@@ -1,0 +1,7 @@
+LIBRARY avdevice-52.dll
+
+EXPORTS
+avdevice_configuration
+avdevice_license
+avdevice_register_all
+avdevice_version
