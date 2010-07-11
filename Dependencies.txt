@@ -1,0 +1,7 @@
+BluefishSDK 5.8.0.31
+boost 1.42.0
+ffmpeg 0.6
+GLee 5.4
+tbb 3.20100406
+WTL80
+VS2010 C++ Runtime
