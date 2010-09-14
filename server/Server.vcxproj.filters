@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="My Inspector Results">
-      <UniqueIdentifier>{dfa15992-650d-44d7-a03b-e7fe2225a044}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source">
       <UniqueIdentifier>{0361bd88-1d96-4d86-b3ad-34d40e2319c6}</UniqueIdentifier>
     </Filter>
@@ -12,9 +9,6 @@
     </Filter>
     <Filter Include="Source\frame">
       <UniqueIdentifier>{69627759-fb18-42fa-8339-66ce27062c90}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="My Inspector Results\My Amplifier Results">
-      <UniqueIdentifier>{b54a1872-cf83-4303-a7f9-83805bf4bd37}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\consumer">
       <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
@@ -374,15 +368,6 @@
   <ItemGroup>
     <None Include="caspar.config">
       <Filter>Source</Filter>
-    </None>
-    <None Include="My Inspector Results\r000mi3\r000mi3.insp">
-      <Filter>My Inspector Results</Filter>
-    </None>
-    <None Include="My Inspector Results\r001mi3\r001mi3.insp">
-      <Filter>My Inspector Results</Filter>
-    </None>
-    <None Include="My Inspector Results\r002ti2\r002ti2.insp">
-      <Filter>My Inspector Results</Filter>
     </None>
   </ItemGroup>
 </Project>
