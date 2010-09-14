@@ -1,0 +1,388 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="My Inspector Results">
+      <UniqueIdentifier>{dfa15992-650d-44d7-a03b-e7fe2225a044}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{0361bd88-1d96-4d86-b3ad-34d40e2319c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\renderer">
+      <UniqueIdentifier>{db784096-c412-4d20-86f0-481e5e2979c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\frame">
+      <UniqueIdentifier>{69627759-fb18-42fa-8339-66ce27062c90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="My Inspector Results\My Amplifier Results">
+      <UniqueIdentifier>{b54a1872-cf83-4303-a7f9-83805bf4bd37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer">
+      <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\oal">
+      <UniqueIdentifier>{3dab53b0-e0ef-4431-8c1d-9a973b269ae7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\ogl">
+      <UniqueIdentifier>{7217dee5-b7ca-4128-9994-03a844c06903}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\bluefish">
+      <UniqueIdentifier>{89e746b3-5d4d-4ff2-a66e-279b5371ac9d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\decklink">
+      <UniqueIdentifier>{aa3626b2-ad7a-4e84-8867-0f5868a21567}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\decklink\interop">
+      <UniqueIdentifier>{a5cb89d7-dbbb-4fca-b899-f53a069727b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer">
+      <UniqueIdentifier>{71accefc-1437-4e1d-9ff7-9de654a32df9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\ffmpeg">
+      <UniqueIdentifier>{671d13be-c7e1-4f65-9909-03b7c8adcbde}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\color">
+      <UniqueIdentifier>{78b16c14-bf29-4511-9122-684ff513dbf5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\transition">
+      <UniqueIdentifier>{26bf9811-1954-46f5-86ce-ecdc26e6db16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\flash">
+      <UniqueIdentifier>{fc25232a-cab1-4c79-962a-b51dc51161fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\image">
+      <UniqueIdentifier>{3d4314f3-8a39-44e3-a0c9-9b833bb8f809}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\ffmpeg\video">
+      <UniqueIdentifier>{a6d6bcc9-7ef1-47a3-9800-76e71f2b3f62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\ffmpeg\audio">
+      <UniqueIdentifier>{4031dc0c-88e9-46b5-b279-955639dca8b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\flash\interop">
+      <UniqueIdentifier>{f99e4727-2b1b-4009-a445-99b11b071e8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\protocol">
+      <UniqueIdentifier>{57f477cb-9cff-4216-aab7-50b06df51f20}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\protocol\cii">
+      <UniqueIdentifier>{a94bc00a-4753-4bce-a777-6a3ea2ceca59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\protocol\amcp">
+      <UniqueIdentifier>{d33e8ddc-ccb4-4f4f-ad20-e788a796bb7b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\protocol\monitor">
+      <UniqueIdentifier>{300c491b-4f95-4b15-8d77-eff22fb4cd60}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\protocol\clk">
+      <UniqueIdentifier>{8355a891-c4db-4a0e-8ecc-795314127cdc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\protocol\osc">
+      <UniqueIdentifier>{23166bfa-06eb-4da9-8a0d-1ae5eac4348b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="StdAfx.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\amcp\AMCPCommandQueue.h">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\amcp\AMCPCommandsImpl.h">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\amcp\AMCPProtocolStrategy.h">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\amcp\AMCPCommand.h">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\cii\CIICommandsImpl.h">
+      <Filter>Source\protocol\cii</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\cii\CIIProtocolStrategy.h">
+      <Filter>Source\protocol\cii</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\cii\CIICommand.h">
+      <Filter>Source\protocol\cii</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\clk\CLKCommand.h">
+      <Filter>Source\protocol\clk</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\clk\CLKProtocolStrategy.h">
+      <Filter>Source\protocol\clk</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\monitor\Monitor.h">
+      <Filter>Source\protocol\monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="renderer\render_device.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="renderer\layer.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="renderer\renderer_fwd.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\frame_fwd.h">
+      <Filter>Source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\frame_format.h">
+      <Filter>Source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\bitmap_frame.h">
+      <Filter>Source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\system_frame.h">
+      <Filter>Source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\audio_chunk.h">
+      <Filter>Source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\frame.h">
+      <Filter>Source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="server.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\bluefish\BluefishPlaybackStrategy.h">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\bluefish\BlueFishVideoConsumer.h">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\bluefish\BluefishException.h">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\bluefish\BluefishFrameManager.h">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\decklink\DecklinkVideoConsumer.h">
+      <Filter>Source\consumer\decklink</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
+      <Filter>Source\consumer\decklink\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\oal\oal_frame_consumer.h">
+      <Filter>Source\consumer\oal</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\ogl\ogl_frame_consumer.h">
+      <Filter>Source\consumer\ogl</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\frame_consumer.h">
+      <Filter>Source\consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\color\color_producer.h">
+      <Filter>Source\producer\color</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\ffmpeg_producer.h">
+      <Filter>Source\producer\ffmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\input.h">
+      <Filter>Source\producer\ffmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\packet.h">
+      <Filter>Source\producer\ffmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h">
+      <Filter>Source\producer\ffmpeg\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\video\video_decoder.h">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\video\video_deinterlacer.h">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\video\video_scaler.h">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\ct_producer.h">
+      <Filter>Source\producer\flash</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\flash_producer.h">
+      <Filter>Source\producer\flash</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\cg_producer.h">
+      <Filter>Source\producer\flash</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\TimerHelper.h">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\FlashAxContainer.h">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\axflash.h">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\image\image_loader.h">
+      <Filter>Source\producer\image</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\image\image_producer.h">
+      <Filter>Source\producer\image</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\image\image_scroll_producer.h">
+      <Filter>Source\producer\image</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\transition\transition_producer.h">
+      <Filter>Source\producer\transition</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\media.h">
+      <Filter>Source\protocol</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="StdAfx.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\amcp\AMCPCommandQueue.cpp">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\amcp\AMCPCommandsImpl.cpp">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\amcp\AMCPProtocolStrategy.cpp">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\cii\CIICommandsImpl.cpp">
+      <Filter>Source\protocol\cii</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\cii\CIIProtocolStrategy.cpp">
+      <Filter>Source\protocol\cii</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\clk\CLKProtocolStrategy.cpp">
+      <Filter>Source\protocol\clk</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\clk\CLKCommand.cpp">
+      <Filter>Source\protocol\clk</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\monitor\Monitor.cpp">
+      <Filter>Source\protocol\monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\render_device.cpp">
+      <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\layer.cpp">
+      <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\system_frame.cpp">
+      <Filter>Source\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\frame_format.cpp">
+      <Filter>Source\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\bitmap_frame.cpp">
+      <Filter>Source\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\audio_chunk.cpp">
+      <Filter>Source\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="server.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\bluefish\BluefishPlaybackStrategy.cpp">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\bluefish\BlueFishVideoConsumer.cpp">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\bluefish\BluefishFrameManager.cpp">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\decklink\DecklinkVideoConsumer.cpp">
+      <Filter>Source\consumer\decklink</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
+      <Filter>Source\consumer\decklink\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\oal\oal_frame_consumer.cpp">
+      <Filter>Source\consumer\oal</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\ogl\ogl_frame_consumer.cpp">
+      <Filter>Source\consumer\ogl</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\color\color_producer.cpp">
+      <Filter>Source\producer\color</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\ffmpeg_producer.cpp">
+      <Filter>Source\producer\ffmpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\input.cpp">
+      <Filter>Source\producer\ffmpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\audio\audio_decoder.cpp">
+      <Filter>Source\producer\ffmpeg\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\video\video_deinterlacer.cpp">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\video\video_scaler.cpp">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\ct_producer.cpp">
+      <Filter>Source\producer\flash</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\flash_producer.cpp">
+      <Filter>Source\producer\flash</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\cg_producer.cpp">
+      <Filter>Source\producer\flash</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\FlashAxContainer.cpp">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\Flash9e_i.c">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\image\image_loader.cpp">
+      <Filter>Source\producer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\image\image_producer.cpp">
+      <Filter>Source\producer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\image\image_scroll_producer.cpp">
+      <Filter>Source\producer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\transition\transition_producer.cpp">
+      <Filter>Source\producer\transition</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\media.cpp">
+      <Filter>Source\protocol</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="consumer\decklink\DeckLinkAPI_v7_3.idl">
+      <Filter>Source\consumer\decklink\interop</Filter>
+    </Midl>
+    <Midl Include="consumer\decklink\DeckLinkAPI.idl">
+      <Filter>Source\consumer\decklink\interop</Filter>
+    </Midl>
+    <Midl Include="consumer\decklink\DeckLinkAPI_v7_1.idl">
+      <Filter>Source\consumer\decklink\interop</Filter>
+    </Midl>
+    <Midl Include="producer\flash\Flash9e.IDL">
+      <Filter>Source\producer\flash\interop</Filter>
+    </Midl>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="caspar.config">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="My Inspector Results\r000mi3\r000mi3.insp">
+      <Filter>My Inspector Results</Filter>
+    </None>
+    <None Include="My Inspector Results\r001mi3\r001mi3.insp">
+      <Filter>My Inspector Results</Filter>
+    </None>
+    <None Include="My Inspector Results\r002ti2\r002ti2.insp">
+      <Filter>My Inspector Results</Filter>
+    </None>
+  </ItemGroup>
+</Project>
