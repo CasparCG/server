@@ -21,11 +21,7 @@
 
 #include "../frame_producer.h"
 
-namespace caspar {
-
-class Monitor;
-
-namespace flash {
+namespace caspar { namespace flash {
 
 class FlashAxContainer;
 
@@ -42,7 +38,7 @@ public:
 	/// <summary> Timeout for blocking while trying to stop the producer. </summary>
 	static const int STOP_TIMEOUT = 2000;
 
-	flash_producer(const std::wstring& filename, const frame_format_desc& format_desc, Monitor* monitor = nullptr);
+	flash_producer(const std::wstring& filename, const frame_format_desc& format_desc);
 	frame_ptr get_frame();
 	const frame_format_desc& get_frame_format_desc() const;
 
@@ -51,13 +47,8 @@ public:
 	static std::wstring find_template(const std::wstring& templateName);
 
 private:	
-	friend class flash::FlashAxContainer;
-
-	Monitor* get_monitor();
-
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
-
 };
 
 typedef std::tr1::shared_ptr<flash_producer> flash_producer_ptr;

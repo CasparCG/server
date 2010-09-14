@@ -5,11 +5,7 @@
 
 #include "layer.h"
 
-namespace caspar{
-	
-class Monitor;
-
-namespace renderer{
+namespace caspar { namespace renderer {
 	
 class render_device : boost::noncopyable
 {	
@@ -26,7 +22,6 @@ public:
 	frame_producer_ptr background(int exLayer) const;
 
 	const frame_format_desc& frame_format_desc() const;			
-	Monitor& monitor();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

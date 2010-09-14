@@ -3,7 +3,6 @@
 #include "render_device.h"
 #include "layer.h"
 
-#include "../protocol/monitor/Monitor.h"
 #include "../consumer/frame_consumer.h"
 
 #include "../frame/system_frame.h"
@@ -33,7 +32,7 @@ namespace caspar{ namespace renderer{
 struct render_device::implementation : boost::noncopyable
 {	
 	implementation(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers)  
-		: consumers_(consumers), monitor_(index), fmt_(format_desc)
+		: consumers_(consumers), fmt_(format_desc)
 	{	
 		is_running_ = true;
 		if(consumers.empty())
@@ -228,8 +227,6 @@ struct render_device::implementation : boost::noncopyable
 	std::map<int, layer> layers_;
 	
 	tbb::atomic<bool> is_running_;	
-
-	caspar::Monitor monitor_;
 };
 
 render_device::render_device(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 
@@ -242,6 +239,5 @@ void render_device::clear(){ impl_->clear();}
 frame_producer_ptr render_device::active(int exLayer) const { return impl_->active(exLayer); }
 frame_producer_ptr render_device::background(int exLayer) const { return impl_->background(exLayer); }
 const frame_format_desc& render_device::frame_format_desc() const{return impl_->fmt_;}
-caspar::Monitor& render_device::monitor(){return impl_->monitor_;}
 }}
 

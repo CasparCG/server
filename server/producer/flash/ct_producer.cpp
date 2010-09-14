@@ -46,11 +46,9 @@ frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params, c
 	while((pos = fixed_filename.find(TEXT('\\'), pos)) != std::wstring::npos) 
 		fixed_filename[pos] = TEXT('/');
 	
-	cg_producer_ptr cg_producer(new cg_producer(format_desc, nullptr));
+	cg_producer_ptr cg_producer(new cg_producer(format_desc));
 	cg_producer->add(0, filename, 1);
 	return cg_producer;
 }
 
-}
-
-}	//namespace caspar
+}}

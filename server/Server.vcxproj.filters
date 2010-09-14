@@ -55,58 +55,10 @@
     <Filter Include="Source\producer\flash\interop">
       <UniqueIdentifier>{f99e4727-2b1b-4009-a445-99b11b071e8e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\protocol">
-      <UniqueIdentifier>{57f477cb-9cff-4216-aab7-50b06df51f20}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\protocol\cii">
-      <UniqueIdentifier>{a94bc00a-4753-4bce-a777-6a3ea2ceca59}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\protocol\amcp">
-      <UniqueIdentifier>{d33e8ddc-ccb4-4f4f-ad20-e788a796bb7b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\protocol\monitor">
-      <UniqueIdentifier>{300c491b-4f95-4b15-8d77-eff22fb4cd60}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\protocol\clk">
-      <UniqueIdentifier>{8355a891-c4db-4a0e-8ecc-795314127cdc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\protocol\osc">
-      <UniqueIdentifier>{23166bfa-06eb-4da9-8a0d-1ae5eac4348b}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
       <Filter>Source</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\amcp\AMCPCommandQueue.h">
-      <Filter>Source\protocol\amcp</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\amcp\AMCPCommandsImpl.h">
-      <Filter>Source\protocol\amcp</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\amcp\AMCPProtocolStrategy.h">
-      <Filter>Source\protocol\amcp</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\amcp\AMCPCommand.h">
-      <Filter>Source\protocol\amcp</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\cii\CIICommandsImpl.h">
-      <Filter>Source\protocol\cii</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\cii\CIIProtocolStrategy.h">
-      <Filter>Source\protocol\cii</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\cii\CIICommand.h">
-      <Filter>Source\protocol\cii</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\clk\CLKCommand.h">
-      <Filter>Source\protocol\clk</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\clk\CLKProtocolStrategy.h">
-      <Filter>Source\protocol\clk</Filter>
-    </ClInclude>
-    <ClInclude Include="protocol\monitor\Monitor.h">
-      <Filter>Source\protocol\monitor</Filter>
     </ClInclude>
     <ClInclude Include="renderer\render_device.h">
       <Filter>Source\renderer</Filter>
@@ -222,37 +174,10 @@
     <ClInclude Include="producer\transition\transition_producer.h">
       <Filter>Source\producer\transition</Filter>
     </ClInclude>
-    <ClInclude Include="protocol\media.h">
-      <Filter>Source\protocol</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp">
       <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\amcp\AMCPCommandQueue.cpp">
-      <Filter>Source\protocol\amcp</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\amcp\AMCPCommandsImpl.cpp">
-      <Filter>Source\protocol\amcp</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\amcp\AMCPProtocolStrategy.cpp">
-      <Filter>Source\protocol\amcp</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\cii\CIICommandsImpl.cpp">
-      <Filter>Source\protocol\cii</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\cii\CIIProtocolStrategy.cpp">
-      <Filter>Source\protocol\cii</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\clk\CLKProtocolStrategy.cpp">
-      <Filter>Source\protocol\clk</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\clk\CLKCommand.cpp">
-      <Filter>Source\protocol\clk</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\monitor\Monitor.cpp">
-      <Filter>Source\protocol\monitor</Filter>
     </ClCompile>
     <ClCompile Include="renderer\render_device.cpp">
       <Filter>Source\renderer</Filter>
@@ -346,9 +271,6 @@
     </ClCompile>
     <ClCompile Include="producer\transition\transition_producer.cpp">
       <Filter>Source\producer\transition</Filter>
-    </ClCompile>
-    <ClCompile Include="protocol\media.cpp">
-      <Filter>Source\protocol</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

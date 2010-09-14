@@ -32,7 +32,6 @@
 #include <conio.h>
 
 #include "server.h"
-#include "protocol/amcp/AMCPProtocolStrategy.h"
 
 class win32_handler_tbb_installer : public tbb::task_scheduler_observer
 {
@@ -73,8 +72,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		caspar::server caspar_device;
 				
-		auto dummy = std::make_shared<caspar::IO::DummyClientInfo>();
-		caspar::amcp::AMCPProtocolStrategy amcp(caspar_device.get_channels());
 		bool is_running = true;
 		while(is_running)
 		{
@@ -87,7 +84,6 @@ int _tmain(int argc, _TCHAR* argv[])
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
 
 			wcmd += L"\r\n";
-			amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
 		}
 	}
 	catch(const std::exception&)

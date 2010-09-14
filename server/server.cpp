@@ -11,14 +11,8 @@
 
 #include <FreeImage.h>
 
-#include "protocol/amcp/AMCPProtocolStrategy.h"
-#include "protocol/cii/CIIProtocolStrategy.h"
-#include "protocol/CLK/CLKProtocolStrategy.h"
 #include "producer/flash/FlashAxContainer.h"
-#include "protocol/monitor/Monitor.h"
 
-#include "../common/io/AsyncEventServer.h"
-#include "../common/io/SerialPort.h"
 #include "../common/utility/string_convert.h"
 
 #include <boost/algorithm/string.hpp>
@@ -41,7 +35,6 @@ struct server::implementation : boost::noncopyable
 
 		setup_paths();
 		setup_channels(pt);
-		setup_controllers(pt);
 	
 		if(!flash::FlashAxContainer::CheckForFlashSupport())
 			CASPAR_LOG(error) << "No flashplayer activex-control installed. Flash support will be disabled";
@@ -50,8 +43,6 @@ struct server::implementation : boost::noncopyable
 	~implementation()
 	{		
 		FreeImage_DeInitialise();
-		serial_ports_.clear();
-		async_servers_.clear();
 		channels_.clear();
 	}
 
@@ -123,68 +114,6 @@ struct server::implementation : boost::noncopyable
 		}
 	}
 		
-	void setup_controllers(boost::property_tree::ptree& pt)
-	{		
-		using boost::property_tree::ptree;
-		BOOST_FOREACH(auto& xml_controller, pt.get_child("configuration.controllers"))
-		{
-			try
-			{
-				std::string name = xml_controller.first;
-				std::string protocol = xml_controller.second.get<std::string>("protocol");	
-
-				if(name == "tcpcontroller")
-				{					
-					unsigned int port = xml_controller.second.get<unsigned int>("port");
-					port = port != 0 ? port : 5250;
-					auto asyncserver = std::make_shared<caspar::IO::AsyncEventServer>(create_protocol(protocol), port);
-					asyncserver->SetClientDisconnectHandler(std::tr1::bind(&Monitor::ClearListener, std::tr1::placeholders::_1));
-					asyncserver->Start();
-					async_servers_.push_back(asyncserver);
-				}
-				else if(name == "serialcontroller")
-				{
-					std::wstring portName = common::widen(xml_controller.second.get<std::string>("port-name"));						
-					unsigned int baudRate = xml_controller.second.get<unsigned int>("baud-rate");
-					unsigned int dataBits = xml_controller.second.get<unsigned int>("data-bits");
-					unsigned int parity = xml_controller.second.get<unsigned int>("parity");
-					unsigned int stopBits = xml_controller.second.get<unsigned int>("stop-bits");
-
-					baudRate =	baudRate	!= 0 ? baudRate : 19200;
-					dataBits =	dataBits	!= 0 ? dataBits : 8;
-					parity =	parity		!= 0 ? parity	: NOPARITY;
-					stopBits =	stopBits	!= 0 ? stopBits : ONESTOPBIT;
-					
-					auto serialPort = std::make_shared<IO::SerialPort>(create_protocol(protocol), baudRate, parity, dataBits, stopBits, portName, xml_controller.second.get("spy", false));
-					serialPort->Start();
-					serial_ports_.push_back(serialPort);
-				}
-				else
-					BOOST_THROW_EXCEPTION(invalid_configuration() << arg_name_info(name) << msg_info("Invalid controller"));
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				throw;
-			}
-		}
-	}
-
-	IO::ProtocolStrategyPtr create_protocol(const std::string& name) const
-	{
-		if(name == "AMCP")
-			return std::make_shared<amcp::AMCPProtocolStrategy>(channels_);
-		else if(name == "CII")
-			return std::make_shared<cii::CIIProtocolStrategy>(channels_);
-		else if(name == "CLOCK")
-			return std::make_shared<CLK::CLKProtocolStrategy>(channels_);
-		
-		BOOST_THROW_EXCEPTION(invalid_configuration() << arg_name_info("name") << arg_value_info(name) << msg_info("Invalid protocol"));
-	}
-
-	std::vector<IO::SerialPortPtr> serial_ports_;
-	std::vector<IO::AsyncEventServerPtr> async_servers_;
-
 	std::vector<renderer::render_device_ptr> channels_;
 
 	int logLevel_;

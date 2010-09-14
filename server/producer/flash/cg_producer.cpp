@@ -153,23 +153,23 @@ struct cg_producer::implementation : boost::noncopyable
 {
 public:
 
-	implementation(const frame_format_desc& fmtDesc, Monitor* pMonitor) : format_desc_(fmtDesc)
+	implementation(const frame_format_desc& fmtDesc) : format_desc_(fmtDesc)
 	{
 		if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.18")))
 		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.18"), fmtDesc, pMonitor);
+			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.18"), fmtDesc);
 			proxy_.reset(new flash_cg_proxy18());
 			CASPAR_LOG(info) << L"Running version 1.8 template graphics.";
 		}
 		else if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.17")))
 		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.17"), fmtDesc, pMonitor);
+			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.17"), fmtDesc);
 			proxy_.reset(new flash_cg_proxy17());
 			CASPAR_LOG(info) << L"Running version 1.7 template graphics.";
 		}
 		else if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth"))) 
 		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth"), fmtDesc, pMonitor);
+			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth"), fmtDesc);
 			proxy_.reset(new flash_cg_proxy16());
 			CASPAR_LOG(info) << L"Running version 1.6 template graphics.";
 		}
@@ -251,22 +251,22 @@ public:
 	
 
 // This is somewhat a hack... needs redesign
-cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& prender_device, unsigned int exLayer)
+cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& render_device, unsigned int exLayer)
 {
-	if(!prender_device)
-		BOOST_THROW_EXCEPTION(null_argument() << msg_info("prender_device"));
+	if(!render_device)
+		BOOST_THROW_EXCEPTION(null_argument() << msg_info("render_device"));
 	
-	auto pProducer = std::dynamic_pointer_cast<cg_producer>(prender_device->active(exLayer));
+	auto pProducer = std::dynamic_pointer_cast<cg_producer>(render_device->active(exLayer));
 	if(!pProducer)	
 	{
-		pProducer = std::make_shared<cg_producer>(prender_device->frame_format_desc(), &prender_device->monitor());		
-		prender_device->load(exLayer, pProducer, renderer::load_option::auto_play); 
+		pProducer = std::make_shared<cg_producer>(render_device->frame_format_desc());		
+		render_device->load(exLayer, pProducer, renderer::load_option::auto_play); 
 	}
 	
 	return pProducer;
 }
 
-cg_producer::cg_producer(const frame_format_desc& fmtDesc, Monitor* pMonitor) : impl_(new implementation(fmtDesc, pMonitor)){}
+cg_producer::cg_producer(const frame_format_desc& fmtDesc) : impl_(new implementation(fmtDesc)){}
 frame_ptr cg_producer::get_frame(){return impl_->get_frame();}
 void cg_producer::clear(){impl_->clear();}
 void cg_producer::add(int layer, const std::wstring& templateName,  bool playOnLoad, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, templateName, playOnLoad, startFromLabel, data);}

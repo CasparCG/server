@@ -2,11 +2,7 @@
 
 #include <memory>
 
-namespace caspar {
-
-class Monitor;
-
-namespace renderer {
+namespace caspar { namespace renderer {
 
 class render_device;
 typedef std::shared_ptr<render_device> render_device_ptr;

@@ -14,9 +14,6 @@
     <Filter Include="Source\image">
       <UniqueIdentifier>{77be36fb-d4c0-415c-a5be-2cbec333ecbc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\io">
-      <UniqueIdentifier>{f4b0d63f-3cb3-4ab4-a6b9-3f249204dd3f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\log">
       <UniqueIdentifier>{3b529e9b-c729-4c8a-8166-0cb8d8030973}</UniqueIdentifier>
     </Filter>
@@ -33,15 +30,6 @@
     </ClCompile>
     <ClCompile Include="log\log.cpp">
       <Filter>Source\log</Filter>
-    </ClCompile>
-    <ClCompile Include="io\SerialPort.cpp">
-      <Filter>Source\io</Filter>
-    </ClCompile>
-    <ClCompile Include="io\SocketInfo.cpp">
-      <Filter>Source\io</Filter>
-    </ClCompile>
-    <ClCompile Include="io\AsyncEventServer.cpp">
-      <Filter>Source\io</Filter>
     </ClCompile>
     <ClCompile Include="image\copy_field.cpp">
       <Filter>Source\image</Filter>
@@ -70,9 +58,6 @@
     <ClCompile Include="exception\win32_exception.cpp">
       <Filter>Source\exception</Filter>
     </ClCompile>
-    <ClCompile Include="concurrency\Thread.cpp">
-      <Filter>Source\concurrency</Filter>
-    </ClCompile>
     <ClCompile Include="hardware\cpuid.cpp">
       <Filter>Source\hardware</Filter>
     </ClCompile>
@@ -86,21 +71,6 @@
     </ClInclude>
     <ClInclude Include="log\log.h">
       <Filter>Source\log</Filter>
-    </ClInclude>
-    <ClInclude Include="io\AsyncEventServer.h">
-      <Filter>Source\io</Filter>
-    </ClInclude>
-    <ClInclude Include="io\ClientInfo.h">
-      <Filter>Source\io</Filter>
-    </ClInclude>
-    <ClInclude Include="io\ProtocolStrategy.h">
-      <Filter>Source\io</Filter>
-    </ClInclude>
-    <ClInclude Include="io\SerialPort.h">
-      <Filter>Source\io</Filter>
-    </ClInclude>
-    <ClInclude Include="io\SocketInfo.h">
-      <Filter>Source\io</Filter>
     </ClInclude>
     <ClInclude Include="image\copy.h">
       <Filter>Source\image</Filter>
@@ -131,9 +101,6 @@
     </ClInclude>
     <ClInclude Include="exception\win32_exception.h">
       <Filter>Source\exception</Filter>
-    </ClInclude>
-    <ClInclude Include="concurrency\Thread.h">
-      <Filter>Source\concurrency</Filter>
     </ClInclude>
     <ClInclude Include="concurrency\executor.h">
       <Filter>Source\concurrency</Filter>

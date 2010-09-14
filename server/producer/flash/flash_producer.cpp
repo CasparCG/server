@@ -55,8 +55,8 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
 struct flash_producer::implementation
 {	
-	implementation(flash_producer* self, const std::wstring& filename, const frame_format_desc& format_desc, Monitor* monitor) 
-		: flashax_container_(nullptr), monitor_(monitor),	filename_(filename), self_(self), format_desc_(format_desc),
+	implementation(flash_producer* self, const std::wstring& filename, const frame_format_desc& format_desc) 
+		: flashax_container_(nullptr), filename_(filename), self_(self), format_desc_(format_desc),
 			bitmap_pool_(new bitmap_pool), executor_([=]{run();})
 	{	
     	if(!boost::filesystem::exists(filename))
@@ -292,9 +292,7 @@ struct flash_producer::implementation
 	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
 	frame_ptr last_frame_;
 	frame_ptr current_frame_;
-
-	Monitor* monitor_;
-
+	
 	std::wstring filename_;
 	flash_producer* self_;
 
@@ -302,14 +300,9 @@ struct flash_producer::implementation
 	common::executor executor_;
 };
 
-flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc, Monitor* monitor) 
-	: impl_(new implementation(this, filename, format_desc, monitor))
-{	
-}
-
+flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc) : impl_(new implementation(this, filename, format_desc)){}
 frame_ptr flash_producer::get_frame(){return impl_->get_frame();}
 bool flash_producer::param(const std::wstring& param){return impl_->param(param);}
-Monitor* flash_producer::get_monitor(){return impl_->monitor_;}
 const frame_format_desc& flash_producer::get_frame_format_desc() const { return impl_->format_desc_; } 
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)
@@ -323,8 +316,7 @@ std::wstring flash_producer::find_template(const std::wstring& template_name)
 	return TEXT("");
 }
 
-flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params, 
-										const frame_format_desc& format_desc)
+flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc)
 {
 	// TODO: Check for flash support
 	auto filename = params[0];
