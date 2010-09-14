@@ -601,9 +601,6 @@
     <None Include="caspar.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="My Inspector Results\r000mi3\r000mi3.insp" />
-    <None Include="My Inspector Results\r001mi3\r001mi3.insp" />
-    <None Include="My Inspector Results\r002ti2\r002ti2.insp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\common\common.vcxproj">
