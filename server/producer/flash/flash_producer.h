@@ -46,7 +46,7 @@ public:
 	frame_ptr get_frame();
 	const frame_format_desc& get_frame_format_desc() const;
 
-	bool param(const std::wstring& param);
+	void param(const std::wstring& param);
 	
 	static std::wstring find_template(const std::wstring& templateName);
 

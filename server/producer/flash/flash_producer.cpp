@@ -45,6 +45,8 @@
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 
+#include <type_traits>
+
 namespace caspar { namespace flash {
 
 using namespace boost::assign;
@@ -56,17 +58,21 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 struct flash_producer::implementation
 {	
 	implementation(flash_producer* self, const std::wstring& filename, const frame_format_desc& format_desc, Monitor* monitor) 
-		: flashax_container_(nullptr), monitor_(monitor),	filename_(filename), self_(self), format_desc_(format_desc),
+		: flashax_container_(nullptr), filename_(filename), self_(self), format_desc_(format_desc), monitor_(monitor),
 			bitmap_pool_(new bitmap_pool), executor_([=]{run();})
 	{	
     	if(!boost::filesystem::exists(filename))
-    		BOOST_THROW_EXCEPTION(file_not_found() << 
-									boost::errinfo_file_name(common::narrow(filename)));
+    		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
 
 		frame_buffer_.set_capacity(flash_producer::DEFAULT_BUFFER_SIZE);
 		last_frame_ = std::make_shared<bitmap_frame>(format_desc_.width, format_desc_.height);
 
 		start();
+	}
+
+	~implementation() 
+	{
+		stop();
 	}
 
 	void start()
@@ -80,37 +86,30 @@ struct flash_producer::implementation
 			{
 				if(FAILED(CComObject<FlashAxContainer>::CreateInstance(&flashax_container_)) || 
 							flashax_container_ == nullptr)
-					BOOST_THROW_EXCEPTION(caspar_exception()
-											<< msg_info("Failed to create FlashAxContainer"));
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to create FlashAxContainer"));
 		
 				flashax_container_->pflash_producer_ = self_;
 				CComPtr<IShockwaveFlash> spFlash;
 
 				if(FAILED(flashax_container_->CreateAxControl()))
-					BOOST_THROW_EXCEPTION(caspar_exception() 
-											<< msg_info("Failed to Create FlashAxControl"));
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to Create FlashAxControl"));
 
 				if(FAILED(flashax_container_->QueryControl(&spFlash)))
-					BOOST_THROW_EXCEPTION(caspar_exception() 
-											<< msg_info("Failed to Query FlashAxControl"));
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to Query FlashAxControl"));
 												
 				if(FAILED(spFlash->put_Playing(true)) )
-					BOOST_THROW_EXCEPTION(caspar_exception() 
-											<< msg_info("Failed to start playing Flash"));
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to start playing Flash"));
 
 				if(FAILED(spFlash->put_Movie(CComBSTR(filename_.c_str()))))
-					BOOST_THROW_EXCEPTION(caspar_exception() 
-											<< msg_info("Failed to Load Template Host"));
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to Load Template Host"));
 						
 				//Exact fit. Scale without respect to the aspect ratio.
 				if(FAILED(spFlash->put_ScaleMode(2))) 
-					BOOST_THROW_EXCEPTION(caspar_exception() 
-											<< msg_info("Failed to Set Scale Mode"));
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to Set Scale Mode"));
 												
 				// stop if failed
 				if(FAILED(flashax_container_->SetFormat(format_desc_))) 
-					BOOST_THROW_EXCEPTION(caspar_exception() 
-											<< msg_info("Failed to Set Format"));
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to Set Format"));
 
 				current_frame_ = nullptr; // Force re-render of current frame			
 			});
@@ -123,69 +122,43 @@ struct flash_producer::implementation
 		}
 	}
 
-	~implementation() 
-	{
-		stop();
-	}
-
 	void stop()
 	{
 		is_empty_ = true;
-		try 
+		if(executor_.is_running())
 		{
-			if(executor_.is_running())
-			{
-				frame_buffer_.clear();
-				if(!executor_.stop(flash_producer::STOP_TIMEOUT)) // Could be interrupted
-					CASPAR_LOG(warning) << "Timed-out. Continuing execution.";
-			}
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
+			frame_buffer_.clear();
+			executor_.stop();
 		}
 	}
 
-	bool param(const std::wstring& param) 
-	{		
-		try
+	void param(const std::wstring& param) 
+	{	
+		if(!executor_.is_running())
 		{
-			if(!executor_.is_running())
+			try
 			{
-				try
-				{
-					start();
-				}
-				catch(caspar_exception& e)
-				{
-					e << msg_info("Failed to restart");
-					throw e;
-				}
+				start();
 			}
-
-			executor_.invoke([&]
-			{	
-				is_empty_ = false;
-				for(int retries = 0; retries < flash_producer::MAX_PARAM_RETRIES; ++retries)
-				{
-					if(retries > 0)
-						CASPAR_LOG(debug) << "Retrying. Count: " << retries;
-
-					retries = flashax_container_->CallFunction(param) ? 
-								flash_producer::MAX_PARAM_RETRIES : retries;
-				}
-			});
-			return true;
+			catch(caspar_exception& e)
+			{
+				e << msg_info("Flashproducer failed to recover from failure.");
+				throw e;
+			}
 		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-		
-		return false;
+
+		executor_.invoke([&]()
+		{			
+			for(size_t retries = 0; !flashax_container_->CallFunction(param); ++retries)
+			{
+				CASPAR_LOG(debug) << "Retrying. Count: " << retries;
+				if(retries > 3)
+					BOOST_THROW_EXCEPTION(operation_failed() << warg_name_info(L"param") << warg_value_info(param));
+			}
+			is_empty_ = false;	
+		});
 	}
-
-
+	
 	void run()
 	{
 		win32_exception::install_handler();
@@ -221,10 +194,13 @@ struct flash_producer::implementation
 				if(!is_empty_)
 				{
 					render();	
-					executor_.execute(false);
+					while(executor_.try_execute()){}
 				}
 				else
-					executor_.execute(true);
+				{
+					executor_.execute();
+					while(executor_.try_execute()){}
+				}
 			}
 		}
 		catch(...)
@@ -273,7 +249,17 @@ struct flash_producer::implementation
 			flashax_container_->DrawControl(frame->hdc());
 
 			auto pool = bitmap_pool_;
-			current_frame_.reset(frame.get(), [=](bitmap_frame*){common::function_task::enqueue([=]{try{pool->try_push(clear_frame(frame));}catch(...){}});});
+			current_frame_.reset(frame.get(), [=](bitmap_frame*)
+			{
+				common::function_task::enqueue([=]
+				{
+					try
+					{
+						pool->try_push(clear_frame(frame));
+					}
+					catch(...){}
+				});
+			});
 		}	
 		return current_frame_;
 	}
@@ -282,7 +268,7 @@ struct flash_producer::implementation
 	{
 		return frame_buffer_.try_pop(last_frame_) || !is_empty_ ? last_frame_ : frame::null();
 	}
-
+	
 	typedef tbb::concurrent_bounded_queue<bitmap_frame_ptr> bitmap_pool;
 	std::shared_ptr<bitmap_pool> bitmap_pool_;
 	frame_format_desc format_desc_;
@@ -292,24 +278,19 @@ struct flash_producer::implementation
 	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
 	frame_ptr last_frame_;
 	frame_ptr current_frame_;
-
-	Monitor* monitor_;
-
+	
 	std::wstring filename_;
 	flash_producer* self_;
+	Monitor* monitor_;
 
 	tbb::atomic<bool> is_empty_;
 	common::executor executor_;
 };
 
-flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc, Monitor* monitor) 
-	: impl_(new implementation(this, filename, format_desc, monitor))
-{	
-}
-
+flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc, Monitor* monitor) : impl_(new implementation(this, filename, format_desc, monitor)){}
 frame_ptr flash_producer::get_frame(){return impl_->get_frame();}
-bool flash_producer::param(const std::wstring& param){return impl_->param(param);}
-Monitor* flash_producer::get_monitor(){return impl_->monitor_;}
+Monitor* flash_producer::get_monitor(){return impl_->monitor_; }
+void flash_producer::param(const std::wstring& param){impl_->param(param);}
 const frame_format_desc& flash_producer::get_frame_format_desc() const { return impl_->format_desc_; } 
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)
@@ -323,8 +304,7 @@ std::wstring flash_producer::find_template(const std::wstring& template_name)
 	return TEXT("");
 }
 
-flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params, 
-										const frame_format_desc& format_desc)
+flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc)
 {
 	// TODO: Check for flash support
 	auto filename = params[0];
