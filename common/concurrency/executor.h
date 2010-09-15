@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../exception/exceptions.h"
+
 #include <boost/thread.hpp>
 
 #include <tbb/atomic.h>
@@ -12,11 +14,9 @@ namespace caspar { namespace common {
 class executor
 {
 public:
-	executor(const std::function<void()>& run_func = nullptr) : run_func_(run_func)
+	explicit executor(const std::function<void()>& run_func = nullptr) : is_running_()
 	{
-		is_running_ = false;
-		if(run_func_ == nullptr) 
-			run_func_ = [=]{default_run();};
+		run_func_ = run_func != nullptr ? run_func : [=]{run();};
 	}
 
 	virtual ~executor()
@@ -36,46 +36,57 @@ public:
 		return is_running_;
 	}
 
-	bool stop(unsigned int timeout = 5000)
+	void stop()
 	{
 		if(is_running_.fetch_and_store(false))
 		{
-			execution_queue_.push([](){});
-			execute(false);
+			execution_queue_.clear();
+			execution_queue_.push([](){});			
 		}
-		return thread_.timed_join(boost::posix_time::milliseconds(timeout));
+		thread_.join();
 	}
 
-	void execute(bool block = false)
+	void execute()
 	{
 		std::function<void()> func;
-		if(block)		
-		{
-			execution_queue_.pop(func);	
-			func();
-		}
+		execution_queue_.pop(func);	
+		func();
+	}
 
-		while(execution_queue_.try_pop(func))
-			func();		
+	bool try_execute()
+	{
+		std::function<void()> func;
+		if(execution_queue_.try_pop(func))
+			func();
+
+		return func != nullptr;
+	}
+
+	void clear()
+	{
+		execution_queue_.clear();
+	}
+
+	template<typename Func>
+	void enqueue(Func&& func)
+	{
+		execution_queue_.push([=]{try{func();}catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}});
 	}
 
 	template<typename Func>
 	auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())>
 	{	
 		typedef decltype(func()) result_type; 
-
-		if(!is_running_)
-			return boost::packaged_task<result_type>([]{ return result_type(); }).get_future();
-
-		if(boost::this_thread::get_id() == thread_.get_id())
-			return boost::packaged_task<result_type>([=]{ return func(); }).get_future();
-
-		auto task = std::make_shared<boost::packaged_task<result_type>>([=]{ return is_running_ ? func() : result_type(); });	
+				
+		auto task = std::make_shared<boost::packaged_task<result_type>>(std::forward<Func>(func));	
 		auto future = task->get_future();
+		
+		if(boost::this_thread::get_id() != thread_.get_id())
+			execution_queue_.push([=]{(*task)();});
+		else
+			(*task)();
 
-		execution_queue_.push([=]{(*task)();});
-
-		return std::move(future);		
+		return std::move(future);
 	}
 	
 	template<typename Func>
@@ -86,10 +97,10 @@ public:
 	
 private:
 
-	void default_run() throw()
+	virtual void run()
 	{
 		while(is_running_)
-			execute(true);
+			execute();
 	}
 
 	std::function<void()> run_func_;

@@ -21,13 +21,13 @@
 
 #include "../hardware/cpuid.h"
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace common { namespace image {
 	
-void pre_multiply_SSE2	 (void* dest, const void* source, size_t size);
-void pre_multiplyParallel_SSE2	 (void* dest, const void* source, size_t size);
-void pre_multiply_FastSSE2(void* dest, const void* source, size_t size);
-void pre_multiply_REF	 (void* dest, const void* source, size_t size);
-void pre_multiplyParallel_REF	 (void* dest, const void* source, size_t size);
+void pre_multiply_SSE2			(void* dest, const void* source, size_t size);
+void pre_multiplyParallel_SSE2	(void* dest, const void* source, size_t size);
+void pre_multiply_FastSSE2		(void* dest, const void* source, size_t size);
+void pre_multiply_REF			(void* dest, const void* source, size_t size);
+void pre_multiplyParallel_REF	(void* dest, const void* source, size_t size);
 
 typedef void(*pre_multiply_fun)(void*, const void*, size_t);
 pre_multiply_fun get_pre_multiply_fun(SIMD simd = REF);

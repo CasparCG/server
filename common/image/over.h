@@ -21,13 +21,13 @@
 
 #include "../hardware/cpuid.h"
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace common { namespace image {
 		
-void pre_over_SSE2(void* dest, const void* source1, const void* source2, size_t size);
-void pre_overParallel_SSE2(void* dest, const void* source1, const void* source2, size_t size);
-void pre_over_FastSSE2(void* dest, const void* source1, const void* source2, size_t size);
-void pre_over_REF(void* dest, const void* source1, const void* source2, size_t size);
-void pre_overParallel_REF(void* dest, const void* source1, const void* source2, size_t size);
+void pre_over_SSE2			(void* dest, const void* source1, const void* source2, size_t size);
+void pre_overParallel_SSE2	(void* dest, const void* source1, const void* source2, size_t size);
+void pre_over_FastSSE2		(void* dest, const void* source1, const void* source2, size_t size);
+void pre_over_REF			(void* dest, const void* source1, const void* source2, size_t size);
+void pre_overParallel_REF	(void* dest, const void* source1, const void* source2, size_t size);
 
 typedef void(*pre_over_fun)(void*, const void*, const void*, size_t);
 pre_over_fun get_pre_over_fun(SIMD simd = REF);

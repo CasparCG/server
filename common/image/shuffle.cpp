@@ -31,9 +31,7 @@
 #include <intrin.h>
 #include <functional>
 
-using namespace std::tr1::placeholders;
-
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace common { namespace image {
 
 static const size_t STRIDE = sizeof(__m128i)*4;
 

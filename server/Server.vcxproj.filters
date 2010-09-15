@@ -55,6 +55,12 @@
     <Filter Include="Source\producer\flash\interop">
       <UniqueIdentifier>{f99e4727-2b1b-4009-a445-99b11b071e8e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\protocol">
+      <UniqueIdentifier>{bf178256-af70-4325-ba6f-6c3e2e6ec865}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\protocol\amcp">
+      <UniqueIdentifier>{2a7b8924-b4be-4b6c-a5b0-a05a8790c0f2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
@@ -174,6 +180,12 @@
     <ClInclude Include="producer\transition\transition_producer.h">
       <Filter>Source\producer\transition</Filter>
     </ClInclude>
+    <ClInclude Include="protocol\amcp\amcp_protocol.h">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol\amcp\command.h">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp">
@@ -271,6 +283,12 @@
     </ClCompile>
     <ClCompile Include="producer\transition\transition_producer.cpp">
       <Filter>Source\producer\transition</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\amcp\amcp_protocol.cpp">
+      <Filter>Source\protocol\amcp</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol\amcp\command.cpp">
+      <Filter>Source\protocol\amcp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

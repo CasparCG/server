@@ -79,6 +79,7 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">$(Configuration)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">false</LinkIncremental>
     <SourcePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Lokala Filer\SDK\ffmpeg\src\ffmpeg-export-2008-11-05\libavcodec\i386;$(SourcePath)</SourcePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\casparcg\server\dependencies\SFML-1.6\include;C:\casparcg\Server\Dependencies\BluefishSDK_V5_8_0_31\Inc;C:\casparcg\Server\Dependencies\boost_1_44_0;C:\casparcg\Server\Dependencies\ffmpeg 0.6\include;C:\casparcg\Server\Dependencies\FreeImage\Dist;C:\casparcg\Server\Dependencies\GLee5_4;C:\casparcg\Server\Dependencies\tbb30_20100406oss\include;C:\casparcg\Server\Dependencies\WTL80\include;C:\Program Files\Microsoft DirectX SDK %28June 2010%29\Include;C:\casparcg\Server\Dependencies\glut-3.7.6-bin;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <PreBuildEvent>
@@ -306,6 +307,8 @@
     <ClInclude Include="producer\image\image_producer.h" />
     <ClInclude Include="producer\image\image_scroll_producer.h" />
     <ClInclude Include="producer\transition\transition_producer.h" />
+    <ClInclude Include="protocol\amcp\amcp_protocol.h" />
+    <ClInclude Include="protocol\amcp\command.h" />
     <ClInclude Include="renderer\renderer_fwd.h" />
     <ClInclude Include="renderer\render_device.h" />
     <ClInclude Include="renderer\layer.h" />
@@ -465,6 +468,18 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\transition\transition_producer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="protocol\amcp\amcp_protocol.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="protocol\amcp\command.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">../../StdAfx.h</PrecompiledHeaderFile>

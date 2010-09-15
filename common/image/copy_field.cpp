@@ -33,7 +33,7 @@
 
 using namespace std::tr1::placeholders; 
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace common { namespace image {
 
 void Docopy_fieldParallel(size_t index, const std::tr1::function<void(void*, const void*, size_t)>& func, void* dest, const void* source, size_t width4)
 {

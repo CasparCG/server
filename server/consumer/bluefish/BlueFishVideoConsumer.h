@@ -19,7 +19,6 @@
 */
 #pragma once
 
-#include "../../../common/concurrency/thread.h"
 #include "BluefishException.h"
 #include "BluefishFrameManager.h"
 #include "../../consumer/frame_consumer.h"

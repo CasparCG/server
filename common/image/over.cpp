@@ -34,7 +34,7 @@
 
 using namespace std::placeholders;
 
-namespace caspar{ namespace common{ namespace image	{
+namespace caspar { namespace common { namespace image	{
 
 static const size_t STRIDE = sizeof(__m128i)*4;
 
@@ -156,22 +156,6 @@ void pre_over_REF(void* dest, const void* source1, const void* source2, size_t s
 		dest8[n+1] = static_cast<u8>(g2 + g1 - (a2*g1)/255);
 		dest8[n+2] = static_cast<u8>(b2 + b1 - (a2*b1)/255);
 		dest8[n+3] = static_cast<u8>(a2 + a1 - (a2*a1)/255);
-
-		// PRECISE
-		//if(a2 > 0)
-		//{
-		//	dest8[n+0] = r2 + r1 - int(float(a2*r1)/255.0f+0.5f);
-		//	dest8[n+1] = g2 + g1 - int(float(a2*g1)/255.0f+0.5f);
-		//	dest8[n+2] = b2 + b1 - int(float(a2*b1)/255.0f+0.5f);
-		//	dest8[n+3] = a2 + a1 - int(float(a2*a1)/255.0f+0.5f);
-		//}
-		//else
-		//{
-		//	dest8[n+0] = r1;
-		//	dest8[n+1] = g1;
-		//	dest8[n+2] = b1;
-		//	dest8[n+3] = a1;
-		//}
 	}
 }
 

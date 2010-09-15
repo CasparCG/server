@@ -32,9 +32,7 @@
 
 using namespace std::tr1::placeholders;
 
-namespace caspar{
-namespace common{
-namespace image{
+namespace caspar { namespace common{ namespace image {
 
 static const size_t STRIDE = sizeof(__m128i)*4;
 
@@ -87,6 +85,4 @@ void clearParallel_REF(void* dest, size_t size)
 	clearParallel(&clear_REF, dest, size);
 }
 
-}
-}
-}
+}}}

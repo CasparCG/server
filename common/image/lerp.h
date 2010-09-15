@@ -21,13 +21,12 @@
 
 #include "../hardware/cpuid.h"
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace common { namespace image {
 		
-void lerp_SSE2(void* dest, const void* source1, const void* source2, float alpha, size_t size);
-void lerp_REF (void* dest, const void* source1, const void* source2, float alpha, size_t size);
-void lerpParallel_SSE2(void* dest, const void* source1, const void* source2, float alpha, size_t size);
-void lerpParallel_REF (void* dest, const void* source1, const void* source2, float alpha, size_t size);
-void lerp_OLD (void* dest, const void* source1, const void* source2, float alpha, size_t size);
+void lerp_SSE2			(void* dest, const void* source1, const void* source2, float alpha, size_t size);
+void lerp_REF			(void* dest, const void* source1, const void* source2, float alpha, size_t size);
+void lerpParallel_SSE2	(void* dest, const void* source1, const void* source2, float alpha, size_t size);
+void lerpParallel_REF	(void* dest, const void* source1, const void* source2, float alpha, size_t size);
 
 typedef void(*lerp_fun)(void*, const void*, const void*, float, size_t);
 lerp_fun get_lerp_fun(SIMD simd = REF);

@@ -22,16 +22,16 @@
 #include "../hardware/cpuid.h"
 #include "../utility/types.h"
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace common { namespace image {
 
-void shuffle_SSSE3(void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
-void shuffle_SSE2 (void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
-void shuffle_REF  (void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
-void shuffleParallel_SSSE3(void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
-void shuffleParallel_SSE2 (void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
-void shuffleParallel_REF  (void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
+void shuffle_SSSE3			(void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
+void shuffle_SSE2			(void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
+void shuffle_REF			(void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
+void shuffleParallel_SSSE3	(void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
+void shuffleParallel_SSE2	(void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
+void shuffleParallel_REF	(void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha);
 
-typedef void(*shuffle_fun)(void*, const void*, size_t, const u8, const u8, const u8, const u8);
+typedef void(*shuffle_fun)	(void*, const void*, size_t, const u8, const u8, const u8, const u8);
 shuffle_fun get_shuffle_fun(SIMD simd = REF);
 
 }}}

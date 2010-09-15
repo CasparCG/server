@@ -21,12 +21,12 @@
 
 #include "../hardware/cpuid.h"
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace common { namespace image {
 	
-void clear_SSE2	 (void* dest, size_t size);
-void clear_REF	 (void* dest, size_t size);
-void clearParallel_SSE2	 (void* dest, size_t size);
-void clearParallel_REF	 (void* dest, size_t size);
+void clear_SSE2			(void* dest, size_t size);
+void clear_REF			(void* dest, size_t size);
+void clearParallel_SSE2 (void* dest, size_t size);
+void clearParallel_REF	(void* dest, size_t size);
 
 typedef void(*clear_fun)(void*, size_t);
 clear_fun get_clear_fun(SIMD simd = REF);

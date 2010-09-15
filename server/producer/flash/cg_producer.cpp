@@ -18,133 +18,54 @@
 		
 namespace caspar{ namespace flash{
 
-struct flash_cg_proxy
+struct flash_cg_proxy18
 {
-	virtual std::wstring add(int layer, const std::wstring& templateName,  bool playOnLoad, const std::wstring& startFromLabel = TEXT(""), const std::wstring& data = TEXT("")) = 0;
-	virtual std::wstring remove(int layer) = 0;
-	virtual std::wstring play(int layer)  = 0;
-	virtual std::wstring stop(int layer, unsigned int mixOutDuration) = 0;
-	virtual std::wstring next(int layer) = 0;
-	virtual std::wstring update(int layer, const std::wstring& data) = 0;
-	virtual std::wstring invoke(int layer, const std::wstring& label) = 0;
-};
-
-struct flash_cg_proxy16 : public flash_cg_proxy
-{		
-	virtual std::wstring add(int layer, const std::wstring& templateName, bool playOnLoad, const std::wstring& label, const std::wstring& data) 
-	{
-		std::wstringstream flashParam;
-		std::wstring::size_type pos = templateName.find('.');
-		std::wstring filename = (pos != std::wstring::npos) ? templateName.substr(0, pos) : templateName;		
-		flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number><string>") << filename << TEXT("</string><number>0</number>") << (playOnLoad?TEXT("<true/>"):TEXT("<false/>")) << TEXT("<string>") << label << TEXT("</string><string><![CDATA[ ") << data << TEXT(" ]]></string></arguments></invoke>");
-		return flashParam.str();
-	}
-
-	virtual std::wstring remove(int layer) 
-	{
-		std::wstringstream flashParam;
-		flashParam << TEXT("<invoke name=\"Delete\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number></arguments></invoke>");
-		return flashParam.str();
-	}
-
-	virtual std::wstring play(int layer) 
-	{
-		std::wstringstream flashParam;
-		flashParam << TEXT("<invoke name=\"Play\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number></arguments></invoke>");
-		return flashParam.str();
-	}
-
-	virtual std::wstring stop(int layer, unsigned int mixOutDuration) 
-	{
-		std::wstringstream flashParam;
-		flashParam << TEXT("<invoke name=\"Stop\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number><number>") << mixOutDuration << TEXT("</number></arguments></invoke>");
-		return flashParam.str();
-	}
-
-	virtual std::wstring next(int layer) 
-	{
-		std::wstringstream flashParam;
-		flashParam << TEXT("<invoke name=\"Next\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number></arguments></invoke>");
-		return flashParam.str();
-	}
-
-	virtual std::wstring update(int layer, const std::wstring& data) 
-	{
-		std::wstringstream flashParam;
-		flashParam << TEXT("<invoke name=\"SetData\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number><string><![CDATA[ ") << data << TEXT(" ]]></string></arguments></invoke>");
-		return flashParam.str();
-	}
-
-	virtual std::wstring invoke(int layer, const std::wstring& label) 
-	{
-		std::wstringstream flashParam;
-		flashParam << TEXT("<invoke name=\"ExecuteMethod\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number><string>") << label << TEXT("</string></arguments></invoke>");
-		return flashParam.str();
-	}
-};
-
-struct flash_cg_proxy17 : public flash_cg_proxy
-{
-	virtual std::wstring add(int layer, const std::wstring& templateName, bool playOnLoad, const std::wstring& label, const std::wstring& data) 
-	{
-		std::wstringstream flashParam;
-
-		std::wstring::size_type pos = templateName.find('.');
-		std::wstring filename = (pos != std::wstring::npos) ? templateName.substr(0, pos) : templateName;
-		
-		flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number><string>") << filename << TEXT("</string>") << (playOnLoad?TEXT("<true/>"):TEXT("<false/>")) << TEXT("<string>") << label << TEXT("</string><string><![CDATA[ ") << data << TEXT(" ]]></string></arguments></invoke>");
-		return flashParam.str();
-	}
-
-	virtual std::wstring remove(int layer) 
+	std::wstring remove(int layer) 
 	{
 		std::wstringstream flashParam;
 		flashParam << TEXT("<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array></arguments></invoke>");
 		return flashParam.str();
 	}
 
-	virtual std::wstring play(int layer) 
+	std::wstring play(int layer) 
 	{
 		std::wstringstream flashParam;
 		flashParam << TEXT("<invoke name=\"Play\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array></arguments></invoke>");
 		return flashParam.str();
 	}
 
-	virtual std::wstring stop(int layer, unsigned int mixOutDuration)
+	std::wstring stop(int layer, unsigned int mix_out_duration)
 	{
 		std::wstringstream flashParam;
-		flashParam << TEXT("<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array><number>") << mixOutDuration << TEXT("</number></arguments></invoke>");
+		flashParam << TEXT("<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array><number>") << mix_out_duration << TEXT("</number></arguments></invoke>");
 		return flashParam.str();
 	}
 
-	virtual std::wstring next(int layer)
+	std::wstring next(int layer)
 	{
 		std::wstringstream flashParam;
 		flashParam << TEXT("<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array></arguments></invoke>");
 		return flashParam.str();
 	}
 
-	virtual std::wstring update(int layer, const std::wstring& data) 
+	std::wstring update(int layer, const std::wstring& data) 
 	{
 		std::wstringstream flashParam;
 		flashParam << TEXT("<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array><string><![CDATA[ ") << data << TEXT(" ]]></string></arguments></invoke>");
 		return flashParam.str();
 	}
 
-	virtual std::wstring invoke(int layer, const std::wstring& label)
+	std::wstring invoke(int layer, const std::wstring& label)
 	{
 		std::wstringstream flashParam;
 		flashParam << TEXT("<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array><string>") << label << TEXT("</string></arguments></invoke>");
 		return flashParam.str();
 	}
-};
 
-struct flash_cg_proxy18 : public flash_cg_proxy17
-{
-	virtual std::wstring add(int layer, const std::wstring& templateName, bool playOnLoad, const std::wstring& label, const std::wstring& data)
+	std::wstring add(int layer, const std::wstring& template_name, bool play_on_load, const std::wstring& label, const std::wstring& data)
 	{
 		std::wstringstream flashParam;
-		flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number><string>") << templateName << TEXT("</string>") << (playOnLoad?TEXT("<true/>"):TEXT("<false/>")) << TEXT("<string>") << label << TEXT("</string><string><![CDATA[ ") << data << TEXT(" ]]></string></arguments></invoke>");
+		flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number><string>") << template_name << TEXT("</string>") << (play_on_load?TEXT("<true/>"):TEXT("<false/>")) << TEXT("<string>") << label << TEXT("</string><string><![CDATA[ ") << data << TEXT(" ]]></string></arguments></invoke>");
 		return flashParam.str();
 	}
 };
@@ -161,21 +82,8 @@ public:
 			proxy_.reset(new flash_cg_proxy18());
 			CASPAR_LOG(info) << L"Running version 1.8 template graphics.";
 		}
-		else if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.17")))
-		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.17"), fmtDesc);
-			proxy_.reset(new flash_cg_proxy17());
-			CASPAR_LOG(info) << L"Running version 1.7 template graphics.";
-		}
-		else if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth"))) 
-		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth"), fmtDesc);
-			proxy_.reset(new flash_cg_proxy16());
-			CASPAR_LOG(info) << L"Running version 1.6 template graphics.";
-		}
 		else 
-			CASPAR_LOG(info) << L"No templatehost found. Template graphics will be disabled";
-		
+			CASPAR_LOG(info) << L"No templatehost found. Template graphics will be disabled";		
 	}
 
 	void clear()
@@ -183,12 +91,12 @@ public:
 		flash_producer_.reset();
 	}
 
-	void add(int layer, const std::wstring& templateName,  bool playOnLoad, const std::wstring& startFromLabel, const std::wstring& data)
+	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data)
 	{
 		if(flash_producer_ == nullptr)
 			return;
 		CASPAR_LOG(info) << "Invoking add-command";
-		flash_producer_->param(proxy_->add(layer, templateName, playOnLoad, startFromLabel, data));
+		flash_producer_->param(proxy_->add(layer, template_name, play_on_load, startFromLabel, data));
 	}
 
 	void remove(int layer)
@@ -207,12 +115,12 @@ public:
 		flash_producer_->param(proxy_->play(layer));
 	}
 
-	void stop(int layer, unsigned int mixOutDuration)
+	void stop(int layer, unsigned int mix_out_duration)
 	{
 		if(flash_producer_ == nullptr)
 			return;
 		CASPAR_LOG(info) << "Invoking stop-command";
-		flash_producer_->param(proxy_->stop(layer, mixOutDuration));
+		flash_producer_->param(proxy_->stop(layer, mix_out_duration));
 	}
 
 	void next(int layer)
@@ -246,7 +154,7 @@ public:
 
 	frame_format_desc format_desc_;
 	flash_producer_ptr flash_producer_;
-	std::unique_ptr<flash_cg_proxy> proxy_;
+	std::unique_ptr<flash_cg_proxy18> proxy_;
 };
 	
 
@@ -269,10 +177,10 @@ cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& rende
 cg_producer::cg_producer(const frame_format_desc& fmtDesc) : impl_(new implementation(fmtDesc)){}
 frame_ptr cg_producer::get_frame(){return impl_->get_frame();}
 void cg_producer::clear(){impl_->clear();}
-void cg_producer::add(int layer, const std::wstring& templateName,  bool playOnLoad, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, templateName, playOnLoad, startFromLabel, data);}
+void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}
 void cg_producer::play(int layer){impl_->play(layer);}
-void cg_producer::stop(int layer, unsigned int mixOutDuration){impl_->stop(layer, mixOutDuration);}
+void cg_producer::stop(int layer, unsigned int mix_out_duration){impl_->stop(layer, mix_out_duration);}
 void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}

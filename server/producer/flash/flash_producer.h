@@ -35,14 +35,12 @@ public:
 	static const int DEFAULT_BUFFER_SIZE = 2;
 	/// <summary> The maximum number of retries when trying to invoce a flash method. </summary>
 	static const int MAX_PARAM_RETRIES = 5;
-	/// <summary> Timeout for blocking while trying to stop the producer. </summary>
-	static const int STOP_TIMEOUT = 2000;
 
 	flash_producer(const std::wstring& filename, const frame_format_desc& format_desc);
 	frame_ptr get_frame();
 	const frame_format_desc& get_frame_format_desc() const;
 
-	bool param(const std::wstring& param);
+	void param(const std::wstring& param);
 	
 	static std::wstring find_template(const std::wstring& templateName);
 

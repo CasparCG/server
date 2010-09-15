@@ -21,13 +21,12 @@
 
 #include "../hardware/cpuid.h"
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace common { namespace image {
 	
-void copy_SSE2	 (void* dest, const void* source, size_t size);
-void copy_REF	 (void* dest, const void* source, size_t size);
-
-void copyParallel_SSE2	 (void* dest, const void* source, size_t size);
-void copyParallel_REF	 (void* dest, const void* source, size_t size);
+void copy_SSE2			(void* dest, const void* source, size_t size);
+void copy_REF			(void* dest, const void* source, size_t size);
+void copyParallel_SSE2	(void* dest, const void* source, size_t size);
+void copyParallel_REF	(void* dest, const void* source, size_t size);
 
 typedef void(*copy_fun)(void*, const void*, size_t);
 copy_fun get_copy_fun(SIMD simd = REF);

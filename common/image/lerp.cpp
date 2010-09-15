@@ -33,9 +33,7 @@
 
 using namespace std::tr1::placeholders;
 
-namespace caspar{
-namespace common{
-namespace image{
+namespace caspar { namespace common { namespace image {
 
 static const size_t STRIDE = sizeof(__m128i)*4;
 
@@ -148,15 +146,10 @@ void lerp_REF(void* dest, const void* source1, const void* source2, float alpha,
 		u32 dg = source8_2[n+1];
 		u32 db = source8_2[n+2];
 		u32 da = source8_2[n+3];
-
-		//dest8[n+0] = dr + ((sr-dr)*a)/256;
-		//dest8[n+1] = dg + ((sg-dg)*a)/256;
-		//dest8[n+2] = db + ((sb-db)*a)/256;
-		//dest8[n+3] = da + ((sa-da)*a)/256;
-
-		dest8[n+0] = static_cast<u8>( dr + int(float((sr-dr)*a)/256.0f+0.5f));
-		dest8[n+1] = static_cast<u8>( dg + int(float((sg-dg)*a)/256.0f+0.5f));
-		dest8[n+2] = static_cast<u8>( db + int(float((sb-db)*a)/256.0f+0.5f));
+		
+		dest8[n+0] = static_cast<u8>(dr + int(float((sr-dr)*a)/256.0f+0.5f));
+		dest8[n+1] = static_cast<u8>(dg + int(float((sg-dg)*a)/256.0f+0.5f));
+		dest8[n+2] = static_cast<u8>(db + int(float((sb-db)*a)/256.0f+0.5f));
 		dest8[n+3] = static_cast<u8>(da + int(float((sa-da)*a)/256.0f+0.5f));
 
 	}
@@ -167,8 +160,6 @@ void lerpParallel_REF(void* dest, const void* source1, const void* source2, floa
 	lerpParallel(&lerp_REF, dest, source1, source2, alpha, size);
 }
 
-} // namespace image
-} // namespace common
-} // namespace caspar
+}}}
 
 
