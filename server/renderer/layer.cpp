@@ -11,18 +11,29 @@ namespace caspar { namespace renderer {
 
 struct layer::implementation
 {		
-	implementation() : is_previewing_(false), preview_frame_(nullptr), active_(nullptr), background_(nullptr) {}
-
-	void load(const frame_producer_ptr& frame_producer, load_option option)
+	implementation() : preview_frame_(nullptr), active_(nullptr), background_(nullptr) {}
+	
+	void load(frame_producer_ptr frame_producer, load_option option)
 	{
 		if(frame_producer == nullptr) 
-			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("pframe_producer"));
+			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("frame_producer"));
 		
-		background_ = frame_producer;	
+		background_.swap(frame_producer);	
 		if(option == load_option::preview)		
 		{
 			active_ = nullptr;	
-			is_previewing_ = true;
+			try
+			{
+				preview_frame_ = background_->get_frame();
+				if(preview_frame_ != nullptr)
+					preview_frame_->audio_data().clear(); // No audio
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				background_.swap(frame_producer); // strong guarantee
+				throw;
+			}
 		}
 		else if(option == load_option::auto_play)
 			play();		
@@ -36,14 +47,12 @@ struct layer::implementation
 		background_->set_leading_producer(active_);
 		active_ = background_;
 		background_ = nullptr;
-        is_previewing_ = false;
 		preview_frame_ = nullptr;
 	}
 
 	void stop()
 	{
 		active_ = nullptr;
-        is_previewing_ = false;
 		preview_frame_ = nullptr;
 	}
 
@@ -55,28 +64,8 @@ struct layer::implementation
 	
 	frame_ptr get_frame()
 	{		
-		if(is_previewing_)
-		{
-			if(preview_frame_ == nullptr && background_ != nullptr)
-			{
-				try
-				{
-					preview_frame_ = background_->get_frame();
-					if(preview_frame_ != nullptr)
-						preview_frame_->audio_data().clear(); // No audio
-				}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					background_ = nullptr;
-					CASPAR_LOG(warning) << "Removed producer from layer.";
-				}
-			}
-			return preview_frame_; 
-		}
-
 		if(!active_)
-			return nullptr;
+			return preview_frame_;
 
 		frame_ptr frame;
 		try
@@ -98,7 +87,6 @@ struct layer::implementation
 		return frame;
 	}	
 			
-	bool is_previewing_;
 	frame_ptr preview_frame_;
 	frame_producer_ptr active_;
 	frame_producer_ptr background_;
@@ -123,7 +111,7 @@ void layer::load(const frame_producer_ptr& frame_producer, load_option option){r
 void layer::play(){impl_->play();}
 void layer::stop(){impl_->stop();}
 void layer::clear(){impl_->clear();}
-frame_ptr layer::get_frame(){return impl_->get_frame();}
+frame_ptr layer::get_frame() {return impl_->get_frame();}
 frame_producer_ptr layer::active() const { return impl_->active_;}
 frame_producer_ptr layer::background() const { return impl_->background_;}
 }}
