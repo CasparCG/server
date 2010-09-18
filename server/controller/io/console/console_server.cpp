@@ -13,9 +13,9 @@ struct console_server::implementation
 		return signal_.connect(func);
 	}
 
-	void start_write(const std::wstring& message)
+	void start_write(const std::string& message)
 	{
-		std::wcout << message << std::endl;
+		std::cout << message << std::endl;
 	}
 	
 	void run()
@@ -41,7 +41,7 @@ struct console_server::implementation
 
 console_server::console_server() : impl_(new implementation){}
 boost::signals2::connection console_server::subscribe(const std::function<void(const std::wstring& message, int tag)>& func) { return impl_->subscribe(func); }
-void console_server::start_write(const std::wstring& message, int tag) { impl_->start_write(message); }
+void console_server::start_write(const std::string& message, int tag) { impl_->start_write(message); }
 void console_server::run() { impl_->run(); }
 
 }}}}

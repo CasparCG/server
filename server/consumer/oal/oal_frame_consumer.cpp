@@ -81,7 +81,9 @@ private:
 		audio_chunk_ptr pChunk;
 		if(!external_chunks_.try_pop(pChunk))
 		{
+#ifdef CASPAR_TRACE_UNDERFLOW
 			CASPAR_LOG(trace) << "Sound Buffer Underrun";
+#endif
 			external_chunks_.pop(pChunk);
 		}
 

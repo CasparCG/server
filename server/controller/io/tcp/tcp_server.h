@@ -6,13 +6,14 @@
 #include <boost/signals2.hpp>
 
 #include <memory>
+#include <functional>
 
 namespace caspar { namespace controller { namespace io { namespace tcp {
 
 class tcp_server
 {
 public:
-	typedef boost::function<void(const std::wstring&, int)> read_callback;
+	typedef std::function<void(const std::wstring&, int)> read_callback;
 
 	tcp_server(short port);
 	
@@ -20,6 +21,7 @@ public:
 	void start_write(const std::string& message, int tag);
 
 	void run();
+	void async_run();
 
 private:
 	struct implementation;

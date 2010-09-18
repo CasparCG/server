@@ -12,7 +12,7 @@ public:
 	console_server();
 
 	boost::signals2::connection subscribe(const std::function<void(const std::wstring& message, int tag)>& func);
-	void start_write(const std::wstring& message, int tag);
+	void start_write(const std::string& message, int tag);
 
 	void run();
 private:

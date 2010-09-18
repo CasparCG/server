@@ -80,12 +80,12 @@ int _tmain(int argc, _TCHAR* argv[])
 		controller::io::tcp::tcp_server tcp_server(5250);
 		controller::amcp::controller<controller::io::tcp::tcp_server> tcp_controller(tcp_server, caspar_device.get_channels());
 
-		tcp_server.run();
+		tcp_server.async_run();
 
-		//controller::io::console::console_message_stream console_stream;
-		//controller::amcp::controller<controller::io::console::console_message_stream> console_controller(console_stream, caspar_device.get_channels());
+		controller::io::console::console_server console_server;
+		controller::amcp::controller<controller::io::console::console_server> console_controller(console_server, caspar_device.get_channels());
 
-		//console_stream.run();
+		console_server.run();
 	}
 	catch(const std::exception&)
 	{
