@@ -55,11 +55,20 @@
     <Filter Include="Source\producer\flash\interop">
       <UniqueIdentifier>{f99e4727-2b1b-4009-a445-99b11b071e8e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\protocol">
+    <Filter Include="Source\controller">
       <UniqueIdentifier>{bf178256-af70-4325-ba6f-6c3e2e6ec865}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\protocol\amcp">
-      <UniqueIdentifier>{2a7b8924-b4be-4b6c-a5b0-a05a8790c0f2}</UniqueIdentifier>
+    <Filter Include="Source\controller\io">
+      <UniqueIdentifier>{c3e69c28-8f85-4dc6-bab1-0deaa22491a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\controller\io\tcp">
+      <UniqueIdentifier>{017e37a6-207e-41f4-bf18-e76d74adf21d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\controller\io\console">
+      <UniqueIdentifier>{e5d70f72-ae95-4414-b6c4-4b1e5fffa0bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\controller\amcp">
+      <UniqueIdentifier>{403eac8f-779d-44f2-9bcd-b9eb3863cfde}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -180,11 +189,23 @@
     <ClInclude Include="producer\transition\transition_producer.h">
       <Filter>Source\producer\transition</Filter>
     </ClInclude>
-    <ClInclude Include="protocol\amcp\amcp_protocol.h">
-      <Filter>Source\protocol\amcp</Filter>
+    <ClInclude Include="controller\io\console\console_message_stream.h">
+      <Filter>Source\controller\io\console</Filter>
     </ClInclude>
-    <ClInclude Include="protocol\amcp\command.h">
-      <Filter>Source\protocol\amcp</Filter>
+    <ClInclude Include="producer\frame_producer.h">
+      <Filter>Source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\media.h">
+      <Filter>Source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="controller\amcp\controller.h">
+      <Filter>Source\controller\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="controller\amcp\exception.h">
+      <Filter>Source\controller\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="controller\amcp\command.h">
+      <Filter>Source\controller\amcp</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -284,11 +305,17 @@
     <ClCompile Include="producer\transition\transition_producer.cpp">
       <Filter>Source\producer\transition</Filter>
     </ClCompile>
-    <ClCompile Include="protocol\amcp\amcp_protocol.cpp">
-      <Filter>Source\protocol\amcp</Filter>
+    <ClCompile Include="controller\io\console\console_message_stream.cpp">
+      <Filter>Source\controller\io\console</Filter>
     </ClCompile>
-    <ClCompile Include="protocol\amcp\command.cpp">
-      <Filter>Source\protocol\amcp</Filter>
+    <ClCompile Include="producer\media.cpp">
+      <Filter>Source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="controller\amcp\controller.cpp">
+      <Filter>Source\controller\amcp</Filter>
+    </ClCompile>
+    <ClCompile Include="controller\amcp\command.cpp">
+      <Filter>Source\controller\amcp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

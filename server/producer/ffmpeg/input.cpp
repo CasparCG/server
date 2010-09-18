@@ -43,11 +43,11 @@ struct input::implementation : boost::noncopyable
 			int errn;
 			AVFormatContext* weak_format_context;
 			if((errn = -av_open_input_file(&weak_format_context, filename.c_str(), nullptr, 0, nullptr)) > 0)
-				BOOST_THROW_EXCEPTION(ffmpeg_error() << boost::errinfo_errno(errn));
+				BOOST_THROW_EXCEPTION(file_read_error() << boost::errinfo_errno(errn));
 			format_context.reset(weak_format_context, av_close_input_file);
 			
 			if((errn = -av_find_stream_info(format_context.get())) > 0)
-				BOOST_THROW_EXCEPTION(ffmpeg_error() << boost::errinfo_errno(errn));
+				BOOST_THROW_EXCEPTION(file_read_error() << boost::errinfo_errno(errn));
 
 			video_codec_context_ = open_video_stream();
 			if(!video_codec_context_)
@@ -58,7 +58,7 @@ struct input::implementation : boost::noncopyable
 				CASPAR_LOG(info) << "No audio stream found.";
 
 			if(!video_codec_context_ && !audio_codex_context)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No video or audio codec found."));
+				BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec found."));
 			
 			video_frame_rate_ = static_cast<double>(video_codec_context_->time_base.den) / static_cast<double>(video_codec_context_->time_base.num);
 

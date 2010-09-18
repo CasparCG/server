@@ -3,10 +3,14 @@
 #include "../producer/frame_producer.h"
 #include "../consumer/frame_consumer.h"
 
+#include "../../common/exception/exceptions.h"
+
 #include "layer.h"
 
 namespace caspar { namespace renderer {
 	
+struct invalid_layer_index : virtual invalid_argument{};
+
 class render_device : boost::noncopyable
 {	
 public:

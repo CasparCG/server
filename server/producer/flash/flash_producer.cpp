@@ -153,7 +153,7 @@ struct flash_producer::implementation
 			{
 				CASPAR_LOG(debug) << "Retrying. Count: " << retries;
 				if(retries > 3)
-					BOOST_THROW_EXCEPTION(operation_failed() << warg_name_info(L"param") << warg_value_info(param));
+					BOOST_THROW_EXCEPTION(operation_failed() << arg_name_info("param") << arg_value_info(common::narrow(param)));
 			}
 			is_empty_ = false;	
 		});

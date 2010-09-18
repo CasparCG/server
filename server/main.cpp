@@ -23,6 +23,9 @@
 #include <tbb/tbbmalloc_proxy.h>
 #include <tbb/task_scheduler_observer.h>
 
+#include "controller/amcp/controller.h"
+#include "controller/io/console/console_message_stream.h"
+
 #ifdef _DEBUG
 	#define _CRTDBG_MAP_ALLOC
 	#include <stdlib.h>
@@ -32,6 +35,8 @@
 #include <conio.h>
 
 #include "server.h"
+
+using namespace caspar;
 
 class win32_handler_tbb_installer : public tbb::task_scheduler_observer
 {
@@ -70,21 +75,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	CASPAR_LOG(debug) << "Started Main Thread";
 	try 
 	{
-		caspar::server caspar_device;
-				
-		bool is_running = true;
-		while(is_running)
-		{
-			std::wstring wcmd;
-			std::getline(std::wcin, wcmd); // TODO: It's blocking...
-			is_running = wcmd != L"exit" && wcmd != L"q";
-			if(wcmd == L"1")
-				wcmd = L"LOADBG 1-1 DV SLIDE 50 LOOP AUTOPLAY";
-			else if(wcmd == L"2")
-				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
+		server caspar_device;
+		controller::io::console::console_message_stream message_stream;
+		controller::protocol::amcp::controller<controller::io::console::console_message_stream> controller(message_stream, caspar_device.get_channels());
 
-			wcmd += L"\r\n";
-		}
+		message_stream.run();
 	}
 	catch(const std::exception&)
 	{

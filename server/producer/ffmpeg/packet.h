@@ -25,8 +25,6 @@ namespace caspar{ namespace ffmpeg{
 typedef std::tr1::shared_ptr<AVFrame> AVFramePtr;	
 typedef std::tr1::shared_ptr<AVPacket> AVPacketPtr;
 
-struct ffmpeg_error: virtual boost::exception, virtual std::exception { };
-
 struct video_packet : boost::noncopyable
 {
 	video_packet(const AVPacketPtr& packet, frame_ptr&& frame, const frame_format_desc& format_desc, AVCodecContext* codec_context, AVCodec* codec) 

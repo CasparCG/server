@@ -27,6 +27,7 @@
 
 #ifdef _MSC_VER
 #pragma warning (disable : 4482)
+#pragma warning (disable : 4503) // decorated name length exceeded, name was truncated
 #endif
 
 #if !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
