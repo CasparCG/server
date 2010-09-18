@@ -29,6 +29,21 @@
 using namespace boost::assign;
 	
 namespace caspar{ namespace renderer{
+	
+std::vector<frame_ptr> render_frames(std::map<int, layer>& layers)
+{	
+	std::vector<frame_ptr> frames(layers.size(), nullptr);
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), [&](const tbb::blocked_range<size_t>& r)
+	{
+		auto it = layers.begin();
+		std::advance(it, r.begin());
+		for(size_t i = r.begin(); i != r.end(); ++i, ++it)
+			frames[i] = it->second.get_frame();
+	});					
+	boost::range::remove_erase(frames, nullptr);
+	boost::range::remove_erase_if(frames, [](const frame_const_ptr& frame) { return *frame == *frame::null();});
+	return frames;
+}
 
 struct render_device::implementation : boost::noncopyable
 {	
@@ -37,14 +52,12 @@ struct render_device::implementation : boost::noncopyable
 	{	
 		is_running_ = true;
 		if(consumers.empty())
-			BOOST_THROW_EXCEPTION(invalid_argument() 
-									<< arg_name_info("consumer") 
-									<< msg_info("render_device requires atleast one consumer"));
+			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("consumer") 
+														<< msg_info("render_device requires atleast one consumer"));
 
 		if(std::any_of(consumers.begin(), consumers.end(), [&](const frame_consumer_ptr& pConsumer){ return pConsumer->get_frame_format_desc() != format_desc;}))
-			BOOST_THROW_EXCEPTION(invalid_argument() 
-									<< arg_name_info("consumer") 
-									<< msg_info("All consumers must have same frameformat as renderdevice."));
+			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("consumer") 
+														<< msg_info("All consumers must have same frameformat as renderdevice."));
 		
 		frame_buffer_.set_capacity(3);
 		display_thread_ = boost::thread([=]{display();});
@@ -61,11 +74,10 @@ struct render_device::implementation : boost::noncopyable
 		render_thread_.join();
 		display_thread_.join();
 	}
-	
-	
+		
 	void render()
 	{		
-		CASPAR_LOG(info) << L"Started render_device::Render Thread";
+		CASPAR_LOG(info) << L"Started render_device::render Thread";
 		win32_exception::install_handler();
 		
 		std::vector<frame_ptr> current_frames;
@@ -95,27 +107,12 @@ struct render_device::implementation : boost::noncopyable
 			}
 		}
 
-		CASPAR_LOG(info) << L"Ended render_device::Render Thread";
-	}
-
-	static std::vector<frame_ptr> render_frames(std::map<int, layer>& layers)
-	{	
-		std::vector<frame_ptr> frames(layers.size(), nullptr);
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), [&](const tbb::blocked_range<size_t>& r)
-		{
-			auto it = layers.begin();
-			std::advance(it, r.begin());
-			for(size_t i = r.begin(); i != r.end(); ++i, it++)
-				frames[i] = it->second.get_frame();
-		});					
-		boost::range::remove_erase(frames, nullptr);
-		boost::range::remove_erase_if(frames, [](const frame_const_ptr& frame) { return *frame == *frame::null();});
-		return frames;
+		CASPAR_LOG(info) << L"Ended render_device::render Thread";
 	}
 	
 	void display()
 	{
-		CASPAR_LOG(info) << L"Started render_device::Display Thread";
+		CASPAR_LOG(info) << L"Started render_device::display Thread";
 		win32_exception::install_handler();
 				
 		frame_ptr frame = clear_frame(std::make_shared<system_frame>(fmt_.size));
@@ -128,12 +125,15 @@ struct render_device::implementation : boost::noncopyable
 				CASPAR_LOG(trace) << "Display Buffer Underrun";
 				frame_buffer_.pop(frame);
 			}
-			send_frame(prepared.front(), frame);
-			prepared.push_back(frame);
-			prepared.pop_front();
+			if(frame != nullptr)
+			{
+				send_frame(prepared.front(), frame);
+				prepared.push_back(frame);
+				prepared.pop_front();
+			}
 		}
 		
-		CASPAR_LOG(info) << L"Ended render_device::Display Thread";
+		CASPAR_LOG(info) << L"Ended render_device::display Thread";
 	}
 
 	void send_frame(const frame_ptr& pPreparedFrame, const frame_ptr& pNextFrame)
@@ -159,12 +159,13 @@ struct render_device::implementation : boost::noncopyable
 		}
 	}
 		
-	void load(int exLayer, const frame_producer_ptr& pProducer, load_option option)
+	void load(int exLayer, const frame_producer_ptr& producer, load_option option)
 	{
-		if(pProducer->get_frame_format_desc() != fmt_)
+		if(producer->get_frame_format_desc() != fmt_)
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("pProducer") << msg_info("Invalid frame format"));
+
 		tbb::mutex::scoped_lock lock(layers_mutex_);
-		layers_[exLayer].load(pProducer, option);
+		layers_[exLayer].load(producer, option);
 	}
 			
 	void play(int exLayer)
@@ -229,13 +230,13 @@ struct render_device::implementation : boost::noncopyable
 
 render_device::render_device(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 
 	: impl_(new implementation(format_desc, index, consumers)){}
-void render_device::load(int exLayer, const frame_producer_ptr& pProducer, load_option option){ impl_->load(exLayer, pProducer, option);}
-void render_device::play(int exLayer){ impl_->play(exLayer);}
-void render_device::stop(int exLayer){ impl_->stop(exLayer);}
-void render_device::clear(int exLayer){ impl_->clear(exLayer);}
-void render_device::clear(){ impl_->clear();}
-frame_producer_ptr render_device::active(int exLayer) const { return impl_->active(exLayer); }
-frame_producer_ptr render_device::background(int exLayer) const { return impl_->background(exLayer); }
+void render_device::load(int exLayer, const frame_producer_ptr& pProducer, load_option option){impl_->load(exLayer, pProducer, option);}
+void render_device::play(int exLayer){impl_->play(exLayer);}
+void render_device::stop(int exLayer){impl_->stop(exLayer);}
+void render_device::clear(int exLayer){impl_->clear(exLayer);}
+void render_device::clear(){impl_->clear();}
+frame_producer_ptr render_device::active(int exLayer) const {return impl_->active(exLayer);}
+frame_producer_ptr render_device::background(int exLayer) const {return impl_->background(exLayer);}
 const frame_format_desc& render_device::frame_format_desc() const{return impl_->fmt_;}
 caspar::Monitor& render_device::monitor(){return impl_->monitor_;}
 }}
