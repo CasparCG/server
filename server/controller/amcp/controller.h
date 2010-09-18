@@ -33,7 +33,7 @@
 //501 [kommando] FAILED	Internt serverfel  
 //502 [kommando] FAILED	Oläslig mediafil  
 
-namespace caspar { namespace controller { namespace protocol { namespace amcp {
+namespace caspar { namespace controller { namespace amcp {
 			
 template<typename message_stream>
 class controller
@@ -43,7 +43,7 @@ public:
 		: channels_(channels), is_running_(), stream_(stream)
 	{
 		thread_ = boost::thread(std::bind(&controller::run, this));
-		connection_ = stream.subscribe(std::bind(&controller::on_next, this, std::placeholders::_1));
+		connection_ = stream.subscribe(std::bind(&controller::on_next, this, std::placeholders::_1, std::placeholders::_2));
 	}
 
 	~controller()
@@ -71,7 +71,7 @@ private:
 		const std::vector<renderer::render_device_ptr>& channels;
 	};
 
-	void on_next(const std::wstring& message)
+	void on_next(const std::wstring& message, int tag)
 	{				
 		command_queue_.push([=]
 		{
@@ -84,32 +84,32 @@ private:
 				try
 				{
 					command_executor executor = {split[n], channels_};
+					CASPAR_LOG(info) << "[amcp_controller] Received: " << split[n];
 					if(!boost::fusion::any(command_list(), executor))
-						stream_.send(L"400");
+						stream_.start_write("400\r\n", tag);
 				}
 				catch(invalid_channel&)
 				{
-					stream_.send(L"401");
+					stream_.start_write("401\r\n", tag);
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
 				catch(file_not_found&)
 				{
-					stream_.send(L"404");
+					stream_.start_write("404\r\n", tag);
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
 				catch(file_read_error&)
 				{
-					stream_.send(L"502");
+					stream_.start_write("502\r\n", tag);
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
 				catch(...)
 				{
-					stream_.send(L"501");
+					stream_.start_write("501\r\n", tag);
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
 			}
-		});
-		
+		});		
 	}
 	
 	void run()
@@ -136,4 +136,4 @@ private:
 };
 
 
-}}}}
+}}}

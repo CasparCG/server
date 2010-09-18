@@ -6,13 +6,13 @@
 
 namespace caspar { namespace controller { namespace io { namespace console {
 
-class console_message_stream
+class console_server
 {
 public:
-	console_message_stream();
+	console_server();
 
-	boost::signals2::connection subscribe(const std::function<void(const std::wstring& message)>& func);
-	void send(const std::wstring& message);
+	boost::signals2::connection subscribe(const std::function<void(const std::wstring& message, int tag)>& func);
+	void start_write(const std::wstring& message, int tag);
 
 	void run();
 private:

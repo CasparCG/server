@@ -24,7 +24,8 @@
 #include <tbb/task_scheduler_observer.h>
 
 #include "controller/amcp/controller.h"
-#include "controller/io/console/console_message_stream.h"
+#include "controller/io/console/console_server.h"
+#include "controller/io/tcp/tcp_server.h"
 
 #ifdef _DEBUG
 	#define _CRTDBG_MAP_ALLOC
@@ -76,10 +77,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	try 
 	{
 		server caspar_device;
-		controller::io::console::console_message_stream message_stream;
-		controller::protocol::amcp::controller<controller::io::console::console_message_stream> controller(message_stream, caspar_device.get_channels());
+		controller::io::tcp::tcp_server tcp_server(5250);
+		controller::amcp::controller<controller::io::tcp::tcp_server> tcp_controller(tcp_server, caspar_device.get_channels());
 
-		message_stream.run();
+		tcp_server.run();
+
+		//controller::io::console::console_message_stream console_stream;
+		//controller::amcp::controller<controller::io::console::console_message_stream> console_controller(console_stream, caspar_device.get_channels());
+
+		//console_stream.run();
 	}
 	catch(const std::exception&)
 	{

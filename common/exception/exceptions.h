@@ -9,8 +9,6 @@ namespace caspar {
 
 typedef boost::error_info<struct tag_arg_name_info, std::string> arg_name_info;
 typedef boost::error_info<struct tag_arg_value_info, std::string> arg_value_info;
-typedef boost::error_info<struct tag_arg_name_info, std::wstring> warg_name_info;
-typedef boost::error_info<struct tag_arg_value_info, std::wstring> warg_value_info;
 typedef boost::error_info<struct tag_msg_info, std::string> msg_info;
 typedef boost::error_info<struct tag_inner_info, std::exception_ptr> inner_info;
 typedef boost::error_info<struct tag_line_info, int> line_info;

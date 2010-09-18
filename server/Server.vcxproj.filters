@@ -189,9 +189,6 @@
     <ClInclude Include="producer\transition\transition_producer.h">
       <Filter>Source\producer\transition</Filter>
     </ClInclude>
-    <ClInclude Include="controller\io\console\console_message_stream.h">
-      <Filter>Source\controller\io\console</Filter>
-    </ClInclude>
     <ClInclude Include="producer\frame_producer.h">
       <Filter>Source\producer</Filter>
     </ClInclude>
@@ -206,6 +203,15 @@
     </ClInclude>
     <ClInclude Include="controller\amcp\command.h">
       <Filter>Source\controller\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="controller\io\tcp\tcp_server.h">
+      <Filter>Source\controller\io\tcp</Filter>
+    </ClInclude>
+    <ClInclude Include="controller\io\tcp\tcp_connection.h">
+      <Filter>Source\controller\io\tcp</Filter>
+    </ClInclude>
+    <ClInclude Include="controller\io\console\console_server.h">
+      <Filter>Source\controller\io\console</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -305,9 +311,6 @@
     <ClCompile Include="producer\transition\transition_producer.cpp">
       <Filter>Source\producer\transition</Filter>
     </ClCompile>
-    <ClCompile Include="controller\io\console\console_message_stream.cpp">
-      <Filter>Source\controller\io\console</Filter>
-    </ClCompile>
     <ClCompile Include="producer\media.cpp">
       <Filter>Source\producer</Filter>
     </ClCompile>
@@ -316,6 +319,15 @@
     </ClCompile>
     <ClCompile Include="controller\amcp\command.cpp">
       <Filter>Source\controller\amcp</Filter>
+    </ClCompile>
+    <ClCompile Include="controller\io\tcp\tcp_server.cpp">
+      <Filter>Source\controller\io\tcp</Filter>
+    </ClCompile>
+    <ClCompile Include="controller\io\tcp\tcp_connection.cpp">
+      <Filter>Source\controller\io\tcp</Filter>
+    </ClCompile>
+    <ClCompile Include="controller\io\console\console_server.cpp">
+      <Filter>Source\controller\io\console</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

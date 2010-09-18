@@ -9,8 +9,9 @@
 
 #include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/range.hpp>
 
-namespace caspar { namespace controller { namespace protocol { namespace amcp {
+namespace caspar { namespace controller { namespace amcp {
 			
 unsigned int get_channel_index(const std::wstring& index_str, const std::vector<renderer::render_device_ptr>& channels)
 {	
@@ -21,14 +22,14 @@ unsigned int get_channel_index(const std::wstring& index_str, const std::vector<
 	return static_cast<unsigned int>(channel_index);
 }
 
-std::function<void()> channel_info_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> channel_info_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
 	return nullptr;
 }
 
-std::function<void()> load_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> load_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
-	static boost::wregex expr(L"\\bLOAD(?<NOPREVIEW>BG)\\s(?<CHANNEL>\\d)?-?(?<LAYER>\\d)?\\s(?<PARAMS>.*)");
+	static boost::wregex expr(L"\\bLOAD(?<NOPREVIEW>BG)?\\s(?<CHANNEL>\\d)?-?(?<LAYER>\\d)?\\s(?<PARAMS>.*)");
 
 	boost::wsmatch what;
 	if(!boost::regex_match(message, what, expr))
@@ -48,16 +49,23 @@ std::function<void()> load_command::parse(const std::wstring& message, const std
 	std::vector<std::wstring> params;
 	boost::split(params, what["PARAMS"].str(), boost::is_any_of(" "));
 
-	return [=]
+	for(size_t n = 0; n < params.size(); ++n)
+		boost::replace_all(params[n], "\"", "");
+	
+	return [=]() -> std::wstring
 	{
 		if(auto producer = load_media(params, channel->frame_format_desc()))
 			channel->load(layer_index, producer, preview ? renderer::load_option::preview : renderer::load_option::auto_play);	
 		else
 			BOOST_THROW_EXCEPTION(file_not_found());
+		
+		CASPAR_LOG(info) << L"Executed [amcp_load]";
+
+		return L"";
 	};
 }
 
-std::function<void()> play_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> play_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
 	static boost::wregex expr(L"\\bPLAY\\s(?<CHANNEL>\\d)?-?(?<LAYER>\\d)?\\s*");
 
@@ -72,10 +80,17 @@ std::function<void()> play_command::parse(const std::wstring& message, const std
 	auto channel		= channels[channel_index];
 	int	 layer_index	= what["LAYER"].matched ? boost::lexical_cast<int>(what["LAYER"].str()) : DEFAULT_CHANNEL_LAYER;
 
-	return [=]{channel->play(layer_index);};
+	return [=]() -> std::wstring
+	{
+		channel->play(layer_index);
+		
+		CASPAR_LOG(info) << L"Executed [amcp_play]";
+
+		return L"";
+	};
 }
 
-std::function<void()> stop_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> stop_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
 	static boost::wregex expr(L"\\bSTOP\\s(?<CHANNEL>\\d)?-?(?<LAYER>\\d)?\\s*");
 
@@ -89,11 +104,18 @@ std::function<void()> stop_command::parse(const std::wstring& message, const std
 	int  channel_index	= get_channel_index(what["CHANNEL"].str(), channels);
 	auto channel		= channels[channel_index];
 	int	 layer_index	= what["LAYER"].matched ? boost::lexical_cast<int>(what["LAYER"].str()) : DEFAULT_CHANNEL_LAYER;
+	
+	return [=]() -> std::wstring
+	{
+		channel->stop(layer_index);
 
-	return [=]{channel->stop(layer_index);};
+		CASPAR_LOG(info) << L"Executed [amcp_stop]";
+
+		return L"";
+	};
 }
 
-std::function<void()> clear_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> clear_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
 	static boost::wregex expr(L"\\bCLEAR\\s(?<CHANNEL>\\d)?-?(?<LAYER>\\d)?\\s*");
 
@@ -108,37 +130,39 @@ std::function<void()> clear_command::parse(const std::wstring& message, const st
 	auto channel		= channels[channel_index];
 	int	 layer_index	= what["LAYER"].matched ? boost::lexical_cast<int>(what["LAYER"].str()) : -1;
 
-	return [=]{layer_index != -1 ? channel->clear(layer_index) : channel->clear();};
+	return [=]() -> std::wstring
+	{
+		layer_index != -1 ? channel->clear(layer_index) : channel->clear();
+
+		CASPAR_LOG(info) << L"Executed [amcp_clear]";
+
+		return L"";	
+	};
 }
 
-std::function<void()> list_media_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> list_media_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
 	return nullptr;
 }
 
-std::function<void()> list_template_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> list_template_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
 	return nullptr;
 }
 
-std::function<void()> media_info_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> media_info_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
 	return nullptr;
 }
 
-std::function<void()> template_info_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> template_info_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
 	return nullptr;
 }
 
-std::function<void()> version_info_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+std::function<std::wstring()> version_info_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
 {
 	return nullptr;
 }
 
-std::function<void()> disconnect_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
-{
-	return nullptr;
-}
-
-}}}}
+}}}

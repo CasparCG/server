@@ -2,6 +2,6 @@
 
 #include "controller.h"
 
-namespace caspar { namespace controller { namespace protocol { namespace amcp {
+namespace caspar { namespace controller { namespace amcp {
 		
-}}}}
+}}}

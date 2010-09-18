@@ -7,63 +7,58 @@
 #include <functional>
 #include <string>
 
-namespace caspar { namespace controller { namespace protocol { namespace amcp {
+namespace caspar { namespace controller { namespace amcp {
 	
 const unsigned int DEFAULT_CHANNEL_LAYER = 0;
 
 struct channel_info_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 struct load_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 struct play_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 struct stop_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 struct clear_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 struct list_media_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 struct list_template_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 struct media_info_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 struct template_info_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 struct version_info_command
 {
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
-};
-
-struct disconnect_command
-{
-	static std::function<void()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
+	static std::function<std::wstring()> parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels);
 };
 
 typedef boost::fusion::vector
@@ -76,8 +71,7 @@ typedef boost::fusion::vector
 	list_template_command,
 	media_info_command,
 	template_info_command,
-	version_info_command,
-	disconnect_command
+	version_info_command
 > command_list;
 
-}}}}
+}}}
