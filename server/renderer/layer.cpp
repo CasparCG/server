@@ -13,30 +13,24 @@ struct layer::implementation
 {		
 	implementation() : preview_frame_(nullptr), active_(nullptr), background_(nullptr) {}
 	
-	void load(frame_producer_ptr frame_producer, load_option option)
+	void load(const frame_producer_ptr& frame_producer, load_option option)
 	{
 		if(frame_producer == nullptr) 
 			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("frame_producer"));
-		
-		background_.swap(frame_producer);	
+			
 		if(option == load_option::preview)		
 		{
+			preview_frame_ = frame_producer->get_frame();
+			if(preview_frame_ != nullptr)
+				preview_frame_->audio_data().clear(); // No audio
 			active_ = nullptr;	
-			try
-			{
-				preview_frame_ = background_->get_frame();
-				if(preview_frame_ != nullptr)
-					preview_frame_->audio_data().clear(); // No audio
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				background_.swap(frame_producer); // strong guarantee
-				throw;
-			}
+			background_ = frame_producer;
 		}
 		else if(option == load_option::auto_play)
+		{
+			background_ = frame_producer;
 			play();		
+		}
 	}
 	
 	void play()
@@ -82,7 +76,7 @@ struct layer::implementation
 		if(frame == nullptr)
 		{
 			active_ = active_->get_following_producer();
-			return get_frame();
+			frame = get_frame();
 		}
 		return frame;
 	}	
