@@ -92,7 +92,7 @@ std::wstring ListMedia()
 			{		
 				auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-				auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(server::media_folder().size(), itr->path().file_string().size()));
+				auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(server::media_folder().size()-1, itr->path().file_string().size()));
 
 				auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 				writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
@@ -121,7 +121,7 @@ std::wstring ListTemplates()
     {		
 		if(boost::filesystem::is_regular_file(itr->path()) && itr->path().extension() == L".ft")
 		{
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(server::template_folder().size(), itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(server::template_folder().size()-1, itr->path().file_string().size()));
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), [](char c){ return std::isdigit(c) == 0;}), writeTimeStr.end());
