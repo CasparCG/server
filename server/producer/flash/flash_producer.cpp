@@ -59,7 +59,7 @@ struct flash_producer::implementation
 {	
 	implementation(flash_producer* self, const std::wstring& filename, const frame_format_desc& format_desc) 
 		: flashax_container_(nullptr), filename_(filename), self_(self), format_desc_(format_desc),
-			bitmap_pool_(new bitmap_pool), executor_([=]{run();})
+			bitmap_pool_(new bitmap_pool), executor_([=]{run();}), invalid_count_(0)
 	{	
     	if(!boost::filesystem::exists(filename))
     		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
@@ -238,7 +238,8 @@ struct flash_producer::implementation
 	frame_ptr render_frame()
 	{
 		flashax_container_->Tick();
-		if(current_frame_ == nullptr || flashax_container_->InvalidRectangle())
+		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
+		if(current_frame_ == nullptr || invalid_count_ < 2)
 		{		
 			bitmap_frame_ptr frame;		
 			if(!bitmap_pool_->try_pop(frame))					
@@ -251,14 +252,7 @@ struct flash_producer::implementation
 			auto pool = bitmap_pool_;
 			current_frame_.reset(frame.get(), [=](bitmap_frame*)
 			{
-				common::function_task::enqueue([=]
-				{
-					try
-					{
-						pool->try_push(clear_frame(frame));
-					}
-					catch(...){}
-				});
+				common::function_task::enqueue([=]{pool->try_push(clear_frame(frame));});
 			});
 		}	
 		return current_frame_;
@@ -284,6 +278,7 @@ struct flash_producer::implementation
 
 	tbb::atomic<bool> is_empty_;
 	common::executor executor_;
+	int invalid_count_;
 };
 
 flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc) : impl_(new implementation(this, filename, format_desc)){}

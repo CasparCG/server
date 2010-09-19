@@ -69,7 +69,7 @@ private:
 		}
 		const std::wstring& message;
 		const std::vector<renderer::render_device_ptr>& channels;
-		std::wstring reply;
+		std::wstring& reply;
 	};
 
 	void on_next(const std::wstring& message, int tag)
@@ -84,14 +84,15 @@ private:
 			{
 				try
 				{
-					command_executor executor = {message_split[n], channels_};
+					std::wstring reply;
+					command_executor executor = {message_split[n], channels_, reply};
 					CASPAR_LOG(info) << "[amcp_controller] Received: " << message_split[n];
 					if(!boost::fusion::any(command_list(), executor))
 						stream_.start_write("400 INVALID\r\n", tag);
 					else
 					{
 						std::vector<std::wstring> reply_split;
-						boost::iter_split(reply_split, executor.reply, boost::algorithm::first_finder(L"\r\n"));
+						boost::iter_split(reply_split, reply, boost::algorithm::first_finder(L"\r\n"));
 
 						if(reply_split.empty())
 							stream_.start_write("202 OK\r\n", tag);

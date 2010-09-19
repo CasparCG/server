@@ -28,9 +28,11 @@ struct layer::implementation
 		}
 		else if(option == load_option::auto_play)
 		{
-			background_ = frame_producer;
-			play();		
+			background_ = frame_producer;	
+			play();	
 		}
+		else			
+			background_ = frame_producer;
 	}
 	
 	void play()

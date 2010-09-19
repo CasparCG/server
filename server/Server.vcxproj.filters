@@ -70,6 +70,9 @@
     <Filter Include="Source\controller\amcp">
       <UniqueIdentifier>{403eac8f-779d-44f2-9bcd-b9eb3863cfde}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\controller\amcp\command">
+      <UniqueIdentifier>{c0564ba4-1a34-41fa-9889-df9d31e1344c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
@@ -201,17 +204,26 @@
     <ClInclude Include="controller\amcp\exception.h">
       <Filter>Source\controller\amcp</Filter>
     </ClInclude>
-    <ClInclude Include="controller\amcp\command.h">
+    <ClInclude Include="controller\amcp\list_media.h">
       <Filter>Source\controller\amcp</Filter>
-    </ClInclude>
-    <ClInclude Include="controller\io\tcp\tcp_server.h">
-      <Filter>Source\controller\io\tcp</Filter>
     </ClInclude>
     <ClInclude Include="controller\io\tcp\tcp_connection.h">
       <Filter>Source\controller\io\tcp</Filter>
     </ClInclude>
+    <ClInclude Include="controller\io\tcp\tcp_server.h">
+      <Filter>Source\controller\io\tcp</Filter>
+    </ClInclude>
     <ClInclude Include="controller\io\console\console_server.h">
       <Filter>Source\controller\io\console</Filter>
+    </ClInclude>
+    <ClInclude Include="controller\amcp\command.h">
+      <Filter>Source\controller\amcp\command</Filter>
+    </ClInclude>
+    <ClInclude Include="controller\amcp\cg_command.h">
+      <Filter>Source\controller\amcp\command</Filter>
+    </ClInclude>
+    <ClInclude Include="controller\amcp\channel_command.h">
+      <Filter>Source\controller\amcp\command</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -317,7 +329,7 @@
     <ClCompile Include="controller\amcp\controller.cpp">
       <Filter>Source\controller\amcp</Filter>
     </ClCompile>
-    <ClCompile Include="controller\amcp\command.cpp">
+    <ClCompile Include="controller\amcp\list_media.cpp">
       <Filter>Source\controller\amcp</Filter>
     </ClCompile>
     <ClCompile Include="controller\io\tcp\tcp_server.cpp">
@@ -328,6 +340,15 @@
     </ClCompile>
     <ClCompile Include="controller\io\console\console_server.cpp">
       <Filter>Source\controller\io\console</Filter>
+    </ClCompile>
+    <ClCompile Include="controller\amcp\cg_command.cpp">
+      <Filter>Source\controller\amcp\command</Filter>
+    </ClCompile>
+    <ClCompile Include="controller\amcp\channel_command.cpp">
+      <Filter>Source\controller\amcp\command</Filter>
+    </ClCompile>
+    <ClCompile Include="controller\amcp\command.cpp">
+      <Filter>Source\controller\amcp\command</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
