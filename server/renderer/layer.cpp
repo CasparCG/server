@@ -31,6 +31,8 @@ struct layer::implementation
 			background_ = frame_producer;
 			play();		
 		}
+		else
+			background_ = frame_producer;
 	}
 	
 	void play()
