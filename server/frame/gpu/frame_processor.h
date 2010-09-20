@@ -19,27 +19,24 @@
 */
 #pragma once
 
-#include "../frame/frame_fwd.h"
-
-#include <boost/noncopyable.hpp>
-
 #include <memory>
+#include <vector>
 
-namespace caspar {
-	
-class frame_consumer : boost::noncopyable
+#include "../frame_fwd.h"
+
+namespace caspar {  namespace gpu {
+
+// NOTE: audio data is ALWAYS shallow copy
+class frame_processor : boost::noncopyable
 {
 public:
-	virtual ~frame_consumer() {}
+	frame_processor(const frame_format_desc& format_desc);
 
-	virtual const frame_format_desc& get_frame_format_desc() const = 0;
-	virtual void prepare(const frame_ptr&) {};
-	virtual void display(const frame_ptr&) {};
+	void composite(const std::vector<frame_ptr>& frames);
+	frame_ptr get_frame();
+private:
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<frame_consumer> frame_consumer_ptr;
-typedef std::shared_ptr<const frame_consumer> frame_consumer_const_ptr;
 
-typedef std::unique_ptr<frame_consumer> frame_consumer_uptr;
-typedef std::unique_ptr<const frame_consumer> frame_consumer_const_uptr;
-
-}
+}}

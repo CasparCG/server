@@ -3,7 +3,7 @@
 #include "input.h"
 
 #include "../../frame/system_frame.h"
-#include "../../frame/frame_format.h"
+#include "../../frame/format.h"
 #include "../../../common/image/image.h"
 #include "../../../common/utility/scope_exit.h"
 

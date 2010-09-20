@@ -2,6 +2,7 @@
 
 #include "../../frame/audio_chunk.h"
 #include "../../frame/frame.h"
+#include "../../frame/format.h"
 
 #include <tbb/scalable_allocator.h>
 #include <type_traits>

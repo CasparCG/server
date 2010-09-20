@@ -4,6 +4,8 @@
 
 #include <boost/signals2.hpp>
 
+#include "../../../renderer/render_device.h"
+
 namespace caspar { namespace controller { namespace io { namespace console {
 
 struct console_server::implementation
@@ -27,9 +29,13 @@ struct console_server::implementation
 			std::getline(std::wcin, wcmd); // TODO: It's blocking...
 			is_running = wcmd != L"exit" && wcmd != L"q";
 			if(wcmd == L"1")
-				wcmd = L"LOADBG 1-1 DV SLIDE 50 LOOP AUTOPLAY";
+				wcmd = L"LOADBG 1-1 1 DV SLIDE 50 LOOP";
 			else if(wcmd == L"2")
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
+			else if(wcmd == L"enable_gpu")
+				renderer::render_device::use_gpu_processing(true);
+			else if(wcmd == L"disable_gpu")
+				renderer::render_device::use_gpu_processing(false);
 
 			wcmd += L"\r\n";
 			signal_(wcmd, 0);

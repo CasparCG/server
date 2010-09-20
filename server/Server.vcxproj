@@ -294,10 +294,12 @@
     <ClInclude Include="controller\io\console\console_server.h" />
     <ClInclude Include="controller\io\tcp\tcp_connection.h" />
     <ClInclude Include="controller\io\tcp\tcp_server.h" />
+    <ClInclude Include="frame\algorithm.h" />
     <ClInclude Include="frame\frame.h" />
-    <ClInclude Include="frame\frame_format.h" />
+    <ClInclude Include="frame\format.h" />
     <ClInclude Include="frame\audio_chunk.h" />
     <ClInclude Include="frame\frame_fwd.h" />
+    <ClInclude Include="frame\gpu\frame_processor.h" />
     <ClInclude Include="producer\color\color_producer.h" />
     <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h" />
     <ClInclude Include="producer\ffmpeg\ffmpeg_producer.h" />
@@ -428,11 +430,17 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="frame\frame_format.cpp">
+    <ClCompile Include="frame\format.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">..\stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="frame\gpu\frame_processor.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\color\color_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -602,6 +610,7 @@
     <None Include="caspar.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="My Amplifier Results\r000hs\r000hs.ampl" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\common\common.vcxproj">

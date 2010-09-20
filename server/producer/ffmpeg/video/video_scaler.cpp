@@ -2,7 +2,7 @@
 
 #include "video_scaler.h"
 
-#include "../../../frame/frame_format.h"
+#include "../../../frame/format.h"
 #include "../../../../common/image/image.h"
 
 #include <tbb/parallel_for.h>

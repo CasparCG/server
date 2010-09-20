@@ -21,7 +21,7 @@
 #include "..\..\stdafx.h"
 
 #include "FlashAxContainer.h"
-#include "..\..\frame\frame_format.h"
+#include "..\..\frame\format.h"
 #include "flash_producer.h"
 #include "TimerHelper.h"
 

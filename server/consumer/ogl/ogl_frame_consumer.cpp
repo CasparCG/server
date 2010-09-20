@@ -27,7 +27,7 @@
 #include "ogl_frame_consumer.h"
 
 #include "../../frame/system_frame.h"
-#include "../../frame/frame_format.h"
+#include "../../frame/format.h"
 #include "../../../common/image/image.h"
 
 #include <boost/thread.hpp>
@@ -155,7 +155,7 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
 		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
-
+		
 		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 		GL_CHECK();
 

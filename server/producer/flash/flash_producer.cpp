@@ -29,8 +29,9 @@
 #include "TimerHelper.h"
 
 #include "../../frame/bitmap_frame.h"
-#include "../../frame/frame_format.h"
+#include "../../frame/format.h"
 #include "../../frame/system_frame.h"
+#include "../../frame/algorithm.h"
 #include "../../../common/utility/find_file.h"
 #include "../../server.h"
 #include "../../../common/concurrency/executor.h"

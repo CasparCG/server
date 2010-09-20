@@ -24,7 +24,7 @@
 
 #include "../../frame/audio_chunk.h"
 #include "../../frame/frame.h"
-#include "../../frame/frame_format.h"
+#include "../../frame/format.h"
 
 #include <SFML/Audio.hpp>
 

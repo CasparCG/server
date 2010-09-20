@@ -6,7 +6,9 @@
 #include "../consumer/frame_consumer.h"
 
 #include "../frame/system_frame.h"
-#include "../frame/frame_format.h"
+#include "../frame/format.h"
+#include "../frame/algorithm.h"
+#include "../frame/gpu/frame_processor.h"
 
 #include "../../common/utility/scope_exit.h"
 #include "../../common/image/image.h"
@@ -47,7 +49,7 @@ std::vector<frame_ptr> render_frames(std::map<int, layer>& layers)
 struct render_device::implementation : boost::noncopyable
 {	
 	implementation(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers)  
-		: consumers_(consumers), fmt_(format_desc)
+		: consumers_(consumers), fmt_(format_desc), gpu_frame_processor_(format_desc)
 	{	
 		is_running_ = true;
 		if(consumers.empty())
@@ -88,11 +90,21 @@ struct render_device::implementation : boost::noncopyable
 				std::vector<frame_ptr> next_frames;
 				frame_ptr composite_frame;		
 
-				{
+				if(render_device::disable_gpu_)
+				{	
 					tbb::mutex::scoped_lock lock(layers_mutex_);	
 					tbb::parallel_invoke(
-						[&]{next_frames = render_frames(layers_);}, 
-						[&]{composite_frame = compose_frames(current_frames.empty() ? std::make_shared<system_frame>(fmt_.size) : current_frames[0], current_frames);});
+							[&]{next_frames = render_frames(layers_);}, 
+							[&]{composite_frame = compose_frames(current_frames.empty() ? std::make_shared<system_frame>(fmt_.size) : current_frames[0], current_frames);});
+				}
+				else
+				{
+					{
+						tbb::mutex::scoped_lock lock(layers_mutex_);	
+						next_frames = render_frames(layers_);
+					}
+					gpu_frame_processor_.composite(next_frames);
+					composite_frame = gpu_frame_processor_.get_frame();
 				}
 
 				current_frames = std::move(next_frames);		
@@ -231,6 +243,8 @@ struct render_device::implementation : boost::noncopyable
 	std::map<int, layer> layers_;
 	
 	tbb::atomic<bool> is_running_;	
+
+	gpu::frame_processor gpu_frame_processor_;
 };
 
 render_device::render_device(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 
@@ -243,5 +257,12 @@ void render_device::clear(){impl_->clear();}
 frame_producer_ptr render_device::active(int exLayer) const {return impl_->active(exLayer);}
 frame_producer_ptr render_device::background(int exLayer) const {return impl_->background(exLayer);}
 const frame_format_desc& render_device::frame_format_desc() const{return impl_->fmt_;}
+
+tbb::atomic<bool> render_device::disable_gpu_;
+void render_device::use_gpu_processing(bool value)
+{
+	render_device::disable_gpu_ = !value;
+}
+
 }}
 

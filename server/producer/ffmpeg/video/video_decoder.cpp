@@ -1,6 +1,8 @@
 #include "../../../stdafx.h"
 
 #include "video_decoder.h"
+
+#include "../../../frame/algorithm.h"
 		
 namespace caspar{ namespace ffmpeg{
 

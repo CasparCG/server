@@ -21,7 +21,8 @@
 
 #include "transition_producer.h"
 
-#include "../../frame/frame_format.h"
+#include "../../frame/format.h"
+#include "../../frame/algorithm.h"
 
 #include "../../../common/image/image.h"
 #include "../../frame/system_frame.h"

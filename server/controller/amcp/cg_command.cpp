@@ -10,9 +10,9 @@
 #include "../../producer/flash/cg_producer.h"
 #include "../../producer/flash/flash_producer.h"
 
-#include "../../../server/server.h"
+#include "../../server.h"
 
-#inclide "../../../../common/utility/scope_exit.h"
+#include "../../../common/utility/scope_exit.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -20,23 +20,30 @@ namespace caspar { namespace controller { namespace amcp {
 	
 std::wstring get_data(const std::wstring& data)
 {
-	std::wstring result = data;
-	if(!data.empty() && data[0] != TEXT('<'))
-	{ //The data is not an XML-string, it must be a filename		
-		std::wstring filename = server::data_folder() + data + L".ftd";
+	if(data.empty())
+		return L"";
 
-		std::wifstream datafile(filename.c_str());
-		if(datafile) 
-		{
-			CASPAR_SCOPE_EXIT([=]{datafile.close();});
-			//read all data
-			std::wstringstream file_data;
-			file_data << datafile.rdbuf();			
+	if(data[0] == L'<')
+		return data;
 
-			result = file_data.str();
-		}		
-	}
-	return result;
+	//The data is not an XML-string, it must be a filename	
+	std::wstring filename = server::data_folder() + data + L".ftd";
+
+	std::wifstream datafile(filename.c_str());
+	if(datafile) 
+	{ 
+		CASPAR_SCOPE_EXIT([&]{datafile.close();});
+		
+		std::wstringstream file_data;
+		file_data << datafile.rdbuf();			
+
+		auto result = file_data.str();
+		if(result.empty() || result[0] != L'<')
+			return result;
+	}		
+	
+	CASPAR_LOG(warning) << "[cg_command] Invalid Data";
+	return L"";
 }
 
 std::function<std::wstring()> channel_cg_add_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
@@ -48,7 +55,9 @@ std::function<std::wstring()> channel_cg_add_command::parse(const std::wstring& 
 		return nullptr;
 
 	auto info = channel_info::parse(what, channels);
+
 	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
+
 	std::wstring templatename = what["TEMPLATE"].str();
 	bool play_on_load = what["PLAY_ON_LOAD"].matched ? what["PLAY_ON_LOAD"].str() != L"0" : 0;
 	std::wstring start_label = what["START_LABEL"].str();	
@@ -83,6 +92,7 @@ std::function<std::wstring()> channel_cg_remove_command::parse(const std::wstrin
 		return nullptr;
 
 	auto info = channel_info::parse(what, channels);
+
 	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
 	
 	return [=]() -> std::wstring
@@ -124,6 +134,7 @@ std::function<std::wstring()> channel_cg_play_command::parse(const std::wstring&
 		return nullptr;
 
 	auto info = channel_info::parse(what, channels);
+
 	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
 	
 	return [=]() -> std::wstring
@@ -145,6 +156,7 @@ std::function<std::wstring()> channel_cg_stop_command::parse(const std::wstring&
 		return nullptr;
 
 	auto info = channel_info::parse(what, channels);
+
 	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
 	
 	return [=]() -> std::wstring
@@ -166,6 +178,7 @@ std::function<std::wstring()> channel_cg_next_command::parse(const std::wstring&
 		return nullptr;
 
 	auto info = channel_info::parse(what, channels);
+
 	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
 	
 	return [=]() -> std::wstring
@@ -187,6 +200,7 @@ std::function<std::wstring()> channel_cg_goto_command::parse(const std::wstring&
 		return nullptr;
 
 	auto info = channel_info::parse(what, channels);
+
 	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
 	
 	BOOST_THROW_EXCEPTION(not_implemented());
@@ -201,6 +215,7 @@ std::function<std::wstring()> channel_cg_update_command::parse(const std::wstrin
 		return nullptr;
 
 	auto info = channel_info::parse(what, channels);
+
 	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
 	std::wstring data = get_data(what["DATA"].str());
 	
@@ -223,6 +238,7 @@ std::function<std::wstring()> channel_cg_invoke_command::parse(const std::wstrin
 		return nullptr;
 
 	auto info = channel_info::parse(what, channels);
+
 	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
 	std::wstring method = get_data(what["METHOD"].str());
 	

@@ -3,7 +3,7 @@
 #include "command.h"
 #include "exception.h"
 
-#include "../../frame/frame_format.h"
+#include "../../frame/format.h"
 
 #include "../../server.h"
 

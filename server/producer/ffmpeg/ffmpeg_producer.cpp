@@ -28,7 +28,7 @@ extern "C"
 #include "video/video_deinterlacer.h"
 #include "video/video_scaler.h"
 
-#include "../../frame/frame_format.h"
+#include "../../frame/format.h"
 #include "../../../common/utility/find_file.h"
 #include "../../server.h"
 #include "../../../common/image/image.h"

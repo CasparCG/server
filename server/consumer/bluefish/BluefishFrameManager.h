@@ -24,7 +24,7 @@
 #pragma once
 
 #include "..\..\frame\system_frame.h"
-#include "..\..\frame\frame_format.h"
+#include "..\..\frame\format.h"
 #include <list>
 #include <memory>
 #include "BluefishException.h"

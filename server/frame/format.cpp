@@ -20,7 +20,7 @@
  
 #include "..\StdAfx.h"
 
-#include "frame_format.h"
+#include "format.h"
 
 #include <boost/algorithm/string.hpp>
 

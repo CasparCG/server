@@ -4,7 +4,7 @@
 #include "image_loader.h"
 
 #include "../../frame/system_frame.h"
-#include "../../frame/frame_format.h"
+#include "../../frame/format.h"
 #include "../../server.h"
 #include "../../../common/utility/find_file.h"
 #include "../../../common/image/image.h"

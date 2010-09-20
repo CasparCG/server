@@ -23,7 +23,7 @@
 #include "color_producer.h"
 
 #include "../../frame/system_frame.h"
-#include "../../frame/frame_format.h"
+#include "../../frame/format.h"
 
 #include <intrin.h>
 #pragma intrinsic(__movsd, __stosd)
