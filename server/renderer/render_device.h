@@ -29,12 +29,9 @@ public:
 
 	const frame_format_desc& frame_format_desc() const;		
 
-	static void use_gpu_processing(bool value); 
-
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
-	static tbb::atomic<bool> disable_gpu_;
 };
 typedef std::shared_ptr<render_device> render_device_ptr;
 typedef std::unique_ptr<render_device> render_device_uptr;

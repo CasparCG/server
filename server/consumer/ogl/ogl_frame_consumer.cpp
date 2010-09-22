@@ -29,6 +29,7 @@
 #include "../../frame/system_frame.h"
 #include "../../frame/format.h"
 #include "../../../common/image/image.h"
+#include "../../../common/gpu/pixel_buffer.h"
 
 #include <boost/thread.hpp>
 
@@ -48,9 +49,8 @@ void GL_CHECK()
 struct ogl_frame_consumer::implementation : boost::noncopyable
 {	
 	implementation(const frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
-		: format_desc_(format_desc), stretch_(stretch), texture_(0), pbo_index_(0), screen_width_(0), screen_height_(0), windowed_(windowed)
+		: format_desc_(format_desc), stretch_(stretch), pbo_index_(0), screen_width_(0), screen_height_(0), windowed_(windowed)
 	{
-		pbos_[0] = pbos_[1] = 0;
 		
 #ifdef _WIN32
 		DISPLAY_DEVICE dDevice;			
@@ -98,11 +98,6 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 	{
 		frame_buffer_.push(nullptr),
 		thread_.join();
-
-		if(texture_)
-			glDeleteTextures(1, &texture_);
-		if(pbos_[0] && pbos_[1])
-			glDeleteBuffers(2, pbos_);
 	}
 
 	void init()	
@@ -116,6 +111,8 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glEnable(GL_TEXTURE_2D);
+		glLoadIdentity();
+		glScalef(1.0f, -1.0f, 1.0f);
 					
 		glViewport(0, 0, screen_width_, screen_height_);
 		
@@ -132,39 +129,8 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 		float wSize = target_ratio.first;
 		float hSize = target_ratio.second;
 
-		dlist_ = glGenLists(1);
-		GL_CHECK();
-
-		glNewList(dlist_, GL_COMPILE);
-			glBegin(GL_QUADS);
-				glTexCoord2f(0.0f,	 1.0f);		glVertex2f(-wSize, -hSize);
-				glTexCoord2f(1.0f,	 1.0f);		glVertex2f( wSize, -hSize);
-				glTexCoord2f(1.0f,	 0.0f);		glVertex2f( wSize,  hSize);
-				glTexCoord2f(0.0f,	 0.0f);		glVertex2f(-wSize,  hSize);
-			glEnd();	
-		glEndList();
-		GL_CHECK();
-			
-		glGenTextures(1, &texture_);	
-		GL_CHECK();
-
-		glBindTexture( GL_TEXTURE_2D, texture_);
-		GL_CHECK();
-
-		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
-		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
-		
-		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-		GL_CHECK();
-
-		glGenBuffersARB(2, pbos_);
-		GL_CHECK();
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbos_[0]);
-		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW);
-		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]);
-		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW);		
+		pbos_[0] = std::make_shared<common::gpu::write_pixel_buffer>(format_desc_.width, format_desc_.height);	
+		pbos_[1] = std::make_shared<common::gpu::write_pixel_buffer>(format_desc_.width, format_desc_.height);	
 
 		pbo_index_ = 0;
 	}
@@ -204,34 +170,20 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 	}
 
 	void render(const frame_ptr& frame)
-	{					
+	{				
+		pbo_index_ = (pbo_index_ + 1) % 2;
+		int next_index = (pbo_index_ + 1) % 2;
+		
 		// Render
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glLoadIdentity();
-	
-		glBindTexture(GL_TEXTURE_2D, texture_);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[pbo_index_]);
-	
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
-
-		glCallList(dlist_);		
+		
+		glClear(GL_COLOR_BUFFER_BIT);	
+		pbos_[pbo_index_]->end_write();		
+		pbos_[pbo_index_]->draw();			
 
 		// Update
 		int nextPboIndex = pbo_index_ ^ 1;
 
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[nextPboIndex]);
-		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, NULL, GL_STREAM_DRAW);
-		GLubyte* ptr = static_cast<GLubyte*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY));
-
-		if(ptr != NULL)			
-		{
-			common::image::copy(ptr, frame->data(), frame->size());
-			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-		}
-
-		// Swap
-		pbo_index_ = nextPboIndex;
+		pbos_[next_index]->begin_write(frame->data());
 	}
 			
 	void display(const frame_ptr& frame)
@@ -280,17 +232,13 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 		while(frame != nullptr);
 	}
 		
-
-	GLuint dlist_;
-	GLuint texture_;
-
 	bool windowed_;
 	unsigned int screen_width_;
 	unsigned int screen_height_;
 	unsigned int screenX_;
 	unsigned int screenY_;
 				
-	GLuint pbos_[2];
+	common::gpu::write_pixel_buffer_ptr pbos_[2];
 	int pbo_index_;
 
 	std::unique_ptr<sf::Window> window_;

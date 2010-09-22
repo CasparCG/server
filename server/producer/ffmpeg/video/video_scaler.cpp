@@ -51,7 +51,7 @@ struct video_scaler::implementation : boost::noncopyable
 		if(!sws_context_)
 		{
 			double param;
-			sws_context_.reset(sws_getContext(video_packet->codec_context->width, video_packet->codec_context->height, video_packet->codec_context->pix_fmt, video_packet->format_desc.width, video_packet->format_desc.height, 
+			sws_context_.reset(sws_getContext(video_packet->codec_context->width, video_packet->codec_context->height, video_packet->codec_context->pix_fmt, video_packet->frame->width(), video_packet->frame->height(), 
 												PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 		}
 		
@@ -59,14 +59,14 @@ struct video_scaler::implementation : boost::noncopyable
 		//avcodec_get_frame_defaults(avFrame);
 		//avpicture_fill(reinterpret_cast<AVPicture*>(&avFrame), video_packet->frame->data(), PIX_FMT_BGRA, video_packet->frameFormat.width, video_packet->frameFormat.height);
 		
-		fill_frame fill_frame(video_packet->format_desc.width, video_packet->format_desc.height);
+		fill_frame fill_frame(video_packet->frame->width(), video_packet->frame->height());
 		int result = sws_scale(sws_context_.get(), video_packet->decoded_frame->data, video_packet->decoded_frame->linesize, 0, video_packet->codec_context->height, fill_frame.frame->data, fill_frame.frame->linesize);
 		video_packet->decoded_frame.reset(); // Free memory
 		
 		if(video_packet->codec->id == CODEC_ID_DVVIDEO) // Move up one field
 		{
-			size_t size = video_packet->format_desc.width * video_packet->format_desc.height * 4;
-			size_t linesize = video_packet->format_desc.width * 4;
+			size_t size = video_packet->frame->size();
+			size_t linesize = video_packet->frame->width() * 4;
 			common::image::copy(video_packet->frame->data(), fill_frame.buffer.get() + linesize, size - linesize);
 			common::image::clear(video_packet->frame->data() + size - linesize, linesize);
 		}

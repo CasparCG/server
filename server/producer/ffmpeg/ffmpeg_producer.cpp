@@ -57,8 +57,8 @@ public:
 	static const size_t LOAD_TARGET_BUFFER_SIZE = 4;
 	static const size_t THREAD_TIMEOUT_MS = 1000;
 
-	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params, const frame_format_desc& format_desc) 
-		: filename_(filename), format_desc_(format_desc)
+	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) 
+		: filename_(filename)
 	{
     	if(!boost::filesystem::exists(filename))
     		BOOST_THROW_EXCEPTION(file_not_found() <<  boost::errinfo_file_name(common::narrow(filename)));
@@ -66,7 +66,7 @@ public:
 		static boost::once_flag flag = BOOST_ONCE_INIT;
 		boost::call_once(av_register_all, flag);	
 		
-		input_.reset(new input(format_desc));
+		input_.reset(new input());
 		input_->set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
 		input_->load(common::narrow(filename_));
 
@@ -131,9 +131,7 @@ public:
 		}
 		return frame;
 	}
-
-	const frame_format_desc& get_frame_format_desc() const { return format_desc_; }
-		
+			
 	bool has_audio_;
 
 	// Filter 1 : Input
@@ -153,7 +151,6 @@ public:
 	std::queue<frame_ptr>			ouput_channel_;
 	
 	std::wstring					filename_;
-	frame_format_desc			format_desc_;
 };
 
 frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& params, const frame_format_desc& format_desc)
@@ -163,7 +160,7 @@ frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& para
 	if(result_filename.empty())
 		return nullptr;
 
-	return std::make_shared<ffmpeg_producer>(result_filename, params, format_desc);
+	return std::make_shared<ffmpeg_producer>(result_filename, params);
 }
 
 }}

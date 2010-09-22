@@ -37,7 +37,7 @@ class empty_producer : public frame_producer
 {
 public:
 	explicit empty_producer(const frame_format_desc& format_desc) 
-		: format_desc_(format_desc), frame_(clear_frame(std::make_shared<system_frame>(format_desc_.size)))
+		: format_desc_(format_desc), frame_(clear_frame(std::make_shared<system_frame>(format_desc_)))
 	{}	
 
 	frame_ptr get_frame() { return frame_; }
@@ -105,7 +105,7 @@ struct transition_producer::implementation : boost::noncopyable
 		frame_ptr result_frame = dest_frame;		
 		if(src_frame != nullptr && dest_frame != nullptr)
 		{
-			result_frame = std::make_shared<system_frame>(format_desc_.size);
+			result_frame = std::make_shared<system_frame>(format_desc_);
 			tbb::parallel_invoke(
 			[&]
 			{
@@ -265,6 +265,5 @@ transition_producer::transition_producer(const frame_producer_ptr& dest, const t
 frame_ptr transition_producer::get_frame(){return impl_->get_frame();}
 frame_producer_ptr transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const frame_producer_ptr& producer) { impl_->set_leading_producer(producer); }
-const frame_format_desc& transition_producer::get_frame_format_desc() const { return impl_->format_desc_; } 
 
 }

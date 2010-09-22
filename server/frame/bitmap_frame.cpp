@@ -66,7 +66,8 @@ private:
 
 struct bitmap_frame::implementation : boost::noncopyable
 {
-	implementation(size_t width, size_t height) : size_(width*height*4), hdc_(CreateCompatibleDC(nullptr)), bitmap_(nullptr)
+	implementation(size_t width, size_t height) 
+		: size_(width*height*4), width_(width), height_(height), hdc_(CreateCompatibleDC(nullptr)), bitmap_(nullptr)
 	{	
 		if(hdc_ == nullptr)
 			throw std::bad_alloc();
@@ -91,13 +92,17 @@ struct bitmap_frame::implementation : boost::noncopyable
 	}
 	
 	const size_t size_;
+	const size_t width_;
+	const size_t height_;
 	unsigned char* bitmap_data_;
 	scoped_hdc hdc_;
 	scoped_bitmap bitmap_;
 };
 
 bitmap_frame::bitmap_frame(size_t width, size_t height) : impl_(new implementation(width, height)){}
-unsigned int bitmap_frame::size() const { return impl_->size_; }
+size_t bitmap_frame::size() const { return impl_->size_; }
+size_t bitmap_frame::width() const { return impl_->width_; }
+size_t bitmap_frame::height() const { return impl_->height_; }
 unsigned char* bitmap_frame::data() { return impl_->bitmap_data_; }
 HDC bitmap_frame::hdc() { return impl_->hdc_; }
 

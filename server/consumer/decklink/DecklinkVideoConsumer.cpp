@@ -84,6 +84,15 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 			return pDecklinkFrame_->GetRowBytes() * pDecklinkFrame_->GetHeight();
 		}
 
+		size_t width() const
+		{
+			return pDecklinkFrame_->GetWidth();
+		}
+		size_t height() const
+		{
+			return pDecklinkFrame_->GetHeight();
+		}
+
 		IDeckLinkMutableVideoFrame*  meta_data() const 
 		{
 			return pDecklinkFrame_;
@@ -179,7 +188,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		}
 
 		frame_ptr CreateFrame() {
-			return std::make_shared<system_frame>(pConsumerImpl_->get_frame_format_desc().size);
+			return std::make_shared<system_frame>(pConsumerImpl_->get_frame_format_desc());
 		}
 
 		std::shared_ptr<DecklinkVideoFrame>  CreateReservedFrame() {

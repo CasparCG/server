@@ -43,13 +43,14 @@ std::vector<frame_ptr> render_frames(std::map<int, layer>& layers)
 	});					
 	boost::range::remove_erase(frames, nullptr);
 	boost::range::remove_erase_if(frames, [](const frame_const_ptr& frame) { return *frame == *frame::null();});
+	
 	return frames;
 }
 
 struct render_device::implementation : boost::noncopyable
 {	
 	implementation(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers)  
-		: consumers_(consumers), fmt_(format_desc), gpu_frame_processor_(format_desc)
+		: consumers_(consumers), format_desc_(format_desc), gpu_frame_processor_(format_desc)
 	{	
 		is_running_ = true;
 		if(consumers.empty())
@@ -90,22 +91,12 @@ struct render_device::implementation : boost::noncopyable
 				std::vector<frame_ptr> next_frames;
 				frame_ptr composite_frame;		
 
-				if(render_device::disable_gpu_)
-				{	
-					tbb::mutex::scoped_lock lock(layers_mutex_);	
-					tbb::parallel_invoke(
-							[&]{next_frames = render_frames(layers_);}, 
-							[&]{composite_frame = compose_frames(current_frames.empty() ? std::make_shared<system_frame>(fmt_.size) : current_frames[0], current_frames);});
-				}
-				else
 				{
-					{
-						tbb::mutex::scoped_lock lock(layers_mutex_);	
-						next_frames = render_frames(layers_);
-					}
-					gpu_frame_processor_.composite(next_frames);
-					composite_frame = gpu_frame_processor_.get_frame();
+					tbb::mutex::scoped_lock lock(layers_mutex_);	
+					next_frames = render_frames(layers_);
 				}
+				gpu_frame_processor_.composite(next_frames);
+				composite_frame = gpu_frame_processor_.get_frame();
 
 				current_frames = std::move(next_frames);		
 				frame_buffer_.push(std::move(composite_frame));
@@ -126,7 +117,7 @@ struct render_device::implementation : boost::noncopyable
 		CASPAR_LOG(info) << L"Started render_device::display Thread";
 		win32_exception::install_handler();
 				
-		frame_ptr frame = clear_frame(std::make_shared<system_frame>(fmt_.size));
+		frame_ptr frame = clear_frame(std::make_shared<system_frame>(format_desc_));
 		std::deque<frame_ptr> prepared(3, frame);
 				
 		while(is_running_)
@@ -174,9 +165,6 @@ struct render_device::implementation : boost::noncopyable
 		
 	void load(int exLayer, const frame_producer_ptr& producer, load_option option)
 	{
-		if(producer->get_frame_format_desc() != fmt_)
-			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("pProducer") << msg_info("Invalid frame format"));
-
 		tbb::mutex::scoped_lock lock(layers_mutex_);
 		layers_[exLayer].load(producer, option);
 	}
@@ -234,7 +222,7 @@ struct render_device::implementation : boost::noncopyable
 	boost::thread render_thread_;
 	boost::thread display_thread_;
 		
-	caspar::frame_format_desc fmt_;
+	caspar::frame_format_desc format_desc_;
 	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
 	
 	std::vector<frame_consumer_ptr> consumers_;
@@ -256,13 +244,7 @@ void render_device::clear(int exLayer){impl_->clear(exLayer);}
 void render_device::clear(){impl_->clear();}
 frame_producer_ptr render_device::active(int exLayer) const {return impl_->active(exLayer);}
 frame_producer_ptr render_device::background(int exLayer) const {return impl_->background(exLayer);}
-const frame_format_desc& render_device::frame_format_desc() const{return impl_->fmt_;}
-
-tbb::atomic<bool> render_device::disable_gpu_;
-void render_device::use_gpu_processing(bool value)
-{
-	render_device::disable_gpu_ = !value;
-}
+const frame_format_desc& render_device::frame_format_desc() const{return impl_->format_desc_;}
 
 }}
 

@@ -32,10 +32,8 @@ struct console_server::implementation
 				wcmd = L"LOADBG 1-1 1 DV SLIDE 50 LOOP";
 			else if(wcmd == L"2")
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
-			else if(wcmd == L"enable_gpu")
-				renderer::render_device::use_gpu_processing(true);
-			else if(wcmd == L"disable_gpu")
-				renderer::render_device::use_gpu_processing(false);
+			else if(wcmd == L"3")
+				wcmd = L"LOADBG 1-3 1 A LOOP";
 
 			wcmd += L"\r\n";
 			signal_(wcmd, 0);

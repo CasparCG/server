@@ -84,7 +84,7 @@ struct image_scroll_producer : public frame_producer
 
 	frame_ptr render_frame()
 	{
-		frame_ptr frame = std::make_shared<system_frame>(format_desc_.size);
+		frame_ptr frame = std::make_shared<system_frame>(format_desc_);
 		common::image::clear(frame->data(), frame->size());
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;

@@ -31,7 +31,9 @@ public:
 	bitmap_frame(size_t width, size_t height);
 
 	unsigned char* data();
-	unsigned int size() const;	
+	size_t size() const;	
+	size_t width() const;
+	size_t height() const;
 	HDC hdc();
 private:
 	struct implementation;

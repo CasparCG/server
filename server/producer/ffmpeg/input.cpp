@@ -6,6 +6,7 @@
 #include "../../frame/format.h"
 #include "../../../common/image/image.h"
 #include "../../../common/utility/scope_exit.h"
+#include "../../renderer/render_device.h"
 
 #include <tbb/concurrent_queue.h>
 
@@ -20,8 +21,8 @@ namespace caspar{ namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
 {
-	implementation(const frame_format_desc& format_desc) 
-		: video_frame_rate_(25.0), video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_a(nullptr), format_desc_(format_desc)
+	implementation() 
+		: video_frame_rate_(25.0), video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_a(nullptr)
 	{
 		loop_ = false;
 		video_packet_buffer_.set_capacity(28);
@@ -158,8 +159,11 @@ struct input::implementation : boost::noncopyable
 
 				if (av_read_frame(format_context.get(), packet.get()) >= 0) // NOTE: Packet is only valid until next call of av_read_frame or av_close_input_file
 				{
-					if(packet->stream_index == video_s_index_) 				
-						video_packet_buffer_.push(std::make_shared<video_packet>(packet, std::make_shared<system_frame>(format_desc_.size), format_desc_, video_codec_context_.get(), video_codec_));		 // NOTE: video_packet makes a copy of AVPacket
+					if(packet->stream_index == video_s_index_) 		
+					{
+						frame_ptr dest = std::make_shared<system_frame>(video_codec_context_->width, video_codec_context_->height);
+						video_packet_buffer_.push(std::make_shared<video_packet>(packet, std::move(dest), video_codec_context_.get(), video_codec_));		 // NOTE: video_packet makes a copy of AVPacket
+					}
 					else if(packet->stream_index == audio_s_index_) 	
 						audio_packet_buffer_.push(std::make_shared<audio_packet>(packet, audio_codex_context.get(), audio_codec_a, video_frame_rate_));			
 				}
@@ -208,9 +212,7 @@ struct input::implementation : boost::noncopyable
 	tbb::atomic<bool>					loop_;
 	int									video_s_index_;
 	int									audio_s_index_;
-
-	frame_format_desc format_desc_;
-
+	
 	tbb::concurrent_bounded_queue<video_packet_ptr> video_packet_buffer_;
 	tbb::concurrent_bounded_queue<audio_packet_ptr> audio_packet_buffer_;
 	boost::thread	io_thread_;
@@ -219,7 +221,7 @@ struct input::implementation : boost::noncopyable
 	double video_frame_rate_;
 };
 
-input::input(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+input::input() : impl_(new implementation()){}
 void input::load(const std::string& filename){impl_->load(filename);}
 void input::set_loop(bool value){impl_->loop_ = value;}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}

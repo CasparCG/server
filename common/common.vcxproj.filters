@@ -23,6 +23,9 @@
     <Filter Include="Source\hardware">
       <UniqueIdentifier>{5115d125-61f1-4fdd-9924-0f1bdced5d27}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\gpu">
+      <UniqueIdentifier>{aad2db69-fa26-4bf0-a892-bb9f2973a946}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -63,6 +66,9 @@
     </ClCompile>
     <ClCompile Include="utility\find_file.cpp">
       <Filter>Source\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="gpu\pixel_buffer.cpp">
+      <Filter>Source\gpu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -125,6 +131,15 @@
     </ClInclude>
     <ClInclude Include="utility\find_file.h">
       <Filter>Source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="gpu\pixel_buffer.h">
+      <Filter>Source\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="gpu\texture.h">
+      <Filter>Source\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="gpu\gl_check.h">
+      <Filter>Source\gpu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

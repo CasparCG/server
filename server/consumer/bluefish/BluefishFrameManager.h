@@ -132,6 +132,8 @@ public:
 	unsigned char* data() { return data_;	}
 
 	unsigned int size() const { return size_; }
+	size_t width() const { return 0; }
+	size_t height() const { return 0; }
 	
 	long meta_data() const { return buffer_id_; }
 

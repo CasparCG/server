@@ -17,7 +17,7 @@ namespace caspar{ namespace image{
 
 struct image_producer : public frame_producer
 {
-	image_producer(const std::wstring& filename, const frame_format_desc& format_desc) : format_desc_(format_desc)
+	image_producer(const std::wstring& filename, const frame_format_desc& format_desc)
 	{
 		auto bitmap = load_image(filename);
 
@@ -30,7 +30,7 @@ struct image_producer : public frame_producer
 
 		FreeImage_FlipVertical(bitmap.get());
 
-		frame_ = std::make_shared<system_frame>(format_desc.size);
+		frame_ = std::make_shared<system_frame>(format_desc);
 		common::image::copy(frame_->data(), FreeImage_GetBits(bitmap.get()), frame_->size());
 	}
 
@@ -39,9 +39,6 @@ struct image_producer : public frame_producer
 		return frame_;
 	}
 
-	const frame_format_desc& get_frame_format_desc() const { return format_desc_; } 
-
-	frame_format_desc format_desc_;
 	frame_ptr frame_;
 };
 

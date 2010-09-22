@@ -20,6 +20,7 @@
 #pragma once
 
 #include "frame.h"
+#include "frame_fwd.h"
 
 #include <memory>
 
@@ -28,14 +29,19 @@ namespace caspar {
 class system_frame : public frame
 {
 public:
-	explicit system_frame(unsigned int dataSize);
+	explicit system_frame(const frame_format_desc& format);
+	system_frame(size_t width, size_t height);
 	~system_frame();
 
 	unsigned char* data();
-	unsigned int size() const;
+	size_t size() const;
+	size_t width() const;
+	size_t height() const;
 private:
 	unsigned char* const data_;
 	const size_t size_;
+	const size_t width_;
+	const size_t height_;
 };
 
 }

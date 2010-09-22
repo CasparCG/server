@@ -11,7 +11,7 @@ typedef std::shared_ptr<AVFormatContext> AVFormatContextPtr;
 class input : boost::noncopyable
 {
 public:
-	input(const frame_format_desc& format_desc);
+	input();
 	void load(const std::string& filename);
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;

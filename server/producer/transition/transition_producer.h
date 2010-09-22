@@ -64,7 +64,6 @@ public:
 
 	frame_producer_ptr get_following_producer() const;
 	void set_leading_producer(const frame_producer_ptr& producer);
-	const frame_format_desc& get_frame_format_desc() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

@@ -2,13 +2,14 @@
 
 #include "frame_processor.h"
 
+#include "../../../common/gpu/pixel_buffer.h"
+
 #include "../frame.h"
 #include "../format.h"
 #include "../algorithm.h"
 #include "../system_frame.h"
 
 #include "../../../common/exception/exceptions.h"
-#include "../../../common/image/image.h"
 
 #include <Glee.h>
 #include <SFML/Window.hpp>
@@ -24,138 +25,16 @@
 
 namespace caspar { namespace gpu {
 	
-class fullscreen_quad
-{
-public:
-
-	fullscreen_quad()
-	{
-		dlist_ = glGenLists(1);
-
-		glNewList(dlist_, GL_COMPILE);
-			glBegin(GL_QUADS);
-				glTexCoord2f(0.0f,	 0.0f); glVertex2f(-1.0f, -1.0f);
-				glTexCoord2f(1.0f,	 0.0f);	glVertex2f( 1.0f, -1.0f);
-				glTexCoord2f(1.0f,	 1.0f);	glVertex2f( 1.0f,  1.0f);
-				glTexCoord2f(0.0f,	 1.0f);	glVertex2f(-1.0f,  1.0f);
-			glEnd();	
-		glEndList();
-	}
-
-	void draw() const
-	{
-		glCallList(dlist_);	
-	}
-
-private:
-	GLuint dlist_;
-};
-typedef std::shared_ptr<fullscreen_quad> fullscreen_quad_ptr;
-
-
-class texture
-{
-public:
-	texture(size_t width, size_t height) : width_(width), height_(height)
-	{	
-		glGenTextures(1, &texture_);	
-		
-		glBindTexture(GL_TEXTURE_2D, texture_);
-
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-	}
-
-	~texture()
-	{		
-		glDeleteTextures(1, &texture_);
-	}
-	
-	size_t width() const { return width_; }
-	size_t height() const { return height_; }
-	GLuint handle() { return texture_; }
-
-private:
-	GLuint texture_;
-	const size_t width_;
-	const size_t height_;
-};
-typedef std::shared_ptr<texture> texture_ptr;
-
-class pixel_buffer
-{
-public:
-
-	pixel_buffer(size_t width, size_t height) : size_(width*height*4), texture_(width, height)
-	{
-		glGenBuffersARB(1, &pbo_);
-	}
-
-	~pixel_buffer()
-	{
-		glDeleteBuffers(1, &pbo_);
-	}
-
-	void begin_write(void* src)
-	{
-		glBindTexture(GL_TEXTURE_2D, texture_.handle());
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbo_);
-		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, size_, 0, GL_STREAM_DRAW);
-		void* ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, GL_WRITE_ONLY);
-		assert(ptr); 
-		common::image::copy(ptr, src, size_);
-		glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-	}
-
-	void end_write()
-	{
-		glBindTexture(GL_TEXTURE_2D, texture_.handle());
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbo_);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture_.width(), texture_.height(), GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
-	}
-
-	void begin_read(GLuint buffer)
-	{
-		glReadBuffer(buffer);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, pbo_);
-		glBufferData(GL_PIXEL_PACK_BUFFER_ARB, size_, NULL, GL_STREAM_READ);
-		glReadPixels(0, 0, texture_.width(), texture_.height(), GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-	}
-
-	void end_read(void* dest)
-	{
-		void* ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER_ARB, GL_READ_ONLY);   
-		common::image::copy(dest, ptr, size_);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER_ARB);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
-	}
-		
-	size_t size() const { return size_; }
-	GLuint pbo_handle() { return pbo_; }
-	GLuint texture_handle() { return texture_.handle(); }
-
-private:
-	texture texture_;
-	GLuint pbo_;
-	size_t size_;
-};
-typedef std::shared_ptr<pixel_buffer> pixel_buffer_ptr;
-
 class frame_buffer
 {
 public:
-	frame_buffer(size_t width, size_t height) : pbo_(width, height), width_(width), height_(height)
+	frame_buffer(size_t width, size_t height) : texture_(width, height)
 	{
 		glGenFramebuffersEXT(1, &fbo_);
 		
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo_);
-		glBindTexture(GL_TEXTURE_2D, pbo_.texture_handle());
-		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pbo_.texture_handle(), 0);
+		glBindTexture(GL_TEXTURE_2D, texture_.handle());
+		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, texture_.handle(), 0);
 	}
 
 	~frame_buffer()
@@ -163,39 +42,24 @@ public:
 		glDeleteFramebuffersEXT(1, &fbo_);
 	}
 	
-	void begin_read()
-	{
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo_);
-		pbo_.begin_read(GL_COLOR_ATTACHMENT0_EXT);
-	}
-
-	void end_read(void* dest)
-	{
-		pbo_.end_read(dest);		
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-	}
-
 	GLuint handle() { return fbo_; }
+	GLenum attachement() { return GL_COLOR_ATTACHMENT0_EXT; }
 	
 private:
-	pixel_buffer pbo_;
+	common::gpu::texture texture_;
 	GLuint fbo_;
-	size_t size_;
-	size_t width_;
-	size_t height_;
 };
 typedef std::shared_ptr<frame_buffer> frame_buffer_ptr;
+
 
 struct frame_processor::implementation
 {	
 	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc)
 	{
-		queue_.set_capacity(5);
+		queue_.set_capacity(3);
 		thread_ = boost::thread([=]{run();});
-		empty_frame_ = clear_frame(std::make_shared<system_frame>(format_desc_.size));
+		empty_frame_ = clear_frame(std::make_shared<system_frame>(format_desc_));
 
-		// triple buffer, add two frames to offset returning frames
-		finished_frames_.push(empty_frame_);
 		finished_frames_.push(empty_frame_);
 	}
 
@@ -215,69 +79,54 @@ struct frame_processor::implementation
 	}
 
 	void do_composite(const std::vector<frame_ptr>& frames)
-	{					
-		// END PREVIOUS READ
-		if(reading_fbo_)
+	{		
+		index_ = (index_ + 1) % 2;
+		int next_index = (index_ + 1) % 2;
+
+		// END WRITE
+		if(!input_pbo_groups_[index_].empty())
 		{
-			reading_fbo_->end_read(reading_result_frame_->data());
-			finished_frames_.push(reading_result_frame_);
-
-			reading_fbo_ = nullptr;
-			reading_result_frame_ = nullptr;
-		}
-
-		// END PREVIOUS WRITE
-		frame_buffer_ptr written_fbo;
-		if(!writing_pbo_group_.empty())
-		{
-			// END
-			written_fbo = get_fbo();
-
-			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, written_fbo->handle());
+			glLoadIdentity();
 			glClear(GL_COLOR_BUFFER_BIT);	
-
-			for(size_t n = 0; n < writing_pbo_group_.size(); ++n)
-			{
-				writing_pbo_group_[n]->end_write();
-				glBindTexture(GL_TEXTURE_2D, writing_pbo_group_[n]->texture_handle());
-				quad_->draw();
-			}
+			for(size_t n = 0; n < input_pbo_groups_[index_].size(); ++n)			
+				input_pbo_groups_[index_][n]->end_write();
 			
-			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);		
-			writing_pbo_group_.clear();
-		}
-		
-		// BEGIN NEW READ		
-		if(written_fbo)
-		{	
-			written_fbo->begin_read();
-			reading_fbo_ = written_fbo; 
-			reading_result_frame_ = writing_result_frame_;
-
-			writing_result_frame_ = nullptr;
+			for(size_t n = 0; n < input_pbo_groups_[index_].size(); ++n)			
+				input_pbo_groups_[index_][n]->draw();		
 		}
 
-		// BEGIN NEW WRITE
+		// BEGIN WRITE
 		if(!frames.empty())
 		{
+			frame_audio_[next_index].clear(),
+			input_pbo_groups_[next_index].clear();
 			for(size_t n = 0; n < frames.size(); ++n)
 			{
-				auto pbo = get_pbo();
+				auto pbo = get_pbo(frames[n]->width(), frames[n]->height());
 				pbo->begin_write(frames[n]->data());
+				input_pbo_groups_[next_index].push_back(pbo);
 
-				writing_pbo_group_.push_back(pbo);
+				frame_audio_[next_index].insert(frame_audio_[next_index].end(), frames[n]->audio_data().begin(), frames[n]->audio_data().end());
 			}
-			
-			writing_result_frame_ = std::make_shared<system_frame>(format_desc_.size);
-			boost::range::for_each(frames, std::bind(&copy_frame_audio<frame_ptr>, writing_result_frame_, std::placeholders::_1)); 
 		}
+
+		CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+				
+		// BEGIN READ
+		output_pbos_[index_]->begin_read();
+
+		// END READ
+		auto frame = std::make_shared<system_frame>(format_desc_);
+		frame->audio_data() = frame_audio_[index_];
+		output_pbos_[next_index]->end_read(frame->data());
+		finished_frames_.push(frame);
 	}
 
 	frame_ptr get_frame()
 	{
 		frame_ptr frame;
 		finished_frames_.pop(frame);
-		return frame;
+		return frame != nullptr ? frame : empty_frame_;
 	}
 		
 	void init()	
@@ -286,12 +135,19 @@ struct frame_processor::implementation
 		context_->SetActive(true);
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_BLEND);
+		glDisable(GL_DEPTH_TEST);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);			
 		glClearColor(0.0, 0.0, 0.0, 0.0);
 		glViewport(0, 0, format_desc_.width, format_desc_.height);
 		glLoadIdentity();
 
-		quad_.reset(new fullscreen_quad());
+		output_pbos_.resize(2);
+		frame_audio_.resize(2);
+		output_pbos_[0] = std::make_shared<common::gpu::read_pixel_buffer>(format_desc_.width, format_desc_.height);
+		output_pbos_[1] = std::make_shared<common::gpu::read_pixel_buffer>(format_desc_.width, format_desc_.height);
+		fbo_ = std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height);
+		glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
+		index_ = 0;
 	}
 
 	void run()
@@ -308,39 +164,33 @@ struct frame_processor::implementation
 		}
 	}
 
-	pixel_buffer_ptr get_pbo()
+	common::gpu::write_pixel_buffer_ptr get_pbo(size_t width, size_t height)
 	{
-		if(pbo_pool_.empty())
-			pbo_pool_.push_back(std::make_shared<pixel_buffer>(format_desc_.width, format_desc_.height));
+		auto pair = std::make_pair(width, height);
+		auto& pbo_pool = pbo_pools_[pair];
 
-		auto pbo = pbo_pool_.front();
-		pbo_pool_.pop_front();
+		if(pbo_pool.empty())
+		{
+			CASPAR_LOG(trace) << "Allocated PBO";
+			pbo_pool.push_back(std::make_shared<common::gpu::write_pixel_buffer>(width, height));
+		}
 
-		return pixel_buffer_ptr(pbo.get(), [=](pixel_buffer*){pbo_pool_.push_back(pbo);});
+		auto pbo = pbo_pool.front();
+		pbo_pool.pop_front();
+
+		return common::gpu::write_pixel_buffer_ptr(pbo.get(), [=](common::gpu::write_pixel_buffer*){pbo_pools_[pair].push_back(pbo);});
 	}
 
-	frame_buffer_ptr get_fbo()
-	{
-		if(fbo_pool_.empty())
-			fbo_pool_.push_back(std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height));
+	frame_buffer_ptr fbo_;
+	
+	int index_;
+	std::vector<common::gpu::write_pixel_buffer_ptr>	input_pbo_groups_[2];
+	std::vector<common::gpu::read_pixel_buffer_ptr>		output_pbos_;
+	std::vector<std::vector<audio_chunk_ptr>>			frame_audio_;
 
-		auto fbo = fbo_pool_.front();
-		fbo_pool_.pop_front();
-
-		return frame_buffer_ptr(fbo.get(), [=](frame_buffer*){fbo_pool_.push_back(fbo);});
-	}
-
-	std::vector<pixel_buffer_ptr>			  writing_pbo_group_;
-	frame_ptr								  writing_result_frame_;
-
-	frame_buffer_ptr						  reading_fbo_;
-	frame_ptr								  reading_result_frame_;
-
-	std::deque<pixel_buffer_ptr> pbo_pool_;
-	std::deque<frame_buffer_ptr> fbo_pool_;
+	std::map<std::pair<size_t, size_t>, std::deque<common::gpu::write_pixel_buffer_ptr>> pbo_pools_;
 	
 	std::unique_ptr<sf::Context> context_;
-	fullscreen_quad_ptr quad_;
 	boost::thread thread_;
 	tbb::concurrent_bounded_queue<std::function<void()>> queue_;
 	tbb::concurrent_bounded_queue<frame_ptr> finished_frames_;

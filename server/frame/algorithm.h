@@ -75,7 +75,6 @@ template<typename frame_ptr_type>
 frame_ptr_type& copy_frame_audio(frame_ptr_type& result_frame, const frame_const_ptr& frame)
 {	
 	assert(result_frame != nullptr && frame != nullptr);
-	assert(result_frame->size() == frame->size());
 	if(result_frame == frame)
 		return result_frame;
 	boost::range::copy(frame->audio_data(), std::back_inserter(result_frame->audio_data()));

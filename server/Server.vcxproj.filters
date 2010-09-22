@@ -396,5 +396,14 @@
     <None Include="My Amplifier Results\r000hs\r000hs.ampl">
       <Filter>My Amplifier Results</Filter>
     </None>
+    <None Include="My Amplifier Results\r001hs\r001hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r002hs\r002hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r003hs\r003hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
   </ItemGroup>
 </Project>

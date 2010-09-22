@@ -81,6 +81,9 @@
     <ClInclude Include="config.h" />
     <ClInclude Include="exception\exceptions.h" />
     <ClInclude Include="exception\win32_exception.h" />
+    <ClInclude Include="gpu\gl_check.h" />
+    <ClInclude Include="gpu\pixel_buffer.h" />
+    <ClInclude Include="gpu\texture.h" />
     <ClInclude Include="hardware\cpuid.h" />
     <ClInclude Include="image\clear.h" />
     <ClInclude Include="image\copy.h" />
@@ -99,6 +102,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="exception\win32_exception.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="gpu\pixel_buffer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

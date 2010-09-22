@@ -35,6 +35,8 @@ public:
 	virtual const unsigned char* data() const { return const_cast<frame&>(*this).data(); }
 	virtual unsigned char* data() = 0;
 	virtual size_t size() const = 0;
+	virtual size_t width() const = 0;
+	virtual size_t height() const = 0;
 	virtual void* tag() const { return nullptr; }
 	virtual const std::vector<audio_chunk_ptr>& audio_data() const { return audioData_; }	
 	virtual std::vector<audio_chunk_ptr>& audio_data() { return audioData_; }			
@@ -45,6 +47,8 @@ public:
 		{
 			unsigned char* data() { return nullptr; };
 			size_t size() const { return 0; };
+			size_t width() const { return 0; };
+			size_t height() const { return 0; };
 		};
 		static auto my_null_frame = std::make_shared<null_frame>();
 		return my_null_frame;
