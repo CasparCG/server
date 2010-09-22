@@ -5,7 +5,7 @@
 #include "gl_check.h"
 
 namespace caspar { namespace common { namespace gpu {
-
+	
 class texture
 {
 public:
@@ -28,6 +28,16 @@ public:
 		glDeleteTextures(1, &texture_);
 	}
 		
+	void draw()
+	{
+		CASPAR_GL_CHECK(glBindTexture(GL_TEXTURE_2D, texture_));
+		glBegin(GL_QUADS);
+			glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, -1.0f);
+			glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0f, -1.0f);
+			glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0f,  1.0f);
+			glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,  1.0f);
+		glEnd();	
+	}
 	size_t width() const { return width_; }
 	size_t height() const { return height_; }
 	GLuint handle() { return texture_; }

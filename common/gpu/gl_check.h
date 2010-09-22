@@ -8,6 +8,8 @@
 
 namespace caspar { namespace common { namespace gpu {
 
+#ifdef _DEBUG
+
 inline void DO_GL_CHECK()
 {
 	auto error = glGetError();
@@ -16,5 +18,8 @@ inline void DO_GL_CHECK()
 }
 
 #define CASPAR_GL_CHECK(expr) expr; ::caspar::common::gpu::DO_GL_CHECK()
+#else
+#define CASPAR_GL_CHECK(expr) expr
+#endif
 
 }}}

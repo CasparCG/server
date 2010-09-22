@@ -129,8 +129,9 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 		float wSize = target_ratio.first;
 		float hSize = target_ratio.second;
 
-		pbos_[0] = std::make_shared<common::gpu::write_pixel_buffer>(format_desc_.width, format_desc_.height);	
-		pbos_[1] = std::make_shared<common::gpu::write_pixel_buffer>(format_desc_.width, format_desc_.height);	
+		pbos_[0] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);	
+		pbos_[1] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);	
+		texture_ = std::make_shared<common::gpu::texture>(format_desc_.width, format_desc_.height);	
 
 		pbo_index_ = 0;
 	}
@@ -177,13 +178,13 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 		// Render
 		
 		glClear(GL_COLOR_BUFFER_BIT);	
-		pbos_[pbo_index_]->end_write();		
-		pbos_[pbo_index_]->draw();			
+		pbos_[pbo_index_]->write_to_texture(*texture_);		
+		texture_->draw();			
 
 		// Update
 		int nextPboIndex = pbo_index_ ^ 1;
 
-		pbos_[next_index]->begin_write(frame->data());
+		pbos_[next_index]->write_to_pbo(frame->data());
 	}
 			
 	void display(const frame_ptr& frame)
@@ -238,7 +239,8 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 	unsigned int screenX_;
 	unsigned int screenY_;
 				
-	common::gpu::write_pixel_buffer_ptr pbos_[2];
+	common::gpu::texture_ptr texture_;
+	common::gpu::pixel_buffer_ptr pbos_[2];
 	int pbo_index_;
 
 	std::unique_ptr<sf::Window> window_;
@@ -254,4 +256,5 @@ ogl_frame_consumer::ogl_frame_consumer(const caspar::frame_format_desc& format_d
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
 const caspar::frame_format_desc& ogl_frame_consumer::get_frame_format_desc() const{return impl_->format_desc_;}
 void ogl_frame_consumer::display(const frame_ptr& frame){impl_->display(frame);}
+
 }}

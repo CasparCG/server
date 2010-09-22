@@ -20,6 +20,7 @@
 #include <boost/thread/once.hpp>
 #include <boost/thread.hpp>
 #include <boost/range.hpp>
+#include <boost/foreach.hpp>
 
 #include <functional>
 
@@ -86,13 +87,18 @@ struct frame_processor::implementation
 		// END WRITE
 		if(!input_pbo_groups_[index_].empty())
 		{
-			glLoadIdentity();
 			glClear(GL_COLOR_BUFFER_BIT);	
-			for(size_t n = 0; n < input_pbo_groups_[index_].size(); ++n)			
-				input_pbo_groups_[index_][n]->end_write();
+
+			std::vector<common::gpu::texture_ptr> textures;
+			BOOST_FOREACH(auto pbo, input_pbo_groups_[index_])
+			{
+				auto texture = get_texture(pbo->width(), pbo->height());
+				pbo->write_to_texture(*texture);
+				textures.push_back(texture);
+			}
 			
-			for(size_t n = 0; n < input_pbo_groups_[index_].size(); ++n)			
-				input_pbo_groups_[index_][n]->draw();		
+			BOOST_FOREACH(auto texture, textures)	
+				texture->draw();		
 		}
 
 		// BEGIN WRITE
@@ -100,25 +106,25 @@ struct frame_processor::implementation
 		{
 			frame_audio_[next_index].clear(),
 			input_pbo_groups_[next_index].clear();
-			for(size_t n = 0; n < frames.size(); ++n)
+			BOOST_FOREACH(auto frame, frames)
 			{
-				auto pbo = get_pbo(frames[n]->width(), frames[n]->height());
-				pbo->begin_write(frames[n]->data());
+				auto pbo = get_pbo(frame->width(), frame->height());
+				pbo->write_to_pbo(frame->data());
 				input_pbo_groups_[next_index].push_back(pbo);
 
-				frame_audio_[next_index].insert(frame_audio_[next_index].end(), frames[n]->audio_data().begin(), frames[n]->audio_data().end());
+				frame_audio_[next_index].insert(frame_audio_[next_index].end(), frame->audio_data().begin(), frame->audio_data().end());
 			}
 		}
 
 		CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
 				
 		// BEGIN READ
-		output_pbos_[index_]->begin_read();
+		output_pbos_[index_]->read_to_pbo();
 
 		// END READ
 		auto frame = std::make_shared<system_frame>(format_desc_);
 		frame->audio_data() = frame_audio_[index_];
-		output_pbos_[next_index]->end_read(frame->data());
+		output_pbos_[next_index]->read_to_memory(frame->data());
 		finished_frames_.push(frame);
 	}
 
@@ -141,10 +147,11 @@ struct frame_processor::implementation
 		glViewport(0, 0, format_desc_.width, format_desc_.height);
 		glLoadIdentity();
 
+		input_pbo_groups_.resize(2);
 		output_pbos_.resize(2);
 		frame_audio_.resize(2);
-		output_pbos_[0] = std::make_shared<common::gpu::read_pixel_buffer>(format_desc_.width, format_desc_.height);
-		output_pbos_[1] = std::make_shared<common::gpu::read_pixel_buffer>(format_desc_.width, format_desc_.height);
+		output_pbos_[0] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);
+		output_pbos_[1] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);
 		fbo_ = std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height);
 		glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
 		index_ = 0;
@@ -164,7 +171,7 @@ struct frame_processor::implementation
 		}
 	}
 
-	common::gpu::write_pixel_buffer_ptr get_pbo(size_t width, size_t height)
+	common::gpu::pixel_buffer_ptr get_pbo(size_t width, size_t height)
 	{
 		auto pair = std::make_pair(width, height);
 		auto& pbo_pool = pbo_pools_[pair];
@@ -172,23 +179,41 @@ struct frame_processor::implementation
 		if(pbo_pool.empty())
 		{
 			CASPAR_LOG(trace) << "Allocated PBO";
-			pbo_pool.push_back(std::make_shared<common::gpu::write_pixel_buffer>(width, height));
+			pbo_pool.push_back(std::make_shared<common::gpu::pixel_buffer>(width, height));
 		}
 
 		auto pbo = pbo_pool.front();
 		pbo_pool.pop_front();
 
-		return common::gpu::write_pixel_buffer_ptr(pbo.get(), [=](common::gpu::write_pixel_buffer*){pbo_pools_[pair].push_back(pbo);});
+		return common::gpu::pixel_buffer_ptr(pbo.get(), [=](common::gpu::pixel_buffer*){pbo_pools_[pair].push_back(pbo);});
+	}
+
+	common::gpu::texture_ptr get_texture(size_t width, size_t height)
+	{
+		auto pair = std::make_pair(width, height);
+		auto& texture_pool = texture_pools_[pair];
+
+		if(texture_pool.empty())
+		{
+			CASPAR_LOG(trace) << "Allocated Texture";
+			texture_pool.push_back(std::make_shared<common::gpu::texture>(width, height));
+		}
+
+		auto texture = texture_pool.front();
+		texture_pool.pop_front();
+
+		return common::gpu::texture_ptr(texture.get(), [=](common::gpu::texture*){texture_pools_[pair].push_back(texture);});
 	}
 
 	frame_buffer_ptr fbo_;
 	
 	int index_;
-	std::vector<common::gpu::write_pixel_buffer_ptr>	input_pbo_groups_[2];
-	std::vector<common::gpu::read_pixel_buffer_ptr>		output_pbos_;
-	std::vector<std::vector<audio_chunk_ptr>>			frame_audio_;
+	std::vector<std::vector<common::gpu::pixel_buffer_ptr>>	input_pbo_groups_;
+	std::vector<common::gpu::pixel_buffer_ptr>				output_pbos_;
+	std::vector<std::vector<audio_chunk_ptr>>				frame_audio_;
 
-	std::map<std::pair<size_t, size_t>, std::deque<common::gpu::write_pixel_buffer_ptr>> pbo_pools_;
+	std::map<std::pair<size_t, size_t>, std::deque<common::gpu::pixel_buffer_ptr>> pbo_pools_;
+	std::map<std::pair<size_t, size_t>, std::deque<common::gpu::texture_ptr>> texture_pools_;
 	
 	std::unique_ptr<sf::Context> context_;
 	boost::thread thread_;
