@@ -24,7 +24,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-#define DEFINE_VIDEOFORMATDESC(w, h, m, f, s, fmt) { (w), (h), (m), (f), (w)*(h)*4, s, (fmt) }
+#define DEFINE_VIDEOFORMATDESC(w, h, m, f, s, fmt) { (w), (h), (m), (f), ((f)/2.0), (w)*(h)*4, s, (fmt) }
 
 namespace caspar {
 

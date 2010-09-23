@@ -19,21 +19,17 @@
 */
 #pragma once
 
-#include <memory>
-#include <vector>
+#include "../../consumer/frame_consumer.h"
 
-#include "../frame_fwd.h"
+namespace caspar { namespace file {
 
-namespace caspar {  namespace gpu {
-
-// NOTE: audio data is ALWAYS shallow copy
-class frame_processor : boost::noncopyable
+class file_frame_consumer : public frame_consumer
 {
-public:
-	frame_processor(const frame_format_desc& format_desc);
-
-	frame_processor& operator<<(const std::vector<frame_ptr>& frames);
-	frame_processor& operator>>(frame_ptr& frame);
+public:	
+	explicit file_frame_consumer(const std::string& filename, const frame_format_desc& format_desc);
+	
+	const frame_format_desc& get_frame_format_desc() const;	
+	void display(const frame_ptr& frame);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

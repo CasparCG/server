@@ -23,6 +23,7 @@ void pixel_buffer::write_to_pbo(void* src)
 	void* ptr = CASPAR_GL_CHECK(glMapBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, GL_WRITE_ONLY));
 	image::copy_SSE2(ptr, src, size_);
 	CASPAR_GL_CHECK(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
+	CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
 	written_ = true;
 }
 
@@ -38,11 +39,13 @@ void pixel_buffer::write_to_texture(texture& texture)
 	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, NULL));
 }
 		
-void pixel_buffer::read_to_pbo()
-{
+void pixel_buffer::read_to_pbo(GLenum mode)
+{	
+	CASPAR_GL_CHECK(glReadBuffer(mode));
 	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, pbo_));
 	CASPAR_GL_CHECK(glBufferData(GL_PIXEL_PACK_BUFFER_ARB, size_, NULL, GL_STREAM_READ));
 	CASPAR_GL_CHECK(glReadPixels(0, 0, width_, height_, GL_BGRA, GL_UNSIGNED_BYTE, NULL));
+	CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
 	reading_ = true;
 }
 

@@ -89,17 +89,17 @@ struct render_device::implementation : boost::noncopyable
 			try
 			{	
 				std::vector<frame_ptr> next_frames;
-				frame_ptr composite_frame;		
+				frame_ptr final_frame;		
 
 				{
 					tbb::mutex::scoped_lock lock(layers_mutex_);	
 					next_frames = render_frames(layers_);
 				}
-				gpu_frame_processor_.composite(next_frames);
-				composite_frame = gpu_frame_processor_.get_frame();
+				gpu_frame_processor_ << next_frames;
+				gpu_frame_processor_ >> final_frame;
 
 				current_frames = std::move(next_frames);		
-				frame_buffer_.push(std::move(composite_frame));
+				frame_buffer_.push(std::move(final_frame));
 			}
 			catch(...)
 			{
@@ -142,7 +142,13 @@ struct render_device::implementation : boost::noncopyable
 
 	void send_frame(const frame_ptr& pPreparedFrame, const frame_ptr& pNextFrame)
 	{
-		BOOST_FOREACH(const frame_consumer_ptr& consumer, consumers_)
+		std::vector<frame_consumer_ptr> consumers;
+		{
+			tbb::spin_mutex::scoped_lock lock(consumers_mutex_);
+			consumers = consumers_;
+		}	
+
+		BOOST_FOREACH(const frame_consumer_ptr& consumer, consumers)
 		{
 			try
 			{
@@ -218,13 +224,26 @@ struct render_device::implementation : boost::noncopyable
 		auto it = layers_.find(exLayer);
 		return it != layers_.end() ? it->second.background() : nullptr;
 	}
+
+	void add(const frame_consumer_ptr& consumer)
+	{
+		tbb::spin_mutex::scoped_lock lock(consumers_mutex_);
+		consumers_.push_back(consumer);
+	}
+
+	void remove(const frame_consumer_ptr& consumer)
+	{
+		tbb::spin_mutex::scoped_lock lock(consumers_mutex_);
+		boost::range::remove_erase(consumers_, consumer);
+	}
 		
 	boost::thread render_thread_;
 	boost::thread display_thread_;
 		
 	caspar::frame_format_desc format_desc_;
 	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
-	
+		
+	mutable tbb::spin_mutex consumers_mutex_;
 	std::vector<frame_consumer_ptr> consumers_;
 	
 	mutable tbb::mutex layers_mutex_;
@@ -245,6 +264,8 @@ void render_device::clear(){impl_->clear();}
 frame_producer_ptr render_device::active(int exLayer) const {return impl_->active(exLayer);}
 frame_producer_ptr render_device::background(int exLayer) const {return impl_->background(exLayer);}
 const frame_format_desc& render_device::frame_format_desc() const{return impl_->format_desc_;}
+void render_device::add(const frame_consumer_ptr& consumer){return impl_->add(consumer);}
+void render_device::remove(const frame_consumer_ptr& consumer){return impl_->remove(consumer);}
 
 }}
 

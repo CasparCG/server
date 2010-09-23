@@ -17,8 +17,8 @@ public:
 
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 		CASPAR_GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL));
 	}
@@ -32,10 +32,10 @@ public:
 	{
 		CASPAR_GL_CHECK(glBindTexture(GL_TEXTURE_2D, texture_));
 		glBegin(GL_QUADS);
-			glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, -1.0f);
-			glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0f, -1.0f);
-			glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0f,  1.0f);
-			glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,  1.0f);
+			glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, -1.0f);
+			glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0f, -1.0f);
+			glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0f,  1.0f);
+			glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f,  1.0f);
 		glEnd();	
 	}
 	size_t width() const { return width_; }

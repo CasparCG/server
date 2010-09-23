@@ -33,7 +33,7 @@
 
 #include <windows.h>
 
-namespace caspar{ namespace audio{	
+namespace caspar { namespace audio {	
 
 class sound_channel : public sf::SoundStream
 {

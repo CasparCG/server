@@ -17,7 +17,7 @@ public:
 	pixel_buffer(size_t width, size_t height);
 	~pixel_buffer();
 	
-	void read_to_pbo();
+	void read_to_pbo(GLenum mode);
 	void read_to_memory(void* dest);	
 	
 	void write_to_pbo(void* src);

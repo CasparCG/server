@@ -8,6 +8,7 @@
 #endif
 #include "consumer/decklink/DecklinkVideoConsumer.h"
 #include "consumer/ogl/ogl_frame_consumer.h"
+#include "consumer/file/file_frame_consumer.h"
 
 #include <FreeImage.h>
 
@@ -22,6 +23,20 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavformat/avformat.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
+
 namespace caspar{
 
 struct server::implementation : boost::noncopyable
@@ -29,6 +44,7 @@ struct server::implementation : boost::noncopyable
 	implementation()												
 	{
 		FreeImage_Initialise(true);	
+		av_register_all();
 				
 		boost::property_tree::ptree pt;
 		boost::property_tree::read_xml(boost::filesystem::initial_path().file_string() + "\\caspar.config", pt);
@@ -74,7 +90,7 @@ struct server::implementation : boost::noncopyable
 			{
 				try
 				{
-					frame_consumer_ptr pConsumer;
+					frame_consumer_ptr consumer;
 					std::string name = xml_consumer.first;
 					if(name == "ogl")
 					{			
@@ -90,26 +106,26 @@ struct server::implementation : boost::noncopyable
 							stretch = ogl::stretch::uniform_to_fill;
 
 						bool windowed = xml_consumer.second.get("windowed", false);
-						pConsumer = std::make_shared<ogl::ogl_frame_consumer>(format_desc, device, stretch, windowed);
+						consumer = std::make_shared<ogl::ogl_frame_consumer>(format_desc, device, stretch, windowed);
 					}
 				#ifndef DISABLE_BLUEFISH
 					else if(name == "bluefish")
-						pConsumer = caspar::bluefish::BlueFishVideoConsumer::Create(format_desc, xml_consumer.second.get("device", 0));
+						consumer = caspar::bluefish::BlueFishVideoConsumer::Create(format_desc, xml_consumer.second.get("device", 0));
 				#endif
 					else if(name == "decklink")
-						pConsumer = std::make_shared<decklink::DecklinkVideoConsumer>(format_desc, xml_consumer.second.get("internalkey", false));
+						consumer = std::make_shared<decklink::DecklinkVideoConsumer>(format_desc, xml_consumer.second.get("internalkey", false));
 					else if(name == "audio")
-						pConsumer = std::make_shared<audio::oal_frame_consumer>(format_desc);
+						consumer = std::make_shared<audio::oal_frame_consumer>(format_desc);
 
-					if(pConsumer)					
-						consumers.push_back(pConsumer);					
+					if(consumer)					
+						consumers.push_back(consumer);					
 				}
 				catch(...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
 			}
-			
+			//consumers.push_back(std::make_shared<file::file_frame_consumer>(common::narrow(media_folder_) + "test.mpeg", format_desc));
 			channels_.push_back(std::make_shared<renderer::render_device>(format_desc, channels_.size() + 1, consumers));
 		}
 	}

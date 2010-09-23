@@ -88,6 +88,9 @@
     <Filter Include="My Amplifier Results">
       <UniqueIdentifier>{c08b965d-9119-47f8-b62e-21c5518846d2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\consumer\file">
+      <UniqueIdentifier>{4ef6b130-4408-4c9a-9496-dd327a7a39f8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
@@ -160,9 +163,6 @@
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClInclude>
     <ClInclude Include="producer\ffmpeg\video\video_deinterlacer.h">
-      <Filter>Source\producer\ffmpeg\video</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\ffmpeg\video\video_scaler.h">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClInclude>
     <ClInclude Include="producer\flash\ct_producer.h">
@@ -246,6 +246,12 @@
     <ClInclude Include="frame\gpu\frame_processor.h">
       <Filter>Source\frame\gpu</Filter>
     </ClInclude>
+    <ClInclude Include="producer\ffmpeg\video\video_transformer.h">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\file\file_frame_consumer.h">
+      <Filter>Source\consumer\file</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp">
@@ -297,9 +303,6 @@
       <Filter>Source\producer\ffmpeg\audio</Filter>
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_deinterlacer.cpp">
-      <Filter>Source\producer\ffmpeg\video</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\ffmpeg\video\video_scaler.cpp">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
@@ -374,6 +377,12 @@
     <ClCompile Include="frame\gpu\frame_processor.cpp">
       <Filter>Source\frame\gpu</Filter>
     </ClCompile>
+    <ClCompile Include="producer\ffmpeg\video\video_transformer.cpp">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\file\file_frame_consumer.cpp">
+      <Filter>Source\consumer\file</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="consumer\decklink\DeckLinkAPI_v7_3.idl">
@@ -392,18 +401,6 @@
   <ItemGroup>
     <None Include="caspar.config">
       <Filter>Source</Filter>
-    </None>
-    <None Include="My Amplifier Results\r000hs\r000hs.ampl">
-      <Filter>My Amplifier Results</Filter>
-    </None>
-    <None Include="My Amplifier Results\r001hs\r001hs.ampl">
-      <Filter>My Amplifier Results</Filter>
-    </None>
-    <None Include="My Amplifier Results\r002hs\r002hs.ampl">
-      <Filter>My Amplifier Results</Filter>
-    </None>
-    <None Include="My Amplifier Results\r003hs\r003hs.ampl">
-      <Filter>My Amplifier Results</Filter>
     </None>
   </ItemGroup>
 </Project>

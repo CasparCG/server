@@ -77,10 +77,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	try 
 	{
 		server caspar_device;
-		controller::io::tcp::tcp_server tcp_server(5250);
-		controller::amcp::controller<controller::io::tcp::tcp_server> tcp_controller(tcp_server, caspar_device.get_channels());
+		//controller::io::tcp::tcp_server tcp_server(5250);
+		//controller::amcp::controller<controller::io::tcp::tcp_server> tcp_controller(tcp_server, caspar_device.get_channels());
 
-		tcp_server.async_run();
+		//tcp_server.async_run();
 
 		controller::io::console::console_server console_server;
 		controller::amcp::controller<controller::io::console::console_server> console_controller(console_server, caspar_device.get_channels());

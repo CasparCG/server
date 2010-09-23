@@ -26,7 +26,7 @@ extern "C"
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 #include "video/video_deinterlacer.h"
-#include "video/video_scaler.h"
+#include "video/video_transformer.h"
 
 #include "../../frame/format.h"
 #include "../../../common/utility/find_file.h"
@@ -62,10 +62,7 @@ public:
 	{
     	if(!boost::filesystem::exists(filename))
     		BOOST_THROW_EXCEPTION(file_not_found() <<  boost::errinfo_file_name(common::narrow(filename)));
-		
-		static boost::once_flag flag = BOOST_ONCE_INIT;
-		boost::call_once(av_register_all, flag);	
-		
+				
 		input_.reset(new input());
 		input_->set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
 		input_->load(common::narrow(filename_));
@@ -79,7 +76,7 @@ public:
 				) : nullptr;
 		
 		video_decoder_.reset(new video_decoder());
-		video_scaler_.reset(new video_scaler());
+		video_transformer_.reset(new video_transformer());
 		audio_decoder_.reset(new audio_decoder(snd_channel_info));
 		has_audio_ = input_->get_audio_codec_context() != nullptr;
 	}
@@ -95,7 +92,7 @@ public:
 				if(video_packet)
 				{
 					video_packet = video_decoder_->execute(video_packet);
-					auto frame = video_scaler_->execute(video_packet)->frame;
+					auto frame = video_transformer_->execute(video_packet)->frame;
 					video_frame_channel_.push_back(std::move(frame));	
 				}
 			}, 
@@ -139,7 +136,7 @@ public:
 
 	// Filter 2 : Video Decoding and Scaling
 	video_decoder_uptr				video_decoder_;
-	video_scaler_uptr				video_scaler_;
+	video_transformer_uptr				video_transformer_;
 	//std::deque<video_packet_ptr>					videoDecodedPacketChannel_;
 	std::deque<frame_ptr>			video_frame_channel_;
 	

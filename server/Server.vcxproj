@@ -282,6 +282,7 @@
     <ClInclude Include="consumer\bluefish\BlueFishVideoConsumer.h" />
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h" />
     <ClInclude Include="consumer\decklink\DecklinkVideoConsumer.h" />
+    <ClInclude Include="consumer\file\file_frame_consumer.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
     <ClInclude Include="consumer\oal\oal_frame_consumer.h" />
     <ClInclude Include="consumer\ogl\ogl_frame_consumer.h" />
@@ -307,7 +308,7 @@
     <ClInclude Include="producer\ffmpeg\packet.h" />
     <ClInclude Include="producer\ffmpeg\video\video_decoder.h" />
     <ClInclude Include="producer\ffmpeg\video\video_deinterlacer.h" />
-    <ClInclude Include="producer\ffmpeg\video\video_scaler.h" />
+    <ClInclude Include="producer\ffmpeg\video\video_transformer.h" />
     <ClInclude Include="producer\flash\axflash.h" />
     <ClInclude Include="producer\flash\cg_producer.h" />
     <ClInclude Include="producer\flash\ct_producer.h" />
@@ -359,6 +360,12 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="consumer\decklink\DecklinkVideoConsumer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="consumer\file\file_frame_consumer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -478,7 +485,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="producer\ffmpeg\video\video_scaler.cpp">
+    <ClCompile Include="producer\ffmpeg\video\video_transformer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseProfiling|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
@@ -610,10 +617,6 @@
     <None Include="caspar.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="My Amplifier Results\r000hs\r000hs.ampl" />
-    <None Include="My Amplifier Results\r001hs\r001hs.ampl" />
-    <None Include="My Amplifier Results\r002hs\r002hs.ampl" />
-    <None Include="My Amplifier Results\r003hs\r003hs.ampl" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\common\common.vcxproj">

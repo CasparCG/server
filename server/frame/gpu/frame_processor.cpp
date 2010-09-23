@@ -23,6 +23,29 @@
 #include <boost/foreach.hpp>
 
 #include <functional>
+#include <unordered_map>
+
+template<typename T>
+class buffer_pool
+{
+public:
+	std::shared_ptr<T> create(size_t width, size_t height)
+	{
+		auto key = (width & 0x00000000FFFFFFFF) | (height << 16);
+		auto& pool = pools_[key];
+
+		if(pool.empty())
+			pool.push(std::make_shared<T>(width, height));		
+
+		auto buffer = pool.front();
+		pool.pop();
+
+		return std::shared_ptr<T>(buffer.get(), [=](T*){pools_[key].push(buffer);});
+	}
+
+private:
+	std::unordered_map<size_t, std::queue<std::shared_ptr<T>>> pools_;
+};
 
 namespace caspar { namespace gpu {
 	
@@ -92,7 +115,7 @@ struct frame_processor::implementation
 			std::vector<common::gpu::texture_ptr> textures;
 			BOOST_FOREACH(auto pbo, input_pbo_groups_[index_])
 			{
-				auto texture = get_texture(pbo->width(), pbo->height());
+				auto texture = texture_pool_.create(pbo->width(), pbo->height());
 				pbo->write_to_texture(*texture);
 				textures.push_back(texture);
 			}
@@ -108,18 +131,16 @@ struct frame_processor::implementation
 			input_pbo_groups_[next_index].clear();
 			BOOST_FOREACH(auto frame, frames)
 			{
-				auto pbo = get_pbo(frame->width(), frame->height());
+				auto pbo = pbo_pool_.create(frame->width(), frame->height());
 				pbo->write_to_pbo(frame->data());
 				input_pbo_groups_[next_index].push_back(pbo);
 
 				frame_audio_[next_index].insert(frame_audio_[next_index].end(), frame->audio_data().begin(), frame->audio_data().end());
 			}
 		}
-
-		CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
 				
 		// BEGIN READ
-		output_pbos_[index_]->read_to_pbo();
+		output_pbos_[index_]->read_to_pbo(GL_COLOR_ATTACHMENT0_EXT);
 
 		// END READ
 		auto frame = std::make_shared<system_frame>(format_desc_);
@@ -131,7 +152,11 @@ struct frame_processor::implementation
 	frame_ptr get_frame()
 	{
 		frame_ptr frame;
-		finished_frames_.pop(frame);
+		if(!finished_frames_.try_pop(frame))
+		{
+			CASPAR_LOG(trace) << "GPU Processor Underflow";
+			finished_frames_.pop(frame);
+		}
 		return frame != nullptr ? frame : empty_frame_;
 	}
 		
@@ -150,10 +175,9 @@ struct frame_processor::implementation
 		input_pbo_groups_.resize(2);
 		output_pbos_.resize(2);
 		frame_audio_.resize(2);
-		output_pbos_[0] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);
-		output_pbos_[1] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);
+		output_pbos_[0] = pbo_pool_.create(format_desc_.width, format_desc_.height);
+		output_pbos_[1] = pbo_pool_.create(format_desc_.width, format_desc_.height);
 		fbo_ = std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height);
-		glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
 		index_ = 0;
 	}
 
@@ -170,41 +194,7 @@ struct frame_processor::implementation
 			queue_.pop(func);
 		}
 	}
-
-	common::gpu::pixel_buffer_ptr get_pbo(size_t width, size_t height)
-	{
-		auto pair = std::make_pair(width, height);
-		auto& pbo_pool = pbo_pools_[pair];
-
-		if(pbo_pool.empty())
-		{
-			CASPAR_LOG(trace) << "Allocated PBO";
-			pbo_pool.push_back(std::make_shared<common::gpu::pixel_buffer>(width, height));
-		}
-
-		auto pbo = pbo_pool.front();
-		pbo_pool.pop_front();
-
-		return common::gpu::pixel_buffer_ptr(pbo.get(), [=](common::gpu::pixel_buffer*){pbo_pools_[pair].push_back(pbo);});
-	}
-
-	common::gpu::texture_ptr get_texture(size_t width, size_t height)
-	{
-		auto pair = std::make_pair(width, height);
-		auto& texture_pool = texture_pools_[pair];
-
-		if(texture_pool.empty())
-		{
-			CASPAR_LOG(trace) << "Allocated Texture";
-			texture_pool.push_back(std::make_shared<common::gpu::texture>(width, height));
-		}
-
-		auto texture = texture_pool.front();
-		texture_pool.pop_front();
-
-		return common::gpu::texture_ptr(texture.get(), [=](common::gpu::texture*){texture_pools_[pair].push_back(texture);});
-	}
-
+		
 	frame_buffer_ptr fbo_;
 	
 	int index_;
@@ -212,8 +202,8 @@ struct frame_processor::implementation
 	std::vector<common::gpu::pixel_buffer_ptr>				output_pbos_;
 	std::vector<std::vector<audio_chunk_ptr>>				frame_audio_;
 
-	std::map<std::pair<size_t, size_t>, std::deque<common::gpu::pixel_buffer_ptr>> pbo_pools_;
-	std::map<std::pair<size_t, size_t>, std::deque<common::gpu::texture_ptr>> texture_pools_;
+	buffer_pool<common::gpu::pixel_buffer> pbo_pool_;
+	buffer_pool<common::gpu::texture> texture_pool_;
 	
 	std::unique_ptr<sf::Context> context_;
 	boost::thread thread_;
@@ -225,7 +215,7 @@ struct frame_processor::implementation
 };
 	
 frame_processor::frame_processor(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void frame_processor::composite(const std::vector<frame_ptr>& frames){ impl_->composite(frames);}
-frame_ptr frame_processor::get_frame(){ return impl_->get_frame();}
+frame_processor& frame_processor::operator<<(const std::vector<frame_ptr>& frames){ impl_->composite(frames); return *this;}
+frame_processor& frame_processor::operator>>(frame_ptr& frame){ frame = impl_->get_frame(); return *this;}
 
 }}

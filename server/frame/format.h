@@ -37,6 +37,7 @@ struct frame_format_desc
 	size_t height;
 	video_mode mode;
 	double fps;
+	double output_fps;
 	size_t size;
 	std::wstring name;
 	frame_format format;

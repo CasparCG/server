@@ -18,7 +18,7 @@ class render_device : boost::noncopyable
 public:
 	render_device(const frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers);
 	
-	void load(int exLayer, const frame_producer_ptr& pProducer, load_option option = load_option::none);	
+	void load(int exLayer, const frame_producer_ptr& producer, load_option option = load_option::none);	
 	void play(int exLayer);
 	void stop(int exLayer);
 	void clear(int exLayer);
@@ -28,6 +28,9 @@ public:
 	frame_producer_ptr background(int exLayer) const;
 
 	const frame_format_desc& frame_format_desc() const;		
+
+	void add(const frame_consumer_ptr& consumer);
+	void remove(const frame_consumer_ptr& consumer);
 
 private:
 	struct implementation;
