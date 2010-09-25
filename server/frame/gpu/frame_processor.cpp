@@ -24,6 +24,7 @@
 
 #include <functional>
 #include <unordered_map>
+#include <numeric>
 
 template<typename T>
 class buffer_pool
@@ -47,8 +48,25 @@ private:
 	std::unordered_map<size_t, std::queue<std::shared_ptr<T>>> pools_;
 };
 
+
 namespace caspar { namespace gpu {
 	
+using namespace common::gpu;
+
+class gpu_buffer
+{
+public:
+	gpu_buffer(size_t width, size_t height) : pbo_(width, height), texture_(width, height){}	
+	void begin_write(void* src){pbo_.write_to_pbo(src);}
+	void end_write(){pbo_.write_to_texture(texture_);}
+	void commit(){texture_.draw();}
+private:
+	pixel_buffer pbo_;
+	texture texture_;
+};
+typedef std::shared_ptr<gpu_buffer> gpu_buffer_ptr;
+
+
 class frame_buffer
 {
 public:
@@ -65,6 +83,7 @@ public:
 	{
 		glDeleteFramebuffersEXT(1, &fbo_);
 	}
+
 	
 	GLuint handle() { return fbo_; }
 	GLenum attachement() { return GL_COLOR_ATTACHMENT0_EXT; }
@@ -106,45 +125,32 @@ struct frame_processor::implementation
 		int next_index = (index_ + 1) % 2;
 
 		// END WRITE
-		if(!input_pbo_groups_[index_].empty())
-		{
-			glClear(GL_COLOR_BUFFER_BIT);	
-
-			std::vector<common::gpu::texture_ptr> textures;
-			BOOST_FOREACH(auto pbo, input_pbo_groups_[index_])
-			{
-				auto texture = texture_pool_.create(pbo->width(), pbo->height());
-				pbo->write_to_texture(*texture);
-				textures.push_back(texture);
-			}
-			
-			BOOST_FOREACH(auto texture, textures)	
-				texture->draw();		
-		}
-
+		boost::range::for_each(input_[index_], std::mem_fn(&gpu_buffer::end_write));
+		active_[index_] = input_[index_];	
+		
 		// BEGIN WRITE
-		if(!frames.empty())
+		frame_audio_[next_index].clear();
+		std::vector<gpu_buffer_ptr> buffers;
+		BOOST_FOREACH(auto frame, frames)
 		{
-			frame_audio_[next_index].clear(),
-			input_pbo_groups_[next_index].clear();
-			BOOST_FOREACH(auto frame, frames)
-			{
-				auto pbo = pbo_pool_.create(frame->width(), frame->height());
-				pbo->write_to_pbo(frame->data());
-				input_pbo_groups_[next_index].push_back(pbo);
+			auto buffer = buffer_pool_.create(frame->width(), frame->height());
+			buffer->begin_write(frame->data());
+			buffers.push_back(buffer);
 
-				frame_audio_[next_index].insert(frame_audio_[next_index].end(), frame->audio_data().begin(), frame->audio_data().end());
-			}
+			frame_audio_[next_index].insert(frame_audio_[next_index].end(), frame->audio_data().begin(), frame->audio_data().end());
 		}
+		input_[next_index] = buffers;
 				
-		// BEGIN READ
-		output_pbos_[index_]->read_to_pbo(GL_COLOR_ATTACHMENT0_EXT);
-
 		// END READ
 		auto frame = std::make_shared<system_frame>(format_desc_);
 		frame->audio_data() = frame_audio_[index_];
-		output_pbos_[next_index]->read_to_memory(frame->data());
+		output_[index_]->read_to_memory(frame->data());
 		finished_frames_.push(frame);
+
+		// BEGIN READ		
+		glClear(GL_COLOR_BUFFER_BIT);	
+		boost::range::for_each(active_[next_index], std::mem_fn(&gpu_buffer::commit));
+		output_[next_index]->read_to_pbo(GL_COLOR_ATTACHMENT0_EXT);
 	}
 
 	bool try_pop(frame_ptr& frame)
@@ -164,11 +170,12 @@ struct frame_processor::implementation
 		glViewport(0, 0, format_desc_.width, format_desc_.height);
 		glLoadIdentity();
 
-		input_pbo_groups_.resize(2);
-		output_pbos_.resize(2);
+		input_.resize(2);
+		active_.resize(2);
+		output_.resize(2);
+		output_[0] = std::make_shared<pixel_buffer>(format_desc_.width, format_desc_.height);
+		output_[1] = std::make_shared<pixel_buffer>(format_desc_.width, format_desc_.height);
 		frame_audio_.resize(2);
-		output_pbos_[0] = pbo_pool_.create(format_desc_.width, format_desc_.height);
-		output_pbos_[1] = pbo_pool_.create(format_desc_.width, format_desc_.height);
 		fbo_ = std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height);
 		index_ = 0;
 	}
@@ -190,12 +197,14 @@ struct frame_processor::implementation
 	frame_buffer_ptr fbo_;
 	
 	int index_;
-	std::vector<std::vector<common::gpu::pixel_buffer_ptr>>	input_pbo_groups_;
-	std::vector<common::gpu::pixel_buffer_ptr>				output_pbos_;
-	std::vector<std::vector<audio_chunk_ptr>>				frame_audio_;
+	std::vector<std::vector<gpu_buffer_ptr>> input_;
+	std::vector<std::vector<gpu_buffer_ptr>> active_;
 
-	buffer_pool<common::gpu::pixel_buffer> pbo_pool_;
-	buffer_pool<common::gpu::texture> texture_pool_;
+	std::vector<gpu::pixel_buffer_ptr>				output_;
+
+	std::vector<std::vector<audio_chunk_ptr>>		frame_audio_;
+
+	buffer_pool<gpu_buffer> buffer_pool_;
 	
 	std::unique_ptr<sf::Context> context_;
 	boost::thread thread_;

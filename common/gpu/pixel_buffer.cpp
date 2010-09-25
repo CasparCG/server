@@ -54,7 +54,7 @@ void pixel_buffer::write_to_texture(texture& texture)
 	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbo_));
 	CASPAR_GL_CHECK(glBindTexture(GL_TEXTURE_2D, texture.handle()));
 	CASPAR_GL_CHECK(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width(), texture.height(), GL_BGRA, GL_UNSIGNED_BYTE, NULL));
-	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, NULL));
+	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
 }
 		
 void pixel_buffer::read_to_pbo(GLenum mode)
@@ -63,7 +63,7 @@ void pixel_buffer::read_to_pbo(GLenum mode)
 	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, pbo_));
 	CASPAR_GL_CHECK(glBufferData(GL_PIXEL_PACK_BUFFER_ARB, size_, NULL, GL_STREAM_READ));
 	CASPAR_GL_CHECK(glReadPixels(0, 0, width_, height_, GL_BGRA, GL_UNSIGNED_BYTE, NULL));
-	CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+	CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0));
 	reading_ = true;
 }
 
@@ -77,7 +77,7 @@ void pixel_buffer::read_to_memory(void* dest)
 	void* ptr = CASPAR_GL_CHECK(glMapBuffer(GL_PIXEL_PACK_BUFFER_ARB, GL_READ_ONLY));   
 	image::copy_SSE2(dest, ptr, size_);
 	CASPAR_GL_CHECK(glUnmapBuffer(GL_PIXEL_PACK_BUFFER_ARB));
-	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, NULL));
+	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, NULL));
 }
 		
 size_t pixel_buffer::size() const { return size_; }

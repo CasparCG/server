@@ -61,6 +61,8 @@ typedef std::shared_ptr<const frame> frame_const_ptr;
 typedef std::unique_ptr<frame> frame_uptr;
 typedef std::unique_ptr<const frame> frame_const_uptr;
 
+typedef std::vector<frame_ptr> frame_chunk;
+
 inline bool operator==(const frame& lhs, const frame& rhs)
 {
 	return lhs.data() == rhs.data() && (lhs.data() == nullptr || lhs.size() == rhs.size());
