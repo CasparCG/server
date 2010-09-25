@@ -46,8 +46,7 @@ public:
 	{
 		glDeleteFramebuffersEXT(1, &fbo_);
 	}
-
-	
+		
 	GLuint handle() { return fbo_; }
 	GLenum attachement() { return GL_COLOR_ATTACHMENT0_EXT; }
 	
@@ -61,14 +60,14 @@ struct frame_processor::implementation
 {	
 	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc)
 	{
-		queue_.set_capacity(3);
+		execution_queue_.set_capacity(6);
 		thread_ = boost::thread([=]{run();});
 		empty_frame_ = clear_frame(std::make_shared<system_frame>(format_desc));
 	}
 
 	~implementation()
 	{
-		queue_.push(nullptr);
+		execution_queue_.push(nullptr);
 		finished_frames_.push(nullptr);
 		thread_.join();
 	}
@@ -78,27 +77,31 @@ struct frame_processor::implementation
 		if(frames.empty())
 			finished_frames_.push(empty_frame_);
 		else
-			queue_.push([=]{do_composite(frames);});
+			execution_queue_.push([=]{do_composite(frames);});
 	}
 
 	void do_composite(const std::vector<frame_ptr>& frames)
-	{		
+	{			
 		index_ = (index_ + 1) % 2;
 		int next_index = (index_ + 1) % 2;
 
-		// END WRITE
+		// 2. Start asynchronous DMA transfer to video memory
+
+		// Lock frames and give pointer ownership to OpenGL
 		boost::range::for_each(input_[index_], std::mem_fn(&gpu_frame::lock));
 		writing_[index_] = input_[index_];	
+		input_[index_].clear();
 		
-		// BEGIN WRITE
-		input_[next_index].clear();
+		// 1. Copy to page-locked memory
 		BOOST_FOREACH(auto frame, frames)
 		{
 			gpu_frame_ptr internal_frame;
 			if(frame->tag() == this)
+			{ // It is a gpu frame, no more work required
 				internal_frame = std::static_pointer_cast<gpu_frame>(frame);
+			}
 			else
-			{
+			{ // It is not a gpu frame, create a gpu frame and copy data
 				internal_frame = create_frame(frame->width(), frame->height());
 				copy_frame(internal_frame, frame);
 			}
@@ -106,18 +109,33 @@ struct frame_processor::implementation
 			input_[next_index].push_back(internal_frame);
 		}
 				
-		// END READ
+		// 4. Read from page-locked memory into system memory
 		reading_[index_]->read_to_memory(output_frame_->data());
+
+		// Output to external buffer
 		finished_frames_.push(output_frame_);
 		
-		// BEGIN READ		
+		// 3. Draw to framebuffer and start asynchronous DMA transfer to page-locked memory
+
+		// Clear framebuffer
 		glClear(GL_COLOR_BUFFER_BIT);	
+
+		// Draw all frames to framebuffer
 		boost::range::for_each(writing_[next_index], std::mem_fn(&gpu_frame::draw));
+
+		// Read from framebuffer into page-locked memory
 		reading_[next_index]->read_to_pbo(GL_COLOR_ATTACHMENT0_EXT);
+
+		// Unlock frames and give back pointer ownership
 		boost::range::for_each(writing_[next_index], std::mem_fn(&gpu_frame::unlock));
 
+		// Create an output frame
 		output_frame_ = std::make_shared<system_frame>(format_desc_);
-		boost::range::for_each(writing_[next_index], std::bind(&copy_frame_audio<frame_ptr>, output_frame_, std::placeholders::_1));		
+
+		// Copy audio from composite frames into output frame
+		boost::range::for_each(writing_[next_index], std::bind(&copy_frame_audio<frame_ptr>, output_frame_, std::placeholders::_1));	
+
+		// Return frames to pool
 		writing_[next_index].clear();
 	}
 
@@ -154,12 +172,12 @@ struct frame_processor::implementation
 		init();
 
 		std::function<void()> func;
-		queue_.pop(func);
+		execution_queue_.pop(func);
 
 		while(func != nullptr)
 		{
 			func();
-			queue_.pop(func);
+			execution_queue_.pop(func);
 		}
 	}
 
@@ -177,14 +195,15 @@ struct frame_processor::implementation
 				frame_pools_[key].push(frame);
 			};
 
+			// Always do OpenGL operations on local thread with OpenGL context
 			if(boost::this_thread::get_id() == this_thread_)
 				allocator();
 			else
-				queue_.push(allocator);
+				execution_queue_.push(allocator);
 		}
 
 		gpu_frame_ptr frame;
-		pool.pop(frame);
+		pool.pop(frame); // Blocking
 
 		auto destructor = [=]
 		{
@@ -194,10 +213,11 @@ struct frame_processor::implementation
 
 		return gpu_frame_ptr(frame.get(), [=](gpu_frame*)
 		{
+			// Always do OpenGL operations on local thread with OpenGL context
 			if(boost::this_thread::get_id() == this_thread_)
 				destructor();
 			else
-				queue_.push(destructor);
+				execution_queue_.push(destructor);
 		});
 	}
 
@@ -213,11 +233,12 @@ struct frame_processor::implementation
 
 	std::vector<common::gpu::pixel_buffer_ptr>	reading_;
 	frame_ptr									output_frame_;
+	tbb::concurrent_bounded_queue<frame_ptr>	finished_frames_;
 		
 	std::unique_ptr<sf::Context> context_;
 	boost::thread thread_;
-	tbb::concurrent_bounded_queue<std::function<void()>> queue_;
-	tbb::concurrent_bounded_queue<frame_ptr> finished_frames_;
+
+	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
 
 	frame_format_desc format_desc_;
 	frame_ptr empty_frame_;
