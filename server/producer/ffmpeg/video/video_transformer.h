@@ -10,6 +10,7 @@ class video_transformer : boost::noncopyable
 public:
 	video_transformer();
 	video_packet_ptr execute(const video_packet_ptr& video_packet);
+	void set_factory(const frame_factory_ptr& factory);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

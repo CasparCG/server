@@ -297,6 +297,7 @@
     <ClInclude Include="controller\io\tcp\tcp_server.h" />
     <ClInclude Include="frame\algorithm.h" />
     <ClInclude Include="frame\bitmap_frame.h" />
+    <ClInclude Include="frame\factory.h" />
     <ClInclude Include="frame\frame.h" />
     <ClInclude Include="frame\format.h" />
     <ClInclude Include="frame\audio_chunk.h" />

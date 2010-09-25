@@ -50,7 +50,7 @@ std::vector<frame_ptr> render_frames(std::map<int, layer>& layers)
 struct render_device::implementation : boost::noncopyable
 {	
 	implementation(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers)  
-		: consumers_(consumers), format_desc_(format_desc), gpu_frame_processor_(format_desc)
+		: consumers_(consumers), format_desc_(format_desc), gpu_frame_processor_(new gpu::frame_processor(format_desc))
 	{	
 		is_running_ = true;
 		if(consumers.empty())
@@ -93,10 +93,10 @@ struct render_device::implementation : boost::noncopyable
 					tbb::mutex::scoped_lock lock(layers_mutex_);	
 					frames = render_frames(layers_);
 				}
-				gpu_frame_processor_ .push(frames); // blocks
+				gpu_frame_processor_->push(frames); // blocks
 
 				frame_ptr frame;	
-				if(gpu_frame_processor_.try_pop(frame))
+				if(gpu_frame_processor_->try_pop(frame))
 					frame_buffer_.push(frame);
 			}
 			catch(...)
@@ -170,6 +170,7 @@ struct render_device::implementation : boost::noncopyable
 	void load(int exLayer, const frame_producer_ptr& producer, load_option option)
 	{
 		tbb::mutex::scoped_lock lock(layers_mutex_);
+		producer->initialize(gpu_frame_processor_);
 		layers_[exLayer].load(producer, option);
 	}
 			
@@ -249,7 +250,7 @@ struct render_device::implementation : boost::noncopyable
 	
 	tbb::atomic<bool> is_running_;	
 
-	gpu::frame_processor gpu_frame_processor_;
+	gpu::frame_processor_ptr gpu_frame_processor_;
 };
 
 render_device::render_device(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 

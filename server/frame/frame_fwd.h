@@ -20,4 +20,6 @@ class audio_chunk;
 typedef std::shared_ptr<audio_chunk> audio_chunk_ptr;
 typedef std::unique_ptr<audio_chunk> audio_chunk_uptr;
 
+struct frame_factory;
+typedef std::shared_ptr<frame_factory> frame_factory_ptr;
 }

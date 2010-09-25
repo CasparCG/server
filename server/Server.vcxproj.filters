@@ -255,6 +255,9 @@
     <ClInclude Include="frame\bitmap_frame.h">
       <Filter>Source\frame</Filter>
     </ClInclude>
+    <ClInclude Include="frame\factory.h">
+      <Filter>Source\frame</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp">

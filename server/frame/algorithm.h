@@ -86,7 +86,7 @@ frame_ptr_type& copy_frame(frame_ptr_type& result_frame, const frame_const_ptr& 
 {	
 	assert(result_frame != nullptr && frame != nullptr);
 	assert(result_frame->size() == frame->size());
-	if(result_frame == frame)
+	if(frame == result_frame)
 		return result_frame;
 	tbb::parallel_invoke(
 	[&]{common::image::copy(result_frame->data(), frame->data(), result_frame->size());},

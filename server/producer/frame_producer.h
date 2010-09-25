@@ -36,6 +36,7 @@ public:
 	virtual frame_ptr get_frame() = 0;
 	virtual std::shared_ptr<frame_producer> get_following_producer() const { return nullptr; }
 	virtual void set_leading_producer(const std::shared_ptr<frame_producer>&) {}
+	virtual void initialize(const frame_factory_ptr& factory){}
 };
 typedef std::shared_ptr<frame_producer> frame_producer_ptr;
 

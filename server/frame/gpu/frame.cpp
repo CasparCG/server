@@ -1,23 +1,25 @@
 #include "../../StdAfx.h"
 
 #include "frame.h"
+#include "../algorithm.h"
+#include "../../../common/image/copy.h"
 
 namespace caspar { namespace gpu {
 	
-gpu_frame::gpu_frame(size_t width, size_t height) : buffer_(width, height), data_(nullptr)
-{
-	map();
+gpu_frame::gpu_frame(size_t width, size_t height, void* tag) : buffer_(width, height), texture_(width, height), data_(nullptr), tag_(tag)
+{	
 }
 
-void gpu_frame::unmap()
+void gpu_frame::lock()
 {
 	if(data_ == nullptr)
 		return;
 	data_ = nullptr;
 	buffer_.unmap();
+	buffer_.write_to_texture(texture_);
 }
 
-void gpu_frame::map()
+void gpu_frame::unlock()
 {
 	if(data_ != nullptr)
 		return;
@@ -25,17 +27,15 @@ void gpu_frame::map()
 	if(!data_)
 		BOOST_THROW_EXCEPTION(std::bad_alloc());
 }
-
-void gpu_frame::reset()
-{
-	map();
-	audio_data().clear();
-}
 	
-void gpu_frame::write_to_texture(common::gpu::texture& texture)
+void gpu_frame::draw()
 {
-	assert(data_ == nullptr); // is unmapped
-	buffer_.write_to_texture(texture);
+	texture_.draw();
+}
+
+void* gpu_frame::tag() const
+{
+	return tag_;
 }
 	
 unsigned char* gpu_frame::data()

@@ -4,6 +4,7 @@
 
 #include "../../../common/gpu/pixel_buffer.h"
 
+#include "frame.h"
 #include "../frame.h"
 #include "../format.h"
 #include "../algorithm.h"
@@ -15,6 +16,7 @@
 #include <SFML/Window.hpp>
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/concurrent_unordered_map.h>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/once.hpp>
@@ -26,47 +28,8 @@
 #include <unordered_map>
 #include <numeric>
 
-template<typename T>
-class buffer_pool
-{
-public:
-	std::shared_ptr<T> create(size_t width, size_t height)
-	{
-		auto key = width | (height << 16);
-		auto& pool = pools_[key];
-
-		if(pool.empty())
-			pool.push(std::make_shared<T>(width, height));		
-
-		auto buffer = pool.front();
-		pool.pop();
-
-		return std::shared_ptr<T>(buffer.get(), [=](T*){pools_[key].push(buffer);});
-	}
-
-private:
-	std::unordered_map<size_t, std::queue<std::shared_ptr<T>>> pools_;
-};
-
-
 namespace caspar { namespace gpu {
 	
-using namespace common::gpu;
-
-class gpu_buffer
-{
-public:
-	gpu_buffer(size_t width, size_t height) : pbo_(width, height), texture_(width, height){}	
-	void begin_write(void* src){pbo_.write_to_pbo(src);}
-	void end_write(){pbo_.write_to_texture(texture_);}
-	void commit(){texture_.draw();}
-private:
-	pixel_buffer pbo_;
-	texture texture_;
-};
-typedef std::shared_ptr<gpu_buffer> gpu_buffer_ptr;
-
-
 class frame_buffer
 {
 public:
@@ -93,7 +56,6 @@ private:
 	GLuint fbo_;
 };
 typedef std::shared_ptr<frame_buffer> frame_buffer_ptr;
-
 
 struct frame_processor::implementation
 {	
@@ -125,32 +87,38 @@ struct frame_processor::implementation
 		int next_index = (index_ + 1) % 2;
 
 		// END WRITE
-		boost::range::for_each(input_[index_], std::mem_fn(&gpu_buffer::end_write));
-		active_[index_] = input_[index_];	
+		boost::range::for_each(input_[index_], std::mem_fn(&gpu_frame::lock));
+		writing_[index_] = input_[index_];	
 		
 		// BEGIN WRITE
-		frame_audio_[next_index].clear();
-		std::vector<gpu_buffer_ptr> buffers;
+		input_[next_index].clear();
 		BOOST_FOREACH(auto frame, frames)
 		{
-			auto buffer = buffer_pool_.create(frame->width(), frame->height());
-			buffer->begin_write(frame->data());
-			buffers.push_back(buffer);
+			gpu_frame_ptr internal_frame;
+			if(frame->tag() == this)
+				internal_frame = std::static_pointer_cast<gpu_frame>(frame);
+			else
+			{
+				internal_frame = create_frame(frame->width(), frame->height());
+				copy_frame(internal_frame, frame);
+			}
 
-			frame_audio_[next_index].insert(frame_audio_[next_index].end(), frame->audio_data().begin(), frame->audio_data().end());
+			input_[next_index].push_back(internal_frame);
 		}
-		input_[next_index] = buffers;
 				
 		// END READ
-		auto frame = std::make_shared<system_frame>(format_desc_);
-		frame->audio_data() = frame_audio_[index_];
-		output_[index_]->read_to_memory(frame->data());
-		finished_frames_.push(frame);
-
+		reading_[index_]->read_to_memory(output_frame_->data());
+		finished_frames_.push(output_frame_);
+		
 		// BEGIN READ		
 		glClear(GL_COLOR_BUFFER_BIT);	
-		boost::range::for_each(active_[next_index], std::mem_fn(&gpu_buffer::commit));
-		output_[next_index]->read_to_pbo(GL_COLOR_ATTACHMENT0_EXT);
+		boost::range::for_each(writing_[next_index], std::mem_fn(&gpu_frame::draw));
+		reading_[next_index]->read_to_pbo(GL_COLOR_ATTACHMENT0_EXT);
+		boost::range::for_each(writing_[next_index], std::mem_fn(&gpu_frame::unlock));
+
+		output_frame_ = std::make_shared<system_frame>(format_desc_);
+		boost::range::for_each(writing_[next_index], std::bind(&copy_frame_audio<frame_ptr>, output_frame_, std::placeholders::_1));		
+		writing_[next_index].clear();
 	}
 
 	bool try_pop(frame_ptr& frame)
@@ -160,6 +128,7 @@ struct frame_processor::implementation
 		
 	void init()	
 	{
+		this_thread_ = boost::this_thread::get_id();
 		context_.reset(new sf::Context());
 		context_->SetActive(true);
 		glEnable(GL_TEXTURE_2D);
@@ -171,12 +140,12 @@ struct frame_processor::implementation
 		glLoadIdentity();
 
 		input_.resize(2);
-		active_.resize(2);
-		output_.resize(2);
-		output_[0] = std::make_shared<pixel_buffer>(format_desc_.width, format_desc_.height);
-		output_[1] = std::make_shared<pixel_buffer>(format_desc_.width, format_desc_.height);
-		frame_audio_.resize(2);
+		writing_.resize(2);
+		reading_.resize(2);
+		reading_[0] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);
+		reading_[1] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);
 		fbo_ = std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height);
+		output_frame_ = std::make_shared<system_frame>(format_desc_);
 		index_ = 0;
 	}
 
@@ -193,19 +162,58 @@ struct frame_processor::implementation
 			queue_.pop(func);
 		}
 	}
+
+	gpu_frame_ptr create_frame(size_t width, size_t height)
+	{
+		size_t key = width | (height << 16);
+		auto& pool = frame_pools_[key];
+
+		if(pool.empty())
+		{
+			auto allocator = [=]
+			{
+				auto frame = std::make_shared<gpu_frame>(width, height, this);
+				frame->unlock();
+				frame_pools_[key].push(frame);
+			};
+
+			if(boost::this_thread::get_id() == this_thread_)
+				allocator();
+			else
+				queue_.push(allocator);
+		}
+
+		gpu_frame_ptr frame;
+		pool.pop(frame);
+
+		auto destructor = [=]
+		{
+			frame->audio_data().clear();
+			frame_pools_[key].push(frame);
+		};
+
+		return gpu_frame_ptr(frame.get(), [=](gpu_frame*)
+		{
+			if(boost::this_thread::get_id() == this_thread_)
+				destructor();
+			else
+				queue_.push(destructor);
+		});
+	}
+
+	tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<gpu_frame_ptr>> frame_pools_;
 		
 	frame_buffer_ptr fbo_;
 	
+	boost::thread::id this_thread_;
+
 	int index_;
-	std::vector<std::vector<gpu_buffer_ptr>> input_;
-	std::vector<std::vector<gpu_buffer_ptr>> active_;
+	std::vector<std::vector<gpu_frame_ptr>>		input_;
+	std::vector<std::vector<gpu_frame_ptr>>		writing_;
 
-	std::vector<gpu::pixel_buffer_ptr>				output_;
-
-	std::vector<std::vector<audio_chunk_ptr>>		frame_audio_;
-
-	buffer_pool<gpu_buffer> buffer_pool_;
-	
+	std::vector<common::gpu::pixel_buffer_ptr>	reading_;
+	frame_ptr									output_frame_;
+		
 	std::unique_ptr<sf::Context> context_;
 	boost::thread thread_;
 	tbb::concurrent_bounded_queue<std::function<void()>> queue_;
@@ -218,5 +226,6 @@ struct frame_processor::implementation
 frame_processor::frame_processor(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 void frame_processor::push(const std::vector<frame_ptr>& frames){ impl_->composite(frames);}
 bool frame_processor::try_pop(frame_ptr& frame){ return impl_->try_pop(frame);}
+frame_ptr frame_processor::create_frame(size_t width, size_t height){return impl_->create_frame(width, height);}
 
 }}

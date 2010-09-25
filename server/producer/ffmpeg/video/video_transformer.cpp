@@ -3,6 +3,7 @@
 #include "video_transformer.h"
 
 #include "../../../frame/format.h"
+#include "../../../frame/factory.h"
 #include "../../../frame/algorithm.h"
 #include "../../../frame/system_frame.h"
 #include "../../../../common/image/image.h"
@@ -58,7 +59,7 @@ struct video_transformer::implementation : boost::noncopyable
 				
 		size_t size = size = avpicture_get_size(dest_pix_fmt, width, height);
 
-		video_packet->frame = std::make_shared<system_frame>(width, height, width*height*4);
+		video_packet->frame = factory_->create_frame(width, height); //std::make_shared<system_frame>(width, height, width*height*4);
 		std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
 		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), video_packet->frame->data(), dest_pix_fmt, width, height);
 		
@@ -75,10 +76,17 @@ struct video_transformer::implementation : boost::noncopyable
 		
 		return video_packet;	
 	}
-	
+
+	void set_factory(const frame_factory_ptr& factory)
+	{
+		factory_ = factory;
+	}
+
+	frame_factory_ptr factory_;
 	std::shared_ptr<SwsContext> sws_context_;
 };
 
 video_transformer::video_transformer() : impl_(new implementation()){}
 video_packet_ptr video_transformer::execute(const video_packet_ptr& video_packet){return impl_->execute(video_packet);}
+void video_transformer::set_factory(const frame_factory_ptr& factory){ impl_->set_factory(factory); }
 }}

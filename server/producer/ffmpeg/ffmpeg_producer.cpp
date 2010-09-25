@@ -128,6 +128,11 @@ public:
 		}
 		return frame;
 	}
+	
+	void initialize(const frame_factory_ptr& factory)
+	{
+		video_transformer_->set_factory(factory);
+	}
 			
 	bool has_audio_;
 

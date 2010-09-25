@@ -23,20 +23,24 @@
 #include <vector>
 
 #include "../frame_fwd.h"
+#include "../factory.h"
 
 namespace caspar {  namespace gpu {
 
 // NOTE: audio data is ALWAYS shallow copy
-class frame_processor : boost::noncopyable
+class frame_processor : public frame_factory,  boost::noncopyable
 {
 public:
 	frame_processor(const frame_format_desc& format_desc);
 
 	void push(const std::vector<frame_ptr>& frames);
 	bool try_pop(frame_ptr& frame);
+
+	frame_ptr create_frame(size_t width, size_t height);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
+typedef std::shared_ptr<frame_processor> frame_processor_ptr;
 
 }}
