@@ -82,24 +82,22 @@ struct render_device::implementation : boost::noncopyable
 		CASPAR_LOG(info) << L"Started render_device::render Thread";
 		win32_exception::install_handler();
 		
-		std::vector<frame_ptr> current_frames;
 
 		while(is_running_)
 		{
 			try
 			{	
-				std::vector<frame_ptr> next_frames;
-				frame_ptr final_frame;		
+				std::vector<frame_ptr> frames;	
 
 				{
 					tbb::mutex::scoped_lock lock(layers_mutex_);	
-					next_frames = render_frames(layers_);
+					frames = render_frames(layers_);
 				}
-				gpu_frame_processor_ << next_frames;
-				gpu_frame_processor_ >> final_frame;
+				gpu_frame_processor_ .push(frames); // blocks
 
-				current_frames = std::move(next_frames);		
-				frame_buffer_.push(std::move(final_frame));
+				frame_ptr frame;	
+				if(gpu_frame_processor_.try_pop(frame))
+					frame_buffer_.push(frame);
 			}
 			catch(...)
 			{

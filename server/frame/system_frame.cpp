@@ -31,6 +31,10 @@ system_frame::system_frame(const frame_format_desc& format_desc)
 	: size_(format_desc.size), width_(format_desc.width), height_(format_desc.height), data_(static_cast<unsigned char*>(scalable_aligned_malloc(format_desc.size, 16))){}
 system_frame::system_frame(size_t width, size_t height) 
 	: size_(width*height*4), width_(width), height_(height), data_(static_cast<unsigned char*>(scalable_aligned_malloc(width*height*4, 16))){}
+system_frame::system_frame(const frame_format_desc& format_desc, size_t size) 
+	: size_(format_desc.size), width_(format_desc.width), height_(format_desc.height), data_(static_cast<unsigned char*>(scalable_aligned_malloc(size, 16))){}
+system_frame::system_frame(size_t width, size_t height, size_t size) 
+	: size_(width*height*4), width_(width), height_(height), data_(static_cast<unsigned char*>(scalable_aligned_malloc(size, 16))){}
 system_frame::~system_frame(){scalable_aligned_free(data_);}
 unsigned char* system_frame::data() {return data_;}	
 size_t system_frame::size() const{return size_;}

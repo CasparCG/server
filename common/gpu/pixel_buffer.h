@@ -23,6 +23,9 @@ public:
 	void write_to_pbo(void* src);
 	void write_to_texture(texture& texture);
 
+	void* map();
+	void unmap();
+
 	size_t size() const;
 	size_t width() const;
 	size_t height() const;

@@ -3,6 +3,8 @@
 #include "video_transformer.h"
 
 #include "../../../frame/format.h"
+#include "../../../frame/algorithm.h"
+#include "../../../frame/system_frame.h"
 #include "../../../../common/image/image.h"
 
 #include <tbb/parallel_for.h>
@@ -25,9 +27,20 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar{ namespace ffmpeg{
+	//	const AVPixFmtDescriptor* desc = &av_pix_fmt_descriptors[PIX_FMT_YUVA420P];
 
-typedef std::shared_ptr<SwsContext> SwsContextPtr;
+		//memcpy(frame->data(), av_frame->data[0], size);
+        
+	// size = picture->linesize[0] * height;
+		//h2 = (height + (1 << desc->log2_chroma_h) - 1) >> desc->log2_chroma_h;
+        //size2 = picture->linesize[1] * h2;
+        //picture->data[0] = ptr;
+        //picture->data[1] = picture->data[0] + size;
+        //picture->data[2] = picture->data[1] + size2;
+        //picture->data[3] = picture->data[1] + size2 + size2;
+        //return 2 * size + 2 * size2;
+
+namespace caspar { namespace ffmpeg {
 
 struct video_transformer::implementation : boost::noncopyable
 {
@@ -37,17 +50,17 @@ struct video_transformer::implementation : boost::noncopyable
 
 		size_t width = video_packet->codec_context->width;
 		size_t height = video_packet->codec_context->height;
-		auto pix_fmt = video_packet->codec_context->pix_fmt;
+		PixelFormat src_pix_fmt = video_packet->codec_context->pix_fmt;
+		PixelFormat dest_pix_fmt = PIX_FMT_BGRA;// PIX_FMT_YUVA420P; // PIX_FMT_BGRA;// 
 
 		if(!sws_context_)
-		{
-			double param;
-			sws_context_.reset(sws_getContext(width, height, pix_fmt, width, height, PIX_FMT_BGRA, SWS_FAST_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
-		}
-		
+			sws_context_.reset(sws_getContext(width, height, src_pix_fmt, width, height, dest_pix_fmt, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr), sws_freeContext);
+				
+		size_t size = size = avpicture_get_size(dest_pix_fmt, width, height);
+
+		video_packet->frame = std::make_shared<system_frame>(width, height, width*height*4);
 		std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
-		avcodec_get_frame_defaults(av_frame.get());
-		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), video_packet->frame->data(), PIX_FMT_BGRA, width, height);
+		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), video_packet->frame->data(), dest_pix_fmt, width, height);
 		
 		int result = sws_scale(sws_context_.get(), video_packet->decoded_frame->data, video_packet->decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);
 		video_packet->decoded_frame.reset(); // Free memory
@@ -59,13 +72,11 @@ struct video_transformer::implementation : boost::noncopyable
 			common::image::copy(video_packet->frame->data(), video_packet->frame->data() + linesize, size - linesize);
 			common::image::clear(video_packet->frame->data() + size - linesize, linesize);
 		}
-
-
+		
 		return video_packet;	
 	}
-
-private:
-	SwsContextPtr sws_context_;
+	
+	std::shared_ptr<SwsContext> sws_context_;
 };
 
 video_transformer::video_transformer() : impl_(new implementation()){}

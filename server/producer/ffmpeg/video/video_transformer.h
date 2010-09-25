@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../packet.h"
+#include "../../../frame/frame_fwd.h"
 
 namespace caspar{ namespace ffmpeg{
 

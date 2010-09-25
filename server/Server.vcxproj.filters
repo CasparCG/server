@@ -73,9 +73,6 @@
     <Filter Include="Source\controller\amcp\command">
       <UniqueIdentifier>{c0564ba4-1a34-41fa-9889-df9d31e1344c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\frame\bitmap">
-      <UniqueIdentifier>{4c12a44d-719e-4b1f-bef2-f576472b8136}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\frame\audio">
       <UniqueIdentifier>{ab451a87-3f25-41dd-85e0-72af7d7c8350}</UniqueIdentifier>
     </Filter>
@@ -90,6 +87,9 @@
     </Filter>
     <Filter Include="Source\consumer\file">
       <UniqueIdentifier>{4ef6b130-4408-4c9a-9496-dd327a7a39f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="My Inspector Results">
+      <UniqueIdentifier>{616473fc-80e4-439a-9e42-413b6b63ff0c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -228,9 +228,6 @@
     <ClInclude Include="controller\amcp\channel_command.h">
       <Filter>Source\controller\amcp\command</Filter>
     </ClInclude>
-    <ClInclude Include="frame\bitmap_frame.h">
-      <Filter>Source\frame\bitmap</Filter>
-    </ClInclude>
     <ClInclude Include="frame\audio_chunk.h">
       <Filter>Source\frame\audio</Filter>
     </ClInclude>
@@ -251,6 +248,12 @@
     </ClInclude>
     <ClInclude Include="consumer\file\file_frame_consumer.h">
       <Filter>Source\consumer\file</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\gpu\frame.h">
+      <Filter>Source\frame\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\bitmap_frame.h">
+      <Filter>Source\frame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -362,9 +365,6 @@
     <ClCompile Include="controller\amcp\command.cpp">
       <Filter>Source\controller\amcp\command</Filter>
     </ClCompile>
-    <ClCompile Include="frame\bitmap_frame.cpp">
-      <Filter>Source\frame\bitmap</Filter>
-    </ClCompile>
     <ClCompile Include="frame\audio_chunk.cpp">
       <Filter>Source\frame\audio</Filter>
     </ClCompile>
@@ -382,6 +382,12 @@
     </ClCompile>
     <ClCompile Include="consumer\file\file_frame_consumer.cpp">
       <Filter>Source\consumer\file</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\gpu\frame.cpp">
+      <Filter>Source\frame\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\bitmap_frame.cpp">
+      <Filter>Source\frame</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -401,6 +407,27 @@
   <ItemGroup>
     <None Include="caspar.config">
       <Filter>Source</Filter>
+    </None>
+    <None Include="My Amplifier Results\r000hs\r000hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Inspector Results\r000ti1\r000ti1.insp">
+      <Filter>My Inspector Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r001hs\r001hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r002hs\r002hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r003hs\r003hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r004hs\r004hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r005hs\r005hs.ampl">
+      <Filter>My Amplifier Results</Filter>
     </None>
   </ItemGroup>
 </Project>

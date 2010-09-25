@@ -161,8 +161,7 @@ struct input::implementation : boost::noncopyable
 				{
 					if(packet->stream_index == video_s_index_) 		
 					{
-						frame_ptr dest = std::make_shared<system_frame>(video_codec_context_->width, video_codec_context_->height);
-						video_packet_buffer_.push(std::make_shared<video_packet>(packet, std::move(dest), video_codec_context_.get(), video_codec_));		 // NOTE: video_packet makes a copy of AVPacket
+						video_packet_buffer_.push(std::make_shared<video_packet>(packet, nullptr, video_codec_context_.get(), video_codec_));		 // NOTE: video_packet makes a copy of AVPacket
 					}
 					else if(packet->stream_index == audio_s_index_) 	
 						audio_packet_buffer_.push(std::make_shared<audio_packet>(packet, audio_codex_context.get(), audio_codec_a, video_frame_rate_));			

@@ -52,6 +52,7 @@ struct file_frame_consumer::implementation : boost::noncopyable
 			audio_outbuf_(0), audio_outbuf_size_(0), audio_input_frame_size_(0), video_st_(0), picture_(0),
 				video_outbuf_(0), video_outbuf_size_(0), fmt_(0), oc_(0), img_convert_ctx_(0)
 	{
+		//CODEC_ID_VP6A
 		fmt_ = av_guess_format(nullptr, filename.c_str(), nullptr);
 		if (!fmt_) 
 		{
@@ -76,8 +77,8 @@ struct file_frame_consumer::implementation : boost::noncopyable
 		if (fmt_->video_codec != CODEC_ID_NONE)		
 			video_st_ = add_video_stream(fmt_->video_codec);
 		
-		if (fmt_->audio_codec != CODEC_ID_NONE) 
-			audio_st_ = add_audio_stream(fmt_->audio_codec);	
+		//if (fmt_->audio_codec != CODEC_ID_NONE) 
+		//	audio_st_ = add_audio_stream(fmt_->audio_codec);	
 
 		// set the output parameters (must be done even if no parameters).
 		if (av_set_parameters(oc_, nullptr) < 0) 
@@ -310,7 +311,7 @@ struct file_frame_consumer::implementation : boost::noncopyable
 		c->codec_type = AVMEDIA_TYPE_AUDIO;
 
 		/* put sample parameters */
-		c->bit_rate = 64000;
+		c->bit_rate = 12800;
 		c->sample_rate = 48000;
 		c->channels = 2;
 
@@ -380,7 +381,7 @@ struct file_frame_consumer::implementation : boost::noncopyable
 		audio_data = empty_audio_;
 		if(frame->audio_data().size() > 0)
 		{	
-			assert(frame->audio_data()[0]->size() == audio_input_frame_size_);
+			//assert(frame->audio_data()[0]->size() == audio_input_frame_size_);
 			audio_data = reinterpret_cast<int16_t*>(frame->audio_data()[0]->data());
 		}
 

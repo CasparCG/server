@@ -14,6 +14,24 @@ pixel_buffer::pixel_buffer(size_t width, size_t height) : size_(width*height*4),
 pixel_buffer::~pixel_buffer()
 {
 	glDeleteBuffers(1, &pbo_);
+	pbo_ = 0;
+}
+
+void* pixel_buffer::map()
+{
+	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbo_));
+	CASPAR_GL_CHECK(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, size_, NULL, GL_STREAM_DRAW));
+	void* ptr = CASPAR_GL_CHECK(glMapBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, GL_WRITE_ONLY));
+	CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+	return ptr;
+}
+
+void pixel_buffer::unmap()
+{
+	CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbo_));
+	CASPAR_GL_CHECK(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
+	CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0));
+	written_ = true;
 }
 
 void pixel_buffer::write_to_pbo(void* src)

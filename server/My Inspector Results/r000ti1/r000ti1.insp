@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+ <rdmgr>
+  <timestamp type="u64_t">1285336864</timestamp>
+  <hostname>l40012.internt.svt.se</hostname>
+  <os>windows</os>
+  <product>Intel® Parallel Inspector 2011 beta</product>
+  <buildNumber type="s32_t">101905</buildNumber>
+  <variables>
+   <at>ti1</at>
+  </variables>
+ </rdmgr>
+</root>

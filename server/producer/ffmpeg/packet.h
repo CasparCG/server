@@ -44,7 +44,7 @@ struct video_packet : boost::noncopyable
 	const uint8_t* const			data;
 	AVCodecContext*	const			codec_context;
 	const AVCodec* const			codec;
-	const frame_ptr					frame;
+	frame_ptr						frame;
 	AVFramePtr						decoded_frame;
 };	
 typedef std::shared_ptr<video_packet> video_packet_ptr;

@@ -32,8 +32,8 @@ class frame_processor : boost::noncopyable
 public:
 	frame_processor(const frame_format_desc& format_desc);
 
-	frame_processor& operator<<(const std::vector<frame_ptr>& frames);
-	frame_processor& operator>>(frame_ptr& frame);
+	void push(const std::vector<frame_ptr>& frames);
+	bool try_pop(frame_ptr& frame);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

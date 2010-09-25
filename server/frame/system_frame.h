@@ -31,6 +31,8 @@ class system_frame : public frame
 public:
 	explicit system_frame(const frame_format_desc& format);
 	system_frame(size_t width, size_t height);
+	system_frame(const frame_format_desc& format, size_t size);
+	system_frame(size_t width, size_t height, size_t size);
 	~system_frame();
 
 	unsigned char* data();

@@ -31,7 +31,7 @@ class buffer_pool
 public:
 	std::shared_ptr<T> create(size_t width, size_t height)
 	{
-		auto key = (width & 0x00000000FFFFFFFF) | (height << 16);
+		auto key = width | (height << 16);
 		auto& pool = pools_[key];
 
 		if(pool.empty())
@@ -82,9 +82,7 @@ struct frame_processor::implementation
 	{
 		queue_.set_capacity(3);
 		thread_ = boost::thread([=]{run();});
-		empty_frame_ = clear_frame(std::make_shared<system_frame>(format_desc_));
-
-		finished_frames_.push(empty_frame_);
+		empty_frame_ = clear_frame(std::make_shared<system_frame>(format_desc));
 	}
 
 	~implementation()
@@ -149,15 +147,9 @@ struct frame_processor::implementation
 		finished_frames_.push(frame);
 	}
 
-	frame_ptr get_frame()
+	bool try_pop(frame_ptr& frame)
 	{
-		frame_ptr frame;
-		if(!finished_frames_.try_pop(frame))
-		{
-			CASPAR_LOG(trace) << "GPU Processor Underflow";
-			finished_frames_.pop(frame);
-		}
-		return frame != nullptr ? frame : empty_frame_;
+		return finished_frames_.try_pop(frame);
 	}
 		
 	void init()	
@@ -215,7 +207,7 @@ struct frame_processor::implementation
 };
 	
 frame_processor::frame_processor(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-frame_processor& frame_processor::operator<<(const std::vector<frame_ptr>& frames){ impl_->composite(frames); return *this;}
-frame_processor& frame_processor::operator>>(frame_ptr& frame){ frame = impl_->get_frame(); return *this;}
+void frame_processor::push(const std::vector<frame_ptr>& frames){ impl_->composite(frames);}
+bool frame_processor::try_pop(frame_ptr& frame){ return impl_->try_pop(frame);}
 
 }}

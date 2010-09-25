@@ -89,6 +89,11 @@ struct bitmap_frame::implementation : boost::noncopyable
 
 		bitmap_ = std::move(CreateDIBSection(hdc_, &bitmapInfo, DIB_RGB_COLORS, reinterpret_cast<void**>(&bitmap_data_), NULL, 0));
 		SelectObject(hdc_, bitmap_);	
+				
+		//HANDLE hMapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, width*height*4, NULL);
+		//MapViewOfFileEx(hMapping, FILE_MAP_ALL_ACCESS, 0, 0, 0, memory);
+
+		//hBitmap = CreateDIBSection(memoryDC, &bitmapInfo, DIB_RGB_COLORS, pBitmapData, hMapping, 0);
 	}
 	
 	const size_t size_;

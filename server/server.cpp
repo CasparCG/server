@@ -125,7 +125,7 @@ struct server::implementation : boost::noncopyable
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
 			}
-			//consumers.push_back(std::make_shared<file::file_frame_consumer>(common::narrow(media_folder_) + "test.mpeg", format_desc));
+			//consumers.push_back(std::make_shared<file::file_frame_consumer>(common::narrow(media_folder_) + "test.avi", format_desc));
 			channels_.push_back(std::make_shared<renderer::render_device>(format_desc, channels_.size() + 1, consumers));
 		}
 	}
