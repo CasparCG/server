@@ -26,52 +26,14 @@
 
 namespace caspar{
 	
-class scoped_hdc : boost::noncopyable
-{ 
-public:
-	scoped_hdc(HDC hdc) : hdc_(hdc){}
-	void operator=(scoped_hdc&& other) 
-	{ 
-		hdc_ = other.hdc_;
-		other.hdc_ = nullptr; 
-	}
-	~scoped_hdc()
-	{ 
-		if(hdc_ != nullptr)
-			DeleteDC(hdc_);
-	}
-	operator HDC() { return hdc_; }
-private:
-	HDC hdc_;
-};
-
-class scoped_bitmap : boost::noncopyable
-{ 
-public:
-	scoped_bitmap(HBITMAP bmp) : bmp_(bmp){}
-	void operator=(scoped_bitmap&& other) 
-	{ 
-		bmp_ = other.bmp_;
-		other.bmp_ = nullptr; 
-	}
-	~scoped_bitmap() 
-	{ 
-		if(bmp_ != nullptr) 
-			DeleteObject(bmp_);
-	}
-	operator HBITMAP() const { return bmp_; }
-private:
-	HBITMAP bmp_;
-};
-
 struct bitmap_frame::implementation : boost::noncopyable
 {
 	implementation(size_t width, size_t height) 
-		: size_(width*height*4), width_(width), height_(height), hdc_(CreateCompatibleDC(nullptr)), bitmap_(nullptr)
+		: size_(width*height*4), width_(width), height_(height), hdc_(CreateCompatibleDC(nullptr)), bitmap_handle_(nullptr)
 	{	
 		if(hdc_ == nullptr)
 			throw std::bad_alloc();
-
+		
 		BITMAPINFO bitmapInfo;
 		bitmapInfo.bmiHeader.biBitCount = 32;
 		bitmapInfo.bmiHeader.biClrImportant = 0;
@@ -87,24 +49,50 @@ struct bitmap_frame::implementation : boost::noncopyable
 		bitmapInfo.bmiHeader.biXPelsPerMeter = 0;
 		bitmapInfo.bmiHeader.biYPelsPerMeter = 0;
 
-		bitmap_ = std::move(CreateDIBSection(hdc_, &bitmapInfo, DIB_RGB_COLORS, reinterpret_cast<void**>(&bitmap_data_), NULL, 0));
-		SelectObject(hdc_, bitmap_);	
-				
-		//HANDLE hMapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, width*height*4, NULL);
-		//MapViewOfFileEx(hMapping, FILE_MAP_ALL_ACCESS, 0, 0, 0, memory);
+		bitmap_handle_ = CreateDIBSection(hdc_, &bitmapInfo, DIB_RGB_COLORS, reinterpret_cast<void**>(&bitmap_data_), NULL, 0);
+		SelectObject(hdc_, bitmap_handle_);	
+	}
+	
+	implementation(const std::shared_ptr<frame>& frame)
+		: size_(frame->size()), width_(frame->width()), height_(frame->height()), hdc_(CreateCompatibleDC(nullptr)), bitmap_handle_(nullptr), frame_(frame)
+	{
+		if(hdc_ == nullptr)
+			throw std::bad_alloc();
 
-		//hBitmap = CreateDIBSection(memoryDC, &bitmapInfo, DIB_RGB_COLORS, pBitmapData, hMapping, 0);
+		bitmap_data_ = frame_->data();
+		BITMAP bmp;
+		bmp.bmBits = bitmap_data_;
+		bmp.bmHeight = frame->height();
+		bmp.bmWidth = frame->width();
+		bmp.bmWidthBytes = frame->width()*4;
+		bmp.bmBitsPixel = 32;
+		bmp.bmPlanes = 1;
+		bmp.bmType = 0;
+		bitmap_handle_ = CreateBitmapIndirect(&bmp);
+		bitmap_data_ = frame->data();
+		SelectObject(hdc_, bitmap_handle_);	
+	}
+
+	~implementation()
+	{
+		if(bitmap_handle_ != nullptr) 
+			DeleteObject(bitmap_handle_);
+		if(hdc_ != nullptr)
+			DeleteDC(hdc_);
 	}
 	
 	const size_t size_;
 	const size_t width_;
 	const size_t height_;
 	unsigned char* bitmap_data_;
-	scoped_hdc hdc_;
-	scoped_bitmap bitmap_;
+	HDC hdc_;
+	HBITMAP bitmap_handle_;
+
+	std::shared_ptr<frame> frame_;
 };
 
 bitmap_frame::bitmap_frame(size_t width, size_t height) : impl_(new implementation(width, height)){}
+bitmap_frame::bitmap_frame(const std::shared_ptr<frame>& frame) : impl_(new implementation(frame)){}
 size_t bitmap_frame::size() const { return impl_->size_; }
 size_t bitmap_frame::width() const { return impl_->width_; }
 size_t bitmap_frame::height() const { return impl_->height_; }

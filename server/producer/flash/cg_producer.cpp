@@ -79,6 +79,7 @@ public:
 		if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.18")))
 		{
 			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.18"), fmtDesc);
+			flash_producer_->initialize(factory_);
 			proxy_.reset(new flash_cg_proxy18());
 			CASPAR_LOG(info) << L"Running version 1.8 template graphics.";
 		}
@@ -151,7 +152,14 @@ public:
 	{
 		return flash_producer_ ? flash_producer_->get_frame() : nullptr;
 	}
+	
+	void initialize(const frame_factory_ptr& factory)
+	{
+		factory_ = factory;
+		flash_producer_->initialize(factory_);
+	}
 
+	frame_factory_ptr factory_;
 	frame_format_desc format_desc_;
 	flash_producer_ptr flash_producer_;
 	std::unique_ptr<flash_cg_proxy18> proxy_;
@@ -185,4 +193,5 @@ void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
 const frame_format_desc& cg_producer::get_frame_format_desc() const { return impl_->format_desc_; }
+void cg_producer::initialize(const frame_factory_ptr& factory){impl_->initialize(factory);}
 }}

@@ -29,6 +29,7 @@ class bitmap_frame : public frame
 {
 public:
 	bitmap_frame(size_t width, size_t height);
+	bitmap_frame(const std::shared_ptr<frame>& frame);
 
 	unsigned char* data();
 	size_t size() const;	

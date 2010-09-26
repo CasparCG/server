@@ -28,8 +28,10 @@
 #include "FlashAxContainer.h"
 #include "TimerHelper.h"
 
+#include "../../frame/gpu/frame.h"
 #include "../../frame/bitmap_frame.h"
 #include "../../frame/format.h"
+#include "../../frame/factory.h"
 #include "../../frame/system_frame.h"
 #include "../../frame/algorithm.h"
 #include "../../../common/utility/find_file.h"
@@ -242,19 +244,9 @@ struct flash_producer::implementation
 		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
 		if(current_frame_ == nullptr || invalid_count_ < 2)
 		{		
-			bitmap_frame_ptr frame;		
-			if(!bitmap_pool_->try_pop(frame))					
-			{	
-				CASPAR_LOG(trace) << "Allocated bitmap_frame";
-				frame = clear_frame(std::make_shared<bitmap_frame>(format_desc_.width, format_desc_.height));			
-			}
-			flashax_container_->DrawControl(frame->hdc());
-
-			auto pool = bitmap_pool_;
-			current_frame_.reset(frame.get(), [=](bitmap_frame*)
-			{
-				common::function_task::enqueue([=]{pool->try_push(clear_frame(frame));});
-			});
+			//auto frame = factory_->create_frame(format_desc_.width, format_desc_.height); //  std::make_shared<system_frame>(format_desc_);//
+			current_frame_ = clear_frame(std::make_shared<bitmap_frame>(format_desc_.width, format_desc_.height));	// std::make_shared<bitmap_frame>(frame));//	
+			flashax_container_->DrawControl(current_frame_->hdc());
 		}	
 		return current_frame_;
 	}
@@ -262,6 +254,11 @@ struct flash_producer::implementation
 	frame_ptr get_frame()
 	{
 		return frame_buffer_.try_pop(last_frame_) || !is_empty_ ? last_frame_ : frame::null();
+	}
+
+	void initialize(const frame_factory_ptr& factory)
+	{
+		factory_ = factory;
 	}
 	
 	typedef tbb::concurrent_bounded_queue<bitmap_frame_ptr> bitmap_pool;
@@ -272,7 +269,7 @@ struct flash_producer::implementation
 		
 	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
 	frame_ptr last_frame_;
-	frame_ptr current_frame_;
+	bitmap_frame_ptr current_frame_;
 	
 	std::wstring filename_;
 	flash_producer* self_;
@@ -280,12 +277,15 @@ struct flash_producer::implementation
 	tbb::atomic<bool> is_empty_;
 	common::executor executor_;
 	int invalid_count_;
+
+	frame_factory_ptr factory_;
 };
 
 flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc) : impl_(new implementation(this, filename, format_desc)){}
 frame_ptr flash_producer::get_frame(){return impl_->get_frame();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
 const frame_format_desc& flash_producer::get_frame_format_desc() const { return impl_->format_desc_; } 
+void flash_producer::initialize(const frame_factory_ptr& factory){impl_->initialize(factory);}
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)
 {

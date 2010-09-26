@@ -41,6 +41,8 @@ public:
 	const frame_format_desc& get_frame_format_desc() const;
 
 	void param(const std::wstring& param);
+
+	void initialize(const frame_factory_ptr& factory);
 	
 	static std::wstring find_template(const std::wstring& templateName);
 

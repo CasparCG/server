@@ -34,7 +34,7 @@ public:
 	frame_processor(const frame_format_desc& format_desc);
 
 	void push(const std::vector<frame_ptr>& frames);
-	bool try_pop(frame_ptr& frame);
+	void pop(frame_ptr& frame);
 
 	frame_ptr create_frame(size_t width, size_t height);
 private:

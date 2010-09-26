@@ -22,6 +22,8 @@ public:
 	void update(int layer, const std::wstring& data);
 	void invoke(int layer, const std::wstring& label);
 
+	void initialize(const frame_factory_ptr& factory);
+
 	const frame_format_desc& get_frame_format_desc() const;
 private:
 	struct implementation;

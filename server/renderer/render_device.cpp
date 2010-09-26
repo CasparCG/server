@@ -80,8 +80,7 @@ struct render_device::implementation : boost::noncopyable
 	void render()
 	{		
 		CASPAR_LOG(info) << L"Started render_device::render Thread";
-		win32_exception::install_handler();
-		
+		win32_exception::install_handler();		
 
 		while(is_running_)
 		{
@@ -93,11 +92,11 @@ struct render_device::implementation : boost::noncopyable
 					tbb::mutex::scoped_lock lock(layers_mutex_);	
 					frames = render_frames(layers_);
 				}
-				gpu_frame_processor_->push(frames); // blocks
+				gpu_frame_processor_->push(frames);
 
 				frame_ptr frame;	
-				if(gpu_frame_processor_->try_pop(frame))
-					frame_buffer_.push(frame);
+				gpu_frame_processor_->pop(frame);
+				frame_buffer_.push(frame); // Blocking
 			}
 			catch(...)
 			{
