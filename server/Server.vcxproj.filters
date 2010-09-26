@@ -82,14 +82,8 @@
     <Filter Include="Source\frame\gpu">
       <UniqueIdentifier>{b0a19509-df88-4f87-a52d-36290ac0cfa7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="My Amplifier Results">
-      <UniqueIdentifier>{c08b965d-9119-47f8-b62e-21c5518846d2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\consumer\file">
       <UniqueIdentifier>{4ef6b130-4408-4c9a-9496-dd327a7a39f8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="My Inspector Results">
-      <UniqueIdentifier>{616473fc-80e4-439a-9e42-413b6b63ff0c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -410,27 +404,6 @@
   <ItemGroup>
     <None Include="caspar.config">
       <Filter>Source</Filter>
-    </None>
-    <None Include="My Amplifier Results\r000hs\r000hs.ampl">
-      <Filter>My Amplifier Results</Filter>
-    </None>
-    <None Include="My Inspector Results\r000ti1\r000ti1.insp">
-      <Filter>My Inspector Results</Filter>
-    </None>
-    <None Include="My Amplifier Results\r001hs\r001hs.ampl">
-      <Filter>My Amplifier Results</Filter>
-    </None>
-    <None Include="My Amplifier Results\r002hs\r002hs.ampl">
-      <Filter>My Amplifier Results</Filter>
-    </None>
-    <None Include="My Amplifier Results\r003hs\r003hs.ampl">
-      <Filter>My Amplifier Results</Filter>
-    </None>
-    <None Include="My Amplifier Results\r004hs\r004hs.ampl">
-      <Filter>My Amplifier Results</Filter>
-    </None>
-    <None Include="My Amplifier Results\r005hs\r005hs.ampl">
-      <Filter>My Amplifier Results</Filter>
     </None>
   </ItemGroup>
 </Project>
