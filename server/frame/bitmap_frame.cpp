@@ -59,18 +59,39 @@ struct bitmap_frame::implementation : boost::noncopyable
 		if(hdc_ == nullptr)
 			throw std::bad_alloc();
 
-		bitmap_data_ = frame_->data();
-		BITMAP bmp;
-		bmp.bmBits = bitmap_data_;
-		bmp.bmHeight = frame->height();
-		bmp.bmWidth = frame->width();
-		bmp.bmWidthBytes = frame->width()*4;
-		bmp.bmBitsPixel = 32;
-		bmp.bmPlanes = 1;
-		bmp.bmType = 0;
-		bitmap_handle_ = CreateBitmapIndirect(&bmp);
-		bitmap_data_ = frame->data();
+		//bitmap_data_ = frame_->data();
+		//BITMAP bmp;
+		//bmp.bmBits = bitmap_data_;
+		//bmp.bmHeight = frame->height();
+		//bmp.bmWidth = frame->width();
+		//bmp.bmWidthBytes = frame->width()*4;
+		//bmp.bmBitsPixel = 32;
+		//bmp.bmPlanes = 1;
+		//bmp.bmType = 0;
+		//bitmap_handle_ = CreateBitmapIndirect(&bmp);
+		//bitmap_data_ = frame->data();
+		//SelectObject(hdc_, bitmap_handle_);	
+
+		
+		BITMAPINFO bitmapInfo;
+		bitmapInfo.bmiHeader.biBitCount = 32;
+		bitmapInfo.bmiHeader.biClrImportant = 0;
+		bitmapInfo.bmiHeader.biClrUsed = 0;
+		bitmapInfo.bmiHeader.biCompression = BI_RGB;
+	#pragma warning(disable:4146)
+		bitmapInfo.bmiHeader.biHeight = -height_;
+	#pragma warning(default:4146)
+		bitmapInfo.bmiHeader.biPlanes = 1;
+		bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFO);
+		bitmapInfo.bmiHeader.biWidth = width_;
+		bitmapInfo.bmiHeader.biSizeImage = 0;
+		bitmapInfo.bmiHeader.biXPelsPerMeter = 0;
+		bitmapInfo.bmiHeader.biYPelsPerMeter = 0;
+
+		bitmap_handle_ = CreateCompatibleBitmap(hdc_, width_, height_);
 		SelectObject(hdc_, bitmap_handle_);	
+		SetDIBits(hdc_, bitmap_handle_, 0, height_, frame_->data(), &bitmapInfo, 0);
+		bitmap_data_ = frame_->data();
 	}
 
 	~implementation()

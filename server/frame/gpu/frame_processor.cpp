@@ -82,11 +82,8 @@ struct frame_processor::implementation
 
 			input_.resize(2);
 			writing_.resize(2);
-			reading_.resize(2);
-			reading_[0] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);
-			reading_[1] = std::make_shared<common::gpu::pixel_buffer>(format_desc_.width, format_desc_.height);
 			fbo_ = std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height);
-			output_frame_ = empty_frame_;
+			output_frame_ = std::make_shared<gpu_frame>(format_desc_.width, format_desc_.height, this);
 			index_ = 0;
 		});
 	}
@@ -113,7 +110,7 @@ struct frame_processor::implementation
 
 				// 2. Start asynchronous DMA transfer to video memory
 				// Lock frames and give pointer ownership to OpenGL			
-				boost::range::for_each(input_[index_], std::mem_fn(&gpu_frame::lock));
+				boost::range::for_each(input_[index_], std::mem_fn(&gpu_frame::write_lock));
 				writing_[index_] = input_[index_];	
 				input_[index_].clear();
 				
@@ -134,11 +131,10 @@ struct frame_processor::implementation
 					input_[next_index].push_back(internal_frame);
 				}
 				
-				// 4. Read from page-locked memory into system memory
-				reading_[index_]->read_to_memory(output_frame_->data());
-
-				// Output to external buffer
-				finished_frames_.push(output_frame_);
+				// 4. Output to external buffer
+				if(output_frame_->read_unlock())
+					finished_frames_.push(output_frame_);
+				output_frame_ = nullptr;
 		
 				// 3. Draw to framebuffer and start asynchronous DMA transfer to page-locked memory				
 				// Clear framebuffer
@@ -146,18 +142,18 @@ struct frame_processor::implementation
 
 				// Draw all frames to framebuffer
 				boost::range::for_each(writing_[next_index], std::mem_fn(&gpu_frame::draw));
-
+				
+				// Create an output frame
+				output_frame_ = create_output_frame();
+			
 				// Read from framebuffer into page-locked memory
-				reading_[next_index]->read_to_pbo(GL_COLOR_ATTACHMENT0_EXT);
+				output_frame_->read_lock(GL_COLOR_ATTACHMENT0_EXT);
 
 				// Unlock frames and give back pointer ownership
-				boost::range::for_each(writing_[next_index], std::mem_fn(&gpu_frame::unlock));
-
-				// Create an output frame
-				output_frame_ = std::make_shared<system_frame>(format_desc_);
-
+				boost::range::for_each(writing_[next_index], std::mem_fn(&gpu_frame::write_unlock));
+				
 				// Copy audio from composite frames into output frame
-				boost::range::for_each(writing_[next_index], std::bind(&copy_frame_audio<frame_ptr>, output_frame_, std::placeholders::_1));	
+				boost::range::for_each(writing_[next_index], std::bind(&copy_frame_audio<gpu_frame_ptr>, output_frame_, std::placeholders::_1));	
 
 				// Return frames to pool
 				writing_[next_index].clear();
@@ -168,12 +164,24 @@ struct frame_processor::implementation
 			}
 		});	
 	}
-	
-	
+
+	gpu_frame_ptr create_output_frame()
+	{	
+		gpu_frame_ptr frame;
+		if(!out_frame_pool_.try_pop(frame))				
+			frame = std::make_shared<gpu_frame>(format_desc_.width, format_desc_.height, this);
+
+		return gpu_frame_ptr(frame.get(), [=](gpu_frame*)
+		{
+			frame->audio_data().clear();
+			out_frame_pool_.push(frame);
+		});
+	}
+		
 	gpu_frame_ptr create_frame(size_t width, size_t height)
 	{
 		size_t key = width | (height << 16);
-		auto& pool = frame_pools_[key];
+		auto& pool = input_frame_pools_[key];
 		
 		gpu_frame_ptr frame;
 		if(!pool.try_pop(frame))
@@ -181,7 +189,7 @@ struct frame_processor::implementation
 			frame = executor_.invoke([=]() -> gpu_frame_ptr
 			{
 				auto frame = std::make_shared<gpu_frame>(width, height, this);
-				frame->unlock();
+				frame->write_unlock();
 				return frame;
 			});
 		}
@@ -189,7 +197,7 @@ struct frame_processor::implementation
 		auto destructor = [=]
 		{
 			frame->audio_data().clear();
-			frame_pools_[key].push(frame);
+			input_frame_pools_[key].push(frame);
 		};
 
 		return gpu_frame_ptr(frame.get(), [=](gpu_frame*)
@@ -198,7 +206,9 @@ struct frame_processor::implementation
 		});
 	}
 			
-	tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<gpu_frame_ptr>> frame_pools_;
+	tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<gpu_frame_ptr>> input_frame_pools_;
+
+	tbb::concurrent_bounded_queue<gpu_frame_ptr> out_frame_pool_;
 		
 	frame_buffer_ptr fbo_;
 
@@ -206,8 +216,7 @@ struct frame_processor::implementation
 	std::vector<std::vector<gpu_frame_ptr>>		input_;
 	std::vector<std::vector<gpu_frame_ptr>>		writing_;
 
-	std::vector<common::gpu::pixel_buffer_ptr>	reading_;
-	frame_ptr									output_frame_;
+	gpu_frame_ptr								output_frame_;
 	tbb::concurrent_bounded_queue<frame_ptr>	finished_frames_;
 			
 	frame_format_desc format_desc_;

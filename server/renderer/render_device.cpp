@@ -123,8 +123,8 @@ struct render_device::implementation : boost::noncopyable
 			{
 #ifdef CASPAR_TRACE_UNDERFLOW
 				CASPAR_LOG(trace) << "Display Buffer Underrun";
-				frame_buffer_.pop(frame);
 #endif
+				frame_buffer_.pop(frame);
 			}
 			if(frame != nullptr)
 			{
