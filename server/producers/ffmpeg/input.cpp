@@ -34,14 +34,11 @@ struct input::implementation : boost::noncopyable
 	
 	void stop()
 	{
-		if(!is_running_.fetch_and_store(false))
-			return;
-
+		is_running_ = false;
 		audio_packet_buffer_.clear();
 		video_packet_buffer_.clear();
 		file_buffer_size_ = 0;
 		file_buffer_size_cond_.notify_all();
-		io_thread_.join();
 	}
 
 	void load(const std::string& filename)

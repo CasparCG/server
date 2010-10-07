@@ -65,9 +65,9 @@ public:
 	
 	~Implementation()
 	{
-		frameBuffer_.clear();
 		input_->stop();
-		thread_.join();
+		if(!thread_.timed_join(boost::posix_time::milliseconds(1000)))
+			throw std::runtime_error("Thread time-out");
 	}
 		
 	FramePtr get_frame()
