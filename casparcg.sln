@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Server", "server\Server.vcproj", "{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Server Setup", "server setup\Server Setup.vdproj", "{4BFFC798-E9B8-4C36-AA7C-B66E42298020}"
+EndProject
+Global
+	GlobalSection(SubversionScc) = preSolution
+		Svn-Managed = True
+		Manager = AnkhSVN - Subversion Support for Visual Studio
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Debug|Win32.ActiveCfg = Debug|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Debug|Win32.Build.0 = Debug|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Release|Win32.ActiveCfg = no bluefish|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Release|Win32.Build.0 = no bluefish|Win32
+		{4BFFC798-E9B8-4C36-AA7C-B66E42298020}.Debug|Win32.ActiveCfg = Debug
+		{4BFFC798-E9B8-4C36-AA7C-B66E42298020}.Release|Win32.ActiveCfg = Release
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

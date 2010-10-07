@@ -1,0 +1,367 @@
+// Generated .IDL file (by the OLE/COM Object Viewer)
+// 
+// typelib filename: Flash9e.ocx
+
+[
+  uuid(D27CDB6B-AE6D-11CF-96B8-444553540000),
+  version(1.0),
+  helpstring("Shockwave Flash"),
+  custom(DE77BA64-517C-11D1-A2DA-0000F8773CE9, 100663662),
+  custom(DE77BA63-517C-11D1-A2DA-0000F8773CE9, 1180654890)
+
+]
+library ShockwaveFlashObjects
+{
+    // TLib :     // TLib : OLE Automation : {00020430-0000-0000-C000-000000000046}
+    importlib("stdole2.tlb");
+
+    // Forward declare all types defined in this typelib
+    interface IShockwaveFlash;
+    dispinterface _IShockwaveFlashEvents;
+    interface IFlashFactory;
+    interface IFlashObjectInterface;
+    interface IDispatchEx;
+    interface IServiceProvider;
+
+    [
+      odl,
+      uuid(D27CDB6C-AE6D-11CF-96B8-444553540000),
+      helpstring("Shockwave Flash"),
+      dual,
+      oleautomation
+    ]
+    interface IShockwaveFlash : IDispatch {
+        [id(0xfffffdf3), propget, helpstring("property ReadyState")]
+        HRESULT ReadyState([out, retval] long* pVal);
+        [id(0x0000007c), propget, helpstring("property TotalFrames")]
+        HRESULT TotalFrames([out, retval] long* pVal);
+        [id(0x0000007d), propget, helpstring("property Playing")]
+        HRESULT Playing([out, retval] VARIANT_BOOL* pVal);
+        [id(0x0000007d), propput, helpstring("property Playing")]
+        HRESULT Playing([in] VARIANT_BOOL pVal);
+        [id(0x00000069), propget, helpstring("property Quality")]
+        HRESULT Quality([out, retval] int* pVal);
+        [id(0x00000069), propput, helpstring("property Quality")]
+        HRESULT Quality([in] int pVal);
+        [id(0x00000078), propget, helpstring("property ScaleMode")]
+        HRESULT ScaleMode([out, retval] int* pVal);
+        [id(0x00000078), propput, helpstring("property ScaleMode")]
+        HRESULT ScaleMode([in] int pVal);
+        [id(0x00000079), propget, helpstring("property AlignMode")]
+        HRESULT AlignMode([out, retval] int* pVal);
+        [id(0x00000079), propput, helpstring("property AlignMode")]
+        HRESULT AlignMode([in] int pVal);
+        [id(0x0000007b), propget, helpstring("property BackgroundColor")]
+        HRESULT BackgroundColor([out, retval] long* pVal);
+        [id(0x0000007b), propput, helpstring("property BackgroundColor")]
+        HRESULT BackgroundColor([in] long pVal);
+        [id(0x0000006a), propget, helpstring("property Loop")]
+        HRESULT Loop([out, retval] VARIANT_BOOL* pVal);
+        [id(0x0000006a), propput, helpstring("property Loop")]
+        HRESULT Loop([in] VARIANT_BOOL pVal);
+        [id(0x00000066), propget, helpstring("property Movie")]
+        HRESULT Movie([out, retval] BSTR* pVal);
+        [id(0x00000066), propput, helpstring("property Movie")]
+        HRESULT Movie([in] BSTR pVal);
+        [id(0x0000006b), propget, helpstring("property FrameNum")]
+        HRESULT FrameNum([out, retval] long* pVal);
+        [id(0x0000006b), propput, helpstring("property FrameNum")]
+        HRESULT FrameNum([in] long pVal);
+        [id(0x0000006d), helpstring("method SetZoomRect")]
+        HRESULT SetZoomRect(
+                        [in] long left, 
+                        [in] long top, 
+                        [in] long right, 
+                        [in] long bottom);
+        [id(0x00000076), helpstring("method Zoom")]
+        HRESULT Zoom([in] int factor);
+        [id(0x00000077), helpstring("method Pan")]
+        HRESULT Pan(
+                        [in] long x, 
+                        [in] long y, 
+                        [in] int mode);
+        [id(0x00000070), helpstring("method Play")]
+        HRESULT Play();
+        [id(0x00000071), helpstring("method Stop")]
+        HRESULT Stop();
+        [id(0x00000072), helpstring("method Back")]
+        HRESULT Back();
+        [id(0x00000073), helpstring("method Forward")]
+        HRESULT Forward();
+        [id(0x00000074), helpstring("method Rewind")]
+        HRESULT Rewind();
+        [id(0x0000007e), helpstring("method StopPlay")]
+        HRESULT StopPlay();
+        [id(0x0000007f), helpstring("method GotoFrame")]
+        HRESULT GotoFrame([in] long FrameNum);
+        [id(0x00000080), helpstring("method CurrentFrame")]
+        HRESULT CurrentFrame([out, retval] long* FrameNum);
+        [id(0x00000081), helpstring("method IsPlaying")]
+        HRESULT IsPlaying([out, retval] VARIANT_BOOL* Playing);
+        [id(0x00000082), helpstring("method PercentLoaded")]
+        HRESULT PercentLoaded([out, retval] long* percent);
+        [id(0x00000083), helpstring("method FrameLoaded")]
+        HRESULT FrameLoaded(
+                        [in] long FrameNum, 
+                        [out, retval] VARIANT_BOOL* loaded);
+        [id(0x00000084), helpstring("method FlashVersion")]
+        HRESULT FlashVersion([out, retval] long* version);
+        [id(0x00000085), propget, helpstring("property WMode")]
+        HRESULT WMode([out, retval] BSTR* pVal);
+        [id(0x00000085), propput, helpstring("property WMode")]
+        HRESULT WMode([in] BSTR pVal);
+        [id(0x00000086), propget, helpstring("property SAlign")]
+        HRESULT SAlign([out, retval] BSTR* pVal);
+        [id(0x00000086), propput, helpstring("property SAlign")]
+        HRESULT SAlign([in] BSTR pVal);
+        [id(0x00000087), propget, helpstring("property Menu")]
+        HRESULT Menu([out, retval] VARIANT_BOOL* pVal);
+        [id(0x00000087), propput, helpstring("property Menu")]
+        HRESULT Menu([in] VARIANT_BOOL pVal);
+        [id(0x00000088), propget, helpstring("property Base")]
+        HRESULT Base([out, retval] BSTR* pVal);
+        [id(0x00000088), propput, helpstring("property Base")]
+        HRESULT Base([in] BSTR pVal);
+        [id(0x00000089), propget, helpstring("property Scale")]
+        HRESULT Scale([out, retval] BSTR* pVal);
+        [id(0x00000089), propput, helpstring("property Scale")]
+        HRESULT Scale([in] BSTR pVal);
+        [id(0x0000008a), propget, helpstring("property DeviceFont")]
+        HRESULT DeviceFont([out, retval] VARIANT_BOOL* pVal);
+        [id(0x0000008a), propput, helpstring("property DeviceFont")]
+        HRESULT DeviceFont([in] VARIANT_BOOL pVal);
+        [id(0x0000008b), propget, helpstring("property EmbedMovie")]
+        HRESULT EmbedMovie([out, retval] VARIANT_BOOL* pVal);
+        [id(0x0000008b), propput, helpstring("property EmbedMovie")]
+        HRESULT EmbedMovie([in] VARIANT_BOOL pVal);
+        [id(0x0000008c), propget, helpstring("property BGColor")]
+        HRESULT BGColor([out, retval] BSTR* pVal);
+        [id(0x0000008c), propput, helpstring("property BGColor")]
+        HRESULT BGColor([in] BSTR pVal);
+        [id(0x0000008d), propget, helpstring("property Quality2")]
+        HRESULT Quality2([out, retval] BSTR* pVal);
+        [id(0x0000008d), propput, helpstring("property Quality2")]
+        HRESULT Quality2([in] BSTR pVal);
+        [id(0x0000008e), helpstring("method LoadMovie")]
+        HRESULT LoadMovie(
+                        [in] int layer, 
+                        [in] BSTR url);
+        [id(0x0000008f), helpstring("method TGotoFrame")]
+        HRESULT TGotoFrame(
+                        [in] BSTR target, 
+                        [in] long FrameNum);
+        [id(0x00000090), helpstring("method TGotoLabel")]
+        HRESULT TGotoLabel(
+                        [in] BSTR target, 
+                        [in] BSTR label);
+        [id(0x00000091), helpstring("method TCurrentFrame")]
+        HRESULT TCurrentFrame(
+                        [in] BSTR target, 
+                        [out, retval] long* FrameNum);
+        [id(0x00000092), helpstring("method TCurrentLabel")]
+        HRESULT TCurrentLabel(
+                        [in] BSTR target, 
+                        [out, retval] BSTR* pVal);
+        [id(0x00000093), helpstring("method TPlay")]
+        HRESULT TPlay([in] BSTR target);
+        [id(0x00000094), helpstring("method TStopPlay")]
+        HRESULT TStopPlay([in] BSTR target);
+        [id(0x00000097), helpstring("method SetVariable")]
+        HRESULT SetVariable(
+                        [in] BSTR name, 
+                        [in] BSTR value);
+        [id(0x00000098), helpstring("method GetVariable")]
+        HRESULT GetVariable(
+                        [in] BSTR name, 
+                        [out, retval] BSTR* pVal);
+        [id(0x00000099), helpstring("method TSetProperty")]
+        HRESULT TSetProperty(
+                        [in] BSTR target, 
+                        [in] int property, 
+                        [in] BSTR value);
+        [id(0x0000009a), helpstring("method TGetProperty")]
+        HRESULT TGetProperty(
+                        [in] BSTR target, 
+                        [in] int property, 
+                        [out, retval] BSTR* pVal);
+        [id(0x0000009b), helpstring("method TCallFrame")]
+        HRESULT TCallFrame(
+                        [in] BSTR target, 
+                        [in] int FrameNum);
+        [id(0x0000009c), helpstring("method TCallLabel")]
+        HRESULT TCallLabel(
+                        [in] BSTR target, 
+                        [in] BSTR label);
+        [id(0x0000009d), helpstring("method TSetPropertyNum")]
+        HRESULT TSetPropertyNum(
+                        [in] BSTR target, 
+                        [in] int property, 
+                        [in] double value);
+        [id(0x0000009e), helpstring("method TGetPropertyNum")]
+        HRESULT TGetPropertyNum(
+                        [in] BSTR target, 
+                        [in] int property, 
+                        [out, retval] double* pVal);
+        [id(0x000000ac), helpstring("method TGetPropertyAsNumber")]
+        HRESULT TGetPropertyAsNumber(
+                        [in] BSTR target, 
+                        [in] int property, 
+                        [out, retval] double* pVal);
+        [id(0x0000009f), propget, helpstring("property SWRemote")]
+        HRESULT SWRemote([out, retval] BSTR* pVal);
+        [id(0x0000009f), propput, helpstring("property SWRemote")]
+        HRESULT SWRemote([in] BSTR pVal);
+        [id(0x000000aa), propget, helpstring("property FlashVars")]
+        HRESULT FlashVars([out, retval] BSTR* pVal);
+        [id(0x000000aa), propput, helpstring("property FlashVars")]
+        HRESULT FlashVars([in] BSTR pVal);
+        [id(0x000000ab), propget, helpstring("property AllowScriptAccess")]
+        HRESULT AllowScriptAccess([out, retval] BSTR* pVal);
+        [id(0x000000ab), propput, helpstring("property AllowScriptAccess")]
+        HRESULT AllowScriptAccess([in] BSTR pVal);
+        [id(0x000000be), propget, helpstring("property MovieData")]
+        HRESULT MovieData([out, retval] BSTR* pVal);
+        [id(0x000000be), propput, helpstring("property MovieData")]
+        HRESULT MovieData([in] BSTR pVal);
+        [id(0x000000bf), propget, helpstring("property inline-data")]
+        HRESULT InlineData([out, retval] IUnknown** ppIUnknown);
+        [id(0x000000bf), propput, helpstring("property inline-data")]
+        HRESULT InlineData([in] IUnknown* ppIUnknown);
+        [id(0x000000c0), propget, helpstring("property SeamlessTabbing")]
+        HRESULT SeamlessTabbing([out, retval] VARIANT_BOOL* pVal);
+        [id(0x000000c0), propput, helpstring("property SeamlessTabbing")]
+        HRESULT SeamlessTabbing([in] VARIANT_BOOL pVal);
+        [id(0x000000c1), helpstring("method EnforceLocalSecurity")]
+        HRESULT EnforceLocalSecurity();
+        [id(0x000000c2), propget, helpstring("property Profile")]
+        HRESULT Profile([out, retval] VARIANT_BOOL* pVal);
+        [id(0x000000c2), propput, helpstring("property Profile")]
+        HRESULT Profile([in] VARIANT_BOOL pVal);
+        [id(0x000000c3), propget, helpstring("property ProfileAddress")]
+        HRESULT ProfileAddress([out, retval] BSTR* pVal);
+        [id(0x000000c3), propput, helpstring("property ProfileAddress")]
+        HRESULT ProfileAddress([in] BSTR pVal);
+        [id(0x000000c4), propget, helpstring("property ProfilePort")]
+        HRESULT ProfilePort([out, retval] long* pVal);
+        [id(0x000000c4), propput, helpstring("property ProfilePort")]
+        HRESULT ProfilePort([in] long pVal);
+        [id(0x000000c6), helpstring("method Call")]
+        HRESULT CallFunction(
+                        [in] BSTR request, 
+                        [out, retval] BSTR* response);
+        [id(0x000000c7), helpstring("method SetReturnValue")]
+        HRESULT SetReturnValue([in] BSTR returnValue);
+        [id(0x000000c8), helpstring("method DisableLocalSecurity")]
+        HRESULT DisableLocalSecurity();
+        [id(0x000000c9), propget, helpstring("property AllowNetworking")]
+        HRESULT AllowNetworking([out, retval] BSTR* pVal);
+        [id(0x000000c9), propput, helpstring("property AllowNetworking")]
+        HRESULT AllowNetworking([in] BSTR pVal);
+        [id(0x000000ca), propget, helpstring("property AllowFullScreen")]
+        HRESULT AllowFullScreen([out, retval] BSTR* pVal);
+        [id(0x000000ca), propput, helpstring("property AllowFullScreen")]
+        HRESULT AllowFullScreen([in] BSTR pVal);
+    };
+
+    [
+      uuid(D27CDB6D-AE6D-11CF-96B8-444553540000),
+      helpstring("Event interface for Shockwave Flash"),
+	  hidden
+    ]
+    dispinterface _IShockwaveFlashEvents {
+        properties:
+        methods:
+            [id(0xfffffd9f)]
+            void OnReadyStateChange(long newState);
+            [id(0x000007a6)]
+            void OnProgress(long percentDone);
+            [id(0x00000096)]
+            void FSCommand(
+                            [in] BSTR command, 
+                            [in] BSTR args);
+            [id(0x000000c5)]
+            void FlashCall([in] BSTR request);
+    };
+
+    [
+      uuid(D27CDB6E-AE6D-11CF-96B8-444553540000),
+      helpstring("Shockwave Flash")
+    ]
+    coclass ShockwaveFlash {
+        [default] interface IShockwaveFlash;
+        [default, source] dispinterface _IShockwaveFlashEvents;
+    };
+
+    [
+      odl,
+      uuid(D27CDB70-AE6D-11CF-96B8-444553540000),
+      helpstring("IFlashFactory Interface")
+    ]
+    interface IFlashFactory : IUnknown {
+    };
+
+    [
+      odl,
+      uuid(D27CDB72-AE6D-11CF-96B8-444553540000),
+      helpstring("IFlashObjectInterface Interface")
+    ]
+    interface IFlashObjectInterface : IDispatchEx {
+    };
+
+    [
+      odl,
+      uuid(A6EF9860-C720-11D0-9337-00A0C90DCAA9)
+    ]
+    interface IDispatchEx : IDispatch {
+        HRESULT _stdcall GetDispID(
+                        [in] BSTR bstrName, 
+                        [in] unsigned long grfdex, 
+                        [out] long* pid);
+        HRESULT _stdcall RemoteInvokeEx(
+                        [in] long id, 
+                        [in] unsigned long lcid, 
+                        [in] unsigned long dwFlags, 
+                        [in] DISPPARAMS* pdp, 
+                        [out] VARIANT* pvarRes, 
+                        [out] EXCEPINFO* pei, 
+                        [in] IServiceProvider* pspCaller, 
+                        [in] unsigned int cvarRefArg, 
+                        [in] unsigned int* rgiRefArg, 
+                        [in, out] VARIANT* rgvarRefArg);
+        HRESULT _stdcall DeleteMemberByName(
+                        [in] BSTR bstrName, 
+                        [in] unsigned long grfdex);
+        HRESULT _stdcall DeleteMemberByDispID([in] long id);
+        HRESULT _stdcall GetMemberProperties(
+                        [in] long id, 
+                        [in] unsigned long grfdexFetch, 
+                        [out] unsigned long* pgrfdex);
+        HRESULT _stdcall GetMemberName(
+                        [in] long id, 
+                        [out] BSTR* pbstrName);
+        HRESULT _stdcall GetNextDispID(
+                        [in] unsigned long grfdex, 
+                        [in] long id, 
+                        [out] long* pid);
+        HRESULT _stdcall GetNameSpaceParent([out] IUnknown** ppunk);
+    };
+
+    [
+      odl,
+      uuid(6D5140C1-7436-11CE-8034-00AA006009FA)
+    ]
+    interface IServiceProvider : IUnknown {
+        HRESULT _stdcall RemoteQueryService(
+                        [in] GUID* guidService, 
+                        [in] GUID* riid, 
+                        [out] IUnknown** ppvObject);
+    };
+
+    [
+      uuid(D27CDB71-AE6D-11CF-96B8-444553540000),
+      helpstring("IFlashObjectInterface Interface")
+    ]
+    coclass FlashObjectInterface {
+        [default] interface IFlashObjectInterface;
+    };
+};
