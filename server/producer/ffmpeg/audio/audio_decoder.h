@@ -1,14 +1,15 @@
 #pragma once
 
 #include "../packet.h"
-#include "../../../frame/audio_chunk.h"
+
+#include <boost/noncopyable.hpp>
 
 namespace caspar{ namespace ffmpeg	{
 
 class audio_decoder : boost::noncopyable
 {
 public:
-	audio_decoder(const sound_channel_info_ptr& snd_channel_info);
+	audio_decoder();
 	audio_packet_ptr execute(const audio_packet_ptr& audio_packet);
 	
 	/// <summary> The alignment </summary>
