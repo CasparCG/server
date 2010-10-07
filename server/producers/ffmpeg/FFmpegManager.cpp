@@ -21,7 +21,7 @@
 #include "../../stdafx.h"
 
 #include "FFMPEGManager.h"
-#include "FFMPEGProducer.h"
+#include "ffmpeg_producer.h"
 
 #include "../../MediaProducerInfo.h"
 #include "../../frame/FrameManager.h"
@@ -30,6 +30,16 @@
 
 #include <boost/thread/once.hpp>
 #include <boost/assign.hpp>
+
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+	#include <libavutil/avutil.h>
+	#include <libswscale/swscale.h>
+}
 
 namespace caspar {
 namespace ffmpeg {

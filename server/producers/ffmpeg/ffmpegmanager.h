@@ -1,3 +1,5 @@
+#pragma once
+
 /*
 * copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
 *

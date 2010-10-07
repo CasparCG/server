@@ -72,10 +72,10 @@
       <UniqueIdentifier>{5f57e8d6-78fb-4784-9dea-91e0c95d8aec}</UniqueIdentifier>
     </Filter>
     <Filter Include="producers\ffmpeg\video">
-      <UniqueIdentifier>{a6fee242-7d42-4f2e-8c32-ebc57afc38bc}</UniqueIdentifier>
+      <UniqueIdentifier>{3d3dff86-9539-4103-9f5b-2feb7300782f}</UniqueIdentifier>
     </Filter>
     <Filter Include="producers\ffmpeg\audio">
-      <UniqueIdentifier>{b820b516-95a2-48ac-a302-75e1280375ae}</UniqueIdentifier>
+      <UniqueIdentifier>{52231829-a35a-42e0-b828-84fc8088adb4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -239,9 +239,6 @@
     <ClInclude Include="cg\FlashCGProxy.h">
       <Filter>cg</Filter>
     </ClInclude>
-    <ClInclude Include="Producers\ffmpeg\FFmpegManager.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
     <ClInclude Include="Producers\flash\AxFlash.h">
       <Filter>producers\flash</Filter>
     </ClInclude>
@@ -378,36 +375,6 @@
       <Filter>frame\buffers</Filter>
     </ClInclude>
     <ClInclude Include="string_convert.h" />
-    <ClInclude Include="producers\ffmpeg\video\FFMPEGVideoScaler.h">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\video\FFMPEGVideoDeinterlacer.h">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\video\FFMPEGVideoDecoder.h">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\audio\FFMPEGAudioDecoder.h">
-      <Filter>producers\ffmpeg\audio</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGException.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGProducer.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGFrameOutput.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGInput.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGOutput.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGPacket.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
     <ClInclude Include="utils\UnhandledException.h">
       <Filter>utils</Filter>
     </ClInclude>
@@ -419,6 +386,27 @@
     </ClInclude>
     <ClInclude Include="utils\functiontask.hpp">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="producers\ffmpeg\ffmpeg_producer.h">
+      <Filter>producers\ffmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="producers\ffmpeg\input.h">
+      <Filter>producers\ffmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="producers\ffmpeg\packet.h">
+      <Filter>producers\ffmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="producers\ffmpeg\video\video_transformer.h">
+      <Filter>producers\ffmpeg\video</Filter>
+    </ClInclude>
+    <ClInclude Include="producers\ffmpeg\video\video_decoder.h">
+      <Filter>producers\ffmpeg\video</Filter>
+    </ClInclude>
+    <ClInclude Include="producers\ffmpeg\audio\audio_decoder.h">
+      <Filter>producers\ffmpeg\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="producers\ffmpeg\FFMPEGManager.h">
+      <Filter>producers\ffmpeg</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -530,9 +518,6 @@
     <ClCompile Include="cg\FlashCGProxy.cpp">
       <Filter>cg</Filter>
     </ClCompile>
-    <ClCompile Include="Producers\ffmpeg\FFmpegManager.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
     <ClCompile Include="producers\flash\CTManager.cpp">
       <Filter>producers\flash</Filter>
     </ClCompile>
@@ -632,31 +617,22 @@
     <ClCompile Include="frame\buffers\StaticFrameBuffer.cpp">
       <Filter>frame\buffers</Filter>
     </ClCompile>
-    <ClCompile Include="producers\ffmpeg\video\FFMPEGVideoDecoder.cpp">
+    <ClCompile Include="producers\ffmpeg\ffmpeg_producer.cpp">
+      <Filter>producers\ffmpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="producers\ffmpeg\input.cpp">
+      <Filter>producers\ffmpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="producers\ffmpeg\video\video_transformer.cpp">
       <Filter>producers\ffmpeg\video</Filter>
     </ClCompile>
-    <ClCompile Include="producers\ffmpeg\video\FFMPEGVideoScaler.cpp">
+    <ClCompile Include="producers\ffmpeg\video\video_decoder.cpp">
       <Filter>producers\ffmpeg\video</Filter>
     </ClCompile>
-    <ClCompile Include="producers\ffmpeg\video\FFMPEGVideoDeinterlacer.cpp">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\audio\FFMPEGAudioDecoder.cpp">
+    <ClCompile Include="producers\ffmpeg\audio\audio_decoder.cpp">
       <Filter>producers\ffmpeg\audio</Filter>
     </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGFrameOutput.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGInput.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGOutput.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGPacket.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGProducer.cpp">
+    <ClCompile Include="producers\ffmpeg\FFMPEGManager.cpp">
       <Filter>producers\ffmpeg</Filter>
     </ClCompile>
   </ItemGroup>
