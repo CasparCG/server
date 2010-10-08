@@ -42,7 +42,10 @@ struct video_transformer::implementation : boost::noncopyable
 				
 		size_t size = size = avpicture_get_size(dest_pix_fmt, width, height);
 
-		video_packet->frame = factory_->CreateFrame(); 
+		{
+			tbb::spin_mutex::scoped_lock lock(mutex_);
+			video_packet->frame = factory_->CreateFrame(); 
+		}
 		std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
 		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), video_packet->frame->GetDataPtr(), dest_pix_fmt, width, height);
 		
@@ -62,9 +65,11 @@ struct video_transformer::implementation : boost::noncopyable
 
 	void set_factory(const FrameManagerPtr& factory)
 	{
+		tbb::spin_mutex::scoped_lock lock(mutex_);
 		factory_ = factory;
 	}
 
+	tbb::spin_mutex mutex_;
 	FrameManagerPtr factory_;
 	std::shared_ptr<SwsContext> sws_context_;
 };
