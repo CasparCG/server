@@ -35,6 +35,7 @@ extern "C"
 #include "../../frame/FrameMediaController.h"
 #include "../../audio/audiomanager.h"
 #include "../../utils/Logger.h"
+#include "../../utils/Win32Exception.h"
 
 #include <tbb/mutex.h>
 #include <tbb/parallel_invoke.h>
@@ -60,12 +61,19 @@ public:
     	if(!boost::filesystem::exists(filename))
     		throw std::runtime_error("File not found");
 
-		frameBuffer_.SetCapacity(4);
+		frameBuffer_.SetCapacity(2);
+
+		input_.reset(new input());
+		input_->load(utils::narrow(filename_));
+		input_->set_loop(loop_);
+		has_audio_ = input_->get_audio_codec_context() != nullptr;
 	}
 	
 	~Implementation()
 	{
 		input_->stop();
+		frameBuffer_.clear();
+		frameBuffer_.push_back(nullptr);
 		thread_.join();
 	}
 		
@@ -122,11 +130,8 @@ public:
 		try
 		{
 			video_transformer_.set_factory(pFrameManager);
-			input_.reset(new input());
-			input_->load(utils::narrow(filename_));
-			input_->set_loop(loop_);
-			has_audio_ = input_->get_audio_codec_context() != nullptr;
-			thread_ = boost::thread([=]{run();});
+			if(!thread_.joinable())
+				thread_ = boost::thread([=]{run();});
 		}
 		catch(std::exception& ex)
 		{
@@ -135,6 +140,7 @@ public:
 		}
 		catch(...)
 		{
+			LOG << "FFMPEGProducer::Initialize Exception";
 			return false;
 		}
 
@@ -172,11 +178,12 @@ public:
 
 	void run()
 	{
+		Win32Exception::InstallHandler();
 		LOG << "Started FFMPEGProducer thread";
 
 		try
 		{
-			while(!input_->is_eof())			
+			while(!input_->is_eof() && WaitForSingleObject(frameBuffer_.GetWriteWaitHandle(), INFINITE) == WAIT_OBJECT_0)			
 				frameBuffer_.push_back(get_frame());			
 		}
 		catch(std::exception& ex)

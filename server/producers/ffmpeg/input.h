@@ -23,7 +23,7 @@ public:
 	void set_loop(bool value);
 	void stop();
 
-	static const size_t MAX_FILE_BUFFER_SIZE = 512 * 1000000; // 256
+	static const int FILE_BUFFER_SIZE = 128000000;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

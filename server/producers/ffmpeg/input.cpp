@@ -21,7 +21,7 @@ namespace caspar{ namespace ffmpeg{
 struct input::implementation : boost::noncopyable
 {
 	implementation() 
-		: video_frame_rate_(25.0), video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_a(nullptr), file_buffer_max_size_(input::MAX_FILE_BUFFER_SIZE)
+		: video_frame_rate_(25.0), video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_a(nullptr)
 	{
 		loop_ = false;
 		file_buffer_size_ = 0;
@@ -151,7 +151,7 @@ struct input::implementation : boost::noncopyable
 				is_running_ = false;
 			
 			boost::unique_lock<boost::mutex> lock(file_buffer_size_mutex_);
-			while(file_buffer_size_ > file_buffer_max_size_)			
+			while(file_buffer_size_ > FILE_BUFFER_SIZE)			
 				file_buffer_size_cond_.wait(lock);	
 		}
 		
@@ -187,8 +187,8 @@ struct input::implementation : boost::noncopyable
 		return !is_running_ && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
 	}
 	
-	size_t								file_buffer_max_size_;
-	tbb::atomic<size_t>					file_buffer_size_;
+	int									file_buffer_max_size_;
+	tbb::atomic<int>					file_buffer_size_;
 	boost::condition_variable			file_buffer_size_cond_;
 	boost::mutex						file_buffer_size_mutex_;
 
