@@ -39,6 +39,7 @@ struct input::implementation : boost::noncopyable
 		video_packet_buffer_.clear();
 		file_buffer_size_ = 0;
 		file_buffer_size_cond_.notify_all();
+		io_thread_.join();
 	}
 
 	void load(const std::string& filename)
