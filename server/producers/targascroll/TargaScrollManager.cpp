@@ -36,9 +36,9 @@ TargaScrollMediaManager::~TargaScrollMediaManager()
 {
 }
 
-MediaProducerPtr TargaScrollMediaManager::CreateProducer(const tstring& filename, FrameFormat format)
+MediaProducerPtr TargaScrollMediaManager::CreateProducer(const tstring& filename)
 {
-	TargaScrollMediaProducerPtr pTargaScrollMediaProducer(new TargaScrollMediaProducer(format));
+	TargaScrollMediaProducerPtr pTargaScrollMediaProducer(new TargaScrollMediaProducer());
 	if (!pTargaScrollMediaProducer->Load(filename))
 		pTargaScrollMediaProducer.reset();
 
@@ -48,7 +48,7 @@ MediaProducerPtr TargaScrollMediaManager::CreateProducer(const tstring& filename
 bool TargaScrollMediaManager::getFileInfo(FileInfo* pFileInfo)
 {
 	pFileInfo->length = 1;
-	pFileInfo->type = TEXT("still");
+	pFileInfo->type = TEXT("movie");
 	pFileInfo->encoding = TEXT("NA");
 
 	return true;

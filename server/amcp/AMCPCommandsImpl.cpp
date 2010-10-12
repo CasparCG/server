@@ -905,7 +905,7 @@ bool ClsCommand::Execute()
 					cliptypeindex = 3;
 					bGood = true;
 				}
-				else if(extension == TEXT("SWF") || extension == TEXT("DV") || extension == TEXT("MOV") || extension == TEXT("MPG") || extension == TEXT("AVI"))
+				else if(extension == TEXT("SWF") || extension == TEXT("DV") || extension == TEXT("MOV") || extension == TEXT("MPG") || extension == TEXT("AVI") || extension == TEXT("STGA"))
 				{
 					cliptypeindex = 2;
 					bGood = true;

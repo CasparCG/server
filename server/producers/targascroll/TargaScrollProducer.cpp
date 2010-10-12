@@ -27,10 +27,14 @@
 #include "..\..\utils\FileInputStream.h"
 #include "..\..\utils\PixmapData.h"
 
+#include <boost/lexical_cast.hpp>
+
 namespace caspar {
 using namespace utils;
 
-TargaScrollMediaProducer::TargaScrollMediaProducer(FrameFormat format) : MediaProducer(format)
+int TargaScrollMediaProducer::DEFAULT_SPEED = 4;
+
+TargaScrollMediaProducer::TargaScrollMediaProducer() : initializeEvent_(FALSE, FALSE)
 {
 }
 
@@ -43,28 +47,70 @@ bool TargaScrollMediaProducer::Load(const tstring& filename)
 {
 	if (filename.length() > 0)
 	{
+		tstring::size_type pos = filename.find_last_of(TEXT('_'));
+		if(pos != tstring::npos && (pos+1) < filename.size()) {
+			tstring speedStr = filename.substr(pos + 1);
+			pos = speedStr.find_first_of(TEXT('.'));
+			if(pos != tstring::npos)
+				speedStr = speedStr.substr(0, pos);		
+
+			try
+			{
+				speed = boost::lexical_cast<int, tstring>(speedStr);
+			}
+			catch(...)
+			{
+				speed = DEFAULT_SPEED;
+			}
+		}
+
 		utils::InputStreamPtr pTgaFile(new utils::FileInputStream(filename));
 		if (pTgaFile->Open())
-			return TargaMediaManager::Load(pTgaFile, this->pImage);
+			return TargaManager::Load(pTgaFile, this->pImage);
 	}
 
 	return false;
 }
 
-bool TargaScrollMediaProducer::DoInitialize()
-{
-	this->workerThread.Start(this);
+IMediaController* TargaScrollMediaProducer::QueryController(const tstring& id) {
+	if(id == TEXT("FrameController"))
+		return this;
+	
+	return 0;
+}
+
+bool TargaScrollMediaProducer::Initialize(FrameManagerPtr pFrameManager) {
+	if(pFrameManager != this->pFrameManager_) {
+		if(pFrameManager == 0)
+			return false;
+
+		if(!workerThread.IsRunning()) {
+			pFrameManager_ = pFrameManager;
+			return workerThread.Start(this);
+		}
+		else
+		{
+			{
+				Lock lock(*this);
+
+				if(pFrameManager_->GetFrameFormatDescription().width != pFrameManager->GetFrameFormatDescription().width || pFrameManager_->GetFrameFormatDescription().height != pFrameManager->GetFrameFormatDescription().height) {
+					return false;
+				}
+
+				pTempFrameManager_ = pFrameManager;
+			}
+
+			initializeEvent_.Set();
+		}
+	}
+
 	return true;
 }
 
-FrameBuffer& TargaScrollMediaProducer::GetFrameBuffer()
-{
-	return this->frameBuffer;
-}
 
 void TargaScrollMediaProducer::PadImageToFrameFormat()
 {
-	const FrameFormatDescription& formatDescription = FrameFormatDescription::FormatDescriptions[GetFormat()];
+	const FrameFormatDescription& formatDescription = pFrameManager_->GetFrameFormatDescription();
 
 	const unsigned int PIXMAP_WIDTH = max(this->pImage->width, formatDescription.width);
 	const unsigned int PIXMAP_HEIGHT = max(this->pImage->height, formatDescription.height);
@@ -84,7 +130,7 @@ void TargaScrollMediaProducer::PadImageToFrameFormat()
 
 FramePtr TargaScrollMediaProducer::FillVideoFrame(FramePtr pFrame)
 {
-	const FrameFormatDescription& formatDescription = FrameFormatDescription::FormatDescriptions[GetFormat()];
+	const FrameFormatDescription& formatDescription = pFrameManager_->GetFrameFormatDescription();
 
 	const short deltaX = this->direction == DirectionFlag::ScrollLeft ? this->speed : -this->speed;
 	const short deltaY = this->direction == DirectionFlag::ScrollUp ? this->speed : -this->speed;
@@ -153,28 +199,34 @@ FramePtr TargaScrollMediaProducer::FillVideoFrame(FramePtr pFrame)
 
 void TargaScrollMediaProducer::Run(HANDLE stopEvent)
 {
-	LOG << LogLevel::Verbose << TEXT("Targa scroll thread started") << LogStream::Flush;
+	LOG << LogLevel::Verbose << TEXT("Targa scroll thread started");
 
-	const short waitHandleCount = 2;
-	HANDLE waitHandles[waitHandleCount] = { stopEvent, this->frameBuffer.GetWriteWaitHandle() };
+	const short waitHandleCount = 3;
+	HANDLE waitHandles[waitHandleCount] = { stopEvent, initializeEvent_, this->frameBuffer.GetWriteWaitHandle() };
 
-	const FrameFormatDescription& formatDescription = FrameFormatDescription::FormatDescriptions[GetFormat()];
+	int formatWidth = 0;
+	int formatHeight = 0;
+	{
+		const FrameFormatDescription& formatDescription = pFrameManager_->GetFrameFormatDescription();
+		formatWidth = formatDescription.width;
+		formatHeight = formatDescription.height;
+
+		//determine whether to scroll horizontally or vertically
+		if((this->pImage->width - formatWidth) > (pImage->height - formatHeight))
+			direction = (speed < 0) ? DirectionFlag::ScrollRight : DirectionFlag::ScrollLeft;
+		else
+			direction = (speed < 0) ? DirectionFlag::ScrollDown : DirectionFlag::ScrollUp;
+
+		this->speed = abs(speed / formatDescription.fps);
+		this->offset = 0;
+		if (this->direction == DirectionFlag::ScrollDown)
+			this->offset = this->pImage->height - formatHeight;
+		else if (this->direction == DirectionFlag::ScrollRight)
+			this->offset = this->pImage->width - formatWidth;
+	}
 
 
-
-	// OBS! This will be setup by the tga loader.
-	this->speed = 5;
-	this->direction = DirectionFlag::ScrollDown;
-
-	this->offset = 0;
-	if (this->direction == DirectionFlag::ScrollDown)
-		this->offset = this->pImage->height - formatDescription.height;
-	else if (this->direction == DirectionFlag::ScrollRight)
-		this->offset = this->pImage->width - formatDescription.width;
-
-
-
-	if (formatDescription.width > this->pImage->width || formatDescription.height > this->pImage->height)
+	if (formatWidth > this->pImage->width || formatHeight > this->pImage->height)
 		PadImageToFrameFormat();
 
 	bool quitLoop = false;
@@ -189,19 +241,27 @@ void TargaScrollMediaProducer::Run(HANDLE stopEvent)
 				continue;
 			case WAIT_TIMEOUT:			// Nothing has happened.
 				continue;
-			case WAIT_OBJECT_0 + 1:		// Framebuffer is ready to be filled.
+			case WAIT_OBJECT_0 + 1:		//initialize
+				{
+					Lock lock(*this);
+					pFrameManager_ = pTempFrameManager_;
+					pTempFrameManager_.reset();
+				}
+				break;
+
+			case WAIT_OBJECT_0 + 2:		// Framebuffer is ready to be filled.
 			{
 				// Render next frame.
-				FramePtr pFrame = GetFactory()->CreateFrame();
+				FramePtr pFrame = pFrameManager_->CreateFrame();
 				pFrame = FillVideoFrame(pFrame);
 				this->frameBuffer.push_back(pFrame);
 
 				// Should we stop scrolling?
 				if ((this->direction == DirectionFlag::ScrollDown || this->direction == DirectionFlag::ScrollRight) && this->offset <= 0)
 					quitLoop = true;
-				else if (this->direction == DirectionFlag::ScrollUp && this->offset >= (this->pImage->height - formatDescription.height))
+				else if (this->direction == DirectionFlag::ScrollUp && this->offset >= (this->pImage->height - formatHeight))
 					quitLoop = true;
-				else if (this->direction == DirectionFlag::ScrollLeft && this->offset >= (this->pImage->width - formatDescription.width))
+				else if (this->direction == DirectionFlag::ScrollLeft && this->offset >= (this->pImage->width - formatWidth))
 					quitLoop = true;
 			}
 		}
@@ -211,7 +271,7 @@ void TargaScrollMediaProducer::Run(HANDLE stopEvent)
 	FramePtr pNullFrame;
 	this->frameBuffer.push_back(pNullFrame);
 
-	LOG << LogLevel::Verbose << TEXT("Targa scroll thread ended") << LogStream::Flush;
+	LOG << LogLevel::Verbose << TEXT("Targa scroll thread ended");
 }
 
 bool TargaScrollMediaProducer::OnUnhandledException(const std::exception& ex) throw()
@@ -221,17 +281,13 @@ bool TargaScrollMediaProducer::OnUnhandledException(const std::exception& ex) th
 		FramePtr pNullFrame;
 		this->frameBuffer.push_back(pNullFrame);
 
-		LOG << LogLevel::Critical << TEXT("UNHANDLED EXCEPTION in targa scroll thread. Message: %hS") << ex.what() << LogStream::Flush;
+		LOG << LogLevel::Critical << TEXT("UNHANDLED EXCEPTION in targa scroll thread. Message: ") << ex.what();
 	}
 	catch (...)
 	{
 	}
 
 	return false;
-}
-
-void TargaScrollMediaProducer::Param(const tstring&)
-{
 }
 
 }

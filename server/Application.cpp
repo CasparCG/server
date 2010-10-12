@@ -65,7 +65,7 @@
 #include "producers\flash\FlashManager.h"
 #include "producers\flash\FlashAxContainer.h"
 #include "producers\targa\TargaManager.h"
-//#include "producers\targascroll\TargaScrollManager.h"
+#include "producers\targascroll\TargaScrollManager.h"
 #include "producers\ffmpeg\FFmpegManager.h"
 #include "producers\color\ColorManager.h"
 
@@ -428,7 +428,7 @@ bool Application::Initialize()
 
 		sourceMediaManagers_.push_back(MediaManagerPtr(new FlashManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaManager()));
-//		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaScrollMediaManager()));
+		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaScrollMediaManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new ffmpeg::FFMPEGManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new ColorManager()));
 

@@ -29,12 +29,14 @@
 #include "..\..\utils\image\image.hpp"
 #include "..\..\audio\audiomanager.h"
 
-extern "C" {
-#define __STDC_CONSTANT_MACROS
-#define __STDC_LIMIT_MACROS
-#include <ffmpeg/avformat.h>
-#include <ffmpeg/avcodec.h>
-#include <ffmpeg/swscale.h>
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+	#include <libavutil/avutil.h>
+	#include <libswscale/swscale.h>
 }
 
 namespace caspar {

@@ -34,7 +34,7 @@ class TargaScrollMediaManager : public IMediaManager
 		virtual ~TargaScrollMediaManager();
 
 		virtual bool getFileInfo(FileInfo* pFileInfo);
-		virtual MediaProducerPtr CreateProducer(const tstring& filename, FrameFormat format);
+		virtual MediaProducerPtr CreateProducer(const tstring& filename);
 
 	private:
 		typedef std::tr1::shared_ptr<TargaScrollMediaProducer> TargaScrollMediaProducerPtr;

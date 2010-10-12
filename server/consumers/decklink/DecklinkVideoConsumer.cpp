@@ -218,7 +218,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 			return false;
 		}
 
-		tstring strDesiredFrameFormat = TEXT("PAL");//caspar::GetApplication()->GetSetting(TEXT("videomode"));
+		tstring strDesiredFrameFormat = caspar::GetApplication()->GetSetting(TEXT("videomode"));
 		if(strDesiredFrameFormat.size() == 0)
 			strDesiredFrameFormat = TEXT("PAL");
 		FrameFormat casparVideoFormat = caspar::GetVideoFormat(strDesiredFrameFormat);

@@ -31,6 +31,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <functional>
 
 #include "..\utils\thread.h"
 #include "..\utils\lockable.h"
