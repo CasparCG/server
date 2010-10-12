@@ -32,7 +32,7 @@
 namespace caspar {
 using namespace utils;
 
-int TargaScrollMediaProducer::DEFAULT_SPEED = 4;
+int TargaScrollMediaProducer::DEFAULT_SPEED = 25;
 
 TargaScrollMediaProducer::TargaScrollMediaProducer() : initializeEvent_(FALSE, FALSE)
 {
