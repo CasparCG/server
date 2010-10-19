@@ -37,9 +37,7 @@ public:
 	virtual ~CLKProtocolStrategy();
 
 	virtual void Parse(const TCHAR* pData, int charCount, caspar::IO::ClientInfoPtr pClientInfo);
-	virtual UINT GetCodepage() {
-		return 28591;	//ISO 8859-1
-	}
+	virtual UINT GetCodepage() { return CP_UTF8; }
 
 private:
 	enum ParserState {
