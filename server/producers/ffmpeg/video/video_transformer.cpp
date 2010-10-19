@@ -25,6 +25,18 @@ extern "C"
 #endif
 
 namespace caspar { namespace ffmpeg {
+	
+struct fill_frame
+{
+	fill_frame(size_t width, size_t height) 
+		: frame(avcodec_alloc_frame(), av_free), buffer(static_cast<unsigned char*>(scalable_aligned_malloc(width*height*4, 16)), scalable_aligned_free)
+	{	
+		avpicture_fill(reinterpret_cast<AVPicture*>(frame.get()), buffer.get(), PIX_FMT_BGRA, width, height);
+	}
+	const AVFramePtr	frame;
+	const std::shared_ptr<unsigned char>		buffer;
+};
+typedef std::shared_ptr<fill_frame> fill_frame_ptr;
 
 struct video_transformer::implementation : boost::noncopyable
 {
@@ -46,18 +58,22 @@ struct video_transformer::implementation : boost::noncopyable
 			tbb::spin_mutex::scoped_lock lock(mutex_);
 			video_packet->frame = factory_->CreateFrame(); 
 		}
-		std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
-		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), video_packet->frame->GetDataPtr(), dest_pix_fmt, width, height);
-		
-		int result = sws_scale(sws_context_.get(), video_packet->decoded_frame->data, video_packet->decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);
+
+		fill_frame fill_frame(factory_->GetFrameFormatDescription().width, factory_->GetFrameFormatDescription().height);
+		int result = sws_scale(sws_context_.get(), video_packet->decoded_frame->data, video_packet->decoded_frame->linesize, 0, video_packet->codec_context->height, fill_frame.frame->data, fill_frame.frame->linesize);
 		video_packet->decoded_frame.reset(); // Free memory
 		
 		if(video_packet->codec->id == CODEC_ID_DVVIDEO) // Move up one field
 		{
-			size_t size = video_packet->frame->GetDataSize();
+			size_t size = factory_->GetFrameFormatDescription().width * factory_->GetFrameFormatDescription().height * 4;
 			size_t linesize = factory_->GetFrameFormatDescription().width * 4;
-			utils::image::Copy(video_packet->frame->GetDataPtr(), video_packet->frame->GetDataPtr() + linesize, size - linesize);
+			utils::image::Copy(video_packet->frame->GetDataPtr(), fill_frame.buffer.get() + linesize, size - linesize);
 			utils::image::Clear(video_packet->frame->GetDataPtr() + size - linesize, linesize);
+		}
+		else
+		{
+			 // This copy should be unnecessary. But it seems that when mapping the frame memory to an avframe for scaling there are some artifacts in the picture. See line 59-61.
+			utils::image::Copy(video_packet->frame->GetDataPtr(), fill_frame.buffer.get(), video_packet->frame->GetDataSize());
 		}
 		
 		return video_packet;	
