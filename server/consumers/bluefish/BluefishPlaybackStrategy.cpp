@@ -87,7 +87,7 @@ struct BluefishPlaybackStrategy::Implementation
 				LOG << utils::LogLevel::Critical << TEXT("Failed to set workingset: min = ") << workingSetMinSize << TEXT(", max = ") << workingSetMaxSize;		
 		}
 
-		for(int n = 0; n < num_frames; ++n)		
+		for(int n = 0; n < num_frames; ++n)
 			reservedFrames_.push_back(std::make_shared<BlueFrame>(pConsumer_->pFrameManager_->GetFrameFormatDescription().size, n));
 		
 		audio_buffer_.reset(reinterpret_cast<BLUE_UINT32*>(::VirtualAlloc(NULL, MAX_HANC_BUFFER_SIZE, MEM_COMMIT, PAGE_READWRITE)));
@@ -117,8 +117,9 @@ struct BluefishPlaybackStrategy::Implementation
 		utils::image::Copy(pBlueFrame->GetDataPtr(), pFrame->GetDataPtr(), pBlueFrame->GetDataSize());
 		pBlueFrame->GetAudioData() = pFrame->GetAudioData();
 		
-		currentReservedFrameIndex_ = (currentReservedFrameIndex_+1) % 3;		
+		currentReservedFrameIndex_ = (currentReservedFrameIndex_+1) % reservedFrames_.size();		
 			
+		//DoRender(pBlueFrame);
 		DoRenderEmbAudio(pBlueFrame);	
 	}
 	
@@ -140,7 +141,7 @@ struct BluefishPlaybackStrategy::Implementation
 			log_ = true;
 	}
 	
-	static const int MAX_HANC_BUFFER_SIZE = 256*1024; // Q1. What is this size based on?
+	static const int MAX_HANC_BUFFER_SIZE = 256*1024;
 	void DoRenderEmbAudio(const BlueFramePtr& pFrame) 
 	{
 		unsigned long fieldCount = 0;
@@ -162,7 +163,7 @@ struct BluefishPlaybackStrategy::Implementation
 		
 		auto emb_audio_flag = (blue_emb_audio_enable | blue_emb_audio_group1_enable);
 		
-		auto audio_samples = 1920;//GetAudioSamplesPerFrame(vid_fmt, 0);
+		auto audio_samples = 1920;
 		auto audio_nchannels = 2;
 		
 		memset(reinterpret_cast<PBYTE>(audio_buffer_.get()), 0, MAX_HANC_BUFFER_SIZE); // silent audio
@@ -171,7 +172,7 @@ struct BluefishPlaybackStrategy::Implementation
 				
 		// First write pixel data
 		pSDK_->system_buffer_write_async(pFrame->GetDataPtr(), pFrame->GetDataSize(), 0, pFrame->GetBufferID(), 0);
-
+		
 		// Then encode and write hanc data
 		if (card_type != CRD_BLUE_EPOCH_2K &&	
 			card_type != CRD_BLUE_EPOCH_HORIZON && 
@@ -199,9 +200,9 @@ struct BluefishPlaybackStrategy::Implementation
 		}				
 		
 		pSDK_->system_buffer_write_async(reinterpret_cast<PBYTE>(hanc_stream_info.hanc_data_ptr),
-													 MAX_HANC_BUFFER_SIZE, 
-													 NULL,                 
-													 BlueImage_VBI_HANC_DMABuffer(pFrame->GetBufferID(), BLUE_DATA_HANC));
+										 MAX_HANC_BUFFER_SIZE, 
+										 NULL,                 
+										 BlueImage_VBI_HANC_DMABuffer(pFrame->GetBufferID(), BLUE_DATA_HANC));
 
 		if(BLUE_FAIL(pSDK_->render_buffer_update(BlueBuffer_Image_HANC(pFrame->GetBufferID()))))
 		{
@@ -225,26 +226,9 @@ struct BluefishPlaybackStrategy::Implementation
 	std::unique_ptr<BLUE_UINT32, VirtualFreeMemRelease> audio_buffer_;
 };
 
-BluefishPlaybackStrategy::BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer) : pImpl_(new Implementation(pConsumer)) 
-{}
-
-IVideoConsumer* BluefishPlaybackStrategy::GetConsumer()
-{
-	return pImpl_->pConsumer_;
-}
-
-FramePtr BluefishPlaybackStrategy::GetReservedFrame() {
-	return pImpl_->GetReservedFrame();
-}
-
-FrameManagerPtr BluefishPlaybackStrategy::GetFrameManager()
-{
-	return pImpl_->GetFrameManager();
-}
-
-void BluefishPlaybackStrategy::DisplayFrame(Frame* pFrame) 
-{
-	return pImpl_->DisplayFrame(pFrame);
-}
-
+BluefishPlaybackStrategy::BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer) : pImpl_(new Implementation(pConsumer)){}
+IVideoConsumer* BluefishPlaybackStrategy::GetConsumer(){return pImpl_->pConsumer_;}
+FramePtr BluefishPlaybackStrategy::GetReservedFrame(){return pImpl_->GetReservedFrame();}
+FrameManagerPtr BluefishPlaybackStrategy::GetFrameManager(){return pImpl_->GetFrameManager();}
+void BluefishPlaybackStrategy::DisplayFrame(Frame* pFrame){return pImpl_->DisplayFrame(pFrame);}
 }}
