@@ -143,4 +143,5 @@ inline int GetCardProperty(CBlueVelvet4 * pSdk,ULONG prop,ULONG & value)
 	return (errorCode);
 }
 
+static const int MAX_HANC_BUFFER_SIZE = 256*1024;
 }}

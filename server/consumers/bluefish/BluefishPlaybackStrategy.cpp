@@ -141,12 +141,15 @@ struct BluefishPlaybackStrategy::Implementation
 			log_ = true;
 	}
 	
-	static const int MAX_HANC_BUFFER_SIZE = 256*1024;
+	// TODO: Both pixel data and HANC should be possible to transfer using a single DMA write
 	void DoRenderEmbAudio(const BlueFramePtr& pFrame) 
 	{
 		unsigned long fieldCount = 0;
 		pSDK_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
-		
+						
+		// First write pixel data
+		pSDK_->system_buffer_write_async(pFrame->GetDataPtr(), pFrame->GetDataSize(), 0, pFrame->GetBufferID(), 0);
+
 		auto vid_fmt = pConsumer_->vidFmt_;
 		auto sample_type = (AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN);
 		auto card_type = pSDK_->has_video_cardtype();
@@ -164,15 +167,24 @@ struct BluefishPlaybackStrategy::Implementation
 		auto emb_audio_flag = (blue_emb_audio_enable | blue_emb_audio_group1_enable);
 		
 		auto audio_samples = 1920;
-		auto audio_nchannels = 2;
-		
+		auto audio_nchannels = pFrame->GetAudioData().size()*2;
+
+		// TODO: Needs optimization
 		memset(reinterpret_cast<PBYTE>(audio_buffer_.get()), 0, MAX_HANC_BUFFER_SIZE); // silent audio
-		if(pFrame->GetAudioData().size() > 0)
-			memcpy(audio_buffer_.get(), pFrame->GetAudioData()[0]->GetDataPtr(), pFrame->GetAudioData()[0]->GetLength());
-				
-		// First write pixel data
-		pSDK_->system_buffer_write_async(pFrame->GetDataPtr(), pFrame->GetDataSize(), 0, pFrame->GetBufferID(), 0);
+		std::vector<short> audio_data;
+		audio_data.reserve(audio_samples*audio_nchannels);
+		for(int s = 0; s < audio_samples; ++s)
+		{
+			for(int n = 0; n < pFrame->GetAudioData().size(); ++n)
+			{
+				short* ptr = reinterpret_cast<short*>(pFrame->GetAudioData()[n]->GetDataPtr());
+				audio_data.push_back(ptr[s*2+0]);
+				audio_data.push_back(ptr[s*2+1]);
+			}
+		}
 		
+		memcpy(audio_buffer_.get(), audio_data.data(), audio_data.size()*2);
+	
 		// Then encode and write hanc data
 		if (card_type != CRD_BLUE_EPOCH_2K &&	
 			card_type != CRD_BLUE_EPOCH_HORIZON && 
@@ -199,10 +211,11 @@ struct BluefishPlaybackStrategy::Implementation
 								 emb_audio_flag);
 		}				
 		
+		// Write HANC
 		pSDK_->system_buffer_write_async(reinterpret_cast<PBYTE>(hanc_stream_info.hanc_data_ptr),
 										 MAX_HANC_BUFFER_SIZE, 
 										 NULL,                 
-										 BlueImage_VBI_HANC_DMABuffer(pFrame->GetBufferID(), BLUE_DATA_HANC));
+										 BlueImage_HANC_DMABuffer(pFrame->GetBufferID(), BLUE_DATA_HANC));
 
 		if(BLUE_FAIL(pSDK_->render_buffer_update(BlueBuffer_Image_HANC(pFrame->GetBufferID()))))
 		{
