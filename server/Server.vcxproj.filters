@@ -408,6 +408,9 @@
     <ClInclude Include="producers\ffmpeg\FFMPEGManager.h">
       <Filter>producers\ffmpeg</Filter>
     </ClInclude>
+    <ClInclude Include="consumers\bluefish\BluefishUtil.h">
+      <Filter>consumers\bluefish</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="utils\BitmapHolder.cpp">
@@ -490,9 +493,6 @@
     </ClCompile>
     <ClCompile Include="IO\SocketInfo.cpp">
       <Filter>io</Filter>
-    </ClCompile>
-    <ClCompile Include="consumers\bluefish\BluefishFrameManager.cpp">
-      <Filter>consumers\bluefish</Filter>
     </ClCompile>
     <ClCompile Include="consumers\bluefish\BluefishPlaybackStrategy.cpp">
       <Filter>consumers\bluefish</Filter>
@@ -652,9 +652,6 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuildStep Include="consumers\bluefish\BluefishException.h">
-      <Filter>consumers\bluefish</Filter>
-    </CustomBuildStep>
-    <CustomBuildStep Include="consumers\bluefish\BluefishFrameManager.h">
       <Filter>consumers\bluefish</Filter>
     </CustomBuildStep>
     <CustomBuildStep Include="consumers\bluefish\BluefishPlaybackStrategy.h">

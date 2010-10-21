@@ -22,8 +22,7 @@
 
 #include "..\..\frame\FramePlaybackStrategy.h"
 
-namespace caspar {
-namespace bluefish {
+namespace caspar { namespace bluefish {
 
 class BlueFishVideoConsumer;
 
@@ -34,14 +33,11 @@ class BluefishPlaybackStrategy : public IFramePlaybackStrategy
 
 public:
 	explicit BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer);
-	virtual ~BluefishPlaybackStrategy();
 
-	//IFramePlaybackStrategy
 	virtual void DisplayFrame(Frame*);
 	virtual IVideoConsumer* GetConsumer();
 	virtual FrameManagerPtr GetFrameManager();
 	virtual FramePtr GetReservedFrame();
 };
 
-}	//namespace bluefish
-}	//namespace caspar
+}}
