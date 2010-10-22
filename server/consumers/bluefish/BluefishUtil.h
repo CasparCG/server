@@ -5,6 +5,16 @@
 
 namespace caspar { namespace bluefish {
 	
+inline bool is_epoch_card(int card_type)
+{
+	return	card_type == CRD_BLUE_EPOCH_2K ||	
+			card_type == CRD_BLUE_EPOCH_HORIZON || 
+			card_type == CRD_BLUE_EPOCH_2K_CORE ||  
+			card_type == CRD_BLUE_EPOCH_2K_ULTRA || 
+			card_type == CRD_BLUE_EPOCH_CORE || 
+			card_type == CRD_BLUE_EPOCH_ULTRA;
+}
+
 inline unsigned long VidFmtFromFrameFormat(FrameFormat fmt) 
 {
 	switch(fmt)

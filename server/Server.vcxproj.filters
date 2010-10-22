@@ -411,6 +411,9 @@
     <ClInclude Include="consumers\bluefish\BluefishUtil.h">
       <Filter>consumers\bluefish</Filter>
     </ClInclude>
+    <ClInclude Include="consumers\bluefish\BluefishMemory.h">
+      <Filter>consumers\bluefish</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="utils\BitmapHolder.cpp">

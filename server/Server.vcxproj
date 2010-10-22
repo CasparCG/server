@@ -215,6 +215,7 @@
     <ResourceCompile Include="resources\Server.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="consumers\bluefish\BluefishMemory.h" />
     <ClInclude Include="consumers\bluefish\BluefishUtil.h" />
     <ClInclude Include="frame\buffers\FrameBuffer.h" />
     <ClInclude Include="frame\buffers\MotionFrameBuffer.h" />

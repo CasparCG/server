@@ -24,6 +24,8 @@
 #include "..\..\audio\AudioManager.h"
 #include "..\..\utils\Process.h"
 #include "..\..\Application.h"
+#include "BluefishUtil.h"
+#include "BluefishMemory.h"
 #include <BlueVelvet4.h>
 #include <BlueHancUtils.h>
 
@@ -37,71 +39,24 @@ namespace caspar { namespace bluefish {
 
 using namespace caspar::utils;
 
-struct VirtualFreeMemRelease
-{
-	void operator()(LPVOID lpAddress)
-	{
-		if(lpAddress != nullptr)
-			try{::VirtualFree(lpAddress, 0, MEM_RELEASE);}catch(...){}
-	}
-};
-
-struct BlueFrame
-{
-public:
-	BlueFrame(int dataSize, int bufferID) : dataSize_(dataSize), bufferID_(bufferID)
-	{
-		pData_.reset(static_cast<unsigned char*>(::VirtualAlloc(NULL, dataSize_, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)));
-		if(!pData_)	
-			throw BluefishException("Failed to allocate memory for frame");	
-		if(::VirtualLock(pData_.get(), dataSize_) == 0)	
-			throw BluefishException("Failed to lock memory for frame");	
-	}
-			
-	AudioDataChunkList& GetAudioData() {return audioData_;}
-	unsigned char* GetDataPtr() const {return pData_.get();}
-	int GetBufferID() const {return bufferID_;}
-	unsigned int GetDataSize() const {return dataSize_;}
-private:	
-	std::unique_ptr<unsigned char, VirtualFreeMemRelease> pData_;
-	int bufferID_;
-	int dataSize_;
-	AudioDataChunkList audioData_;
-};
-typedef std::shared_ptr<BlueFrame> BlueFramePtr;
-
 struct BluefishPlaybackStrategy::Implementation
 {	
 	Implementation(BlueFishVideoConsumer* pConsumer) : pConsumer_(pConsumer), currentReservedFrameIndex_(0), log_(true), pSDK_(pConsumer->pSDK_)
 	{
-		auto optimalLength = BlueVelvetGolden(pConsumer_->vidFmt_, pConsumer_->memFmt_, pConsumer_->updFmt_);
+		auto golden = BlueVelvetGolden(pConsumer_->vidFmt_, pConsumer_->memFmt_, pConsumer_->updFmt_); // 5 196 248
 		auto num_frames = 3;
 
-		SIZE_T workingSetMinSize = 0, workingSetMaxSize = 0;
-		if(utils::Process::GetCurrentProcess().GetWorkingSetSize(workingSetMinSize, workingSetMaxSize))
-		{
-			LOG << utils::LogLevel::Debug << TEXT("WorkingSet size: min = ") << workingSetMinSize << TEXT(", max = ") << workingSetMaxSize;
-			
-			workingSetMinSize += optimalLength * num_frames + MAX_HANC_BUFFER_SIZE;
-			workingSetMaxSize += optimalLength * num_frames + MAX_HANC_BUFFER_SIZE;
-
-			if(!utils::Process::GetCurrentProcess().SetWorkingSetSize(workingSetMinSize, workingSetMaxSize))		
-				LOG << utils::LogLevel::Critical << TEXT("Failed to set workingset: min = ") << workingSetMinSize << TEXT(", max = ") << workingSetMaxSize;		
-		}
-
-		for(int n = 0; n < num_frames; ++n)
-			reservedFrames_.push_back(std::make_shared<BlueFrame>(pConsumer_->pFrameManager_->GetFrameFormatDescription().size, n));
+		page_locked_buffer::reserve_working_size((golden + MAX_HANC_BUFFER_SIZE) * num_frames + MAX_HANC_BUFFER_SIZE);
 		
-		audio_buffer_.reset(reinterpret_cast<BLUE_UINT32*>(::VirtualAlloc(NULL, MAX_HANC_BUFFER_SIZE, MEM_COMMIT, PAGE_READWRITE)));
-		if(!audio_buffer_)
-			throw BluefishException("Failed to allocate memory for audio buffer");	
-		if(::VirtualLock(audio_buffer_.get(), MAX_HANC_BUFFER_SIZE) == 0)	
-			throw BluefishException("Failed to lock memory for audio buffer");	
-				
+		for(int n = 0; n < num_frames; ++n)
+			reservedFrames_.push_back(std::make_shared<blue_dma_buffer>(pConsumer_->pFrameManager_->GetFrameFormatDescription().size, n));
+		
+		audio_buffer_ = std::make_shared<page_locked_buffer>(MAX_HANC_BUFFER_SIZE);
+						
 		if(GetApplication()->GetSetting(L"embedded-audio") == L"true")
-			render_func_ = std::bind(&BluefishPlaybackStrategy::Implementation::DoRenderEmbAudio, this, std::placeholders::_1);	
+			render_func_ = std::bind(&BluefishPlaybackStrategy::Implementation::DoRenderEmbAudio, this, std::placeholders::_1, std::placeholders::_2);	
 		else
-			render_func_ = std::bind(&BluefishPlaybackStrategy::Implementation::DoRender, this, std::placeholders::_1);	
+			render_func_ = std::bind(&BluefishPlaybackStrategy::Implementation::DoRender, this, std::placeholders::_1, std::placeholders::_2);	
 	}
 	
 	FramePtr GetReservedFrame() 
@@ -122,22 +77,21 @@ struct BluefishPlaybackStrategy::Implementation
 			return;
 		}
 		
-		auto pBlueFrame = reservedFrames_[currentReservedFrameIndex_];
-		utils::image::Copy(pBlueFrame->GetDataPtr(), pFrame->GetDataPtr(), pBlueFrame->GetDataSize());
-		pBlueFrame->GetAudioData() = pFrame->GetAudioData();
+		auto buffer = reservedFrames_[currentReservedFrameIndex_];
+		utils::image::Copy(buffer->image_data(), pFrame->GetDataPtr(), buffer->image_size());
 		
 		currentReservedFrameIndex_ = (currentReservedFrameIndex_+1) % reservedFrames_.size();		
 			
-		render_func_(pBlueFrame);
+		render_func_(buffer, pFrame->GetAudioData());
 	}
 	
-	void DoRender(const BlueFramePtr& pFrame) 
+	void DoRender(const blue_dma_buffer_ptr& buffer, const AudioDataChunkList& frame_audio_data) 
 	{
 		unsigned long fieldCount = 0;
 		pSDK_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
 		
-		pSDK_->system_buffer_write_async(pFrame->GetDataPtr(), pFrame->GetDataSize(), 0, pFrame->GetBufferID(), 0);
-		if(BLUE_FAIL(pSDK_->render_buffer_update(pFrame->GetBufferID())))
+		pSDK_->system_buffer_write_async(buffer->image_data(), buffer->image_size(), 0, buffer->id(), 0);
+		if(BLUE_FAIL(pSDK_->render_buffer_update(buffer->id())))
 		{
 			if(log_) 
 			{
@@ -149,15 +103,44 @@ struct BluefishPlaybackStrategy::Implementation
 			log_ = true;
 	}
 	
-	static const int MAX_HANC_BUFFER_SIZE = 256*1024;
-	void DoRenderEmbAudio(const BlueFramePtr& pFrame) 
+	void DoRenderEmbAudio(const blue_dma_buffer_ptr& buffer, const AudioDataChunkList& frame_audio_data) 
 	{
 		unsigned long fieldCount = 0;
 		pSDK_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
+				
+		static size_t audio_samples = 1920;
+		static size_t audio_nchannels = 2;
 		
+		MixAudio(audio_buffer_->data(), frame_audio_data, audio_samples, audio_nchannels);		
+		EncodeHANC(buffer->hanc_data(), audio_buffer_->data(), audio_samples, audio_nchannels);
+
+		pSDK_->system_buffer_write_async(buffer->image_data(), 
+										 buffer->image_size(), 
+										 nullptr, 
+										 BlueImage_HANC_DMABuffer(buffer->id(), BLUE_DATA_IMAGE));
+
+		pSDK_->system_buffer_write_async(reinterpret_cast<PBYTE>(buffer->hanc_data()),
+										 buffer->hanc_size(), 
+										 nullptr,                 
+										 BlueImage_HANC_DMABuffer(buffer->id(), BLUE_DATA_HANC));
+
+		if(BLUE_FAIL(pSDK_->render_buffer_update(BlueBuffer_Image_HANC(buffer->id()))))
+		{
+			if(log_) 
+			{
+				LOG << TEXT("BLUEFISH: render_buffer_update failed");
+				log_ = false;
+			}
+		}
+		else
+			log_ = true;
+	}
+
+	void EncodeHANC(unsigned int* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
+	{	
+		auto card_type = pSDK_->has_video_cardtype();
 		auto vid_fmt = pConsumer_->vidFmt_;
 		auto sample_type = (AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN);
-		auto card_type = pSDK_->has_video_cardtype();
 		
 		hanc_stream_info_struct hanc_stream_info;
 		memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));
@@ -166,17 +149,34 @@ struct BluefishPlaybackStrategy::Implementation
 		hanc_stream_info.AudioDBNArray[1] = -1;
 		hanc_stream_info.AudioDBNArray[2] = -1;
 		hanc_stream_info.AudioDBNArray[3] = -1;
-		hanc_stream_info.hanc_data_ptr = reinterpret_cast<unsigned int*>(pFrame->GetDataPtr());
+		hanc_stream_info.hanc_data_ptr = hanc_data;
 		hanc_stream_info.video_mode = vid_fmt;
 		
 		auto emb_audio_flag = (blue_emb_audio_enable | blue_emb_audio_group1_enable);
-		
-		// Mix sound
-		auto audio_samples = 1920;
-		auto audio_nchannels = 2;
-		
-		auto frame_audio_data = pFrame->GetAudioData();
 
+		if (!is_epoch_card(card_type))
+		{
+			encode_hanc_frame(&hanc_stream_info,
+							  audio_data,
+							  audio_nchannels,
+							  audio_samples,
+							  sample_type,
+							  emb_audio_flag);
+		}
+		else
+		{
+			encode_hanc_frame_ex(card_type,
+								 &hanc_stream_info,
+								 audio_data,
+								 audio_nchannels,
+								 audio_samples,
+								 sample_type,
+								 emb_audio_flag);
+		}						
+	}
+
+	void MixAudio(void* dest, const AudioDataChunkList& frame_audio_data, size_t audio_samples, size_t audio_nchannels)
+	{		
 		if(frame_audio_data.size() > 1)
 		{
 			std::vector<short> audio_data(audio_samples*audio_nchannels);
@@ -190,68 +190,23 @@ struct BluefishPlaybackStrategy::Implementation
 					audio_data[s*2+1] += static_cast<short>(static_cast<float>(frame_audio[s*2+1])*volume);		
 				}
 			}
-			memcpy(audio_buffer_.get(), audio_data.data(), audio_data.size()*audio_nchannels);
+			memcpy(dest, audio_data.data(), audio_data.size()*audio_nchannels);
 		}
 		else if(frame_audio_data.size() == 1)
-			memcpy(audio_buffer_.get(), frame_audio_data[0]->GetDataPtr(), frame_audio_data[0]->GetLength());
+			memcpy(dest, frame_audio_data[0]->GetDataPtr(), frame_audio_data[0]->GetLength());
 		else
-			audio_nchannels = 0;
-				
-		// First write pixel data
-		pSDK_->system_buffer_write_async(pFrame->GetDataPtr(), pFrame->GetDataSize(), 0, pFrame->GetBufferID(), 0);
-		
-		// Then encode and write hanc data
-		if (card_type != CRD_BLUE_EPOCH_2K &&	
-			card_type != CRD_BLUE_EPOCH_HORIZON && 
-			card_type != CRD_BLUE_EPOCH_2K_CORE &&  
-			card_type != CRD_BLUE_EPOCH_2K_ULTRA && 
-			card_type != CRD_BLUE_EPOCH_CORE && 
-			card_type != CRD_BLUE_EPOCH_ULTRA)
-		{
-			encode_hanc_frame(&hanc_stream_info,
-							  audio_buffer_.get(),
-							  audio_nchannels,
-							  audio_samples,
-							  sample_type,
-							  emb_audio_flag);
-		}
-		else
-		{
-			encode_hanc_frame_ex(card_type,
-								 &hanc_stream_info,
-								 audio_buffer_.get(),
-								 audio_nchannels,
-								 audio_samples,
-								 sample_type,
-								 emb_audio_flag);
-		}				
-		
-		pSDK_->system_buffer_write_async(reinterpret_cast<PBYTE>(hanc_stream_info.hanc_data_ptr),
-										 MAX_HANC_BUFFER_SIZE, 
-										 NULL,                 
-										 BlueImage_HANC_DMABuffer(pFrame->GetBufferID(), BLUE_DATA_HANC));
-
-		if(BLUE_FAIL(pSDK_->render_buffer_update(BlueBuffer_Image_HANC(pFrame->GetBufferID()))))
-		{
-			if(log_) 
-			{
-				LOG << TEXT("BLUEFISH: render_buffer_update failed");
-				log_ = false;
-			}
-		}
-		else
-			log_ = true;
+			memset(dest, 0, audio_samples*audio_nchannels*2);
 	}
 
-	std::function<void(const BlueFramePtr&)> render_func_;
+	std::function<void(const blue_dma_buffer_ptr&, const AudioDataChunkList&)> render_func_;
 	BlueVelvetPtr pSDK_;
 
 	bool log_;
 	BlueFishVideoConsumer* pConsumer_;
-	std::vector<BlueFramePtr> reservedFrames_;
+	std::vector<blue_dma_buffer_ptr> reservedFrames_;
 	int currentReservedFrameIndex_;
 	
-	std::unique_ptr<BLUE_UINT32, VirtualFreeMemRelease> audio_buffer_;
+	page_locked_buffer_ptr audio_buffer_;
 };
 
 BluefishPlaybackStrategy::BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer) : pImpl_(new Implementation(pConsumer)){}
