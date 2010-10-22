@@ -32,7 +32,7 @@ namespace audio {
 class AudioDataChunk 
 {
 public:
-	AudioDataChunk(int len) : length_(len), pData_(new char[len])
+	AudioDataChunk(int len) : length_(len), pData_(new char[len]), volume_(1.0f)
 	{}
 
 	~AudioDataChunk() {
@@ -50,7 +50,18 @@ public:
 		return length_;
 	}
 
+	void SetVolume(float value)
+	{
+		volume_ = value;
+	}
+
+	float GetVolume() const
+	{
+		return volume_;
+	}
+
 private:
+	float volume_;
 	char* pData_;
 	int length_;
 };

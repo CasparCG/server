@@ -25,6 +25,7 @@
 #include "..\io\ProtocolStrategy.h"
 #include "..\channel.h"
 #include "..\MediaManager.h"
+#include "..\Application.h"
 
 namespace caspar {
 	namespace CG { class ICGControl; }
@@ -37,7 +38,7 @@ public:
 	virtual ~CLKProtocolStrategy();
 
 	virtual void Parse(const TCHAR* pData, int charCount, caspar::IO::ClientInfoPtr pClientInfo);
-	virtual UINT GetCodepage() { return CP_UTF8; }
+	virtual UINT GetCodepage() { return GetApplication()->GetSetting(L"clk-encoding") == L"latin1" ? 28591 : CP_UTF8; } //28591 = ISO 8859-1, Latin1
 
 private:
 	enum ParserState {

@@ -188,12 +188,14 @@ public:
 		}
 		catch(std::exception& ex)
 		{
-			LOG << "Exception in FFMPEGProducer thread what:" << ex.what();
+			LOG << "Exception in FFMPEGProducer thread. Message:" << ex.what();
 		}
 		catch(...)
 		{
 			LOG << "Exception in FFMPEGProducer thread";
 		}
+
+		frameBuffer_.push_back(nullptr);
 		
 		LOG << "Ended FFMPEGProducer thread";
 	}
