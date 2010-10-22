@@ -23,10 +23,12 @@
 #include "..\..\utils\image\Image.hpp"
 #include "..\..\audio\AudioManager.h"
 #include "..\..\utils\Process.h"
+#include "..\..\Application.h"
 #include <BlueVelvet4.h>
 #include <BlueHancUtils.h>
 
 #include <vector>
+#include <functional>
 
 #include "BluefishPlaybackStrategy.h"
 #include "BluefishVideoConsumer.h"
@@ -93,6 +95,12 @@ struct BluefishPlaybackStrategy::Implementation
 		audio_buffer_.reset(reinterpret_cast<BLUE_UINT32*>(::VirtualAlloc(NULL, MAX_HANC_BUFFER_SIZE, MEM_COMMIT, PAGE_READWRITE)));
 		if(!audio_buffer_)
 			throw BluefishException("Failed to allocate memory for audio buffer");	
+
+		
+		if(GetApplication()->GetSetting(L"embedded-audio") == L"true")
+			render_func_ = std::bind(&BluefishPlaybackStrategy::Implementation::DoRenderEmbAudio, this, std::placeholders::_1);	
+		else
+			render_func_ = std::bind(&BluefishPlaybackStrategy::Implementation::DoRender, this, std::placeholders::_1);	
 	}
 	
 	FramePtr GetReservedFrame() 
@@ -119,8 +127,7 @@ struct BluefishPlaybackStrategy::Implementation
 		
 		currentReservedFrameIndex_ = (currentReservedFrameIndex_+1) % reservedFrames_.size();		
 			
-		//DoRender(pBlueFrame);
-		DoRenderEmbAudio(pBlueFrame);	
+		render_func_(pBlueFrame);
 	}
 	
 	void DoRender(const BlueFramePtr& pFrame) 
@@ -141,15 +148,12 @@ struct BluefishPlaybackStrategy::Implementation
 			log_ = true;
 	}
 	
-	// TODO: Both pixel data and HANC should be possible to transfer using a single DMA write
+	static const int MAX_HANC_BUFFER_SIZE = 256*1024;
 	void DoRenderEmbAudio(const BlueFramePtr& pFrame) 
 	{
 		unsigned long fieldCount = 0;
 		pSDK_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
-						
-		// First write pixel data
-		pSDK_->system_buffer_write_async(pFrame->GetDataPtr(), pFrame->GetDataSize(), 0, pFrame->GetBufferID(), 0);
-
+		
 		auto vid_fmt = pConsumer_->vidFmt_;
 		auto sample_type = (AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN);
 		auto card_type = pSDK_->has_video_cardtype();
@@ -166,25 +170,35 @@ struct BluefishPlaybackStrategy::Implementation
 		
 		auto emb_audio_flag = (blue_emb_audio_enable | blue_emb_audio_group1_enable);
 		
+		// Mix sound
 		auto audio_samples = 1920;
-		auto audio_nchannels = pFrame->GetAudioData().size()*2;
-
-		// TODO: Needs optimization
-		memset(reinterpret_cast<PBYTE>(audio_buffer_.get()), 0, MAX_HANC_BUFFER_SIZE); // silent audio
-		std::vector<short> audio_data;
-		audio_data.reserve(audio_samples*audio_nchannels);
-		for(int s = 0; s < audio_samples; ++s)
-		{
-			for(int n = 0; n < pFrame->GetAudioData().size(); ++n)
-			{
-				short* ptr = reinterpret_cast<short*>(pFrame->GetAudioData()[n]->GetDataPtr());
-				audio_data.push_back(ptr[s*2+0]);
-				audio_data.push_back(ptr[s*2+1]);
-			}
-		}
+		auto audio_nchannels = 2;
 		
-		memcpy(audio_buffer_.get(), audio_data.data(), audio_data.size()*2);
-	
+		auto frame_audio_data = pFrame->GetAudioData();
+
+		if(frame_audio_data.size() > 1)
+		{
+			std::vector<short> audio_data(audio_samples*audio_nchannels);
+			for(int s = 0; s < audio_samples; ++s)
+			{				
+				for(int n = 0; n < frame_audio_data.size(); ++n)				
+				{
+					auto frame_audio = reinterpret_cast<short*>(frame_audio_data[n]->GetDataPtr());
+					float volume = frame_audio_data[n]->GetVolume();
+					audio_data[s*2+0] += static_cast<short>(static_cast<float>(frame_audio[s*2+0])*volume);					
+					audio_data[s*2+1] += static_cast<short>(static_cast<float>(frame_audio[s*2+1])*volume);		
+				}
+			}
+			memcpy(audio_buffer_.get(), audio_data.data(), audio_data.size()*audio_nchannels);
+		}
+		else if(frame_audio_data.size() == 1)
+			memcpy(audio_buffer_.get(), frame_audio_data[0]->GetDataPtr(), frame_audio_data[0]->GetLength());
+		else
+			audio_nchannels = 0;
+				
+		// First write pixel data
+		pSDK_->system_buffer_write_async(pFrame->GetDataPtr(), pFrame->GetDataSize(), 0, pFrame->GetBufferID(), 0);
+		
 		// Then encode and write hanc data
 		if (card_type != CRD_BLUE_EPOCH_2K &&	
 			card_type != CRD_BLUE_EPOCH_HORIZON && 
@@ -211,7 +225,6 @@ struct BluefishPlaybackStrategy::Implementation
 								 emb_audio_flag);
 		}				
 		
-		// Write HANC
 		pSDK_->system_buffer_write_async(reinterpret_cast<PBYTE>(hanc_stream_info.hanc_data_ptr),
 										 MAX_HANC_BUFFER_SIZE, 
 										 NULL,                 
@@ -229,6 +242,7 @@ struct BluefishPlaybackStrategy::Implementation
 			log_ = true;
 	}
 
+	std::function<void(const BlueFramePtr&)> render_func_;
 	BlueVelvetPtr pSDK_;
 
 	bool log_;

@@ -55,7 +55,7 @@ VideoConsumerPtr BlueFishVideoConsumer::Create(unsigned int deviceIndex)
 	return card;
 }
 
-BlueFishVideoConsumer::BlueFishVideoConsumer() : pSDK_(BlueVelvetFactory4()), currentFormat_(FFormatPAL), _deviceIndex(0), hasEmbeddedAudio_(false)
+BlueFishVideoConsumer::BlueFishVideoConsumer() : pSDK_(BlueVelvetFactory4()), currentFormat_(FFormatPAL), _deviceIndex(0)
 {}
 
 BlueFishVideoConsumer::~BlueFishVideoConsumer()
@@ -197,9 +197,7 @@ bool BlueFishVideoConsumer::DoSetupDevice(unsigned int deviceIndex, tstring strD
 	if(BLUE_FAIL(SetCardProperty(pSDK_, VIDEO_PREDEFINED_COLOR_MATRIX, vidFmt_ == VID_FMT_PAL ? MATRIX_601_CGR : MATRIX_709_CGR)))
 		LOG << TEXT("BLUECARD ERROR: Failed to set colormatrix to ") << (vidFmt_ == VID_FMT_PAL ? TEXT("601 CGR") : TEXT("709 CGR")) << TEXT(". (device ") << _deviceIndex << TEXT(")");
 		
-	////Disable embedded audio
-	//value.ulVal = 1;
-	//if(BLUE_FAIL(pSDK_->SetCardProperty(EMBEDDED_AUDIO_OUTPUT, value))) 	
+	//if(BLUE_FAIL(SetCardProperty(pSDK_, EMBEDDED_AUDIO_OUTPUT, 0))) 	
 	//	LOG << TEXT("BLUECARD ERROR: Failed to enable embedded audio. (device ") << _deviceIndex << TEXT(")");	
 	//else 
 	//{

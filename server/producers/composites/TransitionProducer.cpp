@@ -312,10 +312,13 @@ struct TransitionProducer::Implementation
 			generateFrameFun_(this, pResultFrame->GetDataPtr(), pSrcFrame->GetDataPtr(), pDestFrame->GetDataPtr());
 			//AUDIO
 			{
+				float alpha = static_cast<float>(currentFrame_)/static_cast<float>(totalFrames_);
 				//copy all sounddatachunks from source
+				std::for_each(pSrcFrame->GetAudioData().begin(), pSrcFrame->GetAudioData().end(), std::bind(&audio::AudioDataChunk::SetVolume, std::placeholders::_1, 1.0f-alpha));
 				pResultFrame->GetAudioData().insert(pResultFrame->GetAudioData().end(), pSrcFrame->GetAudioData().begin(), pSrcFrame->GetAudioData().end());
 
 				//copy sounddatachunk from destination
+				std::for_each(pDestFrame->GetAudioData().begin(), pDestFrame->GetAudioData().end(), std::bind(&audio::AudioDataChunk::SetVolume, std::placeholders::_1, alpha));
 				pResultFrame->GetAudioData().insert(pResultFrame->GetAudioData().end(), pDestFrame->GetAudioData().begin(), pDestFrame->GetAudioData().end());
 			}
 

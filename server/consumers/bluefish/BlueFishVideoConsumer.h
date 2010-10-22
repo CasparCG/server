@@ -83,7 +83,6 @@ private:
 	
 	FrameFormat currentFormat_;
 	unsigned int _deviceIndex;
-	bool hasEmbeddedAudio_;
 		
 	unsigned long memFmt_;
 	unsigned long updFmt_;

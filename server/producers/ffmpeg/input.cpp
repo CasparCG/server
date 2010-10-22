@@ -69,7 +69,7 @@ struct input::implementation : boost::noncopyable
 			video_frame_rate_ = static_cast<double>(video_codec_context_->time_base.den) / static_cast<double>(video_codec_context_->time_base.num);
 			
 			is_running_ = true;
-			io_thread_ = boost::thread([=]{this->read_file();});
+			io_thread_ = boost::thread([=]{read_file();});
 		}
 		catch(...)
 		{
@@ -138,7 +138,7 @@ struct input::implementation : boost::noncopyable
 			{
 				if(packet->stream_index == video_s_index_) 		
 				{
-					video_packet_buffer_.push(std::make_shared<video_packet>(packet, nullptr, video_codec_context_.get(), video_codec_));		 // NOTE: video_packet makes a copy of AVPacket
+					video_packet_buffer_.push(std::make_shared<video_packet>(packet, nullptr, video_codec_context_.get(), video_codec_)); // NOTE: video_packet makes a copy of AVPacket
 					file_buffer_size_ += packet->size;
 				}
 				else if(packet->stream_index == audio_s_index_) 	
@@ -150,9 +150,12 @@ struct input::implementation : boost::noncopyable
 			else if(!loop_ || av_seek_frame(format_context.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
 				is_running_ = false;
 			
-			boost::unique_lock<boost::mutex> lock(file_buffer_size_mutex_);
-			while(file_buffer_size_ > FILE_BUFFER_SIZE)			
-				file_buffer_size_cond_.wait(lock);	
+			if(is_running_)
+			{
+				boost::unique_lock<boost::mutex> lock(file_buffer_size_mutex_);
+				while(file_buffer_size_ > FILE_BUFFER_SIZE)			
+					file_buffer_size_cond_.wait(lock);	
+			}
 		}
 		
 		is_running_ = false;
