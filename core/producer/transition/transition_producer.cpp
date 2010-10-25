@@ -22,35 +22,21 @@
 #include "transition_producer.h"
 
 #include "../../frame/frame_format.h"
+#include "../../frame/gpu_frame.h"
+#include "../../frame/composite_gpu_frame.h"
+#include "../../frame/frame_factory.h"
 
 #include "../../../common/image/image.h"
-#include "../../frame/system_frame.h"
-#include "../../frame/audio_chunk.h"
 #include "../../renderer/render_device.h"
 
 #include <boost/range/algorithm/copy.hpp>
 
 namespace caspar{	
-	
-class empty_producer : public frame_producer
-{
-public:
-	explicit empty_producer(const frame_format_desc& format_desc) 
-		: format_desc_(format_desc), frame_(clear_frame(std::make_shared<system_frame>(format_desc_.size)))
-	{}	
-
-	frame_ptr get_frame() { return frame_; }
-	const frame_format_desc& get_frame_format_desc() const { return format_desc_; }
-private:
-	frame_format_desc format_desc_;
-	frame_ptr frame_;
-};
 
 struct transition_producer::implementation : boost::noncopyable
 {
 	implementation(const frame_producer_ptr& dest, const transition_info& info, const frame_format_desc& format_desc) 
-		: current_frame_(0), info_(info), border_color_(0), format_desc_(format_desc), 
-			empty_(std::make_shared<empty_producer>(format_desc)), source_(empty_), dest_(dest)
+		: current_frame_(0), info_(info), border_color_(0), format_desc_(format_desc), dest_(dest)
 	{
 		if(!dest)
 			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("dest"));
@@ -63,10 +49,10 @@ struct transition_producer::implementation : boost::noncopyable
 	
 	void set_leading_producer(const frame_producer_ptr& producer)
 	{
-		source_ = producer != nullptr ? producer : empty_;
+		source_ = producer;
 	}
 		
-	frame_ptr get_frame()
+	gpu_frame_ptr get_frame()
 	{
 		if(++current_frame_ >= info_.duration)
 			return nullptr;
@@ -74,11 +60,16 @@ struct transition_producer::implementation : boost::noncopyable
 		return compose(get_producer_frame(dest_), get_producer_frame(source_));
 	}
 
-	frame_ptr get_producer_frame(frame_producer_ptr& producer)
+	gpu_frame_ptr get_producer_frame(frame_producer_ptr& producer)
 	{
-		assert(producer != nullptr);
+		if(producer == nullptr)
+		{	
+			auto frame = factory_->create_frame(format_desc_);
+			common::image::clear(frame->data(), frame->size());
+			return frame;
+		}
 
-		frame_ptr frame;
+		gpu_frame_ptr frame;
 		try
 		{
 			frame = producer->get_frame();
@@ -99,157 +90,48 @@ struct transition_producer::implementation : boost::noncopyable
 		return frame;
 	}
 			
-	frame_ptr compose(const frame_ptr& dest_frame, const frame_ptr& src_frame) 
+	gpu_frame_ptr compose(const gpu_frame_ptr& dest_frame, const gpu_frame_ptr& src_frame) 
 	{		
-		frame_ptr result_frame = dest_frame;		
-		if(src_frame != nullptr && dest_frame != nullptr)
-		{
-			result_frame = std::make_shared<system_frame>(format_desc_.size);
-			tbb::parallel_invoke(
-			[&]
-			{
-				GenerateFrame(result_frame->data(), src_frame->data(), dest_frame->data());
-			},
-			[&]
-			{
-				float delta = static_cast<float>(current_frame_)/static_cast<float>(info_.duration);
-				set_frame_volume(dest_frame, delta*100.0f);
-				set_frame_volume(src_frame, (1.0f-delta)*100.0f);		
+		if(info_.type == transition_type::cut)		
+			return src_frame;
+		
+		int volume = static_cast<int>(static_cast<float>(current_frame_)/static_cast<float>(info_.duration)*256.0f);
+				
+		for(size_t n = 0; n < dest_frame->audio_data().size(); ++n)
+			dest_frame->audio_data()[n] = static_cast<short>((static_cast<int>(dest_frame->audio_data()[n])*volume)>>8);
 
-				boost::range::copy(src_frame->audio_data(), std::back_inserter(result_frame->audio_data()));				
-				boost::range::copy(dest_frame->audio_data(), std::back_inserter(result_frame->audio_data()));;
-			});
-		}
-		return result_frame;
-	}
-	
-	void GenerateFrame(unsigned char* pResultData, const unsigned char* pSourceData, const unsigned char* pDestData)
-	{
-		if(info_.type == transition_type::cut)
-		{
-			common::image::copy(pResultData, pSourceData, format_desc_.size);
-			return;
-		}
-
-		if(current_frame_ >= info_.duration) 			
-		{
-			common::image::copy(pResultData, pDestData, format_desc_.size);
-			return;
-		}
-
+		for(size_t n = 0; n < src_frame->audio_data().size(); ++n)
+			src_frame->audio_data()[n] = static_cast<short>((static_cast<int>(src_frame->audio_data()[n])*(256-volume))>>8);
+				
+		float alpha = static_cast<float>(current_frame_)/static_cast<float>(info_.duration);
+		auto composite = std::make_shared<composite_gpu_frame>(format_desc_.width, format_desc_.height);
+		composite->add(src_frame);
+		composite->add(dest_frame);
 		if(info_.type == transition_type::mix)
 		{
-			common::image::lerp(pResultData, pSourceData, pDestData, 1.0f-static_cast<float>(current_frame_)/static_cast<float>(info_.duration), format_desc_.size);
-			return;
+			src_frame->alpha(1.0f-alpha);
+			dest_frame->alpha(alpha);
 		}
-
-		size_t totalWidth = format_desc_.width + info_.border_width;
-			
-		float fStep   = totalWidth / static_cast<float>(info_.duration);
-		float fOffset = fStep * static_cast<float>(current_frame_);
-
-		size_t halfStep = static_cast<size_t>(fStep/2.0);
-		size_t offset   = static_cast<size_t>(fOffset+0.5f);
-			
-		//read source to buffer
-		for(size_t row = 0, even = 0; row < format_desc_.height; ++row, even ^= 1)
+		else if(info_.type == transition_type::slide)
 		{
-			size_t fieldCorrectedOffset = offset + (halfStep*even);
-			if(fieldCorrectedOffset < format_desc_.width)
-			{
-				if(info_.direction != transition_direction::from_left)
-				{
-					if(info_.type == transition_type::push)
-						memcpy(&(pResultData[4*row*format_desc_.width]), &(pSourceData[4*(row*format_desc_.width+fieldCorrectedOffset)]), (format_desc_.width-fieldCorrectedOffset)*4);
-					else	//Slide | Wipe
-						memcpy(&(pResultData[4*row*format_desc_.width]), &(pSourceData[4*row*format_desc_.width]), (format_desc_.width-fieldCorrectedOffset)*4);
-				}
-				else // if (direction == LEFT)
-				{				
-					if(info_.type == transition_type::push)
-						memcpy(&(pResultData[4*(row*format_desc_.width+fieldCorrectedOffset)]), &(pSourceData[4*(row*format_desc_.width)]), (format_desc_.width-fieldCorrectedOffset)*4);
-					else	//slide eller wipe
-						memcpy(&(pResultData[4*(row*format_desc_.width+fieldCorrectedOffset)]), &(pSourceData[4*(row*format_desc_.width+fieldCorrectedOffset)]), (format_desc_.width-fieldCorrectedOffset)*4);
-				}
-			}
+			dest_frame->translate(-1.0f+alpha, 0.0f);
 		}
-
-		//write border to buffer
-		if(info_.border_width > 0)
+		else if(info_.type == transition_type::push)
 		{
-			for(size_t row = 0, even = 0; row < format_desc_.height; ++row, even ^= 1)
-			{
-				size_t fieldCorrectedOffset = offset + (halfStep*even);
-				size_t length = info_.border_width;
-				size_t start = 0;
-
-				if(info_.direction != transition_direction::from_left)
-				{
-					if(fieldCorrectedOffset > format_desc_.width)
-					{
-						length -= fieldCorrectedOffset-format_desc_.width;
-						start += fieldCorrectedOffset-format_desc_.width;
-						fieldCorrectedOffset = format_desc_.width;
-					}
-					else if(fieldCorrectedOffset < length)
-					{
-						length = fieldCorrectedOffset;
-					}
-
-					for(size_t i = 0; i < length; ++i)
-						memcpy(&(pResultData[4*(row*format_desc_.width+format_desc_.width-fieldCorrectedOffset+i)]), &border_color_, 4);
-						
-				}
-				else // if (direction == LEFT)
-				{
-					if(fieldCorrectedOffset > format_desc_.width)
-					{
-						length -= fieldCorrectedOffset-format_desc_.width;
-						start = 0;
-						fieldCorrectedOffset -= info_.border_width-length;
-					}
-					else if(fieldCorrectedOffset < length)
-					{
-						length = fieldCorrectedOffset;
-						start = info_.border_width-fieldCorrectedOffset;
-					}
-
-					for(size_t i = 0; i < length; ++i)
-						memcpy(&(pResultData[4*(row*format_desc_.width+fieldCorrectedOffset-length+i)]), &border_color_, 4);						
-				}
-
-			}
+			dest_frame->translate(-1.0f+alpha, 0.0f);
+			src_frame->translate(alpha, 0.0f);
 		}
-
-		//read dest to buffer
-		offset -= info_.border_width;
-		if(offset > 0)
-		{
-			for(size_t row = 0, even = 0; row < format_desc_.height; ++row, even ^= 1)
-			{
-				int fieldCorrectedOffset = offset + (halfStep*even);
-
-				if(info_.direction != transition_direction::from_left)
-				{
-					if(info_.type == transition_type::wipe)
-						memcpy(&(pResultData[4*(row*format_desc_.width+format_desc_.width-fieldCorrectedOffset)]), &(pDestData[4*(row*format_desc_.width+format_desc_.width-fieldCorrectedOffset)]), fieldCorrectedOffset*4);
-					else
-						memcpy(&(pResultData[4*(row*format_desc_.width+format_desc_.width-fieldCorrectedOffset)]), &(pDestData[4*row*format_desc_.width]), fieldCorrectedOffset*4);
-				}
-				else // if (direction == LEFT)
-				{				
-					if(info_.type == transition_type::wipe)
-						memcpy(&(pResultData[4*(row*format_desc_.width)]), &(pDestData[4*(row*format_desc_.width)]), fieldCorrectedOffset*4);
-					else
-						memcpy(&(pResultData[4*(row*format_desc_.width)]), &(pDestData[4*(row*format_desc_.width+format_desc_.width-fieldCorrectedOffset)]), fieldCorrectedOffset*4);	
-				}
-			}
-		}
+		return composite;
+	}
+		
+	void initialize(const frame_factory_ptr& factory)
+	{
+		dest_->initialize(factory);
+		factory_ = factory;
 	}
 
 	const frame_format_desc format_desc_;
 
-	frame_producer_ptr		empty_;
 	frame_producer_ptr		source_;
 	frame_producer_ptr		dest_;
 	
@@ -257,13 +139,16 @@ struct transition_producer::implementation : boost::noncopyable
 	
 	const transition_info	info_;
 	const unsigned long		border_color_;
+	frame_factory_ptr		factory_;
 };
 
 transition_producer::transition_producer(const frame_producer_ptr& dest, const transition_info& info, const frame_format_desc& format_desc) 
 	: impl_(new implementation(dest, info, format_desc)){}
-frame_ptr transition_producer::get_frame(){return impl_->get_frame();}
+gpu_frame_ptr transition_producer::get_frame(){return impl_->get_frame();}
 frame_producer_ptr transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const frame_producer_ptr& producer) { impl_->set_leading_producer(producer); }
 const frame_format_desc& transition_producer::get_frame_format_desc() const { return impl_->format_desc_; } 
+void transition_producer::initialize(const frame_factory_ptr& factory) { impl_->initialize(factory);}
 
 }
+

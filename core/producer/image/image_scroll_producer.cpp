@@ -5,7 +5,7 @@
 #include "image_loader.h"
 
 #include "../../frame/frame_format.h"
-#include "../../frame/system_frame.h"
+#include "../../frame/frame_factory.h"
 #include "../../server.h"
 #include "../../../common/utility/find_file.h"
 #include "../../../common/image/image.h"
@@ -81,9 +81,9 @@ struct image_scroll_producer : public frame_producer
 			common::image::copy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
 	}
 
-	frame_ptr render_frame()
+	gpu_frame_ptr render_frame()
 	{
-		frame_ptr frame = std::make_shared<system_frame>(format_desc_.size);
+		gpu_frame_ptr frame = factory_->create_frame(format_desc_);
 		common::image::clear(frame->data(), frame->size());
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
@@ -126,18 +126,25 @@ struct image_scroll_producer : public frame_producer
 		return frame;
 	}
 
-	frame_ptr render_interlaced_frame()
+	gpu_frame_ptr render_interlaced_frame()
 	{
-		frame_ptr next_frame1;
-		frame_ptr next_frame2;
+		gpu_frame_ptr next_frame1;
+		gpu_frame_ptr next_frame2;
 		tbb::parallel_invoke([&]{ next_frame1 = render_frame(); }, [&]{ next_frame2 = render_frame(); });
 		
-		return copy_frame(next_frame1, next_frame2, format_desc_);
+		common::image::copy_field(next_frame1->data(), next_frame2->data(), format_desc_.mode == video_mode::upper ? 1 : 0, format_desc_.width, format_desc_.height);
+		return next_frame1;
 	}
 	
-	frame_ptr get_frame()
+	gpu_frame_ptr get_frame()
 	{
 		return format_desc_.mode == video_mode::progressive ? render_frame() : render_interlaced_frame();
+	}
+
+	
+	void initialize(const frame_factory_ptr& factory)
+	{
+		factory_ = factory;
 	}
 
 	const frame_format_desc& get_frame_format_desc() const { return format_desc_; } 
@@ -151,6 +158,8 @@ struct image_scroll_producer : public frame_producer
 	tbb::atomic<bool> loop_;
 	std::shared_ptr<unsigned char> image_;
 	frame_format_desc format_desc_;
+
+	frame_factory_ptr factory_;
 };
 
 frame_producer_ptr create_image_scroll_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc)

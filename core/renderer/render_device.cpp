@@ -3,11 +3,10 @@
 #include "render_device.h"
 #include "layer.h"
 
-#include "../protocol/monitor/Monitor.h"
 #include "../consumer/frame_consumer.h"
 
-#include "../frame/system_frame.h"
 #include "../frame/frame_format.h"
+#include "../frame/gpu_frame_processor.h"
 
 #include "../../common/utility/scope_exit.h"
 #include "../../common/image/image.h"
@@ -30,9 +29,9 @@ using namespace boost::assign;
 	
 namespace caspar{ namespace renderer{
 	
-std::vector<frame_ptr> render_frames(std::map<int, layer>& layers)
+std::vector<gpu_frame_ptr> render_frames(std::map<int, layer>& layers)
 {	
-	std::vector<frame_ptr> frames(layers.size(), nullptr);
+	std::vector<gpu_frame_ptr> frames(layers.size(), nullptr);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), [&](const tbb::blocked_range<size_t>& r)
 	{
 		auto it = layers.begin();
@@ -40,15 +39,13 @@ std::vector<frame_ptr> render_frames(std::map<int, layer>& layers)
 		for(size_t i = r.begin(); i != r.end(); ++i, ++it)
 			frames[i] = it->second.get_frame();
 	});					
-	boost::range::remove_erase(frames, nullptr);
-	boost::range::remove_erase_if(frames, [](const frame_const_ptr& frame) { return *frame == *frame::null();});
 	return frames;
 }
 
 struct render_device::implementation : boost::noncopyable
 {	
 	implementation(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers)  
-		: consumers_(consumers), monitor_(index), fmt_(format_desc)
+		: consumers_(consumers), fmt_(format_desc), frame_processor_(new gpu_frame_processor(format_desc))
 	{	
 		is_running_ = true;
 		if(consumers.empty())
@@ -80,23 +77,19 @@ struct render_device::implementation : boost::noncopyable
 		CASPAR_LOG(info) << L"Started render_device::render Thread";
 		win32_exception::install_handler();
 		
-		std::vector<frame_ptr> current_frames;
-
 		while(is_running_)
 		{
 			try
 			{	
-				std::vector<frame_ptr> next_frames;
-				frame_ptr composite_frame;		
+				std::vector<gpu_frame_ptr> next_frames;
+				gpu_frame_ptr composite_frame;		
 
 				{
 					tbb::mutex::scoped_lock lock(layers_mutex_);	
-					tbb::parallel_invoke(
-						[&]{next_frames = render_frames(layers_);}, 
-						[&]{composite_frame = compose_frames(current_frames.empty() ? std::make_shared<system_frame>(fmt_.size) : current_frames[0], current_frames);});
+					next_frames = render_frames(layers_);
 				}
-
-				current_frames = std::move(next_frames);		
+				frame_processor_->push(next_frames);
+				frame_processor_->pop(composite_frame);	
 				frame_buffer_.push(std::move(composite_frame));
 			}
 			catch(...)
@@ -115,8 +108,9 @@ struct render_device::implementation : boost::noncopyable
 		CASPAR_LOG(info) << L"Started render_device::display Thread";
 		win32_exception::install_handler();
 				
-		frame_ptr frame = clear_frame(std::make_shared<system_frame>(fmt_.size));
-		std::deque<frame_ptr> prepared(3, frame);
+		gpu_frame_ptr frame = frame_processor_->create_frame(fmt_.width, fmt_.height);
+		common::image::clear(frame->data(), frame->size());
+		std::deque<gpu_frame_ptr> prepared(3, frame);
 				
 		while(is_running_)
 		{
@@ -136,14 +130,14 @@ struct render_device::implementation : boost::noncopyable
 		CASPAR_LOG(info) << L"Ended render_device::display Thread";
 	}
 
-	void send_frame(const frame_ptr& pPreparedFrame, const frame_ptr& pNextFrame)
+	void send_frame(const gpu_frame_ptr& prepared_frame, const gpu_frame_ptr& next_frame)
 	{
 		BOOST_FOREACH(const frame_consumer_ptr& consumer, consumers_)
 		{
 			try
 			{
-				consumer->prepare(pNextFrame); // Could block
-				consumer->display(pPreparedFrame); // Could block
+				consumer->prepare(next_frame); // Could block
+				consumer->display(prepared_frame); // Could block
 			}
 			catch(...)
 			{
@@ -164,6 +158,7 @@ struct render_device::implementation : boost::noncopyable
 		if(producer->get_frame_format_desc() != fmt_)
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("pProducer") << msg_info("Invalid frame format"));
 
+		producer->initialize(frame_processor_);
 		tbb::mutex::scoped_lock lock(layers_mutex_);
 		layers_[exLayer].load(producer, option);
 	}
@@ -216,7 +211,7 @@ struct render_device::implementation : boost::noncopyable
 	boost::thread display_thread_;
 		
 	caspar::frame_format_desc fmt_;
-	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
+	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
 	
 	std::vector<frame_consumer_ptr> consumers_;
 	
@@ -225,7 +220,7 @@ struct render_device::implementation : boost::noncopyable
 	
 	tbb::atomic<bool> is_running_;	
 
-	caspar::Monitor monitor_;
+	gpu_frame_processor_ptr frame_processor_;
 };
 
 render_device::render_device(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 
@@ -238,6 +233,5 @@ void render_device::clear(){impl_->clear();}
 frame_producer_ptr render_device::active(int exLayer) const {return impl_->active(exLayer);}
 frame_producer_ptr render_device::background(int exLayer) const {return impl_->background(exLayer);}
 const frame_format_desc& render_device::frame_format_desc() const{return impl_->fmt_;}
-caspar::Monitor& render_device::monitor(){return impl_->monitor_;}
 }}
 

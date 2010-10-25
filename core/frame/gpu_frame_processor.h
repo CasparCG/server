@@ -19,19 +19,27 @@
 */
 #pragma once
 
-#include "../hardware/cpuid.h"
+#include <memory>
+#include <vector>
 
-namespace caspar{ namespace common{ namespace image{
-		
-void lerp_SSE2(void* dest, const void* source1, const void* source2, float alpha, size_t size);
-void lerp_REF (void* dest, const void* source1, const void* source2, float alpha, size_t size);
-void lerpParallel_SSE2(void* dest, const void* source1, const void* source2, float alpha, size_t size);
-void lerpParallel_REF (void* dest, const void* source1, const void* source2, float alpha, size_t size);
-void lerp_OLD (void* dest, const void* source1, const void* source2, float alpha, size_t size);
+#include "frame_fwd.h"
+#include "frame_factory.h"
 
-typedef void(*lerp_fun)(void*, const void*, const void*, float, size_t);
-lerp_fun get_lerp_fun(SIMD simd = REF);
+namespace caspar {
 
-}}}
+class gpu_frame_processor : public frame_factory,  boost::noncopyable
+{
+public:
+	gpu_frame_processor(const frame_format_desc& format_desc);
 
+	void push(const std::vector<gpu_frame_ptr>& frames);
+	void pop(gpu_frame_ptr& frame);
 
+	gpu_frame_ptr create_frame(size_t width, size_t height);
+private:
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
+};
+typedef std::shared_ptr<gpu_frame_processor> gpu_frame_processor_ptr;
+
+}

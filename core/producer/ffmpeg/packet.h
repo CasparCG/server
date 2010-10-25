@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../frame/audio_chunk.h"
-#include "../../frame/frame.h"
+#include "../../frame/gpu_frame.h"
+#include "../../frame/frame_format.h"
 
 #include <tbb/scalable_allocator.h>
 #include <type_traits>
@@ -29,7 +29,7 @@ struct ffmpeg_error: virtual boost::exception, virtual std::exception { };
 
 struct video_packet : boost::noncopyable
 {
-	video_packet(const AVPacketPtr& packet, frame_ptr&& frame, const frame_format_desc& format_desc, AVCodecContext* codec_context, AVCodec* codec) 
+	video_packet(const AVPacketPtr& packet, gpu_frame_ptr&& frame, const frame_format_desc& format_desc, AVCodecContext* codec_context, AVCodec* codec) 
 		:  size(packet->size), codec_context(codec_context), codec(codec), frame(std::move(frame)), format_desc(format_desc), 
 			data(static_cast<uint8_t*>(scalable_aligned_malloc(packet->size, 16)))
 	{
@@ -45,7 +45,7 @@ struct video_packet : boost::noncopyable
 	const uint8_t* const			data;
 	AVCodecContext*	const			codec_context;
 	const AVCodec* const			codec;
-	const frame_ptr					frame;
+	gpu_frame_ptr						frame;
 	AVFramePtr						decoded_frame;
 	const frame_format_desc&		format_desc;
 };	
@@ -86,7 +86,7 @@ struct audio_packet : boost::noncopyable
 	const size_t			size;
 	const uint8_t* const	data;
 
-	std::vector<audio_chunk_ptr> audio_chunks;
+	std::vector<std::vector<short>> audio_chunks;
 };
 typedef std::shared_ptr<audio_packet> audio_packet_ptr;
 

@@ -20,7 +20,7 @@
  
 #pragma once
 
-#include "../../frame/frame.h"
+#include "../../frame/gpu_frame.h"
 #include "../../consumer/frame_consumer.h"
 
 namespace caspar {
@@ -37,7 +37,7 @@ public:
 	explicit BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer);
 	virtual ~BluefishPlaybackStrategy();
 
-	void display(const frame_ptr&);
+	void display(const gpu_frame_ptr&);
 };
 
 }	//namespace bluefish

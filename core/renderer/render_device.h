@@ -25,8 +25,7 @@ public:
 	frame_producer_ptr active(int exLayer) const;
 	frame_producer_ptr background(int exLayer) const;
 
-	const frame_format_desc& frame_format_desc() const;			
-	Monitor& monitor();
+	const frame_format_desc& frame_format_desc() const;		
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

@@ -4,7 +4,6 @@
 
 #include "../producer/frame_producer.h"
 
-#include "../frame/system_frame.h"
 #include "../frame/frame_format.h"
 
 namespace caspar { namespace renderer {
@@ -58,12 +57,12 @@ struct layer::implementation
 		background_ = nullptr;
 	}
 	
-	frame_ptr get_frame()
+	gpu_frame_ptr get_frame()
 	{		
 		if(!active_)
 			return preview_frame_;
 
-		frame_ptr frame;
+		gpu_frame_ptr frame;
 		try
 		{
 			frame = active_->get_frame();
@@ -83,7 +82,7 @@ struct layer::implementation
 		return frame;
 	}	
 			
-	frame_ptr preview_frame_;
+	gpu_frame_ptr preview_frame_;
 	frame_producer_ptr active_;
 	frame_producer_ptr background_;
 };
@@ -107,7 +106,7 @@ void layer::load(const frame_producer_ptr& frame_producer, load_option option){r
 void layer::play(){impl_->play();}
 void layer::stop(){impl_->stop();}
 void layer::clear(){impl_->clear();}
-frame_ptr layer::get_frame() {return impl_->get_frame();}
+gpu_frame_ptr layer::get_frame() {return impl_->get_frame();}
 frame_producer_ptr layer::active() const { return impl_->active_;}
 frame_producer_ptr layer::background() const { return impl_->background_;}
 }}

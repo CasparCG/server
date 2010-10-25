@@ -1,9 +1,12 @@
 #include "../../../stdafx.h"
 
-#include "video_scaler.h"
+#include "video_transformer.h"
 
 #include "../../../frame/frame_format.h"
 #include "../../../../common/image/image.h"
+#include "../../../frame/gpu_frame.h"
+#include "../../../frame/gpu_frame.h"
+#include "../../../frame/frame_factory.h"
 
 #include <tbb/parallel_for.h>
 #include <tbb/atomic.h>
@@ -42,7 +45,7 @@ struct fill_frame
 };
 typedef std::shared_ptr<fill_frame> fill_frame_ptr;
 
-struct video_scaler::implementation : boost::noncopyable
+struct video_transformer::implementation : boost::noncopyable
 {
 	video_packet_ptr execute(const video_packet_ptr video_packet)
 	{				
@@ -59,14 +62,17 @@ struct video_scaler::implementation : boost::noncopyable
 		//avcodec_get_frame_defaults(avFrame);
 		//avpicture_fill(reinterpret_cast<AVPicture*>(&avFrame), video_packet->frame->data(), PIX_FMT_BGRA, video_packet->frameFormat.width, video_packet->frameFormat.height);
 		
-		fill_frame fill_frame(video_packet->format_desc.width, video_packet->format_desc.height);
+		auto format_desc = video_packet->format_desc;
+
+		fill_frame fill_frame(format_desc.width, format_desc.height);
+		video_packet->frame = factory_->create_frame(format_desc.width, format_desc.height);
 		int result = sws_scale(sws_context_.get(), video_packet->decoded_frame->data, video_packet->decoded_frame->linesize, 0, video_packet->codec_context->height, fill_frame.frame->data, fill_frame.frame->linesize);
 		video_packet->decoded_frame.reset(); // Free memory
 		
 		if(video_packet->codec->id == CODEC_ID_DVVIDEO) // Move up one field
 		{
-			size_t size = video_packet->format_desc.width * video_packet->format_desc.height * 4;
-			size_t linesize = video_packet->format_desc.width * 4;
+			size_t size = format_desc.width * format_desc.height * 4;
+			size_t linesize = format_desc.width * 4;
 			common::image::copy(video_packet->frame->data(), fill_frame.buffer.get() + linesize, size - linesize);
 			common::image::clear(video_packet->frame->data() + size - linesize, linesize);
 		}
@@ -79,10 +85,11 @@ struct video_scaler::implementation : boost::noncopyable
 		return video_packet;	
 	}
 
-private:
+	frame_factory_ptr factory_;
 	SwsContextPtr sws_context_;
 };
 
-video_scaler::video_scaler() : impl_(new implementation()){}
-video_packet_ptr video_scaler::execute(const video_packet_ptr& video_packet){return impl_->execute(video_packet);}
+video_transformer::video_transformer() : impl_(new implementation()){}
+video_packet_ptr video_transformer::execute(const video_packet_ptr& video_packet){return impl_->execute(video_packet);}
+void video_transformer::initialize(const frame_factory_ptr& factory){impl_->factory_ = factory; }
 }}

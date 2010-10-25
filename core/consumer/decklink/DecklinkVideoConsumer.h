@@ -30,7 +30,7 @@ class DecklinkVideoConsumer : public frame_consumer
 public:
 	explicit DecklinkVideoConsumer(const caspar::frame_format_desc& format_desc, bool internalKey = false);
 	
-	void display(const frame_ptr&);
+	void display(const gpu_frame_ptr&);
 	const frame_format_desc& get_frame_format_desc() const;
 private:
 	struct Implementation;

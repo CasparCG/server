@@ -64,14 +64,14 @@
     <Filter Include="Source\protocol\amcp">
       <UniqueIdentifier>{d33e8ddc-ccb4-4f4f-ad20-e788a796bb7b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\protocol\monitor">
-      <UniqueIdentifier>{300c491b-4f95-4b15-8d77-eff22fb4cd60}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\protocol\clk">
       <UniqueIdentifier>{8355a891-c4db-4a0e-8ecc-795314127cdc}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\protocol\osc">
       <UniqueIdentifier>{23166bfa-06eb-4da9-8a0d-1ae5eac4348b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\frame\gpu">
+      <UniqueIdentifier>{91076088-a8dc-43e2-b401-ca2b8462fd06}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -105,9 +105,6 @@
     <ClInclude Include="protocol\clk\CLKProtocolStrategy.h">
       <Filter>Source\protocol\clk</Filter>
     </ClInclude>
-    <ClInclude Include="protocol\monitor\Monitor.h">
-      <Filter>Source\protocol\monitor</Filter>
-    </ClInclude>
     <ClInclude Include="renderer\render_device.h">
       <Filter>Source\renderer</Filter>
     </ClInclude>
@@ -123,18 +120,6 @@
     <ClInclude Include="frame\frame_format.h">
       <Filter>Source\frame</Filter>
     </ClInclude>
-    <ClInclude Include="frame\bitmap_frame.h">
-      <Filter>Source\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\system_frame.h">
-      <Filter>Source\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\audio_chunk.h">
-      <Filter>Source\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\frame.h">
-      <Filter>Source\frame</Filter>
-    </ClInclude>
     <ClInclude Include="config.h">
       <Filter>Source</Filter>
     </ClInclude>
@@ -148,9 +133,6 @@
       <Filter>Source\consumer\bluefish</Filter>
     </ClInclude>
     <ClInclude Include="consumer\bluefish\BluefishException.h">
-      <Filter>Source\consumer\bluefish</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\bluefish\BluefishFrameManager.h">
       <Filter>Source\consumer\bluefish</Filter>
     </ClInclude>
     <ClInclude Include="consumer\decklink\DecklinkVideoConsumer.h">
@@ -189,9 +171,6 @@
     <ClInclude Include="producer\ffmpeg\video\video_deinterlacer.h">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClInclude>
-    <ClInclude Include="producer\ffmpeg\video\video_scaler.h">
-      <Filter>Source\producer\ffmpeg\video</Filter>
-    </ClInclude>
     <ClInclude Include="producer\flash\ct_producer.h">
       <Filter>Source\producer\flash</Filter>
     </ClInclude>
@@ -225,6 +204,27 @@
     <ClInclude Include="protocol\media.h">
       <Filter>Source\protocol</Filter>
     </ClInclude>
+    <ClInclude Include="frame\gpu_frame.h">
+      <Filter>Source\frame\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\gpu_frame_processor.h">
+      <Filter>Source\frame\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\frame_factory.h">
+      <Filter>Source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame_producer.h">
+      <Filter>Source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\video\video_transformer.h">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\bitmap.h">
+      <Filter>Source\producer\flash</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\composite_gpu_frame.h">
+      <Filter>Source\frame\gpu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp">
@@ -251,25 +251,13 @@
     <ClCompile Include="protocol\clk\CLKCommand.cpp">
       <Filter>Source\protocol\clk</Filter>
     </ClCompile>
-    <ClCompile Include="protocol\monitor\Monitor.cpp">
-      <Filter>Source\protocol\monitor</Filter>
-    </ClCompile>
     <ClCompile Include="renderer\render_device.cpp">
       <Filter>Source\renderer</Filter>
     </ClCompile>
     <ClCompile Include="renderer\layer.cpp">
       <Filter>Source\renderer</Filter>
     </ClCompile>
-    <ClCompile Include="frame\system_frame.cpp">
-      <Filter>Source\frame</Filter>
-    </ClCompile>
     <ClCompile Include="frame\frame_format.cpp">
-      <Filter>Source\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="frame\bitmap_frame.cpp">
-      <Filter>Source\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="frame\audio_chunk.cpp">
       <Filter>Source\frame</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
@@ -282,9 +270,6 @@
       <Filter>Source\consumer\bluefish</Filter>
     </ClCompile>
     <ClCompile Include="consumer\bluefish\BlueFishVideoConsumer.cpp">
-      <Filter>Source\consumer\bluefish</Filter>
-    </ClCompile>
-    <ClCompile Include="consumer\bluefish\BluefishFrameManager.cpp">
       <Filter>Source\consumer\bluefish</Filter>
     </ClCompile>
     <ClCompile Include="consumer\decklink\DecklinkVideoConsumer.cpp">
@@ -312,9 +297,6 @@
       <Filter>Source\producer\ffmpeg\audio</Filter>
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_deinterlacer.cpp">
-      <Filter>Source\producer\ffmpeg\video</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\ffmpeg\video\video_scaler.cpp">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
@@ -349,6 +331,21 @@
     </ClCompile>
     <ClCompile Include="protocol\media.cpp">
       <Filter>Source\protocol</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\gpu_frame_processor.cpp">
+      <Filter>Source\frame\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\gpu_frame.cpp">
+      <Filter>Source\frame\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\video\video_transformer.cpp">
+      <Filter>Source\producer\ffmpeg\video</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\bitmap.cpp">
+      <Filter>Source\producer\flash</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\composite_gpu_frame.cpp">
+      <Filter>Source\frame\gpu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

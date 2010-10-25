@@ -27,10 +27,9 @@
 #include "flash_producer.h"
 #include "FlashAxContainer.h"
 #include "TimerHelper.h"
+#include "bitmap.h"
 
-#include "../../frame/bitmap_frame.h"
 #include "../../frame/frame_format.h"
-#include "../../frame/system_frame.h"
 #include "../../../common/utility/find_file.h"
 #include "../../server.h"
 #include "../../../common/concurrency/executor.h"
@@ -57,15 +56,15 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
 struct flash_producer::implementation
 {	
-	implementation(flash_producer* self, const std::wstring& filename, const frame_format_desc& format_desc, Monitor* monitor) 
-		: flashax_container_(nullptr), filename_(filename), self_(self), format_desc_(format_desc), monitor_(monitor),
+	implementation(flash_producer* self, const std::wstring& filename, const frame_format_desc& format_desc) 
+		: flashax_container_(nullptr), filename_(filename), self_(self), format_desc_(format_desc),
 			bitmap_pool_(new bitmap_pool), executor_([=]{run();}), invalid_count_(0)
 	{	
     	if(!boost::filesystem::exists(filename))
     		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
 
 		frame_buffer_.set_capacity(flash_producer::DEFAULT_BUFFER_SIZE);
-		last_frame_ = std::make_shared<bitmap_frame>(format_desc_.width, format_desc_.height);
+		last_frame_ = std::make_shared<bitmap>(format_desc_.width, format_desc_.height);
 
 		start();
 	}
@@ -230,63 +229,83 @@ struct flash_producer::implementation
 		}
 	}
 
-	frame_ptr render_interlace_frame()
+	bitmap_ptr render_interlace_frame()
 	{		
-		return copy_frame(render_frame(), render_frame(), format_desc_);
+		bitmap_ptr frame1 = render_frame();
+		bitmap_ptr frame2 = render_frame();
+		common::image::copy(frame1->data(), frame2->data(), frame1->size());
+		return frame1;
 	}
 	
-	frame_ptr render_frame()
+	bitmap_ptr render_frame()
 	{
 		flashax_container_->Tick();
 		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
 		if(current_frame_ == nullptr || invalid_count_ < 2)
 		{		
-			bitmap_frame_ptr frame;		
+			bitmap_ptr frame;		
 			if(!bitmap_pool_->try_pop(frame))					
 			{	
-				CASPAR_LOG(trace) << "Allocated bitmap_frame";
-				frame = clear_frame(std::make_shared<bitmap_frame>(format_desc_.width, format_desc_.height));			
+				CASPAR_LOG(trace) << "Allocated bitmap";
+				frame = std::make_shared<bitmap>(format_desc_.width, format_desc_.height);					
+				common::image::clear(frame->data(), frame->size());
 			}
 			flashax_container_->DrawControl(frame->hdc());
 
 			auto pool = bitmap_pool_;
-			current_frame_.reset(frame.get(), [=](bitmap_frame*)
+			current_frame_.reset(frame.get(), [=](bitmap*)
 			{
-				common::function_task::enqueue([=]{pool->try_push(clear_frame(frame));});
+				common::function_task::enqueue([=]
+				{
+					if(pool->try_push(frame))
+						common::image::clear(frame->data(), frame->size());
+				});
 			});
 		}	
 		return current_frame_;
 	}
 		
-	frame_ptr get_frame()
+	gpu_frame_ptr get_frame()
 	{
-		return frame_buffer_.try_pop(last_frame_) || !is_empty_ ? last_frame_ : frame::null();
+		if(!frame_buffer_.try_pop(last_frame_) && is_empty_)
+			return gpu_frame::null();
+		
+		auto frame = factory_->create_frame(format_desc_);
+		common::image::copy(frame->data(), last_frame_->data(), last_frame_->size());	
+		
+		return frame;
+	}
+
+	void initialize(const frame_factory_ptr& factory)
+	{
+		factory_ = factory;
 	}
 	
-	typedef tbb::concurrent_bounded_queue<bitmap_frame_ptr> bitmap_pool;
+	typedef tbb::concurrent_bounded_queue<bitmap_ptr> bitmap_pool;
 	std::shared_ptr<bitmap_pool> bitmap_pool_;
 	frame_format_desc format_desc_;
 
 	CComObject<caspar::flash::FlashAxContainer>* flashax_container_;
 		
-	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
-	frame_ptr last_frame_;
-	frame_ptr current_frame_;
+	tbb::concurrent_bounded_queue<bitmap_ptr> frame_buffer_;
+	bitmap_ptr last_frame_;
+	bitmap_ptr current_frame_;
 	
 	std::wstring filename_;
 	flash_producer* self_;
-	Monitor* monitor_;
 
 	tbb::atomic<bool> is_empty_;
 	common::executor executor_;
 	int invalid_count_;
+
+	frame_factory_ptr factory_;
 };
 
-flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc, Monitor* monitor) : impl_(new implementation(this, filename, format_desc, monitor)){}
-frame_ptr flash_producer::get_frame(){return impl_->get_frame();}
-Monitor* flash_producer::get_monitor(){return impl_->monitor_; }
+flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc) : impl_(new implementation(this, filename, format_desc)){}
+gpu_frame_ptr flash_producer::get_frame(){return impl_->get_frame();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
 const frame_format_desc& flash_producer::get_frame_format_desc() const { return impl_->format_desc_; } 
+void flash_producer::initialize(const frame_factory_ptr& factory) { impl_->initialize(factory);}
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)
 {

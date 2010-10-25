@@ -19,17 +19,26 @@
 */
 #pragma once
 
-#include "../hardware/cpuid.h"
+#include <memory>
 
-namespace caspar{ namespace common{ namespace image{
-		
-void pre_over_SSE2(void* dest, const void* source1, const void* source2, size_t size);
-void pre_overParallel_SSE2(void* dest, const void* source1, const void* source2, size_t size);
-void pre_over_FastSSE2(void* dest, const void* source1, const void* source2, size_t size);
-void pre_over_REF(void* dest, const void* source1, const void* source2, size_t size);
-void pre_overParallel_REF(void* dest, const void* source1, const void* source2, size_t size);
+namespace caspar{
 
-typedef void(*pre_over_fun)(void*, const void*, const void*, size_t);
-pre_over_fun get_pre_over_fun(SIMD simd = REF);
+class bitmap
+{
+public:
+	bitmap(size_t width, size_t height);
 
-}}}
+	unsigned char* data();
+	size_t size() const;	
+	size_t width() const;
+	size_t height() const;
+	HDC hdc();
+private:
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
+};
+typedef std::shared_ptr<bitmap> bitmap_ptr;
+typedef std::unique_ptr<bitmap> bitmap_uptr;
+
+}
+

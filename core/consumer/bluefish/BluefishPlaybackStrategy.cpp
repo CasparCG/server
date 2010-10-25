@@ -60,7 +60,7 @@ struct BluefishPlaybackStrategy::Implementation
 		return frame;
 	}
 
-	void DisplayFrame(const frame_ptr& frame)
+	void DisplayFrame(const gpu_frame_ptr& frame)
 	{
 		if(frame != nullptr) {
 			if(pConsumer_->pFrameManager_.get() == reinterpret_cast<BluefishFrameManager*>(frame->tag())) {
@@ -122,11 +122,11 @@ BluefishPlaybackStrategy::~BluefishPlaybackStrategy()
 //	return pImpl_->pConsumer_;
 //}
 //
-//frame_ptr BluefishPlaybackStrategy::GetReservedFrame() {
+//gpu_frame_ptr BluefishPlaybackStrategy::GetReservedFrame() {
 //	return pImpl_->GetReservedFrame();
 //}
 
-void BluefishPlaybackStrategy::display(const frame_ptr& frame) 
+void BluefishPlaybackStrategy::display(const gpu_frame_ptr& frame) 
 {
 	return pImpl_->DisplayFrame(frame);
 }

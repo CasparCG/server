@@ -29,7 +29,7 @@ public:
 	explicit oal_frame_consumer(const frame_format_desc& format_desc);
 	
 	const frame_format_desc& get_frame_format_desc() const;	
-	void prepare(const frame_ptr& frame);
+	void prepare(const gpu_frame_ptr& frame);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

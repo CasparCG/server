@@ -118,11 +118,6 @@ class SetCommand : public AMCPCommandBase<true, AddToQueue, 2>
 	bool DoExecute();
 };
 
-class MonitorCommand : public AMCPCommandBase<true, AddToQueue, 1>
-{
-	bool DoExecute();
-};
-
 //class KillCommand : public AMCPCommand
 //{
 //public:

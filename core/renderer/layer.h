@@ -28,7 +28,7 @@ public:
 	frame_producer_ptr active() const;
 	frame_producer_ptr background() const;
 
-	frame_ptr get_frame();
+	gpu_frame_ptr get_frame();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

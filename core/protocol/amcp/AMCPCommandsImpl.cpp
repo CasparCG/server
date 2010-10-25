@@ -27,7 +27,6 @@
 #include "../../producer/flash/flash_producer.h"
 #include "../../producer/transition/transition_producer.h"
 #include <boost/lexical_cast.hpp>
-#include "../monitor/Monitor.h"
 #include "../../producer/flash/cg_producer.h"
 #include "../media.h"
 #include "../../Server.h"
@@ -179,7 +178,6 @@ bool LoadCommand::DoExecute()
 
 		SetReplyString(TEXT("202 LOAD OK\r\n"));
 
-		GetChannel()->monitor().Inform(LOAD, _parameters[0]);
 		return true;
 	}
 	catch(file_not_found&)
@@ -273,7 +271,6 @@ bool LoadbgCommand::DoExecute()
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
 
-		GetChannel()->monitor().Inform(LOADBG, _parameters[0]);
 		return true;
 	}
 	catch(file_not_found&)
@@ -327,7 +324,6 @@ bool ClearCommand::DoExecute()
 	GetChannel()->clear(GetLayerIndex());
 	SetReplyString(TEXT("202 CLEAR OK\r\n"));
 
-	GetChannel()->monitor().Inform(CLEAR);
 	return true;
 }
 
@@ -454,8 +450,6 @@ bool CGCommand::DoExecuteAdd() {
 
 		flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::CG_DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
 		SetReplyString(TEXT("202 CG OK\r\n"));
-
-		GetChannel()->monitor().Inform(CG_ADD, _parameters[2]);
 	}
 	else
 	{
@@ -557,7 +551,6 @@ bool CGCommand::DoExecuteClear()
 {
 	flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::CG_DEFAULT_LAYER))->clear();
 	SetReplyString(TEXT("202 CG OK\r\n"));
-	GetChannel()->monitor().Inform(CG_CLEAR);
 	return true;
 }
 
@@ -837,23 +830,6 @@ bool SetCommand::DoExecute()
 	return true;
 }
 
-bool MonitorCommand::DoExecute()
-{
-	std::wstring cmd = _parameters[0];
-
-	if(cmd == TEXT("START")) {
-		GetChannel()->monitor().AddListener(GetClientInfo());
-		SetReplyString(TEXT("202 MONITOR START OK\r\n"));
-	}
-	else if(cmd == TEXT("STOP")) {
-		GetChannel()->monitor().RemoveListener(GetClientInfo());
-		SetReplyString(TEXT("202 MONITOR STOP OK\r\n"));
-	}
-	else
-		SetReplyString(TEXT("403 MONITOR ERROR\r\n"));
-
-	return true;
-}
 
 }	//namespace amcp
 }	//namespace caspar

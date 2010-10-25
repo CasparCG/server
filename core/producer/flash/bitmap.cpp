@@ -18,59 +18,22 @@
 *
 */
  
-#include "../StdAfx.h"
+#include "../../StdAfx.h"
 
-#include "bitmap_frame.h"
+#include "bitmap.h"
 
 #include <windows.h>
 
 namespace caspar{
 	
-class scoped_hdc : boost::noncopyable
-{ 
-public:
-	scoped_hdc(HDC hdc) : hdc_(hdc){}
-	void operator=(scoped_hdc&& other) 
-	{ 
-		hdc_ = other.hdc_;
-		other.hdc_ = nullptr; 
-	}
-	~scoped_hdc()
-	{ 
-		if(hdc_ != nullptr)
-			DeleteDC(hdc_);
-	}
-	operator HDC() { return hdc_; }
-private:
-	HDC hdc_;
-};
-
-class scoped_bitmap : boost::noncopyable
-{ 
-public:
-	scoped_bitmap(HBITMAP bmp) : bmp_(bmp){}
-	void operator=(scoped_bitmap&& other) 
-	{ 
-		bmp_ = other.bmp_;
-		other.bmp_ = nullptr; 
-	}
-	~scoped_bitmap() 
-	{ 
-		if(bmp_ != nullptr) 
-			DeleteObject(bmp_);
-	}
-	operator HBITMAP() const { return bmp_; }
-private:
-	HBITMAP bmp_;
-};
-
-struct bitmap_frame::implementation : boost::noncopyable
+struct bitmap::implementation : boost::noncopyable
 {
-	implementation(size_t width, size_t height) : size_(width*height*4), hdc_(CreateCompatibleDC(nullptr)), bitmap_(nullptr)
+	implementation(size_t width, size_t height) 
+		: size_(width*height*4), width_(width), height_(height), hdc_(CreateCompatibleDC(nullptr)), bitmap_handle_(nullptr)
 	{	
 		if(hdc_ == nullptr)
 			throw std::bad_alloc();
-
+		
 		BITMAPINFO bitmapInfo;
 		bitmapInfo.bmiHeader.biBitCount = 32;
 		bitmapInfo.bmiHeader.biClrImportant = 0;
@@ -86,19 +49,31 @@ struct bitmap_frame::implementation : boost::noncopyable
 		bitmapInfo.bmiHeader.biXPelsPerMeter = 0;
 		bitmapInfo.bmiHeader.biYPelsPerMeter = 0;
 
-		bitmap_ = std::move(CreateDIBSection(hdc_, &bitmapInfo, DIB_RGB_COLORS, reinterpret_cast<void**>(&bitmap_data_), NULL, 0));
-		SelectObject(hdc_, bitmap_);	
+		bitmap_handle_ = CreateDIBSection(hdc_, &bitmapInfo, DIB_RGB_COLORS, reinterpret_cast<void**>(&bitmap_data_), NULL, 0);
+		SelectObject(hdc_, bitmap_handle_);	
+	}
+	
+	~implementation()
+	{
+		if(bitmap_handle_ != nullptr) 
+			DeleteObject(bitmap_handle_);
+		if(hdc_ != nullptr)
+			DeleteDC(hdc_);
 	}
 	
 	const size_t size_;
+	const size_t width_;
+	const size_t height_;
 	unsigned char* bitmap_data_;
-	scoped_hdc hdc_;
-	scoped_bitmap bitmap_;
+	HDC hdc_;
+	HBITMAP bitmap_handle_;
 };
 
-bitmap_frame::bitmap_frame(size_t width, size_t height) : impl_(new implementation(width, height)){}
-unsigned int bitmap_frame::size() const { return impl_->size_; }
-unsigned char* bitmap_frame::data() { return impl_->bitmap_data_; }
-HDC bitmap_frame::hdc() { return impl_->hdc_; }
+bitmap::bitmap(size_t width, size_t height) : impl_(new implementation(width, height)){}
+size_t bitmap::size() const { return impl_->size_; }
+size_t bitmap::width() const { return impl_->width_; }
+size_t bitmap::height() const { return impl_->height_; }
+unsigned char* bitmap::data() { return impl_->bitmap_data_; }
+HDC bitmap::hdc() { return impl_->hdc_; }
 
 }

@@ -9,7 +9,7 @@
 
 #include "../../renderer/render_device.h"
 #include "../../frame/frame_format.h"
-#include "../../frame/frame.h"
+#include "../../frame/gpu_frame.h"
 #include "../../Server.h"
 
 #include <boost/filesystem.hpp>
@@ -153,23 +153,23 @@ struct cg_producer::implementation : boost::noncopyable
 {
 public:
 
-	implementation(const frame_format_desc& fmtDesc, Monitor* pMonitor) : format_desc_(fmtDesc)
+	implementation(const frame_format_desc& fmtDesc) : format_desc_(fmtDesc)
 	{
 		if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.18")))
 		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.18"), fmtDesc, pMonitor);
+			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.18"), fmtDesc);
 			proxy_.reset(new flash_cg_proxy18());
 			CASPAR_LOG(info) << L"Running version 1.8 template graphics.";
 		}
 		else if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.17")))
 		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.17"), fmtDesc, pMonitor);
+			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.17"), fmtDesc);
 			proxy_.reset(new flash_cg_proxy17());
 			CASPAR_LOG(info) << L"Running version 1.7 template graphics.";
 		}
 		else if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth"))) 
 		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth"), fmtDesc, pMonitor);
+			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth"), fmtDesc);
 			proxy_.reset(new flash_cg_proxy16());
 			CASPAR_LOG(info) << L"Running version 1.6 template graphics.";
 		}
@@ -239,14 +239,23 @@ public:
 		flash_producer_->param(proxy_->invoke(layer, label));
 	}
 
-	frame_ptr get_frame()
+	gpu_frame_ptr get_frame()
 	{
 		return flash_producer_ ? flash_producer_->get_frame() : nullptr;
+	}
+
+	
+	void initialize(const frame_factory_ptr& factory)
+	{
+		factory_ = factory;
+		if(flash_producer_)
+			flash_producer_->initialize(factory_);
 	}
 
 	frame_format_desc format_desc_;
 	flash_producer_ptr flash_producer_;
 	std::unique_ptr<flash_cg_proxy> proxy_;
+	frame_factory_ptr factory_;
 };
 	
 
@@ -259,15 +268,15 @@ cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& prend
 	auto pProducer = std::dynamic_pointer_cast<cg_producer>(prender_device->active(exLayer));
 	if(!pProducer)	
 	{
-		pProducer = std::make_shared<cg_producer>(prender_device->frame_format_desc(), &prender_device->monitor());		
+		pProducer = std::make_shared<cg_producer>(prender_device->frame_format_desc());		
 		prender_device->load(exLayer, pProducer, renderer::load_option::auto_play); 
 	}
 	
 	return pProducer;
 }
 
-cg_producer::cg_producer(const frame_format_desc& fmtDesc, Monitor* pMonitor) : impl_(new implementation(fmtDesc, pMonitor)){}
-frame_ptr cg_producer::get_frame(){return impl_->get_frame();}
+cg_producer::cg_producer(const frame_format_desc& fmtDesc) : impl_(new implementation(fmtDesc)){}
+gpu_frame_ptr cg_producer::get_frame(){return impl_->get_frame();}
 void cg_producer::clear(){impl_->clear();}
 void cg_producer::add(int layer, const std::wstring& templateName,  bool playOnLoad, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, templateName, playOnLoad, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}
@@ -277,4 +286,5 @@ void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
 const frame_format_desc& cg_producer::get_frame_format_desc() const { return impl_->format_desc_; }
+void cg_producer::initialize(const caspar::frame_factory_ptr& factory){impl_->initialize(factory);}
 }}
