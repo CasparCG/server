@@ -22,7 +22,6 @@
 
 #include "color_producer.h"
 
-#include "../../frame/system_frame.h"
 #include "../../frame/frame_format.h"
 
 #include <intrin.h>
@@ -33,17 +32,19 @@ namespace caspar {
 class color_producer : public frame_producer
 {
 public:
-	explicit color_producer(unsigned long color_value, const frame_format_desc& format_desc) : format_desc_(format_desc)
+	explicit color_producer(unsigned long color_value, const frame_format_desc& format_desc) : format_desc_(format_desc){}
+
+	gpu_frame_ptr get_frame() { return frame_; }
+	const frame_format_desc& get_frame_format_desc() const { return format_desc_; }
+	
+	void initialize(const frame_factory_ptr& factory)
 	{
-		frame_ = std::make_shared<system_frame>(format_desc.size);
+		frame_ = factory->create_frame(format_desc_);
 		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
 	}
 
-	frame_ptr get_frame() { return frame_; }
-	const frame_format_desc& get_frame_format_desc() const { return format_desc_; }
-
 	frame_format_desc format_desc_;
-	frame_ptr frame_;
+	gpu_frame_ptr frame_;
 	unsigned long color_value_;
 };
 

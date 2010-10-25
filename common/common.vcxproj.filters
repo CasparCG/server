@@ -26,6 +26,9 @@
     <Filter Include="Source\hardware">
       <UniqueIdentifier>{5115d125-61f1-4fdd-9924-0f1bdced5d27}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\gl">
+      <UniqueIdentifier>{0d94bbc2-e196-4618-a90b-19392a3a0a8e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -47,18 +50,6 @@
       <Filter>Source\image</Filter>
     </ClCompile>
     <ClCompile Include="image\image.cpp">
-      <Filter>Source\image</Filter>
-    </ClCompile>
-    <ClCompile Include="image\lerp.cpp">
-      <Filter>Source\image</Filter>
-    </ClCompile>
-    <ClCompile Include="image\over.cpp">
-      <Filter>Source\image</Filter>
-    </ClCompile>
-    <ClCompile Include="image\pre_multiply.cpp">
-      <Filter>Source\image</Filter>
-    </ClCompile>
-    <ClCompile Include="image\shuffle.cpp">
       <Filter>Source\image</Filter>
     </ClCompile>
     <ClCompile Include="image\clear.cpp">
@@ -111,18 +102,6 @@
     <ClInclude Include="image\image.h">
       <Filter>Source\image</Filter>
     </ClInclude>
-    <ClInclude Include="image\lerp.h">
-      <Filter>Source\image</Filter>
-    </ClInclude>
-    <ClInclude Include="image\over.h">
-      <Filter>Source\image</Filter>
-    </ClInclude>
-    <ClInclude Include="image\pre_multiply.h">
-      <Filter>Source\image</Filter>
-    </ClInclude>
-    <ClInclude Include="image\shuffle.h">
-      <Filter>Source\image</Filter>
-    </ClInclude>
     <ClInclude Include="image\clear.h">
       <Filter>Source\image</Filter>
     </ClInclude>
@@ -158,6 +137,9 @@
     </ClInclude>
     <ClInclude Include="utility\find_file.h">
       <Filter>Source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\utility.h">
+      <Filter>Source\gl</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -60,11 +60,12 @@ class transition_producer : public frame_producer
 public:
 	transition_producer(const frame_producer_ptr& destination, const transition_info& info, const frame_format_desc& fmt);
 
-	frame_ptr get_frame();
+	gpu_frame_ptr get_frame();
 
 	frame_producer_ptr get_following_producer() const;
 	void set_leading_producer(const frame_producer_ptr& producer);
 	const frame_format_desc& get_frame_format_desc() const;
+	virtual void initialize(const frame_factory_ptr& factory);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

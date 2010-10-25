@@ -25,7 +25,7 @@
 #include "cg_producer.h"
 
 #include "../../../common/utility/find_file.h"
-#include "../../frame/frame.h"
+#include "../../frame/gpu_frame.h"
 #include "../../server.h"
 
 #include <boost/assign/list_of.hpp>
@@ -46,7 +46,7 @@ frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params, c
 	while((pos = fixed_filename.find(TEXT('\\'), pos)) != std::wstring::npos) 
 		fixed_filename[pos] = TEXT('/');
 	
-	cg_producer_ptr cg_producer(new cg_producer(format_desc, nullptr));
+	cg_producer_ptr cg_producer(new cg_producer(format_desc));
 	cg_producer->add(0, filename, 1);
 	return cg_producer;
 }

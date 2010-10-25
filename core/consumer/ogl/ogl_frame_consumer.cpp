@@ -26,8 +26,8 @@
 
 #include "ogl_frame_consumer.h"
 
-#include "../../frame/system_frame.h"
 #include "../../frame/frame_format.h"
+#include "../../frame/gpu_frame.h"
 #include "../../../common/image/image.h"
 
 #include <boost/thread.hpp>
@@ -203,7 +203,7 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 		return std::make_pair(width, height);
 	}
 
-	void render(const frame_ptr& frame)
+	void render(const gpu_frame_ptr& frame)
 	{					
 		// Render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -234,7 +234,7 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 		pbo_index_ = nextPboIndex;
 	}
 			
-	void display(const frame_ptr& frame)
+	void display(const gpu_frame_ptr& frame)
 	{
 		if(frame == nullptr)
 			return;		
@@ -252,7 +252,7 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 		auto period = boost::posix_time::microseconds(static_cast<long>(get_frame_format_period(format_desc_)*1000000.0));
 		auto time = boost::posix_time::microsec_clock::local_time();
 		
-		frame_ptr frame;
+		gpu_frame_ptr frame;
 		do
 		{
 			try
@@ -299,11 +299,11 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 
 	std::exception_ptr exception_;
 	boost::thread thread_;
-	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
+	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
 };
 
 ogl_frame_consumer::ogl_frame_consumer(const caspar::frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
 const caspar::frame_format_desc& ogl_frame_consumer::get_frame_format_desc() const{return impl_->format_desc_;}
-void ogl_frame_consumer::display(const frame_ptr& frame){impl_->display(frame);}
+void ogl_frame_consumer::display(const gpu_frame_ptr& frame){impl_->display(frame);}
 }}

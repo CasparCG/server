@@ -39,7 +39,7 @@ public:
 	explicit ogl_frame_consumer(const frame_format_desc& format_desc, unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
 	
 	const frame_format_desc& get_frame_format_desc() const;	
-	void display(const frame_ptr& frame);
+	void display(const gpu_frame_ptr& frame);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

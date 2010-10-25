@@ -22,10 +22,6 @@
 
 #include "image.h"
 
-#include "over.h"
-#include "lerp.h"
-#include "shuffle.h"
-#include "pre_multiply.h"
 #include "copy.h"
 #include "copy_field.h"
 #include "clear.h"
@@ -36,33 +32,9 @@ namespace caspar{ namespace common{ namespace image{
 namespace detail
 {
 	cpuid my_cpuid;
-	pre_over_fun		pre_over = get_pre_over_fun(my_cpuid.SIMD);
-	shuffle_fun			shuffle = get_shuffle_fun(my_cpuid.SIMD);
-	lerp_fun			lerp = get_lerp_fun(my_cpuid.SIMD);
-	pre_multiply_fun	pre_multiply = get_pre_multiply_fun(my_cpuid.SIMD);
 	copy_fun			copy = get_copy_fun(my_cpuid.SIMD);
 	copy_field_fun		copy_field = get_copy_field_fun(my_cpuid.SIMD);
 	clear_fun			clear = get_clear_fun(my_cpuid.SIMD);
-}
-
-void shuffle(void* dest, const void* source, size_t size, const u8 red, const u8 green, const u8 blue, const u8 alpha)
-{
-	(*detail::shuffle)(dest, source, size, red, green, blue, alpha);
-}
-
-void pre_over(void* dest, const void* source1, const void* source2, size_t size)
-{
-	(*detail::pre_over)(dest, source1, source2, size);
-}
-
-void lerp(void* dest, const void* source1, const void* source2, float alpha, size_t size)
-{
-	(*detail::lerp)(dest, source1, source2, alpha, size);
-}
-
-void pre_multiply(void* dest, const void* source, size_t size)
-{
-	(*detail::pre_multiply)(dest, source, size);
 }
 
 void copy(void* dest, const void* source, size_t size)

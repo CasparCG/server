@@ -51,7 +51,7 @@ public:
 	static int EnumerateDevices();
 	static frame_consumer_ptr Create(const frame_format_desc& format_desc, unsigned int deviceIndex);
 	
-	void display(const frame_ptr&);
+	void display(const gpu_frame_ptr&);
 		
 	const frame_format_desc& get_frame_format_desc() const { return format_desc_; }
 
@@ -83,7 +83,7 @@ private:
 	
 	std::exception_ptr pException_;
 	boost::thread thread_;
-	tbb::concurrent_bounded_queue<frame_ptr> frameBuffer_;
+	tbb::concurrent_bounded_queue<gpu_frame_ptr> frameBuffer_;
 };
 typedef std::tr1::shared_ptr<BlueFishVideoConsumer> BlueFishFrameConsumerPtr;
 

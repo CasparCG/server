@@ -15,7 +15,6 @@
 #include "protocol/cii/CIIProtocolStrategy.h"
 #include "protocol/CLK/CLKProtocolStrategy.h"
 #include "producer/flash/FlashAxContainer.h"
-#include "protocol/monitor/Monitor.h"
 
 #include "../common/io/AsyncEventServer.h"
 #include "../common/io/SerialPort.h"
@@ -138,7 +137,6 @@ struct server::implementation : boost::noncopyable
 					unsigned int port = xml_controller.second.get<unsigned int>("port");
 					port = port != 0 ? port : 5250;
 					auto asyncserver = std::make_shared<caspar::IO::AsyncEventServer>(create_protocol(protocol), port);
-					asyncserver->SetClientDisconnectHandler(std::tr1::bind(&Monitor::ClearListener, std::tr1::placeholders::_1));
 					asyncserver->Start();
 					async_servers_.push_back(asyncserver);
 				}

@@ -35,7 +35,8 @@
 
 #pragma warning(push)
 
-#include "..\..\frame\frame.h"
+#include "..\..\frame\gpu_frame.h"
+#include "..\..\frame\frame_format.h"
 
 #include <ocmm.h>
 #include <vector>

@@ -4,11 +4,11 @@
 
 namespace caspar{
 	
-class frame;
-typedef std::shared_ptr<frame> frame_ptr;
-typedef std::shared_ptr<const frame> frame_const_ptr;
-typedef std::unique_ptr<frame> frame_uptr;
-typedef std::unique_ptr<const frame> frame_const_uptr;
+class gpu_frame;
+typedef std::shared_ptr<gpu_frame> gpu_frame_ptr;
+
+struct frame_factory;
+typedef std::shared_ptr<frame_factory> frame_factory_ptr;
 
 struct frame_format_desc;
 	

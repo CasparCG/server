@@ -22,8 +22,7 @@
 
 #include "oal_frame_consumer.h"
 
-#include "../../frame/audio_chunk.h"
-#include "../../frame/frame.h"
+#include "../../frame/gpu_frame.h"
 #include "../../frame/frame_format.h"
 
 #include <SFML/Audio.hpp>
@@ -38,9 +37,10 @@ namespace caspar{ namespace audio{
 class sound_channel : public sf::SoundStream
 {
 public:
-	sound_channel() : internal_chunks_(5)
+	sound_channel() : internal_chunks_(5), silence_(1920*2, 0)
 	{
 		external_chunks_.set_capacity(3);
+		sf::SoundStream::Initialize(2, 48000);
 	}
 
 	~sound_channel()
@@ -49,20 +49,17 @@ public:
 		external_chunks_.push(nullptr);
 		Stop();
 	}
-
-	void Initialize(const sound_channel_info_ptr& info)
+	
+	void push(const gpu_frame_ptr& frame)
 	{
-		sf::SoundStream::Initialize(info->channels_count, info->sample_rate);
-		assert(info->bits_per_sample/(8*sizeof(char)) == sizeof(sf::Int16));
-	}
+		if(frame->audio_data().empty())
+			frame->audio_data() = silence_;
 
-	void Push(const audio_chunk_ptr& paudio_chunk)
-	{
-		if(!external_chunks_.try_push(paudio_chunk))
-		{
+		//if(!external_chunks_.try_push(frame))
+		//{
 			//CASPAR_LOG(debug) << "Sound Buffer Overrun";
-			external_chunks_.push(paudio_chunk);
-		}
+			external_chunks_.push(frame);
+		//}
 
 		if(GetStatus() != Playing && external_chunks_.size() >= 3)
 			Play();
@@ -78,28 +75,29 @@ private:
 
 	bool OnGetData(sf::SoundStream::Chunk& data)
     {
-		audio_chunk_ptr pChunk;
-		if(!external_chunks_.try_pop(pChunk))
-		{
-			CASPAR_LOG(trace) << "Sound Buffer Underrun";
-			external_chunks_.pop(pChunk);
-		}
+		gpu_frame_ptr frame;
+		//if(!external_chunks_.try_pop(frame))
+		//{
+			//CASPAR_LOG(trace) << "Sound Buffer Underrun";
+			external_chunks_.pop(frame);
+		//}
 
-		if(pChunk == nullptr)
+		if(frame == nullptr)
 		{
 			external_chunks_.clear();
 			return false;
 		}
 
-		internal_chunks_.push_back(pChunk);
-		SetVolume(pChunk->volume());
-		data.Samples = reinterpret_cast<sf::Int16*>(pChunk->data());
-		data.NbSamples = pChunk->size()/sizeof(sf::Int16);
+		internal_chunks_.push_back(frame);
+		//SetVolume(pChunk->volume());
+		data.Samples = reinterpret_cast<sf::Int16*>(frame->audio_data().data());
+		data.NbSamples = frame->audio_data().size();
         return true;
     }
 
-	boost::circular_buffer<audio_chunk_ptr> internal_chunks_;
-	tbb::concurrent_bounded_queue<audio_chunk_ptr> external_chunks_;
+	std::vector<short> silence_;
+	boost::circular_buffer<gpu_frame_ptr> internal_chunks_;
+	tbb::concurrent_bounded_queue<gpu_frame_ptr> external_chunks_;
 };
 typedef std::shared_ptr<sound_channel> sound_channelPtr;
 
@@ -107,53 +105,19 @@ struct oal_frame_consumer::implementation : boost::noncopyable
 {	
 	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc)
 	{
-		for(int n = 0; n < 3; ++n)
-			channel_pool_.push(std::make_shared<sound_channel>());
 	}
 	
-	void push(const frame_ptr& frame)
+	void push(const gpu_frame_ptr& frame)
 	{
-		if(frame == nullptr)
-			return;
-
-		decltype(channels_) active_channels;
-		BOOST_FOREACH(const audio_chunk_ptr& pChunk, frame->audio_data())
-		{
-			auto info = pChunk->sound_channel_info();
-			auto it = channels_.find(info);
-			sound_channelPtr channel;
-			if(it == channels_.end())
-			{
-				if(channel_pool_.size() <= 1)
-					channel_pool_.push(std::make_shared<sound_channel>());
-				
-				sound_channelPtr pNewChannel;
-				channel_pool_.pop(pNewChannel);
-
-				channel = sound_channelPtr(pNewChannel.get(), [=](sound_channel*)
-				{
-					channel_pool_.push(pNewChannel);
-					pNewChannel->Push(nullptr);
-				});
-				channel->Initialize(info);
-			}
-			else
-				channel = it->second;
-
-			active_channels.insert(std::make_pair(info, channel));
-			channel->Push(pChunk); // Could Block
-		}
-
-		channels_ = std::move(active_channels);
+		channel_.push(frame);
 	}
 		
-	tbb::concurrent_bounded_queue<sound_channelPtr> channel_pool_;
-	std::map<sound_channel_info_ptr, sound_channelPtr> channels_;
+	sound_channel channel_;
 
 	caspar::frame_format_desc format_desc_;
 };
 
 oal_frame_consumer::oal_frame_consumer(const caspar::frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 const caspar::frame_format_desc& oal_frame_consumer::get_frame_format_desc() const{return impl_->format_desc_;}
-void oal_frame_consumer::prepare(const frame_ptr& frame){impl_->push(frame);}
+void oal_frame_consumer::prepare(const gpu_frame_ptr& frame){impl_->push(frame);}
 }}

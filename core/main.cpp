@@ -82,8 +82,16 @@ int _tmain(int argc, _TCHAR* argv[])
 			std::getline(std::wcin, wcmd); // TODO: It's blocking...
 			is_running = wcmd != L"exit" && wcmd != L"q";
 			if(wcmd == L"1")
-				wcmd = L"LOADBG 1-1 DV SLIDE 50 LOOP AUTOPLAY";
+				wcmd = L"LOADBG 1-1 DV SLIDE 100 LOOP AUTOPLAY";
 			else if(wcmd == L"2")
+				wcmd = L"LOADBG 1-1 DV PUSH 100 LOOP AUTOPLAY";
+			else if(wcmd == L"3")
+				wcmd = L"LOADBG 1-1 DV MIX 100 LOOP AUTOPLAY";
+			else if(wcmd == L"4")
+				wcmd = L"LOADBG 1-1 DV WIPE 100 LOOP AUTOPLAY";
+			else if(wcmd == L"5")
+				wcmd = L"LOADBG 1-1 DV CUT 100 LOOP AUTOPLAY";
+			else if(wcmd == L"6")
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
 
 			wcmd += L"\r\n";

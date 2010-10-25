@@ -20,23 +20,24 @@
 #pragma once
 
 #include "../frame/frame_fwd.h"
+#include "../frame/gpu_frame.h"
+#include "../frame/frame_factory.h"
 
 #include <boost/noncopyable.hpp>
 
 #include <memory>
 
 namespace caspar {
-
-class Monitor;
-
+	
 class frame_producer : boost::noncopyable
 {
 public:
 	virtual ~frame_producer(){}	
-	virtual frame_ptr get_frame() = 0;
+	virtual gpu_frame_ptr get_frame() = 0;
 	virtual std::shared_ptr<frame_producer> get_following_producer() const { return nullptr; }
 	virtual void set_leading_producer(const std::shared_ptr<frame_producer>&) {}
 	virtual const frame_format_desc& get_frame_format_desc() const = 0;
+	virtual void initialize(const frame_factory_ptr& factory) = 0;
 };
 typedef std::shared_ptr<frame_producer> frame_producer_ptr;
 

@@ -42,9 +42,10 @@ public:
 	/// <summary> Timeout for blocking while trying to stop the producer. </summary>
 	static const int STOP_TIMEOUT = 2000;
 
-	flash_producer(const std::wstring& filename, const frame_format_desc& format_desc, Monitor* monitor = nullptr);
-	frame_ptr get_frame();
+	flash_producer(const std::wstring& filename, const frame_format_desc& format_desc);
+	gpu_frame_ptr get_frame();
 	const frame_format_desc& get_frame_format_desc() const;
+	void initialize(const frame_factory_ptr& factory);
 
 	void param(const std::wstring& param);
 	
@@ -52,8 +53,6 @@ public:
 
 private:	
 	friend class flash::FlashAxContainer;
-
-	Monitor* get_monitor();
 
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

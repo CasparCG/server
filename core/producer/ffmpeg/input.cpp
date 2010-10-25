@@ -2,7 +2,6 @@
 
 #include "input.h"
 
-#include "../../frame/system_frame.h"
 #include "../../frame/frame_format.h"
 #include "../../../common/image/image.h"
 #include "../../../common/utility/scope_exit.h"
@@ -159,7 +158,7 @@ struct input::implementation : boost::noncopyable
 				if (av_read_frame(format_context.get(), packet.get()) >= 0) // NOTE: Packet is only valid until next call of av_read_frame or av_close_input_file
 				{
 					if(packet->stream_index == video_s_index_) 				
-						video_packet_buffer_.push(std::make_shared<video_packet>(packet, std::make_shared<system_frame>(format_desc_.size), format_desc_, video_codec_context_.get(), video_codec_));		 // NOTE: video_packet makes a copy of AVPacket
+						video_packet_buffer_.push(std::make_shared<video_packet>(packet, nullptr, format_desc_, video_codec_context_.get(), video_codec_));		 // NOTE: video_packet makes a copy of AVPacket
 					else if(packet->stream_index == audio_s_index_) 	
 						audio_packet_buffer_.push(std::make_shared<audio_packet>(packet, audio_codex_context.get(), audio_codec_a, video_frame_rate_));			
 				}

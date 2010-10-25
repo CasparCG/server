@@ -9,9 +9,9 @@ namespace caspar{ namespace flash{
 class cg_producer : public frame_producer
 {
 public:
-	cg_producer(const frame_format_desc& format_desc, Monitor* pMonitor);
+	cg_producer(const frame_format_desc& format_desc);
 	
-	frame_ptr get_frame();
+	gpu_frame_ptr get_frame();
 
 	void clear();
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));
@@ -23,6 +23,7 @@ public:
 	void invoke(int layer, const std::wstring& label);
 
 	const frame_format_desc& get_frame_format_desc() const;
+	void initialize(const caspar::frame_factory_ptr& factory);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

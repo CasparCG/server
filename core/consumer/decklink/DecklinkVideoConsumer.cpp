@@ -28,7 +28,6 @@
 #include "DecklinkVideoConsumer.h"
 #include "DeckLinkAPI_h.h"
 
-#include "../../frame/system_frame.h"
 #include "../../frame/frame_format.h"
 #include "../../../common/image/image.h"
 
@@ -52,7 +51,7 @@ namespace caspar{ namespace decklink{
 struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallback
 {
 	struct DecklinkFrameManager;
-	struct DecklinkVideoFrame : public frame
+	struct DecklinkVideoFrame
 	{
 		explicit DecklinkVideoFrame(DecklinkFrameManager* pFactory)
 		{
@@ -73,6 +72,9 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		{
 			return pBytes_;
 		}
+		
+		size_t width() const { return 0; }
+		size_t height() const { return 0; }
 
 		bool valid() const 
 		{
@@ -120,25 +122,18 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 			return pResult;
 		}
 
-		void DisplayFrame(const frame_ptr& frame)
+		void DisplayFrame(const gpu_frame_ptr& frame)
 		{
 			if(frame != NULL) 
 			{
-				if(pConsumerImpl_->pFrameManager_.get() == reinterpret_cast<DecklinkFrameManager*>(frame->tag()))
+				std::shared_ptr<DecklinkVideoFrame> pTempFrame = GetReservedFrame();
+				if(pTempFrame && frame->size() == pTempFrame->size())
 				{
-					DoRender(std::static_pointer_cast<DecklinkVideoFrame>(frame));
+					common::image::copy(pTempFrame->data(), frame->data(), pTempFrame->size());
+					DoRender(pTempFrame);
 				}
-				else 
-				{
-					std::shared_ptr<DecklinkVideoFrame> pTempFrame = GetReservedFrame();
-					if(pTempFrame && frame->size() == pTempFrame->size())
-					{
-						common::image::copy(pTempFrame->data(), frame->data(), pTempFrame->size());
-						DoRender(pTempFrame);
-					}
-					else
-						CASPAR_LOG(error) << "DECKLINK: Failed to get reserved frame";
-				}
+				else
+					CASPAR_LOG(error) << "DECKLINK: Failed to get reserved frame";				
 			}
 			else 
 			{
@@ -177,11 +172,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		explicit DecklinkFrameManager(Implementation* pConsumerImpl) : pConsumerImpl_(pConsumerImpl)
 		{
 		}
-
-		frame_ptr CreateFrame() {
-			return std::make_shared<system_frame>(pConsumerImpl_->get_frame_format_desc().size);
-		}
-
+		
 		std::shared_ptr<DecklinkVideoFrame>  CreateReservedFrame() {
 			return std::make_shared<DecklinkVideoFrame>(this);
 		}
@@ -207,7 +198,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 
 	std::exception_ptr pException_;
 	boost::thread thread_;
-	tbb::concurrent_bounded_queue<frame_ptr> frameBuffer_;
+	tbb::concurrent_bounded_queue<gpu_frame_ptr> frameBuffer_;
 
 //	IDeckLinkMutableVideoFrame* pNextFrame_;
 
@@ -251,7 +242,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		ReleaseDevice();
 	}
 	
-	void DisplayFrame(const frame_ptr& frame)
+	void DisplayFrame(const gpu_frame_ptr& frame)
 	{
 		if(frame == nullptr)
 			return;		
@@ -270,7 +261,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		{
 			try
 			{	
-				frame_ptr frame;
+				gpu_frame_ptr frame;
 				frameBuffer_.pop(frame);
 				if(frame == nullptr)
 					return;
@@ -453,7 +444,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 DecklinkVideoConsumer::DecklinkVideoConsumer(const caspar::frame_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey))
 {}
 
-void DecklinkVideoConsumer::display(const frame_ptr& frame)
+void DecklinkVideoConsumer::display(const gpu_frame_ptr& frame)
 {
 	pImpl_->DisplayFrame(frame);
 }

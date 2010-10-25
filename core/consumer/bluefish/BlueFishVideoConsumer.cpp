@@ -436,7 +436,7 @@ void BlueFishVideoConsumer::DisableVideoOutput()
 	}
 }
 
-void BlueFishVideoConsumer::display(const frame_ptr& frame)
+void BlueFishVideoConsumer::display(const gpu_frame_ptr& frame)
 {
 	if(frame == nullptr)
 		return;
@@ -453,7 +453,7 @@ void BlueFishVideoConsumer::Run()
 	{
 		try
 		{
-			frame_ptr frame;
+			gpu_frame_ptr frame;
 			frameBuffer_.pop(frame);
 			if(frame == nullptr)
 				return;
