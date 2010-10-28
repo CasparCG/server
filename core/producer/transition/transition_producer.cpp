@@ -26,7 +26,7 @@
 #include "../../frame/composite_gpu_frame.h"
 #include "../../frame/frame_factory.h"
 
-#include "../../../common/image/image.h"
+#include "../../../common/utility/memory.h"
 #include "../../renderer/render_device.h"
 
 #include <boost/range/algorithm/copy.hpp>
@@ -65,7 +65,7 @@ struct transition_producer::implementation : boost::noncopyable
 		if(producer == nullptr)
 		{	
 			auto frame = factory_->create_frame(format_desc_);
-			common::image::clear(frame->data(), frame->size());
+			common::clear(frame->data(), frame->size());
 			return frame;
 		}
 
@@ -114,12 +114,23 @@ struct transition_producer::implementation : boost::noncopyable
 		}
 		else if(info_.type == transition_type::slide)
 		{
-			dest_frame->translate(-1.0f+alpha, 0.0f);
+			if(info_.direction == transition_direction::from_left)			
+				dest_frame->translate(-1.0f+alpha, 0.0f);			
+			else if(info_.direction == transition_direction::from_right)
+				dest_frame->translate(1.0f-alpha, 0.0f);			
 		}
 		else if(info_.type == transition_type::push)
 		{
-			dest_frame->translate(-1.0f+alpha, 0.0f);
-			src_frame->translate(alpha, 0.0f);
+			if(info_.direction == transition_direction::from_left)		
+			{
+				dest_frame->translate(-1.0f+alpha, 0.0f);
+				src_frame->translate(0.0f+alpha, 0.0f);
+			}
+			else if(info_.direction == transition_direction::from_right)
+			{
+				dest_frame->translate(1.0f-alpha, 0.0f);
+				src_frame->translate(0.0f-alpha, 0.0f);
+			}
 		}
 		return composite;
 	}

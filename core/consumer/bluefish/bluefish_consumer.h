@@ -17,23 +17,26 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
- 
-#ifndef _CASPAR_BLUEFISHEXCEPTION_H__
-#define _CASPAR_BLUEFISHEXCEPTION_H__
+#pragma once
 
-#include <exception>
+#include "../../frame/frame_fwd.h"
+#include "../../consumer/frame_consumer.h"
 
-namespace caspar {
-namespace bluefish {
-
-class BluefishException : public std::exception
+namespace caspar { namespace bluefish {
+	
+class consumer : public frame_consumer
 {
 public:
-	explicit BluefishException(const char* msg) : std::exception(msg) {}
-	~BluefishException() {}
+	consumer(const frame_format_desc& format_desc, unsigned int deviceIndex, bool embedd_audio = false);
+	
+	void display(const gpu_frame_ptr&);
+		
+	const frame_format_desc& get_frame_format_desc() const;
+	virtual bool has_sync_clock() const {return false;}
+private:
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
 };
+typedef std::tr1::shared_ptr<consumer> BlueFishFrameConsumerPtr;
 
-}	//namespace bluefish
-}	//namespace caspar
-
-#endif	//_CASPAR_BLUEFISHEXCEPTION_H__
+}}

@@ -29,7 +29,7 @@
 #include "DeckLinkAPI_h.h"
 
 #include "../../frame/frame_format.h"
-#include "../../../common/image/image.h"
+#include "../../../common/utility/memory.h"
 
 #include "../../renderer/render_device.h"
 
@@ -129,7 +129,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 				std::shared_ptr<DecklinkVideoFrame> pTempFrame = GetReservedFrame();
 				if(pTempFrame && frame->size() == pTempFrame->size())
 				{
-					common::image::copy(pTempFrame->data(), frame->data(), pTempFrame->size());
+					common::copy(pTempFrame->data(), frame->data(), pTempFrame->size());
 					DoRender(pTempFrame);
 				}
 				else
@@ -255,8 +255,6 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 
 	void Run()
 	{				
-		auto period = boost::posix_time::microseconds(get_frame_format_period(format_desc_)*1000000);
-		auto time = boost::posix_time::microsec_clock::local_time();
 		while(true)
 		{
 			try
@@ -265,12 +263,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 				frameBuffer_.pop(frame);
 				if(frame == nullptr)
 					return;
-
-				auto remaining = period - (boost::posix_time::microsec_clock::local_time() - time);
-				if(remaining > boost::posix_time::microseconds(5000))
-					boost::this_thread::sleep(remaining - boost::posix_time::microseconds(5000));
-				time = boost::posix_time::microsec_clock::local_time();
-
+				
 				pPlayback_->DisplayFrame(frame);
 			}
 			catch(...)

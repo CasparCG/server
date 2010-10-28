@@ -1,8 +1,8 @@
 #include "../StdAfx.h"
 
 #include "composite_gpu_frame.h"
-#include "../../common/image/copy.h"
 #include "../../common/gl/utility.h"
+#include "../../common/utility/memory.h"
 
 #include <algorithm>
 #include <numeric>
@@ -44,7 +44,14 @@ struct composite_gpu_frame::implementation
 	void add(const gpu_frame_ptr& frame)
 	{
 		frames_.push_back(frame);
-		mix_audio_safe(audio_data_, frame->audio_data());
+
+		if(audio_data_.empty())
+			audio_data_ = std::move(frame->audio_data());
+		else
+		{
+			for(size_t n = 0; n < frame->audio_data().size(); ++n)
+				audio_data_[n] = static_cast<short>(static_cast<int>(audio_data_[n]) + static_cast<int>(frame->audio_data()[n]) & 0xFFFF);				
+		}
 	}
 
 	unsigned char* data()

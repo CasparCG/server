@@ -15,7 +15,11 @@ typedef boost::error_info<struct tag_msg_info, std::string> msg_info;
 typedef boost::error_info<struct tag_inner_info, std::exception_ptr> inner_info;
 typedef boost::error_info<struct tag_line_info, int> line_info;
 
-struct caspar_exception			: virtual boost::exception, virtual std::exception {};
+struct caspar_exception			: virtual boost::exception, virtual std::exception 
+{
+	caspar_exception(){}
+	explicit caspar_exception(const char* msg) : std::exception(msg) {}
+};
 
 struct io_error					: virtual caspar_exception {};
 struct directory_not_found		: virtual io_error {};

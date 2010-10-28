@@ -3,7 +3,7 @@
 #include "input.h"
 
 #include "../../frame/frame_format.h"
-#include "../../../common/image/image.h"
+#include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
 
 #include <tbb/concurrent_queue.h>

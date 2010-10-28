@@ -20,7 +20,7 @@
  
 #include "../../StdAfx.h"
 
-#include "oal_frame_consumer.h"
+#include "oal_consumer.h"
 
 #include "../../frame/gpu_frame.h"
 #include "../../frame/frame_format.h"
@@ -76,11 +76,11 @@ private:
 	bool OnGetData(sf::SoundStream::Chunk& data)
     {
 		gpu_frame_ptr frame;
-		//if(!external_chunks_.try_pop(frame))
-		//{
-			//CASPAR_LOG(trace) << "Sound Buffer Underrun";
+		if(!external_chunks_.try_pop(frame))
+		{
+			CASPAR_LOG(trace) << "Sound Buffer Underrun";
 			external_chunks_.pop(frame);
-		//}
+		}
 
 		if(frame == nullptr)
 		{
@@ -101,7 +101,7 @@ private:
 };
 typedef std::shared_ptr<sound_channel> sound_channelPtr;
 
-struct oal_frame_consumer::implementation : boost::noncopyable
+struct consumer::implementation : boost::noncopyable
 {	
 	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc)
 	{
@@ -117,7 +117,7 @@ struct oal_frame_consumer::implementation : boost::noncopyable
 	caspar::frame_format_desc format_desc_;
 };
 
-oal_frame_consumer::oal_frame_consumer(const caspar::frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-const caspar::frame_format_desc& oal_frame_consumer::get_frame_format_desc() const{return impl_->format_desc_;}
-void oal_frame_consumer::prepare(const gpu_frame_ptr& frame){impl_->push(frame);}
+consumer::consumer(const caspar::frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+const caspar::frame_format_desc& consumer::get_frame_format_desc() const{return impl_->format_desc_;}
+void consumer::prepare(const gpu_frame_ptr& frame){impl_->push(frame);}
 }}

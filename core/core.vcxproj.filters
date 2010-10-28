@@ -126,26 +126,11 @@
     <ClInclude Include="server.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="consumer\bluefish\BluefishPlaybackStrategy.h">
-      <Filter>Source\consumer\bluefish</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\bluefish\BlueFishVideoConsumer.h">
-      <Filter>Source\consumer\bluefish</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\bluefish\BluefishException.h">
-      <Filter>Source\consumer\bluefish</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\decklink\DecklinkVideoConsumer.h">
       <Filter>Source\consumer\decklink</Filter>
     </ClInclude>
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
       <Filter>Source\consumer\decklink\interop</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\oal\oal_frame_consumer.h">
-      <Filter>Source\consumer\oal</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\ogl\ogl_frame_consumer.h">
-      <Filter>Source\consumer\ogl</Filter>
     </ClInclude>
     <ClInclude Include="consumer\frame_consumer.h">
       <Filter>Source\consumer</Filter>
@@ -170,24 +155,6 @@
     </ClInclude>
     <ClInclude Include="producer\ffmpeg\video\video_deinterlacer.h">
       <Filter>Source\producer\ffmpeg\video</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\flash\ct_producer.h">
-      <Filter>Source\producer\flash</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\flash\flash_producer.h">
-      <Filter>Source\producer\flash</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\flash\cg_producer.h">
-      <Filter>Source\producer\flash</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\flash\TimerHelper.h">
-      <Filter>Source\producer\flash\interop</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\flash\FlashAxContainer.h">
-      <Filter>Source\producer\flash\interop</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\flash\axflash.h">
-      <Filter>Source\producer\flash\interop</Filter>
     </ClInclude>
     <ClInclude Include="producer\image\image_loader.h">
       <Filter>Source\producer\image</Filter>
@@ -219,11 +186,50 @@
     <ClInclude Include="producer\ffmpeg\video\video_transformer.h">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClInclude>
+    <ClInclude Include="frame\composite_gpu_frame.h">
+      <Filter>Source\frame\gpu</Filter>
+    </ClInclude>
     <ClInclude Include="producer\flash\bitmap.h">
       <Filter>Source\producer\flash</Filter>
     </ClInclude>
-    <ClInclude Include="frame\composite_gpu_frame.h">
-      <Filter>Source\frame\gpu</Filter>
+    <ClInclude Include="producer\flash\cg_producer.h">
+      <Filter>Source\producer\flash</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\ct_producer.h">
+      <Filter>Source\producer\flash</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\flash_producer.h">
+      <Filter>Source\producer\flash</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\axflash.h">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\FlashAxContainer.h">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\flash\TimerHelper.h">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\bluefish\util.h">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\bluefish\exception.h">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\bluefish\memory.h">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\bluefish\fwd.h">
+      <Filter>Source\consumer\bluefish</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\ogl\ogl_consumer.h">
+      <Filter>Source\consumer\ogl</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\oal\oal_consumer.h">
+      <Filter>Source\consumer\oal</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\bluefish\bluefish_consumer.h">
+      <Filter>Source\consumer\bluefish</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -266,23 +272,11 @@
     <ClCompile Include="server.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="consumer\bluefish\BluefishPlaybackStrategy.cpp">
-      <Filter>Source\consumer\bluefish</Filter>
-    </ClCompile>
-    <ClCompile Include="consumer\bluefish\BlueFishVideoConsumer.cpp">
-      <Filter>Source\consumer\bluefish</Filter>
-    </ClCompile>
     <ClCompile Include="consumer\decklink\DecklinkVideoConsumer.cpp">
       <Filter>Source\consumer\decklink</Filter>
     </ClCompile>
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
       <Filter>Source\consumer\decklink\interop</Filter>
-    </ClCompile>
-    <ClCompile Include="consumer\oal\oal_frame_consumer.cpp">
-      <Filter>Source\consumer\oal</Filter>
-    </ClCompile>
-    <ClCompile Include="consumer\ogl\ogl_frame_consumer.cpp">
-      <Filter>Source\consumer\ogl</Filter>
     </ClCompile>
     <ClCompile Include="producer\color\color_producer.cpp">
       <Filter>Source\producer\color</Filter>
@@ -301,21 +295,6 @@
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
       <Filter>Source\producer\ffmpeg\video</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\flash\ct_producer.cpp">
-      <Filter>Source\producer\flash</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\flash\flash_producer.cpp">
-      <Filter>Source\producer\flash</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\flash\cg_producer.cpp">
-      <Filter>Source\producer\flash</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\flash\FlashAxContainer.cpp">
-      <Filter>Source\producer\flash\interop</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\flash\Flash9e_i.c">
-      <Filter>Source\producer\flash\interop</Filter>
     </ClCompile>
     <ClCompile Include="producer\image\image_loader.cpp">
       <Filter>Source\producer\image</Filter>
@@ -338,14 +317,38 @@
     <ClCompile Include="frame\gpu_frame.cpp">
       <Filter>Source\frame\gpu</Filter>
     </ClCompile>
+    <ClCompile Include="frame\composite_gpu_frame.cpp">
+      <Filter>Source\frame\gpu</Filter>
+    </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_transformer.cpp">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClCompile>
     <ClCompile Include="producer\flash\bitmap.cpp">
       <Filter>Source\producer\flash</Filter>
     </ClCompile>
-    <ClCompile Include="frame\composite_gpu_frame.cpp">
-      <Filter>Source\frame\gpu</Filter>
+    <ClCompile Include="producer\flash\cg_producer.cpp">
+      <Filter>Source\producer\flash</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\ct_producer.cpp">
+      <Filter>Source\producer\flash</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\flash_producer.cpp">
+      <Filter>Source\producer\flash</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\Flash9e_i.c">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\FlashAxContainer.cpp">
+      <Filter>Source\producer\flash\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\ogl\ogl_consumer.cpp">
+      <Filter>Source\consumer\ogl</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\oal\oal_consumer.cpp">
+      <Filter>Source\consumer\oal</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\bluefish\bluefish_consumer.cpp">
+      <Filter>Source\consumer\bluefish</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

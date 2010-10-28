@@ -17,39 +17,18 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
- 
-#include "../stdafx.h"
+#pragma once
 
-#include "image.h"
+#include "../../../common/exception/exceptions.h"
 
-#include "copy.h"
-#include "copy_field.h"
-#include "clear.h"
-//#include "Transition.hpp"
+#include <exception>
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace bluefish {
 
-namespace detail
+struct bluefish_exception : public caspar_exception
 {
-	cpuid my_cpuid;
-	copy_fun			copy = get_copy_fun(my_cpuid.SIMD);
-	copy_field_fun		copy_field = get_copy_field_fun(my_cpuid.SIMD);
-	clear_fun			clear = get_clear_fun(my_cpuid.SIMD);
-}
+	bluefish_exception(){}
+	explicit bluefish_exception(const char* msg) : std::exception(msg) {}
+};
 
-void copy(void* dest, const void* source, size_t size)
-{
-	(*detail::copy)(dest, source, size);
-}
-
-void copy_field(unsigned char* pDest, const unsigned char* pSrc, size_t fieldIndex, size_t width, size_t height)
-{
-	(*detail::copy_field)(pDest, pSrc, fieldIndex, width, height);
-}
-
-void clear(void* dest, size_t size)
-{
-	(*detail::clear)(dest, size);
-}
-
-}}}
+}}

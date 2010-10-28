@@ -4,11 +4,13 @@
 
 #include "image_loader.h"
 
+#include "../../frame/gpu_frame.h"
+#include "../../frame/composite_gpu_frame.h"
 #include "../../frame/frame_format.h"
 #include "../../frame/frame_factory.h"
 #include "../../server.h"
 #include "../../../common/utility/find_file.h"
-#include "../../../common/image/image.h"
+#include "../../../common/utility/memory.h"
 
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
@@ -73,18 +75,18 @@ struct image_scroll_producer : public frame_producer
 		image_height_ = std::max(height, format_desc_.height);
 
 		image_ = std::shared_ptr<unsigned char>(static_cast<unsigned char*>(scalable_aligned_malloc(image_width_*image_height_*4, 16)));
-		common::image::clear(image_.get(), image_width_*image_height_*4);
+		common::clear(image_.get(), image_width_*image_height_*4);
 
 		unsigned char* pBits = FreeImage_GetBits(pBitmap.get());
 		
 		for (size_t i = 0; i < height; ++i)
-			common::image::copy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
+			common::copy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
 	}
 
 	gpu_frame_ptr render_frame()
 	{
 		gpu_frame_ptr frame = factory_->create_frame(format_desc_);
-		common::image::clear(frame->data(), frame->size());
+		common::clear(frame->data(), frame->size());
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
 		const int delta_y = direction_ == direction::Up ? speed_ : -speed_;
@@ -125,20 +127,33 @@ struct image_scroll_producer : public frame_producer
 
 		return frame;
 	}
-
-	gpu_frame_ptr render_interlaced_frame()
-	{
-		gpu_frame_ptr next_frame1;
-		gpu_frame_ptr next_frame2;
-		tbb::parallel_invoke([&]{ next_frame1 = render_frame(); }, [&]{ next_frame2 = render_frame(); });
 		
-		common::image::copy_field(next_frame1->data(), next_frame2->data(), format_desc_.mode == video_mode::upper ? 1 : 0, format_desc_.width, format_desc_.height);
-		return next_frame1;
-	}
-	
 	gpu_frame_ptr get_frame()
-	{
-		return format_desc_.mode == video_mode::progressive ? render_frame() : render_interlaced_frame();
+	{		
+		gpu_frame_ptr result;
+		if(format_desc_.mode == video_mode::progressive)							
+			result = render_frame();		
+		else
+		{
+			auto result = std::make_shared<composite_gpu_frame>(format_desc_.width, format_desc_.height);
+			gpu_frame_ptr frame1;
+			gpu_frame_ptr frame2;
+			tbb::parallel_invoke([&]{ frame1 = render_frame(); }, [&]{ frame2 = render_frame(); });
+			result->add(frame1);
+			result->add(frame2);
+			if(format_desc_.mode == video_mode::upper)
+			{
+				frame1->mode(video_mode::upper);
+				frame2->mode(video_mode::lower);
+			}
+			else
+			{
+				frame1->mode(video_mode::lower);
+				frame2->mode(video_mode::upper);
+			}
+		}
+
+		return result;
 	}
 
 	

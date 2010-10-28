@@ -2,12 +2,12 @@
 
 #include "server.h"
 
-#include "consumer/oal/oal_frame_consumer.h"
+#include "consumer/oal/oal_consumer.h"
 #ifndef DISABLE_BLUEFISH
-#include "consumer/bluefish/BlueFishVideoConsumer.h"
+#include "consumer/bluefish/bluefish_consumer.h"
 #endif
 #include "consumer/decklink/DecklinkVideoConsumer.h"
-#include "consumer/ogl/ogl_frame_consumer.h"
+#include "consumer/ogl/ogl_consumer.h"
 
 #include <FreeImage.h>
 
@@ -17,7 +17,6 @@
 #include "producer/flash/FlashAxContainer.h"
 
 #include "../common/io/AsyncEventServer.h"
-#include "../common/io/SerialPort.h"
 #include "../common/utility/string_convert.h"
 
 #include <boost/algorithm/string.hpp>
@@ -42,14 +41,13 @@ struct server::implementation : boost::noncopyable
 		setup_channels(pt);
 		setup_controllers(pt);
 	
-		if(!flash::FlashAxContainer::CheckForFlashSupport())
-			CASPAR_LOG(error) << "No flashplayer activex-control installed. Flash support will be disabled";
+		//if(!flash::FlashAxContainer::CheckForFlashSupport())
+		//	CASPAR_LOG(error) << "No flashplayer activex-control installed. Flash support will be disabled";
 	}
 
 	~implementation()
 	{		
 		FreeImage_DeInitialise();
-		serial_ports_.clear();
 		async_servers_.clear();
 		channels_.clear();
 	}
@@ -98,16 +96,16 @@ struct server::implementation : boost::noncopyable
 							stretch = ogl::stretch::uniform_to_fill;
 
 						bool windowed = xml_consumer.second.get("windowed", false);
-						pConsumer = std::make_shared<ogl::ogl_frame_consumer>(format_desc, device, stretch, windowed);
+						pConsumer = std::make_shared<ogl::consumer>(format_desc, device, stretch, windowed);
 					}
 				#ifndef DISABLE_BLUEFISH
-					else if(name == "bluefish")
-						pConsumer = caspar::bluefish::BlueFishVideoConsumer::Create(format_desc, xml_consumer.second.get("device", 0));
+					else if(name == "bluefish")					
+						pConsumer = std::make_shared<bluefish::consumer>(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false));					
 				#endif
 					else if(name == "decklink")
 						pConsumer = std::make_shared<decklink::DecklinkVideoConsumer>(format_desc, xml_consumer.second.get("internalkey", false));
 					else if(name == "audio")
-						pConsumer = std::make_shared<audio::oal_frame_consumer>(format_desc);
+						pConsumer = std::make_shared<audio::consumer>(format_desc);
 
 					if(pConsumer)					
 						consumers.push_back(pConsumer);					
@@ -140,23 +138,6 @@ struct server::implementation : boost::noncopyable
 					asyncserver->Start();
 					async_servers_.push_back(asyncserver);
 				}
-				else if(name == "serialcontroller")
-				{
-					std::wstring portName = common::widen(xml_controller.second.get<std::string>("port-name"));						
-					unsigned int baudRate = xml_controller.second.get<unsigned int>("baud-rate");
-					unsigned int dataBits = xml_controller.second.get<unsigned int>("data-bits");
-					unsigned int parity = xml_controller.second.get<unsigned int>("parity");
-					unsigned int stopBits = xml_controller.second.get<unsigned int>("stop-bits");
-
-					baudRate =	baudRate	!= 0 ? baudRate : 19200;
-					dataBits =	dataBits	!= 0 ? dataBits : 8;
-					parity =	parity		!= 0 ? parity	: NOPARITY;
-					stopBits =	stopBits	!= 0 ? stopBits : ONESTOPBIT;
-					
-					auto serialPort = std::make_shared<IO::SerialPort>(create_protocol(protocol), baudRate, parity, dataBits, stopBits, portName, xml_controller.second.get("spy", false));
-					serialPort->Start();
-					serial_ports_.push_back(serialPort);
-				}
 				else
 					BOOST_THROW_EXCEPTION(invalid_configuration() << arg_name_info(name) << msg_info("Invalid controller"));
 			}
@@ -180,7 +161,6 @@ struct server::implementation : boost::noncopyable
 		BOOST_THROW_EXCEPTION(invalid_configuration() << arg_name_info("name") << arg_value_info(name) << msg_info("Invalid protocol"));
 	}
 
-	std::vector<IO::SerialPortPtr> serial_ports_;
 	std::vector<IO::AsyncEventServerPtr> async_servers_;
 
 	std::vector<renderer::render_device_ptr> channels_;

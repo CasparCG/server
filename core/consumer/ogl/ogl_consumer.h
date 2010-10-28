@@ -19,18 +19,30 @@
 */
 #pragma once
 
-#include "../hardware/cpuid.h"
+#include "../../consumer/frame_consumer.h"
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace ogl {
+
+struct ogl_error : virtual caspar_exception{};
+
+enum stretch
+{
+	none,
+	uniform,
+	fill,
+	uniform_to_fill
+};
+
+class consumer : public frame_consumer
+{
+public:	
+	explicit consumer(const frame_format_desc& format_desc, unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
 	
-void clear_SSE2	 (void* dest, size_t size);
-void clear_REF	 (void* dest, size_t size);
-void clearParallel_SSE2	 (void* dest, size_t size);
-void clearParallel_REF	 (void* dest, size_t size);
+	const frame_format_desc& get_frame_format_desc() const;	
+	void display(const gpu_frame_ptr& frame);
+private:
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
+};
 
-typedef void(*clear_fun)(void*, size_t);
-clear_fun get_clear_fun(SIMD simd = REF);
-
-}}}
-
-
+}}

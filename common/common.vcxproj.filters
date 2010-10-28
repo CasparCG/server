@@ -11,9 +11,6 @@
     <Filter Include="Source\exception">
       <UniqueIdentifier>{35ca385e-c4db-4fe7-858b-0a0bb678675f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\image">
-      <UniqueIdentifier>{77be36fb-d4c0-415c-a5be-2cbec333ecbc}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\io">
       <UniqueIdentifier>{f4b0d63f-3cb3-4ab4-a6b9-3f249204dd3f}</UniqueIdentifier>
     </Filter>
@@ -22,9 +19,6 @@
     </Filter>
     <Filter Include="Source\utility">
       <UniqueIdentifier>{11860e2d-8adf-4573-956b-785e59aef2b0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\hardware">
-      <UniqueIdentifier>{5115d125-61f1-4fdd-9924-0f1bdced5d27}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\gl">
       <UniqueIdentifier>{0d94bbc2-e196-4618-a90b-19392a3a0a8e}</UniqueIdentifier>
@@ -37,26 +31,11 @@
     <ClCompile Include="log\log.cpp">
       <Filter>Source\log</Filter>
     </ClCompile>
-    <ClCompile Include="io\SerialPort.cpp">
-      <Filter>Source\io</Filter>
-    </ClCompile>
     <ClCompile Include="io\SocketInfo.cpp">
       <Filter>Source\io</Filter>
     </ClCompile>
     <ClCompile Include="io\AsyncEventServer.cpp">
       <Filter>Source\io</Filter>
-    </ClCompile>
-    <ClCompile Include="image\copy_field.cpp">
-      <Filter>Source\image</Filter>
-    </ClCompile>
-    <ClCompile Include="image\image.cpp">
-      <Filter>Source\image</Filter>
-    </ClCompile>
-    <ClCompile Include="image\clear.cpp">
-      <Filter>Source\image</Filter>
-    </ClCompile>
-    <ClCompile Include="image\copy.cpp">
-      <Filter>Source\image</Filter>
     </ClCompile>
     <ClCompile Include="exception\win32_exception.cpp">
       <Filter>Source\exception</Filter>
@@ -64,10 +43,10 @@
     <ClCompile Include="concurrency\Thread.cpp">
       <Filter>Source\concurrency</Filter>
     </ClCompile>
-    <ClCompile Include="hardware\cpuid.cpp">
-      <Filter>Source\hardware</Filter>
-    </ClCompile>
     <ClCompile Include="utility\find_file.cpp">
+      <Filter>Source\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="utility\memory.cpp">
       <Filter>Source\utility</Filter>
     </ClCompile>
   </ItemGroup>
@@ -87,23 +66,8 @@
     <ClInclude Include="io\ProtocolStrategy.h">
       <Filter>Source\io</Filter>
     </ClInclude>
-    <ClInclude Include="io\SerialPort.h">
-      <Filter>Source\io</Filter>
-    </ClInclude>
     <ClInclude Include="io\SocketInfo.h">
       <Filter>Source\io</Filter>
-    </ClInclude>
-    <ClInclude Include="image\copy.h">
-      <Filter>Source\image</Filter>
-    </ClInclude>
-    <ClInclude Include="image\copy_field.h">
-      <Filter>Source\image</Filter>
-    </ClInclude>
-    <ClInclude Include="image\image.h">
-      <Filter>Source\image</Filter>
-    </ClInclude>
-    <ClInclude Include="image\clear.h">
-      <Filter>Source\image</Filter>
     </ClInclude>
     <ClInclude Include="exception\exceptions.h">
       <Filter>Source\exception</Filter>
@@ -123,13 +87,7 @@
     <ClInclude Include="config.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="hardware\cpuid.h">
-      <Filter>Source\hardware</Filter>
-    </ClInclude>
     <ClInclude Include="utility\string_convert.h">
-      <Filter>Source\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\types.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
     <ClInclude Include="utility\scope_exit.h">
@@ -140,6 +98,9 @@
     </ClInclude>
     <ClInclude Include="gl\utility.h">
       <Filter>Source\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\memory.h">
+      <Filter>Source\utility</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -19,19 +19,21 @@
 */
 #pragma once
 
-#include "../hardware/cpuid.h"
+#include "../../consumer/frame_consumer.h"
 
-namespace caspar{ namespace common{ namespace image{
+namespace caspar { namespace audio {
+
+class consumer : public frame_consumer
+{
+public:	
+	explicit consumer(const frame_format_desc& format_desc);
 	
-void copy_field_SSE2	 (unsigned char* pDest, const unsigned char* pSrc, size_t fieldIndex, size_t width, size_t height);
-void copy_field_REF	 (unsigned char* pDest, const unsigned char* pSrc, size_t fieldIndex, size_t width, size_t height);
+	const frame_format_desc& get_frame_format_desc() const;	
+	void prepare(const gpu_frame_ptr& frame);
+	virtual bool has_sync_clock() const {return true;}
+private:
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
+};
 
-void copy_fieldParallel_SSE2	 (unsigned char* pDest, const unsigned char* pSrc, size_t fieldIndex, size_t width, size_t height);
-void copy_fieldParallel_REF	 (unsigned char* pDest, const unsigned char* pSrc, size_t fieldIndex, size_t width, size_t height);
-
-typedef void(*copy_field_fun)(unsigned char* pDest, const unsigned char* pSrc, size_t fieldIndex, size_t width, size_t height);
-copy_field_fun get_copy_field_fun(SIMD simd = REF);
-
-}}} 
-
-
+}}
