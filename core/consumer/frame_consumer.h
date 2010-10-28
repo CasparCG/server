@@ -33,8 +33,9 @@ public:
 	virtual ~frame_consumer() {}
 
 	virtual const frame_format_desc& get_frame_format_desc() const = 0;
-	virtual void prepare(const gpu_frame_ptr&){};
-	virtual void display(const gpu_frame_ptr&){};
+	virtual void prepare(const gpu_frame_ptr&){}
+	virtual void display(const gpu_frame_ptr&){}
+	virtual bool has_sync_clock() const {return false;}
 };
 typedef std::shared_ptr<frame_consumer> frame_consumer_ptr;
 typedef std::shared_ptr<const frame_consumer> frame_consumer_const_ptr;

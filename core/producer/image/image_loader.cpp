@@ -5,7 +5,7 @@
 #include "../../../common/exception/Exceptions.h"
 
 #include "../../frame/gpu_frame.h"
-#include "../../../common/image/image.h"
+#include "../../../common/utility/memory.h"
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4714) // marked as __forceinline not inlined

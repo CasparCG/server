@@ -4,7 +4,7 @@
 
 #include "../packet.h"
 
-#include "../../../../common/image/image.h"
+#include "../../../../common/utility/memory.h"
 
 #include <tbb/parallel_for.h>
 #include <tbb/atomic.h>

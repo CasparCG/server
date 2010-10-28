@@ -24,11 +24,11 @@
 #pragma warning (disable : 4244)
 #endif
 
-#include "ogl_frame_consumer.h"
+#include "ogl_consumer.h"
 
 #include "../../frame/frame_format.h"
 #include "../../frame/gpu_frame.h"
-#include "../../../common/image/image.h"
+#include "../../../common/utility/memory.h"
 
 #include <boost/thread.hpp>
 
@@ -45,7 +45,7 @@ void GL_CHECK()
 		BOOST_THROW_EXCEPTION(ogl_error() << msg_info(boost::lexical_cast<std::string>(glGetError())));
 }
 
-struct ogl_frame_consumer::implementation : boost::noncopyable
+struct consumer::implementation : boost::noncopyable
 {	
 	implementation(const frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
 		: format_desc_(format_desc), stretch_(stretch), texture_(0), pbo_index_(0), screen_width_(0), screen_height_(0), windowed_(windowed)
@@ -226,7 +226,7 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 
 		if(ptr != NULL)			
 		{
-			common::image::copy(ptr, frame->data(), frame->size());
+			common::copy(ptr, frame->data(), frame->size());
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 		}
 
@@ -248,10 +248,7 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 	void run()
 	{			
 		init();
-		
-		auto period = boost::posix_time::microseconds(static_cast<long>(get_frame_format_period(format_desc_)*1000000.0));
-		auto time = boost::posix_time::microsec_clock::local_time();
-		
+				
 		gpu_frame_ptr frame;
 		do
 		{
@@ -260,11 +257,6 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 				frame_buffer_.pop(frame);
 				if(frame != nullptr)
 				{
-					auto remaining = period - (boost::posix_time::microsec_clock::local_time() - time);
-					if(remaining > boost::posix_time::microseconds(5000))
-						boost::this_thread::sleep(remaining - boost::posix_time::microseconds(5000));
-					time = boost::posix_time::microsec_clock::local_time();
-
 					sf::Event e;
 					while(window_->GetEvent(e)){}
 					window_->SetActive();
@@ -302,8 +294,8 @@ struct ogl_frame_consumer::implementation : boost::noncopyable
 	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
 };
 
-ogl_frame_consumer::ogl_frame_consumer(const caspar::frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
+consumer::consumer(const caspar::frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
-const caspar::frame_format_desc& ogl_frame_consumer::get_frame_format_desc() const{return impl_->format_desc_;}
-void ogl_frame_consumer::display(const gpu_frame_ptr& frame){impl_->display(frame);}
+const caspar::frame_format_desc& consumer::get_frame_format_desc() const{return impl_->format_desc_;}
+void consumer::display(const gpu_frame_ptr& frame){impl_->display(frame);}
 }}

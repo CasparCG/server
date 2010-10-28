@@ -7,7 +7,7 @@
 #include "../../frame/frame_format.h"
 #include "../../server.h"
 #include "../../../common/utility/find_file.h"
-#include "../../../common/image/image.h"
+#include "../../../common/utility/memory.h"
 
 #include <boost/assign.hpp>
 
@@ -33,7 +33,7 @@ struct image_producer : public frame_producer
 
 		FreeImage_FlipVertical(bitmap.get());
 		frame_ = factory->create_frame(format_desc_);
-		common::image::copy(frame_->data(), FreeImage_GetBits(bitmap.get()), frame_->size());
+		common::copy(frame_->data(), FreeImage_GetBits(bitmap.get()), frame_->size());
 	}
 
 	const frame_format_desc& get_frame_format_desc() const { return format_desc_; } 

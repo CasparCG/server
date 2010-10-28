@@ -34,8 +34,11 @@
 #include "../../server.h"
 #include "../../../common/concurrency/executor.h"
 #include "../../../common/concurrency/function_task.h"
-#include "../../../common/image/image.h"
+#include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
+
+#include "../../frame/gpu_frame.h"
+#include "../../frame/composite_gpu_frame.h"
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
@@ -63,8 +66,7 @@ struct flash_producer::implementation
     	if(!boost::filesystem::exists(filename))
     		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
 
-		frame_buffer_.set_capacity(flash_producer::DEFAULT_BUFFER_SIZE);
-		last_frame_ = std::make_shared<bitmap>(format_desc_.width, format_desc_.height);
+		frame_buffer_.set_capacity(flash_producer::DEFAULT_BUFFER_SIZE);		
 
 		start();
 	}
@@ -224,20 +226,36 @@ struct flash_producer::implementation
 			}
 
 			bool isProgressive = format_desc_.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc_.fps/2 == 0);
-			frame_buffer_.push(isProgressive ? render_frame() : render_interlace_frame());
+
+			gpu_frame_ptr result;
+
+			if(isProgressive)							
+				result = render_frame();		
+			else
+			{
+				auto result = std::make_shared<composite_gpu_frame>(format_desc_.width, format_desc_.height);
+				auto frame1 = render_frame();
+				auto frame2 = render_frame();
+				result->add(frame1);
+				result->add(frame2);
+				if(format_desc_.mode == video_mode::upper)
+				{
+					frame1->mode(video_mode::upper);
+					frame2->mode(video_mode::lower);
+				}
+				else
+				{
+					frame1->mode(video_mode::lower);
+					frame2->mode(video_mode::upper);
+				}
+			}
+
+			frame_buffer_.push(result);
 			is_empty_ = flashax_container_->IsEmpty();
 		}
 	}
-
-	bitmap_ptr render_interlace_frame()
-	{		
-		bitmap_ptr frame1 = render_frame();
-		bitmap_ptr frame2 = render_frame();
-		common::image::copy(frame1->data(), frame2->data(), frame1->size());
-		return frame1;
-	}
-	
-	bitmap_ptr render_frame()
+		
+	gpu_frame_ptr render_frame()
 	{
 		flashax_container_->Tick();
 		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
@@ -248,7 +266,7 @@ struct flash_producer::implementation
 			{	
 				CASPAR_LOG(trace) << "Allocated bitmap";
 				frame = std::make_shared<bitmap>(format_desc_.width, format_desc_.height);					
-				common::image::clear(frame->data(), frame->size());
+				common::clear(frame->data(), frame->size());
 			}
 			flashax_container_->DrawControl(frame->hdc());
 
@@ -258,11 +276,16 @@ struct flash_producer::implementation
 				common::function_task::enqueue([=]
 				{
 					if(pool->try_push(frame))
-						common::image::clear(frame->data(), frame->size());
+						common::clear(frame->data(), frame->size());
 				});
 			});
 		}	
-		return current_frame_;
+
+		auto frame = factory_->create_frame(format_desc_);
+		auto bitmap = render_frame();
+		common::copy(frame->data(), current_frame_->data(), current_frame_->size());	
+
+		return frame;
 	}
 		
 	gpu_frame_ptr get_frame()
@@ -270,10 +293,7 @@ struct flash_producer::implementation
 		if(!frame_buffer_.try_pop(last_frame_) && is_empty_)
 			return gpu_frame::null();
 		
-		auto frame = factory_->create_frame(format_desc_);
-		common::image::copy(frame->data(), last_frame_->data(), last_frame_->size());	
-		
-		return frame;
+		return last_frame_;
 	}
 
 	void initialize(const frame_factory_ptr& factory)
@@ -287,8 +307,8 @@ struct flash_producer::implementation
 
 	CComObject<caspar::flash::FlashAxContainer>* flashax_container_;
 		
-	tbb::concurrent_bounded_queue<bitmap_ptr> frame_buffer_;
-	bitmap_ptr last_frame_;
+	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
+	gpu_frame_ptr last_frame_;
 	bitmap_ptr current_frame_;
 	
 	std::wstring filename_;

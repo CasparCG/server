@@ -3,11 +3,12 @@
 #include "gpu_frame_processor.h"
 
 #include "gpu_frame.h"
+#include "composite_gpu_frame.h"
 #include "frame_format.h"
 
 #include "../../common/exception/exceptions.h"
 #include "../../common/concurrency/executor.h"
-#include "../../common/image/image.h"
+#include "../../common/utility/memory.h"
 #include "../../common/gl/utility.h"
 
 #include <Glee.h>
@@ -76,6 +77,7 @@ struct gpu_frame_processor::implementation
 		{
 			context_.reset(new sf::Context());
 			context_->SetActive(true);
+			glEnable(GL_POLYGON_STIPPLE);
 			glEnable(GL_TEXTURE_2D);
 			glEnable(GL_BLEND);
 			glDisable(GL_DEPTH_TEST);
@@ -84,16 +86,15 @@ struct gpu_frame_processor::implementation
 			glViewport(0, 0, format_desc_.width, format_desc_.height);
 			glLoadIdentity();
 
-			input_.resize(2);
-			writing_.resize(2);
+			input_.resize(2, std::make_shared<composite_gpu_frame>(format_desc_.width, format_desc_.height));
+			writing_.resize(2, std::make_shared<composite_gpu_frame>(format_desc_.width, format_desc_.height));
 			fbo_ = std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height);
 			output_frame_ = std::make_shared<gpu_frame>(format_desc_.width, format_desc_.height);
 			index_ = 0;
 		});
 
 		empty_frame_ = create_frame(format_desc.width, format_desc.height);
-		common::image::clear(empty_frame_->data(), empty_frame_->size());
-		// Fill pipeline length
+		common::clear(empty_frame_->data(), empty_frame_->size());
 		for(int n = 0; n < 3; ++n)
 			finished_frames_.push(empty_frame_);
 	}
@@ -113,6 +114,8 @@ struct gpu_frame_processor::implementation
 	{
 		boost::range::remove_erase(frames, nullptr);
 		boost::range::remove_erase(frames, gpu_frame::null());
+		auto composite_frame = std::make_shared<composite_gpu_frame>(format_desc_.width, format_desc_.height);
+		boost::range::for_each(frames, std::bind(&composite_gpu_frame::add, composite_frame, std::placeholders::_1));
 
 		executor_.begin_invoke([=]
 		{
@@ -123,40 +126,33 @@ struct gpu_frame_processor::implementation
 
 				// 2. Start asynchronous DMA transfer to video memory
 				// Lock frames and give pointer ownership to OpenGL			
-				boost::range::for_each(input_[index_], std::mem_fn(&gpu_frame::write_lock));
-				writing_[index_] = input_[index_];	
-				input_[index_].clear();
+				input_[index_]->write_lock();
+				writing_[index_] = std::move(input_[index_]);	
 				
 				// 1. Copy to page-locked memory
-				input_[next_index] = frames;
+				input_[next_index] = std::move(composite_frame);
 								
 				// 4. Output to external buffer
 				if(output_frame_->read_unlock())
 					finished_frames_.push(output_frame_);
-				output_frame_ = nullptr;
 		
 				// 3. Draw to framebuffer and start asynchronous DMA transfer to page-locked memory				
 				// Clear framebuffer
 				glClear(GL_COLOR_BUFFER_BIT);	
-
-				// Draw all frames to framebuffer
-				glLoadIdentity();
-				boost::range::for_each(writing_[next_index], std::mem_fn(&gpu_frame::draw));
+				writing_[next_index]->draw();
 				
 				// Create an output frame
 				output_frame_ = create_output_frame();
 			
 				// Read from framebuffer into page-locked memory
 				output_frame_->read_lock(GL_COLOR_ATTACHMENT0_EXT);
+				output_frame_->audio_data() = std::move(writing_[next_index]->audio_data());
 
 				// Unlock frames and give back pointer ownership
-				boost::range::for_each(writing_[next_index], std::mem_fn(&gpu_frame::write_unlock));
+				writing_[next_index]->write_unlock();
 				
-				// Mix audio from composite frames into output frame
-				std::accumulate(writing_[next_index].begin(), writing_[next_index].end(), output_frame_, mix_audio_safe<gpu_frame_ptr>);	
-
 				// Return frames to pool
-				writing_[next_index].clear();
+				writing_[next_index].reset();
 			}
 			catch(...)
 			{
@@ -213,8 +209,8 @@ struct gpu_frame_processor::implementation
 	frame_buffer_ptr fbo_;
 
 	int index_;
-	std::vector<std::vector<gpu_frame_ptr>>			input_;
-	std::vector<std::vector<gpu_frame_ptr>>			writing_;
+	std::vector<composite_gpu_frame_ptr>			input_;
+	std::vector<composite_gpu_frame_ptr>			writing_;
 
 	gpu_frame_ptr									output_frame_;
 	tbb::concurrent_bounded_queue<gpu_frame_ptr>	finished_frames_;

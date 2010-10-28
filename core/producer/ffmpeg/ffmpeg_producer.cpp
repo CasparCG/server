@@ -31,7 +31,7 @@ extern "C"
 #include "../../frame/frame_format.h"
 #include "../../../common/utility/find_file.h"
 #include "../../server.h"
-#include "../../../common/image/image.h"
+#include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
 
 #include <tbb/mutex.h>
