@@ -282,7 +282,6 @@ struct flash_producer::implementation
 		}	
 
 		auto frame = factory_->create_frame(format_desc_);
-		auto bitmap = render_frame();
 		common::copy(frame->data(), current_frame_->data(), current_frame_->size());	
 
 		return frame;
