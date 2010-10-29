@@ -389,6 +389,11 @@
     <None Include="caspar.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="My Amplifier Results\r000hs\r000hs.ampl" />
+    <None Include="My Amplifier Results\r001lw\r001lw.ampl" />
+    <None Include="My Amplifier Results\r002lw\r002lw.ampl" />
+    <None Include="My Amplifier Results\r003lw\r003lw.ampl" />
+    <None Include="My Amplifier Results\r004hs\r004hs.ampl" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\common\common.vcxproj">

@@ -50,13 +50,6 @@ namespace caspar{ namespace ffmpeg{
 struct ffmpeg_producer : public frame_producer
 {
 public:
-	static const size_t MAX_TOKENS = 5;
-	static const size_t MIN_BUFFER_SIZE = 2;
-	static const size_t DEFAULT_BUFFER_SIZE = 8;
-	static const size_t MAX_BUFFER_SIZE = 64;
-	static const size_t LOAD_TARGET_BUFFER_SIZE = 4;
-	static const size_t THREAD_TIMEOUT_MS = 1000;
-
 	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params, const frame_format_desc& format_desc) 
 		: filename_(filename), format_desc_(format_desc)
 	{
@@ -73,6 +66,15 @@ public:
 		video_transformer_.reset(new video_transformer());
 		audio_decoder_.reset(new audio_decoder());
 		has_audio_ = input_->get_audio_codec_context() != nullptr;
+
+		auto seek = std::find(params.begin(), params.end(), L"SEEK");
+		if(seek != params.end() && ++seek != params.end())
+		{
+			if(!input_->seek(boost::lexical_cast<unsigned long long>(*seek)))
+				CASPAR_LOG(warning) << "Failed to seek file: " << filename_  << "to frame" << *seek;
+		}
+
+		input_->start();
 	}
 		
 	void initialize(const frame_factory_ptr& factory)

@@ -121,7 +121,7 @@ struct gpu_frame::implementation
 		CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 		data_ = reinterpret_cast<unsigned char*>(ptr);
 		if(!data_)
-			BOOST_THROW_EXCEPTION(std::bad_alloc());
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("glMapBuffer failed"));
 		return true;
 	}
 	
@@ -157,8 +157,8 @@ struct gpu_frame::implementation
 	void draw()
 	{
 		glPushMatrix();
-		glTranslatef(x_*2.0f, y_*2.0f, 0.0f);
-		glColor4f(1.0f, 1.0f, 1.0f, alpha_);
+		glTranslated(x_*2.0, y_*2.0, 0.0);
+		glColor4d(1.0, 1.0, 1.0, alpha_);
 
 		if(mode_ == video_mode::progressive)
 			glPolygonStipple(progressive_pattern);
@@ -203,9 +203,9 @@ struct gpu_frame::implementation
 	bool reading_;
 	std::vector<short> audio_data_;
 
-	float alpha_;
-	float x_;
-	float y_;
+	double alpha_;
+	double x_;
+	double y_;
 	video_mode mode_;
 };
 
@@ -222,11 +222,11 @@ size_t gpu_frame::height() const { return impl_->height_;}
 const std::vector<short>& gpu_frame::audio_data() const { return impl_->audio_data_; }	
 std::vector<short>& gpu_frame::audio_data() { return impl_->audio_data_; }
 void gpu_frame::reset(){impl_->reset();}
-float gpu_frame::alpha() const{ return impl_->alpha_;}
+double gpu_frame::alpha() const{ return impl_->alpha_;}
 void gpu_frame::alpha(float value){ impl_->alpha_ = value;}
-float gpu_frame::x() const { return impl_->x_;}
-float gpu_frame::y() const { return impl_->y_;}
-void gpu_frame::translate(float x, float y) { impl_->x_ += x; impl_->y_ += y; }
+double gpu_frame::x() const { return impl_->x_;}
+double gpu_frame::y() const { return impl_->y_;}
+void gpu_frame::translate(double x, double y) { impl_->x_ += x; impl_->y_ += y; }
 void gpu_frame::mode(video_mode mode){ impl_->mode_ = mode;}
 video_mode gpu_frame::mode() const{ return impl_->mode_;}
 }

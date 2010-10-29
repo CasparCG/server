@@ -17,6 +17,7 @@ public:
 	render_device(const frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers);
 	
 	void load(int exLayer, const frame_producer_ptr& pProducer, load_option option = load_option::none);	
+	void pause(int exLayer);
 	void play(int exLayer);
 	void stop(int exLayer);
 	void clear(int exLayer);

@@ -36,7 +36,7 @@ struct composite_gpu_frame::implementation
 	void draw()
 	{
 		glPushMatrix();
-		glTranslatef(self_->x()*2.0f, self_->y()*2.0f, 0.0f);
+		glTranslated(self_->x()*2.0, self_->y()*2.0, 0.0);
 		std::for_each(frames_.begin(), frames_.end(), std::mem_fn(&gpu_frame::draw));
 		glPopMatrix();
 	}

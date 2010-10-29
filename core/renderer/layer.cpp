@@ -17,11 +17,12 @@ struct layer::implementation
 		if(frame_producer == nullptr) 
 			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("frame_producer"));
 			
+		last_frame_ = nullptr;
 		if(option == load_option::preview)		
 		{
-			preview_frame_ = frame_producer->get_frame();
-			if(preview_frame_ != nullptr)
-				preview_frame_->audio_data().clear(); // No audio
+			last_frame_ = frame_producer->get_frame();
+			if(last_frame_ != nullptr)
+				last_frame_->audio_data().clear(); // No audio
 			active_ = nullptr;	
 			background_ = frame_producer;
 		}
@@ -36,19 +37,25 @@ struct layer::implementation
 	
 	void play()
 	{			
-		if(background_ == nullptr)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("No background clip to play."));
+		if(background_ != nullptr)
+		{
+			background_->set_leading_producer(active_);
+			active_ = background_;
+			background_ = nullptr;
+		}
 
-		background_->set_leading_producer(active_);
-		active_ = background_;
-		background_ = nullptr;
-		preview_frame_ = nullptr;
+		is_paused_ = false;
+	}
+
+	void pause()
+	{
+		is_paused_ = true;
 	}
 
 	void stop()
 	{
 		active_ = nullptr;
-		preview_frame_ = nullptr;
+		last_frame_ = nullptr;
 	}
 
 	void clear()
@@ -59,13 +66,12 @@ struct layer::implementation
 	
 	gpu_frame_ptr get_frame()
 	{		
-		if(!active_)
-			return preview_frame_;
+		if(!active_ || is_paused_)
+			return last_frame_;
 
-		gpu_frame_ptr frame;
 		try
 		{
-			frame = active_->get_frame();
+			last_frame_ = active_->get_frame();
 		}
 		catch(...)
 		{
@@ -74,14 +80,16 @@ struct layer::implementation
 			CASPAR_LOG(warning) << "Removed producer from layer.";
 		}
 
-		if(frame == nullptr)
+		if(last_frame_ == nullptr)
 		{
 			active_ = active_->get_following_producer();
-			frame = get_frame();
+			last_frame_ = get_frame();
 		}
-		return frame;
+		return last_frame_;
 	}	
-			
+		
+	tbb::atomic<bool> is_paused_;
+	gpu_frame_ptr last_frame_;
 	gpu_frame_ptr preview_frame_;
 	frame_producer_ptr active_;
 	frame_producer_ptr background_;
@@ -104,6 +112,7 @@ layer& layer::operator=(const layer& other)
 }
 void layer::load(const frame_producer_ptr& frame_producer, load_option option){return impl_->load(frame_producer, option);}	
 void layer::play(){impl_->play();}
+void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 void layer::clear(){impl_->clear();}
 gpu_frame_ptr layer::get_frame() {return impl_->get_frame();}

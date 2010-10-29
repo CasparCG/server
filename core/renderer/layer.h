@@ -22,6 +22,7 @@ public:
 
 	void load(const frame_producer_ptr& pProducer, load_option option);	
 	void play();
+	void pause();
 	void stop();
 	void clear();
 		

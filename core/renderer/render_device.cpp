@@ -195,6 +195,14 @@ struct render_device::implementation : boost::noncopyable
 		layers_[exLayer].load(producer, option);
 	}
 			
+	void pause(int exLayer)
+	{		
+		tbb::mutex::scoped_lock lock(layers_mutex_);
+		auto it = layers_.find(exLayer);
+		if(it != layers_.end())
+			it->second.pause();		
+	}
+
 	void play(int exLayer)
 	{		
 		tbb::mutex::scoped_lock lock(layers_mutex_);
@@ -260,6 +268,7 @@ struct render_device::implementation : boost::noncopyable
 render_device::render_device(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 
 	: impl_(new implementation(format_desc, index, consumers)){}
 void render_device::load(int exLayer, const frame_producer_ptr& pProducer, load_option option){impl_->load(exLayer, pProducer, option);}
+void render_device::pause(int exLayer){impl_->pause(exLayer);}
 void render_device::play(int exLayer){impl_->play(exLayer);}
 void render_device::stop(int exLayer){impl_->stop(exLayer);}
 void render_device::clear(int exLayer){impl_->clear(exLayer);}
