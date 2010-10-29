@@ -4,15 +4,17 @@
 
 #include <memory>
 
+#include <boost/noncopyable.hpp>
+
 #include <Glee.h>
 
 namespace caspar {
 	
-class gpu_frame
+class gpu_frame : boost::noncopyable
 {
 public:
 	gpu_frame(size_t width, size_t height);
-
+	virtual ~gpu_frame(){}
 	virtual void write_lock();
 	virtual bool write_unlock();
 	virtual void read_lock(GLenum mode);

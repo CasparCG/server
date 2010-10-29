@@ -20,10 +20,10 @@ public:
 	void draw();
 	void reset();
 		
-	unsigned char* data();
+	virtual unsigned char* data();
 					
-	const std::vector<short>& audio_data() const;	
-	std::vector<short>& audio_data();
+	virtual const std::vector<short>& audio_data() const;	
+	virtual std::vector<short>& audio_data();
 
 	void add(const gpu_frame_ptr& frame);
 	

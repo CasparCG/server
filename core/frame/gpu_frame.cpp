@@ -61,7 +61,7 @@ GLubyte lower_pattern[] = {
     0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
 	0xff, 0xff, 0xff, 0xff};
 
-struct gpu_frame::implementation
+struct gpu_frame::implementation : boost::noncopyable
 {
 	implementation(size_t width, size_t height) 
 		: pbo_(0), data_(nullptr), width_(width), height_(height), size_(width*height*4), 

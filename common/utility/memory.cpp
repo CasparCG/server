@@ -11,10 +11,6 @@ namespace caspar { namespace common {
 	
 void* memcpy_SSE2(void* dest, const void* source, size_t num)
 {	
-	assert(dest != nullptr);
-	assert(source != nullptr);
-	assert(dest != source);
-	assert(num % 256 == 0);
 	__asm
 	{
 		mov esi, source;    
