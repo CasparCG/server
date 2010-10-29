@@ -9,7 +9,7 @@
 
 namespace caspar {
 	
-struct composite_gpu_frame::implementation
+struct composite_gpu_frame::implementation : boost::noncopyable
 {
 	implementation(composite_gpu_frame* self) : self_(self){}
 

@@ -8,9 +8,9 @@
 
 namespace caspar { namespace renderer {
 
-struct layer::implementation
+struct layer::implementation : boost::noncopyable
 {		
-	implementation() : preview_frame_(nullptr), active_(nullptr), background_(nullptr) {}
+	implementation() : preview_frame_(nullptr), active_(nullptr), background_(nullptr), last_frame_(nullptr) {}
 	
 	void load(const frame_producer_ptr& frame_producer, load_option option)
 	{
@@ -62,6 +62,7 @@ struct layer::implementation
 	{
 		active_ = nullptr;
 		background_ = nullptr;
+		last_frame_ = nullptr;
 	}
 	
 	gpu_frame_ptr get_frame()
@@ -77,6 +78,7 @@ struct layer::implementation
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			active_ = nullptr;
+			last_frame_ = nullptr;
 			CASPAR_LOG(warning) << "Removed producer from layer.";
 		}
 

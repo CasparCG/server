@@ -31,7 +31,7 @@
 
 namespace caspar {
 	
-class frame_buffer
+class frame_buffer : boost::noncopyable
 {
 public:
 	frame_buffer(size_t width, size_t height)
@@ -68,7 +68,7 @@ private:
 };
 typedef std::shared_ptr<frame_buffer> frame_buffer_ptr;
 
-struct gpu_frame_processor::implementation
+struct gpu_frame_processor::implementation : boost::noncopyable
 {	
 	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc)
 	{		

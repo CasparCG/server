@@ -9,6 +9,7 @@ namespace caspar {
 
 struct frame_factory
 {
+	virtual ~frame_factory(){}
 	virtual gpu_frame_ptr create_frame(size_t width, size_t height) = 0;
 	gpu_frame_ptr create_frame(const frame_format_desc format_desc)
 	{

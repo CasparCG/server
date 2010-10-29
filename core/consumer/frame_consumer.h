@@ -27,9 +27,8 @@
 
 namespace caspar {
 	
-class frame_consumer : boost::noncopyable
+struct frame_consumer : boost::noncopyable
 {
-public:
 	virtual ~frame_consumer() {}
 
 	virtual const frame_format_desc& get_frame_format_desc() const = 0;
