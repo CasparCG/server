@@ -73,6 +73,9 @@
     <Filter Include="Source\frame\gpu">
       <UniqueIdentifier>{91076088-a8dc-43e2-b401-ca2b8462fd06}</UniqueIdentifier>
     </Filter>
+    <Filter Include="My Amplifier Results">
+      <UniqueIdentifier>{bb801cd9-8dc8-4300-a5c7-a7f5ee0805fb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
@@ -368,6 +371,21 @@
   <ItemGroup>
     <None Include="caspar.config">
       <Filter>Source</Filter>
+    </None>
+    <None Include="My Amplifier Results\r000hs\r000hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r001lw\r001lw.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r002lw\r002lw.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r003lw\r003lw.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r004hs\r004hs.ampl">
+      <Filter>My Amplifier Results</Filter>
     </None>
   </ItemGroup>
 </Project>

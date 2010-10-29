@@ -29,8 +29,8 @@ struct ffmpeg_error: virtual boost::exception, virtual std::exception { };
 
 struct video_packet : boost::noncopyable
 {
-	video_packet(const AVPacketPtr& packet, gpu_frame_ptr&& frame, const frame_format_desc& format_desc, AVCodecContext* codec_context, AVCodec* codec) 
-		:  size(packet->size), codec_context(codec_context), codec(codec), frame(std::move(frame)), format_desc(format_desc), 
+	video_packet(const AVPacketPtr& packet, const frame_format_desc& format_desc, AVCodecContext* codec_context, AVCodec* codec) 
+		:  size(packet->size), codec_context(codec_context), codec(codec), format_desc(format_desc), 
 			data(static_cast<uint8_t*>(scalable_aligned_malloc(packet->size, 16)))
 	{
 		memcpy(const_cast<uint8_t*>(data), packet->data, packet->size);

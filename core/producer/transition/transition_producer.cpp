@@ -91,8 +91,11 @@ struct transition_producer::implementation : boost::noncopyable
 	}
 			
 	gpu_frame_ptr compose(const gpu_frame_ptr& dest_frame, const gpu_frame_ptr& src_frame) 
-	{		
-		if(info_.type == transition_type::cut)		
+	{	
+		if(!src_frame)
+			return dest_frame;
+
+		if(info_.type == transition_type::cut || !dest_frame)		
 			return src_frame;
 		
 		int volume = static_cast<int>(static_cast<float>(current_frame_)/static_cast<float>(info_.duration)*256.0f);

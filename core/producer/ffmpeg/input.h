@@ -20,7 +20,8 @@ public:
 	video_packet_ptr get_video_packet();
 	audio_packet_ptr get_audio_packet();
 
-	void initialize(const frame_factory_ptr& factory);
+	bool seek(unsigned long long frame);
+	void start();
 
 	bool is_eof() const;
 	void set_loop(bool value);

@@ -142,15 +142,12 @@ struct gpu_frame_processor::implementation
 				writing_[next_index]->draw();
 				
 				// Create an output frame
-				output_frame_ = create_output_frame();
+				output_frame_ = create_frame(format_desc_.width, format_desc_.height);
 			
 				// Read from framebuffer into page-locked memory
 				output_frame_->read_lock(GL_COLOR_ATTACHMENT0_EXT);
 				output_frame_->audio_data() = std::move(writing_[next_index]->audio_data());
 
-				// Unlock frames and give back pointer ownership
-				writing_[next_index]->write_unlock();
-				
 				// Return frames to pool
 				writing_[next_index].reset();
 			}
@@ -160,20 +157,7 @@ struct gpu_frame_processor::implementation
 			}
 		});	
 	}
-
-	gpu_frame_ptr create_output_frame()
-	{	
-		gpu_frame_ptr frame;
-		if(!out_frame_pool_.try_pop(frame))				
-			frame = std::make_shared<gpu_frame>(format_desc_.width, format_desc_.height);
-
-		return gpu_frame_ptr(frame.get(), [=](gpu_frame*)
-		{
-			frame->reset();
-			out_frame_pool_.push(frame);
-		});
-	}
-		
+			
 	gpu_frame_ptr create_frame(size_t width, size_t height)
 	{
 		size_t key = width | (height << 16);
@@ -192,6 +176,7 @@ struct gpu_frame_processor::implementation
 		
 		auto destructor = [=]
 		{
+			frame->write_unlock();
 			frame->reset();
 			input_frame_pools_[key].push(frame);
 		};

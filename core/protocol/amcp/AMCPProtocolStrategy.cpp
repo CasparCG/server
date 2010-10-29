@@ -302,37 +302,22 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 {
 	std::wstring s = str;
 	transform(s.begin(), s.end(), s.begin(), toupper);
-
-	AMCPCommandPtr result;
-
-	if(s == TEXT("LOAD"))
-		result = AMCPCommandPtr(new LoadCommand());
-	else if(s == TEXT("LOADBG"))
-		result = AMCPCommandPtr(new LoadbgCommand());
-	else if(s == TEXT("PLAY"))
-		result = AMCPCommandPtr(new PlayCommand());
-	else if(s == TEXT("STOP"))
-		result = AMCPCommandPtr(new StopCommand());
-	else if(s == TEXT("CLEAR"))
-		result = AMCPCommandPtr(new ClearCommand());
-	else if(s == TEXT("CG"))
-		result = AMCPCommandPtr(new CGCommand());
-	else if(s == TEXT("DATA"))
-		result = AMCPCommandPtr(new DataCommand());
-	else if(s == TEXT("CINF"))
-		result = AMCPCommandPtr(new CinfCommand());
-	else if(s == TEXT("INFO"))
-		result = AMCPCommandPtr(new InfoCommand(channels_));
-	else if(s == TEXT("CLS"))
-		result = AMCPCommandPtr(new ClsCommand());
-	else if(s == TEXT("TLS"))
-		result = AMCPCommandPtr(new TlsCommand());
-	else if(s == TEXT("VERSION"))
-		result = AMCPCommandPtr(new VersionCommand());
-	else if(s == TEXT("BYE"))
-		result = AMCPCommandPtr(new ByeCommand());
-	else if(s == TEXT("SET"))
-		result = AMCPCommandPtr(new SetCommand());
+	
+	if	   (s == TEXT("LOAD"))		return std::make_shared<LoadCommand>();
+	else if(s == TEXT("LOADBG"))	return std::make_shared<LoadbgCommand>();
+	else if(s == TEXT("PAUSE"))		return std::make_shared<PauseCommand>();
+	else if(s == TEXT("PLAY"))		return std::make_shared<PlayCommand>();
+	else if(s == TEXT("STOP"))		return std::make_shared<StopCommand>();
+	else if(s == TEXT("CLEAR"))		return std::make_shared<ClearCommand>();
+	else if(s == TEXT("CG"))		return std::make_shared<CGCommand>();
+	else if(s == TEXT("DATA"))		return std::make_shared<DataCommand>();
+	else if(s == TEXT("CINF"))		return std::make_shared<CinfCommand>();
+	else if(s == TEXT("INFO"))		return std::make_shared<InfoCommand>(channels_);
+	else if(s == TEXT("CLS"))		return std::make_shared<ClsCommand>();
+	else if(s == TEXT("TLS"))		return std::make_shared<TlsCommand>();
+	else if(s == TEXT("VERSION"))	return std::make_shared<VersionCommand>();
+	else if(s == TEXT("BYE"))		return std::make_shared<ByeCommand>();
+	else if(s == TEXT("SET"))		return std::make_shared<SetCommand>();
 	//else if(s == TEXT("MONITOR"))
 	//{
 	//	result = AMCPCommandPtr(new MonitorCommand());
@@ -341,7 +326,7 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	//{
 	//	result = AMCPCommandPtr(new KillCommand());
 	//}
-	return result;
+	return nullptr;
 }
 
 std::size_t AMCPProtocolStrategy::TokenizeMessage(const std::wstring& message, std::vector<std::wstring>* pTokenVector)

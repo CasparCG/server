@@ -287,6 +287,22 @@ bool LoadbgCommand::DoExecute()
 	}
 }
 
+bool PauseCommand::DoExecute()
+{
+	try
+	{
+		GetChannel()->pause(GetLayerIndex());
+		SetReplyString(TEXT("202 PAUSE OK\r\n"));
+		return true;
+	}
+	catch(...)
+	{
+		SetReplyString(TEXT("501 PAUSE FAILED\r\n"));
+	}
+
+	return false;
+}
+
 bool PlayCommand::DoExecute()
 {
 	try

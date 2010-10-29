@@ -29,12 +29,12 @@ public:
 	virtual const std::vector<short>& audio_data() const;	
 	virtual std::vector<short>& audio_data();
 
-	virtual float alpha() const;
+	virtual double alpha() const;
 	virtual void alpha(float value);
 
-	virtual float x() const;
-	virtual float y() const;
-	virtual void translate(float x, float y);
+	virtual double x() const;
+	virtual double y() const;
+	virtual void translate(double x, double y);
 
 	virtual void mode(video_mode mode);
 	virtual video_mode mode() const;

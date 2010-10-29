@@ -45,6 +45,11 @@ class PlayCommand: public AMCPCommandBase<true, AddToQueue, 0>
 	bool DoExecute();
 };
 
+class PauseCommand: public AMCPCommandBase<true, AddToQueue, 0>
+{
+	bool DoExecute();
+};
+
 class StopCommand : public AMCPCommandBase<true, ImmediatelyAndClear, 0>
 {
 	bool DoExecute();
