@@ -25,7 +25,7 @@
 
 #include <tbb\mutex.h>
 
-namespace caspar { namespace amcp {
+namespace caspar { namespace core { namespace amcp {
 
 class AMCPCommandQueue : public common::IRunnable
 {
@@ -52,4 +52,4 @@ private:
 };
 typedef std::tr1::shared_ptr<AMCPCommandQueue> AMCPCommandQueuePtr;
 
-}}
+}}}

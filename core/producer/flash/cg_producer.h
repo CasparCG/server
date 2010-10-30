@@ -4,7 +4,7 @@
 #include "../../frame/frame_fwd.h"
 #include "../../renderer/render_device.h"
 
-namespace caspar{ namespace flash{
+namespace caspar { namespace core { namespace flash{
 		
 class cg_producer : public frame_producer
 {
@@ -23,7 +23,7 @@ public:
 	void invoke(int layer, const std::wstring& label);
 
 	const frame_format_desc& get_frame_format_desc() const;
-	void initialize(const caspar::frame_factory_ptr& factory);
+	void initialize(const frame_factory_ptr& factory);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
@@ -34,4 +34,4 @@ static const unsigned int CG_DEFAULT_LAYER = 5000;
 
 cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& render_device, unsigned int layer_index = CG_DEFAULT_LAYER);
 
-}}
+}}}

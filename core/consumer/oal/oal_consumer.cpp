@@ -32,18 +32,17 @@
 
 #include <windows.h>
 
-namespace caspar{ namespace audio{	
+namespace caspar { namespace core { namespace audio{	
 
-class sound_channel : public sf::SoundStream
+struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
-public:
-	sound_channel() : internal_chunks_(5), silence_(1920*2, 0)
+	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc), internal_chunks_(5)
 	{
 		external_chunks_.set_capacity(3);
 		sf::SoundStream::Initialize(2, 48000);
 	}
 
-	~sound_channel()
+	~implementation()
 	{
 		external_chunks_.clear();
 		external_chunks_.push(nullptr);
@@ -52,21 +51,16 @@ public:
 	
 	void push(const gpu_frame_ptr& frame)
 	{
+		static std::vector<short> silence(1920*2, 0);
+
 		if(frame->audio_data().empty())
-			frame->audio_data() = silence_;
-
-		//if(!external_chunks_.try_push(frame))
-		//{
-			//CASPAR_LOG(debug) << "Sound Buffer Overrun";
-			external_chunks_.push(frame);
-		//}
-
+			frame->audio_data() = silence;
+		
+		external_chunks_.push(frame);
 		if(GetStatus() != Playing && external_chunks_.size() >= 3)
 			Play();
 	}
-
-private:
-
+	
 	bool OnStart() 
 	{
 		external_chunks_.clear();
@@ -89,35 +83,17 @@ private:
 		}
 
 		internal_chunks_.push_back(frame);
-		//SetVolume(pChunk->volume());
 		data.Samples = reinterpret_cast<sf::Int16*>(frame->audio_data().data());
 		data.NbSamples = frame->audio_data().size();
         return true;
     }
 
-	std::vector<short> silence_;
 	boost::circular_buffer<gpu_frame_ptr> internal_chunks_;
 	tbb::concurrent_bounded_queue<gpu_frame_ptr> external_chunks_;
-};
-typedef std::shared_ptr<sound_channel> sound_channelPtr;
-
-struct consumer::implementation : boost::noncopyable
-{	
-	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc)
-	{
-	}
-	
-	void push(const gpu_frame_ptr& frame)
-	{
-		channel_.push(frame);
-	}
-		
-	sound_channel channel_;
-
-	caspar::frame_format_desc format_desc_;
+	frame_format_desc format_desc_;
 };
 
-consumer::consumer(const caspar::frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-const caspar::frame_format_desc& consumer::get_frame_format_desc() const{return impl_->format_desc_;}
+consumer::consumer(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+const frame_format_desc& consumer::get_frame_format_desc() const{return impl_->format_desc_;}
 void consumer::prepare(const gpu_frame_ptr& frame){impl_->push(frame);}
-}}
+}}}

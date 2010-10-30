@@ -2,7 +2,7 @@
 
 #include "video_decoder.h"
 		
-namespace caspar{ namespace ffmpeg{
+namespace caspar { namespace core { namespace ffmpeg{
 
 struct video_decoder::implementation : boost::noncopyable
 {
@@ -20,4 +20,4 @@ struct video_decoder::implementation : boost::noncopyable
 
 video_decoder::video_decoder() : impl_(new implementation()){}
 video_packet_ptr video_decoder::execute(const video_packet_ptr& video_packet){return impl_->execute(video_packet);}
-}}
+}}}

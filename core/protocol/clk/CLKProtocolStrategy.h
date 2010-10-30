@@ -24,14 +24,14 @@
 #include "../../../common/io/ProtocolStrategy.h"
 #include "../../renderer/render_device.h"
 
-namespace caspar { namespace CLK {
+namespace caspar { namespace core { namespace CLK {
 
-class CLKProtocolStrategy : public caspar::IO::IProtocolStrategy
+class CLKProtocolStrategy : public IO::IProtocolStrategy
 {
 public:
 	CLKProtocolStrategy(const std::vector<renderer::render_device_ptr>& channels);
 
-	void Parse(const TCHAR* pData, int charCount, caspar::IO::ClientInfoPtr pClientInfo);
+	void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
 	UINT GetCodepage() { return 28591; }	//ISO 8859-1
 	
 private:
@@ -53,4 +53,4 @@ private:
 	bool bClockLoaded_;
 };
 
-}}
+}}}

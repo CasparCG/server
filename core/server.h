@@ -2,7 +2,7 @@
 
 #include "renderer/renderer_fwd.h"
 
-namespace caspar { 
+namespace caspar { namespace core { 
 	
 struct invalid_configuration : virtual boost::exception, virtual std::exception {};
 
@@ -22,4 +22,4 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-}
+}}

@@ -23,12 +23,12 @@
 
 #include "../../frame/frame_fwd.h"
 
-namespace caspar { namespace decklink {
+namespace caspar { namespace core { namespace decklink {
 
 class DecklinkVideoConsumer : public frame_consumer
 {
 public:
-	explicit DecklinkVideoConsumer(const caspar::frame_format_desc& format_desc, bool internalKey = false);
+	explicit DecklinkVideoConsumer(const frame_format_desc& format_desc, bool internalKey = false);
 	
 	void display(const gpu_frame_ptr&);
 	const frame_format_desc& get_frame_format_desc() const;
@@ -37,4 +37,4 @@ private:
 	std::tr1::shared_ptr<Implementation> pImpl_;
 };
 
-}}
+}}}

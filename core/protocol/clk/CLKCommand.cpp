@@ -23,7 +23,7 @@
 #include <locale>
 #include "CLKCommand.h"
 
-namespace caspar { namespace CLK {
+namespace caspar { namespace core { namespace CLK {
 
 CLKCommand::CLKCommand() : clockID_(0), command_(CLKInvalidCommand) {}
 
@@ -91,4 +91,4 @@ void CLKCommand::Clear()
 	parameters_.clear();
 }
 
-}}
+}}}

@@ -27,7 +27,7 @@
 
 #include <memory>
 
-namespace caspar {
+namespace caspar { namespace core {
 	
 class frame_producer : boost::noncopyable
 {
@@ -41,4 +41,4 @@ public:
 };
 typedef std::shared_ptr<frame_producer> frame_producer_ptr;
 
-}
+}}

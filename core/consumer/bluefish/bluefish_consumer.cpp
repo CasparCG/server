@@ -37,16 +37,12 @@
 #include <BlueVelvet4.h>
 #include <BlueHancUtils.h>
 
-#if defined(_MSC_VER)
-#pragma warning (push, 1) // TODO: Legacy code, just disable warnings
-#endif
-
-namespace caspar { namespace bluefish {
+namespace caspar { namespace core { namespace bluefish {
 	
 struct consumer::implementation
 {
-	implementation::implementation(const frame_format_desc& format_desc, unsigned int device_index, bool embeed_audio) 
-		: device_index_(device_index), format_desc_(format_desc), sdk_(BlueVelvetFactory4()), current_id_(0), embeed_audio_(embeed_audio)
+	implementation::implementation(const frame_format_desc& format_desc, unsigned int device_index, bool embed_audio) 
+		: device_index_(device_index), format_desc_(format_desc), sdk_(BlueVelvetFactory4()), current_id_(0), embed_audio_(embed_audio)
 	{
 		mem_fmt_		= MEM_FMT_ARGB_PC;
 		upd_fmt_		= UPD_FMT_FRAME;
@@ -140,8 +136,7 @@ struct consumer::implementation
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set vido engine."));
 
 		enable_video_output();
-
-				
+						
 		page_locked_buffer::reserve_working_size(MAX_HANC_BUFFER_SIZE * 3);		
 		for(int n = 0; n < 3; ++n)
 			hanc_buffers_.push_back(std::make_shared<page_locked_buffer>(MAX_HANC_BUFFER_SIZE));
@@ -202,7 +197,7 @@ struct consumer::implementation
 		unsigned long fieldCount = 0;
 		sdk_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
 				
-		if(embeed_audio_)
+		if(embed_audio_)
 		{		
 			encode_hanc(reinterpret_cast<BLUE_UINT32*>(hanc->data()), frame_audio_data.data(), audio_samples, audio_nchannels);
 
@@ -302,13 +297,13 @@ struct consumer::implementation
 
 	std::vector<page_locked_buffer_ptr> hanc_buffers_;
 	int current_id_;
-	bool embeed_audio_;
+	bool embed_audio_;
 };
 
-consumer::consumer(const frame_format_desc& format_desc, unsigned int device_index, bool embeed_audio) : impl_(new implementation(format_desc, device_index, embeed_audio)){}	
+consumer::consumer(const frame_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
 void consumer::display(const gpu_frame_ptr& frame){impl_->display(frame);}
 const frame_format_desc& consumer::get_frame_format_desc() const { return impl_->format_desc_;}
 
-}}
+}}}
 
 #endif

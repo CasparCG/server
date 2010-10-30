@@ -9,8 +9,6 @@
 #include "consumer/decklink/DecklinkVideoConsumer.h"
 #include "consumer/ogl/ogl_consumer.h"
 
-#include <FreeImage.h>
-
 #include "protocol/amcp/AMCPProtocolStrategy.h"
 #include "protocol/cii/CIIProtocolStrategy.h"
 #include "protocol/CLK/CLKProtocolStrategy.h"
@@ -26,14 +24,12 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-namespace caspar{
+namespace caspar { namespace core {
 
 struct server::implementation : boost::noncopyable
 {
 	implementation()												
-	{
-		FreeImage_Initialise(true);	
-				
+	{			
 		boost::property_tree::ptree pt;
 		boost::property_tree::read_xml(boost::filesystem::initial_path().file_string() + "\\caspar.config", pt);
 
@@ -41,13 +37,12 @@ struct server::implementation : boost::noncopyable
 		setup_channels(pt);
 		setup_controllers(pt);
 	
-		//if(!flash::FlashAxContainer::CheckForFlashSupport())
-		//	CASPAR_LOG(error) << "No flashplayer activex-control installed. Flash support will be disabled";
+		if(!flash::FlashAxContainer::CheckForFlashSupport())
+			CASPAR_LOG(error) << "No flashplayer activex-control installed. Flash support will be disabled";
 	}
 
 	~implementation()
-	{		
-		FreeImage_DeInitialise();
+	{				
 		async_servers_.clear();
 		channels_.clear();
 	}
@@ -134,7 +129,7 @@ struct server::implementation : boost::noncopyable
 				{					
 					unsigned int port = xml_controller.second.get<unsigned int>("port");
 					port = port != 0 ? port : 5250;
-					auto asyncserver = std::make_shared<caspar::IO::AsyncEventServer>(create_protocol(protocol), port);
+					auto asyncserver = std::make_shared<IO::AsyncEventServer>(create_protocol(protocol), port);
 					asyncserver->Start();
 					async_servers_.push_back(asyncserver);
 				}
@@ -206,4 +201,4 @@ const std::wstring& server::data_folder()
 
 const std::vector<renderer::render_device_ptr>& server::get_channels() const{ return impl_->channels_; }
 
-}
+}}

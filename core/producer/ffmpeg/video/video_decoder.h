@@ -2,7 +2,7 @@
 
 #include "../packet.h"
 
-namespace caspar{ namespace ffmpeg{
+namespace caspar { namespace core { namespace ffmpeg{
 
 typedef std::tr1::shared_ptr<AVCodecContext> AVCodecContextPtr;
 
@@ -19,4 +19,4 @@ typedef std::shared_ptr<video_decoder> video_decoder_ptr;
 typedef std::unique_ptr<video_decoder> video_decoder_uptr;
 
 	}
-}
+}}

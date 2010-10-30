@@ -394,6 +394,8 @@
     <None Include="My Amplifier Results\r002lw\r002lw.ampl" />
     <None Include="My Amplifier Results\r003lw\r003lw.ampl" />
     <None Include="My Amplifier Results\r004hs\r004hs.ampl" />
+    <None Include="My Amplifier Results\r005hs\r005hs.ampl" />
+    <None Include="My Amplifier Results\r006hs\r006hs.ampl" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\common\common.vcxproj">

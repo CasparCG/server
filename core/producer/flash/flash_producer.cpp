@@ -49,7 +49,7 @@
 
 #include <type_traits>
 
-namespace caspar { namespace flash {
+namespace caspar { namespace core { namespace flash {
 
 using namespace boost::assign;
 
@@ -225,29 +225,17 @@ struct flash_producer::implementation
 				return;
 			}
 
-			bool isProgressive = format_desc_.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc_.fps/2 == 0);
+			bool is_progressive = format_desc_.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc_.fps/2 == 0);
 
 			gpu_frame_ptr result;
 
-			if(isProgressive)							
+			if(is_progressive)							
 				result = render_frame();		
 			else
 			{
-				auto result = std::make_shared<composite_gpu_frame>(format_desc_.width, format_desc_.height);
-				auto frame1 = render_frame();
-				auto frame2 = render_frame();
-				result->add(frame1);
-				result->add(frame2);
-				if(format_desc_.mode == video_mode::upper)
-				{
-					frame1->mode(video_mode::upper);
-					frame2->mode(video_mode::lower);
-				}
-				else
-				{
-					frame1->mode(video_mode::lower);
-					frame2->mode(video_mode::upper);
-				}
+				gpu_frame_ptr frame1 = render_frame();
+				gpu_frame_ptr frame2 = render_frame();
+				result = composite_gpu_frame::interlace(frame1, frame2, format_desc_.mode);
 			}
 
 			frame_buffer_.push(result);
@@ -273,11 +261,8 @@ struct flash_producer::implementation
 			auto pool = bitmap_pool_;
 			current_frame_.reset(frame.get(), [=](bitmap*)
 			{
-				common::function_task::enqueue([=]
-				{
-					if(pool->try_push(frame))
-						common::clear(frame->data(), frame->size());
-				});
+				if(pool->try_push(frame))
+					common::clear(frame->data(), frame->size());
 			});
 		}	
 
@@ -304,7 +289,7 @@ struct flash_producer::implementation
 	std::shared_ptr<bitmap_pool> bitmap_pool_;
 	frame_format_desc format_desc_;
 
-	CComObject<caspar::flash::FlashAxContainer>* flashax_container_;
+	CComObject<flash::FlashAxContainer>* flashax_container_;
 		
 	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
 	gpu_frame_ptr last_frame_;
@@ -347,4 +332,4 @@ flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params
 	return result_filename.empty() ? nullptr : std::make_shared<flash_producer>(result_filename, format_desc);
 }
 
-}}
+}}}

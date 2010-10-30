@@ -8,7 +8,7 @@
 
 #include <Glee.h>
 
-namespace caspar {
+namespace caspar { namespace core {
 	
 class gpu_frame : boost::noncopyable
 {
@@ -53,4 +53,4 @@ private:
 };
 typedef std::shared_ptr<gpu_frame> gpu_frame_ptr;
 	
-}
+}}

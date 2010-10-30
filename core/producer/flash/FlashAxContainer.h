@@ -45,7 +45,7 @@
 #include "axflash.h"
 //#import "progid:ShockwaveFlash.ShockwaveFlash.9" no_namespace, named_guids
 
-namespace caspar { namespace flash {
+namespace caspar { namespace core { namespace flash {
 	
 class flash_producer;
 
@@ -259,7 +259,7 @@ public:
 	flash::flash_producer* pflash_producer_;
 	std::vector<DirtyRect> bDirtyRects_;
 
-	HRESULT SetFormat(const caspar::frame_format_desc&);
+	HRESULT SetFormat(const frame_format_desc&);
 	bool IsReadyToRender() const;
 	void EnterFullscreen();
 
@@ -290,6 +290,6 @@ private:
 };
 
 }	//namespace flash
-}	//namespace caspar
+}}	//namespace caspar
 
 #endif	//_FLASHAXCONTAINER_H__

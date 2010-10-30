@@ -22,12 +22,12 @@
 #include "../../frame/frame_fwd.h"
 #include "../../consumer/frame_consumer.h"
 
-namespace caspar { namespace bluefish {
+namespace caspar { namespace core { namespace bluefish {
 	
 class consumer : public frame_consumer
 {
 public:
-	consumer(const frame_format_desc& format_desc, unsigned int deviceIndex, bool embedd_audio = false);
+	consumer(const frame_format_desc& format_desc, unsigned int deviceIndex, bool embed_audio = false);
 	
 	void display(const gpu_frame_ptr&);
 		
@@ -39,4 +39,4 @@ private:
 };
 typedef std::tr1::shared_ptr<consumer> BlueFishFrameConsumerPtr;
 
-}}
+}}}

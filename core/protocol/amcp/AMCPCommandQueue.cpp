@@ -22,7 +22,7 @@
 
 #include "AMCPCommandQueue.h"
 
-namespace caspar { namespace amcp {
+namespace caspar { namespace core { namespace amcp {
 
 using namespace common;
 
@@ -131,4 +131,4 @@ bool AMCPCommandQueue::OnUnhandledException(const std::exception& ex) throw()
 	return bDoRestart;
 }
 
-}}
+}}}

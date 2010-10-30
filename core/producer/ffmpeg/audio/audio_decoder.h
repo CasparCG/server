@@ -2,7 +2,7 @@
 
 #include "../packet.h"
 
-namespace caspar{ namespace ffmpeg	{
+namespace caspar { namespace core { namespace ffmpeg	{
 
 class audio_decoder : boost::noncopyable
 {
@@ -23,4 +23,4 @@ private:
 typedef std::shared_ptr<audio_decoder> audio_decoder_ptr;
 typedef std::unique_ptr<audio_decoder> audio_decoder_uptr;
 
-}}
+}}}

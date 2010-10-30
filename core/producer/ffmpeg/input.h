@@ -5,7 +5,7 @@
 #include <system_error>
 #include "../../frame/frame_fwd.h"
 
-namespace caspar{ namespace ffmpeg{	
+namespace caspar { namespace core { namespace ffmpeg{	
 	
 typedef std::shared_ptr<AVFormatContext> AVFormatContextPtr;
 
@@ -33,4 +33,4 @@ typedef std::shared_ptr<input> input_ptr;
 typedef std::unique_ptr<input> input_uptr;
 
 	}
-}
+}}

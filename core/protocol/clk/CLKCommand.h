@@ -20,7 +20,7 @@
  
 #pragma once
 
-namespace caspar{ namespace CLK {
+namespace caspar { namespace core { namespace CLK {
 
 class CLKCommand
 {
@@ -58,4 +58,4 @@ public:
 	std::vector<std::wstring> parameters_;
 };
 
-}}
+}}}

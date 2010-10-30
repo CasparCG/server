@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace caspar{
+namespace caspar { namespace core {
 	
 enum video_mode
 {
@@ -60,7 +60,7 @@ inline frame_format_desc get_video_format_desc(const std::wstring& strVideoMode,
 {			
 	auto casparVideoFormat = defaultFormat;
 	if(!strVideoMode.empty())
-		casparVideoFormat = caspar::get_video_format(std::wstring(strVideoMode.begin(), strVideoMode.end()));
+		casparVideoFormat = get_video_format(std::wstring(strVideoMode.begin(), strVideoMode.end()));
 	return frame_format_desc::format_descs[casparVideoFormat];
 }
 
@@ -75,4 +75,4 @@ inline std::wostream& operator<<(std::wostream& out, const frame_format_desc& fo
   return out;
 }
 
-}
+}}

@@ -29,7 +29,7 @@
 #include <unordered_map>
 #include <numeric>
 
-namespace caspar {
+namespace caspar { namespace core {
 	
 class frame_buffer : boost::noncopyable
 {
@@ -93,15 +93,14 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 			index_ = 0;
 		});
 
-		empty_frame_ = create_frame(format_desc.width, format_desc.height);
-		common::clear(empty_frame_->data(), empty_frame_->size());
+		auto empty_frame = create_frame(format_desc.width, format_desc.height);
+		common::clear(empty_frame->data(), empty_frame->size());
 		for(int n = 0; n < 3; ++n)
-			finished_frames_.push(empty_frame_);
+			finished_frames_.push(empty_frame);
 	}
 
 	~implementation()
 	{
-		finished_frames_.push(nullptr);
 		executor_.stop();
 	}
 		
@@ -189,11 +188,9 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 			
 	tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<gpu_frame_ptr>> input_frame_pools_;
 
-	tbb::concurrent_bounded_queue<gpu_frame_ptr> out_frame_pool_;
-		
 	frame_buffer_ptr fbo_;
 
-	int index_;
+	size_t index_;
 	std::vector<composite_gpu_frame_ptr>			input_;
 	std::vector<composite_gpu_frame_ptr>			writing_;
 
@@ -203,9 +200,8 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 	frame_format_desc format_desc_;
 	
 	std::unique_ptr<sf::Context> context_;
+	
 	common::executor executor_;
-
-	gpu_frame_ptr empty_frame_;
 };
 	
 gpu_frame_processor::gpu_frame_processor(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
@@ -213,4 +209,4 @@ void gpu_frame_processor::push(const std::vector<gpu_frame_ptr>& frames){ impl_-
 void gpu_frame_processor::pop(gpu_frame_ptr& frame){ impl_->pop(frame);}
 gpu_frame_ptr gpu_frame_processor::create_frame(size_t width, size_t height){return impl_->create_frame(width, height);}
 
-}
+}}

@@ -29,7 +29,7 @@
 #include <sstream>
 #include <algorithm>
 
-namespace caspar { namespace CLK {
+namespace caspar { namespace core { namespace CLK {
 
 using namespace common;
 
@@ -41,7 +41,7 @@ CLKProtocolStrategy::CLKProtocolStrategy(const std::vector<renderer::render_devi
 	pChannel_ = channels[0];
 }
 
-void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, caspar::IO::ClientInfoPtr pClientInfo) 
+void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo) 
 {
 	for(int index = 0; index < charCount; ++index) 
 	{
@@ -148,4 +148,4 @@ void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, caspar::IO::C
 }
 
 }	//namespace CLK
-}	//namespace caspar
+}}	//namespace caspar

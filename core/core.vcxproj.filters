@@ -189,9 +189,6 @@
     <ClInclude Include="producer\ffmpeg\video\video_transformer.h">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClInclude>
-    <ClInclude Include="frame\composite_gpu_frame.h">
-      <Filter>Source\frame\gpu</Filter>
-    </ClInclude>
     <ClInclude Include="producer\flash\bitmap.h">
       <Filter>Source\producer\flash</Filter>
     </ClInclude>
@@ -233,6 +230,9 @@
     </ClInclude>
     <ClInclude Include="consumer\bluefish\bluefish_consumer.h">
       <Filter>Source\consumer\bluefish</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\composite_gpu_frame.h">
+      <Filter>Source\frame\gpu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -320,9 +320,6 @@
     <ClCompile Include="frame\gpu_frame.cpp">
       <Filter>Source\frame\gpu</Filter>
     </ClCompile>
-    <ClCompile Include="frame\composite_gpu_frame.cpp">
-      <Filter>Source\frame\gpu</Filter>
-    </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_transformer.cpp">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClCompile>
@@ -352,6 +349,9 @@
     </ClCompile>
     <ClCompile Include="consumer\bluefish\bluefish_consumer.cpp">
       <Filter>Source\consumer\bluefish</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\composite_gpu_frame.cpp">
+      <Filter>Source\frame\gpu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -385,6 +385,12 @@
       <Filter>My Amplifier Results</Filter>
     </None>
     <None Include="My Amplifier Results\r004hs\r004hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r005hs\r005hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
+    <None Include="My Amplifier Results\r006hs\r006hs.ampl">
       <Filter>My Amplifier Results</Filter>
     </None>
   </ItemGroup>

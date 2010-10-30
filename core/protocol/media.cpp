@@ -16,7 +16,7 @@
 
 using namespace boost::assign;
 
-namespace caspar { 
+namespace caspar { namespace core { 
 	
 frame_producer_ptr load_media(const std::vector<std::wstring>& params, const frame_format_desc& format_desc)
 {		
@@ -25,8 +25,8 @@ frame_producer_ptr load_media(const std::vector<std::wstring>& params, const fra
 	const auto producerFactories = list_of<ProducerFactory>
 		(&flash::create_flash_producer)
 		(&flash::create_ct_producer)
-		(&caspar::image::create_image_producer)
-		(&caspar::image::create_image_scroll_producer)
+		(&image::create_image_producer)
+		(&image::create_image_scroll_producer)
 		(&ffmpeg::create_ffmpeg_producer)
 		(&create_color_producer);
 
@@ -50,4 +50,4 @@ frame_producer_ptr load_media(const std::vector<std::wstring>& params, const fra
 	return pProducer;
 }
 
-}
+}}

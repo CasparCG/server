@@ -31,7 +31,7 @@
 
 using namespace boost::assign;
 	
-namespace caspar{ namespace renderer{
+namespace caspar { namespace core { namespace renderer {
 	
 std::vector<gpu_frame_ptr> render_frames(std::map<int, layer>& layers)
 {	
@@ -48,7 +48,7 @@ std::vector<gpu_frame_ptr> render_frames(std::map<int, layer>& layers)
 
 struct render_device::implementation : boost::noncopyable
 {	
-	implementation(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers)  
+	implementation(const frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers)  
 		: consumers_(consumers), fmt_(format_desc), frame_processor_(new gpu_frame_processor(format_desc)), needs_clock_(false)
 	{	
 		is_running_ = true;
@@ -111,7 +111,7 @@ struct render_device::implementation : boost::noncopyable
 
 	struct video_sync_clock
 	{
-		video_sync_clock(const caspar::frame_format_desc& format_desc)
+		video_sync_clock(const frame_format_desc& format_desc)
 		{
 			period_ = static_cast<long>(get_frame_format_period(format_desc)*1000000.0);
 			time_ = boost::posix_time::microsec_clock::local_time();
@@ -250,7 +250,7 @@ struct render_device::implementation : boost::noncopyable
 	boost::thread render_thread_;
 	boost::thread display_thread_;
 		
-	caspar::frame_format_desc fmt_;
+	frame_format_desc fmt_;
 	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
 	
 	std::vector<frame_consumer_ptr> consumers_;
@@ -265,7 +265,7 @@ struct render_device::implementation : boost::noncopyable
 	bool needs_clock_;
 };
 
-render_device::render_device(const caspar::frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 
+render_device::render_device(const frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 
 	: impl_(new implementation(format_desc, index, consumers)){}
 void render_device::load(int exLayer, const frame_producer_ptr& pProducer, load_option option){impl_->load(exLayer, pProducer, option);}
 void render_device::pause(int exLayer){impl_->pause(exLayer);}
@@ -275,5 +275,5 @@ void render_device::clear(int exLayer){impl_->clear(exLayer);}
 void render_device::clear(){impl_->clear();}
 frame_producer_ptr render_device::active(int exLayer) const {return impl_->active(exLayer);}
 frame_producer_ptr render_device::background(int exLayer) const {return impl_->background(exLayer);}
-const frame_format_desc& render_device::frame_format_desc() const{return impl_->fmt_;}
-}}
+const frame_format_desc& render_device::get_frame_format_desc() const{return impl_->fmt_;}
+}}}

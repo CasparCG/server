@@ -21,7 +21,7 @@
 
 #include <memory>
 
-namespace caspar{
+namespace caspar { namespace core {
 
 class bitmap
 {
@@ -40,5 +40,5 @@ private:
 typedef std::shared_ptr<bitmap> bitmap_ptr;
 typedef std::unique_ptr<bitmap> bitmap_uptr;
 
-}
+}}
 

@@ -68,7 +68,7 @@
 600 [kommando] FAILED	funktion ej implementerad
 */
 
-namespace caspar {
+namespace caspar { namespace core {
 
 std::wstring ListMedia()
 {	
@@ -170,7 +170,7 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto pFP = load_media(_parameters,  GetChannel()->frame_format_desc());	
+		auto pFP = load_media(_parameters,  GetChannel()->get_frame_format_desc());	
 		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();		
 		GetChannel()->load(GetLayerIndex(), pFP, autoPlay ? renderer::load_option::auto_play : renderer::load_option::preview);
 	
@@ -238,21 +238,6 @@ bool LoadbgCommand::DoExecute()
 					transitionInfo.direction = transition_direction::from_right;
 				else if(direction == TEXT("RIGHT"))
 					transitionInfo.direction = transition_direction::from_left;
-
-				if(_parameters.size() > static_cast<unsigned short>(transitionParameterIndex+3))	//border
-				{
-					std::wstring border = _parameters[transitionParameterIndex+3];
-					if(border.size()>0)
-					{
-						if(border[0] == TEXT('#'))
-							transitionInfo.border_color = border;
-						else
-							transitionInfo.border_image = border;
-					}
-
-					if(_parameters.size() > static_cast<unsigned short>(transitionParameterIndex+4))	//border width
-						transitionInfo.border_width = _ttoi(_parameters[transitionParameterIndex+4].c_str());
-				}
 			}
 		}
 	}
@@ -260,11 +245,11 @@ bool LoadbgCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto pFP = load_media(_parameters,  GetChannel()->frame_format_desc());
+		auto pFP = load_media(_parameters,  GetChannel()->get_frame_format_desc());
 		if(pFP == nullptr)
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? common::narrow(_parameters[0]) : ""));
 
-		pFP = std::make_shared<transition_producer>(pFP, transitionInfo, GetChannel()->frame_format_desc());
+		pFP = std::make_shared<transition_producer>(pFP, transitionInfo, GetChannel()->get_frame_format_desc());
 		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();
 		GetChannel()->load(GetLayerIndex(), pFP, autoPlay ? renderer::load_option::auto_play : renderer::load_option::none); // TODO: LOOP
 	
@@ -744,7 +729,7 @@ bool CinfCommand::DoExecute()
 
 void GenerateChannelInfo(int index, const renderer::render_device_ptr& pChannel, std::wstringstream& replyString)
 {
-	replyString << index << TEXT(" ") << pChannel->frame_format_desc().name  << TEXT("\r\n") << (pChannel->active(0) != nullptr ? TEXT(" PLAYING") : TEXT(" STOPPED"));
+	replyString << index << TEXT(" ") << pChannel->get_frame_format_desc().name  << TEXT("\r\n") << (pChannel->active(0) != nullptr ? TEXT(" PLAYING") : TEXT(" STOPPED"));
 }
 
 bool InfoCommand::DoExecute()
@@ -848,4 +833,4 @@ bool SetCommand::DoExecute()
 
 
 }	//namespace amcp
-}	//namespace caspar
+}}	//namespace caspar

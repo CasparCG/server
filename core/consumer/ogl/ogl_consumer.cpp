@@ -37,7 +37,7 @@
 
 #include <windows.h>
 
-namespace caspar{ namespace ogl{	
+namespace caspar { namespace core { namespace ogl{	
 
 void GL_CHECK()
 {
@@ -287,15 +287,15 @@ struct consumer::implementation : boost::noncopyable
 
 	std::unique_ptr<sf::Window> window_;
 	stretch stretch_;
-	caspar::frame_format_desc format_desc_;
+	frame_format_desc format_desc_;
 
 	std::exception_ptr exception_;
 	boost::thread thread_;
 	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
 };
 
-consumer::consumer(const caspar::frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
+consumer::consumer(const frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
-const caspar::frame_format_desc& consumer::get_frame_format_desc() const{return impl_->format_desc_;}
+const frame_format_desc& consumer::get_frame_format_desc() const{return impl_->format_desc_;}
 void consumer::display(const gpu_frame_ptr& frame){impl_->display(frame);}
-}}
+}}}

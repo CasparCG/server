@@ -5,7 +5,7 @@
 
 #include <memory>
 
-namespace caspar { 
+namespace caspar { namespace core { 
 
 struct frame_factory
 {
@@ -19,4 +19,4 @@ struct frame_factory
 
 typedef std::shared_ptr<frame_factory> frame_factory_ptr;
 
-}
+}}

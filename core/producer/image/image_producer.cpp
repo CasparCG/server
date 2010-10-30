@@ -13,7 +13,7 @@
 
 using namespace boost::assign;
 
-namespace caspar{ namespace image{
+namespace caspar { namespace core { namespace image{
 
 struct image_producer : public frame_producer
 {
@@ -53,4 +53,4 @@ frame_producer_ptr create_image_producer(const  std::vector<std::wstring>& param
 	return nullptr;
 }
 
-}}
+}}}

@@ -21,8 +21,8 @@
 
 #include "../frame_producer.h"
 
-namespace caspar{ namespace flash{
+namespace caspar { namespace core { namespace flash{
 		
-caspar::frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc);
+frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc);
 
-}}
+}}}

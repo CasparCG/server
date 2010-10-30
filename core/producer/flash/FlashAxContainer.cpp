@@ -31,7 +31,7 @@ using namespace ATL;
 #pragma warning (push, 1) // TODO: Legacy code, just disable warnings
 #endif
 
-namespace caspar {
+namespace caspar { namespace core {
 namespace flash {
 
 CComBSTR FlashAxContainer::flashGUID_(_T("{D27CDB6E-AE6D-11CF-96B8-444553540000}"));
@@ -774,7 +774,7 @@ HRESULT FlashAxContainer::CreateAxControl()
 	return S_OK;
 }
 
-HRESULT FlashAxContainer::SetFormat(const caspar::frame_format_desc& format_desc) 
+HRESULT FlashAxContainer::SetFormat(const frame_format_desc& format_desc) 
 {
 	if(m_spInPlaceObjectWindowless == nullptr)
 		return E_FAIL;
@@ -827,7 +827,7 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
 	assert(SUCCEEDED(hr));
 	bInvalidRect_ = false;
 
-/*	const caspar::frame_format_desc& format_desc = caspar::frame_format_desc::format_descs[format_];
+/*	const frame_format_desc& format_desc = frame_format_desc::format_descs[format_];
 
 	//Trying to redraw just the dirty rectangles. Doesn't seem to work when the movie uses "filters", such as glow, dropshadow etc.
 	std::vector<flash::DirtyRect>::iterator it = bDirtyRects_.begin();
@@ -898,4 +898,4 @@ bool FlashAxContainer::IsEmpty() const
 
 
 }	//namespace flash
-}	//namespace caspar
+}}	//namespace caspar

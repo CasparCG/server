@@ -21,7 +21,7 @@
 
 #include "../frame_producer.h"
 
-namespace caspar {
+namespace caspar { namespace core {
 
 class Monitor;
 
@@ -63,4 +63,4 @@ typedef std::tr1::shared_ptr<flash_producer> flash_producer_ptr;
 
 flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc);
 
-}}
+}}}

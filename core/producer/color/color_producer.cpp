@@ -27,7 +27,7 @@
 #include <intrin.h>
 #pragma intrinsic(__movsd, __stosd)
 
-namespace caspar {
+namespace caspar { namespace core {
 
 class color_producer : public frame_producer
 {
@@ -88,4 +88,4 @@ frame_producer_ptr create_color_producer(const std::vector<std::wstring>& params
 	return std::make_shared<color_producer>(get_pixel_color_value(params[0]), format_desc);
 }
 
-}
+}}

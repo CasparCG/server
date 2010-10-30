@@ -16,7 +16,7 @@
 #include <boost/assign.hpp>
 #include <tbb/concurrent_unordered_map.h>
 		
-namespace caspar{ namespace flash{
+namespace caspar { namespace core { namespace flash{
 
 struct flash_cg_proxy
 {
@@ -243,8 +243,7 @@ public:
 	{
 		return flash_producer_ ? flash_producer_->get_frame() : nullptr;
 	}
-
-	
+		
 	void initialize(const frame_factory_ptr& factory)
 	{
 		factory_ = factory;
@@ -258,21 +257,20 @@ public:
 	frame_factory_ptr factory_;
 };
 	
-
 // This is somewhat a hack... needs redesign
-cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& prender_device, unsigned int exLayer)
+cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& render_device, unsigned int exLayer)
 {
-	if(!prender_device)
-		BOOST_THROW_EXCEPTION(null_argument() << msg_info("prender_device"));
+	if(!render_device)
+		BOOST_THROW_EXCEPTION(null_argument() << msg_info("render_device"));
 	
-	auto pProducer = std::dynamic_pointer_cast<cg_producer>(prender_device->active(exLayer));
-	if(!pProducer)	
+	auto producer = std::dynamic_pointer_cast<cg_producer>(render_device->active(exLayer));
+	if(!producer)
 	{
-		pProducer = std::make_shared<cg_producer>(prender_device->frame_format_desc());		
-		prender_device->load(exLayer, pProducer, renderer::load_option::auto_play); 
+		producer = std::make_shared<cg_producer>(render_device->get_frame_format_desc());		
+		render_device->load(exLayer, producer, renderer::load_option::auto_play); 
 	}
 	
-	return pProducer;
+	return producer;
 }
 
 cg_producer::cg_producer(const frame_format_desc& fmtDesc) : impl_(new implementation(fmtDesc)){}
@@ -286,5 +284,5 @@ void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
 const frame_format_desc& cg_producer::get_frame_format_desc() const { return impl_->format_desc_; }
-void cg_producer::initialize(const caspar::frame_factory_ptr& factory){impl_->initialize(factory);}
-}}
+void cg_producer::initialize(const frame_factory_ptr& factory){impl_->initialize(factory);}
+}}}

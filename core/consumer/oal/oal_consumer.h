@@ -21,7 +21,7 @@
 
 #include "../../consumer/frame_consumer.h"
 
-namespace caspar { namespace audio {
+namespace caspar { namespace core { namespace audio {
 
 class consumer : public frame_consumer
 {
@@ -36,4 +36,4 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-}}
+}}}

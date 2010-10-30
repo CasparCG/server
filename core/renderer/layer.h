@@ -2,7 +2,7 @@
 
 #include "../producer/frame_producer.h"
 
-namespace caspar { namespace renderer {
+namespace caspar { namespace core { namespace renderer {
 
 enum load_option
 {
@@ -37,4 +37,4 @@ private:
 typedef std::shared_ptr<layer> layer_ptr;
 typedef std::unique_ptr<layer> layer_uptr;
 
-}}
+}}}

@@ -24,7 +24,7 @@
 
 #include "../log/log.h"
 
-namespace caspar{
+namespace caspar {
 
 void win32_exception::install_handler() 
 {
@@ -66,7 +66,8 @@ win32_access_violation::win32_access_violation(const EXCEPTION_RECORD& info) : w
 	badAddress_ = reinterpret_cast<win32_exception::address>(info.ExceptionInformation[1]);
 }
 
-const char* win32_access_violation::what() const {
+const char* win32_access_violation::what() const
+{
 	sprintf_s<>(messageBuffer_, "Access violation at %p, trying to %s %p", location(), isWrite_?"write":"read", badAddress_);
 
 	return messageBuffer_;

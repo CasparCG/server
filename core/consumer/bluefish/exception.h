@@ -21,14 +21,8 @@
 
 #include "../../../common/exception/exceptions.h"
 
-#include <exception>
+namespace caspar { namespace core { namespace bluefish {
 
-namespace caspar { namespace bluefish {
+struct bluefish_exception : public caspar_exception{};
 
-struct bluefish_exception : public caspar_exception
-{
-	bluefish_exception(){}
-	explicit bluefish_exception(const char* msg) : std::exception(msg) {}
-};
-
-}}
+}}}
