@@ -23,7 +23,7 @@
 
 #include "AMCPCommand.h"
 
-namespace caspar {
+namespace caspar { namespace core {
 	
 std::wstring ListMedia();
 std::wstring ListTemplates();
@@ -142,6 +142,6 @@ class SetCommand : public AMCPCommandBase<true, AddToQueue, 2>
 //};
 
 }	//namespace amcp
-}	//namespace caspar
+}}	//namespace caspar
 
 #endif	//__AMCPCOMMANDSIMPL_H__

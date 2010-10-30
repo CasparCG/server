@@ -4,7 +4,7 @@
 
 #include "../../../frame/frame_fwd.h"
 
-namespace caspar{ namespace ffmpeg{
+namespace caspar { namespace core { namespace ffmpeg{
 
 class video_transformer : boost::noncopyable
 {
@@ -19,4 +19,4 @@ private:
 typedef std::shared_ptr<video_transformer> video_transformer_ptr;
 typedef std::unique_ptr<video_transformer> video_transformer_uptr;
 
-}}
+}}}

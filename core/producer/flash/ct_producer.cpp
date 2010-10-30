@@ -32,7 +32,7 @@
 
 using namespace boost::assign;
 
-namespace caspar { namespace flash {
+namespace caspar { namespace core { namespace flash {
 	
 frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc) 
 {
@@ -53,4 +53,4 @@ frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params, c
 
 }
 
-}	//namespace caspar
+}}	//namespace caspar

@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-namespace caspar {
+namespace caspar { namespace core {
 
 enum transition_type
 {
@@ -38,21 +38,16 @@ enum transition_type
 enum transition_direction
 {
 	from_left = 1,
-	from_right,
-	from_top,
-	from_bottom
+	from_right
 };
 
 struct transition_info
 {
-	transition_info() : type(transition_type::cut), duration(0), border_width(0), border_color(TEXT("#00000000")), direction(transition_direction::from_left){}
+	transition_info() : type(transition_type::cut), duration(0), direction(transition_direction::from_left){}
     
-	unsigned short					duration;
-	unsigned short					border_width;
-	transition_direction			direction;
-	transition_type					type;
-	std::wstring					border_color;
-	std::wstring					border_image;
+	size_t					duration;
+	transition_direction	direction;
+	transition_type			type;
 };
 
 class transition_producer : public frame_producer
@@ -72,4 +67,4 @@ private:
 };
 typedef std::shared_ptr<transition_producer> transition_producer_ptr;
 
-}
+}}

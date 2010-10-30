@@ -2,7 +2,7 @@
 
 #include <memory>
 
-namespace caspar {
+namespace caspar { namespace core {
 
 class Monitor;
 
@@ -15,4 +15,4 @@ class layer;
 typedef std::shared_ptr<layer> layer_ptr;
 typedef std::unique_ptr<layer> layer_uptr;
 
-}}
+}}}

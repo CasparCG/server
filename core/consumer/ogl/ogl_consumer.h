@@ -21,7 +21,7 @@
 
 #include "../../consumer/frame_consumer.h"
 
-namespace caspar { namespace ogl {
+namespace caspar { namespace core { namespace ogl {
 
 struct ogl_error : virtual caspar_exception{};
 
@@ -45,4 +45,4 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-}}
+}}}

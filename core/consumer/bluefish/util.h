@@ -5,7 +5,7 @@
 
 #include <memory>
 
-namespace caspar { namespace bluefish {
+namespace caspar { namespace core { namespace bluefish {
 	
 inline bool is_epoch_card(int card_type)
 {
@@ -93,4 +93,4 @@ inline int set_card_property(const std::shared_ptr<CBlueVelvet4> pSdk, ULONG pro
 	return set_card_property(pSdk.get(), prop, value);
 }
 
-}}
+}}}

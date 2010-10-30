@@ -25,7 +25,7 @@
 #include "frame_fwd.h"
 #include "frame_factory.h"
 
-namespace caspar {
+namespace caspar { namespace core {
 
 class gpu_frame_processor : public frame_factory,  boost::noncopyable
 {
@@ -42,4 +42,4 @@ private:
 };
 typedef std::shared_ptr<gpu_frame_processor> gpu_frame_processor_ptr;
 
-}
+}}

@@ -35,7 +35,7 @@
 #pragma warning (push, 1) // TODO: Legacy code, just disable warnings
 #endif
 
-namespace caspar { namespace cii {
+namespace caspar { namespace core { namespace cii {
 
 using namespace common;
 
@@ -50,7 +50,7 @@ CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<renderer::render_devi
 	executor_.start();
 }
 
-void CIIProtocolStrategy::Parse(const TCHAR* pData, int charCount, caspar::IO::ClientInfoPtr pClientInfo) 
+void CIIProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo) 
 {
 	std::size_t pos;
 	std::wstring msg(pData, charCount);
@@ -187,7 +187,7 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 	
 	std::vector<std::wstring> params;
 	params.push_back(server::template_folder()+TEXT("CG.fth"));
-	auto pFP = flash::create_flash_producer(params, GetChannel()->frame_format_desc());
+	auto pFP = flash::create_flash_producer(params, GetChannel()->get_frame_format_desc());
 	if(pFP != 0)
 	{
 		//TODO: Initialize with valid FrameFactory
@@ -224,8 +224,8 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition.type = transition_type::mix;
 	transition.duration = 12;
 
-	auto pFP = load_media(boost::assign::list_of(filename), pChannel_->frame_format_desc());
-	auto pTransition = std::make_shared<transition_producer>(pFP, transition, pChannel_->frame_format_desc());
+	auto pFP = load_media(boost::assign::list_of(filename), pChannel_->get_frame_format_desc());
+	auto pTransition = std::make_shared<transition_producer>(pFP, transition, pChannel_->get_frame_format_desc());
 
 	try
 	{
@@ -283,4 +283,4 @@ bool operator==(const std::wstring& lhs, const CIIProtocolStrategy::TitleHolder&
 	return lhs == rhs.titleName;
 }
 
-}}
+}}}

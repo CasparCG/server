@@ -40,7 +40,7 @@
 #pragma warning (push, 1) // TODO: Legacy code, just disable warnings
 #endif
 
-namespace caspar { namespace amcp {
+namespace caspar { namespace core { namespace amcp {
 
 using namespace common;
 using IO::ClientInfoPtr;
@@ -403,4 +403,4 @@ std::size_t AMCPProtocolStrategy::TokenizeMessage(const std::wstring& message, s
 }
 
 }	//namespace amcp
-}	//namespace caspar
+}}	//namespace caspar

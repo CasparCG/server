@@ -26,7 +26,7 @@
 #include <algorithm>
 #include "../../producer/flash/cg_producer.h"
 
-namespace caspar { namespace cii {
+namespace caspar { namespace core { namespace cii {
 
 /////////////////
 // MediaCommand
@@ -189,4 +189,4 @@ void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {
 		state_ = 3;
 }
 
-}}
+}}}

@@ -26,7 +26,7 @@
 
 #define DEFINE_VIDEOFORMATDESC(w, h, m, f, s, fmt) { (w), (h), (m), (f), (w)*(h)*4, s, (fmt) }
 
-namespace caspar {
+namespace caspar { namespace core {
 
 const frame_format_desc frame_format_desc::format_descs[frame_format::count] =  
 {	
@@ -46,16 +46,16 @@ const frame_format_desc frame_format_desc::format_descs[frame_format::count] =
 	DEFINE_VIDEOFORMATDESC(1920, 1080,video_mode:: progressive, 30, TEXT("1080p3000"), frame_format::x1080p3000)
 };
 
-frame_format get_video_format(const std::wstring& strVideoMode)
+frame_format get_video_format(const std::wstring& str)
 {
 	for(int n = 0; n < frame_format::count; ++n)
 	{
-		if(boost::iequals(frame_format_desc::format_descs[n].name, strVideoMode))
+		if(boost::iequals(frame_format_desc::format_descs[n].name, str))
 			return static_cast<frame_format>(n);
 	}
 
 	return frame_format::invalid;
 }
 
-}	//namespace caspar
+}}	//namespace caspar
 

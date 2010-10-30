@@ -26,14 +26,14 @@
 #include "../../../common/concurrency/executor.h"
 #include "../../renderer/render_device.h"
 
-namespace caspar { namespace cii {
+namespace caspar { namespace core { namespace cii {
 
-class CIIProtocolStrategy : public caspar::IO::IProtocolStrategy
+class CIIProtocolStrategy : public IO::IProtocolStrategy
 {
 public:
 	CIIProtocolStrategy(const std::vector<renderer::render_device_ptr>& channels);
 
-	void Parse(const TCHAR* pData, int charCount, caspar::IO::ClientInfoPtr pClientInfo);
+	void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
 	UINT GetCodepage() {return 28591;}	//ISO 8859-1
 
 	void SetProfile(const std::wstring& profile) {currentProfile_ = profile;}
@@ -85,4 +85,4 @@ private:
 	renderer::render_device_ptr pChannel_;
 };
 
-}}
+}}}

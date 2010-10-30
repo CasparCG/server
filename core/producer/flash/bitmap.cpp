@@ -24,7 +24,7 @@
 
 #include <windows.h>
 
-namespace caspar{
+namespace caspar { namespace core {
 	
 struct bitmap::implementation : boost::noncopyable
 {
@@ -76,4 +76,4 @@ size_t bitmap::height() const { return impl_->height_; }
 unsigned char* bitmap::data() { return impl_->bitmap_data_; }
 HDC bitmap::hdc() { return impl_->hdc_; }
 
-}
+}}

@@ -22,7 +22,7 @@
 
 #include "ciicommand.h"
 
-namespace caspar {
+namespace caspar { namespace core {
 
 namespace cii {
 
@@ -131,4 +131,4 @@ private:
 };
 
 }	//namespace cii
-}	//namespace caspar
+}}	//namespace caspar

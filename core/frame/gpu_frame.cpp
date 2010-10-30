@@ -4,7 +4,7 @@
 #include "../../common/utility/memory.h"
 #include "../../common/gl/utility.h"
 
-namespace caspar {
+namespace caspar { namespace core {
 	
 GLubyte progressive_pattern[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -229,4 +229,4 @@ double gpu_frame::y() const { return impl_->y_;}
 void gpu_frame::translate(double x, double y) { impl_->x_ += x; impl_->y_ += y; }
 void gpu_frame::mode(video_mode mode){ impl_->mode_ = mode;}
 video_mode gpu_frame::mode() const{ return impl_->mode_;}
-}
+}}

@@ -20,7 +20,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar{ namespace ffmpeg{
+namespace caspar { namespace core { namespace ffmpeg{
 
 typedef std::tr1::shared_ptr<AVFrame> AVFramePtr;	
 typedef std::tr1::shared_ptr<AVPacket> AVPacketPtr;
@@ -91,4 +91,4 @@ struct audio_packet : boost::noncopyable
 typedef std::shared_ptr<audio_packet> audio_packet_ptr;
 
 	}
-}
+}}

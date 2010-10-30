@@ -6,7 +6,7 @@
 
 #include "gpu_frame.h"
 
-namespace caspar {
+namespace caspar { namespace core {
 	
 class composite_gpu_frame : public gpu_frame
 {
@@ -18,14 +18,12 @@ public:
 	void read_lock(GLenum mode);
 	bool read_unlock();
 	void draw();
-	void reset();
-		
+
 	virtual unsigned char* data();
 					
-	virtual const std::vector<short>& audio_data() const;	
-	virtual std::vector<short>& audio_data();
-
 	void add(const gpu_frame_ptr& frame);
+
+	static gpu_frame_ptr interlace(const gpu_frame_ptr& frame1 ,const gpu_frame_ptr& frame2, video_mode mode);
 	
 private:
 	struct implementation;
@@ -33,4 +31,4 @@ private:
 };
 typedef std::shared_ptr<composite_gpu_frame> composite_gpu_frame_ptr;
 	
-}
+}}

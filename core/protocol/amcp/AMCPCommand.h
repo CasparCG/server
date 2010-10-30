@@ -24,7 +24,7 @@
 #include <boost/algorithm/string.hpp>
 #include "../../renderer/render_device.h"
 
-namespace caspar {
+namespace caspar { namespace core {
 namespace amcp {
 
 	enum AMCPCommandScheduling
@@ -51,8 +51,8 @@ namespace amcp {
 
 		void AddParameter(const std::wstring& param){_parameters.push_back(param);}
 
-		void SetClientInfo(caspar::IO::ClientInfoPtr& s){pClientInfo_ = s;}
-		caspar::IO::ClientInfoPtr GetClientInfo(){return pClientInfo_;}
+		void SetClientInfo(IO::ClientInfoPtr& s){pClientInfo_ = s;}
+		IO::ClientInfoPtr GetClientInfo(){return pClientInfo_;}
 
 		void SetChannel(const renderer::render_device_ptr& pChannel){pChannel_ = pChannel;}
 		renderer::render_device_ptr GetChannel(){return pChannel_;}
@@ -79,7 +79,7 @@ namespace amcp {
 	private:
 		unsigned int channelIndex_;
 		int layerIndex_;
-		caspar::IO::ClientInfoPtr pClientInfo_;
+		IO::ClientInfoPtr pClientInfo_;
 		renderer::render_device_ptr pChannel_;
 		AMCPCommandScheduling scheduling_;
 		std::wstring replyString_;
@@ -107,4 +107,4 @@ namespace amcp {
 		virtual bool DoExecute() = 0;
 	};	
 
-}}
+}}}

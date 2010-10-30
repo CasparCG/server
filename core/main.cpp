@@ -33,12 +33,21 @@
 
 #include "server.h"
 #include "protocol/amcp/AMCPProtocolStrategy.h"
+#include "../common/exception/win32_exception.h"
+
+using namespace caspar;
+using namespace caspar::core;
+using namespace caspar::common;
 
 class win32_handler_tbb_installer : public tbb::task_scheduler_observer
 {
 public:
 	win32_handler_tbb_installer()	{observe(true);}
-	void on_scheduler_entry(bool is_worker) {caspar::win32_exception::install_handler();} 
+	void on_scheduler_entry(bool is_worker) 
+	{
+		CASPAR_LOG(debug) << L"Started TBB Worker Thread.";
+		win32_exception::install_handler();
+	} 
 };
  
 int _tmain(int argc, _TCHAR* argv[])
@@ -46,6 +55,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	std::wstringstream str;
 	str << "CasparCG " << CASPAR_VERSION_STR << " " << CASPAR_VERSION_TAG;
 	SetConsoleTitle(str.str().c_str());
+
+	CASPAR_LOG(info) << L"Starting CasparCG Video Playout Server Ver: " << CASPAR_VERSION_STR << " Tag: " << CASPAR_VERSION_TAG << std::endl;
+	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n\n" << std::endl;
 
 	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
     DrawMenuBar(GetConsoleWindow());
@@ -60,21 +72,19 @@ int _tmain(int argc, _TCHAR* argv[])
 	MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 #endif
 
-	caspar::log::add_file_sink(caspar::server::log_folder());
+	log::add_file_sink(server::log_folder());
+	
+	CASPAR_LOG(debug) << "Started Main Thread";
 
 	win32_handler_tbb_installer win32_handler_tbb_installer;
-	caspar::win32_exception::install_handler();
-		
-	std::wcout << L"Starting CasparCG Video Playout Server Ver: " << CASPAR_VERSION_STR << " tag: " << CASPAR_VERSION_TAG << std::endl;
-	std::wcout << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n\n" << std::endl;
-		
-	CASPAR_LOG(debug) << "Started Main Thread";
+	win32_exception::install_handler();
+				
 	try 
 	{
-		caspar::server caspar_device;
+		server caspar_device;
 				
-		auto dummy = std::make_shared<caspar::IO::DummyClientInfo>();
-		caspar::amcp::AMCPProtocolStrategy amcp(caspar_device.get_channels());
+		auto dummy = std::make_shared<IO::DummyClientInfo>();
+		amcp::AMCPProtocolStrategy amcp(caspar_device.get_channels());
 		bool is_running = true;
 		while(is_running)
 		{

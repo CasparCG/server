@@ -2,7 +2,7 @@
 
 #include <memory>
 
-namespace caspar{
+namespace caspar { namespace core {
 	
 class gpu_frame;
 typedef std::shared_ptr<gpu_frame> gpu_frame_ptr;
@@ -20,4 +20,4 @@ class audio_chunk;
 typedef std::shared_ptr<audio_chunk> audio_chunk_ptr;
 typedef std::unique_ptr<audio_chunk> audio_chunk_uptr;
 
-}
+}}

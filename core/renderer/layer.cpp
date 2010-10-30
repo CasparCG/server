@@ -6,9 +6,9 @@
 
 #include "../frame/frame_format.h"
 
-namespace caspar { namespace renderer {
+namespace caspar { namespace core { namespace renderer {
 
-struct layer::implementation : boost::noncopyable
+struct layer::implementation
 {		
 	implementation() : preview_frame_(nullptr), active_(nullptr), background_(nullptr), last_frame_(nullptr) {}
 	
@@ -18,21 +18,16 @@ struct layer::implementation : boost::noncopyable
 			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("frame_producer"));
 			
 		last_frame_ = nullptr;
+		background_ = frame_producer;
 		if(option == load_option::preview)		
 		{
 			last_frame_ = frame_producer->get_frame();
 			if(last_frame_ != nullptr)
 				last_frame_->audio_data().clear(); // No audio
 			active_ = nullptr;	
-			background_ = frame_producer;
 		}
 		else if(option == load_option::auto_play)
-		{
-			background_ = frame_producer;
-			play();		
-		}
-		else
-			background_ = frame_producer;
+			play();			
 	}
 	
 	void play()
@@ -120,4 +115,4 @@ void layer::clear(){impl_->clear();}
 gpu_frame_ptr layer::get_frame() {return impl_->get_frame();}
 frame_producer_ptr layer::active() const { return impl_->active_;}
 frame_producer_ptr layer::background() const { return impl_->background_;}
-}}
+}}}

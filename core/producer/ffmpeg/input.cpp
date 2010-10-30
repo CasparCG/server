@@ -16,7 +16,7 @@
 
 #pragma warning(disable : 4482)
 		
-namespace caspar{ namespace ffmpeg{
+namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
 {
@@ -252,4 +252,4 @@ video_packet_ptr input::get_video_packet(){return impl_->get_video_packet();}
 audio_packet_ptr input::get_audio_packet(){return impl_->get_audio_packet();}
 bool input::seek(unsigned long long frame){return impl_->seek(frame);}
 void input::start(){impl_->start();}
-}}
+}}}

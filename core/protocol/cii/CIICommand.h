@@ -20,7 +20,7 @@
  
 #pragma once
 
-namespace caspar {
+namespace caspar { namespace core {
 namespace cii {
 
 class ICIICommand
@@ -35,4 +35,4 @@ public:
 typedef std::tr1::shared_ptr<ICIICommand> CIICommandPtr;
 
 }	//namespace cii
-}	//namespace caspar
+}}	//namespace caspar

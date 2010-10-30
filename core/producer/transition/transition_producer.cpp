@@ -31,12 +31,12 @@
 
 #include <boost/range/algorithm/copy.hpp>
 
-namespace caspar{	
+namespace caspar { namespace core {	
 
 struct transition_producer::implementation : boost::noncopyable
 {
 	implementation(const frame_producer_ptr& dest, const transition_info& info, const frame_format_desc& format_desc) 
-		: current_frame_(0), info_(info), border_color_(0), format_desc_(format_desc), dest_(dest)
+		: current_frame_(0), info_(info), format_desc_(format_desc), dest_(dest)
 	{
 		if(!dest)
 			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("dest"));
@@ -54,10 +54,7 @@ struct transition_producer::implementation : boost::noncopyable
 		
 	gpu_frame_ptr get_frame()
 	{
-		if(++current_frame_ >= info_.duration)
-			return nullptr;
-
-		return compose(get_producer_frame(dest_), get_producer_frame(source_));
+		return ++current_frame_ >= info_.duration ? nullptr : compose(get_producer_frame(dest_), get_producer_frame(source_));
 	}
 
 	gpu_frame_ptr get_producer_frame(frame_producer_ptr& producer)
@@ -77,12 +74,14 @@ struct transition_producer::implementation : boost::noncopyable
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
+			producer = nullptr;
 			CASPAR_LOG(warning) << "Removed renderer from transition.";
 		}
 
-		if(frame == nullptr && producer->get_following_producer() != nullptr)
+		if(frame == nullptr && producer != nullptr && producer->get_following_producer() != nullptr)
 		{
 			auto following = producer->get_following_producer();
+			following->initialize(factory_);
 			following->set_leading_producer(producer);
 			producer = following;
 			return get_producer_frame(producer);
@@ -98,7 +97,7 @@ struct transition_producer::implementation : boost::noncopyable
 		if(info_.type == transition_type::cut || !dest_frame)		
 			return src_frame;
 		
-		int volume = static_cast<int>(static_cast<float>(current_frame_)/static_cast<float>(info_.duration)*256.0f);
+		int volume = static_cast<int>(static_cast<double>(current_frame_)/static_cast<double>(info_.duration)*256.0);
 				
 		for(size_t n = 0; n < dest_frame->audio_data().size(); ++n)
 			dest_frame->audio_data()[n] = static_cast<short>((static_cast<int>(dest_frame->audio_data()[n])*volume)>>8);
@@ -152,7 +151,6 @@ struct transition_producer::implementation : boost::noncopyable
 	unsigned short			current_frame_;
 	
 	const transition_info	info_;
-	const unsigned long		border_color_;
 	frame_factory_ptr		factory_;
 };
 
@@ -164,5 +162,5 @@ void transition_producer::set_leading_producer(const frame_producer_ptr& produce
 const frame_format_desc& transition_producer::get_frame_format_desc() const { return impl_->format_desc_; } 
 void transition_producer::initialize(const frame_factory_ptr& factory) { impl_->initialize(factory);}
 
-}
+}}
 

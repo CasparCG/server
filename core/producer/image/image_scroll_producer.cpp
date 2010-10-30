@@ -21,7 +21,7 @@
 
 using namespace boost::assign;
 
-namespace caspar{ namespace image{
+namespace caspar { namespace core { namespace image{
 
 enum direction
 {
@@ -130,32 +130,16 @@ struct image_scroll_producer : public frame_producer
 		
 	gpu_frame_ptr get_frame()
 	{		
-		gpu_frame_ptr result;
-		if(format_desc_.mode == video_mode::progressive)							
-			result = render_frame();		
-		else
+		if(format_desc_.mode != video_mode::progressive)				
 		{
-			auto result = std::make_shared<composite_gpu_frame>(format_desc_.width, format_desc_.height);
 			gpu_frame_ptr frame1;
 			gpu_frame_ptr frame2;
 			tbb::parallel_invoke([&]{ frame1 = render_frame(); }, [&]{ frame2 = render_frame(); });
-			result->add(frame1);
-			result->add(frame2);
-			if(format_desc_.mode == video_mode::upper)
-			{
-				frame1->mode(video_mode::upper);
-				frame2->mode(video_mode::lower);
-			}
-			else
-			{
-				frame1->mode(video_mode::lower);
-				frame2->mode(video_mode::upper);
-			}
-		}
+			return composite_gpu_frame::interlace(frame1, frame2, format_desc_.mode);
+		}			
 
-		return result;
+		return render_frame();	
 	}
-
 	
 	void initialize(const frame_factory_ptr& factory)
 	{
@@ -187,4 +171,4 @@ frame_producer_ptr create_image_scroll_producer(const std::vector<std::wstring>&
 	return nullptr;
 }
 
-}}
+}}}

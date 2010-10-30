@@ -45,7 +45,7 @@ extern "C"
 
 using namespace boost::assign;
 
-namespace caspar{ namespace ffmpeg{
+namespace caspar { namespace core { namespace ffmpeg{
 	
 struct ffmpeg_producer : public frame_producer
 {
@@ -165,4 +165,4 @@ frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& para
 	return std::make_shared<ffmpeg_producer>(result_filename, params, format_desc);
 }
 
-}}
+}}}

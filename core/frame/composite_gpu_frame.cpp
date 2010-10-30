@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <numeric>
 
-namespace caspar {
+namespace caspar { namespace core {
 	
 struct composite_gpu_frame::implementation : boost::noncopyable
 {
@@ -45,12 +45,12 @@ struct composite_gpu_frame::implementation : boost::noncopyable
 	{
 		frames_.push_back(frame);
 
-		if(audio_data_.empty())
-			audio_data_ = std::move(frame->audio_data());
+		if(self_->audio_data().empty())
+			self_->audio_data() = std::move(frame->audio_data());
 		else
 		{
 			for(size_t n = 0; n < frame->audio_data().size(); ++n)
-				audio_data_[n] = static_cast<short>(static_cast<int>(audio_data_[n]) + static_cast<int>(frame->audio_data()[n]) & 0xFFFF);				
+				self_->audio_data()[n] = static_cast<short>(static_cast<int>(self_->audio_data()[n]) + static_cast<int>(frame->audio_data()[n]) & 0xFFFF);				
 		}
 	}
 
@@ -62,7 +62,6 @@ struct composite_gpu_frame::implementation : boost::noncopyable
 	composite_gpu_frame* self_;
 	std::vector<gpu_frame_ptr> frames_;
 	size_t size_;
-	std::vector<short> audio_data_;
 };
 
 #pragma warning (disable : 4355)
@@ -74,9 +73,24 @@ void composite_gpu_frame::read_lock(GLenum mode){impl_->read_lock(mode);}
 bool composite_gpu_frame::read_unlock(){return impl_->read_unlock();}
 void composite_gpu_frame::draw(){impl_->draw();}
 unsigned char* composite_gpu_frame::data(){return impl_->data();}
-const std::vector<short>& composite_gpu_frame::audio_data() const { return impl_->audio_data_; }	
-std::vector<short>& composite_gpu_frame::audio_data() { return impl_->audio_data_; }
-void composite_gpu_frame::reset(){impl_->audio_data_.clear();}
 void composite_gpu_frame::add(const gpu_frame_ptr& frame){impl_->add(frame);}
 
+gpu_frame_ptr composite_gpu_frame::interlace(const gpu_frame_ptr& frame1 ,const gpu_frame_ptr& frame2, video_mode mode)
+{			
+	auto result = std::make_shared<composite_gpu_frame>(frame1->width(), frame1->height());
+	result->add(frame1);
+	result->add(frame2);
+	if(mode == video_mode::upper)
+	{
+		frame1->mode(video_mode::upper);
+		frame2->mode(video_mode::lower);
+	}
+	else
+	{
+		frame1->mode(video_mode::lower);
+		frame2->mode(video_mode::upper);
+	}
+	return result;
 }
+
+}}

@@ -28,7 +28,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar{ namespace ffmpeg{
+namespace caspar { namespace core { namespace ffmpeg{
 	
 struct video_transformer::implementation : boost::noncopyable
 {
@@ -66,4 +66,4 @@ struct video_transformer::implementation : boost::noncopyable
 video_transformer::video_transformer() : impl_(new implementation()){}
 video_packet_ptr video_transformer::execute(const video_packet_ptr& video_packet){return impl_->execute(video_packet);}
 void video_transformer::initialize(const frame_factory_ptr& factory){impl_->factory_ = factory; }
-}}
+}}}

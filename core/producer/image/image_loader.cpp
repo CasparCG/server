@@ -14,7 +14,15 @@
 #include <boost/filesystem.hpp>
 #include <boost/exception/errinfo_file_name.hpp>
 
-namespace caspar{ namespace image{
+namespace caspar { namespace core { namespace image{
+
+struct FreeImage_initializer
+{
+	FreeImage_initializer(){FreeImage_Initialise(true);}
+	~FreeImage_initializer(){FreeImage_DeInitialise();}
+};
+
+FreeImage_initializer init;
 
 std::shared_ptr<FIBITMAP> load_image(const std::string& filename)
 {
@@ -47,4 +55,4 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 	return load_image(common::narrow(filename));
 }
 
-}}
+}}}

@@ -6,7 +6,7 @@
 
 #include <queue>
 		
-namespace caspar{ namespace ffmpeg{
+namespace caspar { namespace core { namespace ffmpeg{
 
 struct audio_decoder::implementation : boost::noncopyable
 {
@@ -76,4 +76,4 @@ struct audio_decoder::implementation : boost::noncopyable
 
 audio_decoder::audio_decoder() : impl_(new implementation()){}
 audio_packet_ptr audio_decoder::execute(const audio_packet_ptr& audio_packet){return impl_->execute(audio_packet);}
-}}
+}}}

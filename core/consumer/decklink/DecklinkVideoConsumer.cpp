@@ -46,7 +46,7 @@
 
 #pragma warning(push)
 
-namespace caspar{ namespace decklink{
+namespace caspar { namespace core { namespace decklink{
 
 struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallback
 {
@@ -56,7 +56,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		explicit DecklinkVideoFrame(DecklinkFrameManager* pFactory)
 		{
 			IDeckLinkMutableVideoFrame* frame = NULL;
-			const caspar::frame_format_desc& format_desc = pFactory->pConsumerImpl_->get_frame_format_desc();
+			const frame_format_desc& format_desc = pFactory->pConsumerImpl_->get_frame_format_desc();
 			if(pFactory->pConsumerImpl_->pDecklinkOutput_->CreateVideoFrame(format_desc.width, format_desc.height, format_desc.size/format_desc.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &frame) != S_OK) 
 			{
 				throw std::exception("DECKLINK: Failed to create frame");
@@ -177,7 +177,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 			return std::make_shared<DecklinkVideoFrame>(this);
 		}
 
-		const caspar::frame_format_desc& get_frame_format_desc() const {
+		const frame_format_desc& get_frame_format_desc() const {
 			return pConsumerImpl_->get_frame_format_desc();
 		}
 
@@ -202,7 +202,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 
 //	IDeckLinkMutableVideoFrame* pNextFrame_;
 
-	explicit Implementation(const caspar::frame_format_desc& format_desc, bool internalKey) 
+	explicit Implementation(const frame_format_desc& format_desc, bool internalKey) 
 		: format_desc_(format_desc), currentFormat_(frame_format::pal), internalKey_(internalKey)
 	{
 	
@@ -406,7 +406,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		return S_OK;
 	}
 
-	const caspar::frame_format_desc& get_frame_format_desc() const 
+	const frame_format_desc& get_frame_format_desc() const 
 	{
 		return frame_format_desc::format_descs[currentFormat_];
 	}
@@ -434,7 +434,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 	}
 };
 
-DecklinkVideoConsumer::DecklinkVideoConsumer(const caspar::frame_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey))
+DecklinkVideoConsumer::DecklinkVideoConsumer(const frame_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey))
 {}
 
 void DecklinkVideoConsumer::display(const gpu_frame_ptr& frame)
@@ -448,4 +448,4 @@ const frame_format_desc& DecklinkVideoConsumer::get_frame_format_desc() const
 }
 	
 }	//namespace decklink
-}	//namespace caspar
+}}	//namespace caspar

@@ -23,7 +23,7 @@
 #include "AMCPCommand.h"
 #include "AMCPCommandQueue.h"
 
-namespace caspar { namespace amcp {
+namespace caspar { namespace core { namespace amcp {
 
 class AMCPProtocolStrategy : public IO::IProtocolStrategy
 {
@@ -43,7 +43,7 @@ public:
 	AMCPProtocolStrategy(const std::vector<renderer::render_device_ptr>& channels);
 	virtual ~AMCPProtocolStrategy();
 
-	virtual void Parse(const TCHAR* pData, int charCount, caspar::IO::ClientInfoPtr pClientInfo);
+	virtual void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
 	virtual UINT GetCodepage() {
 		return CP_UTF8;
 	}
@@ -53,7 +53,7 @@ public:
 private:
 	friend class AMCPCommand;
 
-	void ProcessMessage(const std::wstring& message, caspar::IO::ClientInfoPtr& pClientInfo);
+	void ProcessMessage(const std::wstring& message, IO::ClientInfoPtr& pClientInfo);
 	std::size_t TokenizeMessage(const std::wstring& message, std::vector<std::wstring>* pTokenVector);
 	AMCPCommandPtr CommandFactory(const std::wstring& str);
 
@@ -64,4 +64,4 @@ private:
 	static const std::wstring MessageDelimiter;
 };
 
-}}
+}}}

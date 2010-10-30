@@ -25,7 +25,7 @@
 
 #include <memory>
 
-namespace caspar {
+namespace caspar { namespace core {
 	
 struct frame_consumer : boost::noncopyable
 {
@@ -42,4 +42,4 @@ typedef std::shared_ptr<const frame_consumer> frame_consumer_const_ptr;
 typedef std::unique_ptr<frame_consumer> frame_consumer_uptr;
 typedef std::unique_ptr<const frame_consumer> frame_consumer_const_uptr;
 
-}
+}}

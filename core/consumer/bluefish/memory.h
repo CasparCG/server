@@ -6,7 +6,7 @@
 #include "../../frame/frame_format.h"
 #include "exception.h"
 
-namespace caspar { namespace bluefish {
+namespace caspar { namespace core { namespace bluefish {
 	
 static const size_t MAX_HANC_BUFFER_SIZE = 256*1024;
 static const size_t MAX_VBI_BUFFER_SIZE = 36*1920*4;
@@ -55,4 +55,4 @@ private:
 };
 typedef std::shared_ptr<page_locked_buffer> page_locked_buffer_ptr;
 
-}}
+}}}
