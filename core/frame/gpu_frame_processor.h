@@ -25,17 +25,15 @@
 #include "frame_fwd.h"
 #include "frame_factory.h"
 
-#include <boost/signals2/signal.hpp>
-
 namespace caspar { namespace core {
 
 class gpu_frame_processor : public frame_factory,  boost::noncopyable
 {
 public:
 	gpu_frame_processor(const frame_format_desc& format_desc);
-
-	boost::signals2::connection subscribe(const std::function<void(const gpu_frame_ptr&)> func);
+		
 	void push(const std::vector<gpu_frame_ptr>& frames);
+	void pop(gpu_frame_ptr& frame);
 
 	gpu_frame_ptr create_frame(size_t width, size_t height);
 private:

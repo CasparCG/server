@@ -93,6 +93,9 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 			output_frame_ = std::make_shared<gpu_frame>(format_desc_.width, format_desc_.height);
 			index_ = 0;
 		});
+		composite(std::vector<gpu_frame_ptr>());
+		composite(std::vector<gpu_frame_ptr>());
+		composite(std::vector<gpu_frame_ptr>());
 	}
 
 	~implementation()
@@ -128,7 +131,7 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 								
 				// 4. Output to external buffer
 				if(output_frame_->read_unlock())
-					output_signal_(output_frame_);
+					finished_frames_.push(output_frame_);
 		
 				// 3. Draw to framebuffer and start asynchronous DMA transfer to page-locked memory				
 				// Clear framebuffer
@@ -181,9 +184,9 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 		});
 	}
 	
-	boost::signals2::connection subscribe(const std::function<void(const gpu_frame_ptr&)> func)
+	void pop(gpu_frame_ptr& frame)
 	{
-		return output_signal_.connect(func);
+		finished_frames_.pop(frame);
 	}
 			
 	tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<gpu_frame_ptr>> reading_frame_pools_;
@@ -204,12 +207,12 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 	
 	common::executor executor_;
 
-	boost::signals2::signal<void(const gpu_frame_ptr&)> output_signal_;	
+	tbb::concurrent_bounded_queue<gpu_frame_ptr> finished_frames_;	
 };
 	
 gpu_frame_processor::gpu_frame_processor(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 void gpu_frame_processor::push(const std::vector<gpu_frame_ptr>& frames){ impl_->composite(frames);}
-boost::signals2::connection gpu_frame_processor::subscribe(const std::function<void(const gpu_frame_ptr&)> func){return impl_->subscribe(func);}
+void gpu_frame_processor::pop(gpu_frame_ptr& frame){impl_->pop(frame);}
 gpu_frame_ptr gpu_frame_processor::create_frame(size_t width, size_t height){return impl_->create_frame(width, height);}
 
 }}

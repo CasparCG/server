@@ -234,6 +234,9 @@
     <ClInclude Include="frame\gpu_composite_frame.h">
       <Filter>Source\frame\gpu</Filter>
     </ClInclude>
+    <ClInclude Include="renderer\display_device.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp">
@@ -352,6 +355,9 @@
     </ClCompile>
     <ClCompile Include="frame\gpu_composite_frame.cpp">
       <Filter>Source\frame\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\display_device.cpp">
+      <Filter>Source\renderer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

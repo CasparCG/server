@@ -198,6 +198,7 @@
     <ClInclude Include="protocol\clk\CLKCommand.h" />
     <ClInclude Include="protocol\clk\CLKProtocolStrategy.h" />
     <ClInclude Include="protocol\media.h" />
+    <ClInclude Include="renderer\display_device.h" />
     <ClInclude Include="renderer\renderer_fwd.h" />
     <ClInclude Include="renderer\render_device.h" />
     <ClInclude Include="renderer\layer.h" />
@@ -346,6 +347,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="protocol\media.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="renderer\display_device.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
