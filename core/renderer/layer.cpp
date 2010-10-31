@@ -77,7 +77,7 @@ struct layer::implementation
 			CASPAR_LOG(warning) << "Removed producer from layer.";
 		}
 
-		if(last_frame_ == nullptr)
+		if(last_frame_ == nullptr && active_ != nullptr)
 		{
 			active_ = active_->get_following_producer();
 			last_frame_ = get_frame();
