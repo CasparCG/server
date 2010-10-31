@@ -231,7 +231,7 @@
     <ClInclude Include="consumer\bluefish\bluefish_consumer.h">
       <Filter>Source\consumer\bluefish</Filter>
     </ClInclude>
-    <ClInclude Include="frame\composite_gpu_frame.h">
+    <ClInclude Include="frame\gpu_composite_frame.h">
       <Filter>Source\frame\gpu</Filter>
     </ClInclude>
   </ItemGroup>
@@ -350,7 +350,7 @@
     <ClCompile Include="consumer\bluefish\bluefish_consumer.cpp">
       <Filter>Source\consumer\bluefish</Filter>
     </ClCompile>
-    <ClCompile Include="frame\composite_gpu_frame.cpp">
+    <ClCompile Include="frame\gpu_composite_frame.cpp">
       <Filter>Source\frame\gpu</Filter>
     </ClCompile>
   </ItemGroup>

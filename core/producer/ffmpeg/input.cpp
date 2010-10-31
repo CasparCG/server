@@ -24,7 +24,9 @@ struct input::implementation : boost::noncopyable
 		: video_frame_rate_(25.0), video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_(nullptr), format_desc_(format_desc)
 	{
 		loop_ = false;
-		file_buffer_size_ = 0;
+		//file_buffer_size_ = 0;		
+		video_packet_buffer_.set_capacity(25);
+		audio_packet_buffer_.set_capacity(25);
 	}
 
 	~implementation()
@@ -37,8 +39,8 @@ struct input::implementation : boost::noncopyable
 		is_running_ = false;
 		audio_packet_buffer_.clear();
 		video_packet_buffer_.clear();
-		file_buffer_size_ = 0;
-		file_buffer_size_cond_.notify_all();
+		//file_buffer_size_ = 0;
+		//file_buffer_size_cond_.notify_all();
 		io_thread_.join();
 	}
 
@@ -143,23 +145,23 @@ struct input::implementation : boost::noncopyable
 				if(packet->stream_index == video_s_index_) 		
 				{
 					video_packet_buffer_.push(std::make_shared<video_packet>(packet, format_desc_, video_codec_context_.get(), video_codec_)); // NOTE: video_packet makes a copy of AVPacket
-					file_buffer_size_ += packet->size;
+					//file_buffer_size_ += packet->size;
 				}
 				else if(packet->stream_index == audio_s_index_) 	
 				{
 					audio_packet_buffer_.push(std::make_shared<audio_packet>(packet, audio_codex_context_.get(), audio_codec_, video_frame_rate_));		
-					file_buffer_size_ += packet->size;
+					//file_buffer_size_ += packet->size;
 				}
 			}
 			else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
 				is_running_ = false;
 			
-			if(is_running_)
-			{
-				boost::unique_lock<boost::mutex> lock(file_buffer_size_mutex_);
-				while(file_buffer_size_ > 128*1000000)
-					file_buffer_size_cond_.wait(lock);	
-			}
+			//if(is_running_)
+			//{
+			//	boost::unique_lock<boost::mutex> lock(file_buffer_size_mutex_);
+			//	while(file_buffer_size_ > 32*1000000)
+			//		file_buffer_size_cond_.wait(lock);	
+			//}
 		}
 		
 		is_running_ = false;
@@ -172,8 +174,8 @@ struct input::implementation : boost::noncopyable
 		video_packet_ptr video_packet;
 		if(video_packet_buffer_.try_pop(video_packet))
 		{
-			file_buffer_size_ -= video_packet->size;
-			file_buffer_size_cond_.notify_all();
+			//file_buffer_size_ -= video_packet->size;
+			//file_buffer_size_cond_.notify_all();
 		}
 		return video_packet;
 	}
@@ -183,8 +185,8 @@ struct input::implementation : boost::noncopyable
 		audio_packet_ptr audio_packet;
 		if(audio_packet_buffer_.try_pop(audio_packet))
 		{
-			file_buffer_size_ -= audio_packet->size;
-			file_buffer_size_cond_.notify_all();
+			//file_buffer_size_ -= audio_packet->size;
+			//file_buffer_size_cond_.notify_all();
 		}
 		return audio_packet;
 	}
@@ -212,10 +214,10 @@ struct input::implementation : boost::noncopyable
 		return false;
 	}
 	
-	int									file_buffer_max_size_;
-	tbb::atomic<int>					file_buffer_size_;
-	boost::condition_variable			file_buffer_size_cond_;
-	boost::mutex						file_buffer_size_mutex_;
+	//int									file_buffer_max_size_;
+	//tbb::atomic<int>					file_buffer_size_;
+	//boost::condition_variable			file_buffer_size_cond_;
+	//boost::mutex						file_buffer_size_mutex_;
 		
 	tbb::queuing_mutex					seek_mutex_;
 

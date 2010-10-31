@@ -28,68 +28,66 @@
 #include <SFML/Audio.hpp>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/foreach.hpp>
 
-#include <windows.h>
-
-namespace caspar { namespace core { namespace audio{	
+namespace caspar { namespace core { namespace oal {	
 
 struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
-	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc), internal_chunks_(5)
+	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc), container_(5)
 	{
-		external_chunks_.set_capacity(3);
+		input_.set_capacity(2);
 		sf::SoundStream::Initialize(2, 48000);
 	}
 
 	~implementation()
 	{
-		external_chunks_.clear();
-		external_chunks_.push(nullptr);
+		input_.clear();
 		Stop();
 	}
 	
 	void push(const gpu_frame_ptr& frame)
 	{
-		static std::vector<short> silence(1920*2, 0);
-
-		if(frame->audio_data().empty())
-			frame->audio_data() = silence;
+		// NOTE: tbb::concurrent_queue does not have rvalue support. 
+		// Use shared_ptr to emulate move semantics
+		input_.push(std::make_shared<std::vector<short>>(std::move(frame->audio_data()))); 
 		
-		external_chunks_.push(frame);
-		if(GetStatus() != Playing && external_chunks_.size() >= 3)
+		if(GetStatus() != Playing)
 			Play();
 	}
 	
 	bool OnStart() 
 	{
-		external_chunks_.clear();
+		input_.clear();
 		return true;
 	}
 
 	bool OnGetData(sf::SoundStream::Chunk& data)
     {
-		gpu_frame_ptr frame;
-		if(!external_chunks_.try_pop(frame))
+		static std::vector<short> silence(1920*2, 0);
+		
+		std::shared_ptr<std::vector<short>> audio_data;
+		if(!input_.try_pop(audio_data))
 		{
 			CASPAR_LOG(trace) << "Sound Buffer Underrun";
-			external_chunks_.pop(frame);
+			input_.pop(audio_data);
 		}
 
-		if(frame == nullptr)
+		if(audio_data->empty())
+		{	
+			data.Samples = silence.data();
+			data.NbSamples = silence.size();
+		}
+		else
 		{
-			external_chunks_.clear();
-			return false;
+			container_.push_back(std::move(*audio_data));
+			data.Samples = container_.back().data();
+			data.NbSamples = container_.back().size();
 		}
-
-		internal_chunks_.push_back(frame);
-		data.Samples = reinterpret_cast<sf::Int16*>(frame->audio_data().data());
-		data.NbSamples = frame->audio_data().size();
         return true;
     }
 
-	boost::circular_buffer<gpu_frame_ptr> internal_chunks_;
-	tbb::concurrent_bounded_queue<gpu_frame_ptr> external_chunks_;
+	boost::circular_buffer<std::vector<short>> container_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<std::vector<short>>> input_;
 	frame_format_desc format_desc_;
 };
 

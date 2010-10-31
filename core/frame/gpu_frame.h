@@ -32,7 +32,7 @@ public:
 	virtual std::vector<short>& audio_data();
 
 	virtual double alpha() const;
-	virtual void alpha(float value);
+	virtual void alpha(double value);
 
 	virtual double x() const;
 	virtual double y() const;

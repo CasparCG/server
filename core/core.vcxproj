@@ -162,7 +162,7 @@
     <ClInclude Include="consumer\frame_consumer.h" />
     <ClInclude Include="consumer\oal\oal_consumer.h" />
     <ClInclude Include="consumer\ogl\ogl_consumer.h" />
-    <ClInclude Include="frame\composite_gpu_frame.h" />
+    <ClInclude Include="frame\gpu_composite_frame.h" />
     <ClInclude Include="frame\frame_factory.h" />
     <ClInclude Include="frame\frame_format.h" />
     <ClInclude Include="frame\frame_fwd.h" />
@@ -230,7 +230,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="frame\composite_gpu_frame.cpp">
+    <ClCompile Include="frame\gpu_composite_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

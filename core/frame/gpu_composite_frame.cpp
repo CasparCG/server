@@ -1,6 +1,6 @@
 #include "../StdAfx.h"
 
-#include "composite_gpu_frame.h"
+#include "gpu_composite_frame.h"
 #include "../../common/gl/utility.h"
 #include "../../common/utility/memory.h"
 
@@ -9,9 +9,9 @@
 
 namespace caspar { namespace core {
 	
-struct composite_gpu_frame::implementation : boost::noncopyable
+struct gpu_composite_frame::implementation : boost::noncopyable
 {
-	implementation(composite_gpu_frame* self) : self_(self){}
+	implementation(gpu_composite_frame* self) : self_(self){}
 
 	void write_lock()
 	{
@@ -59,25 +59,25 @@ struct composite_gpu_frame::implementation : boost::noncopyable
 		BOOST_THROW_EXCEPTION(invalid_operation());
 	}
 
-	composite_gpu_frame* self_;
+	gpu_composite_frame* self_;
 	std::vector<gpu_frame_ptr> frames_;
 	size_t size_;
 };
 
 #pragma warning (disable : 4355)
 
-composite_gpu_frame::composite_gpu_frame(size_t width, size_t height) : gpu_frame(width, height), impl_(new implementation(this)){}
-void composite_gpu_frame::write_lock(){impl_->write_lock();}
-bool composite_gpu_frame::write_unlock(){return impl_->write_unlock();}	
-void composite_gpu_frame::read_lock(GLenum mode){impl_->read_lock(mode);}
-bool composite_gpu_frame::read_unlock(){return impl_->read_unlock();}
-void composite_gpu_frame::draw(){impl_->draw();}
-unsigned char* composite_gpu_frame::data(){return impl_->data();}
-void composite_gpu_frame::add(const gpu_frame_ptr& frame){impl_->add(frame);}
+gpu_composite_frame::gpu_composite_frame(size_t width, size_t height) : gpu_frame(width, height), impl_(new implementation(this)){}
+void gpu_composite_frame::write_lock(){impl_->write_lock();}
+bool gpu_composite_frame::write_unlock(){return impl_->write_unlock();}	
+void gpu_composite_frame::read_lock(GLenum mode){impl_->read_lock(mode);}
+bool gpu_composite_frame::read_unlock(){return impl_->read_unlock();}
+void gpu_composite_frame::draw(){impl_->draw();}
+unsigned char* gpu_composite_frame::data(){return impl_->data();}
+void gpu_composite_frame::add(const gpu_frame_ptr& frame){impl_->add(frame);}
 
-gpu_frame_ptr composite_gpu_frame::interlace(const gpu_frame_ptr& frame1 ,const gpu_frame_ptr& frame2, video_mode mode)
+gpu_frame_ptr gpu_composite_frame::interlace(const gpu_frame_ptr& frame1 ,const gpu_frame_ptr& frame2, video_mode mode)
 {			
-	auto result = std::make_shared<composite_gpu_frame>(frame1->width(), frame1->height());
+	auto result = std::make_shared<gpu_composite_frame>(frame1->width(), frame1->height());
 	result->add(frame1);
 	result->add(frame2);
 	if(mode == video_mode::upper)
