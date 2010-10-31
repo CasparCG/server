@@ -8,27 +8,27 @@
 
 namespace caspar { namespace core {
 	
-class composite_gpu_frame : public gpu_frame
+class gpu_composite_frame : public gpu_frame
 {
 public:
-	composite_gpu_frame(size_t width, size_t height);
+	gpu_composite_frame(size_t width, size_t height);
 
-	void write_lock();
-	bool write_unlock();
-	void read_lock(GLenum mode);
-	bool read_unlock();
-	void draw();
-
-	virtual unsigned char* data();
+	virtual void write_lock();
+	virtual bool write_unlock();
+	virtual void read_lock(GLenum mode);
+	virtual bool read_unlock();
+	virtual void draw();
 					
 	void add(const gpu_frame_ptr& frame);
 
 	static gpu_frame_ptr interlace(const gpu_frame_ptr& frame1 ,const gpu_frame_ptr& frame2, video_mode mode);
 	
 private:
+	virtual unsigned char* data();
+
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<composite_gpu_frame> composite_gpu_frame_ptr;
+typedef std::shared_ptr<gpu_composite_frame> gpu_composite_frame_ptr;
 	
 }}

@@ -5,7 +5,7 @@
 #include "image_loader.h"
 
 #include "../../frame/gpu_frame.h"
-#include "../../frame/composite_gpu_frame.h"
+#include "../../frame/gpu_composite_frame.h"
 #include "../../frame/frame_format.h"
 #include "../../frame/frame_factory.h"
 #include "../../server.h"
@@ -135,7 +135,7 @@ struct image_scroll_producer : public frame_producer
 			gpu_frame_ptr frame1;
 			gpu_frame_ptr frame2;
 			tbb::parallel_invoke([&]{ frame1 = render_frame(); }, [&]{ frame2 = render_frame(); });
-			return composite_gpu_frame::interlace(frame1, frame2, format_desc_.mode);
+			return gpu_composite_frame::interlace(frame1, frame2, format_desc_.mode);
 		}			
 
 		return render_frame();	

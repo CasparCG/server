@@ -100,7 +100,7 @@ struct server::implementation : boost::noncopyable
 					else if(name == "decklink")
 						pConsumer = std::make_shared<decklink::DecklinkVideoConsumer>(format_desc, xml_consumer.second.get("internalkey", false));
 					else if(name == "audio")
-						pConsumer = std::make_shared<audio::consumer>(format_desc);
+						pConsumer = std::make_shared<oal::consumer>(format_desc);
 
 					if(pConsumer)					
 						consumers.push_back(pConsumer);					

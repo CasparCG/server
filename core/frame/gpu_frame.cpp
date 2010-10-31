@@ -223,7 +223,7 @@ const std::vector<short>& gpu_frame::audio_data() const { return impl_->audio_da
 std::vector<short>& gpu_frame::audio_data() { return impl_->audio_data_; }
 void gpu_frame::reset(){impl_->reset();}
 double gpu_frame::alpha() const{ return impl_->alpha_;}
-void gpu_frame::alpha(float value){ impl_->alpha_ = value;}
+void gpu_frame::alpha(double value){ impl_->alpha_ = value;}
 double gpu_frame::x() const { return impl_->x_;}
 double gpu_frame::y() const { return impl_->y_;}
 void gpu_frame::translate(double x, double y) { impl_->x_ += x; impl_->y_ += y; }

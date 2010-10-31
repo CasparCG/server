@@ -62,6 +62,11 @@ struct render_device::implementation : boost::noncopyable
 		
 		needs_clock_ = !std::any_of(consumers.begin(), consumers.end(), std::mem_fn(&frame_consumer::has_sync_clock));
 
+		processor_connection_ = frame_processor_->subscribe([=](const gpu_frame_ptr& frame)
+		{
+			frame_buffer_.push(std::move(frame));
+		});
+
 		frame_buffer_.set_capacity(3);
 		display_thread_ = boost::thread([=]{display();});
 		render_thread_ = boost::thread([=]{render();});
@@ -71,6 +76,7 @@ struct render_device::implementation : boost::noncopyable
 			
 	~implementation()
 	{
+		processor_connection_.disconnect();
 		is_running_ = false;
 		frame_buffer_.clear();
 		frame_buffer_.push(nullptr);
@@ -95,8 +101,6 @@ struct render_device::implementation : boost::noncopyable
 					next_frames = render_frames(layers_);
 				}
 				frame_processor_->push(next_frames);
-				frame_processor_->pop(composite_frame);	
-				frame_buffer_.push(std::move(composite_frame));
 			}
 			catch(...)
 			{
@@ -108,7 +112,7 @@ struct render_device::implementation : boost::noncopyable
 
 		CASPAR_LOG(info) << L"Ended render_device::render thread";
 	}
-
+	
 	struct video_sync_clock
 	{
 		video_sync_clock(const frame_format_desc& format_desc)
@@ -153,7 +157,7 @@ struct render_device::implementation : boost::noncopyable
 			}
 			if(frame != nullptr)
 			{
-				send_frame(prepared.front(), frame);
+				display_frame(prepared.front(), frame);
 				prepared.push_back(frame);
 				prepared.pop_front();
 			}
@@ -162,7 +166,7 @@ struct render_device::implementation : boost::noncopyable
 		CASPAR_LOG(info) << L"Ended render_device::display thread";
 	}
 
-	void send_frame(const gpu_frame_ptr& prepared_frame, const gpu_frame_ptr& next_frame)
+	void display_frame(const gpu_frame_ptr& prepared_frame, const gpu_frame_ptr& next_frame)
 	{
 		BOOST_FOREACH(const frame_consumer_ptr& consumer, consumers_)
 		{
@@ -263,6 +267,8 @@ struct render_device::implementation : boost::noncopyable
 	gpu_frame_processor_ptr frame_processor_;
 
 	bool needs_clock_;
+
+	boost::signals2::scoped_connection processor_connection_;
 };
 
 render_device::render_device(const frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 

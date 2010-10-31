@@ -38,7 +38,7 @@
 #include "../../../common/utility/scope_exit.h"
 
 #include "../../frame/gpu_frame.h"
-#include "../../frame/composite_gpu_frame.h"
+#include "../../frame/gpu_composite_frame.h"
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
@@ -235,7 +235,7 @@ struct flash_producer::implementation
 			{
 				gpu_frame_ptr frame1 = render_frame();
 				gpu_frame_ptr frame2 = render_frame();
-				result = composite_gpu_frame::interlace(frame1, frame2, format_desc_.mode);
+				result = gpu_composite_frame::interlace(frame1, frame2, format_desc_.mode);
 			}
 
 			frame_buffer_.push(result);
