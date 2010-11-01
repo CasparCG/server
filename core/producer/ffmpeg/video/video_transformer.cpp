@@ -45,14 +45,19 @@ struct video_transformer::implementation : boost::noncopyable
 			sws_context_.reset(sws_getContext(width, height, pix_fmt, width, height, 
 												PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 		}
-		
+
+		//size_t pic_size = avpicture_get_size(PIX_FMT_YUV411P, width, height);
+
+		//size_t pic_size_sqr = static_cast<size_t>(sqrt(static_cast<double>(pic_size)))/4;
+		//pic_size_sqr += pic_size_sqr % 2;
+
 		video_packet->frame = factory_->create_frame(width, height);
 		AVFrame av_frame;	
 		avcodec_get_frame_defaults(&av_frame);
-		avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), video_packet->frame->data(), PIX_FMT_BGRA, width, height);
-		
+		size_t size = avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), video_packet->frame->data(), PIX_FMT_BGRA, width, height);
+		 
 		sws_scale(sws_context_.get(), video_packet->decoded_frame->data, video_packet->decoded_frame->linesize, 0, height, av_frame.data, av_frame.linesize);
-		
+				
 		if(video_packet->codec->id == CODEC_ID_DVVIDEO) // Move up one field
 			video_packet->frame->translate(0.0f, 1.0/static_cast<double>(video_packet->format_desc.height));
 		

@@ -97,7 +97,7 @@
     <ClInclude Include="config.h" />
     <ClInclude Include="exception\exceptions.h" />
     <ClInclude Include="exception\win32_exception.h" />
-    <ClInclude Include="gl\utility.h" />
+    <ClInclude Include="gl\gl_check.h" />
     <ClInclude Include="io\AsyncEventServer.h" />
     <ClInclude Include="io\ClientInfo.h" />
     <ClInclude Include="io\ProtocolStrategy.h" />

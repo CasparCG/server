@@ -53,7 +53,7 @@ namespace caspar { namespace core { namespace flash {
 
 using namespace boost::assign;
 
-// This is needed in order to make CComObject work since this is not a real ATL project
+// NOTE: This is needed in order to make CComObject work since this is not a real ATL project
 CComModule _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
@@ -67,8 +67,6 @@ struct flash_producer::implementation
     		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
 
 		frame_buffer_.set_capacity(flash_producer::DEFAULT_BUFFER_SIZE);		
-
-		start();
 	}
 
 	~implementation() 
@@ -76,8 +74,11 @@ struct flash_producer::implementation
 		stop();
 	}
 
-	void start()
+	void start(bool force = true)
 	{		
+		if(executor_.is_running() && !force)
+			return;
+
 		try
 		{
 			is_empty_ = true;
@@ -283,6 +284,7 @@ struct flash_producer::implementation
 	void initialize(const frame_factory_ptr& factory)
 	{
 		factory_ = factory;
+		start(false);
 	}
 	
 	typedef tbb::concurrent_bounded_queue<bitmap_ptr> bitmap_pool;

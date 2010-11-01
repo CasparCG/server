@@ -2,7 +2,7 @@
 
 #include "gpu_frame.h"
 #include "../../common/utility/memory.h"
-#include "../../common/gl/utility.h"
+#include "../../common/gl/gl_check.h"
 
 namespace caspar { namespace core {
 	

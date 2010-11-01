@@ -16,13 +16,13 @@
 
 namespace caspar { namespace core { namespace image{
 
+#include <boost/thread/once.hpp>
+
 struct FreeImage_initializer
 {
 	FreeImage_initializer(){FreeImage_Initialise(true);}
 	~FreeImage_initializer(){FreeImage_DeInitialise();}
-};
-
-FreeImage_initializer init;
+} init;
 
 std::shared_ptr<FIBITMAP> load_image(const std::string& filename)
 {

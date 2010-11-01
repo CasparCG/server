@@ -25,14 +25,13 @@ extern "C"
 
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
-#include "video/video_deinterlacer.h"
 #include "video/video_transformer.h"
 
 #include "../../frame/frame_format.h"
 #include "../../../common/utility/find_file.h"
-#include "../../server.h"
 #include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
+#include "../../server.h"
 
 #include <tbb/mutex.h>
 #include <tbb/parallel_invoke.h>

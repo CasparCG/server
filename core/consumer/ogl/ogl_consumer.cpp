@@ -29,26 +29,22 @@
 #include "../../frame/frame_format.h"
 #include "../../frame/gpu_frame.h"
 #include "../../../common/utility/memory.h"
+#include "../../../common/gl/gl_check.h"
 
 #include <boost/thread.hpp>
 
 #include <Glee.h>
 #include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
 
 #include <windows.h>
 
 namespace caspar { namespace core { namespace ogl{	
 
-void GL_CHECK()
-{
-	if(glGetError() != GL_NO_ERROR)
-		BOOST_THROW_EXCEPTION(ogl_error() << msg_info(boost::lexical_cast<std::string>(glGetError())));
-}
-
 struct consumer::implementation : boost::noncopyable
 {	
 	implementation(const frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
-		: format_desc_(format_desc), stretch_(stretch), texture_(0), pbo_index_(0), screen_width_(0), screen_height_(0), windowed_(windowed)
+		: format_desc_(format_desc), stretch_(stretch), pbo_index_(0), screen_width_(0), screen_height_(0), windowed_(windowed)
 	{
 		pbos_[0] = pbos_[1] = 0;
 		
@@ -99,28 +95,18 @@ struct consumer::implementation : boost::noncopyable
 		frame_buffer_.push(nullptr),
 		thread_.join();
 
-		if(texture_)
-			glDeleteTextures(1, &texture_);
 		if(pbos_[0] && pbos_[1])
 			glDeleteBuffers(2, pbos_);
 	}
 
 	void init()	
 	{
-		window_.reset(new sf::Window());
-		window_->Create(sf::VideoMode(format_desc_.width, format_desc_.height, 32), "CasparCG", windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
-		window_->ShowMouseCursor(false);
-		window_->SetPosition(screenX_, screenY_);
-		window_->SetSize(screen_width_, screen_height_);
-		window_->SetActive();
-
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glEnable(GL_TEXTURE_2D);
-					
-		glViewport(0, 0, screen_width_, screen_height_);
-		
-		GL_CHECK();
-		
+		window_.Create(sf::VideoMode(format_desc_.width, format_desc_.height, 32), "CasparCG", windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
+		window_.ShowMouseCursor(false);
+		window_.SetPosition(screenX_, screenY_);
+		window_.SetSize(screen_width_, screen_height_);
+		window_.SetActive();
+						
 		std::pair<float, float> target_ratio = None();
 		if(stretch_ == ogl::fill)
 			target_ratio = Fill();
@@ -131,40 +117,15 @@ struct consumer::implementation : boost::noncopyable
 
 		float wSize = target_ratio.first;
 		float hSize = target_ratio.second;
-
-		dlist_ = glGenLists(1);
-		GL_CHECK();
-
-		glNewList(dlist_, GL_COMPILE);
-			glBegin(GL_QUADS);
-				glTexCoord2f(0.0f,	 1.0f);		glVertex2f(-wSize, -hSize);
-				glTexCoord2f(1.0f,	 1.0f);		glVertex2f( wSize, -hSize);
-				glTexCoord2f(1.0f,	 0.0f);		glVertex2f( wSize,  hSize);
-				glTexCoord2f(0.0f,	 0.0f);		glVertex2f(-wSize,  hSize);
-			glEnd();	
-		glEndList();
-		GL_CHECK();
-			
-		glGenTextures(1, &texture_);	
-		GL_CHECK();
-
-		glBindTexture( GL_TEXTURE_2D, texture_);
-		GL_CHECK();
-
-		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
-		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
-
-		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-		GL_CHECK();
-
-		glGenBuffersARB(2, pbos_);
-		GL_CHECK();
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbos_[0]);
-		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW);
-		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]);
-		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW);		
+					
+		image_.Create(format_desc_.width, format_desc_.height);
+		sprite_.SetImage(image_);
+		
+		CASPAR_GL_CHECK(glGenBuffersARB(2, pbos_));
+		CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[0]));
+		CASPAR_GL_CHECK(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW));
+		CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]));
+		CASPAR_GL_CHECK(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW));		
 
 		pbo_index_ = 0;
 	}
@@ -206,28 +167,25 @@ struct consumer::implementation : boost::noncopyable
 	void render(const gpu_frame_ptr& frame)
 	{					
 		// Render
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glLoadIdentity();
+		window_.Clear();
 	
-		glBindTexture(GL_TEXTURE_2D, texture_);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[pbo_index_]);
-	
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+		image_.Bind();
+		CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[pbo_index_]));	
+		CASPAR_GL_CHECK(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0));
 
-		glCallList(dlist_);		
+		window_.Draw(sprite_);
 
 		// Update
 		int nextPboIndex = pbo_index_ ^ 1;
 
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[nextPboIndex]);
-		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, NULL, GL_STREAM_DRAW);
+		CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[nextPboIndex]));
+		CASPAR_GL_CHECK(glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, NULL, GL_STREAM_DRAW));
 		GLubyte* ptr = static_cast<GLubyte*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY));
 
 		if(ptr != NULL)			
 		{
 			common::copy(ptr, frame->data(), frame->size());
-			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+			CASPAR_GL_CHECK(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
 		}
 
 		// Swap
@@ -258,10 +216,10 @@ struct consumer::implementation : boost::noncopyable
 				if(frame != nullptr)
 				{
 					sf::Event e;
-					while(window_->GetEvent(e)){}
-					window_->SetActive();
+					while(window_.GetEvent(e)){}
+					window_.SetActive();
 					render(frame);
-					window_->Display();
+					window_.Display();
 				}
 			}
 			catch(...)
@@ -274,7 +232,6 @@ struct consumer::implementation : boost::noncopyable
 		
 
 	GLuint dlist_;
-	GLuint texture_;
 
 	bool windowed_;
 	unsigned int screen_width_;
@@ -285,13 +242,16 @@ struct consumer::implementation : boost::noncopyable
 	GLuint pbos_[2];
 	int pbo_index_;
 
-	std::unique_ptr<sf::Window> window_;
 	stretch stretch_;
 	frame_format_desc format_desc_;
 
 	std::exception_ptr exception_;
 	boost::thread thread_;
 	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
+
+	sf::Image image_;
+	sf::Sprite sprite_;
+	sf::RenderWindow window_;
 };
 
 consumer::consumer(const frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)

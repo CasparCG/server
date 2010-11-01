@@ -1,7 +1,7 @@
 #include "../StdAfx.h"
 
 #include "gpu_composite_frame.h"
-#include "../../common/gl/utility.h"
+#include "../../common/gl/gl_check.h"
 #include "../../common/utility/memory.h"
 
 #include <algorithm>
