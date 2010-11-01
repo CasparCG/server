@@ -156,9 +156,6 @@
     <ClInclude Include="producer\ffmpeg\video\video_decoder.h">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClInclude>
-    <ClInclude Include="producer\ffmpeg\video\video_deinterlacer.h">
-      <Filter>Source\producer\ffmpeg\video</Filter>
-    </ClInclude>
     <ClInclude Include="producer\image\image_loader.h">
       <Filter>Source\producer\image</Filter>
     </ClInclude>
@@ -295,9 +292,6 @@
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\audio\audio_decoder.cpp">
       <Filter>Source\producer\ffmpeg\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\ffmpeg\video\video_deinterlacer.cpp">
-      <Filter>Source\producer\ffmpeg\video</Filter>
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
       <Filter>Source\producer\ffmpeg\video</Filter>

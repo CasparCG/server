@@ -9,7 +9,7 @@
 #include "../../common/exception/exceptions.h"
 #include "../../common/concurrency/executor.h"
 #include "../../common/utility/memory.h"
-#include "../../common/gl/utility.h"
+#include "../../common/gl/gl_check.h"
 
 #include <Glee.h>
 #include <SFML/Window.hpp>
@@ -40,10 +40,10 @@ public:
 
 		CASPAR_GL_CHECK(glBindTexture(GL_TEXTURE_2D, texture_));
 
-		CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+		CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
 		CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-		CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-		CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+		//CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+		//CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 
 		CASPAR_GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL));
 
@@ -78,15 +78,15 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 		{
 			ogl_context_.reset(new sf::Context());
 			ogl_context_->SetActive(true);
-			glEnable(GL_POLYGON_STIPPLE);
-			glEnable(GL_TEXTURE_2D);
-			glEnable(GL_BLEND);
-			glDisable(GL_DEPTH_TEST);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);			
-			glClearColor(0.0, 0.0, 0.0, 0.0);
-			glViewport(0, 0, format_desc_.width, format_desc_.height);
-			glLoadIdentity();
-
+			CASPAR_GL_CHECK(glEnable(GL_POLYGON_STIPPLE));
+			CASPAR_GL_CHECK(glEnable(GL_TEXTURE_2D));
+			CASPAR_GL_CHECK(glEnable(GL_BLEND));
+			CASPAR_GL_CHECK(glDisable(GL_DEPTH_TEST));
+			CASPAR_GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));			
+			CASPAR_GL_CHECK(glClearColor(0.0, 0.0, 0.0, 0.0));
+			CASPAR_GL_CHECK(glViewport(0, 0, format_desc_.width, format_desc_.height));
+			glLoadIdentity();        
+			
 			reading_.resize(2, std::make_shared<gpu_composite_frame>(format_desc_.width, format_desc_.height));
 			writing_.resize(2, std::make_shared<gpu_composite_frame>(format_desc_.width, format_desc_.height));
 			fbo_ = std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height);
@@ -131,7 +131,7 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 								
 				// 4. Output to external buffer
 				if(output_frame_->read_unlock())
-					finished_frames_.push(output_frame_);
+					output_.push(output_frame_);
 		
 				// 3. Draw to framebuffer and start asynchronous DMA transfer to page-locked memory				
 				// Clear framebuffer
@@ -186,28 +186,26 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 	
 	void pop(gpu_frame_ptr& frame)
 	{
-		finished_frames_.pop(frame);
+		output_.pop(frame);
 	}
 			
 	tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<gpu_frame_ptr>> reading_frame_pools_;
 
 	frame_buffer_ptr fbo_;
 
-	tbb::concurrent_bounded_queue<gpu_composite_frame_ptr>	input_;
+	tbb::concurrent_bounded_queue<gpu_composite_frame_ptr> input_;
+	tbb::concurrent_bounded_queue<gpu_frame_ptr> output_;	
 
 	size_t index_;
-	std::vector<gpu_composite_frame_ptr>			reading_;
-	std::vector<gpu_composite_frame_ptr>			writing_;
+	std::vector<gpu_composite_frame_ptr> reading_;
+	std::vector<gpu_composite_frame_ptr> writing_;
 
-	gpu_frame_ptr									output_frame_;
-			
+	gpu_frame_ptr output_frame_;			
 	frame_format_desc format_desc_;
 	
 	std::unique_ptr<sf::Context> ogl_context_;
 	
 	common::executor executor_;
-
-	tbb::concurrent_bounded_queue<gpu_frame_ptr> finished_frames_;	
 };
 	
 gpu_frame_processor::gpu_frame_processor(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}

@@ -96,11 +96,11 @@
     <ClInclude Include="utility\find_file.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="gl\utility.h">
-      <Filter>Source\gl</Filter>
-    </ClInclude>
     <ClInclude Include="utility\memory.h">
       <Filter>Source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\gl_check.h">
+      <Filter>Source\gl</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
