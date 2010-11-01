@@ -18,7 +18,7 @@
 *
 */
 
-#include "StdAfx.h"
+#include <Windows.h>
 
 #include <tbb/tbbmalloc_proxy.h>
 #include <tbb/task_scheduler_observer.h>
@@ -31,9 +31,12 @@
 
 #include <conio.h>
 
-#include "server.h"
-#include "protocol/amcp/AMCPProtocolStrategy.h"
-#include "../common/exception/win32_exception.h"
+#include <core/config.h>
+#include <core/server.h>
+#include <core/protocol/amcp/AMCPProtocolStrategy.h>
+#include <common/exception/win32_exception.h>
+#include <common/exception/exceptions.h>
+#include <common/log/log.h>
 
 using namespace caspar;
 using namespace caspar::core;
@@ -50,7 +53,7 @@ public:
 	} 
 };
  
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, wchar_t* argv[])
 {
 	std::wstringstream str;
 	str << "CasparCG " << CASPAR_VERSION_STR << " " << CASPAR_VERSION_TAG;

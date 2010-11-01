@@ -123,9 +123,6 @@
     <ClInclude Include="frame\frame_format.h">
       <Filter>Source\frame</Filter>
     </ClInclude>
-    <ClInclude Include="config.h">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="server.h">
       <Filter>Source</Filter>
     </ClInclude>
@@ -234,6 +231,9 @@
     <ClInclude Include="renderer\display_device.h">
       <Filter>Source\renderer</Filter>
     </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>Source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp">
@@ -268,9 +268,6 @@
     </ClCompile>
     <ClCompile Include="frame\frame_format.cpp">
       <Filter>Source\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="server.cpp">
       <Filter>Source</Filter>
@@ -369,9 +366,6 @@
     </Midl>
   </ItemGroup>
   <ItemGroup>
-    <None Include="caspar.config">
-      <Filter>Source</Filter>
-    </None>
     <None Include="My Amplifier Results\r000hs\r000hs.ampl">
       <Filter>My Amplifier Results</Filter>
     </None>
