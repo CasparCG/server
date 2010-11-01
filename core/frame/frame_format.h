@@ -2,6 +2,10 @@
 
 #include <string>
 
+#ifdef _MSC_VER
+#pragma warning (disable : 4482)
+#endif
+
 namespace caspar { namespace core {
 	
 enum video_mode

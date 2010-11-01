@@ -2,6 +2,12 @@
 
 #include "renderer/renderer_fwd.h"
 
+#include <common/exception/exceptions.h>
+
+#include <boost/noncopyable.hpp>
+
+#include <vector>
+
 namespace caspar { namespace core { 
 	
 struct invalid_configuration : virtual boost::exception, virtual std::exception {};

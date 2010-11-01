@@ -20,7 +20,7 @@ public:
 	layer& operator=(layer&& other);
 	layer& operator=(const layer& other);
 
-	void load(const frame_producer_ptr& pProducer, load_option option);	
+	void load(const frame_producer_ptr& pProducer, load_option option = load_option::none);	
 	void play();
 	void pause();
 	void stop();

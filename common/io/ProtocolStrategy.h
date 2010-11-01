@@ -35,8 +35,8 @@ public:
 	virtual ~IProtocolStrategy()
 	{}
 
-	virtual void Parse(const TCHAR* pData, int charCount, ClientInfoPtr pClientInfo) = 0;
-	virtual UINT GetCodepage() = 0;
+	virtual void Parse(const wchar_t* pData, int charCount, ClientInfoPtr pClientInfo) = 0;
+	virtual unsigned int GetCodepage() = 0;
 };
 
 typedef std::tr1::shared_ptr<IProtocolStrategy> ProtocolStrategyPtr;
