@@ -8,8 +8,21 @@
 
 #include <Glee.h>
 
+#include <boost/tuple/tuple.hpp>
+
 namespace caspar { namespace core {
 	
+struct rectangle
+{
+	rectangle(double left, double top, double right, double bottom)
+		: left(left), top(top), right(right), bottom(bottom)
+	{}
+	double left;
+	double top;
+	double right;
+	double bottom;
+};
+
 class gpu_frame : boost::noncopyable
 {
 public:
@@ -37,6 +50,7 @@ public:
 	virtual double x() const;
 	virtual double y() const;
 	virtual void translate(double x, double y);
+	virtual void texcoords(const rectangle& texcoords);
 
 	virtual void mode(video_mode mode);
 	virtual video_mode mode() const;

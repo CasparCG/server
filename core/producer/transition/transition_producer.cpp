@@ -54,7 +54,10 @@ struct transition_producer::implementation : boost::noncopyable
 		
 	gpu_frame_ptr get_frame()
 	{
-		return ++current_frame_ >= info_.duration ? nullptr : compose(get_producer_frame(dest_), get_producer_frame(source_));
+		if(++current_frame_ >= info_.duration)
+			return nullptr;
+
+		return compose(get_producer_frame(dest_), get_producer_frame(source_));
 	}
 
 	gpu_frame_ptr get_producer_frame(frame_producer_ptr& producer)
@@ -134,6 +137,20 @@ struct transition_producer::implementation : boost::noncopyable
 				src_frame->translate(0.0f-alpha, 0.0f);
 			}
 		}
+		else if(info_.type == transition_type::wipe)
+		{
+			if(info_.direction == transition_direction::from_left)		
+			{
+				dest_frame->translate(-1.0f+alpha, 0.0f);
+				dest_frame->texcoords(rectangle(-1.0+alpha, 1.0, alpha, 0.0));
+			}
+			else if(info_.direction == transition_direction::from_right)
+			{
+				dest_frame->translate(1.0f-alpha, 0.0f);
+				dest_frame->texcoords(rectangle(1.0-alpha, 1.0, 2.0-alpha, 0.0));
+			}
+		}
+
 		return composite;
 	}
 		

@@ -57,5 +57,5 @@ frame_format get_video_format(const std::wstring& str)
 	return frame_format::invalid;
 }
 
-}}	//namespace caspar
+}}
 

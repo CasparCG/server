@@ -66,7 +66,8 @@ struct gpu_frame::implementation : boost::noncopyable
 	implementation(size_t width, size_t height) 
 		: pbo_(0), data_(nullptr), width_(width), height_(height), 
 			size_(width*height*4), reading_(false), texture_(0), alpha_(1.0f), 
-			x_(0.0f), y_(0.0f), mode_(video_mode::progressive)
+			x_(0.0f), y_(0.0f), mode_(video_mode::progressive), 
+			texcoords_(0.0, 1.0, 1.0, 0.0)
 	{	
 	}
 
@@ -173,10 +174,10 @@ struct gpu_frame::implementation : boost::noncopyable
 
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
 		glBegin(GL_QUADS);
-			glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, -1.0f);
-			glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0f, -1.0f);
-			glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0f,  1.0f);
-			glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f,  1.0f);
+			glTexCoord2d(texcoords_.left,	texcoords_.bottom); glVertex2d(-1.0, -1.0);
+			glTexCoord2d(texcoords_.right,	texcoords_.bottom); glVertex2d( 1.0, -1.0);
+			glTexCoord2d(texcoords_.right,	texcoords_.top);	glVertex2d( 1.0,  1.0);
+			glTexCoord2d(texcoords_.left,	texcoords_.top);	glVertex2d(-1.0,  1.0);
 		glEnd();
 		glPopMatrix();
 	}
@@ -191,10 +192,11 @@ struct gpu_frame::implementation : boost::noncopyable
 	void reset()
 	{
 		audio_data_.clear();
-		alpha_ = 1.0f;
-		x_     = 0.0f;
-		y_     = 0.0f;
-		mode_  = video_mode::progressive;
+		alpha_     = 1.0f;
+		x_         = 0.0f;
+		y_         = 0.0f;
+		texcoords_ = rectangle(0.0, 1.0, 1.0, 0.0);
+		mode_      = video_mode::progressive;
 	}
 
 	gpu_frame* self_;
@@ -211,6 +213,7 @@ struct gpu_frame::implementation : boost::noncopyable
 	double x_;
 	double y_;
 	video_mode mode_;
+	rectangle texcoords_;
 };
 
 gpu_frame::gpu_frame(size_t width, size_t height) 
@@ -232,6 +235,7 @@ void gpu_frame::alpha(double value){ impl_->alpha_ = value;}
 double gpu_frame::x() const { return impl_->x_;}
 double gpu_frame::y() const { return impl_->y_;}
 void gpu_frame::translate(double x, double y) { impl_->x_ += x; impl_->y_ += y; }
+void gpu_frame::texcoords(const rectangle& texcoords){impl_->texcoords_ = texcoords;}
 void gpu_frame::mode(video_mode mode){ impl_->mode_ = mode;}
 video_mode gpu_frame::mode() const{ return impl_->mode_;}
 }}
