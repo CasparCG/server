@@ -121,11 +121,11 @@ struct consumer::implementation : boost::noncopyable
 		image_.Create(format_desc_.width, format_desc_.height);
 		sprite_.SetImage(image_);
 		
-		CASPAR_GL_CHECK(glGenBuffersARB(2, pbos_));
-		CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[0]));
-		CASPAR_GL_CHECK(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW));
-		CASPAR_GL_CHECK(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]));
-		CASPAR_GL_CHECK(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW));		
+		GL(glGenBuffersARB(2, pbos_));
+		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[0]));
+		GL(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW));
+		GL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]));
+		GL(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW));		
 
 		pbo_index_ = 0;
 	}
@@ -170,22 +170,22 @@ struct consumer::implementation : boost::noncopyable
 		window_.Clear();
 	
 		image_.Bind();
-		CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[pbo_index_]));	
-		CASPAR_GL_CHECK(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0));
+		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[pbo_index_]));	
+		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0));
 
 		window_.Draw(sprite_);
 
 		// Update
 		int nextPboIndex = pbo_index_ ^ 1;
 
-		CASPAR_GL_CHECK(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[nextPboIndex]));
-		CASPAR_GL_CHECK(glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, NULL, GL_STREAM_DRAW));
+		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[nextPboIndex]));
+		GL(glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, NULL, GL_STREAM_DRAW));
 		GLubyte* ptr = static_cast<GLubyte*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY));
 
 		if(ptr != NULL)			
 		{
 			common::copy(ptr, frame->data(), frame->size());
-			CASPAR_GL_CHECK(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
+			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
 		}
 
 		// Swap
