@@ -51,7 +51,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		// Use shared_ptr to emulate move semantics
 		input_.push(std::make_shared<std::vector<short>>(std::move(frame->audio_data()))); 
 		
-		if(GetStatus() != Playing)
+		if(GetStatus() != Playing && input_.size() > 1)
 			Play();
 	}
 	
@@ -62,7 +62,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	}
 
 	bool OnGetData(sf::SoundStream::Chunk& data)
-    {
+	{
 		static std::vector<short> silence(1920*2, 0);
 		
 		std::shared_ptr<std::vector<short>> audio_data;
@@ -83,8 +83,8 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 			data.Samples = container_.back().data();
 			data.NbSamples = container_.back().size();
 		}
-        return true;
-    }
+		return true;
+	}
 
 	boost::circular_buffer<std::vector<short>> container_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<std::vector<short>>> input_;

@@ -258,16 +258,16 @@ public:
 };
 	
 // This is somewhat a hack... needs redesign
-cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& render_device, unsigned int exLayer)
+cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& render_device, unsigned int render_layer)
 {
 	if(!render_device)
 		BOOST_THROW_EXCEPTION(null_argument() << msg_info("render_device"));
 	
-	auto producer = std::dynamic_pointer_cast<cg_producer>(render_device->active(exLayer));
+	auto producer = std::dynamic_pointer_cast<cg_producer>(render_device->active(render_layer));
 	if(!producer)
 	{
 		producer = std::make_shared<cg_producer>(render_device->get_frame_format_desc());		
-		render_device->load(exLayer, producer, renderer::load_option::auto_play); 
+		render_device->load(render_layer, producer, renderer::load_option::auto_play); 
 	}
 	
 	return producer;

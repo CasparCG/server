@@ -32,9 +32,11 @@ public:
 
 	void synchronize()
 	{
-		auto remaining = boost::posix_time::microseconds(period_) - (boost::posix_time::microsec_clock::local_time() - time_);
+		auto remaining = boost::posix_time::microseconds(period_) - 
+						(boost::posix_time::microsec_clock::local_time() - time_);
 		if(remaining > boost::posix_time::microseconds(5000))
-			boost::this_thread::sleep(remaining - boost::posix_time::microseconds(5000));
+			boost::this_thread::sleep(remaining - 
+										boost::posix_time::microseconds(5000));
 		time_ = boost::posix_time::microsec_clock::local_time();
 	}
 private:
@@ -45,17 +47,24 @@ private:
 struct display_device::implementation
 {
 public:
-	implementation(const frame_format_desc& format_desc, const std::vector<frame_consumer_ptr>& consumers) : consumers_(consumers), fmt_(format_desc)
+	implementation(const frame_format_desc& format_desc, 
+					const std::vector<frame_consumer_ptr>& consumers) 
+		: consumers_(consumers), fmt_(format_desc)
 	{
 		if(consumers.empty())
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("consumer") 
-														<< msg_info("display_device requires atleast one consumer"));
+				<< msg_info("display_device requires atleast one consumer"));
 
-		if(std::any_of(consumers.begin(), consumers.end(), [&](const frame_consumer_ptr& pConsumer){ return pConsumer->get_frame_format_desc() != format_desc;}))
+		if(std::any_of(consumers.begin(), consumers.end(), 
+			[&](const frame_consumer_ptr& pConsumer)
+			{ return pConsumer->get_frame_format_desc() != format_desc;}))
+		{
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("consumer") 
-														<< msg_info("All consumers must have same frameformat as display_device."));
-		
-		needs_clock_ = !std::any_of(consumers.begin(), consumers.end(), std::mem_fn(&frame_consumer::has_sync_clock));
+				<< msg_info("All consumers must have same frameformat as display_device."));
+		}
+
+		needs_clock_ = !std::any_of(consumers.begin(), consumers.end(), 
+									std::mem_fn(&frame_consumer::has_sync_clock));
 		frame_buffer_.set_capacity(3);
 		is_running_ = true;
 		display_thread_ = boost::thread([=]{run();});
@@ -105,12 +114,12 @@ public:
 		{
 			try
 			{
-				consumer->prepare(frame); // Could block
+				consumer->prepare(frame);
 				prepared_frames_.push_back(frame);
 
 				if(prepared_frames_.size() > 2)
 				{
-					consumer->display(prepared_frames_.front()); // Could block
+					consumer->display(prepared_frames_.front());
 					prepared_frames_.pop_front();
 				}
 			}
@@ -121,7 +130,8 @@ public:
 				CASPAR_LOG(warning) << "Removed consumer from render-device.";
 				if(consumers_.empty())
 				{
-					CASPAR_LOG(warning) << "No consumers available. Shutting down display-device.";
+					CASPAR_LOG(warning) 
+						<< "No consumers available. Shutting down display-device.";
 					is_running_ = false;
 				}
 			}

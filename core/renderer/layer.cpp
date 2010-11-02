@@ -10,7 +10,9 @@ namespace caspar { namespace core { namespace renderer {
 
 struct layer::implementation
 {		
-	implementation() : preview_frame_(nullptr), active_(nullptr), background_(nullptr), last_frame_(nullptr) {}
+	implementation() 
+		: preview_frame_(nullptr), active_(nullptr), 
+			background_(nullptr), last_frame_(nullptr) {}
 	
 	void load(const frame_producer_ptr& frame_producer, load_option option)
 	{

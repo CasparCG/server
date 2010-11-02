@@ -29,7 +29,7 @@ public:
 	const frame_format_desc& get_frame_format_desc() const
 	{ 
 		static frame_format_desc format;
-		return format();
+		return format;
 	}
 	void initialize(const frame_factory_ptr& factory)
 	{}

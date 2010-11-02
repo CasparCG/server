@@ -27,7 +27,8 @@ namespace caspar { namespace core { namespace renderer {
 std::vector<gpu_frame_ptr> render_frames(std::map<int, layer>& layers)
 {	
 	std::vector<gpu_frame_ptr> frames(layers.size(), nullptr);
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), [&](const tbb::blocked_range<size_t>& r)
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), 
+	[&](const tbb::blocked_range<size_t>& r)
 	{
 		auto it = layers.begin();
 		std::advance(it, r.begin());
@@ -39,8 +40,11 @@ std::vector<gpu_frame_ptr> render_frames(std::map<int, layer>& layers)
 
 struct render_device::implementation : boost::noncopyable
 {	
-	implementation(const frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers)  
-		: display_device_(new display_device(format_desc, consumers)), fmt_(format_desc), frame_processor_(new gpu_frame_processor(format_desc))
+	implementation(const frame_format_desc& format_desc, unsigned int index, 
+					const std::vector<frame_consumer_ptr>& consumers)  
+		: display_device_(new display_device(format_desc, consumers)), 
+							fmt_(format_desc), 
+							frame_processor_(new gpu_frame_processor(format_desc))
 	{	
 		is_running_ = true;
 		
@@ -80,51 +84,53 @@ struct render_device::implementation : boost::noncopyable
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				layers_.clear();
-				CASPAR_LOG(error) << "Unexpected exception. Cleared layers in render-device";
+				CASPAR_LOG(error) 
+					<< "Unexpected exception. Cleared layers in render-device";
 			}
 		}
 
 		CASPAR_LOG(info) << L"Ended render_device thread";
 	}
 
-	void load(int exLayer, const frame_producer_ptr& producer, load_option option)
+	void load(int render_layer, const frame_producer_ptr& producer, load_option option)
 	{
 		if(producer->get_frame_format_desc() != fmt_)
-			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("pProducer") << msg_info("Invalid frame format"));
+			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("pProducer") 
+									<< msg_info("Invalid frame format"));
 
 		producer->initialize(frame_processor_);
 		tbb::mutex::scoped_lock lock(layers_mutex_);
-		layers_[exLayer].load(producer, option);
+		layers_[render_layer].load(producer, option);
 	}
 			
-	void pause(int exLayer)
+	void pause(int render_layer)
 	{		
 		tbb::mutex::scoped_lock lock(layers_mutex_);
-		auto it = layers_.find(exLayer);
+		auto it = layers_.find(render_layer);
 		if(it != layers_.end())
 			it->second.pause();		
 	}
 
-	void play(int exLayer)
+	void play(int render_layer)
 	{		
 		tbb::mutex::scoped_lock lock(layers_mutex_);
-		auto it = layers_.find(exLayer);
+		auto it = layers_.find(render_layer);
 		if(it != layers_.end())
 			it->second.play();		
 	}
 
-	void stop(int exLayer)
+	void stop(int render_layer)
 	{		
 		tbb::mutex::scoped_lock lock(layers_mutex_);
-		auto it = layers_.find(exLayer);
+		auto it = layers_.find(render_layer);
 		if(it != layers_.end())
 			it->second.stop();
 	}
 
-	void clear(int exLayer)
+	void clear(int render_layer)
 	{
 		tbb::mutex::scoped_lock lock(layers_mutex_);
-		auto it = layers_.find(exLayer);
+		auto it = layers_.find(render_layer);
 		if(it != layers_.end())
 			it->second.clear();		
 	}
@@ -135,17 +141,17 @@ struct render_device::implementation : boost::noncopyable
 		layers_.clear();
 	}		
 
-	frame_producer_ptr active(int exLayer) const
+	frame_producer_ptr active(int render_layer) const
 	{
 		tbb::mutex::scoped_lock lock(layers_mutex_);
-		auto it = layers_.find(exLayer);
+		auto it = layers_.find(render_layer);
 		return it != layers_.end() ? it->second.active() : nullptr;
 	}
 	
-	frame_producer_ptr background(int exLayer) const
+	frame_producer_ptr background(int render_layer) const
 	{
 		tbb::mutex::scoped_lock lock(layers_mutex_);
-		auto it = layers_.find(exLayer);
+		auto it = layers_.find(render_layer);
 		return it != layers_.end() ? it->second.background() : nullptr;
 	}
 			
@@ -164,13 +170,13 @@ struct render_device::implementation : boost::noncopyable
 
 render_device::render_device(const frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 
 	: impl_(new implementation(format_desc, index, consumers)){}
-void render_device::load(int exLayer, const frame_producer_ptr& pProducer, load_option option){impl_->load(exLayer, pProducer, option);}
-void render_device::pause(int exLayer){impl_->pause(exLayer);}
-void render_device::play(int exLayer){impl_->play(exLayer);}
-void render_device::stop(int exLayer){impl_->stop(exLayer);}
-void render_device::clear(int exLayer){impl_->clear(exLayer);}
+void render_device::load(int render_layer, const frame_producer_ptr& pProducer, load_option option){impl_->load(render_layer, pProducer, option);}
+void render_device::pause(int render_layer){impl_->pause(render_layer);}
+void render_device::play(int render_layer){impl_->play(render_layer);}
+void render_device::stop(int render_layer){impl_->stop(render_layer);}
+void render_device::clear(int render_layer){impl_->clear(render_layer);}
 void render_device::clear(){impl_->clear();}
-frame_producer_ptr render_device::active(int exLayer) const {return impl_->active(exLayer);}
-frame_producer_ptr render_device::background(int exLayer) const {return impl_->background(exLayer);}
+frame_producer_ptr render_device::active(int render_layer) const {return impl_->active(render_layer);}
+frame_producer_ptr render_device::background(int render_layer) const {return impl_->background(render_layer);}
 const frame_format_desc& render_device::get_frame_format_desc() const{return impl_->fmt_;}
 }}}
