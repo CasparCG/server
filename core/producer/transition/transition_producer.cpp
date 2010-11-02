@@ -35,7 +35,8 @@ namespace caspar { namespace core {
 
 struct transition_producer::implementation : boost::noncopyable
 {
-	implementation(const frame_producer_ptr& dest, const transition_info& info, const frame_format_desc& format_desc) 
+	implementation(const frame_producer_ptr& dest, const transition_info& info, 
+					const frame_format_desc& format_desc) 
 		: current_frame_(0), info_(info), format_desc_(format_desc), dest_(dest)
 	{
 		if(!dest)
@@ -113,10 +114,7 @@ struct transition_producer::implementation : boost::noncopyable
 		composite->add(src_frame);
 		composite->add(dest_frame);
 		if(info_.type == transition_type::mix)
-		{
-			src_frame->alpha(1.0f-alpha);
-			dest_frame->alpha(alpha);
-		}
+			dest_frame->alpha(alpha);		
 		else if(info_.type == transition_type::slide)
 		{
 			if(info_.direction == transition_direction::from_left)			
@@ -160,15 +158,15 @@ struct transition_producer::implementation : boost::noncopyable
 		factory_ = factory;
 	}
 
-	const frame_format_desc format_desc_;
+	const frame_format_desc		format_desc_;
 
-	frame_producer_ptr		source_;
-	frame_producer_ptr		dest_;
+	frame_producer_ptr			source_;
+	frame_producer_ptr			dest_;
 	
-	unsigned short			current_frame_;
+	unsigned short				current_frame_;
 	
-	const transition_info	info_;
-	frame_factory_ptr		factory_;
+	const transition_info		info_;
+	frame_factory_ptr			factory_;
 };
 
 transition_producer::transition_producer(const frame_producer_ptr& dest, const transition_info& info, const frame_format_desc& format_desc) 
