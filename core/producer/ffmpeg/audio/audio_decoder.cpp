@@ -43,7 +43,7 @@ struct audio_decoder::implementation : boost::noncopyable
 		{
 			//either fill what's left of the chunk or copy all written_bytes that are left
 			int targetLength = std::min((max_chunk_length - current_audio_chunk_offset_), written_bytes);
-			common::copy(current_chunk_data_ + current_audio_chunk_offset_, pDecomp, targetLength);
+			memcpy(current_chunk_data_ + current_audio_chunk_offset_, pDecomp, targetLength);
 			written_bytes -= targetLength;
 
 			current_audio_chunk_offset_ += targetLength;
@@ -52,7 +52,7 @@ struct audio_decoder::implementation : boost::noncopyable
 			if(current_audio_chunk_offset_ >= max_chunk_length) 
 			{
 				if(max_chunk_length < static_cast<int>(audio_packet->audio_frame_size)) 
-					common::clear(current_chunk_data_ + max_chunk_length, audio_packet->audio_frame_size-max_chunk_length);					
+					memset(current_chunk_data_ + max_chunk_length, 0, audio_packet->audio_frame_size-max_chunk_length);					
 				else if(audio_packet->audio_frame_size < audio_packet->src_audio_frame_size) 
 					discard_bytes_ = audio_packet->src_audio_frame_size-audio_packet->audio_frame_size;
 				
