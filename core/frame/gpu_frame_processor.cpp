@@ -31,46 +31,10 @@
 
 namespace caspar { namespace core {
 	
-class frame_buffer : boost::noncopyable
-{
-public:
-	frame_buffer(size_t width, size_t height)
-	{
-		CASPAR_GL_CHECK(glGenTextures(1, &texture_));	
-
-		CASPAR_GL_CHECK(glBindTexture(GL_TEXTURE_2D, texture_));
-
-		CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-		CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-		//CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-		//CASPAR_GL_CHECK(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-
-		CASPAR_GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL));
-
-		glGenFramebuffersEXT(1, &fbo_);
-		
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo_);
-		glBindTexture(GL_TEXTURE_2D, texture_);
-		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, texture_, 0);
-	}
-
-	~frame_buffer()
-	{
-		glDeleteFramebuffersEXT(1, &fbo_);
-	}
-		
-	GLuint handle() { return fbo_; }
-	GLenum attachement() { return GL_COLOR_ATTACHMENT0_EXT; }
-	
-private:
-	GLuint texture_;
-	GLuint fbo_;
-};
-typedef std::shared_ptr<frame_buffer> frame_buffer_ptr;
-
 struct gpu_frame_processor::implementation : boost::noncopyable
 {	
-	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc)
+	implementation(const frame_format_desc& format_desc) 
+		: format_desc_(format_desc), index_(0)
 	{		
 		input_.set_capacity(2);
 		executor_.start();
@@ -78,21 +42,32 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 		{
 			ogl_context_.reset(new sf::Context());
 			ogl_context_->SetActive(true);
-			CASPAR_GL_CHECK(glEnable(GL_POLYGON_STIPPLE));
-			CASPAR_GL_CHECK(glEnable(GL_TEXTURE_2D));
-			CASPAR_GL_CHECK(glEnable(GL_BLEND));
-			CASPAR_GL_CHECK(glDisable(GL_DEPTH_TEST));
-			CASPAR_GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));			
-			CASPAR_GL_CHECK(glClearColor(0.0, 0.0, 0.0, 0.0));
-			CASPAR_GL_CHECK(glViewport(0, 0, format_desc_.width, format_desc_.height));
-			glLoadIdentity();        
+			GL(glEnable(GL_POLYGON_STIPPLE));
+			GL(glEnable(GL_TEXTURE_2D));
+			GL(glEnable(GL_BLEND));
+			GL(glDisable(GL_DEPTH_TEST));
+			GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));			
+			GL(glClearColor(0.0, 0.0, 0.0, 0.0));
+			GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+			glLoadIdentity();       
+						
+			// Create and bind a framebuffer
+			GL(glGenTextures(1, &render_texture_));	
+			GL(glBindTexture(GL_TEXTURE_2D, render_texture_));			
+			GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, 
+								format_desc_.height, 0, GL_BGRA, 
+								GL_UNSIGNED_BYTE, NULL));
+			GL(glGenFramebuffersEXT(1, &fbo_));		
+			GL(glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo_));
+			GL(glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, 
+											GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, 
+											render_texture_, 0));
 			
-			reading_.resize(2, std::make_shared<gpu_composite_frame>(format_desc_.width, format_desc_.height));
-			writing_.resize(2, std::make_shared<gpu_composite_frame>(format_desc_.width, format_desc_.height));
-			fbo_ = std::make_shared<frame_buffer>(format_desc_.width, format_desc_.height);
-			output_frame_ = std::make_shared<gpu_frame>(format_desc_.width, format_desc_.height);
-			index_ = 0;
+			writing_.resize(2, std::make_shared<gpu_composite_frame>());
+			output_frame_ = std::make_shared<gpu_frame>(format_desc_.width, 
+															format_desc_.height);
 		});
+		// Fill pipeline
 		composite(std::vector<gpu_frame_ptr>());
 		composite(std::vector<gpu_frame_ptr>());
 		composite(std::vector<gpu_frame_ptr>());
@@ -100,6 +75,7 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 
 	~implementation()
 	{
+		glDeleteFramebuffersEXT(1, &fbo_);
 		executor_.stop();
 	}
 			
@@ -107,45 +83,46 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 	{
 		boost::range::remove_erase(frames, nullptr);
 		boost::range::remove_erase(frames, gpu_frame::null());
-		auto composite_frame = std::make_shared<gpu_composite_frame>(format_desc_.width, format_desc_.height);
-		boost::range::for_each(frames, std::bind(&gpu_composite_frame::add, composite_frame, std::placeholders::_1));
-		input_.push(composite_frame);
+		auto composite_frame = std::make_shared<gpu_composite_frame>();
+		boost::range::for_each(frames, std::bind(&gpu_composite_frame::add, 
+													composite_frame, 
+													std::placeholders::_1));
 
+		input_.push(composite_frame);
 		executor_.begin_invoke([=]
 		{
 			try
 			{
-				gpu_composite_frame_ptr frame;
+				gpu_frame_ptr frame;
 				input_.pop(frame);
 
 				index_ = (index_ + 1) % 2;
 				int next_index = (index_ + 1) % 2;
 
-				// 2. Start asynchronous DMA transfer to video memory
-				// Lock frames and give pointer ownership to OpenGL		
-				writing_[index_] = std::move(reading_[index_]);		
+				// 1. Start asynchronous DMA transfer to video memory.
+				writing_[index_] = std::move(frame);		
+				// Lock frame and give pointer ownership to OpenGL.
 				writing_[index_]->write_lock();
 				
-				// 1. Copy to page-locked memory
-				reading_[next_index] = std::move(frame);
-								
-				// 4. Output to external buffer
+				// 3. Output to external buffer.
 				if(output_frame_->read_unlock())
 					output_.push(output_frame_);
 		
-				// 3. Draw to framebuffer and start asynchronous DMA transfer to page-locked memory				
-				// Clear framebuffer
+				// Clear framebuffer.
 				glClear(GL_COLOR_BUFFER_BIT);	
+
+				// 2. Draw to framebuffer and start asynchronous DMA transfer 
+				// to page-locked memory.
 				writing_[next_index]->draw();
 				
 				// Create an output frame
-				output_frame_ = create_frame(format_desc_.width, format_desc_.height);
+				output_frame_ = create_output_frame();
 			
-				// Read from framebuffer into page-locked memory
+				// Read from framebuffer into page-locked memory.
 				output_frame_->read_lock(GL_COLOR_ATTACHMENT0_EXT);
 				output_frame_->audio_data() = std::move(writing_[next_index]->audio_data());
 
-				// Return frames to pool
+				// Return frames to pool.
 				writing_[next_index] = nullptr;
 			}
 			catch(...)
@@ -154,11 +131,25 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 			}
 		});	
 	}
+
+	gpu_frame_ptr create_output_frame()
+	{
+		gpu_frame_ptr frame;
+		if(!reading_pool_.try_pop(frame))
+			frame = std::make_shared<gpu_frame>(format_desc_.width, 
+													format_desc_.height);
+
+		return gpu_frame_ptr(frame.get(), [=](gpu_frame*)
+		{
+			frame->reset();
+			reading_pool_.push(frame);
+		});
+	}
 			
 	gpu_frame_ptr create_frame(size_t width, size_t height)
 	{
 		size_t key = width | (height << 16);
-		auto& pool = reading_frame_pools_[key];
+		auto& pool = writing_pools_[key];
 		
 		gpu_frame_ptr frame;
 		if(!pool.try_pop(frame))
@@ -175,10 +166,10 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 		{
 			frame->write_unlock();
 			frame->reset();
-			reading_frame_pools_[key].push(frame);
+			writing_pools_[key].push(frame);
 		};
 
-		return gpu_frame_ptr(frame.get(), [=](gpu_frame*)
+		return gpu_frame_ptr(frame.get(), [=](gpu_frame*)							
 		{
 			executor_.begin_invoke(destructor);
 		});
@@ -189,16 +180,15 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 		output_.pop(frame);
 	}
 			
-	tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<gpu_frame_ptr>> reading_frame_pools_;
+	typedef tbb::concurrent_bounded_queue<gpu_frame_ptr> gpu_frame_queue;
+	tbb::concurrent_unordered_map<size_t, gpu_frame_queue> writing_pools_;
+	gpu_frame_queue reading_pool_;	
 
-	frame_buffer_ptr fbo_;
-
-	tbb::concurrent_bounded_queue<gpu_composite_frame_ptr> input_;
-	tbb::concurrent_bounded_queue<gpu_frame_ptr> output_;	
+	gpu_frame_queue input_;
+	std::vector<gpu_frame_ptr> writing_;
+	gpu_frame_queue output_;	
 
 	size_t index_;
-	std::vector<gpu_composite_frame_ptr> reading_;
-	std::vector<gpu_composite_frame_ptr> writing_;
 
 	gpu_frame_ptr output_frame_;			
 	frame_format_desc format_desc_;
@@ -206,6 +196,9 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 	std::unique_ptr<sf::Context> ogl_context_;
 	
 	common::executor executor_;
+
+	GLuint render_texture_;
+	GLuint fbo_;
 };
 	
 gpu_frame_processor::gpu_frame_processor(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}

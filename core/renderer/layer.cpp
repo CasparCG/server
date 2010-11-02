@@ -35,7 +35,7 @@ struct layer::implementation
 		if(background_ != nullptr)
 		{
 			background_->set_leading_producer(active_);
-			active_ = background_;
+			active_     = background_;
 			background_ = nullptr;
 		}
 
@@ -49,13 +49,13 @@ struct layer::implementation
 
 	void stop()
 	{
-		active_ = nullptr;
+		active_     = nullptr;
 		last_frame_ = nullptr;
 	}
 
 	void clear()
 	{
-		active_ = nullptr;
+		active_     = nullptr;
 		background_ = nullptr;
 		last_frame_ = nullptr;
 	}
@@ -94,17 +94,10 @@ struct layer::implementation
 
 layer::layer() : impl_(new implementation()){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){other.impl_ = nullptr;}
-layer::layer(const layer& other) : impl_(new implementation(*other.impl_)) {}
 layer& layer::operator=(layer&& other)
 {
 	impl_ = std::move(other.impl_);	
 	other.impl_ = nullptr;
-	return *this;
-}
-layer& layer::operator=(const layer& other)
-{
-	layer temp(other);
-	impl_.swap(temp.impl_);
 	return *this;
 }
 void layer::load(const frame_producer_ptr& frame_producer, load_option option){return impl_->load(frame_producer, option);}	

@@ -4,25 +4,24 @@
     <Filter Include="Source">
       <UniqueIdentifier>{d4a5c843-0e41-4d98-9056-b7f0de0d49a7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\core">
-      <UniqueIdentifier>{6b116fc0-5f04-4952-a54b-06b208d13b1d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\core\renderer">
+    <Filter Include="Source\renderer">
       <UniqueIdentifier>{f7f271e6-1741-4d8e-8903-73f6b6363ef4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\mock">
+      <UniqueIdentifier>{420ab80e-66c8-477b-b8c6-d8f4ceb08102}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="core\renderer\layer_test.cpp">
-      <Filter>Source\core\renderer</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="core\renderer\display_device.cpp">
-      <Filter>Source\core\renderer</Filter>
+    <ClCompile Include="renderer\layer_test.cpp">
+      <Filter>Source\renderer</Filter>
     </ClCompile>
-    <ClCompile Include="core\renderer\render_device.cpp">
-      <Filter>Source\core\renderer</Filter>
-    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="mock\mock_frame_producer.h">
+      <Filter>Source\mock</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

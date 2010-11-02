@@ -13,14 +13,14 @@ enum load_option
 			
 class layer
 {
+	layer(const layer& other);
+	layer& operator=(const layer& other);
 public:
 	layer();
 	layer(layer&& other);
-	layer(const layer& other);
 	layer& operator=(layer&& other);
-	layer& operator=(const layer& other);
 
-	void load(const frame_producer_ptr& pProducer, load_option option = load_option::none);	
+	void load(const frame_producer_ptr& producer, load_option option = load_option::none);	
 	void play();
 	void pause();
 	void stop();

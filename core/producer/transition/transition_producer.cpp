@@ -106,7 +106,7 @@ struct transition_producer::implementation : boost::noncopyable
 			src_frame->audio_data()[n] = static_cast<short>((static_cast<int>(src_frame->audio_data()[n])*(256-volume))>>8);
 				
 		float alpha = static_cast<float>(current_frame_)/static_cast<float>(info_.duration);
-		auto composite = std::make_shared<gpu_composite_frame>(format_desc_.width, format_desc_.height);
+		auto composite = std::make_shared<gpu_composite_frame>();
 		composite->add(src_frame);
 		composite->add(dest_frame);
 		if(info_.type == transition_type::mix)

@@ -243,11 +243,19 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 				std::vector<std::wstring> split;
 				boost::split(split, str, boost::is_any_of("-"));
 					
-				int channelIndex = boost::lexical_cast<int>(split[0]) - 1;
-
+				int channelIndex = -1;
 				int layerIndex = -1;
-				if(split.size() > 1)
-					layerIndex = boost::lexical_cast<int>(split[1]);
+				try
+				{
+					channelIndex = boost::lexical_cast<int>(split[0]) - 1;
+
+					if(split.size() > 1)
+						layerIndex = boost::lexical_cast<int>(split[1]);
+				}
+				catch(...)
+				{
+					goto ParseFinnished;
+				}
 
 				renderer::render_device_ptr pChannel = GetChannelSafe(channelIndex, channels_);
 				if(pChannel == 0) {
