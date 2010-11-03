@@ -32,20 +32,26 @@ namespace caspar { namespace core {
 class color_producer : public frame_producer
 {
 public:
-	explicit color_producer(unsigned long color_value, const frame_format_desc& format_desc) : format_desc_(format_desc){}
+	explicit color_producer(unsigned int color_value, const frame_format_desc& format_desc) 
+		: color_value_(color_value), format_desc_(format_desc){}
 
-	gpu_frame_ptr get_frame() { return frame_; }
+	gpu_frame_ptr get_frame()
+	{ 
+		frame_ = factory_->create_frame(format_desc_);
+		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
+		return frame_;
+	}
 	const frame_format_desc& get_frame_format_desc() const { return format_desc_; }
 	
 	void initialize(const frame_factory_ptr& factory)
 	{
-		frame_ = factory->create_frame(format_desc_);
-		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
+		factory_ = factory;
 	}
 
 	frame_format_desc format_desc_;
 	gpu_frame_ptr frame_;
-	unsigned long color_value_;
+	unsigned int color_value_;
+	frame_factory_ptr factory_;
 };
 
 union Color 
@@ -58,10 +64,10 @@ union Color
 		unsigned char b;
 	} comp;
 
-	unsigned long value;
+	unsigned int value;
 };
 
-unsigned long get_pixel_color_value(const std::wstring& parameter)
+unsigned int get_pixel_color_value(const std::wstring& parameter)
 {
 	std::wstring color_code;
 	if(parameter.length() != 9 || parameter[0] != '#')
