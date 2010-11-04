@@ -20,6 +20,7 @@ enum frame_format
 	pal = 0,
 	ntsc,
 	x576p2500,
+	x720p2500,
 	x720p5000,
 	x720p5994,
 	x720p6000,

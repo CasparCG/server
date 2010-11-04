@@ -33,6 +33,8 @@ public:
 	virtual void read_lock(GLenum mode);
 	virtual bool read_unlock();
 	virtual void draw();
+
+	virtual bool valid() const;
 		
 	virtual unsigned char* data();
 	virtual size_t size() const;
