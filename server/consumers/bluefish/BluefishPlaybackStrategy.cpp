@@ -31,6 +31,7 @@
 
 #include <vector>
 #include <functional>
+#include <numeric>
 
 #include "BluefishPlaybackStrategy.h"
 #include "BluefishVideoConsumer.h"
@@ -111,15 +112,15 @@ struct BluefishPlaybackStrategy::Implementation
 		static size_t audio_samples = 1920;
 		static size_t audio_nchannels = 2;
 		
-		MixAudio(audio_buffer_->data(), frame_audio_data, audio_samples, audio_nchannels);		
-		EncodeHANC(buffer->hanc_data(), audio_buffer_->data(), audio_samples, audio_nchannels);
+		MixAudio(reinterpret_cast<BLUE_UINT16*>(audio_buffer_->data()), frame_audio_data, audio_samples, audio_nchannels);		
+		EncodeHANC(reinterpret_cast<BLUE_UINT32*>(buffer->hanc_data()), audio_buffer_->data(), audio_samples, audio_nchannels);
 
 		pSDK_->system_buffer_write_async(buffer->image_data(), 
 										 buffer->image_size(), 
 										 nullptr, 
 										 BlueImage_HANC_DMABuffer(buffer->id(), BLUE_DATA_IMAGE));
 
-		pSDK_->system_buffer_write_async(reinterpret_cast<PBYTE>(buffer->hanc_data()),
+		pSDK_->system_buffer_write_async(buffer->hanc_data(),
 										 buffer->hanc_size(), 
 										 nullptr,                 
 										 BlueImage_HANC_DMABuffer(buffer->id(), BLUE_DATA_HANC));
@@ -136,7 +137,7 @@ struct BluefishPlaybackStrategy::Implementation
 			log_ = true;
 	}
 
-	void EncodeHANC(unsigned int* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
+	void EncodeHANC(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
 		auto card_type = pSDK_->has_video_cardtype();
 		auto vid_fmt = pConsumer_->vidFmt_;
@@ -175,27 +176,16 @@ struct BluefishPlaybackStrategy::Implementation
 		}						
 	}
 
-	void MixAudio(void* dest, const AudioDataChunkList& frame_audio_data, size_t audio_samples, size_t audio_nchannels)
+	void MixAudio(BLUE_UINT16* dest, const AudioDataChunkList& frame_audio_data, size_t audio_samples, size_t audio_nchannels)
 	{		
-		if(frame_audio_data.size() > 1)
+		size_t size = audio_samples*audio_nchannels;
+		memset(dest, 0, size*2);
+		std::for_each(frame_audio_data.begin(), frame_audio_data.end(), [&](const audio::AudioDataChunkPtr& chunk)
 		{
-			std::vector<short> audio_data(audio_samples*audio_nchannels);
-			for(int s = 0; s < audio_samples; ++s)
-			{				
-				for(int n = 0; n < frame_audio_data.size(); ++n)				
-				{
-					auto frame_audio = reinterpret_cast<short*>(frame_audio_data[n]->GetDataPtr());
-					float volume = frame_audio_data[n]->GetVolume();
-					audio_data[s*2+0] += static_cast<short>(static_cast<float>(frame_audio[s*2+0])*volume);					
-					audio_data[s*2+1] += static_cast<short>(static_cast<float>(frame_audio[s*2+1])*volume);		
-				}
-			}
-			memcpy(dest, audio_data.data(), audio_data.size()*audio_nchannels);
-		}
-		else if(frame_audio_data.size() == 1)
-			memcpy(dest, frame_audio_data[0]->GetDataPtr(), frame_audio_data[0]->GetLength());
-		else
-			memset(dest, 0, audio_samples*audio_nchannels*2);
+			BLUE_UINT16* src = reinterpret_cast<BLUE_UINT16*>(chunk->GetDataPtr());
+			for(int n = 0; n < size; ++n)
+				dest[n] = static_cast<BLUE_UINT16>(static_cast<BLUE_UINT32>(dest[n])+static_cast<BLUE_UINT32>(src[n]));
+		});
 	}
 
 	std::function<void(const blue_dma_buffer_ptr&, const AudioDataChunkList&)> render_func_;

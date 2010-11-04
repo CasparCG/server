@@ -62,7 +62,7 @@ public:
 	int id() const {return id_;}
 
 	PBYTE image_data() const { return image_buffer_.data(); }
-	unsigned int* hanc_data() const { return reinterpret_cast<unsigned int*>(hanc_buffer_.data()); }
+	PBYTE hanc_data() const { return hanc_buffer_.data(); }
 
 	size_t image_size() const { return image_buffer_.size(); }
 	size_t hanc_size() const { return hanc_buffer_.size(); }

@@ -22,6 +22,8 @@
 #include "Application.h"
 #include "utils\FileOutputStream.h"
 #include <tbb/task_scheduler_init.h>
+#include <tbb/task_scheduler_observer.h>
+#include "utils\Win32Exception.h"
 
 //the easy way to make it possible to forward WndProc messages into the application-object
 caspar::Application* pGlobal_Application = 0;
@@ -33,11 +35,22 @@ namespace caspar {
 	}
 }
 
+class win32_handler_tbb_installer : public tbb::task_scheduler_observer
+{
+public:
+	win32_handler_tbb_installer()	{observe(true);}
+	void on_scheduler_entry(bool is_worker) 
+	{
+		Win32Exception::InstallHandler();
+	} 
+};
+
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int)
 {
 	int returnValue = 0;
 	tstring commandline(lpCmdLine);
 	
+	win32_handler_tbb_installer win32_handler_tbb_installer;
 	tbb::task_scheduler_init task_scheduler(max(2, tbb::task_scheduler_init::default_num_threads()));
 	
 	//if(commandline == TEXT("install"))
