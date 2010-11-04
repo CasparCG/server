@@ -63,7 +63,7 @@ int main(int argc, wchar_t* argv[])
 	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n\n" << std::endl;
 
 	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
-    DrawMenuBar(GetConsoleWindow());
+	DrawMenuBar(GetConsoleWindow());
 	MoveWindow(GetConsoleWindow(), 800, 0, 800, 1000, true);
 
 #ifdef _DEBUG

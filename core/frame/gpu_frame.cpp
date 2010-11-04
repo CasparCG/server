@@ -223,6 +223,7 @@ bool gpu_frame::write_unlock(){return impl_->write_unlock();}
 void gpu_frame::read_lock(GLenum mode){impl_->read_lock(mode);}
 bool gpu_frame::read_unlock(){return impl_->read_unlock();}
 void gpu_frame::draw(){impl_->draw();}
+bool gpu_frame::valid() const { return impl_->data_ != nullptr;}
 unsigned char* gpu_frame::data(){return impl_->data();}
 size_t gpu_frame::size() const { return impl_->size_; }
 size_t gpu_frame::width() const { return impl_->width_;}

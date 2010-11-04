@@ -63,21 +63,17 @@ struct transition_producer::implementation : boost::noncopyable
 
 		tbb::parallel_invoke
 		(
-			[&]{dest = get_producer_frame(dest_producer_);},
-			[&]{source = get_producer_frame(source_producer_);}
+			[&]{dest = get_frame(dest_producer_);},
+			[&]{source = get_frame(source_producer_);}
 		);
 
 		return compose(dest, source);
 	}
 
-	gpu_frame_ptr get_producer_frame(frame_producer_ptr& producer)
+	gpu_frame_ptr get_frame(frame_producer_ptr& producer)
 	{
 		if(producer == nullptr)
-		{	
-			auto frame = factory_->create_frame(format_desc_);
-			common::clear(frame->data(), frame->size());
-			return frame;
-		}
+			return nullptr;
 
 		gpu_frame_ptr frame;
 		try
@@ -97,64 +93,78 @@ struct transition_producer::implementation : boost::noncopyable
 			following->initialize(factory_);
 			following->set_leading_producer(producer);
 			producer = following;
-			return get_producer_frame(producer);
+			return get_frame(producer);
 		}
 		return frame;
 	}
 			
-	gpu_frame_ptr compose(const gpu_frame_ptr& dest_producer_frame, const gpu_frame_ptr& src_frame) 
-	{	
-		if(!src_frame)
-			return dest_producer_frame;
+	void set_volume(const gpu_frame_ptr& frame, int volume)
+	{
+		if(!frame)
+			return;
 
-		if(info_.type == transition_type::cut || !dest_producer_frame)		
+		for(size_t n = 0; n < frame->audio_data().size(); ++n)
+			frame->audio_data()[n] = static_cast<short>((static_cast<int>(frame->audio_data()[n])*volume)>>8);
+	}
+			
+
+	gpu_frame_ptr compose(const gpu_frame_ptr& dest_frame, gpu_frame_ptr src_frame) 
+	{	
+		if(info_.type == transition_type::cut)		
 			return src_frame;
-		
+
+		if(!dest_frame)
+			return nullptr;
+								
+		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
 		int volume = static_cast<int>(static_cast<double>(current_frame_)/static_cast<double>(info_.duration)*256.0);
 				
-		for(size_t n = 0; n < dest_producer_frame->audio_data().size(); ++n)
-			dest_producer_frame->audio_data()[n] = static_cast<short>((static_cast<int>(dest_producer_frame->audio_data()[n])*volume)>>8);
-
-		for(size_t n = 0; n < src_frame->audio_data().size(); ++n)
-			src_frame->audio_data()[n] = static_cast<short>((static_cast<int>(src_frame->audio_data()[n])*(256-volume))>>8);
+		tbb::parallel_invoke
+		(
+			[&]{set_volume(dest_frame, volume);},
+			[&]{set_volume(src_frame, 256-volume);}
+		);
 				
-		float alpha = static_cast<float>(current_frame_)/static_cast<float>(info_.duration);
 		auto composite = std::make_shared<gpu_composite_frame>();
-		composite->add(src_frame);
-		composite->add(dest_producer_frame);
+		if(src_frame)
+			composite->add(src_frame);
+		else
+			src_frame = std::make_shared<gpu_frame>(0, 0);
+		composite->add(dest_frame);
+
 		if(info_.type == transition_type::mix)
-			dest_producer_frame->alpha(alpha);		
+			dest_frame->alpha(alpha);		
 		else if(info_.type == transition_type::slide)
 		{
 			if(info_.direction == transition_direction::from_left)			
-				dest_producer_frame->translate(-1.0f+alpha, 0.0f);			
+				dest_frame->translate(-1.0+alpha, 0.0);			
 			else if(info_.direction == transition_direction::from_right)
-				dest_producer_frame->translate(1.0f-alpha, 0.0f);			
+				dest_frame->translate(1.0-alpha, 0.0);			
 		}
 		else if(info_.type == transition_type::push)
 		{
 			if(info_.direction == transition_direction::from_left)		
 			{
-				dest_producer_frame->translate(-1.0f+alpha, 0.0f);
-				src_frame->translate(0.0f+alpha, 0.0f);
+				dest_frame->translate(-1.0+alpha, 0.0);
+				src_frame->translate(0.0+alpha, 0.0);
 			}
 			else if(info_.direction == transition_direction::from_right)
 			{
-				dest_producer_frame->translate(1.0f-alpha, 0.0f);
-				src_frame->translate(0.0f-alpha, 0.0f);
+				dest_frame->translate(1.0-alpha, 0.0);
+				src_frame->translate(0.0-alpha, 0.0);
 			}
 		}
 		else if(info_.type == transition_type::wipe)
 		{
 			if(info_.direction == transition_direction::from_left)		
 			{
-				dest_producer_frame->translate(-1.0f+alpha, 0.0f);
-				dest_producer_frame->texcoords(rectangle(-1.0+alpha, 1.0, alpha, 0.0));
+				dest_frame->translate(-1.0+alpha, 0.0);
+				dest_frame->texcoords(rectangle(-1.0+alpha, 1.0, alpha, 0.0));
 			}
 			else if(info_.direction == transition_direction::from_right)
 			{
-				dest_producer_frame->translate(1.0f-alpha, 0.0f);
-				dest_producer_frame->texcoords(rectangle(1.0-alpha, 1.0, 2.0-alpha, 0.0));
+				dest_frame->translate(1.0-alpha, 0.0);
+				dest_frame->texcoords(rectangle(1.0-alpha, 1.0, 2.0-alpha, 0.0));
 			}
 		}
 

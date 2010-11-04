@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include <tbb/parallel_for.h>
+
 namespace caspar { namespace core {
 	
 struct gpu_composite_frame::implementation : boost::noncopyable
@@ -54,10 +56,19 @@ struct gpu_composite_frame::implementation : boost::noncopyable
 			self_->audio_data() = std::move(frame->audio_data());
 		else
 		{
-			for(size_t n = 0; n < frame->audio_data().size(); ++n)
-				self_->audio_data()[n] = static_cast<short>(
-					static_cast<int>(self_->audio_data()[n]) + 
-					static_cast<int>(frame->audio_data()[n]) & 0xFFFF);				
+			tbb::parallel_for
+			(
+				tbb::blocked_range<size_t>(0, frame->audio_data().size()),
+				[&](const tbb::blocked_range<size_t>& r)
+				{
+					for(size_t n = r.begin(); n < r.end(); ++n)
+					{
+						self_->audio_data()[n] = static_cast<short>(
+							static_cast<int>(self_->audio_data()[n]) + 
+							static_cast<int>(frame->audio_data()[n]) & 0xFFFF);	
+					}
+				}
+			);
 		}
 	}
 
