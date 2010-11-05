@@ -26,23 +26,13 @@ struct rectangle
 class gpu_frame : boost::noncopyable
 {
 public:
-	gpu_frame(size_t width, size_t height);
 	virtual ~gpu_frame(){}
-	virtual void write_lock();
-	virtual bool write_unlock();
-	virtual void read_lock(GLenum mode);
-	virtual bool read_unlock();
-	virtual void draw();
-
-	virtual bool valid() const;
-		
+			
 	virtual unsigned char* data();
 	virtual size_t size() const;
 	virtual size_t width() const;
 	virtual size_t height() const;
-	
-	virtual void reset();
-			
+				
 	virtual const std::vector<short>& audio_data() const;	
 	virtual std::vector<short>& audio_data();
 
@@ -59,10 +49,22 @@ public:
 
 	static std::shared_ptr<gpu_frame> null()
 	{
-		static auto my_null_frame = std::make_shared<gpu_frame>(0,0);
+		static auto my_null_frame = std::shared_ptr<gpu_frame>(new gpu_frame(0,0));
 		return my_null_frame;
 	}
 		
+protected:
+	gpu_frame(size_t width, size_t height);
+
+	friend class gpu_frame_processor;
+	
+	virtual void begin_write();
+	virtual void end_write();
+	virtual void begin_read();
+	virtual void end_read();
+	virtual void draw();
+	virtual void reset();
+
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

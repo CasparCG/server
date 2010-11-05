@@ -15,6 +15,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="producer\transition\transition_producer_test.cpp" />
     <ClCompile Include="renderer\layer_test.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -26,6 +27,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="mock\mock_frame.h" />
+    <ClInclude Include="mock\mock_frame_factory.h" />
     <ClInclude Include="mock\mock_frame_producer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

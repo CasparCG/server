@@ -3,6 +3,7 @@
 #include "gpu_frame.h"
 #include "../../common/utility/memory.h"
 #include "../../common/gl/gl_check.h"
+#include "../../common/gl/pixel_buffer_object.h"
 
 namespace caspar { namespace core {
 	
@@ -64,99 +65,35 @@ GLubyte lower_pattern[] = {
 struct gpu_frame::implementation : boost::noncopyable
 {
 	implementation(size_t width, size_t height) 
-		: pbo_(0), data_(nullptr), width_(width), height_(height), 
-			size_(width*height*4), reading_(false), texture_(0), alpha_(1.0f), 
+		: pbo_(width, height), data_(nullptr), width_(width), height_(height), 
+			size_(width*height*4), reading_(false), alpha_(1.0f), 
 			x_(0.0f), y_(0.0f), mode_(video_mode::progressive), 
-			texcoords_(0.0, 1.0, 1.0, 0.0)
+			texcoords_(0.0, 1.0, 1.0, 0.0), writing_(false), mapped_(false)
 	{	
-	}
-
-	~implementation()
-	{
-		if(pbo_ != 0)
-			glDeleteBuffers(1, &pbo_);
-		if(texture_ != 0)
-			glDeleteTextures(1, &texture_);
-	}
-
-	GLuint pbo()
-	{		
-		if(pbo_ == 0)
-			GL(glGenBuffers(1, &pbo_));
-		return pbo_;
-	}
-
-	void write_lock()
-	{
-		if(texture_ == 0)
-		{
-			GL(glGenTextures(1, &texture_));
-
-			GL(glBindTexture(GL_TEXTURE_2D, texture_));
-
-			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-
-			GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0, GL_BGRA, 
-								GL_UNSIGNED_BYTE, NULL));
-		}
-
-		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo()));
-		if(data_ != nullptr)
-		{
-			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
-			data_ = nullptr;
-		}
-		GL(glBindTexture(GL_TEXTURE_2D, texture_));
-		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, GL_BGRA, 
-							GL_UNSIGNED_BYTE, NULL));
-		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
-	}
-
-	bool write_unlock()
-	{
-		if(data_ != nullptr)
-			return false;
-		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo()));
-		GL(glBufferData(GL_PIXEL_UNPACK_BUFFER, size_, NULL, GL_STREAM_DRAW));
-		void* ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
-		data_ = reinterpret_cast<unsigned char*>(ptr);
-		if(!data_)
-			BOOST_THROW_EXCEPTION(invalid_operation() 
-									<< msg_info("glMapBuffer failed"));
-		return true;
+		if(width > 0 && height > 0)
+			end_write();
 	}
 	
-	void read_lock(GLenum mode)
-	{	
-		GL(glReadBuffer(mode));
-		GL(glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo()));
-		if(data_ != nullptr)	
-		{	
-			GL(glUnmapBuffer(GL_PIXEL_PACK_BUFFER));	
-			data_ = nullptr;
-		}
-		GL(glBufferData(GL_PIXEL_PACK_BUFFER, size_, NULL, GL_STREAM_READ));	
-		GL(glReadPixels(0, 0, width_, height_, GL_BGRA, GL_UNSIGNED_BYTE, NULL));
-		GL(glBindBuffer(GL_PIXEL_PACK_BUFFER, 0));
-		reading_ = true;
+	void begin_write()
+	{
+		data_ = nullptr;
+		pbo_.begin_write();		
 	}
 
-	bool read_unlock()
+	void end_write()
 	{
-		if(data_ != nullptr || !reading_)
-			return false;
-		GL(glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo()));
-		void* ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);   
-		GL(glBindBuffer(GL_PIXEL_PACK_BUFFER, 0));
-		data_ = reinterpret_cast<unsigned char*>(ptr);
-		if(!data_)
-			BOOST_THROW_EXCEPTION(std::bad_alloc());
-		reading_ = false;
-		return true;
+		data_ = static_cast<unsigned char*>(pbo_.end_write());
+	}
+	
+	void begin_read()
+	{	
+		data_ = nullptr;
+		pbo_.begin_read();
+	}
+
+	void end_read()
+	{
+		data_ = static_cast<unsigned char*>(pbo_.end_read());
 	}
 
 	void draw()
@@ -172,7 +109,7 @@ struct gpu_frame::implementation : boost::noncopyable
 		else if(mode_ == video_mode::lower)
 			glPolygonStipple(lower_pattern);
 
-		GL(glBindTexture(GL_TEXTURE_2D, texture_));
+		pbo_.bind_texture();
 		glBegin(GL_QUADS);
 			glTexCoord2d(texcoords_.left,	texcoords_.bottom); glVertex2d(-1.0, -1.0);
 			glTexCoord2d(texcoords_.right,	texcoords_.bottom); glVertex2d( 1.0, -1.0);
@@ -199,14 +136,17 @@ struct gpu_frame::implementation : boost::noncopyable
 		mode_      = video_mode::progressive;
 	}
 
+	common::gl::pixel_buffer_object pbo_;
 	gpu_frame* self_;
-	GLuint pbo_;
-	GLuint texture_;
 	unsigned char* data_;
 	size_t width_;
 	size_t height_;
 	size_t size_;
+
 	bool reading_;
+	bool writing_;
+	bool mapped_;
+
 	std::vector<short> audio_data_;
 
 	double alpha_;
@@ -218,12 +158,11 @@ struct gpu_frame::implementation : boost::noncopyable
 
 gpu_frame::gpu_frame(size_t width, size_t height) 
 	: impl_(new implementation(width, height)){}
-void gpu_frame::write_lock(){impl_->write_lock();}
-bool gpu_frame::write_unlock(){return impl_->write_unlock();}	
-void gpu_frame::read_lock(GLenum mode){impl_->read_lock(mode);}
-bool gpu_frame::read_unlock(){return impl_->read_unlock();}
+void gpu_frame::begin_write(){impl_->begin_write();}
+void gpu_frame::end_write(){impl_->end_write();}	
+void gpu_frame::begin_read(){impl_->begin_read();}
+void gpu_frame::end_read(){impl_->end_read();}
 void gpu_frame::draw(){impl_->draw();}
-bool gpu_frame::valid() const { return impl_->data_ != nullptr;}
 unsigned char* gpu_frame::data(){return impl_->data();}
 size_t gpu_frame::size() const { return impl_->size_; }
 size_t gpu_frame::width() const { return impl_->width_;}

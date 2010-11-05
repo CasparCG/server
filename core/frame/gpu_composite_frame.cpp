@@ -17,27 +17,24 @@ struct gpu_composite_frame::implementation : boost::noncopyable
 {
 	implementation(gpu_composite_frame* self) : self_(self){}
 
-	void write_lock()
+	void begin_write()
 	{
-		boost::range::for_each(frames_, std::mem_fn(&gpu_frame::write_lock));		
+		boost::range::for_each(frames_, std::mem_fn(&gpu_frame::begin_write));		
 	}
 
-	bool write_unlock()
+	void end_write()
 	{
-		return std::all_of(frames_.begin(), frames_.end(), 
-							std::mem_fn(&gpu_frame::write_unlock));			
+		boost::range::for_each(frames_, std::mem_fn(&gpu_frame::end_write));				
 	}
 	
-	void read_lock(GLenum mode)
+	void begin_read()
 	{	
-		boost::range::for_each(frames_, std::bind(&gpu_frame::read_lock, 
-													std::placeholders::_1, mode));		
+		boost::range::for_each(frames_, std::mem_fn(&gpu_frame::begin_read));		
 	}
 
-	bool read_unlock()
+	void end_read()
 	{
-		return std::all_of(frames_.begin(), frames_.end(), 
-							std::mem_fn(&gpu_frame::read_unlock));		
+		boost::range::for_each(frames_, std::mem_fn(&gpu_frame::end_read));	
 	}
 
 	void draw()
@@ -86,10 +83,10 @@ struct gpu_composite_frame::implementation : boost::noncopyable
 
 gpu_composite_frame::gpu_composite_frame() 
 	: gpu_frame(0, 0), impl_(new implementation(this)){}
-void gpu_composite_frame::write_lock(){impl_->write_lock();}
-bool gpu_composite_frame::write_unlock(){return impl_->write_unlock();}	
-void gpu_composite_frame::read_lock(GLenum mode){impl_->read_lock(mode);}
-bool gpu_composite_frame::read_unlock(){return impl_->read_unlock();}
+void gpu_composite_frame::begin_write(){impl_->begin_write();}
+void gpu_composite_frame::end_write(){impl_->end_write();}	
+void gpu_composite_frame::begin_read(){impl_->begin_read();}
+void gpu_composite_frame::end_read(){impl_->end_read();}
 void gpu_composite_frame::draw(){impl_->draw();}
 unsigned char* gpu_composite_frame::data(){return impl_->data();}
 void gpu_composite_frame::add(const gpu_frame_ptr& frame){impl_->add(frame);}

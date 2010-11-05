@@ -20,10 +20,10 @@ public:
 	
 private:
 	virtual unsigned char* data();
-	virtual void write_lock();
-	virtual bool write_unlock();
-	virtual void read_lock(GLenum mode);
-	virtual bool read_unlock();
+	virtual void begin_write();
+	virtual void end_write();
+	virtual void begin_read();
+	virtual void end_read();
 	virtual void draw();
 
 	struct implementation;

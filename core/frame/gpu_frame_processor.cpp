@@ -10,6 +10,7 @@
 #include "../../common/concurrency/executor.h"
 #include "../../common/utility/memory.h"
 #include "../../common/gl/gl_check.h"
+#include "../../common/gl/frame_buffer_object.h"
 
 #include <Glee.h>
 #include <SFML/Window.hpp>
@@ -49,33 +50,21 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 			GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));			
 			GL(glClearColor(0.0, 0.0, 0.0, 0.0));
 			GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-			glLoadIdentity();       
-						
-			// Create and bind a framebuffer
-			GL(glGenTextures(1, &render_texture_));	
-			GL(glBindTexture(GL_TEXTURE_2D, render_texture_));			
-			GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, 
-								format_desc_.height, 0, GL_BGRA, 
-								GL_UNSIGNED_BYTE, NULL));
-			GL(glGenFramebuffersEXT(1, &fbo_));		
-			GL(glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo_));
-			GL(glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, 
-											GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, 
-											render_texture_, 0));
-			
+			glLoadIdentity();   
+
+			fbo_.create(format_desc_.width, format_desc_.height);
+			fbo_.bind_pixel_source();
+
 			writing_.resize(2, std::make_shared<gpu_composite_frame>());
-			output_frame_ = std::make_shared<gpu_frame>(format_desc_.width, 
-															format_desc_.height);
+
+			// Fill pipeline
+			for(int n = 0; n < 2; ++n)
+				composite(std::vector<gpu_frame_ptr>());
 		});
-		// Fill pipeline
-		composite(std::vector<gpu_frame_ptr>());
-		composite(std::vector<gpu_frame_ptr>());
-		composite(std::vector<gpu_frame_ptr>());
 	}
 
 	~implementation()
 	{
-		glDeleteFramebuffersEXT(1, &fbo_);
 		executor_.stop();
 	}
 			
@@ -102,27 +91,33 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 				// 1. Start asynchronous DMA transfer to video memory.
 				writing_[index_] = std::move(frame);		
 				// Lock frame and give pointer ownership to OpenGL.
-				writing_[index_]->write_lock();
+				writing_[index_]->begin_write();
 				
 				// 3. Output to external buffer.
-				if(output_frame_->read_unlock())
+				if(output_frame_)
+				{	
+					output_frame_->end_read();
 					output_.push(output_frame_);
-		
+				}
+
 				// Clear framebuffer.
-				glClear(GL_COLOR_BUFFER_BIT);	
+				GL(glClear(GL_COLOR_BUFFER_BIT));	
 
 				// 2. Draw to framebuffer and start asynchronous DMA transfer 
 				// to page-locked memory.
 				writing_[next_index]->draw();
 				
 				// Create an output frame
-				output_frame_ = create_output_frame();
+				auto temp_frame = create_output_frame();
 			
 				// Read from framebuffer into page-locked memory.
-				output_frame_->read_lock(GL_COLOR_ATTACHMENT0_EXT);
-				output_frame_->audio_data() = std::move(writing_[next_index]->audio_data());
+				temp_frame->begin_read();
+				temp_frame->audio_data() = std::move(writing_[next_index]->audio_data());
+
+				output_frame_ = temp_frame;
 
 				// Return frames to pool.
+				writing_[next_index]->end_write();
 				writing_[next_index] = nullptr;
 			}
 			catch(...)
@@ -136,8 +131,7 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 	{
 		gpu_frame_ptr frame;
 		if(!reading_pool_.try_pop(frame))
-			frame = std::make_shared<gpu_frame>(format_desc_.width, 
-													format_desc_.height);
+			frame.reset(new gpu_frame(format_desc_.width, format_desc_.height));
 
 		return gpu_frame_ptr(frame.get(), [=](gpu_frame*)
 		{
@@ -154,17 +148,14 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 		gpu_frame_ptr frame;
 		if(!pool.try_pop(frame))
 		{
-			frame = executor_.invoke([=]() -> gpu_frame_ptr
+			frame = executor_.invoke([&]
 			{
-				auto frame = std::make_shared<gpu_frame>(width, height);
-				frame->write_unlock();
-				return frame;
+				return std::shared_ptr<gpu_frame>(new gpu_frame(width, height));
 			});
 		}
 		
 		auto destructor = [=]
 		{
-			frame->write_unlock();
 			frame->reset();
 			writing_pools_[key].push(frame);
 		};
@@ -197,8 +188,7 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 	
 	common::executor executor_;
 
-	GLuint render_texture_;
-	GLuint fbo_;
+	common::gl::frame_buffer_object fbo_;
 };
 	
 gpu_frame_processor::gpu_frame_processor(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
