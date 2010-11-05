@@ -30,12 +30,12 @@
 #include "../../frame/gpu_frame.h"
 #include "../../../common/utility/memory.h"
 #include "../../../common/gl/gl_check.h"
+#include "../../../common/gl/pixel_buffer_object.h"
 
 #include <boost/thread.hpp>
 
 #include <Glee.h>
 #include <SFML/Window.hpp>
-#include <SFML/Graphics.hpp>
 
 #include <windows.h>
 
@@ -44,10 +44,8 @@ namespace caspar { namespace core { namespace ogl{
 struct consumer::implementation : boost::noncopyable
 {	
 	implementation(const frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
-		: format_desc_(format_desc), stretch_(stretch), pbo_index_(0), screen_width_(0), screen_height_(0), windowed_(windowed)
-	{
-		pbos_[0] = pbos_[1] = 0;
-		
+		: index_(0), format_desc_(format_desc), stretch_(stretch), screen_width_(0), screen_height_(0), windowed_(windowed)
+	{		
 #ifdef _WIN32
 		DISPLAY_DEVICE dDevice;			
 		memset(&dDevice,0,sizeof(dDevice));
@@ -94,9 +92,6 @@ struct consumer::implementation : boost::noncopyable
 	{
 		frame_buffer_.push(nullptr),
 		thread_.join();
-
-		if(pbos_[0] && pbos_[1])
-			glDeleteBuffers(2, pbos_);
 	}
 
 	void init()	
@@ -106,7 +101,15 @@ struct consumer::implementation : boost::noncopyable
 		window_.SetPosition(screenX_, screenY_);
 		window_.SetSize(screen_width_, screen_height_);
 		window_.SetActive();
-						
+		GL(glEnable(GL_TEXTURE_2D));
+		GL(glDisable(GL_DEPTH_TEST));		
+		GL(glClearColor(0.0, 0.0, 0.0, 0.0));
+		GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+		glLoadIdentity();
+				
+		wratio_ = static_cast<float>(format_desc_.width)/static_cast<float>(format_desc_.width);
+		hratio_ = static_cast<float>(format_desc_.height)/static_cast<float>(format_desc_.height);
+
 		std::pair<float, float> target_ratio = None();
 		if(stretch_ == ogl::fill)
 			target_ratio = Fill();
@@ -115,19 +118,11 @@ struct consumer::implementation : boost::noncopyable
 		else if(stretch_ == ogl::uniform_to_fill)
 			target_ratio = UniformToFill();
 
-		float wSize = target_ratio.first;
-		float hSize = target_ratio.second;
+		wSize_ = target_ratio.first;
+		hSize_ = target_ratio.second;
 					
-		image_.Create(format_desc_.width, format_desc_.height);
-		sprite_.SetImage(image_);
-		
-		GL(glGenBuffersARB(2, pbos_));
-		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[0]));
-		GL(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW));
-		GL(glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]));
-		GL(glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW));		
-
-		pbo_index_ = 0;
+		pbos_[0].create(format_desc_.width, format_desc_.height);
+		pbos_[1].create(format_desc_.width, format_desc_.height);
 	}
 
 	std::pair<float, float> None()
@@ -165,31 +160,23 @@ struct consumer::implementation : boost::noncopyable
 	}
 
 	void render(const gpu_frame_ptr& frame)
-	{					
-		// Render
-		window_.Clear();
-	
-		image_.Bind();
-		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[pbo_index_]));	
-		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0));
+	{		
+		index_ = (index_ + 1) % 2;
+		int next_index = (index_ + 1) % 2;
+				
+		auto ptr = pbos_[index_].end_write();
+		common::aligned_memcpy(ptr, frame->data(), frame->size());
 
-		window_.Draw(sprite_);
+		GL(glClear(GL_COLOR_BUFFER_BIT));	
+		pbos_[next_index].bind_texture();				
+		glBegin(GL_QUADS);
+				glTexCoord2f(0.0f,	  hratio_);	glVertex2f(-wSize_, -hSize_);
+				glTexCoord2f(wratio_, hratio_);	glVertex2f( wSize_, -hSize_);
+				glTexCoord2f(wratio_, 0.0f);	glVertex2f( wSize_,  hSize_);
+				glTexCoord2f(0.0f,	  0.0f);	glVertex2f(-wSize_,  hSize_);
+		glEnd();
 
-		// Update
-		int nextPboIndex = pbo_index_ ^ 1;
-
-		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[nextPboIndex]));
-		GL(glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, NULL, GL_STREAM_DRAW));
-		GLubyte* ptr = static_cast<GLubyte*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY));
-
-		if(ptr != NULL)			
-		{
-			common::copy(ptr, frame->data(), frame->size());
-			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
-		}
-
-		// Swap
-		pbo_index_ = nextPboIndex;
+		pbos_[next_index].begin_write();
 	}
 			
 	void display(const gpu_frame_ptr& frame)
@@ -228,10 +215,16 @@ struct consumer::implementation : boost::noncopyable
 			}
 		}		
 		while(frame != nullptr);
-	}
-		
+	}		
 
-	GLuint dlist_;
+	float wratio_;
+	float hratio_;
+	
+	float wSize_;
+	float hSize_;
+
+	int index_;
+	common::gl::pixel_buffer_object pbos_[2];
 
 	bool windowed_;
 	unsigned int screen_width_;
@@ -239,9 +232,6 @@ struct consumer::implementation : boost::noncopyable
 	unsigned int screenX_;
 	unsigned int screenY_;
 				
-	GLuint pbos_[2];
-	int pbo_index_;
-
 	stretch stretch_;
 	frame_format_desc format_desc_;
 
@@ -249,9 +239,7 @@ struct consumer::implementation : boost::noncopyable
 	boost::thread thread_;
 	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
 
-	sf::Image image_;
-	sf::Sprite sprite_;
-	sf::RenderWindow window_;
+	sf::Window window_;
 };
 
 consumer::consumer(const frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)

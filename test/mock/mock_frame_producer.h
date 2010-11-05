@@ -1,6 +1,7 @@
 #pragma once
 
-#include <core/frame/gpu_frame.h>
+#include "mock_frame.h"
+
 #include <core/producer/frame_producer.h>
 #include <common/exception/exceptions.h>
 
@@ -11,7 +12,8 @@ class mock_frame_producer : public frame_producer
 {
 public:
 	mock_frame_producer(bool null = false, bool throws = false) 
-		: null_(null), throws_(throws){}
+		: null_(null), throws_(throws), initialized_(false), volume_(100){}
+	void set_volume(short volume) { volume_ = volume;}
 	gpu_frame_ptr get_frame()
 	{ 
 		if(throws_)
@@ -19,7 +21,7 @@ public:
 		if(leading_)
 			return leading_->get_frame();
 		if(!null_)
-			return std::make_shared<gpu_frame>(0, 0);
+			return std::make_shared<mock_frame>(this, volume_);
 		return nullptr;
 	}
 	std::shared_ptr<frame_producer> get_following_producer() const 
@@ -32,12 +34,16 @@ public:
 		return format;
 	}
 	void initialize(const frame_factory_ptr& factory)
-	{}
+	{initialized_ = true;}
 	void set_following_producer(const std::shared_ptr<frame_producer>& following)
 	{following_ = following;}
+
+	bool is_initialized() const { return initialized_;}
 private:
 	std::shared_ptr<frame_producer> following_;
 	std::shared_ptr<frame_producer> leading_;
 	bool null_;
 	bool throws_;
+	bool initialized_;
+	short volume_;
 };

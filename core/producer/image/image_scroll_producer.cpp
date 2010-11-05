@@ -80,7 +80,7 @@ struct image_scroll_producer : public frame_producer
 		unsigned char* pBits = FreeImage_GetBits(pBitmap.get());
 		
 		for (size_t i = 0; i < height; ++i)
-			common::copy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
+			common::aligned_memcpy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
 	}
 
 	gpu_frame_ptr render_frame()

@@ -37,21 +37,19 @@ public:
 
 	gpu_frame_ptr get_frame()
 	{ 
-		frame_ = factory_->create_frame(format_desc_);
-		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
 		return frame_;
 	}
 	const frame_format_desc& get_frame_format_desc() const { return format_desc_; }
 	
 	void initialize(const frame_factory_ptr& factory)
 	{
-		factory_ = factory;
+		frame_ = factory->create_frame(format_desc_);
+		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
 	}
 
 	frame_format_desc format_desc_;
 	gpu_frame_ptr frame_;
 	unsigned int color_value_;
-	frame_factory_ptr factory_;
 };
 
 union Color 

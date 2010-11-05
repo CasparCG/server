@@ -55,7 +55,7 @@ struct transition_producer::implementation : boost::noncopyable
 		
 	gpu_frame_ptr get_frame()
 	{
-		if(++current_frame_ >= info_.duration)
+		if(current_frame_++ >= info_.duration)
 			return nullptr;
 
 		gpu_frame_ptr source;
@@ -128,31 +128,42 @@ struct transition_producer::implementation : boost::noncopyable
 		auto composite = std::make_shared<gpu_composite_frame>();
 		if(src_frame)
 			composite->add(src_frame);
-		else
-			src_frame = std::make_shared<gpu_frame>(0, 0);
 		composite->add(dest_frame);
 
-		if(info_.type == transition_type::mix)
-			dest_frame->alpha(alpha);		
-		else if(info_.type == transition_type::slide)
+		switch(info_.type)
 		{
+		case transition_type::mix: 
+			dest_frame->alpha(alpha);	
+			break;
+		case transition_type::slide:			
 			if(info_.direction == transition_direction::from_left)			
 				dest_frame->translate(-1.0+alpha, 0.0);			
 			else if(info_.direction == transition_direction::from_right)
-				dest_frame->translate(1.0-alpha, 0.0);			
-		}
-		else if(info_.type == transition_type::push)
-		{
+				dest_frame->translate(1.0-alpha, 0.0);		
+			break;
+		case transition_type::push:
 			if(info_.direction == transition_direction::from_left)		
 			{
 				dest_frame->translate(-1.0+alpha, 0.0);
-				src_frame->translate(0.0+alpha, 0.0);
+				if(src_frame)
+					src_frame->translate(0.0+alpha, 0.0);
 			}
 			else if(info_.direction == transition_direction::from_right)
 			{
 				dest_frame->translate(1.0-alpha, 0.0);
-				src_frame->translate(0.0-alpha, 0.0);
+				if(src_frame)
+					src_frame->translate(0.0-alpha, 0.0);
 			}
+			break;
+		}
+
+		if(info_.type == transition_type::mix)
+			dest_frame->alpha(alpha);		
+		else if(info_.type == transition_type::slide)
+		{	
+		}
+		else if(info_.type == transition_type::push)
+		{
 		}
 		else if(info_.type == transition_type::wipe)
 		{

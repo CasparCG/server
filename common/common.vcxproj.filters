@@ -49,6 +49,12 @@
     <ClCompile Include="utility\memory.cpp">
       <Filter>Source\utility</Filter>
     </ClCompile>
+    <ClCompile Include="gl\frame_buffer_object.cpp">
+      <Filter>Source\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="gl\pixel_buffer_object.cpp">
+      <Filter>Source\gl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -100,6 +106,12 @@
       <Filter>Source\utility</Filter>
     </ClInclude>
     <ClInclude Include="gl\gl_check.h">
+      <Filter>Source\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\pixel_buffer_object.h">
+      <Filter>Source\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\frame_buffer_object.h">
       <Filter>Source\gl</Filter>
     </ClInclude>
   </ItemGroup>

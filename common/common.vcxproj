@@ -97,7 +97,9 @@
     <ClInclude Include="config.h" />
     <ClInclude Include="exception\exceptions.h" />
     <ClInclude Include="exception\win32_exception.h" />
+    <ClInclude Include="gl\frame_buffer_object.h" />
     <ClInclude Include="gl\gl_check.h" />
+    <ClInclude Include="gl\pixel_buffer_object.h" />
     <ClInclude Include="io\AsyncEventServer.h" />
     <ClInclude Include="io\ClientInfo.h" />
     <ClInclude Include="io\ProtocolStrategy.h" />
@@ -115,6 +117,14 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="exception\win32_exception.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="gl\frame_buffer_object.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="gl\pixel_buffer_object.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

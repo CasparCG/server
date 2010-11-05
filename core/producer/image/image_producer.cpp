@@ -33,7 +33,7 @@ struct image_producer : public frame_producer
 
 		FreeImage_FlipVertical(bitmap.get());
 		frame_ = factory->create_frame(format_desc_);
-		common::copy(frame_->data(), FreeImage_GetBits(bitmap.get()), frame_->size());
+		common::aligned_memcpy(frame_->data(), FreeImage_GetBits(bitmap.get()), frame_->size());
 	}
 
 	const frame_format_desc& get_frame_format_desc() const { return format_desc_; } 

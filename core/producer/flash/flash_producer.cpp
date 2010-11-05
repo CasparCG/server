@@ -268,7 +268,7 @@ struct flash_producer::implementation
 		}	
 
 		auto frame = factory_->create_frame(format_desc_);
-		common::copy(frame->data(), current_frame_->data(), current_frame_->size());	
+		common::aligned_memcpy(frame->data(), current_frame_->data(), current_frame_->size());	
 
 		return frame;
 	}
