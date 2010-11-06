@@ -63,6 +63,12 @@ struct image_scroll_producer : public frame_producer
 
 		speed_ = static_cast<int>(abs(static_cast<double>(speed_) / format_desc.fps));
 	}
+	
+	~image_scroll_producer()
+	{
+		if(factory_)
+			factory_->release_frames(this);
+	}
 
 	void load_and_pad_image(const std::wstring& filename)
 	{
@@ -80,12 +86,12 @@ struct image_scroll_producer : public frame_producer
 		unsigned char* pBits = FreeImage_GetBits(pBitmap.get());
 		
 		for (size_t i = 0; i < height; ++i)
-			common::aligned_memcpy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
+			common::aligned_parallel_memcpy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
 	}
 
 	gpu_frame_ptr render_frame()
 	{
-		gpu_frame_ptr frame = factory_->create_frame(format_desc_);
+		gpu_frame_ptr frame = factory_->create_frame(format_desc_, this);
 		common::clear(frame->data(), frame->size());
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;

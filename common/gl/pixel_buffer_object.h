@@ -15,8 +15,8 @@ class pixel_buffer_object : boost::noncopyable
 {
 public:
 	pixel_buffer_object();
-	pixel_buffer_object(size_t width, size_t height);
-	void create(size_t width, size_t height);
+	pixel_buffer_object(size_t width, size_t height, GLenum format = GL_BGRA);
+	void create(size_t width, size_t height, GLenum format = GL_BGRA);
 	~pixel_buffer_object(){}
 
 	void begin_write();
@@ -28,7 +28,7 @@ public:
 	void bind_texture();
 
 	size_t width() const;
-	size_t heigth() const;
+	size_t height() const;
 	size_t size() const;
 
 	bool is_reading() const;

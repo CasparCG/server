@@ -14,6 +14,8 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/scalable_allocator.h>
 
+#include <unordered_map>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -30,38 +32,126 @@ extern "C"
 
 namespace caspar { namespace core { namespace ffmpeg{
 	
+pixel_format get_pixel_format(PixelFormat pix_fmt)
+{
+	switch(pix_fmt)
+	{
+		case PIX_FMT_BGRA:		return pixel_format::bgra;
+		case PIX_FMT_ARGB:		return pixel_format::argb;
+		case PIX_FMT_RGBA:		return pixel_format::rgba;
+		case PIX_FMT_ABGR:		return pixel_format::abgr;
+		case PIX_FMT_YUV444P:	return pixel_format::yuv;
+		case PIX_FMT_YUV422P:	return pixel_format::yuv;
+		case PIX_FMT_YUV420P:	return pixel_format::yuv;
+		case PIX_FMT_YUV411P:	return pixel_format::yuv;
+		case PIX_FMT_YUV410P:	return pixel_format::yuv;
+		case PIX_FMT_YUVA420P:	return pixel_format::yuva;
+		default:				return pixel_format::invalid_pixel_format;
+	}
+}
+
 struct video_transformer::implementation : boost::noncopyable
 {
+	~implementation()
+	{
+		if(factory_)
+			factory_->release_frames(this);
+	}
+
 	video_packet_ptr execute(const video_packet_ptr video_packet)
 	{				
 		assert(video_packet);
-		size_t width = video_packet->codec_context->width;
-		size_t height = video_packet->codec_context->height;
+		int width = video_packet->codec_context->width;
+		int height = video_packet->codec_context->height;
 		auto pix_fmt = video_packet->codec_context->pix_fmt;
+		video_packet->decoded_frame;
 
-		if(!sws_context_)
+		switch(pix_fmt)
 		{
-			double param;
-			sws_context_.reset(sws_getContext(width, height, pix_fmt, width, height, 
-												PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+		case PIX_FMT_BGRA:
+		case PIX_FMT_ARGB:
+		case PIX_FMT_RGBA:
+		case PIX_FMT_ABGR:
+			{
+				video_packet->frame = factory_->create_frame(width, height, this);
+				tbb::parallel_for(0, height, 1, [&](int y)
+				{
+					common::aligned_memcpy(
+						video_packet->frame->data()+y*width*4, 
+						video_packet->decoded_frame->data[0] + y*video_packet->decoded_frame->linesize[0], 
+						width*4); 
+				});
+				video_packet->frame->set_pixel_format(get_pixel_format(pix_fmt));
+						
+				break;
+			}
+		case PIX_FMT_YUV444P:
+		case PIX_FMT_YUV422P:
+		case PIX_FMT_YUV420P:
+		case PIX_FMT_YUV411P:
+		case PIX_FMT_YUV410P:
+		case PIX_FMT_YUVA420P:
+			{			
+				// Get linesizes
+				AVPicture dummy_pict;	
+				avpicture_fill(&dummy_pict, nullptr, pix_fmt, width, height);
+			
+				// Find chroma height
+				size_t size2 = dummy_pict.data[2] - dummy_pict.data[1];
+				size_t h2 = size2/dummy_pict.linesize[1];
+
+				planar_frame_dimension data_size;
+				data_size[0] = std::make_pair(dummy_pict.linesize[0], height);
+				data_size[1] = std::make_pair(dummy_pict.linesize[1], h2);
+				data_size[2] = std::make_pair(dummy_pict.linesize[2], h2);
+				data_size[3] = std::make_pair(0, 0);
+
+				if(pix_fmt == PIX_FMT_YUVA420P)			
+					data_size[3] = std::make_pair(dummy_pict.linesize[3], height);
+
+				video_packet->frame = factory_->create_frame(data_size, this);
+				video_packet->frame->set_pixel_format(get_pixel_format(pix_fmt));
+
+				tbb::parallel_for(0, static_cast<int>(data_size.size()), 1, [&](int n)
+				{
+					tbb::parallel_for(0, static_cast<int>(data_size[n].second), 1, [&](int y)
+					{
+						memcpy(
+							video_packet->frame->data(n)+y*dummy_pict.linesize[n], 
+							video_packet->decoded_frame->data[n] + y*video_packet->decoded_frame->linesize[n], 
+							dummy_pict.linesize[n]);
+					});
+				});
+				break;
+			}		
+		default:	
+			{
+				video_packet->frame = factory_->create_frame(width, height, this);
+				video_packet->frame->set_pixel_format(pixel_format::bgra);
+
+				AVFrame av_frame;	
+				avcodec_get_frame_defaults(&av_frame);
+				avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), video_packet->frame->data(), PIX_FMT_BGRA, width, height);
+
+				if(!sws_context_)
+				{
+					double param;
+					sws_context_.reset(sws_getContext(width, height, pix_fmt, width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+				}		
+		 
+				sws_scale(sws_context_.get(), video_packet->decoded_frame->data, video_packet->decoded_frame->linesize, 0, height, av_frame.data, av_frame.linesize);		
+			}
 		}
 
-		//size_t pic_size = avpicture_get_size(PIX_FMT_YUV411P, width, height);
-
-		//size_t pic_size_sqr = static_cast<size_t>(sqrt(static_cast<double>(pic_size)))/4;
-		//pic_size_sqr += pic_size_sqr % 2;
-
-		video_packet->frame = factory_->create_frame(width, height);
-		AVFrame av_frame;	
-		avcodec_get_frame_defaults(&av_frame);
-		size_t size = avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), video_packet->frame->data(), PIX_FMT_BGRA, width, height);
-		 
-		sws_scale(sws_context_.get(), video_packet->decoded_frame->data, video_packet->decoded_frame->linesize, 0, height, av_frame.data, av_frame.linesize);
-				
 		if(video_packet->codec->id == CODEC_ID_DVVIDEO) // Move up one field
 			video_packet->frame->translate(0.0f, 1.0/static_cast<double>(video_packet->format_desc.height));
 		
-		return video_packet;	
+		return video_packet;
+	}
+
+	void initialize(const frame_factory_ptr& factory)
+	{
+		factory_ = factory;
 	}
 
 	frame_factory_ptr factory_;
@@ -70,5 +160,5 @@ struct video_transformer::implementation : boost::noncopyable
 
 video_transformer::video_transformer() : impl_(new implementation()){}
 video_packet_ptr video_transformer::execute(const video_packet_ptr& video_packet){return impl_->execute(video_packet);}
-void video_transformer::initialize(const frame_factory_ptr& factory){impl_->factory_ = factory; }
+void video_transformer::initialize(const frame_factory_ptr& factory){impl_->initialize(factory); }
 }}}

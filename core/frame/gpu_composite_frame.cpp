@@ -37,11 +37,11 @@ struct gpu_composite_frame::implementation : boost::noncopyable
 		boost::range::for_each(frames_, std::mem_fn(&gpu_frame::end_read));	
 	}
 
-	void draw()
+	void draw(const gpu_frame_transform_ptr& transform)
 	{
 		glPushMatrix();
 		glTranslated(self_->x()*2.0, self_->y()*2.0, 0.0);
-		boost::range::for_each(frames_, std::mem_fn(&gpu_frame::draw));
+		boost::range::for_each(frames_, std::bind(&gpu_frame::draw, std::placeholders::_1, transform));
 		glPopMatrix();
 	}
 		
@@ -69,7 +69,7 @@ struct gpu_composite_frame::implementation : boost::noncopyable
 		}
 	}
 
-	unsigned char* data()
+	unsigned char* data(size_t index)
 	{
 		BOOST_THROW_EXCEPTION(invalid_operation());
 	}
@@ -87,8 +87,8 @@ void gpu_composite_frame::begin_write(){impl_->begin_write();}
 void gpu_composite_frame::end_write(){impl_->end_write();}	
 void gpu_composite_frame::begin_read(){impl_->begin_read();}
 void gpu_composite_frame::end_read(){impl_->end_read();}
-void gpu_composite_frame::draw(){impl_->draw();}
-unsigned char* gpu_composite_frame::data(){return impl_->data();}
+void gpu_composite_frame::draw(const gpu_frame_transform_ptr& transform){impl_->draw(transform);}
+unsigned char* gpu_composite_frame::data(size_t index){return impl_->data(index);}
 void gpu_composite_frame::add(const gpu_frame_ptr& frame){impl_->add(frame);}
 
 gpu_frame_ptr gpu_composite_frame::interlace(const gpu_frame_ptr& frame1,

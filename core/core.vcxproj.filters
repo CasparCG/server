@@ -132,9 +132,6 @@
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
       <Filter>Source\consumer\decklink\interop</Filter>
     </ClInclude>
-    <ClInclude Include="consumer\frame_consumer.h">
-      <Filter>Source\consumer</Filter>
-    </ClInclude>
     <ClInclude Include="producer\color\color_producer.h">
       <Filter>Source\producer\color</Filter>
     </ClInclude>
@@ -233,6 +230,12 @@
     </ClInclude>
     <ClInclude Include="config.h">
       <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\gpu_frame_transform.h">
+      <Filter>Source\frame\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\frame_consumer.h">
+      <Filter>Source\consumer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -349,6 +352,9 @@
     </ClCompile>
     <ClCompile Include="renderer\display_device.cpp">
       <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\gpu_frame_transform.cpp">
+      <Filter>Source\frame\gpu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

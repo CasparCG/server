@@ -19,10 +19,17 @@ struct image_producer : public frame_producer
 {
 	image_producer(const std::wstring& filename, const frame_format_desc& format_desc) : format_desc_(format_desc), filename_(filename)	{}
 
+	~image_producer()
+	{
+		if(factory_)
+			factory_->release_frames(this);
+	}
+
 	gpu_frame_ptr get_frame(){return frame_;}
 
 	void initialize(const frame_factory_ptr& factory)
 	{
+		factory_ = factory;
 		auto bitmap = load_image(filename_);
 		if(FreeImage_GetWidth(bitmap.get()) != format_desc_.width || FreeImage_GetHeight(bitmap.get()) == format_desc_.height)
 		{
@@ -32,12 +39,13 @@ struct image_producer : public frame_producer
 		}
 
 		FreeImage_FlipVertical(bitmap.get());
-		frame_ = factory->create_frame(format_desc_);
-		common::aligned_memcpy(frame_->data(), FreeImage_GetBits(bitmap.get()), frame_->size());
+		frame_ = factory->create_frame(format_desc_, this);
+		common::aligned_parallel_memcpy(frame_->data(), FreeImage_GetBits(bitmap.get()), frame_->size());
 	}
 
 	const frame_format_desc& get_frame_format_desc() const { return format_desc_; } 
 
+	frame_factory_ptr factory_;
 	std::wstring filename_;
 	frame_format_desc format_desc_;
 	gpu_frame_ptr frame_;

@@ -10,9 +10,34 @@ namespace caspar { namespace common { namespace gl {
 																																							
 struct pixel_buffer_object::implementation : boost::noncopyable
 {
-	implementation(size_t width, size_t height) 
-		: width_(width), height_(height), size_(width*height*4), pbo_(0),
-			texture_(0), writing_(false), reading_(false), mapped_(false){}
+	implementation(size_t width, size_t height, GLenum format) 
+		: width_(width), height_(height), pbo_(0), format_(format),
+			texture_(0), writing_(false), reading_(false), mapped_(false)
+	{
+		switch(format)
+		{
+		case GL_RGBA:
+		case GL_BGRA:
+			internal_ = GL_RGBA8;
+			size_ = width*height*4;
+			break;
+		case GL_BGR:
+			internal_ = GL_RGB8;
+			size_ = width*height*3;
+			break;
+		case GL_LUMINANCE_ALPHA:
+			internal_ = GL_LUMINANCE_ALPHA;
+			size_ = width*height*2;
+			break;
+		case GL_LUMINANCE:
+		case GL_ALPHA:
+			internal_ = GL_LUMINANCE;
+			size_ = width*height*1;
+			break;
+		default:
+			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("format"));
+		}
+	}
 
 	~implementation()
 	{
@@ -45,7 +70,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
 			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 
-			GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0, GL_BGRA, 
+			GL(glTexImage2D(GL_TEXTURE_2D, 0, internal_, width_, height_, 0, format_, 
 								GL_UNSIGNED_BYTE, NULL));
 		}
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
@@ -58,7 +83,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
 		mapped_ = false;
 		bind_texture();
-		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, GL_BGRA, 
+		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, format_, 
 							GL_UNSIGNED_BYTE, NULL));
 		unbind_pbo(GL_PIXEL_UNPACK_BUFFER);
 		writing_ = true;
@@ -118,14 +143,17 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 	bool mapped_;
 	bool writing_;
 	bool reading_;
+
+	GLint internal_;
+	GLenum format_;
 };
 
 pixel_buffer_object::pixel_buffer_object(){}
-pixel_buffer_object::pixel_buffer_object(size_t width, size_t height) 
-	: impl_(new implementation(width, height)){}
-void pixel_buffer_object::create(size_t width, size_t height)
+pixel_buffer_object::pixel_buffer_object(size_t width, size_t height, GLenum format) 
+	: impl_(new implementation(width, height, format)){}
+void pixel_buffer_object::create(size_t width, size_t height, GLenum format)
 {
-	impl_.reset(new implementation(width, height));
+	impl_.reset(new implementation(width, height, format));
 }
 void pixel_buffer_object::begin_write() { impl_->begin_write();}
 void* pixel_buffer_object::end_write() {return impl_->end_write();} 
@@ -133,7 +161,7 @@ void pixel_buffer_object::begin_read() { impl_->begin_read();}
 void* pixel_buffer_object::end_read(){return impl_->end_read();}
 void pixel_buffer_object::bind_texture() {impl_->bind_texture();}
 size_t pixel_buffer_object::width() const {return impl_->width_;}
-size_t pixel_buffer_object::heigth() const {return impl_->height_;}
+size_t pixel_buffer_object::height() const {return impl_->height_;}
 size_t pixel_buffer_object::size() const {return impl_->size_;}
 bool pixel_buffer_object::is_reading() const { return impl_->reading_;}
 bool pixel_buffer_object::is_writing() const { return impl_->writing_;}

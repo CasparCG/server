@@ -9,7 +9,7 @@
 
 namespace caspar { namespace common {
 	
-void* memcpy_SSE2(void* dest, const void* source, size_t num)
+void* aligned_memcpy(void* dest, const void* source, size_t num)
 {	
 	__asm
 	{
@@ -53,14 +53,14 @@ void* memcpy_SSE2(void* dest, const void* source, size_t num)
 	return dest;
 }
 
-void* aligned_memcpy(void* dest, const void* source, size_t num)
+void* aligned_parallel_memcpy(void* dest, const void* source, size_t num)
 {	
 	if(num < 128)
 		return memcpy(dest, source, num);
 
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, num/128), [&](const tbb::blocked_range<size_t>& r)
 	{
-		memcpy_SSE2(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128);
+		aligned_memcpy(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128);
 	}, tbb::affinity_partitioner());
 
 	return dest;

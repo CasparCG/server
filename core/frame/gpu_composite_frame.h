@@ -19,12 +19,12 @@ public:
 									const gpu_frame_ptr& frame2, video_mode mode);
 	
 private:
-	virtual unsigned char* data();
+	virtual unsigned char* data(size_t index);
 	virtual void begin_write();
 	virtual void end_write();
 	virtual void begin_read();
 	virtual void end_read();
-	virtual void draw();
+	virtual void draw(const gpu_frame_transform_ptr& transform);
 
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

@@ -87,9 +87,6 @@
     <ClInclude Include="concurrency\executor.h">
       <Filter>Source\concurrency</Filter>
     </ClInclude>
-    <ClInclude Include="concurrency\function_task.h">
-      <Filter>Source\concurrency</Filter>
-    </ClInclude>
     <ClInclude Include="config.h">
       <Filter>Source</Filter>
     </ClInclude>

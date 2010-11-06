@@ -34,8 +34,10 @@ public:
 		
 	void push(const std::vector<gpu_frame_ptr>& frames);
 	void pop(gpu_frame_ptr& frame);
-
-	gpu_frame_ptr create_frame(size_t width, size_t height);
+	
+	void release_frames(void* tag);
+	gpu_frame_ptr create_frame(size_t width, size_t height, void* tag);
+	gpu_frame_ptr create_frame(const planar_frame_dimension& data_size, void* tag);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

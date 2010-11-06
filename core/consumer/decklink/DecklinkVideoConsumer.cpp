@@ -129,7 +129,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 				std::shared_ptr<DecklinkVideoFrame> pTempFrame = GetReservedFrame();
 				if(pTempFrame && frame->size() == pTempFrame->size())
 				{
-					common::aligned_memcpy(pTempFrame->data(), frame->data(), pTempFrame->size());
+					common::aligned_parallel_memcpy(pTempFrame->data(), frame->data(), pTempFrame->size());
 					DoRender(pTempFrame);
 				}
 				else

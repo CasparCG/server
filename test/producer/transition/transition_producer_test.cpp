@@ -59,7 +59,7 @@ TEST(transition_producer, null_source_get_frame_cut)
 	ASSERT_TRUE(producer.get_frame() == nullptr);
 }
 
-TEST(transition_producer, initialize) 
+TEST(transition_producer, initialize)
 {
 	auto dest = std::make_shared<mock_frame_producer>();
 	
