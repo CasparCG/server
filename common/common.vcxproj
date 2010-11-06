@@ -92,7 +92,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="concurrency\executor.h" />
-    <ClInclude Include="concurrency\function_task.h" />
     <ClInclude Include="concurrency\Thread.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="exception\exceptions.h" />

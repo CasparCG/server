@@ -35,18 +35,27 @@ public:
 	explicit color_producer(unsigned int color_value, const frame_format_desc& format_desc) 
 		: color_value_(color_value), format_desc_(format_desc){}
 
+	~color_producer()
+	{
+		if(factory_)
+			factory_->release_frames(this);
+	}
+
 	gpu_frame_ptr get_frame()
 	{ 
 		return frame_;
 	}
+
 	const frame_format_desc& get_frame_format_desc() const { return format_desc_; }
 	
 	void initialize(const frame_factory_ptr& factory)
 	{
-		frame_ = factory->create_frame(format_desc_);
+		factory_ = factory;
+		frame_ = factory->create_frame(format_desc_, this);
 		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
 	}
 
+	frame_factory_ptr factory_;
 	frame_format_desc format_desc_;
 	gpu_frame_ptr frame_;
 	unsigned int color_value_;

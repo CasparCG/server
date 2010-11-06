@@ -168,6 +168,7 @@
     <ClInclude Include="frame\frame_fwd.h" />
     <ClInclude Include="frame\gpu_frame.h" />
     <ClInclude Include="frame\gpu_frame_processor.h" />
+    <ClInclude Include="frame\gpu_frame_transform.h" />
     <ClInclude Include="producer\color\color_producer.h" />
     <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h" />
     <ClInclude Include="producer\ffmpeg\ffmpeg_producer.h" />
@@ -243,6 +244,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="frame\gpu_frame_processor.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="frame\gpu_frame_transform.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
     </ClCompile>

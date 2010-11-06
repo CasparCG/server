@@ -2,6 +2,7 @@
 
 #include "gpu_frame_processor.h"
 
+#include "gpu_frame_transform.h"
 #include "gpu_frame.h"
 #include "gpu_composite_frame.h"
 #include "frame_format.h"
@@ -29,6 +30,7 @@
 #include <functional>
 #include <unordered_map>
 #include <numeric>
+#include <math.h>
 
 namespace caspar { namespace core {
 	
@@ -60,6 +62,8 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 			// Fill pipeline
 			for(int n = 0; n < 2; ++n)
 				composite(std::vector<gpu_frame_ptr>());
+
+			transform_ = std::make_shared<gpu_frame_transform>();
 		});
 	}
 
@@ -105,7 +109,7 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 
 				// 2. Draw to framebuffer and start asynchronous DMA transfer 
 				// to page-locked memory.
-				writing_[next_index]->draw();
+				writing_[next_index]->draw(transform_);
 				
 				// Create an output frame
 				auto temp_frame = create_output_frame();
@@ -140,9 +144,8 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 		});
 	}
 			
-	gpu_frame_ptr create_frame(size_t width, size_t height)
+	gpu_frame_ptr do_create_frame(size_t key, const std::function<gpu_frame*()>& constructor)
 	{
-		size_t key = width | (height << 16);
 		auto& pool = writing_pools_[key];
 		
 		gpu_frame_ptr frame;
@@ -150,7 +153,7 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 		{
 			frame = executor_.invoke([&]
 			{
-				return std::shared_ptr<gpu_frame>(new gpu_frame(width, height));
+				return std::shared_ptr<gpu_frame>(constructor());
 			});
 		}
 		
@@ -165,12 +168,35 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 			executor_.begin_invoke(destructor);
 		});
 	}
+
+	gpu_frame_ptr create_frame(size_t width, size_t height, void* tag)
+	{
+		size_t key = reinterpret_cast<size_t>(tag);
+		return do_create_frame(key, [&]
+		{
+			return new gpu_frame(width, height);
+		});
+	}
+	
+	gpu_frame_ptr create_frame(const planar_frame_dimension& data_size, void* tag)
+	{
+		size_t key = reinterpret_cast<size_t>(tag);
+		return do_create_frame(key, [&]
+		{
+			return new gpu_frame(data_size);
+		});
+	}
 	
 	void pop(gpu_frame_ptr& frame)
 	{
 		output_.pop(frame);
 	}
-			
+
+	void release_frames(void* tag)
+	{
+		writing_pools_[reinterpret_cast<size_t>(tag)].clear();
+	}
+				
 	typedef tbb::concurrent_bounded_queue<gpu_frame_ptr> gpu_frame_queue;
 	tbb::concurrent_unordered_map<size_t, gpu_frame_queue> writing_pools_;
 	gpu_frame_queue reading_pool_;	
@@ -189,11 +215,14 @@ struct gpu_frame_processor::implementation : boost::noncopyable
 	common::executor executor_;
 
 	common::gl::frame_buffer_object fbo_;
+
+	gpu_frame_transform_ptr transform_;
 };
 	
 gpu_frame_processor::gpu_frame_processor(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 void gpu_frame_processor::push(const std::vector<gpu_frame_ptr>& frames){ impl_->composite(frames);}
 void gpu_frame_processor::pop(gpu_frame_ptr& frame){impl_->pop(frame);}
-gpu_frame_ptr gpu_frame_processor::create_frame(size_t width, size_t height){return impl_->create_frame(width, height);}
-
+gpu_frame_ptr gpu_frame_processor::create_frame(size_t width, size_t height, void* tag){return impl_->create_frame(width, height, tag);}
+gpu_frame_ptr gpu_frame_processor::create_frame(const planar_frame_dimension& data_size, void* tag){return impl_->create_frame(data_size, tag);}
+void gpu_frame_processor::release_frames(void* tag){impl_->release_frames(tag);}
 }}

@@ -64,40 +64,55 @@ GLubyte lower_pattern[] = {
 																																						
 struct gpu_frame::implementation : boost::noncopyable
 {
-	implementation(size_t width, size_t height) 
-		: pbo_(width, height), data_(nullptr), width_(width), height_(height), 
-			size_(width*height*4), reading_(false), alpha_(1.0f), 
-			x_(0.0f), y_(0.0f), mode_(video_mode::progressive), 
-			texcoords_(0.0, 1.0, 1.0, 0.0), writing_(false), mapped_(false)
-	{	
+	implementation(size_t width, size_t height)
+		: reading_(false), alpha_(1.0f), 	x_(0.0f), y_(0.0f), mode_(video_mode::progressive), 
+			texcoords_(0.0, 1.0, 1.0, 0.0), writing_(false), mapped_(false), pix_format_(pixel_format::bgra)
+	{			
+		data_.resize(1, 0);
+		pbo_.push_back(std::make_shared<common::gl::pixel_buffer_object>(width, height, GL_BGRA));
 		if(width > 0 && height > 0)
 			end_write();
+	}
+
+	implementation(const planar_frame_dimension& data_size)
+		: reading_(false), alpha_(1.0f), 	x_(0.0f), y_(0.0f), mode_(video_mode::progressive), 
+			texcoords_(0.0, 1.0, 1.0, 0.0), writing_(false), mapped_(false), pix_format_(pixel_format::bgra)
+	{			
+		data_.resize(data_size.size(), 0);
+		for(size_t n = 0; n < data_size.size() && data_size[n].first > 0 && data_size[n].second > 0; ++n)
+			pbo_.push_back(std::make_shared<common::gl::pixel_buffer_object>(data_size[n].first, data_size[n].second, GL_LUMINANCE));
+		end_write();
 	}
 	
 	void begin_write()
 	{
-		data_ = nullptr;
-		pbo_.begin_write();		
+		data_ = std::vector<unsigned char*>(4, 0);
+		for(size_t n = 0; n < pbo_.size(); ++n)
+			pbo_[n]->begin_write();		
 	}
 
 	void end_write()
 	{
-		data_ = static_cast<unsigned char*>(pbo_.end_write());
+		for(size_t n = 0; n < pbo_.size(); ++n)
+			data_[n] = static_cast<unsigned char*>(pbo_[n]->end_write());
 	}
 	
 	void begin_read()
 	{	
-		data_ = nullptr;
-		pbo_.begin_read();
+		data_ = std::vector<unsigned char*>(4, 0);
+		for(size_t n = 0; n < pbo_.size(); ++n)
+			pbo_[n]->begin_read();	
 	}
 
 	void end_read()
 	{
-		data_ = static_cast<unsigned char*>(pbo_.end_read());
+		for(size_t n = 0; n < pbo_.size(); ++n)
+			data_[n] = static_cast<unsigned char*>(pbo_[n]->end_read());
 	}
 
-	void draw()
+	void draw(const gpu_frame_transform_ptr& transform)
 	{
+		transform->set_pixel_format(pix_format_);
 		glPushMatrix();
 		glTranslated(x_*2.0, y_*2.0, 0.0);
 		glColor4d(1.0, 1.0, 1.0, alpha_);
@@ -109,7 +124,11 @@ struct gpu_frame::implementation : boost::noncopyable
 		else if(mode_ == video_mode::lower)
 			glPolygonStipple(lower_pattern);
 
-		pbo_.bind_texture();
+		for(size_t n = 0; n < pbo_.size(); ++n)
+		{
+			glActiveTexture(GL_TEXTURE0+n);
+			pbo_[n]->bind_texture();
+		}
 		glBegin(GL_QUADS);
 			glTexCoord2d(texcoords_.left,	texcoords_.bottom); glVertex2d(-1.0, -1.0);
 			glTexCoord2d(texcoords_.right,	texcoords_.bottom); glVertex2d( 1.0, -1.0);
@@ -119,11 +138,11 @@ struct gpu_frame::implementation : boost::noncopyable
 		glPopMatrix();
 	}
 		
-	unsigned char* data()
+	unsigned char* data(size_t index)
 	{
-		if(data_ == nullptr)
+		if(pbo_.size() < index || data_[index] == nullptr)
 			BOOST_THROW_EXCEPTION(invalid_operation());
-		return data_;
+		return data_[index];
 	}
 
 	void reset()
@@ -136,12 +155,10 @@ struct gpu_frame::implementation : boost::noncopyable
 		mode_      = video_mode::progressive;
 	}
 
-	common::gl::pixel_buffer_object pbo_;
+	std::vector<common::gl::pixel_buffer_object_ptr> pbo_;
+	std::vector<unsigned char*> data_;
+
 	gpu_frame* self_;
-	unsigned char* data_;
-	size_t width_;
-	size_t height_;
-	size_t size_;
 
 	bool reading_;
 	bool writing_;
@@ -154,20 +171,23 @@ struct gpu_frame::implementation : boost::noncopyable
 	double y_;
 	video_mode mode_;
 	rectangle texcoords_;
+	pixel_format pix_format_;
 };
 
 gpu_frame::gpu_frame(size_t width, size_t height) 
 	: impl_(new implementation(width, height)){}
+gpu_frame::gpu_frame(const planar_frame_dimension& data_size)
+	: impl_(new implementation(data_size)){}
 void gpu_frame::begin_write(){impl_->begin_write();}
 void gpu_frame::end_write(){impl_->end_write();}	
 void gpu_frame::begin_read(){impl_->begin_read();}
 void gpu_frame::end_read(){impl_->end_read();}
-void gpu_frame::draw(){impl_->draw();}
-unsigned char* gpu_frame::data(){return impl_->data();}
-size_t gpu_frame::size() const { return impl_->size_; }
-size_t gpu_frame::width() const { return impl_->width_;}
-size_t gpu_frame::height() const { return impl_->height_;}
-const std::vector<short>& gpu_frame::audio_data() const{return impl_->audio_data_;}	
+void gpu_frame::draw(const gpu_frame_transform_ptr& transform){impl_->draw(transform);}
+void gpu_frame::set_pixel_format(pixel_format format) {impl_->pix_format_ = format;}
+unsigned char* gpu_frame::data(size_t index){return impl_->data(index);}
+size_t gpu_frame::size(size_t index) const { return impl_->pbo_.at(index)->size(); }
+size_t gpu_frame::width(size_t index) const { return impl_->pbo_.at(index)->width();}
+size_t gpu_frame::height(size_t index) const { return impl_->pbo_.at(index)->height();}
 std::vector<short>& gpu_frame::audio_data() { return impl_->audio_data_; }
 void gpu_frame::reset(){impl_->reset();}
 double gpu_frame::alpha() const{ return impl_->alpha_;}

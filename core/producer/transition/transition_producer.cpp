@@ -35,8 +35,7 @@ namespace caspar { namespace core {
 
 struct transition_producer::implementation : boost::noncopyable
 {
-	implementation(const frame_producer_ptr& dest, const transition_info& info, 
-					const frame_format_desc& format_desc) 
+	implementation(const frame_producer_ptr& dest, const transition_info& info, const frame_format_desc& format_desc) 
 		: current_frame_(0), info_(info), format_desc_(format_desc), dest_producer_(dest)
 	{
 		if(!dest)
@@ -87,7 +86,8 @@ struct transition_producer::implementation : boost::noncopyable
 			CASPAR_LOG(warning) << "Removed renderer from transition.";
 		}
 
-		if(frame == nullptr && producer != nullptr && producer->get_following_producer() != nullptr)
+		if(frame == nullptr && producer != nullptr && 
+			producer->get_following_producer() != nullptr)
 		{
 			auto following = producer->get_following_producer();
 			following->initialize(factory_);
@@ -106,8 +106,7 @@ struct transition_producer::implementation : boost::noncopyable
 		for(size_t n = 0; n < frame->audio_data().size(); ++n)
 			frame->audio_data()[n] = static_cast<short>((static_cast<int>(frame->audio_data()[n])*volume)>>8);
 	}
-			
-
+		
 	gpu_frame_ptr compose(const gpu_frame_ptr& dest_frame, gpu_frame_ptr src_frame) 
 	{	
 		if(info_.type == transition_type::cut)		
@@ -124,24 +123,18 @@ struct transition_producer::implementation : boost::noncopyable
 			[&]{set_volume(dest_frame, volume);},
 			[&]{set_volume(src_frame, 256-volume);}
 		);
-				
-		auto composite = std::make_shared<gpu_composite_frame>();
-		if(src_frame)
-			composite->add(src_frame);
-		composite->add(dest_frame);
-
-		switch(info_.type)
-		{
-		case transition_type::mix: 
-			dest_frame->alpha(alpha);	
-			break;
-		case transition_type::slide:			
+		
+		if(info_.type == transition_type::mix)
+			dest_frame->alpha(alpha);		
+		else if(info_.type == transition_type::slide)
+		{	
 			if(info_.direction == transition_direction::from_left)			
 				dest_frame->translate(-1.0+alpha, 0.0);			
 			else if(info_.direction == transition_direction::from_right)
 				dest_frame->translate(1.0-alpha, 0.0);		
-			break;
-		case transition_type::push:
+		}
+		else if(info_.type == transition_type::push)
+		{
 			if(info_.direction == transition_direction::from_left)		
 			{
 				dest_frame->translate(-1.0+alpha, 0.0);
@@ -154,16 +147,6 @@ struct transition_producer::implementation : boost::noncopyable
 				if(src_frame)
 					src_frame->translate(0.0-alpha, 0.0);
 			}
-			break;
-		}
-
-		if(info_.type == transition_type::mix)
-			dest_frame->alpha(alpha);		
-		else if(info_.type == transition_type::slide)
-		{	
-		}
-		else if(info_.type == transition_type::push)
-		{
 		}
 		else if(info_.type == transition_type::wipe)
 		{
@@ -178,7 +161,11 @@ struct transition_producer::implementation : boost::noncopyable
 				dest_frame->texcoords(rectangle(1.0-alpha, 1.0, 2.0-alpha, 0.0));
 			}
 		}
-
+						
+		auto composite = std::make_shared<gpu_composite_frame>();
+		if(src_frame)
+			composite->add(src_frame);
+		composite->add(dest_frame);
 		return composite;
 	}
 		
