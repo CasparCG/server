@@ -1,7 +1,7 @@
 #include "../StdAfx.h"
 
 #include "gpu_composite_frame.h"
-#include "../../common/gl/gl_check.h"
+#include "../../common/gl/utility.h"
 #include "../../common/utility/memory.h"
 
 #include <boost/range/algorithm.hpp>
@@ -37,16 +37,19 @@ struct gpu_composite_frame::implementation : boost::noncopyable
 		boost::range::for_each(frames_, std::mem_fn(&gpu_frame::end_read));	
 	}
 
-	void draw(const gpu_frame_transform_ptr& transform)
+	void draw(const gpu_frame_shader_ptr& shader)
 	{
 		glPushMatrix();
 		glTranslated(self_->x()*2.0, self_->y()*2.0, 0.0);
-		boost::range::for_each(frames_, std::bind(&gpu_frame::draw, std::placeholders::_1, transform));
+		boost::range::for_each(frames_, std::bind(&gpu_frame::draw, std::placeholders::_1, shader));
 		glPopMatrix();
 	}
 		
 	void add(const gpu_frame_ptr& frame)
 	{
+		if(frame == nullptr || frame == gpu_frame::null())
+			return;
+
 		frames_.push_back(frame);
 
 		if(self_->audio_data().empty())
@@ -69,7 +72,7 @@ struct gpu_composite_frame::implementation : boost::noncopyable
 		}
 	}
 
-	unsigned char* data(size_t index)
+	unsigned char* data(size_t)
 	{
 		BOOST_THROW_EXCEPTION(invalid_operation());
 	}
@@ -79,7 +82,9 @@ struct gpu_composite_frame::implementation : boost::noncopyable
 	size_t size_;
 };
 
-#pragma warning (disable : 4355)
+#if defined(_MSC_VER)
+#pragma warning (disable : 4355) // 'this' : used in base member initializer list
+#endif
 
 gpu_composite_frame::gpu_composite_frame() 
 	: gpu_frame(0, 0), impl_(new implementation(this)){}
@@ -87,7 +92,7 @@ void gpu_composite_frame::begin_write(){impl_->begin_write();}
 void gpu_composite_frame::end_write(){impl_->end_write();}	
 void gpu_composite_frame::begin_read(){impl_->begin_read();}
 void gpu_composite_frame::end_read(){impl_->end_read();}
-void gpu_composite_frame::draw(const gpu_frame_transform_ptr& transform){impl_->draw(transform);}
+void gpu_composite_frame::draw(const gpu_frame_shader_ptr& shader){impl_->draw(shader);}
 unsigned char* gpu_composite_frame::data(size_t index){return impl_->data(index);}
 void gpu_composite_frame::add(const gpu_frame_ptr& frame){impl_->add(frame);}
 

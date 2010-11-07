@@ -17,12 +17,10 @@
 
 #include "../utility/string_convert.h"
 
-namespace caspar{ namespace log{
+namespace caspar { namespace log {
 	
 namespace internal{
-
 void init();
-
 }
 
 void add_file_sink(const std::wstring& folder);

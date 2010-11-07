@@ -23,7 +23,7 @@ struct layer::implementation
 		background_ = frame_producer;
 		if(option == load_option::preview)		
 		{
-			last_frame_ = frame_producer->get_frame();
+			last_frame_ = frame_producer->render_frame();
 			if(last_frame_ != nullptr)
 				last_frame_->audio_data().clear(); // No audio
 			active_ = nullptr;	
@@ -62,28 +62,28 @@ struct layer::implementation
 		last_frame_ = nullptr;
 	}
 	
-	gpu_frame_ptr get_frame()
+	gpu_frame_ptr render_frame()
 	{		
 		if(!active_ || is_paused_)
 			return last_frame_;
 
 		try
 		{
-			last_frame_ = active_->get_frame();
+			last_frame_ = active_->render_frame();
+
+			if(last_frame_ == nullptr)
+			{
+				active_ = active_->get_following_producer();
+				last_frame_ = render_frame();
+			}
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			active_ = nullptr;
-			last_frame_ = nullptr;
 			CASPAR_LOG(warning) << "Removed producer from layer.";
 		}
 
-		if(last_frame_ == nullptr && active_ != nullptr)
-		{
-			active_ = active_->get_following_producer();
-			last_frame_ = get_frame();
-		}
 		return last_frame_;
 	}	
 		
@@ -107,7 +107,7 @@ void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 void layer::clear(){impl_->clear();}
-gpu_frame_ptr layer::get_frame() {return impl_->get_frame();}
+gpu_frame_ptr layer::render_frame() {return impl_->render_frame();}
 frame_producer_ptr layer::active() const { return impl_->active_;}
 frame_producer_ptr layer::background() const { return impl_->background_;}
 }}}

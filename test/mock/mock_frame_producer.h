@@ -14,12 +14,12 @@ public:
 	mock_frame_producer(bool null = false, bool throws = false) 
 		: null_(null), throws_(throws), initialized_(false), volume_(100){}
 	void set_volume(short volume) { volume_ = volume;}
-	gpu_frame_ptr get_frame()
+	gpu_frame_ptr render_frame()
 	{ 
 		if(throws_)
 			BOOST_THROW_EXCEPTION(caspar_exception());
 		if(leading_)
-			return leading_->get_frame();
+			return leading_->render_frame();
 		if(!null_)
 			return std::make_shared<mock_frame>(this, volume_);
 		return nullptr;

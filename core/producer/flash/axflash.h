@@ -188,7 +188,7 @@ EXTERN_C const IID IID_IShockwaveFlash;
         virtual /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE put_Movie( 
             /* [in] */ BSTR pVal) = 0;
         
-        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE get_FrameNum( 
+        virtual /* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE render_frameNum( 
             /* [retval][out] */ long *pVal) = 0;
         
         virtual /* [helpstring][propput][id] */ HRESULT STDMETHODCALLTYPE put_FrameNum( 
@@ -549,7 +549,7 @@ EXTERN_C const IID IID_IShockwaveFlash;
             IShockwaveFlash * This,
             /* [in] */ BSTR pVal);
         
-        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *get_FrameNum )( 
+        /* [helpstring][propget][id] */ HRESULT ( STDMETHODCALLTYPE *render_frameNum )( 
             IShockwaveFlash * This,
             /* [retval][out] */ long *pVal);
         
@@ -959,8 +959,8 @@ EXTERN_C const IID IID_IShockwaveFlash;
 #define IShockwaveFlash_put_Movie(This,pVal)	\
     (This)->lpVtbl -> put_Movie(This,pVal)
 
-#define IShockwaveFlash_get_FrameNum(This,pVal)	\
-    (This)->lpVtbl -> get_FrameNum(This,pVal)
+#define IShockwaveFlash_render_frameNum(This,pVal)	\
+    (This)->lpVtbl -> render_frameNum(This,pVal)
 
 #define IShockwaveFlash_put_FrameNum(This,pVal)	\
     (This)->lpVtbl -> put_FrameNum(This,pVal)
@@ -1389,12 +1389,12 @@ void __RPC_STUB IShockwaveFlash_put_Movie_Stub(
     DWORD *_pdwStubPhase);
 
 
-/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_get_FrameNum_Proxy( 
+/* [helpstring][propget][id] */ HRESULT STDMETHODCALLTYPE IShockwaveFlash_render_frameNum_Proxy( 
     IShockwaveFlash * This,
     /* [retval][out] */ long *pVal);
 
 
-void __RPC_STUB IShockwaveFlash_get_FrameNum_Stub(
+void __RPC_STUB IShockwaveFlash_render_frameNum_Stub(
     IRpcStubBuffer *This,
     IRpcChannelBuffer *_pRpcChannelBuffer,
     PRPC_MESSAGE _pRpcMessage,

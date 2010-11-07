@@ -25,9 +25,7 @@
 
 #pragma once
 
-#ifdef _MSC_VER
-#pragma warning (disable : 4482)
-#endif
+#include "../common/compiler/vs/disable_silly_warnings.h"
 
 #if !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
 #define AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_
@@ -53,10 +51,16 @@
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_invoke.h>
+#include <tbb/parallel_for.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
+
+#include <GLee.h>
+
+#include <SFML/Window.hpp>
+#include <SFML/Audio.hpp>
 
 #include "../common/utility/string_convert.h"
 

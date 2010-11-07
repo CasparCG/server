@@ -23,25 +23,19 @@
 #include <vector>
 
 #include "frame_fwd.h"
-#include "frame_factory.h"
 
 namespace caspar { namespace core {
 
-class gpu_frame_processor : public frame_factory,  boost::noncopyable
+class gpu_frame_renderer :  boost::noncopyable
 {
 public:
-	gpu_frame_processor(const frame_format_desc& format_desc);
+	gpu_frame_renderer(frame_factory& factory, const frame_format_desc& format_desc_);
 		
-	void push(const std::vector<gpu_frame_ptr>& frames);
-	void pop(gpu_frame_ptr& frame);
-	
-	void release_frames(void* tag);
-	gpu_frame_ptr create_frame(size_t width, size_t height, void* tag);
-	gpu_frame_ptr create_frame(const planar_frame_dimension& data_size, void* tag);
+	gpu_frame_ptr render(const gpu_frame_ptr& frames);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<gpu_frame_processor> gpu_frame_processor_ptr;
+typedef std::shared_ptr<gpu_frame_renderer> gpu_frame_renderer_ptr;
 
 }}

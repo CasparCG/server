@@ -43,7 +43,7 @@ public:
 	static const int STOP_TIMEOUT = 2000;
 
 	flash_producer(const std::wstring& filename, const frame_format_desc& format_desc);
-	gpu_frame_ptr get_frame();
+	gpu_frame_ptr render_frame();
 	const frame_format_desc& get_frame_format_desc() const;
 	void initialize(const frame_factory_ptr& factory);
 

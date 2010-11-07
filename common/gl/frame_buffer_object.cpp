@@ -2,7 +2,7 @@
 
 #include "frame_buffer_object.h"
 
-#include "../../common/gl/gl_check.h"
+#include "../../common/gl/utility.h"
 
 #include <Glee.h>
 

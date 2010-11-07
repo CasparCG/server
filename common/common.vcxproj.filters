@@ -23,6 +23,12 @@
     <Filter Include="Source\gl">
       <UniqueIdentifier>{0d94bbc2-e196-4618-a90b-19392a3a0a8e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\compiler">
+      <UniqueIdentifier>{63471750-a430-4167-9b49-31b7a068a913}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\compiler\vs">
+      <UniqueIdentifier>{28c25c8a-1277-4d2c-9e85-5af33f9938ea}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -102,14 +108,17 @@
     <ClInclude Include="utility\memory.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="gl\gl_check.h">
-      <Filter>Source\gl</Filter>
-    </ClInclude>
     <ClInclude Include="gl\pixel_buffer_object.h">
       <Filter>Source\gl</Filter>
     </ClInclude>
     <ClInclude Include="gl\frame_buffer_object.h">
       <Filter>Source\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\utility.h">
+      <Filter>Source\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="compiler\vs\disable_silly_warnings.h">
+      <Filter>Source\compiler\vs</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

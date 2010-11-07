@@ -52,7 +52,7 @@ namespace caspar { namespace core { namespace flash {
 
 using namespace boost::assign;
 
-// NOTE: This is needed in order to make CComObject work since this is not a real ATL project
+// NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
@@ -62,8 +62,8 @@ struct flash_producer::implementation
 		: flashax_container_(nullptr), filename_(filename), self_(self), format_desc_(format_desc),
 			bitmap_pool_(new bitmap_pool), executor_([=]{run();}), invalid_count_(0)
 	{	
-    	if(!boost::filesystem::exists(filename))
-    		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
+		if(!boost::filesystem::exists(filename))
+			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
 
 		frame_buffer_.set_capacity(flash_producer::DEFAULT_BUFFER_SIZE);		
 	}
@@ -232,11 +232,11 @@ struct flash_producer::implementation
 			gpu_frame_ptr result;
 
 			if(is_progressive)							
-				result = render_frame();		
+				result = do_render_frame();		
 			else
 			{
-				gpu_frame_ptr frame1 = render_frame();
-				gpu_frame_ptr frame2 = render_frame();
+				gpu_frame_ptr frame1 = do_render_frame();
+				gpu_frame_ptr frame2 = do_render_frame();
 				result = gpu_composite_frame::interlace(frame1, frame2, format_desc_.mode);
 			}
 
@@ -245,7 +245,7 @@ struct flash_producer::implementation
 		}
 	}
 		
-	gpu_frame_ptr render_frame()
+	gpu_frame_ptr do_render_frame()
 	{
 		flashax_container_->Tick();
 		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
@@ -274,7 +274,7 @@ struct flash_producer::implementation
 		return frame;
 	}
 		
-	gpu_frame_ptr get_frame()
+	gpu_frame_ptr render_frame()
 	{
 		if(!frame_buffer_.try_pop(last_frame_) && is_empty_)
 			return gpu_frame::null();
@@ -309,28 +309,27 @@ struct flash_producer::implementation
 };
 
 flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc) : impl_(new implementation(this, filename, format_desc)){}
-gpu_frame_ptr flash_producer::get_frame(){return impl_->get_frame();}
+gpu_frame_ptr flash_producer::render_frame(){return impl_->render_frame();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
 const frame_format_desc& flash_producer::get_frame_format_desc() const { return impl_->format_desc_; } 
 void flash_producer::initialize(const frame_factory_ptr& factory) { impl_->initialize(factory);}
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)
 {
-	if(boost::filesystem::exists(template_name + TEXT(".ft"))) 
-		return template_name + TEXT(".ft");
+	if(boost::filesystem::exists(template_name + L".ft")) 
+		return template_name + L".ft";
 	
-	if(boost::filesystem::exists(template_name + TEXT(".ct")))
-		return template_name + TEXT(".ct");
+	if(boost::filesystem::exists(template_name + L".ct"))
+		return template_name + L".ct";
 
-	return TEXT("");
+	return L"";
 }
 
 flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc)
 {
 	// TODO: Check for flash support
 	auto filename = params[0];
-	std::wstring result_filename = common::find_file(server::media_folder() + filename, 
-											list_of(L"swf"));
+	std::wstring result_filename = common::find_file(server::media_folder() + filename, list_of(L"swf"));
 
 	return result_filename.empty() ? nullptr : std::make_shared<flash_producer>(result_filename, format_desc);
 }

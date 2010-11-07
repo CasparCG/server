@@ -16,19 +16,12 @@
 
 #include <unordered_map>
 
-#if defined(_MSC_VER)
-#pragma warning (push)
-#pragma warning (disable : 4244)
-#endif
 extern "C" 
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
 	#include <libswscale/swscale.h>
 }
-#if defined(_MSC_VER)
-#pragma warning (pop)
-#endif
 
 namespace caspar { namespace core { namespace ffmpeg{
 	
@@ -40,18 +33,20 @@ pixel_format get_pixel_format(PixelFormat pix_fmt)
 		case PIX_FMT_ARGB:		return pixel_format::argb;
 		case PIX_FMT_RGBA:		return pixel_format::rgba;
 		case PIX_FMT_ABGR:		return pixel_format::abgr;
-		case PIX_FMT_YUV444P:	return pixel_format::yuv;
-		case PIX_FMT_YUV422P:	return pixel_format::yuv;
-		case PIX_FMT_YUV420P:	return pixel_format::yuv;
-		case PIX_FMT_YUV411P:	return pixel_format::yuv;
-		case PIX_FMT_YUV410P:	return pixel_format::yuv;
-		case PIX_FMT_YUVA420P:	return pixel_format::yuva;
+		case PIX_FMT_YUV444P:	return pixel_format::ycbcr;
+		case PIX_FMT_YUV422P:	return pixel_format::ycbcr;
+		case PIX_FMT_YUV420P:	return pixel_format::ycbcr;
+		case PIX_FMT_YUV411P:	return pixel_format::ycbcr;
+		case PIX_FMT_YUV410P:	return pixel_format::ycbcr;
+		case PIX_FMT_YUVA420P:	return pixel_format::ycbcra;
 		default:				return pixel_format::invalid_pixel_format;
 	}
 }
 
 struct video_transformer::implementation : boost::noncopyable
 {
+	implementation() : sw_warning_(false){}
+
 	~implementation()
 	{
 		if(factory_)
@@ -81,7 +76,7 @@ struct video_transformer::implementation : boost::noncopyable
 						video_packet->decoded_frame->data[0] + y*video_packet->decoded_frame->linesize[0], 
 						width*4); 
 				});
-				video_packet->frame->set_pixel_format(get_pixel_format(pix_fmt));
+				video_packet->frame->pix_fmt(get_pixel_format(pix_fmt));
 						
 				break;
 			}
@@ -100,21 +95,24 @@ struct video_transformer::implementation : boost::noncopyable
 				size_t size2 = dummy_pict.data[2] - dummy_pict.data[1];
 				size_t h2 = size2/dummy_pict.linesize[1];
 
-				planar_frame_dimension data_size;
-				data_size[0] = std::make_pair(dummy_pict.linesize[0], height);
-				data_size[1] = std::make_pair(dummy_pict.linesize[1], h2);
-				data_size[2] = std::make_pair(dummy_pict.linesize[2], h2);
-				data_size[3] = std::make_pair(0, 0);
+				gpu_frame_desc desc;
+				desc.planes[0] = plane(dummy_pict.linesize[0], height, 1);
+				desc.planes[1] = plane(dummy_pict.linesize[1], h2, 1);
+				desc.planes[2] = plane(dummy_pict.linesize[2], h2, 1);
+				desc.plane_count = 3;
 
 				if(pix_fmt == PIX_FMT_YUVA420P)			
-					data_size[3] = std::make_pair(dummy_pict.linesize[3], height);
-
-				video_packet->frame = factory_->create_frame(data_size, this);
-				video_packet->frame->set_pixel_format(get_pixel_format(pix_fmt));
-
-				tbb::parallel_for(0, static_cast<int>(data_size.size()), 1, [&](int n)
 				{
-					tbb::parallel_for(0, static_cast<int>(data_size[n].second), 1, [&](int y)
+					desc.planes[3] = plane(dummy_pict.linesize[3], height, 1);
+					desc.plane_count = 4;
+				}
+
+				desc.pix_fmt = get_pixel_format(pix_fmt);
+				video_packet->frame = factory_->create_frame(desc, this);
+
+				tbb::parallel_for(0, static_cast<int>(desc.plane_count), 1, [&](int n)
+				{
+					tbb::parallel_for(0, static_cast<int>(desc.planes[n].height), 1, [&](int y)
 					{
 						memcpy(
 							video_packet->frame->data(n)+y*dummy_pict.linesize[n], 
@@ -126,8 +124,12 @@ struct video_transformer::implementation : boost::noncopyable
 			}		
 		default:	
 			{
+				if(!sw_warning_)
+				{
+					CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
+					sw_warning_ = true;
+				}
 				video_packet->frame = factory_->create_frame(width, height, this);
-				video_packet->frame->set_pixel_format(pixel_format::bgra);
 
 				AVFrame av_frame;	
 				avcodec_get_frame_defaults(&av_frame);
@@ -156,6 +158,7 @@ struct video_transformer::implementation : boost::noncopyable
 
 	frame_factory_ptr factory_;
 	std::shared_ptr<SwsContext> sws_context_;
+	bool sw_warning_;
 };
 
 video_transformer::video_transformer() : impl_(new implementation()){}

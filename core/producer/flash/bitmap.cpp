@@ -39,9 +39,13 @@ struct bitmap::implementation : boost::noncopyable
 		bitmapInfo.bmiHeader.biClrImportant = 0;
 		bitmapInfo.bmiHeader.biClrUsed = 0;
 		bitmapInfo.bmiHeader.biCompression = BI_RGB;
+#ifdef _MSC_VER
 	#pragma warning(disable:4146)
+#endif
 		bitmapInfo.bmiHeader.biHeight = -height;
+#ifdef _MSC_VER
 	#pragma warning(default:4146)
+#endif
 		bitmapInfo.bmiHeader.biPlanes = 1;
 		bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFO);
 		bitmapInfo.bmiHeader.biWidth = width;

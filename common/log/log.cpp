@@ -1,10 +1,8 @@
 #include "../stdafx.h"
 
 #if defined(_MSC_VER)
-#pragma warning (disable : 4100)
-#pragma warning (disable : 4127) // conditional expression is constant
-#pragma warning (disable : 4512)
-#pragma warning (disable : 4714) // marked as __forceinline not inlined
+#pragma warning (disable : 4100) // 'identifier' : unreferenced formal parameter
+#pragma warning (disable : 4512) // 'class' : assignment operator could not be generated
 #endif
 
 #include "log.h"

@@ -33,10 +33,52 @@ class frame_producer : boost::noncopyable
 {
 public:
 	virtual ~frame_producer(){}	
-	virtual gpu_frame_ptr get_frame() = 0;
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	/// \fn	virtual gpu_frame_ptr :::render_frame() = 0;
+	///
+	/// \brief	Renders a frame.
+	/// 		
+	/// \note	This function is run in through the tbb task_schedular and shall be *non blocking*.
+	///
+	/// \return	The frame. 
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	virtual gpu_frame_ptr render_frame() = 0;
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	/// \fn	virtual std::shared_ptr<frame_producer> :::get_following_producer() const
+	///
+	/// \brief	Gets the producer which will replace the current producer on EOF. 
+	///
+	/// \return	The following producer, or nullptr if there is no following producer. 
+	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual std::shared_ptr<frame_producer> get_following_producer() const { return nullptr; }
-	virtual void set_leading_producer(const std::shared_ptr<frame_producer>&) {}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	/// \fn	virtual void :::set_leading_producer(const std::shared_ptr<frame_producer>& producer)
+	///
+	/// \brief	Sets the producer which was run before the current producer. 
+	///
+	/// \param	producer	The leading producer.
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	virtual void set_leading_producer(const std::shared_ptr<frame_producer>& /*producer*/) {}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	/// \fn	virtual const frame_format_desc& :::get_frame_format_desc() const = 0;
+	///
+	/// \brief	Gets the frame format description. 
+	///
+	/// \return	The frame format description. 
+	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual const frame_format_desc& get_frame_format_desc() const = 0;
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	/// \fn	virtual void :::initialize(const frame_factory_ptr& factory) = 0;
+	///
+	/// \brief	Provides the frame factory used to create frames and initializes the producer. 
+	///
+	/// \param	factory	The frame factory. 
+	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual void initialize(const frame_factory_ptr& factory) = 0;
 };
 typedef std::shared_ptr<frame_producer> frame_producer_ptr;

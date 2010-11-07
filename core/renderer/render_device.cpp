@@ -1,16 +1,12 @@
 #include "..\StdAfx.h"
 
-#ifdef _MSC_VER
-#pragma warning (disable : 4244)
-#endif
-
 #include "render_device.h"
 
 #include "display_device.h"
 #include "layer.h"
 
 #include "../frame/frame_format.h"
-#include "../frame/gpu_frame_processor.h"
+#include "../frame/gpu_frame_device.h"
 
 #include "../../common/utility/scope_exit.h"
 #include "../../common/utility/memory.h"
@@ -33,18 +29,15 @@ std::vector<gpu_frame_ptr> render_frames(std::map<int, layer>& layers)
 		auto it = layers.begin();
 		std::advance(it, r.begin());
 		for(size_t i = r.begin(); i != r.end(); ++i, ++it)
-			frames[i] = it->second.get_frame();
+			frames[i] = it->second.render_frame();
 	});		
 	return frames;
 }
 
 struct render_device::implementation : boost::noncopyable
 {	
-	implementation(const frame_format_desc& format_desc, unsigned int index, 
-					const std::vector<frame_consumer_ptr>& consumers)  
-		: display_device_(new display_device(format_desc, consumers)), 
-							fmt_(format_desc), 
-							frame_processor_(new gpu_frame_processor(format_desc))
+	implementation(const frame_format_desc& format_desc, const std::vector<frame_consumer_ptr>& consumers)  
+		: display_device_(new display_device(format_desc, consumers)), fmt_(format_desc), frame_processor_(new gpu_frame_device(format_desc))
 	{	
 		is_running_ = true;
 		
@@ -76,16 +69,14 @@ struct render_device::implementation : boost::noncopyable
 				}
 				frame_processor_->push(next_frames);
 								
-				gpu_frame_ptr frame;		
-				frame_processor_->pop(frame);
+				gpu_frame_ptr frame = frame_processor_->pop();		
 				display_device_->display(frame);
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				layers_.clear();
-				CASPAR_LOG(error) 
-					<< "Unexpected exception. Cleared layers in render-device";
+				CASPAR_LOG(error) << "Unexpected exception. Cleared layers in render-device";
 			}
 		}
 
@@ -95,8 +86,7 @@ struct render_device::implementation : boost::noncopyable
 	void load(int render_layer, const frame_producer_ptr& producer, load_option option)
 	{
 		if(producer->get_frame_format_desc() != fmt_)
-			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("pProducer") 
-									<< msg_info("Invalid frame format"));
+			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("producer") << msg_info("Invalid frame format"));
 
 		producer->initialize(frame_processor_);
 		tbb::mutex::scoped_lock lock(layers_mutex_);
@@ -165,11 +155,11 @@ struct render_device::implementation : boost::noncopyable
 	
 	tbb::atomic<bool> is_running_;	
 
-	gpu_frame_processor_ptr frame_processor_;
+	gpu_frame_device_ptr frame_processor_;
 };
 
-render_device::render_device(const frame_format_desc& format_desc, unsigned int index, const std::vector<frame_consumer_ptr>& consumers) 
-	: impl_(new implementation(format_desc, index, consumers)){}
+render_device::render_device(const frame_format_desc& format_desc, const std::vector<frame_consumer_ptr>& consumers) 
+	: impl_(new implementation(format_desc, consumers)){}
 void render_device::load(int render_layer, const frame_producer_ptr& pProducer, load_option option){impl_->load(render_layer, pProducer, option);}
 void render_device::pause(int render_layer){impl_->pause(render_layer);}
 void render_device::play(int render_layer){impl_->play(render_layer);}

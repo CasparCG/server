@@ -24,7 +24,7 @@ private:
 	virtual void end_write();
 	virtual void begin_read();
 	virtual void end_read();
-	virtual void draw(const gpu_frame_transform_ptr& transform);
+	virtual void draw(const gpu_frame_shader_ptr& shader);
 
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

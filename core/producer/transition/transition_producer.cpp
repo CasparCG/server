@@ -52,7 +52,7 @@ struct transition_producer::implementation : boost::noncopyable
 		source_producer_ = producer;
 	}
 		
-	gpu_frame_ptr get_frame()
+	gpu_frame_ptr render_frame()
 	{
 		if(current_frame_++ >= info_.duration)
 			return nullptr;
@@ -62,14 +62,14 @@ struct transition_producer::implementation : boost::noncopyable
 
 		tbb::parallel_invoke
 		(
-			[&]{dest = get_frame(dest_producer_);},
-			[&]{source = get_frame(source_producer_);}
+			[&]{dest = render_frame(dest_producer_);},
+			[&]{source = render_frame(source_producer_);}
 		);
 
 		return compose(dest, source);
 	}
 
-	gpu_frame_ptr get_frame(frame_producer_ptr& producer)
+	gpu_frame_ptr render_frame(frame_producer_ptr& producer)
 	{
 		if(producer == nullptr)
 			return nullptr;
@@ -77,7 +77,7 @@ struct transition_producer::implementation : boost::noncopyable
 		gpu_frame_ptr frame;
 		try
 		{
-			frame = producer->get_frame();
+			frame = producer->render_frame();
 		}
 		catch(...)
 		{
@@ -93,7 +93,7 @@ struct transition_producer::implementation : boost::noncopyable
 			following->initialize(factory_);
 			following->set_leading_producer(producer);
 			producer = following;
-			return get_frame(producer);
+			return render_frame(producer);
 		}
 		return frame;
 	}
@@ -188,7 +188,7 @@ struct transition_producer::implementation : boost::noncopyable
 
 transition_producer::transition_producer(const frame_producer_ptr& dest, const transition_info& info, const frame_format_desc& format_desc) 
 	: impl_(new implementation(dest, info, format_desc)){}
-gpu_frame_ptr transition_producer::get_frame(){return impl_->get_frame();}
+gpu_frame_ptr transition_producer::render_frame(){return impl_->render_frame();}
 frame_producer_ptr transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const frame_producer_ptr& producer) { impl_->set_leading_producer(producer); }
 const frame_format_desc& transition_producer::get_frame_format_desc() const { return impl_->format_desc_; } 

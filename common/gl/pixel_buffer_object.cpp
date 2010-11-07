@@ -3,7 +3,7 @@
 #include "pixel_buffer_object.h"
 
 #include "../../common/exception/exceptions.h"
-#include "../../common/gl/gl_check.h"
+#include "../../common/gl/utility.h"
 #include "../../common/utility/memory.h"
 
 namespace caspar { namespace common { namespace gl {
@@ -35,8 +35,10 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 			size_ = width*height*1;
 			break;
 		default:
-			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("format"));
+			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported format.") << arg_name_info("format"));
 		}
+		if(width < 2 || height < 2)
+			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Invalid dimensions.")  << arg_name_info("width/height"));
 	}
 
 	~implementation()

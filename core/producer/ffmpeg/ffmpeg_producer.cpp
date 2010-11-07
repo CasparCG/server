@@ -81,7 +81,7 @@ public:
 		video_transformer_->initialize(factory);
 	}
 		
-	gpu_frame_ptr get_frame()
+	gpu_frame_ptr render_frame()
 	{
 		while(ouput_channel_.empty() && !input_->is_eof())
 		{										

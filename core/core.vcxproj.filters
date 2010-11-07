@@ -168,9 +168,6 @@
     <ClInclude Include="frame\gpu_frame.h">
       <Filter>Source\frame\gpu</Filter>
     </ClInclude>
-    <ClInclude Include="frame\gpu_frame_processor.h">
-      <Filter>Source\frame\gpu</Filter>
-    </ClInclude>
     <ClInclude Include="frame\frame_factory.h">
       <Filter>Source\frame</Filter>
     </ClInclude>
@@ -231,11 +228,20 @@
     <ClInclude Include="config.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="frame\gpu_frame_transform.h">
-      <Filter>Source\frame\gpu</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\frame_consumer.h">
       <Filter>Source\consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\gpu_frame_desc.h">
+      <Filter>Source\frame\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\gpu_frame_device.h">
+      <Filter>Source\frame\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\gpu_frame_renderer.h">
+      <Filter>Source\frame\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\gpu_frame_shader.h">
+      <Filter>Source\frame\gpu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -311,9 +317,6 @@
     <ClCompile Include="protocol\media.cpp">
       <Filter>Source\protocol</Filter>
     </ClCompile>
-    <ClCompile Include="frame\gpu_frame_processor.cpp">
-      <Filter>Source\frame\gpu</Filter>
-    </ClCompile>
     <ClCompile Include="frame\gpu_frame.cpp">
       <Filter>Source\frame\gpu</Filter>
     </ClCompile>
@@ -353,7 +356,13 @@
     <ClCompile Include="renderer\display_device.cpp">
       <Filter>Source\renderer</Filter>
     </ClCompile>
-    <ClCompile Include="frame\gpu_frame_transform.cpp">
+    <ClCompile Include="frame\gpu_frame_device.cpp">
+      <Filter>Source\frame\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\gpu_frame_renderer.cpp">
+      <Filter>Source\frame\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\gpu_frame_shader.cpp">
       <Filter>Source\frame\gpu</Filter>
     </ClCompile>
   </ItemGroup>

@@ -44,7 +44,7 @@ TEST(transition_producer, null_dest_get_frame)
 	transition_producer producer(nullptr, transition_info(), test_format);
 	producer.set_leading_producer(source);
 
-	ASSERT_TRUE(producer.get_frame() == nullptr);
+	ASSERT_TRUE(producer.render_frame() == nullptr);
 }
 
 TEST(transition_producer, null_source_get_frame_cut) 
@@ -56,7 +56,7 @@ TEST(transition_producer, null_source_get_frame_cut)
 
 	transition_producer producer(dest, info, test_format);
 
-	ASSERT_TRUE(producer.get_frame() == nullptr);
+	ASSERT_TRUE(producer.render_frame() == nullptr);
 }
 
 TEST(transition_producer, initialize)
@@ -83,8 +83,8 @@ TEST(transition_producer, duration)
 
 	for(int n = 0; n < info.duration; ++n)
 	{
-		auto frame = producer.get_frame();
+		auto frame = producer.render_frame();
 		ASSERT_TRUE(std::static_pointer_cast<mock_frame>(frame)->tag == source.get());
 	}
-	ASSERT_TRUE(producer.get_frame() == nullptr);
+	ASSERT_TRUE(producer.render_frame() == nullptr);
 }

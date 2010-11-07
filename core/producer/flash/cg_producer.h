@@ -11,7 +11,7 @@ class cg_producer : public frame_producer
 public:
 	cg_producer(const frame_format_desc& format_desc);
 	
-	gpu_frame_ptr get_frame();
+	gpu_frame_ptr render_frame();
 
 	void clear();
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));
