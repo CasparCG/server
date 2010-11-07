@@ -65,7 +65,7 @@ struct consumer::implementation
 		//blue_set_connector_property(pBlueDevice, 1, video_routing);
 		//blue_detach_from_device(&pBlueDevice);
 		
-		vid_fmt_ = ULONG_MAX;
+		vid_fmt_ = VID_FMT_INVALID;
 		auto desiredVideoFormat = vid_fmt_from_frame_format(format_desc_.format);
 		int videoModeCount = sdk_->count_video_mode();
 		for(int videoModeIndex=1; videoModeIndex <= videoModeCount; ++videoModeIndex) 
@@ -74,7 +74,7 @@ struct consumer::implementation
 			if(videoMode == desiredVideoFormat) 
 				vid_fmt_ = videoMode;			
 		}
-		if(vid_fmt_ == ULONG_MAX)
+		if(vid_fmt_ == VID_FMT_INVALID)
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set videomode."));
 		
 		// Set default video output channel
@@ -287,11 +287,11 @@ struct consumer::implementation
 	boost::thread thread_;
 	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
 	
-	unsigned long mem_fmt_;
-	unsigned long upd_fmt_;
-	unsigned long vid_fmt_; 
-	unsigned long res_fmt_; 
-	unsigned long engine_mode_;
+	unsigned long	mem_fmt_;
+	unsigned long	upd_fmt_;
+	EVideoMode		vid_fmt_; 
+	unsigned long	res_fmt_; 
+	unsigned long	engine_mode_;
 
 	gpu_frame_ptr transferring_frame_;
 

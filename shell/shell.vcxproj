@@ -28,9 +28,6 @@
     <None Include="caspar.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="My Amplifier Results\r000hs\r000hs.ampl" />
-    <None Include="My Amplifier Results\r001hs\r001hs.ampl" />
-    <None Include="My Amplifier Results\r002hs\r002hs.ampl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8C26C94F-8092-4769-8D84-DEA479721C5B}</ProjectGuid>
@@ -169,6 +166,8 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
+      <LinkTimeCodeGeneration>
+      </LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>

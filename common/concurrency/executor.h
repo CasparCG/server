@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../exception/exceptions.h"
+#include "../exception/win32_exception.h"
 
 #include <boost/thread.hpp>
 
@@ -14,8 +15,9 @@ namespace caspar { namespace common {
 class executor
 {
 public:
-	explicit executor(const std::function<void()>& run_func = nullptr) : is_running_()
+	explicit executor(const std::function<void()>& run_func = nullptr)
 	{
+		is_running_ = false;
 		run_func_ = run_func != nullptr ? run_func : [=]{run();};
 	}
 
@@ -99,6 +101,7 @@ private:
 
 	virtual void run()
 	{
+		win32_exception::install_handler();
 		while(is_running_)
 			execute();
 	}

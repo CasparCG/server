@@ -41,7 +41,7 @@ public:
 			factory_->release_frames(this);
 	}
 
-	gpu_frame_ptr get_frame()
+	gpu_frame_ptr render_frame()
 	{ 
 		return frame_;
 	}
@@ -52,7 +52,7 @@ public:
 	{
 		factory_ = factory;
 		frame_ = factory->create_frame(format_desc_, this);
-		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
+		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, format_desc_.size / sizeof(unsigned long));
 	}
 
 	frame_factory_ptr factory_;

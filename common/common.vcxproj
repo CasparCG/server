@@ -67,7 +67,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>
@@ -91,13 +91,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
     <ClInclude Include="concurrency\executor.h" />
     <ClInclude Include="concurrency\Thread.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="exception\exceptions.h" />
     <ClInclude Include="exception\win32_exception.h" />
     <ClInclude Include="gl\frame_buffer_object.h" />
-    <ClInclude Include="gl\gl_check.h" />
+    <ClInclude Include="gl\utility.h" />
     <ClInclude Include="gl\pixel_buffer_object.h" />
     <ClInclude Include="io\AsyncEventServer.h" />
     <ClInclude Include="io\ClientInfo.h" />

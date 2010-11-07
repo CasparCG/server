@@ -11,11 +11,9 @@ namespace caspar { namespace core { namespace renderer {
 class render_device : boost::noncopyable
 {	
 public:
-	render_device(const frame_format_desc& format_desc, unsigned int index, 
-					const std::vector<frame_consumer_ptr>& consumers);
+	render_device(const frame_format_desc& format_desc, const std::vector<frame_consumer_ptr>& consumers);
 	
-	void load(int render_layer, const frame_producer_ptr& producer, 
-				load_option option = load_option::none);	
+	void load(int render_layer, const frame_producer_ptr& producer, load_option option = load_option::none);	
 	void pause(int render_layer);
 	void play(int render_layer);
 	void stop(int render_layer);

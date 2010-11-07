@@ -13,8 +13,6 @@
 
 #include <errno.h>
 #include <system_error>
-
-#pragma warning(disable : 4482)
 		
 namespace caspar { namespace core { namespace ffmpeg{
 		

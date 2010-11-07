@@ -23,8 +23,10 @@ inline std::wstring widen(const std::wstring& str, const std::locale&)
 	return str;
 }
 
+#if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4244)
+#endif
        
 inline std::string narrow(const std::wstring& str, const std::locale& locale = std::locale())
 {
@@ -41,7 +43,9 @@ inline std::string narrow(const std::string& str, const std::locale&)
 	return str ;
 }
 
+#if defined(_MSC_VER)
 #pragma warning(pop)
+#endif
 //
 //inline std::string narrow_to_latin1(const std::wstring& wideString)
 //{

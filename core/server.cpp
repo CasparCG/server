@@ -111,7 +111,7 @@ struct server::implementation : boost::noncopyable
 				}
 			}
 			
-			channels_.push_back(std::make_shared<renderer::render_device>(format_desc, channels_.size() + 1, consumers));
+			channels_.push_back(std::make_shared<renderer::render_device>(format_desc, consumers));
 		}
 	}
 		

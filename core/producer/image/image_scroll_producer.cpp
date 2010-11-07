@@ -89,10 +89,10 @@ struct image_scroll_producer : public frame_producer
 			common::aligned_parallel_memcpy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
 	}
 
-	gpu_frame_ptr render_frame()
+	gpu_frame_ptr do_render_frame()
 	{
 		gpu_frame_ptr frame = factory_->create_frame(format_desc_, this);
-		common::clear(frame->data(), frame->size());
+		common::clear(frame->data(), format_desc_.size);
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
 		const int delta_y = direction_ == direction::Up ? speed_ : -speed_;
@@ -134,13 +134,13 @@ struct image_scroll_producer : public frame_producer
 		return frame;
 	}
 		
-	gpu_frame_ptr get_frame()
+	gpu_frame_ptr render_frame()
 	{		
 		if(format_desc_.mode != video_mode::progressive)				
 		{
 			gpu_frame_ptr frame1;
 			gpu_frame_ptr frame2;
-			tbb::parallel_invoke([&]{ frame1 = render_frame(); }, [&]{ frame2 = render_frame(); });
+			tbb::parallel_invoke([&]{ frame1 = do_render_frame(); }, [&]{ frame2 = do_render_frame(); });
 			return gpu_composite_frame::interlace(frame1, frame2, format_desc_.mode);
 		}			
 

@@ -17,13 +17,13 @@ inline bool is_epoch_card(int card_type)
 			card_type == CRD_BLUE_EPOCH_ULTRA;
 }
 
-inline unsigned long vid_fmt_from_frame_format(const frame_format& fmt) 
+inline EVideoMode vid_fmt_from_frame_format(const frame_format& fmt) 
 {
 	switch(fmt)
 	{
 	case frame_format::pal:			return VID_FMT_PAL;
 	case frame_format::ntsc:		return VID_FMT_NTSC;
-	case frame_format::x576p2500:	return ULONG_MAX;	//not supported
+	case frame_format::x576p2500:	return VID_FMT_INVALID;	//not supported
 	case frame_format::x720p5000:	return VID_FMT_720P_5000;
 	case frame_format::x720p5994:	return VID_FMT_720P_5994;
 	case frame_format::x720p6000:	return VID_FMT_720P_6000;
@@ -35,7 +35,7 @@ inline unsigned long vid_fmt_from_frame_format(const frame_format& fmt)
 	case frame_format::x1080p2500:	return VID_FMT_1080P_2500;
 	case frame_format::x1080p2997:	return VID_FMT_1080P_2997;
 	case frame_format::x1080p3000:	return VID_FMT_1080P_3000;
-	default:						return ULONG_MAX;
+	default:						return VID_FMT_INVALID;
 	}
 }
 

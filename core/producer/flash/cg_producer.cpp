@@ -239,9 +239,9 @@ public:
 		flash_producer_->param(proxy_->invoke(layer, label));
 	}
 
-	gpu_frame_ptr get_frame()
+	gpu_frame_ptr render_frame()
 	{
-		return flash_producer_ ? flash_producer_->get_frame() : nullptr;
+		return flash_producer_ ? flash_producer_->render_frame() : nullptr;
 	}
 		
 	void initialize(const frame_factory_ptr& factory)
@@ -274,7 +274,7 @@ cg_producer_ptr get_default_cg_producer(const renderer::render_device_ptr& rende
 }
 
 cg_producer::cg_producer(const frame_format_desc& fmtDesc) : impl_(new implementation(fmtDesc)){}
-gpu_frame_ptr cg_producer::get_frame(){return impl_->get_frame();}
+gpu_frame_ptr cg_producer::render_frame(){return impl_->render_frame();}
 void cg_producer::clear(){impl_->clear();}
 void cg_producer::add(int layer, const std::wstring& templateName,  bool playOnLoad, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, templateName, playOnLoad, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}

@@ -25,7 +25,7 @@ struct image_producer : public frame_producer
 			factory_->release_frames(this);
 	}
 
-	gpu_frame_ptr get_frame(){return frame_;}
+	gpu_frame_ptr render_frame(){return frame_;}
 
 	void initialize(const frame_factory_ptr& factory)
 	{
@@ -40,7 +40,7 @@ struct image_producer : public frame_producer
 
 		FreeImage_FlipVertical(bitmap.get());
 		frame_ = factory->create_frame(format_desc_, this);
-		common::aligned_parallel_memcpy(frame_->data(), FreeImage_GetBits(bitmap.get()), frame_->size());
+		common::aligned_parallel_memcpy(frame_->data(), FreeImage_GetBits(bitmap.get()), format_desc_.size);
 	}
 
 	const frame_format_desc& get_frame_format_desc() const { return format_desc_; } 

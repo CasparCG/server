@@ -2,12 +2,14 @@
 
 #include <string>
 
-#ifdef _MSC_VER
-#pragma warning (disable : 4482)
-#endif
+#include "../../common/compiler/vs/disable_silly_warnings.h"
 
 namespace caspar { namespace core {
-	
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \enum	video_mode
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
 enum video_mode
 {
 	progressive,
@@ -15,6 +17,10 @@ enum video_mode
 	upper
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \enum	frame_format
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
 enum frame_format
 {
 	pal = 0,
@@ -36,15 +42,19 @@ enum frame_format
 	invalid
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \struct	frame_format_desc
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
 struct frame_format_desc
 {
-	size_t width;
-	size_t height;
-	video_mode mode;
-	double fps;
-	size_t size;
-	std::wstring name;
-	frame_format format;
+	size_t			width;
+	size_t			height;
+	video_mode		mode;
+	double			fps;
+	size_t			size;
+	std::wstring	name;
+	frame_format	format;
 
 	static const frame_format_desc format_descs[frame_format::count];
 };
@@ -59,17 +69,35 @@ inline bool operator!=(const frame_format_desc& rhs, const frame_format_desc& lh
 	return !(rhs == lhs);
 }
 
-frame_format get_video_format(const std::wstring& strVideoMode);
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn	frame_format get_video_format(const std::wstring& strVideoMode);
+///
+/// \brief	Gets the *frame_format* associated with the specified name.
+///
+/// \param	name	Name of the *frame_format*.. 
+///
+/// \return	The video format. 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+frame_format get_video_format(const std::wstring& name);
 
-inline frame_format_desc get_video_format_desc(const std::wstring& strVideoMode, frame_format defaultFormat = frame_format::x576p2500)
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn	frame_format get_video_format_desc(const std::wstring& strVideoMode);
+///
+/// \brief	Gets the *frame_format_desc* associated with the specified name.
+///
+/// \param	name	Name of the *frame_format_desc*.. 
+///
+/// \return	The video format. 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+inline frame_format_desc get_video_format_desc(const std::wstring& name, frame_format default_format = frame_format::x576p2500)
 {			
-	auto casparVideoFormat = defaultFormat;
-	if(!strVideoMode.empty())
-		casparVideoFormat = get_video_format(std::wstring(strVideoMode.begin(), strVideoMode.end()));
+	auto casparVideoFormat = default_format;
+	if(!name.empty())
+		casparVideoFormat = get_video_format(name);
 	return frame_format_desc::format_descs[casparVideoFormat];
 }
 
-inline double get_frame_format_period(const frame_format_desc& format_desc)
+inline double render_frame_format_period(const frame_format_desc& format_desc)
 {
 	return 1.0/(format_desc.mode == video_mode::progressive ? format_desc.fps : format_desc.fps/2.0);
 }

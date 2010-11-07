@@ -47,11 +47,11 @@ const frame_format_desc frame_format_desc::format_descs[frame_format::count] =
 	DEFINE_VIDEOFORMATDESC(1920, 1080,video_mode:: progressive, 30, TEXT("1080p3000"), frame_format::x1080p3000)
 };
 
-frame_format get_video_format(const std::wstring& str)
+frame_format get_video_format(const std::wstring& name)
 {
 	for(int n = 0; n < frame_format::count; ++n)
 	{
-		if(boost::iequals(frame_format_desc::format_descs[n].name, str))
+		if(boost::iequals(frame_format_desc::format_descs[n].name, name))
 			return static_cast<frame_format>(n);
 	}
 

@@ -26,7 +26,7 @@ class video_sync_clock
 public:
 	video_sync_clock(const frame_format_desc& format_desc)
 	{
-		period_ = static_cast<long>(get_frame_format_period(format_desc)*1000000.0);
+		period_ = static_cast<long>(render_frame_format_period(format_desc)*1000000.0);
 		time_ = boost::posix_time::microsec_clock::local_time();
 	}
 
@@ -35,8 +35,7 @@ public:
 		auto remaining = boost::posix_time::microseconds(period_) - 
 						(boost::posix_time::microsec_clock::local_time() - time_);
 		if(remaining > boost::posix_time::microseconds(5000))
-			boost::this_thread::sleep(remaining - 
-										boost::posix_time::microseconds(5000));
+			boost::this_thread::sleep(remaining - boost::posix_time::microseconds(5000));
 		time_ = boost::posix_time::microsec_clock::local_time();
 	}
 private:
@@ -53,7 +52,7 @@ public:
 	{
 		if(consumers.empty())
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("consumer") 
-				<< msg_info("display_device requires atleast one consumer"));
+				<< msg_info("display_device requires atleast one consumer."));
 
 		if(std::any_of(consumers.begin(), consumers.end(), 
 			[&](const frame_consumer_ptr& pConsumer)
@@ -85,7 +84,7 @@ public:
 			
 	void run()
 	{
-		CASPAR_LOG(info) << L"Started display_device thread";
+		CASPAR_LOG(info) << L"Started display_device thread.";
 		win32_exception::install_handler();
 				
 		video_sync_clock clock(fmt_);
@@ -98,14 +97,14 @@ public:
 			gpu_frame_ptr frame;
 			if(!frame_buffer_.try_pop(frame))
 			{
-				CASPAR_LOG(trace) << "Display Buffer Underrun";
+				CASPAR_LOG(trace) << "Display Buffer Underrun.";
 				frame_buffer_.pop(frame);
 			}
 			if(frame != nullptr)			
 				display_frame(frame);			
 		}
 		
-		CASPAR_LOG(info) << L"Ended display_device thread";
+		CASPAR_LOG(info) << L"Ended display_device thread.";
 	}
 
 	void display_frame(const gpu_frame_ptr& frame)
@@ -127,11 +126,10 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				boost::range::remove_erase(consumers_, consumer);
-				CASPAR_LOG(warning) << "Removed consumer from render-device.";
+				CASPAR_LOG(warning) << "Removed consumer from display_device.";
 				if(consumers_.empty())
 				{
-					CASPAR_LOG(warning) 
-						<< "No consumers available. Shutting down display-device.";
+					CASPAR_LOG(warning) << "No consumers available. Shutting down display_device.";
 					is_running_ = false;
 				}
 			}

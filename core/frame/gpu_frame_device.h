@@ -17,20 +17,31 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
- 
-// stdafx.h : include file for standard system include files,
-//  or project specific include files that are used frequently, but
-//      are changed infrequently
-//
-
 #pragma once
 
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
+#include <memory>
+#include <vector>
 
-#include "compiler\vs\disable_silly_warnings.h"
+#include "frame_fwd.h"
+#include "frame_factory.h"
 
-#include "config.h"
+namespace caspar { namespace core {
 
-#include <string>
-#include <cassert>
+class gpu_frame_device : public frame_factory,  boost::noncopyable
+{
+public:
+	gpu_frame_device(const frame_format_desc& format_desc);
+		
+	void push(const std::vector<gpu_frame_ptr>& frames);
+	gpu_frame_ptr pop();
+	
+	void release_frames(void* tag);
+	gpu_frame_ptr create_frame(size_t width, size_t height, void* tag);
+	gpu_frame_ptr create_frame(const  gpu_frame_desc& desc, void* tag);
+private:
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
+};
+typedef std::shared_ptr<gpu_frame_device> gpu_frame_device_ptr;
+
+}}
