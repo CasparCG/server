@@ -10,38 +10,38 @@
 using namespace caspar;
 using namespace caspar::core;
 
-TEST(layer_test, load_nullptr) 
+TEST(layer, load_nullptr) 
 {
 	core::renderer::layer layer;
 
 	ASSERT_THROW(layer.load(nullptr), null_argument);
 }
 
-TEST(layer_test, load)
+TEST(layer, load)
 {	
 	core::renderer::layer layer;
 	auto background = std::make_shared<mock_frame_producer>();
 
 	layer.load(background);
 	
-	ASSERT_TRUE(layer.get_frame() == nullptr);
+	ASSERT_TRUE(layer.render_frame() == nullptr);
 	ASSERT_TRUE(layer.active() == nullptr);
 	ASSERT_TRUE(layer.background() == background);
 }
 
-TEST(layer_test, load_auto_play)
+TEST(layer, load_auto_play)
 {	
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>();
 
 	layer.load(active, renderer::load_option::auto_play);
 		
-	ASSERT_TRUE(layer.get_frame() != nullptr);
+	ASSERT_TRUE(layer.render_frame() != nullptr);
 	ASSERT_TRUE(layer.active() == active);
 	ASSERT_TRUE(layer.background() == nullptr);
 }
 
-TEST(layer_test, load_active)
+TEST(layer, load_active)
 {	
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>();
@@ -50,28 +50,28 @@ TEST(layer_test, load_active)
 	layer.load(active, renderer::load_option::auto_play);
 	layer.load(background);
 	
-	ASSERT_TRUE(layer.get_frame() != nullptr);
+	ASSERT_TRUE(layer.render_frame() != nullptr);
 	ASSERT_TRUE(layer.active() == active);
 	ASSERT_TRUE(layer.background() == background);
 }
 
-TEST(layer_test, load_preview)
+TEST(layer, load_preview)
 {	
 	core::renderer::layer layer;
 	auto background = std::make_shared<mock_frame_producer>();
 
 	layer.load(background, renderer::load_option::preview);
 
-	auto frame = layer.get_frame();
+	auto frame = layer.render_frame();
 	
 	ASSERT_TRUE(frame != nullptr);
-	ASSERT_TRUE(layer.get_frame() == frame);
+	ASSERT_TRUE(layer.render_frame() == frame);
 	ASSERT_TRUE(layer.active() == nullptr);
 	ASSERT_TRUE(layer.background() == background);
 	ASSERT_TRUE(frame->audio_data().empty());
 }
 
-TEST(layer_test, load_preview_active)
+TEST(layer, load_preview_active)
 {	
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>();
@@ -80,15 +80,15 @@ TEST(layer_test, load_preview_active)
 	layer.load(active, renderer::load_option::auto_play);
 	layer.load(background, renderer::load_option::preview);
 		
-	auto frame = layer.get_frame();
+	auto frame = layer.render_frame();
 
 	ASSERT_TRUE(frame != nullptr);
-	ASSERT_TRUE(layer.get_frame() == frame);
+	ASSERT_TRUE(layer.render_frame() == frame);
 	ASSERT_TRUE(layer.active() == nullptr);
 	ASSERT_TRUE(layer.background() == background);
 }
 
-TEST(layer_test, load_play)
+TEST(layer, load_play)
 {	
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>();
@@ -96,43 +96,43 @@ TEST(layer_test, load_play)
 	layer.load(active);
 	layer.play();
 	
-	ASSERT_TRUE(layer.get_frame() != nullptr);
+	ASSERT_TRUE(layer.render_frame() != nullptr);
 	ASSERT_TRUE(layer.active() == active);
 	ASSERT_TRUE(layer.background() == nullptr);
 }
 
 
-TEST(layer_test, load_play2)
+TEST(layer, empty_play)
 {	
 	core::renderer::layer layer;
 	layer.play();
 
-	auto frame = layer.get_frame();
+	auto frame = layer.render_frame();
 
 	ASSERT_TRUE(frame == nullptr);
 }
 
-TEST(layer_test, pause)
+TEST(layer, pause)
 {
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>();
 
 	layer.load(active, renderer::load_option::auto_play);
 	
-	auto frame = layer.get_frame();
+	auto frame = layer.render_frame();
 
 	layer.pause();
 	
 	ASSERT_TRUE(layer.active() == active);
-	ASSERT_TRUE(layer.get_frame() == frame);
+	ASSERT_TRUE(layer.render_frame() == frame);
 
 	layer.play();
 	
 	ASSERT_TRUE(layer.active() == active);
-	ASSERT_TRUE(layer.get_frame() != frame);
+	ASSERT_TRUE(layer.render_frame() != frame);
 }
 
-TEST(layer_test, stop)
+TEST(layer, stop)
 {
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>();
@@ -140,16 +140,16 @@ TEST(layer_test, stop)
 
 	layer.load(active, renderer::load_option::auto_play);
 	layer.load(background, renderer::load_option::preview);
-	layer.get_frame();
+	layer.render_frame();
 
 	layer.stop();
 		
-	ASSERT_TRUE(layer.get_frame() == nullptr);
+	ASSERT_TRUE(layer.render_frame() == nullptr);
 	ASSERT_TRUE(layer.active() == nullptr);
 	ASSERT_TRUE(layer.background() == background);;
 }
 
-TEST(layer_test, clear)
+TEST(layer, clear)
 {
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>();
@@ -159,50 +159,50 @@ TEST(layer_test, clear)
 	layer.load(background, renderer::load_option::preview);
 	layer.clear();
 		
-	ASSERT_TRUE(layer.get_frame() == nullptr);
+	ASSERT_TRUE(layer.render_frame() == nullptr);
 	ASSERT_TRUE(layer.active() == nullptr);
 	ASSERT_TRUE(layer.background() == nullptr);
 }
 
-TEST(layer_test, following_producer)
+TEST(layer, following_producer)
 {
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>(true);
 	auto following = std::make_shared<mock_frame_producer>();
 	layer.load(active, renderer::load_option::auto_play);
 		
-	ASSERT_TRUE(layer.get_frame() == nullptr);
+	ASSERT_TRUE(layer.render_frame() == nullptr);
 	ASSERT_TRUE(layer.active() == nullptr);
 		
 	layer.load(active, renderer::load_option::auto_play);
 	active->set_following_producer(following);
 	
-	ASSERT_TRUE(layer.get_frame() != nullptr);
+	ASSERT_TRUE(layer.render_frame() != nullptr);
 	ASSERT_TRUE(layer.active() == following);
 }
 
-TEST(layer_test, leading_producer)
+TEST(layer, leading_producer)
 {
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>();
 	auto active2 = std::make_shared<mock_frame_producer>();
 	layer.load(active, renderer::load_option::auto_play);
 		
-	ASSERT_TRUE(layer.get_frame() != nullptr);
+	ASSERT_TRUE(layer.render_frame() != nullptr);
 	ASSERT_TRUE(layer.active() == active);
 		
 	layer.load(active2, renderer::load_option::auto_play);
 	
-	ASSERT_TRUE(layer.get_frame() != nullptr);
+	ASSERT_TRUE(layer.render_frame() != nullptr);
 	ASSERT_TRUE(layer.active() == active2);
 }
 
-TEST(layer_test, get_frame_exception)
+TEST(layer, get_frame_exception)
 {
 	core::renderer::layer layer;
 	auto active = std::make_shared<mock_frame_producer>(false, true);
 	layer.load(active, renderer::load_option::auto_play);
 			
-	ASSERT_TRUE(layer.get_frame() == nullptr);
+	ASSERT_TRUE(layer.render_frame() == nullptr);
 	ASSERT_TRUE(layer.active() == nullptr);
 }
