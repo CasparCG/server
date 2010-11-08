@@ -151,26 +151,24 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="channel.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="consumer\bluefish\exception.h" />
     <ClInclude Include="consumer\bluefish\fwd.h" />
     <ClInclude Include="consumer\bluefish\memory.h" />
     <ClInclude Include="consumer\bluefish\bluefish_consumer.h" />
     <ClInclude Include="consumer\bluefish\util.h" />
+    <ClInclude Include="consumer\frame_consumer_device.h" />
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h" />
     <ClInclude Include="consumer\decklink\DecklinkVideoConsumer.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
     <ClInclude Include="consumer\oal\oal_consumer.h" />
     <ClInclude Include="consumer\ogl\ogl_consumer.h" />
-    <ClInclude Include="frame\gpu_composite_frame.h" />
-    <ClInclude Include="frame\frame_factory.h" />
-    <ClInclude Include="frame\frame_format.h" />
-    <ClInclude Include="frame\frame_fwd.h" />
-    <ClInclude Include="frame\gpu_frame.h" />
-    <ClInclude Include="frame\gpu_frame_device.h" />
-    <ClInclude Include="frame\gpu_frame_renderer.h" />
-    <ClInclude Include="frame\gpu_frame_shader.h" />
-    <ClInclude Include="frame\gpu_frame_desc.h" />
+    <ClInclude Include="processor\composite_frame.h" />
+    <ClInclude Include="processor\frame.h" />
+    <ClInclude Include="processor\frame_processor_device.h" />
+    <ClInclude Include="processor\frame_renderer.h" />
+    <ClInclude Include="processor\frame_shader.h" />
     <ClInclude Include="producer\color\color_producer.h" />
     <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h" />
     <ClInclude Include="producer\ffmpeg\ffmpeg_producer.h" />
@@ -189,6 +187,8 @@
     <ClInclude Include="producer\image\image_loader.h" />
     <ClInclude Include="producer\image\image_producer.h" />
     <ClInclude Include="producer\image\image_scroll_producer.h" />
+    <ClInclude Include="producer\layer.h" />
+    <ClInclude Include="producer\frame_producer_device.h" />
     <ClInclude Include="producer\transition\transition_producer.h" />
     <ClInclude Include="protocol\amcp\AMCPCommand.h" />
     <ClInclude Include="protocol\amcp\AMCPCommandQueue.h" />
@@ -200,11 +200,9 @@
     <ClInclude Include="protocol\clk\CLKCommand.h" />
     <ClInclude Include="protocol\clk\CLKProtocolStrategy.h" />
     <ClInclude Include="protocol\media.h" />
-    <ClInclude Include="renderer\display_device.h" />
-    <ClInclude Include="renderer\renderer_fwd.h" />
-    <ClInclude Include="renderer\render_device.h" />
-    <ClInclude Include="renderer\layer.h" />
     <ClInclude Include="server.h" />
+    <ClInclude Include="video\pixel_format.h" />
+    <ClInclude Include="video\video_format.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishException.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishFrameManager.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishPlaybackStrategy.h" />
@@ -213,9 +211,14 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="channel.cpp" />
     <ClCompile Include="consumer\bluefish\bluefish_consumer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="consumer\frame_consumer_device.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -233,29 +236,25 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="frame\gpu_composite_frame.cpp">
+    <ClCompile Include="processor\composite_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="frame\frame_format.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\stdafx.h</PrecompiledHeaderFile>
+    <ClCompile Include="processor\frame.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="frame\gpu_frame.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+    <ClCompile Include="processor\frame_processor_device.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="frame\gpu_frame_device.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+    <ClCompile Include="processor\frame_renderer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="frame\gpu_frame_renderer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="frame\gpu_frame_shader.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
+    <ClCompile Include="processor\frame_shader.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\color\color_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -320,6 +319,14 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="producer\layer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="producer\frame_producer_device.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="producer\transition\transition_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -356,25 +363,14 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="renderer\display_device.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="renderer\render_device.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="renderer\layer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="server.cpp">
-      <ExpandAttributedSource Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExpandAttributedSource>
-      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
-    </ClCompile>
+    <ClCompile Include="server.cpp" />
     <ClCompile Include="StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="video\video_format.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

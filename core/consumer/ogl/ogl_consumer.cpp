@@ -22,8 +22,8 @@
 
 #include "ogl_consumer.h"
 
-#include "../../frame/frame_format.h"
-#include "../../frame/gpu_frame.h"
+#include "../../video/video_format.h"
+#include "../../processor/frame.h"
 #include "../../../common/utility/memory.h"
 #include "../../../common/gl/utility.h"
 #include "../../../common/gl/pixel_buffer_object.h"
@@ -39,7 +39,7 @@ namespace caspar { namespace core { namespace ogl{
 
 struct consumer::implementation : boost::noncopyable
 {	
-	implementation(const frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
+	implementation(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
 		: index_(0), format_desc_(format_desc), stretch_(stretch), screen_width_(0), screen_height_(0), windowed_(windowed)
 	{		
 #ifdef _WIN32
@@ -155,7 +155,7 @@ struct consumer::implementation : boost::noncopyable
 		return std::make_pair(width, height);
 	}
 
-	void render(const gpu_frame_ptr& frame)
+	void render(const frame_ptr& frame)
 	{		
 		index_ = (index_ + 1) % 2;
 		int next_index = (index_ + 1) % 2;
@@ -175,7 +175,7 @@ struct consumer::implementation : boost::noncopyable
 		pbos_[next_index].begin_write();
 	}
 			
-	void display(const gpu_frame_ptr& frame)
+	void display(const frame_ptr& frame)
 	{
 		if(frame == nullptr)
 			return;		
@@ -190,7 +190,7 @@ struct consumer::implementation : boost::noncopyable
 	{			
 		init();
 				
-		gpu_frame_ptr frame;
+		frame_ptr frame;
 		do
 		{
 			try
@@ -229,17 +229,16 @@ struct consumer::implementation : boost::noncopyable
 	unsigned int screenY_;
 				
 	stretch stretch_;
-	frame_format_desc format_desc_;
+	video_format_desc format_desc_;
 
 	std::exception_ptr exception_;
 	boost::thread thread_;
-	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
+	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
 
 	sf::Window window_;
 };
 
-consumer::consumer(const frame_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
+consumer::consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
-const frame_format_desc& consumer::get_frame_format_desc() const{return impl_->format_desc_;}
-void consumer::display(const gpu_frame_ptr& frame){impl_->display(frame);}
+void consumer::display(const frame_ptr& frame){impl_->display(frame);}
 }}}

@@ -14,7 +14,7 @@ public:
 	mock_frame_producer(bool null = false, bool throws = false) 
 		: null_(null), throws_(throws), initialized_(false), volume_(100){}
 	void set_volume(short volume) { volume_ = volume;}
-	gpu_frame_ptr render_frame()
+	frame_ptr render_frame()
 	{ 
 		if(throws_)
 			BOOST_THROW_EXCEPTION(caspar_exception());
@@ -28,12 +28,12 @@ public:
 	{ return following_; }
 	void set_leading_producer(const std::shared_ptr<frame_producer>& leading) 
 	{ leading_ = leading; }
-	const frame_format_desc& get_frame_format_desc() const
+	const video_format_desc& get_video_format_desc() const
 	{ 
-		static frame_format_desc format;
+		static video_format_desc format;
 		return format;
 	}
-	void initialize(const frame_factory_ptr& factory)
+	void initialize(const frame_processor_device_ptr& factory)
 	{initialized_ = true;}
 	void set_following_producer(const std::shared_ptr<frame_producer>& following)
 	{following_ = following;}

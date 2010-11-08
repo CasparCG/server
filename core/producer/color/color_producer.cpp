@@ -22,7 +22,7 @@
 
 #include "color_producer.h"
 
-#include "../../frame/frame_format.h"
+#include "../../video/video_format.h"
 
 #include <intrin.h>
 #pragma intrinsic(__movsd, __stosd)
@@ -32,32 +32,29 @@ namespace caspar { namespace core {
 class color_producer : public frame_producer
 {
 public:
-	explicit color_producer(unsigned int color_value, const frame_format_desc& format_desc) 
-		: color_value_(color_value), format_desc_(format_desc){}
+	explicit color_producer(unsigned int color_value) 
+		: color_value_(color_value){}
 
 	~color_producer()
 	{
-		if(factory_)
-			factory_->release_frames(this);
+		if(frame_processor_)
+			frame_processor_->release_tag(this);
 	}
 
-	gpu_frame_ptr render_frame()
+	frame_ptr render_frame()
 	{ 
 		return frame_;
 	}
 
-	const frame_format_desc& get_frame_format_desc() const { return format_desc_; }
-	
-	void initialize(const frame_factory_ptr& factory)
+	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
-		factory_ = factory;
-		frame_ = factory->create_frame(format_desc_, this);
-		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, format_desc_.size / sizeof(unsigned long));
+		frame_processor_ = frame_processor;
+		frame_ = frame_processor->create_frame(this);
+		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
 	}
 
-	frame_factory_ptr factory_;
-	frame_format_desc format_desc_;
-	gpu_frame_ptr frame_;
+	frame_processor_device_ptr frame_processor_;
+	frame_ptr frame_;
 	unsigned int color_value_;
 };
 
@@ -94,11 +91,11 @@ unsigned int get_pixel_color_value(const std::wstring& parameter)
 	return color.value;
 }
 
-frame_producer_ptr create_color_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc)
+frame_producer_ptr create_color_producer(const std::vector<std::wstring>& params)
 {
 	if(params.empty() || params[0].at(0) != '#')
 		return nullptr;
-	return std::make_shared<color_producer>(get_pixel_color_value(params[0]), format_desc);
+	return std::make_shared<color_producer>(get_pixel_color_value(params[0]));
 }
 
 }}

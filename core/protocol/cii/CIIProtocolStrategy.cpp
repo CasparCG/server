@@ -42,7 +42,7 @@ using namespace common;
 const std::wstring CIIProtocolStrategy::MessageDelimiter = TEXT("\r\n");
 const TCHAR CIIProtocolStrategy::TokenDelimiter = TEXT('\\');
 
-CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<renderer::render_device_ptr>& channels) 
+CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<channel_ptr>& channels) 
 {
 	if(channels.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("channels"));
@@ -187,7 +187,7 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 	
 	std::vector<std::wstring> params;
 	params.push_back(server::template_folder()+TEXT("CG.fth"));
-	auto pFP = flash::create_flash_producer(params, GetChannel()->get_frame_format_desc());
+	auto pFP = flash::create_flash_producer(params);
 	if(pFP != 0)
 	{
 		//TODO: Initialize with valid FrameFactory
@@ -221,11 +221,11 @@ void CIIProtocolStrategy::DisplayTemplate(const std::wstring& titleName)
 void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename) 
 {
 	transition_info transition;
-	transition.type = transition_type::mix;
+	transition.type = transition::mix;
 	transition.duration = 12;
 
-	auto pFP = load_media(boost::assign::list_of(filename), pChannel_->get_frame_format_desc());
-	auto pTransition = std::make_shared<transition_producer>(pFP, transition, pChannel_->get_frame_format_desc());
+	auto pFP = load_media(boost::assign::list_of(filename));
+	auto pTransition = std::make_shared<transition_producer>(pFP, transition);
 
 	try
 	{

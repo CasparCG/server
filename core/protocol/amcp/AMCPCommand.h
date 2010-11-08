@@ -21,8 +21,9 @@
 
 #include "../../../common/io/clientinfo.h"
 #include "../../consumer/frame_consumer.h"
+#include "../../channel.h"
+
 #include <boost/algorithm/string.hpp>
-#include "../../renderer/render_device.h"
 
 namespace caspar { namespace core {
 namespace amcp {
@@ -54,8 +55,8 @@ namespace amcp {
 		void SetClientInfo(IO::ClientInfoPtr& s){pClientInfo_ = s;}
 		IO::ClientInfoPtr GetClientInfo(){return pClientInfo_;}
 
-		void SetChannel(const renderer::render_device_ptr& pChannel){pChannel_ = pChannel;}
-		renderer::render_device_ptr GetChannel(){return pChannel_;}
+		void SetChannel(const channel_ptr& pChannel){pChannel_ = pChannel;}
+		channel_ptr GetChannel(){return pChannel_;}
 
 		void SetChannelIndex(unsigned int channelIndex){channelIndex_ = channelIndex;}
 		unsigned int GetChannelIndex(){return channelIndex_;}
@@ -80,7 +81,7 @@ namespace amcp {
 		unsigned int channelIndex_;
 		int layerIndex_;
 		IO::ClientInfoPtr pClientInfo_;
-		renderer::render_device_ptr pChannel_;
+		channel_ptr pChannel_;
 		AMCPCommandScheduling scheduling_;
 		std::wstring replyString_;
 	};

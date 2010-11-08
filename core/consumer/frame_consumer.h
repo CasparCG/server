@@ -19,7 +19,8 @@
 */
 #pragma once
 
-#include "../frame/frame_fwd.h"
+#include "../video/video_format.h"
+#include "../processor/frame.h"
 
 #include <boost/noncopyable.hpp>
 
@@ -31,9 +32,8 @@ struct frame_consumer : boost::noncopyable
 {
 	virtual ~frame_consumer() {}
 
-	virtual const frame_format_desc& get_frame_format_desc() const = 0;
-	virtual void prepare(const gpu_frame_ptr&){}
-	virtual void display(const gpu_frame_ptr&){}
+	virtual void prepare(const frame_ptr&){}
+	virtual void display(const frame_ptr&){}
 	virtual bool has_sync_clock() const {return false;}
 };
 typedef std::shared_ptr<frame_consumer> frame_consumer_ptr;

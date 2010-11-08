@@ -26,10 +26,9 @@ namespace caspar { namespace core { namespace oal {
 class consumer : public frame_consumer
 {
 public:	
-	explicit consumer(const frame_format_desc& format_desc);
+	explicit consumer(const video_format_desc& format_desc);
 	
-	const frame_format_desc& get_frame_format_desc() const;	
-	void prepare(const gpu_frame_ptr& frame);
+	void prepare(const frame_ptr& frame);
 	virtual bool has_sync_clock() const {return true;}
 private:
 	struct implementation;

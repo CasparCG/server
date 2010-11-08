@@ -20,25 +20,29 @@
  
 #pragma once
 
+#include "../../channel.h"
+
 #include "../../../common/io/ProtocolStrategy.h"
 #include "CIICommand.h"
+
 #include "../../consumer/frame_consumer.h"
+#include "../../producer/frame_producer_device.h"
+
 #include "../../../common/concurrency/executor.h"
-#include "../../renderer/render_device.h"
 
 namespace caspar { namespace core { namespace cii {
 
 class CIIProtocolStrategy : public IO::IProtocolStrategy
 {
 public:
-	CIIProtocolStrategy(const std::vector<renderer::render_device_ptr>& channels);
+	CIIProtocolStrategy(const std::vector<channel_ptr>& channels);
 
 	void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
 	UINT GetCodepage() {return 28591;}	//ISO 8859-1
 
 	void SetProfile(const std::wstring& profile) {currentProfile_ = profile;}
 
-	renderer::render_device_ptr GetChannel() const{return this->pChannel_;}
+	channel_ptr GetChannel() const{return this->pChannel_;}
 
 	void DisplayMediaFile(const std::wstring& filename);
 	void DisplayTemplate(const std::wstring& titleName);
@@ -82,7 +86,7 @@ private:
 	std::wstring currentMessage_;
 
 	std::wstring currentProfile_;
-	renderer::render_device_ptr pChannel_;
+	channel_ptr pChannel_;
 };
 
 }}}

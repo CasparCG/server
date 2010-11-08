@@ -19,7 +19,7 @@
 */
 #pragma once
 
-#include "../../frame/frame_fwd.h"
+#include "../../video/video_format.h"
 #include "../../consumer/frame_consumer.h"
 
 namespace caspar { namespace core { namespace bluefish {
@@ -27,11 +27,10 @@ namespace caspar { namespace core { namespace bluefish {
 class consumer : public frame_consumer
 {
 public:
-	consumer(const frame_format_desc& format_desc, unsigned int deviceIndex, bool embed_audio = false);
+	consumer(const video_format_desc& format_desc, unsigned int deviceIndex, bool embed_audio = false);
 	
-	void display(const gpu_frame_ptr&);
+	void display(const frame_ptr&);
 		
-	const frame_format_desc& get_frame_format_desc() const;
 	virtual bool has_sync_clock() const {return false;}
 private:
 	struct implementation;

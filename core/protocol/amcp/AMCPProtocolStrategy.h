@@ -22,10 +22,13 @@
 #include "../../../common/io/protocolstrategy.h"
 #include "AMCPCommand.h"
 #include "AMCPCommandQueue.h"
+#include "../../channel.h"
+
+#include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core { namespace amcp {
 
-class AMCPProtocolStrategy : public IO::IProtocolStrategy
+class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 {
 	enum MessageParserState {
 		New = 0,
@@ -40,7 +43,7 @@ class AMCPProtocolStrategy : public IO::IProtocolStrategy
 	AMCPProtocolStrategy& operator=(const AMCPProtocolStrategy&);
 
 public:
-	AMCPProtocolStrategy(const std::vector<renderer::render_device_ptr>& channels);
+	AMCPProtocolStrategy(const std::vector<channel_ptr>& channels);
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
@@ -59,7 +62,7 @@ private:
 
 	bool QueueCommand(AMCPCommandPtr);
 
-	const std::vector<renderer::render_device_ptr>& channels_;
+	std::vector<channel_ptr> channels_;
 	std::vector<AMCPCommandQueuePtr> commandQueues_;
 	static const std::wstring MessageDelimiter;
 };

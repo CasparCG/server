@@ -18,11 +18,11 @@ using namespace boost::assign;
 
 namespace caspar { namespace core { 
 	
-frame_producer_ptr load_media(const std::vector<std::wstring>& params, const frame_format_desc& format_desc)
+frame_producer_ptr load_media(const std::vector<std::wstring>& params)
 {		
-	typedef std::function<frame_producer_ptr(const std::vector<std::wstring>&, const frame_format_desc&)> ProducerFactory;
+	typedef std::function<frame_producer_ptr(const std::vector<std::wstring>&)> producer_factory;
 
-	const auto producerFactories = list_of<ProducerFactory>
+	const auto producer_factories = list_of<producer_factory>
 		(&flash::create_flash_producer)
 		(&flash::create_ct_producer)
 		(&image::create_image_producer)
@@ -33,21 +33,21 @@ frame_producer_ptr load_media(const std::vector<std::wstring>& params, const fra
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 
-	frame_producer_ptr pProducer;
-	std::any_of(producerFactories.begin(), producerFactories.end(), [&](const ProducerFactory& producerFactory) -> bool
+	frame_producer_ptr producer;
+	std::any_of(producer_factories.begin(), producer_factories.end(), [&](const producer_factory& factory) -> bool
 		{
 			try
 			{
-				pProducer = producerFactory(params, format_desc);
+				producer = factory(params);
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
-			return pProducer != nullptr;
+			return producer != nullptr;
 		});
 
-	return pProducer;
+	return producer;
 }
 
 }}

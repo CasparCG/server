@@ -23,7 +23,7 @@
 #include "CLKProtocolStrategy.h"
 
 #include "..\..\producer\flash\cg_producer.h"
-#include "..\..\renderer\render_device.h"
+#include "..\..\producer\frame_producer_device.h"
 
 #include <string>
 #include <sstream>
@@ -33,7 +33,7 @@ namespace caspar { namespace core { namespace CLK {
 
 using namespace common;
 
-CLKProtocolStrategy::CLKProtocolStrategy(const std::vector<renderer::render_device_ptr>& channels) 
+CLKProtocolStrategy::CLKProtocolStrategy(const std::vector<channel_ptr>& channels) 
 	: currentState_(ExpectingNewCommand), bClockLoaded_(false) 
 {	
 	if(channels.empty())

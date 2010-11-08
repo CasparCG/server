@@ -42,10 +42,10 @@ public:
 	/// <summary> Timeout for blocking while trying to stop the producer. </summary>
 	static const int STOP_TIMEOUT = 2000;
 
-	flash_producer(const std::wstring& filename, const frame_format_desc& format_desc);
-	gpu_frame_ptr render_frame();
-	const frame_format_desc& get_frame_format_desc() const;
-	void initialize(const frame_factory_ptr& factory);
+	flash_producer(const std::wstring& filename);
+	frame_ptr render_frame();
+	const video_format_desc& get_video_format_desc() const;
+	void initialize(const frame_processor_device_ptr& frame_processor);
 
 	void param(const std::wstring& param);
 	
@@ -61,6 +61,6 @@ private:
 
 typedef std::tr1::shared_ptr<flash_producer> flash_producer_ptr;
 
-flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc);
+flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params);
 
 }}}

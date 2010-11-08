@@ -2,11 +2,11 @@
 
 #include "video_transformer.h"
 
-#include "../../../frame/frame_format.h"
+#include "../../../video/video_format.h"
 #include "../../../../common/utility/memory.h"
-#include "../../../frame/gpu_frame.h"
-#include "../../../frame/gpu_frame.h"
-#include "../../../frame/frame_factory.h"
+#include "../../../processor/frame.h"
+#include "../../../processor/frame.h"
+#include "../../../processor/frame_processor_device.h"
 
 #include <tbb/parallel_for.h>
 #include <tbb/atomic.h>
@@ -25,7 +25,7 @@ extern "C"
 
 namespace caspar { namespace core { namespace ffmpeg{
 	
-pixel_format get_pixel_format(PixelFormat pix_fmt)
+pixel_format::type get_pixel_format(PixelFormat pix_fmt)
 {
 	switch(pix_fmt)
 	{
@@ -39,7 +39,7 @@ pixel_format get_pixel_format(PixelFormat pix_fmt)
 		case PIX_FMT_YUV411P:	return pixel_format::ycbcr;
 		case PIX_FMT_YUV410P:	return pixel_format::ycbcr;
 		case PIX_FMT_YUVA420P:	return pixel_format::ycbcra;
-		default:				return pixel_format::invalid_pixel_format;
+		default:				return pixel_format::invalid;
 	}
 }
 
@@ -49,8 +49,8 @@ struct video_transformer::implementation : boost::noncopyable
 
 	~implementation()
 	{
-		if(factory_)
-			factory_->release_frames(this);
+		if(frame_processor_)
+			frame_processor_->release_tag(this);
 	}
 
 	video_packet_ptr execute(const video_packet_ptr video_packet)
@@ -68,7 +68,7 @@ struct video_transformer::implementation : boost::noncopyable
 		case PIX_FMT_RGBA:
 		case PIX_FMT_ABGR:
 			{
-				video_packet->frame = factory_->create_frame(width, height, this);
+				video_packet->frame = frame_processor_->create_frame(width, height, this);
 				tbb::parallel_for(0, height, 1, [&](int y)
 				{
 					common::aligned_memcpy(
@@ -95,23 +95,22 @@ struct video_transformer::implementation : boost::noncopyable
 				size_t size2 = dummy_pict.data[2] - dummy_pict.data[1];
 				size_t h2 = size2/dummy_pict.linesize[1];
 
-				gpu_frame_desc desc;
-				desc.planes[0] = plane(dummy_pict.linesize[0], height, 1);
-				desc.planes[1] = plane(dummy_pict.linesize[1], h2, 1);
-				desc.planes[2] = plane(dummy_pict.linesize[2], h2, 1);
-				desc.plane_count = 3;
+				pixel_format_desc desc;
+				desc.planes[0] = pixel_format_desc::plane(dummy_pict.linesize[0], height, 1);
+				desc.planes[1] = pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1);
+				desc.planes[2] = pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1);
 
-				if(pix_fmt == PIX_FMT_YUVA420P)			
-				{
-					desc.planes[3] = plane(dummy_pict.linesize[3], height, 1);
-					desc.plane_count = 4;
-				}
+				if(pix_fmt == PIX_FMT_YUVA420P)						
+					desc.planes[3] = pixel_format_desc::plane(dummy_pict.linesize[3], height, 1);				
 
 				desc.pix_fmt = get_pixel_format(pix_fmt);
-				video_packet->frame = factory_->create_frame(desc, this);
+				video_packet->frame = frame_processor_->create_frame(desc, this);
 
-				tbb::parallel_for(0, static_cast<int>(desc.plane_count), 1, [&](int n)
+				tbb::parallel_for(0, static_cast<int>(desc.planes.size()), 1, [&](int n)
 				{
+					if(desc.planes[n].size == 0)
+						return;
+
 					tbb::parallel_for(0, static_cast<int>(desc.planes[n].height), 1, [&](int y)
 					{
 						memcpy(
@@ -129,7 +128,7 @@ struct video_transformer::implementation : boost::noncopyable
 					CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
 					sw_warning_ = true;
 				}
-				video_packet->frame = factory_->create_frame(width, height, this);
+				video_packet->frame = frame_processor_->create_frame(width, height, this);
 
 				AVFrame av_frame;	
 				avcodec_get_frame_defaults(&av_frame);
@@ -145,23 +144,24 @@ struct video_transformer::implementation : boost::noncopyable
 			}
 		}
 
+		// TODO:
 		if(video_packet->codec->id == CODEC_ID_DVVIDEO) // Move up one field
-			video_packet->frame->translate(0.0f, 1.0/static_cast<double>(video_packet->format_desc.height));
+			video_packet->frame->translate(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));
 		
 		return video_packet;
 	}
 
-	void initialize(const frame_factory_ptr& factory)
+	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
-		factory_ = factory;
+		frame_processor_ = frame_processor;
 	}
 
-	frame_factory_ptr factory_;
+	frame_processor_device_ptr frame_processor_;
 	std::shared_ptr<SwsContext> sws_context_;
 	bool sw_warning_;
 };
 
 video_transformer::video_transformer() : impl_(new implementation()){}
 video_packet_ptr video_transformer::execute(const video_packet_ptr& video_packet){return impl_->execute(video_packet);}
-void video_transformer::initialize(const frame_factory_ptr& factory){impl_->initialize(factory); }
+void video_transformer::initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor); }
 }}}

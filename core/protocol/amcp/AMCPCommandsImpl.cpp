@@ -23,7 +23,7 @@
 #include "AMCPCommandsImpl.h"
 #include "AMCPProtocolStrategy.h"
 #include "../../producer/frame_producer.h"
-#include "../../Frame/frame_format.h"
+#include "../../video/video_format.h"
 #include "../../producer/flash/flash_producer.h"
 #include "../../producer/transition/transition_producer.h"
 #include <boost/lexical_cast.hpp>
@@ -74,7 +74,7 @@ std::wstring ListMedia()
 {	
 	std::wstringstream replyString;
 	for (boost::filesystem::wrecursive_directory_iterator itr(server::media_folder()), end; itr != end; ++itr)
-    {			
+	{			
 		if(boost::filesystem::is_regular_file(itr->path()))
 		{
 			std::wstring clipttype = TEXT(" N/A ");
@@ -117,7 +117,7 @@ std::wstring ListTemplates()
 	std::wstringstream replyString;
 
 	for (boost::filesystem::wrecursive_directory_iterator itr(server::template_folder()), end; itr != end; ++itr)
-    {		
+	{		
 		if(boost::filesystem::is_regular_file(itr->path()) && itr->path().extension() == L".ft")
 		{
 			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(server::template_folder().size()-1, itr->path().file_string().size()));
@@ -170,9 +170,9 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto pFP = load_media(_parameters,  GetChannel()->get_frame_format_desc());	
+		auto pFP = load_media(_parameters);	
 		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();		
-		GetChannel()->load(GetLayerIndex(), pFP, autoPlay ? renderer::load_option::auto_play : renderer::load_option::preview);
+		GetChannel()->load(GetLayerIndex(), pFP, autoPlay ? load_option::auto_play : load_option::preview);
 	
 		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
 
@@ -210,15 +210,15 @@ bool LoadbgCommand::DoExecute()
 		std::wstring transitionType = _parameters[transitionParameterIndex];
 
 		if(transitionType == TEXT("CUT"))
-			transitionInfo.type = transition_type::cut;
+			transitionInfo.type = transition::cut;
 		else if(transitionType == TEXT("MIX"))
-			transitionInfo.type = transition_type::mix;
+			transitionInfo.type = transition::mix;
 		else if(transitionType == TEXT("PUSH"))
-			transitionInfo.type = transition_type::push;
+			transitionInfo.type = transition::push;
 		else if(transitionType == TEXT("SLIDE"))
-			transitionInfo.type = transition_type::slide;
+			transitionInfo.type = transition::slide;
 		else if(transitionType == TEXT("WIPE"))
-			transitionInfo.type = transition_type::wipe;
+			transitionInfo.type = transition::wipe;
 
 		if(_parameters.size() > static_cast<unsigned short>(transitionParameterIndex+1))	//duration
 		{
@@ -245,13 +245,13 @@ bool LoadbgCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto pFP = load_media(_parameters,  GetChannel()->get_frame_format_desc());
+		auto pFP = load_media(_parameters);
 		if(pFP == nullptr)
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? common::narrow(_parameters[0]) : ""));
 
-		pFP = std::make_shared<transition_producer>(pFP, transitionInfo, GetChannel()->get_frame_format_desc());
+		pFP = std::make_shared<transition_producer>(pFP, transitionInfo);
 		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();
-		GetChannel()->load(GetLayerIndex(), pFP, autoPlay ? renderer::load_option::auto_play : renderer::load_option::none); // TODO: LOOP
+		GetChannel()->load(GetLayerIndex(), pFP, autoPlay ? load_option::auto_play : load_option::none); // TODO: LOOP
 	
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
@@ -727,9 +727,9 @@ bool CinfCommand::DoExecute()
 	return false;
 }
 
-void GenerateChannelInfo(int index, const renderer::render_device_ptr& pChannel, std::wstringstream& replyString)
+void GenerateChannelInfo(int index, const channel_ptr& pChannel, std::wstringstream& replyString)
 {
-	replyString << index << TEXT(" ") << pChannel->get_frame_format_desc().name  << TEXT("\r\n") << (pChannel->active(0) != nullptr ? TEXT(" PLAYING") : TEXT(" STOPPED"));
+	replyString << index << TEXT(" ") << pChannel->get_video_format_desc().name  << TEXT("\r\n") << (pChannel->active(0) != nullptr ? TEXT(" PLAYING") : TEXT(" STOPPED"));
 }
 
 bool InfoCommand::DoExecute()

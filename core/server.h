@@ -1,6 +1,8 @@
 #pragma once
 
-#include "renderer/renderer_fwd.h"
+#include "channel.h"
+
+#include "producer/frame_producer_device.h"
 
 #include <common/exception/exceptions.h>
 
@@ -20,9 +22,10 @@ public:
 	static const std::wstring& media_folder();
 	static const std::wstring& log_folder();
 	static const std::wstring& template_folder();		
-	static const std::wstring& data_folder();	
+	static const std::wstring& data_folder();
 
-	const std::vector<renderer::render_device_ptr>& get_channels() const;
+	const std::vector<channel_ptr> get_channels() const;
+
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

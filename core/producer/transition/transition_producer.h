@@ -26,41 +26,47 @@
 
 namespace caspar { namespace core {
 
-enum transition_type
+struct transition
 {
-	cut = 1,
-	mix,
-	push,
-	slide,
-	wipe
+	enum type
+	{
+
+		cut = 1,
+		mix,
+		push,
+		slide,
+		wipe
+	};
 };
 
-enum transition_direction
+struct transition_direction
 {
-	from_left = 1,
-	from_right
+	enum type
+	{
+		from_left = 1,
+		from_right
+	};
 };
 
 struct transition_info
 {
-	transition_info() : type(transition_type::cut), duration(0), direction(transition_direction::from_left){}
+	transition_info() : type(transition::cut), duration(0), direction(transition_direction::from_left){}
     
-	size_t					duration;
-	transition_direction	direction;
-	transition_type			type;
+	size_t						duration;
+	transition_direction::type	direction;
+	transition::type			type;
 };
 
 class transition_producer : public frame_producer
 {
 public:
-	transition_producer(const frame_producer_ptr& destination, const transition_info& info, const frame_format_desc& fmt);
+	transition_producer(const frame_producer_ptr& destination, const transition_info& info);
 
-	gpu_frame_ptr render_frame();
+	frame_ptr render_frame();
 
 	frame_producer_ptr get_following_producer() const;
 	void set_leading_producer(const frame_producer_ptr& producer);
-	const frame_format_desc& get_frame_format_desc() const;
-	virtual void initialize(const frame_factory_ptr& factory);
+	virtual void initialize(const frame_processor_device_ptr& frame_processor);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

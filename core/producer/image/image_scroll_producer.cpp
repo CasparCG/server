@@ -4,10 +4,10 @@
 
 #include "image_loader.h"
 
-#include "../../frame/gpu_frame.h"
-#include "../../frame/gpu_composite_frame.h"
-#include "../../frame/frame_format.h"
-#include "../../frame/frame_factory.h"
+#include "../../processor/frame.h"
+#include "../../processor/composite_frame.h"
+#include "../../video/video_format.h"
+#include "../../processor/frame_processor_device.h"
 #include "../../server.h"
 #include "../../../common/utility/find_file.h"
 #include "../../../common/utility/memory.h"
@@ -32,8 +32,8 @@ struct image_scroll_producer : public frame_producer
 {
 	static const int DEFAULT_SCROLL_SPEED = 50;
 
-	image_scroll_producer(const std::wstring& filename, const std::vector<std::wstring>& params, const frame_format_desc& format_desc) 
-		: format_desc_(format_desc), speed_(image_scroll_producer::DEFAULT_SCROLL_SPEED), direction_(direction::Up), offset_(0)
+	image_scroll_producer(const std::wstring& filename, const std::vector<std::wstring>& params) 
+		: speed_(image_scroll_producer::DEFAULT_SCROLL_SPEED), direction_(direction::Up), offset_(0)
 	{
 		load_and_pad_image(filename);
 
@@ -50,24 +50,12 @@ struct image_scroll_producer : public frame_producer
 		}
 
 		loop_ = std::find(params.begin(), params.end(), L"LOOP") != params.end();
-				
-		if(image_width_ - format_desc.width > image_height_ - format_desc_.height)
-			direction_ = speed_ < 0 ? direction::Right : direction::Left;
-		else
-			direction_ = speed_ < 0 ? direction::Down : direction::Up;
-
-		if (direction_ == direction::Down)
-			offset_ = image_height_ - format_desc_.height;
-		else if (direction_ == direction::Right)
-			offset_ = image_width_ - format_desc_.width;
-
-		speed_ = static_cast<int>(abs(static_cast<double>(speed_) / format_desc.fps));
 	}
 	
 	~image_scroll_producer()
 	{
-		if(factory_)
-			factory_->release_frames(this);
+		if(frame_processor_)
+			frame_processor_->release_tag(this);
 	}
 
 	void load_and_pad_image(const std::wstring& filename)
@@ -89,9 +77,9 @@ struct image_scroll_producer : public frame_producer
 			common::aligned_parallel_memcpy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
 	}
 
-	gpu_frame_ptr do_render_frame()
+	frame_ptr do_render_frame()
 	{
-		gpu_frame_ptr frame = factory_->create_frame(format_desc_, this);
+		frame_ptr frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height, this);
 		common::clear(frame->data(), format_desc_.size);
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
@@ -134,25 +122,38 @@ struct image_scroll_producer : public frame_producer
 		return frame;
 	}
 		
-	gpu_frame_ptr render_frame()
+	frame_ptr render_frame()
 	{		
-		if(format_desc_.mode != video_mode::progressive)				
+		if(format_desc_.update != video_update_format::progressive)				
 		{
-			gpu_frame_ptr frame1;
-			gpu_frame_ptr frame2;
+			frame_ptr frame1;
+			frame_ptr frame2;
 			tbb::parallel_invoke([&]{ frame1 = do_render_frame(); }, [&]{ frame2 = do_render_frame(); });
-			return gpu_composite_frame::interlace(frame1, frame2, format_desc_.mode);
+			return composite_frame::interlace(frame1, frame2, format_desc_.update);
 		}			
 
 		return render_frame();	
 	}
 	
-	void initialize(const frame_factory_ptr& factory)
+	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
-		factory_ = factory;
+		frame_processor_ = frame_processor;
+		format_desc_ = frame_processor_->get_video_format_desc();
+				
+		if(image_width_ - format_desc_.width > image_height_ - format_desc_.height)
+			direction_ = speed_ < 0 ? direction::Right : direction::Left;
+		else
+			direction_ = speed_ < 0 ? direction::Down : direction::Up;
+
+		if (direction_ == direction::Down)
+			offset_ = image_height_ - format_desc_.height;
+		else if (direction_ == direction::Right)
+			offset_ = image_width_ - format_desc_.width;
+
+		speed_ = static_cast<int>(abs(static_cast<double>(speed_) / format_desc_.fps));
 	}
 
-	const frame_format_desc& get_frame_format_desc() const { return format_desc_; } 
+	const video_format_desc& get_video_format_desc() const { return format_desc_; } 
 	
 	int image_width_;
 	int image_height_;
@@ -162,17 +163,17 @@ struct image_scroll_producer : public frame_producer
 
 	tbb::atomic<bool> loop_;
 	std::shared_ptr<unsigned char> image_;
-	frame_format_desc format_desc_;
+	video_format_desc format_desc_;
 
-	frame_factory_ptr factory_;
+	frame_processor_device_ptr frame_processor_;
 };
 
-frame_producer_ptr create_image_scroll_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc)
+frame_producer_ptr create_image_scroll_producer(const std::vector<std::wstring>& params)
 {
 	std::wstring filename = params[0];
 	auto result_filename = common::find_file(server::media_folder() + filename, list_of(L"spng")(L"stga")(L"sbmp")(L"sjpg")(L"sjpeg"));
 	if(!result_filename.empty())
-		return std::make_shared<image_scroll_producer>(result_filename, params, format_desc);
+		return std::make_shared<image_scroll_producer>(result_filename, params);
 
 	return nullptr;
 }

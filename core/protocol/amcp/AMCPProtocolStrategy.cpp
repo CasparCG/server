@@ -19,7 +19,7 @@
 */
  
 #include "../../StdAfx.h"
-#include "../../renderer/render_device.h"
+#include "../../producer/frame_producer_device.h"
 
 #include "AMCPProtocolStrategy.h"
 
@@ -47,12 +47,12 @@ using IO::ClientInfoPtr;
 
 const std::wstring AMCPProtocolStrategy::MessageDelimiter = TEXT("\r\n");
 
-inline renderer::render_device_ptr GetChannelSafe(unsigned int index, const std::vector<renderer::render_device_ptr>& channels)
+inline channel_ptr GetChannelSafe(unsigned int index, const std::vector<channel_ptr>& channels)
 {
 	return index < channels.size() ? channels[index] : nullptr;
 }
 
-AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<renderer::render_device_ptr>& channels) : channels_(channels) {
+AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<channel_ptr>& channels) : channels_(channels) {
 	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue());
 	if(!pGeneralCommandQueue->Start()) {
 		CASPAR_LOG(error) << "Failed to start the general command-queue";
@@ -63,7 +63,7 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<renderer::render_de
 		commandQueues_.push_back(pGeneralCommandQueue);
 
 
-	renderer::render_device_ptr pChannel;
+	channel_ptr pChannel;
 	unsigned int index = -1;
 	//Create a commandpump for each channel
 	while((pChannel = GetChannelSafe(++index, channels_)) != 0) {
@@ -257,7 +257,7 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 					goto ParseFinnished;
 				}
 
-				renderer::render_device_ptr pChannel = GetChannelSafe(channelIndex, channels_);
+				channel_ptr pChannel = GetChannelSafe(channelIndex, channels_);
 				if(pChannel == 0) {
 					goto ParseFinnished;
 				}
