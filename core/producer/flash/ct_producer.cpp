@@ -25,7 +25,7 @@
 #include "cg_producer.h"
 
 #include "../../../common/utility/find_file.h"
-#include "../../frame/gpu_frame.h"
+#include "../../processor/frame.h"
 #include "../../server.h"
 
 #include <boost/assign/list_of.hpp>
@@ -34,7 +34,7 @@ using namespace boost::assign;
 
 namespace caspar { namespace core { namespace flash {
 	
-frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc) 
+frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params) 
 {
 	std::wstring filename = params[0];
 	std::wstring result_filename = common::find_file(server::media_folder() + filename, list_of(L"ct"));
@@ -46,7 +46,7 @@ frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params, c
 	while((pos = fixed_filename.find(TEXT('\\'), pos)) != std::wstring::npos) 
 		fixed_filename[pos] = TEXT('/');
 	
-	cg_producer_ptr cg_producer(new cg_producer(format_desc));
+	cg_producer_ptr cg_producer(new cg_producer());
 	cg_producer->add(0, filename, 1);
 	return cg_producer;
 }

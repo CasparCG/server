@@ -35,8 +35,8 @@
 
 #pragma warning(push)
 
-#include "..\..\frame\gpu_frame.h"
-#include "..\..\frame\frame_format.h"
+#include "..\..\processor\frame.h"
+#include "..\..\video\video_format.h"
 
 #include <ocmm.h>
 #include <vector>
@@ -259,7 +259,7 @@ public:
 	flash::flash_producer* pflash_producer_;
 	std::vector<DirtyRect> bDirtyRects_;
 
-	HRESULT SetFormat(const frame_format_desc&);
+	HRESULT SetFormat(const video_format_desc&);
 	bool IsReadyToRender() const;
 	void EnterFullscreen();
 

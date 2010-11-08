@@ -28,7 +28,7 @@
 #include "exception.h"
 #include "memory.h"
 
-#include "../../frame/gpu_frame.h"
+#include "../../processor/frame.h"
 
 #include <boost/thread.hpp>
 
@@ -41,7 +41,7 @@ namespace caspar { namespace core { namespace bluefish {
 	
 struct consumer::implementation
 {
-	implementation::implementation(const frame_format_desc& format_desc, unsigned int device_index, bool embed_audio) 
+	implementation::implementation(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) 
 		: device_index_(device_index), format_desc_(format_desc), sdk_(BlueVelvetFactory4()), current_id_(0), embed_audio_(embed_audio)
 	{
 		mem_fmt_		= MEM_FMT_ARGB_PC;
@@ -66,7 +66,7 @@ struct consumer::implementation
 		//blue_detach_from_device(&pBlueDevice);
 		
 		vid_fmt_ = VID_FMT_INVALID;
-		auto desiredVideoFormat = vid_fmt_from_frame_format(format_desc_.format);
+		auto desiredVideoFormat = vid_fmt_from_video_format(format_desc_.format);
 		int videoModeCount = sdk_->count_video_mode();
 		for(int videoModeIndex=1; videoModeIndex <= videoModeCount; ++videoModeIndex) 
 		{
@@ -172,7 +172,7 @@ struct consumer::implementation
 			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");		
 	}
 
-	void display(const gpu_frame_ptr& frame)
+	void display(const frame_ptr& frame)
 	{
 		if(frame == nullptr)
 			return;
@@ -183,7 +183,7 @@ struct consumer::implementation
 		frame_buffer_.push(frame);
 	}
 
-	void do_display(const gpu_frame_ptr& frame)
+	void do_display(const frame_ptr& frame)
 	{
 		auto hanc = hanc_buffers_[current_id_];		
 		current_id_ = (current_id_+1) % hanc_buffers_.size();		
@@ -264,7 +264,7 @@ struct consumer::implementation
 		{
 			try
 			{
-				gpu_frame_ptr frame;
+				frame_ptr frame;
 				frame_buffer_.pop(frame);
 				if(frame == nullptr)
 					return;
@@ -281,11 +281,11 @@ struct consumer::implementation
 	BlueVelvetPtr sdk_;
 	
 	unsigned int device_index_;
-	frame_format_desc format_desc_;
+	video_format_desc format_desc_;
 	
 	std::exception_ptr exception_;
 	boost::thread thread_;
-	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
+	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
 	
 	unsigned long	mem_fmt_;
 	unsigned long	upd_fmt_;
@@ -293,16 +293,15 @@ struct consumer::implementation
 	unsigned long	res_fmt_; 
 	unsigned long	engine_mode_;
 
-	gpu_frame_ptr transferring_frame_;
+	frame_ptr transferring_frame_;
 
 	std::vector<page_locked_buffer_ptr> hanc_buffers_;
 	int current_id_;
 	bool embed_audio_;
 };
 
-consumer::consumer(const frame_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
-void consumer::display(const gpu_frame_ptr& frame){impl_->display(frame);}
-const frame_format_desc& consumer::get_frame_format_desc() const { return impl_->format_desc_;}
+consumer::consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
+void consumer::display(const frame_ptr& frame){impl_->display(frame);}
 
 }}}
 

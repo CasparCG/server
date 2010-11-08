@@ -19,9 +19,8 @@
 */
 #pragma once
 
-#include "../frame/frame_fwd.h"
-#include "../frame/gpu_frame.h"
-#include "../frame/frame_factory.h"
+#include "../processor/frame.h"
+#include "../processor/frame_processor_device.h"
 
 #include <boost/noncopyable.hpp>
 
@@ -35,7 +34,7 @@ public:
 	virtual ~frame_producer(){}	
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	/// \fn	virtual gpu_frame_ptr :::render_frame() = 0;
+	/// \fn	virtual frame_ptr :::render_frame() = 0;
 	///
 	/// \brief	Renders a frame.
 	/// 		
@@ -43,7 +42,7 @@ public:
 	///
 	/// \return	The frame. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual gpu_frame_ptr render_frame() = 0;
+	virtual frame_ptr render_frame() = 0;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	/// \fn	virtual std::shared_ptr<frame_producer> :::get_following_producer() const
@@ -62,24 +61,15 @@ public:
 	/// \param	producer	The leading producer.
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual void set_leading_producer(const std::shared_ptr<frame_producer>& /*producer*/) {}
-
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	/// \fn	virtual const frame_format_desc& :::get_frame_format_desc() const = 0;
+	/// \fn	virtual void :::initialize(const frame_processor_device_ptr& frame_processor) = 0;
 	///
-	/// \brief	Gets the frame format description. 
+	/// \brief	Provides the frame frame_processor used to create frames and initializes the producer. 
 	///
-	/// \return	The frame format description. 
+	/// \param	frame_processor	The frame frame_processor. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual const frame_format_desc& get_frame_format_desc() const = 0;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	/// \fn	virtual void :::initialize(const frame_factory_ptr& factory) = 0;
-	///
-	/// \brief	Provides the frame factory used to create frames and initializes the producer. 
-	///
-	/// \param	factory	The frame factory. 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual void initialize(const frame_factory_ptr& factory) = 0;
+	virtual void initialize(const frame_processor_device_ptr& frame_processor) = 0;
 };
 typedef std::shared_ptr<frame_producer> frame_producer_ptr;
 

@@ -4,12 +4,6 @@
     <Filter Include="Source">
       <UniqueIdentifier>{0361bd88-1d96-4d86-b3ad-34d40e2319c6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\renderer">
-      <UniqueIdentifier>{db784096-c412-4d20-86f0-481e5e2979c5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\frame">
-      <UniqueIdentifier>{69627759-fb18-42fa-8339-66ce27062c90}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\consumer">
       <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
     </Filter>
@@ -70,11 +64,17 @@
     <Filter Include="Source\protocol\osc">
       <UniqueIdentifier>{23166bfa-06eb-4da9-8a0d-1ae5eac4348b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\frame\gpu">
-      <UniqueIdentifier>{91076088-a8dc-43e2-b401-ca2b8462fd06}</UniqueIdentifier>
-    </Filter>
     <Filter Include="My Amplifier Results">
       <UniqueIdentifier>{bb801cd9-8dc8-4300-a5c7-a7f5ee0805fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\video">
+      <UniqueIdentifier>{f19ced4f-4ad2-4c0a-b51f-50e89909d669}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\processor">
+      <UniqueIdentifier>{53e41831-70b4-4214-bc38-77e0d7aa288b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\processor\renderer">
+      <UniqueIdentifier>{30fe40ca-8bf0-4a46-a882-16d07b2b441e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -107,24 +107,6 @@
     </ClInclude>
     <ClInclude Include="protocol\clk\CLKProtocolStrategy.h">
       <Filter>Source\protocol\clk</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\render_device.h">
-      <Filter>Source\renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\layer.h">
-      <Filter>Source\renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\renderer_fwd.h">
-      <Filter>Source\renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\frame_fwd.h">
-      <Filter>Source\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\frame_format.h">
-      <Filter>Source\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="server.h">
-      <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="consumer\decklink\DecklinkVideoConsumer.h">
       <Filter>Source\consumer\decklink</Filter>
@@ -165,20 +147,11 @@
     <ClInclude Include="protocol\media.h">
       <Filter>Source\protocol</Filter>
     </ClInclude>
-    <ClInclude Include="frame\gpu_frame.h">
-      <Filter>Source\frame\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\frame_factory.h">
-      <Filter>Source\frame</Filter>
-    </ClInclude>
     <ClInclude Include="producer\frame_producer.h">
       <Filter>Source\producer</Filter>
     </ClInclude>
     <ClInclude Include="producer\ffmpeg\video\video_transformer.h">
       <Filter>Source\producer\ffmpeg\video</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\flash\bitmap.h">
-      <Filter>Source\producer\flash</Filter>
     </ClInclude>
     <ClInclude Include="producer\flash\cg_producer.h">
       <Filter>Source\producer\flash</Filter>
@@ -219,29 +192,50 @@
     <ClInclude Include="consumer\bluefish\bluefish_consumer.h">
       <Filter>Source\consumer\bluefish</Filter>
     </ClInclude>
-    <ClInclude Include="frame\gpu_composite_frame.h">
-      <Filter>Source\frame\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\display_device.h">
-      <Filter>Source\renderer</Filter>
-    </ClInclude>
     <ClInclude Include="config.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="consumer\frame_consumer.h">
       <Filter>Source\consumer</Filter>
     </ClInclude>
-    <ClInclude Include="frame\gpu_frame_desc.h">
-      <Filter>Source\frame\gpu</Filter>
+    <ClInclude Include="producer\flash\bitmap.h">
+      <Filter>Source\producer\flash</Filter>
     </ClInclude>
-    <ClInclude Include="frame\gpu_frame_device.h">
-      <Filter>Source\frame\gpu</Filter>
+    <ClInclude Include="producer\layer.h">
+      <Filter>Source\producer</Filter>
     </ClInclude>
-    <ClInclude Include="frame\gpu_frame_renderer.h">
-      <Filter>Source\frame\gpu</Filter>
+    <ClInclude Include="video\pixel_format.h">
+      <Filter>Source\video</Filter>
     </ClInclude>
-    <ClInclude Include="frame\gpu_frame_shader.h">
-      <Filter>Source\frame\gpu</Filter>
+    <ClInclude Include="video\video_format.h">
+      <Filter>Source\video</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\frame_consumer_device.h">
+      <Filter>Source\consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame_producer_device.h">
+      <Filter>Source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="server.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="channel.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\frame_processor_device.h">
+      <Filter>Source\processor</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\frame.h">
+      <Filter>Source\processor</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\composite_frame.h">
+      <Filter>Source\processor</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\frame_shader.h">
+      <Filter>Source\processor\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\frame_renderer.h">
+      <Filter>Source\processor\renderer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -268,18 +262,6 @@
     </ClCompile>
     <ClCompile Include="protocol\clk\CLKCommand.cpp">
       <Filter>Source\protocol\clk</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\render_device.cpp">
-      <Filter>Source\renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\layer.cpp">
-      <Filter>Source\renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="frame\frame_format.cpp">
-      <Filter>Source\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="server.cpp">
-      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="consumer\decklink\DecklinkVideoConsumer.cpp">
       <Filter>Source\consumer\decklink</Filter>
@@ -317,14 +299,8 @@
     <ClCompile Include="protocol\media.cpp">
       <Filter>Source\protocol</Filter>
     </ClCompile>
-    <ClCompile Include="frame\gpu_frame.cpp">
-      <Filter>Source\frame\gpu</Filter>
-    </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_transformer.cpp">
       <Filter>Source\producer\ffmpeg\video</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\flash\bitmap.cpp">
-      <Filter>Source\producer\flash</Filter>
     </ClCompile>
     <ClCompile Include="producer\flash\cg_producer.cpp">
       <Filter>Source\producer\flash</Filter>
@@ -350,20 +326,41 @@
     <ClCompile Include="consumer\bluefish\bluefish_consumer.cpp">
       <Filter>Source\consumer\bluefish</Filter>
     </ClCompile>
-    <ClCompile Include="frame\gpu_composite_frame.cpp">
-      <Filter>Source\frame\gpu</Filter>
+    <ClCompile Include="producer\flash\bitmap.cpp">
+      <Filter>Source\producer\flash</Filter>
     </ClCompile>
-    <ClCompile Include="renderer\display_device.cpp">
-      <Filter>Source\renderer</Filter>
+    <ClCompile Include="producer\layer.cpp">
+      <Filter>Source\producer</Filter>
     </ClCompile>
-    <ClCompile Include="frame\gpu_frame_device.cpp">
-      <Filter>Source\frame\gpu</Filter>
+    <ClCompile Include="video\video_format.cpp">
+      <Filter>Source\video</Filter>
     </ClCompile>
-    <ClCompile Include="frame\gpu_frame_renderer.cpp">
-      <Filter>Source\frame\gpu</Filter>
+    <ClCompile Include="consumer\frame_consumer_device.cpp">
+      <Filter>Source\consumer</Filter>
     </ClCompile>
-    <ClCompile Include="frame\gpu_frame_shader.cpp">
-      <Filter>Source\frame\gpu</Filter>
+    <ClCompile Include="producer\frame_producer_device.cpp">
+      <Filter>Source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="server.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\frame_processor_device.cpp">
+      <Filter>Source\processor</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\frame.cpp">
+      <Filter>Source\processor</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\composite_frame.cpp">
+      <Filter>Source\processor</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\frame_renderer.cpp">
+      <Filter>Source\processor\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\frame_shader.cpp">
+      <Filter>Source\processor\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="channel.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

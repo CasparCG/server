@@ -22,14 +22,15 @@
 
 #include "CLKCommand.h"
 #include "../../../common/io/ProtocolStrategy.h"
-#include "../../renderer/render_device.h"
+#include "../../producer/frame_producer_device.h"
+#include "../../channel.h"
 
 namespace caspar { namespace core { namespace CLK {
 
 class CLKProtocolStrategy : public IO::IProtocolStrategy
 {
 public:
-	CLKProtocolStrategy(const std::vector<renderer::render_device_ptr>& channels);
+	CLKProtocolStrategy(const std::vector<channel_ptr>& channels);
 
 	void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
 	UINT GetCodepage() { return 28591; }	//ISO 8859-1
@@ -48,7 +49,7 @@ private:
 	CLKCommand currentCommand_;
 	std::wstringstream currentCommandString_;
 
-	renderer::render_device_ptr pChannel_;
+	channel_ptr pChannel_;
 
 	bool bClockLoaded_;
 };

@@ -4,7 +4,7 @@
 
 #include "../../../common/exception/Exceptions.h"
 
-#include "../../frame/gpu_frame.h"
+#include "../../processor/frame.h"
 #include "../../../common/utility/memory.h"
 
 #if defined(_MSC_VER)

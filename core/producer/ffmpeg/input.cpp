@@ -2,7 +2,7 @@
 
 #include "input.h"
 
-#include "../../frame/frame_format.h"
+#include "../../video/video_format.h"
 #include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
 
@@ -18,8 +18,8 @@ namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
 {
-	implementation(const frame_format_desc& format_desc) 
-		: video_frame_rate_(25.0), video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_(nullptr), format_desc_(format_desc)
+	implementation() 
+		: video_frame_rate_(25.0), video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_(nullptr)
 	{
 		loop_ = false;
 		//file_buffer_size_ = 0;		
@@ -142,7 +142,7 @@ struct input::implementation : boost::noncopyable
 			{
 				if(packet->stream_index == video_s_index_) 		
 				{
-					video_packet_buffer_.push(std::make_shared<video_packet>(packet, format_desc_, video_codec_context_.get(), video_codec_)); // NOTE: video_packet makes a copy of AVPacket
+					video_packet_buffer_.push(std::make_shared<video_packet>(packet, video_codec_context_.get(), video_codec_)); // NOTE: video_packet makes a copy of AVPacket
 					//file_buffer_size_ += packet->size;
 				}
 				else if(packet->stream_index == audio_s_index_) 	
@@ -238,11 +238,9 @@ struct input::implementation : boost::noncopyable
 	tbb::atomic<bool> is_running_;
 
 	double video_frame_rate_;
-
-	frame_format_desc format_desc_;
 };
 
-input::input(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+input::input() : impl_(new implementation()){}
 void input::load(const std::string& filename){impl_->load(filename);}
 void input::set_loop(bool value){impl_->loop_ = value;}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}

@@ -28,10 +28,10 @@
 #include "DecklinkVideoConsumer.h"
 #include "DeckLinkAPI_h.h"
 
-#include "../../frame/frame_format.h"
+#include "../../video/video_format.h"
 #include "../../../common/utility/memory.h"
 
-#include "../../renderer/render_device.h"
+#include "../../producer/frame_producer_device.h"
 
 #include <tbb/concurrent_queue.h>
 #include <boost/thread.hpp>
@@ -56,7 +56,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		explicit DecklinkVideoFrame(DecklinkFrameManager* pFactory)
 		{
 			IDeckLinkMutableVideoFrame* frame = NULL;
-			const frame_format_desc& format_desc = pFactory->pConsumerImpl_->get_frame_format_desc();
+			const video_format_desc& format_desc = pFactory->pConsumerImpl_->get_video_format_desc();
 			if(pFactory->pConsumerImpl_->pDecklinkOutput_->CreateVideoFrame(format_desc.width, format_desc.height, format_desc.size/format_desc.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &frame) != S_OK) 
 			{
 				throw std::exception("DECKLINK: Failed to create frame");
@@ -122,7 +122,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 			return pResult;
 		}
 
-		void DisplayFrame(const gpu_frame_ptr& frame)
+		void DisplayFrame(const frame_ptr& frame)
 		{
 			if(frame != NULL) 
 			{
@@ -177,8 +177,8 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 			return std::make_shared<DecklinkVideoFrame>(this);
 		}
 
-		const frame_format_desc& get_frame_format_desc() const {
-			return pConsumerImpl_->get_frame_format_desc();
+		const video_format_desc& get_video_format_desc() const {
+			return pConsumerImpl_->get_video_format_desc();
 		}
 
 		Implementation* pConsumerImpl_;
@@ -193,17 +193,17 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 
 	std::shared_ptr<DecklinkPlaybackStrategy> pPlayback_;
 	DecklinkFrameManagerPtr pFrameManager_;
-	frame_format currentFormat_;
-	frame_format_desc format_desc_;
+	video_format::type currentFormat_;
+	video_format_desc format_desc_;
 
 	std::exception_ptr pException_;
 	boost::thread thread_;
-	tbb::concurrent_bounded_queue<gpu_frame_ptr> frameBuffer_;
+	tbb::concurrent_bounded_queue<frame_ptr> frameBuffer_;
 
 //	IDeckLinkMutableVideoFrame* pNextFrame_;
 
-	explicit Implementation(const frame_format_desc& format_desc, bool internalKey) 
-		: format_desc_(format_desc), currentFormat_(frame_format::pal), internalKey_(internalKey)
+	explicit Implementation(const video_format_desc& format_desc, bool internalKey) 
+		: format_desc_(format_desc), currentFormat_(video_format::pal), internalKey_(internalKey)
 	{
 	
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
@@ -242,7 +242,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		ReleaseDevice();
 	}
 	
-	void DisplayFrame(const gpu_frame_ptr& frame)
+	void DisplayFrame(const frame_ptr& frame)
 	{
 		if(frame == nullptr)
 			return;		
@@ -259,7 +259,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		{
 			try
 			{	
-				gpu_frame_ptr frame;
+				frame_ptr frame;
 				frameBuffer_.pop(frame);
 				if(frame == nullptr)
 					return;
@@ -406,43 +406,43 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 		return S_OK;
 	}
 
-	const frame_format_desc& get_frame_format_desc() const 
+	const video_format_desc& get_video_format_desc() const 
 	{
-		return frame_format_desc::format_descs[currentFormat_];
+		return video_format_desc::format_descs[currentFormat_];
 	}
 
-	unsigned long GetDecklinkVideoFormat(frame_format fmt) 
+	unsigned long GetDecklinkVideoFormat(video_format::type fmt) 
 	{
 		switch(fmt)
 		{
-		case frame_format::pal:			return bmdModePAL;
-		case frame_format::ntsc:		return bmdModeNTSC;
-		case frame_format::x576p2500:	return ULONG_MAX;	//not supported
-		case frame_format::x720p5000:	return bmdModeHD720p50;
-		case frame_format::x720p5994:	return bmdModeHD720p5994;
-		case frame_format::x720p6000:	return bmdModeHD720p60;
-		case frame_format::x1080p2397:	return bmdModeHD1080p2398;
-		case frame_format::x1080p2400:	return bmdModeHD1080p24;
-		case frame_format::x1080i5000:	return bmdModeHD1080i50;
-		case frame_format::x1080i5994:	return bmdModeHD1080i5994;
-		case frame_format::x1080i6000:	return bmdModeHD1080i6000;
-		case frame_format::x1080p2500:	return bmdModeHD1080p25;
-		case frame_format::x1080p2997:	return bmdModeHD1080p2997;
-		case frame_format::x1080p3000:	return bmdModeHD1080p30;
+		case video_format::pal:			return bmdModePAL;
+		case video_format::ntsc:		return bmdModeNTSC;
+		case video_format::x576p2500:	return ULONG_MAX;	//not supported
+		case video_format::x720p5000:	return bmdModeHD720p50;
+		case video_format::x720p5994:	return bmdModeHD720p5994;
+		case video_format::x720p6000:	return bmdModeHD720p60;
+		case video_format::x1080p2397:	return bmdModeHD1080p2398;
+		case video_format::x1080p2400:	return bmdModeHD1080p24;
+		case video_format::x1080i5000:	return bmdModeHD1080i50;
+		case video_format::x1080i5994:	return bmdModeHD1080i5994;
+		case video_format::x1080i6000:	return bmdModeHD1080i6000;
+		case video_format::x1080p2500:	return bmdModeHD1080p25;
+		case video_format::x1080p2997:	return bmdModeHD1080p2997;
+		case video_format::x1080p3000:	return bmdModeHD1080p30;
 		default:						return ULONG_MAX;
 		}
 	}
 };
 
-DecklinkVideoConsumer::DecklinkVideoConsumer(const frame_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey))
+DecklinkVideoConsumer::DecklinkVideoConsumer(const video_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey))
 {}
 
-void DecklinkVideoConsumer::display(const gpu_frame_ptr& frame)
+void DecklinkVideoConsumer::display(const frame_ptr& frame)
 {
 	pImpl_->DisplayFrame(frame);
 }
 
-const frame_format_desc& DecklinkVideoConsumer::get_frame_format_desc() const
+const video_format_desc& DecklinkVideoConsumer::get_video_format_desc() const
 {
 	return pImpl_->format_desc_;
 }

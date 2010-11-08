@@ -1,7 +1,7 @@
 #pragma once
 
 #include <BlueVelvet4.h>
-#include "../../frame/frame_format.h"
+#include "../../video/video_format.h"
 
 #include <memory>
 
@@ -17,24 +17,24 @@ inline bool is_epoch_card(int card_type)
 			card_type == CRD_BLUE_EPOCH_ULTRA;
 }
 
-inline EVideoMode vid_fmt_from_frame_format(const frame_format& fmt) 
+inline EVideoMode vid_fmt_from_video_format(const video_format::type& fmt) 
 {
 	switch(fmt)
 	{
-	case frame_format::pal:			return VID_FMT_PAL;
-	case frame_format::ntsc:		return VID_FMT_NTSC;
-	case frame_format::x576p2500:	return VID_FMT_INVALID;	//not supported
-	case frame_format::x720p5000:	return VID_FMT_720P_5000;
-	case frame_format::x720p5994:	return VID_FMT_720P_5994;
-	case frame_format::x720p6000:	return VID_FMT_720P_6000;
-	case frame_format::x1080p2397:	return VID_FMT_1080P_2397;
-	case frame_format::x1080p2400:	return VID_FMT_1080P_2400;
-	case frame_format::x1080i5000:	return VID_FMT_1080I_5000;
-	case frame_format::x1080i5994:	return VID_FMT_1080I_5994;
-	case frame_format::x1080i6000:	return VID_FMT_1080I_6000;
-	case frame_format::x1080p2500:	return VID_FMT_1080P_2500;
-	case frame_format::x1080p2997:	return VID_FMT_1080P_2997;
-	case frame_format::x1080p3000:	return VID_FMT_1080P_3000;
+	case video_format::pal:			return VID_FMT_PAL;
+	case video_format::ntsc:		return VID_FMT_NTSC;
+	case video_format::x576p2500:	return VID_FMT_INVALID;	//not supported
+	case video_format::x720p5000:	return VID_FMT_720P_5000;
+	case video_format::x720p5994:	return VID_FMT_720P_5994;
+	case video_format::x720p6000:	return VID_FMT_720P_6000;
+	case video_format::x1080p2397:	return VID_FMT_1080P_2397;
+	case video_format::x1080p2400:	return VID_FMT_1080P_2400;
+	case video_format::x1080i5000:	return VID_FMT_1080I_5000;
+	case video_format::x1080i5994:	return VID_FMT_1080I_5994;
+	case video_format::x1080i6000:	return VID_FMT_1080I_6000;
+	case video_format::x1080p2500:	return VID_FMT_1080P_2500;
+	case video_format::x1080p2997:	return VID_FMT_1080P_2997;
+	case video_format::x1080p3000:	return VID_FMT_1080P_3000;
 	default:						return VID_FMT_INVALID;
 	}
 }

@@ -21,17 +21,17 @@
 
 #include "../../consumer/frame_consumer.h"
 
-#include "../../frame/frame_fwd.h"
+#include "../../video/video_format.h"
 
 namespace caspar { namespace core { namespace decklink {
 
 class DecklinkVideoConsumer : public frame_consumer
 {
 public:
-	explicit DecklinkVideoConsumer(const frame_format_desc& format_desc, bool internalKey = false);
+	explicit DecklinkVideoConsumer(const video_format_desc& format_desc, bool internalKey = false);
 	
-	void display(const gpu_frame_ptr&);
-	const frame_format_desc& get_frame_format_desc() const;
+	void display(const frame_ptr&);
+	const video_format_desc& get_video_format_desc() const;
 private:
 	struct Implementation;
 	std::tr1::shared_ptr<Implementation> pImpl_;

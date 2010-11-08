@@ -96,6 +96,11 @@ public:
 	{
 		return begin_invoke(std::forward<Func>(func)).get();
 	}
+
+	void set_capacity(size_t capacity)
+	{
+		execution_queue_.set_capacity(capacity);
+	}
 	
 private:
 

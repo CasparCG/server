@@ -29,15 +29,15 @@
 #include "TimerHelper.h"
 #include "bitmap.h"
 
-#include "../../frame/frame_format.h"
+#include "../../video/video_format.h"
 #include "../../../common/utility/find_file.h"
 #include "../../server.h"
 #include "../../../common/concurrency/executor.h"
 #include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
 
-#include "../../frame/gpu_frame.h"
-#include "../../frame/gpu_composite_frame.h"
+#include "../../processor/frame.h"
+#include "../../processor/composite_frame.h"
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
@@ -58,8 +58,8 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
 struct flash_producer::implementation
 {	
-	implementation(flash_producer* self, const std::wstring& filename, const frame_format_desc& format_desc) 
-		: flashax_container_(nullptr), filename_(filename), self_(self), format_desc_(format_desc),
+	implementation(flash_producer* self, const std::wstring& filename) 
+		: flashax_container_(nullptr), filename_(filename), self_(self),
 			bitmap_pool_(new bitmap_pool), executor_([=]{run();}), invalid_count_(0)
 	{	
 		if(!boost::filesystem::exists(filename))
@@ -71,8 +71,8 @@ struct flash_producer::implementation
 	~implementation() 
 	{
 		stop();
-		if(factory_)
-			factory_->release_frames(this);
+		if(frame_processor_)
+			frame_processor_->release_tag(this);
 	}
 
 	void start(bool force = true)
@@ -111,7 +111,7 @@ struct flash_producer::implementation
 					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to Set Scale Mode"));
 												
 				// stop if failed
-				if(FAILED(flashax_container_->SetFormat(format_desc_))) 
+				if(FAILED(flashax_container_->SetFormat(frame_processor_->get_video_format_desc()))) 
 					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to Set Format"));
 
 				current_frame_ = nullptr; // Force re-render of current frame			
@@ -227,17 +227,18 @@ struct flash_producer::implementation
 				return;
 			}
 
-			bool is_progressive = format_desc_.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc_.fps/2 == 0);
+			auto format_desc = frame_processor_->get_video_format_desc();
+			bool is_progressive = format_desc.update == video_update_format::progressive || (flashax_container_->GetFPS() - format_desc.fps/2 == 0);
 
-			gpu_frame_ptr result;
+			frame_ptr result;
 
 			if(is_progressive)							
 				result = do_render_frame();		
 			else
 			{
-				gpu_frame_ptr frame1 = do_render_frame();
-				gpu_frame_ptr frame2 = do_render_frame();
-				result = gpu_composite_frame::interlace(frame1, frame2, format_desc_.mode);
+				frame_ptr frame1 = do_render_frame();
+				frame_ptr frame2 = do_render_frame();
+				result = composite_frame::interlace(frame1, frame2, format_desc.update);
 			}
 
 			frame_buffer_.push(result);
@@ -245,8 +246,10 @@ struct flash_producer::implementation
 		}
 	}
 		
-	gpu_frame_ptr do_render_frame()
+	frame_ptr do_render_frame()
 	{
+		auto format_desc = frame_processor_->get_video_format_desc();
+
 		flashax_container_->Tick();
 		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
 		if(current_frame_ == nullptr || invalid_count_ < 2)
@@ -255,7 +258,7 @@ struct flash_producer::implementation
 			if(!bitmap_pool_->try_pop(frame))					
 			{	
 				CASPAR_LOG(trace) << "Allocated bitmap";
-				frame = std::make_shared<bitmap>(format_desc_.width, format_desc_.height);					
+				frame = std::make_shared<bitmap>(format_desc.width, format_desc.height);					
 				common::clear(frame->data(), frame->size());
 			}
 			flashax_container_->DrawControl(frame->hdc());
@@ -268,36 +271,35 @@ struct flash_producer::implementation
 			});
 		}	
 
-		auto frame = factory_->create_frame(format_desc_, this);
+		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height, this);
 		common::aligned_parallel_memcpy(frame->data(), current_frame_->data(), current_frame_->size());	
 
 		return frame;
 	}
 		
-	gpu_frame_ptr render_frame()
+	frame_ptr render_frame()
 	{
 		if(!frame_buffer_.try_pop(last_frame_) && is_empty_)
-			return gpu_frame::null();
+			return frame::empty();
 		
 		return last_frame_;
 	}
 
-	void initialize(const frame_factory_ptr& factory)
+	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
-		factory_ = factory;
+		frame_processor_ = frame_processor;
 		start(false);
 	}
 	
 	typedef tbb::concurrent_bounded_queue<bitmap_ptr> bitmap_pool;
 	std::shared_ptr<bitmap_pool> bitmap_pool_;
-	frame_format_desc format_desc_;
 
 	CComObject<flash::FlashAxContainer>* flashax_container_;
 		
-	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
-	gpu_frame_ptr last_frame_;
+	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
+	frame_ptr last_frame_;
 	bitmap_ptr current_frame_;
-	
+		
 	std::wstring filename_;
 	flash_producer* self_;
 
@@ -305,14 +307,13 @@ struct flash_producer::implementation
 	common::executor executor_;
 	int invalid_count_;
 
-	frame_factory_ptr factory_;
+	frame_processor_device_ptr frame_processor_;
 };
 
-flash_producer::flash_producer(const std::wstring& filename, const frame_format_desc& format_desc) : impl_(new implementation(this, filename, format_desc)){}
-gpu_frame_ptr flash_producer::render_frame(){return impl_->render_frame();}
+flash_producer::flash_producer(const std::wstring& filename) : impl_(new implementation(this, filename)){}
+frame_ptr flash_producer::render_frame(){return impl_->render_frame();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
-const frame_format_desc& flash_producer::get_frame_format_desc() const { return impl_->format_desc_; } 
-void flash_producer::initialize(const frame_factory_ptr& factory) { impl_->initialize(factory);}
+void flash_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)
 {
@@ -325,13 +326,13 @@ std::wstring flash_producer::find_template(const std::wstring& template_name)
 	return L"";
 }
 
-flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params, const frame_format_desc& format_desc)
+flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params)
 {
 	// TODO: Check for flash support
 	auto filename = params[0];
 	std::wstring result_filename = common::find_file(server::media_folder() + filename, list_of(L"swf"));
 
-	return result_filename.empty() ? nullptr : std::make_shared<flash_producer>(result_filename, format_desc);
+	return result_filename.empty() ? nullptr : std::make_shared<flash_producer>(result_filename);
 }
 
 }}}

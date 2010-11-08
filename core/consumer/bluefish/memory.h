@@ -3,7 +3,7 @@
 #include <Windows.h>
 
 #include <BlueVelvet4.h>
-#include "../../frame/frame_format.h"
+#include "../../video/video_format.h"
 #include "exception.h"
 
 namespace caspar { namespace core { namespace bluefish {

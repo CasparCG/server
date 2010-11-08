@@ -72,8 +72,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
 			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 
-			GL(glTexImage2D(GL_TEXTURE_2D, 0, internal_, width_, height_, 0, format_, 
-								GL_UNSIGNED_BYTE, NULL));
+			GL(glTexImage2D(GL_TEXTURE_2D, 0, internal_, width_, height_, 0, format_, GL_UNSIGNED_BYTE, NULL));
 		}
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
 	}
@@ -85,8 +84,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER));
 		mapped_ = false;
 		bind_texture();
-		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, format_, 
-							GL_UNSIGNED_BYTE, NULL));
+		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, format_, GL_UNSIGNED_BYTE, NULL));
 		unbind_pbo(GL_PIXEL_UNPACK_BUFFER);
 		writing_ = true;
 	}
@@ -98,11 +96,10 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 
 		bind_pbo(GL_PIXEL_UNPACK_BUFFER);
 		GL(glBufferData(GL_PIXEL_UNPACK_BUFFER, size_, NULL, GL_STREAM_DRAW));
-		auto data = static_cast<unsigned char*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY));
+		auto data = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
 		unbind_pbo(GL_PIXEL_UNPACK_BUFFER);		
 		if(!data)
-			BOOST_THROW_EXCEPTION(invalid_operation() 
-									<< msg_info("glMapBuffer failed"));
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("glMapBuffer failed"));
 		writing_ = false;
 		mapped_ = true;
 		return data;
@@ -126,7 +123,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 			BOOST_THROW_EXCEPTION(invalid_operation());
 
 		bind_pbo(GL_PIXEL_PACK_BUFFER);
-		auto data = static_cast<unsigned char*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));   
+		auto data = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);   
 		unbind_pbo(GL_PIXEL_PACK_BUFFER);
 		if(!data)
 			BOOST_THROW_EXCEPTION(std::bad_alloc());
@@ -135,6 +132,19 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 		return data;
 	}
 
+	void is_smooth(bool smooth)
+	{
+		if(smooth)
+		{
+			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+		}
+		else
+		{
+			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+			GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+		}
+	}
 	
 	GLuint pbo_;
 	GLuint texture_;
@@ -167,4 +177,5 @@ size_t pixel_buffer_object::height() const {return impl_->height_;}
 size_t pixel_buffer_object::size() const {return impl_->size_;}
 bool pixel_buffer_object::is_reading() const { return impl_->reading_;}
 bool pixel_buffer_object::is_writing() const { return impl_->writing_;}
+void pixel_buffer_object::is_smooth(bool smooth){impl_->is_smooth(smooth);}
 }}}

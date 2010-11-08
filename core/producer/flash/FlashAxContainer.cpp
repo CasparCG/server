@@ -21,7 +21,7 @@
 #include "..\..\stdafx.h"
 
 #include "FlashAxContainer.h"
-#include "..\..\frame\frame_format.h"
+#include "..\..\video\video_format.h"
 #include "flash_producer.h"
 #include "TimerHelper.h"
 
@@ -774,7 +774,7 @@ HRESULT FlashAxContainer::CreateAxControl()
 	return S_OK;
 }
 
-HRESULT FlashAxContainer::SetFormat(const frame_format_desc& format_desc) 
+HRESULT FlashAxContainer::SetFormat(const video_format_desc& format_desc) 
 {
 	if(m_spInPlaceObjectWindowless == nullptr)
 		return E_FAIL;
@@ -827,7 +827,7 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
 	assert(SUCCEEDED(hr));
 	bInvalidRect_ = false;
 
-/*	const frame_format_desc& format_desc = frame_format_desc::format_descs[format_];
+/*	const video_format_desc& format_desc = video_format_desc::format_descs[format_];
 
 	//Trying to redraw just the dirty rectangles. Doesn't seem to work when the movie uses "filters", such as glow, dropshadow etc.
 	std::vector<flash::DirtyRect>::iterator it = bDirtyRects_.begin();

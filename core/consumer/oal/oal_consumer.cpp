@@ -22,8 +22,8 @@
 
 #include "oal_consumer.h"
 
-#include "../../frame/gpu_frame.h"
-#include "../../frame/frame_format.h"
+#include "../../processor/frame.h"
+#include "../../video/video_format.h"
 
 #include <SFML/Audio.hpp>
 
@@ -33,7 +33,7 @@ namespace caspar { namespace core { namespace oal {
 
 struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
-	implementation(const frame_format_desc& format_desc) : format_desc_(format_desc), container_(5)
+	implementation() : container_(5)
 	{
 		input_.set_capacity(2);
 		sf::SoundStream::Initialize(2, 48000);
@@ -45,7 +45,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		Stop();
 	}
 	
-	void push(const gpu_frame_ptr& frame)
+	void push(const frame_ptr& frame)
 	{
 		// NOTE: tbb::concurrent_queue does not have rvalue support. 
 		// Use shared_ptr to emulate move semantics
@@ -88,10 +88,8 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 
 	boost::circular_buffer<std::vector<short>> container_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<std::vector<short>>> input_;
-	frame_format_desc format_desc_;
 };
 
-consumer::consumer(const frame_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-const frame_format_desc& consumer::get_frame_format_desc() const{return impl_->format_desc_;}
-void consumer::prepare(const gpu_frame_ptr& frame){impl_->push(frame);}
+consumer::consumer(const video_format_desc&) : impl_(new implementation()){}
+void consumer::prepare(const frame_ptr& frame){impl_->push(frame);}
 }}}

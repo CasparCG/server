@@ -25,6 +25,8 @@ public:
 	void begin_read();
 	void* end_read();
 
+	void is_smooth(bool smooth);
+
 	void bind_texture();
 
 	size_t width() const;

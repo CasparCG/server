@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 
 #include "server.h"
+#include "channel.h"
 
 #include "consumer/oal/oal_consumer.h"
 #ifndef DISABLE_BLUEFISH
@@ -23,6 +24,10 @@
 #include <boost/foreach.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+
+#include "producer/frame_producer_device.h"
+#include "consumer/frame_consumer_device.h"
+#include "processor/frame_processor_device.h"
 
 namespace caspar { namespace core {
 
@@ -111,7 +116,10 @@ struct server::implementation : boost::noncopyable
 				}
 			}
 			
-			channels_.push_back(std::make_shared<renderer::render_device>(format_desc, consumers));
+			auto processor_device = std::make_shared<frame_processor_device>(format_desc);
+			auto producer_device = std::make_shared<frame_producer_device>(processor_device);
+			auto consumer_device = std::make_shared<frame_consumer_device>(processor_device, format_desc, consumers);
+			channels_.push_back(std::make_shared<channel>(producer_device, processor_device, consumer_device));
 		}
 	}
 		
@@ -139,7 +147,6 @@ struct server::implementation : boost::noncopyable
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				throw;
 			}
 		}
 	}
@@ -157,8 +164,8 @@ struct server::implementation : boost::noncopyable
 	}
 
 	std::vector<IO::AsyncEventServerPtr> async_servers_;
-
-	std::vector<renderer::render_device_ptr> channels_;
+	
+	std::vector<channel_ptr> channels_;
 
 	int logLevel_;
 
@@ -199,6 +206,8 @@ const std::wstring& server::data_folder()
 	return server::implementation::data_folder_;
 }
 
-const std::vector<renderer::render_device_ptr>& server::get_channels() const{ return impl_->channels_; }
-
+const std::vector<channel_ptr> server::get_channels() const
+{
+	return impl_->channels_;
+}
 }}

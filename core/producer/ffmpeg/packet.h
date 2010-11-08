@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../frame/gpu_frame.h"
-#include "../../frame/frame_format.h"
+#include "../../processor/frame.h"
+#include "../../video/video_format.h"
 
 #include <tbb/scalable_allocator.h>
 #include <type_traits>
@@ -29,8 +29,8 @@ struct ffmpeg_error: virtual boost::exception, virtual std::exception { };
 
 struct video_packet : boost::noncopyable
 {
-	video_packet(const AVPacketPtr& packet, const frame_format_desc& format_desc, AVCodecContext* codec_context, AVCodec* codec) 
-		:  size(packet->size), codec_context(codec_context), codec(codec), format_desc(format_desc), 
+	video_packet(const AVPacketPtr& packet, AVCodecContext* codec_context, AVCodec* codec) 
+		:  size(packet->size), codec_context(codec_context), codec(codec), 
 			data(static_cast<uint8_t*>(scalable_aligned_malloc(packet->size, 16)))
 	{
 		memcpy(const_cast<uint8_t*>(data), packet->data, packet->size);
@@ -45,9 +45,8 @@ struct video_packet : boost::noncopyable
 	const uint8_t* const			data;
 	AVCodecContext*	const			codec_context;
 	const AVCodec* const			codec;
-	gpu_frame_ptr						frame;
+	frame_ptr						frame;
 	AVFramePtr						decoded_frame;
-	const frame_format_desc&		format_desc;
 };	
 typedef std::shared_ptr<video_packet> video_packet_ptr;
 
