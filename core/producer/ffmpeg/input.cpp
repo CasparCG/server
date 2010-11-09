@@ -14,6 +14,20 @@
 #include <errno.h>
 #include <system_error>
 		
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavformat/avformat.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
+
 namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
@@ -142,12 +156,12 @@ struct input::implementation : boost::noncopyable
 			{
 				if(packet->stream_index == video_s_index_) 		
 				{
-					video_packet_buffer_.push(std::make_shared<video_packet>(packet, video_codec_context_.get(), video_codec_)); // NOTE: video_packet makes a copy of AVPacket
+					video_packet_buffer_.push(std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size));		
 					//file_buffer_size_ += packet->size;
 				}
 				else if(packet->stream_index == audio_s_index_) 	
 				{
-					audio_packet_buffer_.push(std::make_shared<audio_packet>(packet, audio_codex_context_.get(), audio_codec_, video_frame_rate_));		
+					audio_packet_buffer_.push(std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size));		
 					//file_buffer_size_ += packet->size;
 				}
 			}
@@ -167,26 +181,28 @@ struct input::implementation : boost::noncopyable
 		CASPAR_LOG(info) << " Ended ffmpeg_producer::read_file Thread for " << filename_.c_str();
 	}
 	
-	video_packet_ptr get_video_packet()
+	aligned_buffer get_video_packet()
 	{
-		video_packet_ptr video_packet;
+		std::shared_ptr<aligned_buffer> video_packet;
 		if(video_packet_buffer_.try_pop(video_packet))
 		{
+			return std::move(*video_packet);
 			//file_buffer_size_ -= video_packet->size;
 			//file_buffer_size_cond_.notify_all();
 		}
-		return video_packet;
+		return aligned_buffer();
 	}
 
-	audio_packet_ptr get_audio_packet()
+	aligned_buffer get_audio_packet()
 	{
-		audio_packet_ptr audio_packet;
+		std::shared_ptr<aligned_buffer> audio_packet;
 		if(audio_packet_buffer_.try_pop(audio_packet))
 		{
+			return std::move(*audio_packet);
 			//file_buffer_size_ -= audio_packet->size;
 			//file_buffer_size_cond_.notify_all();
 		}
-		return audio_packet;
+		return aligned_buffer();
 	}
 
 	bool is_eof() const
@@ -232,8 +248,8 @@ struct input::implementation : boost::noncopyable
 	int									video_s_index_;
 	int									audio_s_index_;
 	
-	tbb::concurrent_bounded_queue<video_packet_ptr> video_packet_buffer_;
-	tbb::concurrent_bounded_queue<audio_packet_ptr> audio_packet_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> video_packet_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> audio_packet_buffer_;
 	boost::thread	io_thread_;
 	tbb::atomic<bool> is_running_;
 
@@ -246,8 +262,8 @@ void input::set_loop(bool value){impl_->loop_ = value;}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
 bool input::is_eof() const{return impl_->is_eof();}
-video_packet_ptr input::get_video_packet(){return impl_->get_video_packet();}
-audio_packet_ptr input::get_audio_packet(){return impl_->get_audio_packet();}
+aligned_buffer input::get_video_packet(){return impl_->get_video_packet();}
+aligned_buffer input::get_audio_packet(){return impl_->get_audio_packet();}
 bool input::seek(unsigned long long frame){return impl_->seek(frame);}
 void input::start(){impl_->start();}
 }}}

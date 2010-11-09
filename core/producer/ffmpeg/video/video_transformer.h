@@ -1,16 +1,19 @@
 #pragma once
 
-#include "../packet.h"
-
 #include "../../../processor/frame_processor_device.h"
+
+#include <memory>
+
+struct AVCodecContext;
+struct AVFrame;
 
 namespace caspar { namespace core { namespace ffmpeg{
 
 class video_transformer : boost::noncopyable
 {
 public:
-	video_transformer();
-	video_packet_ptr execute(const video_packet_ptr& video_packet);	
+	video_transformer(AVCodecContext* codec_context);
+	frame_ptr execute(const std::shared_ptr<AVFrame>& video_packet);	
 	void initialize(const frame_processor_device_ptr& frame_processor);
 private:
 	struct implementation;

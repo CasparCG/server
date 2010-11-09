@@ -31,7 +31,7 @@ public:
 	
 	void display(const frame_ptr&);
 		
-	virtual bool has_sync_clock() const {return false;}
+	virtual bool has_sync_clock() const {return true;}
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

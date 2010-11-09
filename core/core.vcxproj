@@ -173,7 +173,6 @@
     <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h" />
     <ClInclude Include="producer\ffmpeg\ffmpeg_producer.h" />
     <ClInclude Include="producer\ffmpeg\input.h" />
-    <ClInclude Include="producer\ffmpeg\packet.h" />
     <ClInclude Include="producer\ffmpeg\video\video_decoder.h" />
     <ClInclude Include="producer\ffmpeg\video\video_transformer.h" />
     <ClInclude Include="producer\flash\axflash.h" />

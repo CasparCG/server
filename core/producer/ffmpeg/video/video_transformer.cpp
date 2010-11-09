@@ -16,12 +16,21 @@
 
 #include <unordered_map>
 
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
 extern "C" 
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
 	#include <libswscale/swscale.h>
+	#include <libavformat/avformat.h>
 }
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
+
 
 namespace caspar { namespace core { namespace ffmpeg{
 	
@@ -45,7 +54,7 @@ pixel_format::type get_pixel_format(PixelFormat pix_fmt)
 
 struct video_transformer::implementation : boost::noncopyable
 {
-	implementation() : sw_warning_(false){}
+	implementation(AVCodecContext* codec_context) : sw_warning_(false), codec_context_(codec_context){}
 
 	~implementation()
 	{
@@ -53,13 +62,13 @@ struct video_transformer::implementation : boost::noncopyable
 			frame_processor_->release_tag(this);
 	}
 
-	video_packet_ptr execute(const video_packet_ptr video_packet)
+	frame_ptr execute(const std::shared_ptr<AVFrame>& decoded_frame)
 	{				
-		assert(video_packet);
-		int width = video_packet->codec_context->width;
-		int height = video_packet->codec_context->height;
-		auto pix_fmt = video_packet->codec_context->pix_fmt;
-		video_packet->decoded_frame;
+		const int width = codec_context_->width;
+		const int height = codec_context_->height;
+		const auto pix_fmt = codec_context_->pix_fmt;
+
+		frame_ptr transformed_frame;
 
 		switch(pix_fmt)
 		{
@@ -68,15 +77,15 @@ struct video_transformer::implementation : boost::noncopyable
 		case PIX_FMT_RGBA:
 		case PIX_FMT_ABGR:
 			{
-				video_packet->frame = frame_processor_->create_frame(width, height, this);
+				transformed_frame = frame_processor_->create_frame(width, height, this);
 				tbb::parallel_for(0, height, 1, [&](int y)
 				{
 					common::aligned_memcpy(
-						video_packet->frame->data()+y*width*4, 
-						video_packet->decoded_frame->data[0] + y*video_packet->decoded_frame->linesize[0], 
+						transformed_frame->data()+y*width*4, 
+						decoded_frame->data[0] + y*decoded_frame->linesize[0], 
 						width*4); 
 				});
-				video_packet->frame->pix_fmt(get_pixel_format(pix_fmt));
+				transformed_frame->pix_fmt(get_pixel_format(pix_fmt));
 						
 				break;
 			}
@@ -104,7 +113,7 @@ struct video_transformer::implementation : boost::noncopyable
 					desc.planes[3] = pixel_format_desc::plane(dummy_pict.linesize[3], height, 1);				
 
 				desc.pix_fmt = get_pixel_format(pix_fmt);
-				video_packet->frame = frame_processor_->create_frame(desc, this);
+				transformed_frame = frame_processor_->create_frame(desc, this);
 
 				tbb::parallel_for(0, static_cast<int>(desc.planes.size()), 1, [&](int n)
 				{
@@ -114,8 +123,8 @@ struct video_transformer::implementation : boost::noncopyable
 					tbb::parallel_for(0, static_cast<int>(desc.planes[n].height), 1, [&](int y)
 					{
 						memcpy(
-							video_packet->frame->data(n)+y*dummy_pict.linesize[n], 
-							video_packet->decoded_frame->data[n] + y*video_packet->decoded_frame->linesize[n], 
+							transformed_frame->data(n)+y*dummy_pict.linesize[n], 
+							decoded_frame->data[n] + y*decoded_frame->linesize[n], 
 							dummy_pict.linesize[n]);
 					});
 				});
@@ -128,11 +137,11 @@ struct video_transformer::implementation : boost::noncopyable
 					CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
 					sw_warning_ = true;
 				}
-				video_packet->frame = frame_processor_->create_frame(width, height, this);
+				transformed_frame = frame_processor_->create_frame(width, height, this);
 
 				AVFrame av_frame;	
 				avcodec_get_frame_defaults(&av_frame);
-				avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), video_packet->frame->data(), PIX_FMT_BGRA, width, height);
+				avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), transformed_frame->data(), PIX_FMT_BGRA, width, height);
 
 				if(!sws_context_)
 				{
@@ -140,15 +149,15 @@ struct video_transformer::implementation : boost::noncopyable
 					sws_context_.reset(sws_getContext(width, height, pix_fmt, width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 				}		
 		 
-				sws_scale(sws_context_.get(), video_packet->decoded_frame->data, video_packet->decoded_frame->linesize, 0, height, av_frame.data, av_frame.linesize);		
+				sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame.data, av_frame.linesize);		
 			}
 		}
 
 		// TODO:
-		if(video_packet->codec->id == CODEC_ID_DVVIDEO) // Move up one field
-			video_packet->frame->translate(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));
+		if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field
+			transformed_frame->translate(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));
 		
-		return video_packet;
+		return transformed_frame;
 	}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -159,9 +168,11 @@ struct video_transformer::implementation : boost::noncopyable
 	frame_processor_device_ptr frame_processor_;
 	std::shared_ptr<SwsContext> sws_context_;
 	bool sw_warning_;
+
+	AVCodecContext* codec_context_;
 };
 
-video_transformer::video_transformer() : impl_(new implementation()){}
-video_packet_ptr video_transformer::execute(const video_packet_ptr& video_packet){return impl_->execute(video_packet);}
+video_transformer::video_transformer(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
+frame_ptr video_transformer::execute(const std::shared_ptr<AVFrame>& video_packet){return impl_->execute(video_packet);}
 void video_transformer::initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor); }
 }}}
