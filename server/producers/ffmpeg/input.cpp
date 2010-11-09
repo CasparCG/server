@@ -35,10 +35,10 @@ struct input::implementation : boost::noncopyable
 	void stop()
 	{
 		is_running_ = false;
-		audio_packet_buffer_.clear();
 		video_packet_buffer_.clear();
-		file_buffer_size_ = 0;
+		audio_packet_buffer_.clear();
 		file_buffer_size_cond_.notify_all();
+		packet_wait_cond_.notify_all();
 		io_thread_.join();
 	}
 
@@ -129,33 +129,35 @@ struct input::implementation : boost::noncopyable
 		LOG << "Started ffmpeg_producer::read_file Thread for " << filename_.c_str();
 		Win32Exception::InstallHandler();
 
-		AVPacket tmp_packet;
 		while(is_running_)
 		{
-			std::shared_ptr<AVPacket> packet(&tmp_packet, av_free_packet);		
+			AVPacket packet;		
 
-			if (av_read_frame(format_context.get(), packet.get()) >= 0) // NOTE: Packet is only valid until next call of av_read_frame or av_close_input_file
+			if (av_read_frame(format_context.get(), &packet) >= 0) // NOTE: Packet is only valid until next call of av_read_frame or av_close_input_file
 			{
-				if(packet->stream_index == video_s_index_) 		
+				if(packet.stream_index == video_s_index_) 		
 				{
 					video_packet_buffer_.push(std::make_shared<video_packet>(packet, nullptr, video_codec_context_.get(), video_codec_)); // NOTE: video_packet makes a copy of AVPacket
-					file_buffer_size_ += packet->size;
+					file_buffer_size_ += packet.size;
+					packet_wait_cond_.notify_all();
 				}
-				else if(packet->stream_index == audio_s_index_) 	
+				else if(packet.stream_index == audio_s_index_) 	
 				{
 					audio_packet_buffer_.push(std::make_shared<audio_packet>(packet, audio_codex_context.get(), audio_codec_a, video_frame_rate_));		
-					file_buffer_size_ += packet->size;
+					file_buffer_size_ += packet.size;
+					packet_wait_cond_.notify_all();
 				}
 			}
 			else if(!loop_ || av_seek_frame(format_context.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
 				is_running_ = false;
 			
-			if(is_running_)
-			{
-				boost::unique_lock<boost::mutex> lock(file_buffer_size_mutex_);
-				while(file_buffer_size_ > FILE_BUFFER_SIZE)			
-					file_buffer_size_cond_.wait(lock);	
-			}
+			av_free_packet(&packet);
+
+			boost::unique_lock<boost::mutex> lock(file_buffer_size_mutex_);
+			while(is_running_ && file_buffer_size_ > input::FILE_BUFFER_SIZE)			
+				file_buffer_size_cond_.wait(lock);		
+
+			boost::this_thread::yield();
 		}
 		
 		is_running_ = false;
@@ -189,11 +191,22 @@ struct input::implementation : boost::noncopyable
 	{
 		return !is_running_ && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
 	}
+
+	void wait_for_packet()
+	{
+		boost::unique_lock<boost::mutex> lock(packet_wait_mutex_);
+		while(is_running_ && video_packet_buffer_.empty() && audio_packet_buffer_.empty())
+			packet_wait_cond_.wait(lock);		
+	}
 	
 	int									file_buffer_max_size_;
 	tbb::atomic<int>					file_buffer_size_;
 	boost::condition_variable			file_buffer_size_cond_;
 	boost::mutex						file_buffer_size_mutex_;
+	
+	boost::condition_variable			packet_wait_cond_;
+	boost::mutex						packet_wait_mutex_;
+
 
 	std::string							filename_;
 	std::shared_ptr<AVFormatContext>	format_context;	// Destroy this last
@@ -225,4 +238,5 @@ bool input::is_eof() const{return impl_->is_eof();}
 video_packet_ptr input::get_video_packet(){return impl_->get_video_packet();}
 audio_packet_ptr input::get_audio_packet(){return impl_->get_audio_packet();}
 void input::stop(){impl_->stop();}
+void input::wait_for_packet(){impl_->wait_for_packet();}
 }}

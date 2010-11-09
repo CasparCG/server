@@ -20,7 +20,7 @@ struct audio_decoder::implementation : boost::noncopyable
 		int max_chunk_length = min(audio_packet->audio_frame_size, audio_packet->src_audio_frame_size);
 
 		int written_bytes = audio_decoder::AUDIO_DECOMP_BUFFER_SIZE - audio_decoder::ALIGNMENT;
-		int result = avcodec_decode_audio2(audio_packet->codec_context, reinterpret_cast<int16_t*>(aligned_audio_decomp_addr_), &written_bytes, audio_packet->data, audio_packet->size);
+		int result = avcodec_decode_audio2(audio_packet->codec_context, reinterpret_cast<int16_t*>(aligned_audio_decomp_addr_), &written_bytes, audio_packet->data.data(), audio_packet->size);
 
 		if(result <= 0)
 			return audio_packet;

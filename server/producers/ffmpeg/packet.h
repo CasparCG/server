@@ -29,20 +29,15 @@ typedef std::tr1::shared_ptr<AVPacket> AVPacketPtr;
 
 struct video_packet : boost::noncopyable
 {
-	video_packet(const AVPacketPtr& packet, FramePtr&& frame, AVCodecContext* codec_context, AVCodec* codec) 
-		:  size(packet->size), codec_context(codec_context), codec(codec), frame(std::move(frame)), 
-			data(static_cast<uint8_t*>(scalable_aligned_malloc(packet->size, 16))), decoded_frame(avcodec_alloc_frame(), av_free)
+	video_packet(const AVPacket& packet, FramePtr&& frame, AVCodecContext* codec_context, AVCodec* codec) 
+		:  size(packet.size), codec_context(codec_context), codec(codec), frame(std::move(frame)), 
+			data(packet.size), decoded_frame(avcodec_alloc_frame(), av_free)
 	{
-		memcpy(const_cast<uint8_t*>(data), packet->data, packet->size);
+		memcpy(data.data(), packet.data, packet.size);
 	}
-		
-	~video_packet()
-	{
-		scalable_aligned_free(const_cast<uint8_t*>(data));
-	}
-	
+			
 	const size_t					size;
-	const uint8_t* const			data;
+	std::vector<uint8_t>			data;
 	AVCodecContext*	const			codec_context;
 	const AVCodec* const			codec;
 	FramePtr						frame;
@@ -52,14 +47,14 @@ typedef std::shared_ptr<video_packet> video_packet_ptr;
 
 struct audio_packet : boost::noncopyable
 {
-	audio_packet(const AVPacketPtr& packet, AVCodecContext* codec_context, AVCodec* codec, double frame_rate = 25.0) 
+	audio_packet(const AVPacket& packet, AVCodecContext* codec_context, AVCodec* codec, double frame_rate = 25.0) 
 		: 
-		size(packet->size), 
+		size(packet.size), 
 		codec_context(codec_context), 
 		codec(codec),
-		data(static_cast<uint8_t*>(scalable_aligned_malloc(packet->size, 16)))
+		data(packet.size)
 	{
-		memcpy(const_cast<uint8_t*>(data), packet->data, packet->size);
+		memcpy(data.data(), packet.data, packet.size);
 
 		size_t bytesPerSec = (codec_context->sample_rate * codec_context->channels * 2);
 
@@ -71,19 +66,14 @@ struct audio_packet : boost::noncopyable
 		if(sourceSizeMod != 0)
 			src_audio_frame_size += (codec_context->channels * 2) - sourceSizeMod;
 	}
-		
-	~audio_packet()
-	{
-		scalable_aligned_free(const_cast<uint8_t*>(data));
-	}
-		
+				
 	size_t					src_audio_frame_size;
 	size_t					audio_frame_size;
 
 	AVCodecContext*	const	codec_context;
 	const AVCodec* const	codec;
 	const size_t			size;
-	const uint8_t* const	data;
+	std::vector<uint8_t>	data;
 
 	std::vector<audio::AudioDataChunkPtr> audio_chunks;
 };

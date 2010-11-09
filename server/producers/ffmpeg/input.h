@@ -18,12 +18,13 @@ public:
 
 	video_packet_ptr get_video_packet();
 	audio_packet_ptr get_audio_packet();
+	void wait_for_packet();
 
 	bool is_eof() const;
 	void set_loop(bool value);
 	void stop();
 
-	static const int FILE_BUFFER_SIZE = 2 << 26;
+	static const int FILE_BUFFER_SIZE = 2 << 27;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

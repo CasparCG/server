@@ -58,8 +58,8 @@ public:
 	Implementation(const std::wstring& filename) 
 		: filename_(filename)
 	{
-    	if(!boost::filesystem::exists(filename))
-    		throw std::runtime_error("File not found");
+		if(!boost::filesystem::exists(filename))
+			throw std::runtime_error("File not found");
 
 		frameBuffer_.SetCapacity(2);
 
@@ -80,11 +80,20 @@ public:
 	FramePtr get_frame()
 	{
 		while(ouput_channel_.empty() && !input_->is_eof())
-		{										
+		{				
+			input_->wait_for_packet();
+			
+			audio_packet_ptr audio_packet;
+			if(audio_chunk_channel_.size() < 25)
+				audio_packet = input_->get_audio_packet();
+			
+			video_packet_ptr video_packet;
+			if(video_frame_channel_.size() < 25)
+				video_packet = input_->get_video_packet();
+			
 			tbb::parallel_invoke(
 			[&]
 			{ // Video Decoding and Scaling
-				auto video_packet = input_->get_video_packet();
 				if(video_packet)
 				{
 					video_packet = video_decoder_.execute(video_packet);
@@ -94,7 +103,6 @@ public:
 			}, 
 			[&] 
 			{ // Audio Decoding
-				auto audio_packet = input_->get_audio_packet();
 				if(audio_packet)
 				{
 					auto audio_chunks = audio_decoder_.execute(audio_packet);
@@ -122,6 +130,7 @@ public:
 			frame = ouput_channel_.front();
 			ouput_channel_.pop();
 		}
+
 		return frame;
 	}
 	
