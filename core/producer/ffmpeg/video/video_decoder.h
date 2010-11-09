@@ -1,16 +1,24 @@
 #pragma once
 
-#include "../packet.h"
+#include <tbb/cache_aligned_allocator.h>
+
+#include <boost/noncopyable.hpp>
+
+#include <memory>
+#include <vector>
+
+struct AVCodecContext;
+struct AVFrame;
 
 namespace caspar { namespace core { namespace ffmpeg{
-
-typedef std::tr1::shared_ptr<AVCodecContext> AVCodecContextPtr;
+	
+typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> aligned_buffer;
 
 class video_decoder : boost::noncopyable
 {
 public:
-	video_decoder();
-	video_packet_ptr execute(const video_packet_ptr& video_packet);
+	video_decoder(AVCodecContext* codec_context);
+	std::shared_ptr<AVFrame> execute(const aligned_buffer& video_packet);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

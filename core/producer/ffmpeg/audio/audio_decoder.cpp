@@ -5,75 +5,75 @@
 #include "../../../../common/utility/memory.h"
 
 #include <queue>
+
+#include <tbb/cache_aligned_allocator.h>
 		
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavformat/avformat.h>
+	#include <libavcodec/avcodec.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
+
 namespace caspar { namespace core { namespace ffmpeg{
 
 struct audio_decoder::implementation : boost::noncopyable
 {
-	implementation() : discard_bytes_(0), current_audio_chunk_offset_(0), current_chunk_(1920*2), current_chunk_data_(reinterpret_cast<char*>(current_chunk_.data()))
-	{
-		audio_decomp_buffer_.resize(audio_decoder::AUDIO_DECOMP_BUFFER_SIZE);
-		int alignment_offset_ = static_cast<unsigned char>(audio_decoder::ALIGNMENT - (reinterpret_cast<size_t>(&audio_decomp_buffer_.front()) % audio_decoder::ALIGNMENT));
-		aligned_audio_decomp_addr_ = &audio_decomp_buffer_.front() + alignment_offset_;				
-	}
-		
-	audio_packet_ptr execute(const audio_packet_ptr& audio_packet)
-	{			
-		int max_chunk_length = std::min(audio_packet->audio_frame_size, audio_packet->src_audio_frame_size);
+	static const int FRAME_AUDIO_SAMPLES = 1920*2;
+	static const int SAMPLE_RATE = 48000;
 
-		int written_bytes = audio_decoder::AUDIO_DECOMP_BUFFER_SIZE - audio_decoder::ALIGNMENT;
-		int result = avcodec_decode_audio2(audio_packet->codec_context, reinterpret_cast<int16_t*>(aligned_audio_decomp_addr_), &written_bytes, audio_packet->data, audio_packet->size);
+	implementation(AVCodecContext* codec_context) 
+		: current_chunk_(), codec_context_(codec_context), audio_buffer_(4*SAMPLE_RATE*2+FF_INPUT_BUFFER_PADDING_SIZE/2){}
+		
+	std::vector<std::vector<short>> execute(const aligned_buffer& audio_packet)
+	{			
+		static std::vector<std::vector<short>> silence(1920*2, 0);
+
+		if(codec_context_->sample_rate != SAMPLE_RATE)
+			return silence;
+
+		int written_bytes = audio_buffer_.size()*2 - FF_INPUT_BUFFER_PADDING_SIZE;
+		int result = avcodec_decode_audio2
+		(
+			codec_context_, 
+			audio_buffer_.data(), 
+			&written_bytes, 
+			audio_packet.data(),
+			audio_packet.size()
+		);
 
 		if(result <= 0)
-			return audio_packet;
+			return silence;
 
-		unsigned char* pDecomp = aligned_audio_decomp_addr_;
-
-		//if there are bytes to discard, do that first
-		while(written_bytes > 0 && discard_bytes_ != 0)
-		{
-			int bytesToDiscard = std::min(written_bytes, static_cast<int>(discard_bytes_));
-			pDecomp += bytesToDiscard;
-
-			discard_bytes_ -= bytesToDiscard;
-			written_bytes -= bytesToDiscard;
-		}
-
-		while(written_bytes > 0)
-		{
-			//either fill what's left of the chunk or copy all written_bytes that are left
-			int targetLength = std::min((max_chunk_length - current_audio_chunk_offset_), written_bytes);
-			memcpy(current_chunk_data_ + current_audio_chunk_offset_, pDecomp, targetLength);
-			written_bytes -= targetLength;
-
-			current_audio_chunk_offset_ += targetLength;
-			pDecomp += targetLength;
-
-			if(current_audio_chunk_offset_ >= max_chunk_length) 
-			{
-				if(max_chunk_length < static_cast<int>(audio_packet->audio_frame_size)) 
-					memset(current_chunk_data_ + max_chunk_length, 0, audio_packet->audio_frame_size-max_chunk_length);					
-				else if(audio_packet->audio_frame_size < audio_packet->src_audio_frame_size) 
-					discard_bytes_ = audio_packet->src_audio_frame_size-audio_packet->audio_frame_size;
-				
-				current_audio_chunk_offset_ = 0;
-				audio_packet->audio_chunks.push_back(current_chunk_);
-			}
-		}
-
-		return audio_packet;
-	}
-			
-	int									discard_bytes_;
+		std::vector<std::vector<short>> chunks_;
 		
-	std::vector<unsigned char>			audio_decomp_buffer_;
-	unsigned char*						aligned_audio_decomp_addr_;
-	
-	std::vector<short>					current_chunk_;
-	char*								current_chunk_data_;
-	int									current_audio_chunk_offset_;
+		current_chunk_.insert(current_chunk_.end(), audio_buffer_.data(), audio_buffer_.data() + written_bytes/2);
+		while(current_chunk_.size() >= FRAME_AUDIO_SAMPLES)
+		{
+			auto first = std::make_move_iterator(current_chunk_.begin());
+			auto last = std::make_move_iterator(current_chunk_.begin() + FRAME_AUDIO_SAMPLES);
+
+			chunks_.push_back(std::vector<short>(first, last));
+			current_chunk_ = std::vector<short>(current_chunk_.begin() + FRAME_AUDIO_SAMPLES, current_chunk_.end());
+		}
+		
+		return chunks_;
+	}
+					
+	std::vector<short, tbb::cache_aligned_allocator<short>> audio_buffer_;	
+	std::vector<short> current_chunk_;
+
+	AVCodecContext*		codec_context_;
 };
 
-audio_decoder::audio_decoder() : impl_(new implementation()){}
-audio_packet_ptr audio_decoder::execute(const audio_packet_ptr& audio_packet){return impl_->execute(audio_packet);}
+audio_decoder::audio_decoder(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
+std::vector<std::vector<short>> audio_decoder::execute(const aligned_buffer& audio_packet){return impl_->execute(audio_packet);}
 }}}

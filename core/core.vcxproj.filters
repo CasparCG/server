@@ -123,9 +123,6 @@
     <ClInclude Include="producer\ffmpeg\input.h">
       <Filter>Source\producer\ffmpeg</Filter>
     </ClInclude>
-    <ClInclude Include="producer\ffmpeg\packet.h">
-      <Filter>Source\producer\ffmpeg</Filter>
-    </ClInclude>
     <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h">
       <Filter>Source\producer\ffmpeg\audio</Filter>
     </ClInclude>

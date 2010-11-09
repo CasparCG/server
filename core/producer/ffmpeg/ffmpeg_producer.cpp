@@ -61,9 +61,9 @@ public:
 		input_.reset(new input());
 		input_->set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
 		input_->load(common::narrow(filename_));
-		video_decoder_.reset(new video_decoder());
-		video_transformer_.reset(new video_transformer());
-		audio_decoder_.reset(new audio_decoder());
+		video_decoder_.reset(new video_decoder(input_->get_video_codec_context().get()));
+		video_transformer_.reset(new video_transformer(input_->get_video_codec_context().get()));
+		audio_decoder_.reset(new audio_decoder(input_->get_audio_codec_context().get()));
 		has_audio_ = input_->get_audio_codec_context() != nullptr;
 
 		auto seek = std::find(params.begin(), params.end(), L"SEEK");
@@ -89,21 +89,20 @@ public:
 			[&]
 			{ // Video Decoding and Scaling
 				auto video_packet = input_->get_video_packet();
-				if(video_packet)
+				if(!video_packet.empty())
 				{
-					video_packet = video_decoder_->execute(video_packet);
-					auto frame = video_transformer_->execute(video_packet)->frame;
-					video_frame_channel_.push_back(std::move(frame));	
+					auto decoded_frame = video_decoder_->execute(video_packet);
+					auto transformed_frame = video_transformer_->execute(decoded_frame);
+					video_frame_channel_.push_back(transformed_frame);	
 				}
 			}, 
 			[&] 
 			{ // Audio Decoding
 				auto audio_packet = input_->get_audio_packet();
-				if(audio_packet)
+				if(!audio_packet.empty())
 				{
-					audio_decoder_->execute(audio_packet);
-					for(size_t n = 0; n < audio_packet->audio_chunks.size(); ++n)
-						audio_chunk_channel_.push_back(std::move(audio_packet->audio_chunks[n]));
+					auto chunks = audio_decoder_->execute(audio_packet);
+					audio_chunk_channel_.insert(audio_chunk_channel_.end(), chunks.begin(), chunks.end());
 				}
 			});
 
@@ -139,10 +138,10 @@ public:
 	video_decoder_uptr					video_decoder_;
 	video_transformer_uptr				video_transformer_;
 	//std::deque<video_packet_ptr>		videoDecodedPacketChannel_;
-	std::deque<frame_ptr>			video_frame_channel_;
+	std::deque<frame_ptr>					video_frame_channel_;
 	
 	// Filter 3 : Audio Decoding
-	audio_decoder_uptr					audio_decoder_;
+	audio_decoder_ptr					audio_decoder_;
 	std::deque<std::vector<short>>		audio_chunk_channel_;
 
 	// Filter 4 : Merge Video and Audio

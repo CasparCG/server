@@ -24,10 +24,11 @@ struct pixel_format_desc
 {
 	struct plane
 	{
-		plane() : width(0), height(0), size(0), channels(0){}
+		plane() : linesize(0), width(0), height(0), size(0), channels(0){}
 		plane(size_t width, size_t height, size_t channels)
-			: width(width), height(height), size(width*height*channels), channels(channels)
+			: linesize(width*channels), width(width), height(height), size(width*height*channels), channels(channels)
 		{}
+		size_t linesize;
 		size_t width;
 		size_t height;
 		size_t size;

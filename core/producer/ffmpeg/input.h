@@ -1,12 +1,14 @@
 #pragma once
 
-#include "packet.h"
-
 #include <system_error>
+
+#include <tbb/cache_aligned_allocator.h>
+
+struct AVCodecContext;
 
 namespace caspar { namespace core { namespace ffmpeg{	
 	
-typedef std::shared_ptr<AVFormatContext> AVFormatContextPtr;
+typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> aligned_buffer;
 
 class input : boost::noncopyable
 {
@@ -16,8 +18,8 @@ public:
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 
-	video_packet_ptr get_video_packet();
-	audio_packet_ptr get_audio_packet();
+	aligned_buffer get_video_packet();
+	aligned_buffer get_audio_packet();
 
 	bool seek(unsigned long long frame);
 	void start();

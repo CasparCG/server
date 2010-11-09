@@ -44,7 +44,9 @@ struct video_update_format
 	{
 			progressive,
 			lower,
-			upper
+			upper,
+			count,
+			invalid
 	};
 };
 

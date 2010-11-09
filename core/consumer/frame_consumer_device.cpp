@@ -86,13 +86,13 @@ public:
 				clock.synchronize();
 			
 			frame_ptr frame;
-			if(!frame_processor_->try_receive(frame))
+			while(frame == nullptr && !frame_processor_->try_receive(frame))
 			{
-				CASPAR_LOG(trace) << "Display Buffer Underrun.";
+				if(frame != nullptr)
+					CASPAR_LOG(trace) << "Display Buffer Underrun.";
 				frame_processor_->receive(frame);
-			}
-			if(frame != nullptr)			
-				display_frame(frame);			
+			}		
+			display_frame(frame);			
 		}
 		
 		CASPAR_LOG(info) << L"Ended frame_consumer_device thread.";

@@ -1,26 +1,27 @@
 #pragma once
 
-#include "../packet.h"
+#include <tbb/cache_aligned_allocator.h>
 
-namespace caspar { namespace core { namespace ffmpeg	{
+#include <boost/noncopyable.hpp>
+
+#include <memory>
+#include <vector>
+
+struct AVCodecContext;
+
+namespace caspar { namespace core { namespace ffmpeg{	
+	
+typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> aligned_buffer;
 
 class audio_decoder : boost::noncopyable
 {
 public:
-	audio_decoder();
-	audio_packet_ptr execute(const audio_packet_ptr& audio_packet);
-	
-	/// <summary> The alignment </summary>
-	/// <remarks> Four sec of 16 bit stereo 48kHz should be enough </remarks>
-	static const int ALIGNMENT = 16 ;
-
-	/// <summary> Size of the audio decomp buffer </summary>
-	static const int AUDIO_DECOMP_BUFFER_SIZE = 4*48000*4+ALIGNMENT;
+	audio_decoder(AVCodecContext* codec_context);
+	std::vector<std::vector<short>> execute(const aligned_buffer& audio_packet);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
 typedef std::shared_ptr<audio_decoder> audio_decoder_ptr;
-typedef std::unique_ptr<audio_decoder> audio_decoder_uptr;
 
 }}}
