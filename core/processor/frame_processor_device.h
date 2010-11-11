@@ -22,7 +22,7 @@
 #include <memory>
 #include <vector>
 
-#include "../video/video_format.h"
+#include "../format/video_format.h"
 #include "../processor/frame.h"
 #include "../consumer/frame_consumer_device.h"
 
@@ -35,7 +35,6 @@ public:
 		
 	void send(const frame_ptr& frame);
 	void receive(frame_ptr& frame);
-	bool try_receive(frame_ptr& frame);
 	
 	frame_ptr create_frame(const pixel_format_desc& desc, void* tag);		
 	frame_ptr create_frame(size_t width, size_t height, void* tag);			

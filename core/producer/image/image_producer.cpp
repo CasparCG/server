@@ -4,7 +4,7 @@
 #include "image_loader.h"
 
 #include "../../processor/frame_processor_device.h"
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 #include "../../server.h"
 #include "../../../common/utility/find_file.h"
 #include "../../../common/utility/memory.h"

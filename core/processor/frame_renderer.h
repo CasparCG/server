@@ -21,7 +21,7 @@
 
 #include "frame_processor_device.h"
 
-#include "../video/video_format.h"
+#include "../format/video_format.h"
 
 #include <boost/noncopyable.hpp>
 

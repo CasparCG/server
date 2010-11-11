@@ -6,7 +6,7 @@
 
 #include "../../processor/frame.h"
 #include "../../processor/composite_frame.h"
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 #include "../../processor/frame_processor_device.h"
 #include "../../server.h"
 #include "../../../common/utility/find_file.h"

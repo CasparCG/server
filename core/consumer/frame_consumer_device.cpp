@@ -6,7 +6,7 @@
 
 #include "frame_consumer_device.h"
 
-#include "../video/video_format.h"
+#include "../format/video_format.h"
 #include "../processor/frame.h"
 #include "../processor/frame_processor_device.h"
 
@@ -86,12 +86,9 @@ public:
 				clock.synchronize();
 			
 			frame_ptr frame;
-			while(frame == nullptr && !frame_processor_->try_receive(frame))
-			{
-				if(frame != nullptr)
-					CASPAR_LOG(trace) << "Display Buffer Underrun.";
+			while(frame == nullptr && is_running_)			
 				frame_processor_->receive(frame);
-			}		
+			
 			display_frame(frame);			
 		}
 		

@@ -4,51 +4,6 @@
     <Filter Include="Source">
       <UniqueIdentifier>{0361bd88-1d96-4d86-b3ad-34d40e2319c6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\consumer">
-      <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\consumer\oal">
-      <UniqueIdentifier>{3dab53b0-e0ef-4431-8c1d-9a973b269ae7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\consumer\ogl">
-      <UniqueIdentifier>{7217dee5-b7ca-4128-9994-03a844c06903}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\consumer\bluefish">
-      <UniqueIdentifier>{89e746b3-5d4d-4ff2-a66e-279b5371ac9d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\consumer\decklink">
-      <UniqueIdentifier>{aa3626b2-ad7a-4e84-8867-0f5868a21567}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\consumer\decklink\interop">
-      <UniqueIdentifier>{a5cb89d7-dbbb-4fca-b899-f53a069727b4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer">
-      <UniqueIdentifier>{71accefc-1437-4e1d-9ff7-9de654a32df9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer\ffmpeg">
-      <UniqueIdentifier>{671d13be-c7e1-4f65-9909-03b7c8adcbde}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer\color">
-      <UniqueIdentifier>{78b16c14-bf29-4511-9122-684ff513dbf5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer\transition">
-      <UniqueIdentifier>{26bf9811-1954-46f5-86ce-ecdc26e6db16}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer\flash">
-      <UniqueIdentifier>{fc25232a-cab1-4c79-962a-b51dc51161fb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer\image">
-      <UniqueIdentifier>{3d4314f3-8a39-44e3-a0c9-9b833bb8f809}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer\ffmpeg\video">
-      <UniqueIdentifier>{a6d6bcc9-7ef1-47a3-9800-76e71f2b3f62}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer\ffmpeg\audio">
-      <UniqueIdentifier>{4031dc0c-88e9-46b5-b279-955639dca8b7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer\flash\interop">
-      <UniqueIdentifier>{f99e4727-2b1b-4009-a445-99b11b071e8e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\protocol">
       <UniqueIdentifier>{57f477cb-9cff-4216-aab7-50b06df51f20}</UniqueIdentifier>
     </Filter>
@@ -67,7 +22,25 @@
     <Filter Include="My Amplifier Results">
       <UniqueIdentifier>{bb801cd9-8dc8-4300-a5c7-a7f5ee0805fb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\video">
+    <Filter Include="Source\consumer">
+      <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\oal">
+      <UniqueIdentifier>{3dab53b0-e0ef-4431-8c1d-9a973b269ae7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\ogl">
+      <UniqueIdentifier>{7217dee5-b7ca-4128-9994-03a844c06903}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\bluefish">
+      <UniqueIdentifier>{89e746b3-5d4d-4ff2-a66e-279b5371ac9d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\decklink">
+      <UniqueIdentifier>{aa3626b2-ad7a-4e84-8867-0f5868a21567}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\consumer\decklink\interop">
+      <UniqueIdentifier>{a5cb89d7-dbbb-4fca-b899-f53a069727b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\format">
       <UniqueIdentifier>{f19ced4f-4ad2-4c0a-b51f-50e89909d669}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\processor">
@@ -75,6 +48,33 @@
     </Filter>
     <Filter Include="Source\processor\renderer">
       <UniqueIdentifier>{30fe40ca-8bf0-4a46-a882-16d07b2b441e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer">
+      <UniqueIdentifier>{71accefc-1437-4e1d-9ff7-9de654a32df9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\ffmpeg">
+      <UniqueIdentifier>{671d13be-c7e1-4f65-9909-03b7c8adcbde}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\ffmpeg\video">
+      <UniqueIdentifier>{a6d6bcc9-7ef1-47a3-9800-76e71f2b3f62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\ffmpeg\audio">
+      <UniqueIdentifier>{4031dc0c-88e9-46b5-b279-955639dca8b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\color">
+      <UniqueIdentifier>{78b16c14-bf29-4511-9122-684ff513dbf5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\transition">
+      <UniqueIdentifier>{26bf9811-1954-46f5-86ce-ecdc26e6db16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\flash">
+      <UniqueIdentifier>{fc25232a-cab1-4c79-962a-b51dc51161fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\flash\interop">
+      <UniqueIdentifier>{f99e4727-2b1b-4009-a445-99b11b071e8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\image">
+      <UniqueIdentifier>{3d4314f3-8a39-44e3-a0c9-9b833bb8f809}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -201,12 +201,6 @@
     <ClInclude Include="producer\layer.h">
       <Filter>Source\producer</Filter>
     </ClInclude>
-    <ClInclude Include="video\pixel_format.h">
-      <Filter>Source\video</Filter>
-    </ClInclude>
-    <ClInclude Include="video\video_format.h">
-      <Filter>Source\video</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\frame_consumer_device.h">
       <Filter>Source\consumer</Filter>
     </ClInclude>
@@ -214,9 +208,6 @@
       <Filter>Source\producer</Filter>
     </ClInclude>
     <ClInclude Include="server.h">
-      <Filter>Source</Filter>
-    </ClInclude>
-    <ClInclude Include="channel.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="processor\frame_processor_device.h">
@@ -233,6 +224,15 @@
     </ClInclude>
     <ClInclude Include="processor\frame_renderer.h">
       <Filter>Source\processor\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="format\pixel_format.h">
+      <Filter>Source\format</Filter>
+    </ClInclude>
+    <ClInclude Include="format\video_format.h">
+      <Filter>Source\format</Filter>
+    </ClInclude>
+    <ClInclude Include="channel.h">
+      <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -329,9 +329,6 @@
     <ClCompile Include="producer\layer.cpp">
       <Filter>Source\producer</Filter>
     </ClCompile>
-    <ClCompile Include="video\video_format.cpp">
-      <Filter>Source\video</Filter>
-    </ClCompile>
     <ClCompile Include="consumer\frame_consumer_device.cpp">
       <Filter>Source\consumer</Filter>
     </ClCompile>
@@ -355,6 +352,9 @@
     </ClCompile>
     <ClCompile Include="processor\frame_shader.cpp">
       <Filter>Source\processor\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="format\video_format.cpp">
+      <Filter>Source\format</Filter>
     </ClCompile>
     <ClCompile Include="channel.cpp">
       <Filter>Source</Filter>

@@ -2,8 +2,8 @@
 
 #include "frame_shader.h"
 
-#include "../video/video_format.h"
-#include "../video/pixel_format.h"
+#include "../format/video_format.h"
+#include "../format/pixel_format.h"
 
 #include <memory>
 #include <array>

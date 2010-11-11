@@ -2,7 +2,7 @@
 
 #include "video_transformer.h"
 
-#include "../../../video/video_format.h"
+#include "../../../format/video_format.h"
 #include "../../../../common/utility/memory.h"
 #include "../../../processor/frame.h"
 #include "../../../processor/frame.h"
@@ -63,6 +63,9 @@ struct video_transformer::implementation : boost::noncopyable
 
 	frame_ptr execute(const std::shared_ptr<AVFrame>& decoded_frame)
 	{				
+		if(decoded_frame == nullptr)
+			return nullptr;
+
 		int width = codec_context_->width;
 		int height = codec_context_->height;
 		auto pix_fmt = codec_context_->pix_fmt;

@@ -27,7 +27,7 @@ extern "C"
 #include "video/video_decoder.h"
 #include "video/video_transformer.h"
 
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 #include "../../../common/utility/find_file.h"
 #include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
@@ -50,13 +50,16 @@ struct ffmpeg_producer : public frame_producer
 {
 public:
 	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) 
-		: filename_(filename)
+		: filename_(filename), underrun_count_(0)
 	{
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() <<  boost::errinfo_file_name(common::narrow(filename)));
 		
-		static boost::once_flag flag = BOOST_ONCE_INIT;
-		boost::call_once(av_register_all, flag);	
+		static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
+		boost::call_once(av_register_all, av_register_all_flag);	
+		
+		static boost::once_flag avcodec_init_flag = BOOST_ONCE_INIT;
+		boost::call_once(avcodec_init, avcodec_init_flag);	
 				
 		input_.reset(new input());
 		input_->set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
@@ -84,11 +87,12 @@ public:
 	frame_ptr render_frame()
 	{
 		while(ouput_channel_.empty() && !input_->is_eof())
-		{										
+		{						
+			auto video_packet = input_->get_video_packet();		
+			auto audio_packet = input_->get_audio_packet();		
 			tbb::parallel_invoke(
 			[&]
 			{ // Video Decoding and Scaling
-				auto video_packet = input_->get_video_packet();
 				if(!video_packet.empty())
 				{
 					auto decoded_frame = video_decoder_->execute(video_packet);
@@ -98,7 +102,6 @@ public:
 			}, 
 			[&] 
 			{ // Audio Decoding
-				auto audio_packet = input_->get_audio_packet();
 				if(!audio_packet.empty())
 				{
 					auto chunks = audio_decoder_->execute(audio_packet);
@@ -106,9 +109,21 @@ public:
 				}
 			});
 
+			if(video_packet.empty() && audio_packet.empty())
+			{
+				if(underrun_count_ == 0)
+					CASPAR_LOG(warning) << "File read underflow has STARTED.";
+				++underrun_count_;
+			}
+			else if(underrun_count_ > 0)
+			{
+				CASPAR_LOG(trace) << "File Read Underrun has ENDED with " << underrun_count_ << " ticks.";
+				underrun_count_ = 0;
+			}
+
 			while(!video_frame_channel_.empty() && (!audio_chunk_channel_.empty() || !has_audio_))
 			{
-				if(has_audio_)
+				if(has_audio_ && video_frame_channel_.front() != nullptr)
 				{
 					video_frame_channel_.front()->audio_data() = std::move(audio_chunk_channel_.front());
 					audio_chunk_channel_.pop_front();
@@ -131,23 +146,20 @@ public:
 			
 	bool has_audio_;
 
-	// Filter 1 : Input
 	input_uptr							input_;		
 
-	// Filter 2 : Video Decoding and Scaling
 	video_decoder_uptr					video_decoder_;
 	video_transformer_uptr				video_transformer_;
-	//std::deque<video_packet_ptr>		videoDecodedPacketChannel_;
-	std::deque<frame_ptr>					video_frame_channel_;
+	std::deque<frame_ptr>				video_frame_channel_;
 	
-	// Filter 3 : Audio Decoding
 	audio_decoder_ptr					audio_decoder_;
 	std::deque<std::vector<short>>		audio_chunk_channel_;
 
-	// Filter 4 : Merge Video and Audio
-	std::queue<frame_ptr>			ouput_channel_;
+	std::queue<frame_ptr>				ouput_channel_;
 	
 	std::wstring						filename_;
+
+	long underrun_count_;
 };
 
 frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& params)

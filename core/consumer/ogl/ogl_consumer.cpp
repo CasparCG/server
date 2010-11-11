@@ -22,7 +22,7 @@
 
 #include "ogl_consumer.h"
 
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 #include "../../processor/frame.h"
 #include "../../../common/utility/memory.h"
 #include "../../../common/gl/utility.h"

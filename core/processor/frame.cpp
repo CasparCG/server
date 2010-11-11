@@ -1,7 +1,7 @@
 #include "../StdAfx.h"
 
 #include "frame.h"
-#include "../video/pixel_format.h"
+#include "../format/pixel_format.h"
 #include "../../common/utility/memory.h"
 #include "../../common/gl/utility.h"
 #include "../../common/gl/pixel_buffer_object.h"
