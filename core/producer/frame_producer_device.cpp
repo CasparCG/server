@@ -4,7 +4,7 @@
 
 #include "layer.h"
 
-#include "../video/video_format.h"
+#include "../format/video_format.h"
 #include "../processor/composite_frame.h"
 
 #include "../../common/utility/scope_exit.h"

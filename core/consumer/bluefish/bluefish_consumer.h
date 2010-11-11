@@ -19,7 +19,7 @@
 */
 #pragma once
 
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 #include "../../consumer/frame_consumer.h"
 
 namespace caspar { namespace core { namespace bluefish {

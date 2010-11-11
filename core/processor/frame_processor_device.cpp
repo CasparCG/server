@@ -6,7 +6,7 @@
 #include "frame.h"
 #include "composite_frame.h"
 
-#include "../video/video_format.h"
+#include "../format/video_format.h"
 
 #include "../../common/exception/exceptions.h"
 #include "../../common/concurrency/executor.h"
@@ -29,7 +29,7 @@ namespace caspar { namespace core {
 struct frame_processor_device::implementation : boost::noncopyable
 {	
 	implementation(frame_processor_device* self, const video_format_desc& format_desc) 
-		: fmt_(format_desc)
+		: fmt_(format_desc), underrun_count_(0)
 	{		
 		boost::promise<frame_ptr> promise;
 		active_frame_ = promise.get_future();
@@ -93,14 +93,15 @@ struct frame_processor_device::implementation : boost::noncopyable
 	
 	void send(const frame_ptr& input_frame)
 	{			
-		input_.push(input_frame);
+		input_.push(input_frame); // Block if there are too many frames in pipeline
 		executor_.begin_invoke([=]
 		{
 			try
 			{
 				frame_ptr output_frame;
 				input_.pop(output_frame);
-				output_.push(renderer_->render(output_frame));
+				if(output_frame != nullptr)
+					output_.push(renderer_->render(output_frame));
 			}
 			catch(...)
 			{
@@ -111,14 +112,21 @@ struct frame_processor_device::implementation : boost::noncopyable
 
 	void receive(frame_ptr& output_frame)
 	{
-		output_.pop(output_frame);
+		if(!output_.try_pop(output_frame))
+		{
+			if(underrun_count_ == 0)			
+				CASPAR_LOG(trace) << "Frame Processor Underrun has STARTED.";
+			
+			++underrun_count_;
+			output_.pop(output_frame);
+		}		
+		else if(underrun_count_ > 0)
+		{
+			CASPAR_LOG(trace) << "Frame Processor Underrun has ENDED with " << underrun_count_ << " ticks.";
+			underrun_count_ = 0;
+		}
 	}
 
-	bool try_receive(frame_ptr& output_frame)
-	{
-		return output_.try_pop(output_frame);
-	}
-	
 	video_format_desc fmt_;
 				
 	typedef tbb::concurrent_bounded_queue<frame_ptr> frame_queue;
@@ -135,6 +143,8 @@ struct frame_processor_device::implementation : boost::noncopyable
 	frame_queue output_;	
 
 	frame_renderer_ptr renderer_;
+
+	long underrun_count_;
 };
 	
 #if defined(_MSC_VER)
@@ -147,7 +157,6 @@ frame_ptr frame_processor_device::create_frame(const  pixel_format_desc& desc, v
 void frame_processor_device::release_tag(void* tag){impl_->release_tag(tag);}
 void frame_processor_device::send(const frame_ptr& frame){impl_->send(frame);}
 void frame_processor_device::receive(frame_ptr& frame){impl_->receive(frame);}
-bool frame_processor_device::try_receive(frame_ptr& frame){return impl_->try_receive(frame);}
 const video_format_desc frame_processor_device::get_video_format_desc() const { return impl_->fmt_;}
 frame_ptr frame_processor_device::create_frame(size_t width, size_t height, void* tag)
 {

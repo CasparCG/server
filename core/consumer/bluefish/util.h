@@ -1,7 +1,7 @@
 #pragma once
 
 #include <BlueVelvet4.h>
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 
 #include <memory>
 

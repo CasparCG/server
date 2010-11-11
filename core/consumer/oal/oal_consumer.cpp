@@ -23,7 +23,7 @@
 #include "oal_consumer.h"
 
 #include "../../processor/frame.h"
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 
 #include <SFML/Audio.hpp>
 

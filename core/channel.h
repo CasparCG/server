@@ -16,8 +16,8 @@ namespace caspar { namespace core {
 /// \brief	Channel. 
 /// 		
 ///                |**********| <-   empty frame   <- |***********| <-   frame format  <- |**********|
-/// CONTROLLER ->  | PRODUCER |                       | PROCESSOR |                       | CONSUMER |  -> DISPLAY DEVICE
-///                |**********| -> rendered frames -> |***********| -> processed frame -> |**********|
+///   PROTOCOL ->  | PRODUCER |                       | PROCESSOR |                       | CONSUMER |  -> DISPLAY DEVICE
+///                |**********| -> rendered frames -> |***********| -> formatted frame -> |**********|
 ///   
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class channel : boost::noncopyable

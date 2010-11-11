@@ -29,7 +29,7 @@
 #include "TimerHelper.h"
 #include "bitmap.h"
 
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 #include "../../../common/utility/find_file.h"
 #include "../../server.h"
 #include "../../../common/concurrency/executor.h"

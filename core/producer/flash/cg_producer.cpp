@@ -8,7 +8,7 @@
 #include "flash_producer.h"
 
 #include "../../producer/frame_producer_device.h"
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 #include "../../processor/frame.h"
 #include "../../Server.h"
 

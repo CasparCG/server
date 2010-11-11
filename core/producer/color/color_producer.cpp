@@ -22,7 +22,7 @@
 
 #include "color_producer.h"
 
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 
 #include <intrin.h>
 #pragma intrinsic(__movsd, __stosd)

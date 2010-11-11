@@ -21,7 +21,7 @@
 
 #include "../../consumer/frame_consumer.h"
 
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 
 namespace caspar { namespace core { namespace decklink {
 

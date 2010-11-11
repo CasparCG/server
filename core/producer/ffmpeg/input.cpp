@@ -2,7 +2,7 @@
 
 #include "input.h"
 
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 #include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
 
@@ -32,13 +32,12 @@ namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
 {
-	implementation() 
-		: video_frame_rate_(25.0), video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_(nullptr)
+	implementation() : video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_(nullptr)
 	{
 		loop_ = false;
 		//file_buffer_size_ = 0;		
-		video_packet_buffer_.set_capacity(25);
-		audio_packet_buffer_.set_capacity(25);
+		video_packet_buffer_.set_capacity(50);
+		audio_packet_buffer_.set_capacity(50);
 	}
 
 	~implementation()
@@ -78,16 +77,13 @@ struct input::implementation : boost::noncopyable
 				CASPAR_LOG(warning) << "No audio stream found.";
 
 			if(!video_codec_context_ && !audio_codex_context_)
-				BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec found."));
-			
-			video_frame_rate_ = static_cast<double>(video_codec_context_->time_base.den) / static_cast<double>(video_codec_context_->time_base.num);			
+				BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec found."));		
 		}
 		catch(...)
 		{
 			video_codec_context_.reset();
 			audio_codex_context_.reset();
 			format_context_.reset();
-			video_frame_rate_ = 25.0;
 			video_s_index_ = -1;
 			audio_s_index_ = -1;	
 			throw;
@@ -157,11 +153,13 @@ struct input::implementation : boost::noncopyable
 				if(packet->stream_index == video_s_index_) 		
 				{
 					video_packet_buffer_.push(std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size));		
+					packet_wait_cond_.notify_all();
 					//file_buffer_size_ += packet->size;
 				}
 				else if(packet->stream_index == audio_s_index_) 	
 				{
-					audio_packet_buffer_.push(std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size));		
+					audio_packet_buffer_.push(std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size));	
+					packet_wait_cond_.notify_all();	
 					//file_buffer_size_ += packet->size;
 				}
 			}
@@ -209,6 +207,13 @@ struct input::implementation : boost::noncopyable
 	{
 		return !is_running_ && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
 	}
+
+	void wait_for_packet()
+	{
+		boost::unique_lock<boost::mutex> lock(packet_wait_mutex_);
+		while(is_running_ && video_packet_buffer_.empty() && audio_packet_buffer_.empty())
+			packet_wait_cond_.wait(lock);		
+	}
 	
 	bool seek(unsigned long long seek_target)
 	{
@@ -228,15 +233,19 @@ struct input::implementation : boost::noncopyable
 		return false;
 	}
 	
-	//int									file_buffer_max_size_;
+	//int								file_buffer_max_size_;
 	//tbb::atomic<int>					file_buffer_size_;
 	//boost::condition_variable			file_buffer_size_cond_;
 	//boost::mutex						file_buffer_size_mutex_;
-		
+			
+	boost::condition_variable			packet_wait_cond_;
+	boost::mutex						packet_wait_mutex_;
+
+	std::shared_ptr<AVFormatContext>	format_context_;	// Destroy this last
+
 	tbb::queuing_mutex					seek_mutex_;
 
 	std::string							filename_;
-	std::shared_ptr<AVFormatContext>	format_context_;	// Destroy this last
 
 	std::shared_ptr<AVCodecContext>		video_codec_context_;
 	AVCodec*							video_codec_;
@@ -252,8 +261,6 @@ struct input::implementation : boost::noncopyable
 	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> audio_packet_buffer_;
 	boost::thread	io_thread_;
 	tbb::atomic<bool> is_running_;
-
-	double video_frame_rate_;
 };
 
 input::input() : impl_(new implementation()){}
@@ -266,4 +273,5 @@ aligned_buffer input::get_video_packet(){return impl_->get_video_packet();}
 aligned_buffer input::get_audio_packet(){return impl_->get_audio_packet();}
 bool input::seek(unsigned long long frame){return impl_->seek(frame);}
 void input::start(){impl_->start();}
+void input::wait_for_packet(){impl_->wait_for_packet();}
 }}}

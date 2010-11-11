@@ -24,8 +24,7 @@ struct video_decoder::implementation : boost::noncopyable
 
 	std::shared_ptr<AVFrame> execute(const aligned_buffer& video_packet)
 	{		
-		std::shared_ptr<AVFrame> decoded_frame;
-		decoded_frame.reset(avcodec_alloc_frame(), av_free);
+		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 		int frame_finished = 0;
 		if((-avcodec_decode_video(codec_context_, decoded_frame.get(), &frame_finished, video_packet.data(), video_packet.size())) > 0) 						

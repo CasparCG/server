@@ -28,7 +28,7 @@
 #include "DecklinkVideoConsumer.h"
 #include "DeckLinkAPI_h.h"
 
-#include "../../video/video_format.h"
+#include "../../format/video_format.h"
 #include "../../../common/utility/memory.h"
 
 #include "../../producer/frame_producer_device.h"
