@@ -29,7 +29,7 @@ namespace caspar { namespace core {
 struct frame_processor_device::implementation : boost::noncopyable
 {	
 	implementation(frame_processor_device* self, const video_format_desc& format_desc) 
-		: fmt_(format_desc), underrun_count_(0), input_underrun_count_(0)
+		: fmt_(format_desc), underrun_count_(0)
 	{		
 		output_.set_capacity(4);
 		executor_.start();
@@ -37,34 +37,25 @@ struct frame_processor_device::implementation : boost::noncopyable
 		{
 			ogl_context_.reset(new sf::Context());
 			ogl_context_->SetActive(true);
-			GL(glEnable(GL_POLYGON_STIPPLE));
-			GL(glEnable(GL_TEXTURE_2D));
-			GL(glEnable(GL_BLEND));
-			GL(glDisable(GL_DEPTH_TEST));
-			GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));			
-			GL(glClearColor(0.0, 0.0, 0.0, 0.0));
-			GL(glViewport(0, 0, format_desc.width, format_desc.height));
-			glLoadIdentity();   
 
-			renderer_ = std::make_shared<frame_renderer>(*self, format_desc);
+			renderer_.reset(new frame_renderer(*self, format_desc));
 		});
 	}
 
 	~implementation()
 	{
-		stop();
+		executor_.stop(); // Wait for executor before destroying anything.
 	}
-
-	void stop()
+	
+	void clear()
 	{
 		output_.clear();
-		executor_.stop();
 	}
 
 	frame_ptr create_frame(const pixel_format_desc& desc)
 	{
 		int key = pixel_format_desc::hash(desc);
-		auto& pool = writing_pools_[key];
+		auto& pool = frame_pools_[key];
 		
 		frame_ptr my_frame;
 		if(!pool.try_pop(my_frame))		
@@ -73,7 +64,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 		auto destructor = [=]
 		{
 			my_frame->reset();
-			writing_pools_[key].push(my_frame);
+			frame_pools_[key].push(my_frame);
 		};
 
 		return frame_ptr(my_frame.get(), [=](frame*){executor_.begin_invoke(destructor);});
@@ -85,7 +76,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 			return;
 				
 		auto future = executor_.begin_invoke([=]{return renderer_->render(input_frame);});	
-		output_.push(std::move(future));
+		output_.push(std::move(future)); // Blocks
 	}
 
 	void receive(frame_ptr& output_frame)
@@ -107,35 +98,29 @@ struct frame_processor_device::implementation : boost::noncopyable
 
 		output_frame = future.get();
 	}
-
-	video_format_desc fmt_;
-				
-	typedef tbb::concurrent_bounded_queue<frame_ptr> frame_queue;
-	tbb::concurrent_unordered_map<int, frame_queue> writing_pools_;
-	frame_queue reading_pool_;	
-				
+					
 	std::unique_ptr<sf::Context> ogl_context_;
+	std::unique_ptr<frame_renderer> renderer_;
 	
-	common::executor executor_;
-	
+	common::executor executor_;	
+				
 	tbb::concurrent_bounded_queue<boost::shared_future<frame_ptr>> output_;	
-
-	frame_renderer_ptr renderer_;
-
+	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<frame_ptr>> frame_pools_;
+	
+	video_format_desc fmt_;
 	long underrun_count_;
-	long input_underrun_count_;
 };
 	
 #if defined(_MSC_VER)
 #pragma warning (disable : 4355) // 'this' : used in base member initializer list
 #endif
 
-frame_processor_device::frame_processor_device(const video_format_desc& format_desc) 
-	: impl_(new implementation(this, format_desc)){}
+frame_processor_device::frame_processor_device(const video_format_desc& format_desc) : impl_(new implementation(this, format_desc)){}
 frame_ptr frame_processor_device::create_frame(const  pixel_format_desc& desc){return impl_->create_frame(desc);}
 void frame_processor_device::send(const frame_ptr& frame){impl_->send(frame);}
 void frame_processor_device::receive(frame_ptr& frame){impl_->receive(frame);}
 const video_format_desc frame_processor_device::get_video_format_desc() const { return impl_->fmt_;}
+
 frame_ptr frame_processor_device::create_frame(size_t width, size_t height)
 {
 	// Create bgra frame
@@ -153,5 +138,5 @@ frame_ptr frame_processor_device::create_frame()
 	desc.planes[0] = pixel_format_desc::plane(get_video_format_desc().width, get_video_format_desc().height, 4);
 	return create_frame(desc);
 }
-void frame_processor_device::stop(){impl_->stop();}
+void frame_processor_device::clear(){impl_->clear();}
 }}

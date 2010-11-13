@@ -67,8 +67,8 @@ public:
 	}
 
 private:
+	const frame_processor_device_ptr processor_device_; // Destroyed last inorder to have all frames returned to their pools.
 	const frame_producer_device_ptr producer_device_;
-	const frame_processor_device_ptr processor_device_;
 	const frame_consumer_device_ptr consumer_device_;
 };
 

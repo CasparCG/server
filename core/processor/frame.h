@@ -40,6 +40,15 @@ public:
 		static auto my_null_frame = std::shared_ptr<frame>(new frame(0,0));
 		return my_null_frame;
 	}
+
+protected:
+	frame(size_t width, size_t height);
+	frame(const pixel_format_desc& desc);
+
+	friend class frame_processor_device;
+	friend class frame_renderer;
+
+	virtual void reset();
 		
 	virtual void begin_write();
 	virtual void end_write();
@@ -47,15 +56,8 @@ public:
 	virtual void end_read();
 	virtual void draw(const frame_shader_ptr& shader);
 
-protected:
-	frame(size_t width, size_t height);
-	frame(const pixel_format_desc& desc);
-
-	friend class frame_processor_device;
-
-	virtual void reset();
-
 private:
+
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };

@@ -39,15 +39,13 @@ struct frame_producer_device::implementation : boost::noncopyable
 {	
 	implementation(const frame_processor_device_ptr& frame_processor)  
 		: frame_processor_(frame_processor)
-	{	
-		is_running_ = true;
-		
+	{
 		render_thread_ = boost::thread([=]{run();});
 	}
 			
 	~implementation()
 	{
-		frame_processor_->stop();
+		frame_processor_->clear();
 		is_running_ = false;
 		render_thread_.join();
 	}
@@ -57,18 +55,17 @@ struct frame_producer_device::implementation : boost::noncopyable
 		CASPAR_LOG(info) << L"Started frame_producer_device thread";
 		win32_exception::install_handler();
 		
+		is_running_ = true;
 		while(is_running_)
 		{
 			try
 			{	
-				std::vector<frame_ptr> next_frames;
+				std::vector<frame_ptr> frames;
 				{
 					tbb::mutex::scoped_lock lock(layers_mutex_);	
-					next_frames = render_frames(layers_);
+					frames = render_frames(layers_);
 				}				
-				auto rendered_frame = std::make_shared<composite_frame>();
-				boost::range::for_each(next_frames, std::bind(&composite_frame::add, rendered_frame, std::placeholders::_1));	
-				frame_processor_->send(rendered_frame);
+				frame_processor_->send(std::make_shared<composite_frame>(frames));
 			}
 			catch(...)
 			{
@@ -139,18 +136,15 @@ struct frame_producer_device::implementation : boost::noncopyable
 		auto it = layers_.find(render_layer);
 		return it != layers_.end() ? it->second.background() : nullptr;
 	}
-	
+				
+	frame_processor_device_ptr frame_processor_;
 
-	std::function<void(frame_ptr)> output_;
-			
 	boost::thread render_thread_;
 					
 	mutable tbb::mutex layers_mutex_;
 	std::map<int, layer> layers_;
 	
-	tbb::atomic<bool> is_running_;	
-	
-	frame_processor_device_ptr frame_processor_;
+	tbb::atomic<bool> is_running_;		
 };
 
 frame_producer_device::frame_producer_device(const frame_processor_device_ptr& frame_processor) 

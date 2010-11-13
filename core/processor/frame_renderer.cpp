@@ -30,6 +30,13 @@ struct frame_renderer::implementation : boost::noncopyable
 	{	
 		fbo_.create(format_desc_.width, format_desc_.height);
 		fbo_.bind_pixel_source();
+
+		GL(glEnable(GL_POLYGON_STIPPLE));
+		GL(glEnable(GL_TEXTURE_2D));
+		GL(glEnable(GL_BLEND));
+		GL(glDisable(GL_DEPTH_TEST));
+		GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));			
+		GL(glViewport(0, 0, format_desc.width, format_desc.height));
 	}
 				
 	frame_ptr render(const frame_ptr& frame)

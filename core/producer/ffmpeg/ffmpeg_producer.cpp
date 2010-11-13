@@ -109,9 +109,11 @@ public:
 
 			if(video_packet.empty() && audio_packet.empty())
 			{
-				if(underrun_count_ == 0)
+				if(underrun_count_++ == 0)
 					CASPAR_LOG(warning) << "### File read underflow has STARTED.";
-				++underrun_count_;
+
+				// Return last frame without audio.
+				last_frame_->audio_data().clear();
 				return last_frame_;
 			}
 			else if(underrun_count_ > 0)
