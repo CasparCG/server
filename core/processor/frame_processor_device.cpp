@@ -29,10 +29,9 @@ namespace caspar { namespace core {
 struct frame_processor_device::implementation : boost::noncopyable
 {	
 	implementation(frame_processor_device* self, const video_format_desc& format_desc) 
-		: fmt_(format_desc), output_underrun_count_(0), input_underrun_count_(0)
+		: fmt_(format_desc), underrun_count_(0), input_underrun_count_(0)
 	{		
-		input_.set_capacity(2);
-		output_.set_capacity(2);
+		output_.set_capacity(4);
 		executor_.start();
 		executor_.invoke([=]
 		{
@@ -59,15 +58,12 @@ struct frame_processor_device::implementation : boost::noncopyable
 	void stop()
 	{
 		output_.clear();
-		input_.clear();
-		input_.push(nullptr);
-		output_.push(nullptr);
 		executor_.stop();
 	}
 
 	frame_ptr create_frame(const pixel_format_desc& desc)
 	{
-		size_t key = pixel_format_desc::hash(desc);
+		int key = pixel_format_desc::hash(desc);
 		auto& pool = writing_pools_[key];
 		
 		frame_ptr my_frame;
@@ -87,72 +83,46 @@ struct frame_processor_device::implementation : boost::noncopyable
 	{			
 		if(input_frame == nullptr)
 			return;
-
-		input_.push(input_frame); // Block if there are too many frames in pipeline
-		executor_.begin_invoke([=]
-		{
-			try
-			{
-				output_.push(renderer_->render(input_frame));
-				frame_ptr dummy;
-				input_.try_pop(dummy);
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-			}
-		});	
+				
+		auto future = executor_.begin_invoke([=]{return renderer_->render(input_frame);});	
+		output_.push(std::move(future));
 	}
 
 	void receive(frame_ptr& output_frame)
 	{
-		if(!output_.try_pop(output_frame))
-		{
-			if(input_.empty())
-			{
-				if(input_underrun_count_ == 0)			
-					CASPAR_LOG(trace) << "### Frame Processor Input Underrun has STARTED. ###";
-			
-				++input_underrun_count_;
-			}
-			else 
-			{
-				if(output_underrun_count_ == 0)			
-					CASPAR_LOG(trace) << "### Frame Processor Output Underrun has STARTED. ###";
-			
-				++output_underrun_count_;
-			}
+		boost::shared_future<frame_ptr> future;
 
-			output_.pop(output_frame);
-		}	
-		else if(input_underrun_count_ > 0)
+		if(!output_.try_pop(future))
 		{
-			CASPAR_LOG(trace) << "### Frame Processor Input Underrun has ENDED with " << output_underrun_count_ << " ticks. ###";
-			input_underrun_count_ = 0;
+			if(underrun_count_++ == 0)			
+				CASPAR_LOG(trace) << "### Frame Processor Output Underrun has STARTED. ###";
+			
+			output_.pop(future);
 		}	
-		else if(output_underrun_count_ > 0)
+		else if(underrun_count_ > 0)
 		{
-			CASPAR_LOG(trace) << "### Frame Processor Output Underrun has ENDED with " << output_underrun_count_ << " ticks. ###";
-			output_underrun_count_ = 0;
+			CASPAR_LOG(trace) << "### Frame Processor Output Underrun has ENDED with " << underrun_count_ << " ticks. ###";
+			underrun_count_ = 0;
 		}
+
+		output_frame = future.get();
 	}
 
 	video_format_desc fmt_;
 				
 	typedef tbb::concurrent_bounded_queue<frame_ptr> frame_queue;
-	tbb::concurrent_unordered_map<size_t, frame_queue> writing_pools_;
+	tbb::concurrent_unordered_map<int, frame_queue> writing_pools_;
 	frame_queue reading_pool_;	
 				
 	std::unique_ptr<sf::Context> ogl_context_;
 	
 	common::executor executor_;
 	
-	frame_queue input_;
-	frame_queue output_;	
+	tbb::concurrent_bounded_queue<boost::shared_future<frame_ptr>> output_;	
 
 	frame_renderer_ptr renderer_;
 
-	long output_underrun_count_;
+	long underrun_count_;
 	long input_underrun_count_;
 };
 	
