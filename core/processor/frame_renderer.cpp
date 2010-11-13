@@ -34,6 +34,9 @@ struct frame_renderer::implementation : boost::noncopyable
 				
 	frame_ptr render(const frame_ptr& frame)
 	{
+		if(frame == nullptr)
+			return nullptr;
+
 		frame_ptr result;
 		try
 		{
