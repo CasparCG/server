@@ -70,6 +70,8 @@ public:
 	/// \param	frame_processor	The frame frame_processor. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual void initialize(const frame_processor_device_ptr& frame_processor) = 0;
+
+	virtual std::wstring print() { return L"Unknown frame_producer.";}
 };
 typedef std::shared_ptr<frame_producer> frame_producer_ptr;
 

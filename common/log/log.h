@@ -27,17 +27,17 @@ void add_file_sink(const std::wstring& folder);
 
 enum severity_level
 {
-    trace,
-    debug,
-    info,
-    warning,
-    error,
-    fatal
+	trace,
+	debug,
+	info,
+	warning,
+	error,
+	fatal
 };
 
 template< typename CharT, typename TraitsT >
 inline std::basic_ostream< CharT, TraitsT >& operator<< (
-    std::basic_ostream< CharT, TraitsT >& strm, severity_level lvl)
+	std::basic_ostream< CharT, TraitsT >& strm, severity_level lvl)
 {
 	if(lvl == trace)
 		strm << "trace";
@@ -61,13 +61,13 @@ typedef boost::log::sources::wseverity_logger_mt<severity_level> caspar_logger;
 
 BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 {
-    internal::init();
-    return caspar_logger(boost::log::keywords::severity = trace);
+	internal::init();
+	return caspar_logger(boost::log::keywords::severity = trace);
 }
 
 #define CASPAR_LOG(lvl)\
-    BOOST_LOG_STREAM_WITH_PARAMS(::caspar::log::get_logger(),\
-        (::boost::log::keywords::severity = ::caspar::log::lvl))
+	BOOST_LOG_STREAM_WITH_PARAMS(::caspar::log::get_logger(),\
+		(::boost::log::keywords::severity = ::caspar::log::lvl))
 
 #define CASPAR_LOG_CURRENT_EXCEPTION() \
 	try\

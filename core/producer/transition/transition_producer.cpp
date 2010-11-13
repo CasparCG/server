@@ -67,7 +67,7 @@ struct transition_producer::implementation : boost::noncopyable
 
 			tbb::parallel_invoke
 			(
-				[&]{dest = render_frame(dest_producer_);},
+				[&]{dest   = render_frame(dest_producer_);},
 				[&]{source = render_frame(source_producer_);}
 			);
 
@@ -94,16 +94,27 @@ struct transition_producer::implementation : boost::noncopyable
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			producer = nullptr;
-			CASPAR_LOG(warning) << "Removed renderer from transition.";
+			CASPAR_LOG(warning) << "Removed producer from transition.";
 		}
 
-		if(frame == nullptr && producer != nullptr && 
-			producer->get_following_producer() != nullptr)
+		if(frame == nullptr)
 		{
-			auto following = producer->get_following_producer();
-			following->initialize(frame_processor_);
-			following->set_leading_producer(producer);
-			producer = following;
+			if(producer == nullptr || producer->get_following_producer() == nullptr)
+				return nullptr;
+
+			try
+			{
+				auto following = producer->get_following_producer();
+				following->initialize(frame_processor_);
+				following->set_leading_producer(producer);
+				producer = following;
+			}
+			catch(...)
+			{
+				CASPAR_LOG(warning) << "Failed to initialize following producer. Removing it.";
+				producer = nullptr;
+			}
+
 			return render_frame(producer);
 		}
 		return frame;

@@ -15,6 +15,11 @@ public:
 		: producer_device_(producer_device), processor_device_(processor_device), consumer_device_(consumer_device)
 	{
 	}
+
+	~implementation()
+	{
+		producer_device_->clear();
+	}
 	
 	void load(int render_layer, const frame_producer_ptr& producer, load_option::type option = load_option::none)
 	{

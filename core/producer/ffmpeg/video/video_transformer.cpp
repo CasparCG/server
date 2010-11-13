@@ -54,13 +54,7 @@ pixel_format::type get_pixel_format(PixelFormat pix_fmt)
 struct video_transformer::implementation : boost::noncopyable
 {
 	implementation(AVCodecContext* codec_context) : codec_context_(codec_context), sw_warning_(false){}
-
-	~implementation()
-	{
-		if(frame_processor_)
-			frame_processor_->release_tag(this);
-	}
-
+	
 	frame_ptr execute(const std::shared_ptr<AVFrame>& decoded_frame)
 	{				
 		if(decoded_frame == nullptr)
@@ -110,7 +104,7 @@ struct video_transformer::implementation : boost::noncopyable
 
 		if(desc.pix_fmt != pixel_format::invalid)
 		{
-			result_frame = frame_processor_->create_frame(desc, this);
+			result_frame = frame_processor_->create_frame(desc);
 
 			tbb::parallel_for(0, static_cast<int>(desc.planes.size()), 1, [&](int n)
 			{
@@ -135,7 +129,7 @@ struct video_transformer::implementation : boost::noncopyable
 				CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
 				sw_warning_ = true;
 			}
-			result_frame = frame_processor_->create_frame(width, height, this);
+			result_frame = frame_processor_->create_frame(width, height);
 
 			AVFrame av_frame;	
 			avcodec_get_frame_defaults(&av_frame);
@@ -145,6 +139,12 @@ struct video_transformer::implementation : boost::noncopyable
 			{
 				double param;
 				sws_context_.reset(sws_getContext(width, height, pix_fmt, width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+				if(!sws_context_)
+					BOOST_THROW_EXCEPTION(
+						operation_failed() <<
+						msg_info("Could not create software scaling context.") << 
+						boost::errinfo_api_function("sws_getContext"));
+
 			}		
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame.data, av_frame.linesize);		

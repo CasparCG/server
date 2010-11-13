@@ -80,8 +80,9 @@ struct layer::implementation
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << L"Removed " << (active_ ? active_->print() : L"frame_producer") << L" from layer.";
 			active_ = nullptr;
-			CASPAR_LOG(warning) << "Removed producer from layer.";
+			last_frame_ = nullptr;
 		}
 
 		return last_frame_;

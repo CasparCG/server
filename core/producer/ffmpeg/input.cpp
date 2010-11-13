@@ -10,6 +10,7 @@
 #include <tbb/queuing_mutex.h>
 
 #include <boost/thread.hpp>
+#include <boost/exception/error_info.hpp>
 
 #include <errno.h>
 #include <system_error>
@@ -34,27 +35,19 @@ struct input::implementation : boost::noncopyable
 {
 	implementation() : video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_(nullptr)
 	{
-		loop_ = false;
-		//file_buffer_size_ = 0;		
+		loop_ = false;	
 		video_packet_buffer_.set_capacity(50);
 		audio_packet_buffer_.set_capacity(50);
 	}
 
 	~implementation()
 	{		
-		stop();
-	}
-	
-	void stop()
-	{
 		is_running_ = false;
 		audio_packet_buffer_.clear();
 		video_packet_buffer_.clear();
-		//file_buffer_size_ = 0;
-		//file_buffer_size_cond_.notify_all();
 		io_thread_.join();
 	}
-
+	
 	void load(const std::string& filename)
 	{	
 		try
@@ -62,11 +55,21 @@ struct input::implementation : boost::noncopyable
 			int errn;
 			AVFormatContext* weak_format_context_;
 			if((errn = -av_open_input_file(&weak_format_context_, filename.c_str(), nullptr, 0, nullptr)) > 0)
-				BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec found."));
+				BOOST_THROW_EXCEPTION(
+					file_read_error() << 
+					msg_info("No format context found.") << 
+					boost::errinfo_api_function("av_open_input_file") <<
+					boost::errinfo_errno(errn) <<
+					boost::errinfo_file_name(filename));
+
 			format_context_.reset(weak_format_context_, av_close_input_file);
 			
 			if((errn = -av_find_stream_info(format_context_.get())) > 0)
-				throw std::runtime_error("File read error");
+				BOOST_THROW_EXCEPTION(
+					file_read_error() << 
+					boost::errinfo_api_function("av_find_stream_info") <<
+					msg_info("No stream found.") << 
+					boost::errinfo_errno(errn));
 
 			video_codec_context_ = open_video_stream();
 			if(!video_codec_context_)
@@ -77,7 +80,7 @@ struct input::implementation : boost::noncopyable
 				CASPAR_LOG(warning) << "No audio stream found.";
 
 			if(!video_codec_context_ && !audio_codex_context_)
-				BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec found."));		
+				BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec context found."));		
 		}
 		catch(...)
 		{
@@ -89,13 +92,9 @@ struct input::implementation : boost::noncopyable
 			throw;
 		}
 		filename_ = filename;
-	}
-
-	void start()
-	{
 		io_thread_ = boost::thread([=]{read_file();});
 	}
-			
+				
 	std::shared_ptr<AVCodecContext> open_video_stream()
 	{		
 		AVStream** streams_end = format_context_->streams+format_context_->nb_streams;
@@ -150,28 +149,14 @@ struct input::implementation : boost::noncopyable
 
 			if (av_read_frame(format_context_.get(), packet.get()) >= 0) // NOTE: Packet is only valid until next call of av_read_frame or av_close_input_file
 			{
-				if(packet->stream_index == video_s_index_) 		
-				{
-					video_packet_buffer_.push(std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size));		
-					packet_wait_cond_.notify_all();
-					//file_buffer_size_ += packet->size;
-				}
+				auto buffer = std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size);
+				if(packet->stream_index == video_s_index_) 						
+					video_packet_buffer_.push(buffer);						
 				else if(packet->stream_index == audio_s_index_) 	
-				{
-					audio_packet_buffer_.push(std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size));	
-					packet_wait_cond_.notify_all();	
-					//file_buffer_size_ += packet->size;
-				}
+					audio_packet_buffer_.push(buffer);		
 			}
 			else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
 				is_running_ = false;
-			
-			//if(is_running_)
-			//{
-			//	boost::unique_lock<boost::mutex> lock(file_buffer_size_mutex_);
-			//	while(file_buffer_size_ > 32*1000000)
-			//		file_buffer_size_cond_.wait(lock);	
-			//}
 		}
 		
 		is_running_ = false;
@@ -182,12 +167,8 @@ struct input::implementation : boost::noncopyable
 	aligned_buffer get_video_packet()
 	{
 		std::shared_ptr<aligned_buffer> video_packet;
-		if(video_packet_buffer_.try_pop(video_packet))
-		{
-			return std::move(*video_packet);
-			//file_buffer_size_ -= video_packet->size;
-			//file_buffer_size_cond_.notify_all();
-		}
+		if(video_packet_buffer_.try_pop(video_packet))		
+			return std::move(*video_packet);		
 		return aligned_buffer();
 	}
 
@@ -195,11 +176,7 @@ struct input::implementation : boost::noncopyable
 	{
 		std::shared_ptr<aligned_buffer> audio_packet;
 		if(audio_packet_buffer_.try_pop(audio_packet))
-		{
 			return std::move(*audio_packet);
-			//file_buffer_size_ -= audio_packet->size;
-			//file_buffer_size_cond_.notify_all();
-		}
 		return aligned_buffer();
 	}
 
@@ -207,40 +184,23 @@ struct input::implementation : boost::noncopyable
 	{
 		return !is_running_ && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
 	}
-
-	void wait_for_packet()
-	{
-		boost::unique_lock<boost::mutex> lock(packet_wait_mutex_);
-		while(is_running_ && video_packet_buffer_.empty() && audio_packet_buffer_.empty())
-			packet_wait_cond_.wait(lock);		
-	}
-	
+		
 	bool seek(unsigned long long seek_target)
 	{
 		tbb::queuing_mutex::scoped_lock lock(seek_mutex_);
-		if(av_seek_frame(format_context_.get(), -1, seek_target*AV_TIME_BASE, 0) >= 0)
-		{
-			video_packet_buffer_.clear();
-			audio_packet_buffer_.clear();
-			// TODO: Not sure its enough to jsut flush in input class
-			if(video_codec_context_)
-				avcodec_flush_buffers(video_codec_context_.get());
-			if(audio_codex_context_)
-				avcodec_flush_buffers(audio_codex_context_.get());
-			return true;
-		}
+		if(av_seek_frame(format_context_.get(), -1, seek_target*AV_TIME_BASE, 0) < 0)
+			return false;
 		
-		return false;
+		video_packet_buffer_.clear();
+		audio_packet_buffer_.clear();
+		// TODO: Not sure its enough to jsut flush in input class
+		if(video_codec_context_)
+			avcodec_flush_buffers(video_codec_context_.get());
+		if(audio_codex_context_)
+			avcodec_flush_buffers(audio_codex_context_.get());
+		return true;
 	}
-	
-	//int								file_buffer_max_size_;
-	//tbb::atomic<int>					file_buffer_size_;
-	//boost::condition_variable			file_buffer_size_cond_;
-	//boost::mutex						file_buffer_size_mutex_;
-			
-	boost::condition_variable			packet_wait_cond_;
-	boost::mutex						packet_wait_mutex_;
-
+				
 	std::shared_ptr<AVFormatContext>	format_context_;	// Destroy this last
 
 	tbb::queuing_mutex					seek_mutex_;
@@ -272,6 +232,4 @@ bool input::is_eof() const{return impl_->is_eof();}
 aligned_buffer input::get_video_packet(){return impl_->get_video_packet();}
 aligned_buffer input::get_audio_packet(){return impl_->get_audio_packet();}
 bool input::seek(unsigned long long frame){return impl_->seek(frame);}
-void input::start(){impl_->start();}
-void input::wait_for_packet(){impl_->wait_for_packet();}
 }}}

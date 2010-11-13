@@ -28,51 +28,22 @@
 #pragma intrinsic(__movsd, __stosd)
 
 namespace caspar { namespace core {
-
-class color_producer : public frame_producer
-{
-public:
-	explicit color_producer(unsigned int color_value) 
-		: color_value_(color_value){}
-
-	~color_producer()
-	{
-		if(frame_processor_)
-			frame_processor_->release_tag(this);
-	}
-
-	frame_ptr render_frame()
-	{ 
-		return frame_;
-	}
-
-	void initialize(const frame_processor_device_ptr& frame_processor)
-	{
-		frame_processor_ = frame_processor;
-		frame_ = frame_processor->create_frame(this);
-		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
-	}
-
-	frame_processor_device_ptr frame_processor_;
-	frame_ptr frame_;
-	unsigned int color_value_;
-};
-
-union Color 
-{
-	struct Components 
-	{
-		unsigned char a;
-		unsigned char r;
-		unsigned char g;
-		unsigned char b;
-	} comp;
-
-	unsigned int value;
-};
-
+	
 unsigned int get_pixel_color_value(const std::wstring& parameter)
 {
+	union Color 
+	{
+		struct Components 
+		{
+			unsigned char a;
+			unsigned char r;
+			unsigned char g;
+			unsigned char b;
+		} comp;
+
+		unsigned int value;
+	};
+
 	std::wstring color_code;
 	if(parameter.length() != 9 || parameter[0] != '#')
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("parameter") << arg_value_info(common::narrow(parameter)) << msg_info("Invalid color code"));
@@ -91,11 +62,41 @@ unsigned int get_pixel_color_value(const std::wstring& parameter)
 	return color.value;
 }
 
+class color_producer : public frame_producer
+{
+public:
+	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)){}
+	
+	frame_ptr render_frame()
+	{ 
+		return frame_;
+	}
+
+	void initialize(const frame_processor_device_ptr& frame_processor)
+	{
+		frame_processor_ = frame_processor;
+		frame_ = frame_processor->create_frame();
+		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
+	}
+	
+	std::wstring print()
+	{
+		std::wstringstream str;
+		str << L"color_producer " << color_str_ << L".";
+		return str.str();
+	}
+
+	frame_processor_device_ptr frame_processor_;
+	frame_ptr frame_;
+	unsigned int color_value_;
+	std::wstring color_str_;
+};
+
 frame_producer_ptr create_color_producer(const std::vector<std::wstring>& params)
 {
 	if(params.empty() || params[0].at(0) != '#')
 		return nullptr;
-	return std::make_shared<color_producer>(get_pixel_color_value(params[0]));
+	return std::make_shared<color_producer>(params[0]);
 }
 
 }}

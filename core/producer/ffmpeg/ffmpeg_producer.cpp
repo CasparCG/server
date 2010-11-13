@@ -75,8 +75,6 @@ public:
 			if(!input_->seek(boost::lexical_cast<unsigned long long>(*seek)))
 				CASPAR_LOG(warning) << "Failed to seek file: " << filename_  << "to frame" << *seek;
 		}
-
-		input_->start();
 	}
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -87,7 +85,7 @@ public:
 	frame_ptr render_frame()
 	{
 		while(ouput_channel_.empty() && !input_->is_eof())
-		{						
+		{	
 			auto video_packet = input_->get_video_packet();		
 			auto audio_packet = input_->get_audio_packet();		
 			tbb::parallel_invoke(
@@ -112,12 +110,13 @@ public:
 			if(video_packet.empty() && audio_packet.empty())
 			{
 				if(underrun_count_ == 0)
-					CASPAR_LOG(warning) << "File read underflow has STARTED.";
+					CASPAR_LOG(warning) << "### File read underflow has STARTED.";
 				++underrun_count_;
+				return last_frame_;
 			}
 			else if(underrun_count_ > 0)
 			{
-				CASPAR_LOG(trace) << "File Read Underrun has ENDED with " << underrun_count_ << " ticks.";
+				CASPAR_LOG(trace) << "### File Read Underrun has ENDED with " << underrun_count_ << " ticks.";
 				underrun_count_ = 0;
 			}
 
@@ -135,13 +134,19 @@ public:
 			}				
 		}
 
-		frame_ptr frame;
 		if(!ouput_channel_.empty())
 		{
-			frame = ouput_channel_.front();
+			last_frame_ = ouput_channel_.front();
 			ouput_channel_.pop();
 		}
-		return frame;
+		return last_frame_;
+	}
+
+	std::wstring print()
+	{
+		std::wstringstream str;
+		str << L"ffmpeg_producer " << filename_ << L".";
+		return str.str();
 	}
 			
 	bool has_audio_;
@@ -159,7 +164,9 @@ public:
 	
 	std::wstring						filename_;
 
-	long underrun_count_;
+	long								underrun_count_;
+
+	frame_ptr							last_frame_;
 };
 
 frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& params)
