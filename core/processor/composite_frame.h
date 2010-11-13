@@ -1,23 +1,21 @@
 #pragma once
 
-#include <memory>
-
-#include <Glee.h>
-
 #include "frame.h"
+
+#include <memory>
+#include <algorithm>
 
 namespace caspar { namespace core {
 	
 class composite_frame : public frame
 {
 public:
-	composite_frame();
-						
-	void add(const frame_ptr& frame);
+	composite_frame(const std::vector<frame_ptr>& container);
 
 	static frame_ptr interlace(const frame_ptr& frame1,	const frame_ptr& frame2, video_update_format::type mode);
 	
 private:
+
 	virtual unsigned char* data(size_t index);
 	virtual void begin_write();
 	virtual void end_write();

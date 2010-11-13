@@ -51,6 +51,46 @@ pixel_format::type get_pixel_format(PixelFormat pix_fmt)
 	}
 }
 
+pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_t height)
+{
+	// Get linesizes
+	AVPicture dummy_pict;	
+	avpicture_fill(&dummy_pict, nullptr, pix_fmt, width, height);
+
+	pixel_format_desc desc;
+	desc.pix_fmt = get_pixel_format(pix_fmt);
+		
+	switch(desc.pix_fmt)
+	{
+	case pixel_format::bgra:
+	case pixel_format::argb:
+	case pixel_format::rgba:
+	case pixel_format::abgr:
+		{
+			desc.planes[0] = pixel_format_desc::plane(dummy_pict.linesize[0]/4, height, 4);						
+			return desc;
+		}
+	case pixel_format::ycbcr:
+	case pixel_format::ycbcra:
+		{		
+			// Find chroma height
+			size_t size2 = dummy_pict.data[2] - dummy_pict.data[1];
+			size_t h2 = size2/dummy_pict.linesize[1];			
+
+			desc.planes[0] = pixel_format_desc::plane(dummy_pict.linesize[0], height, 1);
+			desc.planes[1] = pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1);
+			desc.planes[2] = pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1);
+
+			if(desc.pix_fmt == pixel_format::ycbcra)						
+				desc.planes[3] = pixel_format_desc::plane(dummy_pict.linesize[3], height, 1);	
+			return desc;
+		}		
+	default:		
+		desc.pix_fmt = pixel_format::invalid;
+		return desc;
+	}
+}
+
 struct video_transformer::implementation : boost::noncopyable
 {
 	implementation(AVCodecContext* codec_context) : codec_context_(codec_context), sw_warning_(false){}
@@ -64,44 +104,9 @@ struct video_transformer::implementation : boost::noncopyable
 		int height = codec_context_->height;
 		auto pix_fmt = codec_context_->pix_fmt;
 		
-		pixel_format_desc desc;
-		desc.pix_fmt = get_pixel_format(pix_fmt);
+		pixel_format_desc desc = get_pixel_format_desc(pix_fmt, width, height);
 
 		frame_ptr result_frame;
-		
-		// Get linesizes
-		AVPicture dummy_pict;	
-		avpicture_fill(&dummy_pict, nullptr, pix_fmt, width, height);
-		
-		switch(desc.pix_fmt)
-		{
-		case pixel_format::bgra:
-		case pixel_format::argb:
-		case pixel_format::rgba:
-		case pixel_format::abgr:
-			{
-				desc.planes[0] = pixel_format_desc::plane(dummy_pict.linesize[0]/4, height, 4);
-						
-				break;
-			}
-		case pixel_format::ycbcr:
-		case pixel_format::ycbcra:
-			{		
-				// Find chroma height
-				size_t size2 = dummy_pict.data[2] - dummy_pict.data[1];
-				size_t h2 = size2/dummy_pict.linesize[1];			
-
-				desc.planes[0] = pixel_format_desc::plane(dummy_pict.linesize[0]/1, height, 1);
-				desc.planes[1] = pixel_format_desc::plane(dummy_pict.linesize[1]/1, h2, 1);
-				desc.planes[2] = pixel_format_desc::plane(dummy_pict.linesize[2]/1, h2, 1);
-
-				if(pix_fmt == PIX_FMT_YUVA420P)						
-					desc.planes[3] = pixel_format_desc::plane(dummy_pict.linesize[3], height, 1);	
-
-				break;
-			}		
-		}
-
 		if(desc.pix_fmt != pixel_format::invalid)
 		{
 			result_frame = frame_processor_->create_frame(desc);

@@ -184,11 +184,11 @@ struct transition_producer::implementation : boost::noncopyable
 			}
 		}
 						
-		auto composite = std::make_shared<composite_frame>();
+		std::vector<frame_ptr> frames;
 		if(src_frame)
-			composite->add(src_frame);
-		composite->add(dest_frame);
-		return composite;
+			frames.push_back(src_frame);
+		frames.push_back(dest_frame);
+		return std::make_shared<composite_frame>(frames);
 	}
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)
