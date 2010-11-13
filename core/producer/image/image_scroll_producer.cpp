@@ -51,12 +51,6 @@ struct image_scroll_producer : public frame_producer
 
 		loop_ = std::find(params.begin(), params.end(), L"LOOP") != params.end();
 	}
-	
-	~image_scroll_producer()
-	{
-		if(frame_processor_)
-			frame_processor_->release_tag(this);
-	}
 
 	void load_and_pad_image(const std::wstring& filename)
 	{
@@ -79,7 +73,7 @@ struct image_scroll_producer : public frame_producer
 
 	frame_ptr do_render_frame()
 	{
-		frame_ptr frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height, this);
+		frame_ptr frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
 		common::clear(frame->data(), format_desc_.size);
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;

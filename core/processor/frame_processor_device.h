@@ -33,15 +33,14 @@ class frame_processor_device : boost::noncopyable
 public:
 	frame_processor_device(const video_format_desc& format_desc);
 		
+	void stop();
 	void send(const frame_ptr& frame);
 	void receive(frame_ptr& frame);
 	
-	frame_ptr create_frame(const pixel_format_desc& desc, void* tag);		
-	frame_ptr create_frame(size_t width, size_t height, void* tag);			
-	frame_ptr create_frame(void* tag);
-
-	void release_tag(void* tag);
-
+	frame_ptr create_frame(const pixel_format_desc& desc);		
+	frame_ptr create_frame(size_t width, size_t heightg);			
+	frame_ptr create_frame();
+	
 	const video_format_desc get_video_format_desc() const;
 private:
 	struct implementation;

@@ -11,7 +11,7 @@ namespace caspar { namespace common { namespace gl {
 struct pixel_buffer_object::implementation : boost::noncopyable
 {
 	implementation(size_t width, size_t height, GLenum format) 
-		: width_(width), height_(height), pbo_(0), format_(format),
+		: width_(width), height_(height), pbo_(0), format_(format), data_(nullptr),
 			texture_(0), writing_(false), reading_(false), mapped_(false)
 	{
 		switch(format)
@@ -45,6 +45,8 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 	{
 		if(pbo_ != 0)
 			glDeleteBuffers(1, &pbo_);
+		if(texture_ != 0)
+			glDeleteTextures(1, &texture_);
 	}	
 
 	void bind_pbo(GLenum mode)
@@ -92,17 +94,22 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 	void* end_write()
 	{
 		if(mapped_)
-			BOOST_THROW_EXCEPTION(invalid_operation());
+		{
+			if(!writing_)
+				return data_;
+			else
+				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Buffer is already mapped."));
+		}
 
 		bind_pbo(GL_PIXEL_UNPACK_BUFFER);
 		GL(glBufferData(GL_PIXEL_UNPACK_BUFFER, size_, NULL, GL_STREAM_DRAW));
-		auto data = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		data_= glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
 		unbind_pbo(GL_PIXEL_UNPACK_BUFFER);		
-		if(!data)
+		if(!data_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("glMapBuffer failed"));
 		writing_ = false;
 		mapped_ = true;
-		return data;
+		return data_;
 	}
 	
 	void begin_read()
@@ -120,16 +127,21 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 	void* end_read()
 	{
 		if(mapped_)
-			BOOST_THROW_EXCEPTION(invalid_operation());
+		{
+			if(!reading_)
+				return data_;
+			else
+				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Buffer is already mapped."));
+		}
 
 		bind_pbo(GL_PIXEL_PACK_BUFFER);
-		auto data = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);   
+		data_ = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);   
 		unbind_pbo(GL_PIXEL_PACK_BUFFER);
-		if(!data)
+		if(!data_)
 			BOOST_THROW_EXCEPTION(std::bad_alloc());
 		reading_ = false;
 		mapped_ = true;
-		return data;
+		return data_;
 	}
 
 	void is_smooth(bool smooth)
@@ -158,6 +170,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 
 	GLint internal_;
 	GLenum format_;
+	void* data_;
 };
 
 pixel_buffer_object::pixel_buffer_object(){}

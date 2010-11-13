@@ -71,8 +71,6 @@ struct flash_producer::implementation
 	~implementation() 
 	{
 		stop();
-		if(frame_processor_)
-			frame_processor_->release_tag(this);
 	}
 
 	void start(bool force = true)
@@ -271,7 +269,7 @@ struct flash_producer::implementation
 			});
 		}	
 
-		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height, this);
+		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height);
 		common::aligned_parallel_memcpy(frame->data(), current_frame_->data(), current_frame_->size());	
 
 		return frame;

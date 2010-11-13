@@ -18,13 +18,7 @@ namespace caspar { namespace core { namespace image{
 struct image_producer : public frame_producer
 {
 	image_producer(const std::wstring& filename) : filename_(filename)	{}
-
-	~image_producer()
-	{
-		if(frame_processor_)
-			frame_processor_->release_tag(this);
-	}
-
+	
 	frame_ptr render_frame(){return frame_;}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -32,7 +26,7 @@ struct image_producer : public frame_producer
 		frame_processor_ = frame_processor;
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
-		frame_ = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), this);
+		frame_ = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
 		common::aligned_parallel_memcpy(frame_->data(), FreeImage_GetBits(bitmap.get()), frame_->size());
 	}
 	

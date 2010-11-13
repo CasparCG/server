@@ -28,6 +28,10 @@
     <None Include="caspar.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="My Amplifier Results\r006hs\r006hs.ampl" />
+    <None Include="My Amplifier Results\r007cc\r007cc.ampl" />
+    <None Include="My Amplifier Results\r008lw\r008lw.ampl" />
+    <None Include="My Inspector Results\r000ti3\r000ti3.insp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8C26C94F-8092-4769-8D84-DEA479721C5B}</ProjectGuid>

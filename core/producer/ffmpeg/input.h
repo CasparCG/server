@@ -20,10 +20,8 @@ public:
 
 	aligned_buffer get_video_packet();
 	aligned_buffer get_audio_packet();
-	void wait_for_packet();
 
 	bool seek(unsigned long long frame);
-	void start();
 
 	bool is_eof() const;
 	void set_loop(bool value);

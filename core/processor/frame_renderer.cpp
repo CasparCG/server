@@ -57,7 +57,7 @@ struct frame_renderer::implementation : boost::noncopyable
 			writing_[next_index]->draw(shader_);
 				
 			// Create an output frame
-			auto temp_frame = frame_processor_.create_frame(this);
+			auto temp_frame = frame_processor_.create_frame();
 			
 			// Read from framebuffer into page-locked memory.
 			temp_frame->begin_read();
