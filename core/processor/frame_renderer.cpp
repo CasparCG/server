@@ -76,7 +76,7 @@ struct frame_renderer::implementation : boost::noncopyable
 			output_frame_ = temp_frame;
 
 			// Return frames to pool.
-			writing_[next_index]->end_write();
+			//writing_[next_index]->end_write();
 			writing_[next_index] = nullptr;
 		}
 		catch(...)

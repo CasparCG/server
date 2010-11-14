@@ -158,6 +158,7 @@ struct frame::implementation : boost::noncopyable
 		y_			= 0.0f;
 		texcoords_	= rectangle(0.0, 1.0, 1.0, 0.0);
 		update_fmt_ = video_update_format::progressive;
+		end_write();
 	}
 
 	std::vector<common::gl::pixel_buffer_object_ptr> pbo_;

@@ -141,6 +141,9 @@ public:
 			last_frame_ = ouput_channel_.front();
 			ouput_channel_.pop();
 		}
+		else if(input_->is_eof())
+			last_frame_ = nullptr;
+
 		return last_frame_;
 	}
 

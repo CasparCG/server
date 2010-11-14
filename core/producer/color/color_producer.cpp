@@ -75,8 +75,9 @@ public:
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
 		frame_processor_ = frame_processor;
-		frame_ = frame_processor->create_frame();
-		__stosd(reinterpret_cast<unsigned long*>(frame_->data()), color_value_, frame_->size() / sizeof(unsigned long));
+		auto frame = frame_processor->create_frame();
+		__stosd(reinterpret_cast<unsigned long*>(frame->data()), color_value_, frame->size() / sizeof(unsigned long));
+		frame_ = frame;
 	}
 	
 	std::wstring print()

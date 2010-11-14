@@ -35,7 +35,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
 	implementation() : container_(5), underrun_count_(0)
 	{
-		input_.set_capacity(2);
+		input_.set_capacity(3);
 		sf::SoundStream::Initialize(2, 48000);
 	}
 
@@ -51,7 +51,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		// Use shared_ptr to emulate move semantics
 		input_.push(std::make_shared<std::vector<short>>(std::move(frame->audio_data()))); 
 		
-		if(GetStatus() != Playing && input_.size() > 1)
+		if(GetStatus() != Playing && input_.size() > 2)
 			Play();
 	}
 	
