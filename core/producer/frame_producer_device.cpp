@@ -52,7 +52,6 @@ struct frame_producer_device::implementation : boost::noncopyable
 		
 	void run()
 	{		
-		CASPAR_LOG(info) << L"Started frame_producer_device thread";
 		win32_exception::install_handler();
 		
 		is_running_ = true;
@@ -74,8 +73,6 @@ struct frame_producer_device::implementation : boost::noncopyable
 				CASPAR_LOG(error) << "Unexpected exception. Cleared layers in render-device";
 			}
 		}
-
-		CASPAR_LOG(info) << L"Ended frame_producer_device thread";
 	}
 
 	void load(int render_layer, const frame_producer_ptr& producer, load_option::type option)

@@ -100,9 +100,10 @@ struct frame_processor_device::implementation : boost::noncopyable
 	}
 					
 	std::unique_ptr<sf::Context> ogl_context_;
-	std::unique_ptr<frame_renderer> renderer_;
 	
 	common::executor executor_;	
+
+	std::unique_ptr<frame_renderer> renderer_;
 				
 	tbb::concurrent_bounded_queue<boost::shared_future<frame_ptr>> output_;	
 	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<frame_ptr>> frame_pools_;

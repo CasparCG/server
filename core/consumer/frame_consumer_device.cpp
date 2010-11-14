@@ -75,7 +75,6 @@ public:
 				
 	void run()
 	{
-		CASPAR_LOG(info) << L"Started frame_consumer_device thread.";
 		win32_exception::install_handler();
 				
 		video_sync_clock clock(fmt_);
@@ -91,8 +90,6 @@ public:
 			
 			display_frame(frame);			
 		}
-		
-		CASPAR_LOG(info) << L"Ended frame_consumer_device thread.";
 	}
 
 	void display_frame(const frame_ptr& frame)
