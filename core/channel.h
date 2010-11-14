@@ -31,7 +31,7 @@ public:
 	void stop(int render_layer);
 	void clear(int render_layer);
 	void clear();	
-	frame_producer_ptr active(int render_layer) const;
+	frame_producer_ptr foreground(int render_layer) const;
 	frame_producer_ptr background(int render_layer) const;
 	const video_format_desc get_video_format_desc() const;
 private:

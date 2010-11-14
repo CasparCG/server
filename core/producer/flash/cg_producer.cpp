@@ -262,7 +262,7 @@ cg_producer_ptr get_default_cg_producer(const channel_ptr& channel, unsigned int
 	if(!channel)
 		BOOST_THROW_EXCEPTION(null_argument() << msg_info("channel"));
 	
-	auto producer = std::dynamic_pointer_cast<cg_producer>(channel->active(render_layer));
+	auto producer = std::dynamic_pointer_cast<cg_producer>(channel->foreground(render_layer));
 	if(!producer)
 	{
 		producer = std::make_shared<cg_producer>();		

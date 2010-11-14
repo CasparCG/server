@@ -123,11 +123,11 @@ struct frame_producer_device::implementation : boost::noncopyable
 		layers_.clear();
 	}		
 
-	frame_producer_ptr active(int render_layer) const
+	frame_producer_ptr foreground(int render_layer) const
 	{
 		tbb::mutex::scoped_lock lock(layers_mutex_);
 		auto it = layers_.find(render_layer);
-		return it != layers_.end() ? it->second.active() : nullptr;
+		return it != layers_.end() ? it->second.foreground() : nullptr;
 	}
 	
 	frame_producer_ptr background(int render_layer) const
@@ -155,6 +155,6 @@ void frame_producer_device::play(int render_layer){impl_->play(render_layer);}
 void frame_producer_device::stop(int render_layer){impl_->stop(render_layer);}
 void frame_producer_device::clear(int render_layer){impl_->clear(render_layer);}
 void frame_producer_device::clear(){impl_->clear();}
-frame_producer_ptr frame_producer_device::active(int render_layer) const {return impl_->active(render_layer);}
+frame_producer_ptr frame_producer_device::foreground(int render_layer) const {return impl_->foreground(render_layer);}
 frame_producer_ptr frame_producer_device::background(int render_layer) const {return impl_->background(render_layer);}
 }}

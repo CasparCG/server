@@ -29,7 +29,7 @@ public:
 	void stop();
 	void clear();
 		
-	frame_producer_ptr active() const;
+	frame_producer_ptr foreground() const;
 	frame_producer_ptr background() const;
 
 	frame_ptr render_frame();

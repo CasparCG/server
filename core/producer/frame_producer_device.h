@@ -22,7 +22,7 @@ public:
 	void clear(int render_layer);
 	void clear();
 	
-	frame_producer_ptr active(int render_layer) const;
+	frame_producer_ptr foreground(int render_layer) const;
 	frame_producer_ptr background(int render_layer) const;
 private:
 	struct implementation;

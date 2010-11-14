@@ -32,33 +32,9 @@ public:
 		try
 		{		
 			const char* fragment_source = fragment_source_str.c_str();
-			static const char* vertex_source = 
-				"void main()"
-				"{"
-					"gl_TexCoord[0] = gl_MultiTexCoord0;"
-					"gl_FrontColor = gl_Color;"
-					"gl_Position = ftransform();"
-				"}";
-			
-			auto vertex_shader   = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
+						
 			auto fragmemt_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
-
-			GL(glShaderSourceARB(vertex_shader, 1, &vertex_source,   NULL));
-			GL(glCompileShaderARB(vertex_shader));
-
-			GL(glGetObjectParameterivARB(vertex_shader, GL_OBJECT_COMPILE_STATUS_ARB, &success));
-			if (success == GL_FALSE)
-			{
-				char info[2048];
-				GL(glGetInfoLogARB(vertex_shader, sizeof(info), 0, info));
-				GL(glDeleteObjectARB(vertex_shader));
-				GL(glDeleteObjectARB(fragmemt_shader));
-				GL(glDeleteObjectARB(program_));
-				std::stringstream str;
-				str << "Failed to compile vertex shader:" << std::endl << info << std::endl;
-				BOOST_THROW_EXCEPTION(common::gl::gl_error() << msg_info(str.str()));
-			}
-
+					
 			GL(glShaderSourceARB(fragmemt_shader, 1, &fragment_source, NULL));
 			GL(glCompileShaderARB(fragmemt_shader));
 
@@ -67,7 +43,6 @@ public:
 			{
 				char info[2048];
 				GL(glGetInfoLogARB(fragmemt_shader, sizeof(info), 0, info));
-				GL(glDeleteObjectARB(vertex_shader));
 				GL(glDeleteObjectARB(fragmemt_shader));
 				GL(glDeleteObjectARB(program_));
 				std::stringstream str;
@@ -77,10 +52,8 @@ public:
 			
 			program_ = glCreateProgramObjectARB();
 
-			GL(glAttachObjectARB(program_, vertex_shader));
 			GL(glAttachObjectARB(program_, fragmemt_shader));
 
-			GL(glDeleteObjectARB(vertex_shader));
 			GL(glDeleteObjectARB(fragmemt_shader));
 
 			GL(glLinkProgramARB(program_));

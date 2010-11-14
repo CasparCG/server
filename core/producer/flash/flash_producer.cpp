@@ -59,8 +59,7 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 struct flash_producer::implementation
 {	
 	implementation(flash_producer* self, const std::wstring& filename) 
-		: flashax_container_(nullptr), filename_(filename), self_(self),
-			bitmap_pool_(new bitmap_pool), executor_([=]{run();}), invalid_count_(0)
+		: flashax_container_(nullptr), filename_(filename), self_(self), executor_([=]{run();}), invalid_count_(0)
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
@@ -154,7 +153,7 @@ struct flash_producer::implementation
 			{
 				CASPAR_LOG(debug) << "Retrying. Count: " << retries;
 				if(retries > 3)
-					BOOST_THROW_EXCEPTION(operation_failed() << warg_name_info(L"param") << warg_value_info(param));
+					BOOST_THROW_EXCEPTION(operation_failed() << arg_name_info("param") << arg_value_info(common::narrow(param)));
 			}
 			is_empty_ = false;	
 		});
@@ -253,20 +252,11 @@ struct flash_producer::implementation
 		if(current_frame_ == nullptr || invalid_count_ < 2)
 		{		
 			bitmap_ptr frame;		
-			if(!bitmap_pool_->try_pop(frame))					
-			{	
-				CASPAR_LOG(trace) << "Allocated bitmap";
-				frame = std::make_shared<bitmap>(format_desc.width, format_desc.height);					
-				common::clear(frame->data(), frame->size());
-			}
-			flashax_container_->DrawControl(frame->hdc());
-
-			auto pool = bitmap_pool_;
-			current_frame_.reset(frame.get(), [=](bitmap*)
-			{
-				if(pool->try_push(frame))
-					common::clear(frame->data(), frame->size());
-			});
+			if(current_frame_ == nullptr)				
+				current_frame_ = std::make_shared<bitmap>(format_desc.width, format_desc.height);
+			common::clear(current_frame_->data(), current_frame_->size());
+			
+			flashax_container_->DrawControl(current_frame_->hdc());
 		}	
 
 		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height);
@@ -289,9 +279,6 @@ struct flash_producer::implementation
 		start(false);
 	}
 	
-	typedef tbb::concurrent_bounded_queue<bitmap_ptr> bitmap_pool;
-	std::shared_ptr<bitmap_pool> bitmap_pool_;
-
 	CComObject<flash::FlashAxContainer>* flashax_container_;
 		
 	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;

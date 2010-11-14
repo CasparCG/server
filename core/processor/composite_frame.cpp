@@ -5,6 +5,7 @@
 #include "../../common/utility/memory.h"
 
 #include <boost/range/algorithm.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
 
 #include <algorithm>
 #include <numeric>
@@ -19,6 +20,8 @@ struct composite_frame::implementation : boost::noncopyable
 	
 	implementation(composite_frame* self, const std::vector<frame_ptr>& frames) : self_(self), frames_(frames)
 	{
+		boost::range::remove_erase(frames_, nullptr);
+		boost::range::remove_erase(frames_, frame::empty());
 		boost::for_each(frames_, [&](const frame_ptr& frame)
 		{
 			if(self_->audio_data().empty())
