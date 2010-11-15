@@ -30,10 +30,8 @@
 #include "bitmap.h"
 
 #include "../../format/video_format.h"
-#include "../../../common/utility/find_file.h"
 #include "../../server.h"
 #include "../../../common/concurrency/executor.h"
-#include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
 
 #include "../../processor/frame.h"
@@ -254,13 +252,13 @@ struct flash_producer::implementation
 			bitmap_ptr frame;		
 			if(current_frame_ == nullptr)				
 				current_frame_ = std::make_shared<bitmap>(format_desc.width, format_desc.height);
-			common::clear(current_frame_->data(), current_frame_->size());
+			memset(current_frame_->data(), 0, current_frame_->size());
 			
 			flashax_container_->DrawControl(current_frame_->hdc());
 		}	
 
 		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height);
-		common::aligned_parallel_memcpy(frame->data(), current_frame_->data(), current_frame_->size());	
+		memcpy(frame->data(), current_frame_->data(), current_frame_->size());	
 
 		return frame;
 	}
@@ -313,11 +311,18 @@ std::wstring flash_producer::find_template(const std::wstring& template_name)
 
 flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params)
 {
-	// TODO: Check for flash support
-	auto filename = params[0];
-	std::wstring result_filename = common::find_file(server::media_folder() + filename, list_of(L"swf"));
+	static const std::vector<std::wstring> extensions = list_of(L"swf");
+	std::wstring filename = server::media_folder() + L"\\" + params[0];
+	
+	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
+		{					
+			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+		});
 
-	return result_filename.empty() ? nullptr : std::make_shared<flash_producer>(result_filename);
+	if(ext == extensions.end())
+		return nullptr;
+
+	return std::make_shared<flash_producer>(filename + L"." + *ext);
 }
 
 }}}

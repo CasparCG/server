@@ -4,7 +4,6 @@
 
 #include "../../common/exception/exceptions.h"
 #include "../../common/gl/utility.h"
-#include "../../common/utility/memory.h"
 
 namespace caspar { namespace common { namespace gl {
 																																							

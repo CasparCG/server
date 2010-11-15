@@ -2,8 +2,6 @@
 
 #include "audio_decoder.h"
 
-#include "../../../../common/utility/memory.h"
-
 #include <queue>
 
 #include <tbb/cache_aligned_allocator.h>

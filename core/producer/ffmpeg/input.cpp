@@ -3,7 +3,6 @@
 #include "input.h"
 
 #include "../../format/video_format.h"
-#include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
 
 #include <tbb/concurrent_queue.h>

@@ -5,7 +5,6 @@
 #include "../../../common/exception/Exceptions.h"
 
 #include "../../processor/frame.h"
-#include "../../../common/utility/memory.h"
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4714) // marked as __forceinline not inlined

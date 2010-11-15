@@ -6,8 +6,6 @@
 #include "../../processor/frame_processor_device.h"
 #include "../../format/video_format.h"
 #include "../../server.h"
-#include "../../../common/utility/find_file.h"
-#include "../../../common/utility/memory.h"
 
 #include <boost/assign.hpp>
 
@@ -27,7 +25,7 @@ struct image_producer : public frame_producer
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
 		auto frame = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-		common::aligned_parallel_memcpy(frame->data(), FreeImage_GetBits(bitmap.get()), frame->size());
+		memcpy(frame->data(), FreeImage_GetBits(bitmap.get()), frame->size());
 		frame_ = frame;
 	}
 	
@@ -38,12 +36,18 @@ struct image_producer : public frame_producer
 
 frame_producer_ptr create_image_producer(const  std::vector<std::wstring>& params)
 {
-	std::wstring filename = params[0];
-	std::wstring resultFilename = common::find_file(server::media_folder() + filename, list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg"));
-	if(!resultFilename.empty())
-		return std::make_shared<image_producer>(resultFilename);
+	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg");
+	std::wstring filename = server::media_folder() + L"\\" + params[0];
+	
+	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
+		{					
+			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+		});
 
-	return nullptr;
+	if(ext == extensions.end())
+		return nullptr;
+
+	return std::make_shared<image_producer>(filename + L"." + *ext);
 }
 
 }}}

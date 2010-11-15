@@ -49,12 +49,6 @@
     <ClCompile Include="concurrency\Thread.cpp">
       <Filter>Source\concurrency</Filter>
     </ClCompile>
-    <ClCompile Include="utility\find_file.cpp">
-      <Filter>Source\utility</Filter>
-    </ClCompile>
-    <ClCompile Include="utility\memory.cpp">
-      <Filter>Source\utility</Filter>
-    </ClCompile>
     <ClCompile Include="gl\frame_buffer_object.cpp">
       <Filter>Source\gl</Filter>
     </ClCompile>
@@ -100,12 +94,6 @@
       <Filter>Source\utility</Filter>
     </ClInclude>
     <ClInclude Include="utility\scope_exit.h">
-      <Filter>Source\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\find_file.h">
-      <Filter>Source\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\memory.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
     <ClInclude Include="gl\pixel_buffer_object.h">

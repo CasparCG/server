@@ -2,7 +2,6 @@
 
 #include "composite_frame.h"
 #include "../../common/gl/utility.h"
-#include "../../common/utility/memory.h"
 
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>

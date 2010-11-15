@@ -24,7 +24,6 @@
 
 #include "../../format/video_format.h"
 #include "../../processor/frame.h"
-#include "../../../common/utility/memory.h"
 #include "../../../common/gl/utility.h"
 #include "../../../common/gl/pixel_buffer_object.h"
 
@@ -161,7 +160,7 @@ struct consumer::implementation : boost::noncopyable
 		int next_index = (index_ + 1) % 2;
 				
 		auto ptr = pbos_[index_].end_write();
-		common::aligned_parallel_memcpy(ptr, frame->data(), format_desc_.size);
+		memcpy(ptr, frame->data(), format_desc_.size);
 
 		GL(glClear(GL_COLOR_BUFFER_BIT));	
 		pbos_[next_index].bind_texture();				

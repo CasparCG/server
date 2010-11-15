@@ -28,8 +28,6 @@ extern "C"
 #include "video/video_transformer.h"
 
 #include "../../format/video_format.h"
-#include "../../../common/utility/find_file.h"
-#include "../../../common/utility/memory.h"
 #include "../../../common/utility/scope_exit.h"
 #include "../../server.h"
 
@@ -175,13 +173,19 @@ public:
 };
 
 frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& params)
-{
-	std::wstring filename = params[0];
-	std::wstring result_filename = common::find_file(server::media_folder() + filename, list_of(L"mpg")(L"avi")(L"mov")(L"dv")(L"wav")(L"mp3")(L"mp4")(L"f4v")(L"flv"));
-	if(result_filename.empty())
+{	
+	static const std::vector<std::wstring> extensions = list_of(L"mpg")(L"avi")(L"mov")(L"dv")(L"wav")(L"mp3")(L"mp4")(L"f4v")(L"flv");
+	std::wstring filename = server::media_folder() + L"\\" + params[0];
+	
+	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
+		{					
+			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+		});
+
+	if(ext == extensions.end())
 		return nullptr;
 
-	return std::make_shared<ffmpeg_producer>(result_filename, params);
+	return std::make_shared<ffmpeg_producer>(filename + L"." + *ext, params);
 }
 
 }}}

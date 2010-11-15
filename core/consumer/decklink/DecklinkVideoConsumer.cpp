@@ -29,7 +29,6 @@
 #include "DeckLinkAPI_h.h"
 
 #include "../../format/video_format.h"
-#include "../../../common/utility/memory.h"
 
 #include "../../producer/frame_producer_device.h"
 
@@ -129,7 +128,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 				std::shared_ptr<DecklinkVideoFrame> pTempFrame = GetReservedFrame();
 				if(pTempFrame && frame->size() == pTempFrame->size())
 				{
-					common::aligned_parallel_memcpy(pTempFrame->data(), frame->data(), pTempFrame->size());
+					memcpy(pTempFrame->data(), frame->data(), pTempFrame->size());
 					DoRender(pTempFrame);
 				}
 				else

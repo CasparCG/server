@@ -8,7 +8,6 @@
 #include "../processor/composite_frame.h"
 
 #include "../../common/utility/scope_exit.h"
-#include "../../common/utility/memory.h"
 
 #include <boost/thread.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
