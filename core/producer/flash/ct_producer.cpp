@@ -24,7 +24,6 @@
 
 #include "cg_producer.h"
 
-#include "../../../common/utility/find_file.h"
 #include "../../processor/frame.h"
 #include "../../server.h"
 
@@ -36,19 +35,20 @@ namespace caspar { namespace core { namespace flash {
 	
 frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params) 
 {
-	std::wstring filename = params[0];
-	std::wstring result_filename = common::find_file(server::media_folder() + filename, list_of(L"ct"));
-	if(result_filename.empty())
+	static const std::vector<std::wstring> extensions = list_of(L"ct");
+	std::wstring filename = server::media_folder() + L"\\" + params[0];
+	
+	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
+		{					
+			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+		});
+
+	if(ext == extensions.end())
 		return nullptr;
 	
-	std::wstring fixed_filename = result_filename;
-	std::wstring::size_type pos = 0;
-	while((pos = fixed_filename.find(TEXT('\\'), pos)) != std::wstring::npos) 
-		fixed_filename[pos] = TEXT('/');
-	
-	cg_producer_ptr cg_producer(new cg_producer());
-	cg_producer->add(0, filename, 1);
-	return cg_producer;
+	auto producer = std::make_shared<cg_producer>();
+	producer->add(0, filename, 1);
+	return producer;
 }
 
 }

@@ -106,8 +106,6 @@
     <ClInclude Include="io\SocketInfo.h" />
     <ClInclude Include="log\log.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="utility\find_file.h" />
-    <ClInclude Include="utility\memory.h" />
     <ClInclude Include="utility\scope_exit.h" />
     <ClInclude Include="utility\string_convert.h" />
   </ItemGroup>
@@ -143,14 +141,6 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="utility\find_file.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="utility\memory.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

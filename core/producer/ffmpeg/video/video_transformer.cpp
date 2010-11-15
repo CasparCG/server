@@ -3,8 +3,6 @@
 #include "video_transformer.h"
 
 #include "../../../format/video_format.h"
-#include "../../../../common/utility/memory.h"
-#include "../../../processor/frame.h"
 #include "../../../processor/frame.h"
 #include "../../../processor/frame_processor_device.h"
 

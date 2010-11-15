@@ -26,7 +26,6 @@
 #include "../../processor/composite_frame.h"
 #include "../../processor/frame_processor_device.h"
 
-#include "../../../common/utility/memory.h"
 #include "../../producer/frame_producer_device.h"
 
 #include <boost/range/algorithm/copy.hpp>

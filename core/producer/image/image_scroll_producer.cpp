@@ -9,8 +9,6 @@
 #include "../../format/video_format.h"
 #include "../../processor/frame_processor_device.h"
 #include "../../server.h"
-#include "../../../common/utility/find_file.h"
-#include "../../../common/utility/memory.h"
 
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_invoke.h>
@@ -63,18 +61,18 @@ struct image_scroll_producer : public frame_producer
 		image_height_ = std::max(height, format_desc_.height);
 
 		image_ = std::shared_ptr<unsigned char>(static_cast<unsigned char*>(scalable_aligned_malloc(image_width_*image_height_*4, 16)));
-		common::clear(image_.get(), image_width_*image_height_*4);
+		memset(image_.get(), 0, image_width_*image_height_*4);
 
 		unsigned char* pBits = FreeImage_GetBits(pBitmap.get());
 		
 		for (size_t i = 0; i < height; ++i)
-			common::aligned_parallel_memcpy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
+			memcpy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
 	}
 
 	frame_ptr do_render_frame()
 	{
 		frame_ptr frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
-		common::clear(frame->data(), format_desc_.size);
+		memset(frame->data(), 0, format_desc_.size);
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
 		const int delta_y = direction_ == direction::Up ? speed_ : -speed_;
@@ -164,12 +162,18 @@ struct image_scroll_producer : public frame_producer
 
 frame_producer_ptr create_image_scroll_producer(const std::vector<std::wstring>& params)
 {
-	std::wstring filename = params[0];
-	auto result_filename = common::find_file(server::media_folder() + filename, list_of(L"spng")(L"stga")(L"sbmp")(L"sjpg")(L"sjpeg"));
-	if(!result_filename.empty())
-		return std::make_shared<image_scroll_producer>(result_filename, params);
+	static const std::vector<std::wstring> extensions = list_of(L"spng")(L"stga")(L"sbmp")(L"sjpg")(L"sjpeg");
+	std::wstring filename = server::media_folder() + L"\\" + params[0];
+	
+	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
+		{					
+			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+		});
 
-	return nullptr;
+	if(ext == extensions.end())
+		return nullptr;
+
+	return std::make_shared<image_scroll_producer>(filename + L"." + *ext, params);
 }
 
 }}}
