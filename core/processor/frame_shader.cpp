@@ -44,7 +44,6 @@ public:
 				char info[2048];
 				GL(glGetInfoLogARB(fragmemt_shader, sizeof(info), 0, info));
 				GL(glDeleteObjectARB(fragmemt_shader));
-				GL(glDeleteObjectARB(program_));
 				std::stringstream str;
 				str << "Failed to compile fragment shader:" << std::endl << info << std::endl;
 				BOOST_THROW_EXCEPTION(common::gl::gl_error() << msg_info(str.str()));
@@ -181,7 +180,6 @@ struct frame_shader::implementation
 	void use(const pixel_format_desc& desc)
 	{
 		set_pixel_format(desc.pix_fmt);
-//		set_size(desc);
 	}
 
 	void set_pixel_format(pixel_format::type format)

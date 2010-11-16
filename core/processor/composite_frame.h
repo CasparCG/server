@@ -11,12 +11,12 @@ class composite_frame : public frame
 {
 public:
 	composite_frame(const std::vector<frame_ptr>& container);
+	composite_frame(const frame_ptr& frame1, const frame_ptr& frame2);
 
 	static frame_ptr interlace(const frame_ptr& frame1,	const frame_ptr& frame2, video_update_format::type mode);
 	
 private:
 
-	virtual unsigned char* data(size_t index);
 	virtual void begin_write();
 	virtual void end_write();
 	virtual void begin_read();

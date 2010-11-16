@@ -52,19 +52,6 @@ GLubyte lower_pattern[] = {
 																																						
 struct frame::implementation : boost::noncopyable
 {
-	implementation(size_t width, size_t height)
-		: alpha_(1.0f), x_(0.0f), y_(0.0f), update_fmt_(video_update_format::progressive), texcoords_(0.0, 1.0, 1.0, 0.0), pixel_data_(4, nullptr)
-	{	
-		desc_.planes[0] = pixel_format_desc::plane(width, height, 4);
-		desc_.pix_fmt = pixel_format::bgra;
-		pixel_data_.resize(4, 0);
-		if(width >= 2 && height >= 2)
-		{
-			pbo_.push_back(std::make_shared<common::gl::pixel_buffer_object>(width, height, GL_BGRA));
-			end_write();
-		}
-	}
-
 	implementation(const pixel_format_desc& desc)
 		: alpha_(1.0f), x_(0.0f), y_(0.0f), update_fmt_(video_update_format::progressive), texcoords_(0.0, 1.0, 1.0, 0.0), pixel_data_(4, nullptr)
 	{			
@@ -144,9 +131,7 @@ struct frame::implementation : boost::noncopyable
 
 	unsigned char* data(size_t index)
 	{
-		if(pbo_.size() < index)
-			BOOST_THROW_EXCEPTION(out_of_range());
-		return static_cast<unsigned char*>(pixel_data_[index]);
+		return static_cast<unsigned char*>(pixel_data_.at(index));
 	}
 
 	void reset()
@@ -172,9 +157,6 @@ struct frame::implementation : boost::noncopyable
 
 	pixel_format_desc desc_;
 };
-
-frame::frame(size_t width, size_t height) 
-	: impl_(new implementation(width, height)){}
 frame::frame(const pixel_format_desc& desc)
 	: impl_(new implementation(desc)){}
 void frame::draw(const frame_shader_ptr& shader){impl_->draw(shader);}

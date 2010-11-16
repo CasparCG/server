@@ -62,7 +62,7 @@ struct flash_producer::implementation
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
 
-		frame_buffer_.set_capacity(flash_producer::DEFAULT_BUFFER_SIZE);		
+		frame_buffer_.set_capacity(3);		
 	}
 
 	~implementation() 
