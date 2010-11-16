@@ -9,6 +9,9 @@ namespace caspar { namespace core { namespace flash{
 class cg_producer : public frame_producer
 {
 public:
+
+	static const unsigned int DEFAULT_LAYER = 5000;
+
 	cg_producer();
 	
 	frame_ptr render_frame();
@@ -30,8 +33,6 @@ private:
 };
 typedef std::shared_ptr<cg_producer> cg_producer_ptr;
 
-static const unsigned int CG_DEFAULT_LAYER = 5000;
-
-cg_producer_ptr get_default_cg_producer(const channel_ptr& channel, unsigned int layer_index = CG_DEFAULT_LAYER);
+cg_producer_ptr get_default_cg_producer(const channel_ptr& channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
 }}}

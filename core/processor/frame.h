@@ -37,12 +37,11 @@ public:
 
 	static std::shared_ptr<frame> empty()
 	{
-		static auto my_null_frame = std::shared_ptr<frame>(new frame(0,0));
+		static auto my_null_frame = std::shared_ptr<frame>(new frame(pixel_format_desc()));
 		return my_null_frame;
 	}
 
 protected:
-	frame(size_t width, size_t height);
 	frame(const pixel_format_desc& desc);
 
 	friend class frame_processor_device;

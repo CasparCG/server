@@ -35,12 +35,6 @@ class FlashAxContainer;
 class flash_producer : public frame_producer
 {
 public:
-	/// <summary> Default frame buffer size. </summary>
-	static const int DEFAULT_BUFFER_SIZE = 2;
-	/// <summary> The maximum number of retries when trying to invoce a flash method. </summary>
-	static const int MAX_PARAM_RETRIES = 5;
-	/// <summary> Timeout for blocking while trying to stop the producer. </summary>
-	static const int STOP_TIMEOUT = 2000;
 
 	flash_producer(const std::wstring& filename);
 	frame_ptr render_frame();

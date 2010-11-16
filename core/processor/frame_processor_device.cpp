@@ -28,8 +28,7 @@ namespace caspar { namespace core {
 	
 struct frame_processor_device::implementation : boost::noncopyable
 {	
-	implementation(frame_processor_device* self, const video_format_desc& format_desc) 
-		: fmt_(format_desc), underrun_count_(0)
+	implementation(frame_processor_device* self, const video_format_desc& format_desc) : fmt_(format_desc), underrun_count_(0)
 	{		
 		output_.set_capacity(4);
 		executor_.start();
@@ -61,13 +60,14 @@ struct frame_processor_device::implementation : boost::noncopyable
 		if(!pool.try_pop(my_frame))		
 			my_frame = executor_.invoke([&]{return std::shared_ptr<frame>(new frame(desc));});		
 		
-		auto destructor = [=]
+		return frame_ptr(my_frame.get(), [=](frame*)
 		{
-			my_frame->reset();
-			frame_pools_[key].push(my_frame);
-		};
-
-		return frame_ptr(my_frame.get(), [=](frame*){executor_.begin_invoke(destructor);});
+			executor_.begin_invoke([=]
+			{
+				my_frame->reset();
+				frame_pools_[key].push(my_frame);
+			});
+		});
 	}
 		
 	void send(const frame_ptr& input_frame)
