@@ -25,7 +25,7 @@
 
 #include "..\..\utils\thread.h"
 #include "BluefishException.h"
-#include "BluefishUtil.h"
+#include "BluefishFrameManager.h"
 #include "..\..\VideoConsumer.h"
 
 #define TIMEOUT			1000
@@ -61,34 +61,28 @@ public:
 	void DisableVideoOutput();
 	bool SetupDevice(unsigned int deviceIndex);
 	bool ReleaseDevice();
-	const TCHAR* GetFormatDescription() const 
-	{
+	const TCHAR* GetFormatDescription() const {
 		return FrameFormatDescription::FormatDescriptions[currentFormat_].name;
 	}
 	bool SetVideoFormat(const tstring& strDesiredFrameFormat);
 
 private:
-	
-	unsigned long BlueSetVideoFormat(tstring strDesiredFrameFormat);
 
 	bool DoSetupDevice(unsigned int deviceIndex, tstring strDesiredFrameFormat);
 
 	BlueVelvetPtr pSDK_;
 	FramePlaybackControlPtr pPlaybackControl_;
-	FrameManagerPtr pFrameManager_;
+	BluefishFrameManagerPtr pFrameManager_;
 	unsigned long m_bufferCount;
 	unsigned long m_length;
 	unsigned long m_actual;
 	unsigned long m_golden;
-	
+
+	unsigned long VidFmtFromFrameFormat(FrameFormat fmt);
+
 	FrameFormat currentFormat_;
 	unsigned int _deviceIndex;
-		
-	unsigned long memFmt_;
-	unsigned long updFmt_;
-	unsigned long vidFmt_; 
-	unsigned long resFmt_; 
-	unsigned long engineMode_;
+	bool hasEmbeddedAudio_;
 };
 typedef std::tr1::shared_ptr<BlueFishVideoConsumer> BlueFishVideoConsumerPtr;
 

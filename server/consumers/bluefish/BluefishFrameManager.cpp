@@ -126,7 +126,7 @@ BluefishFrameManager::BluefishFrameManager(BlueVelvetPtr pSDK, FrameFormat fmt, 
 		frameBuffers_.push_back(VideoFrameInfoPtr(new SystemFrameInfo(optimalLength, BUFFER_ID_USER_BASE + systemBufferIndex)));
 	}
 
-	FrameInfoList::const_iterator it = frameBuffers_.begin();
+	/*FrameInfoList::const_iterator it = frameBuffers_.begin();
 	FrameInfoList::const_iterator end = frameBuffers_.end();
 	for(; it != end; ++it)
 	{
@@ -134,7 +134,7 @@ BluefishFrameManager::BluefishFrameManager(BlueVelvetPtr pSDK, FrameFormat fmt, 
 		{
 			throw BluefishException("Failed to assign buffer");
 		}
-	}
+	}*/
 }
 
 BluefishFrameManager::~BluefishFrameManager()
