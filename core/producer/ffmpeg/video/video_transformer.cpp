@@ -91,66 +91,58 @@ pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_
 
 struct video_transformer::implementation : boost::noncopyable
 {
-	implementation(AVCodecContext* codec_context) : codec_context_(codec_context), sw_warning_(false){}
+	implementation(AVCodecContext* codec_context) : codec_context_(codec_context), width_(codec_context_->width), height_(codec_context_->height), 
+		pix_fmt_(codec_context_->pix_fmt), desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
+	{
+		if(desc_.pix_fmt == pixel_format::invalid)
+		{
+			CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
+
+			double param;
+			sws_context_.reset(sws_getContext(width_, height_, pix_fmt_, width_, height_, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+			if(!sws_context_)
+				BOOST_THROW_EXCEPTION(
+					operation_failed() <<
+					msg_info("Could not create software scaling context.") << 
+					boost::errinfo_api_function("sws_getContext"));
+		}
+	}
 	
 	frame_ptr execute(const std::shared_ptr<AVFrame>& decoded_frame)
 	{				
 		if(decoded_frame == nullptr)
 			return nullptr;
-
-		int width = codec_context_->width;
-		int height = codec_context_->height;
-		auto pix_fmt = codec_context_->pix_fmt;
-		
-		pixel_format_desc desc = get_pixel_format_desc(pix_fmt, width, height);
-
+				
 		frame_ptr result_frame;
-		if(desc.pix_fmt != pixel_format::invalid)
+		if(sws_context_ == nullptr)
 		{
-			result_frame = frame_processor_->create_frame(desc);
+			result_frame = frame_processor_->create_frame(desc_);
 
-			tbb::parallel_for(0, static_cast<int>(desc.planes.size()), 1, [&](int n)
+			tbb::parallel_for(0, static_cast<int>(desc_.planes.size()), 1, [&](int n)
 			{
-				if(desc.planes[n].size == 0)
+				if(desc_.planes[n].size == 0)
 					return;
 
-				tbb::parallel_for(0, static_cast<int>(desc.planes[n].height), 1, [&](int y)
+				tbb::parallel_for(0, static_cast<int>(desc_.planes[n].height), 1, [&](int y)
 				{
 					memcpy
 					(
-						result_frame->data(n)+y*desc.planes[n].linesize, 
+						result_frame->data(n)+y*desc_.planes[n].linesize, 
 						decoded_frame->data[n] + y*decoded_frame->linesize[n], 
-						desc.planes[n].linesize
+						desc_.planes[n].linesize
 					);
 				});
 			});
 		}
 		else
 		{
-			if(!sw_warning_)
-			{
-				CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
-				sw_warning_ = true;
-			}
-			result_frame = frame_processor_->create_frame(width, height);
+			result_frame = frame_processor_->create_frame(width_, height_);
 
 			AVFrame av_frame;	
 			avcodec_get_frame_defaults(&av_frame);
-			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), result_frame->data(), PIX_FMT_BGRA, width, height);
-
-			if(!sws_context_)
-			{
-				double param;
-				sws_context_.reset(sws_getContext(width, height, pix_fmt, width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
-				if(!sws_context_)
-					BOOST_THROW_EXCEPTION(
-						operation_failed() <<
-						msg_info("Could not create software scaling context.") << 
-						boost::errinfo_api_function("sws_getContext"));
-
-			}		
+			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), result_frame->data(), PIX_FMT_BGRA, width_, height_);
 		 
-			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame.data, av_frame.linesize);		
+			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);		
 		}
 
 		// TODO: Make generic for all formats and modes.
@@ -167,9 +159,13 @@ struct video_transformer::implementation : boost::noncopyable
 	
 	frame_processor_device_ptr frame_processor_;
 	std::shared_ptr<SwsContext> sws_context_;
-	bool sw_warning_;
 
 	AVCodecContext* codec_context_;
+
+	int width_;
+	int height_;
+	PixelFormat pix_fmt_;
+	pixel_format_desc desc_;
 };
 
 video_transformer::video_transformer(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}

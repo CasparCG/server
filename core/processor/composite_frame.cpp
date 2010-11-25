@@ -17,17 +17,17 @@ struct composite_frame::implementation : boost::noncopyable
 {	
 	implementation(composite_frame* self, const std::vector<frame_ptr>& frames) : self_(self), frames_(frames)
 	{
-		mix_audio();
+		prepare();
 	}
 
 	implementation(composite_frame* self, const frame_ptr& frame1, const frame_ptr& frame2) : self_(self)
 	{
 		frames_.push_back(frame1);
 		frames_.push_back(frame2);
-		mix_audio();
+		prepare();
 	}
 
-	void mix_audio()
+	void prepare()
 	{
 		boost::range::remove_erase(frames_, nullptr);
 		boost::range::remove_erase(frames_, frame::empty());
@@ -70,7 +70,7 @@ struct composite_frame::implementation : boost::noncopyable
 		boost::range::for_each(frames_, std::mem_fn(&frame::end_read));	
 	}
 
-	void draw(const frame_shader_ptr& shader)
+	void draw(frame_shader& shader)
 	{
 		glPushMatrix();
 		glTranslated(self_->x()*2.0, self_->y()*2.0, 0.0);
@@ -92,7 +92,7 @@ void composite_frame::begin_write(){impl_->begin_write();}
 void composite_frame::end_write(){impl_->end_write();}	
 void composite_frame::begin_read(){impl_->begin_read();}
 void composite_frame::end_read(){impl_->end_read();}
-void composite_frame::draw(const frame_shader_ptr& shader){impl_->draw(shader);}
+void composite_frame::draw(frame_shader& shader){impl_->draw(shader);}
 
 frame_ptr composite_frame::interlace(const frame_ptr& frame1, const frame_ptr& frame2, video_update_format::type mode)
 {			

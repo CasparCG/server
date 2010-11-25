@@ -31,6 +31,7 @@
     <None Include="My Amplifier Results\r006hs\r006hs.ampl" />
     <None Include="My Amplifier Results\r007cc\r007cc.ampl" />
     <None Include="My Amplifier Results\r008lw\r008lw.ampl" />
+    <None Include="My Amplifier Results\r009hs\r009hs.ampl" />
     <None Include="My Inspector Results\r000ti3\r000ti3.insp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

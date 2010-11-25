@@ -61,7 +61,7 @@ public:
 		return producer_device_->background(render_layer);
 	}
 
-	const video_format_desc get_video_format_desc() const
+	const video_format_desc& get_video_format_desc() const
 	{
 		return processor_device_->get_video_format_desc();
 	}
@@ -82,6 +82,6 @@ void channel::clear(int render_layer){impl_->clear(render_layer);}
 void channel::clear(){impl_->clear();}
 frame_producer_ptr channel::foreground(int render_layer) const{	return impl_->foreground(render_layer);}
 frame_producer_ptr channel::background(int render_layer) const{return impl_->background(render_layer);}
-const video_format_desc channel::get_video_format_desc() const{	return impl_->get_video_format_desc();}
+const video_format_desc& channel::get_video_format_desc() const{	return impl_->get_video_format_desc();}
 
 }}

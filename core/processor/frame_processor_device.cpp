@@ -30,7 +30,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 {	
 	implementation(frame_processor_device* self, const video_format_desc& format_desc) : fmt_(format_desc), underrun_count_(0)
 	{		
-		output_.set_capacity(4);
+		output_.set_capacity(3);
 		executor_.start();
 		executor_.invoke([=]
 		{
@@ -53,20 +53,21 @@ struct frame_processor_device::implementation : boost::noncopyable
 
 	frame_ptr create_frame(const pixel_format_desc& desc)
 	{
-		int key = pixel_format_desc::hash(desc);
-		auto& pool = frame_pools_[key];
+		tbb::concurrent_bounded_queue<frame_ptr>* pool = &frame_pools_[desc];
 		
 		frame_ptr my_frame;
-		if(!pool.try_pop(my_frame))		
+		if(!pool->try_pop(my_frame))		
 			my_frame = executor_.invoke([&]{return std::shared_ptr<frame>(new frame(desc));});		
 		
+		auto destructor = [=]
+		{
+			my_frame->reset();
+			pool->push(my_frame);
+		};
+
 		return frame_ptr(my_frame.get(), [=](frame*)
 		{
-			executor_.begin_invoke([=]
-			{
-				my_frame->reset();
-				frame_pools_[key].push(my_frame);
-			});
+			executor_.begin_invoke(destructor);
 		});
 	}
 		
@@ -106,7 +107,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 	std::unique_ptr<frame_renderer> renderer_;
 				
 	tbb::concurrent_bounded_queue<boost::shared_future<frame_ptr>> output_;	
-	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<frame_ptr>> frame_pools_;
+	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<frame_ptr>, pixel_format_desc_hash> frame_pools_;
 	
 	video_format_desc fmt_;
 	long underrun_count_;
@@ -120,7 +121,7 @@ frame_processor_device::frame_processor_device(const video_format_desc& format_d
 frame_ptr frame_processor_device::create_frame(const  pixel_format_desc& desc){return impl_->create_frame(desc);}
 void frame_processor_device::send(const frame_ptr& frame){impl_->send(frame);}
 void frame_processor_device::receive(frame_ptr& frame){impl_->receive(frame);}
-const video_format_desc frame_processor_device::get_video_format_desc() const { return impl_->fmt_;}
+const video_format_desc& frame_processor_device::get_video_format_desc() const { return impl_->fmt_;}
 
 frame_ptr frame_processor_device::create_frame(size_t width, size_t height)
 {

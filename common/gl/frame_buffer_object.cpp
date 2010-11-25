@@ -23,6 +23,7 @@ public:
 		GL(glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo_));
 		GL(glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, mode_, GL_TEXTURE_2D, 
 										texture_, 0));
+		GL(glReadBuffer(mode_));
 	}
 	
 	~implementation()
@@ -43,12 +44,6 @@ public:
 	size_t height_;
 };
 
-frame_buffer_object::frame_buffer_object(){}
-frame_buffer_object::frame_buffer_object(size_t width, size_t height, GLenum mode)
-	: impl_(new implementation(width, height, mode)){}
-void frame_buffer_object::create(size_t width, size_t height, GLenum mode)
-{
-	impl_.reset(new implementation(width, height, mode));
-}
+frame_buffer_object::frame_buffer_object(size_t width, size_t height, GLenum mode) : impl_(new implementation(width, height, mode)){}
 void frame_buffer_object::bind_pixel_source() {impl_->bind_pixel_source();}
 }}}

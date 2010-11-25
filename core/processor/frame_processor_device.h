@@ -41,7 +41,7 @@ public:
 	frame_ptr create_frame(size_t width, size_t heightg);			
 	frame_ptr create_frame();
 	
-	const video_format_desc get_video_format_desc() const;
+	const video_format_desc& get_video_format_desc() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

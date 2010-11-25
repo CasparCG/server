@@ -44,7 +44,6 @@ struct frame_producer_device::implementation : boost::noncopyable
 			
 	~implementation()
 	{
-		frame_processor_->clear();
 		is_running_ = false;
 		render_thread_.join();
 	}

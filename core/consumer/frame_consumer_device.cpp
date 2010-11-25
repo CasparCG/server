@@ -85,7 +85,7 @@ public:
 				clock.synchronize();
 			
 			frame_ptr frame;
-			while(frame == nullptr && is_running_)			
+			while((frame == nullptr || frame == frame::empty()) && is_running_)			
 				frame_processor_->receive(frame);
 			
 			display_frame(frame);			
@@ -131,7 +131,7 @@ public:
 	bool needs_clock_;
 	std::vector<frame_consumer_ptr> consumers_;
 
-	video_format_desc fmt_;
+	const video_format_desc& fmt_;
 
 	frame_processor_device_ptr frame_processor_;
 };

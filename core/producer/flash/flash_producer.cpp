@@ -248,10 +248,8 @@ struct flash_producer::implementation
 		flashax_container_->Tick();
 		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
 		if(current_frame_ == nullptr || invalid_count_ < 2)
-		{		
-			bitmap_ptr frame;		
-			if(current_frame_ == nullptr)				
-				current_frame_ = std::make_shared<bitmap>(format_desc.width, format_desc.height);
+		{				
+			current_frame_ = bmp_frame_;
 			memset(current_frame_->data(), 0, current_frame_->size());
 			
 			flashax_container_->DrawControl(current_frame_->hdc());
@@ -274,15 +272,20 @@ struct flash_producer::implementation
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
 		frame_processor_ = frame_processor;
+		auto format_desc = frame_processor_->get_video_format_desc();
+		bmp_frame_ = std::make_shared<bitmap>(format_desc.width, format_desc.height);
 		start(false);
 	}
 	
 	CComObject<flash::FlashAxContainer>* flashax_container_;
 		
 	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
+
 	frame_ptr last_frame_;
+
 	bitmap_ptr current_frame_;
-		
+	bitmap_ptr bmp_frame_;
+
 	std::wstring filename_;
 	flash_producer* self_;
 

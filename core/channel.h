@@ -33,7 +33,7 @@ public:
 	void clear();	
 	frame_producer_ptr foreground(int render_layer) const;
 	frame_producer_ptr background(int render_layer) const;
-	const video_format_desc get_video_format_desc() const;
+	const video_format_desc& get_video_format_desc() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
