@@ -52,9 +52,9 @@ GLubyte lower_pattern[] = {
 																																						
 struct frame::implementation : boost::noncopyable
 {
-	implementation(const pixel_format_desc& desc)
-		: alpha_(1.0f), x_(0.0f), y_(0.0f), update_fmt_(video_update_format::progressive), texcoords_(0.0, 1.0, 1.0, 0.0), pixel_data_(4, nullptr)
+	implementation(const pixel_format_desc& desc) : alpha_(1.0f), x_(0.0f), y_(0.0f), update_fmt_(video_update_format::progressive), texcoords_(0.0, 1.0, 1.0, 0.0)
 	{			
+		std::fill(pixel_data_.begin(), pixel_data_.end(), nullptr);
 		desc_ = desc;
 
 		for(size_t n = 0; n < desc_.planes.size(); ++n)
@@ -81,7 +81,7 @@ struct frame::implementation : boost::noncopyable
 	
 	void begin_write()
 	{
-		pixel_data_ = std::vector<void*>(4, 0);
+		std::fill(pixel_data_.begin(), pixel_data_.end(), nullptr);
 		boost::range::for_each(pbo_, std::mem_fn(&common::gl::pixel_buffer_object::begin_write));
 	}
 
@@ -92,7 +92,7 @@ struct frame::implementation : boost::noncopyable
 	
 	void begin_read()
 	{	
-		pixel_data_ = std::vector<void*>(4, 0);
+		std::fill(pixel_data_.begin(), pixel_data_.end(), nullptr);
 		boost::range::for_each(pbo_, std::mem_fn(&common::gl::pixel_buffer_object::begin_read));
 	}
 
@@ -101,9 +101,9 @@ struct frame::implementation : boost::noncopyable
 		boost::range::transform(pbo_, pixel_data_.begin(), std::mem_fn(&common::gl::pixel_buffer_object::end_read));
 	}
 
-	void draw(const frame_shader_ptr& shader)
+	void draw(frame_shader& shader)
 	{
-		shader->use(desc_);
+		shader.use(desc_);
 		glPushMatrix();
 		glTranslated(x_*2.0, y_*2.0, 0.0);
 		glColor4d(1.0, 1.0, 1.0, alpha_);
@@ -146,7 +146,7 @@ struct frame::implementation : boost::noncopyable
 	}
 
 	std::vector<common::gl::pixel_buffer_object_ptr> pbo_;
-	std::vector<void*> pixel_data_;	
+	std::array<void*, 4> pixel_data_;	
 	std::vector<short> audio_data_;
 
 	double alpha_;
@@ -159,7 +159,7 @@ struct frame::implementation : boost::noncopyable
 };
 frame::frame(const pixel_format_desc& desc)
 	: impl_(new implementation(desc)){}
-void frame::draw(const frame_shader_ptr& shader){impl_->draw(shader);}
+void frame::draw(frame_shader& shader){impl_->draw(shader);}
 void frame::begin_write(){impl_->begin_write();}
 void frame::end_write(){impl_->end_write();}	
 void frame::begin_read(){impl_->begin_read();}

@@ -53,7 +53,7 @@ protected:
 	virtual void end_write();
 	virtual void begin_read();
 	virtual void end_read();
-	virtual void draw(const frame_shader_ptr& shader);
+	virtual void draw(frame_shader& shader);
 
 private:
 

@@ -17,6 +17,9 @@
     <None Include="My Inspector Results\r000ti3\r000ti3.insp">
       <Filter>My Inspector Results</Filter>
     </None>
+    <None Include="My Amplifier Results\r009hs\r009hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="My Amplifier Results">

@@ -31,10 +31,8 @@ struct image_scroll_producer : public frame_producer
 	static const int DEFAULT_SCROLL_SPEED = 50;
 
 	image_scroll_producer(const std::wstring& filename, const std::vector<std::wstring>& params) 
-		: speed_(image_scroll_producer::DEFAULT_SCROLL_SPEED), direction_(direction::Up), offset_(0)
+		: speed_(image_scroll_producer::DEFAULT_SCROLL_SPEED), direction_(direction::Up), offset_(0), filename_(filename)
 	{
-		load_and_pad_image(filename);
-
 		auto pos = filename.find_last_of(L'_');
 		if(pos != std::wstring::npos && pos + 1 < filename.size())
 		{
@@ -143,6 +141,8 @@ struct image_scroll_producer : public frame_producer
 			offset_ = image_width_ - format_desc_.width;
 
 		speed_ = static_cast<int>(abs(static_cast<double>(speed_) / format_desc_.fps));
+		
+		load_and_pad_image(filename_);
 	}
 
 	const video_format_desc& get_video_format_desc() const { return format_desc_; } 
@@ -156,6 +156,8 @@ struct image_scroll_producer : public frame_producer
 	tbb::atomic<bool> loop_;
 	std::shared_ptr<unsigned char> image_;
 	video_format_desc format_desc_;
+
+	std::wstring filename_;
 
 	frame_processor_device_ptr frame_processor_;
 };

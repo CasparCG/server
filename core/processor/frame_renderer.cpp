@@ -25,12 +25,9 @@ namespace caspar { namespace core {
 struct frame_renderer::implementation : boost::noncopyable
 {	
 	implementation(frame_processor_device& frame_processor, const video_format_desc& format_desc) 
-		: frame_processor_(frame_processor), format_desc_(format_desc), index_(0), shader_(std::make_shared<frame_shader>(format_desc)), 
-			writing_(2, frame::empty()), output_frame_(frame::empty())
+		: frame_processor_(frame_processor), index_(0), shader_(format_desc), output_frame_(frame::empty()), fbo_(format_desc.width, format_desc.height)
 	{	
-		fbo_.create(format_desc_.width, format_desc_.height);
-		fbo_.bind_pixel_source();
-
+		std::fill(writing_.begin(), writing_.end(), frame::empty());
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glEnable(GL_BLEND));
@@ -44,58 +41,53 @@ struct frame_renderer::implementation : boost::noncopyable
 		if(frame == nullptr)
 			return nullptr;
 
-		frame_ptr result;
 		try
 		{
 			index_ = (index_ + 1) % 2;
 			int next_index = (index_ + 1) % 2;
-
-			// 1. Start asynchronous DMA transfer to video memory.
-			writing_[index_] = std::move(frame);		
-			// Lock frame and give pointer ownership to OpenGL.
-			writing_[index_]->begin_write();
+			
+			// 1. Write from page-locked system memory to video memory.
+			frame->begin_write();
+			writing_[index_] = frame;		
 				
-			// 3. Output to external buffer.
+			// 3. Map video memory to page-locked system memory.
 			output_frame_->end_read();
-			result = output_frame_;
 			
 			// Clear framebuffer.
 			GL(glClear(GL_COLOR_BUFFER_BIT));	
 
-			// 2. Draw to framebuffer and start asynchronous DMA transfer 
-			// to page-locked memory.
+			// 2. Draw to framebuffer
 			writing_[next_index]->draw(shader_);
 				
 			// Create an output frame
-			auto temp_frame = frame_processor_.create_frame();
+			output_frame_ = frame_processor_.create_frame();
 			
 			// Read from framebuffer into page-locked memory.
-			temp_frame->begin_read();
-			temp_frame->audio_data() = std::move(writing_[next_index]->audio_data());
-
-			output_frame_ = temp_frame;
-
+			output_frame_->begin_read();
+			output_frame_->audio_data() = std::move(writing_[next_index]->audio_data());
+			
 			// Return frames to pool.
-			//writing_[next_index]->end_write();
+			//writing_[next_index]->end_write(); // Is done in frame->reset();
 			writing_[next_index] = nullptr;
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-		return result == frame::empty() ? nullptr : result;;
+
+		return output_frame_;
 	}
 
 	size_t index_;
 
 	frame_ptr output_frame_;			
-	video_format_desc format_desc_;
+
 	frame_processor_device& frame_processor_;
 
-	std::vector<frame_ptr> writing_;
+	std::array<frame_ptr, 2> writing_;
 	
 	common::gl::frame_buffer_object fbo_;
-	frame_shader_ptr shader_;
+	frame_shader shader_;
 };
 	
 frame_renderer::frame_renderer(frame_processor_device& frame_processor, const video_format_desc& format_desc) : impl_(new implementation(frame_processor, format_desc)){}
