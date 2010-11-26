@@ -74,20 +74,18 @@ public:
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
-		frame_processor_ = frame_processor;
 		auto frame = frame_processor->create_frame();
 		__stosd(reinterpret_cast<unsigned long*>(frame->data()), color_value_, frame->size() / sizeof(unsigned long));
 		frame_ = frame;
 	}
 	
-	std::wstring print()
+	std::wstring print() const
 	{
 		std::wstringstream str;
 		str << L"color_producer " << color_str_ << L".";
 		return str.str();
 	}
 
-	frame_processor_device_ptr frame_processor_;
 	frame_ptr frame_;
 	unsigned int color_value_;
 	std::wstring color_str_;

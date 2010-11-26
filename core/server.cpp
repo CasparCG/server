@@ -15,6 +15,7 @@
 #include "protocol/CLK/CLKProtocolStrategy.h"
 #include "producer/flash/FlashAxContainer.h"
 
+#include "../common/exception/exceptions.h"
 #include "../common/io/AsyncEventServer.h"
 #include "../common/utility/string_convert.h"
 
@@ -73,7 +74,9 @@ struct server::implementation : boost::noncopyable
 		using boost::property_tree::ptree;
 		BOOST_FOREACH(auto& xml_channel, pt.get_child("configuration.channels"))
 		{		
-			auto format_desc = get_video_format_desc(common::widen(xml_channel.second.get("videomode", "PAL")));			
+			auto format_desc = video_format_desc::get(common::widen(xml_channel.second.get("videomode", "PAL")));		
+			if(format_desc.format == video_format::invalid)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid videomode."));
 			std::vector<frame_consumer_ptr> consumers;
 
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))

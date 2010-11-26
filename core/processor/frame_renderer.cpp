@@ -64,7 +64,7 @@ struct frame_renderer::implementation : boost::noncopyable
 			
 			// Read from framebuffer into page-locked memory.
 			output_frame_->begin_read();
-			output_frame_->audio_data() = std::move(writing_[next_index]->audio_data());
+			output_frame_->get_audio_data() = std::move(writing_[next_index]->get_audio_data());
 			
 			// Return frames to pool.
 			//writing_[next_index]->end_write(); // Is done in frame->reset();

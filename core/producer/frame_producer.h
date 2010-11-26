@@ -71,8 +71,14 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual void initialize(const frame_processor_device_ptr& frame_processor) = 0;
 
-	virtual std::wstring print() { return L"Unknown frame_producer.";}
+	virtual std::wstring print() const { return L"Unknown frame_producer.";}
 };
 typedef std::shared_ptr<frame_producer> frame_producer_ptr;
+
+inline std::wostream& operator<<(std::wostream& out, const frame_producer& producer)
+{
+	out << producer.print().c_str();
+	return out;
+}
 
 }}

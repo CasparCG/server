@@ -23,7 +23,7 @@ struct layer::implementation
 			foreground_ = nullptr;	
 			last_frame_ = frame_producer->render_frame();
 			if(last_frame_ != nullptr)
-				last_frame_->audio_data().clear(); // No audio
+				last_frame_->get_audio_data().clear(); // No audio
 		}
 		else if(option == load_option::auto_play)
 			play();			
@@ -76,7 +76,7 @@ struct layer::implementation
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << L"Removed " << (foreground_ ? foreground_->print() : L"frame_producer") << L" from layer.";
+			CASPAR_LOG(warning) << L"Removed " << (foreground_ ? foreground_->print() : L"null producer") << L" from layer.";
 			foreground_ = nullptr;
 			last_frame_ = nullptr;
 		}

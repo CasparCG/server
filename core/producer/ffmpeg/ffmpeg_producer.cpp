@@ -111,7 +111,7 @@ public:
 					CASPAR_LOG(warning) << "### File read underflow has STARTED.";
 
 				// Return last frame without audio.
-				last_frame_->audio_data().clear();
+				last_frame_->get_audio_data().clear();
 				return last_frame_;
 			}
 			else if(underrun_count_ > 0)
@@ -124,7 +124,7 @@ public:
 			{
 				if(has_audio_ && video_frame_channel_.front() != nullptr)
 				{
-					video_frame_channel_.front()->audio_data() = std::move(audio_chunk_channel_.front());
+					video_frame_channel_.front()->get_audio_data() = std::move(audio_chunk_channel_.front());
 					audio_chunk_channel_.pop_front();
 				}
 				
@@ -145,7 +145,7 @@ public:
 		return last_frame_;
 	}
 
-	std::wstring print()
+	std::wstring print() const
 	{
 		std::wstringstream str;
 		str << L"ffmpeg_producer " << filename_ << L".";

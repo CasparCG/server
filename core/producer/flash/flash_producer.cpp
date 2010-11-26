@@ -223,7 +223,7 @@ struct flash_producer::implementation
 			}
 
 			auto format_desc = frame_processor_->get_video_format_desc();
-			bool is_progressive = format_desc.update == video_update_format::progressive || (flashax_container_->GetFPS() - format_desc.fps/2 == 0);
+			bool is_progressive = format_desc.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc.fps/2 == 0);
 
 			frame_ptr result;
 
@@ -233,7 +233,7 @@ struct flash_producer::implementation
 			{
 				frame_ptr frame1 = do_render_frame();
 				frame_ptr frame2 = do_render_frame();
-				result = composite_frame::interlace(frame1, frame2, format_desc.update);
+				result = composite_frame::interlace(frame1, frame2, format_desc.mode);
 			}
 
 			frame_buffer_.push(result);
@@ -264,7 +264,7 @@ struct flash_producer::implementation
 	frame_ptr render_frame()
 	{
 		if(!frame_buffer_.try_pop(last_frame_) && is_empty_)
-			return frame::empty();
+			last_frame_ = frame::empty();
 		
 		return last_frame_;
 	}

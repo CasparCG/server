@@ -114,12 +114,12 @@ struct image_scroll_producer : public frame_producer
 		
 	frame_ptr render_frame()
 	{		
-		if(format_desc_.update != video_update_format::progressive)				
+		if(format_desc_.mode != video_mode::progressive)				
 		{
 			frame_ptr frame1;
 			frame_ptr frame2;
 			tbb::parallel_invoke([&]{ frame1 = do_render_frame(); }, [&]{ frame2 = do_render_frame(); });
-			return composite_frame::interlace(frame1, frame2, format_desc_.update);
+			return composite_frame::interlace(frame1, frame2, format_desc_.mode);
 		}			
 
 		return render_frame();	
