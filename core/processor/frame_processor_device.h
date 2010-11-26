@@ -38,7 +38,7 @@ public:
 	void clear();
 	
 	frame_ptr create_frame(const pixel_format_desc& desc);		
-	frame_ptr create_frame(size_t width, size_t heightg);			
+	frame_ptr create_frame(size_t width, size_t height);			
 	frame_ptr create_frame();
 	
 	const video_format_desc& get_video_format_desc() const;

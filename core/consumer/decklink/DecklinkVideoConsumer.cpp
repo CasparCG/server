@@ -407,7 +407,7 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 
 	const video_format_desc& get_video_format_desc() const 
 	{
-		return video_format_desc::format_descs[currentFormat_];
+		return video_format_desc::get(currentFormat_);
 	}
 
 	unsigned long GetDecklinkVideoFormat(video_format::type fmt) 

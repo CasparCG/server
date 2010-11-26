@@ -192,7 +192,7 @@ struct consumer::implementation
 		static size_t audio_nchannels = 2;
 		static std::vector<short> silence(audio_samples*audio_nchannels*2, 0);
 
-		auto& frame_audio_data = frame->audio_data().empty() ? silence : frame->audio_data();
+		auto& frame_audio_data = frame->get_audio_data().empty() ? silence : frame->get_audio_data();
 
 		unsigned long fieldCount = 0;
 		sdk_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);

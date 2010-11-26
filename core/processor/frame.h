@@ -9,36 +9,40 @@
 #include <array>
 
 #include <boost/noncopyable.hpp>
-
 #include <boost/tuple/tuple.hpp>
 
 #include <vector>
 
 namespace caspar { namespace core {
 	
-class frame :  boost::noncopyable
+class frame : boost::noncopyable
 {
 public:
+	
+	struct render_transform
+	{
+		render_transform() : alpha(1.0), pos(boost::make_tuple(0.0, 0.0)), uv(boost::make_tuple(0.0, 1.0, 1.0, 0.0)), mode(video_mode::progressive){}
+		double alpha;
+		boost::tuple<double, double> pos;
+		boost::tuple<double, double, double, double> uv;
+		video_mode::type mode; 
+	};
+
 	virtual ~frame(){}
 			
 	virtual unsigned char* data(size_t index = 0);
 	virtual size_t size(size_t index = 0) const;
 				
-	virtual std::vector<short>& audio_data();
-
-	virtual void alpha(double value);
-	virtual void translate(double x, double y);
-	virtual void texcoords(double left, double top, double right, double bottom);
-	virtual void update_fmt(video_update_format::type fmt);	
-	virtual void pix_fmt(pixel_format::type fmt);
+	virtual std::vector<short>& get_audio_data();
+	const std::vector<short>& get_audio_data() const;
 	
-	virtual double x() const;
-	virtual double y() const;
-
-	static std::shared_ptr<frame> empty()
+	virtual render_transform& get_render_transform();
+	const render_transform& get_render_transform() const;
+	
+	static std::shared_ptr<frame>& empty()
 	{
-		static auto my_null_frame = std::shared_ptr<frame>(new frame(pixel_format_desc()));
-		return my_null_frame;
+		static auto empty_frame = std::shared_ptr<frame>(new frame(pixel_format_desc()));
+		return empty_frame;
 	}
 
 protected:
@@ -53,10 +57,10 @@ protected:
 	virtual void end_write();
 	virtual void begin_read();
 	virtual void end_read();
+
 	virtual void draw(frame_shader& shader);
 
 private:
-
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };

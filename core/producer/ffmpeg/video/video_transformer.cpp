@@ -147,7 +147,7 @@ struct video_transformer::implementation : boost::noncopyable
 
 		// TODO: Make generic for all formats and modes.
 		if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field
-			result_frame->translate(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));
+			result_frame->get_render_transform().pos = boost::make_tuple(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));
 		
 		return result_frame;
 	}

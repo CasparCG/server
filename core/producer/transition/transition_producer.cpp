@@ -124,8 +124,8 @@ struct transition_producer::implementation : boost::noncopyable
 		if(!frame)
 			return;
 
-		for(size_t n = 0; n < frame->audio_data().size(); ++n)
-			frame->audio_data()[n] = static_cast<short>((static_cast<int>(frame->audio_data()[n])*volume)>>8);
+		for(size_t n = 0; n < frame->get_audio_data().size(); ++n)
+			frame->get_audio_data()[n] = static_cast<short>((static_cast<int>(frame->get_audio_data()[n])*volume)>>8);
 	}
 		
 	frame_ptr compose(const frame_ptr& dest_frame, frame_ptr src_frame) 
@@ -146,40 +146,40 @@ struct transition_producer::implementation : boost::noncopyable
 		);
 		
 		if(info_.type == transition::mix)
-			dest_frame->alpha(alpha);		
+			dest_frame->get_render_transform().alpha = alpha;		
 		else if(info_.type == transition::slide)
 		{	
 			if(info_.direction == transition_direction::from_left)			
-				dest_frame->translate(-1.0+alpha, 0.0);			
+				dest_frame->get_render_transform().pos = boost::make_tuple(-1.0+alpha, 0.0);			
 			else if(info_.direction == transition_direction::from_right)
-				dest_frame->translate(1.0-alpha, 0.0);		
+				dest_frame->get_render_transform().pos = boost::make_tuple(1.0-alpha, 0.0);		
 		}
 		else if(info_.type == transition::push)
 		{
 			if(info_.direction == transition_direction::from_left)		
 			{
-				dest_frame->translate(-1.0+alpha, 0.0);
+				dest_frame->get_render_transform().pos = boost::make_tuple(-1.0+alpha, 0.0);
 				if(src_frame)
-					src_frame->translate(0.0+alpha, 0.0);
+					src_frame->get_render_transform().pos = boost::make_tuple(0.0+alpha, 0.0);
 			}
 			else if(info_.direction == transition_direction::from_right)
 			{
-				dest_frame->translate(1.0-alpha, 0.0);
+				dest_frame->get_render_transform().pos = boost::make_tuple(1.0-alpha, 0.0);
 				if(src_frame)
-					src_frame->translate(0.0-alpha, 0.0);
+					src_frame->get_render_transform().pos = boost::make_tuple(0.0-alpha, 0.0);
 			}
 		}
 		else if(info_.type == transition::wipe)
 		{
 			if(info_.direction == transition_direction::from_left)		
 			{
-				dest_frame->translate(-1.0+alpha, 0.0);
-				dest_frame->texcoords(-1.0+alpha, 1.0, alpha, 0.0);
+				dest_frame->get_render_transform().pos = boost::make_tuple(-1.0+alpha, 0.0);
+				dest_frame->get_render_transform().uv = boost::make_tuple(-1.0+alpha, 1.0, alpha, 0.0);
 			}
 			else if(info_.direction == transition_direction::from_right)
 			{
-				dest_frame->translate(1.0-alpha, 0.0);
-				dest_frame->texcoords(1.0-alpha, 1.0, 2.0-alpha, 0.0);
+				dest_frame->get_render_transform().pos = boost::make_tuple(1.0-alpha, 0.0);
+				dest_frame->get_render_transform().uv = boost::make_tuple(1.0-alpha, 1.0, 2.0-alpha, 0.0);
 			}
 		}
 						

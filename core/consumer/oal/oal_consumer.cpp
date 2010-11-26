@@ -49,7 +49,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	{
 		// NOTE: tbb::concurrent_queue does not have rvalue support. 
 		// Use shared_ptr to emulate move semantics
-		input_.push(std::make_shared<std::vector<short>>(std::move(frame->audio_data()))); 
+		input_.push(std::make_shared<std::vector<short>>(std::move(frame->get_audio_data()))); 
 		
 		if(GetStatus() != Playing && input_.size() > 2)
 			Play();

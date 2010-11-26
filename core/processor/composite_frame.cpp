@@ -33,17 +33,17 @@ struct composite_frame::implementation : boost::noncopyable
 		boost::range::remove_erase(frames_, frame::empty());
 		boost::for_each(frames_, [&](const frame_ptr& frame)
 		{
-			if(self_->audio_data().empty())
-				self_->audio_data() = std::move(frame->audio_data());
+			if(self_->get_audio_data().empty())
+				self_->get_audio_data() = std::move(frame->get_audio_data());
 			else
 			{
 				tbb::parallel_for
 				(
-					tbb::blocked_range<size_t>(0, frame->audio_data().size()),
+					tbb::blocked_range<size_t>(0, frame->get_audio_data().size()),
 					[&](const tbb::blocked_range<size_t>& r)
 					{
 						for(size_t n = r.begin(); n < r.end(); ++n)
-							self_->audio_data()[n] = static_cast<short>(	static_cast<int>(self_->audio_data()[n]) + static_cast<int>(frame->audio_data()[n]) & 0xFFFF);	
+							self_->get_audio_data()[n] = static_cast<short>(	static_cast<int>(self_->get_audio_data()[n]) + static_cast<int>(frame->get_audio_data()[n]) & 0xFFFF);	
 					}
 				);
 			}
@@ -73,7 +73,7 @@ struct composite_frame::implementation : boost::noncopyable
 	void draw(frame_shader& shader)
 	{
 		glPushMatrix();
-		glTranslated(self_->x()*2.0, self_->y()*2.0, 0.0);
+		glTranslated(self_->get_render_transform().pos.get<0>()*2.0, self_->get_render_transform().pos.get<1>()*2.0, 0.0);
 		boost::range::for_each(frames_, std::bind(&frame::draw, std::placeholders::_1, shader));
 		glPopMatrix();
 	}
@@ -94,18 +94,18 @@ void composite_frame::begin_read(){impl_->begin_read();}
 void composite_frame::end_read(){impl_->end_read();}
 void composite_frame::draw(frame_shader& shader){impl_->draw(shader);}
 
-frame_ptr composite_frame::interlace(const frame_ptr& frame1, const frame_ptr& frame2, video_update_format::type mode)
+frame_ptr composite_frame::interlace(const frame_ptr& frame1, const frame_ptr& frame2, video_mode::type mode)
 {			
 	auto result = std::make_shared<composite_frame>(frame1, frame2);
-	if(mode == video_update_format::upper)
+	if(mode == video_mode::upper)
 	{
-		frame1->update_fmt(video_update_format::upper);
-		frame2->update_fmt(video_update_format::lower);
+		frame1->get_render_transform().mode = video_mode::upper;
+		frame2->get_render_transform().mode = video_mode::lower;
 	}
 	else
 	{
-		frame1->update_fmt(video_update_format::lower);
-		frame2->update_fmt(video_update_format::upper);
+		frame1->get_render_transform().mode = video_mode::lower;
+		frame2->get_render_transform().mode = video_mode::upper;
 	}
 	return result;
 }

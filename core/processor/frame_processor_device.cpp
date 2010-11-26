@@ -59,15 +59,13 @@ struct frame_processor_device::implementation : boost::noncopyable
 		if(!pool->try_pop(my_frame))		
 			my_frame = executor_.invoke([&]{return std::shared_ptr<frame>(new frame(desc));});		
 		
-		auto destructor = [=]
-		{
-			my_frame->reset();
-			pool->push(my_frame);
-		};
-
 		return frame_ptr(my_frame.get(), [=](frame*)
 		{
-			executor_.begin_invoke(destructor);
+			executor_.begin_invoke([=]
+			{
+				my_frame->reset();
+				pool->push(my_frame);
+			});
 		});
 	}
 		
@@ -107,7 +105,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 	std::unique_ptr<frame_renderer> renderer_;
 				
 	tbb::concurrent_bounded_queue<boost::shared_future<frame_ptr>> output_;	
-	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<frame_ptr>, pixel_format_desc_hash> frame_pools_;
+	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<frame_ptr>, std::hash<pixel_format_desc>> frame_pools_;
 	
 	video_format_desc fmt_;
 	long underrun_count_;

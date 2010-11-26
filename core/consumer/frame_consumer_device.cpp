@@ -27,7 +27,7 @@ class video_sync_clock
 public:
 	video_sync_clock(const video_format_desc& format_desc)
 	{
-		period_ = static_cast<long>(render_video_format_period(format_desc)*1000000.0);
+		period_ = static_cast<long>(format_desc.period*1000000.0);
 		time_ = boost::posix_time::microsec_clock::local_time();
 	}
 
