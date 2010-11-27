@@ -81,9 +81,7 @@ public:
 	
 	std::wstring print() const
 	{
-		std::wstringstream str;
-		str << L"color_producer " << color_str_ << L".";
-		return str.str();
+		return + L"color_producer. color: " + color_str_;
 	}
 
 	frame_ptr frame_;

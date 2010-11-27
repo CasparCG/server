@@ -109,14 +109,18 @@ public:
 			}
 			catch(...)
 			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				boost::range::remove_erase(consumers_, consumer);
-				CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
-				if(consumers_.empty())
+				try
 				{
-					CASPAR_LOG(warning) << "No consumers available. Shutting down frame_consumer_device.";
-					is_running_ = false;
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					boost::range::remove_erase(consumers_, consumer);
+					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
+					if(consumers_.empty())
+					{
+						CASPAR_LOG(warning) << "No consumers available. Shutting down frame_consumer_device.";
+						is_running_ = false;
+					}
 				}
+				catch(...){}
 			}
 		}
 	}

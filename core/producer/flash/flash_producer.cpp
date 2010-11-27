@@ -271,6 +271,11 @@ struct flash_producer::implementation
 		bmp_frame_ = std::make_shared<bitmap>(format_desc.width, format_desc.height);
 		start(false);
 	}
+
+	std::wstring print() const
+	{
+		return L"flash_producer. filename: " + filename_;
+	}
 	
 	CComObject<flash::FlashAxContainer>* flashax_container_;
 		
@@ -295,6 +300,7 @@ flash_producer::flash_producer(const std::wstring& filename) : impl_(new impleme
 frame_ptr flash_producer::render_frame(){return impl_->render_frame();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
 void flash_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}
+std::wstring flash_producer::print() const {return impl_->print();}
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)
 {

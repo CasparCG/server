@@ -158,6 +158,11 @@ public:
 			flash_producer_->initialize(frame_processor_);
 	}
 
+	std::wstring print() const
+	{
+		return L"cg_producer. back-end:" + flash_producer_->print();
+	}
+
 	flash_producer_ptr flash_producer_;
 	template_version::type ver_;
 	frame_processor_device_ptr frame_processor_;

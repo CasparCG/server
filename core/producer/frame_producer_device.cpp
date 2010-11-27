@@ -45,6 +45,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 	~implementation()
 	{
 		is_running_ = false;
+		frame_processor_->clear();
 		render_thread_.join();
 	}
 		
@@ -66,9 +67,13 @@ struct frame_producer_device::implementation : boost::noncopyable
 			}
 			catch(...)
 			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				layers_.clear();
-				CASPAR_LOG(error) << "Unexpected exception. Cleared layers in render-device";
+				try
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					layers_.clear();
+					CASPAR_LOG(error) << "Unexpected exception. Cleared layers in render-device";
+				}
+				catch(...){}
 			}
 		}
 	}

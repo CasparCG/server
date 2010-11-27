@@ -67,6 +67,7 @@ public:
 	frame_producer_ptr get_following_producer() const;
 	void set_leading_producer(const frame_producer_ptr& producer);
 	virtual void initialize(const frame_processor_device_ptr& frame_processor);
+	virtual std::wstring print() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

@@ -35,7 +35,7 @@ namespace caspar { namespace core {
 struct transition_producer::implementation : boost::noncopyable
 {
 	implementation(const frame_producer_ptr& dest, const transition_info& info) 
-		: current_frame_(0), info_(info), dest_producer_(dest)
+		: current_frame_(0), info_(info), dest_producer_(dest), org_dest_producer_(dest)
 	{
 		if(!dest)
 			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("dest"));
@@ -48,7 +48,7 @@ struct transition_producer::implementation : boost::noncopyable
 	
 	void set_leading_producer(const frame_producer_ptr& producer)
 	{
-		source_producer_ = producer;
+		org_source_producer_ = source_producer_ = producer;
 	}
 		
 	frame_ptr render_frame()
@@ -173,7 +173,15 @@ struct transition_producer::implementation : boost::noncopyable
 		dest_producer_->initialize(frame_processor);
 		frame_processor_ = frame_processor;
 	}
+
+	std::wstring print() const
+	{
+		return L"transition_producer. dest: " + (org_dest_producer_ ? org_dest_producer_->print() : L"empty") + L" src: " + (org_source_producer_ ? org_source_producer_->print() : L"empty");
+	}
 	
+	frame_producer_ptr			org_source_producer_;
+	frame_producer_ptr			org_dest_producer_;
+
 	frame_producer_ptr			source_producer_;
 	frame_producer_ptr			dest_producer_;
 	
@@ -188,6 +196,7 @@ frame_ptr transition_producer::render_frame(){return impl_->render_frame();}
 frame_producer_ptr transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const frame_producer_ptr& producer) { impl_->set_leading_producer(producer); }
 void transition_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}
+std::wstring transition_producer::print() const { return impl_->print();}
 
 }}
 

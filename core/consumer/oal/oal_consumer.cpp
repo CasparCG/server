@@ -70,7 +70,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		if(!input_.try_pop(audio_data))
 		{
 			if(underrun_count_ == 0)
-				CASPAR_LOG(warning) << "### Sound Input underflow has STARTED.";
+				CASPAR_LOG(trace) << "### Sound Input underflow has STARTED.";
 			++underrun_count_;
 			input_.pop(audio_data);
 		}

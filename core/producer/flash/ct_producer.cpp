@@ -35,18 +35,24 @@ namespace caspar { namespace core { namespace flash {
 
 struct ct_producer : public cg_producer
 {
-	ct_producer(const std::wstring& filename) : filename_(filename){}
+	ct_producer(const std::wstring& filename) : filename_(filename), initialized_(false){}
 
 	frame_ptr render_frame()
 	{
-		if(filename_ != L"")
+		if(!initialized_)
 		{
 			cg_producer::add(0, filename_, 1);
-			filename_ = L"";
+			initialized_ = true;
 		}
 		return cg_producer::render_frame();
 	}
 
+	std::wstring print() const
+	{
+		return L"ct_producer. filename: " + filename_;
+	}
+
+	bool initialized_;
 	std::wstring filename_;
 };
 	

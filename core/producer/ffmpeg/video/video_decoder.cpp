@@ -28,10 +28,8 @@ struct video_decoder::implementation : boost::noncopyable
 
 		int frame_finished = 0;
 		const int result = avcodec_decode_video(codec_context_, decoded_frame.get(), &frame_finished, video_packet.data(), video_packet.size());
-		if(result < 0) 						
-			return nullptr;			
 		
-		return decoded_frame;		
+		return result >= 0 ? decoded_frame : nullptr;		
 	}
 	
 	AVCodecContext* codec_context_;

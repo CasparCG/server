@@ -37,7 +37,7 @@ public:
 	{
 		return is_running_;
 	}
-
+	
 	void stop()
 	{
 		if(is_running_.fetch_and_store(false))
