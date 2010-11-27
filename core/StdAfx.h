@@ -56,6 +56,7 @@
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
+#include <boost/range/algorithm.hpp>
 
 #include <GLee.h>
 

@@ -75,7 +75,7 @@ public:
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
 		auto frame = frame_processor->create_frame();
-		__stosd(reinterpret_cast<unsigned long*>(frame->data()), color_value_, frame->size() / sizeof(unsigned long));
+		__stosd(reinterpret_cast<unsigned long*>(frame->data().begin()), color_value_, frame->data().size() / sizeof(unsigned long));
 		frame_ = frame;
 	}
 	

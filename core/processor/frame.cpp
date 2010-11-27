@@ -39,7 +39,7 @@ GLubyte lower_pattern[] = {
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff};
 																																						
-struct frame::implementation : boost::noncopyable
+struct internal_frame::implementation : boost::noncopyable
 {
 	implementation(const pixel_format_desc& desc) : desc_(desc)
 	{			
@@ -134,19 +134,28 @@ struct frame::implementation : boost::noncopyable
 	std::vector<short> audio_data_;
 	
 	const pixel_format_desc desc_;
-	frame::render_transform transform_;
+	internal_frame::render_transform transform_;
 };
-frame::frame(const pixel_format_desc& desc) : impl_(new implementation(desc)){}
-void frame::draw(frame_shader& shader){impl_->draw(shader);}
-void frame::begin_write(){impl_->begin_write();}
-void frame::end_write(){impl_->end_write();}	
-void frame::begin_read(){impl_->begin_read();}
-void frame::end_read(){impl_->end_read();}
-unsigned char* frame::data(size_t index){return impl_->data(index);}
-size_t frame::size(size_t index) const { return impl_->desc_.planes[index].size; }
-std::vector<short>& frame::get_audio_data() { return impl_->audio_data_; }
-const std::vector<short>& frame::get_audio_data() const { return const_cast<frame*>(this)->get_audio_data(); }
-void frame::reset(){impl_->reset();}
-frame::render_transform& frame::get_render_transform() { return impl_->transform_;}
-const frame::render_transform& frame::get_render_transform() const { return const_cast<frame*>(this)->get_render_transform();}
+	
+std::shared_ptr<frame>& frame::empty()
+{
+	static auto empty_frame = std::shared_ptr<frame>(new internal_frame(pixel_format_desc()));
+	return empty_frame;
+}
+
+internal_frame::internal_frame(const pixel_format_desc& desc) : impl_(new implementation(desc)){}
+void internal_frame::draw(frame_shader& shader){impl_->draw(shader);}
+void internal_frame::begin_write(){impl_->begin_write();}
+void internal_frame::end_write(){impl_->end_write();}	
+void internal_frame::begin_read(){impl_->begin_read();}
+void internal_frame::end_read(){impl_->end_read();}
+boost::iterator_range<unsigned char*> internal_frame::data(size_t index)
+{
+	auto ptr = static_cast<unsigned char*>(impl_->pixel_data_[index]);
+	return boost::iterator_range<unsigned char*>(ptr, ptr+impl_->desc_.planes[index].size);
+}
+
+std::vector<short>& internal_frame::get_audio_data() { return impl_->audio_data_; }
+void internal_frame::reset(){impl_->reset();}
+internal_frame::render_transform& internal_frame::get_render_transform() { return impl_->transform_;}
 }}

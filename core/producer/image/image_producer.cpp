@@ -25,7 +25,7 @@ struct image_producer : public frame_producer
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
 		auto frame = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-		memcpy(frame->data(), FreeImage_GetBits(bitmap.get()), frame->size());
+		memcpy(frame->data().begin(), FreeImage_GetBits(bitmap.get()), frame->data().size());
 		frame_ = frame;
 	}
 	

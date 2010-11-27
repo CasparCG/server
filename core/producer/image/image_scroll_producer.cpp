@@ -70,12 +70,12 @@ struct image_scroll_producer : public frame_producer
 	frame_ptr do_render_frame()
 	{
 		frame_ptr frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
-		memset(frame->data(), 0, format_desc_.size);
+		std::fill(frame->data().begin(), frame->data().end(), 0);
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
 		const int delta_y = direction_ == direction::Up ? speed_ : -speed_;
 
-		unsigned char* frame_data = frame->data();
+		unsigned char* frame_data = frame->data().begin();
 		unsigned char* image_data = image_.get();
 	
 		if (direction_ == direction::Up || direction_ == direction::Down)

@@ -69,6 +69,7 @@ struct layer::implementation
 
 			if(last_frame_ == nullptr)
 			{
+				CASPAR_LOG(warning) << L"EOF: " << foreground_->print();
 				foreground_ = foreground_->get_following_producer();
 				last_frame_ = render_frame();
 			}

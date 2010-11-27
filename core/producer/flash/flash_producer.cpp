@@ -249,24 +249,19 @@ struct flash_producer::implementation
 		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
 		if(current_frame_ == nullptr || invalid_count_ < 2)
 		{				
+			std::fill_n(bmp_frame_->data(), bmp_frame_->size(), 0);			
+			flashax_container_->DrawControl(bmp_frame_->hdc());
 			current_frame_ = bmp_frame_;
-			memset(current_frame_->data(), 0, current_frame_->size());
-			
-			flashax_container_->DrawControl(current_frame_->hdc());
 		}	
 
 		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height);
-		memcpy(frame->data(), current_frame_->data(), current_frame_->size());	
-
+		std::copy(current_frame_->data(), current_frame_->data() + current_frame_->size(), frame->data().begin());
 		return frame;
 	}
 		
 	frame_ptr render_frame()
-	{
-		if(!frame_buffer_.try_pop(last_frame_) && is_empty_)
-			last_frame_ = frame::empty();
-		
-		return last_frame_;
+	{		
+		return (frame_buffer_.try_pop(last_frame_) || !is_empty_) && last_frame_ ? last_frame_ : frame::empty();
 	}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)

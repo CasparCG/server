@@ -32,23 +32,28 @@
 using namespace boost::assign;
 
 namespace caspar { namespace core { namespace flash {
+
+struct ct_producer : public cg_producer
+{
+	ct_producer(const std::wstring& filename) : filename_(filename){}
+
+	frame_ptr render_frame()
+	{
+		if(filename_ != L"")
+		{
+			cg_producer::add(0, filename_, 1);
+			filename_ = L"";
+		}
+		return cg_producer::render_frame();
+	}
+
+	std::wstring filename_;
+};
 	
 frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params) 
 {
-	static const std::vector<std::wstring> extensions = list_of(L"ct");
-	std::wstring filename = server::media_folder() + L"\\" + params[0];
-	
-	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
-		{					
-			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
-		});
-
-	if(ext == extensions.end())
-		return nullptr;
-	
-	auto producer = std::make_shared<cg_producer>();
-	producer->add(0, filename, 1);
-	return producer;
+	std::wstring filename = server::media_folder() + L"\\" + params[0] + L".ct";
+	return boost::filesystem::exists(filename) ? std::make_shared<ct_producer>(filename) : nullptr;
 }
 
 }

@@ -7,12 +7,6 @@
 #include "../../../processor/frame_processor_device.h"
 
 #include <tbb/parallel_for.h>
-#include <tbb/atomic.h>
-#include <tbb/mutex.h>
-#include <tbb/concurrent_queue.h>
-#include <tbb/scalable_allocator.h>
-
-#include <unordered_map>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -65,7 +59,7 @@ pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_
 	case pixel_format::rgba:
 	case pixel_format::abgr:
 		{
-			desc.planes[0] = pixel_format_desc::plane(dummy_pict.linesize[0]/4, height, 4);						
+			desc.planes.push_back(pixel_format_desc::plane(dummy_pict.linesize[0]/4, height, 4));						
 			return desc;
 		}
 	case pixel_format::ycbcr:
@@ -75,12 +69,12 @@ pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_
 			size_t size2 = dummy_pict.data[2] - dummy_pict.data[1];
 			size_t h2 = size2/dummy_pict.linesize[1];			
 
-			desc.planes[0] = pixel_format_desc::plane(dummy_pict.linesize[0], height, 1);
-			desc.planes[1] = pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1);
-			desc.planes[2] = pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1);
+			desc.planes.push_back(pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
+			desc.planes.push_back(pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1));
+			desc.planes.push_back(pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1));
 
 			if(desc.pix_fmt == pixel_format::ycbcra)						
-				desc.planes[3] = pixel_format_desc::plane(dummy_pict.linesize[3], height, 1);	
+				desc.planes.push_back(pixel_format_desc::plane(dummy_pict.linesize[3], height, 1));	
 			return desc;
 		}		
 	default:		
@@ -101,10 +95,9 @@ struct video_transformer::implementation : boost::noncopyable
 			double param;
 			sws_context_.reset(sws_getContext(width_, height_, pix_fmt_, width_, height_, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 			if(!sws_context_)
-				BOOST_THROW_EXCEPTION(
-					operation_failed() <<
-					msg_info("Could not create software scaling context.") << 
-					boost::errinfo_api_function("sws_getContext"));
+				BOOST_THROW_EXCEPTION(	operation_failed() <<
+										msg_info("Could not create software scaling context.") << 
+										boost::errinfo_api_function("sws_getContext"));
 		}
 	}
 	
@@ -120,17 +113,14 @@ struct video_transformer::implementation : boost::noncopyable
 
 			tbb::parallel_for(0, static_cast<int>(desc_.planes.size()), 1, [&](int n)
 			{
-				if(desc_.planes[n].size == 0)
-					return;
-
+				auto plane            = desc_.planes[n];
+				auto result           = result_frame->data(n).begin();
+				auto decoded          = decoded_frame->data[n];
+				auto decoded_linesize = decoded_frame->linesize[n];
+				
 				tbb::parallel_for(0, static_cast<int>(desc_.planes[n].height), 1, [&](int y)
 				{
-					memcpy
-					(
-						result_frame->data(n)+y*desc_.planes[n].linesize, 
-						decoded_frame->data[n] + y*decoded_frame->linesize[n], 
-						desc_.planes[n].linesize
-					);
+					memcpy(result+y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 				});
 			});
 		}
@@ -140,7 +130,7 @@ struct video_transformer::implementation : boost::noncopyable
 
 			AVFrame av_frame;	
 			avcodec_get_frame_defaults(&av_frame);
-			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), result_frame->data(), PIX_FMT_BGRA, width_, height_);
+			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), result_frame->data().begin(), PIX_FMT_BGRA, width_, height_);
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);		
 		}

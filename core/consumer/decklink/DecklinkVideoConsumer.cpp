@@ -126,9 +126,9 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 			if(frame != NULL) 
 			{
 				std::shared_ptr<DecklinkVideoFrame> pTempFrame = GetReservedFrame();
-				if(pTempFrame && frame->size() == pTempFrame->size())
+				if(pTempFrame && frame->data().size() == pTempFrame->size())
 				{
-					memcpy(pTempFrame->data(), frame->data(), pTempFrame->size());
+					std::copy(frame->data().begin(), frame->data().end(), pTempFrame->data());
 					DoRender(pTempFrame);
 				}
 				else

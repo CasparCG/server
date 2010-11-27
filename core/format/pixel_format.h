@@ -35,13 +35,10 @@ struct pixel_format_desc
 		size_t channels;
 	};
 
-	pixel_format_desc() : pix_fmt(pixel_format::invalid)
-	{
-		std::fill(planes.begin(), planes.end(), plane());
-	}
+	pixel_format_desc() : pix_fmt(pixel_format::invalid){}
 	
 	pixel_format::type pix_fmt;
-	std::array<plane, 4> planes;
+	std::vector<plane> planes;
 };
 
 size_t hash(const pixel_format_desc& desc);

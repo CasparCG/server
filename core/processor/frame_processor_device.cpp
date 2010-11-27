@@ -53,13 +53,13 @@ struct frame_processor_device::implementation : boost::noncopyable
 
 	frame_ptr create_frame(const pixel_format_desc& desc)
 	{
-		tbb::concurrent_bounded_queue<frame_ptr>* pool = &frame_pools_[desc];
+		auto pool = &frame_pools_[desc];
 		
-		frame_ptr my_frame;
+		internal_frame_ptr my_frame;
 		if(!pool->try_pop(my_frame))		
-			my_frame = executor_.invoke([&]{return std::shared_ptr<frame>(new frame(desc));});		
+			my_frame = executor_.invoke([&]{return std::shared_ptr<internal_frame>(new internal_frame(desc));});		
 		
-		return frame_ptr(my_frame.get(), [=](frame*)
+		return internal_frame_ptr(my_frame.get(), [=](frame*)
 		{
 			executor_.begin_invoke([=]
 			{
@@ -74,13 +74,13 @@ struct frame_processor_device::implementation : boost::noncopyable
 		if(input_frame == nullptr)
 			return;
 				
-		auto future = executor_.begin_invoke([=]{return renderer_->render(input_frame);});	
+		auto future = executor_.begin_invoke([=]{return renderer_->render(std::static_pointer_cast<internal_frame>(input_frame));});	
 		output_.push(std::move(future)); // Blocks
 	}
 
 	void receive(frame_ptr& output_frame)
 	{
-		boost::shared_future<frame_ptr> future;
+		boost::shared_future<internal_frame_ptr> future;
 
 		if(!output_.try_pop(future))
 		{
@@ -104,8 +104,8 @@ struct frame_processor_device::implementation : boost::noncopyable
 
 	std::unique_ptr<frame_renderer> renderer_;
 				
-	tbb::concurrent_bounded_queue<boost::shared_future<frame_ptr>> output_;	
-	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<frame_ptr>, std::hash<pixel_format_desc>> frame_pools_;
+	tbb::concurrent_bounded_queue<boost::shared_future<internal_frame_ptr>> output_;	
+	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<internal_frame_ptr>, std::hash<pixel_format_desc>> frame_pools_;
 	
 	video_format_desc fmt_;
 	long underrun_count_;
@@ -126,7 +126,7 @@ frame_ptr frame_processor_device::create_frame(size_t width, size_t height)
 	// Create bgra frame
 	pixel_format_desc desc;
 	desc.pix_fmt = pixel_format::bgra;
-	desc.planes[0] = pixel_format_desc::plane(width, height, 4);
+	desc.planes.push_back(pixel_format_desc::plane(width, height, 4));
 	return create_frame(desc);
 }
 			
@@ -135,7 +135,7 @@ frame_ptr frame_processor_device::create_frame()
 	// Create bgra frame with output resolution
 	pixel_format_desc desc;
 	desc.pix_fmt = pixel_format::bgra;
-	desc.planes[0] = pixel_format_desc::plane(get_video_format_desc().width, get_video_format_desc().height, 4);
+	desc.planes.push_back(pixel_format_desc::plane(get_video_format_desc().width, get_video_format_desc().height, 4));
 	return create_frame(desc);
 }
 void frame_processor_device::clear(){impl_->clear();}
