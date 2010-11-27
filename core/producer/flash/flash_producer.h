@@ -37,9 +37,9 @@ class flash_producer : public frame_producer
 public:
 
 	flash_producer(const std::wstring& filename);
-	frame_ptr render_frame();
-	const video_format_desc& get_video_format_desc() const;
-	void initialize(const frame_processor_device_ptr& frame_processor);
+
+	virtual frame_ptr render_frame();
+	virtual void initialize(const frame_processor_device_ptr& frame_processor);
 
 	void param(const std::wstring& param);
 	

@@ -10,6 +10,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #include <vector>
 
@@ -30,26 +31,27 @@ public:
 
 	virtual ~frame(){}
 			
-	virtual unsigned char* data(size_t index = 0);
-	virtual size_t size(size_t index = 0) const;
+	virtual boost::iterator_range<unsigned char*> data(size_t index = 0) = 0;
 				
+	virtual std::vector<short>& get_audio_data() = 0;
+	const std::vector<short>& get_audio_data() const { const_cast<frame*>(this)->get_audio_data();}
+	
+	virtual render_transform& get_render_transform() = 0;
+	const render_transform& get_render_transform() const  { const_cast<frame*>(this)->get_render_transform();}
+	
+	static std::shared_ptr<frame>& empty();
+};
+typedef std::shared_ptr<frame> frame_ptr;
+	
+class internal_frame : public frame
+{
+public:
+	internal_frame(const pixel_format_desc& desc);
+	
+	virtual boost::iterator_range<unsigned char*> data(size_t index = 0);
+
 	virtual std::vector<short>& get_audio_data();
-	const std::vector<short>& get_audio_data() const;
-	
-	virtual render_transform& get_render_transform();
-	const render_transform& get_render_transform() const;
-	
-	static std::shared_ptr<frame>& empty()
-	{
-		static auto empty_frame = std::shared_ptr<frame>(new frame(pixel_format_desc()));
-		return empty_frame;
-	}
-
-protected:
-	frame(const pixel_format_desc& desc);
-
-	friend class frame_processor_device;
-	friend class frame_renderer;
+	virtual core::frame::render_transform& get_render_transform();
 
 	virtual void reset();
 		
@@ -64,6 +66,7 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<frame> frame_ptr;
-	
+typedef std::shared_ptr<internal_frame> internal_frame_ptr;
+
+
 }}

@@ -7,7 +7,7 @@
 
 namespace caspar { namespace core {
 	
-class composite_frame : public frame
+class composite_frame : public internal_frame
 {
 public:
 	composite_frame(const std::vector<frame_ptr>& container);
@@ -26,6 +26,6 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<composite_frame> gpu_composite_frame_ptr;
+typedef std::shared_ptr<composite_frame> composite_frame_ptr;
 	
 }}

@@ -9,12 +9,12 @@ namespace caspar { namespace core { namespace flash{
 class cg_producer : public frame_producer
 {
 public:
-
 	static const unsigned int DEFAULT_LAYER = 5000;
 
 	cg_producer();
 	
-	frame_ptr render_frame();
+	virtual frame_ptr render_frame();
+	virtual void initialize(const frame_processor_device_ptr& frame_processor);
 
 	void clear();
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));
@@ -25,8 +25,6 @@ public:
 	void update(int layer, const std::wstring& data);
 	void invoke(int layer, const std::wstring& label);
 
-	const video_format_desc& get_video_format_desc() const;
-	void initialize(const frame_processor_device_ptr& frame_processor);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

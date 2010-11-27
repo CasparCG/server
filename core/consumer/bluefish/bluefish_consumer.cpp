@@ -201,8 +201,8 @@ struct consumer::implementation
 		{		
 			encode_hanc(reinterpret_cast<BLUE_UINT32*>(hanc->data()), frame_audio_data.data(), audio_samples, audio_nchannels);
 
-			sdk_->system_buffer_write_async(frame->data(), 
-											 frame->size(), 
+			sdk_->system_buffer_write_async(frame->data().begin(), 
+											 frame->data().size(), 
 											 nullptr, 
 											 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_IMAGE));
 
@@ -218,8 +218,8 @@ struct consumer::implementation
 		}
 		else
 		{
-			sdk_->system_buffer_write_async(frame->data(),
-											 frame->size(), 
+			sdk_->system_buffer_write_async(frame->data().begin(),
+											 frame->data().size(), 
 											 nullptr,                 
 											 BlueImage_DMABuffer(current_id_, BLUE_DATA_IMAGE));
 			
