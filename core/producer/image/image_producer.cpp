@@ -30,6 +30,11 @@ struct image_producer : public frame_producer
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->data().size(), frame->data().begin());
 		frame_ = frame;
 	}
+
+	std::wstring print() const
+	{
+		return L"image_producer. filename: " + filename_;
+	}
 	
 	frame_processor_device_ptr frame_processor_;
 	std::wstring filename_;

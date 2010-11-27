@@ -47,8 +47,7 @@ namespace caspar { namespace core { namespace ffmpeg{
 struct ffmpeg_producer : public frame_producer
 {
 public:
-	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) 
-		: filename_(filename), underrun_count_(0)
+	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), underrun_count_(0)
 	{
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() <<  boost::errinfo_file_name(common::narrow(filename)));
@@ -147,9 +146,7 @@ public:
 
 	std::wstring print() const
 	{
-		std::wstringstream str;
-		str << L"ffmpeg_producer " << filename_ << L".";
-		return str.str();
+		return L"ffmpeg_producer. filename " + filename_;
 	}
 			
 	bool has_audio_;

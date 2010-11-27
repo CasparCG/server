@@ -144,6 +144,12 @@ struct image_scroll_producer : public frame_producer
 		
 		load_and_pad_image(filename_);
 	}
+	
+
+	std::wstring print() const
+	{
+		return L"image_scroll_producer. filename: " + filename_;
+	}
 
 	const video_format_desc& get_video_format_desc() const { return format_desc_; } 
 	

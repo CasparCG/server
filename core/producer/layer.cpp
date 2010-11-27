@@ -78,10 +78,14 @@ struct layer::implementation
 		}
 		catch(...)
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << L"Removed " << (foreground_ ? foreground_->print() : L"null producer") << L" from layer.";
-			foreground_ = nullptr;
-			last_frame_ = nullptr;
+			try
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				CASPAR_LOG(warning) << L"Removed " << (foreground_ ? foreground_->print() : L"empty") << L" from layer.";
+				foreground_ = nullptr;
+				last_frame_ = nullptr;
+			}
+			catch(...){}
 		}
 
 		return last_frame_;

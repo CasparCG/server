@@ -40,6 +40,7 @@ public:
 
 	virtual frame_ptr render_frame();
 	virtual void initialize(const frame_processor_device_ptr& frame_processor);
+	virtual std::wstring print() const;
 
 	void param(const std::wstring& param);
 	
