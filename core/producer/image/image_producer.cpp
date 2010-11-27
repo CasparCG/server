@@ -9,6 +9,8 @@
 
 #include <boost/assign.hpp>
 
+#include <algorithm>
+
 using namespace boost::assign;
 
 namespace caspar { namespace core { namespace image{
@@ -25,7 +27,7 @@ struct image_producer : public frame_producer
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
 		auto frame = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-		memcpy(frame->data().begin(), FreeImage_GetBits(bitmap.get()), frame->data().size());
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->data().size(), frame->data().begin());
 		frame_ = frame;
 	}
 	

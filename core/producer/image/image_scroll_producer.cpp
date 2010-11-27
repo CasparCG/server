@@ -59,12 +59,12 @@ struct image_scroll_producer : public frame_producer
 		image_height_ = std::max(height, format_desc_.height);
 
 		image_ = std::shared_ptr<unsigned char>(static_cast<unsigned char*>(scalable_aligned_malloc(image_width_*image_height_*4, 16)));
-		memset(image_.get(), 0, image_width_*image_height_*4);
+		std::fill_n(image_.get(), image_width_*image_height_*4, 0);
 
 		unsigned char* pBits = FreeImage_GetBits(pBitmap.get());
 		
 		for (size_t i = 0; i < height; ++i)
-			memcpy(&image_.get()[i * image_width_ * 4], &pBits[i* width * 4], width * 4);
+			std::copy_n(&pBits[i* width * 4], width * 4, &image_.get()[i * image_width_ * 4]);
 	}
 
 	frame_ptr do_render_frame()
@@ -87,7 +87,7 @@ struct image_scroll_producer : public frame_producer
 				int srcIndex = srcRow * format_desc_.width * 4;
 				int size = format_desc_.width * 4;
 
-				memcpy(&frame_data[dstInxex], &image_data[srcIndex], size);	
+				std::copy_n(&image_data[srcIndex], size, &frame_data[dstInxex]);
 			});				
 			
 			offset_ += delta_y;
@@ -103,7 +103,7 @@ struct image_scroll_producer : public frame_producer
 				int stopOffset = std::min<int>(correctOffset + format_desc_ .width, image_width_);
 				int size = (stopOffset - correctOffset) * 4;
 
-				memcpy(&frame_data[dstIndex], &image_data[srcIndex], size);
+				std::copy_n(&image_data[srcIndex], size, &frame_data[dstIndex]);
 			});
 
 			offset_ += delta_x;

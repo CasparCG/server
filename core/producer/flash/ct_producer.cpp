@@ -56,6 +56,4 @@ frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params)
 	return boost::filesystem::exists(filename) ? std::make_shared<ct_producer>(filename) : nullptr;
 }
 
-}
-
-}}	//namespace caspar
+}}}

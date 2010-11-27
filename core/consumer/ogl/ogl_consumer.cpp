@@ -34,6 +34,8 @@
 
 #include <windows.h>
 
+#include <algorithm>
+
 namespace caspar { namespace core { namespace ogl{	
 
 struct consumer::implementation : boost::noncopyable
@@ -160,7 +162,7 @@ struct consumer::implementation : boost::noncopyable
 		int next_index = (index_ + 1) % 2;
 				
 		auto ptr = pbos_[index_].end_write();
-		memcpy(ptr, frame->data().begin(), frame->data().size());
+		std::copy_n(frame->data().begin(), frame->data().size(), reinterpret_cast<char*>(ptr));
 
 		GL(glClear(GL_COLOR_BUFFER_BIT));	
 		pbos_[next_index].bind_texture();				

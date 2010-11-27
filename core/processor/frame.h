@@ -46,7 +46,7 @@ typedef std::shared_ptr<frame> frame_ptr;
 class internal_frame : public frame
 {
 public:
-	internal_frame(const pixel_format_desc& desc);
+	explicit internal_frame(const pixel_format_desc& desc);
 	
 	virtual boost::iterator_range<unsigned char*> data(size_t index = 0);
 

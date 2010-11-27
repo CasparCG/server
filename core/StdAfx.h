@@ -50,8 +50,10 @@
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
+#include <tbb/concurrent_unordered_map.h>
 #include <tbb/parallel_invoke.h>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_for_each.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
