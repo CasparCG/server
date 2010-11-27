@@ -69,8 +69,10 @@ struct layer::implementation
 
 			if(last_frame_ == nullptr)
 			{
-				CASPAR_LOG(warning) << L"EOF: " << foreground_->print();
-				foreground_ = foreground_->get_following_producer();
+				CASPAR_LOG(info) << L"EOF: " << foreground_->print();
+				auto following = foreground_->get_following_producer();
+				following->set_leading_producer(foreground_);
+				foreground_ = following;
 				last_frame_ = render_frame();
 			}
 		}
@@ -85,10 +87,10 @@ struct layer::implementation
 		return last_frame_;
 	}	
 		
-	tbb::atomic<bool> is_paused_;
-	frame_ptr last_frame_;
-	frame_producer_ptr foreground_;
-	frame_producer_ptr background_;
+	tbb::atomic<bool>	is_paused_;
+	frame_ptr			last_frame_;
+	frame_producer_ptr	foreground_;
+	frame_producer_ptr	background_;
 };
 
 layer::layer() : impl_(new implementation()){}

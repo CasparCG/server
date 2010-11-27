@@ -121,20 +121,23 @@ struct transition_producer::implementation : boost::noncopyable
 			
 	void set_volume(const frame_ptr& frame, int volume)
 	{
-		if(!frame)
-			return;
-
-		for(size_t n = 0; n < frame->get_audio_data().size(); ++n)
-			frame->get_audio_data()[n] = static_cast<short>((static_cast<int>(frame->get_audio_data()[n])*volume)>>8);
+		assert(volume >= 0 && volume <= 256);
+		std::for_each(frame->get_audio_data().begin(), frame->get_audio_data().end(), [&](int16_t& sample)
+		{
+			sample = static_cast<short>((static_cast<int>(sample)*volume)>>8);
+		});
 	}
 		
-	frame_ptr compose(const frame_ptr& dest_frame, frame_ptr src_frame) 
+	frame_ptr compose(frame_ptr dest_frame, frame_ptr src_frame) 
 	{	
+		if(!dest_frame && !src_frame)
+			return nullptr;
+
 		if(info_.type == transition::cut)		
 			return src_frame;
 
-		if(!dest_frame)
-			return nullptr;
+		dest_frame = dest_frame ? dest_frame : frame::empty();
+		src_frame  = src_frame  ? src_frame  : frame::empty();
 								
 		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
 		int volume = static_cast<int>(alpha*256.0);
@@ -144,43 +147,22 @@ struct transition_producer::implementation : boost::noncopyable
 			[&]{set_volume(dest_frame, volume);},
 			[&]{set_volume(src_frame, 256-volume);}
 		);
+
+		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		
 		if(info_.type == transition::mix)
 			dest_frame->get_render_transform().alpha = alpha;		
-		else if(info_.type == transition::slide)
-		{	
-			if(info_.direction == transition_direction::from_left)			
-				dest_frame->get_render_transform().pos = boost::make_tuple(-1.0+alpha, 0.0);			
-			else if(info_.direction == transition_direction::from_right)
-				dest_frame->get_render_transform().pos = boost::make_tuple(1.0-alpha, 0.0);		
-		}
+		else if(info_.type == transition::slide)			
+			dest_frame->get_render_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);			
 		else if(info_.type == transition::push)
 		{
-			if(info_.direction == transition_direction::from_left)		
-			{
-				dest_frame->get_render_transform().pos = boost::make_tuple(-1.0+alpha, 0.0);
-				if(src_frame)
-					src_frame->get_render_transform().pos = boost::make_tuple(0.0+alpha, 0.0);
-			}
-			else if(info_.direction == transition_direction::from_right)
-			{
-				dest_frame->get_render_transform().pos = boost::make_tuple(1.0-alpha, 0.0);
-				if(src_frame)
-					src_frame->get_render_transform().pos = boost::make_tuple(0.0-alpha, 0.0);
-			}
+			dest_frame->get_render_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);
+			src_frame->get_render_transform().pos = boost::make_tuple((0.0+alpha)*dir, 0.0);
 		}
 		else if(info_.type == transition::wipe)
 		{
-			if(info_.direction == transition_direction::from_left)		
-			{
-				dest_frame->get_render_transform().pos = boost::make_tuple(-1.0+alpha, 0.0);
-				dest_frame->get_render_transform().uv = boost::make_tuple(-1.0+alpha, 1.0, alpha, 0.0);
-			}
-			else if(info_.direction == transition_direction::from_right)
-			{
-				dest_frame->get_render_transform().pos = boost::make_tuple(1.0-alpha, 0.0);
-				dest_frame->get_render_transform().uv = boost::make_tuple(1.0-alpha, 1.0, 2.0-alpha, 0.0);
-			}
+			dest_frame->get_render_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);			
+			dest_frame->get_render_transform().uv = boost::make_tuple((-1.0+alpha)*dir, 1.0, 1.0-(1.0-alpha)*dir, 0.0);				
 		}
 						
 		return std::make_shared<composite_frame>(src_frame, dest_frame);
@@ -201,8 +183,7 @@ struct transition_producer::implementation : boost::noncopyable
 	frame_processor_device_ptr	frame_processor_;
 };
 
-transition_producer::transition_producer(const frame_producer_ptr& dest, const transition_info& info) 
-	: impl_(new implementation(dest, info)){}
+transition_producer::transition_producer(const frame_producer_ptr& dest, const transition_info& info) : impl_(new implementation(dest, info)){}
 frame_ptr transition_producer::render_frame(){return impl_->render_frame();}
 frame_producer_ptr transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const frame_producer_ptr& producer) { impl_->set_leading_producer(producer); }

@@ -8,6 +8,8 @@
 
 #include <tbb/parallel_for.h>
 
+#include <algorithm>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -120,7 +122,7 @@ struct video_transformer::implementation : boost::noncopyable
 				
 				tbb::parallel_for(0, static_cast<int>(desc_.planes[n].height), 1, [&](int y)
 				{
-					memcpy(result+y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+					std::copy_n(decoded + y*decoded_linesize, plane.linesize, result + y*plane.linesize);
 				});
 			});
 		}
