@@ -106,6 +106,8 @@ int main(int argc, wchar_t* argv[])
 				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" CUT 100 LOOP AUTOPLAY";
 			else if(wcmd.substr(0, 1) == L"6")
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
+			else if(wcmd.substr(0, 1) == L"7")
+				wcmd = L"LOAD 1-1 720p2500";
 
 			wcmd += L"\r\n";
 			amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
