@@ -110,7 +110,8 @@ public:
 					CASPAR_LOG(warning) << "### File read underflow has STARTED.";
 
 				// Return last frame without audio.
-				last_frame_->get_audio_data().clear();
+				if(last_frame_)
+					last_frame_->get_audio_data().clear();
 				return last_frame_;
 			}
 			else if(underrun_count_ > 0)
