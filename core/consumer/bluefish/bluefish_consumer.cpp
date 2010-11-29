@@ -185,46 +185,53 @@ struct consumer::implementation
 
 	void do_display(const frame_ptr& frame)
 	{
-		auto hanc = hanc_buffers_[current_id_];		
-		current_id_ = (current_id_+1) % hanc_buffers_.size();		
-			
-		static size_t audio_samples = 1920;
-		static size_t audio_nchannels = 2;
-		static std::vector<short> silence(audio_samples*audio_nchannels*2, 0);
-
-		auto& frame_audio_data = frame->get_audio_data().empty() ? silence : frame->get_audio_data();
-
-		unsigned long fieldCount = 0;
-		sdk_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
-				
-		if(embed_audio_)
-		{		
-			encode_hanc(reinterpret_cast<BLUE_UINT32*>(hanc->data()), frame_audio_data.data(), audio_samples, audio_nchannels);
-
-			sdk_->system_buffer_write_async(frame->data().begin(), 
-											 frame->data().size(), 
-											 nullptr, 
-											 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_IMAGE));
-
-			sdk_->system_buffer_write_async(hanc->data(),
-											 hanc->size(), 
-											 nullptr,                 
-											 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_HANC));
-
-			transferring_frame_ = frame;
-
-			if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image_HANC(current_id_))))
-				CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
-		}
-		else
+		try
 		{
-			sdk_->system_buffer_write_async(frame->data().begin(),
-											 frame->data().size(), 
-											 nullptr,                 
-											 BlueImage_DMABuffer(current_id_, BLUE_DATA_IMAGE));
+			auto hanc = hanc_buffers_[current_id_];		
+			current_id_ = (current_id_+1) % hanc_buffers_.size();		
 			
-			if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image(current_id_))))
-				CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
+			static size_t audio_samples = 1920;
+			static size_t audio_nchannels = 2;
+			static std::vector<short> silence(audio_samples*audio_nchannels*2, 0);
+
+			auto& frame_audio_data = frame->get_audio_data().empty() ? silence : frame->get_audio_data();
+
+			unsigned long fieldCount = 0;
+			sdk_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
+				
+			if(embed_audio_)
+			{		
+				encode_hanc(reinterpret_cast<BLUE_UINT32*>(hanc->data()), frame_audio_data.data(), audio_samples, audio_nchannels);
+
+				sdk_->system_buffer_write_async(frame->data().begin(), 
+												 frame->data().size(), 
+												 nullptr, 
+												 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_IMAGE));
+
+				sdk_->system_buffer_write_async(hanc->data(),
+												 hanc->size(), 
+												 nullptr,                 
+												 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_HANC));
+
+				transferring_frame_ = frame;
+
+				if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image_HANC(current_id_))))
+					CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
+			}
+			else
+			{
+				sdk_->system_buffer_write_async(frame->data().begin(),
+												 frame->data().size(), 
+												 nullptr,                 
+												 BlueImage_DMABuffer(current_id_, BLUE_DATA_IMAGE));
+			
+				if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image(current_id_))))
+					CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
+			}
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}
 
@@ -237,10 +244,7 @@ struct consumer::implementation
 		hanc_stream_info_struct hanc_stream_info;
 		memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));
 
-		hanc_stream_info.AudioDBNArray[0] = -1;
-		hanc_stream_info.AudioDBNArray[1] = -1;
-		hanc_stream_info.AudioDBNArray[2] = -1;
-		hanc_stream_info.AudioDBNArray[3] = -1;
+		std::fill_n(hanc_stream_info.AudioDBNArray, sizeof(hanc_stream_info.AudioDBNArray)/sizeof(*hanc_stream_info.AudioDBNArray), -1);
 		hanc_stream_info.hanc_data_ptr = hanc_data;
 		hanc_stream_info.video_mode = vid_fmt_;
 		

@@ -7,7 +7,7 @@
 #ifndef DISABLE_BLUEFISH
 #include "consumer/bluefish/bluefish_consumer.h"
 #endif
-#include "consumer/decklink/DecklinkVideoConsumer.h"
+#include "consumer/decklink/decklink_consumer.h"
 #include "consumer/ogl/ogl_consumer.h"
 
 #include "protocol/amcp/AMCPProtocolStrategy.h"
@@ -106,7 +106,7 @@ struct server::implementation : boost::noncopyable
 						pConsumer = std::make_shared<bluefish::consumer>(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false));					
 				#endif
 					else if(name == "decklink")
-						pConsumer = std::make_shared<decklink::DecklinkVideoConsumer>(format_desc, xml_consumer.second.get("internalkey", false));
+						pConsumer = std::make_shared<decklink::decklink_consumer>(format_desc, xml_consumer.second.get("internalkey", false));
 					else if(name == "audio")
 						pConsumer = std::make_shared<oal::consumer>(format_desc);
 

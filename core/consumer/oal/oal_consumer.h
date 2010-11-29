@@ -28,7 +28,7 @@ class consumer : public frame_consumer
 public:	
 	explicit consumer(const video_format_desc& format_desc);
 	
-	void prepare(const frame_ptr& frame);
+	virtual void prepare(const frame_ptr& frame);
 	virtual bool has_sync_clock() const {return true;}
 private:
 	struct implementation;

@@ -111,9 +111,6 @@
     <ClInclude Include="protocol\clk\CLKProtocolStrategy.h">
       <Filter>Source\protocol\clk</Filter>
     </ClInclude>
-    <ClInclude Include="consumer\decklink\DecklinkVideoConsumer.h">
-      <Filter>Source\channel\consumer\decklink</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
       <Filter>Source\channel\consumer\decklink\interop</Filter>
     </ClInclude>
@@ -237,6 +234,12 @@
     <ClInclude Include="channel.h">
       <Filter>Source\channel</Filter>
     </ClInclude>
+    <ClInclude Include="consumer\decklink\decklink_consumer.h">
+      <Filter>Source\channel\consumer\decklink</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\decklink\util.h">
+      <Filter>Source\channel\consumer\decklink</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp">
@@ -262,9 +265,6 @@
     </ClCompile>
     <ClCompile Include="protocol\clk\CLKCommand.cpp">
       <Filter>Source\protocol\clk</Filter>
-    </ClCompile>
-    <ClCompile Include="consumer\decklink\DecklinkVideoConsumer.cpp">
-      <Filter>Source\channel\consumer\decklink</Filter>
     </ClCompile>
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
       <Filter>Source\channel\consumer\decklink\interop</Filter>
@@ -364,6 +364,9 @@
     </ClCompile>
     <ClCompile Include="format\pixel_format.cpp">
       <Filter>Source\channel\format</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\decklink\decklink_consumer.cpp">
+      <Filter>Source\channel\consumer\decklink</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

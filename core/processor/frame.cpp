@@ -63,6 +63,7 @@ struct internal_frame::implementation : boost::noncopyable
 			}();
 
 			pbo_.push_back(std::make_shared<common::gl::pixel_buffer_object>(desc_.planes[n].width, desc_.planes[n].height, format));
+			pbo_.back()->is_smooth(true);
 		}
 		end_write();
 	}
