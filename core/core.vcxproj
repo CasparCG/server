@@ -159,9 +159,10 @@
     <ClInclude Include="consumer\bluefish\memory.h" />
     <ClInclude Include="consumer\bluefish\bluefish_consumer.h" />
     <ClInclude Include="consumer\bluefish\util.h" />
+    <ClInclude Include="consumer\decklink\decklink_consumer.h" />
+    <ClInclude Include="consumer\decklink\util.h" />
     <ClInclude Include="consumer\frame_consumer_device.h" />
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h" />
-    <ClInclude Include="consumer\decklink\DecklinkVideoConsumer.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
     <ClInclude Include="consumer\oal\oal_consumer.h" />
     <ClInclude Include="consumer\ogl\ogl_consumer.h" />
@@ -216,6 +217,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="consumer\decklink\decklink_consumer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="consumer\frame_consumer_device.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
@@ -223,10 +228,6 @@
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="consumer\decklink\DecklinkVideoConsumer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="consumer\oal\oal_consumer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>

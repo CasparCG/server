@@ -29,8 +29,7 @@ class consumer : public frame_consumer
 public:
 	consumer(const video_format_desc& format_desc, unsigned int deviceIndex, bool embed_audio = false);
 	
-	void display(const frame_ptr&);
-		
+	virtual void display(const frame_ptr&);		
 	virtual bool has_sync_clock() const {return true;}
 private:
 	struct implementation;

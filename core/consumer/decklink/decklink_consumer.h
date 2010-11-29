@@ -25,13 +25,13 @@
 
 namespace caspar { namespace core { namespace decklink {
 
-class DecklinkVideoConsumer : public frame_consumer
+class decklink_consumer : public frame_consumer
 {
 public:
-	explicit DecklinkVideoConsumer(const video_format_desc& format_desc, bool internalKey = false);
+	explicit decklink_consumer(const video_format_desc& format_desc, bool internalKey = false);
 	
-	void display(const frame_ptr&);
-	const video_format_desc& get_video_format_desc() const;
+	virtual void display(const frame_ptr&);
+	virtual bool has_sync_clock() const {return false;}
 private:
 	struct Implementation;
 	std::tr1::shared_ptr<Implementation> pImpl_;

@@ -38,7 +38,8 @@ class consumer : public frame_consumer
 public:	
 	explicit consumer(const video_format_desc& format_desc, unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
 	
-	void display(const frame_ptr& frame);
+	virtual void display(const frame_ptr& frame);
+	virtual bool has_sync_clock() const {return false;}
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
