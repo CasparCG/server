@@ -214,7 +214,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consumers\bluefish\BluefishException.h" />
-    <ClInclude Include="consumers\bluefish\BluefishFrameManager.h" />
     <ClInclude Include="consumers\bluefish\BluefishMemory.h" />
     <ClInclude Include="consumers\bluefish\BluefishPlaybackStrategy.h" />
     <ClInclude Include="consumers\bluefish\BluefishUtil.h" />
@@ -336,11 +335,6 @@
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="consumers\bluefish\BluefishFrameManager.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="consumers\bluefish\BluefishPlaybackStrategy.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>

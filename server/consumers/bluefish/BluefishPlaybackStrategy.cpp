@@ -20,6 +20,7 @@
  
 #include "..\..\StdAfx.h"
 
+#include "..\..\frame\SystemFrameManager.h"
 #include "..\..\utils\image\Image.hpp"
 #include "..\..\audio\AudioManager.h"
 #include "..\..\utils\Process.h"
@@ -42,15 +43,17 @@ using namespace caspar::utils;
 
 struct BluefishPlaybackStrategy::Implementation
 {	
-	Implementation(BlueFishVideoConsumer* pConsumer) : pConsumer_(pConsumer), currentReservedFrameIndex_(0), log_(true), pSDK_(pConsumer->pSDK_)
+	Implementation(BlueFishVideoConsumer* pConsumer, unsigned int memFmt, unsigned int updFmt, unsigned vidFmt) 
+		: pConsumer_(pConsumer), currentReservedFrameIndex_(0), log_(true), pSDK_(pConsumer->pSDK_), vidFmt_(vidFmt)
 	{
-		auto golden = BlueVelvetGolden(pConsumer_->vidFmt_, pConsumer_->memFmt_, pConsumer_->updFmt_); // 5 196 248
-		auto num_frames = 3;
+		const size_t FRAME_POOL_SIZE = 3;
+		const auto fmtDesc = FrameFormatDescription::FormatDescriptions[pConsumer->currentFormat_];
 
-		page_locked_buffer::reserve_working_size((golden + MAX_HANC_BUFFER_SIZE) * num_frames + MAX_HANC_BUFFER_SIZE);
+		auto golden = BlueVelvetGolden(vidFmt, memFmt, updFmt); // 5 196 248
+		page_locked_buffer::reserve_working_size((golden + MAX_HANC_BUFFER_SIZE) * FRAME_POOL_SIZE + MAX_HANC_BUFFER_SIZE);
 		
-		for(int n = 0; n < num_frames; ++n)
-			reservedFrames_.push_back(std::make_shared<blue_dma_buffer>(pConsumer_->pFrameManager_->GetFrameFormatDescription().size, n));
+		for(size_t n = 0; n < FRAME_POOL_SIZE; ++n)
+			reservedFrames_.push_back(std::make_shared<blue_dma_buffer>(fmtDesc.size, n));
 		
 		audio_buffer_ = std::make_shared<page_locked_buffer>(MAX_HANC_BUFFER_SIZE);
 						
@@ -58,21 +61,23 @@ struct BluefishPlaybackStrategy::Implementation
 			render_func_ = std::bind(&BluefishPlaybackStrategy::Implementation::DoRenderEmbAudio, this, std::placeholders::_1, std::placeholders::_2);	
 		else
 			render_func_ = std::bind(&BluefishPlaybackStrategy::Implementation::DoRender, this, std::placeholders::_1, std::placeholders::_2);	
+
+		pFrameManager_ = std::make_shared<SystemFrameManager>(fmtDesc);
 	}
 	
 	FramePtr GetReservedFrame() 
 	{
-		return pConsumer_->pFrameManager_->CreateFrame();
+		return pFrameManager_->CreateFrame();
 	}
 
 	FrameManagerPtr GetFrameManager()
 	{
-		return pConsumer_->pFrameManager_;
+		return pFrameManager_;
 	}
 
 	void DisplayFrame(Frame* pFrame)
 	{
-		if(!pFrame->HasValidDataPtr() || pFrame->GetDataSize() != pConsumer_->pFrameManager_->GetFrameFormatDescription().size)
+		if(!pFrame->HasValidDataPtr() || pFrame->GetDataSize() != pFrameManager_->GetFrameFormatDescription().size)
 		{			
 			LOG << TEXT("BLUEFISH: Tried to render frame with no data or invalid data size");
 			return;
@@ -140,7 +145,7 @@ struct BluefishPlaybackStrategy::Implementation
 	void EncodeHANC(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
 		auto card_type = pSDK_->has_video_cardtype();
-		auto vid_fmt = pConsumer_->vidFmt_;
+		auto vid_fmt = vidFmt_;
 		auto sample_type = (AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN);
 		
 		hanc_stream_info_struct hanc_stream_info;
@@ -183,7 +188,7 @@ struct BluefishPlaybackStrategy::Implementation
 		std::for_each(frame_audio_data.begin(), frame_audio_data.end(), [&](const audio::AudioDataChunkPtr& chunk)
 		{
 			BLUE_UINT16* src = reinterpret_cast<BLUE_UINT16*>(chunk->GetDataPtr());
-			for(int n = 0; n < size; ++n)
+			for(size_t n = 0; n < size; ++n)
 				dest[n] = static_cast<BLUE_UINT16>(static_cast<BLUE_UINT32>(dest[n])+static_cast<BLUE_UINT32>(src[n]));
 		});
 	}
@@ -197,9 +202,13 @@ struct BluefishPlaybackStrategy::Implementation
 	int currentReservedFrameIndex_;
 	
 	page_locked_buffer_ptr audio_buffer_;
+
+	SystemFrameManagerPtr pFrameManager_;
+	unsigned int vidFmt_;
 };
 
-BluefishPlaybackStrategy::BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer) : pImpl_(new Implementation(pConsumer)){}
+BluefishPlaybackStrategy::BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer, unsigned int memFmt, unsigned int updFmt, unsigned vidFmt) 
+	: pImpl_(new Implementation(pConsumer, memFmt, updFmt, vidFmt)){}
 IVideoConsumer* BluefishPlaybackStrategy::GetConsumer(){return pImpl_->pConsumer_;}
 FramePtr BluefishPlaybackStrategy::GetReservedFrame(){return pImpl_->GetReservedFrame();}
 FrameManagerPtr BluefishPlaybackStrategy::GetFrameManager(){return pImpl_->GetFrameManager();}

@@ -384,9 +384,6 @@
     <ClInclude Include="producers\ffmpeg\ffmpegmanager.h">
       <Filter>producers\ffmpeg</Filter>
     </ClInclude>
-    <ClInclude Include="consumers\bluefish\BluefishFrameManager.h">
-      <Filter>consumers\bluefish</Filter>
-    </ClInclude>
     <ClInclude Include="consumers\bluefish\BluefishMemory.h">
       <Filter>consumers\bluefish</Filter>
     </ClInclude>
@@ -604,9 +601,6 @@
     </ClCompile>
     <ClCompile Include="producers\ffmpeg\FFmpegManager.cpp">
       <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="consumers\bluefish\BluefishFrameManager.cpp">
-      <Filter>consumers\bluefish</Filter>
     </ClCompile>
     <ClCompile Include="consumers\bluefish\BluefishPlaybackStrategy.cpp">
       <Filter>consumers\bluefish</Filter>

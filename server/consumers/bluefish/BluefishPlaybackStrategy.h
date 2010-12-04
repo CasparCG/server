@@ -32,7 +32,7 @@ class BluefishPlaybackStrategy : public IFramePlaybackStrategy
 	std::shared_ptr<Implementation> pImpl_;
 
 public:
-	explicit BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer);
+	explicit BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer, unsigned int memFmt, unsigned int updFmt, unsigned vidFmt);
 
 	virtual void DisplayFrame(Frame*);
 	virtual IVideoConsumer* GetConsumer();
