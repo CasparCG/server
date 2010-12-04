@@ -416,11 +416,11 @@ bool BlueFishVideoConsumer::DoSetupDevice(unsigned int deviceIndex, tstring strD
 	}
 	else
 	{
-		value.ulVal = 1;
+		value.ulVal = blue_emb_audio_enable | blue_emb_audio_group1_enable;
 		if(!BLUE_PASS(pSDK_->SetCardProperty(EMBEDEDDED_AUDIO_OUTPUT, value))) {
 			LOG << TEXT("BLUECARD ERROR: Failed to enable embedded audio. (device ") << _deviceIndex << TEXT(")");
 		}
-		LOG << TEXT("BLUECARD INFO: Enabled embedded-audio") << _deviceIndex << TEXT(")");
+		LOG << TEXT("BLUECARD INFO: Enabled embedded-audio. (device ") << _deviceIndex << TEXT(")");
 	}
 
 	LOG << TEXT("BLUECARD INFO: Successfully configured bluecard for ") << strDesiredFrameFormat << TEXT(". (device ") << _deviceIndex << TEXT(")");

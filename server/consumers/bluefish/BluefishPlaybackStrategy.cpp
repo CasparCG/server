@@ -30,7 +30,7 @@
 #include <BlueVelvet4.h>
 #include <BlueHancUtils.h>
 
-#include <vector>
+#include <array>
 #include <functional>
 #include <numeric>
 
@@ -44,16 +44,15 @@ using namespace caspar::utils;
 struct BluefishPlaybackStrategy::Implementation
 {	
 	Implementation(BlueFishVideoConsumer* pConsumer, unsigned int memFmt, unsigned int updFmt, unsigned vidFmt) 
-		: pConsumer_(pConsumer), currentReservedFrameIndex_(0), log_(true), pSDK_(pConsumer->pSDK_), vidFmt_(vidFmt)
+		: pConsumer_(pConsumer), log_(true), pSDK_(pConsumer->pSDK_), vidFmt_(vidFmt)
 	{
-		const size_t FRAME_POOL_SIZE = 3;
 		const auto fmtDesc = FrameFormatDescription::FormatDescriptions[pConsumer->currentFormat_];
 
 		auto golden = BlueVelvetGolden(vidFmt, memFmt, updFmt); // 5 196 248
-		page_locked_buffer::reserve_working_size((golden + MAX_HANC_BUFFER_SIZE) * FRAME_POOL_SIZE + MAX_HANC_BUFFER_SIZE);
+		page_locked_buffer::reserve_working_size((golden + MAX_HANC_BUFFER_SIZE) * reservedFrames_.size() + MAX_HANC_BUFFER_SIZE);
 		
-		for(size_t n = 0; n < FRAME_POOL_SIZE; ++n)
-			reservedFrames_.push_back(std::make_shared<blue_dma_buffer>(fmtDesc.size, n));
+		for(size_t n = 0; n < reservedFrames_.size(); ++n)
+			reservedFrames_[n] = std::make_shared<blue_dma_buffer>(fmtDesc.size, n);
 		
 		audio_buffer_ = std::make_shared<page_locked_buffer>(MAX_HANC_BUFFER_SIZE);
 						
@@ -82,13 +81,11 @@ struct BluefishPlaybackStrategy::Implementation
 			LOG << TEXT("BLUEFISH: Tried to render frame with no data or invalid data size");
 			return;
 		}
-		
-		auto buffer = reservedFrames_[currentReservedFrameIndex_];
-		utils::image::Copy(buffer->image_data(), pFrame->GetDataPtr(), buffer->image_size());
-		
-		currentReservedFrameIndex_ = (currentReservedFrameIndex_+1) % reservedFrames_.size();		
-			
-		render_func_(buffer, pFrame->GetAudioData());
+
+		utils::image::Copy(reservedFrames_.front()->image_data(), pFrame->GetDataPtr(), pFrame->GetDataSize());					
+		render_func_(reservedFrames_.front(), pFrame->GetAudioData());
+
+		std::rotate(reservedFrames_.begin(), reservedFrames_.begin() + 1, reservedFrames_.end());
 	}
 	
 	void DoRender(const blue_dma_buffer_ptr& buffer, const AudioDataChunkList& frame_audio_data) 
@@ -110,12 +107,12 @@ struct BluefishPlaybackStrategy::Implementation
 	}
 	
 	void DoRenderEmbAudio(const blue_dma_buffer_ptr& buffer, const AudioDataChunkList& frame_audio_data) 
-	{
+	{				
+		static const size_t audio_samples = 1920;
+		static const size_t audio_nchannels = 2;
+
 		unsigned long fieldCount = 0;
 		pSDK_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
-				
-		static size_t audio_samples = 1920;
-		static size_t audio_nchannels = 2;
 		
 		MixAudio(reinterpret_cast<BLUE_UINT16*>(audio_buffer_->data()), frame_audio_data, audio_samples, audio_nchannels);		
 		EncodeHANC(reinterpret_cast<BLUE_UINT32*>(buffer->hanc_data()), audio_buffer_->data(), audio_samples, audio_nchannels);
@@ -198,8 +195,7 @@ struct BluefishPlaybackStrategy::Implementation
 
 	bool log_;
 	BlueFishVideoConsumer* pConsumer_;
-	std::vector<blue_dma_buffer_ptr> reservedFrames_;
-	int currentReservedFrameIndex_;
+	std::array<blue_dma_buffer_ptr, 3> reservedFrames_;
 	
 	page_locked_buffer_ptr audio_buffer_;
 
