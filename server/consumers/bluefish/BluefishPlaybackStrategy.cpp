@@ -49,12 +49,12 @@ struct BluefishPlaybackStrategy::Implementation
 		const auto fmtDesc = FrameFormatDescription::FormatDescriptions[pConsumer->currentFormat_];
 
 		auto golden = BlueVelvetGolden(vidFmt, memFmt, updFmt); // 5 196 248
-		page_locked_buffer::reserve_working_size((golden + MAX_HANC_BUFFER_SIZE) * reservedFrames_.size() + MAX_HANC_BUFFER_SIZE);
+		page_locked_allocator::reserve((golden + MAX_HANC_BUFFER_SIZE) * reservedFrames_.size() + MAX_HANC_BUFFER_SIZE);
 		
 		for(size_t n = 0; n < reservedFrames_.size(); ++n)
 			reservedFrames_[n] = std::make_shared<blue_dma_buffer>(fmtDesc.size, n);
 		
-		audio_buffer_ = std::make_shared<page_locked_buffer>(MAX_HANC_BUFFER_SIZE);
+		audio_buffer_.reset(static_cast<BLUE_UINT16*>(page_locked_allocator::allocate(MAX_HANC_BUFFER_SIZE)));
 						
 		if(GetApplication()->GetSetting(L"embedded-audio") == L"true")
 			render_func_ = std::bind(&BluefishPlaybackStrategy::Implementation::DoRenderEmbAudio, this, std::placeholders::_1, std::placeholders::_2);	
@@ -114,8 +114,8 @@ struct BluefishPlaybackStrategy::Implementation
 		unsigned long fieldCount = 0;
 		pSDK_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
 		
-		MixAudio(reinterpret_cast<BLUE_UINT16*>(audio_buffer_->data()), frame_audio_data, audio_samples, audio_nchannels);		
-		EncodeHANC(reinterpret_cast<BLUE_UINT32*>(buffer->hanc_data()), audio_buffer_->data(), audio_samples, audio_nchannels);
+		MixAudio(reinterpret_cast<BLUE_UINT16*>(audio_buffer_.get()), frame_audio_data, audio_samples, audio_nchannels);		
+		EncodeHANC(reinterpret_cast<BLUE_UINT32*>(buffer->hanc_data()), audio_buffer_.get(), audio_samples, audio_nchannels);
 
 		pSDK_->system_buffer_write_async(buffer->image_data(), 
 										 buffer->image_size(), 
@@ -197,7 +197,7 @@ struct BluefishPlaybackStrategy::Implementation
 	BlueFishVideoConsumer* pConsumer_;
 	std::array<blue_dma_buffer_ptr, 3> reservedFrames_;
 	
-	page_locked_buffer_ptr audio_buffer_;
+	std::unique_ptr<BLUE_UINT16, page_locked_allocator::deallocator> audio_buffer_;
 
 	SystemFrameManagerPtr pFrameManager_;
 	unsigned int vidFmt_;

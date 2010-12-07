@@ -91,7 +91,7 @@ using namespace utils;
 enum ControllerTransports { TCP, Serial, TransportsCount };
 enum ControllerProtocols { AMCP, CII, CLOCK, ProtocolsCount };
 
-const TCHAR* Application::versionString_(TEXT("CG 1.8.1.3"));
+const TCHAR* Application::versionString_(TEXT("CG 1.8.1.4"));
 const TCHAR* Application::serviceName_(TEXT("Caspar service"));
 
 Application::Application(const tstring& cmdline, HINSTANCE hInstance) :	   hInstance_(hInstance), logLevel_(2), logDir_(TEXT("log")), 
@@ -301,8 +301,8 @@ LRESULT Application::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 	static int oldyday = 0;
 	static UINT_PTR timerID = 0;
 	
-    switch (message) 
-    {
+	switch (message) 
+	{
 		case WM_PAINT:
 			BeginPaint(hWnd, &ps);
 			EndPaint(hWnd, &ps);
@@ -383,8 +383,8 @@ LRESULT Application::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			break;
 		default:
 			return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
+	}
+	return 0;
 }
 
 /////////////////////////////
@@ -1021,14 +1021,14 @@ tstring Application::GetSetting(const tstring& key) {
 void Application::InstallService() 
 {
 	tstringstream message;
-    SC_HANDLE schSCManager;
+	SC_HANDLE schSCManager;
 	SC_HANDLE schService;
 	TCHAR szPath[MAX_PATH];
 
 	if(!GetModuleFileName(NULL, szPath, MAX_PATH)) {
 		message << TEXT("Error: ") << GetLastError();
 		MessageBox(NULL, message.str().c_str(), TEXT("Cannot install service"), MB_OK);
-        return;
+		return;
 	}
 
 	// Get a handle to the SCM database. 
@@ -1067,57 +1067,57 @@ void Application::InstallService()
 		CloseServiceHandle(schSCManager);
 		MessageBox(NULL, message.str().c_str(), TEXT("Cannot install service"), MB_OK);
 		return;
-    }
-    else
+	}
+	else
 		MessageBox(NULL, TEXT("Service installed successfully"), TEXT("Done!"), MB_OK);
 
-    CloseServiceHandle(schService); 
-    CloseServiceHandle(schSCManager);
+	CloseServiceHandle(schService); 
+	CloseServiceHandle(schSCManager);
 }
 
 void Application::UninstallService()
 {
 	tstringstream message;
-    SC_HANDLE schSCManager;
-    SC_HANDLE schService;
+	SC_HANDLE schSCManager;
+	SC_HANDLE schService;
 
-    // Get a handle to the SCM database. 
-    schSCManager = OpenSCManager( 
-        NULL,                    // local computer
-        NULL,                    // ServicesActive database 
-        SC_MANAGER_ALL_ACCESS);  // full access rights 
+	// Get a handle to the SCM database. 
+	schSCManager = OpenSCManager( 
+		NULL,                    // local computer
+		NULL,                    // ServicesActive database 
+		SC_MANAGER_ALL_ACCESS);  // full access rights 
  
-    if(schSCManager == NULL){
+	if(schSCManager == NULL){
 		message << TEXT("OpenSCManager failed. Error: ") << GetLastError();
 		MessageBox(NULL, message.str().c_str(), TEXT("Cannot uninstall service"), MB_OK);
-        return;
-    }
+		return;
+	}
 
-    // Get a handle to the service.
-    schService = OpenService( 
-        schSCManager,         // SCM database 
-        serviceName_,  // name of service 
-        DELETE);              // need delete access 
+	// Get a handle to the service.
+	schService = OpenService( 
+		schSCManager,         // SCM database 
+		serviceName_,  // name of service 
+		DELETE);              // need delete access 
  
-    if (schService == NULL)
-    { 
+	if (schService == NULL)
+	{ 
 		message << TEXT("OpenService failed. Error: ") << GetLastError();
 		MessageBox(NULL, message.str().c_str(), TEXT("Cannot uninstall service"), MB_OK);
-        CloseServiceHandle(schSCManager);
-        return;
-    }
+		CloseServiceHandle(schSCManager);
+		return;
+	}
 
-    // Delete the service.
-    if (!DeleteService(schService)) 
-    {
+	// Delete the service.
+	if (!DeleteService(schService)) 
+	{
 		message << TEXT("DeleteService failed. Error: ") << GetLastError();
 		MessageBox(NULL, message.str().c_str(), TEXT("Cannot uninstall service"), MB_OK);
-    }
-    else
- 		MessageBox(NULL, TEXT("Service uninstalled successfully"), TEXT("Done!"), MB_OK);
+	}
+	else
+		MessageBox(NULL, TEXT("Service uninstalled successfully"), TEXT("Done!"), MB_OK);
 
-    CloseServiceHandle(schService); 
-    CloseServiceHandle(schSCManager);
+	CloseServiceHandle(schService); 
+	CloseServiceHandle(schSCManager);
 }
 
 }

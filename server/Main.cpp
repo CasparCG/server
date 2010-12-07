@@ -22,6 +22,7 @@
 #include "Application.h"
 #include "utils\FileOutputStream.h"
 #include <tbb/task_scheduler_init.h>
+#include <tbb/tbbmalloc_proxy.h>
 
 //the easy way to make it possible to forward WndProc messages into the application-object
 caspar::Application* pGlobal_Application = 0;

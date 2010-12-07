@@ -608,6 +608,9 @@
     <ClCompile Include="consumers\bluefish\BlueFishVideoConsumer.cpp">
       <Filter>consumers\bluefish</Filter>
     </ClCompile>
+    <ClCompile Include="consumers\bluefish\BlueFishMemory.cpp">
+      <Filter>consumers\bluefish</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="consumers\decklink\DeckLinkAPI.idl">
