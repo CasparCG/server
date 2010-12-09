@@ -35,7 +35,7 @@
 
 #pragma warning(push)
 
-#include "..\..\processor\frame.h"
+#include "..\..\processor\write_frame.h"
 #include "..\..\format\video_format.h"
 
 #include <ocmm.h>

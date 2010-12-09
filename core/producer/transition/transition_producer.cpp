@@ -22,8 +22,8 @@
 #include "transition_producer.h"
 
 #include "../../format/video_format.h"
-#include "../../processor/frame.h"
 #include "../../processor/composite_frame.h"
+#include "../../processor/transform_frame.h"
 #include "../../processor/frame_processor_device.h"
 
 #include "../../producer/frame_producer_device.h"
@@ -51,18 +51,18 @@ struct transition_producer::implementation : boost::noncopyable
 		org_source_producer_ = source_producer_ = producer;
 	}
 		
-	frame_ptr render_frame()
+	gpu_frame_ptr render_frame()
 	{
 		if(current_frame_ == 0)
 			CASPAR_LOG(info) << "Transition started.";
 
-		frame_ptr result = [&]() -> frame_ptr
+		gpu_frame_ptr result = [&]() -> gpu_frame_ptr
 		{
 			if(current_frame_++ >= info_.duration)
 				return nullptr;
 
-			frame_ptr source;
-			frame_ptr dest;
+			gpu_frame_ptr source;
+			gpu_frame_ptr dest;
 
 			tbb::parallel_invoke
 			(
@@ -73,18 +73,18 @@ struct transition_producer::implementation : boost::noncopyable
 			return compose(dest, source);
 		}();
 
-		if(result == nullptr)
+		if(!result)
 			CASPAR_LOG(info) << "Transition ended.";
 
 		return result;
 	}
 
-	frame_ptr render_frame(frame_producer_ptr& producer)
+	gpu_frame_ptr render_frame(frame_producer_ptr& producer)
 	{
-		if(producer == nullptr)
+		if(!producer)
 			return nullptr;
 
-		frame_ptr frame;
+		gpu_frame_ptr frame;
 		try
 		{
 			frame = producer->render_frame();
@@ -98,7 +98,7 @@ struct transition_producer::implementation : boost::noncopyable
 
 		if(frame == nullptr)
 		{
-			if(producer == nullptr || producer->get_following_producer() == nullptr)
+			if(!producer || !producer->get_following_producer())
 				return nullptr;
 
 			try
@@ -118,54 +118,42 @@ struct transition_producer::implementation : boost::noncopyable
 		}
 		return frame;
 	}
-			
-	void set_volume(const frame_ptr& frame, int volume)
-	{
-		assert(volume >= 0 && volume <= 256);
-		std::for_each(frame->get_audio_data().begin(), frame->get_audio_data().end(), [&](int16_t& sample)
-		{
-			sample = static_cast<short>((static_cast<int>(sample)*volume)>>8);
-		});
-	}
-		
-	frame_ptr compose(frame_ptr dest_frame, frame_ptr src_frame) 
+					
+	gpu_frame_ptr compose(gpu_frame_ptr dest_frame, gpu_frame_ptr src_frame) 
 	{	
 		if(!dest_frame && !src_frame)
 			return nullptr;
 
 		if(info_.type == transition::cut)		
 			return src_frame;
-
-		dest_frame = dest_frame ? dest_frame : frame::empty();
-		src_frame  = src_frame  ? src_frame  : frame::empty();
-								
+										
 		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
-		int volume = static_cast<int>(alpha*256.0);
-				
-		tbb::parallel_invoke
-		(
-			[&]{set_volume(dest_frame, volume);},
-			[&]{set_volume(src_frame, 256-volume);}
-		);
+		unsigned char volume = static_cast<unsigned char>(alpha*256.0);
+
+		auto my_src_frame = std::make_shared<transform_frame>(src_frame);
+		auto my_dest_frame = std::make_shared<transform_frame>(dest_frame);
+
+		my_src_frame->audio_volume(255-volume);
+		my_dest_frame->audio_volume(volume);
 
 		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		
 		if(info_.type == transition::mix)
-			dest_frame->get_render_transform().alpha = alpha;		
+			my_dest_frame->alpha(alpha);		
 		else if(info_.type == transition::slide)			
-			dest_frame->get_render_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);			
+			my_dest_frame->translate((-1.0+alpha)*dir, 0.0);			
 		else if(info_.type == transition::push)
 		{
-			dest_frame->get_render_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);
-			src_frame->get_render_transform().pos = boost::make_tuple((0.0+alpha)*dir, 0.0);
+			my_dest_frame->translate((-1.0+alpha)*dir, 0.0);
+			my_src_frame->translate((0.0+alpha)*dir, 0.0);
 		}
 		else if(info_.type == transition::wipe)
 		{
-			dest_frame->get_render_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);			
-			dest_frame->get_render_transform().uv = boost::make_tuple((-1.0+alpha)*dir, 1.0, 1.0-(1.0-alpha)*dir, 0.0);				
+			my_dest_frame->translate((-1.0+alpha)*dir, 0.0);			
+			my_dest_frame->texcoord((-1.0+alpha)*dir, 1.0, 1.0-(1.0-alpha)*dir, 0.0);				
 		}
 						
-		return std::make_shared<composite_frame>(src_frame, dest_frame);
+		return std::make_shared<composite_frame>(my_src_frame, my_dest_frame);
 	}
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -192,7 +180,7 @@ struct transition_producer::implementation : boost::noncopyable
 };
 
 transition_producer::transition_producer(const frame_producer_ptr& dest, const transition_info& info) : impl_(new implementation(dest, info)){}
-frame_ptr transition_producer::render_frame(){return impl_->render_frame();}
+gpu_frame_ptr transition_producer::render_frame(){return impl_->render_frame();}
 frame_producer_ptr transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const frame_producer_ptr& producer) { impl_->set_leading_producer(producer); }
 void transition_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}

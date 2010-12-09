@@ -5,7 +5,7 @@
 #include <string>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
-       
+	   
 namespace caspar { namespace common {
 
 inline std::wstring widen(const std::string& str, const std::locale& locale = std::locale())
@@ -27,7 +27,7 @@ inline std::wstring widen(const std::wstring& str, const std::locale&)
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
-       
+	   
 inline std::string narrow(const std::wstring& str, const std::locale& locale = std::locale())
 {
 	std::stringstream sstr;
@@ -37,7 +37,7 @@ inline std::string narrow(const std::wstring& str, const std::locale& locale = s
 		sstr << ctfacet.narrow(str[i], 0) ;
 	return sstr.str() ;
 }
-       
+	   
 inline std::string narrow(const std::string& str, const std::locale&)
 {
 	return str ;

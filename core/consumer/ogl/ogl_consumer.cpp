@@ -23,7 +23,7 @@
 #include "ogl_consumer.h"
 
 #include "../../format/video_format.h"
-#include "../../processor/frame.h"
+#include "../../processor/write_frame.h"
 #include "../../../common/gl/utility.h"
 #include "../../../common/gl/pixel_buffer_object.h"
 
@@ -87,7 +87,7 @@ struct consumer::implementation : boost::noncopyable
 	
 	~implementation()
 	{
-		frame_buffer_.push(nullptr),
+		frame_buffer_.push(nullptr);
 		thread_.join();
 	}
 
@@ -156,13 +156,13 @@ struct consumer::implementation : boost::noncopyable
 		return std::make_pair(width, height);
 	}
 
-	void render(const frame_ptr& frame)
+	void render(const consumer_frame& frame)
 	{		
 		index_ = (index_ + 1) % 2;
 		int next_index = (index_ + 1) % 2;
 				
 		auto ptr = pbos_[index_].end_write();
-		std::copy_n(frame->data().begin(), frame->data().size(), reinterpret_cast<char*>(ptr));
+		std::copy_n(frame.data().begin(), frame.data().size(), reinterpret_cast<char*>(ptr));
 
 		GL(glClear(GL_COLOR_BUFFER_BIT));	
 		pbos_[next_index].bind_texture();				
@@ -176,42 +176,40 @@ struct consumer::implementation : boost::noncopyable
 		pbos_[next_index].begin_write();
 	}
 			
-	void display(const frame_ptr& frame)
+	void display(const consumer_frame& frame)
 	{
-		if(frame == nullptr)
-			return;		
-
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
 
-		frame_buffer_.push(frame);
+		frame_buffer_.push(std::make_shared<consumer_frame>(frame));
 	}
 
 	void run()
 	{			
 		init();
 				
-		frame_ptr frame;
-		do
+		while(true)
 		{
 			try
 			{		
+				consumer_frame_ptr frame;
 				frame_buffer_.pop(frame);
-				if(frame != nullptr)
-				{
-					sf::Event e;
-					while(window_.GetEvent(e)){}
-					window_.SetActive();
-					render(frame);
-					window_.Display();
-				}
+
+				if(!frame)
+					return;
+
+				sf::Event e;
+				while(window_.GetEvent(e)){}
+				window_.SetActive();
+				render(*frame);
+				window_.Display();
+				
 			}
 			catch(...)
 			{
 				exception_ = std::current_exception();
 			}
 		}		
-		while(frame != nullptr);
 	}		
 
 	float wratio_;
@@ -234,12 +232,12 @@ struct consumer::implementation : boost::noncopyable
 
 	std::exception_ptr exception_;
 	boost::thread thread_;
-	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
+	tbb::concurrent_bounded_queue<consumer_frame_ptr> frame_buffer_;
 
 	sf::Window window_;
 };
 
 consumer::consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
-void consumer::display(const frame_ptr& frame){impl_->display(frame);}
+void consumer::display(const consumer_frame& frame){impl_->display(frame);}
 }}}

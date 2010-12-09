@@ -3,7 +3,8 @@
 #include "video_transformer.h"
 
 #include "../../../format/video_format.h"
-#include "../../../processor/frame.h"
+#include "../../../processor/write_frame.h"
+#include "../../../processor/transform_frame.h"
 #include "../../../processor/frame_processor_device.h"
 
 #include <tbb/parallel_for.h>
@@ -25,7 +26,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar { namespace core { namespace ffmpeg{
+namespace caspar { namespace core { namespace ffmpeg {
 	
 pixel_format::type get_pixel_format(PixelFormat pix_fmt)
 {
@@ -103,12 +104,12 @@ struct video_transformer::implementation : boost::noncopyable
 		}
 	}
 	
-	frame_ptr execute(const std::shared_ptr<AVFrame>& decoded_frame)
+	gpu_frame_ptr execute(const std::shared_ptr<AVFrame>& decoded_frame)
 	{				
 		if(decoded_frame == nullptr)
 			return nullptr;
 				
-		frame_ptr result_frame;
+		write_frame_ptr result_frame;
 		if(sws_context_ == nullptr)
 		{
 			result_frame = frame_processor_->create_frame(desc_);
@@ -139,11 +140,14 @@ struct video_transformer::implementation : boost::noncopyable
 
 		// TODO: Make generic for all formats and modes.
 		if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field
-			result_frame->get_render_transform().pos = boost::make_tuple(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));
+		{
+			auto transform = std::make_shared<transform_frame>(result_frame);
+			transform->translate(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));
+			return transform;
+		}
 		
 		return result_frame;
 	}
-
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
 		frame_processor_ = frame_processor;
@@ -161,6 +165,6 @@ struct video_transformer::implementation : boost::noncopyable
 };
 
 video_transformer::video_transformer(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
-frame_ptr video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
+gpu_frame_ptr video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
 void video_transformer::initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor); }
 }}}
