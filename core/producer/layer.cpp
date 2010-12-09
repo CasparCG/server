@@ -22,8 +22,6 @@ struct layer::implementation
 		{
 			foreground_ = nullptr;	
 			last_frame_ = frame_producer->render_frame();
-			if(last_frame_ != nullptr)
-				last_frame_->get_audio_data().clear(); // No audio
 		}
 		else if(option == load_option::auto_play)
 			play();			
@@ -58,7 +56,7 @@ struct layer::implementation
 		last_frame_ = nullptr;
 	}
 	
-	frame_ptr render_frame()
+	gpu_frame_ptr render_frame()
 	{		
 		if(!foreground_ || is_paused_)
 			return last_frame_;
@@ -92,7 +90,7 @@ struct layer::implementation
 	}	
 		
 	tbb::atomic<bool>	is_paused_;
-	frame_ptr			last_frame_;
+	gpu_frame_ptr			last_frame_;
 	frame_producer_ptr	foreground_;
 	frame_producer_ptr	background_;
 };
@@ -110,7 +108,7 @@ void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 void layer::clear(){impl_->clear();}
-frame_ptr layer::render_frame() {return impl_->render_frame();}
+gpu_frame_ptr layer::render_frame() {return impl_->render_frame();}
 frame_producer_ptr layer::foreground() const { return impl_->foreground_;}
 frame_producer_ptr layer::background() const { return impl_->background_;}
 }}

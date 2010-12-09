@@ -19,7 +19,7 @@
 */
 #pragma once
 
-#include "../processor/frame.h"
+#include "../processor/write_frame.h"
 #include "../processor/frame_processor_device.h"
 
 #include <boost/noncopyable.hpp>
@@ -34,7 +34,7 @@ public:
 	virtual ~frame_producer(){}	
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	/// \fn	virtual frame_ptr :::render_frame() = 0;
+	/// \fn	virtual gpu_frame_ptr :::render_frame() = 0;
 	///
 	/// \brief	Renders a frame.
 	/// 		
@@ -42,7 +42,7 @@ public:
 	///
 	/// \return	The frame. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual frame_ptr render_frame() = 0;
+	virtual gpu_frame_ptr render_frame() = 0;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	/// \fn	virtual std::shared_ptr<frame_producer> :::get_following_producer() const

@@ -7,7 +7,7 @@
 #include "frame_consumer_device.h"
 
 #include "../format/video_format.h"
-#include "../processor/frame.h"
+#include "../processor/write_frame.h"
 #include "../processor/frame_processor_device.h"
 
 #include <tbb/concurrent_queue.h>
@@ -62,7 +62,6 @@ public:
 		//}
 
 		needs_clock_ = !std::any_of(consumers.begin(), consumers.end(), std::mem_fn(&frame_consumer::has_sync_clock));
-		frame_buffer_.set_capacity(3);
 		is_running_ = true;
 		display_thread_ = boost::thread([=]{run();});
 	}
@@ -83,16 +82,12 @@ public:
 		{
 			if(needs_clock_)
 				clock.synchronize();
-			
-			frame_ptr frame;
-			while((frame == nullptr || frame == frame::empty()) && is_running_)			
-				frame_processor_->receive(frame);
-			
-			display_frame(frame);			
+						
+			display_frame(frame_processor_->receive());			
 		}
 	}
 
-	void display_frame(const frame_ptr& frame)
+	void display_frame(const consumer_frame& frame)
 	{
 		BOOST_FOREACH(const frame_consumer_ptr& consumer, consumers_)
 		{
@@ -125,12 +120,11 @@ public:
 		}
 	}
 
-	std::deque<frame_ptr> prepared_frames_;
+	std::deque<consumer_frame> prepared_frames_;
 		
 	boost::thread display_thread_;
 
 	tbb::atomic<bool> is_running_;
-	tbb::concurrent_bounded_queue<frame_ptr> frame_buffer_;
 
 	bool needs_clock_;
 	std::vector<frame_consumer_ptr> consumers_;

@@ -4,7 +4,7 @@
 
 #include "image_loader.h"
 
-#include "../../processor/frame.h"
+#include "../../processor/write_frame.h"
 #include "../../processor/composite_frame.h"
 #include "../../format/video_format.h"
 #include "../../processor/frame_processor_device.h"
@@ -67,9 +67,9 @@ struct image_scroll_producer : public frame_producer
 			std::copy_n(&pBits[i* width * 4], width * 4, &image_.get()[i * image_width_ * 4]);
 	}
 
-	frame_ptr do_render_frame()
+	gpu_frame_ptr do_render_frame()
 	{
-		frame_ptr frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
+		auto frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
 		std::fill(frame->data().begin(), frame->data().end(), 0);
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
@@ -112,12 +112,12 @@ struct image_scroll_producer : public frame_producer
 		return frame;
 	}
 		
-	frame_ptr render_frame()
+	gpu_frame_ptr render_frame()
 	{		
 		if(format_desc_.mode != video_mode::progressive)				
 		{
-			frame_ptr frame1;
-			frame_ptr frame2;
+			gpu_frame_ptr frame1;
+			gpu_frame_ptr frame2;
 			tbb::parallel_invoke([&]{ frame1 = do_render_frame(); }, [&]{ frame2 = do_render_frame(); });
 			return composite_frame::interlace(frame1, frame2, format_desc_.mode);
 		}			

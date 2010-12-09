@@ -22,7 +22,7 @@
 
 #include "oal_consumer.h"
 
-#include "../../processor/frame.h"
+#include "../../processor/write_frame.h"
 #include "../../format/video_format.h"
 
 #include <SFML/Audio.hpp>
@@ -45,11 +45,11 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		Stop();
 	}
 	
-	void push(const frame_ptr& frame)
+	void push(const consumer_frame& frame)
 	{
 		// NOTE: tbb::concurrent_queue does not have rvalue support. 
 		// Use shared_ptr to emulate move semantics
-		input_.push(std::make_shared<std::vector<short>>(std::move(frame->get_audio_data()))); 
+		input_.push(frame.audio_data()); 
 		
 		if(GetStatus() != Playing && input_.size() > 2)
 			Play();
@@ -65,7 +65,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	{
 		static std::vector<short> silence(1920*2, 0);
 		
-		std::shared_ptr<std::vector<short>> audio_data;
+		std::vector<short> audio_data;
 		
 		if(!input_.try_pop(audio_data))
 		{
@@ -80,14 +80,14 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 			underrun_count_ = 0;
 		}
 			
-		if(audio_data->empty())
+		if(audio_data.empty())
 		{	
 			data.Samples = silence.data();
 			data.NbSamples = silence.size();
 		}
 		else
 		{
-			container_.push_back(std::move(*audio_data));
+			container_.push_back(std::move(audio_data));
 			data.Samples = container_.back().data();
 			data.NbSamples = container_.back().size();
 		}
@@ -96,9 +96,9 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 
 	long underrun_count_;
 	boost::circular_buffer<std::vector<short>> container_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<std::vector<short>>> input_;
+	tbb::concurrent_bounded_queue<std::vector<short>> input_;
 };
 
 consumer::consumer(const video_format_desc&) : impl_(new implementation()){}
-void consumer::prepare(const frame_ptr& frame){impl_->push(frame);}
+void consumer::prepare(const consumer_frame& frame){impl_->push(frame);}
 }}}

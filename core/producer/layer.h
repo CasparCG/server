@@ -32,7 +32,7 @@ public:
 	frame_producer_ptr foreground() const;
 	frame_producer_ptr background() const;
 
-	frame_ptr render_frame();
+	gpu_frame_ptr render_frame();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

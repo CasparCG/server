@@ -79,7 +79,7 @@ public:
 		video_transformer_->initialize(frame_processor);
 	}
 		
-	frame_ptr render_frame()
+	gpu_frame_ptr render_frame()
 	{
 		while(ouput_channel_.empty() && !input_->is_eof())
 		{	
@@ -111,7 +111,7 @@ public:
 
 				// Return last frame without audio.
 				if(last_frame_)
-					last_frame_->get_audio_data().clear();
+					last_frame_->audio_data().clear();
 				return last_frame_;
 			}
 			else if(underrun_count_ > 0)
@@ -124,11 +124,11 @@ public:
 			{
 				if(has_audio_ && video_frame_channel_.front() != nullptr)
 				{
-					video_frame_channel_.front()->get_audio_data() = std::move(audio_chunk_channel_.front());
+					video_frame_channel_.front()->audio_data() = std::move(audio_chunk_channel_.front());
 					audio_chunk_channel_.pop_front();
 				}
 				
-				frame_ptr frame = video_frame_channel_.front();
+				gpu_frame_ptr frame = video_frame_channel_.front();
 				video_frame_channel_.pop_front();
 				ouput_channel_.push(std::move(frame));
 			}				
@@ -156,18 +156,18 @@ public:
 
 	video_decoder_uptr					video_decoder_;
 	video_transformer_uptr				video_transformer_;
-	std::deque<frame_ptr>				video_frame_channel_;
+	std::deque<gpu_frame_ptr>			video_frame_channel_;
 	
 	audio_decoder_ptr					audio_decoder_;
 	std::deque<std::vector<short>>		audio_chunk_channel_;
 
-	std::queue<frame_ptr>				ouput_channel_;
+	std::queue<gpu_frame_ptr>			ouput_channel_;
 	
 	std::wstring						filename_;
 
 	long								underrun_count_;
 
-	frame_ptr							last_frame_;
+	gpu_frame_ptr						last_frame_;
 };
 
 frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& params)

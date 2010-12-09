@@ -19,7 +19,7 @@
 */
 #pragma once
 
-#include "frame_processor_device.h"
+#include "fwd.h"
 
 #include "../format/video_format.h"
 
@@ -32,9 +32,9 @@ namespace caspar { namespace core {
 class frame_renderer :  boost::noncopyable
 {
 public:
-	frame_renderer(frame_processor_device& frame_processor, const video_format_desc& format_desc_);
+	frame_renderer(const video_format_desc& format_desc_);
 		
-	internal_frame_ptr render(const internal_frame_ptr& frames);
+	consumer_frame render(const gpu_frame_ptr& frame);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

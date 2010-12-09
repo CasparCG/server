@@ -20,9 +20,9 @@
 	
 namespace caspar { namespace core {
 	
-std::vector<frame_ptr> render_frames(std::map<int, layer>& layers)
+std::vector<gpu_frame_ptr> render_frames(std::map<int, layer>& layers)
 {	
-	std::vector<frame_ptr> frames(layers.size(), nullptr);
+	std::vector<gpu_frame_ptr> frames(layers.size(), nullptr);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), 
 	[&](const tbb::blocked_range<size_t>& r)
 	{
@@ -45,7 +45,6 @@ struct frame_producer_device::implementation : boost::noncopyable
 	~implementation()
 	{
 		is_running_ = false;
-		frame_processor_->clear();
 		render_thread_.join();
 	}
 		
@@ -58,7 +57,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 		{
 			try
 			{	
-				std::vector<frame_ptr> frames;
+				std::vector<gpu_frame_ptr> frames;
 				{
 					tbb::mutex::scoped_lock lock(layers_mutex_);	
 					frames = render_frames(layers_);

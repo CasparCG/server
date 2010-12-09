@@ -79,6 +79,9 @@
     <Filter Include="Source\channel\format">
       <UniqueIdentifier>{f19ced4f-4ad2-4c0a-b51f-50e89909d669}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\channel\processor\frame">
+      <UniqueIdentifier>{deed18de-67bf-4bb9-9f5e-565af7ab64eb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
@@ -213,12 +216,6 @@
     <ClInclude Include="processor\frame_processor_device.h">
       <Filter>Source\channel\processor</Filter>
     </ClInclude>
-    <ClInclude Include="processor\frame.h">
-      <Filter>Source\channel\processor</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\composite_frame.h">
-      <Filter>Source\channel\processor</Filter>
-    </ClInclude>
     <ClInclude Include="processor\frame_shader.h">
       <Filter>Source\channel\processor\renderer</Filter>
     </ClInclude>
@@ -239,6 +236,24 @@
     </ClInclude>
     <ClInclude Include="consumer\decklink\util.h">
       <Filter>Source\channel\consumer\decklink</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\write_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\read_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\composite_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\transform_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\fwd.h">
+      <Filter>Source\channel\processor</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\gpu_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -344,12 +359,6 @@
     <ClCompile Include="processor\frame_processor_device.cpp">
       <Filter>Source\channel\processor</Filter>
     </ClCompile>
-    <ClCompile Include="processor\frame.cpp">
-      <Filter>Source\channel\processor</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\composite_frame.cpp">
-      <Filter>Source\channel\processor</Filter>
-    </ClCompile>
     <ClCompile Include="processor\frame_renderer.cpp">
       <Filter>Source\channel\processor\renderer</Filter>
     </ClCompile>
@@ -367,6 +376,18 @@
     </ClCompile>
     <ClCompile Include="consumer\decklink\decklink_consumer.cpp">
       <Filter>Source\channel\consumer\decklink</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\read_frame.cpp">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\write_frame.cpp">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\composite_frame.cpp">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\transform_frame.cpp">
+      <Filter>Source\channel\processor\frame</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -67,7 +67,7 @@ class color_producer : public frame_producer
 public:
 	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)){}
 	
-	frame_ptr render_frame()
+	gpu_frame_ptr render_frame()
 	{ 
 		return frame_;
 	}
@@ -84,7 +84,7 @@ public:
 		return + L"color_producer. color: " + color_str_;
 	}
 
-	frame_ptr frame_;
+	gpu_frame_ptr frame_;
 	unsigned int color_value_;
 	std::wstring color_str_;
 };

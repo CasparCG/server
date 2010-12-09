@@ -1,28 +1,32 @@
 #pragma once
 
-#include "frame.h"
+#include "gpu_frame.h"
+
+#include "../format/video_format.h"
 
 #include <memory>
 #include <algorithm>
 
 namespace caspar { namespace core {
 	
-class composite_frame : public internal_frame
+class composite_frame : public gpu_frame
 {
 public:
-	composite_frame(const std::vector<frame_ptr>& container);
-	composite_frame(const frame_ptr& frame1, const frame_ptr& frame2);
+	composite_frame(const std::vector<gpu_frame_ptr>& frames);
+	composite_frame(const gpu_frame_ptr& frame1, const gpu_frame_ptr& frame2);
 
-	static frame_ptr interlace(const frame_ptr& frame1,	const frame_ptr& frame2, video_mode::type mode);
+	static std::shared_ptr<composite_frame> interlace(const gpu_frame_ptr& frame1, const gpu_frame_ptr& frame2, video_mode::type mode);
 	
-private:
+	virtual const std::vector<short>& audio_data() const;
+
+protected:	
+	virtual std::vector<short>& audio_data();
 
 	virtual void begin_write();
 	virtual void end_write();
-	virtual void begin_read();
-	virtual void end_read();
 	virtual void draw(frame_shader& shader);
 
+private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };

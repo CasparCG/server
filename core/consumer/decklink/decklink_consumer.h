@@ -30,7 +30,7 @@ class decklink_consumer : public frame_consumer
 public:
 	explicit decklink_consumer(const video_format_desc& format_desc, bool internalKey = false);
 	
-	virtual void display(const frame_ptr&);
+	virtual void display(const consumer_frame&);
 	virtual bool has_sync_clock() const {return false;}
 private:
 	struct Implementation;

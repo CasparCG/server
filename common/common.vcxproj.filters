@@ -55,6 +55,9 @@
     <ClCompile Include="gl\pixel_buffer_object.cpp">
       <Filter>Source\gl</Filter>
     </ClCompile>
+    <ClCompile Include="gl\shader_program.cpp">
+      <Filter>Source\gl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -107,6 +110,9 @@
     </ClInclude>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h">
       <Filter>Source\compiler\vs</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\shader_program.h">
+      <Filter>Source\gl</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

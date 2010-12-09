@@ -62,7 +62,6 @@ struct decklink_consumer::Implementation
 	~Implementation()
 	{
 		input_.push(nullptr);
-
 		thread_.join();
 
 		if(output_) 
@@ -76,25 +75,22 @@ struct decklink_consumer::Implementation
 		}
 	}
 	
-	void display(const frame_ptr& frame)
+	void display(const consumer_frame& frame)
 	{
-		if(frame == nullptr)
-			return;		
-
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
 
-		input_.push(frame);
+		input_.push(std::make_shared<consumer_frame>(frame));
 	}
 		
-	void do_display(const frame_ptr& input_frame)
+	void do_display(const consumer_frame& input_frame)
 	{
 		try
 		{
 			auto& output_frame = reserved_frames_[current_index_];
 			current_index_ = (++current_index_) % reserved_frames_.size();
 		
-			std::copy(input_frame->data().begin(), input_frame->data().end(), static_cast<char*>(output_frame.first));
+			std::copy(input_frame.data().begin(), input_frame.data().end(), static_cast<char*>(output_frame.first));
 				
 			if(FAILED(output_->DisplayVideoFrameSync(output_frame.second)))
 				CASPAR_LOG(error) << L"DECKLINK: Failed to display frame.";
@@ -117,12 +113,13 @@ struct decklink_consumer::Implementation
 		{
 			try
 			{	
-				frame_ptr frame;
+				consumer_frame_ptr frame;
 				input_.pop(frame);
-				if(frame == nullptr)
+				
+				if(!frame)
 					return;
 
-				do_display(frame);
+				do_display(*frame);
 			}
 			catch(...)
 			{
@@ -207,13 +204,13 @@ struct decklink_consumer::Implementation
 
 	std::exception_ptr	exception_;
 	boost::thread		thread_;
-	tbb::concurrent_bounded_queue<frame_ptr> input_;
+	tbb::concurrent_bounded_queue<consumer_frame_ptr> input_;
 };
 
 decklink_consumer::decklink_consumer(const video_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey))
 {}
 
-void decklink_consumer::display(const frame_ptr& frame)
+void decklink_consumer::display(const consumer_frame& frame)
 {
 	pImpl_->display(frame);
 }
