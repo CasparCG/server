@@ -28,9 +28,9 @@
 #include "exception.h"
 #include "memory.h"
 
-#include "../../processor/write_frame.h"
+#include "../../../common/concurrency/executor.h"
 
-#include <boost/thread.hpp>
+#include <boost/optional/optional.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -39,7 +39,7 @@
 
 namespace caspar { namespace core { namespace bluefish {
 	
-struct consumer::implementation
+struct consumer::implementation : boost::noncopyable
 {
 	implementation::implementation(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) 
 		: device_index_(device_index), format_desc_(format_desc), sdk_(BlueVelvetFactory4()), current_id_(0), embed_audio_(embed_audio)
@@ -140,18 +140,14 @@ struct consumer::implementation
 		page_locked_buffer::reserve_working_size(MAX_HANC_BUFFER_SIZE * hanc_buffers_.size());		
 		for(size_t n = 0; n < hanc_buffers_.size(); ++n)
 			hanc_buffers_[n] = std::make_shared<page_locked_buffer>(MAX_HANC_BUFFER_SIZE);
+				
+		executor_.start();
 
-		frame_buffer_.set_capacity(1);
-		thread_ = boost::thread([=]{run();});
-		
 		CASPAR_LOG(info) << TEXT("BLUECARD INFO: Successfully initialized device ") << device_index_;
 	}
 
 	~implementation()
 	{
-		frame_buffer_.push(nullptr);
-		thread_.join();
-
 		disable_video_output();
 
 		if(sdk_)
@@ -172,65 +168,60 @@ struct consumer::implementation
 			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");		
 	}
 
-	void display(const consumer_frame& frame)
+	boost::unique_future<void> display(const consumer_frame& frame)
 	{
-		if(exception_ != nullptr)
-			std::rethrow_exception(exception_);
-
-		frame_buffer_.push(std::make_shared<consumer_frame>(frame));
-	}
-
-	void do_display(consumer_frame_ptr& frame)
-	{
-		try
+		return executor_.begin_invoke([=]
 		{
-			auto hanc = hanc_buffers_.front();		
-			std::rotate(hanc_buffers_.begin(), hanc_buffers_.begin() + 1, hanc_buffers_.end());
-			
-			static size_t audio_samples = 1920;
-			static size_t audio_nchannels = 2;
-			static std::vector<short> silence(audio_samples*audio_nchannels*2, 0);
-
-
-			unsigned long fieldCount = 0;
-			sdk_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
-				
-			if(embed_audio_)
-			{		
-				auto& frame_audio_data = frame->audio_data().empty() ? silence : frame->audio_data();
-
-				encode_hanc(reinterpret_cast<BLUE_UINT32*>(hanc->data()), const_cast<short*>(frame_audio_data.data()), audio_samples, audio_nchannels);
-								
-				sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame->data().begin()), 
-												 frame->data().size(), 
-												 nullptr, 
-												 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_IMAGE));
-
-				sdk_->system_buffer_write_async(hanc->data(),
-												 hanc->size(), 
-												 nullptr,                 
-												 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_HANC));
-
-				if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image_HANC(current_id_))))
-					CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
-			}
-			else
+			try
 			{
-				sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame->data().begin()),
-												 frame->data().size(), 
-												 nullptr,                 
-												 BlueImage_DMABuffer(current_id_, BLUE_DATA_IMAGE));
+				auto hanc = hanc_buffers_.front();		
+				std::rotate(hanc_buffers_.begin(), hanc_buffers_.begin() + 1, hanc_buffers_.end());
 			
-				if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image(current_id_))))
-					CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
-			}
+				static size_t audio_samples = 1920;
+				static size_t audio_nchannels = 2;
+				static std::vector<short> silence(audio_samples*audio_nchannels*2, 0);
 
-			transferring_frame_ = frame;
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
+
+				unsigned long fieldCount = 0;
+				sdk_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
+				
+				if(embed_audio_)
+				{		
+					auto& frame_audio_data = frame.audio_data().empty() ? silence : frame.audio_data();
+
+					encode_hanc(reinterpret_cast<BLUE_UINT32*>(hanc->data()), const_cast<short*>(frame_audio_data.data()), audio_samples, audio_nchannels);
+								
+					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame.data().begin()), 
+													 frame.data().size(), 
+													 nullptr, 
+													 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_IMAGE));
+
+					sdk_->system_buffer_write_async(hanc->data(),
+													 hanc->size(), 
+													 nullptr,                 
+													 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_HANC));
+
+					if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image_HANC(current_id_))))
+						CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
+				}
+				else
+				{
+					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame.data().begin()),
+													 frame.data().size(), 
+													 nullptr,                 
+													 BlueImage_DMABuffer(current_id_, BLUE_DATA_IMAGE));
+			
+					if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image(current_id_))))
+						CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
+				}
+
+				transferring_frame_ = frame;
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
+		});
 	}
 
 
@@ -260,43 +251,20 @@ struct consumer::implementation
 		}						
 	}
 
-	void run()
-	{
-		while(true)
-		{
-			try
-			{
-				consumer_frame_ptr frame;
-				frame_buffer_.pop(frame);
-
-				if(!frame)
-					return;
-
-				do_display(frame);
-			}
-			catch(...)
-			{
-				exception_ = std::current_exception();
-			}
-		}	
-	}
-		
+	common::executor executor_;
+			
 	BlueVelvetPtr sdk_;
 	
 	unsigned int device_index_;
 	video_format_desc format_desc_;
-	
-	std::exception_ptr exception_;
-	boost::thread thread_;
-	tbb::concurrent_bounded_queue<consumer_frame_ptr> frame_buffer_;
-	
+		
 	unsigned long	mem_fmt_;
 	unsigned long	upd_fmt_;
 	EVideoMode		vid_fmt_; 
 	unsigned long	res_fmt_; 
 	unsigned long	engine_mode_;
 
-	consumer_frame_ptr transferring_frame_;
+	boost::optional<consumer_frame> transferring_frame_;
 
 	std::array<page_locked_buffer_ptr, 3> hanc_buffers_;
 	int current_id_;
@@ -304,7 +272,7 @@ struct consumer::implementation
 };
 
 consumer::consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
-void consumer::display(const consumer_frame& frame){impl_->display(frame);}
+boost::unique_future<void> consumer::display(const consumer_frame& frame){return impl_->display(frame);}
 
 }}}
 

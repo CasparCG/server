@@ -24,6 +24,8 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <boost/thread/future.hpp>
+
 #include <memory>
 
 namespace caspar { namespace core {
@@ -32,8 +34,19 @@ struct frame_consumer : boost::noncopyable
 {
 	virtual ~frame_consumer() {}
 
-	virtual void prepare(const consumer_frame&){}
-	virtual void display(const consumer_frame&){}
+	virtual boost::unique_future<void> prepare(const consumer_frame&)
+	{
+		boost::promise<void> promise;
+		promise.set_value();
+		return promise.get_future();
+	}
+
+	virtual boost::unique_future<void> display(const consumer_frame&)
+	{
+		boost::promise<void> promise;
+		promise.set_value();
+		return promise.get_future();
+	}
 	virtual bool has_sync_clock() const {return false;}
 };
 typedef std::shared_ptr<frame_consumer> frame_consumer_ptr;

@@ -26,6 +26,7 @@
 #include "../../processor/write_frame.h"
 #include "../../../common/gl/utility.h"
 #include "../../../common/gl/pixel_buffer_object.h"
+#include "../../../common/concurrency/executor.h"
 
 #include <boost/thread.hpp>
 
@@ -81,47 +82,40 @@ struct consumer::implementation : boost::noncopyable
 		screenX_ = 0;
 		screenY_ = 0;
 #endif
-		frame_buffer_.set_capacity(1);
-		thread_ = boost::thread([=]{run();});
+
+		executor_.start();
+		executor_.invoke([=]
+		{
+			window_.Create(sf::VideoMode(format_desc_.width, format_desc_.height, 32), "CasparCG", windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
+			window_.ShowMouseCursor(false);
+			window_.SetPosition(screenX_, screenY_);
+			window_.SetSize(screen_width_, screen_height_);
+			window_.SetActive();
+			GL(glEnable(GL_TEXTURE_2D));
+			GL(glDisable(GL_DEPTH_TEST));		
+			GL(glClearColor(0.0, 0.0, 0.0, 0.0));
+			GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+			glLoadIdentity();
+				
+			wratio_ = static_cast<float>(format_desc_.width)/static_cast<float>(format_desc_.width);
+			hratio_ = static_cast<float>(format_desc_.height)/static_cast<float>(format_desc_.height);
+
+			std::pair<float, float> target_ratio = None();
+			if(stretch_ == ogl::fill)
+				target_ratio = Fill();
+			else if(stretch_ == ogl::uniform)
+				target_ratio = Uniform();
+			else if(stretch_ == ogl::uniform_to_fill)
+				target_ratio = UniformToFill();
+
+			wSize_ = target_ratio.first;
+			hSize_ = target_ratio.second;
+					
+			pbos_[0].create(format_desc_.width, format_desc_.height);
+			pbos_[1].create(format_desc_.width, format_desc_.height);
+		});
 	}
 	
-	~implementation()
-	{
-		frame_buffer_.push(nullptr);
-		thread_.join();
-	}
-
-	void init()	
-	{
-		window_.Create(sf::VideoMode(format_desc_.width, format_desc_.height, 32), "CasparCG", windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
-		window_.ShowMouseCursor(false);
-		window_.SetPosition(screenX_, screenY_);
-		window_.SetSize(screen_width_, screen_height_);
-		window_.SetActive();
-		GL(glEnable(GL_TEXTURE_2D));
-		GL(glDisable(GL_DEPTH_TEST));		
-		GL(glClearColor(0.0, 0.0, 0.0, 0.0));
-		GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-		glLoadIdentity();
-				
-		wratio_ = static_cast<float>(format_desc_.width)/static_cast<float>(format_desc_.width);
-		hratio_ = static_cast<float>(format_desc_.height)/static_cast<float>(format_desc_.height);
-
-		std::pair<float, float> target_ratio = None();
-		if(stretch_ == ogl::fill)
-			target_ratio = Fill();
-		else if(stretch_ == ogl::uniform)
-			target_ratio = Uniform();
-		else if(stretch_ == ogl::uniform_to_fill)
-			target_ratio = UniformToFill();
-
-		wSize_ = target_ratio.first;
-		hSize_ = target_ratio.second;
-					
-		pbos_[0].create(format_desc_.width, format_desc_.height);
-		pbos_[1].create(format_desc_.width, format_desc_.height);
-	}
-
 	std::pair<float, float> None()
 	{
 		float width = static_cast<float>(format_desc_.width)/static_cast<float>(screen_width_);
@@ -176,42 +170,20 @@ struct consumer::implementation : boost::noncopyable
 		pbos_[next_index].begin_write();
 	}
 			
-	void display(const consumer_frame& frame)
+	boost::unique_future<void> display(const consumer_frame& frame)
 	{
-		if(exception_ != nullptr)
-			std::rethrow_exception(exception_);
-
-		frame_buffer_.push(std::make_shared<consumer_frame>(frame));
+		return executor_.begin_invoke([=]
+		{
+			sf::Event e;
+			while(window_.GetEvent(e)){}
+			window_.SetActive();
+			render(frame);
+			window_.Display();
+		});
 	}
 
-	void run()
-	{			
-		init();
-				
-		while(true)
-		{
-			try
-			{		
-				consumer_frame_ptr frame;
-				frame_buffer_.pop(frame);
-
-				if(!frame)
-					return;
-
-				sf::Event e;
-				while(window_.GetEvent(e)){}
-				window_.SetActive();
-				render(*frame);
-				window_.Display();
-				
-			}
-			catch(...)
-			{
-				exception_ = std::current_exception();
-			}
-		}		
-	}		
-
+	common::executor executor_;
+	
 	float wratio_;
 	float hratio_;
 	
@@ -229,15 +201,11 @@ struct consumer::implementation : boost::noncopyable
 				
 	stretch stretch_;
 	video_format_desc format_desc_;
-
-	std::exception_ptr exception_;
-	boost::thread thread_;
-	tbb::concurrent_bounded_queue<consumer_frame_ptr> frame_buffer_;
-
+	
 	sf::Window window_;
 };
 
 consumer::consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
-void consumer::display(const consumer_frame& frame){impl_->display(frame);}
+boost::unique_future<void> consumer::display(const consumer_frame& frame){return impl_->display(frame);}
 }}}
