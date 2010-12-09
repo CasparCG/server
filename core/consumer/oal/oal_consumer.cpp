@@ -35,24 +35,29 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
 	implementation() : container_(5), underrun_count_(0)
 	{
-		input_.set_capacity(3);
 		sf::SoundStream::Initialize(2, 48000);
 	}
 
 	~implementation()
 	{
-		input_.clear();
 		Stop();
 	}
 	
-	void push(const consumer_frame& frame)
+	boost::unique_future<void> push(const consumer_frame& frame)
 	{
-		// NOTE: tbb::concurrent_queue does not have rvalue support. 
-		// Use shared_ptr to emulate move semantics
 		input_.push(frame.audio_data()); 
+
+		auto promise = std::make_shared<boost::promise<void>>();
 		
 		if(GetStatus() != Playing && input_.size() > 2)
 			Play();
+		
+		if(GetStatus() == Playing)
+			promises_.push(promise);
+		else
+			promise->set_value();
+
+		return promise->get_future();
 	}
 	
 	bool OnStart() 
@@ -65,8 +70,11 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	{
 		static std::vector<short> silence(1920*2, 0);
 		
-		std::vector<short> audio_data;
-		
+		std::shared_ptr<boost::promise<void>> promise;
+		promises_.pop(promise);
+		promise->set_value();
+
+		std::vector<short> audio_data;		
 		if(!input_.try_pop(audio_data))
 		{
 			if(underrun_count_ == 0)
@@ -91,14 +99,17 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 			data.Samples = container_.back().data();
 			data.NbSamples = container_.back().size();
 		}
+
 		return true;
 	}
 
+	tbb::concurrent_bounded_queue<std::shared_ptr<boost::promise<void>>> promises_;
+	tbb::concurrent_bounded_queue<std::vector<short>> input_;
+
 	long underrun_count_;
 	boost::circular_buffer<std::vector<short>> container_;
-	tbb::concurrent_bounded_queue<std::vector<short>> input_;
 };
 
 consumer::consumer(const video_format_desc&) : impl_(new implementation()){}
-void consumer::prepare(const consumer_frame& frame){impl_->push(frame);}
+boost::unique_future<void> consumer::prepare(const consumer_frame& frame){return impl_->push(frame);}
 }}}

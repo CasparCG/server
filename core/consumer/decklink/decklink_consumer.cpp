@@ -26,6 +26,7 @@
 #endif
 
 #include "decklink_consumer.h"
+
 #include "util.h"
 
 #include "DeckLinkAPI_h.h"
@@ -33,6 +34,7 @@
 #include "../../format/video_format.h"
 #include "../../producer/frame_producer_device.h"
 
+#include "../../../common/concurrency/executor.h"
 #include "../../../common/exception/exceptions.h"
 #include "../../../common/utility/scope_exit.h"
 
@@ -51,19 +53,80 @@
 
 namespace caspar { namespace core { namespace decklink{
 
-struct decklink_consumer::Implementation
+struct decklink_consumer::Implementation : boost::noncopyable
 {
 	Implementation(const video_format_desc& format_desc, bool internalKey) : format_desc_(format_desc), currentFormat_(video_format::pal), internalKey_(internalKey), current_index_(0)
-	{			
-		input_.set_capacity(1),
-		thread_ = boost::thread([=]{Run();});
+	{	
+		executor_.start();
+		executor_.invoke([=]
+		{
+			if(FAILED(CoInitialize(nullptr))) 
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Initialization of COM failed."));		
+
+			CComPtr<IDeckLinkIterator> pDecklinkIterator;
+			if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink drivers installed."));
+
+			while(pDecklinkIterator->Next(&decklink_) == S_OK && !decklink_){}	
+
+			if(decklink_ == nullptr)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink card found"));
+
+			output_ = decklink_;
+			keyer_ = decklink_;
+
+			BSTR pModelName;
+			decklink_->GetModelName(&pModelName);
+			if(pModelName != nullptr)
+				CASPAR_LOG(info) << "DECKLINK: Modelname: " << pModelName;
+		
+			unsigned long decklinkVideoFormat = GetDecklinkVideoFormat(format_desc_.format);
+			if(decklinkVideoFormat == ULONG_MAX) 
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat."));
+		
+			currentFormat_ = format_desc_.format;
+
+			BMDDisplayModeSupport displayModeSupport;
+			if(FAILED(output_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitBGRA, &displayModeSupport)))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat"));
+		
+			output_->DisableAudioOutput();
+			if(FAILED(output_->EnableVideoOutput((BMDDisplayMode)decklinkVideoFormat, bmdVideoOutputFlagDefault))) 
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable video output"));
+
+			if(internalKey_) 
+			{
+				if(FAILED(keyer_->Enable(FALSE)))			
+					CASPAR_LOG(error) << "DECKLINK: Failed to enable internal keyer";			
+				else if(FAILED(keyer_->SetLevel(255)))			
+					CASPAR_LOG(error) << "DECKLINK: Keyer - Failed to set blend-level to max";
+				else
+					CASPAR_LOG(info) << "DECKLINK: Successfully configured internal keyer";		
+			}
+			else
+			{
+				if(FAILED(keyer_->Enable(TRUE)))			
+					CASPAR_LOG(error) << "DECKLINK: Failed to enable external keyer";	
+				else
+					CASPAR_LOG(info) << "DECKLINK: Successfully configured external keyer";			
+			}
+		
+			reserved_frames_.resize(3);
+			for(int n = 0; n < reserved_frames_.size(); ++n)
+			{
+				if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &reserved_frames_[n].second)))
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to create frame."));
+
+				if(FAILED(reserved_frames_[n].second->GetBytes(&reserved_frames_[n].first)))
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to get frame bytes."));
+			}
+
+			CASPAR_LOG(info) << "DECKLINK: Successfully initialized decklink for " << format_desc_.name;
+		});
 	}
 
 	~Implementation()
-	{
-		input_.push(nullptr);
-		thread_.join();
-
+	{		
 		if(output_) 
 		{
 			BOOL bIsRunning = FALSE;
@@ -73,124 +136,32 @@ struct decklink_consumer::Implementation
 
 			output_->DisableVideoOutput();
 		}
+		CoUninitialize();
 	}
 	
-	void display(const consumer_frame& frame)
+	boost::unique_future<void> display(const consumer_frame& input_frame)
 	{
-		if(exception_ != nullptr)
-			std::rethrow_exception(exception_);
-
-		input_.push(std::make_shared<consumer_frame>(frame));
-	}
-		
-	void do_display(const consumer_frame& input_frame)
-	{
-		try
-		{
-			auto& output_frame = reserved_frames_[current_index_];
-			current_index_ = (++current_index_) % reserved_frames_.size();
-		
-			std::copy(input_frame.data().begin(), input_frame.data().end(), static_cast<char*>(output_frame.first));
-				
-			if(FAILED(output_->DisplayVideoFrameSync(output_frame.second)))
-				CASPAR_LOG(error) << L"DECKLINK: Failed to display frame.";
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-	}
-
-	void Run()
-	{		
-		if(FAILED(CoInitialize(nullptr)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Initialization of COM failed."));		
-		CASPAR_SCOPE_EXIT(CoUninitialize);
-		
-		init();
-		
-		while(true)
+		return executor_.begin_invoke([=]
 		{
 			try
-			{	
-				consumer_frame_ptr frame;
-				input_.pop(frame);
+			{
+				auto& output_frame = reserved_frames_[current_index_];
+				current_index_ = (++current_index_) % reserved_frames_.size();
+		
+				std::copy(input_frame.data().begin(), input_frame.data().end(), static_cast<char*>(output_frame.first));
 				
-				if(!frame)
-					return;
-
-				do_display(*frame);
+				if(FAILED(output_->DisplayVideoFrameSync(output_frame.second)))
+					CASPAR_LOG(error) << L"DECKLINK: Failed to display frame.";
 			}
 			catch(...)
 			{
-				exception_ = std::current_exception();
+				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
-		}
-	}
-
-	void init()
-	{		
-		CComPtr<IDeckLinkIterator> pDecklinkIterator;
-		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink drivers installed."));
-
-		while(pDecklinkIterator->Next(&decklink_) == S_OK && !decklink_){}	
-
-		if(decklink_ == nullptr)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink card found"));
-
-		output_ = decklink_;
-		keyer_ = decklink_;
-
-		BSTR pModelName;
-		decklink_->GetModelName(&pModelName);
-		if(pModelName != nullptr)
-			CASPAR_LOG(info) << "DECKLINK: Modelname: " << pModelName;
-		
-		unsigned long decklinkVideoFormat = GetDecklinkVideoFormat(format_desc_.format);
-		if(decklinkVideoFormat == ULONG_MAX) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat."));
-		
-		currentFormat_ = format_desc_.format;
-
-		BMDDisplayModeSupport displayModeSupport;
-		if(FAILED(output_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitBGRA, &displayModeSupport)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat"));
-		
-		output_->DisableAudioOutput();
-		if(FAILED(output_->EnableVideoOutput((BMDDisplayMode)decklinkVideoFormat, bmdVideoOutputFlagDefault))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable video output"));
-
-		if(internalKey_) 
-		{
-			if(FAILED(keyer_->Enable(FALSE)))			
-				CASPAR_LOG(error) << "DECKLINK: Failed to enable internal keyer";			
-			else if(FAILED(keyer_->SetLevel(255)))			
-				CASPAR_LOG(error) << "DECKLINK: Keyer - Failed to set blend-level to max";
-			else
-				CASPAR_LOG(info) << "DECKLINK: Successfully configured internal keyer";		
-		}
-		else
-		{
-			if(FAILED(keyer_->Enable(TRUE)))			
-				CASPAR_LOG(error) << "DECKLINK: Failed to enable external keyer";	
-			else
-				CASPAR_LOG(info) << "DECKLINK: Successfully configured external keyer";			
-		}
-		
-		reserved_frames_.resize(3);
-		for(int n = 0; n < reserved_frames_.size(); ++n)
-		{
-			if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &reserved_frames_[n].second)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to create frame."));
-
-			if(FAILED(reserved_frames_[n].second->GetBytes(&reserved_frames_[n].first)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to get frame bytes."));
-		}
-
-		CASPAR_LOG(info) << "DECKLINK: Successfully initialized decklink for " << format_desc_.name;
+		});
 	}
 			
+	common::executor executor_;
+
 	std::vector<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>> reserved_frames_;
 	size_t	current_index_;
 
@@ -201,18 +172,14 @@ struct decklink_consumer::Implementation
 	
 	video_format::type currentFormat_;
 	video_format_desc format_desc_;
-
-	std::exception_ptr	exception_;
-	boost::thread		thread_;
-	tbb::concurrent_bounded_queue<consumer_frame_ptr> input_;
 };
 
 decklink_consumer::decklink_consumer(const video_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey))
 {}
 
-void decklink_consumer::display(const consumer_frame& frame)
+boost::unique_future<void> decklink_consumer::display(const consumer_frame& frame)
 {
-	pImpl_->display(frame);
+	return pImpl_->display(frame);
 }
 	
 }}}	

@@ -52,15 +52,7 @@ public:
 		if(consumers.empty())
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("consumer") 
 				<< msg_info("frame_consumer_device requires atleast one consumer."));
-
-		//if(std::any_of(consumers.begin(), consumers.end(), 
-		//	[&](const frame_consumer_ptr& pConsumer)
-		//	{ return pConsumer->get_video_format_desc() != format_desc;}))
-		//{
-		//	BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("consumer") 
-		//		<< msg_info("All consumers must have same frameformat as frame_consumer_device."));
-		//}
-
+		
 		needs_clock_ = !std::any_of(consumers.begin(), consumers.end(), std::mem_fn(&frame_consumer::has_sync_clock));
 		is_running_ = true;
 		display_thread_ = boost::thread([=]{run();});
@@ -88,36 +80,43 @@ public:
 	}
 
 	void display_frame(const consumer_frame& frame)
-	{
-		BOOST_FOREACH(const frame_consumer_ptr& consumer, consumers_)
+	{		
+		typedef std::vector<std::pair<boost::unique_future<void>, frame_consumer_ptr>> sync_container;
+		sync_container sync;
+		boost::range::transform(consumers_, std::back_inserter(sync), [=](const frame_consumer_ptr& consumer)
+		{
+			return std::make_pair(consumer->prepare(frame), consumer);
+		});
+		
+		prepared_frames_.push_back(frame);
+				
+		if(prepared_frames_.size() > 2)
+		{	
+			boost::range::transform(consumers_, std::back_inserter(sync), [=](const frame_consumer_ptr& consumer)
+			{
+				return std::make_pair(consumer->display(prepared_frames_.front()), consumer);
+			});
+			prepared_frames_.pop_front();
+		}
+
+		boost::range::for_each(sync, [=](sync_container::value_type& sync)
 		{
 			try
 			{
-				consumer->prepare(frame);
-				prepared_frames_.push_back(frame);
-
-				if(prepared_frames_.size() > 2)
-				{
-					consumer->display(prepared_frames_.front());
-					prepared_frames_.pop_front();
-				}
+				sync.first.get();
 			}
 			catch(...)
 			{
-				try
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				boost::range::remove_erase(consumers_, sync.second);
+				CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
+				if(consumers_.empty())
 				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					boost::range::remove_erase(consumers_, consumer);
-					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
-					if(consumers_.empty())
-					{
-						CASPAR_LOG(warning) << "No consumers available. Shutting down frame_consumer_device.";
-						is_running_ = false;
-					}
+					CASPAR_LOG(warning) << "No consumers available. Shutting down frame_consumer_device.";
+					is_running_ = false;
 				}
-				catch(...){}
 			}
-		}
+		});
 	}
 
 	std::deque<consumer_frame> prepared_frames_;
