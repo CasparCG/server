@@ -41,32 +41,26 @@ struct frame_renderer::implementation : boost::noncopyable
 		if(frame == nullptr)
 			return nullptr;
 
+		read_frame_ptr result;
 		try
 		{
 			drawing_ = writing_;
 			writing_ = frame;
-			
-			// Write from page-locked system memory to video memory.
-			writing_->begin_write();
-				
-			//  Map video memory to page-locked system memory.
-			reading_->end_read(); // Note: This frame has already been sent, it is assumed that there is external buffering of atleast 2 frames.
-			
-			// Clear framebuffer.
-			GL(glClear(GL_COLOR_BUFFER_BIT));	
-
-			// Draw to framebuffer
+						
+			writing_->begin_write(); // Note: end_write is done when returned to pool, write_frame::reset();
+						
+			reading_->end_read();
+			result = reading_; 
+						
+			GL(glClear(GL_COLOR_BUFFER_BIT));
+						
 			drawing_->draw(shader_);
 				
-			// Create an output frame
 			reading_ = create_output_frame();
 			
-			// Read from framebuffer into page-locked memory.
 			reading_->begin_read();
 			reading_->audio_data() = std::move(drawing_->audio_data());
-			
-			// Return frames to pool.
-			// Note: end_write is done in writing_fram::reset();
+						
 			drawing_ = nullptr;
 		}
 		catch(...)
@@ -74,7 +68,7 @@ struct frame_renderer::implementation : boost::noncopyable
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		return reading_;
+		return result;
 	}
 
 	read_frame_ptr create_output_frame()

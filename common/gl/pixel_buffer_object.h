@@ -15,7 +15,9 @@ class pixel_buffer_object : boost::noncopyable
 {
 public:
 	pixel_buffer_object();
+	pixel_buffer_object(pixel_buffer_object&& other);
 	pixel_buffer_object(size_t width, size_t height, GLenum format = GL_BGRA);
+	pixel_buffer_object& operator=(pixel_buffer_object&& other);
 	void create(size_t width, size_t height, GLenum format = GL_BGRA);
 	~pixel_buffer_object(){}
 

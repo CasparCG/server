@@ -19,7 +19,7 @@ struct image_producer : public frame_producer
 {
 	image_producer(const std::wstring& filename) : filename_(filename)	{}
 	
-	gpu_frame_ptr render_frame(){return frame_;}
+	gpu_frame_ptr receive(){return frame_;}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{

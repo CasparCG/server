@@ -51,7 +51,7 @@ struct transition_producer::implementation : boost::noncopyable
 		org_source_producer_ = source_producer_ = producer;
 	}
 		
-	gpu_frame_ptr render_frame()
+	gpu_frame_ptr receive()
 	{
 		if(current_frame_ == 0)
 			CASPAR_LOG(info) << "Transition started.";
@@ -66,8 +66,8 @@ struct transition_producer::implementation : boost::noncopyable
 
 			tbb::parallel_invoke
 			(
-				[&]{dest   = render_frame(dest_producer_);},
-				[&]{source = render_frame(source_producer_);}
+				[&]{dest   = receive(dest_producer_);},
+				[&]{source = receive(source_producer_);}
 			);
 
 			return compose(dest, source);
@@ -79,7 +79,7 @@ struct transition_producer::implementation : boost::noncopyable
 		return result;
 	}
 
-	gpu_frame_ptr render_frame(frame_producer_ptr& producer)
+	gpu_frame_ptr receive(frame_producer_ptr& producer)
 	{
 		if(!producer)
 			return nullptr;
@@ -87,7 +87,7 @@ struct transition_producer::implementation : boost::noncopyable
 		gpu_frame_ptr frame;
 		try
 		{
-			frame = producer->render_frame();
+			frame = producer->receive();
 		}
 		catch(...)
 		{
@@ -114,7 +114,7 @@ struct transition_producer::implementation : boost::noncopyable
 				producer = nullptr;
 			}
 
-			return render_frame(producer);
+			return receive(producer);
 		}
 		return frame;
 	}
@@ -180,7 +180,7 @@ struct transition_producer::implementation : boost::noncopyable
 };
 
 transition_producer::transition_producer(const frame_producer_ptr& dest, const transition_info& info) : impl_(new implementation(dest, info)){}
-gpu_frame_ptr transition_producer::render_frame(){return impl_->render_frame();}
+gpu_frame_ptr transition_producer::receive(){return impl_->receive();}
 frame_producer_ptr transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const frame_producer_ptr& producer) { impl_->set_leading_producer(producer); }
 void transition_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}

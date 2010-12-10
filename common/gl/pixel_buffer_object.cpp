@@ -173,8 +173,14 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 };
 
 pixel_buffer_object::pixel_buffer_object(){}
+pixel_buffer_object::pixel_buffer_object(pixel_buffer_object&& other) : impl_(std::move(other.impl_)){}
 pixel_buffer_object::pixel_buffer_object(size_t width, size_t height, GLenum format) 
 	: impl_(new implementation(width, height, format)){}
+pixel_buffer_object& pixel_buffer_object::operator=(pixel_buffer_object&& other)
+{
+	impl_ = std::move(other.impl_);
+	return *this;
+}
 void pixel_buffer_object::create(size_t width, size_t height, GLenum format)
 {
 	impl_.reset(new implementation(width, height, format));

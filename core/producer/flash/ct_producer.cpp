@@ -37,14 +37,14 @@ struct ct_producer : public cg_producer
 {
 	ct_producer(const std::wstring& filename) : filename_(filename), initialized_(false){}
 
-	gpu_frame_ptr render_frame()
+	gpu_frame_ptr receive()
 	{
 		if(!initialized_)
 		{
 			cg_producer::add(0, filename_, 1);
 			initialized_ = true;
 		}
-		return cg_producer::render_frame();
+		return cg_producer::receive();
 	}
 
 	std::wstring print() const

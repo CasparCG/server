@@ -139,27 +139,32 @@ struct decklink_consumer::Implementation : boost::noncopyable
 		CoUninitialize();
 	}
 	
-	boost::unique_future<void> display(const consumer_frame& input_frame)
+	void send(const consumer_frame& input_frame)
 	{
-		return executor_.begin_invoke([=]
+		active_ = executor_.begin_invoke([=]
 		{
-			try
-			{
-				auto& output_frame = reserved_frames_[current_index_];
-				current_index_ = (++current_index_) % reserved_frames_.size();
+			auto& output_frame = reserved_frames_[current_index_];
+			current_index_ = (++current_index_) % reserved_frames_.size();
 		
-				std::copy(input_frame.data().begin(), input_frame.data().end(), static_cast<char*>(output_frame.first));
+			std::copy(input_frame.data().begin(), input_frame.data().end(), static_cast<char*>(output_frame.first));
 				
-				if(FAILED(output_->DisplayVideoFrameSync(output_frame.second)))
-					CASPAR_LOG(error) << L"DECKLINK: Failed to display frame.";
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-			}
+			if(FAILED(output_->DisplayVideoFrameSync(output_frame.second)))
+				CASPAR_LOG(error) << L"DECKLINK: Failed to display frame.";
 		});
 	}
+	
+	frame_consumer::sync_mode synchronize()
+	{
+		active_.get();
+		return frame_consumer::ready;
+	}
+
+	size_t buffer_depth() const
+	{
+		return 1;
+	}
 			
+	boost::unique_future<void> active_;
 	common::executor executor_;
 
 	std::vector<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>> reserved_frames_;
@@ -174,12 +179,9 @@ struct decklink_consumer::Implementation : boost::noncopyable
 	video_format_desc format_desc_;
 };
 
-decklink_consumer::decklink_consumer(const video_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey))
-{}
-
-boost::unique_future<void> decklink_consumer::display(const consumer_frame& frame)
-{
-	return pImpl_->display(frame);
-}
+decklink_consumer::decklink_consumer(const video_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey)){}
+void decklink_consumer::send(const consumer_frame& frame){pImpl_->send(frame);}
+frame_consumer::sync_mode decklink_consumer::synchronize(){return pImpl_->synchronize();}
+size_t decklink_consumer::buffer_depth() const{return pImpl_->buffer_depth();}
 	
 }}}	

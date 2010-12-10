@@ -146,9 +146,9 @@ public:
 		flash_producer_->param(param.str());
 	}
 
-	gpu_frame_ptr render_frame()
+	gpu_frame_ptr receive()
 	{
-		return flash_producer_ ? flash_producer_->render_frame() : nullptr;
+		return flash_producer_ ? flash_producer_->receive() : nullptr;
 	}
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -184,7 +184,7 @@ cg_producer_ptr get_default_cg_producer(const channel_ptr& channel, int render_l
 }
 
 cg_producer::cg_producer() : impl_(new implementation()){}
-gpu_frame_ptr cg_producer::render_frame(){return impl_->render_frame();}
+gpu_frame_ptr cg_producer::receive(){return impl_->receive();}
 void cg_producer::clear(){impl_->clear();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}

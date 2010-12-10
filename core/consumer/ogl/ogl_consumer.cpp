@@ -23,7 +23,7 @@
 #include "ogl_consumer.h"
 
 #include "../../format/video_format.h"
-#include "../../processor/write_frame.h"
+
 #include "../../../common/gl/utility.h"
 #include "../../../common/gl/pixel_buffer_object.h"
 #include "../../../common/concurrency/executor.h"
@@ -42,7 +42,7 @@ namespace caspar { namespace core { namespace ogl{
 struct consumer::implementation : boost::noncopyable
 {	
 	implementation(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
-		: index_(0), format_desc_(format_desc), stretch_(stretch), screen_width_(0), screen_height_(0), windowed_(windowed)
+		: format_desc_(format_desc), stretch_(stretch), screen_width_(0), screen_height_(0), windowed_(windowed)
 	{		
 #ifdef _WIN32
 		DISPLAY_DEVICE dDevice;			
@@ -151,15 +151,12 @@ struct consumer::implementation : boost::noncopyable
 	}
 
 	void render(const consumer_frame& frame)
-	{		
-		index_ = (index_ + 1) % 2;
-		int next_index = (index_ + 1) % 2;
-				
-		auto ptr = pbos_[index_].end_write();
+	{						
+		auto ptr = pbos_.front().end_write();
 		std::copy_n(frame.data().begin(), frame.data().size(), reinterpret_cast<char*>(ptr));
 
 		GL(glClear(GL_COLOR_BUFFER_BIT));	
-		pbos_[next_index].bind_texture();				
+		pbos_.back().bind_texture();				
 		glBegin(GL_QUADS);
 				glTexCoord2f(0.0f,	  hratio_);	glVertex2f(-wSize_, -hSize_);
 				glTexCoord2f(wratio_, hratio_);	glVertex2f( wSize_, -hSize_);
@@ -167,12 +164,14 @@ struct consumer::implementation : boost::noncopyable
 				glTexCoord2f(0.0f,	  0.0f);	glVertex2f(-wSize_,  hSize_);
 		glEnd();
 
-		pbos_[next_index].begin_write();
+		pbos_.back().begin_write();
+
+		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
-			
-	boost::unique_future<void> display(const consumer_frame& frame)
+		
+	void send(const consumer_frame& frame)
 	{
-		return executor_.begin_invoke([=]
+		active_ = executor_.begin_invoke([=]
 		{
 			sf::Event e;
 			while(window_.GetEvent(e)){}
@@ -182,6 +181,18 @@ struct consumer::implementation : boost::noncopyable
 		});
 	}
 
+	frame_consumer::sync_mode synchronize()
+	{
+		active_.get();
+		return frame_consumer::ready;
+	}
+
+	size_t buffer_depth() const
+	{
+		return 2;
+	}
+		
+	boost::unique_future<void> active_;
 	common::executor executor_;
 	
 	float wratio_;
@@ -190,8 +201,7 @@ struct consumer::implementation : boost::noncopyable
 	float wSize_;
 	float hSize_;
 
-	int index_;
-	common::gl::pixel_buffer_object pbos_[2];
+	std::array<common::gl::pixel_buffer_object, 2> pbos_;
 
 	bool windowed_;
 	unsigned int screen_width_;
@@ -207,5 +217,7 @@ struct consumer::implementation : boost::noncopyable
 
 consumer::consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
-boost::unique_future<void> consumer::display(const consumer_frame& frame){return impl_->display(frame);}
+void consumer::send(const consumer_frame& frame){impl_->send(frame);}
+frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
+size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}
