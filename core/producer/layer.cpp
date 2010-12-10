@@ -21,7 +21,7 @@ struct layer::implementation
 		if(option == load_option::preview)		
 		{
 			foreground_ = nullptr;	
-			last_frame_ = frame_producer->render_frame();
+			last_frame_ = frame_producer->receive();
 		}
 		else if(option == load_option::auto_play)
 			play();			
@@ -56,14 +56,14 @@ struct layer::implementation
 		last_frame_ = nullptr;
 	}
 	
-	gpu_frame_ptr render_frame()
+	gpu_frame_ptr receive()
 	{		
 		if(!foreground_ || is_paused_)
 			return last_frame_;
 
 		try
 		{
-			last_frame_ = foreground_->render_frame();
+			last_frame_ = foreground_->receive();
 
 			if(last_frame_ == nullptr)
 			{
@@ -71,7 +71,7 @@ struct layer::implementation
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
 				foreground_ = following;
-				last_frame_ = render_frame();
+				last_frame_ = receive();
 			}
 		}
 		catch(...)
@@ -108,7 +108,7 @@ void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 void layer::clear(){impl_->clear();}
-gpu_frame_ptr layer::render_frame() {return impl_->render_frame();}
+gpu_frame_ptr layer::receive() {return impl_->receive();}
 frame_producer_ptr layer::foreground() const { return impl_->foreground_;}
 frame_producer_ptr layer::background() const { return impl_->background_;}
 }}

@@ -168,19 +168,18 @@ struct consumer::implementation : boost::noncopyable
 			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");		
 	}
 
-	boost::unique_future<void> display(const consumer_frame& frame)
-	{
-		return executor_.begin_invoke([=]
+	void send(const consumer_frame& frame)
+	{			
+		static size_t audio_samples = 1920;
+		static size_t audio_nchannels = 2;
+		static std::vector<short> silence(audio_samples*audio_nchannels*2, 0);
+
+		active_ = executor_.begin_invoke([=]
 		{
 			try
 			{
 				auto hanc = hanc_buffers_.front();		
 				std::rotate(hanc_buffers_.begin(), hanc_buffers_.begin() + 1, hanc_buffers_.end());
-			
-				static size_t audio_samples = 1920;
-				static size_t audio_nchannels = 2;
-				static std::vector<short> silence(audio_samples*audio_nchannels*2, 0);
-
 
 				unsigned long fieldCount = 0;
 				sdk_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
@@ -224,6 +223,17 @@ struct consumer::implementation : boost::noncopyable
 		});
 	}
 
+	frame_consumer::sync_mode synchronize()
+	{
+		active_.get();
+		return frame_consumer::clock;
+	}
+
+	size_t buffer_depth() const
+	{
+		return 1;
+	}
+
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
@@ -233,7 +243,7 @@ struct consumer::implementation : boost::noncopyable
 		hanc_stream_info_struct hanc_stream_info;
 		memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));
 
-		std::fill_n(hanc_stream_info.AudioDBNArray, sizeof(hanc_stream_info.AudioDBNArray)/sizeof(*hanc_stream_info.AudioDBNArray), -1);
+		std::fill_n(hanc_stream_info.AudioDBNArray, sizeof(hanc_stream_info.AudioDBNArray)/sizeof(hanc_stream_info.AudioDBNArray[0]), -1);
 		hanc_stream_info.hanc_data_ptr = hanc_data;
 		hanc_stream_info.video_mode = vid_fmt_;
 		
@@ -251,6 +261,7 @@ struct consumer::implementation : boost::noncopyable
 		}						
 	}
 
+	boost::unique_future<void> active_;
 	common::executor executor_;
 			
 	BlueVelvetPtr sdk_;
@@ -272,8 +283,9 @@ struct consumer::implementation : boost::noncopyable
 };
 
 consumer::consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
-boost::unique_future<void> consumer::display(const consumer_frame& frame){return impl_->display(frame);}
-
+void consumer::send(const consumer_frame& frame){impl_->send(frame);}
+frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
+size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}
 
 #endif

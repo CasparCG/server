@@ -20,7 +20,7 @@
 	
 namespace caspar { namespace core {
 	
-std::vector<gpu_frame_ptr> render_frames(std::map<int, layer>& layers)
+std::vector<gpu_frame_ptr> receives(std::map<int, layer>& layers)
 {	
 	std::vector<gpu_frame_ptr> frames(layers.size(), nullptr);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), 
@@ -29,7 +29,7 @@ std::vector<gpu_frame_ptr> render_frames(std::map<int, layer>& layers)
 		auto it = layers.begin();
 		std::advance(it, r.begin());
 		for(size_t i = r.begin(); i != r.end(); ++i, ++it)
-			frames[i] = it->second.render_frame();
+			frames[i] = it->second.receive();
 	});		
 	return frames;
 }
@@ -60,7 +60,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 				std::vector<gpu_frame_ptr> frames;
 				{
 					tbb::mutex::scoped_lock lock(layers_mutex_);	
-					frames = render_frames(layers_);
+					frames = receives(layers_);
 				}				
 				frame_processor_->send(std::make_shared<composite_frame>(frames));
 			}

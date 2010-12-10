@@ -228,11 +228,11 @@ struct flash_producer::implementation
 			gpu_frame_ptr result;
 
 			if(is_progressive)							
-				result = do_render_frame();		
+				result = do_receive();		
 			else
 			{
-				gpu_frame_ptr frame1 = do_render_frame();
-				gpu_frame_ptr frame2 = do_render_frame();
+				gpu_frame_ptr frame1 = do_receive();
+				gpu_frame_ptr frame2 = do_receive();
 				result = composite_frame::interlace(frame1, frame2, format_desc.mode);
 			}
 
@@ -241,7 +241,7 @@ struct flash_producer::implementation
 		}
 	}
 		
-	gpu_frame_ptr do_render_frame()
+	gpu_frame_ptr do_receive()
 	{
 		auto format_desc = frame_processor_->get_video_format_desc();
 
@@ -259,7 +259,7 @@ struct flash_producer::implementation
 		return frame;
 	}
 		
-	gpu_frame_ptr render_frame()
+	gpu_frame_ptr receive()
 	{		
 		return (frame_buffer_.try_pop(last_frame_) || !is_empty_) && last_frame_ ? last_frame_ : empty_;
 	}
@@ -299,7 +299,7 @@ struct flash_producer::implementation
 };
 
 flash_producer::flash_producer(const std::wstring& filename) : impl_(new implementation(this, filename)){}
-gpu_frame_ptr flash_producer::render_frame(){return impl_->render_frame();}
+gpu_frame_ptr flash_producer::receive(){return impl_->receive();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
 void flash_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}
 std::wstring flash_producer::print() const {return impl_->print();}

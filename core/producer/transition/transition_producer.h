@@ -62,7 +62,7 @@ class transition_producer : public frame_producer
 public:
 	transition_producer(const frame_producer_ptr& destination, const transition_info& info);
 
-	gpu_frame_ptr render_frame();
+	gpu_frame_ptr receive();
 
 	frame_producer_ptr get_following_producer() const;
 	void set_leading_producer(const frame_producer_ptr& producer);

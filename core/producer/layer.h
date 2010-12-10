@@ -2,6 +2,8 @@
 
 #include "../producer/frame_producer.h"
 
+#include <boost/noncopyable.hpp>
+
 namespace caspar { namespace core {
 
 struct load_option
@@ -14,10 +16,8 @@ struct load_option
 	};
 };
 
-class layer
+class layer : boost::noncopyable
 {
-	layer(const layer& other);
-	layer& operator=(const layer& other);
 public:
 	layer();
 	layer(layer&& other);
@@ -32,7 +32,7 @@ public:
 	frame_producer_ptr foreground() const;
 	frame_producer_ptr background() const;
 
-	gpu_frame_ptr render_frame();
+	gpu_frame_ptr receive();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

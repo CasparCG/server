@@ -36,6 +36,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	implementation() : container_(5), underrun_count_(0)
 	{
 		sf::SoundStream::Initialize(2, 48000);
+		tickets_.set_capacity(3);
 	}
 
 	~implementation()
@@ -43,21 +44,23 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		Stop();
 	}
 	
-	boost::unique_future<void> push(const consumer_frame& frame)
-	{
+	void send(const consumer_frame& frame)
+	{				
 		input_.push(frame.audio_data()); 
 
-		auto promise = std::make_shared<boost::promise<void>>();
-		
-		if(GetStatus() != Playing && input_.size() > 2)
-			Play();
-		
-		if(GetStatus() == Playing)
-			promises_.push(promise);
-		else
-			promise->set_value();
+		if(GetStatus() != Playing && input_.size() > 2)		
+			Play();		
+	}
 
-		return promise->get_future();
+	frame_consumer::sync_mode synchronize()
+	{
+		tickets_.push(true);
+		return frame_consumer::clock;
+	}
+
+	size_t buffer_depth() const
+	{
+		return 3;
 	}
 	
 	bool OnStart() 
@@ -70,9 +73,8 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	{
 		static std::vector<short> silence(1920*2, 0);
 		
-		std::shared_ptr<boost::promise<void>> promise;
-		promises_.pop(promise);
-		promise->set_value();
+		bool dummy;
+		tickets_.pop(dummy);
 
 		std::vector<short> audio_data;		
 		if(!input_.try_pop(audio_data))
@@ -103,7 +105,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		return true;
 	}
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<boost::promise<void>>> promises_;
+	tbb::concurrent_bounded_queue<bool> tickets_;
 	tbb::concurrent_bounded_queue<std::vector<short>> input_;
 
 	long underrun_count_;
@@ -111,5 +113,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 };
 
 consumer::consumer(const video_format_desc&) : impl_(new implementation()){}
-boost::unique_future<void> consumer::prepare(const consumer_frame& frame){return impl_->push(frame);}
+void consumer::send(const consumer_frame& frame){impl_->send(frame);}
+frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
+size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}

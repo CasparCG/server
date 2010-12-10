@@ -39,4 +39,4 @@ namespace caspar
 
 #define _CASPAR_EXIT_SCOPE_LINENAME_CAT(name, line) name##line
 #define _CASPAR_EXIT_SCOPE_LINENAME(name, line) _CASPAR_EXIT_SCOPE_LINENAME_CAT(name, line)
-#define CASPAR_SCOPE_EXIT(f) auto _CASPAR_EXIT_SCOPE_LINENAME(EXIT, __LINE__) = caspar::detail::create_scope_exit(f)
+#define CASPAR_SCOPE_EXIT(f) const auto& _CASPAR_EXIT_SCOPE_LINENAME(EXIT, __LINE__) = caspar::detail::create_scope_exit(f)

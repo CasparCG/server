@@ -79,7 +79,7 @@ public:
 		video_transformer_->initialize(frame_processor);
 	}
 		
-	gpu_frame_ptr render_frame()
+	gpu_frame_ptr receive()
 	{
 		while(ouput_channel_.empty() && !input_->is_eof())
 		{	

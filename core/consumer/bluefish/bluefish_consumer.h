@@ -29,8 +29,9 @@ class consumer : public frame_consumer
 public:
 	consumer(const video_format_desc& format_desc, unsigned int deviceIndex, bool embed_audio = false);
 	
-	virtual boost::unique_future<void> display(const consumer_frame&);		
-	virtual bool has_sync_clock() const {return true;}
+	virtual void send(const consumer_frame&);
+	virtual sync_mode synchronize();
+	virtual size_t buffer_depth() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

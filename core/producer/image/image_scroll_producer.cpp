@@ -67,7 +67,7 @@ struct image_scroll_producer : public frame_producer
 			std::copy_n(&pBits[i* width * 4], width * 4, &image_.get()[i * image_width_ * 4]);
 	}
 
-	gpu_frame_ptr do_render_frame()
+	gpu_frame_ptr do_receive()
 	{
 		auto frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
 		std::fill(frame->data().begin(), frame->data().end(), 0);
@@ -112,17 +112,17 @@ struct image_scroll_producer : public frame_producer
 		return frame;
 	}
 		
-	gpu_frame_ptr render_frame()
+	gpu_frame_ptr receive()
 	{		
 		if(format_desc_.mode != video_mode::progressive)				
 		{
 			gpu_frame_ptr frame1;
 			gpu_frame_ptr frame2;
-			tbb::parallel_invoke([&]{ frame1 = do_render_frame(); }, [&]{ frame2 = do_render_frame(); });
+			tbb::parallel_invoke([&]{ frame1 = do_receive(); }, [&]{ frame2 = do_receive(); });
 			return composite_frame::interlace(frame1, frame2, format_desc_.mode);
 		}			
 
-		return render_frame();	
+		return receive();	
 	}
 	
 	void initialize(const frame_processor_device_ptr& frame_processor)

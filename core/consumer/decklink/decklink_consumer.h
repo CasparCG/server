@@ -30,8 +30,9 @@ class decklink_consumer : public frame_consumer
 public:
 	explicit decklink_consumer(const video_format_desc& format_desc, bool internalKey = false);
 	
-	virtual boost::unique_future<void> display(const consumer_frame&);
-	virtual bool has_sync_clock() const {return false;}
+	virtual void send(const consumer_frame&);
+	virtual sync_mode synchronize();
+	virtual size_t buffer_depth() const;
 private:
 	struct Implementation;
 	std::tr1::shared_ptr<Implementation> pImpl_;

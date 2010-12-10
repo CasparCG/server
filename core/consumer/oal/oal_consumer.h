@@ -28,8 +28,9 @@ class consumer : public frame_consumer
 public:	
 	explicit consumer(const video_format_desc& format_desc);
 	
-	virtual boost::unique_future<void> prepare(const consumer_frame& frame);
-	virtual bool has_sync_clock() const {return true;}
+	virtual void send(const consumer_frame&);
+	virtual sync_mode synchronize();
+	virtual size_t buffer_depth() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
