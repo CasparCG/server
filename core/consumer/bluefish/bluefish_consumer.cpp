@@ -190,8 +190,8 @@ struct consumer::implementation : boost::noncopyable
 
 					encode_hanc(reinterpret_cast<BLUE_UINT32*>(hanc->data()), const_cast<short*>(frame_audio_data.data()), audio_samples, audio_nchannels);
 								
-					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame.data().begin()), 
-													 frame.data().size(), 
+					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame.pixel_data().begin()), 
+													 frame.pixel_data().size(), 
 													 nullptr, 
 													 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_IMAGE));
 
@@ -205,8 +205,8 @@ struct consumer::implementation : boost::noncopyable
 				}
 				else
 				{
-					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame.data().begin()),
-													 frame.data().size(), 
+					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame.pixel_data().begin()),
+													 frame.pixel_data().size(), 
 													 nullptr,                 
 													 BlueImage_DMABuffer(current_id_, BLUE_DATA_IMAGE));
 			

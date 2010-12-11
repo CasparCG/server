@@ -24,7 +24,7 @@
 
 #include "cg_producer.h"
 
-#include "../../processor/write_frame.h"
+#include "../../processor/producer_frame.h"
 #include "../../server.h"
 
 #include <boost/assign/list_of.hpp>
@@ -37,7 +37,7 @@ struct ct_producer : public cg_producer
 {
 	ct_producer(const std::wstring& filename) : filename_(filename), initialized_(false){}
 
-	gpu_frame_ptr receive()
+	producer_frame receive()
 	{
 		if(!initialized_)
 		{

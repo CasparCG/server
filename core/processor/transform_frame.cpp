@@ -2,6 +2,7 @@
 
 #include "transform_frame.h"
 
+#include "producer_frame.h"
 #include "frame_shader.h"
 
 #include "../format/pixel_format.h"
@@ -16,24 +17,28 @@ namespace caspar { namespace core {
 																																						
 struct transform_frame::implementation : boost::noncopyable
 {
-	implementation(const gpu_frame_ptr& frame) : frame_(frame), audio_volume_(255){}
+	implementation(const producer_frame& frame) : frame_(frame), audio_volume_(255), calculated_audio_volume_(audio_volume_){}
 	
+	void begin_write(){frame_.begin_write();}
+	void end_write(){frame_.end_write();}
+
 	void draw(frame_shader& shader)
 	{
-		if(!frame_)
+		if(frame_ == producer_frame::empty() || frame_ == producer_frame::eof())
 			return;
 
 		shader.begin(transform_);
-		frame_->draw(shader);
+		frame_.draw(shader);
 		shader.end();
 	}
 
 	std::vector<short>& audio_data()
 	{
-		if(!audio_data_.empty() || !frame_)
+		if(!audio_data_.empty() && calculated_audio_volume_ == audio_volume_)
 			return audio_data_;
 		
-		audio_data_ = frame_->audio_data();
+		calculated_audio_volume_ = audio_volume_;
+		audio_data_ = frame_.audio_data();
 		tbb::parallel_for
 		(
 			tbb::blocked_range<size_t>(0, audio_data_.size()),
@@ -46,28 +51,17 @@ struct transform_frame::implementation : boost::noncopyable
 		
 		return audio_data_;
 	}
-
-	void begin_write()
-	{
-		if(frame_)
-			frame_->begin_write();
-	}
-
-	void end_write()
-	{
-		if(frame_)
-			frame_->end_write();
-	}
 		
 	std::vector<short> audio_data_;
 	
 	shader_transform transform_;
-
+	
+	unsigned char calculated_audio_volume_;
 	unsigned char audio_volume_;
-	gpu_frame_ptr frame_;
+	producer_frame frame_;
 };
 	
-transform_frame::transform_frame(const gpu_frame_ptr& frame) : impl_(new implementation(frame)){}
+transform_frame::transform_frame(const producer_frame& frame) : impl_(new implementation(frame)){}
 void transform_frame::begin_write(){impl_->begin_write();}
 void transform_frame::end_write(){impl_->end_write();}	
 void transform_frame::draw(frame_shader& shader){impl_->draw(shader);}

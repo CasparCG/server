@@ -7,7 +7,7 @@
 #include "cg_producer.h"
 #include "flash_producer.h"
 
-#include "../../processor/write_frame.h"
+#include "../../processor/producer_frame.h"
 #include "../../Server.h"
 
 #include <boost/filesystem.hpp>
@@ -146,9 +146,9 @@ public:
 		flash_producer_->param(param.str());
 	}
 
-	gpu_frame_ptr receive()
+	producer_frame receive()
 	{
-		return flash_producer_ ? flash_producer_->receive() : nullptr;
+		return flash_producer_ ? flash_producer_->receive() : producer_frame::empty();
 	}
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -173,7 +173,7 @@ cg_producer_ptr get_default_cg_producer(const channel_ptr& channel, int render_l
 	if(!channel)
 		BOOST_THROW_EXCEPTION(null_argument() << msg_info("channel"));
 	
-	auto producer = std::dynamic_pointer_cast<cg_producer>(channel->foreground(render_layer));
+	auto producer = std::dynamic_pointer_cast<cg_producer>(channel->foreground(render_layer).get());
 	if(producer == nullptr)
 	{
 		producer = std::make_shared<cg_producer>();		
@@ -184,7 +184,7 @@ cg_producer_ptr get_default_cg_producer(const channel_ptr& channel, int render_l
 }
 
 cg_producer::cg_producer() : impl_(new implementation()){}
-gpu_frame_ptr cg_producer::receive(){return impl_->receive();}
+producer_frame cg_producer::receive(){return impl_->receive();}
 void cg_producer::clear(){impl_->clear();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}

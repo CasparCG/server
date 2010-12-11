@@ -28,6 +28,7 @@ extern "C"
 #include "video/video_transformer.h"
 
 #include "../../format/video_format.h"
+#include "../../processor/producer_frame.h"
 #include "../../../common/utility/scope_exit.h"
 #include "../../server.h"
 
@@ -79,7 +80,7 @@ public:
 		video_transformer_->initialize(frame_processor);
 	}
 		
-	gpu_frame_ptr receive()
+	producer_frame receive()
 	{
 		while(ouput_channel_.empty() && !input_->is_eof())
 		{	
@@ -110,8 +111,7 @@ public:
 					CASPAR_LOG(warning) << "### File read underflow has STARTED.";
 
 				// Return last frame without audio.
-				if(last_frame_)
-					last_frame_->audio_data().clear();
+				//last_frame_.audio_data().clear(); TODO
 				return last_frame_;
 			}
 			else if(underrun_count_ > 0)
@@ -122,13 +122,13 @@ public:
 
 			while(!video_frame_channel_.empty() && (!audio_chunk_channel_.empty() || !has_audio_))
 			{
-				if(has_audio_ && video_frame_channel_.front() != nullptr)
+				if(has_audio_ && video_frame_channel_.front()) 
 				{
 					video_frame_channel_.front()->audio_data() = std::move(audio_chunk_channel_.front());
 					audio_chunk_channel_.pop_front();
 				}
 				
-				gpu_frame_ptr frame = video_frame_channel_.front();
+				auto frame = video_frame_channel_.front();
 				video_frame_channel_.pop_front();
 				ouput_channel_.push(std::move(frame));
 			}				
@@ -140,7 +140,7 @@ public:
 			ouput_channel_.pop();
 		}
 		else if(input_->is_eof())
-			last_frame_ = nullptr;
+			last_frame_ = producer_frame::eof();
 
 		return last_frame_;
 	}
@@ -156,18 +156,18 @@ public:
 
 	video_decoder_uptr					video_decoder_;
 	video_transformer_uptr				video_transformer_;
-	std::deque<gpu_frame_ptr>			video_frame_channel_;
+	std::deque<transform_frame_ptr>		video_frame_channel_;
 	
 	audio_decoder_ptr					audio_decoder_;
 	std::deque<std::vector<short>>		audio_chunk_channel_;
 
-	std::queue<gpu_frame_ptr>			ouput_channel_;
+	std::queue<transform_frame_ptr>		ouput_channel_;
 	
 	std::wstring						filename_;
 
 	long								underrun_count_;
 
-	gpu_frame_ptr						last_frame_;
+	producer_frame						last_frame_;
 };
 
 frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& params)

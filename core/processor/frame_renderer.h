@@ -34,7 +34,7 @@ class frame_renderer :  boost::noncopyable
 public:
 	frame_renderer(const video_format_desc& format_desc_);
 		
-	consumer_frame render(const gpu_frame_ptr& frame);
+	consumer_frame render(const producer_frame& frame);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

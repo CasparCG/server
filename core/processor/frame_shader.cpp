@@ -183,7 +183,7 @@ struct frame_shader::implementation
 	double alpha_;
 	std::stack<shader_transform> transform_stack_;
 
-	video_format_desc format_desc_;
+	const video_format_desc format_desc_;
 	pixel_format::type current_;
 	std::unordered_map<pixel_format::type, common::gl::shader_program> shaders_;
 };

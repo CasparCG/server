@@ -22,6 +22,7 @@
 #include "transition_producer.h"
 
 #include "../../format/video_format.h"
+#include "../../processor/producer_frame.h"
 #include "../../processor/composite_frame.h"
 #include "../../processor/transform_frame.h"
 #include "../../processor/frame_processor_device.h"
@@ -51,18 +52,18 @@ struct transition_producer::implementation : boost::noncopyable
 		org_source_producer_ = source_producer_ = producer;
 	}
 		
-	gpu_frame_ptr receive()
+	producer_frame receive()
 	{
 		if(current_frame_ == 0)
 			CASPAR_LOG(info) << "Transition started.";
 
-		gpu_frame_ptr result = [&]() -> gpu_frame_ptr
+		producer_frame result = [&]() -> producer_frame
 		{
 			if(current_frame_++ >= info_.duration)
-				return nullptr;
+				return producer_frame::eof();
 
-			gpu_frame_ptr source;
-			gpu_frame_ptr dest;
+			producer_frame source;
+			producer_frame dest;
 
 			tbb::parallel_invoke
 			(
@@ -73,18 +74,18 @@ struct transition_producer::implementation : boost::noncopyable
 			return compose(dest, source);
 		}();
 
-		if(!result)
+		if(result == producer_frame::eof())
 			CASPAR_LOG(info) << "Transition ended.";
 
 		return result;
 	}
 
-	gpu_frame_ptr receive(frame_producer_ptr& producer)
+	producer_frame receive(frame_producer_ptr& producer)
 	{
 		if(!producer)
-			return nullptr;
+			return producer_frame::eof();
 
-		gpu_frame_ptr frame;
+		producer_frame frame = producer_frame::eof();
 		try
 		{
 			frame = producer->receive();
@@ -96,10 +97,10 @@ struct transition_producer::implementation : boost::noncopyable
 			CASPAR_LOG(warning) << "Removed producer from transition.";
 		}
 
-		if(frame == nullptr)
+		if(frame == producer_frame::eof())
 		{
 			if(!producer || !producer->get_following_producer())
-				return nullptr;
+				return producer_frame::eof();
 
 			try
 			{
@@ -119,10 +120,10 @@ struct transition_producer::implementation : boost::noncopyable
 		return frame;
 	}
 					
-	gpu_frame_ptr compose(gpu_frame_ptr dest_frame, gpu_frame_ptr src_frame) 
+	producer_frame compose(producer_frame dest_frame, producer_frame src_frame) 
 	{	
-		if(!dest_frame && !src_frame)
-			return nullptr;
+		if(dest_frame == producer_frame::eof() && src_frame == producer_frame::eof())
+			return producer_frame::eof();
 
 		if(info_.type == transition::cut)		
 			return src_frame;
@@ -180,7 +181,7 @@ struct transition_producer::implementation : boost::noncopyable
 };
 
 transition_producer::transition_producer(const frame_producer_ptr& dest, const transition_info& info) : impl_(new implementation(dest, info)){}
-gpu_frame_ptr transition_producer::receive(){return impl_->receive();}
+producer_frame transition_producer::receive(){return impl_->receive();}
 frame_producer_ptr transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const frame_producer_ptr& producer) { impl_->set_leading_producer(producer); }
 void transition_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}

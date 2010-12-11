@@ -22,6 +22,7 @@
 
 #include "color_producer.h"
 
+#include "../../processor/producer_frame.h"
 #include "../../format/video_format.h"
 
 #include <intrin.h>
@@ -65,9 +66,9 @@ unsigned int get_pixel_color_value(const std::wstring& parameter)
 class color_producer : public frame_producer
 {
 public:
-	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)){}
+	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)), frame_(producer_frame::empty()){}
 	
-	gpu_frame_ptr receive()
+	producer_frame receive()
 	{ 
 		return frame_;
 	}
@@ -75,7 +76,7 @@ public:
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
 		auto frame = frame_processor->create_frame();
-		__stosd(reinterpret_cast<unsigned long*>(frame->data().begin()), color_value_, frame->data().size() / sizeof(unsigned long));
+		__stosd(reinterpret_cast<unsigned long*>(frame->pixel_data().begin()), color_value_, frame->pixel_data().size() / sizeof(unsigned long));
 		frame_ = frame;
 	}
 	
@@ -84,7 +85,7 @@ public:
 		return + L"color_producer. color: " + color_str_;
 	}
 
-	gpu_frame_ptr frame_;
+	producer_frame frame_;
 	unsigned int color_value_;
 	std::wstring color_str_;
 };

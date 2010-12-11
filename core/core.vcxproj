@@ -169,11 +169,12 @@
     <ClInclude Include="format\pixel_format.h" />
     <ClInclude Include="format\video_format.h" />
     <ClInclude Include="processor\composite_frame.h" />
+    <ClInclude Include="processor\consumer_frame.h" />
     <ClInclude Include="processor\frame_processor_device.h" />
     <ClInclude Include="processor\frame_renderer.h" />
     <ClInclude Include="processor\frame_shader.h" />
     <ClInclude Include="processor\fwd.h" />
-    <ClInclude Include="processor\gpu_frame.h" />
+    <ClInclude Include="processor\producer_frame.h" />
     <ClInclude Include="processor\read_frame.h" />
     <ClInclude Include="processor\transform_frame.h" />
     <ClInclude Include="processor\write_frame.h" />

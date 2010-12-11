@@ -34,7 +34,7 @@ class frame_processor_device : boost::noncopyable
 public:
 	frame_processor_device(const video_format_desc& format_desc);
 		
-	void send(const gpu_frame_ptr& frame);
+	void send(const producer_frame& frame);
 	consumer_frame receive();
 	
 	write_frame_ptr create_frame(const pixel_format_desc& desc);		

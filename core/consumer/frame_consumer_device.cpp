@@ -9,12 +9,10 @@
 #include "../format/video_format.h"
 #include "../processor/write_frame.h"
 #include "../processor/frame_processor_device.h"
+#include "../../common/concurrency/executor.h"
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
-
-#include <boost/foreach.hpp>
-#include <boost/thread.hpp>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -47,31 +45,18 @@ public:
 		std::vector<size_t> depths;
 		boost::range::transform(consumers_, std::back_inserter(depths), std::mem_fn(&frame_consumer::buffer_depth));
 		max_depth_ = *boost::range::max_element(depths);
-		display_thread_ = boost::thread([=]{run();});
+		executor_.start();
+		executor_.begin_invoke([=]{tick();});
 	}
-
-	~implementation()
+					
+	void tick()
 	{
-		is_running_ = false;
-		display_thread_.join();
-	}
-				
-	void run()
-	{
-		is_running_ = true;
-		CASPAR_LOG(warning) << "Starting frame_consumer_device.";		
-
-		win32_exception::install_handler();
-								
-		while(is_running_)						
-		{
-			display_frame(frame_processor_->receive());		
-			is_running_ = !consumers_.empty();
-		}
-		CASPAR_LOG(warning) << "Shutting down frame_consumer_device.";			
+		process(frame_processor_->receive());		
+		if(!consumers_.empty())
+			executor_.begin_invoke([=]{tick();});
 	}
 
-	void display_frame(const consumer_frame& frame)
+	void process(const consumer_frame& frame)
 	{		
 		buffer_.push_back(frame);
 
@@ -111,11 +96,10 @@ public:
 			buffer_.pop_front();
 	}
 
+	common::executor executor_;	
+
 	size_t max_depth_;
-	std::deque<consumer_frame> buffer_;
-		
-	tbb::atomic<bool> is_running_;
-	boost::thread display_thread_;
+	std::deque<consumer_frame> buffer_;		
 
 	std::vector<frame_consumer_ptr> consumers_;
 	

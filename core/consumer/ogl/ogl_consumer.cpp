@@ -45,31 +45,31 @@ struct consumer::implementation : boost::noncopyable
 		: format_desc_(format_desc), stretch_(stretch), screen_width_(0), screen_height_(0), windowed_(windowed)
 	{		
 #ifdef _WIN32
-		DISPLAY_DEVICE dDevice;			
-		memset(&dDevice,0,sizeof(dDevice));
-		dDevice.cb = sizeof(dDevice);
+		DISPLAY_DEVICE d_device;			
+		memset(&d_device, 0, sizeof(d_device));
+		d_device.cb = sizeof(d_device);
 
 		std::vector<DISPLAY_DEVICE> displayDevices;
-		for(int n = 0; EnumDisplayDevices(NULL, n, &dDevice, NULL); ++n)
+		for(int n = 0; EnumDisplayDevices(NULL, n, &d_device, NULL); ++n)
 		{
-			displayDevices.push_back(dDevice);
-			memset(&dDevice,0,sizeof(dDevice));
-			dDevice.cb = sizeof(dDevice);
+			displayDevices.push_back(d_device);
+			memset(&d_device, 0, sizeof(d_device));
+			d_device.cb = sizeof(d_device);
 		}
 
 		if(screen_index >= displayDevices.size())
 			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_"));
 		
 		DEVMODE devmode;
-		memset(&devmode,0,sizeof(devmode));
+		memset(&devmode, 0, sizeof(devmode));
 		
 		if(!EnumDisplaySettings(displayDevices[screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
 			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info("EnumDisplaySettings"));
 		
 		screen_width_ = windowed ? format_desc_.width : devmode.dmPelsWidth;
 		screen_height_ = windowed ? format_desc_.height : devmode.dmPelsHeight;
-		screenX_ = devmode.dmPosition.x;
-		screenY_ = devmode.dmPosition.y;
+		screen_x_ = devmode.dmPosition.x;
+		screen_y_ = devmode.dmPosition.y;
 #else
 		if(!windowed)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("OGLConsumer doesn't support non-Win32 fullscreen"));
@@ -79,8 +79,8 @@ struct consumer::implementation : boost::noncopyable
 		
 		screen_width_ = format_desc_.width;
 		screen_height_ = format_desc_.height;
-		screenX_ = 0;
-		screenY_ = 0;
+		screen_x_ = 0;
+		screen_y_ = 0;
 #endif
 
 		executor_.start();
@@ -88,7 +88,7 @@ struct consumer::implementation : boost::noncopyable
 		{
 			window_.Create(sf::VideoMode(format_desc_.width, format_desc_.height, 32), "CasparCG", windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
 			window_.ShowMouseCursor(false);
-			window_.SetPosition(screenX_, screenY_);
+			window_.SetPosition(screen_x_, screen_y_);
 			window_.SetSize(screen_width_, screen_height_);
 			window_.SetActive();
 			GL(glEnable(GL_TEXTURE_2D));
@@ -153,7 +153,7 @@ struct consumer::implementation : boost::noncopyable
 	void render(const consumer_frame& frame)
 	{						
 		auto ptr = pbos_.front().end_write();
-		std::copy_n(frame.data().begin(), frame.data().size(), reinterpret_cast<char*>(ptr));
+		std::copy_n(frame.pixel_data().begin(), frame.pixel_data().size(), reinterpret_cast<char*>(ptr));
 
 		GL(glClear(GL_COLOR_BUFFER_BIT));	
 		pbos_.back().bind_texture();				
@@ -206,8 +206,8 @@ struct consumer::implementation : boost::noncopyable
 	bool windowed_;
 	unsigned int screen_width_;
 	unsigned int screen_height_;
-	unsigned int screenX_;
-	unsigned int screenY_;
+	unsigned int screen_x_;
+	unsigned int screen_y_;
 				
 	stretch stretch_;
 	video_format_desc format_desc_;

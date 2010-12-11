@@ -4,8 +4,8 @@
 
 namespace caspar { namespace core {
 		
-class gpu_frame;
-typedef std::shared_ptr<gpu_frame> gpu_frame_ptr;
+class read_frame;
+typedef std::shared_ptr<read_frame> read_frame_ptr;
 
 class write_frame;
 typedef std::shared_ptr<write_frame> write_frame_ptr;
@@ -17,6 +17,7 @@ class composite_frame;
 typedef std::shared_ptr<composite_frame> composite_frame_ptr;
 
 class consumer_frame;
+class producer_frame;
 
 class frame_shader;
 typedef std::shared_ptr<frame_shader> frame_shader_ptr;
