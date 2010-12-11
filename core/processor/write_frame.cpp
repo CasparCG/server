@@ -2,7 +2,7 @@
 
 #include "write_frame.h"
 
-#include "producer_frame.h"
+#include "draw_frame.h"
 #include "frame_shader.h"
 
 #include "../format/pixel_format.h"

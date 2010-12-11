@@ -56,7 +56,7 @@ public:
 			executor_.begin_invoke([=]{tick();});
 	}
 
-	void process(const consumer_frame& frame)
+	void process(const read_frame& frame)
 	{		
 		buffer_.push_back(frame);
 
@@ -99,7 +99,7 @@ public:
 	common::executor executor_;	
 
 	size_t max_depth_;
-	std::deque<consumer_frame> buffer_;		
+	std::deque<read_frame> buffer_;		
 
 	std::vector<frame_consumer_ptr> consumers_;
 	

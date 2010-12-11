@@ -51,7 +51,7 @@ struct transition_direction
 struct transition_info
 {
 	transition_info() : type(transition::cut), duration(0), direction(transition_direction::from_left){}
-    
+	
 	size_t						duration;
 	transition_direction::type	direction;
 	transition::type			type;
@@ -62,7 +62,7 @@ class transition_producer : public frame_producer
 public:
 	transition_producer(const frame_producer_ptr& destination, const transition_info& info);
 
-	producer_frame receive();
+	draw_frame receive();
 
 	frame_producer_ptr get_following_producer() const;
 	void set_leading_producer(const frame_producer_ptr& producer);

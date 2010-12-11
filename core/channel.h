@@ -13,7 +13,7 @@ namespace caspar { namespace core {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \class	channel
 ///
-/// \brief	Channel. 
+/// \brief
 /// 		
 ///                |**********| <-   empty frame   <- |***********| <-   frame format  <- |**********|
 ///   PROTOCOL ->  | PRODUCER |                       | PROCESSOR |                       | CONSUMER |  -> DISPLAY DEVICE

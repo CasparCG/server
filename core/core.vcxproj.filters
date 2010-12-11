@@ -80,7 +80,10 @@
       <UniqueIdentifier>{f19ced4f-4ad2-4c0a-b51f-50e89909d669}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\channel\processor\frame">
-      <UniqueIdentifier>{deed18de-67bf-4bb9-9f5e-565af7ab64eb}</UniqueIdentifier>
+      <UniqueIdentifier>{1b9effc5-16ee-4be7-9189-d2b6bec0165a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\channel\producer\ffmpeg\io">
+      <UniqueIdentifier>{eaa43a39-9ff0-4291-b717-4d4231d8295a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -121,9 +124,6 @@
       <Filter>Source\channel\producer\color</Filter>
     </ClInclude>
     <ClInclude Include="producer\ffmpeg\ffmpeg_producer.h">
-      <Filter>Source\channel\producer\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\ffmpeg\input.h">
       <Filter>Source\channel\producer\ffmpeg</Filter>
     </ClInclude>
     <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h">
@@ -237,28 +237,25 @@
     <ClInclude Include="consumer\decklink\util.h">
       <Filter>Source\channel\consumer\decklink</Filter>
     </ClInclude>
+    <ClInclude Include="processor\fwd.h">
+      <Filter>Source\channel\processor</Filter>
+    </ClInclude>
     <ClInclude Include="processor\write_frame.h">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\read_frame.h">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\composite_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
     <ClInclude Include="processor\transform_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
-    <ClInclude Include="processor\fwd.h">
-      <Filter>Source\channel\processor</Filter>
+    <ClInclude Include="processor\composite_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
-    <ClInclude Include="processor\producer_frame.h">
-      <Filter>Source\channel\processor</Filter>
+    <ClInclude Include="processor\read_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
-    <ClInclude Include="processor\consumer_frame.h">
-      <Filter>Source\channel\processor</Filter>
+    <ClInclude Include="producer\ffmpeg\input.h">
+      <Filter>Source\channel\producer\ffmpeg\io</Filter>
     </ClInclude>
-    <ClInclude Include="processor\drawable_frame.h">
+    <ClInclude Include="processor\draw_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
   </ItemGroup>
@@ -294,9 +291,6 @@
       <Filter>Source\channel\producer\color</Filter>
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\ffmpeg_producer.cpp">
-      <Filter>Source\channel\producer\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\ffmpeg\input.cpp">
       <Filter>Source\channel\producer\ffmpeg</Filter>
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\audio\audio_decoder.cpp">
@@ -383,7 +377,7 @@
     <ClCompile Include="consumer\decklink\decklink_consumer.cpp">
       <Filter>Source\channel\consumer\decklink</Filter>
     </ClCompile>
-    <ClCompile Include="processor\read_frame.cpp">
+    <ClCompile Include="processor\transform_frame.cpp">
       <Filter>Source\channel\processor\frame</Filter>
     </ClCompile>
     <ClCompile Include="processor\write_frame.cpp">
@@ -392,7 +386,13 @@
     <ClCompile Include="processor\composite_frame.cpp">
       <Filter>Source\channel\processor\frame</Filter>
     </ClCompile>
-    <ClCompile Include="processor\transform_frame.cpp">
+    <ClCompile Include="processor\read_frame.cpp">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\input.cpp">
+      <Filter>Source\channel\producer\ffmpeg\io</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\draw_frame.cpp">
       <Filter>Source\channel\processor\frame</Filter>
     </ClCompile>
   </ItemGroup>

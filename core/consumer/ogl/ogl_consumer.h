@@ -38,7 +38,7 @@ class consumer : public frame_consumer
 public:	
 	explicit consumer(const video_format_desc& format_desc, unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
 	
-	virtual void send(const consumer_frame&);
+	virtual void send(const read_frame&);
 	virtual sync_mode synchronize();
 	virtual size_t buffer_depth() const;
 private:

@@ -22,7 +22,7 @@
 
 #include "color_producer.h"
 
-#include "../../processor/producer_frame.h"
+#include "../../processor/draw_frame.h"
 #include "../../format/video_format.h"
 
 #include <intrin.h>
@@ -68,7 +68,7 @@ class color_producer : public frame_producer
 public:
 	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)){}
 	
-	producer_frame receive()
+	draw_frame receive()
 	{ 
 		return frame_;
 	}
@@ -85,7 +85,7 @@ public:
 		return + L"color_producer. color: " + color_str_;
 	}
 
-	producer_frame frame_;
+	draw_frame frame_;
 	unsigned int color_value_;
 	std::wstring color_str_;
 };

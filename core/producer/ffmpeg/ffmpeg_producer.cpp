@@ -28,7 +28,9 @@ extern "C"
 #include "video/video_transformer.h"
 
 #include "../../format/video_format.h"
-#include "../../processor/producer_frame.h"
+#include "../../processor/draw_frame.h"
+#include "../../processor/transform_Frame.h"
+#include "../../processor/draw_frame.h"
 #include "../../../common/utility/scope_exit.h"
 #include "../../server.h"
 
@@ -77,10 +79,11 @@ public:
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
+		format_desc_ = frame_processor->get_video_format_desc();
 		video_transformer_->initialize(frame_processor);
 	}
 		
-	producer_frame receive()
+	draw_frame receive()
 	{
 		while(ouput_channel_.empty() && !input_->is_eof())
 		{	
@@ -92,8 +95,8 @@ public:
 				if(!video_packet.empty())
 				{
 					auto decoded_frame = video_decoder_->execute(video_packet);
-					auto transformed_frame = video_transformer_->execute(decoded_frame);
-					video_frame_channel_.push_back(std::move(transformed_frame));	
+					auto frame = video_transformer_->execute(decoded_frame);
+					video_frame_channel_.push_back(std::move(frame));	
 				}
 			}, 
 			[&] 
@@ -105,13 +108,30 @@ public:
 				}
 			});
 
-			if(video_packet.empty() && audio_packet.empty())
+			while(!video_frame_channel_.empty() && (!audio_chunk_channel_.empty() || !has_audio_))
+			{
+				std::vector<short> audio_data;
+				if(has_audio_) 
+				{
+					audio_data = std::move(audio_chunk_channel_.front());
+					audio_chunk_channel_.pop_front();
+				}
+							
+				auto transform = transform_frame(std::move(video_frame_channel_.front()), std::move(audio_data));
+				video_frame_channel_.pop_front();
+		
+				// TODO: Make generic for all formats and modes.
+				if(input_->get_video_codec_context()->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
+					transform.translate(0.0f, 1.0/static_cast<double>(format_desc_.height));	
+				
+				ouput_channel_.push(std::move(transform));
+			}				
+
+			if(ouput_channel_.empty() && video_packet.empty() && audio_packet.empty())
 			{
 				if(underrun_count_++ == 0)
 					CASPAR_LOG(warning) << "### File read underflow has STARTED.";
 
-				// Return last frame without audio.
-				//last_frame_.audio_data().clear(); TODO
 				return last_frame_;
 			}
 			else if(underrun_count_ > 0)
@@ -119,30 +139,19 @@ public:
 				CASPAR_LOG(trace) << "### File Read Underrun has ENDED with " << underrun_count_ << " ticks.";
 				underrun_count_ = 0;
 			}
-
-			while(!video_frame_channel_.empty() && (!audio_chunk_channel_.empty() || !has_audio_))
-			{
-				if(has_audio_) 
-				{
-					video_frame_channel_.front().audio_data() = std::move(audio_chunk_channel_.front());
-					audio_chunk_channel_.pop_front();
-				}
-				
-				auto frame = std::move(video_frame_channel_.front());
-				video_frame_channel_.pop_front();
-				ouput_channel_.push(std::move(frame));
-			}				
 		}
 
+		draw_frame result = last_frame_;
 		if(!ouput_channel_.empty())
 		{
-			last_frame_ = std::move(ouput_channel_.front());
+			result = std::move(ouput_channel_.front());
+			last_frame_ = transform_frame(result, std::vector<short>()); // last_frame should not have audio, override it!
 			ouput_channel_.pop();
 		}
 		else if(input_->is_eof())
-			last_frame_ = producer_frame::eof();
+			last_frame_ = draw_frame::eof();
 
-		return last_frame_;
+		return result;
 	}
 
 	std::wstring print() const
@@ -156,18 +165,20 @@ public:
 
 	video_decoder_uptr					video_decoder_;
 	video_transformer_uptr				video_transformer_;
-	std::deque<transform_frame>			video_frame_channel_;
+	std::deque<draw_frame>				video_frame_channel_;
 	
 	audio_decoder_ptr					audio_decoder_;
 	std::deque<std::vector<short>>		audio_chunk_channel_;
 
-	std::queue<transform_frame>			ouput_channel_;
+	std::queue<draw_frame>				ouput_channel_;
 	
 	std::wstring						filename_;
 
 	long								underrun_count_;
 
-	producer_frame						last_frame_;
+	draw_frame							last_frame_;
+
+	video_format_desc					format_desc_;
 };
 
 frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& params)

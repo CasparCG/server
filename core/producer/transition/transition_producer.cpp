@@ -22,7 +22,7 @@
 #include "transition_producer.h"
 
 #include "../../format/video_format.h"
-#include "../../processor/producer_frame.h"
+#include "../../processor/draw_frame.h"
 #include "../../processor/composite_frame.h"
 #include "../../processor/transform_frame.h"
 #include "../../processor/frame_processor_device.h"
@@ -35,8 +35,7 @@ namespace caspar { namespace core {
 
 struct transition_producer::implementation : boost::noncopyable
 {
-	implementation(const frame_producer_ptr& dest, const transition_info& info) 
-		: current_frame_(0), info_(info), dest_producer_(dest), org_dest_producer_(dest)
+	implementation(const frame_producer_ptr& dest, const transition_info& info) : current_frame_(0), info_(info), dest_producer_(dest), org_dest_producer_(dest)
 	{
 		if(!dest)
 			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("dest"));
@@ -52,18 +51,18 @@ struct transition_producer::implementation : boost::noncopyable
 		org_source_producer_ = source_producer_ = producer;
 	}
 		
-	producer_frame receive()
+	draw_frame receive()
 	{
 		if(current_frame_ == 0)
 			CASPAR_LOG(info) << "Transition started.";
 
-		producer_frame result = [&]() -> producer_frame
+		draw_frame result = [&]() -> draw_frame
 		{
 			if(current_frame_++ >= info_.duration)
-				return producer_frame::eof();
+				return draw_frame::eof();
 
-			producer_frame source;
-			producer_frame dest;
+			draw_frame source;
+			draw_frame dest;
 
 			tbb::parallel_invoke
 			(
@@ -74,18 +73,18 @@ struct transition_producer::implementation : boost::noncopyable
 			return compose(dest, source);
 		}();
 
-		if(result == producer_frame::eof())
+		if(result == draw_frame::eof())
 			CASPAR_LOG(info) << "Transition ended.";
 
 		return result;
 	}
 
-	producer_frame receive(frame_producer_ptr& producer)
+	draw_frame receive(frame_producer_ptr& producer)
 	{
 		if(!producer)
-			return producer_frame::eof();
+			return draw_frame::eof();
 
-		producer_frame frame = producer_frame::eof();
+		draw_frame frame = draw_frame::eof();
 		try
 		{
 			frame = producer->receive();
@@ -97,10 +96,10 @@ struct transition_producer::implementation : boost::noncopyable
 			CASPAR_LOG(warning) << "Removed producer from transition.";
 		}
 
-		if(frame == producer_frame::eof())
+		if(frame == draw_frame::eof())
 		{
 			if(!producer || !producer->get_following_producer())
-				return producer_frame::eof();
+				return draw_frame::eof();
 
 			try
 			{
@@ -120,10 +119,10 @@ struct transition_producer::implementation : boost::noncopyable
 		return frame;
 	}
 					
-	producer_frame compose(producer_frame dest_frame, producer_frame src_frame) 
+	draw_frame compose(draw_frame dest_frame, draw_frame src_frame) 
 	{	
-		if(dest_frame == producer_frame::eof() && src_frame == producer_frame::eof())
-			return producer_frame::eof();
+		if(dest_frame == draw_frame::eof() && src_frame == draw_frame::eof())
+			return draw_frame::eof();
 
 		if(info_.type == transition::cut)		
 			return src_frame;
@@ -131,8 +130,8 @@ struct transition_producer::implementation : boost::noncopyable
 		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
 		unsigned char volume = static_cast<unsigned char>(alpha*256.0);
 
-		transform_frame my_src_frame = std::move(src_frame);
-		transform_frame my_dest_frame = std::move(dest_frame);
+		auto my_src_frame = transform_frame(src_frame);
+		auto my_dest_frame = transform_frame(dest_frame);
 
 		my_src_frame.audio_volume(255-volume);
 		my_dest_frame.audio_volume(volume);
@@ -154,7 +153,7 @@ struct transition_producer::implementation : boost::noncopyable
 			my_dest_frame.texcoord((-1.0+alpha)*dir, 1.0, 1.0-(1.0-alpha)*dir, 0.0);				
 		}
 
-		return std::make_shared<composite_frame>(std::move(my_src_frame), std::move(my_dest_frame));
+		return composite_frame(std::move(my_src_frame), std::move(my_dest_frame));
 	}
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -181,7 +180,7 @@ struct transition_producer::implementation : boost::noncopyable
 };
 
 transition_producer::transition_producer(const frame_producer_ptr& dest, const transition_info& info) : impl_(new implementation(dest, info)){}
-producer_frame transition_producer::receive(){return impl_->receive();}
+draw_frame transition_producer::receive(){return impl_->receive();}
 frame_producer_ptr transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const frame_producer_ptr& producer) { impl_->set_leading_producer(producer); }
 void transition_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}

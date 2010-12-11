@@ -1,6 +1,6 @@
 #include "../StdAfx.h"
 
-#include "producer_frame.h"
+#include "draw_frame.h"
 #include "composite_frame.h"
 #include "transform_frame.h"
 #include "../../common/gl/utility.h"
@@ -17,36 +17,10 @@ namespace caspar { namespace core {
 	
 struct composite_frame::implementation : boost::noncopyable
 {	
-	implementation(const std::vector<producer_frame>& frames) : frames_(frames)	{}
-	
-	void begin_write()
-	{
-		for(size_t n = 0; n < frames_.size(); ++n)
-			frames_[n].begin_write();
-	}
-
-	void end_write()
-	{
-		for(size_t n = 0; n < frames_.size(); ++n)
-			frames_[n].end_write();	
-	}
-	
-	void draw(frame_shader& shader)
-	{
-		for(size_t n = 0; n < frames_.size(); ++n)
-			frames_[n].draw(shader);
-	}
-			
-	std::vector<short>& audio_data()
-	{
-		if(!audio_data_.empty() || frames_.empty())
-			return audio_data_;
-			
-		audio_data_.resize(1920*2, 0);
-				
-		for(size_t n = 0; n < frames_.size(); ++n)
+	implementation(std::vector<draw_frame>&& frames) : frames_(std::move(frames)), audio_data_(1920*2, 0)
+	{		
+		boost::range::for_each(frames_, [&](const draw_frame& frame)
 		{
-			auto& frame = frames_[n];
 			tbb::parallel_for
 			(
 				tbb::blocked_range<size_t>(0, frame.audio_data().size()),
@@ -56,20 +30,29 @@ struct composite_frame::implementation : boost::noncopyable
 						audio_data_[n] = static_cast<short>((static_cast<int>(audio_data_[n]) + static_cast<int>(frame.audio_data()[n])) & 0xFFFF);						
 				}
 			);
-		}
-
-		return audio_data_;
+		});
 	}
 	
-	std::vector<producer_frame> frames_;
+	void begin_write()
+	{
+		boost::range::for_each(frames_, std::mem_fn(&draw_frame::begin_write));
+	}
+
+	void end_write()
+	{
+		boost::range::for_each(frames_, std::mem_fn(&draw_frame::end_write));
+	}
+	
+	void draw(frame_shader& shader)
+	{
+		boost::range::for_each(frames_, std::bind(&draw_frame::draw, std::placeholders::_1, std::ref(shader)));
+	}
+				
+	std::vector<draw_frame> frames_;
 	std::vector<short> audio_data_;
 };
 
-#if defined(_MSC_VER)
-#pragma warning (disable : 4355) // 'this' : used in base member initializer list
-#endif
-
-composite_frame::composite_frame(const std::vector<producer_frame>& frames) : impl_(new implementation(frames)){}
+composite_frame::composite_frame(std::vector<draw_frame>&& frames) : impl_(new implementation(std::move(frames))){}
 composite_frame::composite_frame(composite_frame&& other) : impl_(std::move(other.impl_)){}
 composite_frame& composite_frame::operator=(composite_frame&& other)
 {
@@ -77,21 +60,20 @@ composite_frame& composite_frame::operator=(composite_frame&& other)
 	return *this;
 }
 
-composite_frame::composite_frame(const producer_frame& frame1, const producer_frame& frame2)
+composite_frame::composite_frame(draw_frame&& frame1, draw_frame&& frame2)
 {
-	std::vector<producer_frame> frames;
-	frames.push_back(frame1);
-	frames.push_back(frame2);
-	impl_.reset(new implementation(frames));
+	std::vector<draw_frame> frames;
+	frames.push_back(std::move(frame1));
+	frames.push_back(std::move(frame2));
+	impl_.reset(new implementation(std::move(frames)));
 }
 
 void composite_frame::begin_write(){impl_->begin_write();}
 void composite_frame::end_write(){impl_->end_write();}	
 void composite_frame::draw(frame_shader& shader){impl_->draw(shader);}
-std::vector<short>& composite_frame::audio_data(){return impl_->audio_data();}
-const std::vector<short>& composite_frame::audio_data() const{return impl_->audio_data();}
+const std::vector<short>& composite_frame::audio_data() const {return impl_->audio_data_;}
 
-composite_frame composite_frame::interlace(producer_frame&& frame1, producer_frame&& frame2, video_mode::type mode)
+composite_frame composite_frame::interlace(draw_frame&& frame1, draw_frame&& frame2, video_mode::type mode)
 {			
 	transform_frame my_frame1 = std::move(frame1);
 	transform_frame my_frame2 = std::move(frame2);
@@ -106,10 +88,10 @@ composite_frame composite_frame::interlace(producer_frame&& frame1, producer_fra
 		my_frame2.video_mode(video_mode::upper);
 	}
 
-	std::vector<producer_frame> frames;
+	std::vector<draw_frame> frames;
 	frames.push_back(std::move(my_frame1));
 	frames.push_back(std::move(my_frame2));
-	return composite_frame(frames);
+	return composite_frame(std::move(frames));
 }
 
 }}

@@ -4,7 +4,7 @@
 #include "image_loader.h"
 
 #include "../../processor/frame_processor_device.h"
-#include "../../processor/producer_frame.h"
+#include "../../processor/draw_frame.h"
 #include "../../format/video_format.h"
 #include "../../server.h"
 
@@ -20,7 +20,7 @@ struct image_producer : public frame_producer
 {
 	image_producer(const std::wstring& filename) : filename_(filename)	{}
 	
-	producer_frame receive(){return frame_;}
+	draw_frame receive(){return frame_;}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
@@ -39,7 +39,7 @@ struct image_producer : public frame_producer
 	
 	frame_processor_device_ptr frame_processor_;
 	std::wstring filename_;
-	producer_frame frame_;
+	draw_frame frame_;
 };
 
 frame_producer_ptr create_image_producer(const  std::vector<std::wstring>& params)

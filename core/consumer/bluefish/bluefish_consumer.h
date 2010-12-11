@@ -29,7 +29,7 @@ class consumer : public frame_consumer
 public:
 	consumer(const video_format_desc& format_desc, unsigned int deviceIndex, bool embed_audio = false);
 	
-	virtual void send(const consumer_frame&);
+	virtual void send(const read_frame&);
 	virtual sync_mode synchronize();
 	virtual size_t buffer_depth() const;
 private:

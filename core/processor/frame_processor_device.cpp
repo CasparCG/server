@@ -4,9 +4,8 @@
 
 #include "frame_renderer.h"
 #include "write_frame.h"
+#include "draw_frame.h"
 #include "read_frame.h"
-#include "composite_frame.h"
-#include "producer_frame.h"
 
 #include "../format/video_format.h"
 
@@ -61,15 +60,15 @@ struct frame_processor_device::implementation : boost::noncopyable
 		}));
 	}
 		
-	void send(const producer_frame& frame)
+	void send(const draw_frame& frame)
 	{			
 		auto future = executor_.begin_invoke([=]{return renderer_->render(frame);});	
 		output_.push(std::move(future)); // Blocks
 	}
 
-	consumer_frame receive()
+	read_frame receive()
 	{
-		boost::shared_future<consumer_frame> future;
+		boost::shared_future<read_frame> future;
 
 		if(!output_.try_pop(future))
 		{
@@ -92,7 +91,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 	std::unique_ptr<sf::Context> ogl_context_;
 	std::unique_ptr<frame_renderer> renderer_;	
 				
-	tbb::concurrent_bounded_queue<boost::shared_future<consumer_frame>> output_;	
+	tbb::concurrent_bounded_queue<boost::shared_future<read_frame>> output_;	
 	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<write_frame_impl_ptr>, std::hash<pixel_format_desc>> frame_pools_;
 	
 	const video_format_desc fmt_;
@@ -100,8 +99,8 @@ struct frame_processor_device::implementation : boost::noncopyable
 };
 	
 frame_processor_device::frame_processor_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void frame_processor_device::send(const producer_frame& frame){impl_->send(std::move(frame));}
-consumer_frame frame_processor_device::receive(){return impl_->receive();}
+void frame_processor_device::send(const draw_frame& frame){impl_->send(std::move(frame));}
+read_frame frame_processor_device::receive(){return impl_->receive();}
 const video_format_desc& frame_processor_device::get_video_format_desc() const { return impl_->fmt_; }
 
 write_frame frame_processor_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		

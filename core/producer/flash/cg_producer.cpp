@@ -7,7 +7,7 @@
 #include "cg_producer.h"
 #include "flash_producer.h"
 
-#include "../../processor/producer_frame.h"
+#include "../../processor/draw_frame.h"
 #include "../../Server.h"
 
 #include <boost/filesystem.hpp>
@@ -146,9 +146,9 @@ public:
 		flash_producer_->param(param.str());
 	}
 
-	producer_frame receive()
+	draw_frame receive()
 	{
-		return flash_producer_ ? flash_producer_->receive() : producer_frame::empty();
+		return flash_producer_ ? flash_producer_->receive() : draw_frame::empty();
 	}
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -184,7 +184,7 @@ cg_producer_ptr get_default_cg_producer(const channel_ptr& channel, int render_l
 }
 
 cg_producer::cg_producer() : impl_(new implementation()){}
-producer_frame cg_producer::receive(){return impl_->receive();}
+draw_frame cg_producer::receive(){return impl_->receive();}
 void cg_producer::clear(){impl_->clear();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}

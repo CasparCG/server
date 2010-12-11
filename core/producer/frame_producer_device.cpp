@@ -6,7 +6,7 @@
 
 #include "../format/video_format.h"
 #include "../processor/composite_frame.h"
-#include "../processor/producer_frame.h"
+#include "../processor/draw_frame.h"
 
 #include "../../common/utility/scope_exit.h"
 #include "../../common/concurrency/executor.h"
@@ -22,9 +22,9 @@
 	
 namespace caspar { namespace core {
 	
-std::vector<producer_frame> receive(std::map<int, layer>& layers)
+std::vector<draw_frame> receive(std::map<int, layer>& layers)
 {	
-	std::vector<producer_frame> frames(layers.size(), producer_frame::empty());
+	std::vector<draw_frame> frames(layers.size(), draw_frame::empty());
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), 
 	[&](const tbb::blocked_range<size_t>& r)
 	{
@@ -33,6 +33,8 @@ std::vector<producer_frame> receive(std::map<int, layer>& layers)
 		for(size_t i = r.begin(); i != r.end(); ++i, ++it)
 			frames[i] = it->second.receive();
 	});		
+	boost::range::remove_erase(frames, draw_frame::eof());
+	boost::range::remove_erase(frames, draw_frame::empty());
 	return frames;
 }
 
@@ -46,16 +48,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 					
 	void tick()
 	{		
-		try
-		{	
-			frame_processor_->send(composite_frame(receive(layers_)));
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			layers_.clear();
-			CASPAR_LOG(error) << "Unexpected exception. Cleared layers in render-device";
-		}
+		frame_processor_->send(composite_frame(receive(layers_)));
 		executor_.begin_invoke([=]{tick();});
 	}
 

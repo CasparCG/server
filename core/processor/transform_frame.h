@@ -2,7 +2,7 @@
 
 #include "fwd.h"
 
-#include "drawable_frame.h"
+#include "draw_frame.h"
 
 #include "../format/video_format.h"
 #include "../format/pixel_format.h"
@@ -16,14 +16,16 @@
 
 namespace caspar { namespace core {
 		
-class transform_frame : public drawable_frame
+class transform_frame : public draw_frame_impl
 {
 public:
-	transform_frame(const producer_frame& frame);
+	transform_frame(const draw_frame& frame);
+	transform_frame(const draw_frame& frame, const std::vector<short>& audio_data);
+	transform_frame(draw_frame&& frame);
+
 	transform_frame(transform_frame&& other);
 	transform_frame& operator=(transform_frame&& other);
 	
-	virtual std::vector<short>& audio_data();
 	virtual const std::vector<short>& audio_data() const;
 
 	void audio_volume(unsigned char volume);
@@ -32,11 +34,12 @@ public:
 	void video_mode(video_mode::type mode);
 	void alpha(double value);
 
+private:
+
 	virtual void begin_write();
 	virtual void end_write();
 	virtual void draw(frame_shader& shader);
 
-private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
