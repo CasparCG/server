@@ -170,6 +170,7 @@
     <ClInclude Include="format\video_format.h" />
     <ClInclude Include="processor\composite_frame.h" />
     <ClInclude Include="processor\consumer_frame.h" />
+    <ClInclude Include="processor\drawable_frame.h" />
     <ClInclude Include="processor\frame_processor_device.h" />
     <ClInclude Include="processor\frame_renderer.h" />
     <ClInclude Include="processor\frame_shader.h" />

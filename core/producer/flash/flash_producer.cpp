@@ -230,12 +230,8 @@ struct flash_producer::implementation
 			if(is_progressive)							
 				result = do_receive();		
 			else
-			{
-				producer_frame frame1 = do_receive();
-				producer_frame frame2 = do_receive();
-				result = composite_frame::interlace(frame1, frame2, format_desc.mode);
-			}
-
+				result = composite_frame::interlace(do_receive(), do_receive(), format_desc.mode);
+			
 			frame_buffer_.push(result);
 			is_empty_ = flashax_container_->IsEmpty();
 		}
@@ -255,8 +251,8 @@ struct flash_producer::implementation
 		}	
 
 		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height);
-		std::copy(current_frame_->data(), current_frame_->data() + current_frame_->size(), frame->pixel_data().begin());
-		return frame;
+		std::copy(current_frame_->data(), current_frame_->data() + current_frame_->size(), frame.pixel_data().begin());
+		return producer_frame(std::make_shared<write_frame>(std::move(frame)));
 	}
 		
 	producer_frame receive()

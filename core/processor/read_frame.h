@@ -11,10 +11,10 @@
 
 namespace caspar { namespace core {
 
-class read_frame : boost::noncopyable
+class read_frame_impl : boost::noncopyable
 {
 public:	
-	explicit read_frame(size_t width, size_t height);
+	read_frame_impl(size_t width, size_t height);
 
 	const boost::iterator_range<const unsigned char*> pixel_data() const;
 	const std::vector<short>& audio_data() const;
@@ -27,5 +27,28 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<read_frame> read_frame_ptr;
+typedef std::shared_ptr<read_frame_impl> read_frame_impl_ptr;
+
+class read_frame
+{
+public:
+	explicit read_frame(const read_frame_impl_ptr& frame) : frame_(frame){}
+	read_frame(read_frame&& other) : frame_(std::move(other.frame_)){}
+	read_frame& operator=(read_frame&& other)
+	{
+		frame_ = std::move(other.frame_);
+		return *this;
+	}
+	
+	const boost::iterator_range<const unsigned char*> pixel_data() const { return frame_->pixel_data();}
+	const std::vector<short>& audio_data() const { return frame_->audio_data();}
+	std::vector<short>& audio_data() { return frame_->audio_data();};
+	
+	void begin_read(){ frame_->begin_read();}
+	void end_read(){ frame_->end_read();}
+
+private:
+	read_frame_impl_ptr frame_;
+};
+
 }}

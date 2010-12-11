@@ -7,118 +7,108 @@
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <boost/variant.hpp>
+#include <boost/utility/enable_if.hpp>
 
 #include <memory>
 #include <vector>
+#include <type_traits>
 
 namespace caspar { namespace core {
+		
+struct eof_frame{};
+struct empty_frame{};
 
 class producer_frame
 {
-public:	
-	typedef boost::iterator_range<const unsigned char*> pixel_data_type;
-	typedef std::vector<short> audio_data_type;
+	enum frame_type
+	{
+		normal_type,
+		eof_type,
+		empty_type
+	};
+public:
+	producer_frame() : type_(empty_type){}
+	producer_frame(const producer_frame& other) : frame_(other.frame_), type_(other.type_){}
+	producer_frame(producer_frame&& other) : frame_(std::move(other.frame_)), type_(other.type_){}
 	
-	producer_frame() : frame_(empty_frame()){}
-	producer_frame(const write_frame_ptr& frame) : frame_(frame){if(!frame) frame_ = eof_frame();}
-	producer_frame(const composite_frame_ptr& frame) : frame_(frame){if(!frame) frame_ = eof_frame();}
-	producer_frame(const transform_frame_ptr& frame) : frame_(frame){if(!frame) frame_ = eof_frame();}
+	producer_frame(drawable_frame_ptr&& frame) : frame_(std::move(frame)), type_(normal_type){}
+	producer_frame(write_frame&& frame) : frame_(std::make_shared<write_frame>(std::move(frame))), type_(normal_type){}
+	producer_frame(composite_frame&& frame) : frame_(std::make_shared<composite_frame>(std::move(frame))), type_(normal_type){}
+	producer_frame(transform_frame&& frame) : frame_(std::make_shared<transform_frame>(std::move(frame))), type_(normal_type){}
 
-	producer_frame(const producer_frame& other) : frame_(other.frame_){}
-	producer_frame(producer_frame&& other) : frame_(std::move(other.frame_)){}
+	producer_frame(eof_frame&&) : type_(eof_type){}
+	producer_frame(empty_frame&&) : type_(empty_type){}
+	
+	const std::vector<short>& audio_data() const 
+	{
+		static std::vector<short> no_audio;
+		return frame_ ? frame_->audio_data() : no_audio;
+	}	
 
+	void begin_write()
+	{
+		if(frame_)
+			frame_->begin_write();
+	}
+
+	void end_write()
+	{
+		if(frame_)
+			frame_->end_write();
+	}
+
+	void draw(frame_shader& shader)
+	{
+		if(frame_)
+			frame_->draw(shader);
+	}
+
+	void swap(producer_frame& other)
+	{
+		frame_.swap(other.frame_);
+		std::swap(type_, other.type_);
+	}
+
+	static eof_frame eof(){return eof_frame();}
+	static empty_frame empty(){return empty_frame();}
+	
+	bool operator==(const eof_frame&){return type_ == eof_type;}
+	bool operator!=(const eof_frame&){return type_ != eof_type;}
+
+	bool operator==(const empty_frame&){return type_ == empty_type;}
+	bool operator!=(const empty_frame&){return type_ != empty_type;}
+
+	bool operator==(const producer_frame& other){return frame_ == other.frame_ && type_ == other.type_;}
+	bool operator!=(const producer_frame& other){return !(*this == other);}
+	
 	producer_frame& operator=(const producer_frame& other)
 	{
 		producer_frame temp(other);
-		frame_.swap(temp.frame_);
+		temp.swap(*this);
 		return *this;
 	}
-
 	producer_frame& operator=(producer_frame&& other)
 	{
 		frame_ = std::move(other.frame_);
+		std::swap(type_, other.type_);
 		return *this;
 	}
-		
-	const audio_data_type& audio_data() const {return boost::apply_visitor(audio_data_visitor(), frame_);}
-
-	void begin_write() {boost::apply_visitor(begin_write_visitor(), frame_);}	
-	void draw(frame_shader& shader) {boost::apply_visitor(draw_visitor(shader), frame_);	}
-	void end_write() {boost::apply_visitor(end_write_visitor(), frame_);}
-	
-	static const producer_frame& eof()
+	producer_frame& operator=(eof_frame&& frame)
 	{
-		static producer_frame eof(eof_frame());
-		return eof;
-	}
-
-	static const producer_frame& empty()
+		frame_ = nullptr;
+		type_ = eof_type;
+		return *this;
+	}	
+	producer_frame& operator=(empty_frame&& frame)
 	{
-		static producer_frame empty(empty_frame());
-		return empty;
-	}
+		frame_ = nullptr;
+		type_ = empty_type;
+		return *this;
+	}	
 
-	bool operator==(const producer_frame& other)
-	{
-		return frame_ == other.frame_;
-	}
-
-	bool operator!=(const producer_frame& other)
-	{
-		return !(*this == other);
-	}
-
-private:
-
-	friend class frame_processor_device;
-	friend class frame_renderer;
-	
-	struct null_frame
-	{
-		void begin_write(){}
-		void draw(frame_shader& shader){}
-		void end_write(){}
-		audio_data_type& audio_data() { static audio_data_type audio_data; return audio_data;} 
-	};
-	typedef std::shared_ptr<null_frame> null_frame_ptr;
-
-	producer_frame(const null_frame_ptr& frame) : frame_(frame){}
-		
-	static const null_frame_ptr& eof_frame()
-	{
-		static null_frame_ptr eof(new null_frame());
-		return eof;
-	}
-
-	static const null_frame_ptr& empty_frame()
-	{
-		static null_frame_ptr empty(new null_frame());
-		return empty;
-	}
-
-	struct audio_data_visitor : public boost::static_visitor<audio_data_type&>
-	{
-		template<typename P> audio_data_type& operator()(P& frame) const{return frame->audio_data();}
-	};
-
-	struct begin_write_visitor : public boost::static_visitor<void>
-	{
-		template<typename P> void operator()(P& frame) const{frame->begin_write();}
-	};
-	
-	struct draw_visitor : public boost::static_visitor<void>
-	{
-		draw_visitor(frame_shader& shader) : shader_(shader){}
-		template<typename P> void operator()(P& frame) const{frame->draw(shader_);}
-		frame_shader& shader_;
-	};
-
-	struct end_write_visitor : public boost::static_visitor<void>
-	{
-		template<typename P> void operator()(P& frame) const{frame->end_write();}
-	};
-
-	boost::variant<write_frame_ptr, composite_frame_ptr, transform_frame_ptr, null_frame_ptr> frame_;
+private:		
+	drawable_frame_ptr frame_;
+	frame_type type_;
 };
 
 }}

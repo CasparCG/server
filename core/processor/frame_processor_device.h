@@ -37,9 +37,9 @@ public:
 	void send(const producer_frame& frame);
 	consumer_frame receive();
 	
-	write_frame_ptr create_frame(const pixel_format_desc& desc);		
-	write_frame_ptr create_frame(size_t width, size_t height);			
-	write_frame_ptr create_frame();
+	write_frame create_frame(const pixel_format_desc& desc);		
+	write_frame create_frame(size_t width, size_t height);			
+	write_frame create_frame();
 	
 	const video_format_desc& get_video_format_desc() const;
 private:

@@ -3,7 +3,7 @@
 #include "video_transformer.h"
 
 #include "../../../format/video_format.h"
-#include "../../../processor/write_frame.h"
+#include "../../../processor/transform_frame.h"
 #include "../../../processor/transform_frame.h"
 #include "../../../processor/producer_frame.h"
 #include "../../../processor/frame_processor_device.h"
@@ -105,20 +105,20 @@ struct video_transformer::implementation : boost::noncopyable
 		}
 	}
 	
-	transform_frame_ptr execute(const std::shared_ptr<AVFrame>& decoded_frame)
+	transform_frame execute(const std::shared_ptr<AVFrame>& decoded_frame)
 	{				
 		if(decoded_frame == nullptr)
-			return nullptr;
+			return transform_frame(producer_frame::eof()); // TODO
 				
-		write_frame_ptr result_frame;
+		transform_frame transform = producer_frame::eof();
 		if(sws_context_ == nullptr)
 		{
-			result_frame = frame_processor_->create_frame(desc_);
+			auto write = frame_processor_->create_frame(desc_);
 
 			tbb::parallel_for(0, static_cast<int>(desc_.planes.size()), 1, [&](int n)
 			{
 				auto plane            = desc_.planes[n];
-				auto result           = result_frame->pixel_data(n).begin();
+				auto result           = write.pixel_data(n).begin();
 				auto decoded          = decoded_frame->data[n];
 				auto decoded_linesize = decoded_frame->linesize[n];
 				
@@ -127,25 +127,29 @@ struct video_transformer::implementation : boost::noncopyable
 					std::copy_n(decoded + y*decoded_linesize, plane.linesize, result + y*plane.linesize);
 				});
 			});
+
+			transform = producer_frame(std::move(write));
 		}
 		else
 		{
-			result_frame = frame_processor_->create_frame(width_, height_);
+			auto write = frame_processor_->create_frame(width_, height_);
 
 			AVFrame av_frame;	
 			avcodec_get_frame_defaults(&av_frame);
-			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), result_frame->pixel_data().begin(), PIX_FMT_BGRA, width_, height_);
+			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), write.pixel_data().begin(), PIX_FMT_BGRA, width_, height_);
 		 
-			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);		
+			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);	
+			
+			transform = producer_frame(std::move(write));
 		}
 		
-		auto transform = std::make_shared<transform_frame>(result_frame);
 		// TODO: Make generic for all formats and modes.
 		if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
-			transform->translate(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));		
+			transform.translate(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));		
 		
 		return transform;
 	}
+
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
 		frame_processor_ = frame_processor;
@@ -163,6 +167,6 @@ struct video_transformer::implementation : boost::noncopyable
 };
 
 video_transformer::video_transformer(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
-transform_frame_ptr video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
+transform_frame video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
 void video_transformer::initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor); }
 }}}

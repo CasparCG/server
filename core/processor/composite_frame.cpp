@@ -21,17 +21,20 @@ struct composite_frame::implementation : boost::noncopyable
 	
 	void begin_write()
 	{
-		boost::range::for_each(frames_, std::mem_fn(&producer_frame::begin_write));		
+		for(size_t n = 0; n < frames_.size(); ++n)
+			frames_[n].begin_write();
 	}
 
 	void end_write()
 	{
-		boost::range::for_each(frames_, std::mem_fn(&producer_frame::end_write));				
+		for(size_t n = 0; n < frames_.size(); ++n)
+			frames_[n].end_write();	
 	}
 	
 	void draw(frame_shader& shader)
 	{
-		boost::range::for_each(frames_, std::bind(&producer_frame::draw, std::placeholders::_1, std::ref(shader)));	
+		for(size_t n = 0; n < frames_.size(); ++n)
+			frames_[n].draw(shader);
 	}
 			
 	std::vector<short>& audio_data()
@@ -67,6 +70,13 @@ struct composite_frame::implementation : boost::noncopyable
 #endif
 
 composite_frame::composite_frame(const std::vector<producer_frame>& frames) : impl_(new implementation(frames)){}
+composite_frame::composite_frame(composite_frame&& other) : impl_(std::move(other.impl_)){}
+composite_frame& composite_frame::operator=(composite_frame&& other)
+{
+	impl_ = std::move(other.impl_);
+	return *this;
+}
+
 composite_frame::composite_frame(const producer_frame& frame1, const producer_frame& frame2)
 {
 	std::vector<producer_frame> frames;
@@ -81,21 +91,25 @@ void composite_frame::draw(frame_shader& shader){impl_->draw(shader);}
 std::vector<short>& composite_frame::audio_data(){return impl_->audio_data();}
 const std::vector<short>& composite_frame::audio_data() const{return impl_->audio_data();}
 
-composite_frame_ptr composite_frame::interlace(const producer_frame& frame1, const producer_frame& frame2, video_mode::type mode)
+composite_frame composite_frame::interlace(producer_frame&& frame1, producer_frame&& frame2, video_mode::type mode)
 {			
-	auto my_frame1 = std::make_shared<transform_frame>(frame1);
-	auto my_frame2 = std::make_shared<transform_frame>(frame2);
+	transform_frame my_frame1 = std::move(frame1);
+	transform_frame my_frame2 = std::move(frame2);
 	if(mode == video_mode::upper)
 	{
-		my_frame1->video_mode(video_mode::upper);
-		my_frame2->video_mode(video_mode::lower);
+		my_frame1.video_mode(video_mode::upper);
+		my_frame2.video_mode(video_mode::lower);
 	}
 	else
 	{
-		my_frame1->video_mode(video_mode::lower);
-		my_frame2->video_mode(video_mode::upper);
+		my_frame1.video_mode(video_mode::lower);
+		my_frame2.video_mode(video_mode::upper);
 	}
-	return std::make_shared<composite_frame>(my_frame1, my_frame2);
+
+	std::vector<producer_frame> frames;
+	frames.push_back(std::move(my_frame1));
+	frames.push_back(std::move(my_frame2));
+	return composite_frame(frames);
 }
 
 }}

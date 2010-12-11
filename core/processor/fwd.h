@@ -3,9 +3,12 @@
 #include <memory>
 
 namespace caspar { namespace core {
-		
+	
 class read_frame;
 typedef std::shared_ptr<read_frame> read_frame_ptr;
+
+struct drawable_frame;
+typedef std::shared_ptr<drawable_frame> drawable_frame_ptr;
 
 class write_frame;
 typedef std::shared_ptr<write_frame> write_frame_ptr;

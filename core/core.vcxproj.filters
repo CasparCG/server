@@ -258,6 +258,9 @@
     <ClInclude Include="processor\consumer_frame.h">
       <Filter>Source\channel\processor</Filter>
     </ClInclude>
+    <ClInclude Include="processor\drawable_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp">

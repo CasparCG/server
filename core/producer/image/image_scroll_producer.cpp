@@ -70,12 +70,12 @@ struct image_scroll_producer : public frame_producer
 	producer_frame do_receive()
 	{
 		auto frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
-		std::fill(frame->pixel_data().begin(), frame->pixel_data().end(), 0);
+		std::fill(frame.pixel_data().begin(), frame.pixel_data().end(), 0);
 
 		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
 		const int delta_y = direction_ == direction::Up ? speed_ : -speed_;
 
-		unsigned char* frame_data = frame->pixel_data().begin();
+		unsigned char* frame_data = frame.pixel_data().begin();
 		unsigned char* image_data = image_.get();
 	
 		if (direction_ == direction::Up || direction_ == direction::Down)
@@ -109,7 +109,7 @@ struct image_scroll_producer : public frame_producer
 			offset_ += delta_x;
 		}
 
-		return frame;
+		return std::move(frame);
 	}
 		
 	producer_frame receive()
@@ -118,8 +118,8 @@ struct image_scroll_producer : public frame_producer
 		{
 			producer_frame frame1;
 			producer_frame frame2;
-			tbb::parallel_invoke([&]{ frame1 = do_receive(); }, [&]{ frame2 = do_receive(); });
-			return composite_frame::interlace(frame1, frame2, format_desc_.mode);
+			tbb::parallel_invoke([&]{ frame1 = std::move(do_receive()); }, [&]{ frame2 = std::move(do_receive()); });
+			return composite_frame::interlace(std::move(frame1), std::move(frame2), format_desc_.mode);
 		}			
 
 		return receive();	

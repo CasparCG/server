@@ -28,8 +28,8 @@ struct image_producer : public frame_producer
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
 		auto frame = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->pixel_data().size(), frame->pixel_data().begin());
-		frame_ = frame;
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.pixel_data().size(), frame.pixel_data().begin());
+		frame_ = std::move(frame);
 	}
 
 	std::wstring print() const
