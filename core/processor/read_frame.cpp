@@ -40,7 +40,7 @@ struct read_frame::implementation : boost::noncopyable
 read_frame::read_frame(size_t width, size_t height) : impl_(new implementation(width, height)){}
 void read_frame::begin_read(){impl_->begin_read();}
 void read_frame::end_read(){impl_->end_read();}
-const boost::iterator_range<const unsigned char*> read_frame::data() const
+const boost::iterator_range<const unsigned char*> read_frame::pixel_data() const
 {
 	auto ptr = static_cast<const unsigned char*>(impl_->pixel_data_);
 	return boost::iterator_range<const unsigned char*>(ptr, ptr+impl_->pbo_->size());

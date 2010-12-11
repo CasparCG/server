@@ -2,8 +2,6 @@
 
 #include "fwd.h"
 
-#include "gpu_frame.h"
-
 #include "../format/video_format.h"
 #include "../format/pixel_format.h"
 
@@ -17,27 +15,24 @@
 
 namespace caspar { namespace core {
 		
-class write_frame : public gpu_frame
+class write_frame
 {
-	friend class frame_renderer;
-	friend class frame_processor_device;
-
 public:	
-	boost::iterator_range<unsigned char*> data(size_t index = 0);
-	const boost::iterator_range<const unsigned char*> data(size_t index = 0) const;
-
-	virtual std::vector<short>& audio_data();
-	virtual const std::vector<short>& audio_data() const;
-	
-private:
 	explicit write_frame(const pixel_format_desc& desc);
 
-	virtual void reset();
-		
-	virtual void begin_write();
-	virtual void end_write();
-	virtual void draw(frame_shader& shader);
+	boost::iterator_range<unsigned char*> pixel_data(size_t index = 0);
+	const boost::iterator_range<const unsigned char*> pixel_data(size_t index = 0) const;
 
+	std::vector<short>& audio_data();
+	const std::vector<short>& audio_data() const;
+	
+	void reset();
+		
+	void begin_write();
+	void end_write();
+	void draw(frame_shader& shader);
+
+private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };

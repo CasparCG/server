@@ -55,22 +55,22 @@ namespace caspar { namespace core { namespace decklink{
 
 struct decklink_consumer::Implementation : boost::noncopyable
 {
-	Implementation(const video_format_desc& format_desc, bool internalKey) : format_desc_(format_desc), currentFormat_(video_format::pal), internalKey_(internalKey), current_index_(0)
+	Implementation(const video_format_desc& format_desc, bool internalKey) : format_desc_(format_desc), currentFormat_(video_format::pal), internalKey_(internalKey)
 	{	
 		executor_.start();
 		executor_.invoke([=]
 		{
 			if(FAILED(CoInitialize(nullptr))) 
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Initialization of COM failed."));		
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Initialization of COM failed."));		
 
 			CComPtr<IDeckLinkIterator> pDecklinkIterator;
 			if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink drivers installed."));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink drivers installed."));
 
 			while(pDecklinkIterator->Next(&decklink_) == S_OK && !decklink_){}	
 
 			if(decklink_ == nullptr)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink card found"));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink card found."));
 
 			output_ = decklink_;
 			keyer_ = decklink_;
@@ -88,30 +88,29 @@ struct decklink_consumer::Implementation : boost::noncopyable
 
 			BMDDisplayModeSupport displayModeSupport;
 			if(FAILED(output_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitBGRA, &displayModeSupport)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat"));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat."));
 		
 			output_->DisableAudioOutput();
 			if(FAILED(output_->EnableVideoOutput((BMDDisplayMode)decklinkVideoFormat, bmdVideoOutputFlagDefault))) 
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable video output"));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable video output."));
 
 			if(internalKey_) 
 			{
 				if(FAILED(keyer_->Enable(FALSE)))			
-					CASPAR_LOG(error) << "DECKLINK: Failed to enable internal keyer";			
+					CASPAR_LOG(error) << "DECKLINK: Failed to enable internal keye.r";			
 				else if(FAILED(keyer_->SetLevel(255)))			
-					CASPAR_LOG(error) << "DECKLINK: Keyer - Failed to set blend-level to max";
+					CASPAR_LOG(error) << "DECKLINK: Keyer - Failed to set key-level to max.";
 				else
-					CASPAR_LOG(info) << "DECKLINK: Successfully configured internal keyer";		
+					CASPAR_LOG(info) << "DECKLINK: Successfully configured internal keyer.";		
 			}
 			else
 			{
 				if(FAILED(keyer_->Enable(TRUE)))			
-					CASPAR_LOG(error) << "DECKLINK: Failed to enable external keyer";	
+					CASPAR_LOG(error) << "DECKLINK: Failed to enable external keyer.";	
 				else
-					CASPAR_LOG(info) << "DECKLINK: Successfully configured external keyer";			
+					CASPAR_LOG(info) << "DECKLINK: Successfully configured external keyer.";			
 			}
 		
-			reserved_frames_.resize(3);
 			for(int n = 0; n < reserved_frames_.size(); ++n)
 			{
 				if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &reserved_frames_[n].second)))
@@ -128,28 +127,21 @@ struct decklink_consumer::Implementation : boost::noncopyable
 	~Implementation()
 	{		
 		if(output_) 
-		{
-			BOOL bIsRunning = FALSE;
-			output_->IsScheduledPlaybackRunning(&bIsRunning);
-			if(bIsRunning)
-				output_->StopScheduledPlayback(0, NULL, 0);
-
 			output_->DisableVideoOutput();
-		}
+		
 		CoUninitialize();
 	}
 	
-	void send(const consumer_frame& input_frame)
+	void send(const consumer_frame& frame)
 	{
 		active_ = executor_.begin_invoke([=]
-		{
-			auto& output_frame = reserved_frames_[current_index_];
-			current_index_ = (++current_index_) % reserved_frames_.size();
-		
-			std::copy(input_frame.data().begin(), input_frame.data().end(), static_cast<char*>(output_frame.first));
+		{		
+			std::copy(frame.pixel_data().begin(), frame.pixel_data().end(), static_cast<char*>(reserved_frames_.front().first));
 				
-			if(FAILED(output_->DisplayVideoFrameSync(output_frame.second)))
+			if(FAILED(output_->DisplayVideoFrameSync(reserved_frames_.front().second)))
 				CASPAR_LOG(error) << L"DECKLINK: Failed to display frame.";
+
+			std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 		});
 	}
 	
@@ -167,8 +159,7 @@ struct decklink_consumer::Implementation : boost::noncopyable
 	boost::unique_future<void> active_;
 	common::executor executor_;
 
-	std::vector<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>> reserved_frames_;
-	size_t	current_index_;
+	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
 
 	bool						internalKey_;
 	CComPtr<IDeckLink>			decklink_;

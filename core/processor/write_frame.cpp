@@ -2,6 +2,7 @@
 
 #include "write_frame.h"
 
+#include "producer_frame.h"
 #include "frame_shader.h"
 
 #include "../format/pixel_format.h"
@@ -88,12 +89,12 @@ write_frame::write_frame(const pixel_format_desc& desc) : impl_(new implementati
 void write_frame::begin_write(){impl_->begin_write();}
 void write_frame::end_write(){impl_->end_write();}	
 void write_frame::draw(frame_shader& shader){impl_->draw(shader);}
-boost::iterator_range<unsigned char*> write_frame::data(size_t index)
+boost::iterator_range<unsigned char*> write_frame::pixel_data(size_t index)
 {
 	auto ptr = static_cast<unsigned char*>(impl_->pixel_data_[index]);
 	return boost::iterator_range<unsigned char*>(ptr, ptr+impl_->desc_.planes[index].size);
 }
-const boost::iterator_range<const unsigned char*> write_frame::data(size_t index) const
+const boost::iterator_range<const unsigned char*> write_frame::pixel_data(size_t index) const
 {
 	auto ptr = static_cast<const unsigned char*>(impl_->pixel_data_[index]);
 	return boost::iterator_range<const unsigned char*>(ptr, ptr+impl_->desc_.planes[index].size);

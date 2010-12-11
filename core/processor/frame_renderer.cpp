@@ -5,6 +5,8 @@
 #include "frame_shader.h"
 #include "write_frame.h"
 #include "read_frame.h"
+#include "producer_frame.h"
+#include "consumer_frame.h"
 
 #include "../format/video_format.h"
 
@@ -26,7 +28,7 @@ namespace caspar { namespace core {
 struct frame_renderer::implementation : boost::noncopyable
 {	
 	implementation(const video_format_desc& format_desc) : shader_(format_desc), format_desc_(format_desc),
-		reading_(new read_frame(0, 0)), writing_(new write_frame(pixel_format_desc())), drawing_(new write_frame(pixel_format_desc())), fbo_(format_desc.width, format_desc.height)
+		reading_(new read_frame(0, 0)), writing_(producer_frame::empty()), drawing_(producer_frame::empty()), fbo_(format_desc.width, format_desc.height)
 	{	
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_TEXTURE_2D));
@@ -36,32 +38,29 @@ struct frame_renderer::implementation : boost::noncopyable
 		GL(glViewport(0, 0, format_desc.width, format_desc.height));
 	}
 				
-	consumer_frame render(const gpu_frame_ptr& frame)
+	consumer_frame render(const producer_frame& frame)
 	{
-		if(frame == nullptr)
-			return nullptr;
-
 		read_frame_ptr result;
 		try
 		{
 			drawing_ = writing_;
 			writing_ = frame;
 						
-			writing_->begin_write(); // Note: end_write is done when returned to pool, write_frame::reset();
+			writing_.begin_write(); // Note: end_write is done when returned to pool, write_frame::reset();
 						
 			reading_->end_read();
 			result = reading_; 
 						
 			GL(glClear(GL_COLOR_BUFFER_BIT));
 						
-			drawing_->draw(shader_);
+			drawing_.draw(shader_);
 				
 			reading_ = create_output_frame();
 			
 			reading_->begin_read();
-			reading_->audio_data() = std::move(drawing_->audio_data());
+			reading_->audio_data() = drawing_.audio_data();
 						
-			drawing_ = nullptr;
+			drawing_ = producer_frame::empty();
 		}
 		catch(...)
 		{
@@ -84,8 +83,8 @@ struct frame_renderer::implementation : boost::noncopyable
 	common::gl::frame_buffer_object fbo_;
 
 	read_frame_ptr	reading_;	
-	gpu_frame_ptr	writing_;
-	gpu_frame_ptr	drawing_;
+	producer_frame	writing_;
+	producer_frame	drawing_;
 	
 	frame_shader shader_;
 
@@ -93,7 +92,7 @@ struct frame_renderer::implementation : boost::noncopyable
 };
 	
 frame_renderer::frame_renderer(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-consumer_frame frame_renderer::render(const gpu_frame_ptr& frame)
+consumer_frame frame_renderer::render(const producer_frame& frame)
 {
 	return impl_->render(frame);
 }

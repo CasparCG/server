@@ -729,7 +729,7 @@ bool CinfCommand::DoExecute()
 
 void GenerateChannelInfo(int index, const channel_ptr& pChannel, std::wstringstream& replyString)
 {
-	replyString << index << TEXT(" ") << pChannel->get_video_format_desc().name  << TEXT("\r\n") << (pChannel->foreground(0) != nullptr ? TEXT(" PLAYING") : TEXT(" STOPPED"));
+	replyString << index << TEXT(" ") << pChannel->get_video_format_desc().name  << TEXT("\r\n") << (pChannel->foreground(0).get() != nullptr ? TEXT(" PLAYING") : TEXT(" STOPPED"));
 }
 
 bool InfoCommand::DoExecute()

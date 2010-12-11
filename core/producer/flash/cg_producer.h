@@ -13,7 +13,7 @@ public:
 
 	cg_producer();
 	
-	virtual gpu_frame_ptr receive();
+	virtual producer_frame receive();
 	virtual void initialize(const frame_processor_device_ptr& frame_processor);
 
 	void clear();

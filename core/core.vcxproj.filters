@@ -252,8 +252,11 @@
     <ClInclude Include="processor\fwd.h">
       <Filter>Source\channel\processor</Filter>
     </ClInclude>
-    <ClInclude Include="processor\gpu_frame.h">
-      <Filter>Source\channel\processor\frame</Filter>
+    <ClInclude Include="processor\producer_frame.h">
+      <Filter>Source\channel\processor</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\consumer_frame.h">
+      <Filter>Source\channel\processor</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -6,6 +6,7 @@
 #include "write_frame.h"
 #include "read_frame.h"
 #include "composite_frame.h"
+#include "producer_frame.h"
 
 #include "../format/video_format.h"
 
@@ -41,12 +42,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 			renderer_.reset(new frame_renderer(format_desc));
 		});
 	}
-
-	~implementation()
-	{
-		executor_.stop(); // Wait for executor before destroying anything.
-	}
-	
+		
 	write_frame_ptr create_frame(const pixel_format_desc& desc)
 	{
 		auto pool = &frame_pools_[desc];
@@ -65,12 +61,9 @@ struct frame_processor_device::implementation : boost::noncopyable
 		});
 	}
 		
-	void send(const gpu_frame_ptr& input_frame)
-	{			
-		if(input_frame == nullptr)
-			return;
-				
-		auto future = executor_.begin_invoke([=]{return renderer_->render(input_frame);});	
+	void send(const producer_frame& frame)
+	{							
+		auto future = executor_.begin_invoke([=]{return renderer_->render(frame);});	
 		output_.push(std::move(future)); // Blocks
 	}
 
@@ -93,21 +86,21 @@ struct frame_processor_device::implementation : boost::noncopyable
 
 		return future.get();
 	}
-					
-	std::unique_ptr<sf::Context> ogl_context_;
-	std::unique_ptr<frame_renderer> renderer_;
-	
+				
 	common::executor executor_;	
+
+	std::unique_ptr<sf::Context> ogl_context_;
+	std::unique_ptr<frame_renderer> renderer_;	
 				
 	tbb::concurrent_bounded_queue<boost::shared_future<consumer_frame>> output_;	
 	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<write_frame_ptr>, std::hash<pixel_format_desc>> frame_pools_;
 	
-	video_format_desc fmt_;
+	const video_format_desc fmt_;
 	long underrun_count_;
 };
 	
 frame_processor_device::frame_processor_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void frame_processor_device::send(const gpu_frame_ptr& frame){impl_->send(frame);}
+void frame_processor_device::send(const producer_frame& frame){impl_->send(frame);}
 consumer_frame frame_processor_device::receive(){return impl_->receive();}
 const video_format_desc& frame_processor_device::get_video_format_desc() const { return impl_->fmt_; }
 

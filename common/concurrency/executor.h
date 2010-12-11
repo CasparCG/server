@@ -74,7 +74,7 @@ public:
 	{
 		execution_queue_.push([=]{try{func();}catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}});
 	}
-
+	
 	template<typename Func>
 	auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())>
 	{	
@@ -83,10 +83,23 @@ public:
 		auto task = std::make_shared<boost::packaged_task<result_type>>(std::forward<Func>(func));	
 		auto future = task->get_future();
 		
-		if(boost::this_thread::get_id() != thread_.get_id())
-			execution_queue_.push([=]{(*task)();});
-		else
-			(*task)();
+		task->set_wait_callback(std::function<void(decltype(*task)& task)>([=](decltype(*task)& task) // The std::function wrapper is required in order to add ::result_type to functor class.
+		{
+			try
+			{
+				if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
+					task();
+			}
+			catch(boost::task_already_started&){}
+		}));
+		execution_queue_.push([=]
+		{
+			try
+			{
+				(*task)();    
+			}
+			catch(boost::task_already_started&){}
+		});
 
 		return std::move(future);		
 	}
@@ -94,6 +107,9 @@ public:
 	template<typename Func>
 	auto invoke(Func&& func) -> decltype(func())
 	{
+		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
+			return func();
+		
 		return begin_invoke(std::forward<Func>(func)).get();
 	}
 

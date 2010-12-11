@@ -4,6 +4,7 @@
 #include "image_loader.h"
 
 #include "../../processor/frame_processor_device.h"
+#include "../../processor/producer_frame.h"
 #include "../../format/video_format.h"
 #include "../../server.h"
 
@@ -19,7 +20,7 @@ struct image_producer : public frame_producer
 {
 	image_producer(const std::wstring& filename) : filename_(filename)	{}
 	
-	gpu_frame_ptr receive(){return frame_;}
+	producer_frame receive(){return frame_;}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
@@ -27,7 +28,7 @@ struct image_producer : public frame_producer
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
 		auto frame = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->data().size(), frame->data().begin());
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->pixel_data().size(), frame->pixel_data().begin());
 		frame_ = frame;
 	}
 
@@ -38,7 +39,7 @@ struct image_producer : public frame_producer
 	
 	frame_processor_device_ptr frame_processor_;
 	std::wstring filename_;
-	gpu_frame_ptr frame_;
+	producer_frame frame_;
 };
 
 frame_producer_ptr create_image_producer(const  std::vector<std::wstring>& params)

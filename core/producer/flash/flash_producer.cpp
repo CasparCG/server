@@ -34,7 +34,7 @@
 #include "../../../common/concurrency/executor.h"
 #include "../../../common/utility/scope_exit.h"
 
-#include "../../processor/write_frame.h"
+#include "../../processor/producer_frame.h"
 #include "../../processor/composite_frame.h"
 
 #include <boost/assign.hpp>
@@ -182,7 +182,7 @@ struct flash_producer::implementation
 				stop();
 
 				frame_buffer_.clear();
-				frame_buffer_.try_push(nullptr); // EOF
+				frame_buffer_.try_push(producer_frame::eof()); // EOF
 		
 				current_frame_ = nullptr;
 			});
@@ -225,14 +225,14 @@ struct flash_producer::implementation
 			auto format_desc = frame_processor_->get_video_format_desc();
 			bool is_progressive = format_desc.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc.fps/2 == 0);
 
-			gpu_frame_ptr result;
+			producer_frame result;
 
 			if(is_progressive)							
 				result = do_receive();		
 			else
 			{
-				gpu_frame_ptr frame1 = do_receive();
-				gpu_frame_ptr frame2 = do_receive();
+				producer_frame frame1 = do_receive();
+				producer_frame frame2 = do_receive();
 				result = composite_frame::interlace(frame1, frame2, format_desc.mode);
 			}
 
@@ -241,7 +241,7 @@ struct flash_producer::implementation
 		}
 	}
 		
-	gpu_frame_ptr do_receive()
+	producer_frame do_receive()
 	{
 		auto format_desc = frame_processor_->get_video_format_desc();
 
@@ -255,20 +255,19 @@ struct flash_producer::implementation
 		}	
 
 		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height);
-		std::copy(current_frame_->data(), current_frame_->data() + current_frame_->size(), frame->data().begin());
+		std::copy(current_frame_->data(), current_frame_->data() + current_frame_->size(), frame->pixel_data().begin());
 		return frame;
 	}
 		
-	gpu_frame_ptr receive()
+	producer_frame receive()
 	{		
-		return (frame_buffer_.try_pop(last_frame_) || !is_empty_) && last_frame_ ? last_frame_ : empty_;
+		return (frame_buffer_.try_pop(last_frame_) || !is_empty_) ? last_frame_ : producer_frame::empty();
 	}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
 		frame_processor_ = frame_processor;
 		auto format_desc = frame_processor_->get_video_format_desc();
-		empty_ = frame_processor_->create_frame(pixel_format_desc());
 		bmp_frame_ = std::make_shared<bitmap>(format_desc.width, format_desc.height);
 		start(false);
 	}
@@ -280,10 +279,9 @@ struct flash_producer::implementation
 	
 	CComObject<flash::FlashAxContainer>* flashax_container_;
 		
-	tbb::concurrent_bounded_queue<gpu_frame_ptr> frame_buffer_;
+	tbb::concurrent_bounded_queue<producer_frame> frame_buffer_;
 
-	gpu_frame_ptr empty_;
-	gpu_frame_ptr last_frame_;
+	producer_frame last_frame_;
 
 	bitmap_ptr current_frame_;
 	bitmap_ptr bmp_frame_;
@@ -299,7 +297,7 @@ struct flash_producer::implementation
 };
 
 flash_producer::flash_producer(const std::wstring& filename) : impl_(new implementation(this, filename)){}
-gpu_frame_ptr flash_producer::receive(){return impl_->receive();}
+producer_frame flash_producer::receive(){return impl_->receive();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
 void flash_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}
 std::wstring flash_producer::print() const {return impl_->print();}

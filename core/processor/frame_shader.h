@@ -25,7 +25,7 @@ public:
 	frame_shader(const video_format_desc& format_desc);
 
 	void begin(const shader_transform& transform);
-	void render(const pixel_format_desc& image);
+	void render(const pixel_format_desc& desc);
 	void end();
 private:
 	struct implementation;
