@@ -13,7 +13,7 @@
 
 namespace caspar { namespace core {
 																																							
-struct write_frame::implementation : boost::noncopyable
+struct write_frame_impl::implementation : boost::noncopyable
 {
 	implementation(const pixel_format_desc& desc) : desc_(desc)
 	{			
@@ -85,22 +85,22 @@ struct write_frame::implementation : boost::noncopyable
 	const pixel_format_desc desc_;
 };
 	
-write_frame::write_frame(const pixel_format_desc& desc) : impl_(new implementation(desc)){}
-void write_frame::begin_write(){impl_->begin_write();}
-void write_frame::end_write(){impl_->end_write();}	
-void write_frame::draw(frame_shader& shader){impl_->draw(shader);}
-boost::iterator_range<unsigned char*> write_frame::pixel_data(size_t index)
+write_frame_impl::write_frame_impl(const pixel_format_desc& desc) : impl_(new implementation(desc)){}
+void write_frame_impl::begin_write(){impl_->begin_write();}
+void write_frame_impl::end_write(){impl_->end_write();}	
+void write_frame_impl::draw(frame_shader& shader){impl_->draw(shader);}
+boost::iterator_range<unsigned char*> write_frame_impl::pixel_data(size_t index)
 {
 	auto ptr = static_cast<unsigned char*>(impl_->pixel_data_[index]);
 	return boost::iterator_range<unsigned char*>(ptr, ptr+impl_->desc_.planes[index].size);
 }
-const boost::iterator_range<const unsigned char*> write_frame::pixel_data(size_t index) const
+const boost::iterator_range<const unsigned char*> write_frame_impl::pixel_data(size_t index) const
 {
 	auto ptr = static_cast<const unsigned char*>(impl_->pixel_data_[index]);
 	return boost::iterator_range<const unsigned char*>(ptr, ptr+impl_->desc_.planes[index].size);
 }
 
-std::vector<short>& write_frame::audio_data() { return impl_->audio_data_; }
-const std::vector<short>& write_frame::audio_data() const { return impl_->audio_data_; }
-void write_frame::reset(){impl_->reset();}
+std::vector<short>& write_frame_impl::audio_data() { return impl_->audio_data_; }
+const std::vector<short>& write_frame_impl::audio_data() const { return impl_->audio_data_; }
+void write_frame_impl::reset(){impl_->reset();}
 }}

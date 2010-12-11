@@ -66,7 +66,7 @@ unsigned int get_pixel_color_value(const std::wstring& parameter)
 class color_producer : public frame_producer
 {
 public:
-	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)), frame_(producer_frame::empty()){}
+	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)){}
 	
 	producer_frame receive()
 	{ 
@@ -75,9 +75,9 @@ public:
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
-		auto frame = frame_processor->create_frame();
-		__stosd(reinterpret_cast<unsigned long*>(frame->pixel_data().begin()), color_value_, frame->pixel_data().size() / sizeof(unsigned long));
-		frame_ = frame;
+		write_frame frame = std::move(frame_processor->create_frame());
+		__stosd(reinterpret_cast<unsigned long*>(frame.pixel_data().begin()), color_value_, frame.pixel_data().size() / sizeof(unsigned long));
+		frame_ = std::move(frame);
 	}
 	
 	std::wstring print() const

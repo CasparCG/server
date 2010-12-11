@@ -22,7 +22,7 @@
 	
 namespace caspar { namespace core {
 	
-std::vector<producer_frame> receives(std::map<int, layer>& layers)
+std::vector<producer_frame> receive(std::map<int, layer>& layers)
 {	
 	std::vector<producer_frame> frames(layers.size(), producer_frame::empty());
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), 
@@ -48,7 +48,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 	{		
 		try
 		{	
-			frame_processor_->send(std::make_shared<composite_frame>(receives(layers_)));
+			frame_processor_->send(composite_frame(receive(layers_)));
 		}
 		catch(...)
 		{
@@ -147,8 +147,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 	std::map<int, layer> layers_;		
 };
 
-frame_producer_device::frame_producer_device(const frame_processor_device_ptr& frame_processor) 
-	: impl_(new implementation(frame_processor)){}
+frame_producer_device::frame_producer_device(const frame_processor_device_ptr& frame_processor) : impl_(new implementation(frame_processor)){}
 void frame_producer_device::load(int render_layer, const frame_producer_ptr& producer, load_option::type option){impl_->load(render_layer, producer, option);}
 void frame_producer_device::pause(int render_layer){impl_->pause(render_layer);}
 void frame_producer_device::play(int render_layer){impl_->play(render_layer);}

@@ -131,30 +131,30 @@ struct transition_producer::implementation : boost::noncopyable
 		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
 		unsigned char volume = static_cast<unsigned char>(alpha*256.0);
 
-		auto my_src_frame = std::make_shared<transform_frame>(src_frame);
-		auto my_dest_frame = std::make_shared<transform_frame>(dest_frame);
+		transform_frame my_src_frame = std::move(src_frame);
+		transform_frame my_dest_frame = std::move(dest_frame);
 
-		my_src_frame->audio_volume(255-volume);
-		my_dest_frame->audio_volume(volume);
+		my_src_frame.audio_volume(255-volume);
+		my_dest_frame.audio_volume(volume);
 
 		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		
 		if(info_.type == transition::mix)
-			my_dest_frame->alpha(alpha);		
+			my_dest_frame.alpha(alpha);		
 		else if(info_.type == transition::slide)			
-			my_dest_frame->translate((-1.0+alpha)*dir, 0.0);			
+			my_dest_frame.translate((-1.0+alpha)*dir, 0.0);			
 		else if(info_.type == transition::push)
 		{
-			my_dest_frame->translate((-1.0+alpha)*dir, 0.0);
-			my_src_frame->translate((0.0+alpha)*dir, 0.0);
+			my_dest_frame.translate((-1.0+alpha)*dir, 0.0);
+			my_src_frame.translate((0.0+alpha)*dir, 0.0);
 		}
 		else if(info_.type == transition::wipe)
 		{
-			my_dest_frame->translate((-1.0+alpha)*dir, 0.0);			
-			my_dest_frame->texcoord((-1.0+alpha)*dir, 1.0, 1.0-(1.0-alpha)*dir, 0.0);				
+			my_dest_frame.translate((-1.0+alpha)*dir, 0.0);			
+			my_dest_frame.texcoord((-1.0+alpha)*dir, 1.0, 1.0-(1.0-alpha)*dir, 0.0);				
 		}
-						
-		return std::make_shared<composite_frame>(my_src_frame, my_dest_frame);
+
+		return std::make_shared<composite_frame>(std::move(my_src_frame), std::move(my_dest_frame));
 	}
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)

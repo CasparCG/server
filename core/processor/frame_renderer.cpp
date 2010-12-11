@@ -28,7 +28,7 @@ namespace caspar { namespace core {
 struct frame_renderer::implementation : boost::noncopyable
 {	
 	implementation(const video_format_desc& format_desc) : shader_(format_desc), format_desc_(format_desc),
-		reading_(new read_frame(0, 0)), writing_(producer_frame::empty()), drawing_(producer_frame::empty()), fbo_(format_desc.width, format_desc.height)
+		reading_(new read_frame_impl(0, 0)), fbo_(format_desc.width, format_desc.height)
 	{	
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_TEXTURE_2D));
@@ -40,7 +40,7 @@ struct frame_renderer::implementation : boost::noncopyable
 				
 	consumer_frame render(const producer_frame& frame)
 	{
-		read_frame_ptr result;
+		read_frame_impl_ptr result;
 		try
 		{
 			drawing_ = writing_;
@@ -67,24 +67,24 @@ struct frame_renderer::implementation : boost::noncopyable
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		return result;
+		return read_frame(result);
 	}
 
-	read_frame_ptr create_output_frame()
+	read_frame_impl_ptr create_output_frame()
 	{
-		read_frame_ptr frame;
+		read_frame_impl_ptr frame;
 		if(!frame_pool_.try_pop(frame))		
-			frame.reset(new read_frame(format_desc_.width, format_desc_.height));		
-		return read_frame_ptr(frame.get(), [=](read_frame*){frame_pool_.push(frame);});
+			frame = std::make_shared<read_frame_impl>(format_desc_.width, format_desc_.height);		
+		return read_frame_impl_ptr(frame.get(), [=](read_frame_impl*){frame_pool_.push(frame);});
 	}
 
-	tbb::concurrent_bounded_queue<read_frame_ptr> frame_pool_;
+	tbb::concurrent_bounded_queue<read_frame_impl_ptr> frame_pool_;
 
 	common::gl::frame_buffer_object fbo_;
 
-	read_frame_ptr	reading_;	
-	producer_frame	writing_;
-	producer_frame	drawing_;
+	read_frame_impl_ptr	reading_;	
+	producer_frame		writing_;
+	producer_frame		drawing_;
 	
 	frame_shader shader_;
 
@@ -92,8 +92,5 @@ struct frame_renderer::implementation : boost::noncopyable
 };
 	
 frame_renderer::frame_renderer(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-consumer_frame frame_renderer::render(const producer_frame& frame)
-{
-	return impl_->render(frame);
-}
+consumer_frame frame_renderer::render(const producer_frame& frame){return impl_->render(std::move(frame));}
 }}

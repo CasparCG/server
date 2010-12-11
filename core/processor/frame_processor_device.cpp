@@ -43,26 +43,26 @@ struct frame_processor_device::implementation : boost::noncopyable
 		});
 	}
 		
-	write_frame_ptr create_frame(const pixel_format_desc& desc)
+	write_frame create_frame(const pixel_format_desc& desc)
 	{
 		auto pool = &frame_pools_[desc];
 		
-		write_frame_ptr my_frame;
+		write_frame_impl_ptr my_frame;
 		if(!pool->try_pop(my_frame))		
-			my_frame = executor_.invoke([&]{return std::shared_ptr<write_frame>(new write_frame(desc));});		
+			my_frame = executor_.invoke([&]{return std::shared_ptr<write_frame_impl>(new write_frame_impl(desc));});		
 		
-		return write_frame_ptr(my_frame.get(), [=](write_frame*)
+		return write_frame(write_frame_impl_ptr(my_frame.get(), [=](write_frame_impl*)
 		{
 			executor_.begin_invoke([=]
 			{
 				my_frame->reset();
 				pool->push(my_frame);
 			});
-		});
+		}));
 	}
 		
 	void send(const producer_frame& frame)
-	{							
+	{			
 		auto future = executor_.begin_invoke([=]{return renderer_->render(frame);});	
 		output_.push(std::move(future)); // Blocks
 	}
@@ -93,19 +93,19 @@ struct frame_processor_device::implementation : boost::noncopyable
 	std::unique_ptr<frame_renderer> renderer_;	
 				
 	tbb::concurrent_bounded_queue<boost::shared_future<consumer_frame>> output_;	
-	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<write_frame_ptr>, std::hash<pixel_format_desc>> frame_pools_;
+	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<write_frame_impl_ptr>, std::hash<pixel_format_desc>> frame_pools_;
 	
 	const video_format_desc fmt_;
 	long underrun_count_;
 };
 	
 frame_processor_device::frame_processor_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void frame_processor_device::send(const producer_frame& frame){impl_->send(frame);}
+void frame_processor_device::send(const producer_frame& frame){impl_->send(std::move(frame));}
 consumer_frame frame_processor_device::receive(){return impl_->receive();}
 const video_format_desc& frame_processor_device::get_video_format_desc() const { return impl_->fmt_; }
 
-write_frame_ptr frame_processor_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		
-write_frame_ptr frame_processor_device::create_frame(size_t width, size_t height)
+write_frame frame_processor_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		
+write_frame frame_processor_device::create_frame(size_t width, size_t height)
 {
 	// Create bgra frame
 	pixel_format_desc desc;
@@ -114,7 +114,7 @@ write_frame_ptr frame_processor_device::create_frame(size_t width, size_t height
 	return create_frame(desc);
 }
 			
-write_frame_ptr frame_processor_device::create_frame()
+write_frame frame_processor_device::create_frame()
 {
 	// Create bgra frame with output resolution
 	pixel_format_desc desc;

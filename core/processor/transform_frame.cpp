@@ -61,7 +61,13 @@ struct transform_frame::implementation : boost::noncopyable
 	producer_frame frame_;
 };
 	
-transform_frame::transform_frame(const producer_frame& frame) : impl_(new implementation(frame)){}
+transform_frame::transform_frame(const producer_frame& frame) : impl_(new implementation(std::move(frame))){}
+transform_frame::transform_frame(transform_frame&& other) : impl_(std::move(other.impl_)){}
+transform_frame& transform_frame::operator=(transform_frame&& other)
+{
+	impl_ = std::move(other.impl_);
+	return *this;
+}
 void transform_frame::begin_write(){impl_->begin_write();}
 void transform_frame::end_write(){impl_->end_write();}	
 void transform_frame::draw(frame_shader& shader){impl_->draw(shader);}

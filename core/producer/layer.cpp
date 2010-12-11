@@ -63,7 +63,7 @@ struct layer::implementation
 		{
 			last_frame_ = foreground_->receive();
 
-			if(last_frame_ == producer_frame::eof())
+			if(last_frame_ == producer_frame::eof() && foreground_->get_following_producer())
 			{
 				CASPAR_LOG(info) << L"EOF: " << foreground_->print();
 				auto following = foreground_->get_following_producer();

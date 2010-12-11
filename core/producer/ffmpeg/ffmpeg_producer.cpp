@@ -93,7 +93,7 @@ public:
 				{
 					auto decoded_frame = video_decoder_->execute(video_packet);
 					auto transformed_frame = video_transformer_->execute(decoded_frame);
-					video_frame_channel_.push_back(transformed_frame);	
+					video_frame_channel_.push_back(std::move(transformed_frame));	
 				}
 			}, 
 			[&] 
@@ -122,13 +122,13 @@ public:
 
 			while(!video_frame_channel_.empty() && (!audio_chunk_channel_.empty() || !has_audio_))
 			{
-				if(has_audio_ && video_frame_channel_.front()) 
+				if(has_audio_) 
 				{
-					video_frame_channel_.front()->audio_data() = std::move(audio_chunk_channel_.front());
+					video_frame_channel_.front().audio_data() = std::move(audio_chunk_channel_.front());
 					audio_chunk_channel_.pop_front();
 				}
 				
-				auto frame = video_frame_channel_.front();
+				auto frame = std::move(video_frame_channel_.front());
 				video_frame_channel_.pop_front();
 				ouput_channel_.push(std::move(frame));
 			}				
@@ -136,7 +136,7 @@ public:
 
 		if(!ouput_channel_.empty())
 		{
-			last_frame_ = ouput_channel_.front();
+			last_frame_ = std::move(ouput_channel_.front());
 			ouput_channel_.pop();
 		}
 		else if(input_->is_eof())
@@ -156,12 +156,12 @@ public:
 
 	video_decoder_uptr					video_decoder_;
 	video_transformer_uptr				video_transformer_;
-	std::deque<transform_frame_ptr>		video_frame_channel_;
+	std::deque<transform_frame>			video_frame_channel_;
 	
 	audio_decoder_ptr					audio_decoder_;
 	std::deque<std::vector<short>>		audio_chunk_channel_;
 
-	std::queue<transform_frame_ptr>		ouput_channel_;
+	std::queue<transform_frame>			ouput_channel_;
 	
 	std::wstring						filename_;
 
