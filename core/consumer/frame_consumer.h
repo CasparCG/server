@@ -20,7 +20,7 @@
 #pragma once
 
 #include "../format/video_format.h"
-#include "../processor/consumer_frame.h"
+#include "../processor/read_frame.h"
 
 #include <boost/noncopyable.hpp>
 
@@ -38,7 +38,7 @@ struct frame_consumer : boost::noncopyable
 
 	virtual ~frame_consumer() {}
 
-	virtual void send(const consumer_frame& frame) = 0;
+	virtual void send(const read_frame& frame) = 0;
 	virtual sync_mode synchronize() = 0;
 	virtual size_t buffer_depth() const = 0;
 };

@@ -7,7 +7,7 @@
 #include "../producer/flash/flash_producer.h"
 #include "../producer/flash/ct_producer.h"
 #include "../producer/image/image_producer.h"
-#include "../producer/image/image_scroll_producer.h"
+//#include "../producer/image/image_scroll_producer.h"
 
 #include "../../common/exception/exceptions.h"
 
@@ -26,7 +26,7 @@ frame_producer_ptr load_media(const std::vector<std::wstring>& params)
 		(&flash::create_flash_producer)
 		(&flash::create_ct_producer)
 		(&image::create_image_producer)
-		(&image::create_image_scroll_producer)
+	//	(&image::create_image_scroll_producer)
 		(&ffmpeg::create_ffmpeg_producer)
 		(&create_color_producer);
 

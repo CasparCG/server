@@ -19,7 +19,7 @@
 */
 #pragma once
 
-#include "../processor/write_frame.h"
+#include "../processor/draw_frame.h"
 #include "../processor/frame_processor_device.h"
 
 #include <boost/noncopyable.hpp>
@@ -34,7 +34,7 @@ public:
 	virtual ~frame_producer(){}	
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	/// \fn	virtual producer_frame :::receive() = 0;
+	/// \fn	virtual draw_frame :::receive() = 0;
 	///
 	/// \brief	Renders a frame.
 	/// 		
@@ -42,7 +42,7 @@ public:
 	///
 	/// \return	The frame. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual producer_frame receive() = 0;
+	virtual draw_frame receive() = 0;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	/// \fn	virtual std::shared_ptr<frame_producer> :::get_following_producer() const
@@ -72,6 +72,18 @@ public:
 	virtual void initialize(const frame_processor_device_ptr& frame_processor) = 0;
 
 	virtual std::wstring print() const { return L"Unknown frame_producer.";}
+
+	static const std::shared_ptr<frame_producer>& empty()
+	{	
+		struct empty_frame_producer : public frame_producer
+		{
+			virtual draw_frame receive(){return draw_frame::empty();}
+			virtual std::shared_ptr<frame_producer> get_following_producer() const { return nullptr; }
+			virtual void initialize(const frame_processor_device_ptr&){}
+		};
+		static std::shared_ptr<frame_producer> empty_producer = std::make_shared<empty_frame_producer>();
+		return empty_producer;
+	}
 };
 typedef std::shared_ptr<frame_producer> frame_producer_ptr;
 

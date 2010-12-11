@@ -17,12 +17,12 @@ class frame_producer_device : boost::noncopyable
 public:
 	frame_producer_device(const frame_processor_device_ptr& frame_processor);
 	
-	void load(int render_layer, const frame_producer_ptr& producer, load_option::type option = load_option::none);	
-	void pause(int render_layer);
-	void play(int render_layer);
-	void stop(int render_layer);
-	void clear(int render_layer);
-	void clear();
+	void load	(int render_layer, const frame_producer_ptr& producer, load_option::type option = load_option::none);	
+	void pause	(int render_layer);
+	void play	(int render_layer);
+	void stop	(int render_layer);
+	void clear	(int render_layer);
+	void clear	();
 	
 	boost::unique_future<frame_producer_ptr> foreground(int render_layer) const;
 	boost::unique_future<frame_producer_ptr> background(int render_layer) const;

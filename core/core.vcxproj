@@ -169,13 +169,11 @@
     <ClInclude Include="format\pixel_format.h" />
     <ClInclude Include="format\video_format.h" />
     <ClInclude Include="processor\composite_frame.h" />
-    <ClInclude Include="processor\consumer_frame.h" />
-    <ClInclude Include="processor\drawable_frame.h" />
     <ClInclude Include="processor\frame_processor_device.h" />
     <ClInclude Include="processor\frame_renderer.h" />
     <ClInclude Include="processor\frame_shader.h" />
     <ClInclude Include="processor\fwd.h" />
-    <ClInclude Include="processor\producer_frame.h" />
+    <ClInclude Include="processor\draw_frame.h" />
     <ClInclude Include="processor\read_frame.h" />
     <ClInclude Include="processor\transform_frame.h" />
     <ClInclude Include="processor\write_frame.h" />
@@ -252,6 +250,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="processor\composite_frame.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="processor\draw_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -341,6 +343,8 @@
     <ClCompile Include="producer\image\image_scroll_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>

@@ -3,9 +3,9 @@
 #include "video_transformer.h"
 
 #include "../../../format/video_format.h"
-#include "../../../processor/transform_frame.h"
-#include "../../../processor/transform_frame.h"
-#include "../../../processor/producer_frame.h"
+#include "../../../processor/draw_frame.h"
+#include "../../../processor/draw_frame.h"
+#include "../../../processor/draw_frame.h"
 #include "../../../processor/frame_processor_device.h"
 
 #include <tbb/parallel_for.h>
@@ -105,12 +105,11 @@ struct video_transformer::implementation : boost::noncopyable
 		}
 	}
 	
-	transform_frame execute(const std::shared_ptr<AVFrame>& decoded_frame)
+	draw_frame execute(const std::shared_ptr<AVFrame>& decoded_frame)
 	{				
 		if(decoded_frame == nullptr)
-			return transform_frame(producer_frame::eof()); // TODO
+			return draw_frame::eof(); // TODO
 				
-		transform_frame transform = producer_frame::eof();
 		if(sws_context_ == nullptr)
 		{
 			auto write = frame_processor_->create_frame(desc_);
@@ -128,7 +127,7 @@ struct video_transformer::implementation : boost::noncopyable
 				});
 			});
 
-			transform = producer_frame(std::move(write));
+			return std::move(write);
 		}
 		else
 		{
@@ -140,14 +139,8 @@ struct video_transformer::implementation : boost::noncopyable
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);	
 			
-			transform = producer_frame(std::move(write));
-		}
-		
-		// TODO: Make generic for all formats and modes.
-		if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
-			transform.translate(0.0f, 1.0/static_cast<double>(frame_processor_->get_video_format_desc().height));		
-		
-		return transform;
+			return std::move(write);
+		}	
 	}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -167,6 +160,6 @@ struct video_transformer::implementation : boost::noncopyable
 };
 
 video_transformer::video_transformer(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
-transform_frame video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
+draw_frame video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
 void video_transformer::initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor); }
 }}}

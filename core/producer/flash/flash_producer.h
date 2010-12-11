@@ -38,7 +38,7 @@ public:
 
 	flash_producer(const std::wstring& filename);
 
-	virtual producer_frame receive();
+	virtual draw_frame receive();
 	virtual void initialize(const frame_processor_device_ptr& frame_processor);
 	virtual std::wstring print() const;
 

@@ -32,7 +32,7 @@ public:
 	frame_producer_ptr foreground() const;
 	frame_producer_ptr background() const;
 
-	producer_frame receive();
+	draw_frame receive();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

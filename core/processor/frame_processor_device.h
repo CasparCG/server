@@ -23,9 +23,9 @@
 #include <vector>
 
 #include "fwd.h"
+#include "write_frame.h"
 
 #include "../format/video_format.h"
-#include "../consumer/frame_consumer_device.h"
 
 namespace caspar { namespace core {
 
@@ -34,8 +34,8 @@ class frame_processor_device : boost::noncopyable
 public:
 	frame_processor_device(const video_format_desc& format_desc);
 		
-	void send(const producer_frame& frame);
-	consumer_frame receive();
+	void send(const draw_frame& frame);
+	read_frame receive();
 	
 	write_frame create_frame(const pixel_format_desc& desc);		
 	write_frame create_frame(size_t width, size_t height);			
