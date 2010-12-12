@@ -13,94 +13,58 @@
 
 namespace caspar { namespace core {
 																																							
-struct write_frame_impl::implementation : boost::noncopyable
+struct write_frame::implementation : boost::noncopyable
 {
-	implementation(const pixel_format_desc& desc) : desc_(desc)
-	{			
-		assert(desc_.planes.size() <= 4);
-
-		std::fill(pixel_data_.begin(), pixel_data_.end(), nullptr);
-
-		for(size_t n = 0; n < desc_.planes.size(); ++n)
-		{
-			if(desc_.planes[n].size == 0)
-				break;
-
-			GLuint format = [&]() -> GLuint
-			{
-				switch(desc_.planes[n].channels)
-				{
-				case 1: return GL_LUMINANCE;
-				case 2: return GL_LUMINANCE_ALPHA;
-				case 3: return GL_BGR;
-				case 4: return GL_BGRA;
-				default: BOOST_THROW_EXCEPTION(out_of_range() << msg_info("1-4 channels are supported") << arg_name_info("desc.planes.channels")); 
-				}
-			}();
-
-			pbo_.push_back(std::make_shared<common::gl::pixel_buffer_object>(desc_.planes[n].width, desc_.planes[n].height, format));
-			pbo_.back()->is_smooth(true);
-		}
-		end_write();
-	}
+	implementation(std::vector<common::gl::pbo_ptr>&& pbos, const pixel_format_desc& desc) : pbos_(std::move(pbos)), desc_(desc){}
 	
 	void begin_write()
 	{
-		std::fill(pixel_data_.begin(), pixel_data_.end(), nullptr);
-		boost::range::for_each(pbo_, std::mem_fn(&common::gl::pixel_buffer_object::begin_write));
+		boost::range::for_each(pbos_, std::mem_fn(&common::gl::pbo::begin_write));
 	}
 
 	void end_write()
 	{
-		boost::range::transform(pbo_, pixel_data_.begin(), std::mem_fn(&common::gl::pixel_buffer_object::end_write));
+		boost::range::for_each(pbos_, std::mem_fn(&common::gl::pbo::end_write));
 	}
 
 	void draw(frame_shader& shader)
 	{
-		assert(pbo_.size() == desc_.planes.size());
-
-		for(size_t n = 0; n < pbo_.size(); ++n)
+		for(size_t n = 0; n < pbos_.size(); ++n)
 		{
 			glActiveTexture(GL_TEXTURE0+n);
-			pbo_[n]->bind_texture();
+			pbos_[n]->bind_texture();
 		}
 		shader.render(desc_);
 	}
 
-	unsigned char* data(size_t index)
+	boost::iterator_range<unsigned char*> pixel_data(size_t index)
 	{
-		return static_cast<unsigned char*>(pixel_data_[index]);
+		auto ptr = static_cast<unsigned char*>(pbos_[index]->data());
+		return boost::iterator_range<unsigned char*>(ptr, ptr+pbos_[index]->size());
 	}
-
-	void reset()
+	const boost::iterator_range<const unsigned char*> pixel_data(size_t index) const
 	{
-		audio_data_.clear();
-		end_write();
+		auto ptr = static_cast<const unsigned char*>(pbos_[index]->data());
+		return boost::iterator_range<const unsigned char*>(ptr, ptr+pbos_[index]->size());
 	}
-	
-	std::vector<common::gl::pixel_buffer_object_ptr> pbo_;
-	std::array<void*, 4> pixel_data_;	
+			
+	std::vector<common::gl::pbo_ptr> pbos_;
 	std::vector<short> audio_data_;
-	
 	const pixel_format_desc desc_;
 };
 	
-write_frame_impl::write_frame_impl(const pixel_format_desc& desc) : impl_(new implementation(desc)){}
-void write_frame_impl::begin_write(){impl_->begin_write();}
-void write_frame_impl::end_write(){impl_->end_write();}	
-void write_frame_impl::draw(frame_shader& shader){impl_->draw(shader);}
-boost::iterator_range<unsigned char*> write_frame_impl::pixel_data(size_t index)
+write_frame::write_frame(std::vector<common::gl::pbo_ptr>&& pbos, const pixel_format_desc& desc) : impl_(new implementation(std::move(pbos), desc)){}
+write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
+write_frame& write_frame::operator=(write_frame&& other)
 {
-	auto ptr = static_cast<unsigned char*>(impl_->pixel_data_[index]);
-	return boost::iterator_range<unsigned char*>(ptr, ptr+impl_->desc_.planes[index].size);
+	impl_ = std::move(other.impl_);
+	return *this;
 }
-const boost::iterator_range<const unsigned char*> write_frame_impl::pixel_data(size_t index) const
-{
-	auto ptr = static_cast<const unsigned char*>(impl_->pixel_data_[index]);
-	return boost::iterator_range<const unsigned char*>(ptr, ptr+impl_->desc_.planes[index].size);
-}
-
-std::vector<short>& write_frame_impl::audio_data() { return impl_->audio_data_; }
-const std::vector<short>& write_frame_impl::audio_data() const { return impl_->audio_data_; }
-void write_frame_impl::reset(){impl_->reset();}
+void write_frame::begin_write(){impl_->begin_write();}
+void write_frame::end_write(){impl_->end_write();}	
+void write_frame::draw(frame_shader& shader){impl_->draw(shader);}
+boost::iterator_range<unsigned char*> write_frame::pixel_data(size_t index){return impl_->pixel_data(index);}
+const boost::iterator_range<const unsigned char*> write_frame::pixel_data(size_t index) const {return impl_->pixel_data(index);}
+std::vector<short>& write_frame::audio_data() { return impl_->audio_data_; }
+const std::vector<short>& write_frame::audio_data() const { return impl_->audio_data_; }
 }}

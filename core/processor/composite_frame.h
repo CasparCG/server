@@ -11,11 +11,14 @@
 
 namespace caspar { namespace core {
 	
-class composite_frame : public draw_frame_impl
+class composite_frame : public detail::draw_frame_impl
 {
 public:
-	composite_frame(std::vector<draw_frame>&& frames);
+	explicit composite_frame(std::vector<draw_frame>&& frames);
 	composite_frame(draw_frame&& frame1, draw_frame&& frame2);
+	
+	composite_frame(const composite_frame& other);
+	composite_frame& operator=(const composite_frame& other);
 	composite_frame(composite_frame&& other);
 	composite_frame& operator=(composite_frame&& other);
 

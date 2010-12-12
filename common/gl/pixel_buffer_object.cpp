@@ -185,6 +185,8 @@ void pixel_buffer_object::create(size_t width, size_t height, GLenum format)
 {
 	impl_.reset(new implementation(width, height, format));
 }
+void* pixel_buffer_object::data(){return impl_->data_;}
+const void* pixel_buffer_object::data() const{return impl_->data_;}
 void pixel_buffer_object::begin_write() { impl_->begin_write();}
 void* pixel_buffer_object::end_write() {return impl_->end_write();} 
 void pixel_buffer_object::begin_read() { impl_->begin_read();}

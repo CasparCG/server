@@ -29,7 +29,7 @@
 
 namespace caspar { namespace core {
 
-class frame_renderer :  boost::noncopyable
+class frame_renderer : boost::noncopyable
 {
 public:
 	frame_renderer(const video_format_desc& format_desc_);

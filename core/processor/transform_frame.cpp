@@ -15,19 +15,19 @@
 
 namespace caspar { namespace core {
 																																						
-struct transform_frame::implementation : boost::noncopyable
+struct transform_frame::implementation
 {
 	implementation(const draw_frame& frame) : frame_(frame), audio_volume_(255), override_audio_(false){}
 	implementation(const draw_frame& frame, const std::vector<short>& audio_data) : frame_(frame), audio_volume_(255), audio_data_(audio_data), override_audio_(true){}
 	implementation(draw_frame&& frame) : frame_(std::move(frame)), audio_volume_(255), override_audio_(false){}
 	
-	void begin_write(){frame_.begin_write();}
-	void end_write(){frame_.end_write();}
+	void begin_write(){detail::draw_frame_access::begin_write(frame_);}
+	void end_write(){detail::draw_frame_access::end_write(frame_);}
 
 	void draw(frame_shader& shader)
 	{
 		shader.begin(transform_);
-		frame_.draw(shader);
+		detail::draw_frame_access::draw(frame_, shader);
 		shader.end();
 	}
 
@@ -52,9 +52,7 @@ struct transform_frame::implementation : boost::noncopyable
 		
 	bool override_audio_;
 	std::vector<short> audio_data_;
-	
-	shader_transform transform_;
-	
+	shader_transform transform_;	
 	unsigned char audio_volume_;
 	draw_frame frame_;
 };
@@ -62,6 +60,13 @@ struct transform_frame::implementation : boost::noncopyable
 transform_frame::transform_frame(const draw_frame& frame) : impl_(new implementation(frame)){}
 transform_frame::transform_frame(const draw_frame& frame, const std::vector<short>& audio_data) : impl_(new implementation(frame, audio_data)){}
 transform_frame::transform_frame(draw_frame&& frame) : impl_(new implementation(std::move(frame))){}
+transform_frame::transform_frame(const transform_frame& other) : impl_(new implementation(*other.impl_)){}
+transform_frame& transform_frame::operator=(const transform_frame& other)
+{
+	transform_frame temp(other);
+	temp.impl_.swap(impl_);
+	return *this;
+}
 transform_frame::transform_frame(transform_frame&& other) : impl_(std::move(other.impl_)){}
 transform_frame& transform_frame::operator=(transform_frame&& other)
 {

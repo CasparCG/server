@@ -29,6 +29,9 @@ public:
 
 	void is_smooth(bool smooth);
 
+	void* data();
+	const void* data() const;
+
 	void bind_texture();
 
 	size_t width() const;
@@ -43,5 +46,7 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 typedef std::shared_ptr<pixel_buffer_object> pixel_buffer_object_ptr;
-	
+
+typedef pixel_buffer_object pbo;
+typedef pixel_buffer_object_ptr pbo_ptr;
 }}}

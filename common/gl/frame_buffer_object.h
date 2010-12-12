@@ -15,5 +15,6 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
+typedef frame_buffer_object fbo;
 
 }}}
