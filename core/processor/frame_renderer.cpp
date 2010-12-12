@@ -28,7 +28,7 @@ namespace caspar { namespace core {
 struct frame_renderer::implementation : boost::noncopyable
 {	
 	implementation(const video_format_desc& format_desc) : shader_(format_desc), format_desc_(format_desc),
-		reading_(new read_frame_impl(0, 0)), fbo_(format_desc.width, format_desc.height)
+		reading_(create_output_frame()), fbo_(format_desc.width, format_desc.height)
 	{	
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_TEXTURE_2D));
@@ -36,6 +36,7 @@ struct frame_renderer::implementation : boost::noncopyable
 		GL(glDisable(GL_DEPTH_TEST));
 		GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));			
 		GL(glViewport(0, 0, format_desc.width, format_desc.height));
+		reading_->begin_read();
 	}
 				
 	read_frame render(const draw_frame& frame)
@@ -67,7 +68,7 @@ struct frame_renderer::implementation : boost::noncopyable
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		return read_frame(result);
+		return read_frame(std::move(result));
 	}
 
 	read_frame_impl_ptr create_output_frame()
@@ -77,18 +78,17 @@ struct frame_renderer::implementation : boost::noncopyable
 			frame = std::make_shared<read_frame_impl>(format_desc_.width, format_desc_.height);		
 		return read_frame_impl_ptr(frame.get(), [=](read_frame_impl*){frame_pool_.push(frame);});
 	}
+	
+	const video_format_desc format_desc_;
+	const common::gl::frame_buffer_object fbo_;
 
 	tbb::concurrent_bounded_queue<read_frame_impl_ptr> frame_pool_;
-
-	common::gl::frame_buffer_object fbo_;
-
+	
 	read_frame_impl_ptr	reading_;	
-	draw_frame		writing_;
-	draw_frame		drawing_;
+	draw_frame			writing_;
+	draw_frame			drawing_;
 	
 	frame_shader shader_;
-
-	video_format_desc format_desc_;
 };
 	
 frame_renderer::frame_renderer(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}

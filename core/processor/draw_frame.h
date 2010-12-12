@@ -23,6 +23,8 @@ struct draw_frame_impl : boost::noncopyable
 	virtual void begin_write() = 0;
 	virtual void end_write() = 0;
 	virtual void draw(frame_shader& shader) = 0;
+
+	virtual ~draw_frame_impl(){}
 };
 
 class draw_frame : boost::equality_comparable<draw_frame>, boost::equality_comparable<eof_frame>, boost::equality_comparable<empty_frame>
