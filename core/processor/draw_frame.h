@@ -27,42 +27,37 @@ struct draw_frame_impl : boost::noncopyable
 
 class draw_frame
 {
-	enum frame_type
+	enum frame_tag
 	{
-		normal_type,
-		eof_type,
-		empty_type
+		normal_tag,
+		eof_tag,
+		empty_tag
 	};
 
-	//TODO: Move constructor is called when copy constructor should be called.
-	template<typename T>
-	void init(T&& other, const boost::true_type&)
-	{
-		impl_ = other.impl_;
-		type_ = other.type_;
-	}
-	
-	template<typename T>
-	void init(T&& impl, const boost::false_type&)
-	{
-		impl_ = std::make_shared<T>(std::move(impl));
-		type_ = normal_type;
-	}
-
+	static_assert(std::is_abstract<draw_frame_impl>::value, "non-abstract container allows slicing");
 public:
-	draw_frame() : type_(empty_type){}
-	draw_frame(const draw_frame& other) : impl_(other.impl_), type_(other.type_){}
+	draw_frame();
+	draw_frame(const draw_frame& other);
+	draw_frame(draw_frame&& other);
 
 	template<typename T>
-	draw_frame(T&& val)
-	{
-		init(std::forward<T>(val), boost::is_same<typename std::remove_reference<T>::type, draw_frame>());
-	}
+	draw_frame(T&& impl, typename std::enable_if<std::is_base_of<draw_frame_impl, T>::value, void>::type* = nullptr)
+		: impl_(std::make_shared<T>(std::forward<T>(impl))), type_(normal_tag){}
 
-	draw_frame(eof_frame&&) : type_(eof_type){}
-	draw_frame(empty_frame&&) : type_(empty_type){}
+	draw_frame(eof_frame&&) : type_(eof_tag){}
+	draw_frame(empty_frame&&) : type_(empty_tag){}
 		
 	void swap(draw_frame& other);
+	
+	template <typename T>
+	typename std::enable_if<std::is_base_of<draw_frame_impl, T>::value, draw_frame&>::type
+	operator=(T&& impl)
+	{
+		impl_ = std::make_shared<T>(std::forward<T>(impl));
+		type_ = normal_tag;
+		return *this;
+	}
+	
 	draw_frame& operator=(const draw_frame& other);
 	draw_frame& operator=(draw_frame&& other);
 	draw_frame& operator=(eof_frame&&);
@@ -87,7 +82,7 @@ public:
 	void draw(frame_shader& shader);
 private:		
 	draw_frame_impl_ptr impl_;
-	frame_type type_;
+	frame_tag type_;
 };
 
 }}
