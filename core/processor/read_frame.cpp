@@ -9,50 +9,22 @@
 
 namespace caspar { namespace core {
 																																							
-struct read_frame_impl::implementation : boost::noncopyable
+struct read_frame::implementation : boost::noncopyable
 {
-	implementation(size_t width, size_t height) : pixel_data_(nullptr), pbo_(width, height, GL_BGRA){}
-		
-	void begin_read()
-	{	
-		pixel_data_ = nullptr;
-		pbo_.begin_read();
-	}
-
-	void end_read()
-	{
-		pixel_data_ = pbo_.end_read();
-	}
-		
-	common::gl::pixel_buffer_object pbo_;
-	void* pixel_data_;	
+	implementation(common::gl::pbo_ptr&& pbo, std::vector<short>&& audio_data) : pbo_(std::move(pbo)), audio_data_(std::move(audio_data)){}				
+	common::gl::pbo_ptr pbo_;
 	std::vector<short> audio_data_;
 };
 	
-read_frame_impl::read_frame_impl(size_t width, size_t height) : impl_(new implementation(width, height)){}
-void read_frame_impl::begin_read(){impl_->begin_read();}
-void read_frame_impl::end_read(){impl_->end_read();}
-const boost::iterator_range<const unsigned char*> read_frame_impl::pixel_data() const
-{
-	if(impl_->pixel_data_ == nullptr)
-		return boost::iterator_range<const unsigned char*>();
-
-	auto ptr = static_cast<const unsigned char*>(impl_->pixel_data_);
-	return boost::iterator_range<const unsigned char*>(ptr, ptr+impl_->pbo_.size());
-}
-const std::vector<short>& read_frame_impl::audio_data() const { return impl_->audio_data_; }
-std::vector<short>& read_frame_impl::audio_data() { return impl_->audio_data_; }
-
-read_frame::read_frame(read_frame_impl_ptr&& frame) : impl_(std::move(frame)){}
-	
+read_frame::read_frame(common::gl::pbo_ptr&& pbo, std::vector<short>&& audio_data) : impl_(new implementation(std::move(pbo), std::move(audio_data))){}
 const boost::iterator_range<const unsigned char*> read_frame::pixel_data() const
 {
-	return impl_ ? impl_->pixel_data() : boost::iterator_range<const unsigned char*>();
-}
+	if(!impl_->pbo_ || !impl_->pbo_->data())
+		return boost::iterator_range<const unsigned char*>();
 
-const std::vector<short>& read_frame::audio_data() const 
-{
-	static std::vector<short> audio_data;
-	return impl_ ? impl_->audio_data() : audio_data;
+	auto ptr = static_cast<const unsigned char*>(impl_->pbo_->data());
+	return boost::iterator_range<const unsigned char*>(ptr, ptr+impl_->pbo_->size());
 }
+const std::vector<short>& read_frame::audio_data() const { return impl_->audio_data_; }
+
 }}

@@ -15,7 +15,7 @@
 
 namespace caspar { namespace core {
 	
-struct composite_frame::implementation : boost::noncopyable
+struct composite_frame::implementation
 {	
 	implementation(std::vector<draw_frame>&& frames) : frames_(std::move(frames)), audio_data_(1920*2, 0)
 	{		
@@ -35,17 +35,17 @@ struct composite_frame::implementation : boost::noncopyable
 	
 	void begin_write()
 	{
-		boost::range::for_each(frames_, std::mem_fn(&draw_frame::begin_write));
+		boost::range::for_each(frames_, std::bind(&detail::draw_frame_access::begin_write, std::placeholders::_1));
 	}
 
 	void end_write()
 	{
-		boost::range::for_each(frames_, std::mem_fn(&draw_frame::end_write));
+		boost::range::for_each(frames_, std::bind(&detail::draw_frame_access::end_write, std::placeholders::_1));
 	}
 	
 	void draw(frame_shader& shader)
 	{
-		boost::range::for_each(frames_, std::bind(&draw_frame::draw, std::placeholders::_1, std::ref(shader)));
+		boost::range::for_each(frames_, std::bind(&detail::draw_frame_access::draw, std::placeholders::_1, std::ref(shader)));
 	}
 				
 	std::vector<draw_frame> frames_;
@@ -54,6 +54,13 @@ struct composite_frame::implementation : boost::noncopyable
 
 composite_frame::composite_frame(std::vector<draw_frame>&& frames) : impl_(new implementation(std::move(frames))){}
 composite_frame::composite_frame(composite_frame&& other) : impl_(std::move(other.impl_)){}
+composite_frame::composite_frame(const composite_frame& other) : impl_(new implementation(*other.impl_)){}
+composite_frame& composite_frame::operator=(const composite_frame& other)
+{
+	composite_frame temp(other);
+	temp.impl_.swap(impl_);
+	return *this;
+}
 composite_frame& composite_frame::operator=(composite_frame&& other)
 {
 	impl_ = std::move(other.impl_);

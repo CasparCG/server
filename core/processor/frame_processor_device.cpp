@@ -27,8 +27,12 @@
 
 namespace caspar { namespace core {
 	
+using namespace common::gl;
+
 struct frame_processor_device::implementation : boost::noncopyable
 {	
+	typedef tbb::concurrent_bounded_queue<pbo_ptr> pbo_pool;
+
 	implementation(const video_format_desc& format_desc) : fmt_(format_desc), underrun_count_(0)
 	{		
 		output_.set_capacity(3);
@@ -41,25 +45,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 			renderer_.reset(new frame_renderer(format_desc));
 		});
 	}
-		
-	write_frame create_frame(const pixel_format_desc& desc)
-	{
-		auto pool = &frame_pools_[desc];
-		
-		write_frame_impl_ptr my_frame;
-		if(!pool->try_pop(my_frame))		
-			my_frame = executor_.invoke([&]{return std::shared_ptr<write_frame_impl>(new write_frame_impl(desc));});		
-		
-		return write_frame(write_frame_impl_ptr(my_frame.get(), [=](write_frame_impl*)
-		{
-			executor_.begin_invoke([=]
-			{
-				my_frame->reset();
-				pool->push(my_frame);
-			});
-		}));
-	}
-		
+				
 	void send(const draw_frame& frame)
 	{			
 		auto future = executor_.begin_invoke([=]{return renderer_->render(frame);});	
@@ -85,6 +71,46 @@ struct frame_processor_device::implementation : boost::noncopyable
 
 		return future.get();
 	}
+	
+	write_frame create_frame(const pixel_format_desc& desc)
+	{
+		std::vector<pbo_pool*> pools(desc.planes.size());
+		boost::range::transform(desc.planes, pools.begin(), [&](const pixel_format_desc::plane& plane)
+		{
+			return &pbo_pools_[((plane.width & 0x7FF)) << 0 | ((plane.height & 0x7FF)) << 11 | plane.channels];
+		});
+
+		bool filled = true;
+		std::vector<pbo_ptr> pbos(pools.size());
+		boost::range::transform(pools, pbos.begin(), [&](pbo_pool* pool) -> pbo_ptr
+		{
+			pbo_ptr pbo;
+			filled &= pool->try_pop(pbo);
+			return pbo;
+		});
+		
+		if(!filled)
+		{
+			executor_.invoke([&]
+			{
+				for(size_t n = 0; n < pbos.size(); ++n)
+				{
+					if(!pbos[n])
+						pbos[n] = create_pooled_pbo(desc.planes[n], pools[n]);
+				}
+			});
+		}
+		
+		return write_frame(std::move(pbos), desc);
+	}
+
+	pbo_ptr create_pooled_pbo(const pixel_format_desc::plane& plane, pbo_pool* pool)
+	{
+		static GLenum mapping[] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
+		auto pooled_pbo = std::make_shared<pbo>(plane.width, plane.height, mapping[plane.channels-1]);
+		pooled_pbo->end_write();
+		return pbo_ptr(pooled_pbo.get(), [=](pbo*){pool->push(pooled_pbo);});
+	}
 				
 	common::executor executor_;	
 
@@ -92,7 +118,8 @@ struct frame_processor_device::implementation : boost::noncopyable
 	std::unique_ptr<frame_renderer> renderer_;	
 				
 	tbb::concurrent_bounded_queue<boost::shared_future<read_frame>> output_;	
-	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<write_frame_impl_ptr>, std::hash<pixel_format_desc>> frame_pools_;
+
+	tbb::concurrent_unordered_map<int, pbo_pool> pbo_pools_;
 	
 	const video_format_desc fmt_;
 	long underrun_count_;
@@ -123,3 +150,29 @@ write_frame frame_processor_device::create_frame()
 }
 
 }}
+
+
+//assert(desc_.planes.size() <= 4);
+
+//std::fill(pixel_data_.begin(), pixel_data_.end(), nullptr);
+
+//for(size_t n = 0; n < desc_.planes.size(); ++n)
+//{
+//	if(desc_.planes[n].size == 0)
+//		break;
+
+//	GLuint format = [&]() -> GLuint
+//	{
+//		switch(desc_.planes[n].channels)
+//		{
+//		case 1: return GL_LUMINANCE;
+//		case 2: return GL_LUMINANCE_ALPHA;
+//		case 3: return GL_BGR;
+//		case 4: return GL_BGRA;
+//		default: BOOST_THROW_EXCEPTION(out_of_range() << msg_info("1-4 channels are supported") << arg_name_info("desc.planes.channels")); 
+//		}
+//	}();
+
+//	pbo_.push_back(std::make_shared<common::gl::pixel_buffer_object>(desc_.planes[n].width, desc_.planes[n].height, format));
+//	pbo_.back()->is_smooth(true);
+//}
