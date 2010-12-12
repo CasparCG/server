@@ -5,7 +5,6 @@
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <boost/variant.hpp>
-#include <boost/type_traits.hpp>
 #include <boost/operators.hpp>
 
 #include <memory>
@@ -43,10 +42,10 @@ public:
 
 	template<typename T>
 	draw_frame(T&& impl, typename std::enable_if<std::is_base_of<draw_frame_impl, typename std::remove_reference<T>::type>::value, void>::type* dummy = nullptr)
-		: impl_(std::make_shared<T>(std::forward<T>(impl))), type_(normal_tag){}
+		: impl_(std::make_shared<T>(std::forward<T>(impl))), tag_(normal_tag){}
 
-	draw_frame(eof_frame&&) : type_(eof_tag){}
-	draw_frame(empty_frame&&) : type_(empty_tag){}
+	draw_frame(eof_frame&&) : tag_(eof_tag){}
+	draw_frame(empty_frame&&) : tag_(empty_tag){}
 		
 	void swap(draw_frame& other);
 	
@@ -55,6 +54,7 @@ public:
 	operator=(T&& impl)
 	{
 		impl_ = std::make_shared<T>(std::forward<T>(impl));
+		tag_ = normal_tag;
 		return *this;
 	}
 	
@@ -78,7 +78,7 @@ public:
 	void draw(frame_shader& shader);
 private:		
 	draw_frame_impl_ptr impl_;
-	frame_tag type_;
+	frame_tag tag_;
 };
 
 }}
