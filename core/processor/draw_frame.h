@@ -6,6 +6,7 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/variant.hpp>
 #include <boost/type_traits.hpp>
+#include <boost/operators.hpp>
 
 #include <memory>
 #include <vector>
@@ -25,7 +26,7 @@ struct draw_frame_impl : boost::noncopyable
 	virtual void draw(frame_shader& shader) = 0;
 };
 
-class draw_frame
+class draw_frame : boost::equality_comparable<draw_frame>, boost::equality_comparable<eof_frame>, boost::equality_comparable<empty_frame>
 {
 	enum frame_tag
 	{
@@ -41,7 +42,7 @@ public:
 	draw_frame(draw_frame&& other);
 
 	template<typename T>
-	draw_frame(T&& impl, typename std::enable_if<std::is_base_of<draw_frame_impl, T>::value, void>::type* = nullptr)
+	draw_frame(T&& impl, typename std::enable_if<std::is_base_of<draw_frame_impl, typename std::remove_reference<T>::type>::value, void>::type* dummy = nullptr)
 		: impl_(std::make_shared<T>(std::forward<T>(impl))), type_(normal_tag){}
 
 	draw_frame(eof_frame&&) : type_(eof_tag){}
@@ -50,16 +51,16 @@ public:
 	void swap(draw_frame& other);
 	
 	template <typename T>
-	typename std::enable_if<std::is_base_of<draw_frame_impl, T>::value, draw_frame&>::type
+	typename std::enable_if<std::is_base_of<draw_frame_impl, typename std::remove_reference<T>::type>::value, draw_frame&>::type
 	operator=(T&& impl)
 	{
 		impl_ = std::make_shared<T>(std::forward<T>(impl));
-		type_ = normal_tag;
 		return *this;
 	}
 	
 	draw_frame& operator=(const draw_frame& other);
 	draw_frame& operator=(draw_frame&& other);
+
 	draw_frame& operator=(eof_frame&&);
 	draw_frame& operator=(empty_frame&&);
 
@@ -67,13 +68,8 @@ public:
 	static empty_frame empty();
 	
 	bool operator==(const eof_frame&);
-	bool operator!=(const eof_frame&);
-
 	bool operator==(const empty_frame&);
-	bool operator!=(const empty_frame&);
-
 	bool operator==(const draw_frame& other);
-	bool operator!=(const draw_frame& other);
 		
 	const std::vector<short>& audio_data() const;
 

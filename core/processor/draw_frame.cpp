@@ -47,13 +47,8 @@ eof_frame draw_frame::eof(){return eof_frame();}
 empty_frame draw_frame::empty(){return empty_frame();}
 	
 bool draw_frame::operator==(const eof_frame&){return type_ == eof_tag;}
-bool draw_frame::operator!=(const eof_frame&){return type_ != eof_tag;}
-
 bool draw_frame::operator==(const empty_frame&){return type_ == empty_tag;}
-bool draw_frame::operator!=(const empty_frame&){return type_ != empty_tag;}
-
 bool draw_frame::operator==(const draw_frame& other){return impl_ == other.impl_ && type_ == other.type_;}
-bool draw_frame::operator!=(const draw_frame& other){return !(*this == other);}
 	
 draw_frame& draw_frame::operator=(const draw_frame& other)
 {
