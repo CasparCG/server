@@ -37,9 +37,7 @@
 #endif
 
 namespace caspar { namespace IO {
-
-using namespace common;
-
+	
 #define CASPAR_MAXIMUM_SOCKET_CLIENTS	(MAXIMUM_WAIT_OBJECTS-1)	
 
 long AsyncEventServer::instanceCount_ = 0;

@@ -40,7 +40,6 @@
 
 using namespace caspar;
 using namespace caspar::core;
-using namespace caspar::common;
 
 class win32_handler_tbb_installer : public tbb::task_scheduler_observer
 {

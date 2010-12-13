@@ -7,6 +7,6 @@
 
 namespace caspar { namespace core { namespace image {
 
-frame_producer_ptr create_image_producer(const std::vector<std::wstring>& params);
+safe_ptr<frame_producer> create_image_producer(const std::vector<std::wstring>& params);
 
 }}}

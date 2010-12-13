@@ -23,9 +23,7 @@
 #include "AMCPCommandQueue.h"
 
 namespace caspar { namespace core { namespace amcp {
-
-using namespace common;
-
+	
 AMCPCommandQueue::AMCPCommandQueue() : newCommandEvent_(FALSE, FALSE) 
 {}
 

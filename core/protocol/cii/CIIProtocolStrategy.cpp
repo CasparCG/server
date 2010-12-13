@@ -36,9 +36,7 @@
 #endif
 
 namespace caspar { namespace core { namespace cii {
-
-using namespace common;
-
+	
 const std::wstring CIIProtocolStrategy::MessageDelimiter = TEXT("\r\n");
 const TCHAR CIIProtocolStrategy::TokenDelimiter = TEXT('\\');
 
@@ -188,19 +186,15 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 	std::vector<std::wstring> params;
 	params.push_back(server::template_folder()+TEXT("CG.fth"));
 	auto pFP = flash::create_flash_producer(params);
-	if(pFP != 0)
-	{
-		//TODO: Initialize with valid FrameFactory
-//		pFP->Initialize(0, false);
 
-		std::wstringstream flashParam;
-		flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");
-		pFP->param(flashParam.str());
+	std::wstringstream flashParam;
+	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");
+	pFP->param(flashParam.str());
 
-		CASPAR_LOG(info) << "Saved an instance of " << templateName << TEXT(" as ") << titleName ;
+	CASPAR_LOG(info) << "Saved an instance of " << templateName << TEXT(" as ") << titleName ;
 
-		PutPreparedTemplate(titleName, std::static_pointer_cast<frame_producer>(pFP));
-	}
+	PutPreparedTemplate(titleName, safe_ptr<frame_producer>(std::move(*pFP)));
+	
 }
 
 void CIIProtocolStrategy::DisplayTemplate(const std::wstring& titleName)
@@ -225,7 +219,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition.duration = 12;
 
 	auto pFP = load_media(boost::assign::list_of(filename));
-	auto pTransition = std::make_shared<transition_producer>(pFP, transition);
+	auto pTransition = safe_ptr<frame_producer>(transition_producer(pFP, transition));
 
 	try
 	{
@@ -243,9 +237,9 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	CASPAR_LOG(info) << L"Displayed " << filename;
 }
 
-frame_producer_ptr CIIProtocolStrategy::GetPreparedTemplate(const std::wstring& titleName)
+safe_ptr<frame_producer> CIIProtocolStrategy::GetPreparedTemplate(const std::wstring& titleName)
 {
-	frame_producer_ptr result;
+	safe_ptr<frame_producer> result(frame_producer::empty());
 
 	TitleList::iterator it = std::find(titles_.begin(), titles_.end(), titleName);
 	if(it != titles_.end()) {
@@ -258,7 +252,7 @@ frame_producer_ptr CIIProtocolStrategy::GetPreparedTemplate(const std::wstring& 
 	return result;
 }
 
-void CIIProtocolStrategy::PutPreparedTemplate(const std::wstring& titleName, frame_producer_ptr& pFP)
+void CIIProtocolStrategy::PutPreparedTemplate(const std::wstring& titleName, safe_ptr<frame_producer>& pFP)
 {
 	CASPAR_LOG(debug) << L"Saved title with name " << titleName;
 

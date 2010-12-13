@@ -21,6 +21,7 @@
 
 #include "../processor/draw_frame.h"
 #include "../processor/frame_processor_device.h"
+#include "../../common/utility/safe_ptr.h"
 
 #include <boost/noncopyable.hpp>
 
@@ -42,7 +43,7 @@ public:
 	///
 	/// \return	The frame. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual draw_frame receive() = 0;
+	virtual safe_ptr<draw_frame> receive() = 0;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	/// \fn	virtual std::shared_ptr<frame_producer> :::get_following_producer() const
@@ -51,8 +52,8 @@ public:
 	///
 	/// \return	The following producer, or nullptr if there is no following producer. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual std::shared_ptr<frame_producer> get_following_producer() const { return nullptr; }
-
+	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	/// \fn	virtual void :::set_leading_producer(const std::shared_ptr<frame_producer>& producer)
 	///
@@ -60,7 +61,7 @@ public:
 	///
 	/// \param	producer	The leading producer.
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual void set_leading_producer(const std::shared_ptr<frame_producer>& /*producer*/) {}
+	virtual void set_leading_producer(const safe_ptr<frame_producer>& /*producer*/) {}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	/// \fn	virtual void :::initialize(const frame_processor_device_ptr& frame_processor) = 0;
@@ -71,26 +72,11 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual void initialize(const frame_processor_device_ptr& frame_processor) = 0;
 
-	virtual std::wstring print() const { return L"Unknown frame_producer.";}
+	static safe_ptr<frame_producer> empty();
 
-	static const std::shared_ptr<frame_producer>& empty()
-	{	
-		struct empty_frame_producer : public frame_producer
-		{
-			virtual draw_frame receive(){return draw_frame::empty();}
-			virtual std::shared_ptr<frame_producer> get_following_producer() const { return nullptr; }
-			virtual void initialize(const frame_processor_device_ptr&){}
-		};
-		static std::shared_ptr<frame_producer> empty_producer = std::make_shared<empty_frame_producer>();
-		return empty_producer;
-	}
+	virtual std::wstring print() const = 0;
 };
-typedef std::shared_ptr<frame_producer> frame_producer_ptr;
 
-inline std::wostream& operator<<(std::wostream& out, const frame_producer& producer)
-{
-	out << producer.print().c_str();
-	return out;
-}
+inline std::wostream& operator<<(std::wostream& out, const frame_producer& producer);
 
 }}

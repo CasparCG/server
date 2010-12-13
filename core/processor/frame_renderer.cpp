@@ -25,14 +25,10 @@
 
 namespace caspar { namespace core {
 
-using namespace common::gl;
-	
 struct frame_renderer::implementation : boost::noncopyable
-{	
-	typedef std::pair<pbo_ptr, std::vector<short>> reading_frame;
-	
+{		
 	implementation(const video_format_desc& format_desc) : shader_(format_desc), format_desc_(format_desc),
-		reading_(create_reading(std::vector<short>())), fbo_(format_desc.width, format_desc.height)
+		reading_(create_reading()), fbo_(format_desc.width, format_desc.height), writing_(draw_frame::empty()), drawing_(draw_frame::empty())
 	{	
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_TEXTURE_2D));
@@ -40,28 +36,28 @@ struct frame_renderer::implementation : boost::noncopyable
 		GL(glDisable(GL_DEPTH_TEST));
 		GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));			
 		GL(glViewport(0, 0, format_desc.width, format_desc.height));
-		reading_.first->begin_read();
+		reading_->begin_read();
 	}
 				
-	read_frame render(const draw_frame& frame)
+	safe_ptr<read_frame> render(const safe_ptr<draw_frame>& frame)
 	{
-		reading_frame result;
+		safe_ptr<read_frame> result = create_reading();
 		try
 		{
 			drawing_ = writing_;
 			writing_ = frame;
 						
-			detail::draw_frame_access::begin_write(writing_);
+			writing_->begin_write();
 						
-			reading_.first->end_read();
-			result = reading_; 
+			reading_->end_read();
 						
 			GL(glClear(GL_COLOR_BUFFER_BIT));
 						
-			detail::draw_frame_access::draw(drawing_, shader_);
+			drawing_->draw(shader_);
 				
-			reading_ = create_reading(std::vector<short>(drawing_.audio_data().begin(), drawing_.audio_data().end()));			
-			reading_.first->begin_read();
+			result.swap(reading_);
+			reading_->begin_read();
+			reading_->audio_data(drawing_->audio_data());
 						
 			drawing_ = draw_frame::empty();
 		}
@@ -70,30 +66,30 @@ struct frame_renderer::implementation : boost::noncopyable
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		return read_frame(std::move(result.first), std::move(result.second));
+		return result;
 	}
 
-	reading_frame create_reading(const std::vector<short>& audio_data)
+	safe_ptr<read_frame> create_reading()
 	{
-		pbo_ptr new_pbo;
-		if(!pbo_pool_.try_pop(new_pbo))		
-			new_pbo = std::make_shared<pbo>(format_desc_.width, format_desc_.height, GL_BGRA);		
-		new_pbo = pbo_ptr(new_pbo.get(), [=](pbo*){pbo_pool_.push(new_pbo);});
-		return reading_frame(std::move(new_pbo), audio_data);
+		std::shared_ptr<read_frame> frame;
+		if(!pool_.try_pop(frame))		
+			frame = std::make_shared<read_frame>(format_desc_.width, format_desc_.height);
+		frame = std::shared_ptr<read_frame>(frame.get(), [=](read_frame*){pool_.push(frame);});
+		return safe_ptr<read_frame>::from_shared(frame);
 	}
 	
 	const video_format_desc format_desc_;
-	const fbo fbo_;
+	const gl::fbo fbo_;
 
-	tbb::concurrent_bounded_queue<pbo_ptr> pbo_pool_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>> pool_;
 	
-	reading_frame	reading_;	
-	draw_frame		writing_;
-	draw_frame		drawing_;
+	safe_ptr<read_frame>	reading_;	
+	safe_ptr<draw_frame>	writing_;
+	safe_ptr<draw_frame>	drawing_;
 	
 	frame_shader shader_;
 };
 	
 frame_renderer::frame_renderer(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-read_frame frame_renderer::render(const draw_frame& frame){return impl_->render(std::move(frame));}
+safe_ptr<read_frame> frame_renderer::render(const safe_ptr<draw_frame>& frame){return impl_->render(std::move(frame));}
 }}

@@ -132,11 +132,11 @@ struct decklink_consumer::Implementation : boost::noncopyable
 		CoUninitialize();
 	}
 	
-	void send(const read_frame& frame)
+	void send(const safe_ptr<read_frame>& frame)
 	{
 		active_ = executor_.begin_invoke([=]
 		{		
-			std::copy(frame.pixel_data().begin(), frame.pixel_data().end(), static_cast<char*>(reserved_frames_.front().first));
+			std::copy(frame->pixel_data().begin(), frame->pixel_data().end(), static_cast<char*>(reserved_frames_.front().first));
 				
 			if(FAILED(output_->DisplayVideoFrameSync(reserved_frames_.front().second)))
 				CASPAR_LOG(error) << L"DECKLINK: Failed to display frame.";
@@ -157,7 +157,7 @@ struct decklink_consumer::Implementation : boost::noncopyable
 	}
 			
 	boost::unique_future<void> active_;
-	common::executor executor_;
+	executor executor_;
 
 	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
 
@@ -171,7 +171,7 @@ struct decklink_consumer::Implementation : boost::noncopyable
 };
 
 decklink_consumer::decklink_consumer(const video_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey)){}
-void decklink_consumer::send(const read_frame& frame){pImpl_->send(frame);}
+void decklink_consumer::send(const safe_ptr<read_frame>& frame){pImpl_->send(frame);}
 frame_consumer::sync_mode decklink_consumer::synchronize(){return pImpl_->synchronize();}
 size_t decklink_consumer::buffer_depth() const{return pImpl_->buffer_depth();}
 	

@@ -63,10 +63,10 @@ struct server::implementation : boost::noncopyable
 		boost::property_tree::read_xml(initialPath + "\\caspar.config", pt);
 
 		auto paths = pt.get_child("configuration.paths");
-		media_folder_ = common::widen(paths.get("media-path", initialPath + "\\media\\"));
-		log_folder_ = common::widen(paths.get("log-path", initialPath + "\\log\\"));
-		template_folder_ = common::widen(paths.get("template-path", initialPath + "\\template\\"));
-		data_folder_ = common::widen(paths.get("data-path", initialPath + "\\data\\"));
+		media_folder_ = widen(paths.get("media-path", initialPath + "\\media\\"));
+		log_folder_ = widen(paths.get("log-path", initialPath + "\\log\\"));
+		template_folder_ = widen(paths.get("template-path", initialPath + "\\template\\"));
+		data_folder_ = widen(paths.get("data-path", initialPath + "\\data\\"));
 	}
 			
 	void setup_channels(boost::property_tree::ptree& pt)
@@ -74,7 +74,7 @@ struct server::implementation : boost::noncopyable
 		using boost::property_tree::ptree;
 		BOOST_FOREACH(auto& xml_channel, pt.get_child("configuration.channels"))
 		{		
-			auto format_desc = video_format_desc::get(common::widen(xml_channel.second.get("videomode", "PAL")));		
+			auto format_desc = video_format_desc::get(widen(xml_channel.second.get("videomode", "PAL")));		
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid videomode."));
 			std::vector<frame_consumer_ptr> consumers;

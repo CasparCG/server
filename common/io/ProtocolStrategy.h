@@ -17,11 +17,7 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
- 
-#ifndef _PROTOCOLSTRATEGY_H__
-#define _PROTOCOLSTRATEGY_H__
-
-#pragma once
+ #pragma once
 
 #include <string>
 #include "clientInfo.h"
@@ -43,5 +39,3 @@ typedef std::tr1::shared_ptr<IProtocolStrategy> ProtocolStrategyPtr;
 
 }	//namespace IO
 }	//namespace caspar
-
-#endif	//_PROTOCOLSTRATEGY_H__

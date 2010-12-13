@@ -27,12 +27,8 @@
 
 namespace caspar { namespace core {
 	
-using namespace common::gl;
-
 struct frame_processor_device::implementation : boost::noncopyable
 {	
-	typedef tbb::concurrent_bounded_queue<pbo_ptr> pbo_pool;
-
 	implementation(const video_format_desc& format_desc) : fmt_(format_desc), underrun_count_(0)
 	{		
 		output_.set_capacity(3);
@@ -46,15 +42,15 @@ struct frame_processor_device::implementation : boost::noncopyable
 		});
 	}
 				
-	void send(const draw_frame& frame)
+	void send(const safe_ptr<draw_frame>& frame)
 	{			
 		auto future = executor_.begin_invoke([=]{return renderer_->render(frame);});	
 		output_.push(std::move(future)); // Blocks
 	}
 
-	read_frame receive()
+	safe_ptr<read_frame> receive()
 	{
-		boost::shared_future<read_frame> future;
+		boost::shared_future<safe_ptr<read_frame>> future;
 
 		if(!output_.try_pop(future))
 		{
@@ -72,73 +68,45 @@ struct frame_processor_device::implementation : boost::noncopyable
 		return future.get();
 	}
 	
-	write_frame create_frame(const pixel_format_desc& desc)
+	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc)
 	{
-		std::vector<pbo_pool*> pools(desc.planes.size());
-		boost::range::transform(desc.planes, pools.begin(), [&](const pixel_format_desc::plane& plane)
-		{
-			return &pbo_pools_[((plane.width & 0x7FF)) << 0 | ((plane.height & 0x7FF)) << 11 | plane.channels];
-		});
-
-		bool filled = true;
-		std::vector<pbo_ptr> pbos(pools.size());
-		boost::range::transform(pools, pbos.begin(), [&](pbo_pool* pool) -> pbo_ptr
-		{
-			pbo_ptr pbo;
-			filled &= pool->try_pop(pbo);
-			return pbo;
-		});
+		auto pool = &pools_[desc];
+		std::shared_ptr<write_frame> frame;
+		if(!pool->try_pop(frame))
+			frame = executor_.invoke([&]{return std::make_shared<write_frame>(desc);});
 		
-		if(!filled)
-		{
-			executor_.invoke([&]
-			{
-				for(size_t n = 0; n < pbos.size(); ++n)
-				{
-					if(!pbos[n])
-						pbos[n] = create_pooled_pbo(desc.planes[n], pools[n]);
-				}
-			});
-		}
-		
-		return write_frame(std::move(pbos), desc);
-	}
-
-	pbo_ptr create_pooled_pbo(const pixel_format_desc::plane& plane, pbo_pool* pool)
-	{
-		static GLenum mapping[] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
-		auto pooled_pbo = std::make_shared<pbo>(plane.width, plane.height, mapping[plane.channels-1]);
-		pooled_pbo->end_write();
-		return pbo_ptr(pooled_pbo.get(), [=](pbo*)
+		frame = std::shared_ptr<write_frame>(frame.get(), [=](write_frame*)
 		{
 			executor_.begin_invoke([=]
 			{
-				pooled_pbo->end_write();
-				pool->push(pooled_pbo);
+				frame->reset();
+				pool->push(frame);
 			});
 		});
+
+		return safe_ptr<write_frame>::from_shared(frame);
 	}
 				
-	common::executor executor_;	
+	executor executor_;	
 
 	std::unique_ptr<sf::Context> ogl_context_;
 	std::unique_ptr<frame_renderer> renderer_;	
 				
-	tbb::concurrent_bounded_queue<boost::shared_future<read_frame>> output_;	
+	tbb::concurrent_bounded_queue<boost::shared_future<safe_ptr<read_frame>>> output_;	
 
-	tbb::concurrent_unordered_map<int, pbo_pool> pbo_pools_;
+	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<std::shared_ptr<write_frame>>, std::hash<pixel_format_desc>> pools_;
 	
 	const video_format_desc fmt_;
 	long underrun_count_;
 };
 	
 frame_processor_device::frame_processor_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void frame_processor_device::send(const draw_frame& frame){impl_->send(std::move(frame));}
-read_frame frame_processor_device::receive(){return impl_->receive();}
+void frame_processor_device::send(const safe_ptr<draw_frame>& frame){impl_->send(std::move(frame));}
+safe_ptr<read_frame> frame_processor_device::receive(){return impl_->receive();}
 const video_format_desc& frame_processor_device::get_video_format_desc() const { return impl_->fmt_; }
 
-write_frame frame_processor_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		
-write_frame frame_processor_device::create_frame(size_t width, size_t height)
+safe_ptr<write_frame> frame_processor_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		
+safe_ptr<write_frame> frame_processor_device::create_frame(size_t width, size_t height)
 {
 	// Create bgra frame
 	pixel_format_desc desc;
@@ -147,7 +115,7 @@ write_frame frame_processor_device::create_frame(size_t width, size_t height)
 	return create_frame(desc);
 }
 			
-write_frame frame_processor_device::create_frame()
+safe_ptr<write_frame> frame_processor_device::create_frame()
 {
 	// Create bgra frame with output resolution
 	pixel_format_desc desc;

@@ -13,7 +13,7 @@ class video_transformer : boost::noncopyable
 {
 public:
 	video_transformer(AVCodecContext* codec_context);
-	draw_frame execute(const std::shared_ptr<AVFrame>& video_packet);	
+	safe_ptr<draw_frame> execute(const std::shared_ptr<AVFrame>& video_packet);	
 	void initialize(const frame_processor_device_ptr& frame_processor);
 private:
 	struct implementation;

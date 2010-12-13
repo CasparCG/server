@@ -22,9 +22,9 @@
 	
 namespace caspar { namespace core {
 	
-std::vector<draw_frame> receive(std::map<int, layer>& layers)
+std::vector<safe_ptr<draw_frame>> receive(std::map<int, layer>& layers)
 {	
-	std::vector<draw_frame> frames(layers.size(), draw_frame::empty());
+	std::vector<safe_ptr<draw_frame>> frames(layers.size(), draw_frame::empty());
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), 
 	[&](const tbb::blocked_range<size_t>& r)
 	{
@@ -52,7 +52,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 		executor_.begin_invoke([=]{tick();});
 	}
 
-	void load(int render_layer, const frame_producer_ptr& producer, load_option::type option)
+	void load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option)
 	{
 		producer->initialize(frame_processor_);
 		executor_.begin_invoke([=]
@@ -86,12 +86,10 @@ struct frame_producer_device::implementation : boost::noncopyable
 		executor_.begin_invoke([=]
 		{
 			auto it = layers_.find(render_layer);
-			if(it != layers_.end())
-			{
-				it->second.stop();
-				if(!it->second.background())
-					layers_.erase(it);
-			}
+			if(it != layers_.end())			
+				it->second.stop();	
+			if(it->second.empty())
+				layers_.erase(it);
 		});
 	}
 
@@ -116,24 +114,24 @@ struct frame_producer_device::implementation : boost::noncopyable
 		});
 	}		
 
-	boost::unique_future<frame_producer_ptr> foreground(int render_layer) const
+	boost::unique_future<safe_ptr<frame_producer>> foreground(int render_layer) const
 	{
-		return executor_.begin_invoke([=]() -> frame_producer_ptr
+		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
 		{			
 			auto it = layers_.find(render_layer);
-			return it != layers_.end() ? it->second.foreground() : nullptr;
+			return it != layers_.end() ? it->second.foreground() : frame_producer::empty();
 		});
 	}
 	
-	boost::unique_future<frame_producer_ptr> background(int render_layer) const
+	boost::unique_future<safe_ptr<frame_producer>> background(int render_layer) const
 	{
-		return executor_.begin_invoke([=]() -> frame_producer_ptr
+		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
 		{
 			auto it = layers_.find(render_layer);
-			return it != layers_.end() ? it->second.background() : nullptr;
+			return it != layers_.end() ? it->second.background() : frame_producer::empty();
 		});
 	}
-	mutable common::executor executor_;
+	mutable executor executor_;
 				
 	frame_processor_device_ptr frame_processor_;
 						
@@ -141,12 +139,12 @@ struct frame_producer_device::implementation : boost::noncopyable
 };
 
 frame_producer_device::frame_producer_device(const frame_processor_device_ptr& frame_processor) : impl_(new implementation(frame_processor)){}
-void frame_producer_device::load(int render_layer, const frame_producer_ptr& producer, load_option::type option){impl_->load(render_layer, producer, option);}
+void frame_producer_device::load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option){impl_->load(render_layer, producer, option);}
 void frame_producer_device::pause(int render_layer){impl_->pause(render_layer);}
 void frame_producer_device::play(int render_layer){impl_->play(render_layer);}
 void frame_producer_device::stop(int render_layer){impl_->stop(render_layer);}
 void frame_producer_device::clear(int render_layer){impl_->clear(render_layer);}
 void frame_producer_device::clear(){impl_->clear();}
-boost::unique_future<frame_producer_ptr> frame_producer_device::foreground(int render_layer) const {return impl_->foreground(render_layer);}
-boost::unique_future<frame_producer_ptr> frame_producer_device::background(int render_layer) const {return impl_->background(render_layer);}
+boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(int render_layer) const {return impl_->foreground(render_layer);}
+boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::background(int render_layer) const {return impl_->background(render_layer);}
 }}

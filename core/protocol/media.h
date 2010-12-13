@@ -7,6 +7,6 @@
 
 namespace caspar { namespace core { 
 	
-frame_producer_ptr load_media(const std::vector<std::wstring>& params);
+safe_ptr<frame_producer> load_media(const std::vector<std::wstring>& params);
 
 }}

@@ -25,14 +25,14 @@ class channel : boost::noncopyable
 public:
 	channel(const frame_producer_device_ptr& producer_device, const frame_processor_device_ptr& processor_device, const frame_consumer_device_ptr& consumer_device);
 	
-	void load(int render_layer, const frame_producer_ptr& producer, load_option::type option = load_option::none);
+	void load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option = load_option::none);
 	void pause(int render_layer);
 	void play(int render_layer);
 	void stop(int render_layer);
 	void clear(int render_layer);
 	void clear();	
-	boost::unique_future<frame_producer_ptr> foreground(int render_layer) const;
-	boost::unique_future<frame_producer_ptr> background(int render_layer) const;
+	boost::unique_future<safe_ptr<frame_producer>> foreground(int render_layer) const;
+	boost::unique_future<safe_ptr<frame_producer>> background(int render_layer) const;
 	const video_format_desc& get_video_format_desc() const;
 private:
 	struct implementation;

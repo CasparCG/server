@@ -141,9 +141,7 @@ std::wstring ListTemplates()
 }
 
 namespace amcp {
-
-using namespace common;
-
+	
 AMCPCommand::AMCPCommand() : channelIndex_(0), scheduling_(Default), layerIndex_(-1)
 {}
 
@@ -246,10 +244,10 @@ bool LoadbgCommand::DoExecute()
 	try
 	{
 		auto pFP = load_media(_parameters);
-		if(pFP == nullptr)
-			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? common::narrow(_parameters[0]) : ""));
+		if(pFP == frame_producer::empty())
+			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
-		pFP = std::make_shared<transition_producer>(pFP, transitionInfo);
+		pFP = safe_ptr<frame_producer>(transition_producer(pFP, transitionInfo));
 		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();
 		GetChannel()->load(GetLayerIndex(), pFP, autoPlay ? load_option::auto_play : load_option::none); // TODO: LOOP
 	
@@ -729,7 +727,7 @@ bool CinfCommand::DoExecute()
 
 void GenerateChannelInfo(int index, const channel_ptr& pChannel, std::wstringstream& replyString)
 {
-	replyString << index << TEXT(" ") << pChannel->get_video_format_desc().name  << TEXT("\r\n") << (pChannel->foreground(0).get() != nullptr ? TEXT(" PLAYING") : TEXT(" STOPPED"));
+	replyString << index << TEXT(" ") << pChannel->get_video_format_desc().name  << TEXT("\r\n") << (pChannel->foreground(0).get()->print());
 }
 
 bool InfoCommand::DoExecute()

@@ -21,7 +21,7 @@ public:
 		producer_device_->clear();
 	}
 	
-	void load(int render_layer, const frame_producer_ptr& producer, load_option::type option = load_option::none)
+	void load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option = load_option::none)
 	{
 		producer_device_->load(render_layer, producer, option);
 	}
@@ -51,12 +51,12 @@ public:
 		producer_device_->clear();
 	}
 	
-	boost::unique_future<frame_producer_ptr> foreground(int render_layer) const
+	boost::unique_future<safe_ptr<frame_producer>> foreground(int render_layer) const
 	{
 		return producer_device_->foreground(render_layer);
 	}
 
-	boost::unique_future<frame_producer_ptr> background(int render_layer) const
+	boost::unique_future<safe_ptr<frame_producer>> background(int render_layer) const
 	{
 		return producer_device_->background(render_layer);
 	}
@@ -74,14 +74,14 @@ private:
 
 channel::channel(const frame_producer_device_ptr& producer_device, const frame_processor_device_ptr& processor_device, const frame_consumer_device_ptr& consumer_device)
 	: impl_(new implementation(producer_device, processor_device, consumer_device)){}
-void channel::load(int render_layer, const frame_producer_ptr& producer, load_option::type option){impl_->load(render_layer, producer, option);}
+void channel::load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option){impl_->load(render_layer, producer, option);}
 void channel::pause(int render_layer){impl_->pause(render_layer);}
 void channel::play(int render_layer){impl_->play(render_layer);}
 void channel::stop(int render_layer){impl_->stop(render_layer);}
 void channel::clear(int render_layer){impl_->clear(render_layer);}
 void channel::clear(){impl_->clear();}
-boost::unique_future<frame_producer_ptr> channel::foreground(int render_layer) const{	return impl_->foreground(render_layer);}
-boost::unique_future<frame_producer_ptr> channel::background(int render_layer) const{return impl_->background(render_layer);}
+boost::unique_future<safe_ptr<frame_producer>> channel::foreground(int render_layer) const{	return impl_->foreground(render_layer);}
+boost::unique_future<safe_ptr<frame_producer>> channel::background(int render_layer) const{return impl_->background(render_layer);}
 const video_format_desc& channel::get_video_format_desc() const{	return impl_->get_video_format_desc();}
 
 }}

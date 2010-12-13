@@ -51,8 +51,8 @@ public:
 public:
 	struct TitleHolder
 	{
-		TitleHolder() : titleName(TEXT(""))	{}
-		TitleHolder(const std::wstring& name, frame_producer_ptr pFP) : titleName(name), pframe_producer(pFP) {}
+		TitleHolder() : titleName(TEXT("")), pframe_producer(frame_producer::empty())	{}
+		TitleHolder(const std::wstring& name, safe_ptr<frame_producer> pFP) : titleName(name), pframe_producer(pFP) {}
 		TitleHolder(const TitleHolder& th) : titleName(th.titleName), pframe_producer(th.pframe_producer) {}
 		const TitleHolder& operator=(const TitleHolder& th) 
 		{
@@ -65,15 +65,15 @@ public:
 		}
 
 		std::wstring titleName;
-		frame_producer_ptr pframe_producer;
+		safe_ptr<frame_producer> pframe_producer;
 		friend CIIProtocolStrategy;
 	};
 private:
 
 	typedef std::list<TitleHolder> TitleList;
 	TitleList titles_;
-	frame_producer_ptr GetPreparedTemplate(const std::wstring& name);
-	void PutPreparedTemplate(const std::wstring& name, frame_producer_ptr& pframe_producer);
+	safe_ptr<frame_producer> GetPreparedTemplate(const std::wstring& name);
+	void PutPreparedTemplate(const std::wstring& name, safe_ptr<frame_producer>& pframe_producer);
 
 	static const TCHAR TokenDelimiter;
 	static const std::wstring MessageDelimiter;
@@ -82,7 +82,7 @@ private:
 	int TokenizeMessage(const std::wstring& message, std::vector<std::wstring>* pTokenVector);
 	CIICommandPtr Create(const std::wstring& name);
 
-	common::executor executor_;
+	executor executor_;
 	std::wstring currentMessage_;
 
 	std::wstring currentProfile_;

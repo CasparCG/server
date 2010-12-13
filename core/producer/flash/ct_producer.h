@@ -23,6 +23,6 @@
 
 namespace caspar { namespace core { namespace flash{
 		
-frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params);
+safe_ptr<frame_producer> create_ct_producer(const std::vector<std::wstring>& params);
 
 }}}

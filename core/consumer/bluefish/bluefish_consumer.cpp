@@ -168,7 +168,7 @@ struct consumer::implementation : boost::noncopyable
 			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");		
 	}
 
-	void send(const read_frame& frame)
+	void send(const safe_ptr<read_frame>& frame)
 	{			
 		static size_t audio_samples = 1920;
 		static size_t audio_nchannels = 2;
@@ -186,12 +186,12 @@ struct consumer::implementation : boost::noncopyable
 				
 				if(embed_audio_)
 				{		
-					auto& frame_audio_data = frame.audio_data().empty() ? silence : frame.audio_data();
+					auto& frame_audio_data = frame->audio_data().empty() ? silence : frame->audio_data();
 
 					encode_hanc(reinterpret_cast<BLUE_UINT32*>(hanc->data()), const_cast<short*>(frame_audio_data.data()), audio_samples, audio_nchannels);
 								
-					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame.pixel_data().begin()), 
-													 frame.pixel_data().size(), 
+					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame->pixel_data().begin()), 
+													 frame->pixel_data().size(), 
 													 nullptr, 
 													 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_IMAGE));
 
@@ -205,8 +205,8 @@ struct consumer::implementation : boost::noncopyable
 				}
 				else
 				{
-					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame.pixel_data().begin()),
-													 frame.pixel_data().size(), 
+					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame->pixel_data().begin()),
+													 frame->pixel_data().size(), 
 													 nullptr,                 
 													 BlueImage_DMABuffer(current_id_, BLUE_DATA_IMAGE));
 			
@@ -262,7 +262,7 @@ struct consumer::implementation : boost::noncopyable
 	}
 
 	boost::unique_future<void> active_;
-	common::executor executor_;
+	executor executor_;
 			
 	BlueVelvetPtr sdk_;
 	
@@ -275,7 +275,7 @@ struct consumer::implementation : boost::noncopyable
 	unsigned long	res_fmt_; 
 	unsigned long	engine_mode_;
 
-	boost::optional<read_frame> transferring_frame_;
+	boost::optional<safe_ptr<read_frame>> transferring_frame_;
 
 	std::array<page_locked_buffer_ptr, 3> hanc_buffers_;
 	int current_id_;
@@ -283,7 +283,7 @@ struct consumer::implementation : boost::noncopyable
 };
 
 consumer::consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
-void consumer::send(const read_frame& frame){impl_->send(frame);}
+void consumer::send(const safe_ptr<read_frame>& frame){impl_->send(frame);}
 frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
 size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}

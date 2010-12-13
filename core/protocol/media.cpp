@@ -18,12 +18,11 @@ using namespace boost::assign;
 
 namespace caspar { namespace core { 
 	
-frame_producer_ptr load_media(const std::vector<std::wstring>& params)
+safe_ptr<frame_producer> load_media(const std::vector<std::wstring>& params)
 {		
-	typedef std::function<frame_producer_ptr(const std::vector<std::wstring>&)> producer_factory;
+	typedef std::function<safe_ptr<frame_producer>(const std::vector<std::wstring>&)> producer_factory;
 
 	const auto producer_factories = list_of<producer_factory>
-		(&flash::create_flash_producer)
 		(&flash::create_ct_producer)
 		(&image::create_image_producer)
 	//	(&image::create_image_scroll_producer)
@@ -33,7 +32,7 @@ frame_producer_ptr load_media(const std::vector<std::wstring>& params)
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 
-	frame_producer_ptr producer;
+	safe_ptr<frame_producer> producer(frame_producer::empty());
 	std::any_of(producer_factories.begin(), producer_factories.end(), [&](const producer_factory& factory) -> bool
 		{
 			try
@@ -44,7 +43,7 @@ frame_producer_ptr load_media(const std::vector<std::wstring>& params)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
-			return producer != nullptr;
+			return producer != frame_producer::empty();
 		});
 
 	return producer;

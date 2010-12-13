@@ -23,16 +23,18 @@ public:
 	layer(layer&& other);
 	layer& operator=(layer&& other);
 
-	void load(const frame_producer_ptr& producer, load_option::type option = load_option::none);	
+	void load(const safe_ptr<frame_producer>& producer, load_option::type option = load_option::none);	
 	void play();
 	void pause();
 	void stop();
 	void clear();
-		
-	frame_producer_ptr foreground() const;
-	frame_producer_ptr background() const;
 
-	draw_frame receive();
+	bool empty() const;
+		
+	safe_ptr<frame_producer> foreground() const;
+	safe_ptr<frame_producer> background() const;
+
+	safe_ptr<draw_frame> receive();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

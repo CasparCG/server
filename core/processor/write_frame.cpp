@@ -16,16 +16,26 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::implementation : boost::noncopyable
 {
-	implementation(std::vector<common::gl::pbo_ptr>&& pbos, const pixel_format_desc& desc) : pbos_(std::move(pbos)), desc_(desc){}
+	implementation(const pixel_format_desc& desc) : desc_(desc)
+	{
+		CASPAR_LOG(trace) << "Allocated write_frame.";
+
+		static GLenum mapping[] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
+		std::transform(desc_.planes.begin(), desc_.planes.end(), std::back_inserter(pbos_), [&](const pixel_format_desc::plane& plane)
+		{
+			return gl::pbo(plane.width, plane.height, mapping[plane.channels-1]);
+		});
+		end_write();
+	}
 	
 	void begin_write()
 	{
-		boost::range::for_each(pbos_, std::mem_fn(&common::gl::pbo::begin_write));
+		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::begin_write));
 	}
 
 	void end_write()
 	{
-		boost::range::for_each(pbos_, std::mem_fn(&common::gl::pbo::end_write));
+		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::end_write));
 	}
 
 	void draw(frame_shader& shader)
@@ -33,35 +43,47 @@ struct write_frame::implementation : boost::noncopyable
 		for(size_t n = 0; n < pbos_.size(); ++n)
 		{
 			glActiveTexture(GL_TEXTURE0+n);
-			pbos_[n]->bind_texture();
+			pbos_[n].bind_texture();
 		}
 		shader.render(desc_);
 	}
 
 	boost::iterator_range<unsigned char*> pixel_data(size_t index)
 	{
-		auto ptr = static_cast<unsigned char*>(pbos_[index]->data());
-		return boost::iterator_range<unsigned char*>(ptr, ptr+pbos_[index]->size());
+		if(index >= pbos_.size() || !pbos_[index].data())
+			return boost::iterator_range<const unsigned char*>();
+		auto ptr = static_cast<unsigned char*>(pbos_[index].data());
+		return boost::iterator_range<unsigned char*>(ptr, ptr+pbos_[index].size());
 	}
 	const boost::iterator_range<const unsigned char*> pixel_data(size_t index) const
 	{
-		auto ptr = static_cast<const unsigned char*>(pbos_[index]->data());
-		return boost::iterator_range<const unsigned char*>(ptr, ptr+pbos_[index]->size());
+		if(index >= pbos_.size() || !pbos_[index].data())
+			return boost::iterator_range<const unsigned char*>();
+		auto ptr = static_cast<const unsigned char*>(pbos_[index].data());
+		return boost::iterator_range<const unsigned char*>(ptr, ptr+pbos_[index].size());
+	}
+
+	void reset()
+	{
+		end_write();
+		audio_data_.clear();
 	}
 			
-	std::vector<common::gl::pbo_ptr> pbos_;
+	std::vector<gl::pbo> pbos_;
 	std::vector<short> audio_data_;
 	const pixel_format_desc desc_;
 };
 	
-write_frame::write_frame(std::vector<common::gl::pbo_ptr>&& pbos, const pixel_format_desc& desc) : impl_(common::singleton_pool<implementation>::make_shared(std::move(pbos), desc)){}
+write_frame::write_frame(const pixel_format_desc& desc) : impl_(singleton_pool<implementation>::make_shared(desc)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 write_frame& write_frame::operator=(write_frame&& other)
 {
-	impl_ = std::move(other.impl_);
+	write_frame temp(std::move(other));
+	temp.swap(*this);
 	return *this;
 }
+void write_frame::reset(){impl_->reset();}
 void write_frame::begin_write(){impl_->begin_write();}
 void write_frame::end_write(){impl_->end_write();}	
 void write_frame::draw(frame_shader& shader){impl_->draw(shader);}

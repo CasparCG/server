@@ -47,7 +47,7 @@ unsigned int get_pixel_color_value(const std::wstring& parameter)
 
 	std::wstring color_code;
 	if(parameter.length() != 9 || parameter[0] != '#')
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("parameter") << arg_value_info(common::narrow(parameter)) << msg_info("Invalid color code"));
+		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("parameter") << arg_value_info(narrow(parameter)) << msg_info("Invalid color code"));
 	
 	color_code = parameter.substr(1);
 
@@ -66,17 +66,18 @@ unsigned int get_pixel_color_value(const std::wstring& parameter)
 class color_producer : public frame_producer
 {
 public:
-	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)){}
+	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)), frame_(draw_frame::empty()){}
+	color_producer(color_producer&& other) : frame_(std::move(other.frame_)), color_value_(std::move(other.color_value_)), color_str_(std::move(other.color_str_)){}
 	
-	draw_frame receive()
+	safe_ptr<draw_frame> receive()
 	{ 
 		return frame_;
 	}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
-		write_frame frame = std::move(frame_processor->create_frame());
-		__stosd(reinterpret_cast<unsigned long*>(frame.pixel_data().begin()), color_value_, frame.pixel_data().size() / sizeof(unsigned long));
+		auto frame = std::move(frame_processor->create_frame());
+		__stosd(reinterpret_cast<unsigned long*>(frame->pixel_data().begin()), color_value_, frame->pixel_data().size() / sizeof(unsigned long));
 		frame_ = std::move(frame);
 	}
 	
@@ -85,16 +86,16 @@ public:
 		return + L"color_producer. color: " + color_str_;
 	}
 
-	draw_frame frame_;
+	safe_ptr<draw_frame> frame_;
 	unsigned int color_value_;
 	std::wstring color_str_;
 };
 
-frame_producer_ptr create_color_producer(const std::vector<std::wstring>& params)
+safe_ptr<frame_producer> create_color_producer(const std::vector<std::wstring>& params)
 {
 	if(params.empty() || params[0].at(0) != '#')
-		return nullptr;
-	return std::make_shared<color_producer>(params[0]);
+		return frame_producer::empty();
+	return make_safe<color_producer>(params[0]);
 }
 
 }}

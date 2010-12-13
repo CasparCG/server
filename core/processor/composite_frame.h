@@ -11,20 +11,21 @@
 
 namespace caspar { namespace core {
 	
-class composite_frame : public detail::draw_frame_impl
+class composite_frame : public draw_frame
 {
 public:
-	explicit composite_frame(std::vector<draw_frame>&& frames);
-	composite_frame(draw_frame&& frame1, draw_frame&& frame2);
+	explicit composite_frame(std::vector<safe_ptr<draw_frame>>&& frames);
+	composite_frame(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_frame>&& frame2);
 	
 	void swap(composite_frame& other);
 
 	composite_frame(const composite_frame& other);
-	composite_frame& operator=(const composite_frame& other);
 	composite_frame(composite_frame&& other);
+
+	composite_frame& operator=(const composite_frame& other);
 	composite_frame& operator=(composite_frame&& other);
 
-	static composite_frame interlace(draw_frame&& frame1, draw_frame&& frame2, video_mode::type mode);
+	static safe_ptr<composite_frame> interlace(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_frame>&& frame2, video_mode::type mode);
 	
 	virtual const std::vector<short>& audio_data() const;
 

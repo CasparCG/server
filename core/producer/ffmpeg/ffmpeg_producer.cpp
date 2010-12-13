@@ -28,8 +28,7 @@ extern "C"
 #include "video/video_transformer.h"
 
 #include "../../format/video_format.h"
-#include "../../processor/draw_frame.h"
-#include "../../processor/transform_Frame.h"
+#include "../../processor/transform_frame.h"
 #include "../../processor/draw_frame.h"
 #include "../../../common/utility/scope_exit.h"
 #include "../../server.h"
@@ -47,13 +46,13 @@ using namespace boost::assign;
 
 namespace caspar { namespace core { namespace ffmpeg{
 	
-struct ffmpeg_producer : public frame_producer
+struct ffmpeg_producer_impl
 {
 public:
-	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), underrun_count_(0)
+	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), underrun_count_(0), last_frame_(draw_frame::empty())
 	{
 		if(!boost::filesystem::exists(filename))
-			BOOST_THROW_EXCEPTION(file_not_found() <<  boost::errinfo_file_name(common::narrow(filename)));
+			BOOST_THROW_EXCEPTION(file_not_found() <<  boost::errinfo_file_name(narrow(filename)));
 		
 		static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
 		boost::call_once(av_register_all, av_register_all_flag);	
@@ -63,7 +62,7 @@ public:
 				
 		input_.reset(new input());
 		input_->set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
-		input_->load(common::narrow(filename_));
+		input_->load(narrow(filename_));
 		video_decoder_.reset(new video_decoder(input_->get_video_codec_context().get()));
 		video_transformer_.reset(new video_transformer(input_->get_video_codec_context().get()));
 		audio_decoder_.reset(new audio_decoder(input_->get_audio_codec_context().get()));
@@ -83,7 +82,7 @@ public:
 		video_transformer_->initialize(frame_processor);
 	}
 		
-	draw_frame receive()
+	safe_ptr<draw_frame> receive()
 	{
 		while(ouput_channel_.empty() && !input_->is_eof())
 		{	
@@ -95,7 +94,7 @@ public:
 				if(!video_packet.empty())
 				{
 					auto decoded_frame = video_decoder_->execute(video_packet);
-					auto frame = video_transformer_->execute(decoded_frame);
+					auto frame = make_safe<transform_frame>(video_transformer_->execute(decoded_frame));
 					video_frame_channel_.push_back(std::move(frame));	
 				}
 			}, 
@@ -141,11 +140,11 @@ public:
 			}
 		}
 
-		draw_frame result = last_frame_;
+		auto result = last_frame_;
 		if(!ouput_channel_.empty())
 		{
 			result = std::move(ouput_channel_.front());
-			last_frame_ = transform_frame(result, std::vector<short>()); // last_frame should not have audio, override it!
+			last_frame_ = make_safe<transform_frame>(result, std::vector<short>()); // last_frame should not have audio, override it!
 			ouput_channel_.pop();
 		}
 		else if(input_->is_eof())
@@ -161,27 +160,39 @@ public:
 			
 	bool has_audio_;
 
-	input_uptr							input_;		
+	input_uptr								input_;		
 
-	video_decoder_uptr					video_decoder_;
-	video_transformer_uptr				video_transformer_;
-	std::deque<draw_frame>				video_frame_channel_;
+	video_decoder_uptr						video_decoder_;
+	video_transformer_uptr					video_transformer_;
+	std::deque<safe_ptr<transform_frame>>	video_frame_channel_;
 	
-	audio_decoder_ptr					audio_decoder_;
-	std::deque<std::vector<short>>		audio_chunk_channel_;
+	audio_decoder_ptr						audio_decoder_;
+	std::deque<std::vector<short>>			audio_chunk_channel_;
 
-	std::queue<draw_frame>				ouput_channel_;
+	std::queue<safe_ptr<transform_frame>>	ouput_channel_;
 	
-	std::wstring						filename_;
+	std::wstring							filename_;
 
-	long								underrun_count_;
+	long									underrun_count_;
 
-	draw_frame							last_frame_;
+	safe_ptr<draw_frame>					last_frame_;
 
-	video_format_desc					format_desc_;
+	video_format_desc						format_desc_;
 };
 
-frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& params)
+class ffmpeg_producer : public frame_producer
+{
+public:
+	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) : impl_(new ffmpeg_producer_impl(filename, params)){}
+	ffmpeg_producer(ffmpeg_producer&& other) : impl_(std::move(other.impl_)){}
+	virtual safe_ptr<draw_frame> receive(){return impl_->receive();}
+	virtual void initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor);}
+	virtual std::wstring print() const{return impl_->print();}
+private:
+	std::shared_ptr<ffmpeg_producer_impl> impl_;
+};
+
+safe_ptr<frame_producer> create_ffmpeg_producer(const  std::vector<std::wstring>& params)
 {	
 	static const std::vector<std::wstring> extensions = list_of(L"mpg")(L"avi")(L"mov")(L"dv")(L"wav")(L"mp3")(L"mp4")(L"f4v")(L"flv");
 	std::wstring filename = server::media_folder() + L"\\" + params[0];
@@ -192,9 +203,9 @@ frame_producer_ptr create_ffmpeg_producer(const  std::vector<std::wstring>& para
 		});
 
 	if(ext == extensions.end())
-		return nullptr;
+		return frame_producer::empty();
 
-	return std::make_shared<ffmpeg_producer>(filename + L"." + *ext, params);
+	return make_safe<ffmpeg_producer>(filename + L"." + *ext, params);
 }
 
 }}}

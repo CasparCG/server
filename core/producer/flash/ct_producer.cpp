@@ -35,9 +35,10 @@ namespace caspar { namespace core { namespace flash {
 
 struct ct_producer : public cg_producer
 {
+	ct_producer(ct_producer&& other) : initialized_(std::move(other.initialized_)), filename_(std::move(other.filename_)){}
 	ct_producer(const std::wstring& filename) : filename_(filename), initialized_(false){}
 
-	draw_frame receive()
+	safe_ptr<draw_frame> receive()
 	{
 		if(!initialized_)
 		{
@@ -56,10 +57,10 @@ struct ct_producer : public cg_producer
 	std::wstring filename_;
 };
 	
-frame_producer_ptr create_ct_producer(const std::vector<std::wstring>& params) 
+safe_ptr<frame_producer> create_ct_producer(const std::vector<std::wstring>& params) 
 {
 	std::wstring filename = server::media_folder() + L"\\" + params[0] + L".ct";
-	return boost::filesystem::exists(filename) ? std::make_shared<ct_producer>(filename) : nullptr;
+	return boost::filesystem::exists(filename) ? make_safe<ct_producer>(filename) : frame_producer::empty();
 }
 
 }}}

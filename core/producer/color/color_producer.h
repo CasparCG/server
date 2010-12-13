@@ -26,6 +26,6 @@
 
 namespace caspar { namespace core {
 	
-frame_producer_ptr create_color_producer(const std::vector<std::wstring>& params);
+safe_ptr<frame_producer> create_color_producer(const std::vector<std::wstring>& params);
 
 }}

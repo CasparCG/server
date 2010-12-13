@@ -3,7 +3,7 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/scalable_allocator.h>
 
-namespace caspar { namespace common {
+namespace caspar {
 
 template <typename T>
 class singleton_pool
@@ -78,4 +78,4 @@ private:
 	}
 };
 
-}}
+}

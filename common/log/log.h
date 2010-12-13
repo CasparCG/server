@@ -71,7 +71,7 @@ BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 
 #define CASPAR_LOG_CURRENT_EXCEPTION() \
 	try\
-	{CASPAR_LOG(error) << caspar::common::widen(boost::current_exception_diagnostic_information());}\
+	{CASPAR_LOG(error) << caspar::widen(boost::current_exception_diagnostic_information());}\
 	catch(...){}
 
 }}

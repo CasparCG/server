@@ -146,7 +146,7 @@ struct input::implementation : boost::noncopyable
 			std::shared_ptr<AVPacket> packet(&tmp_packet, av_free_packet);	
 			tbb::queuing_mutex::scoped_lock lock(seek_mutex_);	
 
-			if (av_read_frame(format_context_.get(), packet.get()) >= 0) // NOTE: Packet is only valid until next call of av_read_frame or av_close_input_file
+			if (av_read_frame(format_context_.get(), packet.get()) >= 0) // NOTE: Packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
 			{
 				auto buffer = std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size);
 				if(packet->stream_index == video_s_index_) 						

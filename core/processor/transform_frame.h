@@ -16,18 +16,20 @@
 
 namespace caspar { namespace core {
 		
-class transform_frame : public detail::draw_frame_impl
+class transform_frame : public draw_frame
 {
 public:
-	transform_frame(const draw_frame& frame);
-	transform_frame(const draw_frame& frame, std::vector<short>&& audio_data);
-	transform_frame(draw_frame&& frame);
+	transform_frame();
+	transform_frame(const safe_ptr<draw_frame>& frame);
+	transform_frame(const safe_ptr<draw_frame>& frame, std::vector<short>&& audio_data);
+	transform_frame(safe_ptr<draw_frame>&& frame);
 
 	void swap(transform_frame& other);
 	
 	transform_frame(const transform_frame& other);
-	transform_frame& operator=(const transform_frame& other);
 	transform_frame(transform_frame&& other);
+
+	transform_frame& operator=(const transform_frame& other);
 	transform_frame& operator=(transform_frame&& other);
 	
 	virtual const std::vector<short>& audio_data() const;

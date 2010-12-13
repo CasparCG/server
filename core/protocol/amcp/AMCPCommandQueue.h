@@ -27,7 +27,7 @@
 
 namespace caspar { namespace core { namespace amcp {
 
-class AMCPCommandQueue : public common::IRunnable
+class AMCPCommandQueue : public IRunnable
 {
 	AMCPCommandQueue(const AMCPCommandQueue&);
 	AMCPCommandQueue& operator=(const AMCPCommandQueue&);
@@ -40,11 +40,11 @@ public:
 	void AddCommand(AMCPCommandPtr pCommand);
 
 private:
-	common::Thread				commandPump_;
+	Thread				commandPump_;
 	virtual void Run(HANDLE stopEvent);
 	virtual bool OnUnhandledException(const std::exception& ex) throw();
 
-	common::Event newCommandEvent_;
+	Event newCommandEvent_;
 
 	//Needs synro-protection
 	std::list<AMCPCommandPtr>	commands_;

@@ -42,7 +42,6 @@
 
 namespace caspar { namespace core { namespace amcp {
 
-using namespace common;
 using IO::ClientInfoPtr;
 
 const std::wstring AMCPProtocolStrategy::MessageDelimiter = TEXT("\r\n");
