@@ -21,6 +21,8 @@
 
 #include "fwd.h"
 
+#include "../../common/utility/safe_ptr.h"
+
 #include "../format/video_format.h"
 
 #include <boost/noncopyable.hpp>
@@ -34,7 +36,7 @@ class frame_renderer : boost::noncopyable
 public:
 	frame_renderer(const video_format_desc& format_desc_);
 		
-	read_frame render(const draw_frame& frame);
+	safe_ptr<read_frame> render(const safe_ptr<draw_frame>& frame);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

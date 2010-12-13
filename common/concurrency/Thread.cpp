@@ -24,7 +24,6 @@
 #include "../exception/win32_exception.h"
 
 namespace caspar {
-namespace common {
 	
 Event::Event(bool bManualReset, bool bInitialState) : handle_(0)
 {
@@ -140,5 +139,4 @@ void Thread::Run() {
 	}while(bDoRestart);
 }
 
-}	//namespace common
 }	//namespace caspar

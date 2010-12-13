@@ -9,7 +9,7 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/thread/future.hpp>
 
-namespace caspar { namespace common { namespace gl {
+namespace caspar { namespace gl {
 	
 class pixel_buffer_object : boost::noncopyable
 {
@@ -49,4 +49,4 @@ typedef std::shared_ptr<pixel_buffer_object> pixel_buffer_object_ptr;
 
 typedef pixel_buffer_object pbo;
 typedef pixel_buffer_object_ptr pbo_ptr;
-}}}
+}}

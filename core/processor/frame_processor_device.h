@@ -34,12 +34,12 @@ class frame_processor_device : boost::noncopyable
 public:
 	frame_processor_device(const video_format_desc& format_desc);
 		
-	void send(const draw_frame& frame);
-	read_frame receive();
+	void send(const safe_ptr<draw_frame>& frame);
+	safe_ptr<read_frame> receive();
 	
-	write_frame create_frame(const pixel_format_desc& desc);		
-	write_frame create_frame(size_t width, size_t height);			
-	write_frame create_frame();
+	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc);		
+	safe_ptr<write_frame> create_frame(size_t width, size_t height);			
+	safe_ptr<write_frame> create_frame();
 	
 	const video_format_desc& get_video_format_desc() const;
 private:

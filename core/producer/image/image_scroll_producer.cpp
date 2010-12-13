@@ -41,7 +41,7 @@
 //			if(pos != std::wstring::npos)
 //			{
 //				speedStr = speedStr.substr(0, pos);		
-//				speed_ = common::lexical_cast_or_default<int>(speedStr, image_scroll_producer::DEFAULT_SCROLL_SPEED);
+//				speed_ = lexical_cast_or_default<int>(speedStr, image_scroll_producer::DEFAULT_SCROLL_SPEED);
 //			}
 //		}
 //
@@ -112,7 +112,7 @@
 //		return std::move(frame);
 //	}
 //		
-//	draw_frame receive()
+//	safe_ptr<draw_frame> receive()
 //	{		
 //		if(format_desc_.mode != video_mode::progressive)				
 //		{
@@ -168,7 +168,7 @@
 //	frame_processor_device_ptr frame_processor_;
 //};
 //
-//frame_producer_ptr create_image_scroll_producer(const std::vector<std::wstring>& params)
+//safe_ptr<frame_producer> create_image_scroll_producer(const std::vector<std::wstring>& params)
 //{
 //	static const std::vector<std::wstring> extensions = list_of(L"spng")(L"stga")(L"sbmp")(L"sjpg")(L"sjpeg");
 //	std::wstring filename = server::media_folder() + L"\\" + params[0];

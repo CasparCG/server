@@ -44,9 +44,9 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		Stop();
 	}
 	
-	void send(const read_frame& frame)
+	void send(const safe_ptr<read_frame>& frame)
 	{				
-		input_.push(frame.audio_data()); 
+		input_.push(frame->audio_data()); 
 
 		if(GetStatus() != Playing && input_.size() > 2)		
 			Play();		
@@ -113,7 +113,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 };
 
 consumer::consumer(const video_format_desc&) : impl_(new implementation()){}
-void consumer::send(const read_frame& frame){impl_->send(frame);}
+void consumer::send(const safe_ptr<read_frame>& frame){impl_->send(frame);}
 frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
 size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}

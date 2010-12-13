@@ -80,7 +80,7 @@ struct frame_shader::implementation : boost::noncopyable
 			"}																		"			
 			"																		";
 			
-		shaders_[pixel_format::abgr] = common::gl::shader_program(common_vertex, common_fragment +
+		shaders_[pixel_format::abgr] = gl::shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -88,7 +88,7 @@ struct frame_shader::implementation : boost::noncopyable
 			"	gl_FragColor = abgr.argb * gl_Color;								"
 			"}																		");
 		
-		shaders_[pixel_format::argb]= common::gl::shader_program(common_vertex, common_fragment +
+		shaders_[pixel_format::argb]= gl::shader_program(common_vertex, common_fragment +
 
 			"void main()															"	
 			"{																		"
@@ -96,7 +96,7 @@ struct frame_shader::implementation : boost::noncopyable
 			"	gl_FragColor = argb.grab * gl_Color;								"	
 			"}																		");
 		
-		shaders_[pixel_format::bgra]= common::gl::shader_program(common_vertex, common_fragment +
+		shaders_[pixel_format::bgra]= gl::shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -104,7 +104,7 @@ struct frame_shader::implementation : boost::noncopyable
 			"	gl_FragColor = bgra.rgba * gl_Color;								"
 			"}																		");
 		
-		shaders_[pixel_format::rgba] = common::gl::shader_program(common_vertex, common_fragment +
+		shaders_[pixel_format::rgba] = gl::shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -112,7 +112,7 @@ struct frame_shader::implementation : boost::noncopyable
 			"	gl_FragColor = rgba.bgra * gl_Color;								"
 			"}																		");
 		
-		shaders_[pixel_format::ycbcr] = common::gl::shader_program(common_vertex, common_fragment +
+		shaders_[pixel_format::ycbcr] = gl::shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -123,7 +123,7 @@ struct frame_shader::implementation : boost::noncopyable
 			"	gl_FragColor = ycbcra_to_bgra(y, cb, cr, a) * gl_Color;			"
 			"}																		");
 		
-		shaders_[pixel_format::ycbcra] = common::gl::shader_program(common_vertex, common_fragment +
+		shaders_[pixel_format::ycbcra] = gl::shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -185,7 +185,7 @@ struct frame_shader::implementation : boost::noncopyable
 
 	const video_format_desc format_desc_;
 	pixel_format::type current_;
-	std::unordered_map<pixel_format::type, common::gl::shader_program> shaders_;
+	std::unordered_map<pixel_format::type, gl::shader_program> shaders_;
 };
 
 frame_shader::frame_shader(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}

@@ -10,7 +10,7 @@
 
 #include <functional>
 
-namespace caspar { namespace common {
+namespace caspar {
 
 class executor
 {
@@ -128,4 +128,4 @@ private:
 	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
 };
 
-}}
+}

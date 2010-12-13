@@ -4,7 +4,7 @@
 
 #include <memory>
 
-namespace caspar { namespace common { namespace gl {
+namespace caspar { namespace gl {
 
 class frame_buffer_object
 {
@@ -17,4 +17,4 @@ private:
 };
 typedef frame_buffer_object fbo;
 
-}}}
+}}

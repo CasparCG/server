@@ -8,7 +8,8 @@ class read_frame;
 class write_frame;
 class draw_frame;
 
-class draw_frame_impl;
+class draw_frame;
+
 class transform_frame;
 class composite_frame;
 

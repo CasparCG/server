@@ -4,8 +4,6 @@
 
 #include "../../../format/video_format.h"
 #include "../../../processor/draw_frame.h"
-#include "../../../processor/draw_frame.h"
-#include "../../../processor/draw_frame.h"
 #include "../../../processor/frame_processor_device.h"
 
 #include <tbb/parallel_for.h>
@@ -105,7 +103,7 @@ struct video_transformer::implementation : boost::noncopyable
 		}
 	}
 	
-	draw_frame execute(const std::shared_ptr<AVFrame>& decoded_frame)
+	safe_ptr<draw_frame> execute(const std::shared_ptr<AVFrame>& decoded_frame)
 	{				
 		if(decoded_frame == nullptr)
 			return draw_frame::eof();
@@ -117,7 +115,7 @@ struct video_transformer::implementation : boost::noncopyable
 			tbb::parallel_for(0, static_cast<int>(desc_.planes.size()), 1, [&](int n)
 			{
 				auto plane            = desc_.planes[n];
-				auto result           = write.pixel_data(n).begin();
+				auto result           = write->pixel_data(n).begin();
 				auto decoded          = decoded_frame->data[n];
 				auto decoded_linesize = decoded_frame->linesize[n];
 				
@@ -135,7 +133,7 @@ struct video_transformer::implementation : boost::noncopyable
 
 			AVFrame av_frame;	
 			avcodec_get_frame_defaults(&av_frame);
-			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), write.pixel_data().begin(), PIX_FMT_BGRA, width_, height_);
+			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), write->pixel_data().begin(), PIX_FMT_BGRA, width_, height_);
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);	
 			
@@ -160,6 +158,6 @@ struct video_transformer::implementation : boost::noncopyable
 };
 
 video_transformer::video_transformer(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
-draw_frame video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
+safe_ptr<draw_frame> video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
 void video_transformer::initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor); }
 }}}

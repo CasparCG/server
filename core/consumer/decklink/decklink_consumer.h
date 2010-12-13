@@ -30,7 +30,7 @@ class decklink_consumer : public frame_consumer
 public:
 	explicit decklink_consumer(const video_format_desc& format_desc, bool internalKey = false);
 	
-	virtual void send(const read_frame&);
+	virtual void send(const safe_ptr<read_frame>&);
 	virtual sync_mode synchronize();
 	virtual size_t buffer_depth() const;
 private:

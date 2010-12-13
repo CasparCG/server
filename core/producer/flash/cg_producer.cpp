@@ -30,33 +30,36 @@ struct cg_producer::implementation : boost::noncopyable
 {
 public:
 
-	implementation() : ver_(template_version::invalid)
+	implementation() : ver_(template_version::invalid), flash_producer_(create_flash())
 	{
+	
+	}
+
+	safe_ptr<flash_producer> create_flash()
+	{		
 		if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.18")))
 		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.18"));
 			CASPAR_LOG(info) << L"Running version 1.8 template graphics.";
 			ver_ = template_version::_18;
+			return safe_ptr<flash_producer>(flash_producer(server::template_folder()+TEXT("cg.fth.18")));
 		}
 		else if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.17")))
 		{
-			flash_producer_ = std::make_shared<flash_producer>(server::template_folder()+TEXT("cg.fth.17"));
 			CASPAR_LOG(info) << L"Running version 1.7 template graphics.";
 			ver_ = template_version::_17;
+			return safe_ptr<flash_producer>(flash_producer(server::template_folder()+TEXT("cg.fth.17")));
 		}
 		else 
-			CASPAR_LOG(info) << L"No templatehost found. Template graphics will be disabled";		
+			BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No templatehost found."));	
 	}
 
 	void clear()
 	{
-		flash_producer_.reset();
+		// TODO
 	}
 
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& label, const std::wstring& data)
 	{
-		if(flash_producer_ == nullptr)
-			return;
 		CASPAR_LOG(info) << "Invoking add-command";
 		
 		std::wstringstream param;
@@ -76,8 +79,6 @@ public:
 
 	void remove(int layer)
 	{
-		if(flash_producer_ == nullptr)
-			return;
 		CASPAR_LOG(info) << "Invoking remove-command";
 		
 		std::wstringstream param;
@@ -88,8 +89,6 @@ public:
 
 	void play(int layer)
 	{
-		if(flash_producer_ == nullptr)
-			return;
 		CASPAR_LOG(info) << "Invoking play-command";
 		
 		std::wstringstream param;
@@ -100,8 +99,6 @@ public:
 
 	void stop(int layer, unsigned int mix_out_duration)
 	{
-		if(flash_producer_ == nullptr)
-			return;
 		CASPAR_LOG(info) << "Invoking stop-command";
 		
 		std::wstringstream param;
@@ -112,8 +109,6 @@ public:
 
 	void next(int layer)
 	{
-		if(flash_producer_ == nullptr)
-			return;
 		CASPAR_LOG(info) << "Invoking next-command";
 		
 		std::wstringstream param;
@@ -124,8 +119,6 @@ public:
 
 	void update(int layer, const std::wstring& data)
 	{
-		if(flash_producer_ == nullptr)
-			return;
 		CASPAR_LOG(info) << "Invoking update-command";
 		
 		std::wstringstream param;
@@ -136,8 +129,6 @@ public:
 
 	void invoke(int layer, const std::wstring& label)
 	{
-		if(flash_producer_ == nullptr)
-			return;
 		CASPAR_LOG(info) << "Invoking invoke-command";
 		
 		std::wstringstream param;
@@ -146,16 +137,15 @@ public:
 		flash_producer_->param(param.str());
 	}
 
-	draw_frame receive()
+	safe_ptr<draw_frame> receive()
 	{
-		return flash_producer_ ? flash_producer_->receive() : draw_frame::empty();
+		return flash_producer_->receive();
 	}
 		
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
 		frame_processor_ = frame_processor;
-		if(flash_producer_ != nullptr)
-			flash_producer_->initialize(frame_processor_);
+		flash_producer_->initialize(frame_processor_);
 	}
 
 	std::wstring print() const
@@ -163,28 +153,28 @@ public:
 		return L"cg_producer. back-end:" + flash_producer_->print();
 	}
 
-	flash_producer_ptr flash_producer_;
+	safe_ptr<flash_producer> flash_producer_;
 	template_version::type ver_;
 	frame_processor_device_ptr frame_processor_;
 };
 	
-cg_producer_ptr get_default_cg_producer(const channel_ptr& channel, int render_layer)
+safe_ptr<cg_producer> get_default_cg_producer(const channel_ptr& channel, int render_layer)
 {
 	if(!channel)
 		BOOST_THROW_EXCEPTION(null_argument() << msg_info("channel"));
 	
-	auto producer = std::dynamic_pointer_cast<cg_producer>(channel->foreground(render_layer).get());
+	auto producer = std::dynamic_pointer_cast<cg_producer>(channel->foreground(render_layer).get().get_shared());
 	if(producer == nullptr)
 	{
 		producer = std::make_shared<cg_producer>();		
-		channel->load(render_layer, producer, load_option::auto_play); 
+		channel->load(render_layer, safe_ptr<frame_producer>::from_shared(producer), load_option::auto_play); 
 	}
 	
-	return producer;
+	return safe_ptr<cg_producer>::from_shared(producer);
 }
 
 cg_producer::cg_producer() : impl_(new implementation()){}
-draw_frame cg_producer::receive(){return impl_->receive();}
+safe_ptr<draw_frame> cg_producer::receive(){return impl_->receive();}
 void cg_producer::clear(){impl_->clear();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}
@@ -194,4 +184,5 @@ void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
 void cg_producer::initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor);}
+std::wstring cg_producer::print() const{return impl_->print();}
 }}}

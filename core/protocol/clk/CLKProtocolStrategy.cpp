@@ -30,9 +30,7 @@
 #include <algorithm>
 
 namespace caspar { namespace core { namespace CLK {
-
-using namespace common;
-
+	
 CLKProtocolStrategy::CLKProtocolStrategy(const std::vector<channel_ptr>& channels) 
 	: currentState_(ExpectingNewCommand), bClockLoaded_(false) 
 {	

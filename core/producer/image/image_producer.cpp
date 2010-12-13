@@ -18,9 +18,10 @@ namespace caspar { namespace core { namespace image{
 
 struct image_producer : public frame_producer
 {
-	image_producer(const std::wstring& filename) : filename_(filename)	{}
+	image_producer(image_producer&& other) : frame_processor_(std::move(other.frame_processor_)), filename_(std::move(other.filename_)), frame_(draw_frame::empty()){}
+	image_producer(const std::wstring& filename) : filename_(filename), frame_(draw_frame::empty())	{}
 	
-	draw_frame receive(){return frame_;}
+	safe_ptr<draw_frame> receive(){return frame_;}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
 	{
@@ -28,7 +29,7 @@ struct image_producer : public frame_producer
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
 		auto frame = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.pixel_data().size(), frame.pixel_data().begin());
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->pixel_data().size(), frame->pixel_data().begin());
 		frame_ = std::move(frame);
 	}
 
@@ -39,10 +40,10 @@ struct image_producer : public frame_producer
 	
 	frame_processor_device_ptr frame_processor_;
 	std::wstring filename_;
-	draw_frame frame_;
+	safe_ptr<draw_frame> frame_;
 };
 
-frame_producer_ptr create_image_producer(const  std::vector<std::wstring>& params)
+safe_ptr<frame_producer> create_image_producer(const  std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg");
 	std::wstring filename = server::media_folder() + L"\\" + params[0];
@@ -53,9 +54,9 @@ frame_producer_ptr create_image_producer(const  std::vector<std::wstring>& param
 		});
 
 	if(ext == extensions.end())
-		return nullptr;
+		return frame_producer::empty();
 
-	return std::make_shared<image_producer>(filename + L"." + *ext);
+	return make_safe<image_producer>(filename + L"." + *ext);
 }
 
 }}}

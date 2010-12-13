@@ -45,7 +45,7 @@ namespace IO {
 
 typedef std::function<void(caspar::IO::SocketInfoPtr)> ClientDisconnectEvent;
 
-class AsyncEventServer : public common::IRunnable
+class AsyncEventServer : public IRunnable
 {
 	static long instanceCount_;
 
@@ -67,7 +67,7 @@ public:
 	void SetClientDisconnectHandler(ClientDisconnectEvent handler);
 	
 private:
-	common::Thread	listenThread_;
+	Thread	listenThread_;
 	void Run(HANDLE stopEvent);
 	bool OnUnhandledException(const std::exception&) throw();
 

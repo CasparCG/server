@@ -5,7 +5,7 @@
 
 #include <memory>
 
-namespace caspar { namespace common { namespace gl {
+namespace caspar { namespace gl {
 		
 class shader_program : boost::noncopyable
 {
@@ -26,4 +26,4 @@ private:
 };
 typedef std::shared_ptr<shader_program> shader_program_ptr;
 
-}}}
+}}

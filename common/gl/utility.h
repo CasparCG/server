@@ -31,7 +31,7 @@
 
 #include <boost/lexical_cast.hpp>
 
-namespace caspar { namespace common { namespace gl {
+namespace caspar { namespace gl {
 
 struct gl_error : virtual caspar_exception{};
 		
@@ -115,10 +115,10 @@ inline void SMFL_GLCheckError(const std::string& expr, const std::string& File, 
 	do \
 	{ \
 		(expr);  \
-		caspar::common::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__);\
+		caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__);\
 	}while(0);
 #else
 #define GL(expr) expr
 #endif
 
-}}}
+}}

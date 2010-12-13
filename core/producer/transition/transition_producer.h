@@ -60,18 +60,17 @@ struct transition_info
 class transition_producer : public frame_producer
 {
 public:
-	transition_producer(const frame_producer_ptr& destination, const transition_info& info);
+	transition_producer(const safe_ptr<frame_producer>& destination, const transition_info& info);
+	transition_producer(transition_producer&& other) : impl_(std::move(other.impl_)){}
+	safe_ptr<draw_frame> receive();
 
-	draw_frame receive();
-
-	frame_producer_ptr get_following_producer() const;
-	void set_leading_producer(const frame_producer_ptr& producer);
+	safe_ptr<frame_producer> get_following_producer() const;
+	void set_leading_producer(const safe_ptr<frame_producer>& producer);
 	virtual void initialize(const frame_processor_device_ptr& frame_processor);
 	virtual std::wstring print() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<transition_producer> transition_producer_ptr;
 
 }}

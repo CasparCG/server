@@ -117,5 +117,8 @@
     <ClInclude Include="utility\singleton_pool.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
+    <ClInclude Include="utility\safe_ptr.h">
+      <Filter>Source\utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

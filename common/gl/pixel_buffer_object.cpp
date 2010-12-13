@@ -5,7 +5,7 @@
 #include "../../common/exception/exceptions.h"
 #include "../../common/gl/utility.h"
 
-namespace caspar { namespace common { namespace gl {
+namespace caspar { namespace gl {
 																																							
 struct pixel_buffer_object::implementation : boost::noncopyable
 {
@@ -198,4 +198,4 @@ size_t pixel_buffer_object::size() const {return impl_->size_;}
 bool pixel_buffer_object::is_reading() const { return impl_->reading_;}
 bool pixel_buffer_object::is_writing() const { return impl_->writing_;}
 void pixel_buffer_object::is_smooth(bool smooth){impl_->is_smooth(smooth);}
-}}}
+}}

@@ -60,7 +60,7 @@ struct flash_producer::implementation
 		: flashax_container_(nullptr), filename_(filename), self_(self), executor_([=]{run();}), invalid_count_(0)
 	{	
 		if(!boost::filesystem::exists(filename))
-			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(common::narrow(filename)));
+			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));
 
 		frame_buffer_.set_capacity(3);		
 	}
@@ -151,7 +151,7 @@ struct flash_producer::implementation
 			{
 				CASPAR_LOG(debug) << "Retrying. Count: " << retries;
 				if(retries > 3)
-					BOOST_THROW_EXCEPTION(operation_failed() << arg_name_info("param") << arg_value_info(common::narrow(param)));
+					BOOST_THROW_EXCEPTION(operation_failed() << arg_name_info("param") << arg_value_info(narrow(param)));
 			}
 			is_empty_ = false;	
 		});
@@ -182,7 +182,7 @@ struct flash_producer::implementation
 				stop();
 
 				frame_buffer_.clear();
-				frame_buffer_.try_push(draw_frame::eof()); // EOF
+				frame_buffer_.try_push(draw_frame::eof().get_shared()); // EOF
 		
 				current_frame_ = nullptr;
 			});
@@ -225,19 +225,18 @@ struct flash_producer::implementation
 			auto format_desc = frame_processor_->get_video_format_desc();
 			bool is_progressive = format_desc.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc.fps/2 == 0);
 
-			draw_frame result;
-
-			if(is_progressive)							
-				result = do_receive();		
+			std::shared_ptr<draw_frame> frame;
+			if(is_progressive)
+				frame = do_receive().get_shared();
 			else
-				result = composite_frame::interlace(do_receive(), do_receive(), format_desc.mode);
+				frame = composite_frame::interlace(do_receive(), do_receive(), format_desc.mode).get_shared();
 			
-			frame_buffer_.push(result);
+			frame_buffer_.push(frame);
 			is_empty_ = flashax_container_->IsEmpty();
 		}
 	}
 		
-	draw_frame do_receive()
+	safe_ptr<draw_frame> do_receive()
 	{
 		auto format_desc = frame_processor_->get_video_format_desc();
 
@@ -251,13 +250,13 @@ struct flash_producer::implementation
 		}	
 
 		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height);
-		std::copy(current_frame_->data(), current_frame_->data() + current_frame_->size(), frame.pixel_data().begin());
-		return std::move(frame);
+		std::copy(current_frame_->data(), current_frame_->data() + current_frame_->size(), frame->pixel_data().begin());
+		return frame;
 	}
 		
-	draw_frame receive()
+	safe_ptr<draw_frame> receive()
 	{		
-		return (frame_buffer_.try_pop(last_frame_) || !is_empty_) ? last_frame_ : draw_frame::empty();
+		return ((frame_buffer_.try_pop(last_frame_) || !is_empty_) && last_frame_) ? safe_ptr<draw_frame>::from_shared(last_frame_) : draw_frame::empty();
 	}
 
 	void initialize(const frame_processor_device_ptr& frame_processor)
@@ -275,9 +274,9 @@ struct flash_producer::implementation
 	
 	CComObject<flash::FlashAxContainer>* flashax_container_;
 		
-	tbb::concurrent_bounded_queue<draw_frame> frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<draw_frame>> frame_buffer_;
 
-	draw_frame last_frame_;
+	std::shared_ptr<draw_frame> last_frame_;
 
 	bitmap_ptr current_frame_;
 	bitmap_ptr bmp_frame_;
@@ -286,14 +285,14 @@ struct flash_producer::implementation
 	flash_producer* self_;
 
 	tbb::atomic<bool> is_empty_;
-	common::executor executor_;
+	executor executor_;
 	int invalid_count_;
 
 	frame_processor_device_ptr frame_processor_;
 };
 
 flash_producer::flash_producer(const std::wstring& filename) : impl_(new implementation(this, filename)){}
-draw_frame flash_producer::receive(){return impl_->receive();}
+safe_ptr<draw_frame> flash_producer::receive(){return impl_->receive();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
 void flash_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}
 std::wstring flash_producer::print() const {return impl_->print();}
@@ -309,7 +308,7 @@ std::wstring flash_producer::find_template(const std::wstring& template_name)
 	return L"";
 }
 
-flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params)
+safe_ptr<flash_producer> create_flash_producer(const std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"swf");
 	std::wstring filename = server::media_folder() + L"\\" + params[0];
@@ -320,9 +319,9 @@ flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params
 		});
 
 	if(ext == extensions.end())
-		return nullptr;
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info(narrow(filename)));
 
-	return std::make_shared<flash_producer>(filename + L"." + *ext);
+	return make_safe<flash_producer>(filename + L"." + *ext);
 }
 
 }}}

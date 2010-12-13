@@ -17,23 +17,29 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
-#pragma once
+#include "../stdafx.h"
 
-#include "../../consumer/frame_consumer.h"
+#include "frame_producer.h"
 
-namespace caspar { namespace core { namespace oal {
-
-class consumer : public frame_consumer
-{
-public:	
-	explicit consumer(const video_format_desc& format_desc);
+namespace caspar { namespace core {
 	
-	virtual void send(const safe_ptr<read_frame>&);
-	virtual sync_mode synchronize();
-	virtual size_t buffer_depth() const;
-private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
+struct empty_frame_producer : public frame_producer
+{
+	virtual safe_ptr<draw_frame> receive(){return draw_frame::eof();}
+	virtual void initialize(const frame_processor_device_ptr&){}
+	virtual std::wstring print() const { return L"empty";}
 };
 
-}}}
+safe_ptr<frame_producer> frame_producer::empty()
+{
+	static auto empty_producer = std::make_shared<empty_frame_producer>();
+	return safe_ptr<frame_producer>::from_shared(empty_producer);
+}
+
+inline std::wostream& operator<<(std::wostream& out, const frame_producer& producer)
+{
+	out << producer.print().c_str();
+	return out;
+}
+
+}}

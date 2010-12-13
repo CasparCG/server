@@ -8,7 +8,7 @@
 
 #include <memory>
 
-namespace caspar { namespace common { namespace gl {
+namespace caspar { namespace gl {
 
 struct frame_buffer_object::implementation
 {
@@ -46,4 +46,4 @@ public:
 
 frame_buffer_object::frame_buffer_object(size_t width, size_t height, GLenum mode) : impl_(new implementation(width, height, mode)){}
 void frame_buffer_object::bind_pixel_source() {impl_->bind_pixel_source();}
-}}}
+}}

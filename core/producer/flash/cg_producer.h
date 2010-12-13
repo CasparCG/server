@@ -12,8 +12,9 @@ public:
 	static const unsigned int DEFAULT_LAYER = 5000;
 
 	cg_producer();
+	cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
 	
-	virtual draw_frame receive();
+	virtual safe_ptr<draw_frame> receive();
 	virtual void initialize(const frame_processor_device_ptr& frame_processor);
 
 	void clear();
@@ -24,13 +25,14 @@ public:
 	void next(int layer);
 	void update(int layer, const std::wstring& data);
 	void invoke(int layer, const std::wstring& label);
+	
+	virtual std::wstring print() const;
 
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<cg_producer> cg_producer_ptr;
 
-cg_producer_ptr get_default_cg_producer(const channel_ptr& channel, int layer_index = cg_producer::DEFAULT_LAYER);
+safe_ptr<cg_producer> get_default_cg_producer(const channel_ptr& channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
 }}}

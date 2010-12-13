@@ -150,10 +150,10 @@ struct consumer::implementation : boost::noncopyable
 		return std::make_pair(width, height);
 	}
 
-	void render(const read_frame& frame)
+	void render(const safe_ptr<read_frame>& frame)
 	{						
 		auto ptr = pbos_.front().end_write();
-		std::copy_n(frame.pixel_data().begin(), frame.pixel_data().size(), reinterpret_cast<char*>(ptr));
+		std::copy_n(frame->pixel_data().begin(), frame->pixel_data().size(), reinterpret_cast<char*>(ptr));
 
 		GL(glClear(GL_COLOR_BUFFER_BIT));	
 		pbos_.back().bind_texture();				
@@ -169,7 +169,7 @@ struct consumer::implementation : boost::noncopyable
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 		
-	void send(const read_frame& frame)
+	void send(const safe_ptr<read_frame>& frame)
 	{
 		active_ = executor_.begin_invoke([=]
 		{
@@ -193,7 +193,7 @@ struct consumer::implementation : boost::noncopyable
 	}
 		
 	boost::unique_future<void> active_;
-	common::executor executor_;
+	executor executor_;
 	
 	float wratio_;
 	float hratio_;
@@ -201,7 +201,7 @@ struct consumer::implementation : boost::noncopyable
 	float wSize_;
 	float hSize_;
 
-	std::array<common::gl::pixel_buffer_object, 2> pbos_;
+	std::array<gl::pixel_buffer_object, 2> pbos_;
 
 	bool windowed_;
 	unsigned int screen_width_;
@@ -217,7 +217,7 @@ struct consumer::implementation : boost::noncopyable
 
 consumer::consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
-void consumer::send(const read_frame& frame){impl_->send(frame);}
+void consumer::send(const safe_ptr<read_frame>& frame){impl_->send(frame);}
 frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
 size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}

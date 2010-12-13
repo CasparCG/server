@@ -24,7 +24,7 @@
 #include <exception>
 #include <memory>
 
-namespace caspar { namespace common {
+namespace caspar {
 	
 class IRunnable
 {
@@ -93,4 +93,4 @@ private:
 	static bool		static_bInstallWin32ExceptionHandler_;
 };
 
-}}
+}

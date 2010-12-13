@@ -9,7 +9,7 @@
 
 #include <boost/noncopyable.hpp>
 
-namespace caspar { namespace common { namespace gl {
+namespace caspar { namespace gl {
 
 shader_program& shader_program::operator=(shader_program&& other) 
 {
@@ -37,7 +37,7 @@ shader_program::shader_program(const std::string& vertex_source_str, const std::
 		GL(glDeleteObjectARB(vertex_shader));
 		std::stringstream str;
 		str << "Failed to compile vertex shader:" << std::endl << info << std::endl;
-		BOOST_THROW_EXCEPTION(common::gl::gl_error() << msg_info(str.str()));
+		BOOST_THROW_EXCEPTION(gl::gl_error() << msg_info(str.str()));
 	}
 			
 	const char* fragment_source = fragment_source_str.c_str();
@@ -55,7 +55,7 @@ shader_program::shader_program(const std::string& vertex_source_str, const std::
 		GL(glDeleteObjectARB(fragmemt_shader));
 		std::stringstream str;
 		str << "Failed to compile fragment shader:" << std::endl << info << std::endl;
-		BOOST_THROW_EXCEPTION(common::gl::gl_error() << msg_info(str.str()));
+		BOOST_THROW_EXCEPTION(gl::gl_error() << msg_info(str.str()));
 	}
 			
 	program_ = glCreateProgramObjectARB();
@@ -76,7 +76,7 @@ shader_program::shader_program(const std::string& vertex_source_str, const std::
 		GL(glDeleteObjectARB(program_));
 		std::stringstream str;
 		str << "Failed to link shader program:" << std::endl << info << std::endl;
-		BOOST_THROW_EXCEPTION(common::gl::gl_error() << msg_info(str.str()));
+		BOOST_THROW_EXCEPTION(gl::gl_error() << msg_info(str.str()));
 	}
 	GL(glUseProgramObjectARB(program_));
 	glUniform1i(glGetUniformLocation(program_, "plane[0]"), 0);
@@ -95,4 +95,4 @@ void shader_program::use()
 	GL(glUseProgramObjectARB(program_));		
 }
 
-}}}
+}}

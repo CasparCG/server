@@ -11,14 +11,14 @@ namespace caspar { namespace core {
 
 struct layer::implementation
 {		
-	implementation() : foreground_(nullptr), background_(nullptr), last_frame_(draw_frame::empty()) {}
+	implementation() : foreground_(frame_producer::empty()), background_(frame_producer::empty()), last_frame_(draw_frame::empty()) {}
 	
-	void load(const frame_producer_ptr& frame_producer, load_option::type option)
+	void load(const safe_ptr<frame_producer>& frame_producer, load_option::type option)
 	{			
 		background_ = frame_producer;
 		if(option == load_option::preview)		
 		{
-			foreground_ = nullptr;	
+			foreground_ = frame_producer::empty();	
 			last_frame_ = frame_producer->receive();
 		}
 		else if(option == load_option::auto_play)
@@ -27,13 +27,11 @@ struct layer::implementation
 	
 	void play()
 	{			
-		if(background_ != nullptr)
-		{
-			background_->set_leading_producer(foreground_);
-			foreground_ = std::move(background_);
-		}
-
+		background_->set_leading_producer(foreground_);
+		foreground_ = background_;
+		background_ = frame_producer::empty();
 		is_paused_ = false;
+		CASPAR_LOG(info) << L"Started: " << foreground_->print();
 	}
 
 	void pause()
@@ -43,20 +41,20 @@ struct layer::implementation
 
 	void stop()
 	{
-		foreground_ = nullptr;
+		foreground_ = frame_producer::empty();
 		last_frame_ = draw_frame::empty();
 	}
 
 	void clear()
 	{
-		foreground_ = nullptr;
-		background_ = nullptr;
+		foreground_ = frame_producer::empty();
+		background_ = frame_producer::empty();
 		last_frame_ = draw_frame::empty();
 	}
 	
-	draw_frame receive()
+	safe_ptr<draw_frame> receive()
 	{		
-		if(!foreground_ || is_paused_)
+		if(foreground_ == frame_producer::empty() || is_paused_)
 			return last_frame_;
 
 		try
@@ -65,10 +63,9 @@ struct layer::implementation
 
 			if(last_frame_ == draw_frame::eof())
 			{
-				CASPAR_LOG(info) << L"EOF: " << foreground_->print();
+				CASPAR_LOG(info) << L"Ended: " << foreground_->print();
 				auto following = foreground_->get_following_producer();
-				if(following)
-					following->set_leading_producer(foreground_);
+				following->set_leading_producer(foreground_);
 				foreground_ = following;
 				last_frame_ = receive();
 			}
@@ -78,8 +75,8 @@ struct layer::implementation
 			try
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << L"Removed " << (foreground_ ? foreground_->print() : L"empty") << L" from layer.";
-				foreground_ = nullptr;
+				CASPAR_LOG(warning) << L"Removed " << foreground_->print() << L" from layer.";
+				foreground_ = frame_producer::empty();
 				last_frame_ = draw_frame::empty();
 			}
 			catch(...){}
@@ -88,10 +85,10 @@ struct layer::implementation
 		return last_frame_;
 	}	
 		
-	tbb::atomic<bool>	is_paused_;
-	draw_frame		last_frame_;
-	frame_producer_ptr	foreground_;
-	frame_producer_ptr	background_;
+	tbb::atomic<bool>			is_paused_;
+	safe_ptr<draw_frame>		last_frame_;
+	safe_ptr<frame_producer>	foreground_;
+	safe_ptr<frame_producer>	background_;
 };
 
 layer::layer() : impl_(new implementation()){}
@@ -102,12 +99,13 @@ layer& layer::operator=(layer&& other)
 	other.impl_ = nullptr;
 	return *this;
 }
-void layer::load(const frame_producer_ptr& frame_producer, load_option::type option){return impl_->load(frame_producer, option);}	
+void layer::load(const safe_ptr<frame_producer>& frame_producer, load_option::type option){return impl_->load(frame_producer, option);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 void layer::clear(){impl_->clear();}
-draw_frame layer::receive() {return impl_->receive();}
-frame_producer_ptr layer::foreground() const { return impl_->foreground_;}
-frame_producer_ptr layer::background() const { return impl_->background_;}
+bool layer::empty() const { return impl_->foreground_ == frame_producer::empty() && impl_->background_ == frame_producer::empty();}
+safe_ptr<draw_frame> layer::receive() {return impl_->receive();}
+safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
+safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 }}

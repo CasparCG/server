@@ -12,17 +12,25 @@
 #include <memory>
 #include <vector>
 
+#include "../../common/utility/safe_ptr.h"
+
 namespace caspar { namespace core {
 	
 class read_frame
 {
 public:
-	explicit read_frame(common::gl::pbo_ptr&& frame, std::vector<short>&& audio_data);
+	explicit read_frame(size_t width, size_t height);
 	
 	const boost::iterator_range<const unsigned char*> pixel_data() const;
 	const std::vector<short>& audio_data() const;
 
 private:
+	friend class frame_renderer;
+	
+	void begin_read();
+	void end_read();
+	void audio_data(const std::vector<short>& audio_data);
+
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };

@@ -37,8 +37,9 @@ class flash_producer : public frame_producer
 public:
 
 	flash_producer(const std::wstring& filename);
+	flash_producer(flash_producer&& other) : impl_(std::move(other.impl_)){}
 
-	virtual draw_frame receive();
+	virtual safe_ptr<draw_frame> receive();
 	virtual void initialize(const frame_processor_device_ptr& frame_processor);
 	virtual std::wstring print() const;
 
@@ -54,8 +55,6 @@ private:
 
 };
 
-typedef std::tr1::shared_ptr<flash_producer> flash_producer_ptr;
-
-flash_producer_ptr create_flash_producer(const std::vector<std::wstring>& params);
+safe_ptr<flash_producer> create_flash_producer(const std::vector<std::wstring>& params);
 
 }}}
