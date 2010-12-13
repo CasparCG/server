@@ -3,13 +3,10 @@
 #include "draw_frame.h"
 #include "composite_frame.h"
 #include "transform_frame.h"
-#include "../../common/gl/utility.h"
+#include "frame_shader.h"
+#include "../../common/utility/singleton_pool.h"
 
 #include <boost/range/algorithm.hpp>
-#include <boost/range/algorithm_ext/erase.hpp>
-
-#include <algorithm>
-#include <numeric>
 
 #include <tbb/parallel_for.h>
 
@@ -17,19 +14,24 @@ namespace caspar { namespace core {
 	
 struct composite_frame::implementation
 {	
-	implementation(std::vector<draw_frame>&& frames) : frames_(std::move(frames)), audio_data_(1920*2, 0)
+	implementation(std::vector<draw_frame>&& frames) : frames_(std::move(frames))
 	{		
 		boost::range::for_each(frames_, [&](const draw_frame& frame)
 		{
-			tbb::parallel_for
-			(
-				tbb::blocked_range<size_t>(0, frame.audio_data().size()),
-				[&](const tbb::blocked_range<size_t>& r)
-				{
-					for(size_t n = r.begin(); n < r.end(); ++n)					
-						audio_data_[n] = static_cast<short>((static_cast<int>(audio_data_[n]) + static_cast<int>(frame.audio_data()[n])) & 0xFFFF);						
-				}
-			);
+			if(audio_data_.empty())
+				audio_data_ = frame.audio_data();
+			else
+			{
+				tbb::parallel_for
+				(
+					tbb::blocked_range<size_t>(0, frame.audio_data().size()),
+					[&](const tbb::blocked_range<size_t>& r)
+					{
+						for(size_t n = r.begin(); n < r.end(); ++n)					
+							audio_data_[n] = static_cast<short>((static_cast<int>(audio_data_[n]) + static_cast<int>(frame.audio_data()[n])) & 0xFFFF);						
+					}
+				);
+			}
 		});
 	}
 	
@@ -48,13 +50,13 @@ struct composite_frame::implementation
 		boost::range::for_each(frames_, std::bind(&detail::draw_frame_access::draw, std::placeholders::_1, std::ref(shader)));
 	}
 				
-	std::vector<draw_frame> frames_;
 	std::vector<short> audio_data_;
+	std::vector<draw_frame> frames_;
 };
 
-composite_frame::composite_frame(std::vector<draw_frame>&& frames) : impl_(new implementation(std::move(frames))){}
+composite_frame::composite_frame(std::vector<draw_frame>&& frames) : impl_(common::singleton_pool<implementation>::make_shared(std::move(frames))){}
 composite_frame::composite_frame(composite_frame&& other) : impl_(std::move(other.impl_)){}
-composite_frame::composite_frame(const composite_frame& other) : impl_(new implementation(*other.impl_)){}
+composite_frame::composite_frame(const composite_frame& other) : impl_(common::singleton_pool<implementation>::make_shared(*other.impl_)){}
 composite_frame& composite_frame::operator=(const composite_frame& other)
 {
 	composite_frame temp(other);

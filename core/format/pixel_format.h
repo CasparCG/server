@@ -40,26 +40,5 @@ struct pixel_format_desc
 	pixel_format::type pix_fmt;
 	std::vector<plane> planes;
 };
-
-size_t hash(const pixel_format_desc& desc);
-	
-inline bool operator==(const pixel_format_desc& lhs, const pixel_format_desc& rhs)
-{
-	return hash(lhs) == hash(rhs);
-}
-
-inline bool operator!=(const pixel_format_desc& lhs, const pixel_format_desc& rhs)
-{
-	return !(lhs == rhs);
-}
 	
 }}
-
-namespace std {
-
-template<> struct hash<caspar::core::pixel_format_desc>
-{
-	size_t operator()(const caspar::core::pixel_format_desc& desc) const { return caspar::core::hash(desc);}
-};
-
-}
