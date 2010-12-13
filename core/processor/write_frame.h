@@ -25,6 +25,9 @@ class write_frame : public detail::draw_frame_impl
 public:	
 	write_frame(std::vector<common::gl::pbo_ptr>&& pbos, const pixel_format_desc& desc);
 	write_frame(write_frame&& other);
+	
+	void swap(write_frame& other);
+
 	write_frame& operator=(write_frame&& other);
 
 	boost::iterator_range<unsigned char*> pixel_data(size_t index = 0);

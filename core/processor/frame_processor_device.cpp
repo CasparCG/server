@@ -157,29 +157,3 @@ write_frame frame_processor_device::create_frame()
 }
 
 }}
-
-
-//assert(desc_.planes.size() <= 4);
-
-//std::fill(pixel_data_.begin(), pixel_data_.end(), nullptr);
-
-//for(size_t n = 0; n < desc_.planes.size(); ++n)
-//{
-//	if(desc_.planes[n].size == 0)
-//		break;
-
-//	GLuint format = [&]() -> GLuint
-//	{
-//		switch(desc_.planes[n].channels)
-//		{
-//		case 1: return GL_LUMINANCE;
-//		case 2: return GL_LUMINANCE_ALPHA;
-//		case 3: return GL_BGR;
-//		case 4: return GL_BGRA;
-//		default: BOOST_THROW_EXCEPTION(out_of_range() << msg_info("1-4 channels are supported") << arg_name_info("desc.planes.channels")); 
-//		}
-//	}();
-
-//	pbo_.push_back(std::make_shared<common::gl::pixel_buffer_object>(desc_.planes[n].width, desc_.planes[n].height, format));
-//	pbo_.back()->is_smooth(true);
-//}

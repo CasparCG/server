@@ -18,9 +18,9 @@ namespace caspar { namespace core {
 																																						
 struct transform_frame::implementation
 {
-	implementation(const draw_frame& frame) : frame_(frame), audio_volume_(255), override_audio_(false){}
-	implementation(const draw_frame& frame, std::vector<short>&& audio_data) : frame_(frame), audio_volume_(255), audio_data_(std::move(audio_data)), override_audio_(true){}
-	implementation(draw_frame&& frame) : frame_(std::move(frame)), audio_volume_(255), override_audio_(false){}
+	implementation(const draw_frame& frame) : frame_(frame), audio_volume_(255){}
+	implementation(const draw_frame& frame, std::vector<short>&& audio_data) : frame_(frame), audio_volume_(255), override_audio_data_(std::move(audio_data)){}
+	implementation(draw_frame&& frame) : frame_(std::move(frame)), audio_volume_(255){}
 	
 	void begin_write(){detail::draw_frame_access::begin_write(frame_);}
 	void end_write(){detail::draw_frame_access::end_write(frame_);}
@@ -38,7 +38,7 @@ struct transform_frame::implementation
 			return;
 		
 		audio_volume_ = volume;
-		if(!override_audio_)
+		if(override_audio_data_.empty())
 			audio_data_ = frame_.audio_data();
 		tbb::parallel_for
 		(
@@ -51,10 +51,15 @@ struct transform_frame::implementation
 		);
 	}
 		
-	bool override_audio_;
+	const std::vector<short>& audio_data() const 
+	{
+		return !audio_data_.empty() ? audio_data_ : (!override_audio_data_.empty() ? override_audio_data_ : frame_.audio_data());
+	}
+		
 	unsigned char audio_volume_;
 	draw_frame frame_;
 	std::vector<short> audio_data_;
+	std::vector<short> override_audio_data_;
 	shader_transform transform_;	
 };
 	
@@ -62,6 +67,7 @@ transform_frame::transform_frame(const draw_frame& frame) : impl_(common::single
 transform_frame::transform_frame(const draw_frame& frame, std::vector<short>&& audio_data) : impl_(common::singleton_pool<implementation>::make_shared(frame, std::move(audio_data))){}
 transform_frame::transform_frame(draw_frame&& frame) : impl_(common::singleton_pool<implementation>::make_shared(std::move(frame))){}
 transform_frame::transform_frame(const transform_frame& other) : impl_(common::singleton_pool<implementation>::make_shared(*other.impl_)){}
+void transform_frame::swap(transform_frame& other){impl_.swap(other.impl_);}
 transform_frame& transform_frame::operator=(const transform_frame& other)
 {
 	transform_frame temp(other);
@@ -82,5 +88,5 @@ void transform_frame::translate(double x, double y){impl_->transform_.pos = boos
 void transform_frame::texcoord(double left, double top, double right, double bottom){impl_->transform_.uv = boost::make_tuple(left, top, right, bottom);}
 void transform_frame::video_mode(video_mode::type mode){impl_->transform_.mode = mode;}
 void transform_frame::alpha(double value){impl_->transform_.alpha = value;}
-const std::vector<short>& transform_frame::audio_data() const { return impl_->audio_data_; }
+const std::vector<short>& transform_frame::audio_data() const { return impl_->audio_data(); }
 }}

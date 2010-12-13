@@ -17,6 +17,8 @@ public:
 	explicit composite_frame(std::vector<draw_frame>&& frames);
 	composite_frame(draw_frame&& frame1, draw_frame&& frame2);
 	
+	void swap(composite_frame& other);
+
 	composite_frame(const composite_frame& other);
 	composite_frame& operator=(const composite_frame& other);
 	composite_frame(composite_frame&& other);
@@ -26,8 +28,7 @@ public:
 	
 	virtual const std::vector<short>& audio_data() const;
 
-private:
-	
+private:	
 	virtual void begin_write();
 	virtual void end_write();
 	virtual void draw(frame_shader& shader);

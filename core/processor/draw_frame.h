@@ -13,9 +13,6 @@
 
 namespace caspar { namespace core {
 		
-struct eof_frame{};
-struct empty_frame{};
-
 namespace detail
 {
 
@@ -34,28 +31,22 @@ struct draw_frame_access;
 
 }
 
+struct eof_frame{};
+struct empty_frame{};
+
 class draw_frame : boost::equality_comparable<draw_frame>, boost::equality_comparable<eof_frame>, boost::equality_comparable<empty_frame>
 {
-	enum frame_tag
-	{
-		normal_tag,
-		eof_tag,
-		empty_tag
-	};
-
-	static_assert(std::is_abstract<detail::draw_frame_impl>::value, "non-abstract container allows slicing");
 public:
 	draw_frame();
 	draw_frame(const draw_frame& other);
 	draw_frame(draw_frame&& other);
+	draw_frame(eof_frame);
+	draw_frame(empty_frame);
 
 	template<typename T>
 	draw_frame(T&& impl, typename std::enable_if<std::is_base_of<detail::draw_frame_impl, typename std::remove_reference<T>::type>::value, void>::type* dummy = nullptr)
-		: impl_(std::make_shared<T>(std::forward<T>(impl))), tag_(normal_tag){dummy;}
-
-	draw_frame(eof_frame&&) : tag_(eof_tag){}
-	draw_frame(empty_frame&&) : tag_(empty_tag){}
-		
+		: impl_(std::make_shared<T>(std::forward<T>(impl))) {dummy;}
+			
 	void swap(draw_frame& other);
 	
 	template <typename T>
@@ -72,13 +63,13 @@ public:
 
 	draw_frame& operator=(eof_frame&&);
 	draw_frame& operator=(empty_frame&&);
+	
+	bool operator==(const draw_frame& other);
+	bool operator==(const eof_frame&);
+	bool operator==(const empty_frame&);
 
 	static eof_frame eof();
 	static empty_frame empty();
-	
-	bool operator==(const eof_frame&);
-	bool operator==(const empty_frame&);
-	bool operator==(const draw_frame& other);
 		
 	const std::vector<short>& audio_data() const;
 private:		
@@ -89,7 +80,6 @@ private:
 	void draw(frame_shader& shader);
 
 	std::shared_ptr<detail::draw_frame_impl> impl_;
-	frame_tag tag_;
 };
 
 namespace detail

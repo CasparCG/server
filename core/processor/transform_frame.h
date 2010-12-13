@@ -22,6 +22,8 @@ public:
 	transform_frame(const draw_frame& frame);
 	transform_frame(const draw_frame& frame, std::vector<short>&& audio_data);
 	transform_frame(draw_frame&& frame);
+
+	void swap(transform_frame& other);
 	
 	transform_frame(const transform_frame& other);
 	transform_frame& operator=(const transform_frame& other);
