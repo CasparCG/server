@@ -15,17 +15,19 @@ struct read_frame::implementation : boost::noncopyable
 	implementation(common::gl::pbo_ptr&& pbo, std::vector<short>&& audio_data) : pbo_(std::move(pbo)), audio_data_(std::move(audio_data)){}				
 	common::gl::pbo_ptr pbo_;
 	std::vector<short> audio_data_;
+
+	const boost::iterator_range<const unsigned char*> pixel_data() const
+	{
+		if(!pbo_ || !pbo_->data())
+			return boost::iterator_range<const unsigned char*>();
+
+		auto ptr = static_cast<const unsigned char*>(pbo_->data());
+		return boost::iterator_range<const unsigned char*>(ptr, ptr+pbo_->size());
+	}
 };
 	
 read_frame::read_frame(common::gl::pbo_ptr&& pbo, std::vector<short>&& audio_data) : impl_(common::singleton_pool<implementation>::make_shared(std::move(pbo), std::move(audio_data))){}
-const boost::iterator_range<const unsigned char*> read_frame::pixel_data() const
-{
-	if(!impl_->pbo_ || !impl_->pbo_->data())
-		return boost::iterator_range<const unsigned char*>();
-
-	auto ptr = static_cast<const unsigned char*>(impl_->pbo_->data());
-	return boost::iterator_range<const unsigned char*>(ptr, ptr+impl_->pbo_->size());
-}
+const boost::iterator_range<const unsigned char*> read_frame::pixel_data() const{return impl_->pixel_data();}
 const std::vector<short>& read_frame::audio_data() const { return impl_->audio_data_; }
 
 }}

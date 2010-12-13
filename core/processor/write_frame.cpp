@@ -56,6 +56,7 @@ struct write_frame::implementation : boost::noncopyable
 	
 write_frame::write_frame(std::vector<common::gl::pbo_ptr>&& pbos, const pixel_format_desc& desc) : impl_(common::singleton_pool<implementation>::make_shared(std::move(pbos), desc)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
+void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 write_frame& write_frame::operator=(write_frame&& other)
 {
 	impl_ = std::move(other.impl_);

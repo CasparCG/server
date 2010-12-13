@@ -16,6 +16,9 @@ struct composite_frame::implementation
 {	
 	implementation(std::vector<draw_frame>&& frames) : frames_(std::move(frames))
 	{		
+		if(frames_.size() < 2)
+			return;
+
 		boost::range::for_each(frames_, [&](const draw_frame& frame)
 		{
 			if(audio_data_.empty())
@@ -49,6 +52,12 @@ struct composite_frame::implementation
 	{
 		boost::range::for_each(frames_, std::bind(&detail::draw_frame_access::draw, std::placeholders::_1, std::ref(shader)));
 	}
+
+	const std::vector<short>& audio_data()
+	{
+		static std::vector<short> no_audio;
+		return !audio_data_.empty() ? audio_data_ : (!frames_.empty() ? frames_.front().audio_data() : no_audio);
+	}
 				
 	std::vector<short> audio_data_;
 	std::vector<draw_frame> frames_;
@@ -57,6 +66,7 @@ struct composite_frame::implementation
 composite_frame::composite_frame(std::vector<draw_frame>&& frames) : impl_(common::singleton_pool<implementation>::make_shared(std::move(frames))){}
 composite_frame::composite_frame(composite_frame&& other) : impl_(std::move(other.impl_)){}
 composite_frame::composite_frame(const composite_frame& other) : impl_(common::singleton_pool<implementation>::make_shared(*other.impl_)){}
+void composite_frame::swap(composite_frame& other){impl_.swap(other.impl_);}
 composite_frame& composite_frame::operator=(const composite_frame& other)
 {
 	composite_frame temp(other);
@@ -80,7 +90,7 @@ composite_frame::composite_frame(draw_frame&& frame1, draw_frame&& frame2)
 void composite_frame::begin_write(){impl_->begin_write();}
 void composite_frame::end_write(){impl_->end_write();}	
 void composite_frame::draw(frame_shader& shader){impl_->draw(shader);}
-const std::vector<short>& composite_frame::audio_data() const {return impl_->audio_data_;}
+const std::vector<short>& composite_frame::audio_data() const {return impl_->audio_data();}
 
 composite_frame composite_frame::interlace(draw_frame&& frame1, draw_frame&& frame2, video_mode::type mode)
 {			

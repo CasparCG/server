@@ -6,49 +6,41 @@
 
 namespace caspar { namespace core {
 	
-draw_frame::draw_frame() : tag_(empty_tag){}
-draw_frame::draw_frame(const draw_frame& other) : impl_(other.impl_), tag_(other.tag_){}
-draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)), tag_(other.tag_)
+struct null_frame : public detail::draw_frame_impl
 {
-	other.tag_ = empty_tag;
-}
+	virtual const std::vector<short>& audio_data() const
+	{
+		static std::vector<short> no_audio;
+		return no_audio;
+	}
+	virtual void begin_write(){}
+	virtual void end_write(){}
+	virtual void draw(frame_shader&){}
+};
 
-const std::vector<short>& draw_frame::audio_data() const 
+static const std::shared_ptr<null_frame>& get_empty()
 {
-	static std::vector<short> no_audio;
-	return impl_ ? impl_->audio_data() : no_audio;
-}	
-
-void draw_frame::swap(draw_frame& other)
-{
-	impl_.swap(other.impl_);
-	std::swap(tag_, other.tag_);
+	static auto empty = std::make_shared<null_frame>();
+	return empty;
 }
 	
-void draw_frame::begin_write()
+static const std::shared_ptr<null_frame>& get_eof()
 {
-	if(impl_)
-		impl_->begin_write();
+	static auto eof = std::make_shared<null_frame>();
+	return eof;
 }
 
-void draw_frame::end_write()
-{
-	if(impl_)
-		impl_->end_write();
-}
+draw_frame::draw_frame() : impl_(get_empty()){}
+draw_frame::draw_frame(const draw_frame& other) : impl_(other.impl_){}
+draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){other.impl_ = get_empty();}
+draw_frame::draw_frame(eof_frame){impl_ = get_eof();}
+draw_frame::draw_frame(empty_frame){impl_ = get_empty();}
 
-void draw_frame::draw(frame_shader& shader)
-{
-	if(impl_)
-		impl_->draw(shader);
-}
-
-eof_frame draw_frame::eof(){return eof_frame();}
-empty_frame draw_frame::empty(){return empty_frame();}
-	
-bool draw_frame::operator==(const eof_frame&){return tag_ == eof_tag;}
-bool draw_frame::operator==(const empty_frame&){return tag_ == empty_tag;}
-bool draw_frame::operator==(const draw_frame& other){return impl_ == other.impl_ && tag_ == other.tag_;}
+void draw_frame::swap(draw_frame& other){impl_.swap(other.impl_);}
+		
+bool draw_frame::operator==(const eof_frame&){return impl_ == get_eof();}
+bool draw_frame::operator==(const empty_frame&){return impl_ == get_empty();}
+bool draw_frame::operator==(const draw_frame& other){return impl_ == other.impl_;}
 	
 draw_frame& draw_frame::operator=(const draw_frame& other)
 {
@@ -56,24 +48,33 @@ draw_frame& draw_frame::operator=(const draw_frame& other)
 	temp.swap(*this);
 	return *this;
 }
+
 draw_frame& draw_frame::operator=(draw_frame&& other)
 {
-	impl_ = std::move(other.impl_);
-	tag_ = other.tag_;
-	other.tag_ = empty_tag;
+	draw_frame temp(other);
+	temp.swap(*this);
 	return *this;
 }
+
 draw_frame& draw_frame::operator=(eof_frame&&)
 {
-	impl_ = nullptr;
-	tag_ = eof_tag;
+	impl_ = get_eof();
 	return *this;
 }	
+
 draw_frame& draw_frame::operator=(empty_frame&&)
 {
-	impl_ = nullptr;
-	tag_ = empty_tag;
+	impl_ = get_empty();
 	return *this;
 }	
+
+eof_frame draw_frame::eof(){return eof_frame();}
+empty_frame draw_frame::empty(){return empty_frame();}
+
+const std::vector<short>& draw_frame::audio_data() const{return impl_->audio_data();}	
+
+void draw_frame::begin_write(){impl_->begin_write();}
+void draw_frame::end_write(){impl_->end_write();}
+void draw_frame::draw(frame_shader& shader){impl_->draw(shader);}
 
 }}
