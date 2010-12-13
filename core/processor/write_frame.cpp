@@ -8,6 +8,7 @@
 #include "../format/pixel_format.h"
 #include "../../common/gl/utility.h"
 #include "../../common/gl/pixel_buffer_object.h"
+#include "../../common/utility/singleton_pool.h"
 
 #include <boost/range/algorithm.hpp>
 
@@ -53,7 +54,7 @@ struct write_frame::implementation : boost::noncopyable
 	const pixel_format_desc desc_;
 };
 	
-write_frame::write_frame(std::vector<common::gl::pbo_ptr>&& pbos, const pixel_format_desc& desc) : impl_(new implementation(std::move(pbos), desc)){}
+write_frame::write_frame(std::vector<common::gl::pbo_ptr>&& pbos, const pixel_format_desc& desc) : impl_(common::singleton_pool<implementation>::make_shared(std::move(pbos), desc)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(write_frame&& other)
 {

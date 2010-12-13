@@ -4,6 +4,7 @@
 #include "../format/pixel_format.h"
 #include "../../common/gl/utility.h"
 #include "../../common/gl/pixel_buffer_object.h"
+#include "../../common/utility/singleton_pool.h"
 
 #include <boost/range/algorithm.hpp>
 
@@ -16,7 +17,7 @@ struct read_frame::implementation : boost::noncopyable
 	std::vector<short> audio_data_;
 };
 	
-read_frame::read_frame(common::gl::pbo_ptr&& pbo, std::vector<short>&& audio_data) : impl_(new implementation(std::move(pbo), std::move(audio_data))){}
+read_frame::read_frame(common::gl::pbo_ptr&& pbo, std::vector<short>&& audio_data) : impl_(common::singleton_pool<implementation>::make_shared(std::move(pbo), std::move(audio_data))){}
 const boost::iterator_range<const unsigned char*> read_frame::pixel_data() const
 {
 	if(!impl_->pbo_ || !impl_->pbo_->data())

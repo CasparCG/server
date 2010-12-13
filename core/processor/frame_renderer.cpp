@@ -48,7 +48,6 @@ struct frame_renderer::implementation : boost::noncopyable
 		reading_frame result;
 		try
 		{
-			detail::draw_frame_access::end_write(drawing_); // Map data pointer before returning to pool.
 			drawing_ = writing_;
 			writing_ = frame;
 						
@@ -61,7 +60,7 @@ struct frame_renderer::implementation : boost::noncopyable
 						
 			detail::draw_frame_access::draw(drawing_, shader_);
 				
-			reading_ = create_reading(drawing_.audio_data());			
+			reading_ = create_reading(std::vector<short>(drawing_.audio_data().begin(), drawing_.audio_data().end()));			
 			reading_.first->begin_read();
 						
 			drawing_ = draw_frame::empty();

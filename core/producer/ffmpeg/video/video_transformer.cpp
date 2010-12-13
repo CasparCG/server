@@ -108,7 +108,7 @@ struct video_transformer::implementation : boost::noncopyable
 	draw_frame execute(const std::shared_ptr<AVFrame>& decoded_frame)
 	{				
 		if(decoded_frame == nullptr)
-			return draw_frame::eof(); // TODO
+			return draw_frame::eof();
 				
 		if(sws_context_ == nullptr)
 		{

@@ -114,5 +114,8 @@
     <ClInclude Include="gl\shader_program.h">
       <Filter>Source\gl</Filter>
     </ClInclude>
+    <ClInclude Include="utility\singleton_pool.h">
+      <Filter>Source\utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

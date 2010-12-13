@@ -51,7 +51,7 @@ public:
 
 	template<typename T>
 	draw_frame(T&& impl, typename std::enable_if<std::is_base_of<detail::draw_frame_impl, typename std::remove_reference<T>::type>::value, void>::type* dummy = nullptr)
-		: impl_(std::make_shared<T>(std::forward<T>(impl))), tag_(normal_tag){}
+		: impl_(std::make_shared<T>(std::forward<T>(impl))), tag_(normal_tag){dummy;}
 
 	draw_frame(eof_frame&&) : tag_(eof_tag){}
 	draw_frame(empty_frame&&) : tag_(empty_tag){}

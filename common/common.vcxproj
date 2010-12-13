@@ -108,6 +108,7 @@
     <ClInclude Include="log\log.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="utility\scope_exit.h" />
+    <ClInclude Include="utility\singleton_pool.h" />
     <ClInclude Include="utility\string_convert.h" />
   </ItemGroup>
   <ItemGroup>

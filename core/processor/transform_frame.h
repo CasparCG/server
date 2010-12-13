@@ -20,7 +20,7 @@ class transform_frame : public detail::draw_frame_impl
 {
 public:
 	transform_frame(const draw_frame& frame);
-	transform_frame(const draw_frame& frame, const std::vector<short>& audio_data);
+	transform_frame(const draw_frame& frame, std::vector<short>&& audio_data);
 	transform_frame(draw_frame&& frame);
 	
 	transform_frame(const transform_frame& other);

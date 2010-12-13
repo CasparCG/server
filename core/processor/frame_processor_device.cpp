@@ -109,7 +109,14 @@ struct frame_processor_device::implementation : boost::noncopyable
 		static GLenum mapping[] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
 		auto pooled_pbo = std::make_shared<pbo>(plane.width, plane.height, mapping[plane.channels-1]);
 		pooled_pbo->end_write();
-		return pbo_ptr(pooled_pbo.get(), [=](pbo*){pool->push(pooled_pbo);});
+		return pbo_ptr(pooled_pbo.get(), [=](pbo*)
+		{
+			executor_.begin_invoke([=]
+			{
+				pooled_pbo->end_write();
+				pool->push(pooled_pbo);
+			});
+		});
 	}
 				
 	common::executor executor_;	

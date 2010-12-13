@@ -8,6 +8,7 @@
 #include "../format/pixel_format.h"
 #include "../../common/gl/utility.h"
 #include "../../common/gl/pixel_buffer_object.h"
+#include "../../common/utility/singleton_pool.h"
 
 #include <boost/range/algorithm.hpp>
 
@@ -18,7 +19,7 @@ namespace caspar { namespace core {
 struct transform_frame::implementation
 {
 	implementation(const draw_frame& frame) : frame_(frame), audio_volume_(255), override_audio_(false){}
-	implementation(const draw_frame& frame, const std::vector<short>& audio_data) : frame_(frame), audio_volume_(255), audio_data_(audio_data), override_audio_(true){}
+	implementation(const draw_frame& frame, std::vector<short>&& audio_data) : frame_(frame), audio_volume_(255), audio_data_(std::move(audio_data)), override_audio_(true){}
 	implementation(draw_frame&& frame) : frame_(std::move(frame)), audio_volume_(255), override_audio_(false){}
 	
 	void begin_write(){detail::draw_frame_access::begin_write(frame_);}
@@ -51,16 +52,16 @@ struct transform_frame::implementation
 	}
 		
 	bool override_audio_;
-	std::vector<short> audio_data_;
-	shader_transform transform_;	
 	unsigned char audio_volume_;
 	draw_frame frame_;
+	std::vector<short> audio_data_;
+	shader_transform transform_;	
 };
 	
-transform_frame::transform_frame(const draw_frame& frame) : impl_(new implementation(frame)){}
-transform_frame::transform_frame(const draw_frame& frame, const std::vector<short>& audio_data) : impl_(new implementation(frame, audio_data)){}
-transform_frame::transform_frame(draw_frame&& frame) : impl_(new implementation(std::move(frame))){}
-transform_frame::transform_frame(const transform_frame& other) : impl_(new implementation(*other.impl_)){}
+transform_frame::transform_frame(const draw_frame& frame) : impl_(common::singleton_pool<implementation>::make_shared(frame)){}
+transform_frame::transform_frame(const draw_frame& frame, std::vector<short>&& audio_data) : impl_(common::singleton_pool<implementation>::make_shared(frame, std::move(audio_data))){}
+transform_frame::transform_frame(draw_frame&& frame) : impl_(common::singleton_pool<implementation>::make_shared(std::move(frame))){}
+transform_frame::transform_frame(const transform_frame& other) : impl_(common::singleton_pool<implementation>::make_shared(*other.impl_)){}
 transform_frame& transform_frame::operator=(const transform_frame& other)
 {
 	transform_frame temp(other);
