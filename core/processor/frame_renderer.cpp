@@ -35,12 +35,6 @@ struct frame_renderer::implementation : boost::noncopyable
 	implementation(const video_format_desc& format_desc) : shader_(format_desc), format_desc_(format_desc),
 		fbo_(format_desc.width, format_desc.height), writing_(draw_frame::empty()), reading_(create_reading())
 	{	
-		GL(glEnable(GL_POLYGON_STIPPLE));
-		GL(glEnable(GL_TEXTURE_2D));
-		GL(glEnable(GL_BLEND));
-		GL(glDisable(GL_DEPTH_TEST));
-		GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));			
-		GL(glViewport(0, 0, format_desc.width, format_desc.height));
 		reading_->unmap();
 	}
 				
@@ -68,8 +62,7 @@ struct frame_renderer::implementation : boost::noncopyable
 		std::shared_ptr<read_frame> frame;
 		if(!pool_.try_pop(frame))		
 			frame = std::make_shared<read_frame>(format_desc_.width, format_desc_.height);
-		frame = std::shared_ptr<read_frame>(frame.get(), [=](read_frame*){pool_.push(frame);});
-		return safe_ptr<read_frame>(frame);
+		return safe_ptr<read_frame>(frame.get(), [=](read_frame*){pool_.push(frame);});
 	}
 
 	const ogl_context context_;

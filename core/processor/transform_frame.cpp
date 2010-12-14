@@ -38,20 +38,13 @@ struct transform_frame::implementation : public draw_frame_decorator
 		
 		audio_volume_ = volume;
 
-		auto& source = override_audio_data_;
-		if(override_audio_data_.empty())
-			source = frame_->audio_data();
-
+		auto& source = !override_audio_data_.empty() ? override_audio_data_ : frame_->audio_data();
 		audio_data_.resize(source.size());
-		tbb::parallel_for
-		(
-			tbb::blocked_range<size_t>(0, audio_data_.size()),
-			[&](const tbb::blocked_range<size_t>& r)
-			{
-				for(size_t n = r.begin(); n < r.end(); ++n)					
-					audio_data_[n] = static_cast<short>((static_cast<int>(source[n])*volume)>>8);						
-			}
-		);
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, audio_data_.size()), [&](const tbb::blocked_range<size_t>& r)
+		{
+			for(size_t n = r.begin(); n < r.end(); ++n)					
+				audio_data_[n] = static_cast<short>((static_cast<int>(source[n])*volume)>>8);						
+		});
 	}
 		
 	const std::vector<short>& audio_data() const 

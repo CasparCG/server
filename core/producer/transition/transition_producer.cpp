@@ -36,7 +36,7 @@ namespace caspar { namespace core {
 struct transition_producer::implementation : boost::noncopyable
 {
 	implementation(const safe_ptr<frame_producer>& dest, const transition_info& info) : current_frame_(0), info_(info), 
-		dest_producer_(dest), org_dest_producer_(dest), org_source_producer_(frame_producer::empty()), source_producer_(frame_producer::empty())
+		dest_producer_(dest), source_producer_(frame_producer::empty())
 	{}
 		
 	safe_ptr<frame_producer> get_following_producer() const
@@ -46,29 +46,24 @@ struct transition_producer::implementation : boost::noncopyable
 	
 	void set_leading_producer(const safe_ptr<frame_producer>& producer)
 	{
-		org_source_producer_ = source_producer_ = producer;
+		source_producer_ = producer;
 	}
 		
 	safe_ptr<draw_frame> receive()
 	{
-		safe_ptr<draw_frame> result = [&]() -> safe_ptr<draw_frame>
-		{
-			if(current_frame_++ >= info_.duration)
-				return draw_frame::eof();
+		if(current_frame_++ >= info_.duration)
+			return draw_frame::eof();
 
-			safe_ptr<draw_frame> source(draw_frame::empty());
-			safe_ptr<draw_frame> dest(draw_frame::empty());
+		auto source = draw_frame::empty();
+		auto dest = draw_frame::empty();
 
-			tbb::parallel_invoke
-			(
-				[&]{dest   = receive(dest_producer_);},
-				[&]{source = receive(source_producer_);}
-			);
+		tbb::parallel_invoke
+		(
+			[&]{dest   = receive(dest_producer_);},
+			[&]{source = receive(source_producer_);}
+		);
 
-			return compose(dest, source);
-		}();
-
-		return result;
+		return compose(dest, source);
 	}
 
 	safe_ptr<draw_frame> receive(safe_ptr<frame_producer>& producer)
@@ -95,13 +90,12 @@ struct transition_producer::implementation : boost::noncopyable
 				auto following = producer->get_following_producer();
 				following->initialize(safe_ptr<frame_processor_device>(frame_processor_));
 				following->set_leading_producer(producer);
-				producer = following;
+				producer = std::move(following);
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				producer = frame_producer::empty();
-				CASPAR_LOG(warning) << "Failed to initialize following producer. Removed producer from transition.";
+				CASPAR_LOG(warning) << "Failed to initialize following producer.";
 			}
 
 			return receive(producer);
@@ -154,12 +148,9 @@ struct transition_producer::implementation : boost::noncopyable
 
 	std::wstring print() const
 	{
-		return L"transition_producer. dest: " + (org_dest_producer_->print()) + L" src: " + (org_source_producer_->print());
+		return L"transition_producer. dest: " + (dest_producer_->print()) + L" src: " + (source_producer_->print());
 	}
 	
-	safe_ptr<frame_producer>	org_source_producer_;
-	safe_ptr<frame_producer>	org_dest_producer_;
-
 	safe_ptr<frame_producer>	source_producer_;
 	safe_ptr<frame_producer>	dest_producer_;
 	
