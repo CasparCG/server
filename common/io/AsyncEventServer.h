@@ -28,6 +28,8 @@
 #pragma once
 #endif
 
+#include "../utility/safe_ptr.h"
+
 #include <string>
 #include <map>
 #include <vector>
@@ -54,11 +56,11 @@ class AsyncEventServer : public IRunnable
 	AsyncEventServer& operator=(const AsyncEventServer&);
 
 public:
-	explicit AsyncEventServer(const ProtocolStrategyPtr& pProtocol, int port);
+	explicit AsyncEventServer(const safe_ptr<IProtocolStrategy>& pProtocol, int port);
 	~AsyncEventServer();
 
 	bool Start();
-	void SetProtocolStrategy(ProtocolStrategyPtr pPS) {
+	void SetProtocolStrategy(safe_ptr<IProtocolStrategy> pPS) {
 		pProtocolStrategy_ = pPS;
 	}
 
@@ -78,7 +80,7 @@ private:
 	void OnError(HANDLE waitEvent, int errorCode);
 
 	SocketInfoPtr		pListenSocketInfo_;
-	ProtocolStrategyPtr	pProtocolStrategy_;
+	safe_ptr<IProtocolStrategy>	pProtocolStrategy_;
 	int					port_;
 
 	friend class SocketInfo;

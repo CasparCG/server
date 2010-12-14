@@ -11,7 +11,7 @@ namespace caspar { namespace core {
 struct channel::implementation : boost::noncopyable
 {
 public:
-	implementation(const frame_producer_device_ptr& producer_device, const frame_processor_device_ptr& processor_device, const frame_consumer_device_ptr& consumer_device)
+	implementation(const safe_ptr<frame_producer_device>& producer_device, const safe_ptr<frame_processor_device>& processor_device, const safe_ptr<frame_consumer_device>& consumer_device)
 		: producer_device_(producer_device), processor_device_(processor_device), consumer_device_(consumer_device)
 	{
 	}
@@ -67,12 +67,13 @@ public:
 	}
 
 private:
-	const frame_processor_device_ptr processor_device_; // Destroyed last inorder to have all frames returned to their pools.
-	const frame_producer_device_ptr producer_device_;
-	const frame_consumer_device_ptr consumer_device_;
+	const safe_ptr<frame_processor_device> processor_device_; // Destroyed last inorder to have all frames returned to their pools.
+	const safe_ptr<frame_producer_device>  producer_device_;
+	const safe_ptr<frame_consumer_device>  consumer_device_;
 };
 
-channel::channel(const frame_producer_device_ptr& producer_device, const frame_processor_device_ptr& processor_device, const frame_consumer_device_ptr& consumer_device)
+channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
+channel::channel(const safe_ptr<frame_producer_device>& producer_device, const safe_ptr<frame_processor_device>& processor_device, const safe_ptr<frame_consumer_device>& consumer_device)
 	: impl_(new implementation(producer_device, processor_device, consumer_device)){}
 void channel::load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option){impl_->load(render_layer, producer, option);}
 void channel::pause(int render_layer){impl_->pause(render_layer);}

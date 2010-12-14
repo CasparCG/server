@@ -39,7 +39,7 @@ private:
 struct frame_consumer_device::implementation
 {
 public:
-	implementation(const frame_processor_device_ptr& frame_processor, const video_format_desc& format_desc, const std::vector<frame_consumer_ptr>& consumers) 
+	implementation(const safe_ptr<frame_processor_device>& frame_processor, const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers) 
 		: frame_processor_(frame_processor), consumers_(consumers), fmt_(format_desc)
 	{		
 		std::vector<size_t> depths;
@@ -56,13 +56,13 @@ public:
 			executor_.begin_invoke([=]{tick();});
 	}
 
-	void process(const safe_ptr<read_frame>& frame)
+	void process(const safe_ptr<const read_frame>& frame)
 	{		
 		buffer_.push_back(frame);
 
 		clock_sync clock;
 		
-		boost::range::for_each(consumers_, [&](const frame_consumer_ptr& consumer)
+		boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
 		{
 			size_t offset = max_depth_ - consumer->buffer_depth();
 			if(offset < buffer_.size())
@@ -70,7 +70,7 @@ public:
 		});
 			
 		frame_consumer::sync_mode sync = frame_consumer::ready;
-		boost::range::for_each(consumers_, [&](const frame_consumer_ptr& consumer)
+		boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
 		{
 			try
 			{
@@ -99,15 +99,16 @@ public:
 	executor executor_;	
 
 	size_t max_depth_;
-	std::deque<safe_ptr<read_frame>> buffer_;		
+	std::deque<safe_ptr<const read_frame>> buffer_;		
 
-	std::vector<frame_consumer_ptr> consumers_;
+	std::vector<safe_ptr<frame_consumer>> consumers_;
 	
-	frame_processor_device_ptr frame_processor_;
+	safe_ptr<frame_processor_device> frame_processor_;
 
 	const video_format_desc& fmt_;
 };
 
-frame_consumer_device::frame_consumer_device(const frame_processor_device_ptr& frame_processor, const video_format_desc& format_desc, const std::vector<frame_consumer_ptr>& consumers)
+frame_consumer_device::frame_consumer_device(frame_consumer_device&& other) : impl_(std::move(other.impl_)){}
+frame_consumer_device::frame_consumer_device(const safe_ptr<frame_processor_device>& frame_processor, const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers)
 	: impl_(new implementation(frame_processor, format_desc, consumers)){}
 }}

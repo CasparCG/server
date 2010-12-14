@@ -40,11 +40,8 @@ namespace caspar { namespace core { namespace cii {
 const std::wstring CIIProtocolStrategy::MessageDelimiter = TEXT("\r\n");
 const TCHAR CIIProtocolStrategy::TokenDelimiter = TEXT('\\');
 
-CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<channel_ptr>& channels) 
+CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<safe_ptr<channel>>& channels) : pChannel_(channels.at(0))
 {
-	if(channels.empty())
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("channels"));
-	pChannel_ = channels[0];
 	executor_.start();
 }
 

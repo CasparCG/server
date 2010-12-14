@@ -40,7 +40,7 @@ std::vector<safe_ptr<draw_frame>> receive(std::map<int, layer>& layers)
 
 struct frame_producer_device::implementation : boost::noncopyable
 {	
-	implementation(const frame_processor_device_ptr& frame_processor)  : frame_processor_(frame_processor)
+	implementation(const safe_ptr<frame_processor_device>& frame_processor)  : frame_processor_(frame_processor)
 	{
 		executor_.start();
 		executor_.begin_invoke([=]{tick();});
@@ -131,14 +131,16 @@ struct frame_producer_device::implementation : boost::noncopyable
 			return it != layers_.end() ? it->second.background() : frame_producer::empty();
 		});
 	}
+
 	mutable executor executor_;
 				
-	frame_processor_device_ptr frame_processor_;
+	safe_ptr<frame_processor_device> frame_processor_;
 						
 	std::map<int, layer> layers_;		
 };
 
-frame_producer_device::frame_producer_device(const frame_processor_device_ptr& frame_processor) : impl_(new implementation(frame_processor)){}
+frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
+frame_producer_device::frame_producer_device(const safe_ptr<frame_processor_device>& frame_processor) : impl_(new implementation(frame_processor)){}
 void frame_producer_device::load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option){impl_->load(render_layer, producer, option);}
 void frame_producer_device::pause(int render_layer){impl_->pause(render_layer);}
 void frame_producer_device::play(int render_layer){impl_->play(render_layer);}

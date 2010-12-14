@@ -34,7 +34,7 @@ read_frame::read_frame(size_t width, size_t height) : impl_(singleton_pool<imple
 const boost::iterator_range<const unsigned char*> read_frame::pixel_data() const{return impl_->pixel_data();}
 const std::vector<short>& read_frame::audio_data() const { return impl_->audio_data_; }
 void read_frame::audio_data(const std::vector<short>& audio_data) { impl_->audio_data_ = audio_data; }
-void read_frame::begin_read(){impl_->pbo_.begin_read();}
-void read_frame::end_read(){impl_->pbo_.end_read();}
+void read_frame::unmap(){impl_->pbo_.unmap_read();}
+void read_frame::map(){impl_->pbo_.map_read();}
 
 }}

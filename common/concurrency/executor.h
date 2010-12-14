@@ -80,7 +80,7 @@ public:
 	{	
 		typedef decltype(func()) result_type; 
 				
-		auto task = std::make_shared<boost::packaged_task<result_type>>(std::forward<Func>(func)); // boost::packaged_task cannot be moved, need to used shared_ptr.
+		auto task = std::make_shared<boost::packaged_task<result_type>>(std::forward<Func>(func)); // boost::packaged_task cannot be moved into lambda, need to used shared_ptr.
 		auto future = task->get_future();
 		
 		task->set_wait_callback(std::function<void(decltype(*task)& task)>([=](decltype(*task)& task) // The std::function wrapper is required in order to add ::result_type to functor class.

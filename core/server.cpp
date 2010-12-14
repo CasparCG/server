@@ -77,13 +77,12 @@ struct server::implementation : boost::noncopyable
 			auto format_desc = video_format_desc::get(widen(xml_channel.second.get("videomode", "PAL")));		
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid videomode."));
-			std::vector<frame_consumer_ptr> consumers;
+			std::vector<safe_ptr<frame_consumer>> consumers;
 
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))
 			{
 				try
 				{
-					frame_consumer_ptr pConsumer;
 					std::string name = xml_consumer.first;
 					if(name == "ogl")
 					{			
@@ -99,19 +98,16 @@ struct server::implementation : boost::noncopyable
 							stretch = ogl::stretch::uniform_to_fill;
 
 						bool windowed = xml_consumer.second.get("windowed", false);
-						pConsumer = std::make_shared<ogl::consumer>(format_desc, device, stretch, windowed);
+						consumers.push_back(ogl::consumer(format_desc, device, stretch, windowed));
 					}
 				#ifndef DISABLE_BLUEFISH
 					else if(name == "bluefish")					
-						pConsumer = std::make_shared<bluefish::consumer>(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false));					
+						consumers.push_back(bluefish::consumer(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false)));					
 				#endif
 					else if(name == "decklink")
-						pConsumer = std::make_shared<decklink::decklink_consumer>(format_desc, xml_consumer.second.get("internalkey", false));
+						consumers.push_back(make_safe<decklink::decklink_consumer>(format_desc, xml_consumer.second.get("internalkey", false)));
 					else if(name == "audio")
-						pConsumer = std::make_shared<oal::consumer>(format_desc);
-
-					if(pConsumer)					
-						consumers.push_back(pConsumer);					
+						consumers.push_back(oal::consumer(format_desc));			
 				}
 				catch(...)
 				{
@@ -119,10 +115,10 @@ struct server::implementation : boost::noncopyable
 				}
 			}
 			
-			auto processor_device = std::make_shared<frame_processor_device>(format_desc);
-			auto producer_device = std::make_shared<frame_producer_device>(processor_device);
-			auto consumer_device = std::make_shared<frame_consumer_device>(processor_device, format_desc, consumers);
-			channels_.push_back(std::make_shared<channel>(producer_device, processor_device, consumer_device));
+			auto processor_device = make_safe<frame_processor_device>(format_desc);
+			auto producer_device = make_safe<frame_producer_device>(processor_device);
+			auto consumer_device = make_safe<frame_consumer_device>(processor_device, format_desc, consumers);
+			channels_.push_back(channel(producer_device, processor_device, consumer_device));
 		}
 	}
 		
@@ -140,7 +136,7 @@ struct server::implementation : boost::noncopyable
 				{					
 					unsigned int port = xml_controller.second.get<unsigned int>("port");
 					port = port != 0 ? port : 5250;
-					auto asyncserver = std::make_shared<IO::AsyncEventServer>(create_protocol(protocol), port);
+					auto asyncserver = make_safe<IO::AsyncEventServer>(create_protocol(protocol), port);
 					asyncserver->Start();
 					async_servers_.push_back(asyncserver);
 				}
@@ -154,21 +150,21 @@ struct server::implementation : boost::noncopyable
 		}
 	}
 
-	IO::ProtocolStrategyPtr create_protocol(const std::string& name) const
+	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::string& name) const
 	{
 		if(name == "AMCP")
-			return std::make_shared<amcp::AMCPProtocolStrategy>(channels_);
+			return make_safe<amcp::AMCPProtocolStrategy>(channels_);
 		else if(name == "CII")
-			return std::make_shared<cii::CIIProtocolStrategy>(channels_);
+			return make_safe<cii::CIIProtocolStrategy>(channels_);
 		else if(name == "CLOCK")
-			return std::make_shared<CLK::CLKProtocolStrategy>(channels_);
+			return make_safe<CLK::CLKProtocolStrategy>(channels_);
 		
 		BOOST_THROW_EXCEPTION(invalid_configuration() << arg_name_info("name") << arg_value_info(name) << msg_info("Invalid protocol"));
 	}
 
-	std::vector<IO::AsyncEventServerPtr> async_servers_;
+	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;
 	
-	std::vector<channel_ptr> channels_;
+	std::vector<safe_ptr<channel>> channels_;
 
 	int logLevel_;
 
@@ -209,7 +205,7 @@ const std::wstring& server::data_folder()
 	return server::implementation::data_folder_;
 }
 
-const std::vector<channel_ptr> server::get_channels() const
+const std::vector<safe_ptr<channel>> server::get_channels() const
 {
 	return impl_->channels_;
 }

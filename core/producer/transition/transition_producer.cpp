@@ -93,7 +93,7 @@ struct transition_producer::implementation : boost::noncopyable
 			try
 			{
 				auto following = producer->get_following_producer();
-				following->initialize(frame_processor_);
+				following->initialize(safe_ptr<frame_processor_device>(frame_processor_));
 				following->set_leading_producer(producer);
 				producer = following;
 			}
@@ -146,10 +146,10 @@ struct transition_producer::implementation : boost::noncopyable
 		return composite_frame(std::move(my_src_frame), std::move(my_dest_frame));
 	}
 		
-	void initialize(const frame_processor_device_ptr& frame_processor)
+	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		dest_producer_->initialize(frame_processor);
-		frame_processor_ = frame_processor;
+		frame_processor_ = frame_processor.get_shared();
 	}
 
 	std::wstring print() const
@@ -166,14 +166,15 @@ struct transition_producer::implementation : boost::noncopyable
 	unsigned short				current_frame_;
 	
 	const transition_info		info_;
-	frame_processor_device_ptr	frame_processor_;
+	std::shared_ptr<frame_processor_device>	frame_processor_;
 };
 
+transition_producer::transition_producer(transition_producer&& other) : impl_(std::move(other.impl_)){}
 transition_producer::transition_producer(const safe_ptr<frame_producer>& dest, const transition_info& info) : impl_(new implementation(dest, info)){}
 safe_ptr<draw_frame> transition_producer::receive(){return impl_->receive();}
 safe_ptr<frame_producer> transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const safe_ptr<frame_producer>& producer) { impl_->set_leading_producer(producer); }
-void transition_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}
+void transition_producer::initialize(const safe_ptr<frame_processor_device>& frame_processor) { impl_->initialize(frame_processor);}
 std::wstring transition_producer::print() const { return impl_->print();}
 
 }}

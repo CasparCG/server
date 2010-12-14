@@ -22,20 +22,15 @@
 #include <string>
 #include "clientInfo.h"
 
-namespace caspar {
-namespace IO {
+namespace caspar { namespace IO {
 
 class IProtocolStrategy
 {
 public:
-	virtual ~IProtocolStrategy()
-	{}
+	virtual ~IProtocolStrategy(){}
 
 	virtual void Parse(const wchar_t* pData, int charCount, ClientInfoPtr pClientInfo) = 0;
 	virtual unsigned int GetCodepage() = 0;
 };
 
-typedef std::tr1::shared_ptr<IProtocolStrategy> ProtocolStrategyPtr;
-
-}	//namespace IO
-}	//namespace caspar
+}}	//namespace caspar

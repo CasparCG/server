@@ -78,7 +78,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
 	}
 
-	void begin_write()
+	void unmap_write()
 	{
 		bind_pbo(GL_PIXEL_UNPACK_BUFFER);
 		if(mapped_)
@@ -90,7 +90,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 		writing_ = true;
 	}
 
-	void* end_write()
+	void* map_write()
 	{
 		if(mapped_)
 		{
@@ -111,7 +111,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 		return data_;
 	}
 	
-	void begin_read()
+	void unmap_read()
 	{	
 		bind_pbo(GL_PIXEL_PACK_BUFFER);
 		if(mapped_)
@@ -123,7 +123,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 		reading_ = true;
 	}
 
-	void* end_read()
+	void* map_read()
 	{
 		if(mapped_)
 		{
@@ -187,10 +187,10 @@ void pixel_buffer_object::create(size_t width, size_t height, GLenum format)
 }
 void* pixel_buffer_object::data(){return impl_->data_;}
 const void* pixel_buffer_object::data() const{return impl_->data_;}
-void pixel_buffer_object::begin_write() { impl_->begin_write();}
-void* pixel_buffer_object::end_write() {return impl_->end_write();} 
-void pixel_buffer_object::begin_read() { impl_->begin_read();}
-void* pixel_buffer_object::end_read(){return impl_->end_read();}
+void pixel_buffer_object::unmap_write() { impl_->unmap_write();}
+void* pixel_buffer_object::map_write() {return impl_->map_write();} 
+void pixel_buffer_object::unmap_read() { impl_->unmap_read();}
+void* pixel_buffer_object::map_read(){return impl_->map_read();}
 void pixel_buffer_object::bind_texture() {impl_->bind_texture();}
 size_t pixel_buffer_object::width() const {return impl_->width_;}
 size_t pixel_buffer_object::height() const {return impl_->height_;}

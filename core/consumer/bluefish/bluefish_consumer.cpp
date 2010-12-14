@@ -168,7 +168,7 @@ struct consumer::implementation : boost::noncopyable
 			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");		
 	}
 
-	void send(const safe_ptr<read_frame>& frame)
+	void send(const safe_ptr<const read_frame>& frame)
 	{			
 		static size_t audio_samples = 1920;
 		static size_t audio_nchannels = 2;
@@ -275,15 +275,16 @@ struct consumer::implementation : boost::noncopyable
 	unsigned long	res_fmt_; 
 	unsigned long	engine_mode_;
 
-	boost::optional<safe_ptr<read_frame>> transferring_frame_;
+	boost::optional<safe_ptr<const read_frame>> transferring_frame_;
 
 	std::array<page_locked_buffer_ptr, 3> hanc_buffers_;
 	int current_id_;
 	bool embed_audio_;
 };
 
+consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
 consumer::consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
-void consumer::send(const safe_ptr<read_frame>& frame){impl_->send(frame);}
+void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
 size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}

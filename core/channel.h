@@ -23,7 +23,8 @@ namespace caspar { namespace core {
 class channel : boost::noncopyable
 {
 public:
-	channel(const frame_producer_device_ptr& producer_device, const frame_processor_device_ptr& processor_device, const frame_consumer_device_ptr& consumer_device);
+	channel(channel&& other);
+	channel(const safe_ptr<frame_producer_device>& producer_device, const safe_ptr<frame_processor_device>& processor_device, const safe_ptr<frame_consumer_device>& consumer_device);
 	
 	void load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option = load_option::none);
 	void pause(int render_layer);
@@ -38,6 +39,5 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<channel> channel_ptr;
 
 }}

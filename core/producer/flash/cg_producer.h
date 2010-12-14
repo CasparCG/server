@@ -12,10 +12,10 @@ public:
 	static const unsigned int DEFAULT_LAYER = 5000;
 
 	cg_producer();
-	cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
+	cg_producer(cg_producer&& other);
 	
 	virtual safe_ptr<draw_frame> receive();
-	virtual void initialize(const frame_processor_device_ptr& frame_processor);
+	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor);
 
 	void clear();
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));
@@ -33,6 +33,6 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-safe_ptr<cg_producer> get_default_cg_producer(const channel_ptr& channel, int layer_index = cg_producer::DEFAULT_LAYER);
+safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
 }}}

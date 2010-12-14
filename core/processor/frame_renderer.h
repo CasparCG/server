@@ -36,7 +36,7 @@ class frame_renderer : boost::noncopyable
 public:
 	frame_renderer(const video_format_desc& format_desc_);
 		
-	safe_ptr<read_frame> render(const safe_ptr<draw_frame>& frame);
+	safe_ptr<const read_frame> render(safe_ptr<draw_frame>&& frame);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

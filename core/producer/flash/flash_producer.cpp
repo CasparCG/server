@@ -256,12 +256,12 @@ struct flash_producer::implementation
 		
 	safe_ptr<draw_frame> receive()
 	{		
-		return ((frame_buffer_.try_pop(last_frame_) || !is_empty_) && last_frame_) ? safe_ptr<draw_frame>::from_shared(last_frame_) : draw_frame::empty();
+		return ((frame_buffer_.try_pop(last_frame_) || !is_empty_) && last_frame_) ? safe_ptr<draw_frame>(last_frame_) : draw_frame::empty();
 	}
 
-	void initialize(const frame_processor_device_ptr& frame_processor)
+	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		frame_processor_ = frame_processor;
+		frame_processor_ = frame_processor.get_shared();
 		auto format_desc = frame_processor_->get_video_format_desc();
 		bmp_frame_ = std::make_shared<bitmap>(format_desc.width, format_desc.height);
 		start(false);
@@ -288,13 +288,14 @@ struct flash_producer::implementation
 	executor executor_;
 	int invalid_count_;
 
-	frame_processor_device_ptr frame_processor_;
+	std::shared_ptr<frame_processor_device> frame_processor_;
 };
 
+flash_producer::flash_producer(flash_producer&& other) : impl_(std::move(other.impl_)){}
 flash_producer::flash_producer(const std::wstring& filename) : impl_(new implementation(this, filename)){}
 safe_ptr<draw_frame> flash_producer::receive(){return impl_->receive();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
-void flash_producer::initialize(const frame_processor_device_ptr& frame_processor) { impl_->initialize(frame_processor);}
+void flash_producer::initialize(const safe_ptr<frame_processor_device>& frame_processor) { impl_->initialize(frame_processor);}
 std::wstring flash_producer::print() const {return impl_->print();}
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)

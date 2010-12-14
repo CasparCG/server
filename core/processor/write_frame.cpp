@@ -25,17 +25,12 @@ struct write_frame::implementation : boost::noncopyable
 		{
 			return gl::pbo(plane.width, plane.height, mapping[plane.channels-1]);
 		});
-		end_write();
+		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::map_write));
 	}
 	
-	void begin_write()
+	void prepare()
 	{
-		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::begin_write));
-	}
-
-	void end_write()
-	{
-		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::end_write));
+		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::unmap_write));
 	}
 
 	void draw(frame_shader& shader)
@@ -46,6 +41,7 @@ struct write_frame::implementation : boost::noncopyable
 			pbos_[n].bind_texture();
 		}
 		shader.render(desc_);
+		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::map_write));
 	}
 
 	boost::iterator_range<unsigned char*> pixel_data(size_t index)
@@ -62,13 +58,7 @@ struct write_frame::implementation : boost::noncopyable
 		auto ptr = static_cast<const unsigned char*>(pbos_[index].data());
 		return boost::iterator_range<const unsigned char*>(ptr, ptr+pbos_[index].size());
 	}
-
-	void reset()
-	{
-		end_write();
-		audio_data_.clear();
-	}
-			
+				
 	std::vector<gl::pbo> pbos_;
 	std::vector<short> audio_data_;
 	const pixel_format_desc desc_;
@@ -83,9 +73,7 @@ write_frame& write_frame::operator=(write_frame&& other)
 	temp.swap(*this);
 	return *this;
 }
-void write_frame::reset(){impl_->reset();}
-void write_frame::begin_write(){impl_->begin_write();}
-void write_frame::end_write(){impl_->end_write();}	
+void write_frame::prepare(){impl_->prepare();}	
 void write_frame::draw(frame_shader& shader){impl_->draw(shader);}
 boost::iterator_range<unsigned char*> write_frame::pixel_data(size_t index){return impl_->pixel_data(index);}
 const boost::iterator_range<const unsigned char*> write_frame::pixel_data(size_t index) const {return impl_->pixel_data(index);}

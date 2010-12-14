@@ -16,19 +16,18 @@
 
 namespace caspar { namespace core {
 																																						
-struct transform_frame::implementation
+struct transform_frame::implementation : public draw_frame_decorator
 {
 	implementation(const safe_ptr<draw_frame>& frame) : frame_(frame), audio_volume_(255){}
 	implementation(const safe_ptr<draw_frame>& frame, std::vector<short>&& audio_data) : frame_(frame), audio_volume_(255), override_audio_data_(std::move(audio_data)){}
 	implementation(safe_ptr<draw_frame>&& frame) : frame_(std::move(frame)), audio_volume_(255){}
 	
-	void begin_write(){frame_->begin_write();}
-	void end_write(){frame_->end_write();}
+	void prepare(){draw_frame_decorator::prepare(frame_);}
 
 	void draw(frame_shader& shader)
 	{
 		shader.begin(transform_);
-		frame_->draw(shader);
+		draw_frame_decorator::draw(frame_, shader);
 		shader.end();
 	}
 
@@ -86,8 +85,7 @@ transform_frame& transform_frame::operator=(transform_frame&& other)
 	temp.swap(*this);
 	return *this;
 }
-void transform_frame::begin_write(){impl_->begin_write();}
-void transform_frame::end_write(){impl_->end_write();}	
+void transform_frame::prepare(){impl_->prepare();}	
 void transform_frame::draw(frame_shader& shader){impl_->draw(shader);}
 void transform_frame::audio_volume(unsigned char volume){impl_->audio_volume(volume);}
 void transform_frame::translate(double x, double y){impl_->transform_.pos = boost::make_tuple(x, y);}

@@ -55,8 +55,8 @@ namespace amcp {
 		void SetClientInfo(IO::ClientInfoPtr& s){pClientInfo_ = s;}
 		IO::ClientInfoPtr GetClientInfo(){return pClientInfo_;}
 
-		void SetChannel(const channel_ptr& pChannel){pChannel_ = pChannel;}
-		channel_ptr GetChannel(){return pChannel_;}
+		void SetChannel(const std::shared_ptr<channel>& pChannel){pChannel_ = pChannel;}
+		std::shared_ptr<channel> GetChannel(){return pChannel_;}
 
 		void SetChannelIndex(unsigned int channelIndex){channelIndex_ = channelIndex;}
 		unsigned int GetChannelIndex(){return channelIndex_;}
@@ -81,7 +81,7 @@ namespace amcp {
 		unsigned int channelIndex_;
 		int layerIndex_;
 		IO::ClientInfoPtr pClientInfo_;
-		channel_ptr pChannel_;
+		std::shared_ptr<channel> pChannel_;
 		AMCPCommandScheduling scheduling_;
 		std::wstring replyString_;
 	};

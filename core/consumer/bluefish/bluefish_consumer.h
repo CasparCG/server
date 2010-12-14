@@ -27,9 +27,10 @@ namespace caspar { namespace core { namespace bluefish {
 class consumer : public frame_consumer
 {
 public:
+	consumer(consumer&& other);
 	consumer(const video_format_desc& format_desc, unsigned int deviceIndex, bool embed_audio = false);
 	
-	virtual void send(const safe_ptr<read_frame>&);
+	virtual void send(const safe_ptr<const read_frame>&);
 	virtual sync_mode synchronize();
 	virtual size_t buffer_depth() const;
 private:

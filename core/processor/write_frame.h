@@ -29,9 +29,7 @@ public:
 	void swap(write_frame& other);
 
 	write_frame& operator=(write_frame&& other);
-
-	void reset();
-
+	
 	boost::iterator_range<unsigned char*> pixel_data(size_t index = 0);
 	const boost::iterator_range<const unsigned char*> pixel_data(size_t index = 0) const;
 	
@@ -40,8 +38,7 @@ public:
 	
 private:
 		
-	void begin_write();
-	void end_write();
+	void prepare();
 	void draw(frame_shader& shader);
 
 	struct implementation;
