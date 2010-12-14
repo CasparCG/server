@@ -66,6 +66,7 @@
 #include <SFML/Audio.hpp>
 
 #include "../common/utility/string_convert.h"
+#include "../common/utility/safe_ptr.h"
 
 #include "../common/log/Log.h"
 #include "../common/exception/exceptions.h"

@@ -182,7 +182,7 @@ struct flash_producer::implementation
 				stop();
 
 				frame_buffer_.clear();
-				frame_buffer_.try_push(draw_frame::eof().get_shared()); // EOF
+				frame_buffer_.try_push(draw_frame::eof()); // EOF
 		
 				current_frame_ = nullptr;
 			});
@@ -227,9 +227,9 @@ struct flash_producer::implementation
 
 			std::shared_ptr<draw_frame> frame;
 			if(is_progressive)
-				frame = do_receive().get_shared();
+				frame = do_receive();
 			else
-				frame = composite_frame::interlace(do_receive(), do_receive(), format_desc.mode).get_shared();
+				frame = std::shared_ptr<composite_frame>(composite_frame::interlace(do_receive(), do_receive(), format_desc.mode));
 			
 			frame_buffer_.push(frame);
 			is_empty_ = flashax_container_->IsEmpty();
@@ -261,7 +261,7 @@ struct flash_producer::implementation
 
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		frame_processor_ = frame_processor.get_shared();
+		frame_processor_ = frame_processor;
 		auto format_desc = frame_processor_->get_video_format_desc();
 		bmp_frame_ = std::make_shared<bitmap>(format_desc.width, format_desc.height);
 		start(false);

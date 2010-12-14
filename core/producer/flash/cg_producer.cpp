@@ -30,10 +30,7 @@ struct cg_producer::implementation : boost::noncopyable
 {
 public:
 
-	implementation() : ver_(template_version::invalid), flash_producer_(create_flash())
-	{
-	
-	}
+	implementation() : ver_(template_version::invalid), flash_producer_(create_flash()){}
 
 	safe_ptr<flash_producer> create_flash()
 	{		
@@ -144,7 +141,7 @@ public:
 		
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		frame_processor_ = frame_processor.get_shared();
+		frame_processor_ = frame_processor;
 		flash_producer_->initialize(frame_processor);
 	}
 
@@ -160,14 +157,16 @@ public:
 	
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, int render_layer)
 {	
-	auto producer = std::dynamic_pointer_cast<cg_producer>(channel->foreground(render_layer).get().get_shared());
-	if(producer == nullptr)
+	try
 	{
-		producer = std::make_shared<cg_producer>();		
-		channel->load(render_layer, safe_ptr<frame_producer>(producer), load_option::auto_play); 
+		return dynamic_pointer_cast<cg_producer>(channel->foreground(render_layer).get());
 	}
-	
-	return safe_ptr<cg_producer>(producer);
+	catch(std::bad_cast&)
+	{
+		auto producer = make_safe<cg_producer>();		
+		channel->load(render_layer, producer, load_option::auto_play); 
+		return producer;
+	}
 }
 
 cg_producer::cg_producer() : impl_(new implementation()){}
