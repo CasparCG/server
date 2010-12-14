@@ -48,7 +48,7 @@ const std::wstring AMCPProtocolStrategy::MessageDelimiter = TEXT("\r\n");
 
 inline std::shared_ptr<channel> GetChannelSafe(unsigned int index, const std::vector<safe_ptr<channel>>& channels)
 {
-	return index < channels.size() ? channels[index].get_shared() : nullptr;
+	return index < channels.size() ? std::shared_ptr<channel>(channels[index]) : nullptr;
 }
 
 AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<channel>>& channels) : channels_(channels) {

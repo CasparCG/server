@@ -143,7 +143,7 @@ struct video_transformer::implementation : boost::noncopyable
 
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		frame_processor_ = frame_processor.get_shared();
+		frame_processor_ = frame_processor;
 	}
 	
 	std::shared_ptr<frame_processor_device> frame_processor_;

@@ -143,7 +143,7 @@ struct transition_producer::implementation : boost::noncopyable
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		dest_producer_->initialize(frame_processor);
-		frame_processor_ = frame_processor.get_shared();
+		frame_processor_ = frame_processor;
 	}
 
 	std::wstring print() const
