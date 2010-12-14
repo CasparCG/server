@@ -33,7 +33,7 @@ namespace caspar { namespace core { namespace oal {
 
 struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
-	implementation() : container_(5), underrun_count_(0)
+	implementation() : container_(5)
 	{
 		sf::SoundStream::Initialize(2, 48000);
 		tickets_.set_capacity(3);
@@ -77,18 +77,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		tickets_.pop(dummy);
 
 		std::vector<short> audio_data;		
-		if(!input_.try_pop(audio_data))
-		{
-			if(underrun_count_ == 0)
-				CASPAR_LOG(trace) << "### Sound Input underflow has STARTED.";
-			++underrun_count_;
-			input_.pop(audio_data);
-		}
-		else if(underrun_count_ > 0)
-		{
-			CASPAR_LOG(trace) << "### Sound Input Underrun has ENDED with " << underrun_count_ << " ticks.";
-			underrun_count_ = 0;
-		}
+		input_.pop(audio_data);
 			
 		if(audio_data.empty())
 		{	
@@ -107,8 +96,6 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 
 	tbb::concurrent_bounded_queue<bool> tickets_;
 	tbb::concurrent_bounded_queue<std::vector<short>> input_;
-
-	long underrun_count_;
 	boost::circular_buffer<std::vector<short>> container_;
 };
 

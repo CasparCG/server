@@ -42,6 +42,7 @@ struct write_frame::implementation : boost::noncopyable
 		}
 		shader.render(desc_);
 		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::map_write));
+		audio_data_.clear();
 	}
 
 	boost::iterator_range<unsigned char*> pixel_data(size_t index)

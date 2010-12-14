@@ -1,10 +1,8 @@
 #pragma once
 
-#include "../exception/exceptions.h"
-
 #include <memory>
-#include <vector>
 #include <type_traits>
+#include <exception>
 
 namespace caspar {
 	
@@ -18,7 +16,6 @@ public:
 	safe_ptr() : impl_(std::make_shared<T>()){static_assert(!std::is_abstract<T>::value, "Cannot construct abstract class.");}	
 	
 	safe_ptr(const safe_ptr<T>& other) : impl_(other.impl_){}
-	safe_ptr(safe_ptr&& other) : impl_(other.impl_) {} // Move doesn't move.
 	
 	template<typename Y>
 	safe_ptr(const safe_ptr<Y>& other, typename std::enable_if<std::is_convertible<Y*, T*>::value, void*>::type = 0) : impl_(other.impl_){}
@@ -27,22 +24,44 @@ public:
 	safe_ptr(const Y& impl, typename std::enable_if<std::is_convertible<typename std::add_pointer<Y>::type, typename std::add_pointer<T>::type>::value, void>::type* = 0)
 		: impl_(std::make_shared<Y>(impl)) {}
 	
+	template<typename Y, typename D>		
+	safe_ptr(const Y& impl, D dtor, typename std::enable_if<std::is_convertible<typename std::add_pointer<Y>::type, typename std::add_pointer<T>::type>::value, void>::type* = 0)
+		: impl_(new Y(impl), dtor) {}
+
 	template<typename Y>	
 	safe_ptr(Y&& impl, typename std::enable_if<std::is_convertible<typename std::add_pointer<Y>::type, typename std::add_pointer<T>::type>::value, void>::type* = 0)
 		: impl_(std::make_shared<Y>(std::forward<Y>(impl))) {}
+
+	template<typename Y, typename D>	
+	safe_ptr(Y&& impl, D dtor, typename std::enable_if<std::is_convertible<typename std::add_pointer<Y>::type, typename std::add_pointer<T>::type>::value, void>::type* = 0)
+		: impl_(new Y(std::forward<Y>(impl)), dtor) {}
 			
 	template<typename Y>	
 	explicit safe_ptr(const std::shared_ptr<Y>& impl, typename std::enable_if<std::is_convertible<Y*, T*>::value, void*>::type = 0) : impl_(impl)
 	{
 		if(!impl_)
-			BOOST_THROW_EXCEPTION(null_argument() << msg_info("impl"));
+			throw std::invalid_argument("impl");
 	}
 	
 	template<typename Y>	
 	explicit safe_ptr(std::shared_ptr<Y>&& impl, typename std::enable_if<std::is_convertible<Y*, T*>::value, void*>::type = 0) : impl_(std::move(impl))
 	{
 		if(!impl_)
-			BOOST_THROW_EXCEPTION(null_argument() << msg_info("impl"));
+			throw std::invalid_argument("impl");
+	}
+
+	template<typename Y>	
+	explicit safe_ptr(Y* impl, typename std::enable_if<std::is_convertible<Y*, T*>::value, void*>::type = 0) : impl_(impl)
+	{
+		if(!impl_)
+			throw std::invalid_argument("impl");
+	}
+
+	template<typename Y, typename D>	
+	explicit safe_ptr(Y* impl, D dtor, typename std::enable_if<std::is_convertible<Y*, T*>::value, void*>::type = 0) : impl_(impl, dtor)
+	{
+		if(!impl_)
+			throw std::invalid_argument("impl");
 	}
 
 	template<typename Y>
