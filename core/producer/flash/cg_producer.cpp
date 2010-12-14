@@ -142,10 +142,10 @@ public:
 		return flash_producer_->receive();
 	}
 		
-	void initialize(const frame_processor_device_ptr& frame_processor)
+	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		frame_processor_ = frame_processor;
-		flash_producer_->initialize(frame_processor_);
+		frame_processor_ = frame_processor.get_shared();
+		flash_producer_->initialize(frame_processor);
 	}
 
 	std::wstring print() const
@@ -155,25 +155,23 @@ public:
 
 	safe_ptr<flash_producer> flash_producer_;
 	template_version::type ver_;
-	frame_processor_device_ptr frame_processor_;
+	std::shared_ptr<frame_processor_device> frame_processor_;
 };
 	
-safe_ptr<cg_producer> get_default_cg_producer(const channel_ptr& channel, int render_layer)
-{
-	if(!channel)
-		BOOST_THROW_EXCEPTION(null_argument() << msg_info("channel"));
-	
+safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, int render_layer)
+{	
 	auto producer = std::dynamic_pointer_cast<cg_producer>(channel->foreground(render_layer).get().get_shared());
 	if(producer == nullptr)
 	{
 		producer = std::make_shared<cg_producer>();		
-		channel->load(render_layer, safe_ptr<frame_producer>::from_shared(producer), load_option::auto_play); 
+		channel->load(render_layer, safe_ptr<frame_producer>(producer), load_option::auto_play); 
 	}
 	
-	return safe_ptr<cg_producer>::from_shared(producer);
+	return safe_ptr<cg_producer>(producer);
 }
 
 cg_producer::cg_producer() : impl_(new implementation()){}
+cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<draw_frame> cg_producer::receive(){return impl_->receive();}
 void cg_producer::clear(){impl_->clear();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
@@ -183,6 +181,6 @@ void cg_producer::stop(int layer, unsigned int mix_out_duration){impl_->stop(lay
 void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
-void cg_producer::initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor);}
+void cg_producer::initialize(const safe_ptr<frame_processor_device>& frame_processor){impl_->initialize(frame_processor);}
 std::wstring cg_producer::print() const{return impl_->print();}
 }}}

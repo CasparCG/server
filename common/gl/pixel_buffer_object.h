@@ -21,11 +21,11 @@ public:
 	void create(size_t width, size_t height, GLenum format = GL_BGRA);
 	~pixel_buffer_object(){}
 
-	void begin_write();
-	void* end_write();
+	void unmap_write();
+	void* map_write();
 
-	void begin_read();
-	void* end_read();
+	void unmap_read();
+	void* map_read();
 
 	void is_smooth(bool smooth);
 

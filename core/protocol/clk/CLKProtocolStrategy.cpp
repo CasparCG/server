@@ -31,13 +31,9 @@
 
 namespace caspar { namespace core { namespace CLK {
 	
-CLKProtocolStrategy::CLKProtocolStrategy(const std::vector<channel_ptr>& channels) 
-	: currentState_(ExpectingNewCommand), bClockLoaded_(false) 
-{	
-	if(channels.empty())
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("channels"));
-	pChannel_ = channels[0];
-}
+CLKProtocolStrategy::CLKProtocolStrategy(const std::vector<safe_ptr<channel>>& channels) 
+	: currentState_(ExpectingNewCommand), bClockLoaded_(false), pChannel_(channels.at(0))
+{}
 
 void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo) 
 {

@@ -76,7 +76,7 @@ public:
 		}
 	}
 		
-	void initialize(const frame_processor_device_ptr& frame_processor)
+	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		format_desc_ = frame_processor->get_video_format_desc();
 		video_transformer_->initialize(frame_processor);
@@ -186,7 +186,7 @@ public:
 	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) : impl_(new ffmpeg_producer_impl(filename, params)){}
 	ffmpeg_producer(ffmpeg_producer&& other) : impl_(std::move(other.impl_)){}
 	virtual safe_ptr<draw_frame> receive(){return impl_->receive();}
-	virtual void initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor);}
+	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor){impl_->initialize(frame_processor);}
 	virtual std::wstring print() const{return impl_->print();}
 private:
 	std::shared_ptr<ffmpeg_producer_impl> impl_;

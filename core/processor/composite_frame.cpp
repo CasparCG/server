@@ -12,7 +12,7 @@
 
 namespace caspar { namespace core {
 	
-struct composite_frame::implementation
+struct composite_frame::implementation : public draw_frame_decorator
 {	
 	implementation(std::vector<safe_ptr<draw_frame>>&& frames) : frames_(std::move(frames))
 	{		
@@ -38,22 +38,17 @@ struct composite_frame::implementation
 		});
 	}
 	
-	void begin_write()
+	void prepare()
 	{
-		boost::range::for_each(frames_, std::bind(&draw_frame::begin_write, std::placeholders::_1));
+		boost::range::for_each(frames_, std::bind(&draw_frame_decorator::prepare, std::placeholders::_1));
 	}
-
-	void end_write()
-	{
-		boost::range::for_each(frames_, std::bind(&draw_frame::end_write, std::placeholders::_1));
-	}
-	
+		
 	void draw(frame_shader& shader)
 	{
-		boost::range::for_each(frames_, std::bind(&draw_frame::draw, std::placeholders::_1, std::ref(shader)));
+		boost::range::for_each(frames_, std::bind(&draw_frame_decorator::draw, std::placeholders::_1, std::ref(shader)));
 	}
 
-	const std::vector<short>& audio_data()
+	const std::vector<short>& audio_data() const
 	{
 		static std::vector<short> no_audio;
 		return !audio_data_.empty() ? audio_data_ : (!frames_.empty() ? frames_.front()->audio_data() : no_audio);
@@ -88,8 +83,7 @@ composite_frame::composite_frame(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_fr
 	impl_.reset(new implementation(std::move(frames)));
 }
 
-void composite_frame::begin_write(){impl_->begin_write();}
-void composite_frame::end_write(){impl_->end_write();}	
+void composite_frame::prepare(){impl_->prepare();}
 void composite_frame::draw(frame_shader& shader){impl_->draw(shader);}
 const std::vector<short>& composite_frame::audio_data() const {return impl_->audio_data();}
 

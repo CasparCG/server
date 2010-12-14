@@ -24,7 +24,7 @@ public:
 	static const std::wstring& template_folder();		
 	static const std::wstring& data_folder();
 
-	const std::vector<channel_ptr> get_channels() const;
+	const std::vector<safe_ptr<channel>> get_channels() const;
 
 private:
 	struct implementation;

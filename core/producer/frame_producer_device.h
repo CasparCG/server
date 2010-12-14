@@ -15,7 +15,8 @@ namespace caspar { namespace core {
 class frame_producer_device : boost::noncopyable
 {	
 public:
-	frame_producer_device(const frame_processor_device_ptr& frame_processor);
+	frame_producer_device(frame_producer_device&& other);
+	frame_producer_device(const safe_ptr<frame_processor_device>& frame_processor);
 	
 	void load	(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option = load_option::none);	
 	void pause	(int render_layer);

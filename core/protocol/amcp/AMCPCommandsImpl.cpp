@@ -157,7 +157,7 @@ void AMCPCommand::SendReply()
 
 void AMCPCommand::Clear() 
 {
-	pChannel_.reset();
+	pChannel_->clear();
 	pClientInfo_.reset();
 	channelIndex_ = 0;
 	_parameters.clear();
@@ -447,7 +447,7 @@ bool CGCommand::DoExecuteAdd() {
 		std::wstring filename = _parameters[2];
 		filename.append(extension);
 
-		flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
+		flash::get_default_cg_producer(safe_ptr<channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
 		SetReplyString(TEXT("202 CG OK\r\n"));
 	}
 	else
@@ -468,7 +468,7 @@ bool CGCommand::DoExecutePlay()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->play(layer);
+		flash::get_default_cg_producer(safe_ptr<channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->play(layer);
 	}
 	else
 	{
@@ -490,7 +490,7 @@ bool CGCommand::DoExecuteStop()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->stop(layer, 0);
+		flash::get_default_cg_producer(safe_ptr<channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->stop(layer, 0);
 	}
 	else 
 	{
@@ -512,7 +512,7 @@ bool CGCommand::DoExecuteNext()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->next(layer);
+		flash::get_default_cg_producer(safe_ptr<channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->next(layer);
 	}
 	else 
 	{
@@ -534,7 +534,7 @@ bool CGCommand::DoExecuteRemove()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->remove(layer);
+		flash::get_default_cg_producer(safe_ptr<channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->remove(layer);
 	}
 	else 
 	{
@@ -548,7 +548,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->clear();
+	flash::get_default_cg_producer(safe_ptr<channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->clear();
 	SetReplyString(TEXT("202 CG OK\r\n"));
 	return true;
 }
@@ -564,7 +564,7 @@ bool CGCommand::DoExecuteUpdate()
 		}
 		int layer = _ttoi(_parameters[1].c_str());
 		//TODO: Implement indirect data loading from file. Same as in Add
-		flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->update(layer, _parameters[2]);
+		flash::get_default_cg_producer(safe_ptr<channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->update(layer, _parameters[2]);
 	}
 	else 
 	{
@@ -586,7 +586,7 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(GetChannel(), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters[2]);
+		flash::get_default_cg_producer(safe_ptr<channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters[2]);
 	}
 	else 
 	{
@@ -725,7 +725,7 @@ bool CinfCommand::DoExecute()
 	return false;
 }
 
-void GenerateChannelInfo(int index, const channel_ptr& pChannel, std::wstringstream& replyString)
+void GenerateChannelInfo(int index, const safe_ptr<channel>& pChannel, std::wstringstream& replyString)
 {
 	replyString << index << TEXT(" ") << pChannel->get_video_format_desc().name  << TEXT("\r\n") << (pChannel->foreground(0).get()->print());
 }

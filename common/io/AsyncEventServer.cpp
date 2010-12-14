@@ -45,7 +45,7 @@ long AsyncEventServer::instanceCount_ = 0;
 // AsyncEventServer constructor
 // PARAMS: port(TCP-port the server should listen to)
 // COMMENT: Initializes the WinSock2 library
-AsyncEventServer::AsyncEventServer(const ProtocolStrategyPtr& pProtocol, int port) : port_(port), pProtocolStrategy_(pProtocol)
+AsyncEventServer::AsyncEventServer(const safe_ptr<IProtocolStrategy>& pProtocol, int port) : port_(port), pProtocolStrategy_(pProtocol)
 {
 	if(instanceCount_ == 0) {
 		WSADATA wsaData;
@@ -351,15 +351,13 @@ bool AsyncEventServer::OnRead(SocketInfoPtr& pSI) {
 			return true;
 		}
 
-		if(pProtocolStrategy_ != 0) {
-			//Convert to widechar
-			if(ConvertMultiByteToWideChar(pProtocolStrategy_->GetCodepage(), pSI->recvBuffer_, recvResult + pSI->recvLeftoverOffset_, pSI->wideRecvBuffer_, pSI->recvLeftoverOffset_))
-				pProtocolStrategy_->Parse(&pSI->wideRecvBuffer_[0], pSI->wideRecvBuffer_.size(), pSI);
-			else
-			{
-				CASPAR_LOG(error) << "Read from " << pSI->host_.c_str() << TEXT(" failed, could not convert command to UNICODE");
-			}
-		}
+		//Convert to widechar
+		if(ConvertMultiByteToWideChar(pProtocolStrategy_->GetCodepage(), pSI->recvBuffer_, recvResult + pSI->recvLeftoverOffset_, pSI->wideRecvBuffer_, pSI->recvLeftoverOffset_))
+			pProtocolStrategy_->Parse(&pSI->wideRecvBuffer_[0], pSI->wideRecvBuffer_.size(), pSI);
+		else			
+			CASPAR_LOG(error) << "Read from " << pSI->host_.c_str() << TEXT(" failed, could not convert command to UNICODE");
+			
+		
 
 		maxRecvLength = sizeof(pSI->recvBuffer_)-pSI->recvLeftoverOffset_;
 		recvResult = recv(pSI->socket_, pSI->recvBuffer_+pSI->recvLeftoverOffset_, maxRecvLength, 0);

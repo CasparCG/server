@@ -141,12 +141,12 @@ struct video_transformer::implementation : boost::noncopyable
 		}	
 	}
 
-	void initialize(const frame_processor_device_ptr& frame_processor)
+	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		frame_processor_ = frame_processor;
+		frame_processor_ = frame_processor.get_shared();
 	}
 	
-	frame_processor_device_ptr frame_processor_;
+	std::shared_ptr<frame_processor_device> frame_processor_;
 	std::shared_ptr<SwsContext> sws_context_;
 
 	AVCodecContext* codec_context_;
@@ -159,5 +159,5 @@ struct video_transformer::implementation : boost::noncopyable
 
 video_transformer::video_transformer(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
 safe_ptr<draw_frame> video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
-void video_transformer::initialize(const frame_processor_device_ptr& frame_processor){impl_->initialize(frame_processor); }
+void video_transformer::initialize(const safe_ptr<frame_processor_device>& frame_processor){impl_->initialize(frame_processor); }
 }}}

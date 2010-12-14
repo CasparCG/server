@@ -23,9 +23,9 @@ struct image_producer : public frame_producer
 	
 	safe_ptr<draw_frame> receive(){return frame_;}
 
-	void initialize(const frame_processor_device_ptr& frame_processor)
+	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		frame_processor_ = frame_processor;
+		frame_processor_ = frame_processor.get_shared();
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
 		auto frame = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
@@ -38,7 +38,7 @@ struct image_producer : public frame_producer
 		return L"image_producer. filename: " + filename_;
 	}
 	
-	frame_processor_device_ptr frame_processor_;
+	std::shared_ptr<frame_processor_device> frame_processor_;
 	std::wstring filename_;
 	safe_ptr<draw_frame> frame_;
 };

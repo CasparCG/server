@@ -13,9 +13,6 @@
 #include "../../common/concurrency/executor.h"
 #include "../../common/gl/utility.h"
 
-#include <Glee.h>
-#include <SFML/Window.hpp>
-
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_vector.h>
@@ -35,22 +32,22 @@ struct frame_processor_device::implementation : boost::noncopyable
 		executor_.start();
 		executor_.invoke([=]
 		{
-			ogl_context_.reset(new sf::Context());
-			ogl_context_->SetActive(true);
-
 			renderer_.reset(new frame_renderer(format_desc));
 		});
 	}
 				
-	void send(const safe_ptr<draw_frame>& frame)
+	void send(safe_ptr<draw_frame>&& frame)
 	{			
-		auto future = executor_.begin_invoke([=]{return renderer_->render(frame);});	
+		auto future = executor_.begin_invoke([=]() -> safe_ptr<const read_frame>
+		{
+			return renderer_->render(safe_ptr<draw_frame>(frame));
+		});	
 		output_.push(std::move(future)); // Blocks
 	}
 
-	safe_ptr<read_frame> receive()
+	safe_ptr<const read_frame> receive()
 	{
-		boost::shared_future<safe_ptr<read_frame>> future;
+		boost::shared_future<safe_ptr<const read_frame>> future;
 
 		if(!output_.try_pop(future))
 		{
@@ -79,20 +76,19 @@ struct frame_processor_device::implementation : boost::noncopyable
 		{
 			executor_.begin_invoke([=]
 			{
-				frame->reset();
+				frame->audio_data().clear();
 				pool->push(frame);
 			});
 		});
 
-		return safe_ptr<write_frame>::from_shared(frame);
+		return safe_ptr<write_frame>(frame);
 	}
 				
 	executor executor_;	
 
-	std::unique_ptr<sf::Context> ogl_context_;
 	std::unique_ptr<frame_renderer> renderer_;	
 				
-	tbb::concurrent_bounded_queue<boost::shared_future<safe_ptr<read_frame>>> output_;	
+	tbb::concurrent_bounded_queue<boost::shared_future<safe_ptr<const read_frame>>> output_;	
 
 	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<std::shared_ptr<write_frame>>, std::hash<pixel_format_desc>> pools_;
 	
@@ -100,9 +96,10 @@ struct frame_processor_device::implementation : boost::noncopyable
 	long underrun_count_;
 };
 	
+frame_processor_device::frame_processor_device(frame_processor_device&& other) : impl_(std::move(other.impl_)){}
 frame_processor_device::frame_processor_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void frame_processor_device::send(const safe_ptr<draw_frame>& frame){impl_->send(std::move(frame));}
-safe_ptr<read_frame> frame_processor_device::receive(){return impl_->receive();}
+void frame_processor_device::send(safe_ptr<draw_frame>&& frame){impl_->send(std::move(frame));}
+safe_ptr<const read_frame> frame_processor_device::receive(){return impl_->receive();}
 const video_format_desc& frame_processor_device::get_video_format_desc() const { return impl_->fmt_; }
 
 safe_ptr<write_frame> frame_processor_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		

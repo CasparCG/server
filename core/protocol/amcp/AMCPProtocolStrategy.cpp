@@ -46,12 +46,12 @@ using IO::ClientInfoPtr;
 
 const std::wstring AMCPProtocolStrategy::MessageDelimiter = TEXT("\r\n");
 
-inline channel_ptr GetChannelSafe(unsigned int index, const std::vector<channel_ptr>& channels)
+inline std::shared_ptr<channel> GetChannelSafe(unsigned int index, const std::vector<safe_ptr<channel>>& channels)
 {
-	return index < channels.size() ? channels[index] : nullptr;
+	return index < channels.size() ? channels[index].get_shared() : nullptr;
 }
 
-AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<channel_ptr>& channels) : channels_(channels) {
+AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<channel>>& channels) : channels_(channels) {
 	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue());
 	if(!pGeneralCommandQueue->Start()) {
 		CASPAR_LOG(error) << "Failed to start the general command-queue";
@@ -62,7 +62,7 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<channel_ptr>& chann
 		commandQueues_.push_back(pGeneralCommandQueue);
 
 
-	channel_ptr pChannel;
+	std::shared_ptr<channel> pChannel;
 	unsigned int index = -1;
 	//Create a commandpump for each channel
 	while((pChannel = GetChannelSafe(++index, channels_)) != 0) {
@@ -256,7 +256,7 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 					goto ParseFinnished;
 				}
 
-				channel_ptr pChannel = GetChannelSafe(channelIndex, channels_);
+				std::shared_ptr<channel> pChannel = GetChannelSafe(channelIndex, channels_);
 				if(pChannel == 0) {
 					goto ParseFinnished;
 				}
@@ -354,7 +354,7 @@ std::size_t AMCPProtocolStrategy::TokenizeMessage(const std::wstring& message, s
 			switch(message[charIndex])
 			{
 			case TEXT('\\'):
-                currentToken += TEXT("\\");
+				currentToken += TEXT("\\");
 				break;
 			case TEXT('\"'):
 				currentToken += TEXT("\"");

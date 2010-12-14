@@ -64,19 +64,33 @@ public:
 	virtual void set_leading_producer(const safe_ptr<frame_producer>& /*producer*/) {}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	/// \fn	virtual void :::initialize(const frame_processor_device_ptr& frame_processor) = 0;
+	/// \fn	virtual void :::initialize(const safe_ptr<frame_processor_device>& frame_processor) = 0;
 	///
 	/// \brief	Provides the frame frame_processor used to create frames and initializes the producer. 
 	///
 	/// \param	frame_processor	The frame frame_processor. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual void initialize(const frame_processor_device_ptr& frame_processor) = 0;
+	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor) = 0;
 
-	static safe_ptr<frame_producer> empty();
+	static safe_ptr<frame_producer> empty()
+	{
+		struct empty_frame_producer : public frame_producer
+		{
+			virtual safe_ptr<draw_frame> receive(){return draw_frame::eof();}
+			virtual void initialize(const safe_ptr<frame_processor_device>&){}
+			virtual std::wstring print() const { return L"empty";}
+		};
+		static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();
+		return producer;
+	}
 
 	virtual std::wstring print() const = 0;
 };
 
-inline std::wostream& operator<<(std::wostream& out, const frame_producer& producer);
+inline std::wostream& operator<<(std::wostream& out, const frame_producer& producer)
+{
+	out << producer.print().c_str();
+	return out;
+}
 
 }}

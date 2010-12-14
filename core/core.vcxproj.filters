@@ -389,9 +389,6 @@
     <ClCompile Include="producer\ffmpeg\input.cpp">
       <Filter>Source\channel\producer\ffmpeg\io</Filter>
     </ClCompile>
-    <ClCompile Include="producer\frame_producer.cpp">
-      <Filter>Source\channel\producer</Filter>
-    </ClCompile>
     <ClCompile Include="format\pixel_format.cpp">
       <Filter>Source\channel\format</Filter>
     </ClCompile>

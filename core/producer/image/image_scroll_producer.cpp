@@ -125,7 +125,7 @@
 //		return receive();	
 //	}
 //	
-//	void initialize(const frame_processor_device_ptr& frame_processor)
+//	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 //	{
 //		frame_processor_ = frame_processor;
 //		format_desc_ = frame_processor_->get_video_format_desc();
@@ -165,7 +165,7 @@
 //
 //	std::wstring filename_;
 //
-//	frame_processor_device_ptr frame_processor_;
+//	safe_ptr<frame_processor_device> frame_processor_;
 //};
 //
 //safe_ptr<frame_producer> create_image_scroll_producer(const std::vector<std::wstring>& params)

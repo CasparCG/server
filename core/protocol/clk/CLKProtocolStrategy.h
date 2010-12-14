@@ -30,7 +30,7 @@ namespace caspar { namespace core { namespace CLK {
 class CLKProtocolStrategy : public IO::IProtocolStrategy
 {
 public:
-	CLKProtocolStrategy(const std::vector<channel_ptr>& channels);
+	CLKProtocolStrategy(const std::vector<safe_ptr<channel>>& channels);
 
 	void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
 	UINT GetCodepage() { return 28591; }	//ISO 8859-1
@@ -49,7 +49,7 @@ private:
 	CLKCommand currentCommand_;
 	std::wstringstream currentCommandString_;
 
-	channel_ptr pChannel_;
+	safe_ptr<channel> pChannel_;
 
 	bool bClockLoaded_;
 };

@@ -43,7 +43,7 @@ class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 	AMCPProtocolStrategy& operator=(const AMCPProtocolStrategy&);
 
 public:
-	AMCPProtocolStrategy(const std::vector<channel_ptr>& channels);
+	AMCPProtocolStrategy(const std::vector<safe_ptr<channel>>& channels);
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
@@ -62,7 +62,7 @@ private:
 
 	bool QueueCommand(AMCPCommandPtr);
 
-	std::vector<channel_ptr> channels_;
+	std::vector<safe_ptr<channel>> channels_;
 	std::vector<AMCPCommandQueuePtr> commandQueues_;
 	static const std::wstring MessageDelimiter;
 };

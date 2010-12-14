@@ -102,10 +102,10 @@ class CinfCommand : public AMCPCommandBase<false, AddToQueue, 1>
 class InfoCommand : public AMCPCommandBase<false, AddToQueue, 0>
 {
 public:
-	InfoCommand(const std::vector<channel_ptr>& channels) : channels_(channels){}
+	InfoCommand(const std::vector<safe_ptr<channel>>& channels) : channels_(channels){}
 	bool DoExecute();
 private:
-	const std::vector<channel_ptr>& channels_;
+	const std::vector<safe_ptr<channel>>& channels_;
 };
 
 class VersionCommand : public AMCPCommandBase<false, AddToQueue, 0>
