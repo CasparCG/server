@@ -22,6 +22,7 @@ namespace caspar { namespace core {
 		
 class write_frame : public draw_frame
 {
+	friend class frame_processor_device;
 public:	
 	write_frame(const pixel_format_desc& desc);
 	write_frame(write_frame&& other);
@@ -38,7 +39,8 @@ public:
 	
 private:
 		
-	void prepare();
+	void map();
+	void unmap();
 	void draw(frame_shader& shader);
 
 	struct implementation;

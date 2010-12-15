@@ -42,7 +42,7 @@ public:
 
 private:
 
-	virtual void prepare();
+	virtual void unmap();
 	virtual void draw(frame_shader& shader);
 
 	struct implementation;

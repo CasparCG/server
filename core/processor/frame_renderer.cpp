@@ -40,18 +40,18 @@ struct frame_renderer::implementation : boost::noncopyable
 				
 	safe_ptr<const read_frame> render(safe_ptr<draw_frame>&& frame)
 	{								
-		frame->prepare(); // Start transfer from system memory to texture. End in next tick.
+		frame->unmap(); // Start transfer from system memory to texture. End with draw in next tick.
 						
 		reading_->map(); // Map texture to system memory.
 		auto result = reading_;
 						
 		GL(glClear(GL_COLOR_BUFFER_BIT));
 						
-		writing_->draw(shader_); // Draw to frame buffer. Maps texture to system memory when done.
+		writing_->draw(shader_); // Draw to frame buffer.
 		writing_ = frame;				
 
 		reading_ = create_reading();
-		reading_->unmap(); // Start transfer from frame buffer to texture. End in next tick.
+		reading_->unmap(); // Start transfer from frame buffer to texture. End with map in next tick.
 		reading_->audio_data(writing_->audio_data());						
 
 		return result;

@@ -15,10 +15,10 @@ namespace caspar {
 class executor
 {
 public:
-	explicit executor(const std::function<void()>& run_func = nullptr)
+	explicit executor(const std::function<void()>& f = nullptr)
 	{
 		is_running_ = false;
-		run_func_ = run_func != nullptr ? run_func : [=]{run();};
+		f_ = f != nullptr ? f : [this]{run();};
 	}
 
 	virtual ~executor()
@@ -26,19 +26,19 @@ public:
 		stop();
 	}
 
-	void start()
+	void start() // noexcept
 	{
 		if(is_running_.fetch_and_store(true))
 			return;
-		thread_ = boost::thread(run_func_);
+		thread_ = boost::thread(f_);
 	}
 
-	bool is_running() const
+	bool is_running() const // noexcept
 	{
 		return is_running_;
 	}
 	
-	void stop()
+	void stop() // noexcept
 	{
 		if(is_running_.fetch_and_store(false))
 		{
@@ -48,14 +48,14 @@ public:
 		thread_.join();
 	}
 
-	void execute()
+	void execute() // noexcept
 	{
 		std::function<void()> func;
 		execution_queue_.pop(func);	
 		func();
 	}
 
-	bool try_execute()
+	bool try_execute() // noexcept
 	{
 		std::function<void()> func;
 		if(execution_queue_.try_pop(func))
@@ -64,19 +64,19 @@ public:
 		return func != nullptr;
 	}
 
-	void clear()
+	void clear() // noexcept
 	{
 		execution_queue_.clear();
 	}
 
 	template<typename Func>
-	void enqueue(Func&& func)
+	void enqueue(Func&& func) // noexcept
 	{
 		execution_queue_.push([=]{try{func();}catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}});
 	}
 	
 	template<typename Func>
-	auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())>
+	auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
 	{	
 		typedef decltype(func()) result_type; 
 				
@@ -99,6 +99,7 @@ public:
 				(*task)();    
 			}
 			catch(boost::task_already_started&){}
+			catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
 		});
 
 		return std::move(future);		
@@ -115,14 +116,14 @@ public:
 		
 private:
 
-	virtual void run()
+	virtual void run() // noexcept
 	{
 		win32_exception::install_handler();
 		while(is_running_)
 			execute();
 	}
 
-	std::function<void()> run_func_;
+	std::function<void()> f_;
 	boost::thread thread_;
 	tbb::atomic<bool> is_running_;
 	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
