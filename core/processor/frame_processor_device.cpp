@@ -24,6 +24,8 @@ namespace caspar { namespace core {
 	
 struct frame_processor_device::implementation : boost::noncopyable
 {	
+	typedef boost::shared_future<safe_ptr<const read_frame>> output_type;
+
 	implementation(const video_format_desc& format_desc) : fmt_(format_desc)
 	{		
 		output_.set_capacity(3);
@@ -38,7 +40,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 
 	safe_ptr<const read_frame> receive()
 	{
-		boost::shared_future<safe_ptr<const read_frame>> future;
+		output_type future;
 		output_.pop(future);
 		return future.get();
 	}
@@ -49,14 +51,19 @@ struct frame_processor_device::implementation : boost::noncopyable
 		std::shared_ptr<write_frame> frame;
 		if(!pool->try_pop(frame))
 			frame = executor_.invoke([&]{return std::make_shared<write_frame>(desc);});		
-		return safe_ptr<write_frame>(frame.get(), [=](write_frame*){pool->push(frame);});
+		return safe_ptr<write_frame>(frame.get(), [=](write_frame*)
+		{
+			executor_.begin_invoke([=]{frame->map();});
+			frame->audio_data().clear();
+			pool->push(frame);
+		});
 	}
 				
 	executor executor_;	
 
 	std::unique_ptr<frame_renderer> renderer_;	
 				
-	tbb::concurrent_bounded_queue<boost::shared_future<safe_ptr<const read_frame>>> output_;	
+	tbb::concurrent_bounded_queue<output_type> output_;	
 	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<std::shared_ptr<write_frame>>, std::hash<pixel_format_desc>> pools_;
 	
 	const video_format_desc fmt_;

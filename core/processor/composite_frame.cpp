@@ -38,9 +38,9 @@ struct composite_frame::implementation : public draw_frame_decorator
 		});
 	}
 	
-	void prepare()
+	void unmap()
 	{
-		boost::range::for_each(frames_, std::bind(&draw_frame_decorator::prepare, std::placeholders::_1));
+		boost::range::for_each(frames_, std::bind(&draw_frame_decorator::unmap, std::placeholders::_1));
 	}
 		
 	void draw(frame_shader& shader)
@@ -83,7 +83,7 @@ composite_frame::composite_frame(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_fr
 	impl_.reset(new implementation(std::move(frames)));
 }
 
-void composite_frame::prepare(){impl_->prepare();}
+void composite_frame::unmap(){impl_->unmap();}
 void composite_frame::draw(frame_shader& shader){impl_->draw(shader);}
 const std::vector<short>& composite_frame::audio_data() const {return impl_->audio_data();}
 

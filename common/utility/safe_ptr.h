@@ -15,25 +15,25 @@ public:
 	
 	safe_ptr() : impl_(std::make_shared<T>()){}	
 	
-	safe_ptr(const safe_ptr<T>& other) : impl_(other.impl_){}
+	safe_ptr(const safe_ptr<T>& other) : impl_(other.impl_){}  // noexcept
 	
 	template<typename U>
-	safe_ptr(const safe_ptr<U>& other, typename std::enable_if<std::is_convertible<U*, T*>::value, void*>::type = 0) : impl_(other.impl_){}
+	safe_ptr(const safe_ptr<U>& other, typename std::enable_if<std::is_convertible<U*, T*>::value, void*>::type = 0) : impl_(other.impl_){}  // noexcept
 		
 	template<typename U>	
-	safe_ptr(const U& impl, typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, typename std::add_pointer<T>::type>::value, void>::type* = 0)
+	safe_ptr(const U& impl, typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, T*>::value, void>::type* = 0)
 		: impl_(std::make_shared<U>(impl)) {}
 	
 	template<typename U, typename D>		
-	safe_ptr(const U& impl, D dtor, typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, typename std::add_pointer<T>::type>::value, void>::type* = 0)
+	safe_ptr(const U& impl, D dtor, typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, T*>::value, void>::type* = 0)
 		: impl_(new U(impl), dtor) {}
 
 	template<typename U>	
-	safe_ptr(U&& impl, typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, typename std::add_pointer<T>::type>::value, void>::type* = 0)
+	safe_ptr(U&& impl, typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, T*>::value, void>::type* = 0)
 		: impl_(std::make_shared<U>(std::forward<U>(impl))) {}
 
 	template<typename U, typename D>	
-	safe_ptr(U&& impl, D dtor, typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, typename std::add_pointer<T>::type>::value, void>::type* = 0)
+	safe_ptr(U&& impl, D dtor, typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, T*>::value, void>::type* = 0)
 		: impl_(new U(std::forward<U>(impl)), dtor) {}
 			
 	template<typename U>	
@@ -74,7 +74,7 @@ public:
 	}
 
 	template <typename U>
-	typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, typename std::add_pointer<T>::type>::value, safe_ptr<T>&>::type
+	typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, T*>::value, safe_ptr<T>&>::type
 	operator=(U&& impl)
 	{
 		safe_ptr<T> temp(std::forward<T>(impl));
@@ -82,65 +82,65 @@ public:
 		return *this;
 	}
 
-	T& operator*() const { return *impl_.get();}
+	T& operator*() const { return *impl_.get();}  // noexcept
 
-	T* operator->() const { return impl_.get();}
+	T* operator->() const { return impl_.get();}  // noexcept
 
-	T* get() const { return impl_.get();}
+	T* get() const { return impl_.get();}  // noexcept
 
-	bool unique() const { return impl_.unique();}
+	bool unique() const { return impl_.unique();}  // noexcept
 
-	long use_count() const { return impl_.use_count();}
+	long use_count() const { return impl_.use_count();}  // noexcept
 				
-	void swap(safe_ptr& other) { impl_.swap(other.impl_); }	
+	void swap(safe_ptr& other) { impl_.swap(other.impl_); }	 // noexcept
 	
-	operator std::shared_ptr<T>() const { return impl_;}
+	operator const std::shared_ptr<T>&() const { return impl_;}  // noexcept
 
 	template<class U>
-	bool owner_before(const safe_ptr<T>& ptr){ return impl_.owner_before(ptr.impl_); }
+	bool owner_before(const safe_ptr<T>& ptr){ return impl_.owner_before(ptr.impl_); }  // noexcept
 
 	template<class U>
-	bool owner_before(const std::shared_ptr<U>& ptr){ return impl_.owner_before(ptr); }
+	bool owner_before(const std::shared_ptr<U>& ptr){ return impl_.owner_before(ptr); }  // noexcept
 	
 	template<class D, class U> 
-	D* get_deleter(safe_ptr<U> const& ptr) { return impl_.get_deleter(); }
+	D* get_deleter(safe_ptr<U> const& ptr) { return impl_.get_deleter(); }  // noexcept
 	
 private:	
 	std::shared_ptr<T> impl_;
 };
 
 template<class T, class U>
-bool operator==(const safe_ptr<T>& a, const safe_ptr<U>& b)
+bool operator==(const safe_ptr<T>& a, const safe_ptr<U>& b)  // noexcept
 {
 	return a.get() == b.get();
 }
 
 template<class T, class U>
-bool operator!=(const safe_ptr<T>& a, const safe_ptr<U>& b)
+bool operator!=(const safe_ptr<T>& a, const safe_ptr<U>& b) // noexcept
 {
 	return a.get() != b.get();
 }
 
 template<class T, class U>
-bool operator<(const safe_ptr<T>& a, const safe_ptr<U>& b)
+bool operator<(const safe_ptr<T>& a, const safe_ptr<U>& b)  // noexcept
 {
 	return a.get() < b.get();
 }
 
 template<class T, class U>
-bool operator>(const safe_ptr<T>& a, const safe_ptr<U>& b)
+bool operator>(const safe_ptr<T>& a, const safe_ptr<U>& b)  // noexcept
 {
 	return a.get() > b.get();
 }
 
 template<class T, class U>
-bool operator>=(const safe_ptr<T>& a, const safe_ptr<U>& b)
+bool operator>=(const safe_ptr<T>& a, const safe_ptr<U>& b)  // noexcept
 {
 	return a.get() >= b.get();
 }
 
 template<class T, class U>
-bool operator<=(const safe_ptr<T>& a, const safe_ptr<U>& b)
+bool operator<=(const safe_ptr<T>& a, const safe_ptr<U>& b)  // noexcept
 {
 	return a.get() <= b.get();
 }
@@ -152,25 +152,25 @@ std::basic_ostream<E, T>& operator<<(std::basic_ostream<E, T>& out,	const safe_p
 }
 
 template<class T> 
-void swap(safe_ptr<T>& a, safe_ptr<T>& b)
+void swap(safe_ptr<T>& a, safe_ptr<T>& b)  // noexcept
 {
 	a.swap(b);
 }
 
 template<class T> 
-T* get_pointer(safe_ptr<T> const& p)
+T* get_pointer(safe_ptr<T> const& p)  // noexcept
 {
 	return p.get();
 }
 
 template <class T, class U>
-safe_ptr<T> static_pointer_cast(const safe_ptr<U>& p)
+safe_ptr<T> static_pointer_cast(const safe_ptr<U>& p)  // noexcept
 {
 	return safe_ptr<T>(std::static_pointer_cast<T>(std::shared_ptr<U>(p)));
 }
 
 template <class T, class U>
-safe_ptr<T> const_pointer_cast(const safe_ptr<U>& p)
+safe_ptr<T> const_pointer_cast(const safe_ptr<U>& p)  // noexcept
 {
 	return safe_ptr<T>(std::const_pointer_cast<T>(std::shared_ptr<U>(p)));
 }
@@ -219,4 +219,5 @@ safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&&)
 {
 	return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P3>(p4)));
 }
+
 }

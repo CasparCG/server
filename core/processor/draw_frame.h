@@ -34,7 +34,7 @@ public:
 				static std::vector<short> audio_data;
 				return audio_data;
 			}
-			virtual void prepare(){}
+			virtual void unmap(){}
 			virtual void draw(frame_shader&){}
 		};
 		static safe_ptr<draw_frame> frame = make_safe<eof_frame>();
@@ -50,21 +50,21 @@ public:
 				static std::vector<short> audio_data;
 				return audio_data;
 			}
-			virtual void prepare(){}
+			virtual void unmap(){}
 			virtual void draw(frame_shader&){}
 		};
 		static safe_ptr<draw_frame> frame = make_safe<empty_frame>();
 		return frame;
 	}
 private:
-	virtual void prepare() = 0;
+	virtual void unmap() = 0;
 	virtual void draw(frame_shader& shader) = 0;
 };
 
 struct draw_frame_decorator
 {
 protected:
-	static void prepare(const safe_ptr<draw_frame>& frame) {frame->prepare();}
+	static void unmap(const safe_ptr<draw_frame>& frame) {frame->unmap();}
 	static void draw(const safe_ptr<draw_frame>& frame, frame_shader& shader) {frame->draw(shader);}
 };
 

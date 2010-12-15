@@ -28,9 +28,14 @@ struct write_frame::implementation : boost::noncopyable
 		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::map_write));
 	}
 	
-	void prepare()
+	void unmap()
 	{
 		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::unmap_write));
+	}
+
+	void map()
+	{
+		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::map_write));
 	}
 
 	void draw(frame_shader& shader)
@@ -41,8 +46,6 @@ struct write_frame::implementation : boost::noncopyable
 			pbos_[n].bind_texture();
 		}
 		shader.render(desc_);
-		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::map_write));
-		audio_data_.clear();
 	}
 
 	boost::iterator_range<unsigned char*> pixel_data(size_t index)
@@ -74,7 +77,8 @@ write_frame& write_frame::operator=(write_frame&& other)
 	temp.swap(*this);
 	return *this;
 }
-void write_frame::prepare(){impl_->prepare();}	
+void write_frame::map(){impl_->map();}	
+void write_frame::unmap(){impl_->unmap();}	
 void write_frame::draw(frame_shader& shader){impl_->draw(shader);}
 boost::iterator_range<unsigned char*> write_frame::pixel_data(size_t index){return impl_->pixel_data(index);}
 const boost::iterator_range<const unsigned char*> write_frame::pixel_data(size_t index) const {return impl_->pixel_data(index);}

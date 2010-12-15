@@ -22,7 +22,7 @@ struct transform_frame::implementation : public draw_frame_decorator
 	implementation(const safe_ptr<draw_frame>& frame, std::vector<short>&& audio_data) : frame_(frame), audio_volume_(255), override_audio_data_(std::move(audio_data)){}
 	implementation(safe_ptr<draw_frame>&& frame) : frame_(std::move(frame)), audio_volume_(255){}
 	
-	void prepare(){draw_frame_decorator::prepare(frame_);}
+	void unmap(){draw_frame_decorator::unmap(frame_);}
 
 	void draw(frame_shader& shader)
 	{
@@ -78,7 +78,7 @@ transform_frame& transform_frame::operator=(transform_frame&& other)
 	temp.swap(*this);
 	return *this;
 }
-void transform_frame::prepare(){impl_->prepare();}	
+void transform_frame::unmap(){impl_->unmap();}	
 void transform_frame::draw(frame_shader& shader){impl_->draw(shader);}
 void transform_frame::audio_volume(unsigned char volume){impl_->audio_volume(volume);}
 void transform_frame::translate(double x, double y){impl_->transform_.pos = boost::make_tuple(x, y);}

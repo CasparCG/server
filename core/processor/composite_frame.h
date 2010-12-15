@@ -30,7 +30,7 @@ public:
 	virtual const std::vector<short>& audio_data() const;
 
 private:	
-	virtual void prepare();
+	virtual void unmap();
 	virtual void draw(frame_shader& shader);
 
 	struct implementation;
