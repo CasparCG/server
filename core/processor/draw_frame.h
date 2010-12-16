@@ -19,7 +19,7 @@ struct draw_frame_decorator;
 class draw_frame : boost::noncopyable
 {	
 	friend struct draw_frame_decorator;
-	friend class frame_renderer;
+	friend class image_processor;
 public:
 	virtual ~draw_frame(){}
 
@@ -35,7 +35,7 @@ public:
 				return audio_data;
 			}
 			virtual void unmap(){}
-			virtual void draw(frame_shader&){}
+			virtual void draw(image_shader&){}
 		};
 		static safe_ptr<draw_frame> frame = make_safe<eof_frame>();
 		return frame;
@@ -51,21 +51,21 @@ public:
 				return audio_data;
 			}
 			virtual void unmap(){}
-			virtual void draw(frame_shader&){}
+			virtual void draw(image_shader&){}
 		};
 		static safe_ptr<draw_frame> frame = make_safe<empty_frame>();
 		return frame;
 	}
 private:
 	virtual void unmap() = 0;
-	virtual void draw(frame_shader& shader) = 0;
+	virtual void draw(image_shader& shader) = 0;
 };
 
 struct draw_frame_decorator
 {
 protected:
 	static void unmap(const safe_ptr<draw_frame>& frame) {frame->unmap();}
-	static void draw(const safe_ptr<draw_frame>& frame, frame_shader& shader) {frame->draw(shader);}
+	static void draw(const safe_ptr<draw_frame>& frame, image_shader& shader) {frame->draw(shader);}
 };
 
 

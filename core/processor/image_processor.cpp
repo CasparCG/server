@@ -1,8 +1,8 @@
 #include "../StdAfx.h"
 
-#include "frame_renderer.h"
+#include "image_processor.h"
 
-#include "frame_shader.h"
+#include "image_shader.h"
 #include "write_frame.h"
 #include "read_frame.h"
 
@@ -30,7 +30,7 @@ struct ogl_context
 	sf::Context context_;
 };
 
-struct frame_renderer::implementation : boost::noncopyable
+struct image_processor::implementation : boost::noncopyable
 {		
 	implementation(const video_format_desc& format_desc) : shader_(format_desc), format_desc_(format_desc),
 		fbo_(format_desc.width, format_desc.height), writing_(draw_frame::empty()), reading_(create_reading())
@@ -41,18 +41,18 @@ struct frame_renderer::implementation : boost::noncopyable
 	safe_ptr<const read_frame> render(safe_ptr<draw_frame>&& frame)
 	{								
 		frame->unmap(); // Start transfer from system memory to texture. End with draw in next tick.
-						
+
 		reading_->map(); // Map texture to system memory.
 		auto result = reading_;
-						
+
 		GL(glClear(GL_COLOR_BUFFER_BIT));
-						
+
 		writing_->draw(shader_); // Draw to frame buffer.
-		writing_ = frame;				
+		writing_ = frame;
 
 		reading_ = create_reading();
 		reading_->unmap(); // Start transfer from frame buffer to texture. End with map in next tick.
-		reading_->audio_data(writing_->audio_data());						
+		reading_->audio_data(writing_->audio_data());
 
 		return result;
 	}
@@ -71,12 +71,12 @@ struct frame_renderer::implementation : boost::noncopyable
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>> pool_;
 	
-	safe_ptr<read_frame>	reading_;	
+	safe_ptr<read_frame>	reading_;
 	safe_ptr<draw_frame>	writing_;
-	
-	frame_shader shader_;
+
+	image_shader shader_;
 };
 	
-frame_renderer::frame_renderer(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-safe_ptr<const read_frame> frame_renderer::render(safe_ptr<draw_frame>&& frame){return impl_->render(std::move(frame));}
+image_processor::image_processor(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+safe_ptr<const read_frame> image_processor::render(safe_ptr<draw_frame>&& frame){return impl_->render(std::move(frame));}
 }}

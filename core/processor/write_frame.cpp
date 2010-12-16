@@ -3,7 +3,7 @@
 #include "write_frame.h"
 
 #include "draw_frame.h"
-#include "frame_shader.h"
+#include "image_shader.h"
 
 #include "../format/pixel_format.h"
 #include "../../common/gl/utility.h"
@@ -38,7 +38,7 @@ struct write_frame::implementation : boost::noncopyable
 		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::map_write));
 	}
 
-	void draw(frame_shader& shader)
+	void draw(image_shader& shader)
 	{
 		for(size_t n = 0; n < pbos_.size(); ++n)
 		{
@@ -79,7 +79,7 @@ write_frame& write_frame::operator=(write_frame&& other)
 }
 void write_frame::map(){impl_->map();}	
 void write_frame::unmap(){impl_->unmap();}	
-void write_frame::draw(frame_shader& shader){impl_->draw(shader);}
+void write_frame::draw(image_shader& shader){impl_->draw(shader);}
 boost::iterator_range<unsigned char*> write_frame::pixel_data(size_t index){return impl_->pixel_data(index);}
 const boost::iterator_range<const unsigned char*> write_frame::pixel_data(size_t index) const {return impl_->pixel_data(index);}
 std::vector<short>& write_frame::audio_data() { return impl_->audio_data_; }

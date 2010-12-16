@@ -31,16 +31,16 @@
 
 namespace caspar { namespace core {
 
-class frame_renderer : boost::noncopyable
+class image_processor : boost::noncopyable
 {
 public:
-	frame_renderer(const video_format_desc& format_desc_);
+	image_processor(const video_format_desc& format_desc_);
 		
 	safe_ptr<const read_frame> render(safe_ptr<draw_frame>&& frame);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<frame_renderer> frame_renderer_ptr;
+typedef std::shared_ptr<image_processor> image_processor_ptr;
 
 }}

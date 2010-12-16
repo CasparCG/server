@@ -168,10 +168,11 @@
     <ClInclude Include="consumer\ogl\ogl_consumer.h" />
     <ClInclude Include="format\pixel_format.h" />
     <ClInclude Include="format\video_format.h" />
+    <ClInclude Include="processor\audio_processor.h" />
     <ClInclude Include="processor\composite_frame.h" />
     <ClInclude Include="processor\frame_processor_device.h" />
-    <ClInclude Include="processor\frame_renderer.h" />
-    <ClInclude Include="processor\frame_shader.h" />
+    <ClInclude Include="processor\image_processor.h" />
+    <ClInclude Include="processor\image_shader.h" />
     <ClInclude Include="processor\fwd.h" />
     <ClInclude Include="processor\draw_frame.h" />
     <ClInclude Include="processor\read_frame.h" />
@@ -249,6 +250,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="processor\audio_processor.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="processor\composite_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
@@ -257,11 +262,11 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="processor\frame_renderer.cpp">
+    <ClCompile Include="processor\image_processor.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="processor\frame_shader.cpp">
+    <ClCompile Include="processor\image_shader.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

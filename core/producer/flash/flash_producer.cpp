@@ -62,7 +62,7 @@ struct flash_producer::implementation
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));
 
-		frame_buffer_.set_capacity(3);		
+		frame_buffer_.set_capacity(3);
 	}
 
 	~implementation() 
@@ -125,7 +125,8 @@ struct flash_producer::implementation
 		is_empty_ = true;
 		if(executor_.is_running())
 		{
-			frame_buffer_.clear();
+			std::shared_ptr<draw_frame>  frame;
+			while(frame_buffer_.try_pop(frame)){}
 			executor_.stop();
 		}
 	}
@@ -180,8 +181,9 @@ struct flash_producer::implementation
 			CASPAR_SCOPE_EXIT([=]
 			{						
 				stop();
-
-				frame_buffer_.clear();
+				
+				std::shared_ptr<draw_frame>  frame;
+				while(frame_buffer_.try_pop(frame)){}
 				frame_buffer_.try_push(draw_frame::eof()); // EOF
 		
 				current_frame_ = nullptr;
@@ -235,7 +237,7 @@ struct flash_producer::implementation
 			is_empty_ = flashax_container_->IsEmpty();
 		}
 	}
-		
+
 	safe_ptr<draw_frame> do_receive()
 	{
 		auto format_desc = frame_processor_->get_video_format_desc();
@@ -243,19 +245,19 @@ struct flash_producer::implementation
 		flashax_container_->Tick();
 		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
 		if(current_frame_ == nullptr || invalid_count_ < 2)
-		{				
+		{
 			std::fill_n(bmp_frame_->data(), bmp_frame_->size(), 0);			
 			flashax_container_->DrawControl(bmp_frame_->hdc());
 			current_frame_ = bmp_frame_;
-		}	
+		}
 
 		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height);
 		std::copy(current_frame_->data(), current_frame_->data() + current_frame_->size(), frame->pixel_data().begin());
 		return frame;
 	}
-		
+
 	safe_ptr<draw_frame> receive()
-	{		
+	{
 		return ((frame_buffer_.try_pop(last_frame_) || !is_empty_) && last_frame_) ? safe_ptr<draw_frame>(last_frame_) : draw_frame::empty();
 	}
 
@@ -273,7 +275,7 @@ struct flash_producer::implementation
 	}
 	
 	CComObject<flash::FlashAxContainer>* flashax_container_;
-		
+
 	tbb::concurrent_bounded_queue<std::shared_ptr<draw_frame>> frame_buffer_;
 
 	std::shared_ptr<draw_frame> last_frame_;
@@ -315,7 +317,7 @@ safe_ptr<flash_producer> create_flash_producer(const std::vector<std::wstring>& 
 	std::wstring filename = server::media_folder() + L"\\" + params[0];
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
-		{					
+		{
 			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
 		});
 
