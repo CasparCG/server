@@ -1,6 +1,6 @@
 #include "../StdAfx.h"
 
-#include "frame_shader.h"
+#include "image_shader.h"
 
 #include "../../common/exception/exceptions.h"
 #include "../../common/gl/utility.h"
@@ -32,7 +32,7 @@ GLubyte lower_pattern[] = {
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff};
 	
-struct frame_shader::implementation : boost::noncopyable
+struct image_shader::implementation : boost::noncopyable
 {
 	implementation(const video_format_desc& format_desc) : current_(pixel_format::invalid), alpha_(1.0)
 	{
@@ -181,8 +181,8 @@ struct frame_shader::implementation : boost::noncopyable
 	std::unordered_map<pixel_format::type, gl::shader_program> shaders_;
 };
 
-frame_shader::frame_shader(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void frame_shader::begin(const shader_transform& transform) {impl_->begin(transform);}
-void frame_shader::render(const pixel_format_desc& desc){impl_->render(desc);}
-void frame_shader::end(){impl_->end();}
+image_shader::image_shader(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+void image_shader::begin(const shader_transform& transform) {impl_->begin(transform);}
+void image_shader::render(const pixel_format_desc& desc){impl_->render(desc);}
+void image_shader::end(){impl_->end();}
 }}

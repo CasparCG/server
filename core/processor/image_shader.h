@@ -19,10 +19,10 @@ struct shader_transform
 	video_mode::type mode; 
 };
 
-class frame_shader
+class image_shader
 {
 public:
-	frame_shader(const video_format_desc& format_desc);
+	image_shader(const video_format_desc& format_desc);
 
 	void begin(const shader_transform& transform);
 	void render(const pixel_format_desc& desc);
@@ -31,6 +31,6 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<frame_shader> frame_shader_ptr;
+typedef std::shared_ptr<image_shader> image_shader_ptr;
 
 }}

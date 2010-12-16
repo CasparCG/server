@@ -2,7 +2,7 @@
 
 #include "frame_processor_device.h"
 
-#include "frame_renderer.h"
+#include "image_processor.h"
 #include "write_frame.h"
 #include "read_frame.h"
 
@@ -30,12 +30,12 @@ struct frame_processor_device::implementation : boost::noncopyable
 	{		
 		output_.set_capacity(3);
 		executor_.start();
-		executor_.invoke([=]{renderer_.reset(new frame_renderer(format_desc));});
+		executor_.invoke([=]{image_processor_.reset(new image_processor(format_desc));});
 	}
 				
 	void send(safe_ptr<draw_frame>&& frame)
 	{			
-		output_.push(executor_.begin_invoke([=]{return renderer_->render(safe_ptr<draw_frame>(frame));})); // Blocks
+		output_.push(executor_.begin_invoke([=]{return image_processor_->render(safe_ptr<draw_frame>(frame));})); // Blocks
 	}
 
 	safe_ptr<const read_frame> receive()
@@ -61,7 +61,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 				
 	executor executor_;	
 
-	std::unique_ptr<frame_renderer> renderer_;	
+	std::unique_ptr<image_processor> image_processor_;	
 				
 	tbb::concurrent_bounded_queue<output_type> output_;	
 	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<std::shared_ptr<write_frame>>, std::hash<pixel_format_desc>> pools_;

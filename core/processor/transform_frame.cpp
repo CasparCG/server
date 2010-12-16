@@ -3,7 +3,7 @@
 #include "transform_frame.h"
 
 #include "draw_frame.h"
-#include "frame_shader.h"
+#include "image_shader.h"
 
 #include "../format/pixel_format.h"
 #include "../../common/gl/utility.h"
@@ -24,7 +24,7 @@ struct transform_frame::implementation : public draw_frame_decorator
 	
 	void unmap(){draw_frame_decorator::unmap(frame_);}
 
-	void draw(frame_shader& shader)
+	void draw(image_shader& shader)
 	{
 		shader.begin(transform_);
 		draw_frame_decorator::draw(frame_, shader);
@@ -79,7 +79,7 @@ transform_frame& transform_frame::operator=(transform_frame&& other)
 	return *this;
 }
 void transform_frame::unmap(){impl_->unmap();}	
-void transform_frame::draw(frame_shader& shader){impl_->draw(shader);}
+void transform_frame::draw(image_shader& shader){impl_->draw(shader);}
 void transform_frame::audio_volume(unsigned char volume){impl_->audio_volume(volume);}
 void transform_frame::translate(double x, double y){impl_->transform_.pos = boost::make_tuple(x, y);}
 void transform_frame::texcoord(double left, double top, double right, double bottom){impl_->transform_.uv = boost::make_tuple(left, top, right, bottom);}

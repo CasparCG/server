@@ -42,8 +42,9 @@ struct input::implementation : boost::noncopyable
 	~implementation()
 	{		
 		is_running_ = false;
-		audio_packet_buffer_.clear();
-		video_packet_buffer_.clear();
+		std::shared_ptr<aligned_buffer> buffer;
+		audio_packet_buffer_.try_pop(buffer);
+		video_packet_buffer_.try_pop(buffer);
 		io_thread_.join();
 	}
 	

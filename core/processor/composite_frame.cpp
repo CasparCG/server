@@ -3,7 +3,7 @@
 #include "draw_frame.h"
 #include "composite_frame.h"
 #include "transform_frame.h"
-#include "frame_shader.h"
+#include "image_shader.h"
 #include "../../common/utility/singleton_pool.h"
 
 #include <boost/range/algorithm.hpp>
@@ -43,7 +43,7 @@ struct composite_frame::implementation : public draw_frame_decorator
 		boost::range::for_each(frames_, std::bind(&draw_frame_decorator::unmap, std::placeholders::_1));
 	}
 		
-	void draw(frame_shader& shader)
+	void draw(image_shader& shader)
 	{
 		boost::range::for_each(frames_, std::bind(&draw_frame_decorator::draw, std::placeholders::_1, std::ref(shader)));
 	}
@@ -84,7 +84,7 @@ composite_frame::composite_frame(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_fr
 }
 
 void composite_frame::unmap(){impl_->unmap();}
-void composite_frame::draw(frame_shader& shader){impl_->draw(shader);}
+void composite_frame::draw(image_shader& shader){impl_->draw(shader);}
 const std::vector<short>& composite_frame::audio_data() const {return impl_->audio_data();}
 
 safe_ptr<composite_frame> composite_frame::interlace(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_frame>&& frame2, video_mode::type mode)

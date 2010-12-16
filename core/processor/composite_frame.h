@@ -31,7 +31,7 @@ public:
 
 private:	
 	virtual void unmap();
-	virtual void draw(frame_shader& shader);
+	virtual void draw(image_shader& shader);
 
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

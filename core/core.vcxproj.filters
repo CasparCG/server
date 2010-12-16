@@ -28,9 +28,6 @@
     <Filter Include="Source\channel\processor">
       <UniqueIdentifier>{53e41831-70b4-4214-bc38-77e0d7aa288b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\channel\processor\renderer">
-      <UniqueIdentifier>{30fe40ca-8bf0-4a46-a882-16d07b2b441e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\channel\consumer">
       <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
     </Filter>
@@ -84,6 +81,12 @@
     </Filter>
     <Filter Include="Source\channel\producer\ffmpeg\io">
       <UniqueIdentifier>{eaa43a39-9ff0-4291-b717-4d4231d8295a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\channel\processor\image">
+      <UniqueIdentifier>{30fe40ca-8bf0-4a46-a882-16d07b2b441e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\channel\processor\audio">
+      <UniqueIdentifier>{43ca44bb-d718-44df-9342-1913750f7e41}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -216,12 +219,6 @@
     <ClInclude Include="processor\frame_processor_device.h">
       <Filter>Source\channel\processor</Filter>
     </ClInclude>
-    <ClInclude Include="processor\frame_shader.h">
-      <Filter>Source\channel\processor\renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\frame_renderer.h">
-      <Filter>Source\channel\processor\renderer</Filter>
-    </ClInclude>
     <ClInclude Include="format\pixel_format.h">
       <Filter>Source\channel\format</Filter>
     </ClInclude>
@@ -257,6 +254,15 @@
     </ClInclude>
     <ClInclude Include="processor\draw_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\image_shader.h">
+      <Filter>Source\channel\processor\image</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\image_processor.h">
+      <Filter>Source\channel\processor\image</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\audio_processor.h">
+      <Filter>Source\channel\processor\audio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -359,12 +365,6 @@
     <ClCompile Include="processor\frame_processor_device.cpp">
       <Filter>Source\channel\processor</Filter>
     </ClCompile>
-    <ClCompile Include="processor\frame_renderer.cpp">
-      <Filter>Source\channel\processor\renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\frame_shader.cpp">
-      <Filter>Source\channel\processor\renderer</Filter>
-    </ClCompile>
     <ClCompile Include="format\video_format.cpp">
       <Filter>Source\channel\format</Filter>
     </ClCompile>
@@ -391,6 +391,15 @@
     </ClCompile>
     <ClCompile Include="format\pixel_format.cpp">
       <Filter>Source\channel\format</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\image_shader.cpp">
+      <Filter>Source\channel\processor\image</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\image_processor.cpp">
+      <Filter>Source\channel\processor\image</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\audio_processor.cpp">
+      <Filter>Source\channel\processor\audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -13,7 +13,7 @@ class draw_frame;
 class transform_frame;
 class composite_frame;
 
-class frame_shader;
-class frame_renderer;
+class image_shader;
+class image_processor;
 class frame_processor_device;
 }}
