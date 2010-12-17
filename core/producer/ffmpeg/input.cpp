@@ -32,11 +32,44 @@ namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
 {
-	implementation() : video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_(nullptr)
+	implementation(const std::string& filename) : video_s_index_(-1), audio_s_index_(-1), video_codec_(nullptr), audio_codec_(nullptr), filename_(filename)
 	{
 		loop_ = false;	
 		video_packet_buffer_.set_capacity(50);
 		audio_packet_buffer_.set_capacity(50);
+		
+		int errn;
+		AVFormatContext* weak_format_context_;
+		if((errn = -av_open_input_file(&weak_format_context_, filename.c_str(), nullptr, 0, nullptr)) > 0)
+			BOOST_THROW_EXCEPTION(
+				file_read_error() << 
+				msg_info("No format context found.") << 
+				boost::errinfo_api_function("av_open_input_file") <<
+				boost::errinfo_errno(errn) <<
+				boost::errinfo_file_name(filename));
+
+		format_context_.reset(weak_format_context_, av_close_input_file);
+			
+		if((errn = -av_find_stream_info(format_context_.get())) > 0)
+			BOOST_THROW_EXCEPTION(
+				file_read_error() << 
+				boost::errinfo_api_function("av_find_stream_info") <<
+				msg_info("No stream found.") << 
+				boost::errinfo_errno(errn));
+
+		video_codec_context_ = open_stream(CODEC_TYPE_VIDEO, video_s_index_, video_codec_);
+		if(!video_codec_context_)
+			CASPAR_LOG(warning) << "No video stream found.";
+		
+		audio_codex_context_ = open_stream(CODEC_TYPE_AUDIO, audio_s_index_, audio_codec_);
+		if(!audio_codex_context_)
+			CASPAR_LOG(warning) << "No audio stream found.";
+
+		if(!video_codec_context_ && !audio_codex_context_)
+			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec context found."));		
+				
+		is_running_ = true;
+		io_thread_ = boost::thread([=]{read_file();});
 	}
 
 	~implementation()
@@ -45,109 +78,45 @@ struct input::implementation : boost::noncopyable
 		std::shared_ptr<aligned_buffer> buffer;
 		audio_packet_buffer_.try_pop(buffer);
 		video_packet_buffer_.try_pop(buffer);
-		io_thread_.join();
-	}
-	
-	void load(const std::string& filename)
-	{	
-		try
+
+		if(io_thread_.joinable() && !io_thread_.timed_join(boost::posix_time::milliseconds(1000)))
 		{
-			int errn;
-			AVFormatContext* weak_format_context_;
-			if((errn = -av_open_input_file(&weak_format_context_, filename.c_str(), nullptr, 0, nullptr)) > 0)
-				BOOST_THROW_EXCEPTION(
-					file_read_error() << 
-					msg_info("No format context found.") << 
-					boost::errinfo_api_function("av_open_input_file") <<
-					boost::errinfo_errno(errn) <<
-					boost::errinfo_file_name(filename));
-
-			format_context_.reset(weak_format_context_, av_close_input_file);
-			
-			if((errn = -av_find_stream_info(format_context_.get())) > 0)
-				BOOST_THROW_EXCEPTION(
-					file_read_error() << 
-					boost::errinfo_api_function("av_find_stream_info") <<
-					msg_info("No stream found.") << 
-					boost::errinfo_errno(errn));
-
-			video_codec_context_ = open_video_stream();
-			if(!video_codec_context_)
-				CASPAR_LOG(warning) << "No video stream found.";
-		
-			audio_codex_context_ = open_audio_stream();
-			if(!audio_codex_context_)
-				CASPAR_LOG(warning) << "No audio stream found.";
-
-			if(!video_codec_context_ && !audio_codex_context_)
-				BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec context found."));		
+			CASPAR_LOG(error) << "ffmpeg input deadlock";
+			io_thread_.join();
 		}
-		catch(...)
-		{
-			video_codec_context_.reset();
-			audio_codex_context_.reset();
-			format_context_.reset();
-			video_s_index_ = -1;
-			audio_s_index_ = -1;	
-			throw;
-		}
-		filename_ = filename;
-		io_thread_ = boost::thread([=]{read_file();});
 	}
 				
-	std::shared_ptr<AVCodecContext> open_video_stream()
+	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index, AVCodec*& codec)
 	{		
 		AVStream** streams_end = format_context_->streams+format_context_->nb_streams;
-		AVStream** video_stream = std::find_if(format_context_->streams, streams_end, 
-			[](AVStream* stream) { return stream != nullptr && stream->codec->codec_type == CODEC_TYPE_VIDEO ;});
+		AVStream** stream = std::find_if(format_context_->streams, streams_end, 
+			[&](AVStream* stream) { return stream != nullptr && stream->codec->codec_type == codec_type ;});
 
-		video_s_index_ = video_stream != streams_end ? (*video_stream)->index : -1;
-		if(video_s_index_ == -1) 
+		s_index = stream != streams_end ? (*stream)->index : -1;
+		if(s_index == -1) 
 			return nullptr;
 		
-		video_codec_ = avcodec_find_decoder((*video_stream)->codec->codec_id);			
-		if(video_codec_ == nullptr)
+		codec = avcodec_find_decoder((*stream)->codec->codec_id);			
+		if(codec == nullptr)
 			return nullptr;
 			
-		if((-avcodec_open((*video_stream)->codec, video_codec_)) > 0)		
+		if((-avcodec_open((*stream)->codec, codec)) > 0)		
 			return nullptr;
 
-		return std::shared_ptr<AVCodecContext>((*video_stream)->codec, avcodec_close);
+		return std::shared_ptr<AVCodecContext>((*stream)->codec, avcodec_close);
 	}
-
-	std::shared_ptr<AVCodecContext> open_audio_stream()
-	{	
-		AVStream** streams_end = format_context_->streams+format_context_->nb_streams;
-		AVStream** audio_stream = std::find_if(format_context_->streams, streams_end, 
-			[](AVStream* stream) { return stream != nullptr && stream->codec->codec_type == CODEC_TYPE_AUDIO;});
-
-		audio_s_index_ = audio_stream != streams_end ? (*audio_stream)->index : -1;
-		if(audio_s_index_ == -1)
-			return nullptr;
 		
-		audio_codec_ = avcodec_find_decoder((*audio_stream)->codec->codec_id);
-		if(audio_codec_ == nullptr)
-			return nullptr;
-
-		if((-avcodec_open((*audio_stream)->codec, audio_codec_)) > 0)		
-			return nullptr;
-
-		return std::shared_ptr<AVCodecContext>((*audio_stream)->codec, avcodec_close);
-	}	
-
 	void read_file()
 	{	
 		CASPAR_LOG(info) << "Started ffmpeg_producer::read_file Thread for " << filename_.c_str();
 		win32_exception::install_handler();
 		
-		is_running_ = true;
-
 		try
 		{
 			AVPacket tmp_packet;
 			while(is_running_)
 			{
-				std::shared_ptr<AVPacket> packet(&tmp_packet, av_free_packet);	
+				safe_ptr<AVPacket> packet(&tmp_packet, av_free_packet);	
 				tbb::queuing_mutex::scoped_lock lock(seek_mutex_);	
 
 				if (av_read_frame(format_context_.get(), packet.get()) >= 0) // NOTE: Packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
@@ -193,6 +162,7 @@ struct input::implementation : boost::noncopyable
 		return !is_running_ && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
 	}
 		
+	// TODO: Not properly done.
 	bool seek(unsigned long long seek_target)
 	{
 		tbb::queuing_mutex::scoped_lock lock(seek_mutex_);
@@ -231,8 +201,7 @@ struct input::implementation : boost::noncopyable
 	tbb::atomic<bool> is_running_;
 };
 
-input::input() : impl_(new implementation()){}
-void input::load(const std::string& filename){impl_->load(filename);}
+input::input(const std::string& filename) : impl_(new implementation(filename)){}
 void input::set_loop(bool value){impl_->loop_ = value;}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}

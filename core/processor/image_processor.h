@@ -19,6 +19,9 @@ struct image_transform
 	boost::tuple<double, double> pos;
 	boost::tuple<double, double, double, double> uv;
 	video_mode::type mode; 
+
+	image_transform& operator*=(const image_transform &other);
+	const image_transform operator*(const image_transform &other) const;
 };
 
 class image_processor

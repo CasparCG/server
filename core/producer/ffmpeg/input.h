@@ -13,8 +13,7 @@ typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> 
 class input : boost::noncopyable
 {
 public:
-	input();
-	void load(const std::string& filename);
+	input(const std::string& filename);
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 
