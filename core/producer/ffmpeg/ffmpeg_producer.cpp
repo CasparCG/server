@@ -49,7 +49,7 @@ namespace caspar { namespace core { namespace ffmpeg{
 struct ffmpeg_producer_impl
 {
 public:
-	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), underrun_count_(0), last_frame_(draw_frame::empty())
+	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), underrun_count_(0), last_frame_(transform_frame(draw_frame::empty()))
 	{
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() <<  boost::errinfo_file_name(narrow(filename)));
@@ -94,7 +94,7 @@ public:
 				if(!video_packet.empty())
 				{
 					auto decoded_frame = video_decoder_->execute(video_packet);
-					auto frame = make_safe<transform_frame>(video_transformer_->execute(decoded_frame));
+					auto frame = video_transformer_->execute(decoded_frame);
 					video_frame_channel_.push_back(std::move(frame));	
 				}
 			}, 
@@ -116,7 +116,9 @@ public:
 					audio_chunk_channel_.pop_front();
 				}
 							
-				auto transform = transform_frame(std::move(video_frame_channel_.front()), std::move(audio_data));
+				auto write = std::move(video_frame_channel_.front());
+				write->audio_data() = std::move(audio_data);
+				auto transform = transform_frame(write);
 				video_frame_channel_.pop_front();
 		
 				// TODO: Make generic for all formats and modes.
@@ -144,11 +146,12 @@ public:
 		if(!ouput_channel_.empty())
 		{
 			result = std::move(ouput_channel_.front());
-			last_frame_ = make_safe<transform_frame>(result, std::vector<short>()); // last_frame should not have audio, override it!
+			last_frame_ = transform_frame(result);
+			last_frame_->audio_volume(0.0); // last_frame should not have audio
 			ouput_channel_.pop();
 		}
 		else if(input_->is_eof())
-			last_frame_ = draw_frame::eof();
+			return draw_frame::eof();
 
 		return result;
 	}
@@ -164,7 +167,7 @@ public:
 
 	video_decoder_uptr						video_decoder_;
 	video_transformer_uptr					video_transformer_;
-	std::deque<safe_ptr<transform_frame>>	video_frame_channel_;
+	std::deque<safe_ptr<write_frame>>		video_frame_channel_;
 	
 	audio_decoder_ptr						audio_decoder_;
 	std::deque<std::vector<short>>			audio_chunk_channel_;
@@ -175,7 +178,7 @@ public:
 
 	long									underrun_count_;
 
-	safe_ptr<draw_frame>					last_frame_;
+	safe_ptr<transform_frame>				last_frame_;
 
 	video_format_desc						format_desc_;
 };

@@ -141,22 +141,30 @@ struct input::implementation : boost::noncopyable
 		win32_exception::install_handler();
 		
 		is_running_ = true;
-		AVPacket tmp_packet;
-		while(is_running_)
-		{
-			std::shared_ptr<AVPacket> packet(&tmp_packet, av_free_packet);	
-			tbb::queuing_mutex::scoped_lock lock(seek_mutex_);	
 
-			if (av_read_frame(format_context_.get(), packet.get()) >= 0) // NOTE: Packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
+		try
+		{
+			AVPacket tmp_packet;
+			while(is_running_)
 			{
-				auto buffer = std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size);
-				if(packet->stream_index == video_s_index_) 						
-					video_packet_buffer_.push(buffer);						
-				else if(packet->stream_index == audio_s_index_) 	
-					audio_packet_buffer_.push(buffer);		
+				std::shared_ptr<AVPacket> packet(&tmp_packet, av_free_packet);	
+				tbb::queuing_mutex::scoped_lock lock(seek_mutex_);	
+
+				if (av_read_frame(format_context_.get(), packet.get()) >= 0) // NOTE: Packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
+				{
+					auto buffer = std::make_shared<aligned_buffer>(packet->data, packet->data + packet->size);
+					if(packet->stream_index == video_s_index_) 						
+						video_packet_buffer_.push(buffer);						
+					else if(packet->stream_index == audio_s_index_) 	
+						audio_packet_buffer_.push(buffer);		
+				}
+				else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
+					is_running_ = false;
 			}
-			else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
-				is_running_ = false;
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 		
 		is_running_ = false;

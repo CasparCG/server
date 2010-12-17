@@ -3,7 +3,8 @@
 #include "write_frame.h"
 
 #include "draw_frame.h"
-#include "image_shader.h"
+#include "image_processor.h"
+#include "audio_processor.h"
 
 #include "../format/pixel_format.h"
 #include "../../common/gl/utility.h"
@@ -38,14 +39,15 @@ struct write_frame::implementation : boost::noncopyable
 		boost::range::for_each(pbos_, std::mem_fn(&gl::pbo::map_write));
 	}
 
-	void draw(image_shader& shader)
+	void process_image(image_processor& processor)
 	{
-		for(size_t n = 0; n < pbos_.size(); ++n)
-		{
-			glActiveTexture(GL_TEXTURE0+n);
-			pbos_[n].bind_texture();
-		}
-		shader.render(desc_);
+		processor.process(desc_, pbos_);
+	}
+
+	void process_audio(audio_processor& processor)
+	{
+		processor.process(audio_data_);
+		audio_data_.clear();
 	}
 
 	boost::iterator_range<unsigned char*> pixel_data(size_t index)
@@ -79,9 +81,9 @@ write_frame& write_frame::operator=(write_frame&& other)
 }
 void write_frame::map(){impl_->map();}	
 void write_frame::unmap(){impl_->unmap();}	
-void write_frame::draw(image_shader& shader){impl_->draw(shader);}
+void write_frame::process_image(image_processor& processor){impl_->process_image(processor);}
+void write_frame::process_audio(audio_processor& processor){impl_->process_audio(processor);}
 boost::iterator_range<unsigned char*> write_frame::pixel_data(size_t index){return impl_->pixel_data(index);}
 const boost::iterator_range<const unsigned char*> write_frame::pixel_data(size_t index) const {return impl_->pixel_data(index);}
 std::vector<short>& write_frame::audio_data() { return impl_->audio_data_; }
-const std::vector<short>& write_frame::audio_data() const { return impl_->audio_data_; }
 }}

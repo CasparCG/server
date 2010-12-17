@@ -14,7 +14,7 @@ namespace caspar { namespace core {
 class composite_frame : public draw_frame
 {
 public:
-	explicit composite_frame(std::vector<safe_ptr<draw_frame>>&& frames);
+	composite_frame(const std::vector<safe_ptr<draw_frame>>& frames);
 	composite_frame(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_frame>&& frame2);
 	
 	void swap(composite_frame& other);
@@ -26,12 +26,10 @@ public:
 	composite_frame& operator=(composite_frame&& other);
 
 	static safe_ptr<composite_frame> interlace(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_frame>&& frame2, video_mode::type mode);
-	
-	virtual const std::vector<short>& audio_data() const;
-
+		
 private:	
-	virtual void unmap();
-	virtual void draw(image_shader& shader);
+	virtual void process_image(image_processor& processor);
+	virtual void process_audio(audio_processor& processor);
 
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

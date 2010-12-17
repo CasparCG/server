@@ -103,11 +103,8 @@ struct video_transformer::implementation : boost::noncopyable
 		}
 	}
 	
-	safe_ptr<draw_frame> execute(const std::shared_ptr<AVFrame>& decoded_frame)
-	{				
-		if(decoded_frame == nullptr)
-			return draw_frame::eof();
-				
+	safe_ptr<write_frame> execute(const safe_ptr<AVFrame>& decoded_frame)
+	{								
 		if(sws_context_ == nullptr)
 		{
 			auto write = frame_processor_->create_frame(desc_);
@@ -158,6 +155,6 @@ struct video_transformer::implementation : boost::noncopyable
 };
 
 video_transformer::video_transformer(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
-safe_ptr<draw_frame> video_transformer::execute(const std::shared_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
+safe_ptr<write_frame> video_transformer::execute(const safe_ptr<AVFrame>& decoded_frame){return impl_->execute(decoded_frame);}
 void video_transformer::initialize(const safe_ptr<frame_processor_device>& frame_processor){impl_->initialize(frame_processor); }
 }}}

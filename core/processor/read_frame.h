@@ -18,6 +18,7 @@ namespace caspar { namespace core {
 	
 class read_frame
 {
+	friend class image_processor;
 public:
 	explicit read_frame(size_t width, size_t height);
 	
@@ -26,10 +27,10 @@ public:
 	const std::vector<short>& audio_data() const;
 	void audio_data(const std::vector<short>& audio_data);
 	
+private:
 	void unmap();
 	void map();
 
-private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };

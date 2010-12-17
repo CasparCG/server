@@ -172,7 +172,6 @@
     <ClInclude Include="processor\composite_frame.h" />
     <ClInclude Include="processor\frame_processor_device.h" />
     <ClInclude Include="processor\image_processor.h" />
-    <ClInclude Include="processor\image_shader.h" />
     <ClInclude Include="processor\fwd.h" />
     <ClInclude Include="processor\draw_frame.h" />
     <ClInclude Include="processor\read_frame.h" />
@@ -263,10 +262,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="processor\image_processor.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="processor\image_shader.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

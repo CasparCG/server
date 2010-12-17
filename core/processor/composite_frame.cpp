@@ -3,7 +3,7 @@
 #include "draw_frame.h"
 #include "composite_frame.h"
 #include "transform_frame.h"
-#include "image_shader.h"
+#include "image_processor.h"
 #include "../../common/utility/singleton_pool.h"
 
 #include <boost/range/algorithm.hpp>
@@ -12,53 +12,24 @@
 
 namespace caspar { namespace core {
 	
-struct composite_frame::implementation : public draw_frame_decorator
-{	
-	implementation(std::vector<safe_ptr<draw_frame>>&& frames) : frames_(std::move(frames))
-	{		
-		if(frames_.size() < 2)
-			return;
-
-		boost::range::for_each(frames_, [&](const safe_ptr<draw_frame>& frame)
-		{
-			if(audio_data_.empty())
-				audio_data_ = frame->audio_data();
-			else
-			{
-				tbb::parallel_for
-				(
-					tbb::blocked_range<size_t>(0, frame->audio_data().size()),
-					[&](const tbb::blocked_range<size_t>& r)
-					{
-						for(size_t n = r.begin(); n < r.end(); ++n)					
-							audio_data_[n] = static_cast<short>((static_cast<int>(audio_data_[n]) + static_cast<int>(frame->audio_data()[n])) & 0xFFFF);						
-					}
-				);
-			}
-		});
-	}
-	
-	void unmap()
+struct composite_frame::implementation
+{		
+	implementation(const std::vector<safe_ptr<draw_frame>>& frames) : frames_(frames){}
+			
+	void process_image(image_processor& processor)
 	{
-		boost::range::for_each(frames_, std::bind(&draw_frame_decorator::unmap, std::placeholders::_1));
-	}
-		
-	void draw(image_shader& shader)
-	{
-		boost::range::for_each(frames_, std::bind(&draw_frame_decorator::draw, std::placeholders::_1, std::ref(shader)));
+		boost::range::for_each(frames_, std::bind(&draw_frame::process_image, std::placeholders::_1, std::ref(processor)));
 	}
 
-	const std::vector<short>& audio_data() const
+	void process_audio(audio_processor& processor)
 	{
-		static std::vector<short> no_audio;
-		return !audio_data_.empty() ? audio_data_ : (!frames_.empty() ? frames_.front()->audio_data() : no_audio);
+		boost::range::for_each(frames_, std::bind(&draw_frame::process_audio, std::placeholders::_1, std::ref(processor)));
 	}
-				
-	std::vector<short> audio_data_;
+					
 	std::vector<safe_ptr<draw_frame>> frames_;
 };
 
-composite_frame::composite_frame(std::vector<safe_ptr<draw_frame>>&& frames) : impl_(singleton_pool<implementation>::make_shared(std::move(frames))){}
+composite_frame::composite_frame(const std::vector<safe_ptr<draw_frame>>& frames) : impl_(singleton_pool<implementation>::make_shared(frames)){}
 composite_frame::composite_frame(composite_frame&& other) : impl_(std::move(other.impl_)){}
 composite_frame::composite_frame(const composite_frame& other) : impl_(singleton_pool<implementation>::make_shared(*other.impl_)){}
 void composite_frame::swap(composite_frame& other){impl_.swap(other.impl_);}
@@ -83,9 +54,8 @@ composite_frame::composite_frame(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_fr
 	impl_.reset(new implementation(std::move(frames)));
 }
 
-void composite_frame::unmap(){impl_->unmap();}
-void composite_frame::draw(image_shader& shader){impl_->draw(shader);}
-const std::vector<short>& composite_frame::audio_data() const {return impl_->audio_data();}
+void composite_frame::process_image(image_processor& processor){impl_->process_image(processor);}
+void composite_frame::process_audio(audio_processor& processor){impl_->process_audio(processor);}
 
 safe_ptr<composite_frame> composite_frame::interlace(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_frame>&& frame2, video_mode::type mode)
 {			
@@ -105,7 +75,7 @@ safe_ptr<composite_frame> composite_frame::interlace(safe_ptr<draw_frame>&& fram
 	std::vector<safe_ptr<draw_frame>> frames;
 	frames.push_back(std::move(my_frame1));
 	frames.push_back(std::move(my_frame2));
-	return make_safe<composite_frame>(std::move(frames));
+	return make_safe<composite_frame>(frames);
 }
 
 }}

@@ -13,7 +13,7 @@ namespace caspar { namespace gl {
 struct frame_buffer_object::implementation
 {
 public:
-	implementation(size_t width, size_t height, GLenum mode) : mode_(mode)
+	implementation(size_t width, size_t height, GLenum mode) : mode_(mode), width_(width), height_(height)
 	{
 		GL(glGenTextures(1, &texture_));	
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));			
@@ -46,4 +46,6 @@ public:
 
 frame_buffer_object::frame_buffer_object(size_t width, size_t height, GLenum mode) : impl_(new implementation(width, height, mode)){}
 void frame_buffer_object::bind_pixel_source() {impl_->bind_pixel_source();}
+size_t frame_buffer_object::width() const{return impl_->width_;}
+size_t frame_buffer_object::height() const{return impl_->height_;}
 }}
