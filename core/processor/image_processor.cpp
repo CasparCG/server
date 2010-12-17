@@ -21,6 +21,20 @@ struct ogl_context
 };
 
 namespace caspar { namespace core {
+		
+image_transform& image_transform::operator*=(const image_transform &other)
+{
+	alpha *= other.alpha;
+	mode = other.mode;
+	pos.get<0>() += other.pos.get<0>();
+	pos.get<1>() += other.pos.get<1>();
+	return *this;
+}
+
+const image_transform image_transform::operator*(const image_transform &other) const
+{
+	return image_transform(*this) *= other;
+}
 
 GLubyte progressive_pattern[] = {
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -44,8 +58,9 @@ struct image_processor::implementation : boost::noncopyable
 {
 	implementation(const video_format_desc& format_desc) : fbo_(format_desc.width, format_desc.height), current_(pixel_format::invalid), reading_(create_reading())
 	{
-		alpha_stack_.push(1.0);
-		mode_stack_.push(video_mode::progressive);
+		transform_stack_.push(image_transform());
+		transform_stack_.top().mode = video_mode::progressive;
+
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glEnable(GL_BLEND));
@@ -141,14 +156,13 @@ struct image_processor::implementation : boost::noncopyable
 
 	void begin(const image_transform& transform)
 	{
-		alpha_stack_.push(alpha_stack_.top()*transform.alpha);
-		mode_stack_.push(transform.mode);
+		glLoadIdentity();
+		transform_stack_.push(transform_stack_.top()*transform);
 
-		glPushMatrix();
-		glColor4d(1.0, 1.0, 1.0, alpha_stack_.top());
-		glTranslated(transform.pos.get<0>()*2.0, transform.pos.get<1>()*2.0, 0.0);
+		glColor4d(1.0, 1.0, 1.0, transform_stack_.top().alpha);
+		glTranslated(transform_stack_.top().pos.get<0>()*2.0, transform_stack_.top().pos.get<1>()*2.0, 0.0);
 		
-		set_mode(mode_stack_.top());
+		set_mode(transform_stack_.top().mode);
 	}
 		
 	void render(const pixel_format_desc& desc, std::vector<gl::pbo>& pbos)
@@ -171,11 +185,7 @@ struct image_processor::implementation : boost::noncopyable
 
 	void end()
 	{
-		mode_stack_.pop();
-		alpha_stack_.pop();
-		glPopMatrix();
-
-		set_mode(mode_stack_.top());
+		transform_stack_.pop();
 	}
 
 	safe_ptr<read_frame> begin_pass()
@@ -221,8 +231,7 @@ struct image_processor::implementation : boost::noncopyable
 		 
 	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>> pool_;
 
-	std::stack<double> alpha_stack_;
-	std::stack<video_mode::type> mode_stack_;
+	std::stack<image_transform> transform_stack_;
 
 	pixel_format::type current_;
 	std::unordered_map<pixel_format::type, gl::shader_program> shaders_;
@@ -262,4 +271,5 @@ void image_processor::end_pass()
 		impl_.reset(new implementation(format_desc_));
 	impl_->end_pass();
 }
+
 }}
