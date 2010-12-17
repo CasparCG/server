@@ -112,13 +112,12 @@ struct transition_producer::implementation : boost::noncopyable
 			return src_frame;
 										
 		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
-		unsigned char volume = static_cast<unsigned char>(alpha*256.0);
 
 		auto my_src_frame = transform_frame(src_frame);
 		auto my_dest_frame = transform_frame(dest_frame);
 
-		my_src_frame.audio_volume(255-volume);
-		my_dest_frame.audio_volume(volume);
+		my_src_frame.audio_volume(1.0-alpha);
+		my_dest_frame.audio_volume(alpha);
 
 		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		

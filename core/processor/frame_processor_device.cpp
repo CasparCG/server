@@ -2,7 +2,9 @@
 
 #include "frame_processor_device.h"
 
+#include "audio_processor.h"
 #include "image_processor.h"
+
 #include "write_frame.h"
 #include "read_frame.h"
 
@@ -11,6 +13,7 @@
 #include "../../common/exception/exceptions.h"
 #include "../../common/concurrency/executor.h"
 #include "../../common/gl/utility.h"
+
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
@@ -26,16 +29,31 @@ struct frame_processor_device::implementation : boost::noncopyable
 {	
 	typedef boost::shared_future<safe_ptr<const read_frame>> output_type;
 
-	implementation(const video_format_desc& format_desc) : fmt_(format_desc)
+	implementation(const video_format_desc& format_desc) : fmt_(format_desc), writing_(draw_frame::empty()), image_processor_(format_desc)
 	{		
 		output_.set_capacity(3);
 		executor_.start();
-		executor_.invoke([=]{image_processor_.reset(new image_processor(format_desc));});
 	}
 				
 	void send(safe_ptr<draw_frame>&& frame)
 	{			
-		output_.push(executor_.begin_invoke([=]{return image_processor_->render(safe_ptr<draw_frame>(frame));})); // Blocks
+		output_.push(executor_.begin_invoke([=]() -> safe_ptr<const read_frame>
+		{		
+			auto result = image_processor_.read();
+			result->audio_data(audio_processor_.read());
+
+			image_processor_.begin_pass();
+			writing_->process_image(image_processor_);
+			image_processor_.end_pass();
+
+			audio_processor_.begin_pass();
+			writing_->process_audio(audio_processor_);
+			audio_processor_.end_pass();
+
+			writing_ = frame;
+
+			return result;
+		}));
 	}
 
 	safe_ptr<const read_frame> receive()
@@ -53,15 +71,22 @@ struct frame_processor_device::implementation : boost::noncopyable
 			frame = executor_.invoke([&]{return std::make_shared<write_frame>(desc);});		
 		return safe_ptr<write_frame>(frame.get(), [=](write_frame*)
 		{
-			executor_.begin_invoke([=]{frame->map();});
-			frame->audio_data().clear();
-			pool->push(frame);
+			executor_.begin_invoke([=]
+			{
+				frame->map();
+				pool->push(frame);
+			}, executor::high_priority);
 		});
 	}
+	
+	const video_format_desc format_desc_;
+		
+	safe_ptr<draw_frame>	writing_;
+
+	audio_processor	audio_processor_;
+	image_processor image_processor_;
 				
 	executor executor_;	
-
-	std::unique_ptr<image_processor> image_processor_;	
 				
 	tbb::concurrent_bounded_queue<output_type> output_;	
 	tbb::concurrent_unordered_map<pixel_format_desc, tbb::concurrent_bounded_queue<std::shared_ptr<write_frame>>, std::hash<pixel_format_desc>> pools_;

@@ -3,7 +3,8 @@
 #include "transform_frame.h"
 
 #include "draw_frame.h"
-#include "image_shader.h"
+#include "image_processor.h"
+#include "audio_processor.h"
 
 #include "../format/pixel_format.h"
 #include "../../common/gl/utility.h"
@@ -16,52 +17,34 @@
 
 namespace caspar { namespace core {
 																																						
-struct transform_frame::implementation : public draw_frame_decorator
+struct transform_frame::implementation
 {
-	implementation(const safe_ptr<draw_frame>& frame) : frame_(frame), audio_volume_(255){}
-	implementation(const safe_ptr<draw_frame>& frame, std::vector<short>&& audio_data) : frame_(frame), audio_volume_(255), override_audio_data_(std::move(audio_data)){}
-	implementation(safe_ptr<draw_frame>&& frame) : frame_(std::move(frame)), audio_volume_(255){}
+	implementation(const safe_ptr<draw_frame>& frame) : frame_(frame){}
+	implementation(safe_ptr<draw_frame>&& frame) : frame_(std::move(frame)){}
 	
-	void unmap(){draw_frame_decorator::unmap(frame_);}
-
-	void draw(image_shader& shader)
+	void process_image(image_processor& processor)
 	{
-		shader.begin(transform_);
-		draw_frame_decorator::draw(frame_, shader);
-		shader.end();
+		processor.begin(image_transform_);
+		frame_->process_image(processor);
+		processor.end();
 	}
 
-	void audio_volume(const unsigned char volume)
+	void process_audio(audio_processor& processor)
 	{
-		if(volume == audio_volume_)
-			return;
-		
-		audio_volume_ = volume;
-
-		auto& source = !override_audio_data_.empty() ? override_audio_data_ : frame_->audio_data();
-		audio_data_.resize(source.size());
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, audio_data_.size()), [&](const tbb::blocked_range<size_t>& r)
-		{
-			for(size_t n = r.begin(); n < r.end(); ++n)					
-				audio_data_[n] = static_cast<short>((static_cast<int>(source[n])*volume)>>8);						
-		});
+		processor.begin(audio_transform_);
+		frame_->process_audio(processor);
+		processor.end();
 	}
 		
-	const std::vector<short>& audio_data() const 
-	{
-		return !audio_data_.empty() ? audio_data_ : (!override_audio_data_.empty() ? override_audio_data_ : frame_->audio_data());
-	}
-		
-	unsigned char audio_volume_;
 	safe_ptr<draw_frame> frame_;
 	std::vector<short> audio_data_;
 	std::vector<short> override_audio_data_;
-	shader_transform transform_;	
+	image_transform image_transform_;	
+	audio_transform audio_transform_;	
 };
 	
 transform_frame::transform_frame() : impl_(singleton_pool<implementation>::make_shared(draw_frame::empty())){}
 transform_frame::transform_frame(const safe_ptr<draw_frame>& frame) : impl_(singleton_pool<implementation>::make_shared(frame)){}
-transform_frame::transform_frame(const safe_ptr<draw_frame>& frame, std::vector<short>&& audio_data) : impl_(singleton_pool<implementation>::make_shared(frame, std::move(audio_data))){}
 transform_frame::transform_frame(safe_ptr<draw_frame>&& frame) : impl_(singleton_pool<implementation>::make_shared(std::move(frame))){}
 transform_frame::transform_frame(const transform_frame& other) : impl_(singleton_pool<implementation>::make_shared(*other.impl_)){}
 void transform_frame::swap(transform_frame& other){impl_.swap(other.impl_);}
@@ -78,12 +61,11 @@ transform_frame& transform_frame::operator=(transform_frame&& other)
 	temp.swap(*this);
 	return *this;
 }
-void transform_frame::unmap(){impl_->unmap();}	
-void transform_frame::draw(image_shader& shader){impl_->draw(shader);}
-void transform_frame::audio_volume(unsigned char volume){impl_->audio_volume(volume);}
-void transform_frame::translate(double x, double y){impl_->transform_.pos = boost::make_tuple(x, y);}
-void transform_frame::texcoord(double left, double top, double right, double bottom){impl_->transform_.uv = boost::make_tuple(left, top, right, bottom);}
-void transform_frame::video_mode(video_mode::type mode){impl_->transform_.mode = mode;}
-void transform_frame::alpha(double value){impl_->transform_.alpha = value;}
-const std::vector<short>& transform_frame::audio_data() const { return impl_->audio_data(); }
+void transform_frame::process_image(image_processor& processor){impl_->process_image(processor);}
+void transform_frame::process_audio(audio_processor& processor){impl_->process_audio(processor);}
+void transform_frame::audio_volume(double volume){impl_->audio_transform_.volume = volume;}
+void transform_frame::translate(double x, double y){impl_->image_transform_.pos = boost::make_tuple(x, y);}
+void transform_frame::texcoord(double left, double top, double right, double bottom){impl_->image_transform_.uv = boost::make_tuple(left, top, right, bottom);}
+void transform_frame::video_mode(video_mode::type mode){impl_->image_transform_.mode = mode;}
+void transform_frame::alpha(double value){impl_->image_transform_.alpha = value;}
 }}

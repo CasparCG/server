@@ -4,18 +4,13 @@
 
 #include "draw_frame.h"
 
-#include "../../common/exception/exceptions.h"
-#include "../../common/gl/pixel_buffer_object.h"
-
 #include "../format/video_format.h"
 #include "../format/pixel_format.h"
 
 #include <boost/noncopyable.hpp>
-#include <boost/tuple/tuple.hpp>
 #include <boost/range/iterator_range.hpp>
 
 #include <memory>
-#include <array>
 #include <vector>
 
 namespace caspar { namespace core {
@@ -35,13 +30,13 @@ public:
 	const boost::iterator_range<const unsigned char*> pixel_data(size_t index = 0) const;
 	
 	std::vector<short>& audio_data();
-	virtual const std::vector<short>& audio_data() const;
 	
 private:
 		
 	void map();
 	void unmap();
-	void draw(image_shader& shader);
+	void process_image(image_processor& processor);
+	void process_audio(audio_processor& processor);
 
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

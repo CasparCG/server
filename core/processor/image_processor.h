@@ -1,46 +1,43 @@
-/*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
-*
-*  This file is part of CasparCG.
-*
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
-*
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
-*
-*/
 #pragma once
 
-#include "fwd.h"
-
-#include "../../common/utility/safe_ptr.h"
+#include "read_frame.h"
 
 #include "../format/video_format.h"
+#include "../format/pixel_format.h"
 
-#include <boost/noncopyable.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #include <memory>
+#include <array>
 
 namespace caspar { namespace core {
+	
+struct image_transform
+{
+	image_transform() : alpha(1.0), pos(boost::make_tuple(0.0, 0.0)), uv(boost::make_tuple(0.0, 1.0, 1.0, 0.0)), mode(video_mode::invalid){}
+	double alpha;
+	boost::tuple<double, double> pos;
+	boost::tuple<double, double, double, double> uv;
+	video_mode::type mode; 
+};
 
-class image_processor : boost::noncopyable
+class image_processor
 {
 public:
-	image_processor(const video_format_desc& format_desc_);
-		
-	safe_ptr<const read_frame> render(safe_ptr<draw_frame>&& frame);
+	image_processor(const video_format_desc& format_desc);
+
+	void begin(const image_transform& transform);
+	void process(const pixel_format_desc& desc, std::vector<gl::pbo>& pbos);
+	void end();
+
+	void begin_pass();
+	void end_pass();
+	safe_ptr<read_frame> read();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
+	video_format_desc format_desc_;
 };
-typedef std::shared_ptr<image_processor> image_processor_ptr;
+typedef std::shared_ptr<image_processor> image_shader_ptr;
 
 }}

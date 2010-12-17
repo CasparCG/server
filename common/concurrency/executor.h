@@ -15,8 +15,17 @@ namespace caspar {
 class executor
 {
 public:
+
+	enum priority
+	{
+		low_priority = 0,
+		normal_priority,
+		high_priority
+	};
+
 	explicit executor(const std::function<void()>& f = nullptr)
 	{
+		size_ = 0;
 		is_running_ = false;
 		f_ = f != nullptr ? f : [this]{run();};
 	}
@@ -40,43 +49,33 @@ public:
 	
 	void stop() // noexcept
 	{
-		if(is_running_.fetch_and_store(false))
-		{
-			execution_queue_.clear();
-			execution_queue_.push([](){});			
-		}
+		is_running_ = false;		
 		thread_.join();
 	}
 
 	void execute() // noexcept
 	{
-		std::function<void()> func;
-		execution_queue_.pop(func);	
-		func();
+		boost::unique_lock<boost::mutex> lock(mut_);
+		while(size_ < 1)		
+			cond_.wait(lock);
+		
+		try_execute();
 	}
 
 	bool try_execute() // noexcept
 	{
 		std::function<void()> func;
-		if(execution_queue_.try_pop(func))
+		if(execution_queue_[high_priority].try_pop(func) || execution_queue_[normal_priority].try_pop(func) || execution_queue_[low_priority].try_pop(func))
+		{
 			func();
+			--size_;
+		}
 
 		return func != nullptr;
 	}
-
-	void clear() // noexcept
-	{
-		execution_queue_.clear();
-	}
-
+			
 	template<typename Func>
-	void enqueue(Func&& func) // noexcept
-	{
-		execution_queue_.push([=]{try{func();}catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}});
-	}
-	
-	template<typename Func>
-	auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
+	auto begin_invoke(Func&& func, priority p = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
 		typedef decltype(func()) result_type; 
 				
@@ -92,7 +91,7 @@ public:
 			}
 			catch(boost::task_already_started&){}
 		}));
-		execution_queue_.push([=]
+		execution_queue_[p].push([=]
 		{
 			try
 			{
@@ -101,17 +100,19 @@ public:
 			catch(boost::task_already_started&){}
 			catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
 		});
+		++size_;
+		cond_.notify_one();
 
 		return std::move(future);		
 	}
 	
 	template<typename Func>
-	auto invoke(Func&& func) -> decltype(func())
+	auto invoke(Func&& func, priority p = normal_priority) -> decltype(func())
 	{
 		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
 			return func();
 		
-		return begin_invoke(std::forward<Func>(func)).get();
+		return begin_invoke(std::forward<Func>(func), p).get();
 	}
 		
 private:
@@ -123,10 +124,14 @@ private:
 			execute();
 	}
 
+	tbb::atomic<size_t> size_;
+	boost::condition_variable cond_;
+	boost::mutex mut_;
+
 	std::function<void()> f_;
 	boost::thread thread_;
 	tbb::atomic<bool> is_running_;
-	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
+	std::array<tbb::concurrent_bounded_queue<std::function<void()>>, 3> execution_queue_;
 };
 
 }
