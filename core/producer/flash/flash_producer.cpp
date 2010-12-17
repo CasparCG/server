@@ -196,11 +196,9 @@ struct flash_producer::implementation
 					render();	
 					while(executor_.try_execute()){}
 				}
-				else
-				{
+				else				
 					executor_.execute();
-					while(executor_.try_execute()){}
-				}
+				
 			}
 		}
 		catch(...)
@@ -227,11 +225,9 @@ struct flash_producer::implementation
 			auto format_desc = frame_processor_->get_video_format_desc();
 			bool is_progressive = format_desc.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc.fps/2 == 0);
 
-			std::shared_ptr<draw_frame> frame;
-			if(is_progressive)
-				frame = do_receive();
-			else
-				frame = std::shared_ptr<composite_frame>(composite_frame::interlace(do_receive(), do_receive(), format_desc.mode));
+			std::shared_ptr<draw_frame> frame = do_receive();
+			if(!is_progressive)
+				frame = std::shared_ptr<composite_frame>(composite_frame::interlace(safe_ptr<draw_frame>(frame), do_receive(), format_desc.mode));
 			
 			frame_buffer_.push(frame);
 			is_empty_ = flashax_container_->IsEmpty();

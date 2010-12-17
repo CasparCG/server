@@ -45,6 +45,7 @@ struct image_processor::implementation : boost::noncopyable
 	implementation(const video_format_desc& format_desc) : fbo_(format_desc.width, format_desc.height), current_(pixel_format::invalid), reading_(create_reading())
 	{
 		alpha_stack_.push(1.0);
+		mode_stack_.push(video_mode::progressive);
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glEnable(GL_BLEND));
@@ -141,17 +142,13 @@ struct image_processor::implementation : boost::noncopyable
 	void begin(const image_transform& transform)
 	{
 		alpha_stack_.push(alpha_stack_.top()*transform.alpha);
+		mode_stack_.push(transform.mode);
 
 		glPushMatrix();
 		glColor4d(1.0, 1.0, 1.0, alpha_stack_.top());
 		glTranslated(transform.pos.get<0>()*2.0, transform.pos.get<1>()*2.0, 0.0);
-
-		if(transform.mode == video_mode::upper)
-			glPolygonStipple(upper_pattern);
-		else if(transform.mode == video_mode::lower)
-			glPolygonStipple(lower_pattern);
-		else
-			glPolygonStipple(progressive_pattern);
+		
+		set_mode(mode_stack_.top());
 	}
 		
 	void render(const pixel_format_desc& desc, std::vector<gl::pbo>& pbos)
@@ -174,13 +171,18 @@ struct image_processor::implementation : boost::noncopyable
 
 	void end()
 	{
+		mode_stack_.pop();
 		alpha_stack_.pop();
 		glPopMatrix();
+
+		set_mode(mode_stack_.top());
 	}
 
-	void begin_pass()
+	safe_ptr<read_frame> begin_pass()
 	{
+		reading_->map();
 		GL(glClear(GL_COLOR_BUFFER_BIT));
+		return reading_;
 	}
 
 	void end_pass()
@@ -188,11 +190,15 @@ struct image_processor::implementation : boost::noncopyable
 		reading_ = create_reading();
 		reading_->unmap(); // Start transfer from frame buffer to texture. End with map in next tick.
 	}
-
-	safe_ptr<read_frame> read()
+	
+	void set_mode(video_mode::type mode)
 	{
-		reading_->map();
-		return reading_;
+		if(mode == video_mode::upper)
+			glPolygonStipple(upper_pattern);
+		else if(mode == video_mode::lower)
+			glPolygonStipple(lower_pattern);
+		else
+			glPolygonStipple(progressive_pattern);
 	}
 
 	void set_pixel_format(pixel_format::type format)
@@ -216,6 +222,7 @@ struct image_processor::implementation : boost::noncopyable
 	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>> pool_;
 
 	std::stack<double> alpha_stack_;
+	std::stack<video_mode::type> mode_stack_;
 
 	pixel_format::type current_;
 	std::unordered_map<pixel_format::type, gl::shader_program> shaders_;
@@ -243,22 +250,16 @@ void image_processor::end()
 		impl_.reset(new implementation(format_desc_));
 	impl_->end();
 }
-void image_processor::begin_pass()
+safe_ptr<read_frame> image_processor::begin_pass()
 {
 	if(!impl_)
 		impl_.reset(new implementation(format_desc_));
-	impl_->begin_pass();
+	return impl_->begin_pass();
 }
 void image_processor::end_pass()
 {
 	if(!impl_)
 		impl_.reset(new implementation(format_desc_));
 	impl_->end_pass();
-}
-safe_ptr<read_frame> image_processor::read()
-{
-	if(!impl_)
-		impl_.reset(new implementation(format_desc_));
-	return impl_->read();
 }
 }}
