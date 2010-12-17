@@ -93,10 +93,7 @@ public:
 		}));
 		execution_queue_[p].push([=]
 		{
-			try
-			{
-				(*task)();    
-			}
+			try{(*task)();}
 			catch(boost::task_already_started&){}
 			catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
 		});

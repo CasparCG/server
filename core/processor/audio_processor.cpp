@@ -52,7 +52,7 @@ struct audio_processor::implementation
 		transform_stack_.pop();
 	}
 
-	std::vector<short> read()
+	std::vector<short> begin_pass()
 	{
 		return std::move(audio_data_);
 	}
@@ -65,6 +65,7 @@ audio_processor::audio_processor() : impl_(new implementation()){}
 void audio_processor::begin(const audio_transform& transform){impl_->begin(transform);}
 void audio_processor::process(const std::vector<short>& audio_data){impl_->process(audio_data);}
 void audio_processor::end(){impl_->end();}
-std::vector<short> audio_processor::read(){return impl_->read();}
+std::vector<short> audio_processor::begin_pass(){return impl_->begin_pass();}	
+void audio_processor::end_pass(){}
 
 }}

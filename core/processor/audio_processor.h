@@ -19,11 +19,9 @@ public:
 	void begin(const audio_transform& transform);
 	void process(const std::vector<short>& audio_data);
 	void end();
-
-	std::vector<short> read();
-
-	void begin_pass(){}
-	void end_pass(){}
+	
+	std::vector<short> begin_pass();
+	void end_pass();
 
 private:
 	struct implementation;

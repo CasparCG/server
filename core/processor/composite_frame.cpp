@@ -46,35 +46,35 @@ composite_frame& composite_frame::operator=(composite_frame&& other)
 	return *this;
 }
 
-composite_frame::composite_frame(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_frame>&& frame2)
+composite_frame::composite_frame(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2)
 {
 	std::vector<safe_ptr<draw_frame>> frames;
-	frames.push_back(std::move(frame1));
-	frames.push_back(std::move(frame2));
-	impl_.reset(new implementation(std::move(frames)));
+	frames.push_back(frame1);
+	frames.push_back(frame2);
+	impl_ = singleton_pool<implementation>::make_shared(std::move(frames));
 }
 
 void composite_frame::process_image(image_processor& processor){impl_->process_image(processor);}
 void composite_frame::process_audio(audio_processor& processor){impl_->process_audio(processor);}
 
-safe_ptr<composite_frame> composite_frame::interlace(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_frame>&& frame2, video_mode::type mode)
+safe_ptr<composite_frame> composite_frame::interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, video_mode::type mode)
 {			
-	transform_frame my_frame1 = std::move(frame1);
-	transform_frame my_frame2 = std::move(frame2);
+	auto my_frame1 = make_safe<transform_frame>(frame1);
+	auto my_frame2 = make_safe<transform_frame>(frame2);
 	if(mode == video_mode::upper)
 	{
-		my_frame1.video_mode(video_mode::upper);
-		my_frame2.video_mode(video_mode::lower);
+		my_frame1->video_mode(video_mode::upper);	
+		my_frame2->video_mode(video_mode::lower);	
 	}
 	else
 	{
-		my_frame1.video_mode(video_mode::lower);
-		my_frame2.video_mode(video_mode::upper);
+		my_frame1->video_mode(video_mode::lower);	
+		my_frame2->video_mode(video_mode::upper);	
 	}
 
 	std::vector<safe_ptr<draw_frame>> frames;
-	frames.push_back(std::move(my_frame1));
-	frames.push_back(std::move(my_frame2));
+	frames.push_back(my_frame1);
+	frames.push_back(my_frame2);
 	return make_safe<composite_frame>(frames);
 }
 

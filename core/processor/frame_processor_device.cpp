@@ -39,20 +39,18 @@ struct frame_processor_device::implementation : boost::noncopyable
 	{			
 		output_.push(executor_.begin_invoke([=]() -> safe_ptr<const read_frame>
 		{		
-			auto result = image_processor_.read();
-			result->audio_data(audio_processor_.read());
-
-			image_processor_.begin_pass();
+			auto result_frame = image_processor_.begin_pass();
 			writing_->process_image(image_processor_);
 			image_processor_.end_pass();
 
-			audio_processor_.begin_pass();
+			auto result_audio = audio_processor_.begin_pass();
 			writing_->process_audio(audio_processor_);
 			audio_processor_.end_pass();
 
 			writing_ = frame;
-
-			return result;
+			
+			result_frame->audio_data(result_audio);
+			return result_frame;
 		}));
 	}
 

@@ -30,9 +30,8 @@ public:
 	void process(const pixel_format_desc& desc, std::vector<gl::pbo>& pbos);
 	void end();
 
-	void begin_pass();
+	safe_ptr<read_frame> begin_pass();
 	void end_pass();
-	safe_ptr<read_frame> read();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
