@@ -79,7 +79,6 @@ struct transition_producer::implementation : boost::noncopyable
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			producer = frame_producer::empty();
 			CASPAR_LOG(warning) << "Failed to receive frame. Removed producer from transition.";
 		}
 
@@ -103,13 +102,13 @@ struct transition_producer::implementation : boost::noncopyable
 		return frame;
 	}
 					
-	safe_ptr<draw_frame> compose(safe_ptr<draw_frame> dest_frame, safe_ptr<draw_frame> src_frame) 
+	safe_ptr<draw_frame> compose(const safe_ptr<draw_frame>& dest_frame, const safe_ptr<draw_frame>& src_frame) 
 	{	
 		if(dest_frame == draw_frame::eof() && src_frame == draw_frame::eof())
 			return draw_frame::eof();
 
 		if(info_.type == transition::cut)		
-			return src_frame;
+			return src_frame != draw_frame::eof() ? src_frame : draw_frame::empty();
 										
 		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
 
@@ -133,7 +132,7 @@ struct transition_producer::implementation : boost::noncopyable
 		else if(info_.type == transition::wipe)
 		{
 			my_dest_frame.translate((-1.0+alpha)*dir, 0.0);			
-			my_dest_frame.texcoord((-1.0+alpha)*dir, 1.0, 1.0-(1.0-alpha)*dir, 0.0);				
+			my_dest_frame.texcoord((-1.0+alpha)*dir, 0.0, 0.0-(1.0-alpha)*dir, 0.0);				
 		}
 
 		return composite_frame(std::move(my_src_frame), std::move(my_dest_frame));

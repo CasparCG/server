@@ -26,8 +26,10 @@ image_transform& image_transform::operator*=(const image_transform &other)
 {
 	alpha *= other.alpha;
 	mode = other.mode;
-	pos.get<0>() += other.pos.get<0>();
-	pos.get<1>() += other.pos.get<1>();
+	uv.get<0>() += other.uv.get<0>();
+	uv.get<1>() += other.uv.get<1>();
+	uv.get<2>() += other.uv.get<2>();
+	uv.get<3>() += other.uv.get<3>();
 	return *this;
 }
 
@@ -60,6 +62,7 @@ struct image_processor::implementation : boost::noncopyable
 	{
 		transform_stack_.push(image_transform());
 		transform_stack_.top().mode = video_mode::progressive;
+		transform_stack_.top().uv = boost::make_tuple(0.0, 1.0, 1.0, 0.0);
 
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_TEXTURE_2D));
@@ -156,11 +159,11 @@ struct image_processor::implementation : boost::noncopyable
 
 	void begin(const image_transform& transform)
 	{
-		glLoadIdentity();
+		glPushMatrix();
 		transform_stack_.push(transform_stack_.top()*transform);
 
 		glColor4d(1.0, 1.0, 1.0, transform_stack_.top().alpha);
-		glTranslated(transform_stack_.top().pos.get<0>()*2.0, transform_stack_.top().pos.get<1>()*2.0, 0.0);
+		glTranslated(transform.pos.get<0>()*2.0, transform.pos.get<1>()*2.0, 0.0);
 		
 		set_mode(transform_stack_.top().mode);
 	}
@@ -175,17 +178,20 @@ struct image_processor::implementation : boost::noncopyable
 			pbos[n].unmap_write();
 		}
 
+		auto t = transform_stack_.top();
 		glBegin(GL_QUADS);
-			glTexCoord2d(0.0, 0.0); glVertex2d(-1.0, -1.0);
-			glTexCoord2d(1.0, 0.0); glVertex2d( 1.0, -1.0);
-			glTexCoord2d(1.0, 1.0); glVertex2d( 1.0,  1.0);
-			glTexCoord2d(0.0, 1.0); glVertex2d(-1.0,  1.0);
+			glTexCoord2d(t.uv.get<0>(), t.uv.get<3>()); glVertex2d(-1.0, -1.0);
+			glTexCoord2d(t.uv.get<2>(), t.uv.get<3>()); glVertex2d( 1.0, -1.0);
+			glTexCoord2d(t.uv.get<2>(), t.uv.get<1>()); glVertex2d( 1.0,  1.0);
+			glTexCoord2d(t.uv.get<0>(), t.uv.get<1>()); glVertex2d(-1.0,  1.0);
 		glEnd();
 	}
 
 	void end()
 	{
 		transform_stack_.pop();
+		set_mode(transform_stack_.top().mode);
+		glPopMatrix();
 	}
 
 	safe_ptr<read_frame> begin_pass()

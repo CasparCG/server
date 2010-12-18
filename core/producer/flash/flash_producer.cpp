@@ -32,6 +32,7 @@
 #include "../../format/video_format.h"
 #include "../../server.h"
 #include "../../../common/concurrency/executor.h"
+#include "../../../common/concurrency/concurrent_queue.h"
 #include "../../../common/utility/scope_exit.h"
 
 #include "../../processor/draw_frame.h"
@@ -42,7 +43,6 @@
 #include <boost/thread.hpp>
 
 #include <tbb/atomic.h>
-#include <tbb/concurrent_queue.h>
 
 #include <type_traits>
 
@@ -57,7 +57,7 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 struct flash_producer::implementation
 {	
 	implementation(flash_producer* self, const std::wstring& filename) 
-		: flashax_container_(nullptr), filename_(filename), self_(self), executor_([=]{run();}), invalid_count_(0)
+		: flashax_container_(nullptr), filename_(filename), self_(self), executor_([=]{run();}), invalid_count_(0), last_frame_(draw_frame::empty())
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));
@@ -70,13 +70,13 @@ struct flash_producer::implementation
 		stop();
 	}
 
-	void start(bool force = true)
+	void start()
 	{		
-		if(executor_.is_running() && !force)
-			return;
-
 		try
 		{
+			safe_ptr<draw_frame> frame = draw_frame::eof();
+			while(frame_buffer_.try_pop(frame)){}
+
 			is_empty_ = true;
 			executor_.stop(); // Restart if running
 			executor_.start();
@@ -109,7 +109,8 @@ struct flash_producer::implementation
 				if(FAILED(flashax_container_->SetFormat(frame_processor_->get_video_format_desc()))) 
 					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to Set Format"));
 
-				current_frame_ = nullptr; // Force re-render of current frame			
+				current_frame_ = nullptr; // Force re-render of current frame	
+				last_frame_ = draw_frame::empty();
 			});
 		}
 		catch(...)
@@ -125,7 +126,7 @@ struct flash_producer::implementation
 		is_empty_ = true;
 		if(executor_.is_running())
 		{
-			std::shared_ptr<draw_frame>  frame;
+			safe_ptr<draw_frame> frame = draw_frame::eof();
 			while(frame_buffer_.try_pop(frame)){}
 			executor_.stop();
 		}
@@ -134,17 +135,7 @@ struct flash_producer::implementation
 	void param(const std::wstring& param) 
 	{	
 		if(!executor_.is_running())
-		{
-			try
-			{
-				start();
-			}
-			catch(caspar_exception& e)
-			{
-				e << msg_info("Flashproducer failed to recover from failure.");
-				throw e;
-			}
-		}
+			start();
 
 		executor_.invoke([&]()
 		{			
@@ -170,25 +161,14 @@ struct flash_producer::implementation
 
 			CASPAR_SCOPE_EXIT([=]
 			{
-				if(flashax_container_ != nullptr)
+				if(flashax_container_)
 				{
 					flashax_container_->DestroyAxControl();
 					flashax_container_->Release();
 					flashax_container_ = nullptr;
 				}
 			});
-
-			CASPAR_SCOPE_EXIT([=]
-			{						
-				stop();
-				
-				std::shared_ptr<draw_frame>  frame;
-				while(frame_buffer_.try_pop(frame)){}
-				frame_buffer_.try_push(draw_frame::eof()); // EOF
-		
-				current_frame_ = nullptr;
-			});
-
+			
 			while(executor_.is_running())
 			{	
 				if(!is_empty_)
@@ -197,8 +177,7 @@ struct flash_producer::implementation
 					while(executor_.try_execute()){}
 				}
 				else				
-					executor_.execute();
-				
+					executor_.execute();				
 			}
 		}
 		catch(...)
@@ -206,37 +185,29 @@ struct flash_producer::implementation
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 		
+		frame_buffer_.try_push(draw_frame::eof()); // EOF
 		CASPAR_LOG(info) << L"Ended flash_producer Thread";
 	}
 
 	void render()
-	{
-		assert(flashax_container_);
-		
+	{		
 		if(!is_empty_ || current_frame_ == nullptr)
 		{
-			if(!flashax_container_->IsReadyToRender())
-			{
-				CASPAR_LOG(trace) << "Flash Producer Underflow";
-				boost::thread::yield();
-				return;
-			}
+			bool is_progressive = format_desc_.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc_.fps/2 == 0);
 
-			auto format_desc = frame_processor_->get_video_format_desc();
-			bool is_progressive = format_desc.mode == video_mode::progressive || (flashax_container_->GetFPS() - format_desc.fps/2 == 0);
-
-			std::shared_ptr<draw_frame> frame = do_receive();
+			safe_ptr<draw_frame> frame = render_frame();
 			if(!is_progressive)
-				frame = std::shared_ptr<composite_frame>(composite_frame::interlace(safe_ptr<draw_frame>(frame), do_receive(), format_desc.mode));
+				frame = composite_frame::interlace(frame, render_frame(), format_desc_.mode);
 			
-			frame_buffer_.push(frame);
+			frame_buffer_.push(std::move(frame));
 			is_empty_ = flashax_container_->IsEmpty();
 		}
 	}
 
-	safe_ptr<draw_frame> do_receive()
+	safe_ptr<draw_frame> render_frame()
 	{
-		auto format_desc = frame_processor_->get_video_format_desc();
+		if(!flashax_container_->IsReadyToRender())
+			return draw_frame::empty();
 
 		flashax_container_->Tick();
 		invalid_count_ = !flashax_container_->InvalidRectangle() ? std::min(2, invalid_count_+1) : 0;
@@ -247,22 +218,22 @@ struct flash_producer::implementation
 			current_frame_ = bmp_frame_;
 		}
 
-		auto frame = frame_processor_->create_frame(format_desc.width, format_desc.height);
+		auto frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
 		std::copy(current_frame_->data(), current_frame_->data() + current_frame_->size(), frame->pixel_data().begin());
 		return frame;
 	}
 
 	safe_ptr<draw_frame> receive()
 	{
-		return ((frame_buffer_.try_pop(last_frame_) || !is_empty_) && last_frame_) ? safe_ptr<draw_frame>(last_frame_) : draw_frame::empty();
+		return frame_buffer_.try_pop(last_frame_) || !is_empty_ ? last_frame_ : draw_frame::empty();
 	}
 
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		frame_processor_ = frame_processor;
-		auto format_desc = frame_processor_->get_video_format_desc();
-		bmp_frame_ = std::make_shared<bitmap>(format_desc.width, format_desc.height);
-		start(false);
+		format_desc_ = frame_processor_->get_video_format_desc();
+		bmp_frame_ = std::make_shared<bitmap>(format_desc_.width, format_desc_.height);
+		start();
 	}
 
 	std::wstring print() const
@@ -272,9 +243,9 @@ struct flash_producer::implementation
 	
 	CComObject<flash::FlashAxContainer>* flashax_container_;
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<draw_frame>> frame_buffer_;
+	concurrent_bounded_queue_r<safe_ptr<draw_frame>> frame_buffer_;
 
-	std::shared_ptr<draw_frame> last_frame_;
+	safe_ptr<draw_frame> last_frame_;
 
 	bitmap_ptr current_frame_;
 	bitmap_ptr bmp_frame_;
@@ -287,6 +258,8 @@ struct flash_producer::implementation
 	int invalid_count_;
 
 	std::shared_ptr<frame_processor_device> frame_processor_;
+
+	video_format_desc format_desc_;
 };
 
 flash_producer::flash_producer(flash_producer&& other) : impl_(std::move(other.impl_)){}

@@ -92,6 +92,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
+    <ClInclude Include="concurrency\concurrent_queue.h" />
     <ClInclude Include="concurrency\executor.h" />
     <ClInclude Include="concurrency\Thread.h" />
     <ClInclude Include="config.h" />

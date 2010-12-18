@@ -52,7 +52,7 @@ public:
 
 	void clear()
 	{
-		// TODO
+		flash_producer_ = create_flash();
 	}
 
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& label, const std::wstring& data)

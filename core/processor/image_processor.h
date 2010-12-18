@@ -14,7 +14,7 @@ namespace caspar { namespace core {
 	
 struct image_transform
 {
-	image_transform() : alpha(1.0), pos(boost::make_tuple(0.0, 0.0)), uv(boost::make_tuple(0.0, 1.0, 1.0, 0.0)), mode(video_mode::invalid){}
+	image_transform() : alpha(1.0), pos(boost::make_tuple(0.0, 0.0)), uv(boost::make_tuple(0.0, 0.0, 0.0, 0.0)), mode(video_mode::invalid){}
 	double alpha;
 	boost::tuple<double, double> pos;
 	boost::tuple<double, double, double, double> uv;

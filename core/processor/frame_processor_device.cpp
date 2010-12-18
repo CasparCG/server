@@ -73,7 +73,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 			{
 				frame->map();
 				pool->push(frame);
-			}, executor::high_priority);
+			});
 		});
 	}
 	
