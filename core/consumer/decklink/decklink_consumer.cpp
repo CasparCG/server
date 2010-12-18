@@ -125,11 +125,20 @@ struct decklink_consumer::Implementation : boost::noncopyable
 	}
 
 	~Implementation()
-	{		
-		if(output_) 
-			output_->DisableVideoOutput();
-		
-		CoUninitialize();
+	{				
+		executor_.invoke([this]
+		{
+			if(output_) 
+				output_->DisableVideoOutput();
+
+			for(size_t n = 0; n < reserved_frames_.size(); ++n)
+				reserved_frames_[n].second.Release();
+
+			keyer_.Release();
+			output_.Release();
+			decklink_.Release();
+			CoUninitialize();
+		});
 	}
 	
 	void send(const safe_ptr<const read_frame>& frame)

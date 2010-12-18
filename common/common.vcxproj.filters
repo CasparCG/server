@@ -120,5 +120,8 @@
     <ClInclude Include="utility\safe_ptr.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
+    <ClInclude Include="concurrency\concurrent_queue.h">
+      <Filter>Source\concurrency</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

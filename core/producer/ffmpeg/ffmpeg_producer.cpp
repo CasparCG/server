@@ -42,6 +42,8 @@ extern "C"
 #include <boost/thread.hpp>
 #include <boost/thread/once.hpp>
 
+#include <deque>
+
 using namespace boost::assign;
 
 namespace caspar { namespace core { namespace ffmpeg{
@@ -72,8 +74,14 @@ public:
 	{
 		while(ouput_channel_.empty() && !input_.is_eof())
 		{	
-			auto video_packet = input_.get_video_packet();		
-			auto audio_packet = input_.get_audio_packet();		
+			aligned_buffer video_packet;
+			if(video_frame_channel_.size() < 3)	
+				video_packet = input_.get_video_packet();		
+			
+			aligned_buffer audio_packet;
+			if(audio_chunk_channel_.size() < 3)	
+				audio_packet = input_.get_audio_packet();		
+
 			tbb::parallel_invoke(
 			[&]
 			{ // Video Decoding and Scaling
