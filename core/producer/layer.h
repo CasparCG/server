@@ -19,7 +19,7 @@ struct load_option
 class layer : boost::noncopyable
 {
 public:
-	layer();
+	layer(size_t index = -1);
 	layer(layer&& other);
 	layer& operator=(layer&& other);
 

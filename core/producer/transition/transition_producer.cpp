@@ -146,7 +146,7 @@ struct transition_producer::implementation : boost::noncopyable
 
 	std::wstring print() const
 	{
-		return L"transition_producer. dest: " + (dest_producer_->print()) + L" src: " + (source_producer_->print());
+		return L"transition[" + (source_producer_->print()) + L" -> " + (dest_producer_->print()) + L"]";
 	}
 	
 	safe_ptr<frame_producer>	source_producer_;

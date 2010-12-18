@@ -52,7 +52,7 @@ struct ffmpeg_producer_impl
 {
 public:
 	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), last_frame_(transform_frame(draw_frame::empty())), underrun_count_(0),
-		input_(narrow(filename)), video_decoder_(input_.get_video_codec_context().get()), video_transformer_(input_.get_video_codec_context().get()), audio_decoder_(input_.get_audio_codec_context().get())
+		input_(filename), video_decoder_(input_.get_video_codec_context().get()), video_transformer_(input_.get_video_codec_context().get()), audio_decoder_(input_.get_audio_codec_context().get())
 	{				
 		input_.set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
 
@@ -125,13 +125,13 @@ public:
 			if(ouput_channel_.empty() && video_packet.empty() && audio_packet.empty())
 			{
 				if(underrun_count_++ == 0)
-					CASPAR_LOG(warning) << "### File read underflow has STARTED.";
+					CASPAR_LOG(warning) << print() << "### Started File read underrun.";
 
 				return last_frame_;
 			}
 			else if(underrun_count_ > 0)
 			{
-				CASPAR_LOG(trace) << "### File Read Underrun has ENDED with " << underrun_count_ << " ticks.";
+				CASPAR_LOG(trace) << print() << "### Ended file read underrun with " << underrun_count_ << " ticks.";
 				underrun_count_ = 0;
 			}
 		}
@@ -152,7 +152,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"ffmpeg_producer. filename " + filename_;
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 
 	size_t									underrun_count_;

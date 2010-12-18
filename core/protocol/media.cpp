@@ -4,7 +4,6 @@
 
 #include "../producer/color/color_producer.h"
 #include "../producer/ffmpeg/ffmpeg_producer.h"
-#include "../producer/flash/flash_producer.h"
 #include "../producer/flash/ct_producer.h"
 #include "../producer/image/image_producer.h"
 //#include "../producer/image/image_scroll_producer.h"

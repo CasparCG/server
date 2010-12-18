@@ -147,7 +147,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"cg_producer. back-end:" + flash_producer_->print();
+		return L"cg[" + flash_producer_->print() + L"]";
 	}
 
 	safe_ptr<flash_producer> flash_producer_;

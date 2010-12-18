@@ -50,7 +50,7 @@ struct ct_producer : public cg_producer
 
 	std::wstring print() const
 	{
-		return L"ct_producer. filename: " + filename_;
+		return L"ct[" + filename_ + L"]";
 	}
 
 	bool initialized_;

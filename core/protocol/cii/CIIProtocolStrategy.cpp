@@ -180,17 +180,15 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 		return;
 	}
 	
-	std::vector<std::wstring> params;
-	params.push_back(server::template_folder()+TEXT("CG.fth"));
-	auto pFP = flash::create_flash_producer(params);
+	auto producer = flash::flash_producer(server::template_folder()+TEXT("CG.fth"));
 
 	std::wstringstream flashParam;
 	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");
-	pFP->param(flashParam.str());
+	producer.param(flashParam.str());
 
 	CASPAR_LOG(info) << "Saved an instance of " << templateName << TEXT(" as ") << titleName ;
 
-	PutPreparedTemplate(titleName, safe_ptr<frame_producer>(std::move(*pFP)));
+	PutPreparedTemplate(titleName, safe_ptr<frame_producer>(std::move(producer)));
 	
 }
 

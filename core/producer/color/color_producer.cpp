@@ -83,7 +83,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return + L"color_producer. color: " + color_str_;
+		return + L"color[" + color_str_ + L"]";
 	}
 
 	safe_ptr<draw_frame> frame_;

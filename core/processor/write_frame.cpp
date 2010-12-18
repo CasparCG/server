@@ -19,7 +19,7 @@ struct write_frame::implementation : boost::noncopyable
 {
 	implementation(const pixel_format_desc& desc) : desc_(desc)
 	{
-		CASPAR_LOG(trace) << "Allocated write_frame.";
+		CASPAR_LOG(trace) << "[write_frame] Allocated.";
 
 		static GLenum mapping[] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
 		std::transform(desc_.planes.begin(), desc_.planes.end(), std::back_inserter(pbos_), [&](const pixel_format_desc::plane& plane)

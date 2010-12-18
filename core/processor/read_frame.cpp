@@ -14,7 +14,7 @@ struct read_frame::implementation : boost::noncopyable
 {
 	implementation(size_t width, size_t height) : pbo_(width, height, GL_BGRA)
 	{
-		CASPAR_LOG(trace) << "Allocated read_frame.";
+		CASPAR_LOG(trace) << "[read_frame] Allocated.";
 	}				
 
 	const boost::iterator_range<const unsigned char*> pixel_data() const

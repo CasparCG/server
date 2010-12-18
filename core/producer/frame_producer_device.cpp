@@ -57,7 +57,8 @@ struct frame_producer_device::implementation : boost::noncopyable
 		producer->initialize(frame_processor_);
 		executor_.begin_invoke([=]
 		{
-			layers_[render_layer].load(producer, option);
+			auto it = layers_.insert(std::make_pair(render_layer, layer(render_layer))).first;
+			it->second.load(producer, option);
 		});
 	}
 			

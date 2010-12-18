@@ -55,6 +55,4 @@ private:
 
 };
 
-safe_ptr<flash_producer> create_flash_producer(const std::vector<std::wstring>& params);
-
 }}}
