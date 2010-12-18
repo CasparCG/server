@@ -34,19 +34,19 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 {
 	static const size_t BUFFER_SIZE = 2 << 25;
 
-	implementation(const std::string& filename) : video_s_index_(-1), audio_s_index_(-1), filename_(filename)
+	implementation(const std::wstring& filename) : video_s_index_(-1), audio_s_index_(-1), filename_(filename)
 	{
 		loop_ = false;	
 		
 		int errn;
 		AVFormatContext* weak_format_context_;
-		if((errn = -av_open_input_file(&weak_format_context_, filename.c_str(), nullptr, 0, nullptr)) > 0)
+		if((errn = -av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr)) > 0)
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
 				msg_info("No format context found.") << 
 				boost::errinfo_api_function("av_open_input_file") <<
 				boost::errinfo_errno(errn) <<
-				boost::errinfo_file_name(filename));
+				boost::errinfo_file_name(narrow(filename)));
 
 		format_context_.reset(weak_format_context_, av_close_input_file);
 			
@@ -104,7 +104,7 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 	{	
 		static tbb::atomic<size_t> instances(boost::initialized_value); // Dangling threads debug info.
 
-		CASPAR_LOG(info) << "Started ffmpeg_producer::read_file Thread for " << filename_.c_str() << " instances: " << ++instances;
+		CASPAR_LOG(info) << L"ffmpeg[" << boost::filesystem::wpath(filename_).filename().c_str() << L"] Started file buffer thread. Instances: " << ++instances;
 		win32_exception::install_handler();
 		
 		try
@@ -153,7 +153,7 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 		
 		is_running_ = false;
 		
-		CASPAR_LOG(info) << " Ended ffmpeg_producer::read_file Thread for " << filename_.c_str() << " instances: " << --instances;
+		CASPAR_LOG(info) << L"ffmpeg[" << boost::filesystem::wpath(filename_).filename().c_str() << L"] Ended file buffer thread. Instances: " << --instances;
 	}
 
 	bool need_packet()
@@ -208,7 +208,7 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 
 	tbb::queuing_mutex					seek_mutex_;
 
-	const std::string					filename_;
+	const std::wstring					filename_;
 
 	std::shared_ptr<AVCodecContext>		video_codec_context_;
 
@@ -229,7 +229,7 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 	tbb::atomic<bool> is_running_;
 };
 
-input::input(const std::string& filename) : impl_(new implementation(filename)){}
+input::input(const std::wstring& filename) : impl_(new implementation(filename)){}
 input::~input(){impl_->stop();}
 void input::set_loop(bool value){impl_->loop_ = value;}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}

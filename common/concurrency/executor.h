@@ -47,12 +47,12 @@ public:
 		return is_running_;
 	}
 	
-	void stop(bool wait = true) // noexcept
+	void stop() // noexcept
 	{
 		is_running_ = false;	
 		begin_invoke([]{}); // wake if sleeping
-		if(wait && boost::this_thread::get_id() != thread_.get_id())
-			thread_.join();
+		assert(boost::this_thread::get_id() != thread_.get_id());
+		thread_.join();
 	}
 
 	void execute() // noexcept

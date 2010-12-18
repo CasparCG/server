@@ -11,7 +11,7 @@ namespace caspar { namespace core {
 
 struct layer::implementation
 {		
-	implementation() : foreground_(frame_producer::empty()), background_(frame_producer::empty()), last_frame_(draw_frame::empty()) {}
+	implementation(size_t index) : foreground_(frame_producer::empty()), background_(frame_producer::empty()), last_frame_(draw_frame::empty()), index_(index) {}
 	
 	void load(const safe_ptr<frame_producer>& frame_producer, load_option::type option)
 	{			
@@ -31,7 +31,7 @@ struct layer::implementation
 		foreground_ = background_;
 		background_ = frame_producer::empty();
 		is_paused_ = false;
-		CASPAR_LOG(info) << L"Started: " << foreground_->print();
+		CASPAR_LOG(info) << L"layer[" << index_ << L"] Started: " << foreground_->print();
 	}
 
 	void pause()
@@ -63,10 +63,12 @@ struct layer::implementation
 
 			if(last_frame_ == draw_frame::eof())
 			{
-				CASPAR_LOG(info) << L"Ended: " << foreground_->print();
+				CASPAR_LOG(info) << L"layer[" << index_ << L"] Ended:" << foreground_->print();
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
 				foreground_ = following;
+				if(foreground_ != frame_producer::empty())
+					CASPAR_LOG(info) << L"layer[" << index_ << L"] Started:" << foreground_->print();
 				last_frame_ = receive();
 			}
 		}
@@ -75,7 +77,7 @@ struct layer::implementation
 			try
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << L"Removed " << foreground_->print() << L" from layer.";
+				CASPAR_LOG(warning) << L"layer[" << index_ << L"] Error. Removed " << foreground_->print() << L" from layer.";
 				foreground_ = frame_producer::empty();
 				last_frame_ = draw_frame::empty();
 			}
@@ -89,9 +91,10 @@ struct layer::implementation
 	safe_ptr<draw_frame>		last_frame_;
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
+	size_t						index_;
 };
 
-layer::layer() : impl_(new implementation()){}
+layer::layer(size_t index) : impl_(new implementation(index)){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){other.impl_ = nullptr;}
 layer& layer::operator=(layer&& other)
 {
