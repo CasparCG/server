@@ -140,14 +140,15 @@ public:
 		return current_frame_;
 	}
 	
-	safe_ptr<draw_frame> receive()
+	bool try_pop(safe_ptr<draw_frame>& dest)
 	{
-		frame_buffer_.try_pop(last_frame_);
-		return last_frame_;
+		bool result = frame_buffer_.try_pop(last_frame_);
+		dest = last_frame_;
+		return result;
 	}
 
-	std::wstring print() const{ return L"flash[" + filename_ + L"]"; }
-	std::string bprint() const{ return narrow(L"flash[" + filename_ + L"]"); }
+	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"] Render thread"; }
+	std::string bprint() const{ return narrow(print()); }
 
 private:
 	const std::wstring filename_;
@@ -186,41 +187,40 @@ struct flash_producer::implementation
 			if(!renderer_)
 				renderer_.reset(factory_());
 			renderer_->param(param);
-		}, executor::high_priority);
+			render_frame();
+		});
 	}
 	
 	safe_ptr<draw_frame> receive()
 	{
-		auto frame = renderer_ ? renderer_->receive() : draw_frame::empty();
-		if(executor_.size() < 4) // Avoid problems when in underrun.
-		{
-			executor_.begin_invoke([this]
-			{
-				try
-				{
-					renderer_->render();
-				}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					renderer_.reset();
-				}
-			});
-		}
+		auto frame = draw_frame::empty();
+		if(renderer_ && renderer_->try_pop(frame)) // Only render again if frame was removed from buffer.		
+			executor_.begin_invoke([this]{render_frame();});		
+		
+		assert(executor_.size() < 8);
+		
 		return frame;
+	}
+
+	void render_frame()
+	{
+		try
+		{
+			renderer_->render();
+		}
+		catch(...)
+		{
+			renderer_.reset();
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 	}
 
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		factory_ = [=]{return new flash_renderer(frame_processor, filename_);};
-		executor_.invoke([&]
-		{
-			if(!renderer_)
-				renderer_.reset(factory_());
-		});
 	}
-
-	std::wstring print() const{ return L"flash[" + filename_ + L"]"; }
+	
+	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }
 	
 	std::wstring filename_;
 	std::function<flash_renderer*()> factory_;
