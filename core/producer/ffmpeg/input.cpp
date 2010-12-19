@@ -100,7 +100,7 @@ struct input::implementation : boost::noncopyable
 		
 	void read_file() // For every packet taken: read in a number of packets.
 	{		
-		for(size_t n = 0; (n < 3 || video_packet_buffer_.size() < 3 || audio_packet_buffer_.size() < 3) && buffer_size_ < BUFFER_SIZE && executor_.is_running(); ++n)
+		for(size_t n = 0; buffer_size_ < BUFFER_SIZE && (n < 3 || video_packet_buffer_.size() < 3 || audio_packet_buffer_.size() < 3) && executor_.is_running(); ++n)
 		{
 			AVPacket tmp_packet;
 			safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
@@ -141,8 +141,8 @@ struct input::implementation : boost::noncopyable
 		if(buffer.try_pop(packet))
 		{
 			buffer_size_ -= packet.size();
-			if(executor_.size() < 4) // Avoid problems when in underrun.
-				executor_.begin_invoke([this]{read_file();});
+			executor_.begin_invoke([this]{read_file();});
+			assert(executor_.size() < 8);
 		}
 		return std::move(packet);
 	}
@@ -171,7 +171,7 @@ struct input::implementation : boost::noncopyable
 
 	std::wstring print() const
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"] Buffering ";
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"] Buffer thread";
 	}
 				
 	std::shared_ptr<AVFormatContext>	format_context_;	// Destroy this last

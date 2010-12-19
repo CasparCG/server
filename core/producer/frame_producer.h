@@ -86,7 +86,7 @@ public:
 		return producer;
 	}
 
-	virtual std::wstring print() const = 0;
+	virtual std::wstring print() const = 0; // nothrow
 };
 
 inline std::wostream& operator<<(std::wostream& out, const frame_producer& producer)

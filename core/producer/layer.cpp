@@ -16,14 +16,15 @@ struct layer::implementation
 	void load(const safe_ptr<frame_producer>& frame_producer, bool autoplay)
 	{			
 		background_ = frame_producer;
+		CASPAR_LOG(info) << print() << " " << foreground_->print() << " => background";
 		if(autoplay)
 			play();			
 	}
 
 	void preview(const safe_ptr<frame_producer>& frame_producer)
 	{
-		background_ = frame_producer;
-		foreground_ = frame_producer::empty();	
+		stop();
+		load(frame_producer, false);			
 		try
 		{
 			last_frame_ = frame_producer->receive();
@@ -31,9 +32,8 @@ struct layer::implementation
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << L"layer[" << index_ << L"] Error. Removed " << foreground_->print() << L" from layer.";
+			CASPAR_LOG(warning) << print() << L" empty => background{" << background_->print() << "}";
 			background_ = frame_producer::empty();
-			last_frame_ = draw_frame::empty();
 		}
 	}
 	
@@ -43,7 +43,7 @@ struct layer::implementation
 		foreground_ = background_;
 		background_ = frame_producer::empty();
 		is_paused_ = false;
-		CASPAR_LOG(info) << L"layer[" << index_ << L"] Started: " << foreground_->print();
+		CASPAR_LOG(info) << print() << L" background{" << foreground_->print() << "} => foreground";
 	}
 
 	void pause()
@@ -75,25 +75,28 @@ struct layer::implementation
 
 			if(last_frame_ == draw_frame::eof())
 			{
-				CASPAR_LOG(info) << L"layer[" << index_ << L"] Ended:" << foreground_->print();
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
 				foreground_ = following;
 				if(foreground_ != frame_producer::empty())
-					CASPAR_LOG(info) << L"layer[" << index_ << L"] Started:" << foreground_->print();
+					CASPAR_LOG(info) << print() << L" [EOF] following{" << foreground_->print() << "} => foreground{" << foreground_->print() << "}";
+				else
+					CASPAR_LOG(info) << print() << L" [EOF] empty => foreground{" << foreground_->print() << "}";
 				last_frame_ = receive();
 			}
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << L"layer[" << index_ << L"] Error. Removed " << foreground_->print() << L" from layer.";
+			CASPAR_LOG(warning) << print() << L" empty -> foreground{" << foreground_->print() << "]";
 			foreground_ = frame_producer::empty();
 			last_frame_ = draw_frame::empty();
 		}
 
 		return last_frame_;
 	}
+
+	std::wstring print() const { return L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]"; }
 				
 	tbb::atomic<bool>			is_paused_;
 	safe_ptr<draw_frame>		last_frame_;
