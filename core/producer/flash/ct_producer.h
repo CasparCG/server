@@ -21,6 +21,10 @@
 
 #include "../frame_producer.h"
 
+#include <common/utility/safe_ptr.h>
+
+#include <string>
+
 namespace caspar { namespace core { namespace flash{
 		
 safe_ptr<frame_producer> create_ct_producer(const std::vector<std::wstring>& params);

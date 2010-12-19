@@ -3,7 +3,6 @@
 #include "input.h"
 
 #include "../../format/video_format.h"
-#include "../../../common/utility/scope_exit.h"
 #include "../../../common/concurrency/concurrent_queue.h"
 
 #include <tbb/concurrent_queue.h>
@@ -19,7 +18,7 @@
 #pragma warning (disable : 4244)
 #endif
 
-#include <boost/thread.hpp>
+#include "../../../common/concurrency/executor.h"
 
 extern "C" 
 {
@@ -30,7 +29,7 @@ extern "C"
 
 namespace caspar { namespace core { namespace ffmpeg{
 		
-struct input::implementation : public std::enable_shared_from_this<implementation>, boost::noncopyable
+struct input::implementation : boost::noncopyable
 {
 	static const size_t BUFFER_SIZE = 2 << 25;
 
@@ -59,26 +58,25 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 
 		video_codec_context_ = open_stream(CODEC_TYPE_VIDEO, video_s_index_);
 		if(!video_codec_context_)
-			CASPAR_LOG(warning) << "No video stream found.";
+			CASPAR_LOG(warning) << "Could not open any video stream.";
 		
 		audio_codex_context_ = open_stream(CODEC_TYPE_AUDIO, audio_s_index_);
 		if(!audio_codex_context_)
-			CASPAR_LOG(warning) << "No audio stream found.";
+			CASPAR_LOG(warning) << "Could not open any audio stream.";
 
 		if(!video_codec_context_ && !audio_codex_context_)
 			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec context found."));		
-				
-		is_running_ = true;
-		io_thread_ = boost::thread([=]{read_file();});
+			
+		executor_.start();
+		executor_.begin_invoke([this]{read_file();});
+		CASPAR_LOG(info) << print() << " Started";
 	}
 
-	void stop()
-	{		
-		is_running_ = false;
-		buffer_size_ = 0;
-		cond_.notify_one();
+	~implementation()
+	{
+		CASPAR_LOG(info) << print() << " Ended";
 	}
-				
+							
 	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index)
 	{		
 		AVStream** streams_end = format_context_->streams+format_context_->nb_streams;
@@ -100,67 +98,33 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 		return std::shared_ptr<AVCodecContext>((*stream)->codec, avcodec_close);
 	}
 		
-	void read_file()
-	{	
-		static tbb::atomic<size_t> instances(boost::initialized_value); // Dangling threads debug info.
-
-		CASPAR_LOG(info) << L"ffmpeg[" << boost::filesystem::wpath(filename_).filename().c_str() << L"] Started file buffer thread. Instances: " << ++instances;
-		win32_exception::install_handler();
-		
-		try
+	void read_file() // For every packet taken: read in a number of packets.
+	{		
+		for(size_t n = 0; (n < 3 || video_packet_buffer_.size() < 3 || audio_packet_buffer_.size() < 3) && buffer_size_ < BUFFER_SIZE && executor_.is_running(); ++n)
 		{
-			auto keep_alive = shared_from_this(); // keep alive this while thread is running.
-			while(keep_alive->is_running_)
+			AVPacket tmp_packet;
+			safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
+			tbb::queuing_mutex::scoped_lock lock(seek_mutex_);	
+
+			if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
 			{
+				auto packet = aligned_buffer(read_packet->data, read_packet->data + read_packet->size);
+				if(read_packet->stream_index == video_s_index_) 						
 				{
-					AVPacket tmp_packet;
-					safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
-					tbb::queuing_mutex::scoped_lock lock(seek_mutex_);	
-
-					if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
-					{
-						auto packet = aligned_buffer(read_packet->data, read_packet->data + read_packet->size);
-						if(read_packet->stream_index == video_s_index_) 						
-						{
-							buffer_size_ += packet.size();
-							video_packet_buffer_.try_push(std::move(packet));						
-						}
-						else if(read_packet->stream_index == audio_s_index_) 	
-						{
-							buffer_size_ += packet.size();
-							audio_packet_buffer_.try_push(std::move(packet));
-						}
-					}
-					else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
-						is_running_ = false;
+					buffer_size_ += packet.size();
+					video_packet_buffer_.try_push(std::move(packet));						
 				}
-
-				if(!need_packet() && is_running_)
-					boost::this_thread::sleep(boost::posix_time::milliseconds(10)); // Read packets in max 100 pps
-
-				if(buffer_size_ >= BUFFER_SIZE)
+				else if(read_packet->stream_index == audio_s_index_) 	
 				{
-					boost::unique_lock<boost::mutex> lock(mut_);
-					while(buffer_size_ >= BUFFER_SIZE && !need_packet() && is_running_)
-						cond_.wait(lock);
+					buffer_size_ += packet.size();
+					audio_packet_buffer_.try_push(std::move(packet));
 				}
 			}
+			else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
+				executor_.stop(false);
 		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-		
-		is_running_ = false;
-		
-		CASPAR_LOG(info) << L"ffmpeg[" << boost::filesystem::wpath(filename_).filename().c_str() << L"] Ended file buffer thread. Instances: " << --instances;
 	}
-
-	bool need_packet()
-	{
-		return video_packet_buffer_.size() < 3 || audio_packet_buffer_.size() < 3;
-	}
-	
+		
 	aligned_buffer get_video_packet()
 	{
 		return get_packet(video_packet_buffer_);
@@ -177,14 +141,15 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 		if(buffer.try_pop(packet))
 		{
 			buffer_size_ -= packet.size();
-			cond_.notify_one();
+			if(executor_.size() < 4) // Avoid problems when in underrun.
+				executor_.begin_invoke([this]{read_file();});
 		}
 		return std::move(packet);
 	}
 
 	bool is_eof() const
 	{
-		return !is_running_ && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
+		return !executor_.is_running() && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
 	}
 		
 	// TODO: Not properly done.
@@ -202,6 +167,11 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 		if(audio_codex_context_)
 			avcodec_flush_buffers(audio_codex_context_.get());
 		return true;
+	}
+
+	std::wstring print() const
+	{
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"] Buffering ";
 	}
 				
 	std::shared_ptr<AVFormatContext>	format_context_;	// Destroy this last
@@ -221,16 +191,12 @@ struct input::implementation : public std::enable_shared_from_this<implementatio
 	concurrent_bounded_queue_r<aligned_buffer> video_packet_buffer_;
 	concurrent_bounded_queue_r<aligned_buffer> audio_packet_buffer_;
 	
-	boost::mutex				mut_;
-	boost::condition_variable	cond_;
 	tbb::atomic<size_t>			buffer_size_;
 
-	boost::thread	io_thread_;
-	tbb::atomic<bool> is_running_;
+	executor executor_;
 };
 
 input::input(const std::wstring& filename) : impl_(new implementation(filename)){}
-input::~input(){impl_->stop();}
 void input::set_loop(bool value){impl_->loop_ = value;}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}

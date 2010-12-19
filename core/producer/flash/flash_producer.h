@@ -21,13 +21,9 @@
 
 #include "../frame_producer.h"
 
-namespace caspar { namespace core {
+#include <memory>
 
-class Monitor;
-
-namespace flash {
-
-class FlashAxContainer;
+namespace caspar { namespace core { namespace flash {
 
 ///=================================================================================================
 /// <summary>	Flash Producer. </summary>
@@ -48,8 +44,6 @@ public:
 	static std::wstring find_template(const std::wstring& templateName);
 
 private:	
-	friend class flash::FlashAxContainer;
-
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 

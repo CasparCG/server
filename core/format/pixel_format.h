@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <array>
+#include <vector>
 
 namespace caspar { namespace core {
 	

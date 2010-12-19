@@ -31,11 +31,11 @@
 
 #include "../../format/video_format.h"
 #include "../../server.h"
-#include "../../../common/concurrency/executor.h"
-#include "../../../common/concurrency/concurrent_queue.h"
 
-#include "../../processor/draw_frame.h"
 #include "../../processor/composite_frame.h"
+
+#include <common/concurrency/executor.h>
+#include <common/concurrency/concurrent_queue.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
@@ -111,7 +111,7 @@ public:
 		
 	void render()
 	{		 
-		while(frame_buffer_.size() < 3)
+		while(frame_buffer_.size() < 3) // Keep pipeline filled.
 		{
 			bool is_progressive = format_desc_.mode == video_mode::progressive || (ax_->GetFPS() - format_desc_.fps/2 == 0);
 
@@ -125,7 +125,8 @@ public:
 
 	safe_ptr<draw_frame> render_frame()
 	{
-		ax_->Tick();
+		if(!ax_->IsEmpty())
+			ax_->Tick();
 		
 		if(ax_->IsReadyToRender() && ax_->InvalidRectangle())
 		{
@@ -191,18 +192,21 @@ struct flash_producer::implementation
 	safe_ptr<draw_frame> receive()
 	{
 		auto frame = renderer_ ? renderer_->receive() : draw_frame::empty();
-		executor_.begin_invoke([this]
+		if(executor_.size() < 4) // Avoid problems when in underrun.
 		{
-			try
+			executor_.begin_invoke([this]
 			{
-				renderer_->render();
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				renderer_.reset();
-			}
-		});
+				try
+				{
+					renderer_->render();
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					renderer_.reset();
+				}
+			});
+		}
 		return frame;
 	}
 

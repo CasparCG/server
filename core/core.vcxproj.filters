@@ -129,12 +129,6 @@
     <ClInclude Include="producer\ffmpeg\ffmpeg_producer.h">
       <Filter>Source\channel\producer\ffmpeg</Filter>
     </ClInclude>
-    <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h">
-      <Filter>Source\channel\producer\ffmpeg\audio</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\ffmpeg\video\video_decoder.h">
-      <Filter>Source\channel\producer\ffmpeg\video</Filter>
-    </ClInclude>
     <ClInclude Include="producer\image\image_loader.h">
       <Filter>Source\channel\producer\image</Filter>
     </ClInclude>
@@ -152,9 +146,6 @@
     </ClInclude>
     <ClInclude Include="producer\frame_producer.h">
       <Filter>Source\channel\producer</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\ffmpeg\video\video_transformer.h">
-      <Filter>Source\channel\producer\ffmpeg\video</Filter>
     </ClInclude>
     <ClInclude Include="producer\flash\cg_producer.h">
       <Filter>Source\channel\producer\flash</Filter>
@@ -249,9 +240,6 @@
     <ClInclude Include="processor\read_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
-    <ClInclude Include="producer\ffmpeg\input.h">
-      <Filter>Source\channel\producer\ffmpeg\io</Filter>
-    </ClInclude>
     <ClInclude Include="processor\draw_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
@@ -260,6 +248,15 @@
     </ClInclude>
     <ClInclude Include="processor\audio_processor.h">
       <Filter>Source\channel\processor\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h">
+      <Filter>Source\channel\producer\ffmpeg\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\input.h">
+      <Filter>Source\channel\producer\ffmpeg\io</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg\video\video_decoder.h">
+      <Filter>Source\channel\producer\ffmpeg\video</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -296,12 +293,6 @@
     <ClCompile Include="producer\ffmpeg\ffmpeg_producer.cpp">
       <Filter>Source\channel\producer\ffmpeg</Filter>
     </ClCompile>
-    <ClCompile Include="producer\ffmpeg\audio\audio_decoder.cpp">
-      <Filter>Source\channel\producer\ffmpeg\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
-      <Filter>Source\channel\producer\ffmpeg\video</Filter>
-    </ClCompile>
     <ClCompile Include="producer\image\image_loader.cpp">
       <Filter>Source\channel\producer\image</Filter>
     </ClCompile>
@@ -316,9 +307,6 @@
     </ClCompile>
     <ClCompile Include="protocol\media.cpp">
       <Filter>Source\protocol</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\ffmpeg\video\video_transformer.cpp">
-      <Filter>Source\channel\producer\ffmpeg\video</Filter>
     </ClCompile>
     <ClCompile Include="producer\flash\cg_producer.cpp">
       <Filter>Source\channel\producer\flash</Filter>
@@ -383,9 +371,6 @@
     <ClCompile Include="processor\read_frame.cpp">
       <Filter>Source\channel\processor\frame</Filter>
     </ClCompile>
-    <ClCompile Include="producer\ffmpeg\input.cpp">
-      <Filter>Source\channel\producer\ffmpeg\io</Filter>
-    </ClCompile>
     <ClCompile Include="format\pixel_format.cpp">
       <Filter>Source\channel\format</Filter>
     </ClCompile>
@@ -394,6 +379,15 @@
     </ClCompile>
     <ClCompile Include="processor\audio_processor.cpp">
       <Filter>Source\channel\processor\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\audio\audio_decoder.cpp">
+      <Filter>Source\channel\producer\ffmpeg\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\input.cpp">
+      <Filter>Source\channel\producer\ffmpeg\io</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
+      <Filter>Source\channel\producer\ffmpeg\video</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

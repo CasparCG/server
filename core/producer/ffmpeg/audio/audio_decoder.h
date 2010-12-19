@@ -22,6 +22,5 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<audio_decoder> audio_decoder_ptr;
 
 }}}

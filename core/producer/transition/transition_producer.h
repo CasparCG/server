@@ -22,7 +22,7 @@
 #include "../frame_producer.h"
 
 #include <string>
-#include <vector>
+#include <memory>
 
 namespace caspar { namespace core {
 

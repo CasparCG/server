@@ -5,6 +5,7 @@
 #endif
 
 #include "cg_producer.h"
+
 #include "flash_producer.h"
 
 #include "../../processor/draw_frame.h"
@@ -164,7 +165,7 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, 
 	catch(std::bad_cast&)
 	{
 		auto producer = make_safe<cg_producer>();		
-		channel->load(render_layer, producer, load_option::auto_play); 
+		channel->load(render_layer, producer, true); 
 		return producer;
 	}
 }

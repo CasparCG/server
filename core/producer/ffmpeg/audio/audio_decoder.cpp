@@ -3,6 +3,7 @@
 #include "audio_decoder.h"
 
 #include <queue>
+#include <deque>
 
 #include <tbb/cache_aligned_allocator.h>
 		
@@ -28,9 +29,8 @@ struct audio_decoder::implementation : boost::noncopyable
 	static const int FRAME_AUDIO_SAMPLES = 1920*2;
 	static const int SAMPLE_RATE = 48000;
 
-	implementation(AVCodecContext* codec_context) 
-		: current_chunk_(), codec_context_(codec_context), audio_resample_buffer_(4*SAMPLE_RATE*2+FF_INPUT_BUFFER_PADDING_SIZE/2),
-		audio_buffer_(4*SAMPLE_RATE*2+FF_INPUT_BUFFER_PADDING_SIZE/2)/*, resample_context_(nullptr)*/
+	implementation(AVCodecContext* codec_context) : current_chunk_(), codec_context_(codec_context), audio_resample_buffer_(4*SAMPLE_RATE*2+FF_INPUT_BUFFER_PADDING_SIZE/2),
+		audio_buffer_(4*SAMPLE_RATE*2+FF_INPUT_BUFFER_PADDING_SIZE/2)//, resample_context_(nullptr)
 	{
 		//if(codec_context_->sample_rate != SAMPLE_RATE)
 		//{
@@ -107,9 +107,9 @@ struct audio_decoder::implementation : boost::noncopyable
 	buffer audio_buffer_;	
 	buffer audio_resample_buffer_;
 
-	std::deque<short, tbb::cache_aligned_allocator<short>> current_chunk_;
+	std::vector<short, tbb::cache_aligned_allocator<short>> current_chunk_;
 
-	std::vector<short, tbb::cache_aligned_allocator<short>> current_resample_chunk_;
+	//std::vector<short, tbb::cache_aligned_allocator<short>> current_resample_chunk_;
 
 	AVCodecContext*	codec_context_;
 };

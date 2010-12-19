@@ -22,13 +22,13 @@
 
 #include "../../channel.h"
 
-#include "../../../common/io/ProtocolStrategy.h"
+#include <common/io/ProtocolStrategy.h>
 #include "CIICommand.h"
 
 #include "../../consumer/frame_consumer.h"
 #include "../../producer/frame_producer_device.h"
 
-#include "../../../common/concurrency/executor.h"
+#include <common/concurrency/executor.h>
 
 namespace caspar { namespace core { namespace cii {
 

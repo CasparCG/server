@@ -4,21 +4,16 @@
 
 #include "layer.h"
 
-#include "../format/video_format.h"
 #include "../processor/composite_frame.h"
 #include "../processor/draw_frame.h"
+#include "../processor/frame_processor_device.h"
 
-#include "../../common/utility/scope_exit.h"
-#include "../../common/concurrency/executor.h"
+#include <common/concurrency/executor.h>
 
 #include <boost/thread.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
-#include <boost/range/algorithm.hpp>
-#include <boost/foreach.hpp>
 
-#include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
-#include <tbb/mutex.h>
 	
 namespace caspar { namespace core {
 	
@@ -52,16 +47,26 @@ struct frame_producer_device::implementation : boost::noncopyable
 		executor_.begin_invoke([=]{tick();});
 	}
 
-	void load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option)
+	void load(int render_layer, const safe_ptr<frame_producer>& producer, bool autoplay)
 	{
 		producer->initialize(frame_processor_);
 		executor_.begin_invoke([=]
 		{
 			auto it = layers_.insert(std::make_pair(render_layer, layer(render_layer))).first;
-			it->second.load(producer, option);
+			it->second.load(producer, autoplay);
 		});
 	}
 			
+	void preview(int render_layer, const safe_ptr<frame_producer>& producer)
+	{
+		producer->initialize(frame_processor_);
+		executor_.begin_invoke([=]
+		{
+			auto it = layers_.insert(std::make_pair(render_layer, layer(render_layer))).first;
+			it->second.preview(producer);
+		});
+	}
+
 	void pause(int render_layer)
 	{		
 		executor_.begin_invoke([=]
@@ -88,9 +93,11 @@ struct frame_producer_device::implementation : boost::noncopyable
 		{
 			auto it = layers_.find(render_layer);
 			if(it != layers_.end())			
+			{
 				it->second.stop();	
-			if(it->second.empty())
-				layers_.erase(it);
+				if(it->second.empty())
+					layers_.erase(it);
+			}
 		});
 	}
 
@@ -142,7 +149,8 @@ struct frame_producer_device::implementation : boost::noncopyable
 
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 frame_producer_device::frame_producer_device(const safe_ptr<frame_processor_device>& frame_processor) : impl_(new implementation(frame_processor)){}
-void frame_producer_device::load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option){impl_->load(render_layer, producer, option);}
+void frame_producer_device::load(int render_layer, const safe_ptr<frame_producer>& producer, bool autoplay){impl_->load(render_layer, producer, autoplay);}
+void frame_producer_device::preview(int render_layer, const safe_ptr<frame_producer>& producer){impl_->preview(render_layer, producer);}
 void frame_producer_device::pause(int render_layer){impl_->pause(render_layer);}
 void frame_producer_device::play(int render_layer){impl_->play(render_layer);}
 void frame_producer_device::stop(int render_layer){impl_->stop(render_layer);}

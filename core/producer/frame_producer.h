@@ -21,14 +21,16 @@
 
 #include "../processor/draw_frame.h"
 #include "../processor/frame_processor_device.h"
-#include "../../common/utility/safe_ptr.h"
+
+#include <common/utility/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 
-#include <memory>
+#include <string>
+#include <ostream>
 
 namespace caspar { namespace core {
-	
+
 class frame_producer : boost::noncopyable
 {
 public:
@@ -52,7 +54,7 @@ public:
 	///
 	/// \return	The following producer, or nullptr if there is no following producer. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}
+	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	/// \fn	virtual void :::set_leading_producer(const std::shared_ptr<frame_producer>& producer)
@@ -61,7 +63,7 @@ public:
 	///
 	/// \param	producer	The leading producer.
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual void set_leading_producer(const safe_ptr<frame_producer>& /*producer*/) {}
+	virtual void set_leading_producer(const safe_ptr<frame_producer>& /*producer*/) {}  // nothrow
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	/// \fn	virtual void :::initialize(const safe_ptr<frame_processor_device>& frame_processor) = 0;
@@ -72,7 +74,7 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor) = 0;
 
-	static safe_ptr<frame_producer> empty()
+	static safe_ptr<frame_producer> empty()  // nothrow
 	{
 		struct empty_frame_producer : public frame_producer
 		{

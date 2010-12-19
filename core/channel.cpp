@@ -21,9 +21,14 @@ public:
 		producer_device_->clear();
 	}
 	
-	void load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option = load_option::none)
+	void load(int render_layer, const safe_ptr<frame_producer>& producer, bool autoplay)
 	{
-		producer_device_->load(render_layer, producer, option);
+		producer_device_->load(render_layer, producer, autoplay);
+	}
+
+	void preview(int render_layer, const safe_ptr<frame_producer>& producer)
+	{
+		producer_device_->preview(render_layer, producer);
 	}
 
 	void pause(int render_layer)
@@ -75,7 +80,8 @@ private:
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
 channel::channel(const safe_ptr<frame_producer_device>& producer_device, const safe_ptr<frame_processor_device>& processor_device, const safe_ptr<frame_consumer_device>& consumer_device)
 	: impl_(new implementation(producer_device, processor_device, consumer_device)){}
-void channel::load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option){impl_->load(render_layer, producer, option);}
+void channel::load(int render_layer, const safe_ptr<frame_producer>& producer, bool autoplay){impl_->load(render_layer, producer, autoplay);}
+void channel::preview(int render_layer, const safe_ptr<frame_producer>& producer){impl_->preview(render_layer, producer);}
 void channel::pause(int render_layer){impl_->pause(render_layer);}
 void channel::play(int render_layer){impl_->play(render_layer);}
 void channel::stop(int render_layer){impl_->stop(render_layer);}

@@ -2,6 +2,7 @@
 
 #include "../exception/exceptions.h"
 #include "../exception/win32_exception.h"
+#include "../log/log.h"
 
 #include <boost/thread.hpp>
 
@@ -9,6 +10,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <functional>
+#include <array>
 
 namespace caspar {
 
@@ -47,12 +49,12 @@ public:
 		return is_running_;
 	}
 	
-	void stop() // noexcept
+	void stop(bool wait = true) // noexcept
 	{
 		is_running_ = false;	
 		begin_invoke([]{}); // wake if sleeping
-		assert(boost::this_thread::get_id() != thread_.get_id());
-		thread_.join();
+		if(wait && boost::this_thread::get_id() != thread_.get_id())
+			thread_.join();
 	}
 
 	void execute() // noexcept
@@ -103,6 +105,16 @@ public:
 		cond_.notify_one();
 
 		return std::move(future);		
+	}
+
+	size_t size() const
+	{
+		return execution_queue_.size();
+	}
+
+	bool empty() const
+	{
+		return execution_queue_.empty();
 	}
 	
 	template<typename Func>
