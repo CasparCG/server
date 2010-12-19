@@ -19,30 +19,32 @@
 */
 #pragma once
 
-#include <memory>
-#include <vector>
-
 #include "fwd.h"
+
 #include "write_frame.h"
 
 #include "../format/video_format.h"
 
-namespace caspar { namespace core {
+#include <common/utility/safe_ptr.h>
 
+#include <memory>
+
+namespace caspar { namespace core {
+	
 class frame_processor_device : boost::noncopyable
 {
 public:
-	frame_processor_device(frame_processor_device&& other);
+	frame_processor_device(frame_processor_device&& other); // nothrow
 	frame_processor_device(const video_format_desc& format_desc);
 		
-	void send(safe_ptr<draw_frame>&& frame);
+	void send(safe_ptr<draw_frame>&& frame); // nothrow
 	safe_ptr<const read_frame> receive();
-	
+		
 	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc);		
-	safe_ptr<write_frame> create_frame(size_t width, size_t height);			
-	safe_ptr<write_frame> create_frame();
+	safe_ptr<write_frame> create_frame(size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra);			
+	safe_ptr<write_frame> create_frame(pixel_format::type pix_fmt = pixel_format::bgra);
 	
-	const video_format_desc& get_video_format_desc() const;
+	const video_format_desc& get_video_format_desc() const; // nothrow
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

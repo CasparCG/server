@@ -36,7 +36,7 @@ struct pixel_buffer_object::implementation : boost::noncopyable
 		default:
 			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported format.") << arg_name_info("format"));
 		}
-		if(width < 2 || height < 2)
+		if(width < 1 || height < 1)
 			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Invalid dimensions.")  << arg_name_info("width/height"));
 	}
 

@@ -13,16 +13,28 @@ struct layer::implementation
 {		
 	implementation(size_t index) : foreground_(frame_producer::empty()), background_(frame_producer::empty()), last_frame_(draw_frame::empty()), index_(index) {}
 	
-	void load(const safe_ptr<frame_producer>& frame_producer, load_option::type option)
+	void load(const safe_ptr<frame_producer>& frame_producer, bool autoplay)
 	{			
 		background_ = frame_producer;
-		if(option == load_option::preview)		
+		if(autoplay)
+			play();			
+	}
+
+	void preview(const safe_ptr<frame_producer>& frame_producer)
+	{
+		background_ = frame_producer;
+		foreground_ = frame_producer::empty();	
+		try
 		{
-			foreground_ = frame_producer::empty();	
 			last_frame_ = frame_producer->receive();
 		}
-		else if(option == load_option::auto_play)
-			play();			
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << L"layer[" << index_ << L"] Error. Removed " << foreground_->print() << L" from layer.";
+			background_ = frame_producer::empty();
+			last_frame_ = draw_frame::empty();
+		}
 	}
 	
 	void play()
@@ -74,19 +86,15 @@ struct layer::implementation
 		}
 		catch(...)
 		{
-			try
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << L"layer[" << index_ << L"] Error. Removed " << foreground_->print() << L" from layer.";
-				foreground_ = frame_producer::empty();
-				last_frame_ = draw_frame::empty();
-			}
-			catch(...){}
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << L"layer[" << index_ << L"] Error. Removed " << foreground_->print() << L" from layer.";
+			foreground_ = frame_producer::empty();
+			last_frame_ = draw_frame::empty();
 		}
 
 		return last_frame_;
-	}	
-		
+	}
+				
 	tbb::atomic<bool>			is_paused_;
 	safe_ptr<draw_frame>		last_frame_;
 	safe_ptr<frame_producer>	foreground_;
@@ -102,7 +110,8 @@ layer& layer::operator=(layer&& other)
 	other.impl_ = nullptr;
 	return *this;
 }
-void layer::load(const safe_ptr<frame_producer>& frame_producer, load_option::type option){return impl_->load(frame_producer, option);}	
+void layer::load(const safe_ptr<frame_producer>& frame_producer, bool autoplay){return impl_->load(frame_producer, autoplay);}	
+void layer::preview(const safe_ptr<frame_producer>& frame_producer){return impl_->preview(frame_producer);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}

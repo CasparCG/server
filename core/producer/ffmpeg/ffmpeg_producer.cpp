@@ -25,7 +25,7 @@ extern "C"
 
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
-#include "video/video_transformer.h"
+#include "video/video_decoder.h"
 
 #include "../../format/video_format.h"
 #include "../../processor/transform_frame.h"
@@ -52,7 +52,7 @@ struct ffmpeg_producer_impl
 {
 public:
 	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), last_frame_(transform_frame(draw_frame::empty())), underrun_count_(0),
-		input_(filename), video_decoder_(input_.get_video_codec_context().get()), video_transformer_(input_.get_video_codec_context().get()), audio_decoder_(input_.get_audio_codec_context().get())
+		input_(filename), video_decoder_(input_.get_video_codec_context().get()), audio_decoder_(input_.get_audio_codec_context().get())
 	{				
 		input_.set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
 
@@ -67,7 +67,7 @@ public:
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		format_desc_ = frame_processor->get_video_format_desc();
-		video_transformer_.initialize(frame_processor);
+		video_decoder_.initialize(frame_processor);
 	}
 		
 	safe_ptr<draw_frame> receive()
@@ -87,8 +87,7 @@ public:
 			{ // Video Decoding and Scaling
 				if(!video_packet.empty())
 				{
-					auto decoded_frame = video_decoder_.execute(video_packet);
-					auto frame = video_transformer_.execute(decoded_frame);
+					auto frame = video_decoder_.execute(video_packet);
 					video_frame_channel_.push_back(std::move(frame));	
 				}
 			}, 
@@ -160,7 +159,6 @@ public:
 	input									input_;			
 	audio_decoder							audio_decoder_;
 	video_decoder							video_decoder_;
-	video_transformer						video_transformer_;
 
 	std::deque<safe_ptr<write_frame>>		video_frame_channel_;	
 	std::deque<std::vector<short>>			audio_chunk_channel_;

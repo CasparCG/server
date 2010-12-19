@@ -10,18 +10,14 @@
 
 #include "../format/video_format.h"
 
-#include "../../common/exception/exceptions.h"
-#include "../../common/concurrency/executor.h"
-#include "../../common/gl/utility.h"
-
+#include <common/exception/exceptions.h>
+#include <common/concurrency/executor.h>
+#include <common/gl/utility.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
 
 #include <boost/range/algorithm.hpp>
-#include <boost/thread.hpp>
-
-#include <functional>
 
 namespace caspar { namespace core {
 	
@@ -98,20 +94,20 @@ void frame_processor_device::send(safe_ptr<draw_frame>&& frame){impl_->send(std:
 safe_ptr<const read_frame> frame_processor_device::receive(){return impl_->receive();}
 const video_format_desc& frame_processor_device::get_video_format_desc() const { return impl_->fmt_; }
 safe_ptr<write_frame> frame_processor_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		
-safe_ptr<write_frame> frame_processor_device::create_frame(size_t width, size_t height)
+safe_ptr<write_frame> frame_processor_device::create_frame(size_t width, size_t height, pixel_format::type pix_fmt)
 {
 	// Create bgra frame
 	pixel_format_desc desc;
-	desc.pix_fmt = pixel_format::bgra;
+	desc.pix_fmt = pix_fmt;
 	desc.planes.push_back(pixel_format_desc::plane(width, height, 4));
 	return create_frame(desc);
 }
 			
-safe_ptr<write_frame> frame_processor_device::create_frame()
+safe_ptr<write_frame> frame_processor_device::create_frame(pixel_format::type pix_fmt)
 {
 	// Create bgra frame with output resolution
 	pixel_format_desc desc;
-	desc.pix_fmt = pixel_format::bgra;
+	desc.pix_fmt = pix_fmt;
 	desc.planes.push_back(pixel_format_desc::plane(get_video_format_desc().width, get_video_format_desc().height, 4));
 	return create_frame(desc);
 }

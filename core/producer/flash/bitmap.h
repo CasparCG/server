@@ -37,8 +37,6 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<bitmap> bitmap_ptr;
-typedef std::unique_ptr<bitmap> bitmap_uptr;
 
 }}
 

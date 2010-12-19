@@ -168,9 +168,8 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto pFP = load_media(_parameters);	
-		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();		
-		GetChannel()->load(GetLayerIndex(), pFP, autoPlay ? load_option::auto_play : load_option::preview);
+		auto pFP = load_media(_parameters);		
+		GetChannel()->preview(GetLayerIndex(), pFP);
 	
 		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
 
@@ -249,7 +248,7 @@ bool LoadbgCommand::DoExecute()
 
 		pFP = safe_ptr<frame_producer>(transition_producer(pFP, transitionInfo));
 		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();
-		GetChannel()->load(GetLayerIndex(), pFP, autoPlay ? load_option::auto_play : load_option::none); // TODO: LOOP
+		GetChannel()->load(GetLayerIndex(), pFP, autoPlay); // TODO: LOOP
 	
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));

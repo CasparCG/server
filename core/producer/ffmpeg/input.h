@@ -1,8 +1,9 @@
 #pragma once
 
-#include <system_error>
-
 #include <tbb/cache_aligned_allocator.h>
+
+#include <memory>
+#include <string>
 
 struct AVCodecContext;
 
@@ -14,7 +15,6 @@ class input : boost::noncopyable
 {
 public:
 	input(const std::wstring& filename);
-	~input();
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 
@@ -29,8 +29,6 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<input> input_ptr;
-typedef std::unique_ptr<input> input_uptr;
 
 	}
 }}

@@ -23,71 +23,36 @@
 #include "color_producer.h"
 
 #include "../../processor/draw_frame.h"
-#include "../../format/video_format.h"
 
-#include <intrin.h>
-#pragma intrinsic(__movsd, __stosd)
+#include <sstream>
 
 namespace caspar { namespace core {
 	
-unsigned int get_pixel_color_value(const std::wstring& parameter)
-{
-	union Color 
-	{
-		struct Components 
-		{
-			unsigned char a;
-			unsigned char r;
-			unsigned char g;
-			unsigned char b;
-		} comp;
-
-		unsigned int value;
-	};
-
-	std::wstring color_code;
-	if(parameter.length() != 9 || parameter[0] != '#')
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("parameter") << arg_value_info(narrow(parameter)) << msg_info("Invalid color code"));
-	
-	color_code = parameter.substr(1);
-
-	Color color;
-	color.value = _tcstoul(color_code.c_str(), 0, 16);
-	unsigned char temp = color.comp.a;
-	color.comp.a = color.comp.b;
-	color.comp.b = temp;
-	temp = color.comp.r;
-	color.comp.r = color.comp.g;
-	color.comp.g = temp;
-
-	return color.value;
-}
-
 class color_producer : public frame_producer
 {
 public:
-	color_producer(color_producer&& other) : frame_(std::move(other.frame_)), color_value_(std::move(other.color_value_)), color_str_(std::move(other.color_str_)){}
-	explicit color_producer(const std::wstring& color) : color_str_(color), color_value_(get_pixel_color_value(color)), frame_(draw_frame::empty()){}
-	
-	safe_ptr<draw_frame> receive()
-	{ 
-		return frame_;
+	color_producer(color_producer&& other) : frame_(std::move(other.frame_)), color_str_(std::move(other.color_str_)){}
+
+	explicit color_producer(const std::wstring& color) : color_str_(color), frame_(draw_frame::empty())
+	{
+		if(color.length() != 9 || color[0] != '#')
+			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color)) << msg_info("Invalid color code"));
 	}
+	
+	safe_ptr<draw_frame> receive() { return frame_; }
 
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		auto frame = std::move(frame_processor->create_frame());
-		__stosd(reinterpret_cast<unsigned long*>(frame->pixel_data().begin()), color_value_, frame->pixel_data().size() / sizeof(unsigned long));
+		auto frame = frame_processor->create_frame(1, 1, pixel_format::bgra);
+		auto& value = *reinterpret_cast<unsigned long*>(frame->pixel_data().begin());
+		std::wstringstream str(color_str_.substr(1));
+		str >> std::hex >> value;	
 		frame_ = std::move(frame);
 	}
 	
-	std::wstring print() const
-	{
-		return + L"color[" + color_str_ + L"]";
-	}
+	std::wstring print() const { return + L"color[" + color_str_ + L"]"; }
 
 	safe_ptr<draw_frame> frame_;
-	unsigned int color_value_;
 	std::wstring color_str_;
 };
 

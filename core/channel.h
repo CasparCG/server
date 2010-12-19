@@ -26,7 +26,8 @@ public:
 	channel(channel&& other);
 	channel(const safe_ptr<frame_producer_device>& producer_device, const safe_ptr<frame_processor_device>& processor_device, const safe_ptr<frame_consumer_device>& consumer_device);
 	
-	void load(int render_layer, const safe_ptr<frame_producer>& producer, load_option::type option = load_option::none);
+	void load(int render_layer, const safe_ptr<frame_producer>& producer, bool autoplay = false);
+	void preview(int render_layer, const safe_ptr<frame_producer>& producer);
 	void pause(int render_layer);
 	void play(int render_layer);
 	void stop(int render_layer);

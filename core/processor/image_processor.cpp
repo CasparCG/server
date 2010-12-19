@@ -191,6 +191,7 @@ struct image_processor::implementation : boost::noncopyable
 	{
 		transform_stack_.pop();
 		set_mode(transform_stack_.top().mode);
+		glColor4d(1.0, 1.0, 1.0, transform_stack_.top().alpha);
 		glPopMatrix();
 	}
 

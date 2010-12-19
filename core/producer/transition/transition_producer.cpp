@@ -22,12 +22,9 @@
 #include "transition_producer.h"
 
 #include "../../format/video_format.h"
-#include "../../processor/draw_frame.h"
 #include "../../processor/composite_frame.h"
 #include "../../processor/transform_frame.h"
 #include "../../processor/frame_processor_device.h"
-
-#include "../../producer/frame_producer_device.h"
 
 #include <boost/range/algorithm/copy.hpp>
 
