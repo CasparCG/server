@@ -7,9 +7,8 @@
 #include "frame_consumer_device.h"
 
 #include "../format/video_format.h"
-#include "../processor/write_frame.h"
-#include "../processor/frame_processor_device.h"
-#include "../../common/concurrency/executor.h"
+
+#include <common/concurrency/executor.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
@@ -38,26 +37,25 @@ private:
 
 struct frame_consumer_device::implementation
 {
+	typedef safe_ptr<const read_frame> frame_type;
 public:
-	implementation(const safe_ptr<frame_processor_device>& frame_processor, const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers) 
-		: frame_processor_(frame_processor), consumers_(consumers), fmt_(format_desc)
+	implementation(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers) : consumers_(consumers), fmt_(format_desc)
 	{		
 		std::vector<size_t> depths;
 		boost::range::transform(consumers_, std::back_inserter(depths), std::mem_fn(&frame_consumer::buffer_depth));
 		max_depth_ = *boost::range::max_element(depths);
+		input_.set_capacity(3);
 		executor_.start();
 		executor_.begin_invoke([=]{tick();});
 	}
 					
 	void tick()
 	{
-		process(frame_processor_->receive());		
-		if(!consumers_.empty())
-			executor_.begin_invoke([=]{tick();});
-	}
+		boost::shared_future<frame_type> future_frame;
+		input_.pop(future_frame);
+		
+		auto frame = future_frame.get();
 
-	void process(const safe_ptr<const read_frame>& frame)
-	{		
 		buffer_.push_back(frame);
 
 		clock_sync clock;
@@ -96,6 +94,13 @@ public:
 			buffer_.pop_front();
 	}
 
+	void consume(boost::unique_future<frame_type>&& frame)
+	{		
+		input_.push(boost::shared_future<frame_type>(std::move(frame)));
+	}
+
+	tbb::concurrent_bounded_queue<boost::shared_future<frame_type>> input_;
+
 	executor executor_;	
 
 	size_t max_depth_;
@@ -103,12 +108,11 @@ public:
 
 	std::vector<safe_ptr<frame_consumer>> consumers_;
 	
-	safe_ptr<frame_processor_device> frame_processor_;
-
 	const video_format_desc& fmt_;
 };
 
 frame_consumer_device::frame_consumer_device(frame_consumer_device&& other) : impl_(std::move(other.impl_)){}
-frame_consumer_device::frame_consumer_device(const safe_ptr<frame_processor_device>& frame_processor, const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers)
-	: impl_(new implementation(frame_processor, format_desc, consumers)){}
+frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers)
+	: impl_(new implementation(format_desc, consumers)){}
+void frame_consumer_device::consume(boost::unique_future<safe_ptr<const read_frame>>&& future_frame) { impl_->consume(std::move(future_frame)); }
 }}

@@ -26,7 +26,6 @@
 #include "CIICommand.h"
 
 #include "../../consumer/frame_consumer.h"
-#include "../../producer/frame_producer_device.h"
 
 #include <common/concurrency/executor.h>
 

@@ -68,7 +68,6 @@
 #include "../common/utility/string_convert.h"
 #include "../common/utility/safe_ptr.h"
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
-#include "../common/concurrency/concurrent_queue.h"
 
 #include "../common/log/Log.h"
 #include "../common/exception/exceptions.h"

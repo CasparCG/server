@@ -22,7 +22,6 @@
 
 #include "CLKCommand.h"
 #include "../../../common/io/ProtocolStrategy.h"
-#include "../../producer/frame_producer_device.h"
 #include "../../channel.h"
 
 namespace caspar { namespace core { namespace CLK {

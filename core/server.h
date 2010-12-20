@@ -2,8 +2,6 @@
 
 #include "channel.h"
 
-#include "producer/frame_producer_device.h"
-
 #include <common/exception/exceptions.h>
 
 #include <boost/noncopyable.hpp>

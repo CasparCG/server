@@ -3,7 +3,8 @@
 #include "input.h"
 
 #include "../../format/video_format.h"
-#include "../../../common/concurrency/concurrent_queue.h"
+
+#include <common/concurrency/executor.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/queuing_mutex.h>
@@ -18,7 +19,6 @@
 #pragma warning (disable : 4244)
 #endif
 
-#include "../../../common/concurrency/executor.h"
 
 extern "C" 
 {
@@ -69,12 +69,12 @@ struct input::implementation : boost::noncopyable
 			
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
-		CASPAR_LOG(info) << print() << " Started";
+		CASPAR_LOG(info) << print() << " started.";
 	}
 
 	~implementation()
 	{
-		CASPAR_LOG(info) << print() << " Ended";
+		CASPAR_LOG(info) << print() << " ended.";
 	}
 							
 	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index)
@@ -108,15 +108,15 @@ struct input::implementation : boost::noncopyable
 
 			if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
 			{
-				auto packet = aligned_buffer(read_packet->data, read_packet->data + read_packet->size);
+				auto packet = std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size);
 				if(read_packet->stream_index == video_s_index_) 						
 				{
-					buffer_size_ += packet.size();
+					buffer_size_ += packet->size();
 					video_packet_buffer_.try_push(std::move(packet));						
 				}
 				else if(read_packet->stream_index == audio_s_index_) 	
 				{
-					buffer_size_ += packet.size();
+					buffer_size_ += packet->size();
 					audio_packet_buffer_.try_push(std::move(packet));
 				}
 			}
@@ -135,16 +135,17 @@ struct input::implementation : boost::noncopyable
 		return get_packet(audio_packet_buffer_);
 	}
 	
-	aligned_buffer get_packet(concurrent_bounded_queue_r<aligned_buffer>& buffer)
+	aligned_buffer get_packet(tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>>& buffer)
 	{
-		aligned_buffer packet;
+		std::shared_ptr<aligned_buffer> packet;
 		if(buffer.try_pop(packet))
 		{
-			buffer_size_ -= packet.size();
+			buffer_size_ -= packet->size();
 			executor_.begin_invoke([this]{read_file();});
 			assert(executor_.size() < 8);
+			return std::move(*packet);
 		}
-		return std::move(packet);
+		return aligned_buffer();
 	}
 
 	bool is_eof() const
@@ -188,8 +189,8 @@ struct input::implementation : boost::noncopyable
 	int									video_s_index_;
 	int									audio_s_index_;
 	
-	concurrent_bounded_queue_r<aligned_buffer> video_packet_buffer_;
-	concurrent_bounded_queue_r<aligned_buffer> audio_packet_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> video_packet_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> audio_packet_buffer_;
 	
 	tbb::atomic<size_t>			buffer_size_;
 

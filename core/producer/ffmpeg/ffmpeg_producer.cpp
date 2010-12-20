@@ -30,7 +30,6 @@ extern "C"
 #include "../../format/video_format.h"
 #include "../../processor/transform_frame.h"
 #include "../../processor/draw_frame.h"
-#include "../../../common/utility/scope_exit.h"
 #include "../../server.h"
 
 #include <tbb/mutex.h>

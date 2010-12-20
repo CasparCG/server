@@ -92,7 +92,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
-    <ClInclude Include="concurrency\concurrent_queue.h" />
     <ClInclude Include="concurrency\executor.h" />
     <ClInclude Include="concurrency\Thread.h" />
     <ClInclude Include="config.h" />
@@ -109,7 +108,6 @@
     <ClInclude Include="log\log.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="utility\safe_ptr.h" />
-    <ClInclude Include="utility\scope_exit.h" />
     <ClInclude Include="utility\singleton_pool.h" />
     <ClInclude Include="utility\string_convert.h" />
   </ItemGroup>
