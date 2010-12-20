@@ -19,7 +19,6 @@
 */
  
 #include "../../StdAfx.h"
-#include "../../producer/frame_producer_device.h"
 
 #include "AMCPProtocolStrategy.h"
 

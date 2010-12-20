@@ -32,11 +32,9 @@
 #include "DeckLinkAPI_h.h"
 
 #include "../../format/video_format.h"
-#include "../../producer/frame_producer_device.h"
 
-#include "../../../common/concurrency/executor.h"
-#include "../../../common/exception/exceptions.h"
-#include "../../../common/utility/scope_exit.h"
+#include <common/concurrency/executor.h>
+#include <common/exception/exceptions.h>
 
 #include <tbb/concurrent_queue.h>
 #include <boost/thread.hpp>

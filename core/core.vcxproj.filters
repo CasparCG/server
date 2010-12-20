@@ -195,14 +195,8 @@
     <ClInclude Include="producer\flash\bitmap.h">
       <Filter>Source\channel\producer\flash</Filter>
     </ClInclude>
-    <ClInclude Include="producer\layer.h">
-      <Filter>Source\channel\producer</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\frame_consumer_device.h">
       <Filter>Source\channel\consumer</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame_producer_device.h">
-      <Filter>Source\channel\producer</Filter>
     </ClInclude>
     <ClInclude Include="server.h">
       <Filter>Source</Filter>
@@ -257,6 +251,9 @@
     </ClInclude>
     <ClInclude Include="producer\ffmpeg\video\video_decoder.h">
       <Filter>Source\channel\producer\ffmpeg\video</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\layer.h">
+      <Filter>Source\channel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -335,14 +332,8 @@
     <ClCompile Include="producer\flash\bitmap.cpp">
       <Filter>Source\channel\producer\flash</Filter>
     </ClCompile>
-    <ClCompile Include="producer\layer.cpp">
-      <Filter>Source\channel\producer</Filter>
-    </ClCompile>
     <ClCompile Include="consumer\frame_consumer_device.cpp">
       <Filter>Source\channel\consumer</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\frame_producer_device.cpp">
-      <Filter>Source\channel\producer</Filter>
     </ClCompile>
     <ClCompile Include="server.cpp">
       <Filter>Source</Filter>
@@ -388,6 +379,9 @@
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
       <Filter>Source\channel\producer\ffmpeg\video</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\layer.cpp">
+      <Filter>Source\channel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -35,7 +35,6 @@
 #include "../../processor/composite_frame.h"
 
 #include <common/concurrency/executor.h>
-#include <common/concurrency/concurrent_queue.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
@@ -142,7 +141,10 @@ public:
 	
 	bool try_pop(safe_ptr<draw_frame>& dest)
 	{
-		bool result = frame_buffer_.try_pop(last_frame_);
+		std::shared_ptr<draw_frame> temp;
+		bool result = frame_buffer_.try_pop(temp);
+		if(temp)
+			last_frame_ = safe_ptr<draw_frame>(std::move(temp));
 		dest = last_frame_;
 		return result;
 	}
@@ -157,7 +159,7 @@ private:
 	const safe_ptr<bitmap> bmp_frame_;	 
 
 	CComPtr<FlashAxContainer> ax_;
-	concurrent_bounded_queue_r<safe_ptr<draw_frame>> frame_buffer_;	
+	tbb::concurrent_bounded_queue<std::shared_ptr<draw_frame>> frame_buffer_;	
 	safe_ptr<draw_frame> last_frame_;
 	safe_ptr<draw_frame> current_frame_;
 };

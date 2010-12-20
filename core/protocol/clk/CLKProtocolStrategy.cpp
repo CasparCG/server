@@ -23,7 +23,6 @@
 #include "CLKProtocolStrategy.h"
 
 #include "..\..\producer\flash\cg_producer.h"
-#include "..\..\producer\frame_producer_device.h"
 
 #include <string>
 #include <sstream>

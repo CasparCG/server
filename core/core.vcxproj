@@ -194,7 +194,6 @@
     <ClInclude Include="producer\image\image_producer.h" />
     <ClInclude Include="producer\image\image_scroll_producer.h" />
     <ClInclude Include="producer\layer.h" />
-    <ClInclude Include="producer\frame_producer_device.h" />
     <ClInclude Include="producer\transition\transition_producer.h" />
     <ClInclude Include="protocol\amcp\AMCPCommand.h" />
     <ClInclude Include="protocol\amcp\AMCPCommandQueue.h" />
@@ -338,10 +337,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producer\frame_producer_device.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

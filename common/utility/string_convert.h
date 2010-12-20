@@ -65,15 +65,16 @@ inline std::string narrow(const std::string& str, const std::locale&)
 //}
 
 template <typename T>
-inline T lexical_cast_or_default(const std::wstring str, T defaultValue = T())
+inline T lexical_cast_or_default(const std::wstring str, T fail_value = T())
 {
 	try
 	{
-		if(!str.empty())
-			return boost::lexical_cast<T>(str);
+		return boost::lexical_cast<T>(str);
 	}
-	catch(...){}
-	return defaultValue;
+	catch(boost::bad_lexical_cast&)
+	{
+		return fail_value;
+	}
 }
 
 }

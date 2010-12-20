@@ -26,7 +26,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-#include "producer/frame_producer_device.h"
 #include "consumer/frame_consumer_device.h"
 #include "processor/frame_processor_device.h"
 
@@ -115,10 +114,7 @@ struct server::implementation : boost::noncopyable
 				}
 			}
 			
-			auto processor_device = make_safe<frame_processor_device>(format_desc);
-			auto producer_device = make_safe<frame_producer_device>(processor_device);
-			auto consumer_device = make_safe<frame_consumer_device>(processor_device, format_desc, consumers);
-			channels_.push_back(channel(producer_device, processor_device, consumer_device));
+			channels_.push_back(channel(format_desc, consumers));
 		}
 	}
 		
