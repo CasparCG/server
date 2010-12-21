@@ -97,6 +97,7 @@ public:
 	void consume(boost::unique_future<frame_type>&& frame)
 	{		
 		input_.push(boost::shared_future<frame_type>(std::move(frame)));
+		executor_.begin_invoke([=]{tick();});
 	}
 
 	tbb::concurrent_bounded_queue<boost::shared_future<frame_type>> input_;
