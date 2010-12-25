@@ -24,13 +24,6 @@
 
 #include "cg_producer.h"
 
-#include "../../processor/draw_frame.h"
-#include "../../server.h"
-
-#include <boost/assign/list_of.hpp>
-
-using namespace boost::assign;
-
 namespace caspar { namespace core { namespace flash {
 
 struct ct_producer : public cg_producer
@@ -59,7 +52,7 @@ struct ct_producer : public cg_producer
 	
 safe_ptr<frame_producer> create_ct_producer(const std::vector<std::wstring>& params) 
 {
-	std::wstring filename = server::media_folder() + L"\\" + params[0] + L".ct";
+	std::wstring filename = params[0] + L".ct";
 	return boost::filesystem::exists(filename) ? make_safe<ct_producer>(filename) : frame_producer::empty();
 }
 

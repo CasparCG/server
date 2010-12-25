@@ -1,40 +1,37 @@
 #include "../StdAfx.h"
 
 #include "read_frame.h"
-#include "../format/pixel_format.h"
-#include "../../common/gl/utility.h"
-#include "../../common/gl/pixel_buffer_object.h"
-#include "../../common/utility/singleton_pool.h"
 
-#include <boost/range/algorithm.hpp>
+#include "buffer/read_buffer.h"
+
+#include <common/gl/utility.h>
+#include <common/utility/singleton_pool.h>
 
 namespace caspar { namespace core {
 																																							
 struct read_frame::implementation : boost::noncopyable
 {
-	implementation(size_t width, size_t height) : pbo_(width, height, GL_BGRA)
-	{
-		CASPAR_LOG(trace) << "[read_frame] Allocated.";
-	}				
+	implementation(safe_ptr<const read_buffer>&& image_data, std::vector<short>&& audio_data) : image_data_(std::move(image_data)), audio_data_(std::move(audio_data)){}	
 
-	const boost::iterator_range<const unsigned char*> pixel_data() const
-	{
-		if(!pbo_.data())
-			return boost::iterator_range<const unsigned char*>();
-
-		auto ptr = static_cast<const unsigned char*>(pbo_.data());
-		return boost::iterator_range<const unsigned char*>(ptr, ptr+pbo_.size());
-	}
-
-	gl::pbo pbo_;
+	safe_ptr<const read_buffer> image_data_;
 	std::vector<short> audio_data_;
 };
 
-read_frame::read_frame(size_t width, size_t height) : impl_(singleton_pool<implementation>::make_shared(width, height)){}
-const boost::iterator_range<const unsigned char*> read_frame::pixel_data() const{return impl_->pixel_data();}
-const std::vector<short>& read_frame::audio_data() const { return impl_->audio_data_; }
-void read_frame::audio_data(const std::vector<short>& audio_data) { impl_->audio_data_ = audio_data; }
-void read_frame::unmap(){impl_->pbo_.unmap_read();}
-void read_frame::map(){impl_->pbo_.map_read();}
+read_frame::read_frame(){}
+read_frame::read_frame(safe_ptr<const read_buffer>&& image_data, std::vector<short>&& audio_data) : impl_(singleton_pool<implementation>::make_shared(image_data, audio_data)){}
+
+const boost::iterator_range<const unsigned char*> read_frame::image_data() const
+{
+	if(!impl_ || !impl_->image_data_->data())
+		return boost::iterator_range<const unsigned char*>();
+	auto ptr = static_cast<const unsigned char*>(impl_->image_data_->data());
+	return boost::iterator_range<const unsigned char*>(ptr, ptr + impl_->image_data_->size());
+}
+const boost::iterator_range<const short*> read_frame::audio_data() const
+{
+	if(!impl_)
+		return boost::iterator_range<const short*>();
+	return boost::iterator_range<const short*>(impl_->audio_data_.data(), impl_->audio_data_.data() + impl_->audio_data_.size());
+}
 
 }}

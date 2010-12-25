@@ -6,7 +6,7 @@
 
 #include "consumer/frame_consumer_device.h"
 
-#include "processor/composite_frame.h"
+#include "processor/draw_frame.h"
 #include "processor/draw_frame.h"
 #include "processor/frame_processor_device.h"
 
@@ -35,8 +35,8 @@ struct channel::implementation : boost::noncopyable
 	void tick()
 	{		
 		auto drawed_frame = draw();
-		auto future_frame = processor_device_->process(std::move(drawed_frame));
-		consumer_device_.consume(std::move(future_frame));
+		auto processed_frame = processor_device_->process(std::move(drawed_frame));
+		consumer_device_.consume(std::move(processed_frame));
 
 		executor_.begin_invoke([=]{tick();});
 	}
@@ -54,7 +54,7 @@ struct channel::implementation : boost::noncopyable
 		});		
 		boost::range::remove_erase(frames, draw_frame::eof());
 		boost::range::remove_erase(frames, draw_frame::empty());
-		return composite_frame(frames);
+		return draw_frame(frames);
 	}
 
 	void load(int render_layer, const safe_ptr<frame_producer>& producer, bool autoplay)

@@ -143,7 +143,7 @@ struct decklink_consumer::Implementation : boost::noncopyable
 	{
 		active_ = executor_.begin_invoke([=]
 		{		
-			std::copy(frame->pixel_data().begin(), frame->pixel_data().end(), static_cast<char*>(reserved_frames_.front().first));
+			std::copy(frame->image_data().begin(), frame->image_data().end(), static_cast<char*>(reserved_frames_.front().first));
 				
 			if(FAILED(output_->DisplayVideoFrameSync(reserved_frames_.front().second)))
 				CASPAR_LOG(error) << L"DECKLINK: Failed to display frame.";

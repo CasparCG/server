@@ -6,7 +6,6 @@
 #include "../../processor/frame_processor_device.h"
 #include "../../processor/draw_frame.h"
 #include "../../format/video_format.h"
-#include "../../server.h"
 
 #include <boost/assign.hpp>
 
@@ -29,7 +28,7 @@ struct image_producer : public frame_producer
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
 		auto frame = frame_processor->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->pixel_data().size(), frame->pixel_data().begin());
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
 		frame_ = std::move(frame);
 	}
 
@@ -46,7 +45,7 @@ struct image_producer : public frame_producer
 safe_ptr<frame_producer> create_image_producer(const  std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg");
-	std::wstring filename = server::media_folder() + L"\\" + params[0];
+	std::wstring filename = params[0];
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 		{					

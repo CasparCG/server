@@ -51,11 +51,9 @@ public:
 					
 	void tick()
 	{
-		boost::shared_future<frame_type> future_frame;
-		input_.pop(future_frame);
+		frame_type frame;
+		input_.pop(frame);
 		
-		auto frame = future_frame.get();
-
 		buffer_.push_back(frame);
 
 		clock_sync clock;
@@ -94,13 +92,13 @@ public:
 			buffer_.pop_front();
 	}
 
-	void consume(boost::unique_future<frame_type>&& frame)
+	void consume(frame_type&& frame)
 	{		
-		input_.push(boost::shared_future<frame_type>(std::move(frame)));
+		input_.push(std::move(frame));
 		executor_.begin_invoke([=]{tick();});
 	}
 
-	tbb::concurrent_bounded_queue<boost::shared_future<frame_type>> input_;
+	tbb::concurrent_bounded_queue<frame_type> input_;
 
 	executor executor_;	
 
@@ -115,5 +113,5 @@ public:
 frame_consumer_device::frame_consumer_device(frame_consumer_device&& other) : impl_(std::move(other.impl_)){}
 frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers)
 	: impl_(new implementation(format_desc, consumers)){}
-void frame_consumer_device::consume(boost::unique_future<safe_ptr<const read_frame>>&& future_frame) { impl_->consume(std::move(future_frame)); }
+void frame_consumer_device::consume(safe_ptr<const read_frame>&& future_frame) { impl_->consume(std::move(future_frame)); }
 }}

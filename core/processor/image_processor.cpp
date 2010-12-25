@@ -2,10 +2,14 @@
 
 #include "image_processor.h"
 
-#include "../../common/exception/exceptions.h"
-#include "../../common/gl/utility.h"
-#include "../../common/gl/shader_program.h"
-#include "../../common/gl/frame_buffer_object.h"
+#include "buffer/read_buffer.h"
+#include "buffer/write_buffer.h"
+
+#include <common/exception/exceptions.h>
+#include <common/gl/utility.h>
+#include <common/gl/shader_program.h>
+#include <common/gl/frame_buffer_object.h>
+#include <common/concurrency/executor.h>
 
 #include <Glee.h>
 #include <SFML/Window.hpp>
@@ -56,9 +60,10 @@ GLubyte lower_pattern[] = {
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff};
 	
-struct image_processor::implementation : boost::noncopyable
-{
-	implementation(const video_format_desc& format_desc) : fbo_(format_desc.width, format_desc.height), current_(pixel_format::invalid), reading_(create_reading())
+
+struct renderer
+{	
+	renderer(const video_format_desc& format_desc) : fbo_(format_desc.width, format_desc.height), reading_(create_reading())
 	{
 		transform_stack_.push(image_transform());
 		transform_stack_.top().mode = video_mode::progressive;
@@ -168,14 +173,20 @@ struct image_processor::implementation : boost::noncopyable
 		set_mode(transform_stack_.top().mode);
 	}
 		
-	void render(const pixel_format_desc& desc, std::vector<gl::pbo>& pbos)
+	void render(const pixel_format_desc& desc, std::vector<safe_ptr<write_buffer>>& buffers)
 	{
-		set_pixel_format(desc.pix_fmt);
+		shaders_[desc.pix_fmt].use();
 
-		for(size_t n = 0; n < pbos.size(); ++n)
+		for(size_t n = 0; n < buffers.size(); ++n)
 		{
+			auto buffer = buffers[n];
+
 			glActiveTexture(GL_TEXTURE0+n);
-			pbos[n].unmap_write();
+			buffer->unmap();
+						
+			bool fit = buffer->width() == fbo_.width() && buffer->height() == fbo_.height();
+			GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, fit ? GL_NEAREST : GL_LINEAR));
+			GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, fit ? GL_NEAREST : GL_LINEAR));
 		}
 
 		auto t = transform_stack_.top();
@@ -195,7 +206,7 @@ struct image_processor::implementation : boost::noncopyable
 		glPopMatrix();
 	}
 
-	safe_ptr<read_frame> begin_pass()
+	safe_ptr<const read_buffer> begin_pass()
 	{
 		reading_->map();
 		GL(glClear(GL_COLOR_BUFFER_BIT));
@@ -218,65 +229,107 @@ struct image_processor::implementation : boost::noncopyable
 			glPolygonStipple(progressive_pattern);
 	}
 
-	void set_pixel_format(pixel_format::type format)
+	safe_ptr<read_buffer> create_reading()
 	{
-		if(current_ == format)
-			return;
-		current_ = format;
-		shaders_[format].use();
-	}
-
-	safe_ptr<read_frame> create_reading()
-	{
-		std::shared_ptr<read_frame> frame;
+		std::shared_ptr<read_buffer> frame;
 		if(!pool_.try_pop(frame))		
-			frame = std::make_shared<read_frame>(fbo_.width(), fbo_.height());
-		return safe_ptr<read_frame>(frame.get(), [=](read_frame*){pool_.push(frame);});
+			frame = std::make_shared<read_buffer>(fbo_.width(), fbo_.height());
+		return safe_ptr<read_buffer>(frame.get(), [=](read_buffer*){pool_.push(frame);});
 	}
 
 	const ogl_context context_;
 		 
-	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>> pool_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<read_buffer>> pool_;
 
 	std::stack<image_transform> transform_stack_;
 
-	pixel_format::type current_;
 	std::unordered_map<pixel_format::type, gl::shader_program> shaders_;
 	gl::fbo fbo_;
 
-	safe_ptr<read_frame> reading_;
+	safe_ptr<read_buffer> reading_;
 };
 
-image_processor::image_processor(const video_format_desc& format_desc) : format_desc_(format_desc){}
-void image_processor::begin(const image_transform& transform) 
+struct image_processor::implementation : boost::noncopyable
 {
-	if(!impl_)
-		impl_.reset(new implementation(format_desc_));
-	impl_->begin(transform);
-}
-void image_processor::process(const pixel_format_desc& desc, std::vector<gl::pbo>& pbos)
-{
-	if(!impl_)
-		impl_.reset(new implementation(format_desc_));
-	impl_->render(desc, pbos);
-}
-void image_processor::end()
-{
-	if(!impl_)
-		impl_.reset(new implementation(format_desc_));
-	impl_->end();
-}
-safe_ptr<read_frame> image_processor::begin_pass()
-{
-	if(!impl_)
-		impl_.reset(new implementation(format_desc_));
-	return impl_->begin_pass();
-}
-void image_processor::end_pass()
-{
-	if(!impl_)
-		impl_.reset(new implementation(format_desc_));
-	impl_->end_pass();
-}
+	implementation(const video_format_desc& format_desc) : format_desc_(format_desc)
+	{
+		executor_.start();
+	}
+	
+	void begin(const image_transform& transform)
+	{
+		executor_.begin_invoke([=]{get()->begin(transform);});
+	}
+		
+	void render(const pixel_format_desc& desc, std::vector<safe_ptr<write_buffer>>& buffers)
+	{
+		executor_.begin_invoke([=]() mutable{get()->render(desc, buffers);});
+	}
+
+	void end()
+	{
+		executor_.begin_invoke([=]{get()->end();});
+	}
+
+	boost::unique_future<safe_ptr<const read_buffer>> begin_pass()
+	{
+		return executor_.begin_invoke([=]{return get()->begin_pass();});
+	}
+
+	void end_pass()
+	{
+		executor_.begin_invoke([=]{get()->end_pass();});
+	}
+
+	std::unique_ptr<renderer>& get()
+	{
+		if(!renderer_)
+			renderer_.reset(new renderer(format_desc_));
+		return renderer_;
+	}
+
+	std::vector<safe_ptr<write_buffer>> create_buffers(const pixel_format_desc& format)
+	{
+		std::vector<safe_ptr<write_buffer>> buffers;
+		std::transform(format.planes.begin(), format.planes.end(), std::back_inserter(buffers), [&](const pixel_format_desc::plane& plane) -> safe_ptr<write_buffer>
+		{
+			size_t key = ((plane.channels << 24) & 0x0F000000) | ((plane.width << 12) & 0x00FFF000) | ((plane.height << 0) & 0x00000FFF);
+			auto pool = &write_frames_[key];
+			std::shared_ptr<write_buffer> buffer;
+			if(!pool->try_pop(buffer))
+			{
+				executor_.begin_invoke([&]
+				{
+					buffer = std::make_shared<write_buffer>(plane.width, plane.height, plane.channels);
+					buffer->map();
+				}).get();	
+			}
+
+			return safe_ptr<write_buffer>(buffer.get(), [=](write_buffer*)
+			{
+				executor_.begin_invoke([=]
+				{
+					buffer->map();
+					pool->push(buffer);
+				});
+			});
+		});
+		return buffers;
+	}
+		
+	tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<std::shared_ptr<write_buffer>>> write_frames_;
+
+	const video_format_desc format_desc_;
+	std::unique_ptr<renderer> renderer_;
+	executor executor_;	
+};
+
+image_processor::image_processor(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+void image_processor::begin(const image_transform& transform) {	impl_->begin(transform);}
+void image_processor::process(const pixel_format_desc& desc, std::vector<safe_ptr<write_buffer>>& buffers){	impl_->render(desc, buffers);}
+void image_processor::end(){impl_->end();}
+boost::unique_future<safe_ptr<const read_buffer>> image_processor::begin_pass(){	return impl_->begin_pass();}
+void image_processor::end_pass(){impl_->end_pass();}
+std::vector<safe_ptr<write_buffer>> image_processor::create_buffers(const pixel_format_desc& format){return impl_->create_buffers(format);}
 
 }}

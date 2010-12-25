@@ -46,7 +46,7 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	
 	void send(const safe_ptr<const read_frame>& frame)
 	{				
-		input_.push(frame->audio_data()); 
+		input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 
 
 		if(GetStatus() != Playing && input_.size() > 2)		
 			Play();		

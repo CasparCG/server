@@ -1,74 +1,30 @@
 #include "../../StdAfx.h"
 
-#if defined(_MSC_VER)
-#pragma warning (disable : 4714) // marked as __forceinline not inlined
-#endif
-
 #include "cg_producer.h"
 
 #include "flash_producer.h"
 
-#include "../../processor/draw_frame.h"
 #include "../../Server.h"
 
 #include <boost/filesystem.hpp>
-#include <boost/assign.hpp>
 		
 namespace caspar { namespace core { namespace flash {
 	
-struct template_version
-{
-	enum type
-	{
-		_17,
-		_18,
-		invalid,
-		count
-	};
-};
-
 struct cg_producer::implementation : boost::noncopyable
 {
 public:
-
-	implementation() : ver_(template_version::invalid), flash_producer_(create_flash()){}
-
-	safe_ptr<flash_producer> create_flash()
-	{		
-		if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.18")))
-		{
-			CASPAR_LOG(info) << L"Running version 1.8 template graphics.";
-			ver_ = template_version::_18;
-			return safe_ptr<flash_producer>(flash_producer(server::template_folder()+TEXT("cg.fth.18")));
-		}
-		else if(boost::filesystem::exists(server::template_folder()+TEXT("cg.fth.17")))
-		{
-			CASPAR_LOG(info) << L"Running version 1.7 template graphics.";
-			ver_ = template_version::_17;
-			return safe_ptr<flash_producer>(flash_producer(server::template_folder()+TEXT("cg.fth.17")));
-		}
-		else 
-			BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No templatehost found."));	
-	}
+	implementation() : flash_producer_(flash_producer(server::template_folder()+TEXT("cg.fth.18"))){}
 
 	void clear()
 	{
-		flash_producer_ = create_flash();
+		flash_producer_ = flash_producer(server::template_folder()+TEXT("cg.fth.18"));
 	}
 
-	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& label, const std::wstring& data)
+	void add(int layer, const std::wstring& filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
 	{
 		CASPAR_LOG(info) << "Invoking add-command";
 		
 		std::wstringstream param;
-
-		std::wstring filename = template_name;
-
-		if(ver_ == template_version::_17)
-		{
-			std::wstring::size_type pos = template_name.find('.');
-			filename = (pos != std::wstring::npos) ? template_name.substr(0, pos) : template_name;
-		}
 
 		param << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number><string>") << filename << TEXT("</string>") << (play_on_load?TEXT("<true/>"):TEXT("<false/>")) << TEXT("<string>") << label << TEXT("</string><string><![CDATA[ ") << data << TEXT(" ]]></string></arguments></invoke>");
 		
@@ -152,7 +108,6 @@ public:
 	}
 
 	safe_ptr<flash_producer> flash_producer_;
-	template_version::type ver_;
 	std::shared_ptr<frame_processor_device> frame_processor_;
 };
 	
