@@ -1,11 +1,13 @@
 #pragma once
 
-#include "read_frame.h"
+#include "buffer/write_buffer.h"
+#include "buffer/read_buffer.h"
 
 #include "../format/video_format.h"
 #include "../format/pixel_format.h"
 
 #include <boost/tuple/tuple.hpp>
+#include <boost/thread/future.hpp>
 
 #include <memory>
 #include <array>
@@ -30,15 +32,17 @@ public:
 	image_processor(const video_format_desc& format_desc);
 
 	void begin(const image_transform& transform);
-	void process(const pixel_format_desc& desc, std::vector<gl::pbo>& pbos);
+	void process(const pixel_format_desc& desc, std::vector<safe_ptr<write_buffer>>& buffers);
 	void end();
 
-	safe_ptr<read_frame> begin_pass();
+	boost::unique_future<safe_ptr<const read_buffer>> begin_pass();
 	void end_pass();
+
+	std::vector<safe_ptr<write_buffer>> create_buffers(const pixel_format_desc& format);
+
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
-	video_format_desc format_desc_;
 };
 typedef std::shared_ptr<image_processor> image_shader_ptr;
 

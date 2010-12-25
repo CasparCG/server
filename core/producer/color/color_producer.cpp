@@ -44,7 +44,7 @@ public:
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		auto frame = frame_processor->create_frame(1, 1, pixel_format::bgra);
-		auto& value = *reinterpret_cast<unsigned long*>(frame->pixel_data().begin());
+		auto& value = *reinterpret_cast<unsigned long*>(frame->image_data().begin());
 		std::wstringstream str(color_str_.substr(1));
 		str >> std::hex >> value;	
 		frame_ = std::move(frame);

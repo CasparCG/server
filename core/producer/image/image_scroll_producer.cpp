@@ -5,7 +5,7 @@
 //#include "image_loader.h"
 //
 //#include "../../processor/draw_frame.h"
-//#include "../../processor/composite_frame.h"
+//#include "../../processor/draw_frame.h"
 //#include "../../format/video_format.h"
 //#include "../../processor/frame_processor_device.h"
 //#include "../../server.h"
@@ -70,12 +70,12 @@
 //	draw_frame do_receive()
 //	{
 //		auto frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
-//		std::fill(frame.pixel_data().begin(), frame.pixel_data().end(), 0);
+//		std::fill(frame.image_data().begin(), frame.image_data().end(), 0);
 //
 //		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
 //		const int delta_y = direction_ == direction::Up ? speed_ : -speed_;
 //
-//		unsigned char* frame_data = frame.pixel_data().begin();
+//		unsigned char* frame_data = frame.image_data().begin();
 //		unsigned char* image_data = image_.get();
 //	
 //		if (direction_ == direction::Up || direction_ == direction::Down)
@@ -119,7 +119,7 @@
 //			draw_frame frame1;
 //			draw_frame frame2;
 //			tbb::parallel_invoke([&]{ frame1 = std::move(do_receive()); }, [&]{ frame2 = std::move(do_receive()); });
-//			return composite_frame::interlace(std::move(frame1), std::move(frame2), format_desc_.mode);
+//			return draw_frame::interlace(std::move(frame1), std::move(frame2), format_desc_.mode);
 //		}			
 //
 //		return receive();	

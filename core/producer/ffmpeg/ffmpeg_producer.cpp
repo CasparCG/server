@@ -28,9 +28,8 @@ extern "C"
 #include "video/video_decoder.h"
 
 #include "../../format/video_format.h"
-#include "../../processor/transform_frame.h"
 #include "../../processor/draw_frame.h"
-#include "../../server.h"
+#include "../../processor/draw_frame.h"
 
 #include <tbb/mutex.h>
 #include <tbb/parallel_invoke.h>
@@ -50,7 +49,7 @@ namespace caspar { namespace core { namespace ffmpeg{
 struct ffmpeg_producer_impl
 {
 public:
-	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), last_frame_(transform_frame(draw_frame::empty())), underrun_count_(0),
+	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), last_frame_(draw_frame(draw_frame::empty())), underrun_count_(0),
 		input_(filename), video_decoder_(input_.get_video_codec_context().get()), audio_decoder_(input_.get_audio_codec_context().get())
 	{				
 		input_.set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
@@ -110,7 +109,7 @@ public:
 							
 				auto write = std::move(video_frame_channel_.front());
 				write->audio_data() = std::move(audio_data);
-				auto transform = transform_frame(write);
+				auto transform = draw_frame(write);
 				video_frame_channel_.pop_front();
 		
 				// TODO: Make generic for all formats and modes.
@@ -138,7 +137,7 @@ public:
 		if(!ouput_channel_.empty())
 		{
 			result = std::move(ouput_channel_.front());
-			last_frame_ = transform_frame(result);
+			last_frame_ = draw_frame(result);
 			last_frame_->audio_volume(0.0); // last_frame should not have audio
 			ouput_channel_.pop();
 		}
@@ -162,11 +161,11 @@ public:
 	std::deque<safe_ptr<write_frame>>		video_frame_channel_;	
 	std::deque<std::vector<short>>			audio_chunk_channel_;
 
-	std::queue<safe_ptr<transform_frame>>	ouput_channel_;
+	std::queue<safe_ptr<draw_frame>>	ouput_channel_;
 	
 	const std::wstring						filename_;
 	
-	safe_ptr<transform_frame>				last_frame_;
+	safe_ptr<draw_frame>				last_frame_;
 
 	video_format_desc						format_desc_;
 };
@@ -183,10 +182,10 @@ private:
 	std::shared_ptr<ffmpeg_producer_impl> impl_;
 };
 
-safe_ptr<frame_producer> create_ffmpeg_producer(const  std::vector<std::wstring>& params)
+safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>& params)
 {			
 	static const std::vector<std::wstring> extensions = list_of(L"mpg")(L"avi")(L"mov")(L"dv")(L"wav")(L"mp3")(L"mp4")(L"f4v")(L"flv");
-	std::wstring filename = server::media_folder() + L"\\" + params[0];
+	std::wstring filename = params[0];
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 		{					

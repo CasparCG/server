@@ -41,7 +41,7 @@ public:
 	frame_processor_device(frame_processor_device&& other); // nothrow
 	frame_processor_device(const video_format_desc& format_desc);
 		
-	boost::unique_future<safe_ptr<const read_frame>> process(safe_ptr<draw_frame>&& frame); // nothrow
+	safe_ptr<const read_frame> process(safe_ptr<draw_frame>&& frame); // nothrow
 		
 	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc);		
 	safe_ptr<write_frame> create_frame(size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra);			

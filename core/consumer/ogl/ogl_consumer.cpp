@@ -153,7 +153,7 @@ struct consumer::implementation : boost::noncopyable
 	void render(const safe_ptr<const read_frame>& frame)
 	{						
 		auto ptr = pbos_.front().map_write();
-		std::copy_n(frame->pixel_data().begin(), frame->pixel_data().size(), reinterpret_cast<char*>(ptr));
+		std::copy_n(frame->image_data().begin(), frame->image_data().size(), reinterpret_cast<char*>(ptr));
 
 		GL(glClear(GL_COLOR_BUFFER_BIT));	
 		pbos_.back().bind_texture();				

@@ -141,8 +141,8 @@ struct input::implementation : boost::noncopyable
 		if(buffer.try_pop(packet))
 		{
 			buffer_size_ -= packet->size();
-			executor_.begin_invoke([this]{read_file();});
-			assert(executor_.size() < 8);
+			if(executor_.size() < 4)
+				executor_.begin_invoke([this]{read_file();});
 			return std::move(*packet);
 		}
 		return aligned_buffer();

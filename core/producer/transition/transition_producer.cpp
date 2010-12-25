@@ -22,8 +22,8 @@
 #include "transition_producer.h"
 
 #include "../../format/video_format.h"
-#include "../../processor/composite_frame.h"
-#include "../../processor/transform_frame.h"
+#include "../../processor/draw_frame.h"
+#include "../../processor/draw_frame.h"
 #include "../../processor/frame_processor_device.h"
 
 #include <boost/range/algorithm/copy.hpp>
@@ -109,8 +109,8 @@ struct transition_producer::implementation : boost::noncopyable
 										
 		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
 
-		auto my_src_frame = transform_frame(src_frame);
-		auto my_dest_frame = transform_frame(dest_frame);
+		auto my_src_frame = draw_frame(src_frame);
+		auto my_dest_frame = draw_frame(dest_frame);
 
 		my_src_frame.audio_volume(1.0-alpha);
 		my_dest_frame.audio_volume(alpha);
@@ -132,7 +132,7 @@ struct transition_producer::implementation : boost::noncopyable
 			my_dest_frame.texcoord((-1.0+alpha)*dir, 0.0, 0.0-(1.0-alpha)*dir, 0.0);				
 		}
 
-		return composite_frame(std::move(my_src_frame), std::move(my_dest_frame));
+		return draw_frame(std::move(my_src_frame), std::move(my_dest_frame));
 	}
 		
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)

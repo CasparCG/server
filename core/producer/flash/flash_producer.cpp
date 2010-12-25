@@ -32,7 +32,7 @@
 #include "../../format/video_format.h"
 #include "../../server.h"
 
-#include "../../processor/composite_frame.h"
+#include "../../processor/draw_frame.h"
 
 #include <common/concurrency/executor.h>
 
@@ -116,7 +116,7 @@ public:
 
 			safe_ptr<draw_frame> frame = render_frame();
 			if(!is_progressive)
-				frame = composite_frame::interlace(frame, render_frame(), format_desc_.mode);
+				frame = draw_frame::interlace(frame, render_frame(), format_desc_.mode);
 			
 			frame_buffer_.try_push(std::move(frame));
 		}
@@ -133,7 +133,7 @@ public:
 			ax_->DrawControl(bmp_frame_->hdc());
 		
 			auto frame = frame_processor_->create_frame();
-			std::copy(bmp_frame_->data(), bmp_frame_->data() + bmp_frame_->size(), frame->pixel_data().begin());
+			std::copy(bmp_frame_->data(), bmp_frame_->data() + bmp_frame_->size(), frame->image_data().begin());
 			current_frame_ = frame;
 		}
 		return current_frame_;

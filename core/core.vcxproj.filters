@@ -88,6 +88,9 @@
     <Filter Include="Source\channel\processor\audio">
       <UniqueIdentifier>{e3d8bd98-8cb9-4f4a-8cf0-bd455ce9138d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\channel\processor\buffer">
+      <UniqueIdentifier>{d6518ab7-eb0c-4cbe-b83c-a9e32c062b6f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
@@ -198,9 +201,6 @@
     <ClInclude Include="consumer\frame_consumer_device.h">
       <Filter>Source\channel\consumer</Filter>
     </ClInclude>
-    <ClInclude Include="server.h">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="processor\frame_processor_device.h">
       <Filter>Source\channel\processor</Filter>
     </ClInclude>
@@ -222,19 +222,7 @@
     <ClInclude Include="processor\fwd.h">
       <Filter>Source\channel\processor</Filter>
     </ClInclude>
-    <ClInclude Include="processor\write_frame.h">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\transform_frame.h">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\composite_frame.h">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClInclude>
     <ClInclude Include="processor\read_frame.h">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\draw_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
     <ClInclude Include="processor\image_processor.h">
@@ -254,6 +242,21 @@
     </ClInclude>
     <ClInclude Include="producer\layer.h">
       <Filter>Source\channel</Filter>
+    </ClInclude>
+    <ClInclude Include="server.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\write_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\draw_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\buffer\write_buffer.h">
+      <Filter>Source\channel\processor\buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\buffer\read_buffer.h">
+      <Filter>Source\channel\processor\buffer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -350,20 +353,8 @@
     <ClCompile Include="consumer\decklink\decklink_consumer.cpp">
       <Filter>Source\channel\consumer\decklink</Filter>
     </ClCompile>
-    <ClCompile Include="processor\transform_frame.cpp">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\write_frame.cpp">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\composite_frame.cpp">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClCompile>
     <ClCompile Include="processor\read_frame.cpp">
       <Filter>Source\channel\processor\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="format\pixel_format.cpp">
-      <Filter>Source\channel\format</Filter>
     </ClCompile>
     <ClCompile Include="processor\image_processor.cpp">
       <Filter>Source\channel\processor\image</Filter>
@@ -382,6 +373,18 @@
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
       <Filter>Source\channel</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\write_frame.cpp">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\draw_frame.cpp">
+      <Filter>Source\channel\processor\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\buffer\read_buffer.cpp">
+      <Filter>Source\channel\processor\buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\buffer\write_buffer.cpp">
+      <Filter>Source\channel\processor\buffer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

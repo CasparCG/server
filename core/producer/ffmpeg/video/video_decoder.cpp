@@ -122,7 +122,7 @@ struct video_decoder::implementation : boost::noncopyable
 			tbb::parallel_for(0, static_cast<int>(desc_.planes.size()), 1, [&](int n)
 			{
 				auto plane            = desc_.planes[n];
-				auto result           = write->pixel_data(n).begin();
+				auto result           = write->image_data(n).begin();
 				auto decoded          = decoded_frame->data[n];
 				auto decoded_linesize = decoded_frame->linesize[n];
 				
@@ -140,7 +140,7 @@ struct video_decoder::implementation : boost::noncopyable
 
 			AVFrame av_frame;	
 			avcodec_get_frame_defaults(&av_frame);
-			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), write->pixel_data().begin(), PIX_FMT_BGRA, width_, height_);
+			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);	
 			
