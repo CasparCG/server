@@ -2,7 +2,7 @@
 
 #include "fwd.h"
 
-#include "buffer\write_buffer.h"
+#include "host_buffer.h"
 
 #include "draw_frame.h"
 
@@ -20,7 +20,7 @@ namespace caspar { namespace core {
 class write_frame : public draw_frame, boost::noncopyable
 {
 public:	
-	explicit write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<write_buffer>> buffers);
+	explicit write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers);
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
 	

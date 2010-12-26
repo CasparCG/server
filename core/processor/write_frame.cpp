@@ -2,7 +2,7 @@
 
 #include "write_frame.h"
 
-#include "buffer/write_buffer.h"
+#include "host_buffer.h"
 
 #include "draw_frame.h"
 #include "image_processor.h"
@@ -18,7 +18,7 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::implementation : boost::noncopyable
 {
-	implementation(const pixel_format_desc& desc, std::vector<safe_ptr<write_buffer>> buffers) : desc_(desc), buffers_(buffers){}
+	implementation(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) : desc_(desc), buffers_(buffers){}
 	
 	void process_image(image_processor& processor)
 	{
@@ -45,12 +45,12 @@ struct write_frame::implementation : boost::noncopyable
 		return boost::iterator_range<const unsigned char*>(ptr, ptr+buffers_[index]->size());
 	}
 				
-	std::vector<safe_ptr<write_buffer>> buffers_;
+	std::vector<safe_ptr<host_buffer>> buffers_;
 	std::vector<short> audio_data_;
 	const pixel_format_desc desc_;
 };
 	
-write_frame::write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<write_buffer>> buffers) : impl_(singleton_pool<implementation>::make_shared(desc, buffers)){}
+write_frame::write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) : impl_(singleton_pool<implementation>::make_shared(desc, buffers)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 write_frame& write_frame::operator=(write_frame&& other)

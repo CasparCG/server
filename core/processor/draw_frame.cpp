@@ -2,18 +2,13 @@
 
 #include "draw_frame.h"
 
-#include "draw_frame.h"
 #include "image_processor.h"
 #include "audio_processor.h"
 
 #include "../format/pixel_format.h"
-#include "../../common/gl/utility.h"
-#include "../../common/gl/pixel_buffer_object.h"
 #include "../../common/utility/singleton_pool.h"
 
 #include <boost/range/algorithm.hpp>
-
-#include <tbb/parallel_for.h>
 
 namespace caspar { namespace core {
 																																						

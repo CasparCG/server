@@ -24,9 +24,8 @@
 
 #include "../../format/video_format.h"
 
-#include "../../../common/gl/utility.h"
-#include "../../../common/gl/pixel_buffer_object.h"
-#include "../../../common/concurrency/executor.h"
+#include <common/gl/utility.h>
+#include <common/concurrency/executor.h>
 
 #include <boost/thread.hpp>
 
@@ -42,7 +41,7 @@ namespace caspar { namespace core { namespace ogl{
 struct consumer::implementation : boost::noncopyable
 {	
 	implementation(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
-		: format_desc_(format_desc), stretch_(stretch), screen_width_(0), screen_height_(0), windowed_(windowed)
+		: format_desc_(format_desc), stretch_(stretch), screen_width_(0), screen_height_(0), windowed_(windowed), texture_(0)
 	{		
 #ifdef _WIN32
 		DISPLAY_DEVICE d_device;			
@@ -110,9 +109,23 @@ struct consumer::implementation : boost::noncopyable
 
 			wSize_ = target_ratio.first;
 			hSize_ = target_ratio.second;
-					
-			pbos_[0].create(format_desc_.width, format_desc_.height);
-			pbos_[1].create(format_desc_.width, format_desc_.height);
+			
+			glGenTextures(1, &texture_);
+			glBindTexture(GL_TEXTURE_2D, texture_);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			
+			GL(glGenBuffers(2, pbos_.data()));
+			
+			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[0]);
+			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
+			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]);
+			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
+			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		});
 	}
 	
@@ -151,20 +164,34 @@ struct consumer::implementation : boost::noncopyable
 	}
 
 	void render(const safe_ptr<const read_frame>& frame)
-	{						
-		auto ptr = pbos_.front().map_write();
-		std::copy_n(frame->image_data().begin(), frame->image_data().size(), reinterpret_cast<char*>(ptr));
+	{			
+		glBindTexture(GL_TEXTURE_2D, texture_);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]);
 
-		GL(glClear(GL_COLOR_BUFFER_BIT));	
-		pbos_.back().bind_texture();				
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]);
+
+		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW);
+
+		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		if(ptr)
+		{
+			std::copy_n(frame->image_data().begin(), frame->image_data().size(), reinterpret_cast<char*>(ptr));
+			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
+		}
+
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+				
+		GL(glClear(GL_COLOR_BUFFER_BIT));			
 		glBegin(GL_QUADS);
 				glTexCoord2f(0.0f,	  hratio_);	glVertex2f(-wSize_, -hSize_);
 				glTexCoord2f(wratio_, hratio_);	glVertex2f( wSize_, -hSize_);
 				glTexCoord2f(wratio_, 0.0f);	glVertex2f( wSize_,  hSize_);
 				glTexCoord2f(0.0f,	  0.0f);	glVertex2f(-wSize_,  hSize_);
 		glEnd();
-
-		pbos_.back().unmap_write();
+		
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
@@ -201,7 +228,8 @@ struct consumer::implementation : boost::noncopyable
 	float wSize_;
 	float hSize_;
 
-	std::array<gl::pixel_buffer_object, 2> pbos_;
+	GLuint				  texture_;
+	std::array<GLuint, 2> pbos_;
 
 	bool windowed_;
 	unsigned int screen_width_;
@@ -210,7 +238,7 @@ struct consumer::implementation : boost::noncopyable
 	unsigned int screen_y_;
 				
 	stretch stretch_;
-	video_format_desc format_desc_;
+	const video_format_desc format_desc_;
 	
 	sf::Window window_;
 };

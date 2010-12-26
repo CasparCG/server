@@ -65,7 +65,7 @@ struct frame_processor_device::implementation : boost::noncopyable
 	audio_processor	audio_processor_;
 	image_processor image_processor_;
 
-	std::queue<boost::unique_future<safe_ptr<const read_buffer>>> image_buffer_;
+	std::queue<boost::unique_future<safe_ptr<const host_buffer>>> image_buffer_;
 	std::queue<std::vector<short>> audio_buffer_;
 										
 	const video_format_desc fmt_;

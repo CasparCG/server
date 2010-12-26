@@ -1,7 +1,6 @@
 #pragma once
 
-#include "buffer/write_buffer.h"
-#include "buffer/read_buffer.h"
+#include "host_buffer.h"
 
 #include "../format/video_format.h"
 #include "../format/pixel_format.h"
@@ -32,18 +31,17 @@ public:
 	image_processor(const video_format_desc& format_desc);
 
 	void begin(const image_transform& transform);
-	void process(const pixel_format_desc& desc, std::vector<safe_ptr<write_buffer>>& buffers);
+	void process(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>>& buffers);
 	void end();
 
-	boost::unique_future<safe_ptr<const read_buffer>> begin_pass();
+	boost::unique_future<safe_ptr<const host_buffer>> begin_pass();
 	void end_pass();
 
-	std::vector<safe_ptr<write_buffer>> create_buffers(const pixel_format_desc& format);
+	std::vector<safe_ptr<host_buffer>> create_buffers(const pixel_format_desc& format);
 
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<image_processor> image_shader_ptr;
 
 }}

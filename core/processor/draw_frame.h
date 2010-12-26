@@ -19,7 +19,8 @@ namespace caspar { namespace core {
 class draw_frame
 {
 public:
-	draw_frame();
+	draw_frame();	
+	draw_frame(safe_ptr<write_frame>&& image, std::vector<short>&& audio);
 	draw_frame(const safe_ptr<draw_frame>& frame);
 	draw_frame(safe_ptr<draw_frame>&& frame);
 	draw_frame(const std::vector<safe_ptr<draw_frame>>& frames);
