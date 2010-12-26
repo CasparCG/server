@@ -5,18 +5,23 @@
 #include <memory>
 
 namespace caspar { namespace core {
-	
-class read_buffer 
+		
+class host_buffer 
 {
-	friend class image_processor;
 public:
-	read_buffer(size_t width, size_t height);
+	enum usage_t
+	{
+		write_only,
+		read_only
+	};
+	host_buffer(size_t size, usage_t usage);
 	
 	const void* data() const;
+	void* data();
 	size_t size() const;	
-	size_t width() const;
-	size_t height() const;
-		
+	
+	void bind();
+	void unbind();
 	void unmap();
 	void map();
 private:

@@ -88,9 +88,6 @@
     <Filter Include="Source\channel\processor\audio">
       <UniqueIdentifier>{e3d8bd98-8cb9-4f4a-8cf0-bd455ce9138d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\channel\processor\buffer">
-      <UniqueIdentifier>{d6518ab7-eb0c-4cbe-b83c-a9e32c062b6f}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
@@ -252,11 +249,14 @@
     <ClInclude Include="processor\draw_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
-    <ClInclude Include="processor\buffer\write_buffer.h">
-      <Filter>Source\channel\processor\buffer</Filter>
+    <ClInclude Include="processor\image_kernel.h">
+      <Filter>Source\channel\processor\image</Filter>
     </ClInclude>
-    <ClInclude Include="processor\buffer\read_buffer.h">
-      <Filter>Source\channel\processor\buffer</Filter>
+    <ClInclude Include="processor\device_buffer.h">
+      <Filter>Source\channel\processor\image</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\host_buffer.h">
+      <Filter>Source\channel\processor\image</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -380,11 +380,14 @@
     <ClCompile Include="processor\draw_frame.cpp">
       <Filter>Source\channel\processor\frame</Filter>
     </ClCompile>
-    <ClCompile Include="processor\buffer\read_buffer.cpp">
-      <Filter>Source\channel\processor\buffer</Filter>
+    <ClCompile Include="processor\image_kernel.cpp">
+      <Filter>Source\channel\processor\image</Filter>
     </ClCompile>
-    <ClCompile Include="processor\buffer\write_buffer.cpp">
-      <Filter>Source\channel\processor\buffer</Filter>
+    <ClCompile Include="processor\device_buffer.cpp">
+      <Filter>Source\channel\processor\image</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\host_buffer.cpp">
+      <Filter>Source\channel\processor\image</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

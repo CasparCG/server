@@ -2,7 +2,7 @@
 
 #include "read_frame.h"
 
-#include "buffer/read_buffer.h"
+#include "host_buffer.h"
 
 #include <common/gl/utility.h>
 #include <common/utility/singleton_pool.h>
@@ -11,14 +11,14 @@ namespace caspar { namespace core {
 																																							
 struct read_frame::implementation : boost::noncopyable
 {
-	implementation(safe_ptr<const read_buffer>&& image_data, std::vector<short>&& audio_data) : image_data_(std::move(image_data)), audio_data_(std::move(audio_data)){}	
+	implementation(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data) : image_data_(std::move(image_data)), audio_data_(std::move(audio_data)){}	
 
-	safe_ptr<const read_buffer> image_data_;
+	safe_ptr<const host_buffer> image_data_;
 	std::vector<short> audio_data_;
 };
 
 read_frame::read_frame(){}
-read_frame::read_frame(safe_ptr<const read_buffer>&& image_data, std::vector<short>&& audio_data) : impl_(singleton_pool<implementation>::make_shared(image_data, audio_data)){}
+read_frame::read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data) : impl_(singleton_pool<implementation>::make_shared(image_data, audio_data)){}
 
 const boost::iterator_range<const unsigned char*> read_frame::image_data() const
 {
