@@ -202,7 +202,6 @@ struct consumer::implementation : boost::noncopyable
 		{
 			sf::Event e;
 			while(window_.GetEvent(e)){}
-			window_.SetActive();
 			render(frame);
 			window_.Display();
 		});

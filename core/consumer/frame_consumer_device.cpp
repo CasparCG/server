@@ -44,16 +44,11 @@ public:
 		std::vector<size_t> depths;
 		boost::range::transform(consumers_, std::back_inserter(depths), std::mem_fn(&frame_consumer::buffer_depth));
 		max_depth_ = *boost::range::max_element(depths);
-		input_.set_capacity(3);
 		executor_.start();
-		executor_.begin_invoke([=]{tick();});
 	}
 					
-	void tick()
+	void tick(const frame_type& frame)
 	{
-		frame_type frame;
-		input_.pop(frame);
-		
 		buffer_.push_back(frame);
 
 		clock_sync clock;
@@ -94,11 +89,11 @@ public:
 
 	void consume(frame_type&& frame)
 	{		
-		input_.push(std::move(frame));
-		executor_.begin_invoke([=]{tick();});
+		if(executor_.size() < 3)
+			executor_.begin_invoke([=]{tick(frame);});
+		else
+			executor_.invoke([=]{tick(frame);});
 	}
-
-	tbb::concurrent_bounded_queue<frame_type> input_;
 
 	executor executor_;	
 

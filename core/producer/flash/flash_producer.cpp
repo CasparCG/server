@@ -30,22 +30,16 @@
 #include "bitmap.h"
 
 #include "../../format/video_format.h"
-#include "../../server.h"
 
 #include "../../processor/draw_frame.h"
 
 #include <common/concurrency/executor.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/thread.hpp>
-
-#include <tbb/atomic.h>
 
 #include <type_traits>
 
 namespace caspar { namespace core { namespace flash {
-
-using namespace boost::assign;
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -56,7 +50,7 @@ class flash_renderer
 public:
 	flash_renderer(const safe_ptr<frame_processor_device>& frame_processor, const std::wstring& filename) 
 		: last_frame_(draw_frame::empty()), current_frame_(draw_frame::empty()), frame_processor_(frame_processor), filename_(filename),
-			format_desc_(frame_processor->get_video_format_desc()), bmp_frame_(std::make_shared<bitmap>(format_desc_.width, format_desc_.height))
+			format_desc_(frame_processor->get_video_format_desc()), bmp_frame_(format_desc_.width, format_desc_.height)
 
 	{
 		CASPAR_LOG(info) << print() << L" Started";
@@ -129,11 +123,11 @@ public:
 		
 		if(ax_->IsReadyToRender() && ax_->InvalidRectangle())
 		{
-			std::fill_n(bmp_frame_->data(), bmp_frame_->size(), 0);			
-			ax_->DrawControl(bmp_frame_->hdc());
+			std::fill_n(bmp_frame_.data(), bmp_frame_.size(), 0);			
+			ax_->DrawControl(bmp_frame_.hdc());
 		
 			auto frame = frame_processor_->create_frame();
-			std::copy(bmp_frame_->data(), bmp_frame_->data() + bmp_frame_->size(), frame->image_data().begin());
+			std::copy(bmp_frame_.data(), bmp_frame_.data() + bmp_frame_.size(), frame->image_data().begin());
 			current_frame_ = frame;
 		}
 		return current_frame_;
@@ -156,7 +150,7 @@ private:
 	const std::wstring filename_;
 	const safe_ptr<frame_processor_device> frame_processor_;
 	const video_format_desc format_desc_;
-	const safe_ptr<bitmap> bmp_frame_;	 
+	bitmap bmp_frame_;	 
 
 	CComPtr<FlashAxContainer> ax_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<draw_frame>> frame_buffer_;	
@@ -198,9 +192,6 @@ struct flash_producer::implementation
 		auto frame = draw_frame::empty();
 		if(renderer_ && renderer_->try_pop(frame)) // Only render again if frame was removed from buffer.		
 			executor_.begin_invoke([this]{render_frame();});		
-		
-		assert(executor_.size() < 8);
-		
 		return frame;
 	}
 
