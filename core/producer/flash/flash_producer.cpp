@@ -86,8 +86,16 @@ public:
 
 	~flash_renderer()
 	{
-		ax_->DestroyAxControl();
-		ax_.Release();
+		try
+		{
+			ax_->DestroyAxControl();
+			ax_.Release();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+
 		::OleUninitialize();
 		CASPAR_LOG(info) << print() << L" Ended";
 	}
@@ -104,16 +112,13 @@ public:
 		
 	void render()
 	{		 
-		while(frame_buffer_.size() < 3) // Keep pipeline filled.
-		{
-			bool is_progressive = format_desc_.mode == video_mode::progressive || (ax_->GetFPS() - format_desc_.fps/2 == 0);
-
-			safe_ptr<draw_frame> frame = render_frame();
-			if(!is_progressive)
-				frame = draw_frame::interlace(frame, render_frame(), format_desc_.mode);
+		bool is_progressive = format_desc_.mode == video_mode::progressive || (ax_->GetFPS() - format_desc_.fps/2 == 0);
+		
+		safe_ptr<draw_frame> frame = render_frame();
+		if(!is_progressive)
+			frame = draw_frame::interlace(frame, render_frame(), format_desc_.mode);
 			
-			frame_buffer_.try_push(std::move(frame));
-		}
+		frame_buffer_.try_push(std::move(frame));
 	}
 
 	safe_ptr<draw_frame> render_frame()
@@ -181,9 +186,12 @@ struct flash_producer::implementation
 		executor_.invoke([&]
 		{
 			if(!renderer_)
+			{
 				renderer_.reset(factory_());
+				for(int n = 0; n < 8; ++n)
+					render_frame();
+			}
 			renderer_->param(param);
-			render_frame();
 		});
 	}
 	
@@ -191,7 +199,9 @@ struct flash_producer::implementation
 	{
 		auto frame = draw_frame::empty();
 		if(renderer_ && renderer_->try_pop(frame)) // Only render again if frame was removed from buffer.		
-			executor_.begin_invoke([this]{render_frame();});		
+			executor_.begin_invoke([this]{render_frame();});	
+		else
+			CASPAR_LOG(trace) << print() << " underflow.";
 		return frame;
 	}
 
