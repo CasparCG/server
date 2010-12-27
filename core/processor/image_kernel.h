@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../format/pixel_format.h"
 #include "../format/video_format.h"
+
+#include "frame_processor_device.h"
 
 #include <memory>
 

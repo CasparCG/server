@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/utility/safe_ptr.h>
+
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
@@ -31,7 +33,5 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<layer> layer_ptr;
-typedef std::unique_ptr<layer> layer_uptr;
 
 }}

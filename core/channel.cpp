@@ -57,51 +57,51 @@ struct channel::implementation : boost::noncopyable
 		return draw_frame(frames);
 	}
 
-	void load(int render_layer, const safe_ptr<frame_producer>& producer, bool autoplay)
+	void load(int index, const safe_ptr<frame_producer>& producer, bool autoplay)
 	{
 		producer->initialize(processor_device_);
 		executor_.begin_invoke([=]
 		{
-			auto it = layers_.insert(std::make_pair(render_layer, layer(render_layer))).first;
+			auto it = layers_.insert(std::make_pair(index, layer(index))).first;
 			it->second.load(producer, autoplay);
 		});
 	}
 			
-	void preview(int render_layer, const safe_ptr<frame_producer>& producer)
+	void preview(int index, const safe_ptr<frame_producer>& producer)
 	{
 		producer->initialize(processor_device_);
 		executor_.begin_invoke([=]
 		{
-			auto it = layers_.insert(std::make_pair(render_layer, layer(render_layer))).first;
+			auto it = layers_.insert(std::make_pair(index, layer(index))).first;
 			it->second.preview(producer);
 		});
 	}
 
-	void pause(int render_layer)
+	void pause(int index)
 	{		
 		executor_.begin_invoke([=]
 		{			
-			auto it = layers_.find(render_layer);
+			auto it = layers_.find(index);
 			if(it != layers_.end())
 				it->second.pause();		
 		});
 	}
 
-	void play(int render_layer)
+	void play(int index)
 	{		
 		executor_.begin_invoke([=]
 		{
-			auto it = layers_.find(render_layer);
+			auto it = layers_.find(index);
 			if(it != layers_.end())
 				it->second.play();		
 		});
 	}
 
-	void stop(int render_layer)
+	void stop(int index)
 	{		
 		executor_.begin_invoke([=]
 		{
-			auto it = layers_.find(render_layer);
+			auto it = layers_.find(index);
 			if(it != layers_.end())			
 			{
 				it->second.stop();	
@@ -111,11 +111,11 @@ struct channel::implementation : boost::noncopyable
 		});
 	}
 
-	void clear(int render_layer)
+	void clear(int index)
 	{
 		executor_.begin_invoke([=]
 		{			
-			auto it = layers_.find(render_layer);
+			auto it = layers_.find(index);
 			if(it != layers_.end())
 			{
 				it->second.clear();		
@@ -132,20 +132,20 @@ struct channel::implementation : boost::noncopyable
 		});
 	}		
 
-	boost::unique_future<safe_ptr<frame_producer>> foreground(int render_layer) const
+	boost::unique_future<safe_ptr<frame_producer>> foreground(int index) const
 	{
 		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
 		{			
-			auto it = layers_.find(render_layer);
+			auto it = layers_.find(index);
 			return it != layers_.end() ? it->second.foreground() : frame_producer::empty();
 		});
 	}
 	
-	boost::unique_future<safe_ptr<frame_producer>> background(int render_layer) const
+	boost::unique_future<safe_ptr<frame_producer>> background(int index) const
 	{
 		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
 		{
-			auto it = layers_.find(render_layer);
+			auto it = layers_.find(index);
 			return it != layers_.end() ? it->second.background() : frame_producer::empty();
 		});
 	}
@@ -163,15 +163,15 @@ struct channel::implementation : boost::noncopyable
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
 channel::channel(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers)
 	: impl_(new implementation(format_desc, consumers)){}
-void channel::load(int render_layer, const safe_ptr<frame_producer>& producer, bool autoplay){impl_->load(render_layer, producer, autoplay);}
-void channel::preview(int render_layer, const safe_ptr<frame_producer>& producer){impl_->preview(render_layer, producer);}
-void channel::pause(int render_layer){impl_->pause(render_layer);}
-void channel::play(int render_layer){impl_->play(render_layer);}
-void channel::stop(int render_layer){impl_->stop(render_layer);}
-void channel::clear(int render_layer){impl_->clear(render_layer);}
+void channel::load(int index, const safe_ptr<frame_producer>& producer, bool autoplay){impl_->load(index, producer, autoplay);}
+void channel::preview(int index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
+void channel::pause(int index){impl_->pause(index);}
+void channel::play(int index){impl_->play(index);}
+void channel::stop(int index){impl_->stop(index);}
+void channel::clear(int index){impl_->clear(index);}
 void channel::clear(){impl_->clear();}
-boost::unique_future<safe_ptr<frame_producer>> channel::foreground(int render_layer) const{	return impl_->foreground(render_layer);}
-boost::unique_future<safe_ptr<frame_producer>> channel::background(int render_layer) const{return impl_->background(render_layer);}
+boost::unique_future<safe_ptr<frame_producer>> channel::foreground(int index) const{	return impl_->foreground(index);}
+boost::unique_future<safe_ptr<frame_producer>> channel::background(int index) const{return impl_->background(index);}
 const video_format_desc& channel::get_video_format_desc() const{	return impl_->format_desc_;}
 
 }}

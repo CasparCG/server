@@ -64,10 +64,10 @@ public:
 
 	transition_producer(const safe_ptr<frame_producer>& destination, const transition_info& info);
 
-	safe_ptr<draw_frame> receive();
+	virtual safe_ptr<draw_frame> receive();
 
-	safe_ptr<frame_producer> get_following_producer() const;
-	void set_leading_producer(const safe_ptr<frame_producer>& producer);
+	virtual safe_ptr<frame_producer> get_following_producer() const;
+	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer);
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor);
 	virtual std::wstring print() const;
 private:

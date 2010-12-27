@@ -37,7 +37,6 @@ private:
 
 struct frame_consumer_device::implementation
 {
-	typedef safe_ptr<const read_frame> frame_type;
 public:
 	implementation(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers) : consumers_(consumers), fmt_(format_desc)
 	{		
@@ -47,7 +46,7 @@ public:
 		executor_.start();
 	}
 					
-	void tick(const frame_type& frame)
+	void tick(const safe_ptr<const read_frame>& frame)
 	{
 		buffer_.push_back(frame);
 
@@ -87,7 +86,7 @@ public:
 			buffer_.pop_front();
 	}
 
-	void consume(frame_type&& frame)
+	void consume(safe_ptr<const read_frame>&& frame)
 	{		
 		if(executor_.size() < 3)
 			executor_.begin_invoke([=]{tick(frame);});

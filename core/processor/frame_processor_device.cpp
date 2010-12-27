@@ -20,8 +20,7 @@
 #include <boost/range/algorithm.hpp>
 
 namespace caspar { namespace core {
-
-
+	
 struct frame_processor_device::implementation : boost::noncopyable
 {	
 	implementation(const video_format_desc& format_desc) : fmt_(format_desc), image_processor_(format_desc){}

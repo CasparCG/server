@@ -166,7 +166,6 @@
     <ClInclude Include="consumer\frame_consumer.h" />
     <ClInclude Include="consumer\oal\oal_consumer.h" />
     <ClInclude Include="consumer\ogl\ogl_consumer.h" />
-    <ClInclude Include="format\pixel_format.h" />
     <ClInclude Include="format\video_format.h" />
     <ClInclude Include="processor\audio_processor.h" />
     <ClInclude Include="processor\device_buffer.h" />
@@ -176,6 +175,7 @@
     <ClInclude Include="processor\image_processor.h" />
     <ClInclude Include="processor\fwd.h" />
     <ClInclude Include="processor\ogl_device.h" />
+    <ClInclude Include="processor\pixel_format.h" />
     <ClInclude Include="processor\read_frame.h" />
     <ClInclude Include="processor\draw_frame.h" />
     <ClInclude Include="processor\write_frame.h" />

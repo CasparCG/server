@@ -7,8 +7,8 @@
 #include "draw_frame.h"
 #include "image_processor.h"
 #include "audio_processor.h"
+#include "pixel_format.h"
 
-#include "../format/pixel_format.h"
 #include "../../common/gl/utility.h"
 #include "../../common/utility/singleton_pool.h"
 

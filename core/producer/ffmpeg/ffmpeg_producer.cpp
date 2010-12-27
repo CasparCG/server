@@ -62,13 +62,13 @@ public:
 		}
 	}
 
-	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		format_desc_ = frame_processor->get_video_format_desc();
 		video_decoder_.initialize(frame_processor);
 	}
 		
-	safe_ptr<draw_frame> receive()
+	virtual safe_ptr<draw_frame> receive()
 	{
 		while(ouput_channel_.empty() && !input_.is_eof())
 		{	
@@ -137,7 +137,7 @@ public:
 		return result;
 	}
 
-	std::wstring print() const
+	virtual std::wstring print() const
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}

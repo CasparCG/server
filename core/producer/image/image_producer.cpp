@@ -20,9 +20,9 @@ struct image_producer : public frame_producer
 	image_producer(image_producer&& other) : frame_processor_(std::move(other.frame_processor_)), filename_(std::move(other.filename_)), frame_(draw_frame::empty()){}
 	image_producer(const std::wstring& filename) : filename_(filename), frame_(draw_frame::empty())	{}
 	
-	safe_ptr<draw_frame> receive(){return frame_;}
+	virtual safe_ptr<draw_frame> receive(){return frame_;}
 
-	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		frame_processor_ = frame_processor;
 		auto bitmap = load_image(filename_);
@@ -32,7 +32,7 @@ struct image_producer : public frame_producer
 		frame_ = std::move(frame);
 	}
 
-	std::wstring print() const
+	virtual std::wstring print() const
 	{
 		return L"image_producer. filename: " + filename_;
 	}

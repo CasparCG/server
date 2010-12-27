@@ -73,9 +73,6 @@
     <Filter Include="Source\channel\producer\image">
       <UniqueIdentifier>{3d4314f3-8a39-44e3-a0c9-9b833bb8f809}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\channel\format">
-      <UniqueIdentifier>{f19ced4f-4ad2-4c0a-b51f-50e89909d669}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\channel\processor\frame">
       <UniqueIdentifier>{1b9effc5-16ee-4be7-9189-d2b6bec0165a}</UniqueIdentifier>
     </Filter>
@@ -91,11 +88,11 @@
     <Filter Include="Source\channel\processor\ogl">
       <UniqueIdentifier>{219e5733-b365-4231-8c79-fd689c46c488}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Afx">
+      <UniqueIdentifier>{a15604fc-d914-48e1-8fd5-ae1edeba9c6c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="StdAfx.h">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="protocol\amcp\AMCPCommandQueue.h">
       <Filter>Source\protocol\amcp</Filter>
     </ClInclude>
@@ -204,12 +201,6 @@
     <ClInclude Include="processor\frame_processor_device.h">
       <Filter>Source\channel\processor</Filter>
     </ClInclude>
-    <ClInclude Include="format\pixel_format.h">
-      <Filter>Source\channel\format</Filter>
-    </ClInclude>
-    <ClInclude Include="format\video_format.h">
-      <Filter>Source\channel\format</Filter>
-    </ClInclude>
     <ClInclude Include="channel.h">
       <Filter>Source\channel</Filter>
     </ClInclude>
@@ -264,11 +255,17 @@
     <ClInclude Include="processor\device_buffer.h">
       <Filter>Source\channel\processor\ogl</Filter>
     </ClInclude>
+    <ClInclude Include="StdAfx.h">
+      <Filter>Afx</Filter>
+    </ClInclude>
+    <ClInclude Include="format\video_format.h">
+      <Filter>Source\channel</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\pixel_format.h">
+      <Filter>Source\channel\processor</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="StdAfx.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="protocol\amcp\AMCPCommandQueue.cpp">
       <Filter>Source\protocol\amcp</Filter>
     </ClCompile>
@@ -350,9 +347,6 @@
     <ClCompile Include="processor\frame_processor_device.cpp">
       <Filter>Source\channel\processor</Filter>
     </ClCompile>
-    <ClCompile Include="format\video_format.cpp">
-      <Filter>Source\channel\format</Filter>
-    </ClCompile>
     <ClCompile Include="channel.cpp">
       <Filter>Source\channel</Filter>
     </ClCompile>
@@ -397,6 +391,12 @@
     </ClCompile>
     <ClCompile Include="processor\device_buffer.cpp">
       <Filter>Source\channel\processor\ogl</Filter>
+    </ClCompile>
+    <ClCompile Include="StdAfx.cpp">
+      <Filter>Afx</Filter>
+    </ClCompile>
+    <ClCompile Include="format\video_format.cpp">
+      <Filter>Source\channel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
