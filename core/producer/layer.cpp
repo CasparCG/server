@@ -9,7 +9,7 @@
 
 namespace caspar { namespace core {
 
-struct layer::implementation
+struct layer::implementation : boost::noncopyable
 {		
 	implementation(size_t index) : foreground_(frame_producer::empty()), background_(frame_producer::empty()), last_frame_(draw_frame::empty()), index_(index) {}
 	
@@ -71,8 +71,7 @@ struct layer::implementation
 
 		try
 		{
-			last_frame_ = foreground_->receive();
-
+			last_frame_ = foreground_->receive(); 
 			if(last_frame_ == draw_frame::eof())
 			{
 				auto following = foreground_->get_following_producer();
@@ -102,7 +101,7 @@ struct layer::implementation
 	safe_ptr<draw_frame>		last_frame_;
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
-	size_t						index_;
+	const size_t				index_;
 };
 
 layer::layer(size_t index) : impl_(new implementation(index)){}

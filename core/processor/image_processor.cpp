@@ -143,10 +143,10 @@ struct image_processor::implementation
 		return buffers;
 	}
 		
-	const video_format_desc format_desc_;
-
 	ogl_device context_;
 
+	const video_format_desc format_desc_;
+	
 	std::stack<image_transform> transform_stack_;
 
 	GLuint fbo_;

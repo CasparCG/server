@@ -7,7 +7,6 @@
 #include "draw_frame.h"
 
 #include "../format/video_format.h"
-#include "../format/pixel_format.h"
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -16,7 +15,9 @@
 #include <vector>
 
 namespace caspar { namespace core {
-		
+	
+struct pixel_format_desc;
+
 class write_frame : public draw_frame, boost::noncopyable
 {
 public:	

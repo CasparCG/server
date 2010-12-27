@@ -4,9 +4,9 @@
 
 #include "image_processor.h"
 #include "audio_processor.h"
+#include "pixel_format.h"
 
-#include "../format/pixel_format.h"
-#include "../../common/utility/singleton_pool.h"
+#include <common/utility/singleton_pool.h>
 
 #include <boost/range/algorithm.hpp>
 

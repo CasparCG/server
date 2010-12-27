@@ -21,6 +21,7 @@
 
 #include "fwd.h"
 
+#include "pixel_format.h"
 #include "write_frame.h"
 
 #include "../format/video_format.h"
@@ -34,7 +35,7 @@
 #include <memory>
 
 namespace caspar { namespace core {
-	
+
 class frame_processor_device : boost::noncopyable
 {
 public:

@@ -39,9 +39,9 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color)) << msg_info("Invalid color code"));
 	}
 	
-	safe_ptr<draw_frame> receive() { return frame_; }
+	virtual safe_ptr<draw_frame> receive() { return frame_; }
 
-	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		auto frame = frame_processor->create_frame(1, 1, pixel_format::bgra);
 		auto& value = *reinterpret_cast<unsigned long*>(frame->image_data().begin());
@@ -50,7 +50,7 @@ public:
 		frame_ = std::move(frame);
 	}
 	
-	std::wstring print() const { return + L"color[" + color_str_ + L"]"; }
+	virtual std::wstring print() const { return + L"color[" + color_str_ + L"]"; }
 
 	safe_ptr<draw_frame> frame_;
 	std::wstring color_str_;

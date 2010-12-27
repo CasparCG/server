@@ -31,7 +31,7 @@ struct ct_producer : public cg_producer
 	ct_producer(ct_producer&& other) : initialized_(std::move(other.initialized_)), filename_(std::move(other.filename_)){}
 	ct_producer(const std::wstring& filename) : filename_(filename), initialized_(false){}
 
-	safe_ptr<draw_frame> receive()
+	virtual safe_ptr<draw_frame> receive()
 	{
 		if(!initialized_)
 		{
@@ -41,7 +41,7 @@ struct ct_producer : public cg_producer
 		return cg_producer::receive();
 	}
 
-	std::wstring print() const
+	virtual std::wstring print() const
 	{
 		return L"ct[" + filename_ + L"]";
 	}

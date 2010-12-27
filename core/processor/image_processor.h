@@ -3,7 +3,6 @@
 #include "host_buffer.h"
 
 #include "../format/video_format.h"
-#include "../format/pixel_format.h"
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/thread/future.hpp>
@@ -12,6 +11,8 @@
 #include <array>
 
 namespace caspar { namespace core {
+
+struct pixel_format_desc;
 	
 struct image_transform
 {

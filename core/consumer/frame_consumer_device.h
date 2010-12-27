@@ -22,7 +22,7 @@ class frame_consumer_device : boost::noncopyable
 public:
 	frame_consumer_device(frame_consumer_device&& other);
 	frame_consumer_device(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers);
-	void consume(safe_ptr<const read_frame>&& future_frame);
+	void consume(safe_ptr<const read_frame>&& future_frame); // nothrow
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
