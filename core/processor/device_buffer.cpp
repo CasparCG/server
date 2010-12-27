@@ -25,7 +25,7 @@ struct device_buffer::implementation : boost::noncopyable
 
 	~implementation()
 	{
-		glDeleteTextures(1, &id_);
+		GL(glDeleteTextures(1, &id_));
 	}
 	
 	void bind()
@@ -60,7 +60,7 @@ struct device_buffer::implementation : boost::noncopyable
 
 	void attach(int index)
 	{
-		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0_EXT + index, GL_TEXTURE_2D, id_, 0));
+		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, id_, 0));
 	}
 
 	GLuint id_;
@@ -79,6 +79,5 @@ void device_buffer::bind(){impl_->bind();}
 void device_buffer::unbind(){impl_->unbind();}
 void device_buffer::read(host_buffer& source){impl_->read(source);}
 void device_buffer::write(host_buffer& target){impl_->write(target);}
-GLuint device_buffer::id() const { return impl_->id_; }
 
 }}

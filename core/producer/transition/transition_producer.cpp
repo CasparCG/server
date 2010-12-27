@@ -48,6 +48,11 @@ struct transition_producer::implementation : boost::noncopyable
 		
 	safe_ptr<draw_frame> receive()
 	{
+		return render_frame();
+	}
+
+	safe_ptr<draw_frame> render_frame()
+	{
 		if(current_frame_++ >= info_.duration)
 			return draw_frame::eof();
 
@@ -56,14 +61,14 @@ struct transition_producer::implementation : boost::noncopyable
 
 		tbb::parallel_invoke
 		(
-			[&]{dest   = receive(dest_producer_);},
-			[&]{source = receive(source_producer_);}
+			[&]{dest   = render_sub_frame(dest_producer_);},
+			[&]{source = render_sub_frame(source_producer_);}
 		);
 
 		return compose(dest, source);
 	}
 
-	safe_ptr<draw_frame> receive(safe_ptr<frame_producer>& producer)
+	safe_ptr<draw_frame> render_sub_frame(safe_ptr<frame_producer>& producer)
 	{
 		if(producer == frame_producer::empty())
 			return draw_frame::eof();
@@ -94,7 +99,7 @@ struct transition_producer::implementation : boost::noncopyable
 				CASPAR_LOG(warning) << "Failed to initialize following producer.";
 			}
 
-			return receive(producer);
+			return render_sub_frame(producer);
 		}
 		return frame;
 	}

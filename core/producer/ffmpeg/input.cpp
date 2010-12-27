@@ -121,7 +121,7 @@ struct input::implementation : boost::noncopyable
 				}
 			}
 			else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
-				executor_.stop(false);
+				executor_.stop(executor::no_wait);
 		}
 	}
 		

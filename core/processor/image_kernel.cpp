@@ -128,6 +128,10 @@ struct image_kernel::implementation
 {
 	std::unordered_map<pixel_format::type, shader_program>& shaders()
 	{
+		GL(glEnable(GL_POLYGON_STIPPLE));
+		GL(glEnable(GL_BLEND));
+		GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));	
+
 		if(shaders_.empty())
 		{
 		std::string common_vertex = 

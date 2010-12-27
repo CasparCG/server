@@ -175,6 +175,7 @@
     <ClInclude Include="processor\image_kernel.h" />
     <ClInclude Include="processor\image_processor.h" />
     <ClInclude Include="processor\fwd.h" />
+    <ClInclude Include="processor\ogl_device.h" />
     <ClInclude Include="processor\read_frame.h" />
     <ClInclude Include="processor\draw_frame.h" />
     <ClInclude Include="processor\write_frame.h" />
@@ -265,6 +266,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="processor\image_processor.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="processor\ogl_device.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

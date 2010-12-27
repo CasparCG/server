@@ -23,7 +23,7 @@ struct host_buffer::implementation : boost::noncopyable
 
 	~implementation()
 	{
-		glDeleteBuffers(1, &pbo_);
+		GL(glDeleteBuffers(1, &pbo_));
 	}
 
 	void map()

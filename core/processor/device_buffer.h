@@ -23,9 +23,7 @@ public:
 	void attach(int index);
 	void read(host_buffer& source);
 	void write(host_buffer& target);
-
-	GLuint id() const;
-
+	
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

@@ -49,7 +49,7 @@ namespace caspar { namespace core { namespace ffmpeg{
 struct ffmpeg_producer_impl
 {
 public:
-	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), last_frame_(draw_frame(draw_frame::empty())), underrun_count_(0),
+	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), last_frame_(draw_frame(draw_frame::empty())),
 		input_(filename), video_decoder_(input_.get_video_codec_context().get()), audio_decoder_(input_.get_audio_codec_context().get())
 	{				
 		input_.set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
@@ -119,18 +119,8 @@ public:
 				ouput_channel_.push(std::move(transform));
 			}				
 
-			if(ouput_channel_.empty() && video_packet.empty() && audio_packet.empty())
-			{
-				if(underrun_count_++ == 0)
-					CASPAR_LOG(warning) << print() << "### Started File read underrun.";
-
-				return last_frame_;
-			}
-			else if(underrun_count_ > 0)
-			{
-				CASPAR_LOG(trace) << print() << "### Ended file read underrun with " << underrun_count_ << " ticks.";
-				underrun_count_ = 0;
-			}
+			if(ouput_channel_.empty() && video_packet.empty() && audio_packet.empty())			
+				return last_frame_;			
 		}
 
 		auto result = last_frame_;
@@ -152,22 +142,20 @@ public:
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 
-	size_t									underrun_count_;
-			
-	input									input_;			
-	audio_decoder							audio_decoder_;
-	video_decoder							video_decoder_;
+	input								input_;			
+	audio_decoder						audio_decoder_;
+	video_decoder						video_decoder_;
 
-	std::deque<safe_ptr<write_frame>>		video_frame_channel_;	
-	std::deque<std::vector<short>>			audio_chunk_channel_;
+	std::deque<safe_ptr<write_frame>>	video_frame_channel_;	
+	std::deque<std::vector<short>>		audio_chunk_channel_;
 
 	std::queue<safe_ptr<draw_frame>>	ouput_channel_;
 	
-	const std::wstring						filename_;
+	const std::wstring					filename_;
 	
 	safe_ptr<draw_frame>				last_frame_;
 
-	video_format_desc						format_desc_;
+	video_format_desc					format_desc_;
 };
 
 class ffmpeg_producer : public frame_producer
