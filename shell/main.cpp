@@ -102,7 +102,7 @@ int main(int argc, wchar_t* argv[])
 			else if(wcmd.substr(0, 1) == L"4")
 				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" WIPE 100 LOOP AUTOPLAY";
 			else if(wcmd.substr(0, 1) == L"5")
-				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" LOOP AUTOPLAY";
+				wcmd = L"LOADBG 1-2 " + wcmd.substr(1, wcmd.length()-1) + L" LOOP AUTOPLAY";
 			else if(wcmd.substr(0, 1) == L"6")
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
 			else if(wcmd.substr(0, 1) == L"7")

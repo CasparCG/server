@@ -6,6 +6,7 @@
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/thread/future.hpp>
+#include <boost/noncopyable.hpp>
 
 #include <memory>
 #include <array>
@@ -14,7 +15,7 @@ namespace caspar { namespace core {
 
 struct pixel_format_desc;
 	
-struct image_transform
+struct image_transform 
 {
 	image_transform() : alpha(1.0), pos(boost::make_tuple(0.0, 0.0)), uv(boost::make_tuple(0.0, 0.0, 0.0, 0.0)), mode(video_mode::invalid){}
 	double alpha;
@@ -26,7 +27,7 @@ struct image_transform
 	const image_transform operator*(const image_transform &other) const;
 };
 
-class image_processor
+class image_processor : boost::noncopyable
 {
 public:
 	image_processor(const video_format_desc& format_desc);

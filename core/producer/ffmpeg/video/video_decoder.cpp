@@ -132,7 +132,11 @@ struct video_decoder::implementation : boost::noncopyable
 				});
 			});
 
-			return std::move(write);
+			// TODO: Make generic for all formats and modes.
+			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
+				write->translate(0.0f, 1.0/static_cast<double>(height_));
+
+			return write;
 		}
 		else
 		{
@@ -143,8 +147,12 @@ struct video_decoder::implementation : boost::noncopyable
 			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);	
-			
-			return std::move(write);
+						
+			// TODO: Make generic for all formats and modes.
+			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
+				write->translate(0.0f, 1.0/static_cast<double>(height_));
+
+			return write;
 		}	
 	}
 

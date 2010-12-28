@@ -12,10 +12,7 @@
 #include <common/concurrency/executor.h>
 
 #include <Glee.h>
-#include <SFML/Window.hpp>
-
-#include <boost/noncopyable.hpp>
-
+#include <SFML/Window/Context.hpp>
 #include <unordered_map>
 
 namespace caspar { namespace core {
@@ -38,7 +35,7 @@ const image_transform image_transform::operator*(const image_transform &other) c
 	return image_transform(*this) *= other;
 }
 
-struct image_processor::implementation
+struct image_processor::implementation : boost::noncopyable
 {	
 	implementation(const video_format_desc& format_desc) : format_desc_(format_desc)
 	{
