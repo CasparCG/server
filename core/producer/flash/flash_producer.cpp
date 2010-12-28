@@ -144,7 +144,7 @@ public:
 		if(ax_->IsReadyToRender() && ax_->InvalidRectangle())
 		{
 			std::fill_n(bmp_data_, format_desc_.size, 0);			
-			//ax_->DrawControl((HDC)hdc_.get());
+			ax_->DrawControl((HDC)hdc_.get());
 		
 			auto frame = frame_processor_->create_frame();
 			std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
@@ -188,8 +188,6 @@ struct flash_producer::implementation
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));
-
-		executor_.start();
 	}
 
 	~implementation() 
@@ -199,11 +197,10 @@ struct flash_producer::implementation
 	
 	void param(const std::wstring& param) 
 	{	
-		if(!factory_)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info(narrow(print()) + "Uninitialized."));
-
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
+			if(!factory_)
+				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info(narrow(print()) + "Uninitialized."));
 			if(!renderer_)
 			{
 				renderer_.reset(factory_());
@@ -240,6 +237,7 @@ struct flash_producer::implementation
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		factory_ = [=]{return new flash_renderer(frame_processor, filename_);};
+		executor_.start();
 	}
 	
 	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }

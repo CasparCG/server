@@ -19,15 +19,14 @@
 */
 #pragma once
 
-#include "../format/video_format.h"
-#include "../processor/read_frame.h"
+#include <common/utility/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 
-#include <memory>
-
 namespace caspar { namespace core {
 	
+class read_frame;
+
 struct frame_consumer : boost::noncopyable
 {
 	enum sync_mode
@@ -42,10 +41,5 @@ struct frame_consumer : boost::noncopyable
 	virtual sync_mode synchronize() = 0;
 	virtual size_t buffer_depth() const = 0;
 };
-typedef std::shared_ptr<frame_consumer> frame_consumer_ptr;
-typedef std::shared_ptr<const frame_consumer> frame_consumer_const_ptr;
-
-typedef std::unique_ptr<frame_consumer> frame_consumer_uptr;
-typedef std::unique_ptr<const frame_consumer> frame_consumer_const_uptr;
 
 }}

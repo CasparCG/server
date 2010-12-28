@@ -8,14 +8,10 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <tbb/concurrent_queue.h>
-
-#include <boost/thread/future.hpp>
-
 namespace caspar { namespace core {
 	
-class frame_processor_device;
 class draw_frame;
+struct video_format_desc;
 
 class frame_consumer_device : boost::noncopyable
 {

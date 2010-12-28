@@ -2,9 +2,7 @@
 
 #include "image_loader.h"
 
-#include "../../../common/exception/Exceptions.h"
-
-#include "../../processor/write_frame.h"
+#include <common/exception/Exceptions.h>
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4714) // marked as __forceinline not inlined
@@ -14,8 +12,6 @@
 #include <boost/exception/errinfo_file_name.hpp>
 
 namespace caspar { namespace core { namespace image{
-
-#include <boost/thread/once.hpp>
 
 struct FreeImage_initializer
 {
@@ -37,7 +33,6 @@ std::shared_ptr<FIBITMAP> load_image(const std::string& filename)
 		BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 		
 	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, filename.c_str(), 0), FreeImage_Unload);
-	//FREE_IMAGE_TYPE ImageType = FreeImage_GetImageType(bitmap.get());
 		  
 	if(FreeImage_GetBPP(bitmap.get()) != 32)
 	{

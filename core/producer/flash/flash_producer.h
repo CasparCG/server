@@ -25,9 +25,6 @@
 
 namespace caspar { namespace core { namespace flash {
 
-///=================================================================================================
-/// <summary>	Flash Producer. </summary>
-///=================================================================================================
 class flash_producer : public frame_producer
 {
 public:
@@ -46,7 +43,6 @@ public:
 private:	
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
-
 };
 
 }}}
