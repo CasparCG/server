@@ -125,6 +125,18 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, 
 	}
 }
 
+safe_ptr<frame_producer> create_ct_producer(const std::vector<std::wstring>& params) 
+{
+	std::wstring filename = params[0] + L".ct";
+	if(!boost::filesystem::exists(filename))
+		return frame_producer::empty();
+
+	auto producer = make_safe<cg_producer>();
+	producer->add(0, filename, 1);
+
+	return producer;
+}
+
 cg_producer::cg_producer() : impl_(new implementation()){}
 cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<draw_frame> cg_producer::receive(){return impl_->receive();}

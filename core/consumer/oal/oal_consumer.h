@@ -19,10 +19,11 @@
 */
 #pragma once
 
+#include "../../format/video_format.h"
 #include "../../consumer/frame_consumer.h"
 
 namespace caspar { namespace core { namespace oal {
-
+	
 class consumer : public frame_consumer
 {
 public:	

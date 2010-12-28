@@ -23,9 +23,11 @@
 #include "ogl_consumer.h"
 
 #include "../../format/video_format.h"
+#include "../../processor/read_frame.h"
 
 #include <common/gl/utility.h>
 #include <common/concurrency/executor.h>
+#include <common/utility/safe_ptr.h>
 
 #include <boost/thread.hpp>
 

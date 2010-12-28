@@ -32,6 +32,7 @@
 #include "DeckLinkAPI_h.h"
 
 #include "../../format/video_format.h"
+#include "../../processor/read_frame.h"
 
 #include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>

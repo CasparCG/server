@@ -35,4 +35,6 @@ private:
 
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
+safe_ptr<frame_producer> create_ct_producer(const std::vector<std::wstring>& params);
+
 }}}

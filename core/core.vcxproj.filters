@@ -150,9 +150,6 @@
     <ClInclude Include="producer\flash\cg_producer.h">
       <Filter>Source\channel\producer\flash</Filter>
     </ClInclude>
-    <ClInclude Include="producer\flash\ct_producer.h">
-      <Filter>Source\channel\producer\flash</Filter>
-    </ClInclude>
     <ClInclude Include="producer\flash\flash_producer.h">
       <Filter>Source\channel\producer\flash</Filter>
     </ClInclude>
@@ -309,9 +306,6 @@
       <Filter>Source\protocol</Filter>
     </ClCompile>
     <ClCompile Include="producer\flash\cg_producer.cpp">
-      <Filter>Source\channel\producer\flash</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\flash\ct_producer.cpp">
       <Filter>Source\channel\producer\flash</Filter>
     </ClCompile>
     <ClCompile Include="producer\flash\flash_producer.cpp">

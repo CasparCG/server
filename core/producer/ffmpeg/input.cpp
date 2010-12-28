@@ -165,14 +165,7 @@ struct input::implementation : boost::noncopyable
 		tbb::queuing_mutex::scoped_lock lock(seek_mutex_);
 		if(av_seek_frame(format_context_.get(), -1, seek_target*AV_TIME_BASE, 0) < 0)
 			return false;
-		
-		video_packet_buffer_.clear();
-		audio_packet_buffer_.clear();
-		// TODO: Not sure its enough to just flush in input class
-		if(video_codec_context_)
-			avcodec_flush_buffers(video_codec_context_.get());
-		if(audio_codex_context_)
-			avcodec_flush_buffers(audio_codex_context_.get());
+
 		return true;
 	}
 
