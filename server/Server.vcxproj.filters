@@ -71,6 +71,9 @@
     <Filter Include="frame\buffers">
       <UniqueIdentifier>{5f57e8d6-78fb-4784-9dea-91e0c95d8aec}</UniqueIdentifier>
     </Filter>
+    <Filter Include="My Inspector Results">
+      <UniqueIdentifier>{866b8ee7-b7c8-40de-8658-48c7b6f871af}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\Icon2.ico">
@@ -78,6 +81,13 @@
     </None>
     <None Include="resources\server.rc2">
       <Filter>resources</Filter>
+    </None>
+    <None Include="My Inspector Results\r000mi3\r000mi3.insp" />
+    <None Include="My Inspector Results\r002mi3\r002mi3.insp">
+      <Filter>My Inspector Results</Filter>
+    </None>
+    <None Include="My Inspector Results\r003mi3\r003mi3.insp">
+      <Filter>My Inspector Results</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -296,13 +306,7 @@
     <ClInclude Include="frame\BitmapFrame.h">
       <Filter>frame</Filter>
     </ClInclude>
-    <ClInclude Include="frame\BitmapFrameAdapter.h">
-      <Filter>frame</Filter>
-    </ClInclude>
     <ClInclude Include="frame\BitmapFrameManager.h">
-      <Filter>frame</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\BitmapFrameManagerAdapter.h">
       <Filter>frame</Filter>
     </ClInclude>
     <ClInclude Include="frame\ClipInfo.h">
@@ -554,13 +558,7 @@
     <ClCompile Include="frame\BitmapFrame.cpp">
       <Filter>frame</Filter>
     </ClCompile>
-    <ClCompile Include="frame\BitmapFrameAdapter.cpp">
-      <Filter>frame</Filter>
-    </ClCompile>
     <ClCompile Include="frame\BitmapFrameManager.cpp">
-      <Filter>frame</Filter>
-    </ClCompile>
-    <ClCompile Include="frame\BitmapFrameManagerAdapter.cpp">
       <Filter>frame</Filter>
     </ClCompile>
     <ClCompile Include="frame\Frame.cpp">

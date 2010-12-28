@@ -40,7 +40,7 @@ namespace caspar{
 class BitmapHolder : private utils::Noncopyable
 {
 public:
-	BitmapHolder(HWND hWnd, size_t height, size_t width, void* memory = NULL);
+	BitmapHolder(HWND hWnd, size_t height, size_t width);
 
 	HDC GetDC() const;
 	unsigned char* GetPtr() const;

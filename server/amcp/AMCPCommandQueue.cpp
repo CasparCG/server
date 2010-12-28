@@ -55,11 +55,11 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pNewCommand)
 			commands_.clear();
 
 			commands_.push_back(pNewCommand);
-			LOG << LogLevel::Verbose << TEXT("Cleared queue and added command");
+			LOG << LogLevel::Verbose << TEXT("Cleared queue and added command: ") << pNewCommand->print();
 		}
 		else {
 			commands_.push_back(pNewCommand);
-			LOG << LogLevel::Verbose << TEXT("Added command to end of queue");
+			LOG << LogLevel::Verbose << TEXT("Added command to end of queue: ") << pNewCommand->print();
 		}
 	}
 
@@ -101,13 +101,26 @@ void AMCPCommandQueue::Run(HANDLE stopEvent)
 				//don't fail, just wait for a while and then try again
 				continue;
 			}
-			else if(condition == ConditionGood) {
-				if(pCurrentCommand->Execute()) {
-					LOG << LogLevel::Verbose << TEXT("Executed command");
+			else if(condition == ConditionGood) 
+			{
+				bool success = false;
+				try
+				{
+					success = pCurrentCommand->Execute();					
 				}
-				else {
-					LOG << LogLevel::Verbose << TEXT("Failed to executed command");
-				}		
+				catch(std::exception& ex)
+				{
+					LOG << LogLevel::Critical << TEXT("UNEXPECTED EXCEPTION: In command execution. Message: ") << ex.what();
+				}
+				catch(...)
+				{
+					LOG << LogLevel::Critical << TEXT("UNEXPECTED EXCEPTION: In command execution. Message: Unknown");					
+				}
+
+				if(success)
+					LOG << LogLevel::Verbose << TEXT("Executed command: ") << pCurrentCommand->print();
+				else
+					LOG << LogLevel::Verbose << TEXT("Failed to execute command: ") << pCurrentCommand->print();
 			}
 			else {	//condition == ConditionPermanentlyBad
 				LOG << TEXT("Invalid commandobject");

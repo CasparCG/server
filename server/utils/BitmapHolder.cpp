@@ -25,7 +25,7 @@
 
 namespace caspar{
 
-bool CreateBitmap(HDC dc, size_t width, size_t height, HBITMAP& hBitmap, void** pBitmapData, void* memory)
+bool CreateBitmap(HDC dc, size_t width, size_t height, HBITMAP& hBitmap, void** pBitmapData)
 {
 	BITMAPINFO bitmapInfo;
 	bitmapInfo.bmiHeader.biBitCount = 32;
@@ -40,33 +40,19 @@ bool CreateBitmap(HDC dc, size_t width, size_t height, HBITMAP& hBitmap, void** 
 	bitmapInfo.bmiHeader.biXPelsPerMeter = 0;
 	bitmapInfo.bmiHeader.biYPelsPerMeter = 0;
 
-	if(memory != NULL)
-	{		
-		HDC memoryDC = CreateCompatibleDC(dc);
-		if(memoryDC == NULL)
-			return false;
-
-		HANDLE hMapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, width*height*4, NULL);
-		MapViewOfFileEx(hMapping, FILE_MAP_ALL_ACCESS, 0, 0, 0, memory);
-
-		hBitmap = CreateDIBSection(memoryDC, &bitmapInfo, DIB_RGB_COLORS, pBitmapData, hMapping, 0);
-	}
-	else
-		hBitmap = CreateDIBSection(dc, &bitmapInfo, DIB_RGB_COLORS, pBitmapData, NULL, 0);
+	hBitmap = CreateDIBSection(dc, &bitmapInfo, DIB_RGB_COLORS, pBitmapData, NULL, 0);
 
 	return (hBitmap != 0);
 }
 
 struct BitmapHolder::Implementation
 {	
-
-	Implementation(HWND hWnd, size_t width, size_t height, void* memory)
-		: hDC_(0), hBitmap_(0), pBitmapData_(0), width_(width), height_(height)
+	Implementation(HWND hWnd, size_t width, size_t height) : hDC_(0), hBitmap_(0), pBitmapData_(0), width_(width), height_(height)
 	{
 		DCWrapper hDC(hWnd);
 
 		hDC_ = CreateCompatibleDC(hDC);
-		if(CreateBitmap(hDC_, width_, height_, hBitmap_, reinterpret_cast<void**>(&pBitmapData_), memory))
+		if(CreateBitmap(hDC_, width_, height_, hBitmap_, reinterpret_cast<void**>(&pBitmapData_)))
 			SelectObject(hDC_, hBitmap_);	
 		else
 		{
@@ -99,7 +85,7 @@ struct BitmapHolder::Implementation
 	unsigned char* pBitmapData_;
 };
 
-BitmapHolder::BitmapHolder(HWND hWnd, size_t width, size_t height, void* memory): pImpl_(new Implementation(hWnd, width, height, memory))
+BitmapHolder::BitmapHolder(HWND hWnd, size_t width, size_t height): pImpl_(new Implementation(hWnd, width, height))
 {
 }
 

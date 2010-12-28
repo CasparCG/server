@@ -206,6 +206,9 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="My Inspector Results\r000mi3\r000mi3.insp" />
+    <None Include="My Inspector Results\r002mi3\r002mi3.insp" />
+    <None Include="My Inspector Results\r003mi3\r003mi3.insp" />
     <None Include="resources\Icon2.ico" />
     <None Include="resources\server.rc2" />
   </ItemGroup>
@@ -301,9 +304,7 @@
     <ClInclude Include="audio\AudioManager.h" />
     <ClInclude Include="audio\DirectSoundManager.h" />
     <ClInclude Include="frame\BitmapFrame.h" />
-    <ClInclude Include="frame\BitmapFrameAdapter.h" />
     <ClInclude Include="frame\BitmapFrameManager.h" />
-    <ClInclude Include="frame\BitmapFrameManagerAdapter.h" />
     <ClInclude Include="frame\ClipInfo.h" />
     <ClInclude Include="frame\Frame.h" />
     <ClInclude Include="frame\FrameManager.h" />
@@ -652,20 +653,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="frame\BitmapFrameAdapter.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="frame\BitmapFrameManager.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="frame\BitmapFrameManagerAdapter.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="frame\Frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\StdAfx.h</PrecompiledHeaderFile>

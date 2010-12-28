@@ -42,6 +42,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 1;
 	}
+	virtual std::wstring print() const {return TEXT("LoadCommand"); }
 };
 
 class LoadbgCommand : public AMCPCommand
@@ -60,6 +61,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 1;
 	}
+	virtual std::wstring print() const {return TEXT("LoadBgCommand"); }
 };
 
 class PlayCommand : public AMCPCommand
@@ -78,6 +80,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 0;
 	}
+	virtual std::wstring print() const {return TEXT("PlayCommand"); }
 };
 
 class StopCommand : public AMCPCommand
@@ -96,6 +99,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 0;
 	}
+	virtual std::wstring print() const {return TEXT("StopCommand"); }
 };
 
 class ClearCommand : public AMCPCommand
@@ -114,6 +118,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 0;
 	}
+	virtual std::wstring print() const {return TEXT("ClearCommand"); }
 };
 
 class ParamCommand : public AMCPCommand
@@ -132,6 +137,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 1;
 	}
+	virtual std::wstring print() const {return TEXT("ParamCommand"); }
 };
 
 class CGCommand : public AMCPCommand
@@ -150,6 +156,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 1;
 	}
+	virtual std::wstring print() const {return TEXT("CGCommand"); }
 
 private:
 	bool ValidateLayer(const tstring& layerstring);
@@ -181,6 +188,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 1;
 	}
+	virtual std::wstring print() const {return TEXT("DataCommand"); }
 
 private:
 	bool ExecuteStore();
@@ -204,6 +212,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 0;
 	}
+	virtual std::wstring print() const {return TEXT("ClsCommand"); }
 };
 
 class TlsCommand : public AMCPCommand
@@ -222,6 +231,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 0;
 	}
+	virtual std::wstring print() const {return TEXT("TlsCommand"); }
 
 private:
 	void FindInDirectory(const tstring& dir, tstringstream&);
@@ -243,6 +253,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 1;
 	}
+	virtual std::wstring print() const {return TEXT("CinfCommand"); }
 };
 
 class InfoCommand : public AMCPCommand
@@ -261,6 +272,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 0;
 	}
+	virtual std::wstring print() const {return TEXT("InfoCommand"); }
 
 private:
 	void GenerateChannelInfo(ChannelPtr&, tstringstream&);
@@ -282,6 +294,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 0;
 	}
+	virtual std::wstring print() const {return TEXT("VersionCommand"); }
 };
 
 class ByeCommand : public AMCPCommand
@@ -300,6 +313,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 0;
 	}
+	virtual std::wstring print() const {return TEXT("ByeCommand"); }
 };
 
 class SetCommand : public AMCPCommand
@@ -320,6 +334,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 2;
 	}
+	virtual std::wstring print() const {return TEXT("SetCommand"); }
 };
 
 class MonitorCommand : public AMCPCommand
@@ -340,6 +355,7 @@ public:
 	virtual int GetMinimumParameters() {
 		return 1;
 	}
+	virtual std::wstring print() const {return TEXT("MonitorCommand"); }
 };
 
 //class KillCommand : public AMCPCommand

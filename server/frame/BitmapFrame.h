@@ -30,7 +30,7 @@ class BitmapFrame : public Frame
 {
 public:
 	explicit BitmapFrame(BitmapHolderPtr bitmap, const utils::ID& factoryID);
-	BitmapFrame(const utils::ID& factoryID, HWND hWnd, size_t height, size_t width, void* memory = NULL);
+	BitmapFrame(const utils::ID& factoryID, HWND hWnd, size_t height, size_t width);
 	virtual ~BitmapFrame();
 
 	virtual unsigned char* GetDataPtr() const;

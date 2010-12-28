@@ -90,6 +90,8 @@ namespace amcp {
 			scheduling_ = s;
 		}
 
+		virtual std::wstring print() const = 0;
+
 	protected:
 		void SetReplyString(const tstring& str) {
 			replyString_ = str;

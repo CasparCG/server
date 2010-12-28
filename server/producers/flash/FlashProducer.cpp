@@ -27,7 +27,7 @@
 #include "..\..\utils\LogLevel.h"
 #include "..\..\utils\image\Image.hpp"
 #include "..\..\application.h"
-#include "..\..\frame\BitmapFrameManagerAdapter.h"
+#include "..\..\frame\BitmapFrameManager.h"
 
 namespace caspar {
 
@@ -374,7 +374,7 @@ bool FlashProducer::DoInitialize(FrameManagerPtr pFrameManager)
 		oldHeight = oldFmtDesc.height;
 	}
 
-	pFrameManager_ = pFrameManager->HasFeature("BITMAP_FRAME") ? pFrameManager : FrameManagerPtr(new BitmapFrameManagerAdapter(pFrameManager, GetApplication()->GetMainWindow()->getHwnd()));
+	pFrameManager_.reset(new BitmapFrameManager(pFrameManager->GetFrameFormatDescription(), GetApplication()->GetMainWindow()->getHwnd()));
 	const caspar::FrameFormatDescription& fmtDesc = pFrameManager_->GetFrameFormatDescription();
 	
 	pCurrentFrame_ = FramePtr();

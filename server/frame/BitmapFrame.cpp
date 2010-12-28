@@ -29,8 +29,8 @@ BitmapFrame::BitmapFrame(BitmapHolderPtr pBitmap, const utils::ID& factoryID)
 {
 }
 
-BitmapFrame::BitmapFrame(const utils::ID& factoryID, HWND hWnd, size_t height, size_t width, void* memory)
-	: pBitmap_(new BitmapHolder(hWnd, height, width, memory)), factoryID_(factoryID)
+BitmapFrame::BitmapFrame(const utils::ID& factoryID, HWND hWnd, size_t height, size_t width)
+	: pBitmap_(new BitmapHolder(hWnd, height, width)), factoryID_(factoryID)
 {
 }
 
