@@ -185,7 +185,6 @@
     <ClInclude Include="producer\ffmpeg\input.h" />
     <ClInclude Include="producer\ffmpeg\video\video_decoder.h" />
     <ClInclude Include="producer\flash\axflash.h" />
-    <ClInclude Include="producer\flash\bitmap.h" />
     <ClInclude Include="producer\flash\cg_producer.h" />
     <ClInclude Include="producer\flash\ct_producer.h" />
     <ClInclude Include="producer\flash\FlashAxContainer.h" />
@@ -304,10 +303,6 @@
     <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../../stdafx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producer\flash\bitmap.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../stdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../stdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\flash\cg_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../stdAfx.h</PrecompiledHeaderFile>

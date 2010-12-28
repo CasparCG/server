@@ -20,6 +20,9 @@
     <None Include="My Amplifier Results\r009hs\r009hs.ampl">
       <Filter>My Amplifier Results</Filter>
     </None>
+    <None Include="My Amplifier Results\r003hs\r003hs.ampl">
+      <Filter>My Amplifier Results</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="My Amplifier Results">

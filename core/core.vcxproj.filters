@@ -192,9 +192,6 @@
     <ClInclude Include="consumer\frame_consumer.h">
       <Filter>Source\channel\consumer</Filter>
     </ClInclude>
-    <ClInclude Include="producer\flash\bitmap.h">
-      <Filter>Source\channel\producer\flash</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\frame_consumer_device.h">
       <Filter>Source\channel\consumer</Filter>
     </ClInclude>
@@ -334,9 +331,6 @@
     </ClCompile>
     <ClCompile Include="consumer\bluefish\bluefish_consumer.cpp">
       <Filter>Source\channel\consumer\bluefish</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\flash\bitmap.cpp">
-      <Filter>Source\channel\producer\flash</Filter>
     </ClCompile>
     <ClCompile Include="consumer\frame_consumer_device.cpp">
       <Filter>Source\channel\consumer</Filter>

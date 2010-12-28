@@ -27,7 +27,6 @@
 #include "flash_producer.h"
 #include "FlashAxContainer.h"
 #include "TimerHelper.h"
-#include "bitmap.h"
 
 #include "../../format/video_format.h"
 
@@ -36,8 +35,6 @@
 #include <common/concurrency/executor.h>
 
 #include <boost/filesystem.hpp>
-
-#include <type_traits>
 
 namespace caspar { namespace core { namespace flash {
 
@@ -50,7 +47,7 @@ class flash_renderer
 public:
 	flash_renderer(const safe_ptr<frame_processor_device>& frame_processor, const std::wstring& filename) 
 		: last_frame_(draw_frame::empty()), current_frame_(draw_frame::empty()), frame_processor_(frame_processor), filename_(filename),
-			format_desc_(frame_processor->get_video_format_desc()), bmp_frame_(format_desc_.width, format_desc_.height)
+		hdc_(CreateCompatibleDC(0), DeleteDC), format_desc_(frame_processor->get_video_format_desc())
 
 	{
 		CASPAR_LOG(info) << print() << L" Started";
@@ -76,12 +73,30 @@ public:
 
 		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Load Template Host"));
-								
+										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Set Scale Mode"));
 														
 		if(FAILED(ax_->SetFormat(frame_processor_->get_video_format_desc())))  // stop if failed
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Set Format"));
+
+		BITMAPINFO info;
+		memset(&info, 0, sizeof(BITMAPINFO));
+		info.bmiHeader.biBitCount = 32;
+		info.bmiHeader.biCompression = BI_RGB;
+#ifdef _MSC_VER
+	#pragma warning(disable:4146)
+#endif
+		info.bmiHeader.biHeight = -format_desc_.height;
+#ifdef _MSC_VER
+	#pragma warning(default:4146)
+#endif
+		info.bmiHeader.biPlanes = 1;
+		info.bmiHeader.biSize = sizeof(BITMAPINFO);
+		info.bmiHeader.biWidth = format_desc_.width;
+
+		bmp_.reset(CreateDIBSection((HDC)hdc_.get(), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
+		SelectObject((HDC)hdc_.get(), bmp_.get());	
 	}
 
 	~flash_renderer()
@@ -95,7 +110,7 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-
+		
 		::OleUninitialize();
 		CASPAR_LOG(info) << print() << L" Ended";
 	}
@@ -128,11 +143,11 @@ public:
 		
 		if(ax_->IsReadyToRender() && ax_->InvalidRectangle())
 		{
-			std::fill_n(bmp_frame_.data(), bmp_frame_.size(), 0);			
-			ax_->DrawControl(bmp_frame_.hdc());
+			std::fill_n(bmp_data_, format_desc_.size, 0);			
+			//ax_->DrawControl((HDC)hdc_.get());
 		
 			auto frame = frame_processor_->create_frame();
-			std::copy(bmp_frame_.data(), bmp_frame_.data() + bmp_frame_.size(), frame->image_data().begin());
+			std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
 			current_frame_ = frame;
 		}
 		return current_frame_;
@@ -155,7 +170,11 @@ private:
 	const std::wstring filename_;
 	const safe_ptr<frame_processor_device> frame_processor_;
 	const video_format_desc format_desc_;
-	bitmap bmp_frame_;	 
+	
+	unsigned char* bmp_data_;
+	
+	std::shared_ptr<void> hdc_;
+	std::shared_ptr<void> bmp_;
 
 	CComPtr<FlashAxContainer> ax_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<draw_frame>> frame_buffer_;	
@@ -195,7 +214,7 @@ struct flash_producer::implementation
 		});
 	}
 	
-	safe_ptr<draw_frame> receive()
+	virtual safe_ptr<draw_frame> receive()
 	{
 		auto frame = draw_frame::empty();
 		if(renderer_ && renderer_->try_pop(frame)) // Only render again if frame was removed from buffer.		
@@ -205,7 +224,7 @@ struct flash_producer::implementation
 		return frame;
 	}
 
-	void render_frame()
+	virtual void render_frame()
 	{
 		try
 		{
@@ -218,7 +237,7 @@ struct flash_producer::implementation
 		}
 	}
 
-	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		factory_ = [=]{return new flash_renderer(frame_processor, filename_);};
 	}

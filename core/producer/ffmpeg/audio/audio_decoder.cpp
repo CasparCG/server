@@ -2,11 +2,6 @@
 
 #include "audio_decoder.h"
 
-#include <queue>
-#include <deque>
-
-#include <tbb/cache_aligned_allocator.h>
-		
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)

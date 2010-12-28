@@ -2,43 +2,14 @@
 
 #include "ffmpeg_producer.h"
 
-#if defined(_MSC_VER)
-#pragma warning (push)
-#pragma warning (disable : 4244)
-#endif
-
-extern "C" 
-{
-	#define __STDC_CONSTANT_MACROS
-	#define __STDC_LIMIT_MACROS
-	#include <libavcodec/avcodec.h>
-	#include <libavformat/avformat.h>
-	#include <libavutil/avutil.h>
-	#include <libswscale/swscale.h>
-}
-
-#if defined(_MSC_VER)
-#pragma warning (pop)
-#endif
-
 #include "input.h"
-
 #include "audio/audio_decoder.h"
-#include "video/video_decoder.h"
 #include "video/video_decoder.h"
 
 #include "../../format/video_format.h"
 #include "../../processor/draw_frame.h"
-#include "../../processor/draw_frame.h"
 
-#include <tbb/mutex.h>
 #include <tbb/parallel_invoke.h>
-#include <tbb/task_group.h>
-
-#include <boost/algorithm/string/case_conv.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/thread.hpp>
-#include <boost/thread/once.hpp>
 
 #include <deque>
 
@@ -46,10 +17,10 @@ using namespace boost::assign;
 
 namespace caspar { namespace core { namespace ffmpeg{
 	
-struct ffmpeg_producer_impl
+struct ffmpeg_producer : public frame_producer
 {
 public:
-	ffmpeg_producer_impl(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), last_frame_(draw_frame(draw_frame::empty())),
+	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), last_frame_(draw_frame(draw_frame::empty())),
 		input_(filename), video_decoder_(input_.get_video_codec_context().get()), audio_decoder_(input_.get_audio_codec_context().get())
 	{				
 		input_.set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
@@ -100,23 +71,14 @@ public:
 
 			while(!video_frame_channel_.empty() && (!audio_chunk_channel_.empty() || input_.get_audio_codec_context() == nullptr))
 			{
-				std::vector<short> audio_data;
 				if(input_.get_audio_codec_context() != nullptr) 
 				{
-					audio_data = std::move(audio_chunk_channel_.front());
+					video_frame_channel_.front()->audio_data() = std::move(audio_chunk_channel_.front());
 					audio_chunk_channel_.pop_front();
 				}
 							
-				auto write = std::move(video_frame_channel_.front());
-				write->audio_data() = std::move(audio_data);
-				auto transform = draw_frame(write);
+				ouput_channel_.push(video_frame_channel_.front());
 				video_frame_channel_.pop_front();
-		
-				// TODO: Make generic for all formats and modes.
-				if(input_.get_video_codec_context()->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
-					transform.translate(0.0f, 1.0/static_cast<double>(format_desc_.height));	
-				
-				ouput_channel_.push(std::move(transform));
 			}				
 
 			if(ouput_channel_.empty() && video_packet.empty() && audio_packet.empty())			
@@ -158,18 +120,6 @@ public:
 	video_format_desc					format_desc_;
 };
 
-class ffmpeg_producer : public frame_producer
-{
-public:
-	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) : impl_(new ffmpeg_producer_impl(filename, params)){}
-	ffmpeg_producer(ffmpeg_producer&& other) : impl_(std::move(other.impl_)){}
-	virtual safe_ptr<draw_frame> receive(){return impl_->receive();}
-	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor){impl_->initialize(frame_processor);}
-	virtual std::wstring print() const{return impl_->print();}
-private:
-	std::shared_ptr<ffmpeg_producer_impl> impl_;
-};
-
 safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>& params)
 {			
 	static const std::vector<std::wstring> extensions = list_of(L"mpg")(L"avi")(L"mov")(L"dv")(L"wav")(L"mp3")(L"mp4")(L"f4v")(L"flv");
@@ -182,12 +132,6 @@ safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>&
 
 	if(ext == extensions.end())
 		return frame_producer::empty();
-		
-	static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
-	boost::call_once(av_register_all, av_register_all_flag);	
-		
-	static boost::once_flag avcodec_init_flag = BOOST_ONCE_INIT;
-	boost::call_once(avcodec_init, avcodec_init_flag);	
 
 	return make_safe<ffmpeg_producer>(filename + L"." + *ext, params);
 }

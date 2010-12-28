@@ -10,7 +10,7 @@
 #include <tbb/queuing_mutex.h>
 
 #include <boost/exception/error_info.hpp>
-#include <boost/utility/value_init.hpp>
+#include <boost/thread/once.hpp>
 
 #include <errno.h>
 #include <system_error>
@@ -34,7 +34,13 @@ struct input::implementation : boost::noncopyable
 	static const size_t BUFFER_SIZE = 2 << 25;
 
 	implementation(const std::wstring& filename) : video_s_index_(-1), audio_s_index_(-1), filename_(filename)
-	{
+	{		
+		static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
+		boost::call_once(av_register_all, av_register_all_flag);	
+		
+		static boost::once_flag avcodec_init_flag = BOOST_ONCE_INIT;
+		boost::call_once(avcodec_init, avcodec_init_flag);	
+
 		loop_ = false;	
 		
 		int errn;
