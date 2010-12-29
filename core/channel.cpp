@@ -7,17 +7,13 @@
 #include "consumer/frame_consumer_device.h"
 
 #include "processor/draw_frame.h"
-#include "processor/draw_frame.h"
 #include "processor/frame_processor_device.h"
 
 #include <common/concurrency/executor.h>
 
-#include <boost/thread.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
 #include <tbb/parallel_for.h>
-
-#include <boost/noncopyable.hpp>
 
 #include <memory>
 

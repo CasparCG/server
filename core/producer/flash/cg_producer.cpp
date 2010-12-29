@@ -7,6 +7,10 @@
 #include "../../Server.h"
 
 #include <boost/filesystem.hpp>
+#include <boost/format.hpp>
+
+using boost::format;
+using boost::io::group;
 		
 namespace caspar { namespace core { namespace flash {
 	
@@ -23,72 +27,43 @@ public:
 	void add(int layer, const std::wstring& filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
 	{
 		CASPAR_LOG(info) << "Invoking add-command";
-		
-		std::wstringstream param;
-
-		param << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>") << layer << TEXT("</number><string>") << filename << TEXT("</string>") << (play_on_load?TEXT("<true/>"):TEXT("<false/>")) << TEXT("<string>") << label << TEXT("</string><string><![CDATA[ ") << data << TEXT(" ]]></string></arguments></invoke>");
-		
-		flash_producer_->param(param.str());
+		flash_producer_->param((boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?TEXT("<true/>"):TEXT("<false/>")) % label % data).str());
 	}
 
 	void remove(int layer)
 	{
 		CASPAR_LOG(info) << "Invoking remove-command";
-		
-		std::wstringstream param;
-		param << TEXT("<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array></arguments></invoke>");
-		
-		flash_producer_->param(param.str());
+		flash_producer_->param((boost::wformat(L"<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str());
 	}
 
 	void play(int layer)
 	{
 		CASPAR_LOG(info) << "Invoking play-command";
-		
-		std::wstringstream param;
-		param << TEXT("<invoke name=\"Play\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array></arguments></invoke>");
-		
-		flash_producer_->param(param.str());
+		flash_producer_->param((boost::wformat(L"<invoke name=\"Play\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str());
 	}
 
-	void stop(int layer, unsigned int mix_out_duration)
+	void stop(int layer, unsigned int)
 	{
 		CASPAR_LOG(info) << "Invoking stop-command";
-		
-		std::wstringstream param;
-		param << TEXT("<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array><number>") << mix_out_duration << TEXT("</number></arguments></invoke>");
-		
-		flash_producer_->param(param.str());
+		flash_producer_->param((boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str());
 	}
 
 	void next(int layer)
 	{
 		CASPAR_LOG(info) << "Invoking next-command";
-		
-		std::wstringstream param;
-		param << TEXT("<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array></arguments></invoke>");
-		
-		flash_producer_->param(param.str());
+		flash_producer_->param((boost::wformat(L"<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str());
 	}
 
 	void update(int layer, const std::wstring& data)
 	{
 		CASPAR_LOG(info) << "Invoking update-command";
-		
-		std::wstringstream param;
-		param << TEXT("<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array><string><![CDATA[ ") << data << TEXT(" ]]></string></arguments></invoke>");
-		
-		flash_producer_->param(param.str());
+		flash_producer_->param((boost::wformat(L"<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></arguments></invoke>") % layer % data).str());
 	}
 
 	void invoke(int layer, const std::wstring& label)
 	{
 		CASPAR_LOG(info) << "Invoking invoke-command";
-		
-		std::wstringstream param;
-		param << TEXT("<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>") << layer << TEXT("</number></property></array><string>") << label << TEXT("</string></arguments></invoke>");
-		
-		flash_producer_->param(param.str());
+		flash_producer_->param((boost::wformat(L"<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") % layer % label).str());
 	}
 
 	safe_ptr<draw_frame> receive()
