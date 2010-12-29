@@ -21,7 +21,7 @@ public:
 	void consume(safe_ptr<const read_frame>&& future_frame); // nothrow
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }}

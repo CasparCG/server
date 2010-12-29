@@ -153,9 +153,6 @@
     <ClInclude Include="producer\flash\flash_producer.h">
       <Filter>Source\channel\producer\flash</Filter>
     </ClInclude>
-    <ClInclude Include="producer\flash\axflash.h">
-      <Filter>Source\channel\producer\flash\interop</Filter>
-    </ClInclude>
     <ClInclude Include="producer\flash\FlashAxContainer.h">
       <Filter>Source\channel\producer\flash\interop</Filter>
     </ClInclude>
@@ -258,6 +255,9 @@
     <ClInclude Include="processor\pixel_format.h">
       <Filter>Source\channel\processor</Filter>
     </ClInclude>
+    <ClInclude Include="producer\flash\axflash.h">
+      <Filter>Source\channel\producer\flash\interop</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="protocol\amcp\AMCPCommandQueue.cpp">
@@ -310,9 +310,6 @@
     </ClCompile>
     <ClCompile Include="producer\flash\flash_producer.cpp">
       <Filter>Source\channel\producer\flash</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\flash\Flash9e_i.c">
-      <Filter>Source\channel\producer\flash\interop</Filter>
     </ClCompile>
     <ClCompile Include="producer\flash\FlashAxContainer.cpp">
       <Filter>Source\channel\producer\flash\interop</Filter>
@@ -385,6 +382,9 @@
     </ClCompile>
     <ClCompile Include="format\video_format.cpp">
       <Filter>Source\channel</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\flash\Flash9e_i.c">
+      <Filter>Source\channel\producer\flash\interop</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
