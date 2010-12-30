@@ -92,6 +92,9 @@ void draw_frame::alpha(double value){impl_->image_transform_.alpha = value;}
 
 safe_ptr<draw_frame> draw_frame::interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, video_mode::type mode)
 {			
+	if(frame1 == frame2)
+		return frame1;
+
 	auto my_frame1 = make_safe<draw_frame>(frame1);
 	auto my_frame2 = make_safe<draw_frame>(frame2);
 	if(mode == video_mode::upper)

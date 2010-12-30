@@ -23,7 +23,6 @@
 #include "FlashAxContainer.h"
 #include "..\..\format\video_format.h"
 #include "flash_producer.h"
-#include "TimerHelper.h"
 
 using namespace ATL;
 
@@ -39,20 +38,19 @@ CComBSTR FlashAxContainer::flashGUID_(_T("{D27CDB6E-AE6D-11CF-96B8-444553540000}
 _ATL_FUNC_INFO fnInfoFlashCallEvent = { CC_STDCALL, VT_EMPTY, 1, { VT_BSTR } };
 _ATL_FUNC_INFO fnInfoReadyStateChangeEvent = { CC_STDCALL, VT_EMPTY, 1, { VT_I4 } };
 
-FlashAxContainer::FlashAxContainer() : pflash_producer_(0), bInPlaceActive_(FALSE), pTimerHelper(0), lastTime_(0)
+FlashAxContainer::FlashAxContainer() : bInPlaceActive_(FALSE), m_lpDD4(0)
 {
 	bInvalidRect_ = false;
 	bCallSuccessful_ = false;
 	bReadyToRender_ = false;
-	bIsEmpty_ = false;
-	bHasNewTiming_ = false;
 }
 FlashAxContainer::~FlashAxContainer()
 {
-//	ReleaseAll();
-	if(pTimerHelper != 0)
-		delete pTimerHelper;
-
+	if(m_lpDD4)
+	{
+		m_lpDD4->Release();
+		m_lpDD4 = nullptr;
+	}
 	CASPAR_LOG(info) << "[FlashAxContainer] Destroyed";
 }
 
@@ -411,34 +409,15 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::ShowPropertyFrame()
 }
 
 
-///////////////////
-// IAdviseSink
-///////////////////
-void STDMETHODCALLTYPE FlashAxContainer::OnDataChange(FORMATETC* pFormatetc, STGMEDIUM* pStgmed)
-{
-	ATLTRACE(_T("IAdviseSink::OnDataChange\n"));
-}
+//DirectDraw GUIDS
 
-void STDMETHODCALLTYPE FlashAxContainer::OnViewChange(DWORD dwAspect, LONG lindex)
-{
-	ATLTRACE(_T("IAdviseSink::OnViewChange\n"));
-}
+DEFINE_GUID2(CLSID_DirectDraw,0xD7B70EE0,0x4340,0x11CF,0xB0,0x63,0x00,0x20,0xAF,0xC2,0xCD,0x35);
+DEFINE_GUID2(CLSID_DirectDraw7,0x3c305196,0x50db,0x11d3,0x9c,0xfe,0x00,0xc0,0x4f,0xd9,0x30,0xc5);
 
-void STDMETHODCALLTYPE FlashAxContainer::OnRename(IMoniker* pmk)
-{
-	ATLTRACE(_T("IAdviseSink::OnRename\n"));
-}
-
-void STDMETHODCALLTYPE FlashAxContainer::OnSave()
-{
-	ATLTRACE(_T("IAdviseSink::OnSave\n"));
-}
-
-void STDMETHODCALLTYPE FlashAxContainer::OnClose()
-{
-	ATLTRACE(_T("IAdviseSink::OnClose\n"));
-}
-
+DEFINE_GUID2(IID_IDirectDraw,0x6C14DB80,0xA733,0x11CE,0xA5,0x21,0x00,0x20,0xAF,0x0B,0xE5,0x60);
+DEFINE_GUID2(IID_IDirectDraw3,0x618f8ad4,0x8b7a,0x11d0,0x8f,0xcc,0x0,0xc0,0x4f,0xd9,0x18,0x9d);
+DEFINE_GUID2(IID_IDirectDraw4,0x9c59509a,0x39bd,0x11d1,0x8c,0x4a,0x00,0xc0,0x4f,0xd9,0x30,0xc5);
+DEFINE_GUID2(IID_IDirectDraw7,0x15e65ec0,0x3b9c,0x11d2,0xb9,0x2f,0x00,0x60,0x97,0x97,0xea,0x5b);
 
 ///////////////////
 // IServiceProvider
@@ -452,101 +431,38 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 	if (ppvObj == NULL)
 		return E_POINTER;
 	*ppvObj = NULL;
+	
+	HRESULT hr;
+
+	// Author: Makarov Igor
+	// Transparent Flash Control in Plain C++ 
+	// http://www.codeproject.com/KB/COM/flashcontrol.aspx 
+	if (IsEqualGUID(rsid, IID_IDirectDraw3))
+	{
+		if (!m_lpDD4)
+		{
+			m_lpDD4 = new IDirectDraw4Ptr;
+			hr = m_lpDD4->CreateInstance(CLSID_DirectDraw, NULL, CLSCTX_INPROC_SERVER); 
+			if (FAILED(hr))
+			{
+				delete m_lpDD4;
+				m_lpDD4 = NULL;
+				CASPAR_LOG(warning) << "[FlashAxContainer] Failed to query DirectDraw Service";
+				return E_NOINTERFACE;
+			}
+		}
+		if (m_lpDD4 && m_lpDD4->GetInterfacePtr())
+		{
+			*ppvObj = m_lpDD4->GetInterfacePtr();
+			m_lpDD4->AddRef();
+			return S_OK;
+		}
+	}
 
 	//TODO: The fullscreen-consumer requires that ths does NOT return an ITimerService
-	HRESULT hr = QueryInterface(riid, ppvObj);//E_NOINTERFACE;
+	hr = QueryInterface(riid, ppvObj);//E_NOINTERFACE;
 
 	return hr;
-}
-
-
-///////////////////
-// ITimerService
-///////////////////
-HRESULT STDMETHODCALLTYPE FlashAxContainer::CreateTimer(ITimer *pReferenceTimer, ITimer **ppNewTimer)
-{
-	ATLTRACE(_T("ITimerService::CreateTimer\n"));
-	if(pTimerHelper != 0)
-	{
-		delete pTimerHelper;
-		pTimerHelper = 0;
-	}
-	pTimerHelper = new TimerHelper();
-	return QueryInterface(__uuidof(ITimer), (void**) ppNewTimer);
-}
-
-HRESULT STDMETHODCALLTYPE FlashAxContainer::GetNamedTimer(REFGUID rguidName, ITimer **ppTimer)
-{
-	ATLTRACE(_T("ITimerService::GetNamedTimer"));
-	if(ppTimer == NULL)
-		return E_POINTER;
-	else
-		*ppTimer = NULL;
-
-	return E_FAIL;
-}
-
-HRESULT STDMETHODCALLTYPE FlashAxContainer::SetNamedTimerReference(REFGUID rguidName, ITimer *pReferenceTimer)
-{
-	ATLTRACE(_T("ITimerService::SetNamedTimerReference"));
-	return S_OK;
-}
-
-///////////
-// ITimer
-///////////
-HRESULT STDMETHODCALLTYPE FlashAxContainer::Advise(VARIANT vtimeMin, VARIANT vtimeMax, VARIANT vtimeInterval, DWORD dwFlags, ITimerSink *pTimerSink, DWORD *pdwCookie)
-{
-	ATLTRACE(_T("Timer::Advise\n"));
-	if(pdwCookie == 0)
-		return E_POINTER;
-
-	if(pTimerHelper != 0)
-	{
-		pTimerHelper->Setup(vtimeMin.ulVal, vtimeInterval.ulVal, pTimerSink);
-		*pdwCookie = pTimerHelper->ID;
-		bHasNewTiming_ = true;
-
-		return S_OK;
-	}
-	else
-		return E_OUTOFMEMORY;
-}
-
-HRESULT STDMETHODCALLTYPE FlashAxContainer::Unadvise(/* [in] */ DWORD dwCookie)
-{
-	ATLTRACE(_T("Timer::Unadvice\n"));
-	if(pTimerHelper != 0)
-	{
-		pTimerHelper->pTimerSink = 0;
-		return S_OK;
-	}
-	else
-		return E_FAIL;
-}
-
-HRESULT STDMETHODCALLTYPE FlashAxContainer::Freeze(/* [in] */ BOOL fFreeze)
-{
-	ATLTRACE(_T("Timer::Freeze\n"));
-	return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE FlashAxContainer::GetTime(/* [out] */ VARIANT *pvtime)
-{
-	ATLTRACE(_T("Timer::GetTime\n"));
-	if(pvtime == 0)
-		return E_POINTER;
-
-//	return E_NOTIMPL;
-	pvtime->lVal = 0;
-	return S_OK;
-}
-
-int FlashAxContainer::GetFPS() {
-	if(pTimerHelper != 0 && pTimerHelper->interval > 0)
-		return (1000 / pTimerHelper->interval);
-	
-	return 0;
 }
 
 bool FlashAxContainer::IsReadyToRender() const {
@@ -603,7 +519,6 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	else if(str.find(TEXT("IsEmpty")) != std::wstring::npos)
 	{
 		ATLTRACE(_T("ShockwaveFlash::IsEmpty\n"));
-		bIsEmpty_ = true;
 	}
 	else if(str.find(TEXT("OnError")) != std::wstring::npos)
 	{
@@ -855,23 +770,8 @@ bool FlashAxContainer::InvalidRectangle() const
 	return bInvalidRect_;
 }
 
-void FlashAxContainer::Tick()
-{
-	if(pTimerHelper)
-	{
-		HRESULT result;
-		DWORD time = pTimerHelper->Invoke(); // Tick flash
-		if(time - lastTime_ >= 400)
-		{
-			m_spInPlaceObjectWindowless->OnWindowMessage(WM_TIMER, 3, 0, &result);
-			lastTime_ = time;
-		}
-	}
-}
-
 bool FlashAxContainer::CallFunction(const std::wstring& param)
 {
-	bIsEmpty_ = false;
 	bCallSuccessful_ = false;
 
 	CComPtr<IShockwaveFlash> spFlash;
@@ -883,11 +783,6 @@ bool FlashAxContainer::CallFunction(const std::wstring& param)
 	}
 
 	return false;
-}
-
-bool FlashAxContainer::IsEmpty() const
-{
-	return bIsEmpty_;
 }
 
 // Receives the following messages:
