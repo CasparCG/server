@@ -22,15 +22,16 @@
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4714) // marked as __forceinline not inlined
+#pragma warning(disable:4146)
 #endif
 
 #include "flash_producer.h"
 #include "FlashAxContainer.h"
-#include "TimerHelper.h"
 
 #include "../../format/video_format.h"
 
 #include "../../processor/draw_frame.h"
+#include "../../processor/frame_processor_device.h"
 
 #include <common/concurrency/executor.h>
 
@@ -45,21 +46,27 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 class flash_renderer
 {
 public:
-	flash_renderer(const safe_ptr<frame_processor_device>& frame_processor, const std::wstring& filename) 
-		: last_frame_(draw_frame::empty()), current_frame_(draw_frame::empty()), frame_processor_(frame_processor), filename_(filename),
-		hdc_(CreateCompatibleDC(0), DeleteDC), format_desc_(frame_processor->get_video_format_desc())
+	flash_renderer() : last_frame_(draw_frame::empty()), current_frame_(draw_frame::empty()), bmp_data_(nullptr), ax_(nullptr) {}
 
+	~flash_renderer()
+	{		
+		if(ax_)
+		{
+			ax_->DestroyAxControl();
+			ax_->Release();
+		}
+		CASPAR_LOG(info) << print() << L" Ended";
+	}
+
+	void load(const std::shared_ptr<frame_processor_device>& frame_processor, const std::wstring& filename)
 	{
+		filename_ = filename;
+		hdc_.reset(CreateCompatibleDC(0), DeleteDC);
+		frame_processor_ = frame_processor;
 		CASPAR_LOG(info) << print() << L" Started";
-
-		::OleInitialize(nullptr);
-
-		CComObject<FlashAxContainer>* object;		
-		if(FAILED(CComObject<FlashAxContainer>::CreateInstance(&object)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to create FlashAxContainer"));
 		
-		object->AddRef();
-		ax_.Attach(object);
+		if(FAILED(CComObject<FlashAxContainer>::CreateInstance(&ax_)))
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to create FlashAxContainer"));
 		
 		if(FAILED(ax_->CreateAxControl()))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Create FlashAxControl"));
@@ -79,174 +86,167 @@ public:
 														
 		if(FAILED(ax_->SetFormat(frame_processor_->get_video_format_desc())))  // stop if failed
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Set Format"));
+		
+		format_desc_ = frame_processor->get_video_format_desc();
 
 		BITMAPINFO info;
 		memset(&info, 0, sizeof(BITMAPINFO));
 		info.bmiHeader.biBitCount = 32;
 		info.bmiHeader.biCompression = BI_RGB;
-#ifdef _MSC_VER
-	#pragma warning(disable:4146)
-#endif
 		info.bmiHeader.biHeight = -format_desc_.height;
-#ifdef _MSC_VER
-	#pragma warning(default:4146)
-#endif
 		info.bmiHeader.biPlanes = 1;
 		info.bmiHeader.biSize = sizeof(BITMAPINFO);
 		info.bmiHeader.biWidth = format_desc_.width;
 
-		bmp_.reset(CreateDIBSection((HDC)hdc_.get(), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
-		SelectObject((HDC)hdc_.get(), bmp_.get());	
-	}
+		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
+		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
 
-	~flash_renderer()
-	{
-		try
-		{
-			ax_->DestroyAxControl();
-			ax_.Release();
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-		
-		::OleUninitialize();
-		CASPAR_LOG(info) << print() << L" Ended";
+		frame_buffer_.set_capacity(20);
+		for(int n = 0; n < frame_buffer_.capacity()/2; ++n)
+			frame_buffer_.try_push(draw_frame::empty());
+		is_running_ = true;
 	}
 
 	void param(const std::wstring& param) 
-	{			
-		for(size_t retries = 0; !ax_->CallFunction(param); ++retries)
-		{
-			CASPAR_LOG(debug) << print() << L" Retrying. Count: " << retries;
-			if(retries > 3)
-				BOOST_THROW_EXCEPTION(operation_failed() << arg_name_info("param") << arg_value_info(narrow(param)) << msg_info(narrow(print())));
-		}
+	{		
+		params_.push(param);
 	}
 		
-	void render()
-	{		 
-		bool is_progressive = format_desc_.mode == video_mode::progressive || (ax_->GetFPS() - format_desc_.fps/2 == 0);
-		
-		safe_ptr<draw_frame> frame = render_frame();
-		if(!is_progressive)
-			frame = draw_frame::interlace(frame, render_frame(), format_desc_.mode);
-			
-		frame_buffer_.try_push(std::move(frame));
+	void tick()
+	{		
+		std::wstring param;
+		if(params_.try_pop(param))
+		{
+			for(size_t retries = 0; !ax_->CallFunction(param); ++retries)
+			{
+				CASPAR_LOG(debug) << print() << L" Retrying. Count: " << retries;
+				if(retries > 3)
+					CASPAR_LOG(warning) << "Flash Function Call Failed. Param: " << param;
+			}
+		}	
+
+		if(!is_running_)
+			PostQuitMessage(0);
 	}
 
-	safe_ptr<draw_frame> render_frame()
+	void render()
 	{
-		if(!ax_->IsEmpty())
-			ax_->Tick();
-		
 		if(ax_->IsReadyToRender() && ax_->InvalidRectangle())
-		{
-			std::fill_n(bmp_data_, format_desc_.size, 0);			
-			ax_->DrawControl((HDC)hdc_.get());
+		{			
+			std::fill_n(bmp_data_, format_desc_.size, 0);
+			ax_->DrawControl(static_cast<HDC>(hdc_.get()));
 		
 			auto frame = frame_processor_->create_frame();
 			std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
 			current_frame_ = frame;
+		}				
+		frame_buffer_.try_push(current_frame_);
+	}
+		
+	safe_ptr<draw_frame> get_frame(video_mode::type mode)
+	{		
+		frame_buffer_.try_pop(last_frame_);
+		auto frame1 = last_frame_;
+		auto frame2 = frame1;
+		if(mode != video_mode::progressive && frame_buffer_.size() > frame_buffer_.capacity()/2) // Regulate between interlaced and progressive
+		{
+			frame_buffer_.try_pop(last_frame_);
+			frame2 = last_frame_;
 		}
-		return current_frame_;
+		return draw_frame::interlace(frame1, frame2, mode);
 	}
 	
-	bool try_pop(safe_ptr<draw_frame>& dest)
+	void stop()
 	{
-		std::shared_ptr<draw_frame> temp;
-		bool result = frame_buffer_.try_pop(temp);
-		if(temp)
-			last_frame_ = safe_ptr<draw_frame>(std::move(temp));
-		dest = last_frame_;
-		return result;
+		is_running_ = false;
 	}
 
 	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"] Render thread"; }
 	std::string bprint() const{ return narrow(print()); }
 
 private:
-	const std::wstring filename_;
-	const safe_ptr<frame_processor_device> frame_processor_;
-	const video_format_desc format_desc_;
+	tbb::atomic<bool> is_running_;
+	std::wstring filename_;
+	std::shared_ptr<frame_processor_device> frame_processor_;
+	video_format_desc format_desc_;
 	
 	unsigned char* bmp_data_;
 	
 	std::shared_ptr<void> hdc_;
 	std::shared_ptr<void> bmp_;
 
-	CComPtr<FlashAxContainer> ax_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<draw_frame>> frame_buffer_;	
+	CComObject<FlashAxContainer>* ax_;
+	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;	
 	safe_ptr<draw_frame> last_frame_;
 	safe_ptr<draw_frame> current_frame_;
+
+	tbb::concurrent_queue<std::wstring> params_;
 };
 
 struct flash_producer::implementation
 {	
-	implementation(const std::wstring& filename) : filename_(filename)
+	implementation(const std::wstring& filename) : filename_(filename), renderer_(std::make_shared<flash_renderer>())
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));
 	}
 
-	~implementation() 
+	~implementation()
 	{
-		executor_.invoke([this]{renderer_.reset();});
+		renderer_->stop();
 	}
 	
 	void param(const std::wstring& param) 
 	{	
-		executor_.begin_invoke([=]
-		{
-			if(!factory_)
-				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info(narrow(print()) + "Uninitialized."));
-			if(!renderer_)
-			{
-				renderer_.reset(factory_());
-				for(int n = 0; n < 8; ++n)
-					render_frame();
-			}
-			renderer_->param(param);
-		});
+		renderer_->param(param);
 	}
 	
-	virtual safe_ptr<draw_frame> receive()
+	void run()
 	{
-		auto frame = draw_frame::empty();
-		if(renderer_ && renderer_->try_pop(frame)) // Only render again if frame was removed from buffer.		
-			executor_.begin_invoke([this]{render_frame();});	
-		else
-			CASPAR_LOG(trace) << print() << " underflow.";
-		return frame;
-	}
+		CASPAR_LOG(info) << print() << " started.";
 
-	virtual void render_frame()
-	{
-		try
-		{
-			renderer_->render();
+		::OleInitialize(nullptr);
+		
+		volatile auto keep_alive = renderer_;
+		renderer_->load(frame_processor_, filename_);
+
+		MSG msg;
+		while(GetMessage(&msg, 0, 0, 0))
+		{		
+			if(msg.message == WM_USER + 1)
+				renderer_->render();
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+
+			renderer_->tick();		
 		}
-		catch(...)
-		{
-			renderer_.reset();
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
+
+		renderer_ = nullptr;
+
+		::OleUninitialize();
+
+		CASPAR_LOG(info) << print() << " ended.";
 	}
 
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		factory_ = [=]{return new flash_renderer(frame_processor, filename_);};
-		executor_.start();
+		frame_processor_ = frame_processor;
+		thread_ = boost::thread([this]{run();});
+	}
+
+	virtual safe_ptr<draw_frame> receive()
+	{
+		return renderer_->get_frame(frame_processor_->get_video_format_desc().mode);
 	}
 	
-	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }
-	
-	std::wstring filename_;
-	std::function<flash_renderer*()> factory_;
+	boost::thread thread_;
 
-	std::unique_ptr<flash_renderer> renderer_;
-	executor executor_;
+	std::shared_ptr<flash_renderer> renderer_;
+	std::shared_ptr<frame_processor_device> frame_processor_;
+	
+	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }	
+	std::wstring filename_;
 };
 
 flash_producer::flash_producer(flash_producer&& other) : impl_(std::move(other.impl_)){}

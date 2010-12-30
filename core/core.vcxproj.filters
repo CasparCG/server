@@ -156,9 +156,6 @@
     <ClInclude Include="producer\flash\FlashAxContainer.h">
       <Filter>Source\channel\producer\flash\interop</Filter>
     </ClInclude>
-    <ClInclude Include="producer\flash\TimerHelper.h">
-      <Filter>Source\channel\producer\flash\interop</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\bluefish\util.h">
       <Filter>Source\channel\consumer\bluefish</Filter>
     </ClInclude>
