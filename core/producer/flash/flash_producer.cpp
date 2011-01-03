@@ -46,7 +46,7 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 class flash_renderer
 {
 public:
-	flash_renderer() : last_frame_(draw_frame::empty()), current_frame_(draw_frame::empty()), bmp_data_(nullptr), ax_(nullptr) {}
+	flash_renderer() : tail_(draw_frame::empty()), head_(draw_frame::empty()), bmp_data_(nullptr), ax_(nullptr) {}
 
 	~flash_renderer()
 	{		
@@ -138,22 +138,24 @@ public:
 		
 			auto frame = frame_processor_->create_frame();
 			std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
-			current_frame_ = frame;
+			head_ = frame;
 		}				
-		frame_buffer_.try_push(current_frame_);
+		if(!frame_buffer_.try_push(head_))
+			CASPAR_LOG(trace) << print() << " overflow";
 	}
 		
-	safe_ptr<draw_frame> get_frame(video_mode::type mode)
+	safe_ptr<draw_frame> get_frame()
 	{		
-		frame_buffer_.try_pop(last_frame_);
-		auto frame1 = last_frame_;
-		auto frame2 = frame1;
-		if(mode != video_mode::progressive && frame_buffer_.size() > frame_buffer_.capacity()/2) // Regulate between interlaced and progressive
+		if(!frame_buffer_.try_pop(tail_))
+			CASPAR_LOG(trace) << print() << " underflow";
+
+		auto frame = tail_;
+		if(frame_buffer_.size() > frame_buffer_.capacity()/2) // Regulate between interlaced and progressive
 		{
-			frame_buffer_.try_pop(last_frame_);
-			frame2 = last_frame_;
+			frame_buffer_.try_pop(tail_);
+			frame = draw_frame::interlace(frame, tail_, format_desc_.mode);
 		}
-		return draw_frame::interlace(frame1, frame2, mode);
+		return frame;
 	}
 	
 	void stop()
@@ -177,8 +179,8 @@ private:
 
 	CComObject<FlashAxContainer>* ax_;
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;	
-	safe_ptr<draw_frame> last_frame_;
-	safe_ptr<draw_frame> current_frame_;
+	safe_ptr<draw_frame> tail_;
+	safe_ptr<draw_frame> head_;
 
 	tbb::concurrent_queue<std::wstring> params_;
 };
@@ -237,7 +239,7 @@ struct flash_producer::implementation
 
 	virtual safe_ptr<draw_frame> receive()
 	{
-		return renderer_->get_frame(frame_processor_->get_video_format_desc().mode);
+		return renderer_->get_frame();
 	}
 	
 	boost::thread thread_;
