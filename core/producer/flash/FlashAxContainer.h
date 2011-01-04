@@ -18,34 +18,27 @@
 *
 */
  
-#if defined(_MSC_VER)
-#pragma once
-#endif
-
 #ifndef _FLASHAXCONTAINER_H__
 #define _FLASHAXCONTAINER_H__
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
+#pragma once
 
-	#include <atlbase.h>
+#include <atlbase.h>
+#include <atlcom.h>
+#include <atlhost.h>
 
-	#include <atlcom.h>
-	#include <atlhost.h>
-
-#pragma warning(push)
-
-#include "..\..\processor\write_frame.h"
-#include "..\..\format\video_format.h"
 
 #include <ocmm.h>
 #include <vector>
-#include <tbb\atomic.h>
 
+#include "../../format/video_format.h"
 #include "axflash.h"
+//#import "progid:ShockwaveFlash.ShockwaveFlash.9" no_namespace, named_guids
 
 #include <ddraw.h>
 #include <comdef.h>
+
+#include "TimerHelper.h"
 
 #ifndef DEFINE_GUID2
 #define DEFINE_GUID2(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
@@ -55,10 +48,31 @@
 
 _COM_SMARTPTR_TYPEDEF(IDirectDraw4, IID_IDirectDraw4);
 
-//#import "progid:ShockwaveFlash.ShockwaveFlash.9" no_namespace, named_guids
+namespace caspar {
 
-namespace caspar { namespace core { namespace flash {
-	
+namespace flash {
+
+class TimerHelper;
+struct DirtyRect {
+	DirtyRect(LONG l, LONG t, LONG r, LONG b, bool e) : bErase(e), bWhole(false) { 
+		rect.left = l;
+		rect.top = t;
+		rect.right = r;
+		rect.bottom = b; 
+	}
+	DirtyRect(const RECT& rc, bool e) : bErase(e), bWhole(false)  {
+		rect.left = rc.left;
+		rect.top = rc.top;
+		rect.right = rc.right;
+		rect.bottom = rc.bottom; 
+	}
+	explicit DirtyRect(bool b) : bWhole(b) {}
+
+	RECT	rect;
+	bool	bErase;
+	bool	bWhole;
+};
+
 extern _ATL_FUNC_INFO fnInfoFlashCallEvent;
 extern _ATL_FUNC_INFO fnInfoReadyStateChangeEvent;
 
@@ -71,6 +85,9 @@ class ATL_NO_VTABLE FlashAxContainer :
 		public IOleInPlaceSiteWindowless,
 		public IObjectWithSiteImpl<FlashAxContainer>,
 		public IServiceProvider,
+		public IAdviseSink,
+		public ITimerService,
+		public ITimer,
 		public IDispatchImpl<IDispatch>,
 		public IDispEventSimpleImpl<0, FlashAxContainer, &DIID__IShockwaveFlashEvents>
 {
@@ -98,6 +115,11 @@ public:
 
 		COM_INTERFACE_ENTRY(IServiceProvider)
 
+		COM_INTERFACE_ENTRY(IAdviseSink)
+
+		COM_INTERFACE_ENTRY(ITimerService)
+
+		COM_INTERFACE_ENTRY(ITimer)
 	END_COM_MAP()
 
 	BEGIN_SINK_MAP(FlashAxContainer)
@@ -161,6 +183,13 @@ public:
 	STDMETHOD(OnFocus)(BOOL fGotFocus);
 	STDMETHOD(ShowPropertyFrame)();
 
+// IAdviseSink
+	STDMETHOD_(void, OnDataChange)(FORMATETC* pFormatetc, STGMEDIUM* pStgmed);
+	STDMETHOD_(void, OnViewChange)(DWORD dwAspect, LONG lindex);
+	STDMETHOD_(void, OnRename)(IMoniker* pmk);
+	STDMETHOD_(void, OnSave)();
+	STDMETHOD_(void, OnClose)();
+
 // IServiceProvider
 	STDMETHOD(QueryService)( REFGUID rsid, REFIID riid, void** ppvObj);
 
@@ -193,6 +222,18 @@ public:
 		ATLTRACENOTIMPL(_T("IOleContainer::LockContainer"));
 	}
 
+//ITimerService
+	STDMETHOD(CreateTimer)(ITimer *pReferenceTimer, ITimer **ppNewTimer);
+	STDMETHOD(GetNamedTimer)(REFGUID rguidName, ITimer **ppTimer);
+	STDMETHOD(SetNamedTimerReference)(REFGUID rguidName, ITimer *pReferenceTimer);
+
+//ITimer
+	STDMETHOD(Advise)(VARIANT vtimeMin, VARIANT vtimeMax, VARIANT vtimeInterval, DWORD dwFlags, ITimerSink *pTimerSink, DWORD *pdwCookie);
+	STDMETHOD(Unadvise)(DWORD dwCookie);
+	STDMETHOD(Freeze)(BOOL fFreeze);
+	STDMETHOD(GetTime)(VARIANT *pvtime);
+	int GetFPS();
+
 	HRESULT CreateAxControl();
 	void DestroyAxControl();
 	HRESULT QueryControl(REFIID iid, void** ppUnk);
@@ -203,25 +244,36 @@ public:
 		return QueryControl(__uuidof(Q), (void**)ppUnk);
 	}
 
-	bool InvalidRectangle() const;
-	bool CallFunction(const std::wstring& param);
-
 //	static ATL::CComObject<FlashAxContainer>* CreateInstance();
 
+	void Tick();
+	bool FlashCall(const std::wstring& str);
 	bool DrawControl(HDC targetDC);
+	bool InvalidRect() const { return bInvalidRect_; } 
+	bool IsEmpty() const { return bIsEmpty_; }
 
-	HRESULT SetFormat(const video_format_desc&);
+	void SetFormat(const core::video_format_desc&);
 	bool IsReadyToRender() const;
 	void EnterFullscreen();
 
 	static bool CheckForFlashSupport();
+
+	ATL::CComPtr<IOleInPlaceObjectWindowless> m_spInPlaceObjectWindowless;
+
 private:
+	TimerHelper* pTimerHelper;
+	volatile bool bInvalidRect_;
+	volatile bool bCallSuccessful_;
+	volatile bool bReadyToRender_;
+	volatile bool bIsEmpty_;
+	volatile bool bHasNewTiming_;
+	std::vector<DirtyRect> bDirtyRects_;
+
+
 	IDirectDraw4Ptr *m_lpDD4;
 	static CComBSTR flashGUID_;
 
-	tbb::atomic<bool> bInvalidRect_;
-	tbb::atomic<bool> bCallSuccessful_;
-	tbb::atomic<bool> bReadyToRender_;
+	DWORD timerCount_;
 
 //	state
 	bool		bUIActive_;
@@ -239,12 +291,11 @@ private:
 	ATL::CComPtr<IOleObject> m_spServices;
 	ATL::CComPtr<IOleObject> m_spOleObject;
 	ATL::CComPtr<IViewObjectEx> m_spViewObject;
-	ATL::CComPtr<IOleInPlaceObjectWindowless> m_spInPlaceObjectWindowless;
 
 //	ATL::CComPtr<ATL::CComObject<MyMoniker> > m_spMyMoniker;
 };
 
 }	//namespace flash
-}}	//namespace caspar
+}	//namespace caspar
 
 #endif	//_FLASHAXCONTAINER_H__
