@@ -21,16 +21,15 @@
 #include "..\..\stdafx.h"
 
 #include "FlashAxContainer.h"
-#include "..\..\format\video_format.h"
-#include "flash_producer.h"
+#include "TimerHelper.h"
 
 using namespace ATL;
 
 #if defined(_MSC_VER)
-#pragma warning (push, 1) // TODO: Legacy code, just disable warnings
+#pragma warning (push, 1) // TODO: Legacy code, just disable warnings, will replace with boost::asio in future
 #endif
 
-namespace caspar { namespace core {
+namespace caspar {
 namespace flash {
 
 CComBSTR FlashAxContainer::flashGUID_(_T("{D27CDB6E-AE6D-11CF-96B8-444553540000}"));
@@ -38,20 +37,19 @@ CComBSTR FlashAxContainer::flashGUID_(_T("{D27CDB6E-AE6D-11CF-96B8-444553540000}
 _ATL_FUNC_INFO fnInfoFlashCallEvent = { CC_STDCALL, VT_EMPTY, 1, { VT_BSTR } };
 _ATL_FUNC_INFO fnInfoReadyStateChangeEvent = { CC_STDCALL, VT_EMPTY, 1, { VT_I4 } };
 
-FlashAxContainer::FlashAxContainer() : bInPlaceActive_(FALSE), m_lpDD4(0)
+FlashAxContainer::FlashAxContainer() : bInPlaceActive_(FALSE), pTimerHelper(0), bInvalidRect_(false), bReadyToRender_(false), bHasNewTiming_(false), m_lpDD4(0), timerCount_(0)
 {
-	bInvalidRect_ = false;
-	bCallSuccessful_ = false;
-	bReadyToRender_ = false;
 }
 FlashAxContainer::~FlashAxContainer()
-{
+{	
 	if(m_lpDD4)
 	{
 		m_lpDD4->Release();
 		m_lpDD4 = nullptr;
 	}
-	CASPAR_LOG(info) << "[FlashAxContainer] Destroyed";
+
+	if(pTimerHelper != 0)
+		delete pTimerHelper;
 }
 
 
@@ -409,6 +407,35 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::ShowPropertyFrame()
 }
 
 
+///////////////////
+// IAdviseSink
+///////////////////
+void STDMETHODCALLTYPE FlashAxContainer::OnDataChange(FORMATETC* pFormatetc, STGMEDIUM* pStgmed)
+{
+	ATLTRACE(_T("IAdviseSink::OnDataChange\n"));
+}
+
+void STDMETHODCALLTYPE FlashAxContainer::OnViewChange(DWORD dwAspect, LONG lindex)
+{
+	ATLTRACE(_T("IAdviseSink::OnViewChange\n"));
+}
+
+void STDMETHODCALLTYPE FlashAxContainer::OnRename(IMoniker* pmk)
+{
+	ATLTRACE(_T("IAdviseSink::OnRename\n"));
+}
+
+void STDMETHODCALLTYPE FlashAxContainer::OnSave()
+{
+	ATLTRACE(_T("IAdviseSink::OnSave\n"));
+}
+
+void STDMETHODCALLTYPE FlashAxContainer::OnClose()
+{
+	ATLTRACE(_T("IAdviseSink::OnClose\n"));
+}
+
+
 //DirectDraw GUIDS
 
 DEFINE_GUID2(CLSID_DirectDraw,0xD7B70EE0,0x4340,0x11CF,0xB0,0x63,0x00,0x20,0xAF,0xC2,0xCD,0x35);
@@ -433,7 +460,6 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 	*ppvObj = NULL;
 	
 	HRESULT hr;
-
 	// Author: Makarov Igor
 	// Transparent Flash Control in Plain C++ 
 	// http://www.codeproject.com/KB/COM/flashcontrol.aspx 
@@ -447,7 +473,6 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 			{
 				delete m_lpDD4;
 				m_lpDD4 = NULL;
-				CASPAR_LOG(warning) << "[FlashAxContainer] Failed to query DirectDraw Service";
 				return E_NOINTERFACE;
 			}
 		}
@@ -463,6 +488,97 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 	hr = QueryInterface(riid, ppvObj);//E_NOINTERFACE;
 
 	return hr;
+}
+
+
+///////////////////
+// ITimerService
+///////////////////
+HRESULT STDMETHODCALLTYPE FlashAxContainer::CreateTimer(ITimer *pReferenceTimer, ITimer **ppNewTimer)
+{
+	ATLTRACE(_T("ITimerService::CreateTimer\n"));
+	if(pTimerHelper != 0)
+	{
+		delete pTimerHelper;
+		pTimerHelper = 0;
+	}
+	pTimerHelper = new TimerHelper();
+	return QueryInterface(__uuidof(ITimer), (void**) ppNewTimer);
+}
+
+HRESULT STDMETHODCALLTYPE FlashAxContainer::GetNamedTimer(REFGUID rguidName, ITimer **ppTimer)
+{
+	ATLTRACE(_T("ITimerService::GetNamedTimer"));
+	if(ppTimer == NULL)
+		return E_POINTER;
+	else
+		*ppTimer = NULL;
+
+	return E_FAIL;
+}
+
+HRESULT STDMETHODCALLTYPE FlashAxContainer::SetNamedTimerReference(REFGUID rguidName, ITimer *pReferenceTimer)
+{
+	ATLTRACE(_T("ITimerService::SetNamedTimerReference"));
+	return S_OK;
+}
+
+///////////
+// ITimer
+///////////
+HRESULT STDMETHODCALLTYPE FlashAxContainer::Advise(VARIANT vtimeMin, VARIANT vtimeMax, VARIANT vtimeInterval, DWORD dwFlags, ITimerSink *pTimerSink, DWORD *pdwCookie)
+{
+	ATLTRACE(_T("Timer::Advise\n"));
+
+	if(pdwCookie == 0)
+		return E_POINTER;
+
+	if(pTimerHelper != 0)
+	{
+		pTimerHelper->Setup(vtimeMin.ulVal, vtimeInterval.ulVal, pTimerSink);
+		*pdwCookie = pTimerHelper->ID;
+		bHasNewTiming_ = true;
+
+		return S_OK;
+	}
+	else
+		return E_OUTOFMEMORY;
+}
+
+HRESULT STDMETHODCALLTYPE FlashAxContainer::Unadvise(/* [in] */ DWORD dwCookie)
+{
+	ATLTRACE(_T("Timer::Unadvice\n"));
+	if(pTimerHelper != 0)
+	{
+		pTimerHelper->pTimerSink = 0;
+		return S_OK;
+	}
+	else
+		return E_FAIL;
+}
+
+HRESULT STDMETHODCALLTYPE FlashAxContainer::Freeze(/* [in] */ BOOL fFreeze)
+{
+	ATLTRACE(_T("Timer::Freeze\n"));
+	return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE FlashAxContainer::GetTime(/* [out] */ VARIANT *pvtime)
+{
+	ATLTRACE(_T("Timer::GetTime\n"));
+	if(pvtime == 0)
+		return E_POINTER;
+
+//	return E_NOTIMPL;
+	pvtime->lVal = 0;
+	return S_OK;
+}
+
+int FlashAxContainer::GetFPS() {
+	if(pTimerHelper != 0 && pTimerHelper->interval > 0)
+		return (1000 / pTimerHelper->interval);
+	
+	return 0;
 }
 
 bool FlashAxContainer::IsReadyToRender() const {
@@ -489,36 +605,37 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("OnCommand")) != std::wstring::npos) {
 		//this is how templatehost 1.8 reports that a command has been received
-		CASPAR_LOG(info) << "TEMPLATEHOST: " << str;
+		CASPAR_LOG(info) << TEXT("TEMPLATEHOST: ") << str;
 		bCallSuccessful_ = true;
 	}
 	else if(str.find(TEXT("Activity")) != std::wstring::npos)
 	{
-		CASPAR_LOG(info) << "TEMPLATEHOST: " << str;
+		CASPAR_LOG(info) << TEXT("TEMPLATEHOST: ") << str;
 
 		//this is how templatehost 1.7 reports that a command has been received
 		if(str.find(TEXT("Command recieved")) != std::wstring::npos)
 			bCallSuccessful_ = true;
 
-		/*if(pflash_producer_ != 0 && pflash_producer_->pMonitor_) {
+		/*if(pFlashProducer_ != 0 && pFlashProducer_->pMonitor_) {
 			std::wstring::size_type pos = str.find(TEXT('@'));
 			if(pos != std::wstring::npos)
-				pflash_producer_->GetMonitor()->Inform(str.substr(pos, str.find(TEXT('<'), pos)-pos));
+				pFlashProducer_->pMonitor_->Inform(str.substr(pos, str.find(TEXT('<'), pos)-pos));
 		}*/
 	}
 	else if(str.find(TEXT("OnNotify")) != std::wstring::npos)
 	{
-		CASPAR_LOG(info) << "TEMPLATEHOST: " << str;
+		CASPAR_LOG(info) << TEXT("TEMPLATEHOST: ") << str;
 
-		//if(pflash_producer_ != 0 && pflash_producer_->pMonitor_) {
+		//if(pFlashProducer_ != 0 && pFlashProducer_->pMonitor_) {
 		//	std::wstring::size_type pos = str.find(TEXT('@'));
 		//	if(pos != std::wstring::npos)
-		//		pflash_producer_->pMonitor_->Inform(str.substr(pos, str.find(TEXT('<'), pos)-pos));
+		//		pFlashProducer_->pMonitor_->Inform(str.substr(pos, str.find(TEXT('<'), pos)-pos));
 		//}
 	}
 	else if(str.find(TEXT("IsEmpty")) != std::wstring::npos)
 	{
 		ATLTRACE(_T("ShockwaveFlash::IsEmpty\n"));
+		bIsEmpty_ = true;
 	}
 	else if(str.find(TEXT("OnError")) != std::wstring::npos)
 	{
@@ -689,18 +806,13 @@ HRESULT FlashAxContainer::CreateAxControl()
 	return S_OK;
 }
 
-HRESULT FlashAxContainer::SetFormat(const video_format_desc& format_desc) 
-{
-	if(m_spInPlaceObjectWindowless == nullptr)
-		return E_FAIL;
-
-	if(m_rcPos.right != format_desc.width || m_rcPos.bottom != format_desc.height)
+void FlashAxContainer::SetFormat(const core::video_format_desc& fmtDesc) {
+	if(m_spInPlaceObjectWindowless != 0)
 	{
-		RECT oldRcPos = m_rcPos;
 		m_rcPos.top = 0;
 		m_rcPos.left = 0;
-		m_rcPos.right = format_desc.width;
-		m_rcPos.bottom = format_desc.height;
+		m_rcPos.right = fmtDesc.width;
+		m_rcPos.bottom = fmtDesc.height;
 
 		m_pxSize.cx = m_rcPos.right - m_rcPos.left;
 		m_pxSize.cy = m_rcPos.bottom - m_rcPos.top;
@@ -711,15 +823,9 @@ HRESULT FlashAxContainer::SetFormat(const video_format_desc& format_desc)
 		m_rcPos.right = m_rcPos.left + m_pxSize.cx;
 		m_rcPos.bottom = m_rcPos.top + m_pxSize.cy;
 
-		HRESULT result = m_spInPlaceObjectWindowless->SetObjectRects(&m_rcPos, &m_rcPos);
+		m_spInPlaceObjectWindowless->SetObjectRects(&m_rcPos, &m_rcPos);
 		bInvalidRect_ = true;
-		if(FAILED(result))
-			 m_spInPlaceObjectWindowless->SetObjectRects(&oldRcPos, &oldRcPos);
-
-		return result;
 	}
-
-	return S_OK;
 }
 
 HRESULT FlashAxContainer::QueryControl(REFIID iid, void** ppUnk)
@@ -737,19 +843,17 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
 //	ATLTRACE(_T("FlashAxContainer::DrawControl\n"));
 	DVASPECTINFO aspectInfo = {sizeof(DVASPECTINFO), DVASPECTINFOFLAG_CANOPTIMIZE};
 	HRESULT hr = S_OK;
-	
-	hr = m_spViewObject->Draw(DVASPECT_CONTENT, -1, &aspectInfo, NULL, NULL, targetDC, NULL, NULL, NULL, NULL); 
-	assert(SUCCEEDED(hr));
-	bInvalidRect_ = false;
 
-/*	const video_format_desc& format_desc = video_format_desc::format_descs[format_];
+	hr = m_spViewObject->Draw(DVASPECT_CONTENT, -1, &aspectInfo, NULL, NULL, targetDC, NULL, NULL, NULL, NULL); 
+	bInvalidRect_ = false;
+/*	const video_format_desc& fmtDesc = video_format_desc::FormatDescriptions[format_];
 
 	//Trying to redraw just the dirty rectangles. Doesn't seem to work when the movie uses "filters", such as glow, dropshadow etc.
 	std::vector<flash::DirtyRect>::iterator it = bDirtyRects_.begin();
 	std::vector<flash::DirtyRect>::iterator end = bDirtyRects_.end();
 	for(; it != end; ++it) {
 		flash::DirtyRect& dirtyRect = (*it);
-		if(dirtyRect.bWhole || dirtyRect.rect.right >= format_desc.width || dirtyRect.rect.bottom >= format_desc.height) {
+		if(dirtyRect.bWhole || dirtyRect.rect.right >= fmtDesc.width || dirtyRect.rect.bottom >= fmtDesc.height) {
 			m_spInPlaceObjectWindowless->SetObjectRects(&m_rcPos, &m_rcPos);
 			hr = m_spViewObject->Draw(DVASPECT_OPAQUE, -1, NULL, NULL, NULL, targetDC, NULL, NULL, NULL, NULL); 
 			break;
@@ -765,32 +869,32 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
 	return (hr == S_OK);
 }
 
-bool FlashAxContainer::InvalidRectangle() const
+void FlashAxContainer::Tick()
 {
-	return bInvalidRect_;
-}
-
-bool FlashAxContainer::CallFunction(const std::wstring& param)
-{
-	bCallSuccessful_ = false;
-
-	CComPtr<IShockwaveFlash> spFlash;
-	if(SUCCEEDED(QueryControl(&spFlash)))
+	if(pTimerHelper)
 	{
-		CComBSTR request(param.c_str());
-		CComBSTR result;
-		return SUCCEEDED(spFlash->CallFunction(request, &result)) || bCallSuccessful_;		
+		DWORD time = pTimerHelper->Invoke(); // Tick flash
+		if(time - timerCount_ >= 400)
+		{
+			timerCount_ = time;
+			HRESULT hr;
+			m_spInPlaceObjectWindowless->OnWindowMessage(WM_TIMER, 3, 0, &hr);
+		}
 	}
-
-	return false;
 }
 
-// Receives the following messages:
-// 0		0x0000 ?
-// 275		0x0113 WM_TIMER
-// 536		0x0218 WM_POWERBROADCAST
-// 49286	0xC086 ?
+bool FlashAxContainer::FlashCall(const std::wstring& str)
+{
+	CComBSTR result;
+	CComPtr<IShockwaveFlash> spFlash;
+	QueryControl(&spFlash);
+	CComBSTR request(str.c_str());
 
+	bCallSuccessful_ = false;
+	for(size_t retries = 0; !bCallSuccessful_ && retries < 4; ++retries)
+		spFlash->CallFunction(request, &result);
+	return bCallSuccessful_;
+}
 
 }	//namespace flash
-}}	//namespace caspar
+}	//namespace caspar

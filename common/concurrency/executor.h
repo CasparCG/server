@@ -49,6 +49,12 @@ public:
 		if(policy == wait && boost::this_thread::get_id() != thread_.get_id())
 			thread_.join();
 	}
+
+	void clear()
+	{
+		std::function<void()> func;
+		while(execution_queue_.try_pop(func)){}
+	}
 			
 	template<typename Func>
 	auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept

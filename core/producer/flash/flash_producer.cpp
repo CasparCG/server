@@ -46,26 +46,13 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 class flash_renderer
 {
 public:
-	flash_renderer() : tail_(draw_frame::empty()), head_(draw_frame::empty()), bmp_data_(nullptr), ax_(nullptr) {}
-
-	~flash_renderer()
-	{		
-		if(ax_)
-		{
-			ax_->DestroyAxControl();
-			ax_->Release();
-		}
-		CASPAR_LOG(info) << print() << L" Ended";
-	}
-
-	void load(const std::shared_ptr<frame_processor_device>& frame_processor, const std::wstring& filename)
+	flash_renderer(const std::shared_ptr<frame_processor_device>& frame_processor, const std::wstring& filename) 
+		: head_(draw_frame::empty()), bmp_data_(nullptr), ax_(nullptr), filename_(filename), hdc_(CreateCompatibleDC(0), DeleteDC), frame_processor_(frame_processor), 
+			format_desc_(frame_processor->get_video_format_desc())
 	{
-		filename_ = filename;
-		hdc_.reset(CreateCompatibleDC(0), DeleteDC);
-		frame_processor_ = frame_processor;
 		CASPAR_LOG(info) << print() << L" Started";
 		
-		if(FAILED(CComObject<FlashAxContainer>::CreateInstance(&ax_)))
+		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to create FlashAxContainer"));
 		
 		if(FAILED(ax_->CreateAxControl()))
@@ -84,11 +71,10 @@ public:
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Set Scale Mode"));
 														
-		if(FAILED(ax_->SetFormat(frame_processor_->get_video_format_desc())))  // stop if failed
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Set Format"));
+		ax_->SetFormat(format_desc_);
+		//if(FAILED(ax_->SetFormat(frame_processor_->get_video_format_desc())))  // stop if failed
+		//	BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Set Format"));
 		
-		format_desc_ = frame_processor->get_video_format_desc();
-
 		BITMAPINFO info;
 		memset(&info, 0, sizeof(BITMAPINFO));
 		info.bmiHeader.biBitCount = 32;
@@ -100,38 +86,46 @@ public:
 
 		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
 		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
-
-		frame_buffer_.set_capacity(20);
-		for(int n = 0; n < frame_buffer_.capacity()/2; ++n)
-			frame_buffer_.try_push(draw_frame::empty());
-		is_running_ = true;
 	}
 
-	void param(const std::wstring& param) 
+	~flash_renderer()
 	{		
-		params_.push(param);
-	}
-		
-	void tick()
-	{		
-		std::wstring param;
-		if(params_.try_pop(param))
+		if(ax_)
 		{
-			for(size_t retries = 0; !ax_->CallFunction(param); ++retries)
-			{
-				CASPAR_LOG(debug) << print() << L" Retrying. Count: " << retries;
-				if(retries > 3)
-					CASPAR_LOG(warning) << "Flash Function Call Failed. Param: " << param;
-			}
-		}	
-
-		if(!is_running_)
-			PostQuitMessage(0);
+			ax_->DestroyAxControl();
+			ax_->Release();
+		}
+		CASPAR_LOG(info) << print() << L" Ended";
 	}
-
-	void render()
+	
+	void param(const std::wstring& param)
+	{		
+		if(!ax_->FlashCall(param))
+			CASPAR_LOG(warning) << "Flash Function Call Failed. Param: " << param;
+	}
+	
+	safe_ptr<draw_frame> render_frame()
 	{
-		if(ax_->IsReadyToRender() && ax_->InvalidRectangle())
+		auto frame = render_simple_frame();
+		
+		auto running_fps = ax_->GetFPS();
+		auto target_fps = static_cast<int>(format_desc_.mode == video_mode::progressive ? format_desc_.fps : format_desc_.fps/2.0);
+		if(target_fps < running_fps)
+			frame = draw_frame::interlace(frame, render_simple_frame(), format_desc_.mode);
+		return frame;
+	}
+			
+	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"] Render thread"; }
+	std::string bprint() const{ return narrow(print()); }
+
+private:
+
+	safe_ptr<draw_frame> render_simple_frame()
+	{
+		if(!ax_->IsEmpty())
+			ax_->Tick();
+
+		if(ax_->InvalidRect())
 		{			
 			std::fill_n(bmp_data_, format_desc_.size, 0);
 			ax_->DrawControl(static_cast<HDC>(hdc_.get()));
@@ -139,35 +133,11 @@ public:
 			auto frame = frame_processor_->create_frame();
 			std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
 			head_ = frame;
-		}				
-		if(!frame_buffer_.try_push(head_))
-			CASPAR_LOG(trace) << print() << " overflow";
-	}
-		
-	safe_ptr<draw_frame> get_frame()
-	{		
-		if(!frame_buffer_.try_pop(tail_))
-			CASPAR_LOG(trace) << print() << " underflow";
+		}		
 
-		auto frame = tail_;
-		if(frame_buffer_.size() > frame_buffer_.capacity()/2) // Regulate between interlaced and progressive
-		{
-			frame_buffer_.try_pop(tail_);
-			frame = draw_frame::interlace(frame, tail_, format_desc_.mode);
-		}
-		return frame;
-	}
-	
-	void stop()
-	{
-		is_running_ = false;
+		return head_;
 	}
 
-	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"] Render thread"; }
-	std::string bprint() const{ return narrow(print()); }
-
-private:
-	tbb::atomic<bool> is_running_;
 	std::wstring filename_;
 	std::shared_ptr<frame_processor_device> frame_processor_;
 	video_format_desc format_desc_;
@@ -177,72 +147,88 @@ private:
 	std::shared_ptr<void> hdc_;
 	std::shared_ptr<void> bmp_;
 
-	CComObject<FlashAxContainer>* ax_;
-	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;	
-	safe_ptr<draw_frame> tail_;
+	CComObject<caspar::flash::FlashAxContainer>* ax_;
 	safe_ptr<draw_frame> head_;
-
-	tbb::concurrent_queue<std::wstring> params_;
 };
 
 struct flash_producer::implementation
 {	
-	implementation(const std::wstring& filename) : filename_(filename), renderer_(std::make_shared<flash_renderer>())
+	implementation(const std::wstring& filename) : filename_(filename), tail_(draw_frame::empty())
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));
+		
+		executor_.begin_invoke([=]
+		{
+			::OleInitialize(nullptr);
+		});
+
+		frame_buffer_.set_capacity(25);
+		while(frame_buffer_.try_push(draw_frame::empty())){}
 	}
 
 	~implementation()
 	{
-		renderer_->stop();
+		executor_.clear();
+		executor_.invoke([=]
+		{
+			renderer_ = nullptr;
+			::OleUninitialize();
+		});
+	}
+
+	virtual safe_ptr<draw_frame> receive()
+	{		
+		if(!frame_buffer_.try_pop(tail_))
+			CASPAR_LOG(trace) << print() << " underflow";
+
+		executor_.begin_invoke([=]
+		{
+			auto frame = draw_frame::empty();
+			try
+			{
+				if(renderer_)
+					frame = renderer_->render_frame();
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				renderer_ = nullptr;
+			}
+			frame_buffer_.try_push(frame);
+		});	
+				
+		return tail_;
+	}
+	
+	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+	{
+		frame_processor_ = frame_processor;
+		executor_.start();
 	}
 	
 	void param(const std::wstring& param) 
 	{	
-		renderer_->param(param);
+		executor_.begin_invoke([=]
+		{
+			if(!renderer_)
+				renderer_.reset(new flash_renderer(frame_processor_, filename_));
+
+			try
+			{
+				renderer_->param(param);
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				renderer_ = nullptr;
+			}
+		});
 	}
 	
-	void run()
-	{
-		CASPAR_LOG(info) << print() << " started.";
-
-		::OleInitialize(nullptr);
-		
-		volatile auto keep_alive = renderer_;
-		renderer_->load(frame_processor_, filename_);
-
-		MSG msg;
-		while(GetMessage(&msg, 0, 0, 0))
-		{		
-			if(msg.message == WM_USER + 1)
-				renderer_->render();
-
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-
-			renderer_->tick();		
-		}
-
-		renderer_ = nullptr;
-
-		::OleUninitialize();
-
-		CASPAR_LOG(info) << print() << " ended.";
-	}
-
-	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
-	{
-		frame_processor_ = frame_processor;
-		thread_ = boost::thread([this]{run();});
-	}
-
-	virtual safe_ptr<draw_frame> receive()
-	{
-		return renderer_->get_frame();
-	}
-	
-	boost::thread thread_;
+	safe_ptr<draw_frame> tail_;
+	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
+	executor executor_;
 
 	std::shared_ptr<flash_renderer> renderer_;
 	std::shared_ptr<frame_processor_device> frame_processor_;

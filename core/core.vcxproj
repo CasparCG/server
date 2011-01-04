@@ -188,6 +188,7 @@
     <ClInclude Include="producer\flash\cg_producer.h" />
     <ClInclude Include="producer\flash\FlashAxContainer.h" />
     <ClInclude Include="producer\flash\flash_producer.h" />
+    <ClInclude Include="producer\flash\TimerHelper.h" />
     <ClInclude Include="producer\frame_producer.h" />
     <ClInclude Include="producer\image\image_loader.h" />
     <ClInclude Include="producer\image\image_producer.h" />
