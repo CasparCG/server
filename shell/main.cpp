@@ -54,6 +54,8 @@ public:
  
 int main(int argc, wchar_t* argv[])
 {
+	timeBeginPeriod(1);
+
 	std::wstringstream str;
 	str << "CasparCG " << CASPAR_VERSION_STR << " " << CASPAR_VERSION_TAG;
 	SetConsoleTitle(str.str().c_str());
@@ -122,6 +124,8 @@ int main(int argc, wchar_t* argv[])
 		_getwch();
 	}	
 	CASPAR_LOG(debug) << "Ended Main Thread";
+
+	timeEndPeriod(1);
 
 	return 0;
 }

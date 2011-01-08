@@ -163,7 +163,7 @@ struct flash_producer::implementation
 			::OleInitialize(nullptr);
 		});
 
-		frame_buffer_.set_capacity(25);
+		frame_buffer_.set_capacity(2);
 		while(frame_buffer_.try_push(draw_frame::empty())){}
 	}
 
