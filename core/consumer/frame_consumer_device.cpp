@@ -19,22 +19,7 @@
 #include <boost/range/algorithm.hpp>
 
 namespace caspar { namespace core {
-
-class clock_sync
-{
-public:
-	clock_sync() : time_(boost::posix_time::microsec_clock::local_time()){}
-
-	void wait(double period)
-	{				
-		auto remaining = boost::posix_time::microseconds(static_cast<long>(period*1000000.0)) - (boost::posix_time::microsec_clock::local_time() - time_);
-		if(remaining > boost::posix_time::microseconds(5000))
-			boost::this_thread::sleep(remaining - boost::posix_time::microseconds(5000));
-	}
-private:
-	boost::posix_time::ptime time_;
-};
-
+	
 struct frame_consumer_device::implementation
 {
 public:
@@ -50,8 +35,6 @@ public:
 	{
 		buffer_.push_back(frame);
 
-		clock_sync clock;
-		
 		boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
 		{
 			size_t offset = max_depth_ - consumer->buffer_depth();
@@ -59,7 +42,6 @@ public:
 				consumer->send(*(buffer_.begin() + offset));
 		});
 			
-		frame_consumer::sync_mode sync = frame_consumer::ready;
 		boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
 		{
 			try
@@ -68,8 +50,7 @@ public:
 				if(offset >= buffer_.size())
 					return;
 
-				if(consumer->synchronize() == frame_consumer::clock)
-					sync = frame_consumer::clock;
+				consumer->synchronize();
 			}
 			catch(...)
 			{
@@ -79,9 +60,6 @@ public:
 			}
 		});
 	
-		if(sync != frame_consumer::clock)
-			clock.wait(fmt_.period);
-
 		if(buffer_.size() >= max_depth_)
 			buffer_.pop_front();
 	}
