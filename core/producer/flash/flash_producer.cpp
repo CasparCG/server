@@ -22,7 +22,7 @@
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4714) // marked as __forceinline not inlined
-#pragma warning(disable:4146)
+#pragma warning (disable : 4146)
 #endif
 
 #include "flash_producer.h"
@@ -34,7 +34,6 @@
 #include "../../processor/frame_processor_device.h"
 
 #include <common/concurrency/executor.h>
-#include <common/utility/timer.h>
 
 #include <boost/filesystem.hpp>
 
@@ -73,8 +72,6 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Set Scale Mode"));
 														
 		ax_->SetFormat(format_desc_);
-		//if(FAILED(ax_->SetFormat(frame_processor_->get_video_format_desc())))  // stop if failed
-		//	BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Set Format"));
 		
 		BITMAPINFO info;
 		memset(&info, 0, sizeof(BITMAPINFO));
@@ -145,7 +142,7 @@ private:
 	std::shared_ptr<frame_processor_device> frame_processor_;
 	video_format_desc format_desc_;
 	
-	unsigned char* bmp_data_;
+	BYTE* bmp_data_;
 	
 	std::shared_ptr<void> hdc_;
 	std::shared_ptr<void> bmp_;
@@ -184,35 +181,27 @@ struct flash_producer::implementation
 	{		
 		if(!frame_buffer_.try_pop(tail_))
 			CASPAR_LOG(trace) << print() << " underflow";
-
-		executor_.begin_invoke([=]
+		else
 		{
-			clock_.wait(); // Use high precision timer to sync rendering. Flash has free-running timers which can get out of sync with tick.
-
-			auto frame = draw_frame::empty();
-			do{frame = render_frame();} // Fill framebuffer when rendering empty frames.
-			while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
-		});	
-				
+			executor_.begin_invoke([=]
+			{
+				auto frame = draw_frame::empty();
+				try
+				{
+					if(renderer_)
+						frame = renderer_->render_frame();
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					renderer_ = nullptr;
+				}
+				frame_buffer_.try_push(frame);
+			});	
+		}				
 		return tail_;
 	}
 	
-	safe_ptr<draw_frame> render_frame()
-	{
-		auto frame = draw_frame::empty();
-		try
-		{
-			if(renderer_)
-				frame = renderer_->render_frame();
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			renderer_ = nullptr;
-		}
-		return frame;
-	}
-
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		frame_processor_ = frame_processor;
@@ -238,8 +227,6 @@ struct flash_producer::implementation
 		});
 	}
 
-	timer clock_;
-	
 	safe_ptr<draw_frame> tail_;
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
 	executor executor_;

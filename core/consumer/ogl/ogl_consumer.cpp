@@ -209,9 +209,10 @@ struct consumer::implementation : boost::noncopyable
 		});
 	}
 
-	void synchronize()
+	frame_consumer::sync_mode synchronize()
 	{
 		active_.get();
+		return frame_consumer::ready;
 	}
 
 	size_t buffer_depth() const
@@ -247,6 +248,6 @@ consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
 consumer::consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
 : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
 void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
-void consumer::synchronize(){impl_->synchronize();}
+frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
 size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}

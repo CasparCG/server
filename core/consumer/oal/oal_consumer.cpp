@@ -37,7 +37,6 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	implementation() : container_(5)
 	{
 		sf::SoundStream::Initialize(2, 48000);
-		tickets_.set_capacity(3);
 	}
 
 	~implementation()
@@ -53,9 +52,9 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 			Play();		
 	}
 
-	void synchronize()
+	frame_consumer::sync_mode synchronize()
 	{
-		tickets_.push(true);
+		return frame_consumer::ready;
 	}
 
 	size_t buffer_depth() const
@@ -73,9 +72,6 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	{
 		static std::vector<short> silence(1920*2, 0);
 		
-		bool dummy;
-		tickets_.pop(dummy);
-
 		std::vector<short> audio_data;		
 		input_.pop(audio_data);
 			
@@ -94,7 +90,6 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 		return true;
 	}
 
-	tbb::concurrent_bounded_queue<bool> tickets_;
 	tbb::concurrent_bounded_queue<std::vector<short>> input_;
 	boost::circular_buffer<std::vector<short>> container_;
 };
@@ -102,6 +97,6 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
 consumer::consumer(const video_format_desc&) : impl_(new implementation()){}
 void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
-void consumer::synchronize(){impl_->synchronize();}
+frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
 size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}

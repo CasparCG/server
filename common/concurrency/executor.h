@@ -35,6 +35,11 @@ public:
 		stop();
 	}
 
+	void set_capacity(size_t capacity)
+	{
+		execution_queue_.set_capacity(capacity);
+	}
+
 	void start() // noexcept
 	{
 		if(is_running_.fetch_and_store(true))
@@ -82,7 +87,7 @@ public:
 			mutable task_type task;
 		} task_adaptor(std::move(task));
 
-		execution_queue_.try_push([=]
+		execution_queue_.push([=]
 		{
 			try{task_adaptor();}
 			catch(boost::task_already_started&){}

@@ -11,11 +11,6 @@
 #include <common/concurrency/executor.h>
 #include <common/utility/timer.h>
 
-#include <tbb/concurrent_queue.h>
-#include <tbb/atomic.h>
-
-#include <boost/date_time/posix_time/posix_time.hpp>
-
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/range/algorithm.hpp>
 
@@ -29,6 +24,7 @@ public:
 		std::vector<size_t> depths;
 		boost::range::transform(consumers_, std::back_inserter(depths), std::mem_fn(&frame_consumer::buffer_depth));
 		max_depth_ = *boost::range::max_element(depths);
+		executor_.set_capacity(3);
 		executor_.start();
 	}
 					
@@ -72,10 +68,7 @@ public:
 
 	void consume(safe_ptr<const read_frame>&& frame)
 	{		
-		if(executor_.size() < 3)
-			executor_.begin_invoke([=]{tick(frame);});
-		else
-			executor_.invoke([=]{tick(frame);});
+		executor_.begin_invoke([=]{tick(frame);});
 	}
 
 	timer clock_;
