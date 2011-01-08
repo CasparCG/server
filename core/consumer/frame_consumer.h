@@ -29,10 +29,16 @@ class read_frame;
 
 struct frame_consumer : boost::noncopyable
 {
+	enum sync_mode
+	{
+		ready = 0,
+		clock		
+	};
+
 	virtual ~frame_consumer() {}
 
 	virtual void send(const safe_ptr<const read_frame>& frame) = 0;
-	virtual void synchronize() = 0;
+	virtual sync_mode synchronize() = 0;
 	virtual size_t buffer_depth() const = 0;
 };
 

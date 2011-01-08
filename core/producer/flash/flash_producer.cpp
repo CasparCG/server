@@ -34,6 +34,7 @@
 #include "../../processor/frame_processor_device.h"
 
 #include <common/concurrency/executor.h>
+#include <common/utility/timer.h>
 
 #include <boost/filesystem.hpp>
 
@@ -106,6 +107,9 @@ public:
 	
 	safe_ptr<draw_frame> render_frame()
 	{
+		if(ax_->IsEmpty())
+			return draw_frame::empty();
+
 		auto frame = render_simple_frame();
 		
 		auto running_fps = ax_->GetFPS();
@@ -122,8 +126,7 @@ private:
 
 	safe_ptr<draw_frame> render_simple_frame()
 	{
-		if(!ax_->IsEmpty())
-			ax_->Tick();
+		ax_->Tick();
 
 		if(ax_->InvalidRect())
 		{			
@@ -163,7 +166,7 @@ struct flash_producer::implementation
 			::OleInitialize(nullptr);
 		});
 
-		frame_buffer_.set_capacity(2);
+		frame_buffer_.set_capacity(8);
 		while(frame_buffer_.try_push(draw_frame::empty())){}
 	}
 
@@ -184,23 +187,32 @@ struct flash_producer::implementation
 
 		executor_.begin_invoke([=]
 		{
+			clock_.wait(); // Use high precision timer to sync rendering. Flash has free-running timers which can get out of sync with tick.
+
 			auto frame = draw_frame::empty();
-			try
-			{
-				if(renderer_)
-					frame = renderer_->render_frame();
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				renderer_ = nullptr;
-			}
-			frame_buffer_.try_push(frame);
+			do{frame = render_frame();} // Fill framebuffer when rendering empty frames.
+			while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
 		});	
 				
 		return tail_;
 	}
 	
+	safe_ptr<draw_frame> render_frame()
+	{
+		auto frame = draw_frame::empty();
+		try
+		{
+			if(renderer_)
+				frame = renderer_->render_frame();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			renderer_ = nullptr;
+		}
+		return frame;
+	}
+
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		frame_processor_ = frame_processor;
@@ -225,6 +237,8 @@ struct flash_producer::implementation
 			}
 		});
 	}
+
+	timer clock_;
 	
 	safe_ptr<draw_frame> tail_;
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;

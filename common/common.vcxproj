@@ -107,6 +107,7 @@
     <ClInclude Include="utility\safe_ptr.h" />
     <ClInclude Include="utility\singleton_pool.h" />
     <ClInclude Include="utility\string_convert.h" />
+    <ClInclude Include="utility\timer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="concurrency\Thread.cpp">
