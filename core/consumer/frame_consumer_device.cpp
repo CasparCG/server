@@ -9,6 +9,7 @@
 #include "../format/video_format.h"
 
 #include <common/concurrency/executor.h>
+#include <common/utility/timer.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
@@ -34,7 +35,7 @@ public:
 	void tick(const safe_ptr<const read_frame>& frame)
 	{
 		buffer_.push_back(frame);
-
+	
 		boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
 		{
 			size_t offset = max_depth_ - consumer->buffer_depth();
@@ -42,6 +43,7 @@ public:
 				consumer->send(*(buffer_.begin() + offset));
 		});
 			
+		frame_consumer::sync_mode sync = frame_consumer::ready;
 		boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
 		{
 			try
@@ -50,7 +52,8 @@ public:
 				if(offset >= buffer_.size())
 					return;
 
-				consumer->synchronize();
+				if(consumer->synchronize() == frame_consumer::clock)
+					sync = frame_consumer::clock;
 			}
 			catch(...)
 			{
@@ -60,6 +63,9 @@ public:
 			}
 		});
 	
+		if(sync != frame_consumer::clock)
+			clock_.wait();
+
 		if(buffer_.size() >= max_depth_)
 			buffer_.pop_front();
 	}
@@ -72,6 +78,7 @@ public:
 			executor_.invoke([=]{tick(frame);});
 	}
 
+	timer clock_;
 	executor executor_;	
 
 	size_t max_depth_;

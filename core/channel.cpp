@@ -19,64 +19,6 @@
 
 namespace caspar { namespace core {
 
-class clock
-{
-public:
-	clock(int fps = 25) : fps_(fps)
-	{
-		QueryPerformanceFrequency(&freq_);
-		time_.QuadPart = 0;
-	}
-		
-	// Author: Ryan M. Geiss
-	// http://www.geisswerks.com/ryan/FAQS/timing.html
-	void wait()
-	{     	
-		LARGE_INTEGER t;
-		QueryPerformanceCounter(&t);
-
-		if (time_.QuadPart != 0)
-		{
-			int ticks_to_wait = static_cast<int>(freq_.QuadPart / fps_);
-			int done = 0;
-			do
-			{
-				QueryPerformanceCounter(&t);
-				
-				int ticks_passed = static_cast<int>(static_cast<__int64>(t.QuadPart) - static_cast<__int64>(time_.QuadPart));
-				int ticks_left = ticks_to_wait - ticks_passed;
-
-				if (t.QuadPart < time_.QuadPart)    // time wrap
-					done = 1;
-				if (ticks_passed >= ticks_to_wait)
-					done = 1;
-				
-				if (!done)
-				{
-					// if > 0.002s left, do Sleep(1), which will actually sleep some 
-					//   steady amount, probably 1-2 ms,
-					//   and do so in a nice way (cpu meter drops; laptop battery spared).
-					// otherwise, do a few Sleep(0)'s, which just give up the timeslice,
-					//   but don't really save cpu or battery, but do pass a tiny
-					//   amount of time.
-					if (ticks_left > static_cast<int>((freq_.QuadPart*2)/1000))
-						Sleep(1);
-					else                        
-						for (int i = 0; i < 10; ++i) 
-							Sleep(0);  // causes thread to give up its timeslice
-				}
-			}
-			while (!done);            
-		}
-
-		time_ = t;
-	}
-private:
-	LARGE_INTEGER freq_;
-	LARGE_INTEGER time_;
-	int fps_;
-};
-
 struct channel::implementation : boost::noncopyable
 {	
 	implementation(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers)  
@@ -93,8 +35,6 @@ struct channel::implementation : boost::noncopyable
 		consumer_device_.consume(std::move(processed_frame));
 
 		executor_.begin_invoke([=]{tick();});
-
-		clock_.wait();
 	}
 	
 	safe_ptr<draw_frame> draw()
@@ -205,8 +145,6 @@ struct channel::implementation : boost::noncopyable
 			return it != layers_.end() ? it->second.background() : frame_producer::empty();
 		});
 	}
-
-	clock clock_;
 
 	mutable executor executor_;
 				

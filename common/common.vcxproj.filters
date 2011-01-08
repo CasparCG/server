@@ -102,5 +102,8 @@
     <ClInclude Include="utility\singleton_pool.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
+    <ClInclude Include="utility\timer.h">
+      <Filter>Source\utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
