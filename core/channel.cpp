@@ -89,7 +89,7 @@ struct channel::implementation : boost::noncopyable
 		{
 			auto it = layers_.find(index);
 			if(it != layers_.end())
-				it->second.play();		
+				it->second.play();
 		});
 	}
 
@@ -98,7 +98,7 @@ struct channel::implementation : boost::noncopyable
 		executor_.begin_invoke([=]
 		{
 			auto it = layers_.find(index);
-			if(it != layers_.end())			
+			if(it != layers_.end())
 			{
 				it->second.stop();	
 				if(it->second.empty())

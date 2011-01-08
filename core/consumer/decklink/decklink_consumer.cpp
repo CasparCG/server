@@ -153,9 +153,10 @@ struct decklink_consumer::Implementation : boost::noncopyable
 		});
 	}
 	
-	void synchronize()
+	frame_consumer::sync_mode synchronize()
 	{
 		active_.get();
+		return frame_consumer::ready;
 	}
 
 	size_t buffer_depth() const
@@ -179,7 +180,7 @@ struct decklink_consumer::Implementation : boost::noncopyable
 
 decklink_consumer::decklink_consumer(const video_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey)){}
 void decklink_consumer::send(const safe_ptr<const read_frame>& frame){pImpl_->send(frame);}
-void decklink_consumer::synchronize(){return pImpl_->synchronize();}
+frame_consumer::sync_mode decklink_consumer::synchronize(){return pImpl_->synchronize();}
 size_t decklink_consumer::buffer_depth() const{return pImpl_->buffer_depth();}
 	
 }}}	
