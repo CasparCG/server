@@ -21,7 +21,7 @@ struct ffmpeg_producer : public frame_producer
 {
 public:
 	ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) : filename_(filename), last_frame_(draw_frame(draw_frame::empty())),
-		input_(filename), video_decoder_(input_.get_video_codec_context().get()), audio_decoder_(input_.get_audio_codec_context().get())
+		input_(filename), video_decoder_(input_.get_video_codec_context().get()), audio_decoder_(input_.get_audio_codec_context().get(), input_.fps())
 	{				
 		input_.set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
 

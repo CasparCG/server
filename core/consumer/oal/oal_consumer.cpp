@@ -37,19 +37,15 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	implementation() : container_(5)
 	{
 		sf::SoundStream::Initialize(2, 48000);
-	}
-
-	~implementation()
-	{
-		Stop();
+		Play();		
 	}
 	
 	void send(const safe_ptr<const read_frame>& frame)
 	{				
-		input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 
+		if(frame->audio_data().empty())
+			return;
 
-		if(GetStatus() != Playing && input_.size() > 2)		
-			Play();		
+		input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 	
 	}
 
 	frame_consumer::sync_mode synchronize()
@@ -69,23 +65,13 @@ struct consumer::implementation : public sf::SoundStream, boost::noncopyable
 	}
 
 	bool OnGetData(sf::SoundStream::Chunk& data)
-	{
-		static std::vector<short> silence(1920*2, 0);
-		
+	{		
 		std::vector<short> audio_data;		
 		input_.pop(audio_data);
-			
-		if(audio_data.empty())
-		{	
-			data.Samples = silence.data();
-			data.NbSamples = silence.size();
-		}
-		else
-		{
-			container_.push_back(std::move(audio_data));
-			data.Samples = container_.back().data();
-			data.NbSamples = container_.back().size();
-		}
+				
+		container_.push_back(std::move(audio_data));
+		data.Samples = container_.back().data();
+		data.NbSamples = container_.back().size();		
 
 		return true;
 	}

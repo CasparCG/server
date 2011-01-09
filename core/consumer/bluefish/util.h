@@ -3,8 +3,6 @@
 #include <BlueVelvet4.h>
 #include "../../format/video_format.h"
 
-#include <memory>
-
 namespace caspar { namespace core { namespace bluefish {
 	
 inline bool is_epoch_card(int card_type)
@@ -25,7 +23,7 @@ inline EVideoMode vid_fmt_from_video_format(const video_format::type& fmt)
 	//case video_format::ntsc:		return VID_FMT_NTSC;
 	//case video_format::x576p2500:	return VID_FMT_INVALID;	//not supported
 	case video_format::x720p2500:	return VID_FMT_720P_2500;
-	//case video_format::x720p5000:	return VID_FMT_720P_5000;
+	case video_format::x720p5000:	return VID_FMT_720P_5000;
 	//case video_format::x720p5994:	return VID_FMT_720P_5994;
 	//case video_format::x720p6000:	return VID_FMT_720P_6000;
 	//case video_format::x1080p2397:	return VID_FMT_1080P_2397;

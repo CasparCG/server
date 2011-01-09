@@ -28,7 +28,7 @@
 #include "CIICommandsimpl.h"
 #include "../../producer/flash/flash_producer.h"
 #include "../../producer/transition/transition_producer.h"
-#include "../../Server.h"
+#include "../../configuration.h"
 #include "../../producer/frame_producer.h"
 
 #if defined(_MSC_VER)
@@ -166,7 +166,7 @@ CIICommandPtr CIIProtocolStrategy::Create(const std::wstring& name)
 
 void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, const std::wstring& titleName, const std::wstring& xmlData) 
 {
-	std::wstring fullTemplateFilename = server::template_folder();
+	std::wstring fullTemplateFilename = configuration::template_folder();
 	if(currentProfile_.size() > 0)
 	{
 		fullTemplateFilename += currentProfile_;
@@ -180,7 +180,7 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 		return;
 	}
 	
-	auto producer = flash::flash_producer(server::template_folder()+TEXT("CG.fth"));
+	auto producer = flash::flash_producer(configuration::template_folder()+TEXT("CG.fth"));
 
 	std::wstringstream flashParam;
 	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");

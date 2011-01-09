@@ -29,7 +29,7 @@
 #include <boost/lexical_cast.hpp>
 #include "../../producer/flash/cg_producer.h"
 #include "../media.h"
-#include "../../Server.h"
+#include "../../configuration.h"
 
 #include <algorithm>
 #include <locale>
@@ -61,8 +61,8 @@
 403 [kommando] ERROR	Ogiltig parameter  
 404 [kommando] ERROR	Mediafilen hittades inte  
 
-500 FAILED				Internt serverfel  
-501 [kommando] FAILED	Internt serverfel  
+500 FAILED				Internt configurationfel  
+501 [kommando] FAILED	Internt configurationfel  
 502 [kommando] FAILED	Oläslig mediafil  
 
 600 [kommando] FAILED	funktion ej implementerad
@@ -73,7 +73,7 @@ namespace caspar { namespace core {
 std::wstring ListMedia()
 {	
 	std::wstringstream replyString;
-	for (boost::filesystem::wrecursive_directory_iterator itr(server::media_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::wrecursive_directory_iterator itr(configuration::media_folder()), end; itr != end; ++itr)
 	{			
 		if(boost::filesystem::is_regular_file(itr->path()))
 		{
@@ -91,7 +91,7 @@ std::wstring ListMedia()
 			{		
 				auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-				auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(server::media_folder().size()-1, itr->path().file_string().size()));
+				auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(configuration::media_folder().size()-1, itr->path().file_string().size()));
 
 				auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 				writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
@@ -116,11 +116,11 @@ std::wstring ListTemplates()
 {
 	std::wstringstream replyString;
 
-	for (boost::filesystem::wrecursive_directory_iterator itr(server::template_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::wrecursive_directory_iterator itr(configuration::template_folder()), end; itr != end; ++itr)
 	{		
 		if(boost::filesystem::is_regular_file(itr->path()) && itr->path().extension() == L".ft")
 		{
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(server::template_folder().size()-1, itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(configuration::template_folder().size()-1, itr->path().file_string().size()));
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), [](char c){ return std::isdigit(c) == 0;}), writeTimeStr.end());
@@ -168,7 +168,7 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		_parameters[0] = server::media_folder() + L"\\" + _parameters[0];
+		_parameters[0] = configuration::media_folder() + L"\\" + _parameters[0];
 		auto pFP = load_media(_parameters);		
 		GetChannel()->preview(GetLayerIndex(), pFP);
 	
@@ -243,7 +243,7 @@ bool LoadbgCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		_parameters[0] = server::media_folder() + L"\\" + _parameters[0];
+		_parameters[0] = configuration::media_folder() + L"\\" + _parameters[0];
 		auto pFP = load_media(_parameters);
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
@@ -422,7 +422,7 @@ bool CGCommand::DoExecuteAdd() {
 		else 
 		{
 			//The data is not an XML-string, it must be a filename
-			std::wstring filename = server::data_folder();
+			std::wstring filename = configuration::data_folder();
 			filename.append(dataString);
 			filename.append(TEXT(".ftd"));
 
@@ -441,7 +441,7 @@ bool CGCommand::DoExecuteAdd() {
 		}
 	}
 
-	std::wstring fullFilename = flash::flash_producer::find_template(server::template_folder() + _parameters[2]);
+	std::wstring fullFilename = flash::flash_producer::find_template(configuration::template_folder() + _parameters[2]);
 	if(!fullFilename.empty())
 	{
 		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
@@ -629,7 +629,7 @@ bool DataCommand::DoExecuteStore()
 		return false;
 	}
 
-	std::wstring filename = server::data_folder();
+	std::wstring filename = configuration::data_folder();
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
@@ -656,7 +656,7 @@ bool DataCommand::DoExecuteRetrieve()
 		return false;
 	}
 
-	std::wstring filename = server::data_folder();
+	std::wstring filename = configuration::data_folder();
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
@@ -701,7 +701,7 @@ bool CinfCommand::DoExecute()
 {
 	std::wstringstream replyString;
 
-	std::wstring filename = server::media_folder()+_parameters[0];
+	std::wstring filename = configuration::media_folder()+_parameters[0];
 
 	// TODO:
 

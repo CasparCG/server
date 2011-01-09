@@ -132,8 +132,7 @@ struct video_decoder::implementation : boost::noncopyable
 				});
 			});
 
-			// TODO: Make generic for all formats and modes.
-			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
+			if(frame_processor_->get_video_format_desc().mode == video_mode::upper && codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
 				write->translate(0.0f, 1.0/static_cast<double>(height_));
 
 			return write;
@@ -148,8 +147,7 @@ struct video_decoder::implementation : boost::noncopyable
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);	
 						
-			// TODO: Make generic for all formats and modes.
-			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
+			if(frame_processor_->get_video_format_desc().mode == video_mode::upper && codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
 				write->translate(0.0f, 1.0/static_cast<double>(height_));
 
 			return write;
@@ -158,7 +156,10 @@ struct video_decoder::implementation : boost::noncopyable
 
 	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
-		frame_processor_ = frame_processor;
+		frame_processor_ = frame_processor;		
+		double frame_rate = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
+		if(abs(frame_rate - frame_processor->get_video_format_desc().actual_fps) > std::numeric_limits<double>::min())
+			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid video framerate."));
 	}
 	
 	std::shared_ptr<frame_processor_device> frame_processor_;

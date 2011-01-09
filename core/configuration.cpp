@@ -1,6 +1,6 @@
 #include "StdAfx.h"
 
-#include "server.h"
+#include "configuration.h"
 #include "channel.h"
 
 #include "consumer/oal/oal_consumer.h"
@@ -31,7 +31,7 @@
 
 namespace caspar { namespace core {
 
-struct server::implementation : boost::noncopyable
+struct configuration::implementation : boost::noncopyable
 {
 	implementation()												
 	{			
@@ -48,7 +48,7 @@ struct server::implementation : boost::noncopyable
 
 	~implementation()
 	{				
-		async_servers_.clear();
+		async_configurations_.clear();
 		channels_.clear();
 	}
 
@@ -132,9 +132,9 @@ struct server::implementation : boost::noncopyable
 				{					
 					unsigned int port = xml_controller.second.get<unsigned int>("port");
 					port = port != 0 ? port : 5250;
-					auto asyncserver = make_safe<IO::AsyncEventServer>(create_protocol(protocol), port);
-					asyncserver->Start();
-					async_servers_.push_back(asyncserver);
+					auto asyncconfiguration = make_safe<IO::AsyncEventServer>(create_protocol(protocol), port);
+					asyncconfiguration->Start();
+					async_configurations_.push_back(asyncconfiguration);
 				}
 				else
 					BOOST_THROW_EXCEPTION(invalid_configuration() << arg_name_info(name) << msg_info("Invalid controller"));
@@ -158,7 +158,7 @@ struct server::implementation : boost::noncopyable
 		BOOST_THROW_EXCEPTION(invalid_configuration() << arg_name_info("name") << arg_value_info(name) << msg_info("Invalid protocol"));
 	}
 
-	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;
+	std::vector<safe_ptr<IO::AsyncEventServer>> async_configurations_;
 	
 	std::vector<safe_ptr<channel>> channels_;
 
@@ -170,38 +170,38 @@ struct server::implementation : boost::noncopyable
 	static std::wstring data_folder_;
 };
 
-std::wstring server::implementation::media_folder_ = L"";
-std::wstring server::implementation::log_folder_ = L"";
-std::wstring server::implementation::template_folder_ = L"";
-std::wstring server::implementation::data_folder_ = L"";
+std::wstring configuration::implementation::media_folder_ = L"";
+std::wstring configuration::implementation::log_folder_ = L"";
+std::wstring configuration::implementation::template_folder_ = L"";
+std::wstring configuration::implementation::data_folder_ = L"";
 
-server::server() : impl_(new implementation()){}
+configuration::configuration() : impl_(new implementation()){}
 
-const std::wstring& server::media_folder()
+const std::wstring& configuration::media_folder()
 {
-	server::implementation::setup_paths();
-	return server::implementation::media_folder_;
+	configuration::implementation::setup_paths();
+	return configuration::implementation::media_folder_;
 }
 
-const std::wstring& server::log_folder()
+const std::wstring& configuration::log_folder()
 {
-	server::implementation::setup_paths();
-	return server::implementation::log_folder_;
+	configuration::implementation::setup_paths();
+	return configuration::implementation::log_folder_;
 }
 
-const std::wstring& server::template_folder()
+const std::wstring& configuration::template_folder()
 {
-	server::implementation::setup_paths();
-	return server::implementation::template_folder_;
+	configuration::implementation::setup_paths();
+	return configuration::implementation::template_folder_;
 }
 
-const std::wstring& server::data_folder()
+const std::wstring& configuration::data_folder()
 {
-	server::implementation::setup_paths();
-	return server::implementation::data_folder_;
+	configuration::implementation::setup_paths();
+	return configuration::implementation::data_folder_;
 }
 
-const std::vector<safe_ptr<channel>> server::get_channels() const
+const std::vector<safe_ptr<channel>> configuration::get_channels() const
 {
 	return impl_->channels_;
 }

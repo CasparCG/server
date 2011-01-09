@@ -222,9 +222,6 @@
     <ClInclude Include="producer\layer.h">
       <Filter>Source\channel</Filter>
     </ClInclude>
-    <ClInclude Include="server.h">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="processor\write_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
@@ -257,6 +254,9 @@
     </ClInclude>
     <ClInclude Include="producer\flash\TimerHelper.h">
       <Filter>Source\channel\producer\flash\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="configuration.h">
+      <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -326,9 +326,6 @@
     <ClCompile Include="consumer\frame_consumer_device.cpp">
       <Filter>Source\channel\consumer</Filter>
     </ClCompile>
-    <ClCompile Include="server.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="processor\frame_processor_device.cpp">
       <Filter>Source\channel\processor</Filter>
     </ClCompile>
@@ -385,6 +382,9 @@
     </ClCompile>
     <ClCompile Include="producer\flash\Flash9e_i.c">
       <Filter>Source\channel\producer\flash\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="configuration.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

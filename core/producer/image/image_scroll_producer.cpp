@@ -8,7 +8,7 @@
 //#include "../../processor/draw_frame.h"
 //#include "../../format/video_format.h"
 //#include "../../processor/frame_processor_device.h"
-//#include "../../server.h"
+//#include "../../configuration.h"
 //
 //#include <tbb/parallel_for.h>
 //#include <tbb/parallel_invoke.h>
@@ -171,7 +171,7 @@
 //safe_ptr<frame_producer> create_image_scroll_producer(const std::vector<std::wstring>& params)
 //{
 //	static const std::vector<std::wstring> extensions = list_of(L"spng")(L"stga")(L"sbmp")(L"sjpg")(L"sjpeg");
-//	std::wstring filename = server::media_folder() + L"\\" + params[0];
+//	std::wstring filename = configuration::media_folder() + L"\\" + params[0];
 //	
 //	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 //		{					

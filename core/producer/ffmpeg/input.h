@@ -25,6 +25,8 @@ public:
 
 	bool is_eof() const;
 	void set_loop(bool value);
+
+	double fps() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

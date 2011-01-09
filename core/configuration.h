@@ -12,10 +12,10 @@ namespace caspar { namespace core {
 	
 struct invalid_configuration : virtual boost::exception, virtual std::exception {};
 
-class server : boost::noncopyable
+class configuration : boost::noncopyable
 {
 public:
-	server();
+	configuration();
 
 	static const std::wstring& media_folder();
 	static const std::wstring& log_folder();
