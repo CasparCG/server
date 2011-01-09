@@ -32,7 +32,7 @@
 #include <conio.h>
 
 #include <core/config.h>
-#include <core/server.h>
+#include <core/configuration.h>
 #include <core/protocol/amcp/AMCPProtocolStrategy.h>
 #include <common/exception/win32_exception.h>
 #include <common/exception/exceptions.h>
@@ -76,7 +76,7 @@ int main(int argc, wchar_t* argv[])
 	MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 #endif
 
-	log::add_file_sink(server::log_folder());
+	log::add_file_sink(configuration::log_folder());
 	
 	CASPAR_LOG(debug) << "Started Main Thread";
 
@@ -85,7 +85,7 @@ int main(int argc, wchar_t* argv[])
 				
 	try 
 	{
-		server caspar_device;
+		configuration caspar_device;
 				
 		auto dummy = std::make_shared<IO::DummyClientInfo>();
 		amcp::AMCPProtocolStrategy amcp(caspar_device.get_channels());

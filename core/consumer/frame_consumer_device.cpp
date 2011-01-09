@@ -47,10 +47,7 @@ public:
 				try
 				{
 					size_t offset = max_depth_ - consumer->buffer_depth();
-					if(offset >= buffer_.size())
-						return;
-
-					if(consumer->synchronize() == frame_consumer::clock)
+					if(offset < buffer_.size() && consumer->synchronize() == frame_consumer::clock)
 						sync = frame_consumer::clock;
 				}
 				catch(...)

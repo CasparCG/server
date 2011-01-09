@@ -2,7 +2,7 @@
 
 /* this ALWAYS GENERATED file contains the IIDs and CLSIDs */
 
-/* link this file in with the server and any clients */
+/* link this file in with the configuration and any clients */
 
 
  /* File created by MIDL compiler version 7.00.0500 */

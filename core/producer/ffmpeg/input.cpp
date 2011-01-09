@@ -169,6 +169,11 @@ struct input::implementation : boost::noncopyable
 		return true;
 	}
 
+	double fps() const
+	{
+		return static_cast<double>(video_codec_context_->time_base.den) / static_cast<double>(video_codec_context_->time_base.num);
+	}
+
 	std::wstring print() const
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"] Buffer thread";
@@ -204,4 +209,5 @@ bool input::is_eof() const{return impl_->is_eof();}
 aligned_buffer input::get_video_packet(){return impl_->get_video_packet();}
 aligned_buffer input::get_audio_packet(){return impl_->get_audio_packet();}
 bool input::seek(unsigned long long frame){return impl_->seek(frame);}
+double input::fps() const { return impl_->fps(); }
 }}}

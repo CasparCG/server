@@ -205,7 +205,7 @@
     <ClInclude Include="protocol\clk\CLKCommand.h" />
     <ClInclude Include="protocol\clk\CLKProtocolStrategy.h" />
     <ClInclude Include="protocol\media.h" />
-    <ClInclude Include="server.h" />
+    <ClInclude Include="configuration.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishException.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishFrameManager.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishPlaybackStrategy.h" />
@@ -373,7 +373,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="server.cpp" />
+    <ClCompile Include="configuration.cpp" />
     <ClCompile Include="StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
