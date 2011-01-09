@@ -7,22 +7,27 @@ namespace caspar {
 class timer
 {
 public:
-	timer(int fps = 25) : fps_(fps)
+	timer(double fps = 25.0) : fps_(fps)
 	{
 		QueryPerformanceFrequency(&freq_);
 		time_.QuadPart = 0;
 	}
-		
+
+	void wait()
+	{
+		wait(fps_);
+	}
+
 	// Author: Ryan M. Geiss
 	// http://www.geisswerks.com/ryan/FAQS/timing.html
-	void wait()
+	void wait(double fps)
 	{     	
 		LARGE_INTEGER t;
 		QueryPerformanceCounter(&t);
 
 		if (time_.QuadPart != 0)
 		{
-			int ticks_to_wait = static_cast<int>(freq_.QuadPart / fps_);
+			int ticks_to_wait = static_cast<int>(static_cast<double>(freq_.QuadPart) / fps);
 			int done = 0;
 			do
 			{
@@ -56,10 +61,12 @@ public:
 
 		time_ = t;
 	}
+		
 private:
+	
 	LARGE_INTEGER freq_;
 	LARGE_INTEGER time_;
-	int fps_;
+	double fps_;
 };
 
 }

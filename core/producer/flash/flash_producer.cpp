@@ -34,6 +34,7 @@
 #include "../../processor/frame_processor_device.h"
 
 #include <common/concurrency/executor.h>
+#include <common/utility/timer.h>
 
 #include <boost/filesystem.hpp>
 
@@ -109,13 +110,14 @@ public:
 
 		auto frame = render_simple_frame();
 		
-		auto running_fps = ax_->GetFPS();
-		auto target_fps = static_cast<int>(format_desc_.mode == video_mode::progressive ? format_desc_.fps : format_desc_.fps/2.0);
+		auto running_fps = static_cast<int>(ax_->GetFPS());
+		auto target_fps = static_cast<int>(format_desc_.actual_fps);
 		if(target_fps < running_fps)
 			frame = draw_frame::interlace(frame, render_simple_frame(), format_desc_.mode);
 		return frame;
 	}
-			
+		
+	timer timer_;
 	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"] Render thread"; }
 	std::string bprint() const{ return narrow(print()); }
 
@@ -123,6 +125,8 @@ private:
 
 	safe_ptr<draw_frame> render_simple_frame()
 	{
+		timer_.wait(ax_->GetFPS()); // Tick doesnt work on nested timelines, force an actual sync
+
 		ax_->Tick();
 
 		if(ax_->InvalidRect())
@@ -185,18 +189,20 @@ struct flash_producer::implementation
 		{
 			executor_.begin_invoke([=]
 			{
-				auto frame = draw_frame::empty();
+				if(!renderer_)
+					return;
+
 				try
 				{
-					if(renderer_)
-						frame = renderer_->render_frame();
+					auto frame = draw_frame::empty();
+					do{frame = renderer_->render_frame();}
+					while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
 				}
 				catch(...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
 					renderer_ = nullptr;
 				}
-				frame_buffer_.try_push(frame);
 			});	
 		}				
 		return tail_;

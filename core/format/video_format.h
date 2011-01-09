@@ -11,20 +11,20 @@ struct video_format
 	enum type
 	{
 		pal = 0,
-		ntsc,
+		//ntsc,
 		x576p2500,
 		x720p2500,
 		x720p5000,
-		x720p5994,
-		x720p6000,
-		x1080p2397,
-		x1080p2400,
+		//x720p5994,
+		//x720p6000,
+		//x1080p2397,
+		//x1080p2400,
 		x1080i5000,
-		x1080i5994,
-		x1080i6000,
+		//x1080i5994,
+		//x1080i6000,
 		x1080p2500,
-		x1080p2997,
-		x1080p3000,
+		//x1080p2997,
+		//x1080p3000,
 		count,
 		invalid
 	};
@@ -50,7 +50,8 @@ struct video_format_desc
 	size_t					height;
 	video_mode::type		mode;
 	double					fps;
-	double					period;
+	double					actual_fps;
+	double					actual_interval;
 	size_t					size;
 	std::wstring			name;
 

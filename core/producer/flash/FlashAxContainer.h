@@ -232,7 +232,7 @@ public:
 	STDMETHOD(Unadvise)(DWORD dwCookie);
 	STDMETHOD(Freeze)(BOOL fFreeze);
 	STDMETHOD(GetTime)(VARIANT *pvtime);
-	int GetFPS();
+	double GetFPS();
 
 	HRESULT CreateAxControl();
 	void DestroyAxControl();
