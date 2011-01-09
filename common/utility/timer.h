@@ -7,15 +7,10 @@ namespace caspar {
 class timer
 {
 public:
-	timer(double fps = 25.0) : fps_(fps)
+	timer()
 	{
 		QueryPerformanceFrequency(&freq_);
-		time_.QuadPart = 0;
-	}
-
-	void wait()
-	{
-		wait(fps_);
+		QueryPerformanceCounter(&time_);
 	}
 
 	// Author: Ryan M. Geiss
@@ -60,13 +55,10 @@ public:
 		}
 
 		time_ = t;
-	}
-		
-private:
-	
+	}		
+private:	
 	LARGE_INTEGER freq_;
 	LARGE_INTEGER time_;
-	double fps_;
 };
 
 }
