@@ -12,8 +12,9 @@ namespace caspar { namespace core { namespace decklink {
 		{
 		case video_format::pal:			return bmdModePAL;
 		//case video_format::ntsc:		return bmdModeNTSC;
-		case video_format::x576p2500:	return ULONG_MAX;	//not supported
-		case video_format::x720p5000:	return bmdModeHD720p50;
+		//case video_format::x576p2500:	return ULONG_MAX;
+		case video_format::x720p2500:	return ULONG_MAX;
+		//case video_format::x720p5000:	return bmdModeHD720p50;
 		//case video_format::x720p5994:	return bmdModeHD720p5994;
 		//case video_format::x720p6000:	return bmdModeHD720p60;
 		//case video_format::x1080p2397:	return bmdModeHD1080p2398;

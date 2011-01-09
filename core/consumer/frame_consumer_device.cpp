@@ -27,48 +27,46 @@ public:
 		executor_.set_capacity(3);
 		executor_.start();
 	}
-					
-	void tick(const safe_ptr<const read_frame>& frame)
-	{
-		buffer_.push_back(frame);
-	
-		boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
-		{
-			size_t offset = max_depth_ - consumer->buffer_depth();
-			if(offset < buffer_.size())
-				consumer->send(*(buffer_.begin() + offset));
-		});
 			
-		frame_consumer::sync_mode sync = frame_consumer::ready;
-		boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
-		{
-			try
-			{
-				size_t offset = max_depth_ - consumer->buffer_depth();
-				if(offset >= buffer_.size())
-					return;
-
-				if(consumer->synchronize() == frame_consumer::clock)
-					sync = frame_consumer::clock;
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				boost::range::remove_erase(consumers_, consumer);
-				CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
-			}
-		});
-	
-		if(sync != frame_consumer::clock)
-			clock_.wait();
-
-		if(buffer_.size() >= max_depth_)
-			buffer_.pop_front();
-	}
-
 	void consume(safe_ptr<const read_frame>&& frame)
 	{		
-		executor_.begin_invoke([=]{tick(frame);});
+		executor_.begin_invoke([=]
+		{
+			buffer_.push_back(frame);
+	
+			boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
+			{
+				size_t offset = max_depth_ - consumer->buffer_depth();
+				if(offset < buffer_.size())
+					consumer->send(*(buffer_.begin() + offset));
+			});
+			
+			frame_consumer::sync_mode sync = frame_consumer::ready;
+			boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
+			{
+				try
+				{
+					size_t offset = max_depth_ - consumer->buffer_depth();
+					if(offset >= buffer_.size())
+						return;
+
+					if(consumer->synchronize() == frame_consumer::clock)
+						sync = frame_consumer::clock;
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					boost::range::remove_erase(consumers_, consumer);
+					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
+				}
+			});
+	
+			if(sync != frame_consumer::clock)
+				clock_.wait(fmt_.actual_fps);
+
+			if(buffer_.size() >= max_depth_)
+				buffer_.pop_front();
+		});
 	}
 
 	timer clock_;
@@ -79,7 +77,7 @@ public:
 
 	std::vector<safe_ptr<frame_consumer>> consumers_;
 	
-	const video_format_desc& fmt_;
+	const video_format_desc fmt_;
 };
 
 frame_consumer_device::frame_consumer_device(frame_consumer_device&& other) : impl_(std::move(other.impl_)){}

@@ -109,10 +109,7 @@ public:
 			return draw_frame::empty();
 
 		auto frame = render_simple_frame();
-		
-		auto running_fps = static_cast<int>(ax_->GetFPS());
-		auto target_fps = static_cast<int>(format_desc_.actual_fps);
-		if(target_fps < running_fps)
+		if(ax_->GetFPS()/2.0 - format_desc_.actual_fps >= 0.0)
 			frame = draw_frame::interlace(frame, render_simple_frame(), format_desc_.mode);
 		return frame;
 	}
@@ -166,9 +163,6 @@ struct flash_producer::implementation
 		{
 			::OleInitialize(nullptr);
 		});
-
-		frame_buffer_.set_capacity(8);
-		while(frame_buffer_.try_push(draw_frame::empty())){}
 	}
 
 	~implementation()
@@ -211,6 +205,8 @@ struct flash_producer::implementation
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		frame_processor_ = frame_processor;
+		frame_buffer_.set_capacity(static_cast<size_t>(frame_processor->get_video_format_desc().actual_fps/2.0));
+		while(frame_buffer_.try_push(draw_frame::empty())){}
 		executor_.start();
 	}
 	
