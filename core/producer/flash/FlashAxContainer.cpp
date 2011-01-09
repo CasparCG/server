@@ -574,11 +574,11 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::GetTime(/* [out] */ VARIANT *pvtime)
 	return S_OK;
 }
 
-int FlashAxContainer::GetFPS() {
+double FlashAxContainer::GetFPS() {
 	if(pTimerHelper != 0 && pTimerHelper->interval > 0)
-		return (1000 / pTimerHelper->interval);
+		return (1000.0 / static_cast<double>(pTimerHelper->interval));
 	
-	return 0;
+	return 0.0;
 }
 
 bool FlashAxContainer::IsReadyToRender() const {
