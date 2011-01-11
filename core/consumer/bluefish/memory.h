@@ -7,10 +7,7 @@
 
 #include <common/memory/page_locked_allocator.h>
 
-#include <tbb/mutex.h>
-#include <tbb/recursive_mutex.h>
-
-#include <unordered_map>
+#include <vector>
 
 namespace caspar { namespace core { namespace bluefish {
 	
@@ -23,7 +20,7 @@ public:
 	blue_dma_buffer(int image_size, int id) 
 		: id_(id)
 		, image_size_(image_size)
-		, hanc_size_(256*1024)
+		, hanc_size_(MAX_HANC_BUFFER_SIZE)
 		, image_buffer_(image_size_)
 		, hanc_buffer_(hanc_size_){}
 			

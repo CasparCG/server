@@ -65,7 +65,7 @@ public:
 				}
 			});
 	
-			//clock_.wait(fmt_.fps);
+			clock_.wait(fmt_.fps);
 
 			if(buffer_.size() >= max_depth_)
 				buffer_.pop_front();
