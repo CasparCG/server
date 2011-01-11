@@ -32,8 +32,6 @@
 
 #include <common/concurrency/executor.h>
 
-#include <boost/optional/optional.hpp>
-
 #include <tbb/concurrent_queue.h>
 
 #include <BlueVelvet4.h>
@@ -43,14 +41,39 @@ namespace caspar { namespace core { namespace bluefish {
 	
 struct consumer::implementation : boost::noncopyable
 {
+	boost::unique_future<void> active_;
+	executor executor_;
+			
+	BlueVelvetPtr sdk_;
+	
+	unsigned int device_index_;
+	video_format_desc format_desc_;
+		
+	unsigned long	mem_fmt_;
+	unsigned long	upd_fmt_;
+	EVideoMode		vid_fmt_; 
+	unsigned long	res_fmt_; 
+	unsigned long	engine_mode_;
+
+	std::shared_ptr<const read_frame> transferring_frame_;
+
+	std::array<page_locked_buffer_ptr, 3> hanc_buffers_;
+	int current_id_;
+	bool embed_audio_;
+
+public:
 	implementation::implementation(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) 
-		: device_index_(device_index), format_desc_(format_desc), sdk_(BlueVelvetFactory4()), current_id_(0), embed_audio_(embed_audio)
+		: sdk_(BlueVelvetFactory4())
+		, device_index_(device_index)
+		, format_desc_(format_desc)
+		, mem_fmt_(MEM_FMT_ARGB_PC)
+		, upd_fmt_(UPD_FMT_FRAME)
+		, vid_fmt_(VID_FMT_INVALID) 
+		, res_fmt_(RES_FMT_NORMAL) 
+		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
+		, current_id_(0)
+		, embed_audio_(embed_audio)
 	{
-		mem_fmt_		= MEM_FMT_ARGB_PC;
-		upd_fmt_		= UPD_FMT_FRAME;
-		vid_fmt_		= VID_FMT_PAL; 
-		res_fmt_		= RES_FMT_NORMAL; 
-		engine_mode_	= VIDEO_ENGINE_FRAMESTORE;
 				
 		if(BLUE_FAIL(sdk_->device_attach(device_index_, FALSE))) 
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to attach device."));
@@ -67,10 +90,9 @@ struct consumer::implementation : boost::noncopyable
 		//blue_set_connector_property(pBlueDevice, 1, video_routing);
 		//blue_detach_from_device(&pBlueDevice);
 		
-		vid_fmt_ = VID_FMT_INVALID;
 		auto desiredVideoFormat = vid_fmt_from_video_format(format_desc_.format);
 		int videoModeCount = sdk_->count_video_mode();
-		for(int videoModeIndex=1; videoModeIndex <= videoModeCount; ++videoModeIndex) 
+		for(int videoModeIndex = 1; videoModeIndex <= videoModeCount; ++videoModeIndex) 
 		{
 			EVideoMode videoMode = sdk_->enum_video_mode(videoModeIndex);
 			if(videoMode == desiredVideoFormat) 
@@ -146,11 +168,13 @@ struct consumer::implementation : boost::noncopyable
 		executor_.start();
 
 		CASPAR_LOG(info) << TEXT("BLUECARD INFO: Successfully initialized device ") << device_index_;
-		active_ = executor_.begin_invoke([=]{});
+
+		active_ = executor_.begin_invoke([]{});
 	}
 
 	~implementation()
 	{
+		page_locked_buffer::unreserve_working_size(MAX_HANC_BUFFER_SIZE * hanc_buffers_.size());		
 		disable_video_output();
 
 		if(sdk_)
@@ -173,7 +197,7 @@ struct consumer::implementation : boost::noncopyable
 
 	void send(const safe_ptr<const read_frame>& frame)
 	{			
-		static size_t audio_samples = 1920;
+		static size_t audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps);
 		static size_t audio_nchannels = 2;
 		static std::vector<short> silence(audio_samples*audio_nchannels*2, 0);
 		
@@ -195,14 +219,14 @@ struct consumer::implementation : boost::noncopyable
 					encode_hanc(reinterpret_cast<BLUE_UINT32*>(hanc->data()), frame_audio_data, audio_samples, audio_nchannels);
 								
 					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame->image_data().begin()), 
-													 frame->image_data().size(), 
-													 nullptr, 
-													 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_IMAGE));
+													frame->image_data().size(), 
+													nullptr, 
+													BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_IMAGE));
 
 					sdk_->system_buffer_write_async(hanc->data(),
-													 hanc->size(), 
-													 nullptr,                 
-													 BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_HANC));
+													hanc->size(), 
+													nullptr,                 
+													BlueImage_HANC_DMABuffer(current_id_, BLUE_DATA_HANC));
 
 					if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image_HANC(current_id_))))
 						CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
@@ -210,9 +234,9 @@ struct consumer::implementation : boost::noncopyable
 				else
 				{
 					sdk_->system_buffer_write_async(const_cast<unsigned char*>(frame->image_data().begin()),
-													 frame->image_data().size(), 
-													 nullptr,                 
-													 BlueImage_DMABuffer(current_id_, BLUE_DATA_IMAGE));
+													frame->image_data().size(), 
+													nullptr,                 
+													BlueImage_DMABuffer(current_id_, BLUE_DATA_IMAGE));
 			
 					if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image(current_id_))))
 						CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
@@ -231,7 +255,6 @@ struct consumer::implementation : boost::noncopyable
 	{
 		return 1;
 	}
-
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
@@ -258,26 +281,6 @@ struct consumer::implementation : boost::noncopyable
 								 audio_samples, sample_type, emb_audio_flag);
 		}						
 	}
-
-	boost::unique_future<void> active_;
-	executor executor_;
-			
-	BlueVelvetPtr sdk_;
-	
-	unsigned int device_index_;
-	video_format_desc format_desc_;
-		
-	unsigned long	mem_fmt_;
-	unsigned long	upd_fmt_;
-	EVideoMode		vid_fmt_; 
-	unsigned long	res_fmt_; 
-	unsigned long	engine_mode_;
-
-	boost::optional<safe_ptr<const read_frame>> transferring_frame_;
-
-	std::array<page_locked_buffer_ptr, 3> hanc_buffers_;
-	int current_id_;
-	bool embed_audio_;
 };
 
 consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
