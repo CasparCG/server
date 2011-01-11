@@ -80,7 +80,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>

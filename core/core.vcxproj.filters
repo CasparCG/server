@@ -216,9 +216,6 @@
     <ClInclude Include="processor\write_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
-    <ClInclude Include="processor\draw_frame.h">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClInclude>
     <ClInclude Include="processor\image_kernel.h">
       <Filter>Source\channel\processor\image</Filter>
     </ClInclude>
@@ -251,6 +248,9 @@
     </ClInclude>
     <ClInclude Include="version.h">
       <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="processor\draw_frame.h">
+      <Filter>Source\channel\processor\frame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -353,9 +353,6 @@
     <ClCompile Include="processor\write_frame.cpp">
       <Filter>Source\channel\processor\frame</Filter>
     </ClCompile>
-    <ClCompile Include="processor\draw_frame.cpp">
-      <Filter>Source\channel\processor\frame</Filter>
-    </ClCompile>
     <ClCompile Include="processor\image_kernel.cpp">
       <Filter>Source\channel\processor\image</Filter>
     </ClCompile>
@@ -379,6 +376,9 @@
     </ClCompile>
     <ClCompile Include="configuration.cpp">
       <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="processor\draw_frame.cpp">
+      <Filter>Source\channel\processor\frame</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
