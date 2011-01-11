@@ -24,6 +24,8 @@
 
 namespace caspar { namespace core { namespace bluefish {
 	
+struct bluefish_exception : public caspar_exception{};
+
 class consumer : public frame_consumer
 {
 public:

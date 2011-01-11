@@ -153,8 +153,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="channel.h" />
-    <ClInclude Include="consumer\bluefish\exception.h" />
-    <ClInclude Include="consumer\bluefish\fwd.h" />
     <ClInclude Include="consumer\bluefish\memory.h" />
     <ClInclude Include="consumer\bluefish\bluefish_consumer.h" />
     <ClInclude Include="consumer\bluefish\util.h" />

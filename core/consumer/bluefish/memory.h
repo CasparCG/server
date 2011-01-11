@@ -4,7 +4,6 @@
 
 #include <BlueVelvet4.h>
 #include "../../format/video_format.h"
-#include "exception.h"
 
 #include <tbb/mutex.h>
 
@@ -38,7 +37,7 @@ public:
 			workingSetMaxSize += size;
 
 			if(!::SetProcessWorkingSetSize(::GetCurrentProcess(), workingSetMinSize, workingSetMaxSize))		
-				BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed set workingset."));		
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed set workingset."));		
 		}
 	}
 
@@ -54,7 +53,7 @@ public:
 			workingSetMaxSize += static_cast<SIZE_T>(static_cast<int>(workingSetMaxSize) - static_cast<int>(size));
 
 			if(!::SetProcessWorkingSetSize(::GetCurrentProcess(), workingSetMinSize, workingSetMaxSize))		
-				BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed set workingset."));		
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed set workingset."));		
 		}
 	}
 
