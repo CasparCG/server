@@ -16,7 +16,7 @@ typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> 
 class audio_decoder : boost::noncopyable
 {
 public:
-	audio_decoder(AVCodecContext* codec_context, double fps);
+	explicit audio_decoder(AVCodecContext* codec_context, double fps);
 	std::vector<std::vector<short>> execute(const aligned_buffer& audio_packet);
 private:
 	struct implementation;

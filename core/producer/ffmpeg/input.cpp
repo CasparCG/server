@@ -30,10 +30,34 @@ extern "C"
 namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
-{
+{				
+	std::shared_ptr<AVFormatContext>	format_context_;	// Destroy this last
+
+	std::shared_ptr<AVCodecContext>		video_codec_context_;
+	std::shared_ptr<AVCodecContext>		audio_codex_context_;
+
+	tbb::queuing_mutex					seek_mutex_;
+
+	const std::wstring					filename_;
+
+	tbb::atomic<bool>					loop_;
+	int									video_s_index_;
+	int									audio_s_index_;
+
+	tbb::atomic<size_t>	buffer_size_;
+	
+	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> video_packet_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> audio_packet_buffer_;
+	
+	executor executor_;
+
 	static const size_t BUFFER_SIZE = 2 << 25;
 
-	implementation(const std::wstring& filename) : video_s_index_(-1), audio_s_index_(-1), filename_(filename)
+public:
+	explicit implementation(const std::wstring& filename) 
+		: video_s_index_(-1)
+		, audio_s_index_(-1)
+		, filename_(filename)
 	{		
 		static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
 		boost::call_once(av_register_all, av_register_all_flag);	
@@ -178,27 +202,6 @@ struct input::implementation : boost::noncopyable
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"] Buffer thread";
 	}
-				
-	std::shared_ptr<AVFormatContext>	format_context_;	// Destroy this last
-
-	tbb::queuing_mutex					seek_mutex_;
-
-	const std::wstring					filename_;
-
-	std::shared_ptr<AVCodecContext>		video_codec_context_;
-
-	std::shared_ptr<AVCodecContext>		audio_codex_context_;
-
-	tbb::atomic<bool>					loop_;
-	int									video_s_index_;
-	int									audio_s_index_;
-	
-	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> video_packet_buffer_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> audio_packet_buffer_;
-	
-	tbb::atomic<size_t>			buffer_size_;
-
-	executor executor_;
 };
 
 input::input(const std::wstring& filename) : impl_(new implementation(filename)){}

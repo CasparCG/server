@@ -20,11 +20,6 @@
  
 #include "../../stdafx.h"
 
-#if defined(_MSC_VER)
-#pragma warning (push, 1) // TODO: Legacy code, just disable warnings
-#pragma warning (disable : 4244)
-#endif
-
 #include "decklink_consumer.h"
 
 #include "util.h"
@@ -52,9 +47,26 @@
 
 namespace caspar { namespace core { namespace decklink{
 
-struct decklink_consumer::Implementation : boost::noncopyable
-{
-	Implementation(const video_format_desc& format_desc, bool internalKey) : format_desc_(format_desc), currentFormat_(video_format::pal), internalKey_(internalKey)
+struct decklink_consumer::implementation : boost::noncopyable
+{			
+	boost::unique_future<void> active_;
+	executor executor_;
+
+	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
+
+	bool						internal_key;
+	CComPtr<IDeckLink>			decklink_;
+	CComQIPtr<IDeckLinkOutput>	output_;
+	CComQIPtr<IDeckLinkKeyer>	keyer_;
+	
+	video_format::type current_format_;
+	video_format_desc format_desc_;
+
+public:
+	implementation(const video_format_desc& format_desc, size_t device_index, bool internalKey) 
+		: format_desc_(format_desc)
+		, current_format_(video_format::pal)
+		, internal_key(internalKey)
 	{	
 		executor_.start();
 		executor_.invoke([=]
@@ -66,10 +78,11 @@ struct decklink_consumer::Implementation : boost::noncopyable
 			if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink drivers installed."));
 
-			while(pDecklinkIterator->Next(&decklink_) == S_OK && !decklink_){}	
+			size_t n = 0;
+			while(n < device_index && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
 
-			if(decklink_ == nullptr)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink card found."));
+			if(n != device_index || !decklink_)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink card found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index)));
 
 			output_ = decklink_;
 			keyer_ = decklink_;
@@ -83,7 +96,7 @@ struct decklink_consumer::Implementation : boost::noncopyable
 			if(decklinkVideoFormat == ULONG_MAX) 
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat."));
 		
-			currentFormat_ = format_desc_.format;
+			current_format_ = format_desc_.format;
 
 			BMDDisplayModeSupport displayModeSupport;
 			if(FAILED(output_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitBGRA, &displayModeSupport)))
@@ -93,7 +106,7 @@ struct decklink_consumer::Implementation : boost::noncopyable
 			if(FAILED(output_->EnableVideoOutput((BMDDisplayMode)decklinkVideoFormat, bmdVideoOutputFlagDefault))) 
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable video output."));
 
-			if(internalKey_) 
+			if(internal_key) 
 			{
 				if(FAILED(keyer_->Enable(FALSE)))			
 					CASPAR_LOG(error) << "DECKLINK: Failed to enable internal keye.r";			
@@ -110,7 +123,7 @@ struct decklink_consumer::Implementation : boost::noncopyable
 					CASPAR_LOG(info) << "DECKLINK: Successfully configured external keyer.";			
 			}
 		
-			for(int n = 0; n < reserved_frames_.size(); ++n)
+			for(size_t n = 0; n < reserved_frames_.size(); ++n)
 			{
 				if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &reserved_frames_[n].second)))
 					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to create frame."));
@@ -121,13 +134,14 @@ struct decklink_consumer::Implementation : boost::noncopyable
 
 			CASPAR_LOG(info) << "DECKLINK: Successfully initialized decklink for " << format_desc_.name;
 		});
+		active_ = executor_.begin_invoke([]{});
 	}
 
-	~Implementation()
+	~implementation()
 	{				
 		executor_.invoke([this]
 		{
-			if(output_) 
+			if(output_ != nullptr) 
 				output_->DisableVideoOutput();
 
 			for(size_t n = 0; n < reserved_frames_.size(); ++n)
@@ -142,6 +156,7 @@ struct decklink_consumer::Implementation : boost::noncopyable
 	
 	void send(const safe_ptr<const read_frame>& frame)
 	{
+		active_.get();
 		active_ = executor_.begin_invoke([=]
 		{		
 			std::copy(frame->image_data().begin(), frame->image_data().end(), static_cast<char*>(reserved_frames_.front().first));
@@ -152,35 +167,16 @@ struct decklink_consumer::Implementation : boost::noncopyable
 			std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 		});
 	}
-	
-	frame_consumer::sync_mode synchronize()
-	{
-		active_.get();
-		return frame_consumer::ready;
-	}
 
 	size_t buffer_depth() const
 	{
 		return 1;
 	}
-			
-	boost::unique_future<void> active_;
-	executor executor_;
-
-	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
-
-	bool						internalKey_;
-	CComPtr<IDeckLink>			decklink_;
-	CComQIPtr<IDeckLinkOutput>	output_;
-	CComQIPtr<IDeckLinkKeyer>	keyer_;
-	
-	video_format::type currentFormat_;
-	video_format_desc format_desc_;
 };
 
-decklink_consumer::decklink_consumer(const video_format_desc& format_desc, bool internalKey) : pImpl_(new Implementation(format_desc, internalKey)){}
-void decklink_consumer::send(const safe_ptr<const read_frame>& frame){pImpl_->send(frame);}
-frame_consumer::sync_mode decklink_consumer::synchronize(){return pImpl_->synchronize();}
-size_t decklink_consumer::buffer_depth() const{return pImpl_->buffer_depth();}
+decklink_consumer::decklink_consumer(const video_format_desc& format_desc, size_t device_index, bool internalKey) : impl_(new implementation(format_desc, device_index, internalKey)){}
+decklink_consumer::decklink_consumer(decklink_consumer&& other) : impl_(std::move(other.impl_)){}
+void decklink_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
+size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
 	
 }}}	

@@ -11,7 +11,7 @@ class cg_producer : public frame_producer
 public:
 	static const unsigned int DEFAULT_LAYER = 5000;
 
-	cg_producer();
+	explicit cg_producer();
 	cg_producer(cg_producer&& other);
 	
 	virtual safe_ptr<draw_frame> receive();

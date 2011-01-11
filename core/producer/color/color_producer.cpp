@@ -30,8 +30,13 @@ namespace caspar { namespace core {
 	
 class color_producer : public frame_producer
 {
+	safe_ptr<draw_frame> frame_;
+	std::wstring color_str_;
+
 public:
-	color_producer(color_producer&& other) : frame_(std::move(other.frame_)), color_str_(std::move(other.color_str_)){}
+	explicit color_producer(color_producer&& other) 
+		: frame_(std::move(other.frame_))
+		, color_str_(std::move(other.color_str_)){}
 
 	explicit color_producer(const std::wstring& color) : color_str_(color), frame_(draw_frame::empty())
 	{
@@ -51,9 +56,6 @@ public:
 	}
 	
 	virtual std::wstring print() const { return + L"color[" + color_str_ + L"]"; }
-
-	safe_ptr<draw_frame> frame_;
-	std::wstring color_str_;
 };
 
 safe_ptr<frame_producer> create_color_producer(const std::vector<std::wstring>& params)

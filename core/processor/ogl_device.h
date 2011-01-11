@@ -35,6 +35,7 @@ public:
 		
 	safe_ptr<device_buffer> create_device_buffer(size_t width, size_t height, size_t stride);
 	safe_ptr<host_buffer> create_host_buffer(size_t size, host_buffer::usage_t usage);
+
 private:
 	executor executor_;
 	std::unique_ptr<sf::Context> context_;

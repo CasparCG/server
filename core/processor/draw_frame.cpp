@@ -6,16 +6,22 @@
 #include "audio_processor.h"
 #include "pixel_format.h"
 
-#include <common/utility/singleton_pool.h>
-
 #include <boost/range/algorithm.hpp>
 
 namespace caspar { namespace core {
 																																						
 struct draw_frame::implementation
-{
-	implementation(const std::vector<safe_ptr<draw_frame>>& frames) : frames_(frames){}
-	implementation(std::vector<safe_ptr<draw_frame>>&& frames) : frames_(std::move(frames)){}
+{		
+	std::vector<safe_ptr<draw_frame>> frames_;
+
+	image_transform image_transform_;	
+	audio_transform audio_transform_;
+
+public:
+	implementation(const std::vector<safe_ptr<draw_frame>>& frames) 
+		: frames_(frames){}
+	implementation(std::vector<safe_ptr<draw_frame>>&& frames) 
+		: frames_(std::move(frames)){}
 	
 	void process_image(image_processor& processor)
 	{
@@ -29,43 +35,38 @@ struct draw_frame::implementation
 		processor.begin(audio_transform_);
 		boost::range::for_each(frames_, std::bind(&draw_frame::process_audio, std::placeholders::_1, std::ref(processor)));
 		processor.end();
-	}
-		
-	std::vector<safe_ptr<draw_frame>> frames_;
-
-	image_transform image_transform_;	
-	audio_transform audio_transform_;	
+	}	
 };
 	
-draw_frame::draw_frame() : impl_(singleton_pool<implementation>::make_shared(std::vector<safe_ptr<draw_frame>>())){}
-draw_frame::draw_frame(const std::vector<safe_ptr<draw_frame>>& frames) : impl_(singleton_pool<implementation>::make_shared(frames)){}
-draw_frame::draw_frame(std::vector<safe_ptr<draw_frame>>&& frames) : impl_(singleton_pool<implementation>::make_shared(std::move(frames))){}
-draw_frame::draw_frame(const draw_frame& other) : impl_(singleton_pool<implementation>::make_shared(*other.impl_)){}
+draw_frame::draw_frame() : impl_(new implementation(std::vector<safe_ptr<draw_frame>>())){}
+draw_frame::draw_frame(const std::vector<safe_ptr<draw_frame>>& frames) : impl_(new implementation(frames)){}
+draw_frame::draw_frame(std::vector<safe_ptr<draw_frame>>&& frames) : impl_(new implementation(std::move(frames))){}
+draw_frame::draw_frame(const draw_frame& other) : impl_(new implementation(*other.impl_)){}
 draw_frame::draw_frame(const safe_ptr<draw_frame>& frame)
 {
 	std::vector<safe_ptr<draw_frame>> frames;
 	frames.push_back(frame);
-	impl_ = singleton_pool<implementation>::make_shared(std::move(frames));
+	impl_.reset(new implementation(std::move(frames)));
 }
 draw_frame::draw_frame(safe_ptr<draw_frame>&& frame)
 {
 	std::vector<safe_ptr<draw_frame>> frames;
 	frames.push_back(std::move(frame));
-	impl_ = singleton_pool<implementation>::make_shared(std::move(frames));
+	impl_.reset(new implementation(std::move(frames)));
 }
 draw_frame::draw_frame(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2)
 {
 	std::vector<safe_ptr<draw_frame>> frames;
 	frames.push_back(frame1);
 	frames.push_back(frame2);
-	impl_ = singleton_pool<implementation>::make_shared(std::move(frames));
+	impl_.reset(new implementation(std::move(frames)));
 }
 draw_frame::draw_frame(safe_ptr<draw_frame>&& frame1, safe_ptr<draw_frame>&& frame2)
 {
 	std::vector<safe_ptr<draw_frame>> frames;
 	frames.push_back(std::move(frame1));
 	frames.push_back(std::move(frame2));
-	impl_ = singleton_pool<implementation>::make_shared(std::move(frames));
+	impl_.reset(new implementation(std::move(frames)));
 }
 
 void draw_frame::swap(draw_frame& other){impl_.swap(other.impl_);}

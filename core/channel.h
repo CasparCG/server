@@ -23,8 +23,8 @@ namespace caspar { namespace core {
 class channel : boost::noncopyable
 {
 public:
+	explicit channel(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers);
 	channel(channel&& other);
-	channel(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers);
 	
 	void load(int index, const safe_ptr<frame_producer>& producer, bool autoplay = false);
 	void preview(int index, const safe_ptr<frame_producer>& producer);

@@ -2,12 +2,12 @@
 
 #include "channel.h"
 
-#include "producer/layer.h"
-
 #include "consumer/frame_consumer_device.h"
 
 #include "processor/draw_frame.h"
 #include "processor/frame_processor_device.h"
+
+#include "producer/layer.h"
 
 #include <common/concurrency/executor.h>
 
@@ -15,14 +15,27 @@
 
 #include <tbb/parallel_for.h>
 
+#include <map>
 #include <memory>
 
 namespace caspar { namespace core {
 
 struct channel::implementation : boost::noncopyable
 {	
+	mutable executor executor_;
+				
+	safe_ptr<frame_processor_device> processor_device_;
+	frame_consumer_device consumer_device_;
+						
+	std::map<int, layer> layers_;		
+
+	const video_format_desc format_desc_;
+
+public:
 	implementation(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers)  
-		: format_desc_(format_desc), processor_device_(frame_processor_device(format_desc)), consumer_device_(format_desc, consumers)
+		: format_desc_(format_desc)
+		, processor_device_(frame_processor_device(format_desc))
+		, consumer_device_(format_desc, consumers)
 	{
 		executor_.start();
 		executor_.begin_invoke([=]{tick();});
@@ -144,16 +157,7 @@ struct channel::implementation : boost::noncopyable
 			auto it = layers_.find(index);
 			return it != layers_.end() ? it->second.background() : frame_producer::empty();
 		});
-	}
-
-	mutable executor executor_;
-				
-	safe_ptr<frame_processor_device> processor_device_;
-	frame_consumer_device consumer_device_;
-						
-	std::map<int, layer> layers_;		
-
-	const video_format_desc format_desc_;
+	};
 };
 
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}

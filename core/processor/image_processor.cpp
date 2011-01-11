@@ -8,7 +8,7 @@
 #include "device_buffer.h"
 
 #include <common/exception/exceptions.h>
-#include <common/gl/utility.h>
+#include <common/gl/gl_check.h>
 #include <common/concurrency/executor.h>
 
 #include <Glee.h>
@@ -36,7 +36,21 @@ const image_transform image_transform::operator*(const image_transform &other) c
 }
 
 struct image_processor::implementation : boost::noncopyable
-{	
+{			
+	ogl_device context_;
+
+	const video_format_desc format_desc_;
+	
+	std::stack<image_transform> transform_stack_;
+
+	GLuint fbo_;
+	std::array<std::shared_ptr<device_buffer>, 2> render_targets_;
+
+	std::shared_ptr<host_buffer> reading_;
+
+	image_kernel kernel_;
+
+public:
 	implementation(const video_format_desc& format_desc) : format_desc_(format_desc)
 	{
 		context_.begin_invoke([=]
@@ -139,19 +153,6 @@ struct image_processor::implementation : boost::noncopyable
 		});
 		return buffers;
 	}
-		
-	ogl_device context_;
-
-	const video_format_desc format_desc_;
-	
-	std::stack<image_transform> transform_stack_;
-
-	GLuint fbo_;
-	std::array<std::shared_ptr<device_buffer>, 2> render_targets_;
-
-	std::shared_ptr<host_buffer> reading_;
-
-	image_kernel kernel_;
 };
 
 image_processor::image_processor(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}

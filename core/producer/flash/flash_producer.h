@@ -28,9 +28,8 @@ namespace caspar { namespace core { namespace flash {
 class flash_producer : public frame_producer
 {
 public:
+	explicit flash_producer(const std::wstring& filename);
 	flash_producer(flash_producer&& other);
-
-	flash_producer(const std::wstring& filename);
 
 	virtual safe_ptr<draw_frame> receive();
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor);

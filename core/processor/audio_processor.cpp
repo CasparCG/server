@@ -17,6 +17,10 @@ const audio_transform audio_transform::operator*(const audio_transform &other) c
 
 struct audio_processor::implementation
 {
+	std::vector<short> audio_data_;
+	std::stack<audio_transform> transform_stack_;
+
+public:
 	implementation()
 	{
 		transform_stack_.push(audio_transform());
@@ -56,9 +60,6 @@ struct audio_processor::implementation
 	{
 		return std::move(audio_data_);
 	}
-
-	std::vector<short> audio_data_;
-	std::stack<audio_transform> transform_stack_;
 };
 
 audio_processor::audio_processor() : impl_(new implementation()){}

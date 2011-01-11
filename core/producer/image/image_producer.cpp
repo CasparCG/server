@@ -16,9 +16,18 @@ using namespace boost::assign;
 namespace caspar { namespace core { namespace image{
 
 struct image_producer : public frame_producer
-{
-	image_producer(image_producer&& other) : frame_processor_(std::move(other.frame_processor_)), filename_(std::move(other.filename_)), frame_(draw_frame::empty()){}
-	image_producer(const std::wstring& filename) : filename_(filename), frame_(draw_frame::empty())	{}
+{	
+	std::shared_ptr<frame_processor_device> frame_processor_;
+	std::wstring filename_;
+	safe_ptr<draw_frame> frame_;
+
+	image_producer(image_producer&& other) 
+		: frame_processor_(std::move(other.frame_processor_))
+		, filename_(std::move(other.filename_))
+		, frame_(draw_frame::empty()){}
+
+	image_producer(const std::wstring& filename) 
+		: filename_(filename), frame_(draw_frame::empty())	{}
 	
 	virtual safe_ptr<draw_frame> receive(){return frame_;}
 
@@ -36,10 +45,6 @@ struct image_producer : public frame_producer
 	{
 		return L"image_producer. filename: " + filename_;
 	}
-	
-	std::shared_ptr<frame_processor_device> frame_processor_;
-	std::wstring filename_;
-	safe_ptr<draw_frame> frame_;
 };
 
 safe_ptr<frame_producer> create_image_producer(const  std::vector<std::wstring>& params)
