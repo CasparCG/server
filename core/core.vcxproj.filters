@@ -159,13 +159,7 @@
     <ClInclude Include="consumer\bluefish\util.h">
       <Filter>Source\channel\consumer\bluefish</Filter>
     </ClInclude>
-    <ClInclude Include="consumer\bluefish\exception.h">
-      <Filter>Source\channel\consumer\bluefish</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\bluefish\memory.h">
-      <Filter>Source\channel\consumer\bluefish</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\bluefish\fwd.h">
       <Filter>Source\channel\consumer\bluefish</Filter>
     </ClInclude>
     <ClInclude Include="consumer\ogl\ogl_consumer.h">

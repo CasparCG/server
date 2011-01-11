@@ -22,10 +22,8 @@
 
 #ifndef DISABLE_BLUEFISH
 
-#include "fwd.h"
 #include "bluefish_consumer.h"
 #include "util.h"
-#include "exception.h"
 #include "memory.h"
 
 #include "../../processor/read_frame.h"
@@ -37,6 +35,8 @@
 #include <BlueVelvet4.h>
 #include <BlueHancUtils.h>
 
+#include <memory>
+
 namespace caspar { namespace core { namespace bluefish {
 	
 struct consumer::implementation : boost::noncopyable
@@ -44,7 +44,7 @@ struct consumer::implementation : boost::noncopyable
 	boost::unique_future<void> active_;
 	executor executor_;
 			
-	BlueVelvetPtr sdk_;
+	std::shared_ptr<CBlueVelvet4> sdk_;
 	
 	unsigned int device_index_;
 	video_format_desc format_desc_;
