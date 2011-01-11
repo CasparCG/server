@@ -102,6 +102,7 @@
     <ClInclude Include="io\ProtocolStrategy.h" />
     <ClInclude Include="io\SocketInfo.h" />
     <ClInclude Include="log\log.h" />
+    <ClInclude Include="memory\page_locked_allocator.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="utility\safe_ptr.h" />
     <ClInclude Include="utility\string_convert.h" />

@@ -147,7 +147,7 @@ public:
 				});
 			});
 
-			if(frame_processor_->get_video_format_desc().mode == video_mode::upper && codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
+			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field frame_processor_->get_video_format_desc().mode == video_mode::upper && 	 
 				write->translate(0.0f, 1.0/static_cast<double>(height_));
 
 			return write;
@@ -161,9 +161,6 @@ public:
 			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);	
-						
-			if(frame_processor_->get_video_format_desc().mode == video_mode::upper && codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field		
-				write->translate(0.0f, 1.0/static_cast<double>(height_));
 
 			return write;
 		}	
