@@ -44,16 +44,15 @@ struct video_mode
 
 struct video_format_desc
 {
-	video_format::type		format;
+	video_format::type		format;		// video output format
 
-	size_t					width;
-	size_t					height;
-	video_mode::type		mode;
-	double					fps;
-	double					actual_fps;
-	double					actual_interval;
-	size_t					size;
-	std::wstring			name;
+	size_t					width;		// output frame width
+	size_t					height;		// output frame height
+	video_mode::type		mode;		// progressive, interlaced upper field first, interlaced lower field first
+	double					fps;		// actual framerate, e.g. i50 = 25 fps, p50 = 50 fps
+	double					interval;	// time between frames
+	size_t					size;		// output frame size in bytes 
+	std::wstring			name;		// name of output format
 
 	static const video_format_desc& get(video_format::type format);
 	static const video_format_desc& get(const std::wstring& name);

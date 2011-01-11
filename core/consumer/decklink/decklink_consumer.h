@@ -28,14 +28,14 @@ namespace caspar { namespace core { namespace decklink {
 class decklink_consumer : public frame_consumer
 {
 public:
-	explicit decklink_consumer(const video_format_desc& format_desc, bool internalKey = false);
+	explicit decklink_consumer(const video_format_desc& format_desc, size_t device_index, bool internal_key = false);
+	decklink_consumer(decklink_consumer&& other);
 	
 	virtual void send(const safe_ptr<const read_frame>&);
-	virtual sync_mode synchronize();
 	virtual size_t buffer_depth() const;
 private:
-	struct Implementation;
-	std::tr1::shared_ptr<Implementation> pImpl_;
+	struct implementation;
+	std::tr1::shared_ptr<implementation> impl_;
 };
 
 }}}

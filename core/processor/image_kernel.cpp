@@ -3,7 +3,7 @@
 #include "image_kernel.h"
 
 #include <common/exception/exceptions.h>
-#include <common/gl/utility.h>
+#include <common/gl/gl_check.h>
 
 #include <Glee.h>
 
@@ -15,6 +15,7 @@ namespace caspar { namespace core {
 
 class shader_program
 {
+	GLuint program_;
 public:
 
 	shader_program() : program_(0) {}
@@ -101,9 +102,6 @@ public:
 	{	
 		GL(glUseProgramObjectARB(program_));		
 	}
-
-private:
-	GLuint program_;
 };
 
 GLubyte progressive_pattern[] = {
@@ -125,7 +123,10 @@ GLubyte lower_pattern[] = {
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff};
 
 struct image_kernel::implementation
-{
+{	
+	std::unordered_map<pixel_format::type, shader_program> shaders_;
+
+public:
 	std::unordered_map<pixel_format::type, shader_program>& shaders()
 	{
 		GL(glEnable(GL_POLYGON_STIPPLE));
@@ -220,8 +221,6 @@ struct image_kernel::implementation
 		}
 		return shaders_;
 	}
-	
-	std::unordered_map<pixel_format::type, shader_program> shaders_;
 };
 
 image_kernel::image_kernel() : impl_(new implementation()){}

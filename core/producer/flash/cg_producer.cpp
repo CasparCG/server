@@ -17,7 +17,8 @@ namespace caspar { namespace core { namespace flash {
 struct cg_producer::implementation : boost::noncopyable
 {
 public:
-	implementation() : flash_producer_(flash_producer(configuration::template_folder()+TEXT("cg.fth.18"))){}
+	implementation() 
+		: flash_producer_(flash_producer(configuration::template_folder()+TEXT("cg.fth.18"))){}
 
 	void clear()
 	{

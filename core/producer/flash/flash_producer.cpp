@@ -46,10 +46,26 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
 class flash_renderer
 {
+	std::wstring filename_;
+	std::shared_ptr<frame_processor_device> frame_processor_;
+	video_format_desc format_desc_;
+	
+	BYTE* bmp_data_;	
+	std::shared_ptr<void> hdc_;
+	std::shared_ptr<void> bmp_;
+
+	CComObject<caspar::flash::FlashAxContainer>* ax_;
+	safe_ptr<draw_frame> head_;
+
 public:
 	flash_renderer(const std::shared_ptr<frame_processor_device>& frame_processor, const std::wstring& filename) 
-		: head_(draw_frame::empty()), bmp_data_(nullptr), ax_(nullptr), filename_(filename), hdc_(CreateCompatibleDC(0), DeleteDC), frame_processor_(frame_processor), 
-			format_desc_(frame_processor->get_video_format_desc())
+		: head_(draw_frame::empty())
+		, bmp_data_(nullptr)
+		, ax_(nullptr)
+		, filename_(filename)
+		, hdc_(CreateCompatibleDC(0), DeleteDC)
+		, frame_processor_(frame_processor)
+		, format_desc_(frame_processor->get_video_format_desc())
 	{
 		CASPAR_LOG(info) << print() << L" Started";
 		
@@ -109,7 +125,7 @@ public:
 			return draw_frame::empty();
 
 		auto frame = render_simple_frame();
-		if(ax_->GetFPS()/2.0 - format_desc_.actual_fps >= 0.0)
+		if(format_desc_.mode != video_mode::progressive && ax_->GetFPS()/2.0 - format_desc_.fps >= 0.0)
 			frame = draw_frame::interlace(frame, render_simple_frame(), format_desc_.mode);
 		return frame;
 	}
@@ -138,23 +154,23 @@ private:
 
 		return head_;
 	}
-
-	std::wstring filename_;
-	std::shared_ptr<frame_processor_device> frame_processor_;
-	video_format_desc format_desc_;
-	
-	BYTE* bmp_data_;
-	
-	std::shared_ptr<void> hdc_;
-	std::shared_ptr<void> bmp_;
-
-	CComObject<caspar::flash::FlashAxContainer>* ax_;
-	safe_ptr<draw_frame> head_;
 };
 
 struct flash_producer::implementation
 {	
-	implementation(const std::wstring& filename) : filename_(filename), tail_(draw_frame::empty())
+	safe_ptr<draw_frame> tail_;
+	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
+	executor executor_;
+
+	std::shared_ptr<flash_renderer> renderer_;
+	std::shared_ptr<frame_processor_device> frame_processor_;
+	
+	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }	
+	std::wstring filename_;
+
+	implementation(const std::wstring& filename) 
+		: filename_(filename)
+		, tail_(draw_frame::empty())
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));
@@ -205,7 +221,7 @@ struct flash_producer::implementation
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		frame_processor_ = frame_processor;
-		frame_buffer_.set_capacity(static_cast<size_t>(frame_processor->get_video_format_desc().actual_fps/2.0));
+		frame_buffer_.set_capacity(static_cast<size_t>(frame_processor->get_video_format_desc().fps/2.0));
 		while(frame_buffer_.try_push(draw_frame::empty())){}
 		executor_.start();
 	}
@@ -228,16 +244,6 @@ struct flash_producer::implementation
 			}
 		});
 	}
-
-	safe_ptr<draw_frame> tail_;
-	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
-	executor executor_;
-
-	std::shared_ptr<flash_renderer> renderer_;
-	std::shared_ptr<frame_processor_device> frame_processor_;
-	
-	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }	
-	std::wstring filename_;
 };
 
 flash_producer::flash_producer(flash_producer&& other) : impl_(std::move(other.impl_)){}

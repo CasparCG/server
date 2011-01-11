@@ -30,7 +30,5 @@
 
 #include "compiler\vs\disable_silly_warnings.h"
 
-#include "config.h"
-
 #include <string>
 #include <cassert>

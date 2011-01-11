@@ -26,7 +26,7 @@
 
 #include <array>
 
-#define DEFINE_VIDEOFORMATDESC(w, h, m, f, s, fmt) { (fmt), (w), (h), (m), (f), (m == video_mode::progressive ? f : f/2.0), (1.0/(m == video_mode::progressive ? f : f/2.0)), ((w)*(h)*4), (s) }
+#define DEFINE_VIDEOFORMATDESC(w, h, m, f, s, fmt) { (fmt), (w), (h), (m), (m == video_mode::progressive ? f : f/2.0), (1.0/(m == video_mode::progressive ? f : f/2.0)), ((w)*(h)*4), (s) }
 
 namespace caspar { namespace core {
 	

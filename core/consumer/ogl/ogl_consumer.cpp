@@ -25,7 +25,7 @@
 #include "../../format/video_format.h"
 #include "../../processor/read_frame.h"
 
-#include <common/gl/utility.h>
+#include <common/gl/gl_check.h>
 #include <common/concurrency/executor.h>
 #include <common/utility/safe_ptr.h>
 
@@ -41,9 +41,40 @@
 namespace caspar { namespace core { namespace ogl{	
 
 struct consumer::implementation : boost::noncopyable
-{	
+{			
+	boost::unique_future<void> active_;
+	executor executor_;
+	
+	float wratio_;
+	float hratio_;
+	
+	float wSize_;
+	float hSize_;
+
+	GLuint				  texture_;
+	std::array<GLuint, 2> pbos_;
+
+	bool windowed_;
+	unsigned int screen_width_;
+	unsigned int screen_height_;
+	unsigned int screen_x_;
+	unsigned int screen_y_;
+				
+	stretch stretch_;
+	const video_format_desc format_desc_;
+	
+	sf::Window window_;
+
+public:
 	implementation(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
-		: format_desc_(format_desc), stretch_(stretch), screen_width_(0), screen_height_(0), windowed_(windowed), texture_(0)
+		: format_desc_(format_desc)
+		, stretch_(stretch)
+		, windowed_(windowed)
+		, texture_(0)
+		, screen_width_(format_desc.width)
+		, screen_height_(format_desc.height)
+		, screen_x_(0)
+		, screen_y_(0)
 	{		
 #ifdef _WIN32
 		DISPLAY_DEVICE d_device;			
@@ -77,11 +108,6 @@ struct consumer::implementation : boost::noncopyable
 
 		if(screen_index != 0)
 			CASPAR_LOG(warning) << "OGLConsumer only supports screen_index=0 for non-Win32";
-		
-		screen_width_ = format_desc_.width;
-		screen_height_ = format_desc_.height;
-		screen_x_ = 0;
-		screen_y_ = 0;
 #endif
 
 		executor_.start();
@@ -129,6 +155,7 @@ struct consumer::implementation : boost::noncopyable
 			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		});
+		active_ = executor_.begin_invoke([]{});
 	}
 	
 	std::pair<float, float> None()
@@ -200,6 +227,7 @@ struct consumer::implementation : boost::noncopyable
 		
 	void send(const safe_ptr<const read_frame>& frame)
 	{
+		active_.get();
 		active_ = executor_.begin_invoke([=]
 		{
 			sf::Event e;
@@ -209,45 +237,15 @@ struct consumer::implementation : boost::noncopyable
 		});
 	}
 
-	frame_consumer::sync_mode synchronize()
-	{
-		active_.get();
-		return frame_consumer::ready;
-	}
 
 	size_t buffer_depth() const
 	{
 		return 2;
 	}
-		
-	boost::unique_future<void> active_;
-	executor executor_;
-	
-	float wratio_;
-	float hratio_;
-	
-	float wSize_;
-	float hSize_;
-
-	GLuint				  texture_;
-	std::array<GLuint, 2> pbos_;
-
-	bool windowed_;
-	unsigned int screen_width_;
-	unsigned int screen_height_;
-	unsigned int screen_x_;
-	unsigned int screen_y_;
-				
-	stretch stretch_;
-	const video_format_desc format_desc_;
-	
-	sf::Window window_;
 };
 
 consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
-consumer::consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed)
-: impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
+consumer::consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
 void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
-frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
 size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}

@@ -2,7 +2,7 @@
 
 #include "device_buffer.h"
 
-#include <common/gl/utility.h>
+#include <common/gl/gl_check.h>
 
 namespace caspar { namespace core {
 	
@@ -11,7 +11,17 @@ GLenum INTERNAL_FORMAT[] = {0, GL_LUMINANCE8, GL_LUMINANCE8_ALPHA8, GL_RGB8, GL_
 
 struct device_buffer::implementation : boost::noncopyable
 {
-	implementation(size_t width, size_t height, size_t stride) : width_(width), height_(height), stride_(stride)
+	GLuint id_;
+
+	const size_t width_;
+	const size_t height_;
+	const size_t stride_;
+
+public:
+	implementation(size_t width, size_t height, size_t stride) 
+		: width_(width)
+		, height_(height)
+		, stride_(stride)
 	{	
 		GL(glGenTextures(1, &id_));
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
@@ -62,12 +72,6 @@ struct device_buffer::implementation : boost::noncopyable
 	{
 		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, id_, 0));
 	}
-
-	GLuint id_;
-
-	const size_t width_;
-	const size_t height_;
-	const size_t stride_;
 };
 
 device_buffer::device_buffer(size_t width, size_t height, size_t stride) : impl_(new implementation(width, height, stride)){}

@@ -60,9 +60,8 @@ struct transition_info
 class transition_producer : public frame_producer
 {
 public:
+	explicit transition_producer(const safe_ptr<frame_producer>& destination, const transition_info& info);
 	transition_producer(transition_producer&& other);
-
-	transition_producer(const safe_ptr<frame_producer>& destination, const transition_info& info);
 
 	virtual safe_ptr<draw_frame> receive();
 

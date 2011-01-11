@@ -10,8 +10,21 @@
 namespace caspar { namespace core {
 
 struct layer::implementation : boost::noncopyable
-{		
-	implementation(size_t index) : foreground_(frame_producer::empty()), background_(frame_producer::empty()), last_frame_(draw_frame::empty()), index_(index) {}
+{	
+	std::wstring print() const { return L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]"; }
+				
+	tbb::atomic<bool>			is_paused_;
+	safe_ptr<draw_frame>		last_frame_;
+	safe_ptr<frame_producer>	foreground_;
+	safe_ptr<frame_producer>	background_;
+	const size_t				index_;
+
+public:
+	implementation(size_t index) 
+		: foreground_(frame_producer::empty())
+		, background_(frame_producer::empty())
+		, last_frame_(draw_frame::empty())
+		, index_(index) {}
 	
 	void load(const safe_ptr<frame_producer>& frame_producer, bool autoplay)
 	{			
@@ -94,14 +107,6 @@ struct layer::implementation : boost::noncopyable
 
 		return last_frame_;
 	}
-
-	std::wstring print() const { return L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]"; }
-				
-	tbb::atomic<bool>			is_paused_;
-	safe_ptr<draw_frame>		last_frame_;
-	safe_ptr<frame_producer>	foreground_;
-	safe_ptr<frame_producer>	background_;
-	const size_t				index_;
 };
 
 layer::layer(size_t index) : impl_(new implementation(index)){}

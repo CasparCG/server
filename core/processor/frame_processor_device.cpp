@@ -12,7 +12,7 @@
 
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
-#include <common/gl/utility.h>
+#include <common/gl/gl_check.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
@@ -22,8 +22,16 @@
 namespace caspar { namespace core {
 	
 struct frame_processor_device::implementation : boost::noncopyable
-{	
-	implementation(const video_format_desc& format_desc) : fmt_(format_desc), image_processor_(format_desc){}
+{		
+	const video_format_desc format_desc_;
+
+	audio_processor	audio_processor_;
+	image_processor image_processor_;
+
+public:
+	implementation(const video_format_desc& format_desc) 
+		: format_desc_(format_desc)
+		, image_processor_(format_desc){}
 			
 	safe_ptr<const read_frame> process(safe_ptr<draw_frame>&& frame)
 	{			
@@ -42,19 +50,12 @@ struct frame_processor_device::implementation : boost::noncopyable
 	{
 		return make_safe<write_frame>(desc, image_processor_.create_buffers(desc));
 	}
-	
-	const video_format_desc format_desc_;
-		
-	audio_processor	audio_processor_;
-	image_processor image_processor_;
-											
-	const video_format_desc fmt_;
 };
 	
 frame_processor_device::frame_processor_device(frame_processor_device&& other) : impl_(std::move(other.impl_)){}
 frame_processor_device::frame_processor_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 safe_ptr<const read_frame> frame_processor_device::process(safe_ptr<draw_frame>&& frame){return impl_->process(std::move(frame));}
-const video_format_desc& frame_processor_device::get_video_format_desc() const { return impl_->fmt_; }
+const video_format_desc& frame_processor_device::get_video_format_desc() const { return impl_->format_desc_; }
 safe_ptr<write_frame> frame_processor_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		
 safe_ptr<write_frame> frame_processor_device::create_frame(size_t width, size_t height, pixel_format::type pix_fmt)
 {

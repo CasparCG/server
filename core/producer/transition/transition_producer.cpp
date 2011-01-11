@@ -31,9 +31,21 @@
 namespace caspar { namespace core {	
 
 struct transition_producer::implementation : boost::noncopyable
-{
-	implementation(const safe_ptr<frame_producer>& dest, const transition_info& info) : current_frame_(0), info_(info), 
-		dest_producer_(dest), source_producer_(frame_producer::empty())
+{	
+	unsigned short				current_frame_;
+	
+	const transition_info		info_;
+	
+	safe_ptr<frame_producer>	dest_producer_;
+	safe_ptr<frame_producer>	source_producer_;
+
+	std::shared_ptr<frame_processor_device>	frame_processor_;
+
+	implementation(const safe_ptr<frame_producer>& dest, const transition_info& info) 
+		: current_frame_(0)
+		, info_(info)
+		, dest_producer_(dest)
+		, source_producer_(frame_producer::empty())
 	{}
 		
 	safe_ptr<frame_producer> get_following_producer() const
@@ -47,11 +59,6 @@ struct transition_producer::implementation : boost::noncopyable
 	}
 		
 	safe_ptr<draw_frame> receive()
-	{
-		return render_frame();
-	}
-
-	safe_ptr<draw_frame> render_frame()
 	{
 		if(current_frame_++ >= info_.duration)
 			return draw_frame::eof();
@@ -67,7 +74,7 @@ struct transition_producer::implementation : boost::noncopyable
 
 		return compose(dest, source);
 	}
-
+	
 	safe_ptr<draw_frame> render_sub_frame(safe_ptr<frame_producer>& producer)
 	{
 		if(producer == frame_producer::empty())
@@ -150,14 +157,6 @@ struct transition_producer::implementation : boost::noncopyable
 	{
 		return L"transition[" + (source_producer_->print()) + L" -> " + (dest_producer_->print()) + L"]";
 	}
-	
-	safe_ptr<frame_producer>	source_producer_;
-	safe_ptr<frame_producer>	dest_producer_;
-	
-	unsigned short				current_frame_;
-	
-	const transition_info		info_;
-	std::shared_ptr<frame_processor_device>	frame_processor_;
 };
 
 transition_producer::transition_producer(transition_producer&& other) : impl_(std::move(other.impl_)){}

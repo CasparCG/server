@@ -2,14 +2,27 @@
 
 #include "host_buffer.h"
 
-#include <common/gl/utility.h>
+#include <common/gl/gl_check.h>
 
 namespace caspar { namespace core {
 																																							
 struct host_buffer::implementation : boost::noncopyable
-{
-	implementation(size_t size, usage_t usage) : size_(size), data_(nullptr), pbo_(0),
-		target_(usage == write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER), usage_(usage == write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
+{	
+	GLuint pbo_;
+
+	const size_t size_;
+
+	void* data_;
+	GLenum usage_;
+	GLenum target_;
+
+public:
+	implementation(size_t size, usage_t usage) 
+		: size_(size)
+		, data_(nullptr)
+		, pbo_(0)
+		, target_(usage == write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
+		, usage_(usage == write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
 	{
 		GL(glGenBuffers(1, &pbo_));
 		GL(glBindBuffer(target_, pbo_));
@@ -58,14 +71,6 @@ struct host_buffer::implementation : boost::noncopyable
 	{
 		GL(glBindBuffer(target_, 0));
 	}
-	
-	GLuint pbo_;
-
-	const size_t size_;
-
-	void* data_;
-	GLenum usage_;
-	GLenum target_;
 };
 
 host_buffer::host_buffer(size_t size, usage_t usage) : impl_(new implementation(size, usage)){}

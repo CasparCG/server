@@ -146,6 +146,7 @@ struct consumer::implementation : boost::noncopyable
 		executor_.start();
 
 		CASPAR_LOG(info) << TEXT("BLUECARD INFO: Successfully initialized device ") << device_index_;
+		active_ = executor_.begin_invoke([=]{});
 	}
 
 	~implementation()
@@ -175,7 +176,8 @@ struct consumer::implementation : boost::noncopyable
 		static size_t audio_samples = 1920;
 		static size_t audio_nchannels = 2;
 		static std::vector<short> silence(audio_samples*audio_nchannels*2, 0);
-
+		
+		active_.get();
 		active_ = executor_.begin_invoke([=]
 		{
 			try
@@ -223,12 +225,6 @@ struct consumer::implementation : boost::noncopyable
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
 		});
-	}
-
-	frame_consumer::sync_mode synchronize()
-	{
-		active_.get();
-		return frame_consumer::clock;
 	}
 
 	size_t buffer_depth() const
@@ -287,7 +283,6 @@ struct consumer::implementation : boost::noncopyable
 consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
 consumer::consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
 void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
-frame_consumer::sync_mode consumer::synchronize(){return impl_->synchronize();}
 size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}
 

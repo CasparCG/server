@@ -9,16 +9,22 @@
 #include "audio_processor.h"
 #include "pixel_format.h"
 
-#include "../../common/gl/utility.h"
-#include "../../common/utility/singleton_pool.h"
+#include <common/gl/gl_check.h>
 
 #include <boost/range/algorithm.hpp>
 
 namespace caspar { namespace core {
 																																							
 struct write_frame::implementation : boost::noncopyable
-{
-	implementation(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) : desc_(desc), buffers_(buffers){}
+{				
+	std::vector<safe_ptr<host_buffer>> buffers_;
+	std::vector<short> audio_data_;
+	const pixel_format_desc desc_;
+
+public:
+	implementation(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) 
+		: desc_(desc)
+		, buffers_(buffers){}
 	
 	void process_image(image_processor& processor)
 	{
@@ -44,13 +50,9 @@ struct write_frame::implementation : boost::noncopyable
 		auto ptr = static_cast<const unsigned char*>(buffers_[index]->data());
 		return boost::iterator_range<const unsigned char*>(ptr, ptr+buffers_[index]->size());
 	}
-				
-	std::vector<safe_ptr<host_buffer>> buffers_;
-	std::vector<short> audio_data_;
-	const pixel_format_desc desc_;
 };
 	
-write_frame::write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) : impl_(singleton_pool<implementation>::make_shared(desc, buffers)){}
+write_frame::write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) : impl_(new implementation(desc, buffers)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 write_frame& write_frame::operator=(write_frame&& other)

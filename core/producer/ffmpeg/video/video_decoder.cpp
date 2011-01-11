@@ -88,9 +88,24 @@ pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_
 }
 
 struct video_decoder::implementation : boost::noncopyable
-{
-	implementation(AVCodecContext* codec_context) : codec_context_(codec_context), width_(codec_context_->width), height_(codec_context_->height), 
-		pix_fmt_(codec_context_->pix_fmt), desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
+{	
+	std::shared_ptr<frame_processor_device> frame_processor_;
+	std::shared_ptr<SwsContext> sws_context_;
+
+	AVCodecContext* codec_context_;
+
+	int width_;
+	int height_;
+	PixelFormat pix_fmt_;
+	pixel_format_desc desc_;
+
+public:
+	explicit implementation(AVCodecContext* codec_context) 
+		: codec_context_(codec_context)
+		, width_(codec_context_->width)
+		, height_(codec_context_->height)
+		, pix_fmt_(codec_context_->pix_fmt)
+		, desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
 	{
 		if(desc_.pix_fmt == pixel_format::invalid)
 		{
@@ -158,19 +173,9 @@ struct video_decoder::implementation : boost::noncopyable
 	{
 		frame_processor_ = frame_processor;		
 		double frame_rate = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
-		if(abs(frame_rate - frame_processor->get_video_format_desc().actual_fps) > std::numeric_limits<double>::min())
+		if(abs(frame_rate - frame_processor->get_video_format_desc().fps) > std::numeric_limits<double>::min())
 			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid video framerate."));
 	}
-	
-	std::shared_ptr<frame_processor_device> frame_processor_;
-	std::shared_ptr<SwsContext> sws_context_;
-
-	AVCodecContext* codec_context_;
-
-	int width_;
-	int height_;
-	PixelFormat pix_fmt_;
-	pixel_format_desc desc_;
 };
 
 video_decoder::video_decoder(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
