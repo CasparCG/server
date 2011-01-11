@@ -90,6 +90,8 @@ void draw_frame::translate(double x, double y){impl_->image_transform_.pos = boo
 void draw_frame::texcoord(double left, double top, double right, double bottom){impl_->image_transform_.uv = boost::make_tuple(left, top, right, bottom);}
 void draw_frame::video_mode(video_mode::type mode){impl_->image_transform_.mode = mode;}
 void draw_frame::alpha(double value){impl_->image_transform_.alpha = value;}
+const image_transform& draw_frame::get_image_transform() const { return impl_->image_transform_;}
+const audio_transform& draw_frame::get_audio_transform() const { return impl_->audio_transform_;}
 
 safe_ptr<draw_frame> draw_frame::interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, video_mode::type mode)
 {			

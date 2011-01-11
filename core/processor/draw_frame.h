@@ -14,6 +14,9 @@
 #include <vector>
 
 namespace caspar { namespace core {
+
+struct image_transform;
+struct audio_transform;
 		
 class draw_frame
 {
@@ -40,6 +43,9 @@ public:
 	void texcoord(double left, double top, double right, double bottom);
 	void video_mode(video_mode::type mode);
 	void alpha(double value);
+
+	const image_transform& get_image_transform() const;
+	const audio_transform& get_audio_transform() const;
 		
 	static safe_ptr<draw_frame> interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, video_mode::type mode);
 		

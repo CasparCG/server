@@ -17,23 +17,29 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::implementation : boost::noncopyable
 {				
+	write_frame& self_;
 	std::vector<safe_ptr<host_buffer>> buffers_;
 	std::vector<short> audio_data_;
 	const pixel_format_desc desc_;
 
 public:
-	implementation(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) 
-		: desc_(desc)
+	implementation(write_frame& self, const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) 
+		: self_(self)
+		, desc_(desc)
 		, buffers_(buffers){}
 	
 	void process_image(image_processor& processor)
 	{
+		processor.begin(self_.get_image_transform());
 		processor.process(desc_, buffers_);
+		processor.end();
 	}
 
 	void process_audio(audio_processor& processor)
 	{
+		processor.begin(self_.get_audio_transform());
 		processor.process(audio_data_);
+		processor.end();
 	}
 
 	boost::iterator_range<unsigned char*> image_data(size_t index)
@@ -51,8 +57,12 @@ public:
 		return boost::iterator_range<const unsigned char*>(ptr, ptr+buffers_[index]->size());
 	}
 };
+
+#ifdef _MSC_VER
+#pragma warning(disable : 4355) // 'this' : used in base member initializer list
+#endif
 	
-write_frame::write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) : impl_(new implementation(desc, buffers)){}
+write_frame::write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) : impl_(new implementation(*this, desc, buffers)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 write_frame& write_frame::operator=(write_frame&& other)

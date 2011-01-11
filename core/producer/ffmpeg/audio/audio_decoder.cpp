@@ -37,21 +37,14 @@ public:
 	explicit implementation(AVCodecContext* codec_context, double fps) 
 		: codec_context_(codec_context)
 		, audio_buffer_(4*SAMPLE_RATE*2+FF_INPUT_BUFFER_PADDING_SIZE/2)
-		, audio_frame_size_(static_cast<size_t>(static_cast<double>(SAMPLE_RATE) / fps) * N_CHANNELS)
-	{
-		if(codec_context_->sample_rate != SAMPLE_RATE)
-			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid sample rate. Expected 48000."));
-
-		if(codec_context_->channels != 2)
-			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid channel count. Expected 2."));
-	}
+		, audio_frame_size_(static_cast<size_t>(static_cast<double>(SAMPLE_RATE) / fps) * N_CHANNELS){}
 		
 	std::vector<std::vector<short>> execute(const aligned_buffer& audio_packet)
 	{			
 		int written_bytes = audio_buffer_.size()*2 - FF_INPUT_BUFFER_PADDING_SIZE;
 		const int result = avcodec_decode_audio2(codec_context_, audio_buffer_.data(), &written_bytes, audio_packet.data(), audio_packet.size());
 
-		if(result <= 0)
+		if(result <= 0 || codec_context_->sample_rate != SAMPLE_RATE || codec_context_->channels != 2)
 			return std::vector<std::vector<short>>();
 						
 		current_chunk_.insert(current_chunk_.end(), audio_buffer_.data(), audio_buffer_.data() + written_bytes/2);
