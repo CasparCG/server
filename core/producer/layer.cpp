@@ -17,10 +17,10 @@ struct layer::implementation : boost::noncopyable
 	safe_ptr<draw_frame>		last_frame_;
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
-	const size_t				index_;
+	const int					index_;
 
 public:
-	implementation(size_t index) 
+	implementation(int index) 
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, last_frame_(draw_frame::empty())
@@ -109,7 +109,7 @@ public:
 	}
 };
 
-layer::layer(size_t index) : impl_(new implementation(index)){}
+layer::layer(int index) : impl_(new implementation(index)){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){other.impl_ = nullptr;}
 layer& layer::operator=(layer&& other)
 {

@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "../../common/utility/safe_ptr.h"
+#include "../../common/memory/safe_ptr.h"
 
 namespace caspar { namespace core {
 	

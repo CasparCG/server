@@ -93,9 +93,6 @@
     <ClInclude Include="utility\timer.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="utility\safe_ptr.h">
-      <Filter>Source\utility</Filter>
-    </ClInclude>
     <ClInclude Include="utility\string_convert.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
@@ -103,6 +100,9 @@
       <Filter>Source\gl</Filter>
     </ClInclude>
     <ClInclude Include="memory\page_locked_allocator.h">
+      <Filter>Source\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\safe_ptr.h">
       <Filter>Source\memory</Filter>
     </ClInclude>
   </ItemGroup>

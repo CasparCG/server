@@ -22,7 +22,7 @@
 #include "../processor/draw_frame.h"
 #include "../processor/frame_processor_device.h"
 
-#include <common/utility/safe_ptr.h>
+#include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 

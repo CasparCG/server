@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/utility/safe_ptr.h>
+#include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -12,7 +12,7 @@ class draw_frame;
 class layer : boost::noncopyable
 {
 public:
-	layer(size_t index = -1); // nothrow
+	layer(int index = -1); // nothrow
 	layer(layer&& other); // nothrow
 	layer& operator=(layer&& other); // nothrow
 	

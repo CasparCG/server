@@ -28,7 +28,7 @@
 #pragma once
 #endif
 
-#include "../utility/safe_ptr.h"
+#include "../memory/safe_ptr.h"
 
 #include <string>
 #include <map>
