@@ -31,7 +31,7 @@
 
 #include <conio.h>
 
-#include <core/config.h>
+#include <core/version.h>
 #include <core/configuration.h>
 #include <core/protocol/amcp/AMCPProtocolStrategy.h>
 #include <common/exception/win32_exception.h>

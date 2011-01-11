@@ -30,6 +30,7 @@
 #include "../../producer/flash/cg_producer.h"
 #include "../media.h"
 #include "../../configuration.h"
+#include "../../version.h"
 
 #include <algorithm>
 #include <locale>
