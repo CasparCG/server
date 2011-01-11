@@ -27,7 +27,7 @@
 
 #include <common/gl/gl_check.h>
 #include <common/concurrency/executor.h>
-#include <common/utility/safe_ptr.h>
+#include <common/memory/safe_ptr.h>
 
 #include <boost/thread.hpp>
 

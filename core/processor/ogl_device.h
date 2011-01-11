@@ -4,7 +4,7 @@
 #include "device_buffer.h"
 
 #include <common/concurrency/executor.h>
-#include <common/utility/safe_ptr.h>
+#include <common/memory/safe_ptr.h>
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>

@@ -26,7 +26,7 @@
 
 #include "../format/video_format.h"
 
-#include <common/utility/safe_ptr.h>
+#include <common/memory/safe_ptr.h>
 
 #include <tbb/concurrent_queue.h>
 

@@ -3,7 +3,7 @@
 #include "consumer/frame_consumer.h"
 #include "producer/frame_producer.h"
 
-#include <common/utility/safe_ptr.h>
+#include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>

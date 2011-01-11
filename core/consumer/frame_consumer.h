@@ -19,7 +19,7 @@
 */
 #pragma once
 
-#include <common/utility/safe_ptr.h>
+#include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 

@@ -2,7 +2,7 @@
 
 #include "../frame_producer.h"
 
-#include <common/utility/safe_ptr.h>
+#include <common/memory/safe_ptr.h>
 
 #include <string>
 #include <vector>
