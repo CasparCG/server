@@ -48,14 +48,15 @@ public:
 		executor_.begin_invoke([=]
 		{
 			buffer_.push_back(frame);
+
+			if(buffer_.size() < max_depth_)
+				return;
 	
 			boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
 			{
-				size_t offset = max_depth_ - consumer->buffer_depth();
 				try
 				{
-					if(offset < buffer_.size())
-						consumer->send(*(buffer_.begin() + offset));
+					consumer->send(buffer_[consumer->buffer_depth()-1]);
 				}
 				catch(...)
 				{
@@ -64,11 +65,10 @@ public:
 					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
 				}
 			});
+
+			buffer_.pop_front();
 	
 			clock_.wait(fmt_.fps);
-
-			if(buffer_.size() >= max_depth_)
-				buffer_.pop_front();
 		});
 	}
 };
