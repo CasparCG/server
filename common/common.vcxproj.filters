@@ -32,6 +32,9 @@
     <Filter Include="Afx">
       <UniqueIdentifier>{9250809a-3410-418d-95ca-ff2dcb6f0578}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\memory">
+      <UniqueIdentifier>{9259676d-c225-4422-a50e-30d152d78dc2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="io\SocketInfo.cpp">
@@ -98,6 +101,9 @@
     </ClInclude>
     <ClInclude Include="gl\gl_check.h">
       <Filter>Source\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\page_locked_allocator.h">
+      <Filter>Source\memory</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

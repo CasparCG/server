@@ -5,80 +5,43 @@
 #include <BlueVelvet4.h>
 #include "../../format/video_format.h"
 
+#include <common/memory/page_locked_allocator.h>
+
 #include <tbb/mutex.h>
+#include <tbb/recursive_mutex.h>
+
+#include <unordered_map>
 
 namespace caspar { namespace core { namespace bluefish {
 	
 static const size_t MAX_HANC_BUFFER_SIZE = 256*1024;
 static const size_t MAX_VBI_BUFFER_SIZE = 36*1920*4;
 
-struct page_locked_buffer
+struct blue_dma_buffer
 {
 public:
-	page_locked_buffer(size_t size) 
-		: size_(size)
-		, data_(static_cast<unsigned char*>(::VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)))
-	{
-		if(!data_)	
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed to allocate memory for paged locked buffer."));	
-		if(::VirtualLock(data_.get(), size_) == 0)	
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed to lock memory for paged locked buffer."));
-	}
-	
-	static void reserve_working_size(size_t size)
-	{
-		auto lock = get_lock();
-		SIZE_T workingSetMinSize = 0, workingSetMaxSize = 0;
-		if(::GetProcessWorkingSetSize(::GetCurrentProcess(), &workingSetMinSize, &workingSetMaxSize))
-		{
-			CASPAR_LOG(debug) << TEXT("WorkingSet size: min = ") << workingSetMinSize << TEXT(", max = ") << workingSetMaxSize;
+	blue_dma_buffer(int image_size, int id) 
+		: id_(id)
+		, image_size_(image_size)
+		, hanc_size_(256*1024)
+		, image_buffer_(image_size_)
+		, hanc_buffer_(hanc_size_){}
 			
-			workingSetMinSize += size;
-			workingSetMaxSize += size;
+	int id() const {return id_;}
 
-			if(!::SetProcessWorkingSetSize(::GetCurrentProcess(), workingSetMinSize, workingSetMaxSize))		
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed set workingset."));		
-		}
-	}
+	PBYTE image_data() { return image_buffer_.data(); }
+	PBYTE hanc_data() { return hanc_buffer_.data(); }
 
-	static void unreserve_working_size(size_t size)
-	{
-		auto lock = get_lock();
-		SIZE_T workingSetMinSize = 0, workingSetMaxSize = 0;
-		if(::GetProcessWorkingSetSize(::GetCurrentProcess(), &workingSetMinSize, &workingSetMaxSize))
-		{
-			CASPAR_LOG(debug) << TEXT("WorkingSet size: min = ") << workingSetMinSize << TEXT(", max = ") << workingSetMaxSize;
-			
-			workingSetMinSize += static_cast<SIZE_T>(static_cast<int>(workingSetMinSize) - static_cast<int>(size));
-			workingSetMaxSize += static_cast<SIZE_T>(static_cast<int>(workingSetMaxSize) - static_cast<int>(size));
+	size_t image_size() const { return image_size_; }
+	size_t hanc_size() const { return hanc_size_; }
 
-			if(!::SetProcessWorkingSetSize(::GetCurrentProcess(), workingSetMinSize, workingSetMaxSize))		
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed set workingset."));		
-		}
-	}
-
-	PBYTE data() const { return data_.get(); }
-	size_t size() const { return size_; }
-private:
-
-	static std::unique_ptr<tbb::mutex::scoped_lock> get_lock()
-	{
-		static tbb::mutex mutex;
-		return std::move(std::unique_ptr<tbb::mutex::scoped_lock>(new tbb::mutex::scoped_lock(mutex)));
-	}
-	
-	struct virtual_free
-	{
-		void operator()(LPVOID lpAddress)
-		{
-			if(lpAddress != nullptr)		
-				try{::VirtualFree(lpAddress, 0, MEM_RELEASE);}catch(...){}		
-		}
-	};
-
-	size_t size_;
-	std::unique_ptr<BYTE, virtual_free> data_;
+private:	
+	int id_;
+	size_t image_size_;
+	size_t hanc_size_;
+	std::vector<BYTE, page_locked_allocator<BYTE>> image_buffer_;	
+	std::vector<BYTE, page_locked_allocator<BYTE>> hanc_buffer_;
 };
-typedef std::shared_ptr<page_locked_buffer> page_locked_buffer_ptr;
+typedef std::shared_ptr<blue_dma_buffer> blue_dma_buffer_ptr;
 
 }}}
