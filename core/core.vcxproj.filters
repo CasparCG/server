@@ -177,9 +177,6 @@
     <ClInclude Include="consumer\bluefish\bluefish_consumer.h">
       <Filter>Source\channel\consumer\bluefish</Filter>
     </ClInclude>
-    <ClInclude Include="config.h">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\frame_consumer.h">
       <Filter>Source\channel\consumer</Filter>
     </ClInclude>
@@ -256,6 +253,9 @@
       <Filter>Source\channel\producer\flash\interop</Filter>
     </ClInclude>
     <ClInclude Include="configuration.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="version.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

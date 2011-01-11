@@ -27,6 +27,17 @@
 
 #include "../common/compiler/vs/disable_silly_warnings.h"
 
+#define NOMINMAX
+
+#if defined(_MSC_VER)
+#	ifndef _SCL_SECURE_NO_WARNINGS
+#		define _SCL_SECURE_NO_WARNINGS
+#	endif
+#	ifndef _CRT_SECURE_NO_WARNINGS
+#		define _CRT_SECURE_NO_WARNINGS
+#	endif
+#endif
+
 #if !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
 #define AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_
 
@@ -34,8 +45,6 @@
 #include <crtdbg.h>
 #endif
 
-#include "config.h"
-	 	 
 #include <winsock2.h>
 #include <tchar.h>
 #include <sstream>

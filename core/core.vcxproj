@@ -153,7 +153,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="channel.h" />
-    <ClInclude Include="config.h" />
     <ClInclude Include="consumer\bluefish\exception.h" />
     <ClInclude Include="consumer\bluefish\fwd.h" />
     <ClInclude Include="consumer\bluefish\memory.h" />
@@ -206,6 +205,7 @@
     <ClInclude Include="protocol\clk\CLKProtocolStrategy.h" />
     <ClInclude Include="protocol\media.h" />
     <ClInclude Include="configuration.h" />
+    <ClInclude Include="version.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishException.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishFrameManager.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishPlaybackStrategy.h" />
