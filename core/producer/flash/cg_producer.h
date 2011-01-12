@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../frame_producer.h"
-#include "../../format/video_format.h"
+#include "../../video_format.h"
 #include "../../channel.h"
 
 namespace caspar { namespace core { namespace flash{

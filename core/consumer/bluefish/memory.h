@@ -3,7 +3,7 @@
 #include <Windows.h>
 
 #include <BlueVelvet4.h>
-#include "../../format/video_format.h"
+#include "../../video_format.h"
 
 #include <common/memory/page_locked_allocator.h>
 

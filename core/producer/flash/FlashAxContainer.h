@@ -31,7 +31,7 @@
 #include <ocmm.h>
 #include <vector>
 
-#include "../../format/video_format.h"
+#include "../../video_format.h"
 #include "axflash.h"
 //#import "progid:ShockwaveFlash.ShockwaveFlash.9" no_namespace, named_guids
 

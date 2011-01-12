@@ -6,7 +6,7 @@
 
 #include "frame_consumer_device.h"
 
-#include "../format/video_format.h"
+#include "../video_format.h"
 
 #include <common/concurrency/executor.h>
 #include <common/utility/timer.h>

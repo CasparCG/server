@@ -231,9 +231,6 @@
     <ClInclude Include="StdAfx.h">
       <Filter>Afx</Filter>
     </ClInclude>
-    <ClInclude Include="format\video_format.h">
-      <Filter>Source\channel</Filter>
-    </ClInclude>
     <ClInclude Include="processor\pixel_format.h">
       <Filter>Source\channel\processor</Filter>
     </ClInclude>
@@ -251,6 +248,9 @@
     </ClInclude>
     <ClInclude Include="processor\draw_frame.h">
       <Filter>Source\channel\processor\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="video_format.h">
+      <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -368,9 +368,6 @@
     <ClCompile Include="StdAfx.cpp">
       <Filter>Afx</Filter>
     </ClCompile>
-    <ClCompile Include="format\video_format.cpp">
-      <Filter>Source\channel</Filter>
-    </ClCompile>
     <ClCompile Include="producer\flash\Flash9e_i.c">
       <Filter>Source\channel\producer\flash\interop</Filter>
     </ClCompile>
@@ -379,6 +376,9 @@
     </ClCompile>
     <ClCompile Include="processor\draw_frame.cpp">
       <Filter>Source\channel\processor\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="video_format.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

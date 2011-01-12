@@ -2,7 +2,7 @@
 
 #include "host_buffer.h"
 
-#include "../format/video_format.h"
+#include "../video_format.h"
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/thread/future.hpp>

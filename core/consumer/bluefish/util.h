@@ -1,7 +1,7 @@
 #pragma once
 
 #include <BlueVelvet4.h>
-#include "../../format/video_format.h"
+#include "../../video_format.h"
 
 namespace caspar { namespace core { namespace bluefish {
 	

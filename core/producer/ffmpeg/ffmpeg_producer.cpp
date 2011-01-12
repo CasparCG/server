@@ -6,7 +6,7 @@
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 
-#include "../../format/video_format.h"
+#include "../../video_format.h"
 #include "../../processor/draw_frame.h"
 
 #include <tbb/parallel_invoke.h>

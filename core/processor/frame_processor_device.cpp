@@ -8,7 +8,7 @@
 #include "write_frame.h"
 #include "read_frame.h"
 
-#include "../format/video_format.h"
+#include "../video_format.h"
 
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
