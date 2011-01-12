@@ -45,8 +45,7 @@ struct transition_producer::implementation : boost::noncopyable
 		: current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
-		, source_producer_(frame_producer::empty())
-	{}
+		, source_producer_(frame_producer::empty()){}
 		
 	safe_ptr<frame_producer> get_following_producer() const
 	{

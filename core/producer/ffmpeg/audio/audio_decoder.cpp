@@ -37,7 +37,11 @@ public:
 	explicit implementation(AVCodecContext* codec_context, double fps) 
 		: codec_context_(codec_context)
 		, audio_buffer_(4*SAMPLE_RATE*2+FF_INPUT_BUFFER_PADDING_SIZE/2)
-		, audio_frame_size_(static_cast<size_t>(static_cast<double>(SAMPLE_RATE) / fps) * N_CHANNELS){}
+		, audio_frame_size_(static_cast<size_t>(static_cast<double>(SAMPLE_RATE) / fps) * N_CHANNELS)
+	{
+		if(!codec_context)
+			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("codec_context"));						
+	}
 		
 	std::vector<std::vector<short>> execute(const aligned_buffer& audio_packet)
 	{			
@@ -45,7 +49,7 @@ public:
 		const int result = avcodec_decode_audio2(codec_context_, audio_buffer_.data(), &written_bytes, audio_packet.data(), audio_packet.size());
 
 		if(result <= 0 || codec_context_->sample_rate != SAMPLE_RATE || codec_context_->channels != 2)
-			return std::vector<std::vector<short>>();
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Invalid audio stream"));
 						
 		current_chunk_.insert(current_chunk_.end(), audio_buffer_.data(), audio_buffer_.data() + written_bytes/2);
 

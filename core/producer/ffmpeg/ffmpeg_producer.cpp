@@ -11,6 +11,8 @@
 
 #include <tbb/parallel_invoke.h>
 
+#include <boost/optional.hpp>
+
 #include <deque>
 
 using namespace boost::assign;
@@ -20,7 +22,7 @@ namespace caspar { namespace core { namespace ffmpeg{
 struct ffmpeg_producer : public frame_producer
 {
 	input								input_;			
-	audio_decoder						audio_decoder_;
+	std::unique_ptr<audio_decoder>		audio_decoder_;
 	video_decoder						video_decoder_;
 
 	std::deque<safe_ptr<write_frame>>	video_frame_channel_;	
@@ -39,10 +41,12 @@ public:
 		: filename_(filename)
 		, last_frame_(draw_frame(draw_frame::empty()))
 		, input_(filename)
-		, video_decoder_(input_.get_video_codec_context().get())
-		, audio_decoder_(input_.get_audio_codec_context().get(), input_.fps())
-	{				
+		, video_decoder_(input_.get_video_codec_context().get())		
+	{			
 		input_.set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
+
+		if(input_.get_audio_codec_context().get())
+			audio_decoder_.reset(new audio_decoder(input_.get_audio_codec_context().get(), input_.fps()));
 
 		auto seek = std::find(params.begin(), params.end(), L"SEEK");
 		if(seek != params.end() && ++seek != params.end())
@@ -81,16 +85,24 @@ public:
 			}, 
 			[&] 
 			{ // Audio Decoding
-				if(!audio_packet.empty())
+				if(!audio_packet.empty() && audio_decoder_)
 				{
-					auto chunks = audio_decoder_.execute(audio_packet);
-					audio_chunk_channel_.insert(audio_chunk_channel_.end(), chunks.begin(), chunks.end());
+					try
+					{
+						auto chunks = audio_decoder_->execute(audio_packet);
+						audio_chunk_channel_.insert(audio_chunk_channel_.end(), chunks.begin(), chunks.end());
+					}
+					catch(...)
+					{
+						CASPAR_LOG_CURRENT_EXCEPTION();
+						audio_decoder_.reset();
+					}
 				}
 			});
 
-			while(!video_frame_channel_.empty() && (!audio_chunk_channel_.empty() || input_.get_audio_codec_context() == nullptr))
+			while(!video_frame_channel_.empty() && (!audio_chunk_channel_.empty() || !audio_decoder_))
 			{
-				if(input_.get_audio_codec_context() != nullptr) 
+				if(audio_decoder_) 
 				{
 					video_frame_channel_.front()->audio_data() = std::move(audio_chunk_channel_.front());
 					audio_chunk_channel_.pop_front();
