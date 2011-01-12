@@ -10,9 +10,7 @@
 namespace caspar { namespace core {
 
 struct layer::implementation : boost::noncopyable
-{	
-	std::wstring print() const { return L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]"; }
-				
+{					
 	tbb::atomic<bool>			is_paused_;
 	safe_ptr<draw_frame>		last_frame_;
 	safe_ptr<frame_producer>	foreground_;
@@ -24,7 +22,10 @@ public:
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, last_frame_(draw_frame::empty())
-		, index_(index) {}
+		, index_(index) 
+	{
+		is_paused_ = false;
+	}
 	
 	void load(const safe_ptr<frame_producer>& frame_producer, bool autoplay)
 	{			
@@ -66,47 +67,50 @@ public:
 
 	void stop()
 	{
-		foreground_ = frame_producer::empty();
+		is_paused_ = false;
 		last_frame_ = draw_frame::empty();
+		foreground_ = frame_producer::empty();
 	}
 
 	void clear()
 	{
+		is_paused_ = false;
+		last_frame_ = draw_frame::empty();
 		foreground_ = frame_producer::empty();
 		background_ = frame_producer::empty();
-		last_frame_ = draw_frame::empty();
 	}
 	
 	safe_ptr<draw_frame> receive()
 	{		
-		if(foreground_ == frame_producer::empty() || is_paused_)
+		if(is_paused_)
 			return last_frame_;
 
 		try
 		{
 			last_frame_ = foreground_->receive(); 
-			if(last_frame_ == draw_frame::eof())
+			if(last_frame_ == draw_frame::eof() && foreground_ != frame_producer::empty())
 			{
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
 				foreground_ = following;
-				if(foreground_ != frame_producer::empty())
-					CASPAR_LOG(info) << print() << L" [EOF] " << foreground_->print() << " => foreground";
-				else
-					CASPAR_LOG(info) << print() << L" [EOF] empty => foreground";
+
+				CASPAR_LOG(info) << print() << L" [EOF] " << foreground_->print() << " => foreground";
+
 				last_frame_ = receive();
 			}
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << print() << L" empty => foreground";
 			foreground_ = frame_producer::empty();
 			last_frame_ = draw_frame::empty();
+			CASPAR_LOG(warning) << print() << L" empty => foreground";
 		}
 
 		return last_frame_;
 	}
+
+	std::wstring print() const { return L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]"; }
 };
 
 layer::layer(int index) : impl_(new implementation(index)){}

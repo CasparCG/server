@@ -24,7 +24,7 @@ struct channel::implementation : boost::noncopyable
 {	
 	mutable executor executor_;
 				
-	safe_ptr<frame_processor_device> processor_device_;
+	const safe_ptr<frame_processor_device> processor_device_;
 	frame_consumer_device consumer_device_;
 						
 	std::map<int, layer> layers_;		

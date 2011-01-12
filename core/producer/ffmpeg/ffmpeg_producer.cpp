@@ -37,24 +37,12 @@ struct ffmpeg_producer : public frame_producer
 	video_format_desc					format_desc_;
 
 public:
-	explicit ffmpeg_producer(const std::wstring& filename, const  std::vector<std::wstring>& params) 
+	explicit ffmpeg_producer(const std::wstring& filename) 
 		: filename_(filename)
 		, last_frame_(draw_frame(draw_frame::empty()))
 		, input_(filename)
 		, video_decoder_(input_.get_video_codec_context().get())		
-	{			
-		input_.set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
-
-		if(input_.get_audio_codec_context().get())
-			audio_decoder_.reset(new audio_decoder(input_.get_audio_codec_context().get(), input_.fps()));
-
-		auto seek = std::find(params.begin(), params.end(), L"SEEK");
-		if(seek != params.end() && ++seek != params.end())
-		{
-			if(!input_.seek(boost::lexical_cast<unsigned long long>(*seek)))
-				CASPAR_LOG(warning) << "Failed to seek file: " << filename_  << "to frame" << *seek;
-		}
-	}
+		, audio_decoder_(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), input_.fps()) : nullptr){}
 
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
@@ -130,6 +118,17 @@ public:
 		return result;
 	}
 
+	void set_loop(bool value)
+	{
+		input_.set_loop(value);
+	}
+
+	void seek(unsigned long long value)
+	{
+		if(!input_.seek(value))
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to seek file: )") << arg_value_info(narrow(filename_)));		
+	}
+
 	virtual std::wstring print() const
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
@@ -149,7 +148,15 @@ safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>&
 	if(ext == extensions.end())
 		return frame_producer::empty();
 
-	return make_safe<ffmpeg_producer>(filename + L"." + *ext, params);
+	auto producer = make_safe<ffmpeg_producer>(filename + L"." + *ext);
+
+	producer->set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
+	
+	auto seek = std::find(params.begin(), params.end(), L"SEEK");
+	if(seek != params.end() && ++seek != params.end())
+		producer->seek(boost::lexical_cast<unsigned long long>(*seek));
+
+	return producer;	
 }
 
 }}}
