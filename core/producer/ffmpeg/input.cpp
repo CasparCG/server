@@ -2,7 +2,7 @@
 
 #include "input.h"
 
-#include "../../format/video_format.h"
+#include "../../video_format.h"
 
 #include <common/concurrency/executor.h>
 

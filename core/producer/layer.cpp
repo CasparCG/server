@@ -5,7 +5,7 @@
 #include "../processor/draw_frame.h"
 #include "../producer/frame_producer.h"
 
-#include "../format/video_format.h"
+#include "../video_format.h"
 
 namespace caspar { namespace core {
 

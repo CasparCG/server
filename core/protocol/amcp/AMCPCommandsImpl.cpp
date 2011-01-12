@@ -23,7 +23,7 @@
 #include "AMCPCommandsImpl.h"
 #include "AMCPProtocolStrategy.h"
 #include "../../producer/frame_producer.h"
-#include "../../format/video_format.h"
+#include "../../video_format.h"
 #include "../../producer/flash/flash_producer.h"
 #include "../../producer/transition/transition_producer.h"
 #include <boost/lexical_cast.hpp>

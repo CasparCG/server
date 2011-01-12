@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../format/video_format.h"
+#include "../../video_format.h"
 
 #include "DeckLinkAPI_h.h"
 

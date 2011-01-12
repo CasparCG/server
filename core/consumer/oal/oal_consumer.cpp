@@ -22,7 +22,7 @@
 
 #include "oal_consumer.h"
 
-#include "../../format/video_format.h"
+#include "../../video_format.h"
 
 #include "../../processor/read_frame.h"
 

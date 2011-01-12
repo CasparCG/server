@@ -24,7 +24,7 @@
 #include "pixel_format.h"
 #include "write_frame.h"
 
-#include "../format/video_format.h"
+#include "../video_format.h"
 
 #include <common/memory/safe_ptr.h>
 
