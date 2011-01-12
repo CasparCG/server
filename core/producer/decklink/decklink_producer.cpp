@@ -120,21 +120,35 @@ public:
 			return S_OK;
 		}
 
-		// TODO: Convert from YUV422 non-planar to either a permutation of BGRA or YUV422 planar format.
-		// Decklink 7.6 has IDeckLinkVideoConversion which can convert to ARGB, should probably upgrade to latest SDK version.
+		pixel_format_desc desc;
+		desc.pix_fmt = pixel_format::ycbcr;
+		desc.planes.push_back(pixel_format_desc::plane(width_, height_, 1));
+		desc.planes.push_back(pixel_format_desc::plane(width_/2, height_, 1));
+		desc.planes.push_back(pixel_format_desc::plane(width_/2, height_, 1));	
+		
+		auto frame = frame_processor_->create_frame(desc);
+				
+		void* bytes;
+		if(FAILED(video->GetBytes(&bytes)))
+			return S_OK;
 
-		//pixel_format_desc desc;
-		//desc.pix_fmt = pixel_format::argb;
-		//desc.planes.push_back(pixel_format_desc::plane(width_, height_, 4));	
+		unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
+		int frame_size = (width_ * 16 / 8) * height_;
 
-		//auto frame = frame_processor_->create_frame(desc);
-		//		
-		//void* bytes;
-		//if(FAILED(video->GetBytes(&bytes)))
-		//	return S_OK;
+		// Convert to planar YUV422
+		unsigned char* y = frame->image_data(0).begin();
+		unsigned char* cb = frame->image_data(1).begin();
+		unsigned char* cr = frame->image_data(2).begin();
 
-		//std::copy_n(reinterpret_cast<unsigned char*>(bytes), width_*height_, frame->image_data().begin());
-		head_ = draw_frame::empty();
+		for(int n = 0; n < frame_size; n += 4)
+		{
+			*(cb++) = data[n+0];
+			*(y++)  = data[n+1];
+			*(cr++) = data[n+2];
+			*(y++)  = data[n+3];
+		}
+
+		head_ = frame;
 
 		return S_OK;
 	}
@@ -147,8 +161,7 @@ public:
 	}
 };
 	
-// NOTE: This class is not-fully implemented. See input_callback::VideoInputFrameArrived.
-// With this design it will probably not be possible to do input and output from same decklink device, as there will be 2 threads trying to use the same device.
+// NOTE: With this design it will probably not be possible to do input and output from same decklink device, as there will be 2 threads trying to use the same device.
 // decklink_consumer and decklink_producer will need to use a common active object decklink_device which handles all processing for decklink device.
 class decklink_producer : public frame_producer
 {
@@ -181,6 +194,7 @@ public:
 
 			input_.Release();
 			decklink_.Release();
+			callback_.reset();
 			CoUninitialize();
 		});
 	}
