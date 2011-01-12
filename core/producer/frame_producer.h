@@ -78,7 +78,7 @@ public:
 	{
 		struct empty_frame_producer : public frame_producer
 		{
-			virtual safe_ptr<draw_frame> receive(){return draw_frame::eof();}
+			virtual safe_ptr<draw_frame> receive(){return draw_frame::empty();}
 			virtual void initialize(const safe_ptr<frame_processor_device>&){}
 			virtual std::wstring print() const { return L"empty";}
 		};
