@@ -33,7 +33,6 @@
 #include <common/exception/exceptions.h>
 
 #include <tbb/concurrent_queue.h>
-#include <boost/thread.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 4996)

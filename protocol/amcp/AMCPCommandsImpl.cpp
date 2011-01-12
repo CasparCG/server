@@ -171,7 +171,7 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		_parameters[0] = env::media_folder() + L"\\" + _parameters[0];
+		_parameters[0] = _parameters[0];
 		auto pFP = load_media(_parameters);		
 		GetChannel()->preview(GetLayerIndex(), pFP);
 	
@@ -246,7 +246,7 @@ bool LoadbgCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		_parameters[0] = env::media_folder() + L"\\" + _parameters[0];
+		_parameters[0] = _parameters[0];
 		auto pFP = load_media(_parameters);
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
@@ -704,7 +704,7 @@ bool CinfCommand::DoExecute()
 {
 	std::wstringstream replyString;
 
-	std::wstring filename = env::media_folder()+_parameters[0];
+	std::wstring filename = _parameters[0];
 
 	// TODO:
 

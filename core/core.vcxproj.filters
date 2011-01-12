@@ -73,6 +73,9 @@
     <Filter Include="Source\producer\image">
       <UniqueIdentifier>{3d4314f3-8a39-44e3-a0c9-9b833bb8f809}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\producer\decklink">
+      <UniqueIdentifier>{3685fbd9-c2ff-495c-9864-6b0c5778d852}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
@@ -198,6 +201,9 @@
     <ClInclude Include="channel.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="producer\decklink\decklink_producer.h">
+      <Filter>Source\producer\decklink</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
@@ -298,6 +304,9 @@
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
       <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\decklink\decklink_producer.cpp">
+      <Filter>Source\producer\decklink</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
