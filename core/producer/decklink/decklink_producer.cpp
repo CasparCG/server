@@ -167,23 +167,19 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* /*audio*/)
 	{		
-		if(!frame_buffer_.try_push(head_))
-		{
-			CASPAR_LOG(trace) << "decklink overflow";
+		if(!frame_buffer_.try_push(head_) || video == nullptr)
+			return S_OK;		
+				
+		void* bytes = nullptr;
+		if(FAILED(video->GetBytes(&bytes)))
 			return S_OK;
-		}
 
 		pixel_format_desc desc;
 		desc.pix_fmt = pixel_format::ycbcr;
 		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width,   format_desc_.height, 1));
 		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));
-		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));	
-		
+		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));			
 		auto frame = frame_processor_->create_frame(desc);
-				
-		void* bytes;
-		if(FAILED(video->GetBytes(&bytes)))
-			return S_OK;
 
 		unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
 		int frame_size = (format_desc_.width * 16 / 8) * format_desc_.height;
@@ -208,8 +204,7 @@ public:
 
 	safe_ptr<draw_frame> get_frame()
 	{
-		if(!frame_buffer_.try_pop(tail_))
-			CASPAR_LOG(trace) << "decklink underflow";
+		frame_buffer_.try_pop(tail_);
 		return tail_;
 	}
 };
