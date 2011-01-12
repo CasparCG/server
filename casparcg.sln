@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj",
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shell", "shell\shell.vcxproj", "{8C26C94F-8092-4769-8D84-DEA479721C5B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "protocol", "protocol\protocol.vcxproj", "{2040B361-1FB6-488E-84A5-38A580DA90DE}"
+EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
 		Svn-Managed = True
@@ -35,6 +37,10 @@ Global
 		{8C26C94F-8092-4769-8D84-DEA479721C5B}.Debug|Win32.Build.0 = Debug|Win32
 		{8C26C94F-8092-4769-8D84-DEA479721C5B}.Release|Win32.ActiveCfg = Release|Win32
 		{8C26C94F-8092-4769-8D84-DEA479721C5B}.Release|Win32.Build.0 = Release|Win32
+		{2040B361-1FB6-488E-84A5-38A580DA90DE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2040B361-1FB6-488E-84A5-38A580DA90DE}.Debug|Win32.Build.0 = Debug|Win32
+		{2040B361-1FB6-488E-84A5-38A580DA90DE}.Release|Win32.ActiveCfg = Release|Win32
+		{2040B361-1FB6-488E-84A5-38A580DA90DE}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

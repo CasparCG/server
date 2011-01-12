@@ -191,18 +191,6 @@
     <ClInclude Include="producer\image\image_scroll_producer.h" />
     <ClInclude Include="producer\layer.h" />
     <ClInclude Include="producer\transition\transition_producer.h" />
-    <ClInclude Include="protocol\amcp\AMCPCommand.h" />
-    <ClInclude Include="protocol\amcp\AMCPCommandQueue.h" />
-    <ClInclude Include="protocol\amcp\AMCPCommandsImpl.h" />
-    <ClInclude Include="protocol\amcp\AMCPProtocolStrategy.h" />
-    <ClInclude Include="protocol\cii\CIICommand.h" />
-    <ClInclude Include="protocol\cii\CIICommandsImpl.h" />
-    <ClInclude Include="protocol\cii\CIIProtocolStrategy.h" />
-    <ClInclude Include="protocol\clk\CLKCommand.h" />
-    <ClInclude Include="protocol\clk\CLKProtocolStrategy.h" />
-    <ClInclude Include="protocol\media.h" />
-    <ClInclude Include="configuration.h" />
-    <ClInclude Include="version.h" />
     <ClInclude Include="video_format.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishException.h" />
     <CustomBuildStep Include="consumers\bluefish\BluefishFrameManager.h" />
@@ -335,39 +323,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="protocol\amcp\AMCPCommandQueue.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\stdafx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="protocol\amcp\AMCPCommandsImpl.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="protocol\amcp\AMCPProtocolStrategy.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="protocol\cii\CIICommandsImpl.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="protocol\cii\CIIProtocolStrategy.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="protocol\clk\CLKCommand.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="protocol\clk\CLKProtocolStrategy.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="protocol\media.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="configuration.cpp" />
     <ClCompile Include="StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
