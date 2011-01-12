@@ -6,6 +6,7 @@
 #include <core/producer/ffmpeg/ffmpeg_producer.h>
 #include <core/producer/flash/cg_producer.h>
 #include <core/producer/image/image_producer.h>
+#include <core/producer/decklink/decklink_producer.h>
 //#include "../producer/image/image_scroll_producer.h"
 
 #include <common/exception/exceptions.h>
@@ -28,6 +29,7 @@ safe_ptr<core::frame_producer> load_media(const std::vector<std::wstring>& param
 		(&core::image::create_image_producer)
 	//	(&image::create_image_scroll_producer)
 		(&core::ffmpeg::create_ffmpeg_producer)
+		(&core::create_decklink_producer)
 		(&core::create_color_producer);
 
 	if(params.empty())

@@ -7,6 +7,8 @@
 #include "../../processor/draw_frame.h"
 #include "../../video_format.h"
 
+#include <common/env.h>
+
 #include <boost/assign.hpp>
 
 #include <algorithm>
@@ -50,7 +52,7 @@ struct image_producer : public frame_producer
 safe_ptr<frame_producer> create_image_producer(const  std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg");
-	std::wstring filename = params[0];
+	std::wstring filename = env::media_folder() + L"\\" + params[0];
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 		{					
