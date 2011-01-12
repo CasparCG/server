@@ -8,7 +8,8 @@ struct env
 {
 	static const std::wstring& media_folder();
 	static const std::wstring& log_folder();
-	static const std::wstring& template_folder();		
+	static const std::wstring& template_folder();
+	static const std::wstring& template_host();
 	static const std::wstring& data_folder();
 	static const std::wstring& version();
 	static const std::wstring& version_tag();

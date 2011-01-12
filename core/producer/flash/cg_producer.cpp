@@ -18,11 +18,11 @@ struct cg_producer::implementation : boost::noncopyable
 {
 public:
 	implementation() 
-		: flash_producer_(flash_producer(env::template_folder()+TEXT("cg.fth.18"))){}
+		: flash_producer_(flash_producer(env::template_host())){}
 
 	void clear()
 	{
-		flash_producer_ = flash_producer(env::template_folder()+TEXT("cg.fth.18"));
+		flash_producer_ = flash_producer(env::template_host());
 	}
 
 	void add(int layer, const std::wstring& filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)

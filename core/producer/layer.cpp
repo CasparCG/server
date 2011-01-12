@@ -88,8 +88,10 @@ public:
 		try
 		{
 			last_frame_ = foreground_->receive(); 
-			if(last_frame_ == draw_frame::eof() && foreground_ != frame_producer::empty())
+			if(last_frame_ == draw_frame::eof())
 			{
+				assert(foreground_ != frame_producer::empty());
+
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
 				foreground_ = following;

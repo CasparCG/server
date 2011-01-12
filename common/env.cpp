@@ -17,6 +17,7 @@ namespace caspar
 std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
+std::wstring ftemplate_host;
 std::wstring data;
 boost::property_tree::ptree pt;
 
@@ -30,6 +31,7 @@ void do_setup()
 	media = widen(paths.get("media-path", initialPath + "\\media\\"));
 	log = widen(paths.get("log-path", initialPath + "\\log\\"));
 	ftemplate = widen(paths.get("template-path", initialPath + "\\template\\"));
+	ftemplate_host = widen(paths.get("template-host-path", initialPath + "\\template\\cg.fth"));
 	data = widen(paths.get("data-path", initialPath + "\\data\\"));
 }
 
@@ -56,6 +58,13 @@ const std::wstring& env::template_folder()
 	setup();
 	return ftemplate;
 }
+
+const std::wstring& env::template_host()
+{
+	setup();
+	return ftemplate_host;
+}
+
 
 const std::wstring& env::data_folder()
 {
