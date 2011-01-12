@@ -64,17 +64,17 @@
     <Filter Include="Source\producer\transition">
       <UniqueIdentifier>{26bf9811-1954-46f5-86ce-ecdc26e6db16}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\producer\flash">
-      <UniqueIdentifier>{fc25232a-cab1-4c79-962a-b51dc51161fb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\producer\flash\interop">
-      <UniqueIdentifier>{f99e4727-2b1b-4009-a445-99b11b071e8e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\producer\image">
       <UniqueIdentifier>{3d4314f3-8a39-44e3-a0c9-9b833bb8f809}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\producer\decklink">
       <UniqueIdentifier>{3685fbd9-c2ff-495c-9864-6b0c5778d852}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\flash">
+      <UniqueIdentifier>{fc25232a-cab1-4c79-962a-b51dc51161fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\flash\interop">
+      <UniqueIdentifier>{f99e4727-2b1b-4009-a445-99b11b071e8e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
