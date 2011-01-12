@@ -31,15 +31,17 @@
 
 #include <conio.h>
 
-#include <core/version.h>
-#include <core/configuration.h>
-#include <core/protocol/amcp/AMCPProtocolStrategy.h>
+#include "bootstrapper.h"
+
 #include <common/exception/win32_exception.h>
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
+#include <common/env.h>
+#include <protocol/amcp/AMCPProtocolStrategy.h>
 
 using namespace caspar;
 using namespace caspar::core;
+using namespace caspar::protocol;
 
 class win32_handler_tbb_installer : public tbb::task_scheduler_observer
 {
@@ -57,10 +59,10 @@ int main(int argc, wchar_t* argv[])
 	timeBeginPeriod(1);
 
 	std::wstringstream str;
-	str << "CasparCG " << CASPAR_VERSION_STR << " " << CASPAR_VERSION_TAG;
+	str << "CasparCG " << env::version() << " " << env::version_tag();
 	SetConsoleTitle(str.str().c_str());
 
-	CASPAR_LOG(info) << L"Starting CasparCG Video Playout Server Ver: " << CASPAR_VERSION_STR << " Tag: " << CASPAR_VERSION_TAG << std::endl;
+	CASPAR_LOG(info) << L"Starting CasparCG Video Playout Server Ver: " << env::version() << env::version_tag() << std::endl;
 	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n\n" << std::endl;
 
 	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
@@ -76,7 +78,7 @@ int main(int argc, wchar_t* argv[])
 	MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 #endif
 
-	log::add_file_sink(configuration::log_folder());
+	log::add_file_sink(env::log_folder());
 	
 	CASPAR_LOG(debug) << "Started Main Thread";
 
@@ -85,7 +87,7 @@ int main(int argc, wchar_t* argv[])
 				
 	try 
 	{
-		configuration caspar_device;
+		bootstrapper caspar_device;
 				
 		auto dummy = std::make_shared<IO::DummyClientInfo>();
 		amcp::AMCPProtocolStrategy amcp(caspar_device.get_channels());

@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="boostrapper.cpp" />
     <ClCompile Include="main.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -22,6 +23,9 @@
     </ProjectReference>
     <ProjectReference Include="..\core\core.vcxproj">
       <Project>{79388c20-6499-4bf6-b8b9-d8c33d7d4ddd}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\protocol\protocol.vcxproj">
+      <Project>{2040b361-1fb6-488e-84a5-38a580da90de}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -35,6 +39,9 @@
     <None Include="My Amplifier Results\r008lw\r008lw.ampl" />
     <None Include="My Amplifier Results\r009hs\r009hs.ampl" />
     <None Include="My Inspector Results\r000ti3\r000ti3.insp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="bootstrapper.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8C26C94F-8092-4769-8D84-DEA479721C5B}</ProjectGuid>
