@@ -189,6 +189,9 @@ public:
 		tbb::queuing_mutex::scoped_lock lock(seek_mutex_);
 		if(av_seek_frame(format_context_.get(), -1, seek_target*AV_TIME_BASE, 0) < 0)
 			return false;
+		
+		video_packet_buffer_.clear();
+		audio_packet_buffer_.clear();
 
 		return true;
 	}
