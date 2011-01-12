@@ -55,8 +55,6 @@ class decklink_input : public IDeckLinkInputCallback
 	CComQIPtr<IDeckLinkInput>	input_;
 
 	tbb::atomic<ULONG> ref_count_;
-	size_t width_;
-	size_t height_;
 	std::shared_ptr<frame_processor_device> frame_processor_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
@@ -73,7 +71,7 @@ public:
 		, tail_(draw_frame::empty())
 	{
 		ref_count_ = 1;
-		frame_buffer_.set_capacity(8);
+		frame_buffer_.set_capacity(4);
 		
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
@@ -185,17 +183,21 @@ public:
 		int frame_size = (format_desc_.width * 16 / 8) * format_desc_.height;
 
 		// Convert to planar YUV422
-		unsigned char* y = frame->image_data(0).begin();
+		unsigned char* y  = frame->image_data(0).begin();
 		unsigned char* cb = frame->image_data(1).begin();
 		unsigned char* cr = frame->image_data(2).begin();
-
-		for(int n = 0; n < frame_size; n += 4)
+		
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, frame_size/4), 
+		[&](const tbb::blocked_range<size_t>& r)
 		{
-			*(cb++) = data[n+0];
-			*(y++)  = data[n+1];
-			*(cr++) = data[n+2];
-			*(y++)  = data[n+3];
-		}
+			for(auto n = r.begin(); n != r.end(); ++n)
+			{
+				cb[n]	  = data[n*4+0];
+				y [n*2+0] = data[n*4+1];
+				cr[n]	  = data[n*4+2];
+				y [n*2+1] = data[n*4+3];
+			}
+		});
 
 		head_ = frame;
 
