@@ -3,9 +3,7 @@
 #include <core/channel.h>
 
 #include <core/consumer/oal/oal_consumer.h>
-#ifndef DISABLE_BLUEFISH
 #include <core/consumer/bluefish/bluefish_consumer.h>
-#endif
 #include <core/consumer/decklink/decklink_consumer.h>
 #include <core/consumer/ogl/ogl_consumer.h>
 #include <core/producer/flash/FlashAxContainer.h>
@@ -82,12 +80,10 @@ struct bootstrapper::implementation : boost::noncopyable
 						bool windowed = xml_consumer.second.get("windowed", false);
 						consumers.push_back(ogl::consumer(format_desc, device, stretch, windowed));
 					}
-				#ifndef DISABLE_BLUEFISH
 					else if(name == "bluefish")					
 						consumers.push_back(bluefish::consumer(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false)));					
-				#endif
 					else if(name == "decklink")
-						consumers.push_back(make_safe<decklink::decklink_consumer>(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false), xml_consumer.second.get("internalkey", false)));
+						consumers.push_back(make_safe<decklink::decklink_consumer>(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("internalkey", false)));
 					else if(name == "audio")
 						consumers.push_back(oal::consumer(format_desc));			
 				}
