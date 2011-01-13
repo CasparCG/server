@@ -138,11 +138,14 @@ safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>&
 
 	if(ext == extensions.end())
 		return frame_producer::empty();
+
+	std::wstring path = filename + L"." + *ext;
+	bool loop = std::find(params.begin(), params.end(), L"LOOP") != params.end();
 	
 	static boost::wregex frame_range_expr(L".*\\[(?<START>\\d+\\.?\\d*)(-?(?<END>\\d+\\.?\\d*))?\\].*");
 
-	double start_time = 0;
-	double end_time = -1;
+	double start_time = 0.0;
+	double end_time = -1.0;
 	
 	boost::wsmatch what;
 	if(std::find_if(params.begin(), params.end(), [&](const std::wstring& str){ return boost::regex_match(str, what, frame_range_expr);}) != params.end())
@@ -153,9 +156,6 @@ safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>&
 		try{end_time = boost::lexical_cast<double>(what["END"].str());}
 		catch(boost::bad_lexical_cast&){}
 	}
-
-	std::wstring path = filename + L"." + *ext;
-	bool loop = std::find(params.begin(), params.end(), L"LOOP") != params.end();
 
 	return make_safe<ffmpeg_producer>(path, loop, start_time, end_time);
 }
