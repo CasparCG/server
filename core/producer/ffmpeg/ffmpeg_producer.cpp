@@ -13,7 +13,7 @@
 
 #include <tbb/parallel_invoke.h>
 
-#include <boost/optional.hpp>
+#include <boost/regex.hpp>
 
 #include <deque>
 
@@ -39,10 +39,10 @@ struct ffmpeg_producer : public frame_producer
 	video_format_desc					format_desc_;
 
 public:
-	explicit ffmpeg_producer(const std::wstring& filename) 
+	explicit ffmpeg_producer(const std::wstring& filename, bool loop, double start_time = 0, double end_time = -1.0) 
 		: filename_(filename)
 		, last_frame_(draw_frame(draw_frame::empty()))
-		, input_(filename)
+		, input_(filename, loop, start_time, end_time)
 		, video_decoder_(input_.get_video_codec_context().get())		
 		, audio_decoder_(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), input_.fps()) : nullptr){}
 
@@ -120,17 +120,6 @@ public:
 		return result;
 	}
 
-	void set_loop(bool value)
-	{
-		input_.set_loop(value);
-	}
-
-	void seek(unsigned long long value)
-	{
-		if(!input_.seek(value))
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to seek file: )") << arg_value_info(narrow(filename_)));		
-	}
-
 	virtual std::wstring print() const
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
@@ -149,16 +138,26 @@ safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>&
 
 	if(ext == extensions.end())
 		return frame_producer::empty();
-
-	auto producer = make_safe<ffmpeg_producer>(filename + L"." + *ext);
-
-	producer->set_loop(std::find(params.begin(), params.end(), L"LOOP") != params.end());
 	
-	auto seek = std::find(params.begin(), params.end(), L"SEEK");
-	if(seek != params.end() && ++seek != params.end())
-		producer->seek(boost::lexical_cast<unsigned long long>(*seek));
+	static boost::wregex frame_range_expr(L".*\\[(?<START>\\d+\\.?\\d*)(-?(?<END>\\d+\\.?\\d*))?\\].*");
 
-	return producer;	
+	double start_time = 0;
+	double end_time = -1;
+	
+	boost::wsmatch what;
+	if(std::find_if(params.begin(), params.end(), [&](const std::wstring& str){ return boost::regex_match(str, what, frame_range_expr);}) != params.end())
+	{
+		try{start_time = boost::lexical_cast<double>(what["START"].str());}
+		catch(boost::bad_lexical_cast&){}
+
+		try{end_time = boost::lexical_cast<double>(what["END"].str());}
+		catch(boost::bad_lexical_cast&){}
+	}
+
+	std::wstring path = filename + L"." + *ext;
+	bool loop = std::find(params.begin(), params.end(), L"LOOP") != params.end();
+
+	return make_safe<ffmpeg_producer>(path, loop, start_time, end_time);
 }
 
 }}}

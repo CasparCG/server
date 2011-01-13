@@ -31,13 +31,15 @@ namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
 {				
+	long long start_frame_;
+	long long end_frame_;
+	long long frame_count_;
+
 	std::shared_ptr<AVFormatContext>	format_context_;	// Destroy this last
 
 	std::shared_ptr<AVCodecContext>		video_codec_context_;
 	std::shared_ptr<AVCodecContext>		audio_codex_context_;
-
-	tbb::queuing_mutex					seek_mutex_;
-
+	
 	const std::wstring					filename_;
 
 	tbb::atomic<bool>					loop_;
@@ -54,7 +56,7 @@ struct input::implementation : boost::noncopyable
 	static const size_t BUFFER_SIZE = 2 << 25;
 
 public:
-	explicit implementation(const std::wstring& filename) 
+	explicit implementation(const std::wstring& filename, bool loop, double start_time, double end_time) 
 		: video_s_index_(-1)
 		, audio_s_index_(-1)
 		, filename_(filename)
@@ -65,7 +67,7 @@ public:
 		static boost::once_flag avcodec_init_flag = BOOST_ONCE_INIT;
 		boost::call_once(avcodec_init, avcodec_init_flag);	
 
-		loop_ = false;	
+		loop_ = loop;	
 		
 		int errn;
 		AVFormatContext* weak_format_context_;
@@ -96,7 +98,14 @@ public:
 
 		if(!video_codec_context_ && !audio_codex_context_)
 			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec context found."));		
-			
+					
+		start_frame_ = static_cast<long long>(start_time * fps());
+		end_frame_ = static_cast<long long>(end_time * fps());
+		frame_count_ = end_frame_;
+
+		if(av_seek_frame(format_context_.get(), -1, start_frame_*AV_TIME_BASE, AVSEEK_FLAG_ANY) < 0)
+			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Failed to seek frame."));	
+
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " started.";
@@ -134,7 +143,6 @@ public:
 		{
 			AVPacket tmp_packet;
 			safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
-			tbb::queuing_mutex::scoped_lock lock(seek_mutex_);	
 
 			if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
 			{
@@ -142,7 +150,8 @@ public:
 				if(read_packet->stream_index == video_s_index_) 						
 				{
 					buffer_size_ += packet->size();
-					video_packet_buffer_.try_push(std::move(packet));						
+					video_packet_buffer_.try_push(std::move(packet));	
+					frame_count_ = frame_count_ != 0 ? frame_count_ - 1 : 0;
 				}
 				else if(read_packet->stream_index == audio_s_index_) 	
 				{
@@ -150,9 +159,16 @@ public:
 					audio_packet_buffer_.try_push(std::move(packet));
 				}
 			}
-			else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
+			else if(!loop_ || !reset_frame()) // TODO: av_seek_frame does not work for all formats
 				executor_.stop(executor::no_wait);
 		}
+	}
+
+	bool reset_frame()
+	{
+		bool result = av_seek_frame(format_context_.get(), -1, start_frame_*AV_TIME_BASE, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY) >= 0;
+		frame_count_ = end_frame_;
+		return result;
 	}
 		
 	aligned_buffer get_video_packet()
@@ -180,22 +196,9 @@ public:
 
 	bool is_eof() const
 	{
-		return !executor_.is_running() && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
+		return frame_count_ == 0 || !executor_.is_running() && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
 	}
 		
-	// TODO: Not properly done.
-	bool seek(unsigned long long seek_target)
-	{
-		tbb::queuing_mutex::scoped_lock lock(seek_mutex_);
-		if(av_seek_frame(format_context_.get(), -1, seek_target*AV_TIME_BASE, 0) < 0)
-			return false;
-		
-		video_packet_buffer_.clear();
-		audio_packet_buffer_.clear();
-
-		return true;
-	}
-
 	double fps() const
 	{
 		return static_cast<double>(video_codec_context_->time_base.den) / static_cast<double>(video_codec_context_->time_base.num);
@@ -207,13 +210,11 @@ public:
 	}
 };
 
-input::input(const std::wstring& filename) : impl_(new implementation(filename)){}
-void input::set_loop(bool value){impl_->loop_ = value;}
+input::input(const std::wstring& filename, bool loop, double start_time, double end_time) : impl_(new implementation(filename, loop, start_time, end_time)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
 bool input::is_eof() const{return impl_->is_eof();}
 aligned_buffer input::get_video_packet(){return impl_->get_video_packet();}
 aligned_buffer input::get_audio_packet(){return impl_->get_audio_packet();}
-bool input::seek(unsigned long long frame){return impl_->seek(frame);}
 double input::fps() const { return impl_->fps(); }
 }}}

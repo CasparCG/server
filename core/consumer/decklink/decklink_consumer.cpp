@@ -47,8 +47,7 @@
 #pragma warning(push)
 
 namespace caspar { namespace core { namespace decklink{
-
-
+	
 struct decklink_consumer::implementation : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {			
 	struct co_init
