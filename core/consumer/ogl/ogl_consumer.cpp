@@ -237,7 +237,6 @@ public:
 		});
 	}
 
-
 	size_t buffer_depth() const
 	{
 		return 2;

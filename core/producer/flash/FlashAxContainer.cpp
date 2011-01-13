@@ -27,12 +27,7 @@
 
 using namespace ATL;
 
-#if defined(_MSC_VER)
-#pragma warning (push, 1) // TODO: Legacy code, just disable warnings, will replace with boost::asio in future
-#endif
-
-namespace caspar {
-namespace flash {
+namespace caspar { namespace flash {
 
 CComBSTR FlashAxContainer::flashGUID_(_T("{D27CDB6E-AE6D-11CF-96B8-444553540000}"));
 

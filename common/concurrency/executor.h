@@ -45,6 +45,11 @@ public:
 		if(is_running_.fetch_and_store(true))
 			return;
 		thread_ = boost::thread(f_);
+		try
+		{
+			execution_queue_.clear();
+		}
+		catch(boost::broken_promise&){}
 	}
 			
 	void stop(stop_policy policy = wait) // noexcept
