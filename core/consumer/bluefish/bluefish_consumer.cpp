@@ -18,7 +18,7 @@
 *
 */
  
-#include "..\..\StdAfx.h"
+#include "../../StdAfx.h"
 
 #include "bluefish_consumer.h"
 #include "util.h"
@@ -33,73 +33,51 @@
 #include <BlueVelvet4.h>
 #include <BlueHancUtils.h>
 
-#include <memory>
+#include <windows.h>
 
-#include <Windows.h>
+#include <boost/thread/once.hpp>
+
+#include <memory>
 
 namespace caspar { namespace core { namespace bluefish {
 	
-class BlueVelvetLib
+CBlueVelvet4* (*BlueVelvetFactory4)();
+BLUE_UINT32 (*encode_hanc_frame)(struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr,BLUE_UINT32 no_audio_ch,BLUE_UINT32 no_audio_samples,BLUE_UINT32 nTypeOfSample,BLUE_UINT32 emb_audio_flag);
+BLUE_UINT32 (*encode_hanc_frame_ex)(BLUE_UINT32 card_type, struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr, BLUE_UINT32 no_audio_ch,	BLUE_UINT32 no_audio_samples, BLUE_UINT32 nTypeOfSample, BLUE_UINT32 emb_audio_flag);
+
+void blue_velvet_initialize()
 {
-	HINSTANCE lib_;
-
-	BlueVelvetLib()
-	{  
 #ifdef _DEBUG
-		auto lib_str = L"BlueVelvet3_d.dll";
+	auto module = LoadLibrary(L"BlueVelvet3_d.dll");
 #else
-		auto lib_str = L"BlueVelvet3.dll";
+	auto module = LoadLibrary(L"BlueVelvet3.dll");
 #endif
-		lib_ = LoadLibrary(lib_str);	   
-		if(!lib_)
-			BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll"));
-		BlueVelvetFactory4 = (BlueVelvetFactory4Func)GetProcAddress(lib_, "BlueVelvetFactory4");
-	}
-public:
-	typedef CBlueVelvet4* (*BlueVelvetFactory4Func)();
-	BlueVelvetFactory4Func BlueVelvetFactory4;
-	
-	~BlueVelvetLib(){FreeLibrary(lib_);}
+	if(!module)
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll"));
+	static std::shared_ptr<void> lib(module, FreeLibrary);
+	BlueVelvetFactory4 = reinterpret_cast<decltype(BlueVelvetFactory4)>(GetProcAddress(module, "BlueVelvetFactory4"));
+}
 
-	static BlueVelvetLib& get_instance()
-	{
-		static BlueVelvetLib instance;
-		return instance;
-	}
-};
-	
-class BlueHancUtilLib
+void blue_hanc_initialize()
 {
-	HINSTANCE lib_;
-	BlueHancUtilLib()
-	{  
 #ifdef _DEBUG
-		auto lib_str = L"BlueHancUtils_d.dll";
+	auto module = LoadLibrary(L"BlueHancUtils_d.dll");
 #else
-		auto lib_str = L"BlueHancUtils.dll";
+	auto module = LoadLibrary(L"BlueHancUtils.dll");
 #endif
-		lib_ = LoadLibrary(lib_str);	   
-		if(!lib_)
-			BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll"));
-		encode_hanc_frame = (encode_hanc_frame_func)GetProcAddress(lib_, "encode_hanc_frame");
-		encode_hanc_frame_ex = (encode_hanc_frame_ex_func)GetProcAddress(lib_, "encode_hanc_frame_ex");
-	}
-public:
-	typedef BLUE_UINT32 (*encode_hanc_frame_func)(struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr,BLUE_UINT32 no_audio_ch,BLUE_UINT32 no_audio_samples,BLUE_UINT32 nTypeOfSample,BLUE_UINT32 emb_audio_flag);
-	encode_hanc_frame_func encode_hanc_frame;
+	if(!module)
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll"));
+	static std::shared_ptr<void> lib(module, FreeLibrary);
+	encode_hanc_frame = reinterpret_cast<decltype(encode_hanc_frame)>(GetProcAddress(module, "encode_hanc_frame"));
+	encode_hanc_frame_ex = reinterpret_cast<decltype(encode_hanc_frame_ex)>(GetProcAddress(module, "encode_hanc_frame_ex"));
+}
 
-	typedef BLUE_UINT32 (*encode_hanc_frame_ex_func)(BLUE_UINT32 card_type, struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr, BLUE_UINT32 no_audio_ch,	BLUE_UINT32 no_audio_samples, BLUE_UINT32 nTypeOfSample, BLUE_UINT32 emb_audio_flag);
-	encode_hanc_frame_ex_func encode_hanc_frame_ex;
-
-	~BlueHancUtilLib(){FreeLibrary(lib_);}
-
-	static BlueHancUtilLib& get_instance()
-	{
-		static BlueHancUtilLib instance;
-		return instance;
-	}
-};
-
+void blue_initialize()
+{
+	blue_velvet_initialize();
+	blue_hanc_initialize();
+}
+		
 struct consumer::implementation : boost::noncopyable
 {
 	boost::unique_future<void> active_;
@@ -122,8 +100,7 @@ struct consumer::implementation : boost::noncopyable
 
 public:
 	implementation::implementation(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) 
-		: blue_(BlueVelvetLib::get_instance().BlueVelvetFactory4())
-		, device_index_(device_index)
+		: device_index_(device_index)
 		, format_desc_(format_desc)
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)
@@ -132,7 +109,11 @@ public:
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
 		, embed_audio_(embed_audio)
 	{
-				
+		static boost::once_flag flag = BOOST_ONCE_INIT;
+		boost::call_once(blue_initialize, flag);	
+		
+		blue_.reset(BlueVelvetFactory4());
+
 		if(BLUE_FAIL(blue_->device_attach(device_index_, FALSE))) 
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to attach device."));
 	
@@ -335,9 +316,9 @@ public:
 		auto emb_audio_flag = (blue_emb_audio_enable | blue_emb_audio_group1_enable);
 
 		if (!is_epoch_card(card_type))
-			BlueHancUtilLib::get_instance().encode_hanc_frame(&hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);	
+			encode_hanc_frame(&hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);	
 		else
-			BlueHancUtilLib::get_instance().encode_hanc_frame_ex(card_type, &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
+			encode_hanc_frame_ex(card_type, &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
 	}
 };
 
