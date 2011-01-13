@@ -23,6 +23,8 @@
 #include "FlashAxContainer.h"
 #include "TimerHelper.h"
 
+#include <common/log/log.h>
+
 using namespace ATL;
 
 #if defined(_MSC_VER)
@@ -473,6 +475,7 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 			{
 				delete m_lpDD4;
 				m_lpDD4 = NULL;
+				CASPAR_LOG(info) << "flash: DirectDraw not installed. Running without DirectDraw.";
 				return E_NOINTERFACE;
 			}
 		}
