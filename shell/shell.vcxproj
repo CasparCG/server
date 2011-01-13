@@ -113,7 +113,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>dxguid.lib;BlueHancUtils_d.lib;sfml-audio-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;OpenGL32.lib;FreeImage.lib;GLee.lib;Winmm.lib;Ws2_32.lib;BlueVelvet3_d.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;swscale-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxguid.lib;sfml-audio-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;OpenGL32.lib;FreeImage.lib;GLee.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;swscale-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -162,7 +162,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>dxguid.lib; BlueHancUtils.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;Bluevelvet3.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxguid.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

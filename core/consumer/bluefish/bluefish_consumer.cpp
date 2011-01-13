@@ -20,8 +20,6 @@
  
 #include "..\..\StdAfx.h"
 
-#ifndef DISABLE_BLUEFISH
-
 #include "bluefish_consumer.h"
 #include "util.h"
 #include "memory.h"
@@ -37,14 +35,77 @@
 
 #include <memory>
 
+#include <Windows.h>
+
 namespace caspar { namespace core { namespace bluefish {
 	
+class BlueVelvetLib
+{
+	HINSTANCE lib_;
+
+	BlueVelvetLib()
+	{  
+#ifdef _DEBUG
+		auto lib_str = L"BlueVelvet3_d.dll";
+#else
+		auto lib_str = L"BlueVelvet3.dll";
+#endif
+		lib_ = LoadLibrary(lib_str);	   
+		if(!lib_)
+			BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll"));
+		BlueVelvetFactory4 = (BlueVelvetFactory4Func)GetProcAddress(lib_, "BlueVelvetFactory4");
+	}
+public:
+	typedef CBlueVelvet4* (*BlueVelvetFactory4Func)();
+	BlueVelvetFactory4Func BlueVelvetFactory4;
+	
+	~BlueVelvetLib(){FreeLibrary(lib_);}
+
+	static BlueVelvetLib& get_instance()
+	{
+		static BlueVelvetLib instance;
+		return instance;
+	}
+};
+	
+class BlueHancUtilLib
+{
+	HINSTANCE lib_;
+	BlueHancUtilLib()
+	{  
+#ifdef _DEBUG
+		auto lib_str = L"BlueHancUtils_d.dll";
+#else
+		auto lib_str = L"BlueHancUtils.dll";
+#endif
+		lib_ = LoadLibrary(lib_str);	   
+		if(!lib_)
+			BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll"));
+		encode_hanc_frame = (encode_hanc_frame_func)GetProcAddress(lib_, "encode_hanc_frame");
+		encode_hanc_frame_ex = (encode_hanc_frame_ex_func)GetProcAddress(lib_, "encode_hanc_frame_ex");
+	}
+public:
+	typedef BLUE_UINT32 (*encode_hanc_frame_func)(struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr,BLUE_UINT32 no_audio_ch,BLUE_UINT32 no_audio_samples,BLUE_UINT32 nTypeOfSample,BLUE_UINT32 emb_audio_flag);
+	encode_hanc_frame_func encode_hanc_frame;
+
+	typedef BLUE_UINT32 (*encode_hanc_frame_ex_func)(BLUE_UINT32 card_type, struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr, BLUE_UINT32 no_audio_ch,	BLUE_UINT32 no_audio_samples, BLUE_UINT32 nTypeOfSample, BLUE_UINT32 emb_audio_flag);
+	encode_hanc_frame_ex_func encode_hanc_frame_ex;
+
+	~BlueHancUtilLib(){FreeLibrary(lib_);}
+
+	static BlueHancUtilLib& get_instance()
+	{
+		static BlueHancUtilLib instance;
+		return instance;
+	}
+};
+
 struct consumer::implementation : boost::noncopyable
 {
 	boost::unique_future<void> active_;
 	executor executor_;
 			
-	std::shared_ptr<CBlueVelvet4> sdk_;
+	std::shared_ptr<CBlueVelvet4> blue_;
 	
 	unsigned int device_index_;
 	video_format_desc format_desc_;
@@ -61,7 +122,7 @@ struct consumer::implementation : boost::noncopyable
 
 public:
 	implementation::implementation(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) 
-		: sdk_(BlueVelvetFactory4())
+		: blue_(BlueVelvetLib::get_instance().BlueVelvetFactory4())
 		, device_index_(device_index)
 		, format_desc_(format_desc)
 		, mem_fmt_(MEM_FMT_ARGB_PC)
@@ -72,10 +133,10 @@ public:
 		, embed_audio_(embed_audio)
 	{
 				
-		if(BLUE_FAIL(sdk_->device_attach(device_index_, FALSE))) 
+		if(BLUE_FAIL(blue_->device_attach(device_index_, FALSE))) 
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to attach device."));
 	
-		int videoCardType = sdk_->has_video_cardtype();
+		int videoCardType = blue_->has_video_cardtype();
 		CASPAR_LOG(info) << TEXT("BLUECARD INFO: Card type: ") << get_card_desc(videoCardType) << TEXT(". (device ") << device_index_ << TEXT(")");
 	
 		//void* pBlueDevice = blue_attach_to_device(1);
@@ -88,10 +149,10 @@ public:
 		//blue_detach_from_device(&pBlueDevice);
 		
 		auto desiredVideoFormat = vid_fmt_from_video_format(format_desc_.format);
-		int videoModeCount = sdk_->count_video_mode();
+		int videoModeCount = blue_->count_video_mode();
 		for(int videoModeIndex = 1; videoModeIndex <= videoModeCount; ++videoModeIndex) 
 		{
-			EVideoMode videoMode = sdk_->enum_video_mode(videoModeIndex);
+			EVideoMode videoMode = blue_->enum_video_mode(videoModeIndex);
 			if(videoMode == desiredVideoFormat) 
 				vid_fmt_ = videoMode;			
 		}
@@ -99,61 +160,66 @@ public:
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set videomode."));
 		
 		// Set default video output channel
-		//if(BLUE_FAIL(set_card_property(sdk_, DEFAULT_VIDEO_OUTPUT_CHANNEL, channel)))
+		//if(BLUE_FAIL(set_card_property(blue_, DEFAULT_VIDEO_OUTPUT_CHANNEL, channel)))
 		//	CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set default channel. (device ") << device_index_ << TEXT(")");
 
 		//Setting output Video mode
-		if(BLUE_FAIL(set_card_property(sdk_, VIDEO_MODE, vid_fmt_))) 
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set videomode."));
 
 		//Select Update Mode for output
-		if(BLUE_FAIL(set_card_property(sdk_, VIDEO_UPDATE_TYPE, upd_fmt_))) 
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_UPDATE_TYPE, upd_fmt_))) 
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set update type. "));
 	
 		disable_video_output();
 
 		//Enable dual link output
-		if(BLUE_FAIL(set_card_property(sdk_, VIDEO_DUAL_LINK_OUTPUT, 1)))
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT, 1)))
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to enable dual link."));
 
-		if(BLUE_FAIL(set_card_property(sdk_, VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_4224)))
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_4224)))
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set dual link format type to 4:2:2:4. (device " + boost::lexical_cast<std::string>(device_index_) + ")"));
 			
 		//Select output memory format
-		if(BLUE_FAIL(set_card_property(sdk_, VIDEO_MEMORY_FORMAT, mem_fmt_))) 
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MEMORY_FORMAT, mem_fmt_))) 
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set memory format."));
 		
 		//Select image orientation
-		if(BLUE_FAIL(set_card_property(sdk_, VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
 			CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set image orientation to normal. (device ") << device_index_ << TEXT(")");	
 
 		// Select data range
-		if(BLUE_FAIL(set_card_property(sdk_, VIDEO_RGB_DATA_RANGE, CGR_RANGE))) 
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_RGB_DATA_RANGE, CGR_RANGE))) 
 			CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set RGB data range to CGR. (device ") << device_index_ << TEXT(")");	
 		
-		if(BLUE_FAIL(set_card_property(sdk_, VIDEO_PREDEFINED_COLOR_MATRIX, vid_fmt_ == VID_FMT_PAL ? MATRIX_601_CGR : MATRIX_709_CGR)))
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_PREDEFINED_COLOR_MATRIX, vid_fmt_ == VID_FMT_PAL ? MATRIX_601_CGR : MATRIX_709_CGR)))
 			CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set colormatrix to ") << (vid_fmt_ == VID_FMT_PAL ? TEXT("601 CGR") : TEXT("709 CGR")) << TEXT(". (device ") << device_index_ << TEXT(")");
-		
-		//if(BLUE_FAIL(set_card_property(sdk_, EMBEDDED_AUDIO_OUTPUT, 0))) 	
-		//	CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to enable embedded audio. (device ") << device_index_ << TEXT(")");	
-		//else 
-		//{
-		//	CASPAR_LOG(info) << TEXT("BLUECARD INFO: Enabled embedded audio. (device ") << device_index_ << TEXT(")");
-		//	hasEmbeddedAudio_ = true;
-		//}
+
+		if(!embed_audio_)
+		{
+			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, 0))) 
+				CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to disable embedded audio. (device ") << device_index_ << TEXT(")");			
+			CASPAR_LOG(info) << TEXT("BLUECARD INFO: Disabled embedded-audio. device ") << device_index_ << TEXT(")");
+		}
+		else
+		{
+			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, blue_emb_audio_enable | blue_emb_audio_group1_enable))) 
+				CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to enable embedded audio. (device ") << device_index_ << TEXT(")");			
+			CASPAR_LOG(info) << TEXT("BLUECARD INFO: Enabled embedded-audio. device ") << device_index_ << TEXT(")");
+		}
 
 		CASPAR_LOG(info) << TEXT("BLUECARD INFO: Successfully configured bluecard for ") << format_desc_ << TEXT(". (device ") << device_index_ << TEXT(")");
 
-		if (sdk_->has_output_key()) 
+		if (blue_->has_output_key()) 
 		{
 			int dummy = TRUE; int v4444 = FALSE; int invert = FALSE; int white = FALSE;
-			sdk_->set_output_key(dummy, v4444, invert, white);
+			blue_->set_output_key(dummy, v4444, invert, white);
 		}
 
-		if(sdk_->GetHDCardType(device_index_) != CRD_HD_INVALID) 
-			sdk_->Set_DownConverterSignalType(vid_fmt_ == VID_FMT_PAL ? SD_SDI : HD_SDI);	
+		if(blue_->GetHDCardType(device_index_) != CRD_HD_INVALID) 
+			blue_->Set_DownConverterSignalType(vid_fmt_ == VID_FMT_PAL ? SD_SDI : HD_SDI);	
 	
-		if(BLUE_FAIL(sdk_->set_video_engine(engine_mode_)))
+		if(BLUE_FAIL(blue_->set_video_engine(engine_mode_)))
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set vido engine."));
 
 		enable_video_output();
@@ -172,21 +238,21 @@ public:
 	{
 		disable_video_output();
 
-		if(sdk_)
-			sdk_->device_detach();		
+		if(blue_)
+			blue_->device_detach();		
 
 		CASPAR_LOG(info) << "BLUECARD INFO: Successfully released device " << device_index_;
 	}
 	
 	void enable_video_output()
 	{
-		if(!BLUE_PASS(set_card_property(sdk_, VIDEO_BLACKGENERATOR, 0)))
+		if(!BLUE_PASS(set_card_property(blue_, VIDEO_BLACKGENERATOR, 0)))
 			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");	
 	}
 
 	void disable_video_output()
 	{
-		if(!BLUE_PASS(set_card_property(sdk_, VIDEO_BLACKGENERATOR, 1)))
+		if(!BLUE_PASS(set_card_property(blue_, VIDEO_BLACKGENERATOR, 1)))
 			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");		
 	}
 
@@ -205,7 +271,7 @@ public:
 				std::copy_n(frame->image_data().begin(), frame->image_data().size(), reserved_frames_.front()->image_data());
 
 				unsigned long n_field = 0;
-				sdk_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
+				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
 				
 				if(embed_audio_)
 				{		
@@ -213,27 +279,27 @@ public:
 
 					encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio_data, audio_samples, audio_nchannels);
 								
-					sdk_->system_buffer_write_async(const_cast<unsigned char*>(reserved_frames_.front()->image_data()), 
+					blue_->system_buffer_write_async(const_cast<unsigned char*>(reserved_frames_.front()->image_data()), 
 													reserved_frames_.front()->image_size(), 
 													nullptr, 
 													BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
 
-					sdk_->system_buffer_write_async(reserved_frames_.front()->hanc_data(),
+					blue_->system_buffer_write_async(reserved_frames_.front()->hanc_data(),
 													reserved_frames_.front()->hanc_size(), 
 													nullptr,                 
 													BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_HANC));
 
-					if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
+					if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
 						CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
 				}
 				else
 				{
-					sdk_->system_buffer_write_async(const_cast<unsigned char*>(reserved_frames_.front()->image_data()),
+					blue_->system_buffer_write_async(const_cast<unsigned char*>(reserved_frames_.front()->image_data()),
 													reserved_frames_.front()->image_size(), 
 													nullptr,                 
 													BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
 			
-					if(BLUE_FAIL(sdk_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
+					if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
 						CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
 				}
 
@@ -253,7 +319,7 @@ public:
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
-		auto card_type = sdk_->has_video_cardtype();
+		auto card_type = blue_->has_video_cardtype();
 		auto sample_type = (AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN);
 		
 		hanc_stream_info_struct hanc_stream_info;
@@ -269,15 +335,9 @@ public:
 		auto emb_audio_flag = (blue_emb_audio_enable | blue_emb_audio_group1_enable);
 
 		if (!is_epoch_card(card_type))
-		{
-			encode_hanc_frame(&hanc_stream_info, audio_data, audio_nchannels, 
-								audio_samples, sample_type, emb_audio_flag);	
-		}
+			BlueHancUtilLib::get_instance().encode_hanc_frame(&hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);	
 		else
-		{
-			encode_hanc_frame_ex(card_type, &hanc_stream_info, audio_data, audio_nchannels,
-								 audio_samples, sample_type, emb_audio_flag);
-		}						
+			BlueHancUtilLib::get_instance().encode_hanc_frame_ex(card_type, &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
 	}
 };
 
@@ -286,5 +346,3 @@ consumer::consumer(const video_format_desc& format_desc, unsigned int device_ind
 void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
 }}}
-
-#endif

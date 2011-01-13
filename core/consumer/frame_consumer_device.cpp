@@ -21,7 +21,7 @@ struct frame_consumer_device::implementation
 	timer clock_;
 	executor executor_;	
 
-	size_t max_depth_;
+	size_t depth_;
 	std::deque<safe_ptr<const read_frame>> buffer_;		
 
 	std::vector<safe_ptr<frame_consumer>> consumers_;
@@ -38,7 +38,7 @@ public:
 
 		std::vector<size_t> depths;
 		boost::range::transform(consumers_, std::back_inserter(depths), std::mem_fn(&frame_consumer::buffer_depth));
-		max_depth_ = *boost::range::max_element(depths);
+		depth_ = *boost::range::max_element(depths);
 		executor_.set_capacity(3);
 		executor_.start();
 	}
@@ -49,7 +49,7 @@ public:
 		{
 			buffer_.push_back(frame);
 
-			if(buffer_.size() < max_depth_)
+			if(buffer_.size() < depth_)
 				return;
 	
 			boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
