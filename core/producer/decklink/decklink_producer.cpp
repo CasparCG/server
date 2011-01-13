@@ -48,13 +48,25 @@ namespace caspar { namespace core {
 
 class decklink_input : public IDeckLinkInputCallback
 {
+	struct co_init
+	{
+		co_init()
+		{
+			if(FAILED(CoInitialize(nullptr))) 
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Initialization of COM failed."));	
+		}
+		~co_init()
+		{
+			CoUninitialize();
+		}
+	} co_;
+
 	const video_format_desc format_desc_;
 	const size_t device_index_;
 
 	CComPtr<IDeckLink>			decklink_;
 	CComQIPtr<IDeckLinkInput>	input_;
 
-	tbb::atomic<ULONG> ref_count_;
 	std::shared_ptr<frame_processor_device> frame_processor_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
@@ -70,7 +82,6 @@ public:
 		, head_(draw_frame::empty())
 		, tail_(draw_frame::empty())
 	{
-		ref_count_ = 1;
 		frame_buffer_.set_capacity(4);
 		
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
@@ -119,45 +130,11 @@ public:
 			input_->DisableVideoInput();
 		}
 	}
-	
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv)
-	{
-		HRESULT	result = E_NOINTERFACE;	
-		*ppv = NULL;
-	
-		if (iid == IID_IUnknown)
-		{
-			*ppv = this;
-			AddRef();
-			result = S_OK;
-		}
-		else if (iid == IID_IDeckLinkInputCallback)
-		{
-			*ppv = (IDeckLinkInputCallback*)this;
-			AddRef();
-			result = S_OK;
-		}
-	
-		return result;
-	}
 
-	virtual ULONG STDMETHODCALLTYPE	AddRef(void)
-	{
-		return ++ref_count_;
-	}
-
-	virtual ULONG STDMETHODCALLTYPE	Release(void)
-	{	
-		auto new_ref_count = --ref_count_;
-		if (new_ref_count == 0)
-		{
-			delete this;
-			return 0;
-		}
-	
-		return new_ref_count;
-	}
-	
+	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
+	virtual ULONG STDMETHODCALLTYPE		AddRef ()							{return 1;}
+	virtual ULONG STDMETHODCALLTYPE		Release ()							{return 1;}
+		
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents /*notificationEvents*/, IDeckLinkDisplayMode* /*newDisplayMode*/, BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/)
 	{
 		return S_OK;
@@ -233,8 +210,7 @@ public:
 	{	
 		executor_.invoke([this]
 		{
-			input_.reset();
-			CoUninitialize();
+			input_ = nullptr;
 		});
 	}
 	
@@ -248,8 +224,6 @@ public:
 		executor_.start();
 		executor_.invoke([=]
 		{
-			if(FAILED(CoInitialize(nullptr))) 
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: Initialization of COM failed."));		
 			input_.reset(new decklink_input(device_index_, format_desc_, frame_processor));
 		});
 	}
