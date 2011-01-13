@@ -87,7 +87,7 @@ struct bootstrapper::implementation : boost::noncopyable
 						consumers.push_back(bluefish::consumer(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false)));					
 				#endif
 					else if(name == "decklink")
-						consumers.push_back(make_safe<decklink::decklink_consumer>(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("internalkey", false)));
+						consumers.push_back(make_safe<decklink::decklink_consumer>(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false), xml_consumer.second.get("internalkey", false)));
 					else if(name == "audio")
 						consumers.push_back(oal::consumer(format_desc));			
 				}
