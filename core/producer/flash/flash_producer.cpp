@@ -46,6 +46,19 @@ extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
 class flash_renderer
 {
+	struct co_init
+	{
+		co_init()
+		{
+			if(FAILED(CoInitialize(nullptr))) 
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Initialization of COM failed."));	
+		}
+		~co_init()
+		{
+			CoUninitialize();
+		}
+	} co_;
+
 	std::wstring filename_;
 	std::shared_ptr<frame_processor_device> frame_processor_;
 	video_format_desc format_desc_;
@@ -173,12 +186,7 @@ struct flash_producer::implementation
 		, tail_(draw_frame::empty())
 	{	
 		if(!boost::filesystem::exists(filename))
-			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));
-		
-		executor_.begin_invoke([=]
-		{
-			::OleInitialize(nullptr);
-		});
+			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));		
 	}
 
 	~implementation()
@@ -187,7 +195,6 @@ struct flash_producer::implementation
 		executor_.invoke([=]
 		{
 			renderer_ = nullptr;
-			::OleUninitialize();
 		});
 	}
 

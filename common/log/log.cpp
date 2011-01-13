@@ -48,25 +48,25 @@ namespace internal{
 
 void init()
 {	
-    boost::log::add_common_attributes<wchar_t>();
-    typedef boost::log::aux::add_common_attributes_constants<wchar_t> traits_t;
+	boost::log::add_common_attributes<wchar_t>();
+	typedef boost::log::aux::add_common_attributes_constants<wchar_t> traits_t;
 
-    typedef boost::log::sinks::synchronous_sink<boost::log::sinks::wtext_file_backend> file_sink_type;
+	typedef boost::log::sinks::synchronous_sink<boost::log::sinks::wtext_file_backend> file_sink_type;
 
 	typedef boost::log::sinks::asynchronous_sink<boost::log::sinks::wtext_ostream_backend> stream_sink_type;
 
-    auto stream_backend = boost::make_shared<boost::log::sinks::wtext_ostream_backend>();
+	auto stream_backend = boost::make_shared<boost::log::sinks::wtext_ostream_backend>();
 	stream_backend->add_stream(boost::shared_ptr<std::wostream>(&std::wcout, boost::log::empty_deleter()));
 	stream_backend->auto_flush(true);
 
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
 
-    stream_sink->locked_backend()->set_formatter(
-        boost::log::formatters::wstream
-            << L"[" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(traits_t::thread_id_attr_name())
-            << L"] [" << boost::log::formatters::attr<severity_level >(boost::log::sources::aux::severity_attribute_name<wchar_t>::get())
-            << L"] " << boost::log::formatters::message<wchar_t>()
-    );
+	stream_sink->locked_backend()->set_formatter(
+		boost::log::formatters::wstream
+			<< L"[" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(traits_t::thread_id_attr_name())
+			<< L"] [" << boost::log::formatters::attr<severity_level >(boost::log::sources::aux::severity_attribute_name<wchar_t>::get())
+			<< L"] " << boost::log::formatters::message<wchar_t>()
+	);
 
 	boost::log::wcore::get()->add_sink(stream_sink);
 }
@@ -75,10 +75,10 @@ void init()
 
 void add_file_sink(const std::wstring& folder)
 {	
-    boost::log::add_common_attributes<wchar_t>();
-    typedef boost::log::aux::add_common_attributes_constants<wchar_t> traits_t;
+	boost::log::add_common_attributes<wchar_t>();
+	typedef boost::log::aux::add_common_attributes_constants<wchar_t> traits_t;
 
-    typedef boost::log::sinks::synchronous_sink<boost::log::sinks::wtext_file_backend> file_sink_type;
+	typedef boost::log::sinks::synchronous_sink<boost::log::sinks::wtext_file_backend> file_sink_type;
 
 	try
 	{

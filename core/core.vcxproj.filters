@@ -310,7 +310,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="consumer\decklink\DeckLinkAPI_v7_3.idl">
+    <Midl Include="producer\flash\Flash9e.IDL">
+      <Filter>Source\producer\flash\interop</Filter>
+    </Midl>
+    <Midl Include="consumer\decklink\DeckLinkAPI_v7_6.idl">
       <Filter>Source\consumer\decklink\interop</Filter>
     </Midl>
     <Midl Include="consumer\decklink\DeckLinkAPI.idl">
@@ -319,8 +322,8 @@
     <Midl Include="consumer\decklink\DeckLinkAPI_v7_1.idl">
       <Filter>Source\consumer\decklink\interop</Filter>
     </Midl>
-    <Midl Include="producer\flash\Flash9e.IDL">
-      <Filter>Source\producer\flash\interop</Filter>
+    <Midl Include="consumer\decklink\DeckLinkAPI_v7_3.idl">
+      <Filter>Source\consumer\decklink\interop</Filter>
     </Midl>
   </ItemGroup>
   <ItemGroup>
