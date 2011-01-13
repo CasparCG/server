@@ -35,10 +35,12 @@
 #include "axflash.h"
 //#import "progid:ShockwaveFlash.ShockwaveFlash.9" no_namespace, named_guids
 
-#include <ddraw.h>
 #include <comdef.h>
 
 #include "TimerHelper.h"
+
+#include <InitGuid.h>
+#include <ddraw.h>
 
 #ifndef DEFINE_GUID2
 #define DEFINE_GUID2(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
