@@ -30,7 +30,7 @@ public:
 		f_ = f != nullptr ? f : [this]{run();};
 	}
 
-	~executor()
+	virtual ~executor()
 	{
 		stop();
 	}

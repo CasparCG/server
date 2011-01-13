@@ -6,7 +6,7 @@
 
 namespace caspar { namespace core {
 		
-class host_buffer 
+class host_buffer : boost::noncopyable
 {
 public:
 	enum usage_t
