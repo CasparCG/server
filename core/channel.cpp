@@ -161,8 +161,7 @@ public:
 };
 
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
-channel::channel(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers)
-	: impl_(new implementation(format_desc, consumers)){}
+channel::channel(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers) : impl_(new implementation(format_desc, consumers)){}
 void channel::load(int index, const safe_ptr<frame_producer>& producer, bool autoplay){impl_->load(index, producer, autoplay);}
 void channel::preview(int index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
 void channel::pause(int index){impl_->pause(index);}

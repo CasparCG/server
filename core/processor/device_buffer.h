@@ -8,7 +8,7 @@
 
 namespace caspar { namespace core {
 	
-class device_buffer 
+class device_buffer : boost::noncopyable
 {
 public:
 	device_buffer(size_t width, size_t height, size_t stride);
