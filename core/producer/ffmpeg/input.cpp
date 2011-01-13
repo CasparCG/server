@@ -19,7 +19,6 @@
 #pragma warning (disable : 4244)
 #endif
 
-
 extern "C" 
 {
 	#define __STDC_CONSTANT_MACROS
@@ -53,7 +52,7 @@ struct input::implementation : boost::noncopyable
 	
 	executor executor_;
 
-	static const size_t BUFFER_SIZE = 2 << 25;
+	static const size_t BUFFER_SIZE = 2 << 24;
 
 public:
 	explicit implementation(const std::wstring& filename, bool loop, double start_time, double end_time) 
