@@ -164,13 +164,13 @@ public:
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to get frame bytes."));
 		}
 					
-		auto frame_rate = static_cast<size_t>(frame_time_scale_/frame_duration_);
-		for(size_t n = 0; n < frame_rate; ++n)
+		auto buffer_size = static_cast<size_t>(frame_time_scale_/frame_duration_)/4;
+		for(size_t n = 0; n < buffer_size; ++n)
 			schedule_next_video(safe_ptr<const read_frame>());
 
-		video_frame_buffer_.set_capacity(frame_rate);
-		audio_frame_buffer_.set_capacity(frame_rate);
-		for(size_t n = 0; n < frame_rate/2; ++n)
+		video_frame_buffer_.set_capacity(buffer_size);
+		audio_frame_buffer_.set_capacity(buffer_size);
+		for(size_t n = 0; n < std::max<size_t>(2, buffer_size-2); ++n)
 		{
 			video_frame_buffer_.try_push(safe_ptr<const read_frame>());
 			if(embed_audio_)
