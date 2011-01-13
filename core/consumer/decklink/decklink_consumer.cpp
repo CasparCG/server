@@ -34,6 +34,8 @@
 
 #include <tbb/concurrent_queue.h>
 
+#include <boost/circular_buffer.hpp>
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 
@@ -47,7 +49,7 @@
 namespace caspar { namespace core { namespace decklink{
 
 
-struct decklink_consumer::implementation : public IDeckLinkVideoOutputCallback, boost::noncopyable
+struct decklink_consumer::implementation : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {			
 	struct co_init
 	{
@@ -63,8 +65,10 @@ struct decklink_consumer::implementation : public IDeckLinkVideoOutputCallback, 
 	} co_;
 
 	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
+	boost::circular_buffer<std::vector<short>> audio_container_;
 
-	bool						internal_key;
+	const bool					embed_audio_;
+	const bool					internal_key;
 	CComPtr<IDeckLink>			decklink_;
 	CComQIPtr<IDeckLinkOutput>	output_;
 	CComQIPtr<IDeckLinkKeyer>	keyer_;
@@ -75,15 +79,20 @@ struct decklink_consumer::implementation : public IDeckLinkVideoOutputCallback, 
 	BMDTimeScale frame_time_scale_;
 	BMDTimeValue frame_duration_;
 	unsigned long frames_scheduled_;
+	unsigned long audio_scheduled_;
 
-	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> frame_buffer_;
+	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> video_frame_buffer_;
+	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> audio_frame_buffer_;
 
 public:
-	implementation(const video_format_desc& format_desc, size_t device_index, bool internalKey) 
+	implementation(const video_format_desc& format_desc, size_t device_index, bool embed_audio, bool internalKey) 
 		: format_desc_(format_desc)
+		, audio_container_(5)
 		, current_format_(video_format::pal)
+		, embed_audio_(embed_audio)
 		, internal_key(internalKey)
 		, frames_scheduled_(0)
+		, audio_scheduled_(0)
 	{	
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
@@ -114,7 +123,14 @@ public:
 		if(FAILED(output_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, &displayModeSupport)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat."));
 		
-		output_->DisableAudioOutput();
+		if(embed_audio_)
+		{
+			if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2, bmdAudioOutputStreamTimestamped)))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable audio output."));
+				
+			if(FAILED(output_->SetAudioCallback(this)))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could set audio callback."));
+		}
 
 		if(FAILED(output_->EnableVideoOutput(display_mode->GetDisplayMode(), bmdVideoOutputFlagDefault))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable video output."));
@@ -150,15 +166,20 @@ public:
 					
 		auto frame_rate = static_cast<size_t>(frame_time_scale_/frame_duration_);
 		for(size_t n = 0; n < frame_rate; ++n)
-			schedule_next_frame(safe_ptr<const read_frame>());
+			schedule_next_video(safe_ptr<const read_frame>());
 
-		frame_buffer_.set_capacity(frame_rate);
+		video_frame_buffer_.set_capacity(frame_rate);
+		audio_frame_buffer_.set_capacity(frame_rate);
 		for(size_t n = 0; n < frame_rate/2; ++n)
-			frame_buffer_.try_push(safe_ptr<const read_frame>());
-						
+		{
+			video_frame_buffer_.try_push(safe_ptr<const read_frame>());
+			if(embed_audio_)
+				audio_frame_buffer_.try_push(safe_ptr<const read_frame>());
+		}
+
 		if(FAILED(output_->StartScheduledPlayback(0, frame_time_scale_, 1.0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to schedule playback."));
-
+		
 		CASPAR_LOG(info) << "DECKLINK: Successfully initialized decklink for " << format_desc_.name;		
 	}
 
@@ -166,7 +187,9 @@ public:
 	{			
 		if(output_ != nullptr) 
 		{
-			output_->StopScheduledPlayback(0, nullptr, static_cast<int>(format_desc_.fps));
+			output_->StopScheduledPlayback(0, nullptr, 0);
+			if(embed_audio_)
+				output_->DisableAudioOutput();
 			output_->DisableVideoOutput();
 		}
 	}
@@ -178,8 +201,8 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted (IDeckLinkVideoFrame* /*completedFrame*/, BMDOutputFrameCompletionResult /*result*/)
 	{
 		safe_ptr<const read_frame> frame;		
-		frame_buffer_.pop(frame);		
-		schedule_next_frame(frame);
+		video_frame_buffer_.pop(frame);		
+		schedule_next_video(frame);
 		return S_OK;
 	}
 
@@ -187,8 +210,30 @@ public:
 	{
 		return S_OK;
 	}
-	
-	void schedule_next_frame(const safe_ptr<const read_frame>& frame)
+		
+	virtual HRESULT STDMETHODCALLTYPE RenderAudioSamples (BOOL /*preroll*/)
+	{
+		safe_ptr<const read_frame> frame;		
+		audio_frame_buffer_.pop(frame);		
+		schedule_next_audio(frame);		
+		return S_OK;
+	}
+
+	void schedule_next_audio(const safe_ptr<const read_frame>& frame)
+	{
+		static std::vector<short> silence(48000, 0);
+
+		int audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps);
+
+		auto frame_audio_data = frame->audio_data().empty() ? silence.data() : const_cast<short*>(frame->audio_data().begin());
+
+		audio_container_.push_back(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end()));
+
+		if(FAILED(output_->ScheduleAudioSamples(frame_audio_data, audio_samples, (audio_scheduled_++) * audio_samples, 48000, nullptr)))
+			CASPAR_LOG(error) << L"DECKLINK: Failed to schedule audio.";
+	}
+			
+	void schedule_next_video(const safe_ptr<const read_frame>& frame)
 	{
 		if(!frame->image_data().empty())
 			std::copy(frame->image_data().begin(), frame->image_data().end(), static_cast<char*>(reserved_frames_.front().first));
@@ -196,13 +241,16 @@ public:
 			std::fill_n(static_cast<int*>(reserved_frames_.front().first), 0, format_desc_.size/4);
 
 		if(FAILED(output_->ScheduleVideoFrame(reserved_frames_.front().second, (frames_scheduled_++) * frame_duration_, frame_duration_, frame_time_scale_)))
-			CASPAR_LOG(error) << L"DECKLINK: Failed to display frame.";
+			CASPAR_LOG(error) << L"DECKLINK: Failed to schedule video.";
+
 		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 	}
 
 	void send(const safe_ptr<const read_frame>& frame)
 	{
-		frame_buffer_.push(frame);
+		video_frame_buffer_.push(frame);
+		if(embed_audio_)
+			audio_frame_buffer_.push(frame);
 	}
 
 	size_t buffer_depth() const
@@ -211,7 +259,7 @@ public:
 	}
 };
 
-decklink_consumer::decklink_consumer(const video_format_desc& format_desc, size_t device_index, bool internalKey) : impl_(new implementation(format_desc, device_index, internalKey)){}
+decklink_consumer::decklink_consumer(const video_format_desc& format_desc, size_t device_index, bool embed_audio, bool internalKey) : impl_(new implementation(format_desc, device_index, embed_audio, internalKey)){}
 decklink_consumer::decklink_consumer(decklink_consumer&& other) : impl_(std::move(other.impl_)){}
 void decklink_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
