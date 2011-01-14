@@ -11,11 +11,11 @@ namespace caspar { namespace core {
 
 struct layer::implementation : boost::noncopyable
 {					
-	tbb::atomic<bool>			is_paused_;
-	safe_ptr<draw_frame>		last_frame_;
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
+	safe_ptr<draw_frame>		last_frame_;
 	const int					index_;
+	bool						is_paused_;
 
 public:
 	implementation(int index) 
@@ -23,15 +23,13 @@ public:
 		, background_(frame_producer::empty())
 		, last_frame_(draw_frame::empty())
 		, index_(index) 
-	{
-		is_paused_ = false;
-	}
+		, is_paused_(false){}
 	
-	void load(const safe_ptr<frame_producer>& frame_producer, bool autoplay)
+	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load)
 	{			
 		background_ = frame_producer;
 		CASPAR_LOG(info) << print() << " " << frame_producer->print() << " => background";
-		if(autoplay)
+		if(play_on_load)
 			play();			
 	}
 
@@ -123,7 +121,7 @@ layer& layer::operator=(layer&& other)
 	other.impl_ = nullptr;
 	return *this;
 }
-void layer::load(const safe_ptr<frame_producer>& frame_producer, bool autoplay){return impl_->load(frame_producer, autoplay);}	
+void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load){return impl_->load(frame_producer, play_on_load);}	
 void layer::preview(const safe_ptr<frame_producer>& frame_producer){return impl_->preview(frame_producer);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}

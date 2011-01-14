@@ -23,7 +23,6 @@
 
 #include "../../video_format.h"
 #include "../../processor/draw_frame.h"
-#include "../../processor/draw_frame.h"
 #include "../../processor/frame_processor_device.h"
 
 #include <boost/range/algorithm/copy.hpp>

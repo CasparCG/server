@@ -194,8 +194,7 @@ class decklink_producer : public frame_producer
 {
 	executor executor_;
 	
-	video_format_desc format_desc_;
-
+	const video_format_desc format_desc_;
 	const size_t device_index_;
 
 	std::unique_ptr<decklink_input> input_;

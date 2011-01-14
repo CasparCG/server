@@ -34,16 +34,16 @@ struct input::implementation : boost::noncopyable
 	long long end_frame_;
 	long long frame_count_;
 
-	std::shared_ptr<AVFormatContext>	format_context_;	// Destroy this last
+	std::shared_ptr<AVFormatContext> format_context_;	// Destroy this last
 
-	std::shared_ptr<AVCodecContext>		video_codec_context_;
-	std::shared_ptr<AVCodecContext>		audio_codex_context_;
+	std::shared_ptr<AVCodecContext>	video_codec_context_;
+	std::shared_ptr<AVCodecContext>	audio_codex_context_;
 	
-	const std::wstring					filename_;
+	const std::wstring filename_;
 
-	tbb::atomic<bool>					loop_;
-	int									video_s_index_;
-	int									audio_s_index_;
+	bool loop_;
+	int video_s_index_;
+	int	audio_s_index_;
 
 	tbb::atomic<size_t>	buffer_size_;
 	
@@ -56,7 +56,8 @@ struct input::implementation : boost::noncopyable
 
 public:
 	explicit implementation(const std::wstring& filename, bool loop, double start_time, double end_time) 
-		: video_s_index_(-1)
+		: loop_(loop)
+		, video_s_index_(-1)
 		, audio_s_index_(-1)
 		, filename_(filename)
 	{		
@@ -65,9 +66,7 @@ public:
 		
 		static boost::once_flag avcodec_init_flag = BOOST_ONCE_INIT;
 		boost::call_once(avcodec_init, avcodec_init_flag);	
-
-		loop_ = loop;	
-		
+				
 		int errn;
 		AVFormatContext* weak_format_context_;
 		if((errn = -av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr)) > 0)
