@@ -48,15 +48,8 @@ class flash_renderer
 {
 	struct co_init
 	{
-		co_init()
-		{
-			if(FAILED(CoInitialize(nullptr))) 
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Initialization of COM failed."));	
-		}
-		~co_init()
-		{
-			CoUninitialize();
-		}
+		co_init(){CoInitialize(nullptr);}
+		~co_init(){CoUninitialize();}
 	} co_;
 
 	const std::wstring filename_;

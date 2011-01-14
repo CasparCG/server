@@ -50,15 +50,8 @@ class decklink_input : public IDeckLinkInputCallback
 {
 	struct co_init
 	{
-		co_init()
-		{
-			if(FAILED(CoInitialize(nullptr))) 
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Initialization of COM failed."));	
-		}
-		~co_init()
-		{
-			CoUninitialize();
-		}
+		co_init(){CoInitialize(nullptr);}
+		~co_init(){CoUninitialize();}
 	} co_;
 
 	const video_format_desc format_desc_;
