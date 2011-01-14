@@ -30,10 +30,6 @@ namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
 {				
-	long long start_frame_;
-	long long end_frame_;
-	long long frame_count_;
-
 	std::shared_ptr<AVFormatContext> format_context_;	// Destroy this last
 
 	std::shared_ptr<AVCodecContext>	video_codec_context_;
@@ -55,7 +51,7 @@ struct input::implementation : boost::noncopyable
 	static const size_t BUFFER_SIZE = 2 << 24;
 
 public:
-	explicit implementation(const std::wstring& filename, bool loop, double start_time, double end_time) 
+	explicit implementation(const std::wstring& filename, bool loop) 
 		: loop_(loop)
 		, video_s_index_(-1)
 		, audio_s_index_(-1)
@@ -97,12 +93,6 @@ public:
 		if(!video_codec_context_ && !audio_codex_context_)
 			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec context found."));		
 					
-		start_frame_ = static_cast<long long>(start_time * fps());
-		end_frame_ = static_cast<long long>(end_time * fps());
-		assert(start_frame_ >= 0);
-
-		if(!seek_frame(start_frame_))
-			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Failed to seek frame."));	
 
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
@@ -142,16 +132,13 @@ public:
 			AVPacket tmp_packet;
 			safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
 
-			if (av_read_frame(format_context_.get(), read_packet.get()) >= 0 && frame_count_ != 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
+			if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
 			{
 				auto packet = std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size);
 				if(read_packet->stream_index == video_s_index_) 						
 				{
 					buffer_size_ += packet->size();
 					video_packet_buffer_.try_push(std::move(packet));	
-
-					if(frame_count_ > 0)
-						--frame_count_;
 				}
 				else if(read_packet->stream_index == audio_s_index_) 	
 				{
@@ -168,8 +155,6 @@ public:
 	{  
 		static const AVRational TIME_BASE_Q = {1, AV_TIME_BASE};
 		
-		frame_count_ = end_frame_ - seek_target;
-
 		int stream_index = std::max(video_s_index_, audio_s_index_);
 		seek_target *= AV_TIME_BASE;
 
@@ -221,7 +206,7 @@ public:
 	}
 };
 
-input::input(const std::wstring& filename, bool loop, double start_time, double end_time) : impl_(new implementation(filename, loop, start_time, end_time)){}
+input::input(const std::wstring& filename, bool loop) : impl_(new implementation(filename, loop)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
 bool input::is_eof() const{return impl_->is_eof();}

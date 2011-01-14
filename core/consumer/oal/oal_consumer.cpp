@@ -57,14 +57,8 @@ public:
 	{
 		return 3;
 	}
-	
-	bool OnStart() 
-	{
-		input_.clear();
-		return true;
-	}
 
-	bool OnGetData(sf::SoundStream::Chunk& data)
+	virtual bool OnGetData(sf::SoundStream::Chunk& data)
 	{		
 		std::vector<short> audio_data;		
 		input_.pop(audio_data);
