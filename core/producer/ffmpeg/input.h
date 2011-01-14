@@ -14,7 +14,7 @@ typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> 
 class input : boost::noncopyable
 {
 public:
-	explicit input(const std::wstring& filename, bool loop, double start_time, double end_time);
+	explicit input(const std::wstring& filename, bool loop);
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 

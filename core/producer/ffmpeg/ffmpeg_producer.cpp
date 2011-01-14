@@ -39,10 +39,10 @@ struct ffmpeg_producer : public frame_producer
 	video_format_desc					format_desc_;
 
 public:
-	explicit ffmpeg_producer(const std::wstring& filename, bool loop, double start_time = 0, double end_time = -1.0) 
+	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
 		: filename_(filename)
 		, last_frame_(draw_frame(draw_frame::empty()))
-		, input_(filename, loop, start_time, end_time)
+		, input_(filename, loop)
 		, video_decoder_(new video_decoder(input_.get_video_codec_context().get()))		
 		, audio_decoder_(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), input_.fps()) : nullptr){}
 
@@ -142,22 +142,7 @@ safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>&
 	std::wstring path = filename + L"." + *ext;
 	bool loop = std::find(params.begin(), params.end(), L"LOOP") != params.end();
 	
-	static boost::wregex frame_range_expr(L".*\\[(?<START>\\d+\\.?\\d*)(-?(?<END>\\d+\\.?\\d*))?\\].*");
-
-	double start_time = 0.0;
-	double end_time = -1.0;
-	
-	boost::wsmatch what;
-	if(std::find_if(params.begin(), params.end(), [&](const std::wstring& str){ return boost::regex_match(str, what, frame_range_expr);}) != params.end())
-	{
-		try{start_time = boost::lexical_cast<double>(what["START"].str());}
-		catch(boost::bad_lexical_cast&){}
-
-		try{end_time = boost::lexical_cast<double>(what["END"].str());}
-		catch(boost::bad_lexical_cast&){}
-	}
-
-	return make_safe<ffmpeg_producer>(path, loop, start_time, end_time);
+	return make_safe<ffmpeg_producer>(path, loop);
 }
 
 }}}
