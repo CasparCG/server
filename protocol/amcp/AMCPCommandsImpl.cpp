@@ -324,7 +324,12 @@ bool StopCommand::DoExecute()
 
 bool ClearCommand::DoExecute()
 {
-	GetChannel()->clear(GetLayerIndex());
+	int index = GetLayerIndex(std::numeric_limits<int>::max());
+	if(index == std::numeric_limits<int>::max())
+		GetChannel()->clear();
+	else
+		GetChannel()->clear(index);
+		
 	SetReplyString(TEXT("202 CLEAR OK\r\n"));
 
 	return true;
