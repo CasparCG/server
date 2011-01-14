@@ -102,7 +102,7 @@ public:
 		end_frame_ = static_cast<long long>(end_time * fps());
 		frame_count_ = end_frame_;
 
-		if(av_seek_frame(format_context_.get(), -1, start_frame_*AV_TIME_BASE, AVSEEK_FLAG_ANY) < 0)
+		if(av_seek_frame(format_context_.get(), -1, start_frame_*AV_TIME_BASE, 0) < 0)
 			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Failed to seek frame."));	
 
 		executor_.start();
@@ -167,7 +167,7 @@ public:
 
 	bool reset_frame()
 	{
-		bool result = av_seek_frame(format_context_.get(), -1, start_frame_*AV_TIME_BASE, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY) >= 0;
+		bool result = av_seek_frame(format_context_.get(), -1, start_frame_*AV_TIME_BASE, AVSEEK_FLAG_BACKWARD) >= 0;
 		if(!result)
 			CASPAR_LOG(warning) << "Failed to seek frame.";
 		frame_count_ = end_frame_;
