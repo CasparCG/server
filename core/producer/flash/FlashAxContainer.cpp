@@ -25,6 +25,10 @@
 
 #include <common/log/log.h>
 
+#if defined(_MSC_VER)
+#pragma warning (push, 2) // TODO
+#endif
+
 using namespace ATL;
 
 namespace caspar { namespace flash {

@@ -36,7 +36,7 @@ public:
 	void preview(const safe_ptr<frame_producer>& frame_producer)
 	{
 		stop();
-		load(frame_producer, false);			
+		load(frame_producer, false);		
 		try
 		{
 			last_frame_ = frame_producer->receive();
@@ -44,8 +44,7 @@ public:
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << print() << L" empty => background";
-			background_ = frame_producer::empty();
+			clear();
 		}
 	}
 	
@@ -65,17 +64,17 @@ public:
 
 	void stop()
 	{
-		is_paused_ = false;
+		pause();
 		last_frame_ = draw_frame::empty();
 		foreground_ = frame_producer::empty();
+		CASPAR_LOG(warning) << print() << L" empty => foreground";
 	}
 
 	void clear()
 	{
-		is_paused_ = false;
-		last_frame_ = draw_frame::empty();
-		foreground_ = frame_producer::empty();
+		stop();
 		background_ = frame_producer::empty();
+		CASPAR_LOG(warning) << print() << L" empty => background";
 	}
 	
 	safe_ptr<draw_frame> receive()
@@ -102,9 +101,7 @@ public:
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			foreground_ = frame_producer::empty();
-			last_frame_ = draw_frame::empty();
-			CASPAR_LOG(warning) << print() << L" empty => foreground";
+			stop();
 		}
 
 		return last_frame_;

@@ -49,18 +49,11 @@
 namespace caspar { namespace core { namespace decklink{
 	
 struct decklink_consumer::implementation : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
-{			
+{		
 	struct co_init
 	{
-		co_init()
-		{
-			if(FAILED(CoInitialize(nullptr))) 
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Initialization of COM failed."));	
-		}
-		~co_init()
-		{
-			CoUninitialize();
-		}
+		co_init(){CoInitialize(nullptr);}
+		~co_init(){CoUninitialize();}
 	} co_;
 
 	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
