@@ -143,14 +143,16 @@ public:
 			AVPacket tmp_packet;
 			safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
 
-			if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
+			if (av_read_frame(format_context_.get(), read_packet.get()) >= 0 && frame_count_ != 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
 			{
 				auto packet = std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size);
 				if(read_packet->stream_index == video_s_index_) 						
 				{
 					buffer_size_ += packet->size();
 					video_packet_buffer_.try_push(std::move(packet));	
-					frame_count_ = frame_count_ != 0 ? frame_count_ - 1 : 0;
+
+					if(frame_count_ > 0)
+						--frame_count_;
 				}
 				else if(read_packet->stream_index == audio_s_index_) 	
 				{
@@ -166,6 +168,8 @@ public:
 	bool reset_frame()
 	{
 		bool result = av_seek_frame(format_context_.get(), -1, start_frame_*AV_TIME_BASE, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY) >= 0;
+		if(!result)
+			CASPAR_LOG(warning) << "Failed to seek frame.";
 		frame_count_ = end_frame_;
 		return result;
 	}
