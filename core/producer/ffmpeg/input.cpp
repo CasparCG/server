@@ -99,9 +99,9 @@ public:
 					
 		start_frame_ = static_cast<long long>(start_time * fps());
 		end_frame_ = static_cast<long long>(end_time * fps());
-		frame_count_ = end_frame_;
+		assert(start_frame_ >= 0);
 
-		if(av_seek_frame(format_context_.get(), -1, start_frame_*AV_TIME_BASE, 0) < 0)
+		if(!seek_frame(start_frame_))
 			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Failed to seek frame."));	
 
 		executor_.start();
@@ -159,17 +159,26 @@ public:
 					audio_packet_buffer_.try_push(std::move(packet));
 				}
 			}
-			else if(!loop_ || !reset_frame()) // TODO: av_seek_frame does not work for all formats
-				executor_.stop(executor::no_wait);
+			//else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
+			//	executor_.stop(executor::no_wait);
 		}
 	}
+	
+	bool seek_frame(int64_t seek_target, int flags = 0)
+	{  
+		static const AVRational TIME_BASE_Q = {1, AV_TIME_BASE};
+		
+		frame_count_ = end_frame_ - seek_target;
 
-	bool reset_frame()
-	{
-		bool result = av_seek_frame(format_context_.get(), -1, start_frame_*AV_TIME_BASE, AVSEEK_FLAG_BACKWARD) >= 0;
+		int stream_index = std::max(video_s_index_, audio_s_index_);
+		seek_target *= AV_TIME_BASE;
+
+		if(stream_index >= 0)	  
+			seek_target = av_rescale_q(seek_target, TIME_BASE_Q, format_context_->streams[stream_index]->time_base);
+	  
+		bool result = av_seek_frame(format_context_.get(), stream_index, seek_target, flags) >= 0;
 		if(!result)
 			CASPAR_LOG(warning) << "Failed to seek frame.";
-		frame_count_ = end_frame_;
 		return result;
 	}
 		
