@@ -16,7 +16,7 @@ public:
 	layer(layer&& other); // nothrow
 	layer& operator=(layer&& other); // nothrow
 	
-	void load(const safe_ptr<frame_producer>& producer, bool autoplay = false); // nothrow
+	void load(const safe_ptr<frame_producer>& producer, bool play_on_load = false); // nothrow
 	void preview(const safe_ptr<frame_producer>& producer); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow

@@ -85,8 +85,8 @@ struct consumer::implementation : boost::noncopyable
 			
 	std::shared_ptr<CBlueVelvet4> blue_;
 	
-	unsigned int device_index_;
-	video_format_desc format_desc_;
+	const unsigned int device_index_;
+	const video_format_desc format_desc_;
 		
 	unsigned long	mem_fmt_;
 	unsigned long	upd_fmt_;
@@ -96,7 +96,7 @@ struct consumer::implementation : boost::noncopyable
 	
 	std::array<blue_dma_buffer_ptr, 3> reserved_frames_;	
 
-	bool embed_audio_;
+	const bool embed_audio_;
 
 public:
 	implementation::implementation(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) 

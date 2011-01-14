@@ -23,14 +23,25 @@ struct pixel_format_desc
 {
 	struct plane
 	{
-		plane() : linesize(0), width(0), height(0), size(0), channels(0){}
-		plane(size_t width, size_t height, size_t channels)
-			: linesize(width*channels), width(width), height(height), size(width*height*channels), channels(channels){}
 		size_t linesize;
 		size_t width;
 		size_t height;
 		size_t size;
 		size_t channels;
+
+		plane() 
+			: linesize(0)
+			, width(0)
+			, height(0)
+			, size(0)
+			, channels(0){}
+
+		plane(size_t width, size_t height, size_t channels)
+			: linesize(width*channels)
+			, width(width)
+			, height(height)
+			, size(width*height*channels)
+			, channels(channels){}
 	};
 
 	pixel_format_desc() : pix_fmt(pixel_format::invalid){}

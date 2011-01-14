@@ -59,9 +59,10 @@ class flash_renderer
 		}
 	} co_;
 
-	std::wstring filename_;
+	const std::wstring filename_;
+	const video_format_desc format_desc_;
+
 	std::shared_ptr<frame_processor_device> frame_processor_;
-	video_format_desc format_desc_;
 	
 	BYTE* bmp_data_;	
 	std::shared_ptr<void> hdc_;
@@ -72,13 +73,13 @@ class flash_renderer
 
 public:
 	flash_renderer(const std::shared_ptr<frame_processor_device>& frame_processor, const std::wstring& filename) 
-		: head_(draw_frame::empty())
-		, bmp_data_(nullptr)
-		, ax_(nullptr)
-		, filename_(filename)
-		, hdc_(CreateCompatibleDC(0), DeleteDC)
-		, frame_processor_(frame_processor)
+		: filename_(filename)
 		, format_desc_(frame_processor->get_video_format_desc())
+		, frame_processor_(frame_processor)
+		, bmp_data_(nullptr)
+		, hdc_(CreateCompatibleDC(0), DeleteDC)
+		, ax_(nullptr)
+		, head_(draw_frame::empty())
 	{
 		CASPAR_LOG(info) << print() << L" Started";
 		
@@ -138,7 +139,7 @@ public:
 			return draw_frame::empty();
 
 		auto frame = render_simple_frame();
-		if(format_desc_.mode != video_mode::progressive && ax_->GetFPS()/2.0 - format_desc_.fps >= 0.0)
+		if(ax_->GetFPS()/2.0 - format_desc_.fps >= 0.0)
 			frame = draw_frame::interlace(frame, render_simple_frame(), format_desc_.mode);
 		return frame;
 	}

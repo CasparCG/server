@@ -23,7 +23,6 @@ namespace caspar { namespace core { namespace ffmpeg{
 	
 struct ffmpeg_producer : public frame_producer
 {
-	bool								is_running_;
 	input								input_;			
 	std::unique_ptr<audio_decoder>		audio_decoder_;
 	std::unique_ptr<video_decoder>		video_decoder_;
@@ -41,8 +40,7 @@ struct ffmpeg_producer : public frame_producer
 
 public:
 	explicit ffmpeg_producer(const std::wstring& filename, bool loop, double start_time = 0, double end_time = -1.0) 
-		: is_running_(true)
-		, filename_(filename)
+		: filename_(filename)
 		, last_frame_(draw_frame(draw_frame::empty()))
 		, input_(filename, loop, start_time, end_time)
 		, video_decoder_(new video_decoder(input_.get_video_codec_context().get()))		
@@ -56,7 +54,7 @@ public:
 		
 	virtual safe_ptr<draw_frame> receive()
 	{
-		while(is_running_ && ouput_channel_.empty() && !input_.is_eof())
+		while(ouput_channel_.empty() && !input_.is_eof())
 		{	
 			aligned_buffer video_packet;
 			if(video_frame_channel_.size() < 3)	
@@ -71,17 +69,8 @@ public:
 			{ // Video Decoding and Scaling
 				if(!video_packet.empty() && video_decoder_)
 				{
-					try
-					{
-						auto frame = video_decoder_->execute(video_packet);
-						video_frame_channel_.push_back(std::move(frame));
-					}
-					catch(...)
-					{
-						CASPAR_LOG_CURRENT_EXCEPTION();
-						video_decoder_.reset();
-						is_running_ = false;
-					}	
+					auto frame = video_decoder_->execute(video_packet);
+					video_frame_channel_.push_back(std::move(frame));
 				}
 			}, 
 			[&] 
@@ -125,7 +114,7 @@ public:
 			last_frame_->audio_volume(0.0); // last_frame should not have audio
 			ouput_channel_.pop();
 		}
-		else if(input_.is_eof() || !is_running_)
+		else if(input_.is_eof())
 			return draw_frame::eof();
 
 		return result;
