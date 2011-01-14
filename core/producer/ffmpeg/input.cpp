@@ -199,7 +199,7 @@ public:
 
 	bool is_eof() const
 	{
-		return frame_count_ == 0 || !executor_.is_running() && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
+		return !executor_.is_running() && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
 	}
 		
 	double fps() const
