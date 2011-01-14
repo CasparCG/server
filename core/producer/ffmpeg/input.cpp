@@ -159,8 +159,8 @@ public:
 					audio_packet_buffer_.try_push(std::move(packet));
 				}
 			}
-			//else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
-			//	executor_.stop(executor::no_wait);
+			else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
+				executor_.stop(executor::no_wait);
 		}
 	}
 	
