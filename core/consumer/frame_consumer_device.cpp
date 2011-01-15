@@ -24,13 +24,13 @@ struct frame_consumer_device::implementation
 
 	boost::circular_buffer<safe_ptr<const read_frame>> buffer_;
 
-	std::vector<safe_ptr<frame_consumer>> consumers_;
+	std::list<safe_ptr<frame_consumer>> consumers_; // Valid iterators after erase
 	
 	const video_format_desc fmt_;
 
 public:
 	implementation(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers) 
-		: consumers_(consumers)
+		: consumers_(consumers.begin(), consumers.end())
 		, fmt_(format_desc)
 	{		
 		if(consumers_.empty())
