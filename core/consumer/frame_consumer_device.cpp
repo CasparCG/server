@@ -47,7 +47,7 @@ public:
 	{		
 		executor_.begin_invoke([=]
 		{
-			buffer_.push_back(frame);
+			buffer_.push_back(std::move(frame));
 
 			if(!buffer_.full())
 				return;

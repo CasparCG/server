@@ -7,8 +7,6 @@ namespace caspar { namespace core {
 class read_frame;
 class write_frame;
 class draw_frame;
-class draw_frame;
-class draw_frame;
 
 class image_processor;
 class frame_processor;

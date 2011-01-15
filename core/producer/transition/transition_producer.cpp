@@ -86,6 +86,7 @@ struct transition_producer::implementation : boost::noncopyable
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
+			producer = frame_producer::empty();
 			CASPAR_LOG(warning) << "Failed to receive frame. Removed producer from transition.";
 		}
 
@@ -101,6 +102,7 @@ struct transition_producer::implementation : boost::noncopyable
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
+				producer = frame_producer::empty();
 				CASPAR_LOG(warning) << "Failed to initialize following producer.";
 			}
 
