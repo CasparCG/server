@@ -52,7 +52,7 @@ public:
 			if(!buffer_.full())
 				return;
 	
-			boost::range::for_each(consumers_, [&](const safe_ptr<frame_consumer>& consumer)
+			BOOST_FOREACH(auto consumer, consumers_)
 			{
 				try
 				{
@@ -64,7 +64,7 @@ public:
 					boost::range::remove_erase(consumers_, consumer);
 					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
 				}
-			});
+			}
 	
 			clock_.wait(fmt_.fps);
 		});

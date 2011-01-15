@@ -15,4 +15,6 @@ class frame_processor;
 class audio_processor;
 class frame_processor_device;
 
+struct pixel_format_desc;
+
 }}

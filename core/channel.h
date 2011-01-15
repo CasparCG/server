@@ -26,7 +26,7 @@ public:
 	explicit channel(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers);
 	channel(channel&& other);
 	
-	void load(int index, const safe_ptr<frame_producer>& producer, bool autoplay = false);
+	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load = false);
 	void preview(int index, const safe_ptr<frame_producer>& producer);
 	void pause(int index);
 	void play(int index);

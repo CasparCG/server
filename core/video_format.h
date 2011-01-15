@@ -53,8 +53,6 @@ struct video_format_desc
 	double					interval;	// time between frames
 	size_t					size;		// output frame size in bytes 
 	std::wstring			name;		// name of output format
-	size_t					time_scale;
-	size_t					display_duration;
 
 	static const video_format_desc& get(video_format::type format);
 	static const video_format_desc& get(const std::wstring& name);
