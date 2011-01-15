@@ -237,7 +237,7 @@ public:
 			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");		
 	}
 
-	void send(const safe_ptr<const read_frame>& frame)
+	virtual void send(const safe_ptr<const read_frame>& frame)
 	{			
 		static std::vector<short> silence(MAX_HANC_BUFFER_SIZE, 0);
 		
@@ -293,10 +293,7 @@ public:
 		});
 	}
 
-	size_t buffer_depth() const
-	{
-		return 1;
-	}
+	virtual size_t buffer_depth() const{return 1;}
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	

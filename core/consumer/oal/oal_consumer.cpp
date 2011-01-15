@@ -45,7 +45,7 @@ public:
 		Play();		
 	}
 	
-	void send(const safe_ptr<const read_frame>& frame)
+	virtual void send(const safe_ptr<const read_frame>& frame)
 	{				
 		if(frame->audio_data().empty())
 			return;
@@ -53,10 +53,7 @@ public:
 		input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 	
 	}
 
-	size_t buffer_depth() const
-	{
-		return 3;
-	}
+	virtual size_t buffer_depth() const{return 3;}
 
 	virtual bool OnGetData(sf::SoundStream::Chunk& data)
 	{		

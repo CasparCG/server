@@ -15,14 +15,14 @@ public:
 
 	// Author: Ryan M. Geiss
 	// http://www.geisswerks.com/ryan/FAQS/timing.html
-	void wait(double fps)
+	void tick(double interval)
 	{     	
 		LARGE_INTEGER t;
 		QueryPerformanceCounter(&t);
 
 		if (time_.QuadPart != 0)
 		{
-			int ticks_to_wait = static_cast<int>(static_cast<double>(freq_.QuadPart) / fps);
+			int ticks_to_wait = static_cast<int>(static_cast<double>(freq_.QuadPart) * interval);
 			int done = 0;
 			do
 			{

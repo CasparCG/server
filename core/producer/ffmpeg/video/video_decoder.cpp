@@ -94,10 +94,10 @@ struct video_decoder::implementation : boost::noncopyable
 
 	AVCodecContext* codec_context_;
 
-	int width_;
-	int height_;
-	PixelFormat pix_fmt_;
-	pixel_format_desc desc_;
+	const int width_;
+	const int height_;
+	const PixelFormat pix_fmt_;
+	const pixel_format_desc desc_;
 
 public:
 	explicit implementation(AVCodecContext* codec_context) 

@@ -145,7 +145,7 @@ private:
 
 	safe_ptr<draw_frame> render_simple_frame()
 	{
-		timer_.wait(ax_->GetFPS()); // Tick doesnt work on nested timelines, force an actual sync
+		timer_.tick(1.0/ax_->GetFPS()); // Tick doesnt work on nested timelines, force an actual sync
 
 		ax_->Tick();
 

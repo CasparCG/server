@@ -76,6 +76,9 @@
     <Filter Include="Source\producer\flash\interop">
       <UniqueIdentifier>{f99e4727-2b1b-4009-a445-99b11b071e8e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\consumer\ffmpeg">
+      <UniqueIdentifier>{b651856c-ff7e-4f90-be8a-32aba6094dbd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
@@ -204,6 +207,9 @@
     <ClInclude Include="producer\decklink\decklink_producer.h">
       <Filter>Source\producer\decklink</Filter>
     </ClInclude>
+    <ClInclude Include="consumer\ffmpeg\ffmpeg_consumer.h">
+      <Filter>Source\consumer\ffmpeg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
@@ -307,6 +313,9 @@
     </ClCompile>
     <ClCompile Include="producer\decklink\decklink_producer.cpp">
       <Filter>Source\producer\decklink</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\ffmpeg\ffmpeg_consumer.cpp">
+      <Filter>Source\consumer\ffmpeg</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
