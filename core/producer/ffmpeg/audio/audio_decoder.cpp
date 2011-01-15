@@ -28,7 +28,7 @@ struct audio_decoder::implementation : boost::noncopyable
 	buffer audio_buffer_;	
 	buffer current_chunk_;
 
-	size_t audio_frame_size_;
+	const size_t audio_frame_size_;
 
 	static const size_t SAMPLE_RATE = 48000;
 	static const size_t N_CHANNELS = 2;

@@ -158,6 +158,7 @@
     <ClInclude Include="consumer\bluefish\util.h" />
     <ClInclude Include="consumer\decklink\decklink_consumer.h" />
     <ClInclude Include="consumer\decklink\util.h" />
+    <ClInclude Include="consumer\ffmpeg\ffmpeg_consumer.h" />
     <ClInclude Include="consumer\frame_consumer_device.h" />
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
@@ -209,6 +210,12 @@
     <ClCompile Include="consumer\decklink\decklink_consumer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="consumer\ffmpeg\ffmpeg_consumer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="consumer\frame_consumer_device.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>

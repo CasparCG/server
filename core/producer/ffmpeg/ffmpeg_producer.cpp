@@ -21,7 +21,7 @@ struct ffmpeg_producer : public frame_producer
 {
 	input								input_;			
 	std::unique_ptr<audio_decoder>		audio_decoder_;
-	std::unique_ptr<video_decoder>		video_decoder_;
+	video_decoder						video_decoder_;
 
 	std::deque<safe_ptr<write_frame>>	video_frame_channel_;	
 	std::deque<std::vector<short>>		audio_chunk_channel_;
@@ -39,13 +39,13 @@ public:
 		: filename_(filename)
 		, last_frame_(draw_frame(draw_frame::empty()))
 		, input_(filename, loop)
-		, video_decoder_(new video_decoder(input_.get_video_codec_context().get()))		
+		, video_decoder_(input_.get_video_codec_context().get())		
 		, audio_decoder_(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), input_.fps()) : nullptr){}
 
 	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
 	{
 		format_desc_ = frame_processor->get_video_format_desc();
-		video_decoder_->initialize(frame_processor);
+		video_decoder_.initialize(frame_processor);
 	}
 		
 	virtual safe_ptr<draw_frame> receive()
@@ -63,9 +63,9 @@ public:
 			tbb::parallel_invoke(
 			[&]
 			{ // Video Decoding and Scaling
-				if(!video_packet.empty() && video_decoder_)
+				if(!video_packet.empty())
 				{
-					auto frame = video_decoder_->execute(video_packet);
+					auto frame = video_decoder_.execute(video_packet);
 					video_frame_channel_.push_back(std::move(frame));
 				}
 			}, 
@@ -94,7 +94,7 @@ public:
 					audio_chunk_channel_.pop_front();
 				}
 							
-				ouput_channel_.push(video_frame_channel_.front());
+				ouput_channel_.push(std::move(video_frame_channel_.front()));
 				video_frame_channel_.pop_front();
 			}				
 

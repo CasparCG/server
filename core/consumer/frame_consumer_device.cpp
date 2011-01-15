@@ -68,7 +68,7 @@ public:
 				}
 			}
 	
-			clock_.wait(fmt_.fps);
+			clock_.tick(1.0/fmt_.fps);
 		});
 	}
 };

@@ -225,7 +225,7 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 		
-	void send(const safe_ptr<const read_frame>& frame)
+	virtual void send(const safe_ptr<const read_frame>& frame)
 	{
 		active_.get();
 		active_ = executor_.begin_invoke([=]
@@ -237,10 +237,7 @@ public:
 		});
 	}
 
-	size_t buffer_depth() const
-	{
-		return 2;
-	}
+	virtual size_t buffer_depth() const{return 2;}
 };
 
 consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}

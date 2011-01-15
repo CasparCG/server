@@ -238,14 +238,14 @@ public:
 		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 	}
 
-	void send(const safe_ptr<const read_frame>& frame)
+	virtual void send(const safe_ptr<const read_frame>& frame)
 	{
 		video_frame_buffer_.push(frame);
 		if(embed_audio_)
 			audio_frame_buffer_.push(frame);
 	}
 
-	size_t buffer_depth() const
+	virtual size_t buffer_depth() const
 	{
 		return 1;
 	}
