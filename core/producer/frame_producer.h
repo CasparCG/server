@@ -95,4 +95,10 @@ inline std::wostream& operator<<(std::wostream& out, const frame_producer& produ
 	return out;
 }
 
+inline std::wostream& operator<<(std::wostream& out, const safe_ptr<const frame_producer>& producer)
+{
+	out << producer->print().c_str();
+	return out;
+}
+
 }}

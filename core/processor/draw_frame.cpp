@@ -26,14 +26,16 @@ public:
 	void process_image(image_processor& processor)
 	{
 		processor.begin(image_transform_);
-		boost::range::for_each(frames_, std::bind(&draw_frame::process_image, std::placeholders::_1, std::ref(processor)));
+		BOOST_FOREACH(auto frame, frames_)
+			frame->process_image(processor);
 		processor.end();
 	}
 
 	void process_audio(audio_processor& processor)
 	{
 		processor.begin(audio_transform_);
-		boost::range::for_each(frames_, std::bind(&draw_frame::process_audio, std::placeholders::_1, std::ref(processor)));
+		BOOST_FOREACH(auto frame, frames_)
+			frame->process_audio(processor);
 		processor.end();
 	}	
 };

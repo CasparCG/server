@@ -66,13 +66,13 @@ public:
 		return draw_frame(frames);
 	}
 
-	void load(int index, const safe_ptr<frame_producer>& producer, bool autoplay)
+	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load)
 	{
 		producer->initialize(processor_device_);
 		executor_.begin_invoke([=]
 		{
 			auto it = layers_.insert(std::make_pair(index, layer(index))).first;
-			it->second.load(producer, autoplay);
+			it->second.load(producer, play_on_load);
 		});
 	}
 			
@@ -162,7 +162,7 @@ public:
 
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
 channel::channel(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers) : impl_(new implementation(format_desc, consumers)){}
-void channel::load(int index, const safe_ptr<frame_producer>& producer, bool autoplay){impl_->load(index, producer, autoplay);}
+void channel::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
 void channel::preview(int index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
 void channel::pause(int index){impl_->pause(index);}
 void channel::play(int index){impl_->play(index);}

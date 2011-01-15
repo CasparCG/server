@@ -13,11 +13,7 @@
 
 #include <tbb/parallel_invoke.h>
 
-#include <boost/regex.hpp>
-
 #include <deque>
-
-using namespace boost::assign;
 
 namespace caspar { namespace core { namespace ffmpeg{
 	
@@ -128,7 +124,7 @@ public:
 
 safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>& params)
 {			
-	static const std::vector<std::wstring> extensions = list_of(L"mpg")(L"avi")(L"mov")(L"dv")(L"wav")(L"mp3")(L"mp4")(L"f4v")(L"flv");
+	static const std::vector<std::wstring> extensions = boost::assign::list_of(L"mpg")(L"avi")(L"mov")(L"dv")(L"wav")(L"mp3")(L"mp4")(L"f4v")(L"flv");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool

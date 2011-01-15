@@ -21,20 +21,14 @@
 
 #include "fwd.h"
 
-#include "pixel_format.h"
 #include "write_frame.h"
-
-#include "../video_format.h"
+#include "pixel_format.h"
 
 #include <common/memory/safe_ptr.h>
 
-#include <tbb/concurrent_queue.h>
-
-#include <boost/thread/future.hpp>
-
-#include <memory>
-
 namespace caspar { namespace core {
+
+struct video_format;
 
 class frame_processor_device : boost::noncopyable
 {
@@ -51,7 +45,7 @@ public:
 	const video_format_desc& get_video_format_desc() const; // nothrow
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }}
