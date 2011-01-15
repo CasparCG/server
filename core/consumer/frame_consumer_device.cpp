@@ -52,16 +52,18 @@ public:
 			if(!buffer_.full())
 				return;
 	
-			BOOST_FOREACH(auto consumer, consumers_)
+			auto it = consumers_.begin();
+			while(it != consumers_.end())
 			{
 				try
 				{
-					consumer->send(buffer_[consumer->buffer_depth()-1]);
+					(*it)->send(buffer_[(*it)->buffer_depth()-1]);
+					++it;
 				}
 				catch(...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
-					boost::range::remove_erase(consumers_, consumer);
+					consumers_.erase(it++);
 					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
 				}
 			}
