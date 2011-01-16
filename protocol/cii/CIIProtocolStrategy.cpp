@@ -215,7 +215,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition.type = transition::mix;
 	transition.duration = 12;
 
-	auto pFP = load_media(boost::assign::list_of(filename));
+	auto pFP = create_producer(boost::assign::list_of(filename));
 	auto pTransition = safe_ptr<core::frame_producer>(transition_producer(pFP, transition));
 
 	try

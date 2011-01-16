@@ -26,6 +26,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/utility/string_convert.h>
+#include <common/env.h>
 
 #include <boost/thread/once.hpp>
 
@@ -49,9 +50,9 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar { namespace core { namespace ffmpeg {
+namespace caspar { namespace core {
 	
-struct consumer::implementation : boost::noncopyable
+struct ffmpeg_consumer::implementation : boost::noncopyable
 {		
 	executor executor_;
 	const std::string filename_;
@@ -76,10 +77,10 @@ struct consumer::implementation : boost::noncopyable
 	implementation(const video_format_desc& format_desc, const std::string& filename)
 		: filename_(filename)
 		, format_desc_(format_desc)
-		, audio_st_(0)
-		, video_st_(0)
-		, fmt_(0)
-		, img_convert_ctx_(0)
+		, audio_st_(nullptr)
+		, video_st_(nullptr)
+		, fmt_(nullptr)
+		, img_convert_ctx_(nullptr)
 		, video_outbuf_(format_desc.size)
 		, audio_outbuf_(48000)
 	{
@@ -118,8 +119,7 @@ struct consumer::implementation : boost::noncopyable
 		if (fmt_->audio_codec != CODEC_ID_NONE) 
 			audio_st_ = add_audio_stream(fmt_->audio_codec);	
 
-		// Set the output parameters (must be done even if no parameters).
-		
+		// Set the output parameters (must be done even if no parameters).		
 		int errn = 0;
 		if ((errn = -av_set_parameters(oc_.get(), nullptr)) > 0)
 			BOOST_THROW_EXCEPTION(
@@ -165,6 +165,8 @@ struct consumer::implementation : boost::noncopyable
 
 	~implementation()
 	{    
+		executor_.stop();
+
 		av_write_trailer(oc_.get());
 
 		// Close each codec.
@@ -383,9 +385,21 @@ struct consumer::implementation : boost::noncopyable
 	size_t buffer_depth() const { return 1; }
 };
 
-consumer::consumer(const video_format_desc& format_desc, const std::wstring& filename) : impl_(new implementation(format_desc, narrow(filename))){}
-consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
-void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
-size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
+ffmpeg_consumer::ffmpeg_consumer(const video_format_desc& format_desc, const std::wstring& filename) : impl_(new implementation(format_desc, narrow(filename))){}
+ffmpeg_consumer::ffmpeg_consumer(ffmpeg_consumer&& other) : impl_(std::move(other.impl_)){}
+void ffmpeg_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
+size_t ffmpeg_consumer::buffer_depth() const{return impl_->buffer_depth();}
 
-}}}
+safe_ptr<frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params)
+{
+	if(params.size() < 3 || params[0] != L"FILE")
+		return frame_consumer::empty();
+
+	auto format_desc = video_format_desc::get(params[1]);
+	if(format_desc.format == video_format::invalid)
+		return frame_consumer::empty();
+
+	return make_safe<ffmpeg_consumer>(format_desc, env::media_folder() + params[2]);
+}
+
+}}

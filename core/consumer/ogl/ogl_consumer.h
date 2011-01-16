@@ -22,7 +22,7 @@
 #include "../../consumer/frame_consumer.h"
 #include "../../video_format.h"
 
-namespace caspar { namespace core { namespace ogl {
+namespace caspar { namespace core {
 
 struct ogl_error : virtual caspar_exception{};
 
@@ -34,11 +34,11 @@ enum stretch
 	uniform_to_fill
 };
 
-class consumer : public frame_consumer
+class ogl_consumer : public frame_consumer
 {
 public:	
-	explicit consumer(const video_format_desc& format_desc, unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
-	consumer(consumer&& other);
+	explicit ogl_consumer(const video_format_desc& format_desc, unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
+	ogl_consumer(ogl_consumer&& other);
 	
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
@@ -47,4 +47,6 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-}}}
+safe_ptr<frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params);
+
+}}

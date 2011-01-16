@@ -22,13 +22,13 @@
 #include "../../video_format.h"
 #include "../../consumer/frame_consumer.h"
 
-namespace caspar { namespace core { namespace oal {
+namespace caspar { namespace core {
 	
-class consumer : public frame_consumer
+class oal_consumer : public frame_consumer
 {
 public:	
-	explicit consumer(const video_format_desc& format_desc);
-	consumer(consumer&& other);
+	explicit oal_consumer(const video_format_desc& format_desc);
+	oal_consumer(oal_consumer&& other);
 	
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
@@ -37,4 +37,6 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-}}}
+safe_ptr<frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params);
+
+}}

@@ -22,15 +22,15 @@
 #include "../../video_format.h"
 #include "../../consumer/frame_consumer.h"
 
-namespace caspar { namespace core { namespace bluefish {
+namespace caspar { namespace core {
 	
 struct bluefish_exception : public caspar_exception{};
 
-class consumer : public frame_consumer
+class bluefish_consumer : public frame_consumer
 {
 public:
-	explicit consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio = false);
-	consumer(consumer&& other);
+	explicit bluefish_consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio = false);
+	bluefish_consumer(bluefish_consumer&& other);
 	
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
@@ -38,6 +38,7 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::tr1::shared_ptr<consumer> BlueFishFrameConsumerPtr;
+	
+safe_ptr<frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params);
 
-}}}
+}}

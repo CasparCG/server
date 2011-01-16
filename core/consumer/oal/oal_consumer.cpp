@@ -30,19 +30,29 @@
 
 #include <boost/circular_buffer.hpp>
 
-namespace caspar { namespace core { namespace oal {	
+namespace caspar { namespace core {
 
-struct consumer::implementation : public sf::SoundStream, boost::noncopyable
+struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
 	tbb::concurrent_bounded_queue<std::vector<short>> input_;
 	boost::circular_buffer<std::vector<short>> container_;
-
+	tbb::atomic<bool> is_running_;
 public:
 	implementation() 
 		: container_(5)
 	{
+		is_running_ = true;
 		sf::SoundStream::Initialize(2, 48000);
 		Play();		
+		CASPAR_LOG(info) << "Sucessfully started oal_consumer";
+	}
+
+	~implementation()
+	{
+		is_running_ = false;
+		input_.try_push(std::vector<short>());
+		input_.try_push(std::vector<short>());
+		CASPAR_LOG(info) << "Sucessfully ended oal_consumer";
 	}
 	
 	virtual void send(const safe_ptr<const read_frame>& frame)
@@ -64,12 +74,24 @@ public:
 		data.Samples = container_.back().data();
 		data.NbSamples = container_.back().size();		
 
-		return true;
+		return is_running_;
 	}
 };
 
-consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
-consumer::consumer(const video_format_desc&) : impl_(new implementation()){}
-void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
-size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
-}}}
+oal_consumer::oal_consumer(oal_consumer&& other) : impl_(std::move(other.impl_)){}
+oal_consumer::oal_consumer(const video_format_desc&) : impl_(new implementation()){}
+void oal_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
+size_t oal_consumer::buffer_depth() const{return impl_->buffer_depth();}
+
+safe_ptr<frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)
+{
+	if(params.size() < 2 || params[0] != L"OAL")
+		return frame_consumer::empty();
+
+	auto format_desc = video_format_desc::get(params[1]);
+	if(format_desc.format == video_format::invalid)
+		return frame_consumer::empty();
+
+	return make_safe<oal_consumer>(format_desc);
+}
+}}

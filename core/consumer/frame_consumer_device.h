@@ -16,8 +16,11 @@ struct video_format_desc;
 class frame_consumer_device : boost::noncopyable
 {
 public:
-	explicit frame_consumer_device(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers);
+	explicit frame_consumer_device(const video_format_desc& format_desc);
 	frame_consumer_device(frame_consumer_device&& other);
+
+	void add(int index, const safe_ptr<frame_consumer>& consumer);
+	void remove(int index);
 	void consume(safe_ptr<const read_frame>&& future_frame); // nothrow
 private:
 	struct implementation;

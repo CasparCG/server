@@ -4,7 +4,7 @@
 
 #include "DeckLinkAPI_h.h"
 
-namespace caspar { namespace core { namespace decklink {
+namespace caspar { namespace core {
 	
 static BMDDisplayMode GetDecklinkVideoFormat(video_format::type fmt) 
 {
@@ -51,4 +51,4 @@ static IDeckLinkDisplayMode* get_display_mode(IDeckLinkOutput* output, video_for
 	return get_display_mode(output, GetDecklinkVideoFormat(fmt));
 }
 
-}}}
+}}

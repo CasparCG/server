@@ -38,9 +38,9 @@
 
 #include <algorithm>
 
-namespace caspar { namespace core { namespace ogl{	
+namespace caspar { namespace core {
 
-struct consumer::implementation : boost::noncopyable
+struct ogl_consumer::implementation : boost::noncopyable
 {			
 	boost::unique_future<void> active_;
 	executor executor_;
@@ -128,11 +128,11 @@ public:
 			hratio_ = static_cast<float>(format_desc_.height)/static_cast<float>(format_desc_.height);
 
 			std::pair<float, float> target_ratio = None();
-			if(stretch_ == ogl::fill)
+			if(stretch_ == fill)
 				target_ratio = Fill();
-			else if(stretch_ == ogl::uniform)
+			else if(stretch_ == uniform)
 				target_ratio = Uniform();
-			else if(stretch_ == ogl::uniform_to_fill)
+			else if(stretch_ == uniform_to_fill)
 				target_ratio = UniformToFill();
 
 			wSize_ = target_ratio.first;
@@ -156,6 +156,13 @@ public:
 			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		});
 		active_ = executor_.begin_invoke([]{});
+
+		CASPAR_LOG(info) << "Sucessfully started ogl_consumer";
+	}
+
+	~implementation()
+	{
+		CASPAR_LOG(info) << "Sucessfully ended ogl_consumer";
 	}
 	
 	std::pair<float, float> None()
@@ -240,8 +247,30 @@ public:
 	virtual size_t buffer_depth() const{return 2;}
 };
 
-consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
-consumer::consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
-void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
-size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
-}}}
+ogl_consumer::ogl_consumer(ogl_consumer&& other) : impl_(std::move(other.impl_)){}
+ogl_consumer::ogl_consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
+void ogl_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
+size_t ogl_consumer::buffer_depth() const{return impl_->buffer_depth();}
+
+safe_ptr<frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params)
+{
+	if(params.size() < 2 || params[0] != L"OGL")
+		return frame_consumer::empty();
+
+	auto format_desc = video_format_desc::get(params[1]);
+	if(format_desc.format == video_format::invalid)
+		return frame_consumer::empty();
+
+	unsigned int screen_index = 0;
+	stretch stretch = stretch::fill;
+	bool windowed = true;
+	
+	try{screen_index = boost::lexical_cast<int>(params[2]);}
+	catch(boost::bad_lexical_cast&){}
+	try{windowed = boost::lexical_cast<bool>(params[3]);}
+	catch(boost::bad_lexical_cast&){}
+
+	return make_safe<ogl_consumer>(format_desc, screen_index, stretch, windowed);
+}
+
+}}
