@@ -61,8 +61,6 @@ public:
 	{		
 		executor_.begin_invoke([=]
 		{	
-			clock_.tick(1.0/fmt_.fps);
-
 			buffer_.push_back(std::move(frame));
 
 			if(!buffer_.full())
@@ -83,6 +81,8 @@ public:
 					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
 				}
 			}
+
+			clock_.tick(1.0/fmt_.fps);
 		});
 	}
 };
