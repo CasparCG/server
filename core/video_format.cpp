@@ -30,7 +30,7 @@
 
 namespace caspar { namespace core {
 	
-const video_format_desc format_descs[video_format::invalid] =  
+const video_format_desc format_descs[video_format::count] =  
 {									   
 	DEFINE_VIDEOFORMATDESC(720,  576,  video_mode::upper,			50,			TEXT("PAL"),		video_format::pal		), 
 	//DEFINE_VIDEOFORMATDESC(720,  486,  video_mode::lower,			60/1.001,	TEXT("NTSC"),		video_format::ntsc		), 
