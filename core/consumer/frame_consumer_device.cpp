@@ -19,34 +19,50 @@ namespace caspar { namespace core {
 	
 struct frame_consumer_device::implementation
 {
+	static int const MAX_DEPTH = 3;
+
 	timer clock_;
 	executor executor_;	
 
 	boost::circular_buffer<safe_ptr<const read_frame>> buffer_;
 
-	std::list<safe_ptr<frame_consumer>> consumers_; // Valid iterators after erase
+	std::map<int, std::shared_ptr<frame_consumer>> consumers_; // Valid iterators after erase
 	
 	const video_format_desc fmt_;
 
 public:
-	implementation(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers) 
-		: consumers_(consumers.begin(), consumers.end())
-		, fmt_(format_desc)
+	implementation(const video_format_desc& format_desc) : fmt_(format_desc)
 	{		
-		if(consumers_.empty())
-			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("No consumer."));
-
-		std::vector<size_t> depths;
-		boost::range::transform(consumers_, std::back_inserter(depths), std::mem_fn(&frame_consumer::buffer_depth));
-		buffer_.set_capacity(*boost::range::max_element(depths));
 		executor_.set_capacity(3);
 		executor_.start();
+	}
+
+	void add(int index, const safe_ptr<frame_consumer>& consumer)
+	{		
+		executor_.invoke([&]
+		{
+			if(buffer_.capacity() < consumer->buffer_depth())
+				buffer_.set_capacity(consumer->buffer_depth());
+			consumers_[index] = consumer;
+		});
+	}
+
+	void remove(int index)
+	{
+		executor_.invoke([&]
+		{
+			auto it = consumers_.find(index);
+			if(it != consumers_.end())
+				consumers_.erase(it);
+		});
 	}
 			
 	void consume(safe_ptr<const read_frame>&& frame)
 	{		
 		executor_.begin_invoke([=]
-		{
+		{	
+			clock_.tick(1.0/fmt_.fps);
+
 			buffer_.push_back(std::move(frame));
 
 			if(!buffer_.full())
@@ -57,7 +73,7 @@ public:
 			{
 				try
 				{
-					(*it)->send(buffer_[(*it)->buffer_depth()-1]);
+					it->second->send(buffer_[it->second->buffer_depth()-1]);
 					++it;
 				}
 				catch(...)
@@ -67,13 +83,13 @@ public:
 					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
 				}
 			}
-	
-			clock_.tick(1.0/fmt_.fps);
 		});
 	}
 };
 
 frame_consumer_device::frame_consumer_device(frame_consumer_device&& other) : impl_(std::move(other.impl_)){}
-frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc, const std::vector<safe_ptr<frame_consumer>>& consumers) : impl_(new implementation(format_desc, consumers)){}
+frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+void frame_consumer_device::add(int index, const safe_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
+void frame_consumer_device::remove(int index){impl_->remove(index);}
 void frame_consumer_device::consume(safe_ptr<const read_frame>&& future_frame) { impl_->consume(std::move(future_frame)); }
 }}

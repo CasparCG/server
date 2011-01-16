@@ -46,7 +46,7 @@
 
 #pragma warning(push)
 
-namespace caspar { namespace core { namespace decklink{
+namespace caspar { namespace core {
 	
 struct decklink_consumer::implementation : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
@@ -256,4 +256,27 @@ decklink_consumer::decklink_consumer(decklink_consumer&& other) : impl_(std::mov
 void decklink_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
 	
-}}}	
+safe_ptr<frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params)
+{
+	if(params.size() < 2 || params[0] != L"DECKLINK")
+		return frame_consumer::empty();
+
+	auto format_desc = video_format_desc::get(params[1]);
+	if(format_desc.format == video_format::invalid)
+		return frame_consumer::empty();
+
+	int device_index = 1;
+	bool embed_audio = false;
+	bool internal_key = false;
+
+	try{device_index = boost::lexical_cast<int>(params[2]);}
+	catch(boost::bad_lexical_cast&){}
+	try{embed_audio = boost::lexical_cast<bool>(params[3]);}
+	catch(boost::bad_lexical_cast&){}
+	try{internal_key = boost::lexical_cast<bool>(params[4]);}
+	catch(boost::bad_lexical_cast&){}
+
+	return make_safe<decklink_consumer>(format_desc, device_index, embed_audio, internal_key);
+}
+
+}}

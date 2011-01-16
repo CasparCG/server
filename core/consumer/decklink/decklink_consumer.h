@@ -23,7 +23,7 @@
 
 #include "../../video_format.h"
 
-namespace caspar { namespace core { namespace decklink {
+namespace caspar { namespace core {
 
 class decklink_consumer : public frame_consumer
 {
@@ -38,4 +38,7 @@ private:
 	std::tr1::shared_ptr<implementation> impl_;
 };
 
-}}}
+safe_ptr<frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params);
+
+
+}}

@@ -50,11 +50,15 @@ public:
 	
 	void play()
 	{			
-		background_->set_leading_producer(foreground_);
-		foreground_ = background_;
-		background_ = frame_producer::empty();
-		is_paused_ = false;
-		CASPAR_LOG(info) << print() << L" background => foreground";
+		if(is_paused_)			
+			is_paused_ = false;
+		else
+		{
+			background_->set_leading_producer(foreground_);
+			foreground_ = background_;
+			background_ = frame_producer::empty();
+			CASPAR_LOG(info) << print() << L" background => foreground";
+		}
 	}
 
 	void pause()

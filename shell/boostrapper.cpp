@@ -59,8 +59,10 @@ struct bootstrapper::implementation : boost::noncopyable
 			auto format_desc = video_format_desc::get(widen(xml_channel.second.get("videomode", "PAL")));		
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid videomode."));
-			std::vector<safe_ptr<frame_consumer>> consumers;
-
+			
+			channels_.push_back(channel(format_desc));
+			
+			int index = 0;
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))
 			{
 				try
@@ -70,41 +72,30 @@ struct bootstrapper::implementation : boost::noncopyable
 					{			
 						int device = xml_consumer.second.get("device", 0);
 			
-						ogl::stretch stretch = ogl::stretch::fill;
+						stretch stretch = stretch::fill;
 						std::string stretchStr = xml_consumer.second.get("stretch", "");
 						if(stretchStr == "none")
-							stretch = ogl::stretch::none;
+							stretch = stretch::none;
 						else if(stretchStr == "uniform")
-							stretch = ogl::stretch::uniform;
+							stretch = stretch::uniform;
 						else if(stretchStr == "uniformtofill")
-							stretch = ogl::stretch::uniform_to_fill;
+							stretch = stretch::uniform_to_fill;
 
 						bool windowed = xml_consumer.second.get("windowed", false);
-						consumers.push_back(ogl::consumer(format_desc, device, stretch, windowed));
+						channels_.back()->add(index++, ogl_consumer(format_desc, device, stretch, windowed));
 					}
 					else if(name == "bluefish")					
-						consumers.push_back(bluefish::consumer(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false)));					
+						channels_.back()->add(index++, bluefish_consumer(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("embedded-audio", false)));					
 					else if(name == "decklink")
-						consumers.push_back(make_safe<decklink::decklink_consumer>(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("internalkey", false)));
+						channels_.back()->add(index++, decklink_consumer(format_desc, xml_consumer.second.get("device", 0), xml_consumer.second.get("internalkey", false)));
 					else if(name == "audio")
-						consumers.push_back(oal::consumer(format_desc));			
+						channels_.back()->add(index++, oal_consumer(format_desc));			
 				}
 				catch(...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
-			}
-
-			try
-			{
-				consumers.push_back(ffmpeg::consumer(format_desc, env::media_folder() + L"test.mpeg"));	
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-			}
-							
-			channels_.push_back(channel(format_desc, consumers));
+			}							
 		}
 	}
 		

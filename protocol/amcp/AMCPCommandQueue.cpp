@@ -95,10 +95,18 @@ void AMCPCommandQueue::Run(HANDLE stopEvent)
 
 		if(pCurrentCommand != 0) 
 		{
-			if(pCurrentCommand->Execute()) 
-				CASPAR_LOG(info) << "Executed command";
-			else 
-				CASPAR_LOG(info) << "Failed to executed command";
+			try
+			{
+				if(pCurrentCommand->Execute()) 
+					CASPAR_LOG(info) << "Executed command: " << pCurrentCommand->print();
+				else 
+					CASPAR_LOG(info) << "Failed to executed command: " << pCurrentCommand->print();
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				CASPAR_LOG(info) << "Failed to executed command:" << pCurrentCommand->print();
+			}
 				
 			pCurrentCommand->SendReply();
 			pCurrentCommand.reset();

@@ -72,6 +72,8 @@ namespace amcp {
 			return scheduling_ == Default ? GetDefaultScheduling() : scheduling_;
 		}
 
+		virtual std::wstring print() const = 0;
+
 		void SetScheduling(AMCPCommandScheduling s){scheduling_ = s;}
 
 	protected:

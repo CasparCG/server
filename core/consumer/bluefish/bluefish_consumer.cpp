@@ -39,7 +39,7 @@
 
 #include <memory>
 
-namespace caspar { namespace core { namespace bluefish {
+namespace caspar { namespace core {
 	
 CBlueVelvet4* (*BlueVelvetFactory4)();
 BLUE_UINT32 (*encode_hanc_frame)(struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr,BLUE_UINT32 no_audio_ch,BLUE_UINT32 no_audio_samples,BLUE_UINT32 nTypeOfSample,BLUE_UINT32 emb_audio_flag);
@@ -78,7 +78,7 @@ void blue_initialize()
 	blue_hanc_initialize();
 }
 		
-struct consumer::implementation : boost::noncopyable
+struct bluefish_consumer::implementation : boost::noncopyable
 {
 	boost::unique_future<void> active_;
 	executor executor_;
@@ -319,8 +319,29 @@ public:
 	}
 };
 
-consumer::consumer(consumer&& other) : impl_(std::move(other.impl_)){}
-consumer::consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
-void consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
-size_t consumer::buffer_depth() const{return impl_->buffer_depth();}
-}}}
+bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
+bluefish_consumer::bluefish_consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
+void bluefish_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
+size_t bluefish_consumer::buffer_depth() const{return impl_->buffer_depth();}
+	
+safe_ptr<frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params)
+{
+	if(params.size() < 2 || params[0] != L"BLUEFISH")
+		return frame_consumer::empty();
+
+	auto format_desc = video_format_desc::get(params[1]);
+	if(format_desc.format == video_format::invalid)
+		return frame_consumer::empty();
+	
+	int device_index = 1;
+	bool embed_audio = false;
+
+	try{device_index = boost::lexical_cast<int>(params[2]);}
+	catch(boost::bad_lexical_cast&){}
+	try{embed_audio = boost::lexical_cast<bool>(params[3]);}
+	catch(boost::bad_lexical_cast&){}
+
+	return make_safe<bluefish_consumer>(format_desc, device_index, embed_audio);
+}
+
+}}

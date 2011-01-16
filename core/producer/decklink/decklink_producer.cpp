@@ -94,7 +94,7 @@ public:
 		if(pModelName != nullptr)
 			CASPAR_LOG(info) << "decklink_producer: Modelname: " << pModelName;
 		
-		unsigned long decklinkVideoFormat = decklink::GetDecklinkVideoFormat(format_desc_.format);
+		unsigned long decklinkVideoFormat = GetDecklinkVideoFormat(format_desc_.format);
 		if(decklinkVideoFormat == ULONG_MAX) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: Card does not support requested videoformat."));
 

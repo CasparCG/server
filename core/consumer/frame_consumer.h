@@ -30,9 +30,20 @@ class read_frame;
 struct frame_consumer : boost::noncopyable
 {
 	virtual ~frame_consumer() {}
-
+	
 	virtual void send(const safe_ptr<const read_frame>& frame) = 0;
 	virtual size_t buffer_depth() const = 0;
+
+	static safe_ptr<frame_consumer> empty()
+	{
+		struct empty_frame_consumer : public frame_consumer
+		{
+			virtual void send(const safe_ptr<const read_frame>&){}
+			virtual size_t buffer_depth() const{return 0;}
+		};
+		static safe_ptr<frame_consumer> consumer = make_safe<empty_frame_consumer>();
+		return consumer;
+	}
 };
 
 }}

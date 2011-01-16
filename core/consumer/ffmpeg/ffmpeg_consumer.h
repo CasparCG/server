@@ -22,13 +22,13 @@
 #include "../../video_format.h"
 #include "../../consumer/frame_consumer.h"
 
-namespace caspar { namespace core { namespace ffmpeg {
+namespace caspar { namespace core {
 	
-class consumer : public frame_consumer
+class ffmpeg_consumer : public frame_consumer
 {
 public:	
-	explicit consumer(const video_format_desc& format_desc, const std::wstring& filename);
-	consumer(consumer&& other);
+	explicit ffmpeg_consumer(const video_format_desc& format_desc, const std::wstring& filename);
+	ffmpeg_consumer(ffmpeg_consumer&& other);
 	
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
@@ -37,4 +37,6 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-}}}
+safe_ptr<frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params);
+
+}}

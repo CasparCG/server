@@ -166,13 +166,68 @@ void AMCPCommand::Clear()
 	_parameters.clear();
 }
 
+bool AddCommand::DoExecute()
+{	
+	//Perform loading of the clip
+	try
+	{
+		auto consumer = create_consumer(_parameters);		
+		GetChannel()->add(GetLayerIndex(), consumer);
+	
+		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
+
+		SetReplyString(TEXT("202 ADD OK\r\n"));
+
+		return true;
+	}
+	catch(file_not_found&)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("404 ADD ERROR\r\n"));
+		return false;
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("502 ADD FAILED\r\n"));
+		return false;
+	}
+}
+
+bool RemoveCommand::DoExecute()
+{	
+	//Perform loading of the clip
+	try
+	{
+		GetChannel()->remove(GetLayerIndex());
+	
+		CASPAR_LOG(info) << "Removed " << TEXT(" successfully");
+
+		SetReplyString(TEXT("202 REMOVE OK\r\n"));
+
+		return true;
+	}
+	catch(file_not_found&)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("404 REMOVE ERROR\r\n"));
+		return false;
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("502 REMOVE FAILED\r\n"));
+		return false;
+	}
+}
+
 bool LoadCommand::DoExecute()
 {	
 	//Perform loading of the clip
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = load_media(_parameters);		
+		auto pFP = create_producer(_parameters);		
 		GetChannel()->preview(GetLayerIndex(), pFP);
 	
 		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
@@ -247,7 +302,7 @@ bool LoadbgCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = load_media(_parameters);
+		auto pFP = create_producer(_parameters);
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
