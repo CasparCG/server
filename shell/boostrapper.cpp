@@ -94,6 +94,15 @@ struct bootstrapper::implementation : boost::noncopyable
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
 			}
+
+			try
+			{
+				consumers.push_back(ffmpeg::consumer(format_desc, env::media_folder() + L"test.mpeg"));	
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
 							
 			channels_.push_back(channel(format_desc, consumers));
 		}

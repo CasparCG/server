@@ -62,7 +62,6 @@ struct consumer::implementation : boost::noncopyable
 
 	// Video
 	AVStream* video_st_;
-	AVFrame* picture_;
 	std::vector<uint8_t, tbb::cache_aligned_allocator<unsigned char>> picture_buf_;
 
 	std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> video_outbuf_;
@@ -79,7 +78,6 @@ struct consumer::implementation : boost::noncopyable
 		, format_desc_(format_desc)
 		, audio_st_(0)
 		, video_st_(0)
-		, picture_(0)
 		, fmt_(0)
 		, img_convert_ctx_(0)
 		, video_outbuf_(format_desc.size)
@@ -176,9 +174,6 @@ struct consumer::implementation : boost::noncopyable
 		if (audio_st_)
 			avcodec_close(audio_st_->codec);
 				
-		if(picture_)
-			av_free(picture_);		
-
 		// Free the streams.
 		for(size_t i = 0; i < oc_->nb_streams; ++i) 
 		{
@@ -206,8 +201,7 @@ struct consumer::implementation : boost::noncopyable
 		c->height = format_desc_.height;
 		c->time_base.den = static_cast<int>(format_desc_.fps);
 		c->time_base.num = 1;
-		c->gop_size = 12; // Emit one intra frame every twelve frames at most.
-		c->pix_fmt = PIX_FMT_YUV420P;
+		c->pix_fmt = c->pix_fmt == -1 ? PIX_FMT_YUV420P : c->pix_fmt;
 
 		// Some formats want stream headers to be separate.
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
@@ -255,8 +249,18 @@ struct consumer::implementation : boost::noncopyable
 
 		sws_scale(img_convert_ctx_, av_frame->data, av_frame->linesize, 0, c->height, local_av_frame.data, local_av_frame.linesize);
 				
-		auto out_size = avcodec_encode_video(c, video_outbuf_.data(), video_outbuf_.size(), &local_av_frame);
+		int ret = avcodec_encode_video(c, video_outbuf_.data(), video_outbuf_.size(), &local_av_frame);
+				
+		int errn = -ret;
+		if (errn > 0) 
+			BOOST_THROW_EXCEPTION(
+				invalid_operation() << 
+				msg_info("Could not encode video frame.") <<
+				boost::errinfo_api_function("avcodec_encode_video") <<
+				boost::errinfo_errno(errn) <<
+				boost::errinfo_file_name(filename_));
 
+		auto out_size = ret;
 		AVPacket pkt;
 		av_init_packet(&pkt);
 		pkt.size = out_size;
@@ -324,11 +328,9 @@ struct consumer::implementation : boost::noncopyable
 		if(!frame->audio_data().empty())
 			audio_input_buffer_.insert(audio_input_buffer_.end(), frame->audio_data().begin(), frame->audio_data().end());
 		else
-			audio_input_buffer_.insert(audio_input_buffer_.end(), 1920, 0);
+			audio_input_buffer_.insert(audio_input_buffer_.end(), 3840, 0);
 
 		while(encode_audio_packet()){}
-
-		CASPAR_LOG(trace) << audio_input_buffer_.size();
 	}
 
 	bool encode_audio_packet()
@@ -342,8 +344,18 @@ struct consumer::implementation : boost::noncopyable
 		AVPacket pkt;
 		av_init_packet(&pkt);
 		
-		pkt.size = avcodec_encode_audio(c, audio_outbuf_.data(), audio_outbuf_.size(), audio_input_buffer_.data());
+		int ret = avcodec_encode_audio(c, audio_outbuf_.data(), audio_outbuf_.size(), audio_input_buffer_.data());
+		
+		int errn = -ret;
+		if (errn > 0) 
+			BOOST_THROW_EXCEPTION(
+				invalid_operation() << 
+				msg_info("Could not encode audio samples.") <<
+				boost::errinfo_api_function("avcodec_encode_audio") <<
+				boost::errinfo_errno(errn) <<
+				boost::errinfo_file_name(filename_));
 
+		pkt.size = ret;
 		audio_input_buffer_ = std::vector<short, tbb::cache_aligned_allocator<short>>(audio_input_buffer_.begin() + frame_bytes/2, audio_input_buffer_.end());
 
 		if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
@@ -360,9 +372,6 @@ struct consumer::implementation : boost::noncopyable
 	 
 	void send(const safe_ptr<const read_frame>& frame)
 	{
-		if(frame->audio_data().empty())
-			return;
-
 		executor_.begin_invoke([=]
 		{				
 			auto my_frame = frame;
