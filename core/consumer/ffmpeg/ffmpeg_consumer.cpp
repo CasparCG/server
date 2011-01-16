@@ -74,6 +74,8 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 
 	std::vector<short, tbb::cache_aligned_allocator<short>> audio_input_buffer_;
 
+	boost::unique_future<void> active_;
+
 	implementation(const video_format_desc& format_desc, const std::string& filename)
 		: filename_(filename)
 		, format_desc_(format_desc)
@@ -84,8 +86,8 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 		, video_outbuf_(format_desc.size)
 		, audio_outbuf_(48000)
 	{
-		executor_.set_capacity(8);
 		executor_.start();
+		active_ = executor_.begin_invoke([]{});
 
 		static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
 		boost::call_once(av_register_all, av_register_all_flag);	
@@ -277,10 +279,10 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 
 			pkt.stream_index = video_st_->index;
 			pkt.data = video_outbuf_.data();
-		} 
-		
-		if (av_interleaved_write_frame(oc_.get(), &pkt) != 0)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Error while writing video frame"));
+
+			if (av_interleaved_write_frame(oc_.get(), &pkt) != 0)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Error while writing video frame"));
+		} 		
 	}
 
 	AVStream* add_audio_stream(enum CodecID codec_id)
@@ -374,7 +376,8 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 	 
 	void send(const safe_ptr<const read_frame>& frame)
 	{
-		executor_.begin_invoke([=]
+		active_.get();
+		active_ = executor_.begin_invoke([=]
 		{				
 			auto my_frame = frame;
 			encode_video_frame(my_frame);
