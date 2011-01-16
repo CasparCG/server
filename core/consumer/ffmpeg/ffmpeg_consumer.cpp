@@ -402,6 +402,8 @@ safe_ptr<frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>&
 	if(format_desc.format == video_format::invalid)
 		return frame_consumer::empty();
 
+	// TODO: Ask stakeholders about case where file already exists.
+	boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + params[2])); // Delete the file if it exists
 	return make_safe<ffmpeg_consumer>(format_desc, env::media_folder() + params[2]);
 }
 
