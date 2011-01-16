@@ -6,6 +6,8 @@
 #include <core/consumer/bluefish/bluefish_consumer.h>
 #include <core/consumer/decklink/decklink_consumer.h>
 #include <core/consumer/ogl/ogl_consumer.h>
+#include <core/consumer/ffmpeg/ffmpeg_consumer.h>
+
 #include <core/producer/flash/FlashAxContainer.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
@@ -92,7 +94,7 @@ struct bootstrapper::implementation : boost::noncopyable
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
 			}
-			
+							
 			channels_.push_back(channel(format_desc, consumers));
 		}
 	}
