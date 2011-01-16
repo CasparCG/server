@@ -48,7 +48,7 @@
 
 namespace caspar { namespace core {
 	
-struct decklink_consumer::implementation : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
+struct decklink_input : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
 	struct co_init
 	{
@@ -77,7 +77,7 @@ struct decklink_consumer::implementation : public IDeckLinkVideoOutputCallback, 
 	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> audio_frame_buffer_;
 
 public:
-	implementation(const video_format_desc& format_desc, size_t device_index, bool embed_audio, bool internalKey) 
+	decklink_input(const video_format_desc& format_desc, size_t device_index, bool embed_audio, bool internalKey) 
 		: format_desc_(format_desc)
 		, audio_container_(5)
 		, current_format_(video_format::pal)
@@ -175,7 +175,7 @@ public:
 		CASPAR_LOG(info) << "DECKLINK: Successfully initialized decklink for " << format_desc_.name;		
 	}
 
-	~implementation()
+	~decklink_input()
 	{			
 		if(output_ != nullptr) 
 		{
@@ -238,11 +238,39 @@ public:
 		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 	}
 
-	virtual void send(const safe_ptr<const read_frame>& frame)
+	void send(const safe_ptr<const read_frame>& frame)
 	{
 		video_frame_buffer_.push(frame);
 		if(embed_audio_)
 			audio_frame_buffer_.push(frame);
+	}
+};
+
+struct decklink_consumer::implementation
+{
+	executor executor_;
+	std::unique_ptr<decklink_input> input_;
+
+	implementation(const video_format_desc& format_desc, size_t device_index, bool embed_audio, bool internalKey)
+	{
+		executor_.start();
+		executor_.invoke([&]
+		{
+			input_.reset(new decklink_input(format_desc, device_index, embed_audio, internalKey));
+		});
+	}
+
+	~implementation()
+	{
+		executor_.invoke([&]
+		{
+			input_ = nullptr;
+		});
+	}
+
+	virtual void send(const safe_ptr<const read_frame>& frame)
+	{
+		input_->send(frame);
 	}
 
 	virtual size_t buffer_depth() const
