@@ -17,7 +17,6 @@
 
 #include <tbb/parallel_for.h>
 
-#include <map>
 #include <memory>
 
 namespace caspar { namespace core {
@@ -39,6 +38,7 @@ public:
 
 	~implementation()
 	{
+		// Shutdown order is important! Destroy all created frames to mixer before destroying mixer.
 		CASPAR_LOG(info) << "Shutting down channel.";
 		producer_.reset();
 		CASPAR_LOG(info) << "Successfully shut down producer-device.";
