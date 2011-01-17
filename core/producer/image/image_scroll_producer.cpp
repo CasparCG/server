@@ -69,7 +69,7 @@
 //
 //	draw_frame do_receive()
 //	{
-//		auto frame = frame_mixer_->create_frame(format_desc_.width, format_desc_.height);
+//		auto frame = frame_factory_->create_frame(format_desc_.width, format_desc_.height);
 //		std::fill(frame.image_data().begin(), frame.image_data().end(), 0);
 //
 //		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
@@ -125,10 +125,10 @@
 //		return receive();	
 //	}
 //	
-//	void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
+//	void initialize(const safe_ptr<frame_factory>& frame_factory)
 //	{
-//		frame_mixer_ = frame_mixer;
-//		format_desc_ = frame_mixer_->get_video_format_desc();
+//		frame_factory_ = frame_factory;
+//		format_desc_ = frame_factory_->get_video_format_desc();
 //				
 //		if(image_width_ - format_desc_.width > image_height_ - format_desc_.height)
 //			direction_ = speed_ < 0 ? direction::Right : direction::Left;
@@ -165,7 +165,7 @@
 //
 //	std::wstring filename_;
 //
-//	safe_ptr<frame_mixer_device> frame_mixer_;
+//	safe_ptr<frame_mixer_device> frame_factory_;
 //};
 //
 //safe_ptr<frame_producer> create_image_scroll_producer(const std::vector<std::wstring>& params)

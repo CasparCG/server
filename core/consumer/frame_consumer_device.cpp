@@ -20,21 +20,27 @@ namespace caspar { namespace core {
 struct frame_consumer_device::implementation
 {
 	static int const MAX_DEPTH = 3;
-
+	
 	timer clock_;
-	executor executor_;	
 
 	boost::circular_buffer<safe_ptr<const read_frame>> buffer_;
 
 	std::map<int, std::shared_ptr<frame_consumer>> consumers_; // Valid iterators after erase
 	
 	const video_format_desc fmt_;
-
+	
+	executor executor_;	
 public:
 	implementation(const video_format_desc& format_desc) : fmt_(format_desc)
 	{		
-		executor_.set_capacity(3);
+		executor_.set_capacity(2);
 		executor_.start();
+	}
+
+	~implementation()
+	{
+		executor_.clear();
+		CASPAR_LOG(info) << "Shutting down consumer-device.";
 	}
 
 	void add(int index, const safe_ptr<frame_consumer>& consumer)
@@ -57,7 +63,7 @@ public:
 		});
 	}
 			
-	void consume(safe_ptr<const read_frame>&& frame)
+	void send(const safe_ptr<const read_frame>& frame)
 	{		
 		executor_.begin_invoke([=]
 		{	
@@ -91,5 +97,5 @@ frame_consumer_device::frame_consumer_device(frame_consumer_device&& other) : im
 frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 void frame_consumer_device::add(int index, const safe_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
-void frame_consumer_device::consume(safe_ptr<const read_frame>&& future_frame) { impl_->consume(std::move(future_frame)); }
+void frame_consumer_device::send(const safe_ptr<const read_frame>& future_frame) { impl_->send(future_frame); }
 }}

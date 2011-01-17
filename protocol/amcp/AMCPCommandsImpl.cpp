@@ -160,7 +160,7 @@ void AMCPCommand::SendReply()
 
 void AMCPCommand::Clear() 
 {
-	pChannel_->clear();
+	pChannel_->producer().clear();
 	pClientInfo_.reset();
 	channelIndex_ = 0;
 	_parameters.clear();
@@ -176,17 +176,17 @@ bool MixerCommand::DoExecute()
 			if(_parameters[1] == L"OPACITY")
 			{
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				GetChannel()->set_video_opacity(GetLayerIndex(), value);
+				GetChannel()->producer().set_video_opacity(GetLayerIndex(), value);
 			}
 			else if(_parameters[1] == L"GAIN")
 			{
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				GetChannel()->set_video_gain(GetLayerIndex(), value);
+				GetChannel()->producer().set_video_gain(GetLayerIndex(), value);
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				GetChannel()->set_video_opacity(GetLayerIndex(), 1.0);
-				GetChannel()->set_video_gain(GetLayerIndex(), 1.0);
+				GetChannel()->producer().set_video_opacity(GetLayerIndex(), 1.0);
+				GetChannel()->producer().set_video_gain(GetLayerIndex(), 1.0);
 			}
 		}
 		else if(_parameters[0] == L"AUDIO")
@@ -194,18 +194,18 @@ bool MixerCommand::DoExecute()
 			if(_parameters[1] == L"GAIN")
 			{
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				GetChannel()->set_audio_gain(GetLayerIndex(), value);
+				GetChannel()->producer().set_audio_gain(GetLayerIndex(), value);
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				GetChannel()->set_audio_gain(GetLayerIndex(), 1.0);
+				GetChannel()->producer().set_audio_gain(GetLayerIndex(), 1.0);
 			}
 		}
 		else if(_parameters[0] == L"RESET")
 		{
-			GetChannel()->set_video_opacity(GetLayerIndex(), 1.0);
-			GetChannel()->set_video_gain(GetLayerIndex(), 1.0);
-			GetChannel()->set_audio_gain(GetLayerIndex(), 1.0);
+			GetChannel()->producer().set_video_opacity(GetLayerIndex(), 1.0);
+			GetChannel()->producer().set_video_gain(GetLayerIndex(), 1.0);
+			GetChannel()->producer().set_audio_gain(GetLayerIndex(), 1.0);
 		}
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));
@@ -232,7 +232,7 @@ bool AddCommand::DoExecute()
 	try
 	{
 		auto consumer = create_consumer(_parameters);		
-		GetChannel()->add(GetLayerIndex(), consumer);
+		GetChannel()->consumer().add(GetLayerIndex(), consumer);
 	
 		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
 
@@ -259,7 +259,7 @@ bool RemoveCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->remove(GetLayerIndex());
+		GetChannel()->consumer().remove(GetLayerIndex());
 	
 		CASPAR_LOG(info) << "Removed " << TEXT(" successfully");
 
@@ -288,7 +288,7 @@ bool LoadCommand::DoExecute()
 	{
 		_parameters[0] = _parameters[0];
 		auto pFP = create_producer(_parameters);		
-		GetChannel()->preview(GetLayerIndex(), pFP);
+		GetChannel()->producer().preview(GetLayerIndex(), pFP);
 	
 		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
 
@@ -368,7 +368,7 @@ bool LoadbgCommand::DoExecute()
 
 		pFP = safe_ptr<core::frame_producer>(transition_producer(pFP, transitionInfo));
 		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();
-		GetChannel()->load(GetLayerIndex(), pFP, autoPlay); // TODO: LOOP
+		GetChannel()->producer().load(GetLayerIndex(), pFP, autoPlay); // TODO: LOOP
 	
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
@@ -393,7 +393,7 @@ bool PauseCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->pause(GetLayerIndex());
+		GetChannel()->producer().pause(GetLayerIndex());
 		SetReplyString(TEXT("202 PAUSE OK\r\n"));
 		return true;
 	}
@@ -409,7 +409,7 @@ bool PlayCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->play(GetLayerIndex());
+		GetChannel()->producer().play(GetLayerIndex());
 		SetReplyString(TEXT("202 PLAY OK\r\n"));
 		return true;
 	}
@@ -425,7 +425,7 @@ bool StopCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->stop(GetLayerIndex());
+		GetChannel()->producer().stop(GetLayerIndex());
 		SetReplyString(TEXT("202 STOP OK\r\n"));
 		return true;
 	}
@@ -439,7 +439,7 @@ bool StopCommand::DoExecute()
 
 bool ClearCommand::DoExecute()
 {
-	GetChannel()->clear(GetLayerIndex());
+	GetChannel()->producer().clear(GetLayerIndex());
 		
 	SetReplyString(TEXT("202 CLEAR OK\r\n"));
 
@@ -847,7 +847,7 @@ bool CinfCommand::DoExecute()
 
 void GenerateChannelInfo(int index, const safe_ptr<core::channel>& pChannel, std::wstringstream& replyString)
 {
-	replyString << index << TEXT(" ") << pChannel->get_video_format_desc().name  << TEXT("\r\n") << (pChannel->foreground(0).get()->print());
+	replyString << index << TEXT(" ") << pChannel->get_video_format_desc().name  << TEXT("\r\n") << (pChannel->producer().foreground(0).get()->print());
 }
 
 bool InfoCommand::DoExecute()
@@ -936,7 +936,7 @@ bool SetCommand::DoExecute()
 
 	if(name == TEXT("MODE"))
 	{
-		//if(this->GetChannel()->SetVideoFormat(value)) TODO
+		//if(this->GetChannel()->producer().SetVideoFormat(value)) TODO
 		//	this->SetReplyString(TEXT("202 SET MODE OK\r\n"));
 		//else
 			this->SetReplyString(TEXT("501 SET MODE FAILED\r\n"));

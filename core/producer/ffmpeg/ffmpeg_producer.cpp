@@ -43,10 +43,10 @@ public:
 		, video_decoder_(input_.get_video_codec_context().get())		
 		, audio_decoder_(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), input_.fps()) : nullptr){}
 
-	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
+	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
-		format_desc_ = frame_mixer->get_video_format_desc();
-		video_decoder_.initialize(frame_mixer);
+		format_desc_ = frame_factory->get_video_format_desc();
+		video_decoder_.initialize(frame_factory);
 	}
 		
 	virtual safe_ptr<draw_frame> receive()

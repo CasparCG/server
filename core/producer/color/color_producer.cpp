@@ -43,9 +43,9 @@ public:
 	
 	virtual safe_ptr<draw_frame> receive() { return frame_; }
 
-	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
+	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
-		auto frame = frame_mixer->create_frame(1, 1, pixel_format::bgra);
+		auto frame = frame_factory->create_frame(1, 1, pixel_format::bgra);
 		auto& value = *reinterpret_cast<unsigned long*>(frame->image_data().begin());
 		std::wstringstream str(color_str_.substr(1));
 		str >> std::hex >> value;	

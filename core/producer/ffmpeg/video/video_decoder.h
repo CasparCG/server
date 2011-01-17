@@ -15,7 +15,7 @@ class video_decoder : boost::noncopyable
 public:
 	explicit video_decoder(AVCodecContext* codec_context);
 	safe_ptr<write_frame> execute(const aligned_buffer& video_packet);	
-	void initialize(const safe_ptr<frame_mixer_device>& frame_mixer);
+	void initialize(const safe_ptr<frame_factory>& frame_factory);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

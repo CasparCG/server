@@ -169,6 +169,7 @@
     <ClInclude Include="mixer\frame\pixel_format.h" />
     <ClInclude Include="mixer\frame\read_frame.h" />
     <ClInclude Include="mixer\frame\write_frame.h" />
+    <ClInclude Include="mixer\frame_factory.h" />
     <ClInclude Include="mixer\frame_mixer_device.h" />
     <ClInclude Include="mixer\fwd.h" />
     <ClInclude Include="mixer\gpu\device_buffer.h" />
@@ -188,6 +189,7 @@
     <ClInclude Include="producer\flash\flash_producer.h" />
     <ClInclude Include="producer\flash\TimerHelper.h" />
     <ClInclude Include="producer\frame_producer.h" />
+    <ClInclude Include="producer\frame_producer_device.h" />
     <ClInclude Include="producer\image\image_loader.h" />
     <ClInclude Include="producer\image\image_producer.h" />
     <ClInclude Include="producer\image\image_scroll_producer.h" />
@@ -310,6 +312,10 @@
     <ClCompile Include="producer\flash\flash_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../stdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../stdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="producer\frame_producer_device.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\image\image_loader.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>

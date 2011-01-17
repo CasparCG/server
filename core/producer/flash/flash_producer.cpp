@@ -55,7 +55,7 @@ class flash_renderer
 	const std::wstring filename_;
 	const video_format_desc format_desc_;
 
-	std::shared_ptr<frame_mixer_device> frame_mixer_;
+	std::shared_ptr<frame_factory> frame_factory_;
 	
 	BYTE* bmp_data_;	
 	std::shared_ptr<void> hdc_;
@@ -65,10 +65,10 @@ class flash_renderer
 	safe_ptr<draw_frame> head_;
 
 public:
-	flash_renderer(const std::shared_ptr<frame_mixer_device>& frame_mixer, const std::wstring& filename) 
+	flash_renderer(const std::shared_ptr<frame_factory>& frame_factory, const std::wstring& filename) 
 		: filename_(filename)
-		, format_desc_(frame_mixer->get_video_format_desc())
-		, frame_mixer_(frame_mixer)
+		, format_desc_(frame_factory->get_video_format_desc())
+		, frame_factory_(frame_factory)
 		, bmp_data_(nullptr)
 		, hdc_(CreateCompatibleDC(0), DeleteDC)
 		, ax_(nullptr)
@@ -154,7 +154,7 @@ private:
 			std::fill_n(bmp_data_, format_desc_.size, 0);
 			ax_->DrawControl(static_cast<HDC>(hdc_.get()));
 		
-			auto frame = frame_mixer_->create_frame();
+			auto frame = frame_factory_->create_frame();
 			std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
 			head_ = frame;
 		}		
@@ -170,7 +170,7 @@ struct flash_producer::implementation
 	executor executor_;
 
 	std::shared_ptr<flash_renderer> renderer_;
-	std::shared_ptr<frame_mixer_device> frame_mixer_;
+	std::shared_ptr<frame_factory> frame_factory_;
 	
 	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }	
 	std::wstring filename_;
@@ -219,10 +219,10 @@ struct flash_producer::implementation
 		return tail_;
 	}
 	
-	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
+	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
-		frame_mixer_ = frame_mixer;
-		frame_buffer_.set_capacity(static_cast<size_t>(frame_mixer->get_video_format_desc().fps/2.0));
+		frame_factory_ = frame_factory;
+		frame_buffer_.set_capacity(static_cast<size_t>(frame_factory->get_video_format_desc().fps/2.0));
 		while(frame_buffer_.try_push(draw_frame::empty())){}
 		executor_.start();
 	}
@@ -232,7 +232,7 @@ struct flash_producer::implementation
 		executor_.begin_invoke([=]
 		{
 			if(!renderer_)
-				renderer_.reset(new flash_renderer(frame_mixer_, filename_));
+				renderer_.reset(new flash_renderer(frame_factory_, filename_));
 
 			try
 			{
@@ -251,7 +251,7 @@ flash_producer::flash_producer(flash_producer&& other) : impl_(std::move(other.i
 flash_producer::flash_producer(const std::wstring& filename) : impl_(new implementation(filename)){}
 safe_ptr<draw_frame> flash_producer::receive(){return impl_->receive();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
-void flash_producer::initialize(const safe_ptr<frame_mixer_device>& frame_mixer) { impl_->initialize(frame_mixer);}
+void flash_producer::initialize(const safe_ptr<frame_factory>& frame_factory) { impl_->initialize(frame_factory);}
 std::wstring flash_producer::print() const {return impl_->print();}
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)

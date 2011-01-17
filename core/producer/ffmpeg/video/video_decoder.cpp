@@ -90,7 +90,7 @@ pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_
 
 struct video_decoder::implementation : boost::noncopyable
 {	
-	std::shared_ptr<frame_mixer_device> frame_mixer_;
+	std::shared_ptr<frame_factory> frame_factory_;
 	std::shared_ptr<SwsContext> sws_context_;
 
 	AVCodecContext* codec_context_;
@@ -133,7 +133,7 @@ public:
 
 		if(sws_context_ == nullptr)
 		{
-			auto write = frame_mixer_->create_frame(desc_);
+			auto write = frame_factory_->create_frame(desc_);
 
 			tbb::parallel_for(0, static_cast<int>(desc_.planes.size()), 1, [&](int n)
 			{
@@ -148,14 +148,14 @@ public:
 				});
 			});
 
-			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field frame_mixer_->get_video_format_desc().mode == video_mode::upper && 	 
+			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field frame_factory_->get_video_format_desc().mode == video_mode::upper && 	 
 				write->get_image_transform().pos = boost::make_tuple(0.0f, 1.0/static_cast<double>(height_));
 
 			return write;
 		}
 		else
 		{
-			auto write = frame_mixer_->create_frame(width_, height_);
+			auto write = frame_factory_->create_frame(width_, height_);
 
 			AVFrame av_frame;	
 			avcodec_get_frame_defaults(&av_frame);
@@ -167,16 +167,16 @@ public:
 		}	
 	}
 
-	void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
+	void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
-		frame_mixer_ = frame_mixer;		
+		frame_factory_ = frame_factory;		
 		double frame_rate = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
-		if(abs(frame_rate - frame_mixer->get_video_format_desc().fps) > std::numeric_limits<double>::min())
+		if(abs(frame_rate - frame_factory->get_video_format_desc().fps) > std::numeric_limits<double>::min())
 			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid video framerate."));
 	}
 };
 
 video_decoder::video_decoder(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
 safe_ptr<write_frame> video_decoder::execute(const aligned_buffer& video_packet){return impl_->execute(video_packet);}
-void video_decoder::initialize(const safe_ptr<frame_mixer_device>& frame_mixer){impl_->initialize(frame_mixer); }
+void video_decoder::initialize(const safe_ptr<frame_factory>& frame_factory){impl_->initialize(frame_factory); }
 }}}

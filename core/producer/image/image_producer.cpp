@@ -19,12 +19,12 @@ namespace caspar { namespace core { namespace image{
 
 struct image_producer : public frame_producer
 {	
-	std::shared_ptr<frame_mixer_device> frame_mixer_;
+	std::shared_ptr<frame_factory> frame_factory_;
 	std::wstring filename_;
 	safe_ptr<draw_frame> frame_;
 
 	image_producer(image_producer&& other) 
-		: frame_mixer_(std::move(other.frame_mixer_))
+		: frame_factory_(std::move(other.frame_factory_))
 		, filename_(std::move(other.filename_))
 		, frame_(draw_frame::empty()){}
 
@@ -33,12 +33,12 @@ struct image_producer : public frame_producer
 	
 	virtual safe_ptr<draw_frame> receive(){return frame_;}
 
-	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
+	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
-		frame_mixer_ = frame_mixer;
+		frame_factory_ = frame_factory;
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
-		auto frame = frame_mixer->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
+		auto frame = frame_factory->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
 		frame_ = std::move(frame);
 	}

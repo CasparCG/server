@@ -198,8 +198,8 @@ void CIIProtocolStrategy::DisplayTemplate(const std::wstring& titleName)
 {
 	try
 	{
-		pChannel_->load(0, GetPreparedTemplate(titleName));
-		pChannel_->play(0);
+		pChannel_->producer().load(0, GetPreparedTemplate(titleName));
+		pChannel_->producer().play(0);
 
 		CASPAR_LOG(info) << L"Displayed title " << titleName ;
 	}
@@ -220,7 +220,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 
 	try
 	{
-		pChannel_->load(0, pTransition);
+		pChannel_->producer().load(0, pTransition);
 	}
 	catch(...)
 	{
@@ -229,7 +229,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 		return;
 	}
 
-	pChannel_->play(0);
+	pChannel_->producer().play(0);
 
 	CASPAR_LOG(info) << L"Displayed " << filename;
 }
