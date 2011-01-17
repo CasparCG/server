@@ -261,6 +261,7 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 				}
 
 				pCommand->SetChannel(pChannel);
+				pCommand->SetChannels(channels_);
 				pCommand->SetChannelIndex(channelIndex);
 				pCommand->SetLayerIntex(layerIndex);
 
@@ -310,6 +311,7 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	transform(s.begin(), s.end(), s.begin(), toupper);
 	
 	if	   (s == TEXT("MIXER"))		return std::make_shared<MixerCommand>();
+	else if(s == TEXT("SWAP"))		return std::make_shared<SwapCommand>();
 	else if(s == TEXT("LOAD"))		return std::make_shared<LoadCommand>();
 	else if(s == TEXT("LOADBG"))	return std::make_shared<LoadbgCommand>();
 	else if(s == TEXT("ADD"))		return std::make_shared<AddCommand>();

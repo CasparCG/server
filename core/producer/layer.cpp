@@ -9,6 +9,8 @@
 
 #include "../video_format.h"
 
+#include <common/utility/assert.h>
+
 namespace caspar { namespace core {
 
 struct layer::implementation : boost::noncopyable
@@ -101,7 +103,7 @@ public:
 			last_frame_ = foreground_->receive(); 
 			if(last_frame_ == draw_frame::eof())
 			{
-				assert(foreground_ != frame_producer::empty());
+				CASPAR_ASSERT(foreground_ != frame_producer::empty());
 
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
@@ -113,6 +115,7 @@ public:
 			}
 			else
 			{
+				last_frame_ = draw_frame(last_frame_);
 				last_frame_->get_image_transform().gain *= video_gain_;
 				last_frame_->get_image_transform().alpha *= video_opacity_;
 				last_frame_->get_audio_transform().gain *= audio_gain_;

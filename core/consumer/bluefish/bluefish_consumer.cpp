@@ -336,9 +336,9 @@ safe_ptr<frame_consumer> create_bluefish_consumer(const std::vector<std::wstring
 	int device_index = 1;
 	bool embed_audio = false;
 
-	try{device_index = boost::lexical_cast<int>(params[2]);}
+	try{if(params.size() > 2) device_index = boost::lexical_cast<int>(params[2]);}
 	catch(boost::bad_lexical_cast&){}
-	try{embed_audio = boost::lexical_cast<bool>(params[3]);}
+	try{if(params.size() > 3) embed_audio = boost::lexical_cast<bool>(params[3]);}
 	catch(boost::bad_lexical_cast&){}
 
 	return make_safe<bluefish_consumer>(format_desc, device_index, embed_audio);

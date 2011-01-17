@@ -37,6 +37,7 @@
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
 #include <common/env.h>
+#include <common/utility/assert.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 
 using namespace caspar;

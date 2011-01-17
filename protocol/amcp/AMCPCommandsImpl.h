@@ -48,6 +48,12 @@ class RemoveCommand : public AMCPCommandBase<true, AddToQueue, 0>
 	bool DoExecute();
 };
 
+class SwapCommand : public AMCPCommandBase<true, AddToQueue, 1>
+{
+	std::wstring print() const { return L"SwapCommand";}
+	bool DoExecute();
+};
+
 class LoadCommand : public AMCPCommandBase<true, AddToQueue, 1>
 {
 	std::wstring print() const { return L"LoadCommand";}
