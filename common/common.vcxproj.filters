@@ -84,5 +84,8 @@
     <ClInclude Include="env.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="utility\assert.h">
+      <Filter>Source\utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

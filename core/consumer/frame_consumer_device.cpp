@@ -10,6 +10,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/utility/timer.h>
+#include <common/utility/assert.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/range/algorithm.hpp>
@@ -62,6 +63,15 @@ public:
 				consumers_.erase(it);
 		});
 	}
+
+	safe_ptr<frame_consumer> get(int index)
+	{
+		return executor_.invoke([&]() -> safe_ptr<frame_consumer>
+		{
+			auto it = consumers_.find(index);
+			return it != consumers_.end() && it->second ? safe_ptr<frame_consumer>(it->second) : frame_consumer::empty();
+		});
+	}
 			
 	void send(const safe_ptr<const read_frame>& frame)
 	{		
@@ -97,5 +107,6 @@ frame_consumer_device::frame_consumer_device(frame_consumer_device&& other) : im
 frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 void frame_consumer_device::add(int index, const safe_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
+safe_ptr<frame_consumer> frame_consumer_device::get(int index) { return impl_->get(index); }
 void frame_consumer_device::send(const safe_ptr<const read_frame>& future_frame) { impl_->send(future_frame); }
 }}

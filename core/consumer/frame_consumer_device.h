@@ -21,6 +21,8 @@ public:
 
 	void add(int index, const safe_ptr<frame_consumer>& consumer);
 	void remove(int index);
+	safe_ptr<frame_consumer> get(int index);
+
 	void send(const safe_ptr<const read_frame>& future_frame); // nothrow
 private:
 	struct implementation;

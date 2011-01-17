@@ -226,6 +226,45 @@ bool MixerCommand::DoExecute()
 	}
 }
 
+bool SwapCommand::DoExecute()
+{	
+	//Perform loading of the clip
+	try
+	{
+		std::vector<std::string> strs;
+		boost::split(strs, _parameters[0], boost::is_any_of("-"));
+			
+		auto ch1 = GetChannel();
+		auto ch2 = GetChannels().at(boost::lexical_cast<int>(strs.at(0))-1);
+
+		int l1 = GetLayerIndex();
+		int l2 = boost::lexical_cast<int>(strs.at(1));
+		
+		auto c1 = ch1->consumer().get(l1);
+		auto c2 = ch2->consumer().get(l2);
+
+		ch2->consumer().add(l1, c1);
+		ch1->consumer().add(l2, c2);
+		CASPAR_LOG(info) << "Swapped successfully";
+
+		SetReplyString(TEXT("202 SWAP OK\r\n"));
+
+		return true;
+	}
+	catch(file_not_found&)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("404 SWAP ERROR\r\n"));
+		return false;
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("502 SWAP FAILED\r\n"));
+		return false;
+	}
+}
+
 bool AddCommand::DoExecute()
 {	
 	//Perform loading of the clip
