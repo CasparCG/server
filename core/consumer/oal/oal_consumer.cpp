@@ -24,7 +24,7 @@
 
 #include "../../video_format.h"
 
-#include "../../processor/read_frame.h"
+#include "../../mixer/frame/read_frame.h"
 
 #include <SFML/Audio.hpp>
 

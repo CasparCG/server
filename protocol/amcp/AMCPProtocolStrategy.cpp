@@ -309,7 +309,8 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	std::wstring s = str;
 	transform(s.begin(), s.end(), s.begin(), toupper);
 	
-	if	   (s == TEXT("LOAD"))		return std::make_shared<LoadCommand>();
+	if	   (s == TEXT("MIXER"))		return std::make_shared<MixerCommand>();
+	else if(s == TEXT("LOAD"))		return std::make_shared<LoadCommand>();
 	else if(s == TEXT("LOADBG"))	return std::make_shared<LoadbgCommand>();
 	else if(s == TEXT("ADD"))		return std::make_shared<AddCommand>();
 	else if(s == TEXT("REMOVE"))	return std::make_shared<RemoveCommand>();

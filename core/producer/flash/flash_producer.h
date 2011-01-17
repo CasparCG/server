@@ -32,7 +32,7 @@ public:
 	flash_producer(flash_producer&& other);
 
 	virtual safe_ptr<draw_frame> receive();
-	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor);
+	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer);
 	virtual std::wstring print() const;
 
 	void param(const std::wstring& param);

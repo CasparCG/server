@@ -15,7 +15,7 @@ public:
 	cg_producer(cg_producer&& other);
 	
 	virtual safe_ptr<draw_frame> receive();
-	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor);
+	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer);
 
 	void clear();
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));

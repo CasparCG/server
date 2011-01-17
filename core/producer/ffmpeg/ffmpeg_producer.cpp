@@ -7,7 +7,8 @@
 #include "video/video_decoder.h"
 
 #include "../../video_format.h"
-#include "../../processor/draw_frame.h"
+#include "../../mixer/frame/draw_frame.h"
+#include "../../mixer/audio/audio_mixer.h"
 
 #include <common/env.h>
 
@@ -42,10 +43,10 @@ public:
 		, video_decoder_(input_.get_video_codec_context().get())		
 		, audio_decoder_(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), input_.fps()) : nullptr){}
 
-	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
 	{
-		format_desc_ = frame_processor->get_video_format_desc();
-		video_decoder_.initialize(frame_processor);
+		format_desc_ = frame_mixer->get_video_format_desc();
+		video_decoder_.initialize(frame_mixer);
 	}
 		
 	virtual safe_ptr<draw_frame> receive()
@@ -107,7 +108,7 @@ public:
 		{
 			result = std::move(ouput_channel_.front());
 			last_frame_ = draw_frame(result);
-			last_frame_->audio_volume(0.0); // last_frame should not have audio
+			last_frame_->get_audio_transform().gain = 0.0; // last_frame should not have audio
 			ouput_channel_.pop();
 		}
 		else if(input_.is_eof())

@@ -72,10 +72,10 @@ public:
 		return flash_producer_->receive();
 	}
 		
-	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+	void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
 	{
-		frame_processor_ = frame_processor;
-		flash_producer_->initialize(frame_processor);
+		frame_mixer_ = frame_mixer;
+		flash_producer_->initialize(frame_mixer);
 	}
 
 	std::wstring print() const
@@ -84,7 +84,7 @@ public:
 	}
 
 	safe_ptr<flash_producer> flash_producer_;
-	std::shared_ptr<frame_processor_device> frame_processor_;
+	std::shared_ptr<frame_mixer_device> frame_mixer_;
 };
 	
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, int render_layer)
@@ -124,6 +124,6 @@ void cg_producer::stop(int layer, unsigned int mix_out_duration){impl_->stop(lay
 void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
-void cg_producer::initialize(const safe_ptr<frame_processor_device>& frame_processor){impl_->initialize(frame_processor);}
+void cg_producer::initialize(const safe_ptr<frame_mixer_device>& frame_mixer){impl_->initialize(frame_mixer);}
 std::wstring cg_producer::print() const{return impl_->print();}
 }}}

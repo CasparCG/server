@@ -166,6 +166,66 @@ void AMCPCommand::Clear()
 	_parameters.clear();
 }
 
+bool MixerCommand::DoExecute()
+{	
+	//Perform loading of the clip
+	try
+	{	
+		if(_parameters[0] == L"VIDEO")
+		{
+			if(_parameters[1] == L"OPACITY")
+			{
+				double value = boost::lexical_cast<double>(_parameters[2]);
+				GetChannel()->set_video_opacity(GetLayerIndex(), value);
+			}
+			else if(_parameters[1] == L"GAIN")
+			{
+				double value = boost::lexical_cast<double>(_parameters[2]);
+				GetChannel()->set_video_gain(GetLayerIndex(), value);
+			}
+			else if(_parameters[1] == L"RESET")
+			{
+				GetChannel()->set_video_opacity(GetLayerIndex(), 1.0);
+				GetChannel()->set_video_gain(GetLayerIndex(), 1.0);
+			}
+		}
+		else if(_parameters[0] == L"AUDIO")
+		{
+			if(_parameters[1] == L"GAIN")
+			{
+				double value = boost::lexical_cast<double>(_parameters[2]);
+				GetChannel()->set_audio_gain(GetLayerIndex(), value);
+			}
+			else if(_parameters[1] == L"RESET")
+			{
+				GetChannel()->set_audio_gain(GetLayerIndex(), 1.0);
+			}
+		}
+		else if(_parameters[0] == L"RESET")
+		{
+			GetChannel()->set_video_opacity(GetLayerIndex(), 1.0);
+			GetChannel()->set_video_gain(GetLayerIndex(), 1.0);
+			GetChannel()->set_audio_gain(GetLayerIndex(), 1.0);
+		}
+	
+		SetReplyString(TEXT("202 MIXER OK\r\n"));
+
+		return true;
+	}
+	catch(file_not_found&)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("404 MIXER ERROR\r\n"));
+		return false;
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("502 MIXER FAILED\r\n"));
+		return false;
+	}
+}
+
 bool AddCommand::DoExecute()
 {	
 	//Perform loading of the clip
@@ -379,11 +439,7 @@ bool StopCommand::DoExecute()
 
 bool ClearCommand::DoExecute()
 {
-	int index = GetLayerIndex(std::numeric_limits<int>::max());
-	if(index == std::numeric_limits<int>::max())
-		GetChannel()->clear();
-	else
-		GetChannel()->clear(index);
+	GetChannel()->clear(GetLayerIndex());
 		
 	SetReplyString(TEXT("202 CLEAR OK\r\n"));
 
