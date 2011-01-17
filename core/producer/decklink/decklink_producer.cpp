@@ -60,7 +60,7 @@ class decklink_input : public IDeckLinkInputCallback
 	CComPtr<IDeckLink>			decklink_;
 	CComQIPtr<IDeckLinkInput>	input_;
 
-	std::shared_ptr<frame_mixer_device> frame_mixer_;
+	std::shared_ptr<frame_factory> frame_factory_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
 	safe_ptr<draw_frame> head_;
@@ -68,10 +68,10 @@ class decklink_input : public IDeckLinkInputCallback
 
 public:
 
-	decklink_input(size_t device_index, const video_format_desc& format_desc, const std::shared_ptr<frame_mixer_device>& frame_mixer)
+	decklink_input(size_t device_index, const video_format_desc& format_desc, const std::shared_ptr<frame_factory>& frame_factory)
 		: device_index_(device_index)
 		, format_desc_(format_desc)
-		, frame_mixer_(frame_mixer)
+		, frame_factory_(frame_factory)
 		, head_(draw_frame::empty())
 		, tail_(draw_frame::empty())
 	{
@@ -148,7 +148,7 @@ public:
 		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width,   format_desc_.height, 1));
 		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));
 		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));			
-		auto frame = frame_mixer_->create_frame(desc);
+		auto frame = frame_factory_->create_frame(desc);
 
 		unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
 		int frame_size = (format_desc_.width * 16 / 8) * format_desc_.height;
@@ -212,12 +212,12 @@ public:
 		return input_->get_frame();
 	}
 
-	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
+	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
 		executor_.start();
 		executor_.invoke([=]
 		{
-			input_.reset(new decklink_input(device_index_, format_desc_, frame_mixer));
+			input_.reset(new decklink_input(device_index_, format_desc_, frame_factory));
 		});
 	}
 	

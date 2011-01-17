@@ -162,9 +162,6 @@
     <ClInclude Include="video_format.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="producer\layer.h">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="channel.h">
       <Filter>Source</Filter>
     </ClInclude>
@@ -209,6 +206,15 @@
     </ClInclude>
     <ClInclude Include="mixer\frame\write_frame.h">
       <Filter>Source\mixer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame_producer_device.h">
+      <Filter>Source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\layer.h">
+      <Filter>Source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\frame_factory.h">
+      <Filter>Source\mixer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -278,9 +284,6 @@
     <ClCompile Include="channel.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="producer\layer.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="producer\decklink\decklink_producer.cpp">
       <Filter>Source\producer\decklink</Filter>
     </ClCompile>
@@ -316,6 +319,12 @@
     </ClCompile>
     <ClCompile Include="mixer\frame\write_frame.cpp">
       <Filter>Source\mixer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\frame_producer_device.cpp">
+      <Filter>Source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\layer.cpp">
+      <Filter>Source\producer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

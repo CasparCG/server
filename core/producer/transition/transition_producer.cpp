@@ -40,7 +40,7 @@ struct transition_producer::implementation : boost::noncopyable
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
 
-	std::shared_ptr<frame_mixer_device>	frame_mixer_;
+	std::shared_ptr<frame_factory>	frame_factory_;
 
 	implementation(const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: current_frame_(0)
@@ -97,7 +97,7 @@ struct transition_producer::implementation : boost::noncopyable
 			try
 			{
 				auto following = producer->get_following_producer();
-				following->initialize(safe_ptr<frame_mixer_device>(frame_mixer_));
+				following->initialize(safe_ptr<frame_factory>(frame_factory_));
 				following->set_leading_producer(producer);
 				producer = std::move(following);
 			}
@@ -149,10 +149,10 @@ struct transition_producer::implementation : boost::noncopyable
 		return draw_frame(std::move(my_src_frame), std::move(my_dest_frame));
 	}
 		
-	void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
+	void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
-		dest_producer_->initialize(frame_mixer);
-		frame_mixer_ = frame_mixer;
+		dest_producer_->initialize(frame_factory);
+		frame_factory_ = frame_factory;
 	}
 
 	std::wstring print() const
@@ -166,7 +166,7 @@ transition_producer::transition_producer(const safe_ptr<frame_producer>& dest, c
 safe_ptr<draw_frame> transition_producer::receive(){return impl_->receive();}
 safe_ptr<frame_producer> transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const safe_ptr<frame_producer>& producer) { impl_->set_leading_producer(producer); }
-void transition_producer::initialize(const safe_ptr<frame_mixer_device>& frame_mixer) { impl_->initialize(frame_mixer);}
+void transition_producer::initialize(const safe_ptr<frame_factory>& frame_factory) { impl_->initialize(frame_factory);}
 std::wstring transition_producer::print() const { return impl_->print();}
 
 }}
