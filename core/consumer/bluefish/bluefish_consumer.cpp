@@ -24,7 +24,7 @@
 #include "util.h"
 #include "memory.h"
 
-#include "../../processor/read_frame.h"
+#include "../../mixer/frame/read_frame.h"
 
 #include <common/concurrency/executor.h>
 

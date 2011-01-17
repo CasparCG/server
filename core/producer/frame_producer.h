@@ -19,8 +19,8 @@
 */
 #pragma once
 
-#include "../processor/draw_frame.h"
-#include "../processor/frame_processor_device.h"
+#include "../mixer/frame/draw_frame.h"
+#include "../mixer/frame_mixer_device.h"
 
 #include <common/memory/safe_ptr.h>
 
@@ -66,20 +66,20 @@ public:
 	virtual void set_leading_producer(const safe_ptr<frame_producer>& /*producer*/) {}  // nothrow
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	/// \fn	virtual void :::initialize(const safe_ptr<frame_processor_device>& frame_processor) = 0;
+	/// \fn	virtual void :::initialize(const safe_ptr<frame_mixer_device>& frame_mixer) = 0;
 	///
-	/// \brief	Provides the frame frame_processor used to create frames and initializes the producer. 
+	/// \brief	Provides the frame frame_mixer used to create frames and initializes the producer. 
 	///
-	/// \param	frame_processor	The frame frame_processor. 
+	/// \param	frame_mixer	The frame frame_mixer. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor) = 0;
+	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer) = 0;
 
 	static safe_ptr<frame_producer> empty()  // nothrow
 	{
 		struct empty_frame_producer : public frame_producer
 		{
 			virtual safe_ptr<draw_frame> receive(){return draw_frame::empty();}
-			virtual void initialize(const safe_ptr<frame_processor_device>&){}
+			virtual void initialize(const safe_ptr<frame_mixer_device>&){}
 			virtual std::wstring print() const { return L"empty";}
 		};
 		static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();

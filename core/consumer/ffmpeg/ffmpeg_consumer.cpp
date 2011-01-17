@@ -22,7 +22,7 @@
 
 #include "ffmpeg_consumer.h"
 
-#include "../../processor/read_frame.h"
+#include "../../mixer/frame/read_frame.h"
 
 #include <common/concurrency/executor.h>
 #include <common/utility/string_convert.h>
@@ -200,7 +200,7 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 		c->codec_type = AVMEDIA_TYPE_VIDEO;
  
 		// Put sample parameters.
-		c->bit_rate = (format_desc_.size*static_cast<int>(format_desc_.fps))/2;
+		c->bit_rate = static_cast<int>(static_cast<double>(format_desc_.size)*format_desc_.fps*0.1326);
 		c->width = format_desc_.width;
 		c->height = format_desc_.height;
 		c->time_base.den = static_cast<int>(format_desc_.fps);

@@ -28,21 +28,6 @@
     <Filter Include="Source\consumer\decklink\interop">
       <UniqueIdentifier>{a5cb89d7-dbbb-4fca-b899-f53a069727b4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\processor">
-      <UniqueIdentifier>{53e41831-70b4-4214-bc38-77e0d7aa288b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\processor\frame">
-      <UniqueIdentifier>{1b9effc5-16ee-4be7-9189-d2b6bec0165a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\processor\image">
-      <UniqueIdentifier>{fe2c2f78-7daf-4b6d-9132-eda45b4c93e1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\processor\audio">
-      <UniqueIdentifier>{e3d8bd98-8cb9-4f4a-8cf0-bd455ce9138d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\processor\ogl">
-      <UniqueIdentifier>{219e5733-b365-4231-8c79-fd689c46c488}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\producer">
       <UniqueIdentifier>{71accefc-1437-4e1d-9ff7-9de654a32df9}</UniqueIdentifier>
     </Filter>
@@ -78,6 +63,21 @@
     </Filter>
     <Filter Include="Source\consumer\ffmpeg">
       <UniqueIdentifier>{b651856c-ff7e-4f90-be8a-32aba6094dbd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\mixer">
+      <UniqueIdentifier>{fe65a63a-9c77-450e-8b5a-d08ea7067053}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\mixer\frame">
+      <UniqueIdentifier>{3cf873fa-08ad-43e1-b530-fda9d8621ba4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\mixer\image">
+      <UniqueIdentifier>{300816f9-421b-4fab-82e0-acabe5b1e1b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\mixer\audio">
+      <UniqueIdentifier>{fd06d1d1-2b0b-4913-8416-f8fa1de42442}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\mixer\gpu">
+      <UniqueIdentifier>{5e7c7a4c-4a81-4aa1-b628-0344bf89517e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -135,26 +135,11 @@
     <ClInclude Include="consumer\frame_consumer_device.h">
       <Filter>Source\consumer</Filter>
     </ClInclude>
-    <ClInclude Include="processor\frame_processor_device.h">
-      <Filter>Source\processor</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\decklink\decklink_consumer.h">
       <Filter>Source\consumer\decklink</Filter>
     </ClInclude>
     <ClInclude Include="consumer\decklink\util.h">
       <Filter>Source\consumer\decklink</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\fwd.h">
-      <Filter>Source\processor</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\read_frame.h">
-      <Filter>Source\processor\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\image_processor.h">
-      <Filter>Source\processor\image</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\audio_processor.h">
-      <Filter>Source\processor\audio</Filter>
     </ClInclude>
     <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h">
       <Filter>Source\producer\ffmpeg\audio</Filter>
@@ -165,35 +150,14 @@
     <ClInclude Include="producer\ffmpeg\video\video_decoder.h">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClInclude>
-    <ClInclude Include="processor\write_frame.h">
-      <Filter>Source\processor\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\image_kernel.h">
-      <Filter>Source\processor\image</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\ogl_device.h">
-      <Filter>Source\processor\ogl</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\host_buffer.h">
-      <Filter>Source\processor\ogl</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\device_buffer.h">
-      <Filter>Source\processor\ogl</Filter>
-    </ClInclude>
     <ClInclude Include="StdAfx.h">
       <Filter>Afx</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\pixel_format.h">
-      <Filter>Source\processor</Filter>
     </ClInclude>
     <ClInclude Include="producer\flash\axflash.h">
       <Filter>Source\producer\flash\interop</Filter>
     </ClInclude>
     <ClInclude Include="producer\flash\TimerHelper.h">
       <Filter>Source\producer\flash\interop</Filter>
-    </ClInclude>
-    <ClInclude Include="processor\draw_frame.h">
-      <Filter>Source\processor\frame</Filter>
     </ClInclude>
     <ClInclude Include="video_format.h">
       <Filter>Source</Filter>
@@ -209,6 +173,42 @@
     </ClInclude>
     <ClInclude Include="consumer\ffmpeg\ffmpeg_consumer.h">
       <Filter>Source\consumer\ffmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\frame_mixer_device.h">
+      <Filter>Source\mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\fwd.h">
+      <Filter>Source\mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\image\image_kernel.h">
+      <Filter>Source\mixer\image</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\image\image_mixer.h">
+      <Filter>Source\mixer\image</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\audio\audio_mixer.h">
+      <Filter>Source\mixer\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\gpu\device_buffer.h">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\gpu\host_buffer.h">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\gpu\ogl_device.h">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\frame\draw_frame.h">
+      <Filter>Source\mixer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\frame\pixel_format.h">
+      <Filter>Source\mixer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\frame\read_frame.h">
+      <Filter>Source\mixer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\frame\write_frame.h">
+      <Filter>Source\mixer\frame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -254,20 +254,8 @@
     <ClCompile Include="consumer\frame_consumer_device.cpp">
       <Filter>Source\consumer</Filter>
     </ClCompile>
-    <ClCompile Include="processor\frame_processor_device.cpp">
-      <Filter>Source\processor</Filter>
-    </ClCompile>
     <ClCompile Include="consumer\decklink\decklink_consumer.cpp">
       <Filter>Source\consumer\decklink</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\read_frame.cpp">
-      <Filter>Source\processor\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\image_processor.cpp">
-      <Filter>Source\processor\image</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\audio_processor.cpp">
-      <Filter>Source\processor\audio</Filter>
     </ClCompile>
     <ClCompile Include="producer\ffmpeg\audio\audio_decoder.cpp">
       <Filter>Source\producer\ffmpeg\audio</Filter>
@@ -278,29 +266,11 @@
     <ClCompile Include="producer\ffmpeg\video\video_decoder.cpp">
       <Filter>Source\producer\ffmpeg\video</Filter>
     </ClCompile>
-    <ClCompile Include="processor\write_frame.cpp">
-      <Filter>Source\processor\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\image_kernel.cpp">
-      <Filter>Source\processor\image</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\ogl_device.cpp">
-      <Filter>Source\processor\ogl</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\host_buffer.cpp">
-      <Filter>Source\processor\ogl</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\device_buffer.cpp">
-      <Filter>Source\processor\ogl</Filter>
-    </ClCompile>
     <ClCompile Include="StdAfx.cpp">
       <Filter>Afx</Filter>
     </ClCompile>
     <ClCompile Include="producer\flash\Flash9e_i.c">
       <Filter>Source\producer\flash\interop</Filter>
-    </ClCompile>
-    <ClCompile Include="processor\draw_frame.cpp">
-      <Filter>Source\processor\frame</Filter>
     </ClCompile>
     <ClCompile Include="video_format.cpp">
       <Filter>Source</Filter>
@@ -316,6 +286,36 @@
     </ClCompile>
     <ClCompile Include="consumer\ffmpeg\ffmpeg_consumer.cpp">
       <Filter>Source\consumer\ffmpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\frame_mixer_device.cpp">
+      <Filter>Source\mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\image\image_kernel.cpp">
+      <Filter>Source\mixer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\image\image_mixer.cpp">
+      <Filter>Source\mixer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\audio\audio_mixer.cpp">
+      <Filter>Source\mixer\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\device_buffer.cpp">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\host_buffer.cpp">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\ogl_device.cpp">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\frame\draw_frame.cpp">
+      <Filter>Source\mixer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\frame\read_frame.cpp">
+      <Filter>Source\mixer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\frame\write_frame.cpp">
+      <Filter>Source\mixer\frame</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

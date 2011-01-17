@@ -22,8 +22,10 @@
 #include "transition_producer.h"
 
 #include "../../video_format.h"
-#include "../../processor/draw_frame.h"
-#include "../../processor/frame_processor_device.h"
+#include "../../mixer/frame/draw_frame.h"
+#include "../../mixer/frame_mixer_device.h"
+#include "../../mixer/image/image_mixer.h"
+#include "../../mixer/audio/audio_mixer.h"
 
 #include <boost/range/algorithm/copy.hpp>
 
@@ -38,7 +40,7 @@ struct transition_producer::implementation : boost::noncopyable
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
 
-	std::shared_ptr<frame_processor_device>	frame_processor_;
+	std::shared_ptr<frame_mixer_device>	frame_mixer_;
 
 	implementation(const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: current_frame_(0)
@@ -95,7 +97,7 @@ struct transition_producer::implementation : boost::noncopyable
 			try
 			{
 				auto following = producer->get_following_producer();
-				following->initialize(safe_ptr<frame_processor_device>(frame_processor_));
+				following->initialize(safe_ptr<frame_mixer_device>(frame_mixer_));
 				following->set_leading_producer(producer);
 				producer = std::move(following);
 			}
@@ -124,33 +126,33 @@ struct transition_producer::implementation : boost::noncopyable
 		auto my_src_frame = draw_frame(src_frame);
 		auto my_dest_frame = draw_frame(dest_frame);
 
-		my_src_frame.audio_volume(1.0-alpha);
-		my_dest_frame.audio_volume(alpha);
+		my_src_frame.get_audio_transform().gain = 1.0-alpha;
+		my_dest_frame.get_audio_transform().gain = alpha;
 
 		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		
 		if(info_.type == transition::mix)
-			my_dest_frame.alpha(alpha);		
+			my_dest_frame.get_image_transform().alpha = alpha;		
 		else if(info_.type == transition::slide)			
-			my_dest_frame.translate((-1.0+alpha)*dir, 0.0);			
+			my_dest_frame.get_image_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);			
 		else if(info_.type == transition::push)
 		{
-			my_dest_frame.translate((-1.0+alpha)*dir, 0.0);
-			my_src_frame.translate((0.0+alpha)*dir, 0.0);
+			my_dest_frame.get_image_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);
+			my_src_frame.get_image_transform().pos = boost::make_tuple((0.0+alpha)*dir, 0.0);
 		}
 		else if(info_.type == transition::wipe)
 		{
-			my_dest_frame.translate((-1.0+alpha)*dir, 0.0);			
-			my_dest_frame.texcoord((-1.0+alpha)*dir, 0.0, 0.0-(1.0-alpha)*dir, 0.0);				
+			my_dest_frame.get_image_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);			
+			my_dest_frame.get_image_transform().uv = boost::make_tuple((-1.0+alpha)*dir, 0.0, 0.0-(1.0-alpha)*dir, 0.0);				
 		}
 
 		return draw_frame(std::move(my_src_frame), std::move(my_dest_frame));
 	}
 		
-	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+	void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
 	{
-		dest_producer_->initialize(frame_processor);
-		frame_processor_ = frame_processor;
+		dest_producer_->initialize(frame_mixer);
+		frame_mixer_ = frame_mixer;
 	}
 
 	std::wstring print() const
@@ -164,7 +166,7 @@ transition_producer::transition_producer(const safe_ptr<frame_producer>& dest, c
 safe_ptr<draw_frame> transition_producer::receive(){return impl_->receive();}
 safe_ptr<frame_producer> transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const safe_ptr<frame_producer>& producer) { impl_->set_leading_producer(producer); }
-void transition_producer::initialize(const safe_ptr<frame_processor_device>& frame_processor) { impl_->initialize(frame_processor);}
+void transition_producer::initialize(const safe_ptr<frame_mixer_device>& frame_mixer) { impl_->initialize(frame_mixer);}
 std::wstring transition_producer::print() const { return impl_->print();}
 
 }}

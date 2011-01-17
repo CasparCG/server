@@ -22,7 +22,7 @@
 
 #include "decklink_producer.h"
 
-#include "../../processor/draw_frame.h"
+#include "../../mixer/frame/draw_frame.h"
 #include "../../consumer/decklink/DeckLinkAPI_h.h" // TODO: Change this
 #include "../../consumer/decklink/util.h" // TODO: Change this
 
@@ -60,7 +60,7 @@ class decklink_input : public IDeckLinkInputCallback
 	CComPtr<IDeckLink>			decklink_;
 	CComQIPtr<IDeckLinkInput>	input_;
 
-	std::shared_ptr<frame_processor_device> frame_processor_;
+	std::shared_ptr<frame_mixer_device> frame_mixer_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
 	safe_ptr<draw_frame> head_;
@@ -68,10 +68,10 @@ class decklink_input : public IDeckLinkInputCallback
 
 public:
 
-	decklink_input(size_t device_index, const video_format_desc& format_desc, const std::shared_ptr<frame_processor_device>& frame_processor)
+	decklink_input(size_t device_index, const video_format_desc& format_desc, const std::shared_ptr<frame_mixer_device>& frame_mixer)
 		: device_index_(device_index)
 		, format_desc_(format_desc)
-		, frame_processor_(frame_processor)
+		, frame_mixer_(frame_mixer)
 		, head_(draw_frame::empty())
 		, tail_(draw_frame::empty())
 	{
@@ -133,6 +133,7 @@ public:
 		return S_OK;
 	}
 
+	// TODO: Enable audio input
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* /*audio*/)
 	{		
 		if(!frame_buffer_.try_push(head_) || video == nullptr)
@@ -147,7 +148,7 @@ public:
 		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width,   format_desc_.height, 1));
 		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));
 		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));			
-		auto frame = frame_processor_->create_frame(desc);
+		auto frame = frame_mixer_->create_frame(desc);
 
 		unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
 		int frame_size = (format_desc_.width * 16 / 8) * format_desc_.height;
@@ -211,12 +212,12 @@ public:
 		return input_->get_frame();
 	}
 
-	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
 	{
 		executor_.start();
 		executor_.invoke([=]
 		{
-			input_.reset(new decklink_input(device_index_, format_desc_, frame_processor));
+			input_.reset(new decklink_input(device_index_, format_desc_, frame_mixer));
 		});
 	}
 	

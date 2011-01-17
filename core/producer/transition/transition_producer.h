@@ -67,7 +67,7 @@ public:
 
 	virtual safe_ptr<frame_producer> get_following_producer() const;
 	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer);
-	virtual void initialize(const safe_ptr<frame_processor_device>& frame_processor);
+	virtual void initialize(const safe_ptr<frame_mixer_device>& frame_mixer);
 	virtual std::wstring print() const;
 private:
 	struct implementation;

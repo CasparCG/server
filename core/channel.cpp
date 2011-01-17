@@ -4,8 +4,8 @@
 
 #include "consumer/frame_consumer_device.h"
 
-#include "processor/draw_frame.h"
-#include "processor/frame_processor_device.h"
+#include "mixer/frame/draw_frame.h"
+#include "mixer/frame_mixer_device.h"
 
 #include "producer/layer.h"
 
@@ -22,7 +22,7 @@ namespace caspar { namespace core {
 
 struct channel::implementation : boost::noncopyable
 {					
-	const safe_ptr<frame_processor_device> processor_device_;
+	const safe_ptr<frame_mixer_device> processor_device_;
 	frame_consumer_device consumer_device_;
 						
 	std::map<int, layer> layers_;		
@@ -34,7 +34,7 @@ struct channel::implementation : boost::noncopyable
 public:
 	implementation(const video_format_desc& format_desc)  
 		: format_desc_(format_desc)
-		, processor_device_(frame_processor_device(format_desc))
+		, processor_device_(frame_mixer_device(format_desc))
 		, consumer_device_(format_desc)
 	{
 		executor_.start();
@@ -66,6 +66,7 @@ public:
 		return draw_frame(frames);
 	}
 
+	// Consumers
 	void add(int index, const safe_ptr<frame_consumer>& consumer)
 	{
 		consumer_device_.add(index, consumer);
@@ -76,9 +77,24 @@ public:
 		consumer_device_.remove(index);
 	}
 
+	// Layers and Producers
+	void set_video_gain(int index, double value)
+	{
+		begin_invoke_layer(index, std::bind(&layer::set_video_gain, std::placeholders::_1, value));
+	}
+
+	void set_video_opacity(int index, double value)
+	{
+		begin_invoke_layer(index, std::bind(&layer::set_video_opacity, std::placeholders::_1, value));
+	}
+
+	void set_audio_gain(int index, double value)
+	{
+		begin_invoke_layer(index, std::bind(&layer::set_audio_gain, std::placeholders::_1, value));
+	}
+
 	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load)
 	{
-		CASPAR_LOG(trace) << executor_.size();
 		producer->initialize(processor_device_);
 		executor_.begin_invoke([=]
 		{
@@ -99,36 +115,17 @@ public:
 
 	void pause(int index)
 	{		
-		executor_.begin_invoke([=]
-		{			
-			auto it = layers_.find(index);
-			if(it != layers_.end())
-				it->second.pause();		
-		});
+		begin_invoke_layer(index, std::mem_fn(&layer::pause));
 	}
 
 	void play(int index)
 	{		
-		executor_.begin_invoke([=]
-		{
-			auto it = layers_.find(index);
-			if(it != layers_.end())
-				it->second.play();
-		});
+		begin_invoke_layer(index, std::mem_fn(&layer::play));
 	}
 
 	void stop(int index)
 	{		
-		executor_.begin_invoke([=]
-		{
-			auto it = layers_.find(index);
-			if(it != layers_.end())
-			{
-				it->second.stop();	
-				if(it->second.empty())
-					layers_.erase(it);
-			}
-		});
+		begin_invoke_layer(index, std::mem_fn(&layer::stop));
 	}
 
 	void clear(int index)
@@ -152,6 +149,17 @@ public:
 		});
 	}		
 
+	template<typename F>
+	void begin_invoke_layer(int index, F&& func)
+	{
+		executor_.begin_invoke([=]
+		{
+			auto it = layers_.find(index);
+			if(it != layers_.end())
+				func(it->second);	
+		});
+	}
+
 	boost::unique_future<safe_ptr<frame_producer>> foreground(int index) const
 	{
 		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
@@ -173,8 +181,13 @@ public:
 
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
 channel::channel(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+
 void channel::add(int index, const safe_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
 void channel::remove(int index){impl_->remove(index);}
+
+void channel::set_video_gain(int index, double value){impl_->set_video_gain(index, value);}
+void channel::set_video_opacity(int index, double value){impl_->set_video_opacity(index, value);}
+void channel::set_audio_gain(int index, double value){impl_->set_audio_gain(index, value);}
 void channel::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
 void channel::preview(int index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
 void channel::pause(int index){impl_->pause(index);}

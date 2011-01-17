@@ -4,10 +4,10 @@
 //
 //#include "image_loader.h"
 //
-//#include "../../processor/draw_frame.h"
-//#include "../../processor/draw_frame.h"
+//#include "../../mixer/draw_frame.h"
+//#include "../../mixer/draw_frame.h"
 //#include "../../video_format.h"
-//#include "../../processor/frame_processor_device.h"
+//#include "../../mixer/frame_mixer_device.h"
 //#include "../../configuration.h"
 //
 //#include <tbb/parallel_for.h>
@@ -69,7 +69,7 @@
 //
 //	draw_frame do_receive()
 //	{
-//		auto frame = frame_processor_->create_frame(format_desc_.width, format_desc_.height);
+//		auto frame = frame_mixer_->create_frame(format_desc_.width, format_desc_.height);
 //		std::fill(frame.image_data().begin(), frame.image_data().end(), 0);
 //
 //		const int delta_x = direction_ == direction::Left ? speed_ : -speed_;
@@ -125,10 +125,10 @@
 //		return receive();	
 //	}
 //	
-//	void initialize(const safe_ptr<frame_processor_device>& frame_processor)
+//	void initialize(const safe_ptr<frame_mixer_device>& frame_mixer)
 //	{
-//		frame_processor_ = frame_processor;
-//		format_desc_ = frame_processor_->get_video_format_desc();
+//		frame_mixer_ = frame_mixer;
+//		format_desc_ = frame_mixer_->get_video_format_desc();
 //				
 //		if(image_width_ - format_desc_.width > image_height_ - format_desc_.height)
 //			direction_ = speed_ < 0 ? direction::Right : direction::Left;
@@ -165,7 +165,7 @@
 //
 //	std::wstring filename_;
 //
-//	safe_ptr<frame_processor_device> frame_processor_;
+//	safe_ptr<frame_mixer_device> frame_mixer_;
 //};
 //
 //safe_ptr<frame_producer> create_image_scroll_producer(const std::vector<std::wstring>& params)
