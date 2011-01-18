@@ -49,7 +49,7 @@ public:
 		executor_.begin_invoke([=]{tick();});
 	}
 	
-	safe_ptr<draw_frame> draw()
+	std::vector<safe_ptr<draw_frame>> draw()
 	{	
 		std::vector<safe_ptr<draw_frame>> frames(layers_.size(), draw_frame::empty());
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), 
@@ -62,23 +62,7 @@ public:
 		});		
 		boost::range::remove_erase(frames, draw_frame::eof());
 		boost::range::remove_erase(frames, draw_frame::empty());
-		return draw_frame(frames);
-	}
-
-	// Layers and Producers
-	void set_video_gain(int index, double value)
-	{
-		begin_invoke_layer(index, std::bind(&layer::set_video_gain, std::placeholders::_1, value));
-	}
-
-	void set_video_opacity(int index, double value)
-	{
-		begin_invoke_layer(index, std::bind(&layer::set_video_opacity, std::placeholders::_1, value));
-	}
-
-	void set_audio_gain(int index, double value)
-	{
-		begin_invoke_layer(index, std::bind(&layer::set_audio_gain, std::placeholders::_1, value));
+		return frames;
 	}
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load)
@@ -170,9 +154,6 @@ public:
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 frame_producer_device::frame_producer_device(const video_format_desc& format_desc, const safe_ptr<frame_factory>& factory, const output_func& output) 
 	: impl_(new implementation(format_desc, factory, output)){}
-void frame_producer_device::set_video_gain(int index, double value){impl_->set_video_gain(index, value);}
-void frame_producer_device::set_video_opacity(int index, double value){impl_->set_video_opacity(index, value);}
-void frame_producer_device::set_audio_gain(int index, double value){impl_->set_audio_gain(index, value);}
 void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
 void frame_producer_device::preview(int index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
 void frame_producer_device::pause(int index){impl_->pause(index);}

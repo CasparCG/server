@@ -1,6 +1,7 @@
 #pragma once
 
 #include "consumer/frame_consumer_device.h"
+#include "mixer/frame_mixer_device.h"
 #include "producer/frame_producer_device.h"
 
 #include <common/memory/safe_ptr.h>
@@ -27,6 +28,7 @@ public:
 	channel(channel&& other);
 
 	frame_producer_device& producer();
+	frame_mixer_device& mixer();
 	frame_consumer_device& consumer();
 
 	const video_format_desc& get_video_format_desc() const;

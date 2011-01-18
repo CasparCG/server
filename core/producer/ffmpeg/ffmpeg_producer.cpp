@@ -108,7 +108,7 @@ public:
 		{
 			result = std::move(ouput_channel_.front());
 			last_frame_ = draw_frame(result);
-			last_frame_->get_audio_transform().gain = 0.0; // last_frame should not have audio
+			last_frame_->get_audio_transform().set_gain(0.0); // last_frame should not have audio
 			ouput_channel_.pop();
 		}
 		else if(input_.is_eof())

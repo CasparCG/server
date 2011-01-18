@@ -4,9 +4,25 @@
 
 namespace caspar { namespace core {
 	
+audio_transform::audio_transform()
+	: gain_(1.0){}
+
+void audio_transform::set_gain(double value)
+{
+	tbb::spin_mutex::scoped_lock lock(mutex_);
+	gain_ = value;
+}
+
+double audio_transform::get_gain() const
+{
+	tbb::spin_mutex::scoped_lock lock(mutex_);
+	return gain_;
+}
+
 audio_transform& audio_transform::operator*=(const audio_transform &other) 
 {
-	gain *= other.gain;
+	tbb::spin_mutex::scoped_lock lock(mutex_);
+	gain_ *= other.gain_;
 	return *this;
 }
 
@@ -36,6 +52,7 @@ public:
 		if(audio_data_.empty())
 			audio_data_.resize(audio_data.size(), 0);
 
+		double gain = transform_stack_.top().get_gain();
 		tbb::parallel_for
 		(
 			tbb::blocked_range<size_t>(0, audio_data.size()),
@@ -44,7 +61,7 @@ public:
 				for(size_t n = r.begin(); n < r.end(); ++n)
 				{
 					int sample = static_cast<int>(audio_data[n]);
-					sample = (static_cast<int>(transform_stack_.top().gain*8192.0)*sample)/8192;
+					sample = (static_cast<int>(gain*8192.0)*sample)/8192;
 					audio_data_[n] = static_cast<short>((static_cast<int>(audio_data_[n]) + sample) & 0xFFFF);
 				}
 			}

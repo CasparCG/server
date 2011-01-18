@@ -126,24 +126,24 @@ struct transition_producer::implementation : boost::noncopyable
 		auto my_src_frame = draw_frame(src_frame);
 		auto my_dest_frame = draw_frame(dest_frame);
 
-		my_src_frame.get_audio_transform().gain = 1.0-alpha;
-		my_dest_frame.get_audio_transform().gain = alpha;
+		my_src_frame.get_audio_transform().set_gain(1.0-alpha);
+		my_dest_frame.get_audio_transform().set_gain(alpha);
 
 		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		
 		if(info_.type == transition::mix)
-			my_dest_frame.get_image_transform().alpha = alpha;		
+			my_dest_frame.get_image_transform().set_opacity(alpha);		
 		else if(info_.type == transition::slide)			
-			my_dest_frame.get_image_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);			
+			my_dest_frame.get_image_transform().set_position((-1.0+alpha)*dir, 0.0);			
 		else if(info_.type == transition::push)
 		{
-			my_dest_frame.get_image_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);
-			my_src_frame.get_image_transform().pos = boost::make_tuple((0.0+alpha)*dir, 0.0);
+			my_dest_frame.get_image_transform().set_position((-1.0+alpha)*dir, 0.0);
+			my_src_frame.get_image_transform().set_position((0.0+alpha)*dir, 0.0);
 		}
 		else if(info_.type == transition::wipe)
 		{
-			my_dest_frame.get_image_transform().pos = boost::make_tuple((-1.0+alpha)*dir, 0.0);			
-			my_dest_frame.get_image_transform().uv = boost::make_tuple((-1.0+alpha)*dir, 0.0, 0.0-(1.0-alpha)*dir, 0.0);				
+			my_dest_frame.get_image_transform().set_position((-1.0+alpha)*dir, 0.0);			
+			my_dest_frame.get_image_transform().set_uv((-1.0+alpha)*dir, 0.0, 0.0-(1.0-alpha)*dir, 0.0);				
 		}
 
 		return draw_frame(std::move(my_src_frame), std::move(my_dest_frame));

@@ -15,8 +15,8 @@
 
 namespace caspar { namespace core {
 
-struct image_transform;
-struct audio_transform;
+class image_transform;
+class audio_transform;
 		
 class draw_frame
 {
@@ -62,6 +62,9 @@ public:
 
 	virtual void process_image(image_mixer& mixer);
 	virtual void process_audio(audio_mixer& mixer);
+
+	void set_layer_index(int index);
+	int get_layer_index() const;
 	
 private:
 	struct implementation;

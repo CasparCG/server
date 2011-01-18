@@ -237,11 +237,11 @@ void image_kernel::apply(pixel_format::type pix_fmt, const image_transform& tran
 {
 	impl_->shaders()[pix_fmt].use();
 
-	GL(glUniform1f(impl_->shaders()[pix_fmt].get_location("color_gain"), static_cast<GLfloat>(transform.gain)));
+	GL(glUniform1f(impl_->shaders()[pix_fmt].get_location("color_gain"), static_cast<GLfloat>(transform.get_gain())));
 
-	if(transform.mode == video_mode::upper)
+	if(transform.get_mode() == video_mode::upper)
 		glPolygonStipple(upper_pattern);
-	else if(transform.mode == video_mode::lower)
+	else if(transform.get_mode() == video_mode::lower)
 		glPolygonStipple(lower_pattern);
 	else
 		glPolygonStipple(progressive_pattern);

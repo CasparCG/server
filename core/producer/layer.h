@@ -15,12 +15,7 @@ public:
 	layer(int index = -1); // nothrow
 	layer(layer&& other); // nothrow
 	layer& operator=(layer&& other); // nothrow
-
-	void set_video_gain(double value);
-	void set_video_opacity(double value);
-
-	void set_audio_gain(double value);
-	
+		
 	void load(const safe_ptr<frame_producer>& producer, bool play_on_load = false); // nothrow
 	void preview(const safe_ptr<frame_producer>& producer); // nothrow
 	void play(); // nothrow
