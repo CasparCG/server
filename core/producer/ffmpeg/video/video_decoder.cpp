@@ -149,7 +149,7 @@ public:
 			});
 
 			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field frame_factory_->get_video_format_desc().mode == video_mode::upper && 	 
-				write->get_image_transform().pos = boost::make_tuple(0.0f, 1.0/static_cast<double>(height_));
+				write->get_image_transform().set_position(0.0f, 1.0/static_cast<double>(height_));
 
 			return write;
 		}

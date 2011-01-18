@@ -176,17 +176,16 @@ bool MixerCommand::DoExecute()
 			if(_parameters[1] == L"OPACITY")
 			{
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				GetChannel()->producer().set_video_opacity(GetLayerIndex(), value);
+				GetChannel()->mixer().image(GetLayerIndex()).set_opacity(value);
 			}
 			else if(_parameters[1] == L"GAIN")
 			{
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				GetChannel()->producer().set_video_gain(GetLayerIndex(), value);
+				GetChannel()->mixer().image(GetLayerIndex()).set_gain(value);
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				GetChannel()->producer().set_video_opacity(GetLayerIndex(), 1.0);
-				GetChannel()->producer().set_video_gain(GetLayerIndex(), 1.0);
+				GetChannel()->mixer().image(GetLayerIndex()) = image_transform();
 			}
 		}
 		else if(_parameters[0] == L"AUDIO")
@@ -194,18 +193,17 @@ bool MixerCommand::DoExecute()
 			if(_parameters[1] == L"GAIN")
 			{
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				GetChannel()->producer().set_audio_gain(GetLayerIndex(), value);
+				GetChannel()->mixer().audio(GetLayerIndex()).set_gain(value);
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				GetChannel()->producer().set_audio_gain(GetLayerIndex(), 1.0);
+				GetChannel()->mixer().audio(GetLayerIndex()) = audio_transform();
 			}
 		}
 		else if(_parameters[0] == L"RESET")
 		{
-			GetChannel()->producer().set_video_opacity(GetLayerIndex(), 1.0);
-			GetChannel()->producer().set_video_gain(GetLayerIndex(), 1.0);
-			GetChannel()->producer().set_audio_gain(GetLayerIndex(), 1.0);
+			GetChannel()->mixer().image(GetLayerIndex()) = image_transform();
+			GetChannel()->mixer().audio(GetLayerIndex()) = audio_transform();
 		}
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));

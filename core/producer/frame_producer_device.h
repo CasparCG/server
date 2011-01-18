@@ -25,17 +25,11 @@ namespace caspar { namespace core {
 class frame_producer_device : boost::noncopyable
 {
 public:
-	typedef std::function<void(const safe_ptr<draw_frame>&)> output_func;
+	typedef std::function<void(const std::vector<safe_ptr<draw_frame>>&)> output_func;
 
 	explicit frame_producer_device(const video_format_desc& format_desc, const safe_ptr<frame_factory>& factory, const output_func& output);
 	frame_producer_device(frame_producer_device&& other);
 		
-	// Layers and Producers
-	void set_video_gain(int index, double value);
-	void set_video_opacity(int index, double value);
-
-	void set_audio_gain(int index, double value);
-
 	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load = false);
 	void preview(int index, const safe_ptr<frame_producer>& producer);
 	void pause(int index);

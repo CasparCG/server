@@ -15,17 +15,34 @@ namespace caspar { namespace core {
 
 struct pixel_format_desc;
 	
-struct image_transform 
+class image_transform 
 {
-	image_transform() : alpha(1.0), pos(boost::make_tuple(0.0, 0.0)), gain(1.0), uv(boost::make_tuple(0.0, 0.0, 0.0, 0.0)), mode(video_mode::invalid){}
-	double alpha;
-	double gain;
-	boost::tuple<double, double> pos;
-	boost::tuple<double, double, double, double> uv;
-	video_mode::type mode; 
+public:
+	image_transform();
+
+	void set_opacity(double value);
+	double get_opacity() const;
+
+	void set_gain(double value);
+	double get_gain() const;
+
+	void set_position(double x, double y);
+	std::array<double, 2> get_position() const;
+
+	void set_uv(double left, double top, double right, double bottom);
+	std::array<double, 4> get_uv() const;
+
+	void set_mode(video_mode::type mode);
+	video_mode::type get_mode() const;
 
 	image_transform& operator*=(const image_transform &other);
 	const image_transform operator*(const image_transform &other) const;
+private:
+	double opacity_;
+	double gain_;
+	std::array<double, 2> pos_;
+	std::array<double, 4> uv_;
+	video_mode::type mode_;
 };
 
 class image_mixer : boost::noncopyable

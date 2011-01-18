@@ -7,7 +7,7 @@
 
 namespace caspar { namespace core {
 
-struct image_transform;
+class image_transform;
 
 class image_kernel
 {

@@ -52,6 +52,7 @@ public:
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
 channel::channel(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 frame_producer_device& channel::producer() { return *impl_->producer_;} 
+frame_mixer_device& channel::mixer() { return *impl_->mixer_;} 
 frame_consumer_device& channel::consumer() { return *impl_->consumer_;} 
 const video_format_desc& channel::get_video_format_desc() const{return impl_->format_desc_;}
 

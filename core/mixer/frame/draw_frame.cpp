@@ -18,11 +18,14 @@ struct draw_frame::implementation
 	image_transform image_transform_;	
 	audio_transform audio_transform_;
 
+	int index_;
 public:
 	implementation(const std::vector<safe_ptr<draw_frame>>& frames) 
-		: frames_(frames){}
+		: frames_(frames)
+		, index_(std::numeric_limits<int>::min()) {}
 	implementation(std::vector<safe_ptr<draw_frame>>&& frames) 
-		: frames_(std::move(frames)){}
+		: frames_(std::move(frames))
+		, index_(std::numeric_limits<int>::min()) {}
 	
 	void process_image(image_mixer& mixer)
 	{
@@ -103,13 +106,13 @@ safe_ptr<draw_frame> draw_frame::interlace(const safe_ptr<draw_frame>& frame1, c
 	auto my_frame2 = make_safe<draw_frame>(frame2);
 	if(mode == video_mode::upper)
 	{
-		my_frame1->get_image_transform().mode = video_mode::upper;	
-		my_frame2->get_image_transform().mode = video_mode::lower;	
-	}
-	else
-	{
-		my_frame1->get_image_transform().mode = video_mode::lower;	
-		my_frame2->get_image_transform().mode = video_mode::upper;	
+		my_frame1->get_image_transform().set_mode(video_mode::upper);	
+		my_frame2->get_image_transform().set_mode(video_mode::lower);	
+	}											 
+	else										 
+	{											 
+		my_frame1->get_image_transform().set_mode(video_mode::lower);	
+		my_frame2->get_image_transform().set_mode(video_mode::upper);	
 	}
 
 	std::vector<safe_ptr<draw_frame>> frames;
@@ -117,5 +120,8 @@ safe_ptr<draw_frame> draw_frame::interlace(const safe_ptr<draw_frame>& frame1, c
 	frames.push_back(my_frame2);
 	return make_safe<draw_frame>(frames);
 }
+
+void draw_frame::set_layer_index(int index) { impl_->index_ = index; }
+int draw_frame::get_layer_index() const { return impl_->index_; }
 
 }}

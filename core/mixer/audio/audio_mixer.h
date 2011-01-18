@@ -1,14 +1,22 @@
 #pragma once
 
+#include <tbb/spin_mutex.h>
+
 namespace caspar { namespace core {
 
-struct audio_transform
+class audio_transform
 {
-	audio_transform() : gain(1.0){}
-	double gain;
+public:
+	audio_transform();
+
+	void set_gain(double value);
+	double get_gain() const;
 
 	audio_transform& operator*=(const audio_transform &other);
 	const audio_transform operator*(const audio_transform &other) const;
+private:
+	double gain_;
+	mutable tbb::spin_mutex mutex_;
 };
 
 class audio_mixer

@@ -17,17 +17,90 @@
 
 namespace caspar { namespace core {
 		
+image_transform::image_transform() 
+	: opacity_(1.0)
+	, gain_(1.0)
+	, mode_(video_mode::invalid)
+{
+	std::fill(pos_.begin(), pos_.end(), 0.0);
+	std::fill(uv_.begin(), uv_.end(), 0.0);
+}
+
+void image_transform::set_opacity(double value)
+{
+	tbb::spin_mutex::scoped_lock(mutex_);	
+	opacity_ = value;
+}
+
+double image_transform::get_opacity() const
+{
+	tbb::spin_mutex::scoped_lock(mutex_);
+	return opacity_;
+}
+
+void image_transform::set_gain(double value)
+{
+	tbb::spin_mutex::scoped_lock(mutex_);
+	gain_ = value;
+}
+
+double image_transform::get_gain() const
+{
+	tbb::spin_mutex::scoped_lock(mutex_);
+	return gain_;
+}
+
+void image_transform::set_position(double x, double y)
+{
+	std::array<double, 2> value = {x, y};
+	tbb::spin_mutex::scoped_lock(mutex_);
+	pos_ = value;
+}
+
+std::array<double, 2> image_transform::get_position() const
+{
+	tbb::spin_mutex::scoped_lock(mutex_);
+	return pos_;
+}
+
+void image_transform::set_uv(double left, double top, double right, double bottom)
+{
+	std::array<double, 4> value = {left, top, right, bottom};
+	tbb::spin_mutex::scoped_lock(mutex_);
+	uv_ = value;
+}
+
+std::array<double, 4> image_transform::get_uv() const
+{
+	tbb::spin_mutex::scoped_lock(mutex_);
+	return uv_;
+}
+
+void image_transform::set_mode(video_mode::type mode)
+{
+	tbb::spin_mutex::scoped_lock(mutex_);
+	mode_ = mode;
+}
+
+video_mode::type image_transform::get_mode() const
+{
+	tbb::spin_mutex::scoped_lock(mutex_);
+	return mode_;
+}
+
+
 image_transform& image_transform::operator*=(const image_transform &other)
 {
-	alpha *= other.alpha;
-	mode = other.mode;
-	gain *= other.gain;
-	uv.get<0>() += other.uv.get<0>();
-	uv.get<1>() += other.uv.get<1>();
-	uv.get<2>() += other.uv.get<2>();
-	uv.get<3>() += other.uv.get<3>();
-	pos.get<0>() += other.pos.get<0>();
-	pos.get<1>() += other.pos.get<1>();
+	tbb::spin_mutex::scoped_lock(mutex_);
+	opacity_ *= other.opacity_;
+	mode_ = other.mode_;
+	gain_ *= other.gain_;
+	uv_[0] += other.uv_[0];
+	uv_[1] += other.uv_[1];
+	uv_[2] += other.uv_[2];
+	uv_[3] += other.uv_[3];
+	pos_[0] += other.pos_[0];
+	pos_[1] += other.pos_[1];
 	return *this;
 }
 
@@ -58,8 +131,8 @@ public:
 		context_.begin_invoke([=]
 		{
 			transform_stack_.push(image_transform());
-			transform_stack_.top().mode = video_mode::progressive;
-			transform_stack_.top().uv = boost::make_tuple(0.0, 1.0, 1.0, 0.0);
+			transform_stack_.top().set_mode(video_mode::progressive);
+			transform_stack_.top().set_uv(0.0, 1.0, 1.0, 0.0);
 
 			GL(glEnable(GL_TEXTURE_2D));
 			GL(glDisable(GL_DEPTH_TEST));		
@@ -91,8 +164,8 @@ public:
 		context_.begin_invoke([=]
 		{
 			GL(glLoadIdentity());
-			GL(glTranslated(transform.pos.get<0>()*2.0, transform.pos.get<1>()*2.0, 0.0));
-			GL(glColor4d(1.0, 1.0, 1.0, transform.alpha));
+			GL(glTranslated(transform.get_position()[0]*2.0, transform.get_position()[1]*2.0, 0.0));
+			GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
 			GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
 			kernel_.apply(desc.pix_fmt, transform);
 
@@ -112,10 +185,10 @@ public:
 
 			auto t = transform;
 			glBegin(GL_QUADS);
-				glTexCoord2d(t.uv.get<0>(), t.uv.get<3>()); glVertex2d(-1.0, -1.0);
-				glTexCoord2d(t.uv.get<2>(), t.uv.get<3>()); glVertex2d( 1.0, -1.0);
-				glTexCoord2d(t.uv.get<2>(), t.uv.get<1>()); glVertex2d( 1.0,  1.0);
-				glTexCoord2d(t.uv.get<0>(), t.uv.get<1>()); glVertex2d(-1.0,  1.0);
+				glTexCoord2d(t.get_uv()[0], t.get_uv()[3]); glVertex2d(-1.0, -1.0);
+				glTexCoord2d(t.get_uv()[2], t.get_uv()[3]); glVertex2d( 1.0, -1.0);
+				glTexCoord2d(t.get_uv()[2], t.get_uv()[1]); glVertex2d( 1.0,  1.0);
+				glTexCoord2d(t.get_uv()[0], t.get_uv()[1]); glVertex2d(-1.0,  1.0);
 			glEnd();
 		});
 	}
