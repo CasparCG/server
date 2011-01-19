@@ -122,13 +122,14 @@ struct image_mixer::implementation : boost::noncopyable
 
 	image_kernel kernel_;
 
-	ogl_device context_;
+	safe_ptr<ogl_device> context_;
 
 public:
 	implementation(const video_format_desc& format_desc) 
 		: format_desc_(format_desc)
+		, context_(ogl_device::create())
 	{
-		context_.begin_invoke([=]
+		context_->begin_invoke([=]
 		{
 			transform_stack_.push(image_transform());
 			transform_stack_.top().set_mode(video_mode::progressive);
@@ -137,14 +138,14 @@ public:
 			GL(glEnable(GL_TEXTURE_2D));
 			GL(glDisable(GL_DEPTH_TEST));		
 
-			render_targets_[0] = context_.create_device_buffer(format_desc.width, format_desc.height, 4);
-			render_targets_[1] = context_.create_device_buffer(format_desc.width, format_desc.height, 4);
+			render_targets_[0] = context_->create_device_buffer(format_desc.width, format_desc.height, 4);
+			render_targets_[1] = context_->create_device_buffer(format_desc.width, format_desc.height, 4);
 			
 			GL(glGenFramebuffers(1, &fbo_));		
 			GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
 			GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
 
-			reading_ = context_.create_host_buffer(format_desc_.size, host_buffer::read_only);
+			reading_ = context_->create_host_buffer(format_desc_.size, host_buffer::read_only);
 		});
 	}
 
@@ -161,7 +162,7 @@ public:
 	void render(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>>& buffers)
 	{
 		auto transform = transform_stack_.top();
-		context_.begin_invoke([=]
+		context_->begin_invoke([=]
 		{
 			GL(glLoadIdentity());
 			GL(glTranslated(transform.get_position()[0]*2.0, transform.get_position()[1]*2.0, 0.0));
@@ -172,7 +173,7 @@ public:
 			std::vector<safe_ptr<device_buffer>> device_buffers;
 			for(size_t n = 0; n < buffers.size(); ++n)
 			{
-				auto texture = context_.create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
+				auto texture = context_->create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
 				texture->read(*buffers[n]);
 				device_buffers.push_back(texture);
 			}
@@ -200,7 +201,7 @@ public:
 
 	boost::unique_future<safe_ptr<const host_buffer>> begin_pass()
 	{
-		return context_.begin_invoke([=]() -> safe_ptr<const host_buffer>
+		return context_->begin_invoke([=]() -> safe_ptr<const host_buffer>
 		{
 			reading_->map();
 			render_targets_[0]->attach(0);
@@ -211,9 +212,9 @@ public:
 
 	void end_pass()
 	{
-		context_.begin_invoke([=]
+		context_->begin_invoke([=]
 		{
-			reading_ = context_.create_host_buffer(format_desc_.size, host_buffer::read_only);
+			reading_ = context_->create_host_buffer(format_desc_.size, host_buffer::read_only);
 			render_targets_[0]->write(*reading_);
 			std::rotate(render_targets_.begin(), render_targets_.begin() + 1, render_targets_.end());
 		});
@@ -224,7 +225,7 @@ public:
 		std::vector<safe_ptr<host_buffer>> buffers;
 		std::transform(format.planes.begin(), format.planes.end(), std::back_inserter(buffers), [&](const pixel_format_desc::plane& plane) -> safe_ptr<host_buffer>
 		{
-			return context_.create_host_buffer(plane.size, host_buffer::write_only);
+			return context_->create_host_buffer(plane.size, host_buffer::write_only);
 		});
 		return buffers;
 	}

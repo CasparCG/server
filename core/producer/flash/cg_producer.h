@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../frame_producer.h"
+#include "../frame_producer_device.h"
 #include "../../video_format.h"
 #include "../../channel.h"
 
@@ -9,7 +10,7 @@ namespace caspar { namespace core { namespace flash{
 class cg_producer : public frame_producer
 {
 public:
-	static const unsigned int DEFAULT_LAYER = 5000;
+	static const unsigned int DEFAULT_LAYER = frame_producer_device::MAX_LAYER;
 
 	explicit cg_producer();
 	cg_producer(cg_producer&& other);

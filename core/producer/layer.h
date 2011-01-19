@@ -4,6 +4,8 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <tbb/atomic.h>
+
 namespace caspar { namespace core {
 
 class frame_producer;
@@ -14,7 +16,11 @@ class layer : boost::noncopyable
 public:
 	layer(int index = -1); // nothrow
 	layer(layer&& other); // nothrow
+	~layer();
 	layer& operator=(layer&& other); // nothrow
+
+	//NOTE: swap is thread-safe on "other", NOT on "this".
+	void swap(layer& other); // nothrow 
 		
 	void load(const safe_ptr<frame_producer>& producer, bool play_on_load = false); // nothrow
 	void preview(const safe_ptr<frame_producer>& producer); // nothrow
@@ -29,7 +35,7 @@ public:
 	safe_ptr<draw_frame> receive(); // nothrow
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	tbb::atomic<implementation*> impl_;
 };
 
 }}

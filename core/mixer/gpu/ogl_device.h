@@ -17,8 +17,13 @@ namespace caspar { namespace core {
 
 class ogl_device
 {	
-public:	
 	ogl_device();
+public:	
+	static safe_ptr<ogl_device> create()
+	{
+		static safe_ptr<ogl_device> instance(new ogl_device());
+		return instance;
+	}
 
 	template<typename Func>
 	auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept

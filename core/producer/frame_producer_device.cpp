@@ -10,17 +10,18 @@
 #include <common/concurrency/executor.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <tbb/parallel_for.h>
 
-#include <map>
+#include <array>
 #include <memory>
 
 namespace caspar { namespace core {
 
 struct frame_producer_device::implementation : boost::noncopyable
 {		
-	std::map<int, layer> layers_;		
+	std::array<layer, frame_producer_device::MAX_LAYER> layers_;		
 
 	const output_func output_;
 	const safe_ptr<frame_factory> factory_;
@@ -53,101 +54,128 @@ public:
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), 
 		[&](const tbb::blocked_range<size_t>& r)
 		{
-			auto it = layers_.begin();
-			std::advance(it, r.begin());
-			for(size_t i = r.begin(); i != r.end(); ++i, ++it)
-				frames[i] = it->second.receive();
+			for(size_t i = r.begin(); i != r.end(); ++i)
+				frames[i] = layers_[i].receive();
 		});		
 		boost::range::remove_erase(frames, draw_frame::eof());
 		boost::range::remove_erase(frames, draw_frame::empty());
 		return frames;
 	}
 
-	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load)
+	void load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load)
 	{
+		check_bounds(index);
 		producer->initialize(factory_);
-		executor_.begin_invoke([=]
+		executor_.invoke([&]
 		{
-			auto it = layers_.insert(std::make_pair(index, layer(index))).first;
-			it->second.load(producer, play_on_load);
+			layers_[index] = layer(index);
+			layers_[index].load(producer, play_on_load);
 		});
 	}
 			
-	void preview(int index, const safe_ptr<frame_producer>& producer)
+	void preview(size_t index, const safe_ptr<frame_producer>& producer)
 	{
+		check_bounds(index);
 		producer->initialize(factory_);
-		executor_.begin_invoke([=]
-		{
-			auto it = layers_.insert(std::make_pair(index, layer(index))).first;
-			it->second.preview(producer);
+		executor_.invoke([&]
+		{			
+			layers_[index] = layer(index);
+			layers_[index].preview(producer);
 		});
 	}
 
-	void pause(int index)
+	void pause(size_t index)
 	{		
-		begin_invoke_layer(index, std::mem_fn(&layer::pause));
+		check_bounds(index);
+		executor_.invoke([&]
+		{
+			layers_[index].pause();
+		});
 	}
 
-	void play(int index)
+	void play(size_t index)
 	{		
-		begin_invoke_layer(index, std::mem_fn(&layer::play));
+		check_bounds(index);
+		executor_.invoke([&]
+		{
+			layers_[index].play();
+		});
 	}
 
-	void stop(int index)
+	void stop(size_t index)
 	{		
-		begin_invoke_layer(index, std::mem_fn(&layer::stop));
+		check_bounds(index);
+		executor_.invoke([&]
+		{
+			layers_[index].stop();
+		});
 	}
 
-	void clear(int index)
+	void clear(size_t index)
 	{
-		executor_.begin_invoke([=]
-		{			
-			auto it = layers_.find(index);
-			if(it != layers_.end())
-			{
-				it->second.clear();		
-				layers_.erase(it);
-			}
+		check_bounds(index);
+		executor_.invoke([&]
+		{
+			layers_[index] = std::move(layer());
 		});
 	}
 		
 	void clear()
 	{
-		executor_.begin_invoke([=]
-		{			
-			layers_.clear();
-		});
-	}		
-
-	template<typename F>
-	void begin_invoke_layer(int index, F&& func)
-	{
-		executor_.begin_invoke([=]
+		executor_.invoke([&]
 		{
-			auto it = layers_.find(index);
-			if(it != layers_.end())
-				func(it->second);	
+			for(auto it = layers_.begin(); it != layers_.end(); ++it)
+				*it = std::move(layer());
+		});
+	}	
+	
+	void swap(size_t index, size_t other_index)
+	{
+		check_bounds(index);
+		check_bounds(other_index);
+
+		executor_.invoke([&]
+		{
+			layers_[index].swap(layers_[other_index]);
 		});
 	}
 
-	boost::unique_future<safe_ptr<frame_producer>> foreground(int index) const
+	void swap(size_t index, size_t other_index, frame_producer_device& other)
+	{
+		check_bounds(index);
+		check_bounds(other_index);
+
+		executor_.invoke([&]
+		{
+			layers_[index].swap(other.impl_->layers_[other_index]);
+		});
+	}
+
+	void check_bounds(size_t index)
+	{
+		if(index < 0 || index >= frame_producer_device::MAX_LAYER)
+			BOOST_THROW_EXCEPTION(out_of_range() << msg_info("Valid range is [0..100]") << arg_name_info("index") << arg_value_info(boost::lexical_cast<std::string>(index)));
+	}
+	
+	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const
 	{
 		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
 		{			
-			auto it = layers_.find(index);
-			return it != layers_.end() ? it->second.foreground() : frame_producer::empty();
+			return layers_[index].foreground();
 		});
 	}
 };
 
 frame_producer_device::frame_producer_device(const safe_ptr<frame_factory>& factory, const output_func& output) : impl_(new implementation(factory, output)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
-void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
-void frame_producer_device::preview(int index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
-void frame_producer_device::pause(int index){impl_->pause(index);}
-void frame_producer_device::play(int index){impl_->play(index);}
-void frame_producer_device::stop(int index){impl_->stop(index);}
-void frame_producer_device::clear(int index){impl_->clear(index);}
+void frame_producer_device::load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
+void frame_producer_device::preview(size_t index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
+void frame_producer_device::pause(size_t index){impl_->pause(index);}
+void frame_producer_device::play(size_t index){impl_->play(index);}
+void frame_producer_device::stop(size_t index){impl_->stop(index);}
+void frame_producer_device::clear(size_t index){impl_->clear(index);}
 void frame_producer_device::clear(){impl_->clear();}
-boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(int index) const{	return impl_->foreground(index);}
+void frame_producer_device::swap(size_t index, size_t other_index){impl_->swap(index, other_index);}
+void frame_producer_device::swap(size_t index, size_t other_index, frame_producer_device& other){impl_->swap(index, other_index, other);}
+boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) const{	return impl_->foreground(index);}
 }}
