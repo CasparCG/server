@@ -36,6 +36,9 @@ public:
 		: factory_(factory)
 		, output_(output)
 	{
+		for(size_t n = 0; n < layers_.size(); ++n)
+			layers_[n] = layer(n);
+
 		executor_.start();
 		executor_.begin_invoke([=]{tick();});
 	}
@@ -75,7 +78,6 @@ public:
 		producer->initialize(factory_);
 		executor_.invoke([&]
 		{
-			layers_[index] = layer(index);
 			layers_[index].load(producer, play_on_load);
 		});
 	}
@@ -86,7 +88,6 @@ public:
 		producer->initialize(factory_);
 		executor_.invoke([&]
 		{			
-			layers_[index] = layer(index);
 			layers_[index].preview(producer);
 		});
 	}
@@ -140,7 +141,6 @@ public:
 	{
 		check_bounds(index);
 		check_bounds(other_index);
-
 		executor_.invoke([&]
 		{
 			layers_[index].swap(layers_[other_index]);
@@ -151,7 +151,6 @@ public:
 	{
 		check_bounds(index);
 		check_bounds(other_index);
-
 		executor_.invoke([&]
 		{
 			layers_[index].swap(other.impl_->layers_[other_index]);
@@ -168,7 +167,7 @@ public:
 	void check_bounds(size_t index) const
 	{
 		if(index < 0 || index >= frame_producer_device::MAX_LAYER)
-			BOOST_THROW_EXCEPTION(out_of_range() << msg_info("Valid range is [0..100]") << arg_name_info("index") << arg_value_info(boost::lexical_cast<std::string>(index)));
+			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("index") << arg_value_info(boost::lexical_cast<std::string>(index)));
 	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const
