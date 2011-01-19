@@ -27,9 +27,10 @@ namespace caspar { namespace core {
 class ffmpeg_consumer : public frame_consumer
 {
 public:	
-	explicit ffmpeg_consumer(const video_format_desc& format_desc, const std::wstring& filename);
+	explicit ffmpeg_consumer(const std::wstring& filename);
 	ffmpeg_consumer(ffmpeg_consumer&& other);
 	
+	virtual void initialize(const video_format_desc& format_desc);
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
 private:

@@ -59,6 +59,7 @@ struct decklink_input : public IDeckLinkVideoOutputCallback, public IDeckLinkAud
 	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
 	boost::circular_buffer<std::vector<short>> audio_container_;
 
+	const size_t				device_index_;
 	const bool					embed_audio_;
 	const bool					internal_key;
 	CComPtr<IDeckLink>			decklink_;
@@ -77,24 +78,39 @@ struct decklink_input : public IDeckLinkVideoOutputCallback, public IDeckLinkAud
 	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> audio_frame_buffer_;
 
 public:
-	decklink_input(const video_format_desc& format_desc, size_t device_index, bool embed_audio, bool internalKey) 
-		: format_desc_(format_desc)
+	decklink_input(size_t device_index, bool embed_audio, bool internalKey) 
+		: device_index_(device_index)
 		, audio_container_(5)
 		, current_format_(video_format::pal)
 		, embed_audio_(embed_audio)
 		, internal_key(internalKey)
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
-	{	
+	{}
+
+	~decklink_input()
+	{			
+		if(output_ != nullptr) 
+		{
+			output_->StopScheduledPlayback(0, nullptr, 0);
+			if(embed_audio_)
+				output_->DisableAudioOutput();
+			output_->DisableVideoOutput();
+		}
+	}
+
+	void initialize(const video_format_desc& format_desc)
+	{
+		format_desc_ = format_desc;
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink drivers installed."));
 
 		size_t n = 0;
-		while(n < device_index && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
+		while(n < device_index_ && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
 
-		if(n != device_index || !decklink_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink card found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index)));
+		if(n != device_index_ || !decklink_)
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink card found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
 
 		output_ = decklink_;
 		keyer_ = decklink_;
@@ -172,18 +188,7 @@ public:
 		if(FAILED(output_->StartScheduledPlayback(0, frame_time_scale_, 1.0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to schedule playback."));
 		
-		CASPAR_LOG(info) << "DECKLINK: Successfully initialized decklink for " << format_desc_.name;		
-	}
-
-	~decklink_input()
-	{			
-		if(output_ != nullptr) 
-		{
-			output_->StopScheduledPlayback(0, nullptr, 0);
-			if(embed_audio_)
-				output_->DisableAudioOutput();
-			output_->DisableVideoOutput();
-		}
+		CASPAR_LOG(info) << "DECKLINK: Successfully initialized decklink for " << format_desc_.name;	
 	}
 	
 	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
@@ -251,12 +256,12 @@ struct decklink_consumer::implementation
 	executor executor_;
 	std::unique_ptr<decklink_input> input_;
 
-	implementation(const video_format_desc& format_desc, size_t device_index, bool embed_audio, bool internalKey)
+	implementation(size_t device_index, bool embed_audio, bool internalKey)
 	{
 		executor_.start();
 		executor_.invoke([&]
 		{
-			input_.reset(new decklink_input(format_desc, device_index, embed_audio, internalKey));
+			input_.reset(new decklink_input(device_index, embed_audio, internalKey));
 		});
 	}
 
@@ -268,43 +273,48 @@ struct decklink_consumer::implementation
 		});
 	}
 
-	virtual void send(const safe_ptr<const read_frame>& frame)
+	void initialize(const video_format_desc& format_desc)
+	{
+		executor_.invoke([&]
+		{
+			input_->initialize(format_desc);
+		});
+	}
+
+	void send(const safe_ptr<const read_frame>& frame)
 	{
 		input_->send(frame);
 	}
 
-	virtual size_t buffer_depth() const
+	size_t buffer_depth() const
 	{
 		return 1;
 	}
 };
 
-decklink_consumer::decklink_consumer(const video_format_desc& format_desc, size_t device_index, bool embed_audio, bool internalKey) : impl_(new implementation(format_desc, device_index, embed_audio, internalKey)){}
+decklink_consumer::decklink_consumer(size_t device_index, bool embed_audio, bool internalKey) : impl_(new implementation(device_index, embed_audio, internalKey)){}
 decklink_consumer::decklink_consumer(decklink_consumer&& other) : impl_(std::move(other.impl_)){}
+void decklink_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
 void decklink_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
 	
 safe_ptr<frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 2 || params[0] != L"DECKLINK")
+	if(params.size() < 1 || params[0] != L"DECKLINK")
 		return frame_consumer::empty();
-
-	auto format_desc = video_format_desc::get(params[1]);
-	if(format_desc.format == video_format::invalid)
-		return frame_consumer::empty();
-
+	
 	int device_index = 1;
 	bool embed_audio = false;
 	bool internal_key = false;
 
-	try{if(params.size() > 2) device_index = boost::lexical_cast<int>(params[2]);}
+	try{if(params.size() > 1) device_index = boost::lexical_cast<int>(params[2]);}
 	catch(boost::bad_lexical_cast&){}
-	try{if(params.size() > 3) embed_audio = boost::lexical_cast<bool>(params[3]);}
+	try{if(params.size() > 2) embed_audio = boost::lexical_cast<bool>(params[3]);}
 	catch(boost::bad_lexical_cast&){}
-	try{if(params.size() > 4) internal_key = boost::lexical_cast<bool>(params[4]);}
+	try{if(params.size() > 3) internal_key = boost::lexical_cast<bool>(params[4]);}
 	catch(boost::bad_lexical_cast&){}
 
-	return make_safe<decklink_consumer>(format_desc, device_index, embed_audio, internal_key);
+	return make_safe<decklink_consumer>(device_index, embed_audio, internal_key);
 }
 
 }}

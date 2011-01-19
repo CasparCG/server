@@ -54,28 +54,41 @@ struct ogl_consumer::implementation : boost::noncopyable
 	GLuint				  texture_;
 	std::array<GLuint, 2> pbos_;
 
-	bool windowed_;
+	const bool windowed_;
 	unsigned int screen_width_;
 	unsigned int screen_height_;
 	unsigned int screen_x_;
 	unsigned int screen_y_;
+	const unsigned int screen_index_;
 				
-	stretch stretch_;
-	const video_format_desc format_desc_;
+	const stretch stretch_;
+	video_format_desc format_desc_;
 	
 	sf::Window window_;
 
 public:
-	implementation(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) 
-		: format_desc_(format_desc)
-		, stretch_(stretch)
+	implementation(unsigned int screen_index, stretch stretch, bool windowed) 
+		: stretch_(stretch)
 		, windowed_(windowed)
 		, texture_(0)
-		, screen_width_(format_desc.width)
-		, screen_height_(format_desc.height)
 		, screen_x_(0)
 		, screen_y_(0)
+		, screen_index_(screen_index)
 	{		
+		CASPAR_LOG(info) << "Sucessfully started ogl_consumer";
+	}
+
+	~implementation()
+	{
+		CASPAR_LOG(info) << "Sucessfully ended ogl_consumer";
+	}
+
+	void initialize(const video_format_desc& format_desc)
+	{
+		format_desc_ = format_desc;
+
+		screen_width_ = format_desc.width;
+		screen_height_ = format_desc.height;
 #ifdef _WIN32
 		DISPLAY_DEVICE d_device;			
 		memset(&d_device, 0, sizeof(d_device));
@@ -89,17 +102,17 @@ public:
 			d_device.cb = sizeof(d_device);
 		}
 
-		if(screen_index >= displayDevices.size())
+		if(screen_index_ >= displayDevices.size())
 			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_"));
 		
 		DEVMODE devmode;
 		memset(&devmode, 0, sizeof(devmode));
 		
-		if(!EnumDisplaySettings(displayDevices[screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
+		if(!EnumDisplaySettings(displayDevices[screen_index_].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
 			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info("EnumDisplaySettings"));
 		
-		screen_width_ = windowed ? format_desc_.width : devmode.dmPelsWidth;
-		screen_height_ = windowed ? format_desc_.height : devmode.dmPelsHeight;
+		screen_width_ = windowed_ ? format_desc_.width : devmode.dmPelsWidth;
+		screen_height_ = windowed_ ? format_desc_.height : devmode.dmPelsHeight;
 		screen_x_ = devmode.dmPosition.x;
 		screen_y_ = devmode.dmPosition.y;
 #else
@@ -156,13 +169,6 @@ public:
 			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		});
 		active_ = executor_.begin_invoke([]{});
-
-		CASPAR_LOG(info) << "Sucessfully started ogl_consumer";
-	}
-
-	~implementation()
-	{
-		CASPAR_LOG(info) << "Sucessfully ended ogl_consumer";
 	}
 	
 	std::pair<float, float> None()
@@ -232,7 +238,7 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 		
-	virtual void send(const safe_ptr<const read_frame>& frame)
+	void send(const safe_ptr<const read_frame>& frame)
 	{
 		active_.get();
 		active_ = executor_.begin_invoke([=]
@@ -244,33 +250,30 @@ public:
 		});
 	}
 
-	virtual size_t buffer_depth() const{return 2;}
+	size_t buffer_depth() const{return 2;}
 };
 
 ogl_consumer::ogl_consumer(ogl_consumer&& other) : impl_(std::move(other.impl_)){}
-ogl_consumer::ogl_consumer(const video_format_desc& format_desc, unsigned int screen_index, stretch stretch, bool windowed) : impl_(new implementation(format_desc, screen_index, stretch, windowed)){}
+ogl_consumer::ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed) : impl_(new implementation(screen_index, stretch, windowed)){}
 void ogl_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t ogl_consumer::buffer_depth() const{return impl_->buffer_depth();}
+void ogl_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
 
 safe_ptr<frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 2 || params[0] != L"OGL")
+	if(params.size() < 1 || params[0] != L"OGL")
 		return frame_consumer::empty();
-
-	auto format_desc = video_format_desc::get(params[1]);
-	if(format_desc.format == video_format::invalid)
-		return frame_consumer::empty();
-
+	
 	unsigned int screen_index = 0;
 	stretch stretch = stretch::fill;
 	bool windowed = true;
 	
-	try{if(params.size() > 2) screen_index = boost::lexical_cast<int>(params[2]);}
+	try{if(params.size() > 1) screen_index = boost::lexical_cast<int>(params[2]);}
 	catch(boost::bad_lexical_cast&){}
-	try{if(params.size() > 3) windowed = boost::lexical_cast<bool>(params[3]);}
+	try{if(params.size() > 2) windowed = boost::lexical_cast<bool>(params[3]);}
 	catch(boost::bad_lexical_cast&){}
 
-	return make_safe<ogl_consumer>(format_desc, screen_index, stretch, windowed);
+	return make_safe<ogl_consumer>(screen_index, stretch, windowed);
 }
 
 }}

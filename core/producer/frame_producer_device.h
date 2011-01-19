@@ -27,7 +27,7 @@ class frame_producer_device : boost::noncopyable
 public:
 	typedef std::function<void(const std::vector<safe_ptr<draw_frame>>&)> output_func;
 
-	explicit frame_producer_device(const video_format_desc& format_desc, const safe_ptr<frame_factory>& factory, const output_func& output);
+	explicit frame_producer_device(const safe_ptr<frame_factory>& factory, const output_func& output);
 	frame_producer_device(frame_producer_device&& other);
 		
 	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load = false);
@@ -38,8 +38,6 @@ public:
 	void clear(int index);
 	void clear();	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(int index) const;
-	boost::unique_future<safe_ptr<frame_producer>> background(int index) const;
-	const video_format_desc& get_video_format_desc() const;
 
 private:
 	struct implementation;

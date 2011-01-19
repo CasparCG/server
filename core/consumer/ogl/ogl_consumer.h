@@ -37,9 +37,10 @@ enum stretch
 class ogl_consumer : public frame_consumer
 {
 public:	
-	explicit ogl_consumer(const video_format_desc& format_desc, unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
+	explicit ogl_consumer(unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
 	ogl_consumer(ogl_consumer&& other);
 	
+	virtual void initialize(const video_format_desc& format_desc);
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
 private:
