@@ -119,13 +119,24 @@ public:
 	std::wstring print() const { return L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]"; }
 };
 
-layer::layer(int index) : impl_(new implementation(index)){}
+layer::layer(int index) 
+{
+	impl_ = new implementation(index);
+}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){other.impl_ = nullptr;}
+layer::~layer()
+{
+	delete impl_.fetch_and_store(nullptr);
+}
 layer& layer::operator=(layer&& other)
 {
 	impl_ = std::move(other.impl_);	
 	other.impl_ = nullptr;
 	return *this;
+}
+void layer::swap(layer& other)
+{
+	impl_ = other.impl_.compare_and_swap(impl_, other.impl_);
 }
 void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load){return impl_->load(frame_producer, play_on_load);}	
 void layer::preview(const safe_ptr<frame_producer>& frame_producer){return impl_->preview(frame_producer);}	
