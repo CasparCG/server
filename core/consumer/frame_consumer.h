@@ -26,6 +26,7 @@
 namespace caspar { namespace core {
 	
 class read_frame;
+struct video_format_desc;
 
 struct frame_consumer : boost::noncopyable
 {
@@ -33,6 +34,7 @@ struct frame_consumer : boost::noncopyable
 	
 	virtual void send(const safe_ptr<const read_frame>& frame) = 0;
 	virtual size_t buffer_depth() const = 0;
+	virtual void initialize(const video_format_desc& format_desc) = 0;
 
 	static safe_ptr<frame_consumer> empty()
 	{
@@ -40,6 +42,7 @@ struct frame_consumer : boost::noncopyable
 		{
 			virtual void send(const safe_ptr<const read_frame>&){}
 			virtual size_t buffer_depth() const{return 0;}
+			void initialize(const video_format_desc&){}
 		};
 		static safe_ptr<frame_consumer> consumer = make_safe<empty_frame_consumer>();
 		return consumer;

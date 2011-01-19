@@ -86,7 +86,7 @@ struct bluefish_consumer::implementation : boost::noncopyable
 	std::shared_ptr<CBlueVelvet4> blue_;
 	
 	const unsigned int device_index_;
-	const video_format_desc format_desc_;
+	video_format_desc format_desc_;
 		
 	unsigned long	mem_fmt_;
 	unsigned long	upd_fmt_;
@@ -99,19 +99,33 @@ struct bluefish_consumer::implementation : boost::noncopyable
 	const bool embed_audio_;
 
 public:
-	implementation::implementation(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) 
-		: device_index_(device_index)
-		, format_desc_(format_desc)
+	implementation::implementation(unsigned int device_index, bool embed_audio) 
+		: device_index_(device_index)		
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)
 		, vid_fmt_(VID_FMT_INVALID) 
 		, res_fmt_(RES_FMT_NORMAL) 
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
 		, embed_audio_(embed_audio)
+	{}
+
+	~implementation()
+	{
+		disable_video_output();
+
+		if(blue_)
+			blue_->device_detach();		
+
+		CASPAR_LOG(info) << "BLUECARD INFO: Successfully released device " << device_index_;
+	}
+
+	void initialize(const video_format_desc& format_desc)
 	{
 		static boost::once_flag flag = BOOST_ONCE_INIT;
 		boost::call_once(blue_initialize, flag);	
 		
+		format_desc_ = format_desc;
+
 		blue_.reset(BlueVelvetFactory4());
 
 		if(BLUE_FAIL(blue_->device_attach(device_index_, FALSE))) 
@@ -214,16 +228,6 @@ public:
 
 		active_ = executor_.begin_invoke([]{});
 	}
-
-	~implementation()
-	{
-		disable_video_output();
-
-		if(blue_)
-			blue_->device_detach();		
-
-		CASPAR_LOG(info) << "BLUECARD INFO: Successfully released device " << device_index_;
-	}
 	
 	void enable_video_output()
 	{
@@ -320,28 +324,25 @@ public:
 };
 
 bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
-bluefish_consumer::bluefish_consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio) : impl_(new implementation(format_desc, device_index, embed_audio)){}	
+bluefish_consumer::bluefish_consumer(unsigned int device_index, bool embed_audio) : impl_(new implementation(device_index, embed_audio)){}	
+void bluefish_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
 void bluefish_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t bluefish_consumer::buffer_depth() const{return impl_->buffer_depth();}
 	
 safe_ptr<frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 2 || params[0] != L"BLUEFISH")
+	if(params.size() < 1 || params[0] != L"BLUEFISH")
 		return frame_consumer::empty();
-
-	auto format_desc = video_format_desc::get(params[1]);
-	if(format_desc.format == video_format::invalid)
-		return frame_consumer::empty();
-	
+		
 	int device_index = 1;
 	bool embed_audio = false;
 
-	try{if(params.size() > 2) device_index = boost::lexical_cast<int>(params[2]);}
+	try{if(params.size() > 1) device_index = boost::lexical_cast<int>(params[2]);}
 	catch(boost::bad_lexical_cast&){}
-	try{if(params.size() > 3) embed_audio = boost::lexical_cast<bool>(params[3]);}
+	try{if(params.size() > 2) embed_audio = boost::lexical_cast<bool>(params[3]);}
 	catch(boost::bad_lexical_cast&){}
 
-	return make_safe<bluefish_consumer>(format_desc, device_index, embed_audio);
+	return make_safe<bluefish_consumer>(device_index, embed_audio);
 }
 
 }}

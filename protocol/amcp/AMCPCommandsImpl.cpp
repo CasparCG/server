@@ -229,25 +229,25 @@ bool SwapCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		std::vector<std::string> strs;
-		boost::split(strs, _parameters[0], boost::is_any_of("-"));
-			
-		auto ch1 = GetChannel();
-		auto ch2 = GetChannels().at(boost::lexical_cast<int>(strs.at(0))-1);
+		//std::vector<std::string> strs;
+		//boost::split(strs, _parameters[0], boost::is_any_of("-"));
+		//	
+		//auto ch1 = GetChannel();
+		//auto ch2 = GetChannels().at(boost::lexical_cast<int>(strs.at(0))-1);
 
-		int l1 = GetLayerIndex();
-		int l2 = boost::lexical_cast<int>(strs.at(1));
-		
-		auto c1 = ch1->consumer().get(l1);
-		auto c2 = ch2->consumer().get(l2);
+		//int l1 = GetLayerIndex();
+		//int l2 = boost::lexical_cast<int>(strs.at(1));
+		//
+		//auto c1 = ch1->consumer().get(l1);
+		//auto c2 = ch2->consumer().get(l2);
 
-		ch2->consumer().add(l1, c1);
-		ch1->consumer().add(l2, c2);
-		CASPAR_LOG(info) << "Swapped successfully";
+		//ch2->consumer().add(l1, c1);
+		//ch1->consumer().add(l2, c2);
+		//CASPAR_LOG(info) << "Swapped successfully";
 
-		SetReplyString(TEXT("202 SWAP OK\r\n"));
+		SetReplyString(TEXT("600 SWAP NOT IMPLEMENTED\r\n"));
 
-		return true;
+		return false;
 	}
 	catch(file_not_found&)
 	{
@@ -268,8 +268,7 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto consumer = create_consumer(_parameters);		
-		GetChannel()->consumer().add(GetLayerIndex(), consumer);
+		GetChannel()->consumer().add(GetLayerIndex(), create_consumer(_parameters));
 	
 		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
 

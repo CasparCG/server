@@ -34,7 +34,7 @@ public:
 		: format_desc_(format_desc)
 		, consumer_(new frame_consumer_device(format_desc))
 		, mixer_(new frame_mixer_device(format_desc, std::bind(&frame_consumer_device::send, consumer_.get(), std::placeholders::_1)))
-		, producer_(new frame_producer_device(format_desc, safe_ptr<frame_factory>(mixer_), std::bind(&frame_mixer_device::send, mixer_.get(), std::placeholders::_1)))	{}
+		, producer_(new frame_producer_device(safe_ptr<frame_factory>(mixer_), std::bind(&frame_mixer_device::send, mixer_.get(), std::placeholders::_1)))	{}
 
 	~implementation()
 	{

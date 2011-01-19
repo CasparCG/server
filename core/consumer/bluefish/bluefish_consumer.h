@@ -29,9 +29,10 @@ struct bluefish_exception : public caspar_exception{};
 class bluefish_consumer : public frame_consumer
 {
 public:
-	explicit bluefish_consumer(const video_format_desc& format_desc, unsigned int device_index, bool embed_audio = false);
+	explicit bluefish_consumer(unsigned int device_index, bool embed_audio = false);
 	bluefish_consumer(bluefish_consumer&& other);
 	
+	virtual void initialize(const video_format_desc& format_desc);
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
 private:

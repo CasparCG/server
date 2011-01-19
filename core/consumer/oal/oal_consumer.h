@@ -27,9 +27,10 @@ namespace caspar { namespace core {
 class oal_consumer : public frame_consumer
 {
 public:	
-	explicit oal_consumer(const video_format_desc& format_desc);
+	explicit oal_consumer();
 	oal_consumer(oal_consumer&& other);
-	
+
+	virtual void initialize(const video_format_desc& format_desc);	
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
 private:

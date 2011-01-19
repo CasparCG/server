@@ -22,16 +22,14 @@ struct frame_producer_device::implementation : boost::noncopyable
 {		
 	std::map<int, layer> layers_;		
 
-	const video_format_desc format_desc_;	
 	const output_func output_;
 	const safe_ptr<frame_factory> factory_;
 	
 	mutable executor executor_;
 
 public:
-	implementation(const video_format_desc& format_desc, const safe_ptr<frame_factory>& factory, const output_func& output)  
-		: format_desc_(format_desc)
-		, factory_(factory)
+	implementation(const safe_ptr<frame_factory>& factory, const output_func& output)  
+		: factory_(factory)
 		, output_(output)
 	{
 		executor_.start();
@@ -140,20 +138,10 @@ public:
 			return it != layers_.end() ? it->second.foreground() : frame_producer::empty();
 		});
 	}
-	
-	boost::unique_future<safe_ptr<frame_producer>> background(int index) const
-	{
-		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
-		{
-			auto it = layers_.find(index);
-			return it != layers_.end() ? it->second.background() : frame_producer::empty();
-		});
-	};
 };
 
+frame_producer_device::frame_producer_device(const safe_ptr<frame_factory>& factory, const output_func& output) : impl_(new implementation(factory, output)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
-frame_producer_device::frame_producer_device(const video_format_desc& format_desc, const safe_ptr<frame_factory>& factory, const output_func& output) 
-	: impl_(new implementation(format_desc, factory, output)){}
 void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
 void frame_producer_device::preview(int index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
 void frame_producer_device::pause(int index){impl_->pause(index);}
@@ -162,7 +150,4 @@ void frame_producer_device::stop(int index){impl_->stop(index);}
 void frame_producer_device::clear(int index){impl_->clear(index);}
 void frame_producer_device::clear(){impl_->clear();}
 boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(int index) const{	return impl_->foreground(index);}
-boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::background(int index) const{return impl_->background(index);}
-const video_format_desc& frame_producer_device::get_video_format_desc() const{	return impl_->format_desc_;}
-
 }}

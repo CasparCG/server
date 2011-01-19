@@ -70,100 +70,21 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 	
 	AVOutputFormat* fmt_;
 	std::shared_ptr<AVFormatContext> oc_;
-	const video_format_desc format_desc_;
+	video_format_desc format_desc_;
 
 	std::vector<short, tbb::cache_aligned_allocator<short>> audio_input_buffer_;
 
 	boost::unique_future<void> active_;
 
-	implementation(const video_format_desc& format_desc, const std::string& filename)
+	implementation(const std::string& filename)
 		: filename_(filename)
-		, format_desc_(format_desc)
 		, audio_st_(nullptr)
 		, video_st_(nullptr)
 		, fmt_(nullptr)
 		, img_convert_ctx_(nullptr)
-		, video_outbuf_(format_desc.size)
+		, video_outbuf_(1920*1080*4)
 		, audio_outbuf_(48000)
-	{
-		executor_.start();
-		active_ = executor_.begin_invoke([]{});
-
-		static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
-		boost::call_once(av_register_all, av_register_all_flag);	
-		
-		static boost::once_flag avcodec_init_flag = BOOST_ONCE_INIT;
-		boost::call_once(avcodec_init, avcodec_init_flag);	
-
-		fmt_ = av_guess_format(nullptr, filename.c_str(), nullptr);
-		if (!fmt_) 
-		{
-			CASPAR_LOG(warning) << "Could not deduce output format from ffmpeg extension: using MPEG.";
-			fmt_ = av_guess_format("mpeg", nullptr, nullptr);
-		}
-		if (!fmt_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not find suitable output format"));
-		
-		oc_.reset(avformat_alloc_context(), av_free);
-		if (!oc_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Memory error"));
-		std::copy_n(filename.c_str(), filename.size(), oc_->filename);
-
-		oc_->oformat = fmt_;
-		// To avoid mpeg buffer underflow (http://www.mail-archive.com/libav-user@mplayerhq.hu/msg00194.html)
-		oc_->preload = static_cast<int>(0.5*AV_TIME_BASE);
-		oc_->max_delay = static_cast<int>(0.7*AV_TIME_BASE);
-			
-		//  Add the audio and video streams using the default format codecs	and initialize the codecs .
-		if (fmt_->video_codec != CODEC_ID_NONE)		
-			video_st_ = add_video_stream(fmt_->video_codec);
-		
-		if (fmt_->audio_codec != CODEC_ID_NONE) 
-			audio_st_ = add_audio_stream(fmt_->audio_codec);	
-
-		// Set the output parameters (must be done even if no parameters).		
-		int errn = 0;
-		if ((errn = -av_set_parameters(oc_.get(), nullptr)) > 0)
-			BOOST_THROW_EXCEPTION(
-				file_read_error() << 
-				msg_info("Invalid output format parameters") <<
-				boost::errinfo_api_function("avcodec_open") <<
-				boost::errinfo_errno(errn) <<
-				boost::errinfo_file_name(filename_));
-		
-		dump_format(oc_.get(), 0, filename.c_str(), 1);
-
-		// Now that all the parameters are set, we can open the audio and
-		// video codecs and allocate the necessary encode buffers.
-		if (video_st_)
-			open_video(video_st_);
-		
-		try
-		{
-			if (audio_st_)
-				open_audio(audio_st_);
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			audio_st_ = nullptr;
-		}
- 
-		// Open the output ffmpeg, if needed.
-		if (!(fmt_->flags & AVFMT_NOFILE)) 
-		{
-			int errn = 0;
-			if ((errn = -url_fopen(&oc_->pb, filename.c_str(), URL_WRONLY)) > 0) 
-				BOOST_THROW_EXCEPTION(
-					file_not_found() << 
-					msg_info("Could not open file") <<
-					boost::errinfo_api_function("url_fopen") <<
-					boost::errinfo_errno(errn) <<
-					boost::errinfo_file_name(filename_));
-		}
-		
-		av_write_header(oc_.get()); // write the stream header, if any 
-	}
+	{}
 
 	~implementation()
 	{    
@@ -187,6 +108,88 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 
 		if (!(fmt_->flags & AVFMT_NOFILE)) 
 			url_fclose(oc_->pb); // Close the output ffmpeg.
+	}
+
+	void initialize(const video_format_desc& format_desc)
+	{
+		format_desc_ = format_desc;
+		executor_.start();
+		active_ = executor_.begin_invoke([]{});
+
+		static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
+		boost::call_once(av_register_all, av_register_all_flag);	
+		
+		static boost::once_flag avcodec_init_flag = BOOST_ONCE_INIT;
+		boost::call_once(avcodec_init, avcodec_init_flag);	
+
+		fmt_ = av_guess_format(nullptr, filename_.c_str(), nullptr);
+		if (!fmt_) 
+		{
+			CASPAR_LOG(warning) << "Could not deduce output format from ffmpeg extension: using MPEG.";
+			fmt_ = av_guess_format("mpeg", nullptr, nullptr);
+		}
+		if (!fmt_)
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not find suitable output format"));
+		
+		oc_.reset(avformat_alloc_context(), av_free);
+		if (!oc_)
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Memory error"));
+		std::copy_n(filename_.c_str(), filename_.size(), oc_->filename);
+
+		oc_->oformat = fmt_;
+		// To avoid mpeg buffer underflow (http://www.mail-archive.com/libav-user@mplayerhq.hu/msg00194.html)
+		oc_->preload = static_cast<int>(0.5*AV_TIME_BASE);
+		oc_->max_delay = static_cast<int>(0.7*AV_TIME_BASE);
+			
+		//  Add the audio and video streams using the default format codecs	and initialize the codecs .
+		if (fmt_->video_codec != CODEC_ID_NONE)		
+			video_st_ = add_video_stream(fmt_->video_codec);
+		
+		if (fmt_->audio_codec != CODEC_ID_NONE) 
+			audio_st_ = add_audio_stream(fmt_->audio_codec);	
+
+		// Set the output parameters (must be done even if no parameters).		
+		int errn = 0;
+		if ((errn = -av_set_parameters(oc_.get(), nullptr)) > 0)
+			BOOST_THROW_EXCEPTION(
+				file_read_error() << 
+				msg_info("Invalid output format parameters") <<
+				boost::errinfo_api_function("avcodec_open") <<
+				boost::errinfo_errno(errn) <<
+				boost::errinfo_file_name(filename_));
+		
+		dump_format(oc_.get(), 0, filename_.c_str(), 1);
+
+		// Now that all the parameters are set, we can open the audio and
+		// video codecs and allocate the necessary encode buffers.
+		if (video_st_)
+			open_video(video_st_);
+		
+		try
+		{
+			if (audio_st_)
+				open_audio(audio_st_);
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			audio_st_ = nullptr;
+		}
+ 
+		// Open the output ffmpeg, if needed.
+		if (!(fmt_->flags & AVFMT_NOFILE)) 
+		{
+			int errn = 0;
+			if ((errn = -url_fopen(&oc_->pb, filename_.c_str(), URL_WRONLY)) > 0) 
+				BOOST_THROW_EXCEPTION(
+					file_not_found() << 
+					msg_info("Could not open file") <<
+					boost::errinfo_api_function("url_fopen") <<
+					boost::errinfo_errno(errn) <<
+					boost::errinfo_file_name(filename_));
+		}
+		
+		av_write_header(oc_.get()); // write the stream header, if any 
 	}
 
 	AVStream* add_video_stream(enum CodecID codec_id)
@@ -388,23 +391,20 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 	size_t buffer_depth() const { return 1; }
 };
 
-ffmpeg_consumer::ffmpeg_consumer(const video_format_desc& format_desc, const std::wstring& filename) : impl_(new implementation(format_desc, narrow(filename))){}
+ffmpeg_consumer::ffmpeg_consumer(const std::wstring& filename) : impl_(new implementation(narrow(filename))){}
 ffmpeg_consumer::ffmpeg_consumer(ffmpeg_consumer&& other) : impl_(std::move(other.impl_)){}
 void ffmpeg_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t ffmpeg_consumer::buffer_depth() const{return impl_->buffer_depth();}
+void ffmpeg_consumer::initialize(const video_format_desc& format_desc) {impl_->initialize(format_desc);}
 
 safe_ptr<frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 3 || params[0] != L"FILE")
+	if(params.size() < 2 || params[0] != L"FILE")
 		return frame_consumer::empty();
-
-	auto format_desc = video_format_desc::get(params[1]);
-	if(format_desc.format == video_format::invalid)
-		return frame_consumer::empty();
-
+	
 	// TODO: Ask stakeholders about case where file already exists.
 	boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + params[2])); // Delete the file if it exists
-	return make_safe<ffmpeg_consumer>(format_desc, env::media_folder() + params[2]);
+	return make_safe<ffmpeg_consumer>(env::media_folder() + params[2]);
 }
 
 }}

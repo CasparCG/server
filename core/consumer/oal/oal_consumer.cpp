@@ -42,9 +42,6 @@ public:
 		: container_(5)
 	{
 		is_running_ = true;
-		sf::SoundStream::Initialize(2, 48000);
-		Play();		
-		CASPAR_LOG(info) << "Sucessfully started oal_consumer";
 	}
 
 	~implementation()
@@ -54,8 +51,15 @@ public:
 		input_.try_push(std::vector<short>());
 		CASPAR_LOG(info) << "Sucessfully ended oal_consumer";
 	}
+
+	void initialize(const video_format_desc&)
+	{
+		sf::SoundStream::Initialize(2, 48000);
+		Play();		
+		CASPAR_LOG(info) << "Sucessfully started oal_consumer";
+	}
 	
-	virtual void send(const safe_ptr<const read_frame>& frame)
+	void send(const safe_ptr<const read_frame>& frame)
 	{				
 		if(frame->audio_data().empty())
 			return;
@@ -63,7 +67,7 @@ public:
 		input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 	
 	}
 
-	virtual size_t buffer_depth() const{return 3;}
+	size_t buffer_depth() const{return 3;}
 
 	virtual bool OnGetData(sf::SoundStream::Chunk& data)
 	{		
@@ -79,19 +83,16 @@ public:
 };
 
 oal_consumer::oal_consumer(oal_consumer&& other) : impl_(std::move(other.impl_)){}
-oal_consumer::oal_consumer(const video_format_desc&) : impl_(new implementation()){}
+oal_consumer::oal_consumer() : impl_(new implementation()){}
 void oal_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t oal_consumer::buffer_depth() const{return impl_->buffer_depth();}
+void oal_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
 
 safe_ptr<frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 2 || params[0] != L"OAL")
+	if(params.size() < 1 || params[0] != L"OAL")
 		return frame_consumer::empty();
 
-	auto format_desc = video_format_desc::get(params[1]);
-	if(format_desc.format == video_format::invalid)
-		return frame_consumer::empty();
-
-	return make_safe<oal_consumer>(format_desc);
+	return make_safe<oal_consumer>();
 }
 }}

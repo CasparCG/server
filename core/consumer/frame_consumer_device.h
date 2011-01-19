@@ -19,9 +19,8 @@ public:
 	explicit frame_consumer_device(const video_format_desc& format_desc);
 	frame_consumer_device(frame_consumer_device&& other);
 
-	void add(int index, const safe_ptr<frame_consumer>& consumer);
+	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);
-	safe_ptr<frame_consumer> get(int index);
 
 	void send(const safe_ptr<const read_frame>& future_frame); // nothrow
 private:
