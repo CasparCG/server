@@ -61,7 +61,7 @@ public:
 	std::vector<safe_ptr<draw_frame>> draw()
 	{	
 		std::vector<safe_ptr<draw_frame>> frames(layers_.size(), draw_frame::empty());
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size()), 
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size(), 1),
 		[&](const tbb::blocked_range<size_t>& r)
 		{
 			for(size_t i = r.begin(); i != r.end(); ++i)
