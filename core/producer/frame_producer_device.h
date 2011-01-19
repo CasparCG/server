@@ -25,7 +25,7 @@ namespace caspar { namespace core {
 class frame_producer_device : boost::noncopyable
 {
 public:
-	static const int MAX_LAYER = 101;
+	static const int MAX_LAYER = 32;
 
 	typedef std::function<void(const std::vector<safe_ptr<draw_frame>>&)> output_func;
 
