@@ -229,22 +229,31 @@ bool SwapCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		std::vector<std::string> strs;
-		boost::split(strs, _parameters[0], boost::is_any_of("-"));
+		if(GetLayerIndex(-1) != -1)
+		{
+			std::vector<std::string> strs;
+			boost::split(strs, _parameters[0], boost::is_any_of("-"));
 			
-		auto ch1 = GetChannel();
-		auto ch2 = GetChannels().at(boost::lexical_cast<int>(strs.at(0))-1);
+			auto ch1 = GetChannel();
+			auto ch2 = GetChannels().at(boost::lexical_cast<int>(strs.at(0))-1);
 
-		int l1 = GetLayerIndex();
-		int l2 = boost::lexical_cast<int>(strs.at(1));
+			int l1 = GetLayerIndex();
+			int l2 = boost::lexical_cast<int>(strs.at(1));
 
-		ch1->producer().swap(l1, l2, ch2->producer());
+			ch1->producer().swap_layer(l1, l2, ch2->producer());
+		}
+		else
+		{
+			auto ch1 = GetChannel();
+			auto ch2 = GetChannels().at(boost::lexical_cast<int>(_parameters[0])-1);
+			ch1->producer().swap_output(ch2->producer());
+		}
 
 		CASPAR_LOG(info) << "Swapped successfully";
 
 		SetReplyString(TEXT("202 SWAP OK\r\n"));
 
-		return false;
+		return true;
 	}
 	catch(file_not_found&)
 	{

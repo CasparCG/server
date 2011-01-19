@@ -39,8 +39,9 @@ public:
 	void stop(size_t index);
 	void clear(size_t index);
 	void clear();	
-	void swap(size_t index, size_t other_index);
-	void swap(size_t index, size_t other_index, frame_producer_device& other);
+	void swap_layer(size_t index, size_t other_index);
+	void swap_layer(size_t index, size_t other_index, frame_producer_device& other);
+	void swap_output(frame_producer_device& other);
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const;
 
 private:

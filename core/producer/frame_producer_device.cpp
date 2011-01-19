@@ -13,6 +13,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <tbb/parallel_for.h>
+#include <tbb/spin_mutex.h>
 
 #include <array>
 #include <memory>
@@ -23,7 +24,9 @@ struct frame_producer_device::implementation : boost::noncopyable
 {		
 	std::array<layer, frame_producer_device::MAX_LAYER> layers_;		
 
-	const output_func output_;
+	tbb::spin_mutex output_mutex_;
+	output_func output_;
+
 	const safe_ptr<frame_factory> factory_;
 	
 	mutable executor executor_;
@@ -44,7 +47,11 @@ public:
 					
 	void tick()
 	{		
-		output_(draw());
+		auto frame = draw();
+		{
+			tbb::spin_mutex::scoped_lock lock(output_mutex_);
+			output_(frame);
+		}
 		executor_.begin_invoke([=]{tick();});
 	}
 	
@@ -129,7 +136,7 @@ public:
 		});
 	}	
 	
-	void swap(size_t index, size_t other_index)
+	void swap_layer(size_t index, size_t other_index)
 	{
 		check_bounds(index);
 		check_bounds(other_index);
@@ -140,7 +147,7 @@ public:
 		});
 	}
 
-	void swap(size_t index, size_t other_index, frame_producer_device& other)
+	void swap_layer(size_t index, size_t other_index, frame_producer_device& other)
 	{
 		check_bounds(index);
 		check_bounds(other_index);
@@ -151,7 +158,14 @@ public:
 		});
 	}
 
-	void check_bounds(size_t index)
+	void swap_output(frame_producer_device& other)
+	{
+		tbb::spin_mutex::scoped_lock lock1(output_mutex_);		
+		tbb::spin_mutex::scoped_lock lock2(other.impl_->output_mutex_);
+		output_.swap(other.impl_->output_);
+	}
+
+	void check_bounds(size_t index) const
 	{
 		if(index < 0 || index >= frame_producer_device::MAX_LAYER)
 			BOOST_THROW_EXCEPTION(out_of_range() << msg_info("Valid range is [0..100]") << arg_name_info("index") << arg_value_info(boost::lexical_cast<std::string>(index)));
@@ -159,6 +173,7 @@ public:
 	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const
 	{
+		check_bounds(index);
 		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
 		{			
 			return layers_[index].foreground();
@@ -175,7 +190,8 @@ void frame_producer_device::play(size_t index){impl_->play(index);}
 void frame_producer_device::stop(size_t index){impl_->stop(index);}
 void frame_producer_device::clear(size_t index){impl_->clear(index);}
 void frame_producer_device::clear(){impl_->clear();}
-void frame_producer_device::swap(size_t index, size_t other_index){impl_->swap(index, other_index);}
-void frame_producer_device::swap(size_t index, size_t other_index, frame_producer_device& other){impl_->swap(index, other_index, other);}
+void frame_producer_device::swap_layer(size_t index, size_t other_index){impl_->swap_layer(index, other_index);}
+void frame_producer_device::swap_layer(size_t index, size_t other_index, frame_producer_device& other){impl_->swap_layer(index, other_index, other);}
+void frame_producer_device::swap_output(frame_producer_device& other){impl_->swap_output(other);}
 boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) const{	return impl_->foreground(index);}
 }}
