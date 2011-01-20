@@ -59,6 +59,7 @@ class decklink_input : public IDeckLinkInputCallback
 
 	CComPtr<IDeckLink>			decklink_;
 	CComQIPtr<IDeckLinkInput>	input_;
+	IDeckLinkDisplayMode*		d_mode_;
 
 	std::shared_ptr<frame_factory> frame_factory_;
 
@@ -68,9 +69,8 @@ class decklink_input : public IDeckLinkInputCallback
 
 public:
 
-	decklink_input(size_t device_index, const video_format_desc& format_desc, const std::shared_ptr<frame_factory>& frame_factory)
+	decklink_input(const video_format_desc& format_desc, size_t device_index, const std::shared_ptr<frame_factory>& frame_factory)
 		: device_index_(device_index)
-		, format_desc_(format_desc)
 		, frame_factory_(frame_factory)
 		, head_(draw_frame::empty())
 		, tail_(draw_frame::empty())
@@ -94,8 +94,12 @@ public:
 		if(pModelName != nullptr)
 			CASPAR_LOG(info) << "decklink_producer: Modelname: " << pModelName;
 		
-		unsigned long decklinkVideoFormat = GetDecklinkVideoFormat(format_desc_.format);
+		unsigned long decklinkVideoFormat = GetDecklinkVideoFormat(format_desc.format);
 		if(decklinkVideoFormat == ULONG_MAX) 
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: Card does not support requested videoformat."));
+
+		d_mode_ = get_display_mode((BMDDisplayMode)decklinkVideoFormat);
+		if(d_mode_ == nullptr) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: Card does not support requested videoformat."));
 
 		BMDDisplayModeSupport displayModeSupport;
@@ -128,8 +132,9 @@ public:
 	virtual ULONG STDMETHODCALLTYPE		AddRef ()							{return 1;}
 	virtual ULONG STDMETHODCALLTYPE		Release ()							{return 1;}
 		
-	virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents /*notificationEvents*/, IDeckLinkDisplayMode* /*newDisplayMode*/, BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/)
+	virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents /*notificationEvents*/, IDeckLinkDisplayMode* newDisplayMode, BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/)
 	{
+		d_mode_ = newDisplayMode;
 		return S_OK;
 	}
 
@@ -145,13 +150,13 @@ public:
 
 		pixel_format_desc desc;
 		desc.pix_fmt = pixel_format::ycbcr;
-		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width,   format_desc_.height, 1));
-		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));
-		desc.planes.push_back(pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));			
+		desc.planes.push_back(pixel_format_desc::plane(d_mode_->GetWidth(),   d_mode_->GetHeight(), 1));
+		desc.planes.push_back(pixel_format_desc::plane(d_mode_->GetWidth()/2, d_mode_->GetHeight(), 1));
+		desc.planes.push_back(pixel_format_desc::plane(d_mode_->GetWidth()/2, d_mode_->GetHeight(), 1));			
 		auto frame = frame_factory_->create_frame(desc);
 
 		unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
-		int frame_size = (format_desc_.width * 16 / 8) * format_desc_.height;
+		int frame_size = (d_mode_->GetWidth() * 16 / 8) * d_mode_->GetHeight();
 
 		// Convert to planar YUV422
 		unsigned char* y  = frame->image_data(0).begin();
@@ -175,6 +180,22 @@ public:
 		return S_OK;
 	}
 
+	IDeckLinkDisplayMode* get_display_mode(BMDDisplayMode mode)
+	{	
+		CComPtr<IDeckLinkDisplayModeIterator>	iterator;
+		IDeckLinkDisplayMode*					d_mode;
+	
+		if (input_->GetDisplayModeIterator(&iterator) != S_OK)
+			return nullptr;
+
+		while (iterator->Next(&d_mode) == S_OK)
+		{
+			if(d_mode->GetDisplayMode() == mode)
+				return d_mode;
+		}
+		return nullptr;
+	}
+
 	safe_ptr<draw_frame> get_frame()
 	{
 		frame_buffer_.try_pop(tail_);
@@ -188,16 +209,16 @@ class decklink_producer : public frame_producer
 {
 	executor executor_;
 	
-	const video_format_desc format_desc_;
 	const size_t device_index_;
 
 	std::unique_ptr<decklink_input> input_;
-		
+	
+	const video_format_desc format_desc_;
 public:
 
-	explicit decklink_producer(const video_format_desc format_desc, size_t device_index)
-		: device_index_(device_index)
-		, format_desc_(format_desc){}
+	explicit decklink_producer(const video_format_desc& format_desc, size_t device_index)
+		: format_desc_(format_desc) 
+		, device_index_(device_index){}
 
 	~decklink_producer()
 	{	
@@ -206,19 +227,19 @@ public:
 			input_ = nullptr;
 		});
 	}
-	
-	virtual safe_ptr<draw_frame> receive()
-	{
-		return input_->get_frame();
-	}
 
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
 		executor_.start();
 		executor_.invoke([=]
 		{
-			input_.reset(new decklink_input(device_index_, format_desc_, frame_factory));
+			input_.reset(new decklink_input(format_desc_, device_index_, frame_factory));
 		});
+	}
+	
+	virtual safe_ptr<draw_frame> receive()
+	{
+		return input_->get_frame();
 	}
 	
 	virtual std::wstring print() const { return + L"decklink"; }

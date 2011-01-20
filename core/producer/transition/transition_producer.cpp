@@ -47,7 +47,13 @@ struct transition_producer::implementation : boost::noncopyable
 		, info_(info)
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty()){}
-		
+				
+	void initialize(const safe_ptr<frame_factory>& frame_factory)
+	{
+		dest_producer_->initialize(frame_factory);
+		frame_factory_ = frame_factory;
+	}
+
 	safe_ptr<frame_producer> get_following_producer() const
 	{
 		return dest_producer_;
@@ -147,12 +153,6 @@ struct transition_producer::implementation : boost::noncopyable
 		}
 
 		return draw_frame(std::move(my_src_frame), std::move(my_dest_frame));
-	}
-		
-	void initialize(const safe_ptr<frame_factory>& frame_factory)
-	{
-		dest_producer_->initialize(frame_factory);
-		frame_factory_ = frame_factory;
 	}
 
 	std::wstring print() const

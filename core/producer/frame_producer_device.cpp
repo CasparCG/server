@@ -160,7 +160,7 @@ public:
 
 	void swap_output(frame_producer_device& other)
 	{
-		tbb::spin_mutex::scoped_lock lock1(output_mutex_);		
+		tbb::spin_mutex::scoped_lock lock1(output_mutex_);
 		tbb::spin_mutex::scoped_lock lock2(other.impl_->output_mutex_);
 		output_.swap(other.impl_->output_);
 	}
