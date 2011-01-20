@@ -22,9 +22,9 @@
 
 #include "oal_consumer.h"
 
-#include "../../video_format.h"
+#include <core/video_format.h>
 
-#include "../../mixer/frame/read_frame.h"
+#include <mixer/frame/read_frame.h>
 
 #include <SFML/Audio.hpp>
 

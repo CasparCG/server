@@ -2,11 +2,12 @@
 
 #include "video_decoder.h"
 
-#include "../../../video_format.h"
-#include "../../../mixer/frame/draw_frame.h"
-#include "../../../mixer/image/image_transform.h"
-
 #include <common/memory/safe_ptr.h>
+
+#include <core/video_format.h>
+
+#include <mixer/frame/draw_frame.h>
+#include <mixer/image/image_transform.h>
 
 #include <tbb/parallel_for.h>
 

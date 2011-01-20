@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../../mixer/frame_mixer_device.h"
+#include <common/memory/safe_ptr.h>
 
-#include <memory>
+#include <mixer/frame_mixer_device.h>
 
 struct AVCodecContext;
 
@@ -18,7 +18,7 @@ public:
 	void initialize(const safe_ptr<frame_factory>& frame_factory);
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }}}

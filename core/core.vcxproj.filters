@@ -171,55 +171,55 @@
     <ClInclude Include="consumer\ffmpeg\ffmpeg_consumer.h">
       <Filter>Source\consumer\ffmpeg</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\frame_mixer_device.h">
-      <Filter>Source\mixer</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\fwd.h">
-      <Filter>Source\mixer</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\image\image_kernel.h">
-      <Filter>Source\mixer\image</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\image\image_mixer.h">
-      <Filter>Source\mixer\image</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\audio\audio_mixer.h">
-      <Filter>Source\mixer\audio</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\device_buffer.h">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\host_buffer.h">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\ogl_device.h">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\frame\draw_frame.h">
-      <Filter>Source\mixer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\frame\pixel_format.h">
-      <Filter>Source\mixer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\frame\read_frame.h">
-      <Filter>Source\mixer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\frame\write_frame.h">
-      <Filter>Source\mixer\frame</Filter>
-    </ClInclude>
     <ClInclude Include="producer\frame_producer_device.h">
       <Filter>Source\producer</Filter>
     </ClInclude>
     <ClInclude Include="producer\layer.h">
       <Filter>Source\producer</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\frame_factory.h">
+    <ClInclude Include="..\mixer\frame_factory.h">
       <Filter>Source\mixer</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\image\image_transform.h">
+    <ClInclude Include="..\mixer\frame_mixer_device.h">
+      <Filter>Source\mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\fwd.h">
+      <Filter>Source\mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\image\image_kernel.h">
       <Filter>Source\mixer\image</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\audio\audio_transform.h">
+    <ClInclude Include="..\mixer\image\image_mixer.h">
+      <Filter>Source\mixer\image</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\image\image_transform.h">
+      <Filter>Source\mixer\image</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\gpu\device_buffer.h">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\gpu\host_buffer.h">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\gpu\ogl_device.h">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\frame\draw_frame.h">
+      <Filter>Source\mixer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\frame\pixel_format.h">
+      <Filter>Source\mixer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\frame\read_frame.h">
+      <Filter>Source\mixer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\frame\write_frame.h">
+      <Filter>Source\mixer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\audio\audio_mixer.h">
+      <Filter>Source\mixer\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mixer\audio\audio_transform.h">
       <Filter>Source\mixer\audio</Filter>
     </ClInclude>
   </ItemGroup>
@@ -296,46 +296,46 @@
     <ClCompile Include="consumer\ffmpeg\ffmpeg_consumer.cpp">
       <Filter>Source\consumer\ffmpeg</Filter>
     </ClCompile>
-    <ClCompile Include="mixer\frame_mixer_device.cpp">
-      <Filter>Source\mixer</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\image\image_kernel.cpp">
-      <Filter>Source\mixer\image</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\image\image_mixer.cpp">
-      <Filter>Source\mixer\image</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\audio\audio_mixer.cpp">
-      <Filter>Source\mixer\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\device_buffer.cpp">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\host_buffer.cpp">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\ogl_device.cpp">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\frame\draw_frame.cpp">
-      <Filter>Source\mixer\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\frame\read_frame.cpp">
-      <Filter>Source\mixer\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\frame\write_frame.cpp">
-      <Filter>Source\mixer\frame</Filter>
-    </ClCompile>
     <ClCompile Include="producer\frame_producer_device.cpp">
       <Filter>Source\producer</Filter>
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
       <Filter>Source\producer</Filter>
     </ClCompile>
-    <ClCompile Include="mixer\image\image_transform.cpp">
+    <ClCompile Include="..\mixer\frame_mixer_device.cpp">
+      <Filter>Source\mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\image\image_kernel.cpp">
       <Filter>Source\mixer\image</Filter>
     </ClCompile>
-    <ClCompile Include="mixer\audio\audio_transform.cpp">
+    <ClCompile Include="..\mixer\image\image_mixer.cpp">
+      <Filter>Source\mixer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\image\image_transform.cpp">
+      <Filter>Source\mixer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\gpu\device_buffer.cpp">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\gpu\host_buffer.cpp">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\gpu\ogl_device.cpp">
+      <Filter>Source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\frame\draw_frame.cpp">
+      <Filter>Source\mixer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\frame\read_frame.cpp">
+      <Filter>Source\mixer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\frame\write_frame.cpp">
+      <Filter>Source\mixer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\audio\audio_mixer.cpp">
+      <Filter>Source\mixer\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mixer\audio\audio_transform.cpp">
       <Filter>Source\mixer\audio</Filter>
     </ClCompile>
   </ItemGroup>

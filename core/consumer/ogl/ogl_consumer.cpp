@@ -22,8 +22,8 @@
 
 #include "ogl_consumer.h"
 
-#include "../../video_format.h"
-#include "../../mixer/frame/read_frame.h"
+#include <core/video_format.h>
+#include <mixer/frame/read_frame.h>
 
 #include <common/gl/gl_check.h>
 #include <common/concurrency/executor.h>

@@ -4,17 +4,16 @@
 
 #include "audio/audio_mixer.h"
 #include "audio/audio_transform.h"
-#include "image/image_mixer.h"
-#include "image/image_transform.h"
-
 #include "frame/write_frame.h"
 #include "frame/read_frame.h"
-
-#include "../video_format.h"
+#include "image/image_mixer.h"
+#include "image/image_transform.h"
 
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
 #include <common/gl/gl_check.h>
+
+#include <core/video_format.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>

@@ -2,7 +2,7 @@
 
 #include "../gpu/host_buffer.h"
 
-#include "../../video_format.h"
+#include <core/video_format.h>
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/thread/future.hpp>
