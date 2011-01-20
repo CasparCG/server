@@ -23,6 +23,7 @@ image_transform::image_transform()
 	, mode_(video_mode::invalid)
 {
 	std::fill(pos_.begin(), pos_.end(), 0.0);
+	std::fill(size_.begin(), size_.end(), 1.0);
 	std::fill(uv_.begin(), uv_.end(), 0.0);
 }
 
@@ -63,6 +64,19 @@ std::array<double, 2> image_transform::get_position() const
 	return pos_;
 }
 
+void image_transform::set_size(double x, double y)
+{
+	std::array<double, 2> value = {x, y};
+	tbb::spin_mutex::scoped_lock(mutex_);
+	size_ = value;
+}
+
+std::array<double, 2> image_transform::get_size() const
+{
+	tbb::spin_mutex::scoped_lock(mutex_);
+	return size_;
+}
+
 void image_transform::set_uv(double left, double top, double right, double bottom)
 {
 	std::array<double, 4> value = {left, top, right, bottom};
@@ -101,6 +115,8 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	uv_[3] += other.uv_[3];
 	pos_[0] += other.pos_[0];
 	pos_[1] += other.pos_[1];
+	size_[0] *= other.size_[0];
+	size_[1] *= other.size_[1];
 	return *this;
 }
 
@@ -164,8 +180,6 @@ public:
 		auto transform = transform_stack_.top();
 		context_->begin_invoke([=]
 		{
-			GL(glLoadIdentity());
-			GL(glTranslated(transform.get_position()[0]*2.0, transform.get_position()[1]*2.0, 0.0));
 			GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
 			GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
 			kernel_.apply(desc.pix_fmt, transform);
@@ -184,12 +198,15 @@ public:
 				device_buffers[n]->bind();
 			}
 
-			auto t = transform;
+			auto& p = transform.get_position();
+			auto& s = transform.get_size();
+			auto& uv = transform.get_uv();
+
 			glBegin(GL_QUADS);
-				glTexCoord2d(t.get_uv()[0], t.get_uv()[3]); glVertex2d(-1.0, -1.0);
-				glTexCoord2d(t.get_uv()[2], t.get_uv()[3]); glVertex2d( 1.0, -1.0);
-				glTexCoord2d(t.get_uv()[2], t.get_uv()[1]); glVertex2d( 1.0,  1.0);
-				glTexCoord2d(t.get_uv()[0], t.get_uv()[1]); glVertex2d(-1.0,  1.0);
+				glTexCoord2d(uv[0], uv[3]); glVertex2d( p[0]*2.0-1.0,		  p[1]*2.0-1.0);
+				glTexCoord2d(uv[2], uv[3]); glVertex2d((p[0]+s[0])*2.0-1.0,   p[1]*2.0-1.0);
+				glTexCoord2d(uv[2], uv[1]); glVertex2d((p[0]+s[0])*2.0-1.0,  (p[1]+s[1])*2.0-1.0);
+				glTexCoord2d(uv[0], uv[1]); glVertex2d( p[0]*2.0-1.0,		 (p[1]+s[1])*2.0-1.0);
 			glEnd();
 		});
 	}

@@ -183,6 +183,26 @@ bool MixerCommand::DoExecute()
 				double value = boost::lexical_cast<double>(_parameters[2]);
 				GetChannel()->mixer().image(GetLayerIndex()).set_gain(value);
 			}
+			else if(_parameters[1] == L"FIX_RECT")
+			{
+				double x	= boost::lexical_cast<double>(_parameters.at(2));
+				double y	= boost::lexical_cast<double>(_parameters.at(3));
+				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
+				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
+				GetChannel()->mixer().image(GetLayerIndex()).set_position(x, y);
+				GetChannel()->mixer().image(GetLayerIndex()).set_size(x_s, y_s);
+				GetChannel()->mixer().image(GetLayerIndex()).set_uv(0.0, 0.0, 0.0, 0.0);
+			}
+			else if(_parameters[1] == L"CLIP_RECT")
+			{
+				double x	= boost::lexical_cast<double>(_parameters.at(2));
+				double y	= boost::lexical_cast<double>(_parameters.at(3));
+				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
+				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
+				GetChannel()->mixer().image(GetLayerIndex()).set_position(x, y);
+				GetChannel()->mixer().image(GetLayerIndex()).set_size(x_s, y_s);
+				GetChannel()->mixer().image(GetLayerIndex()).set_uv(x, -1.0 + y + y_s, -1.0 + x + x_s, y);
+			}
 			else if(_parameters[1] == L"RESET")
 			{
 				GetChannel()->mixer().image(GetLayerIndex()) = image_transform();
