@@ -53,6 +53,10 @@ public:
 		CASPAR_LOG(debug) << L"Started TBB Worker Thread.";
 		win32_exception::install_handler();
 	}
+	void on_scheduler_exit()
+	{
+		CASPAR_LOG(debug) << L"Stopped TBB Worker Thread.";
+	}
 };
  
 int main(int argc, wchar_t* argv[])
