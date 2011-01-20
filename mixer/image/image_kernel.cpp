@@ -153,7 +153,7 @@ public:
 
 		std::string common_fragment = 
 			"uniform sampler2D	plane[4];											"
-			"uniform float		color_gain;											"
+			"uniform float		gain;												"
 																				
 			// NOTE: YCbCr, ITU-R, http://www.intersil.com/data/an/an9717.pdf		
 			// TODO: Support for more yuv formats might be needed.					
@@ -178,7 +178,7 @@ public:
 			"void main()															"
 			"{																		"
 			"	vec4 abgr = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	gl_FragColor = abgr.argb * color_gain;								"
+			"	gl_FragColor = abgr.argb * gain;									"
 			"}																		");
 		
 		shaders_[pixel_format::argb]= shader_program(common_vertex, common_fragment +
@@ -186,7 +186,7 @@ public:
 			"void main()															"	
 			"{																		"
 			"	vec4 argb = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	gl_FragColor = argb.grab * gl_Color * color_gain;					"
+			"	gl_FragColor = argb.grab * gl_Color * gain;							"
 			"}																		");
 		
 		shaders_[pixel_format::bgra]= shader_program(common_vertex, common_fragment +
@@ -194,7 +194,7 @@ public:
 			"void main()															"
 			"{																		"
 			"	vec4 bgra = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	gl_FragColor = bgra.rgba * gl_Color * color_gain;					"
+			"	gl_FragColor = bgra.rgba * gl_Color * gain;							"
 			"}																		");
 		
 		shaders_[pixel_format::rgba] = shader_program(common_vertex, common_fragment +
@@ -202,29 +202,29 @@ public:
 			"void main()															"
 			"{																		"
 			"	vec4 rgba = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	gl_FragColor = rgba.bgra * gl_Color * color_gain;					"
+			"	gl_FragColor = rgba.bgra * gl_Color * gain;							"
 			"}																		");
 		
 		shaders_[pixel_format::ycbcr] = shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
-			"	float y  = texture2D(plane[0], gl_TexCoord[0].st).r;"
-			"	float cb = texture2D(plane[1], gl_TexCoord[0].st).r;"
-			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;"
+			"	float y  = texture2D(plane[0], gl_TexCoord[0].st).r;				"
+			"	float cb = texture2D(plane[1], gl_TexCoord[0].st).r;				"
+			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;				"
 			"	float a = 1.0;														"	
-			"	gl_FragColor = ycbcra_to_bgra(y, cb, cr, a) * gl_Color * color_gain;"
+			"	gl_FragColor = ycbcra_to_bgra(y, cb, cr, a) * gl_Color * gain;"
 			"}																		");
 		
 		shaders_[pixel_format::ycbcra] = shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
-			"	float y  = texture2D(plane[0], gl_TexCoord[0].st).r;"
-			"	float cb = texture2D(plane[1], gl_TexCoord[0].st).r;"
-			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;"
-			"	float a  = texture2D(plane[3], gl_TexCoord[0].st).r;"
-			"	gl_FragColor = ycbcra_to_bgra(y, cb, cr, a) * gl_Color * color_gain;"
+			"	float y  = texture2D(plane[0], gl_TexCoord[0].st).r;				"
+			"	float cb = texture2D(plane[1], gl_TexCoord[0].st).r;				"
+			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;				"
+			"	float a  = texture2D(plane[3], gl_TexCoord[0].st).r;				"
+			"	gl_FragColor = ycbcra_to_bgra(y, cb, cr, a) * gl_Color * gain;		"
 			"}																		");
 		}
 		return shaders_;
@@ -237,7 +237,7 @@ void image_kernel::apply(pixel_format::type pix_fmt, const image_transform& tran
 {
 	impl_->shaders()[pix_fmt].use();
 
-	GL(glUniform1f(impl_->shaders()[pix_fmt].get_location("color_gain"), static_cast<GLfloat>(transform.get_gain())));
+	GL(glUniform1f(impl_->shaders()[pix_fmt].get_location("gain"), static_cast<GLfloat>(transform.get_gain())));
 
 	if(transform.get_mode() == video_mode::upper)
 		glPolygonStipple(upper_pattern);

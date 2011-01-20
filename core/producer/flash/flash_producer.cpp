@@ -196,7 +196,6 @@ struct flash_producer::implementation
 	{
 		frame_factory_ = frame_factory;
 		frame_buffer_.set_capacity(static_cast<size_t>(frame_factory->get_video_format_desc().fps/2.0));
-		while(frame_buffer_.try_push(draw_frame::empty())){}
 		executor_.start();
 	}
 
@@ -204,27 +203,26 @@ struct flash_producer::implementation
 	{		
 		if(!frame_buffer_.try_pop(tail_))
 			CASPAR_LOG(trace) << print() << " underflow";
-
-		if(executor_.size() > 8) // Limit the call queue in-case of underflow
-			return tail_;
-
-		executor_.begin_invoke([=]
+		else
 		{
-			if(!renderer_)
-				return;
+			executor_.begin_invoke([=]
+			{
+				if(!renderer_)
+					return;
 
-			try
-			{
-				auto frame = draw_frame::empty();
-				do{frame = renderer_->render_frame();}
-				while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				renderer_ = nullptr;
-			}
-		});	
+				try
+				{
+					auto frame = draw_frame::empty();
+					do{frame = renderer_->render_frame();}
+					while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					renderer_ = nullptr;
+				}
+			});	
+		}
 
 		return tail_;
 	}
@@ -234,7 +232,10 @@ struct flash_producer::implementation
 		executor_.begin_invoke([=]
 		{
 			if(!renderer_)
+			{
 				renderer_.reset(new flash_renderer(frame_factory_, filename_));
+				while(frame_buffer_.try_push(draw_frame::empty())){}
+			}
 
 			try
 			{
