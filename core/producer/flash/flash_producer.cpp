@@ -28,10 +28,10 @@
 #include "flash_producer.h"
 #include "FlashAxContainer.h"
 
-#include "../../video_format.h"
+#include <core/video_format.h>
 
-#include "../../mixer/frame/draw_frame.h"
-#include "../../mixer/frame_mixer_device.h"
+#include <mixer/frame/draw_frame.h>
+#include <mixer/frame_mixer_device.h>
 
 #include <common/concurrency/executor.h>
 #include <common/utility/timer.h>

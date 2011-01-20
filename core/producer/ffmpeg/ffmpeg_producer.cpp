@@ -6,9 +6,9 @@
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 
-#include "../../video_format.h"
-#include "../../mixer/frame/draw_frame.h"
-#include "../../mixer/audio/audio_transform.h"
+#include <core/video_format.h>
+#include <mixer/frame/draw_frame.h>
+#include <mixer/audio/audio_transform.h>
 
 #include <common/env.h>
 

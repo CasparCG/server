@@ -3,9 +3,10 @@
 #include "image_producer.h"
 #include "image_loader.h"
 
-#include "../../mixer/frame_mixer_device.h"
-#include "../../mixer/frame/draw_frame.h"
-#include "../../video_format.h"
+#include <core/video_format.h>
+
+#include <mixer/frame_mixer_device.h>
+#include <mixer/frame/draw_frame.h>
 
 #include <common/env.h>
 

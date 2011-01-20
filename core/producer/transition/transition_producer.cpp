@@ -21,12 +21,13 @@
 
 #include "transition_producer.h"
 
-#include "../../video_format.h"
-#include "../../mixer/frame/draw_frame.h"
-#include "../../mixer/frame_mixer_device.h"
-#include "../../mixer/image/image_transform.h"
-#include "../../mixer/audio/audio_mixer.h"
-#include "../../mixer/audio/audio_transform.h"
+#include <core/video_format.h>
+
+#include <mixer/frame/draw_frame.h>
+#include <mixer/frame_mixer_device.h>
+#include <mixer/image/image_transform.h>
+#include <mixer/audio/audio_mixer.h>
+#include <mixer/audio/audio_transform.h>
 
 #include <boost/range/algorithm/copy.hpp>
 

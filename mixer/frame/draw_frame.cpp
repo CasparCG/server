@@ -7,7 +7,8 @@
 #include "../audio/audio_mixer.h"
 #include "../audio/audio_transform.h"
 #include "pixel_format.h"
-#include "../../video_format.h"
+
+#include <core/video_format.h>
 
 #include <boost/range/algorithm.hpp>
 

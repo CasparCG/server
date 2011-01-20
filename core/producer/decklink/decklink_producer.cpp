@@ -22,7 +22,7 @@
 
 #include "decklink_producer.h"
 
-#include "../../mixer/frame/draw_frame.h"
+#include <mixer/frame/draw_frame.h>
 #include "../../consumer/decklink/DeckLinkAPI_h.h" // TODO: Change this
 #include "../../consumer/decklink/util.h" // TODO: Change this
 

@@ -22,10 +22,10 @@
 
 #include "AMCPCommandsImpl.h"
 #include "AMCPProtocolStrategy.h"
+
 #include "../media.h"
 
-#include <core/mixer/image/image_transform.h>
-#include <core/mixer/audio/audio_transform.h>
+#include <common/env.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
@@ -33,7 +33,8 @@
 #include <core/producer/transition/transition_producer.h>
 #include <core/producer/flash/cg_producer.h>
 
-#include <common/env.h>
+#include <mixer/image/image_transform.h>
+#include <mixer/audio/audio_transform.h>
 
 #include <algorithm>
 #include <locale>
@@ -178,14 +179,14 @@ bool MixerCommand::DoExecute()
 		{
 			if(_parameters[1] == L"OPACITY")
 			{
-				double value = boost::lexical_cast<double>(_parameters[2]);
+				double value = boost::lexical_cast<double>(_parameters.at(2));
 				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
 				transform.set_opacity(value);
 				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));
 			}
 			else if(_parameters[1] == L"GAIN")
 			{
-				double value = boost::lexical_cast<double>(_parameters[2]);
+				double value = boost::lexical_cast<double>(_parameters.at(2));
 				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
 				transform.set_gain(value);
 				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));
@@ -199,6 +200,8 @@ bool MixerCommand::DoExecute()
 				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
 				transform.set_image_translation(x, y);
 				transform.set_image_scale(x_s, y_s);
+				transform.set_mask_translation(0.0, 0.0);
+				transform.set_mask_scale(1.0, 1.0);
 				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));
 			}
 			else if(_parameters[1] == L"CLIP_RECT")
@@ -208,6 +211,8 @@ bool MixerCommand::DoExecute()
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
 				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
 				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
+				transform.set_image_translation(0.0, 0.0);
+				transform.set_image_scale(1.0, 1.0);
 				transform.set_mask_translation(x, y);
 				transform.set_mask_scale(x_s, y_s);
 				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));

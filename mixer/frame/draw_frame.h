@@ -4,7 +4,7 @@
 
 #include "draw_frame.h"
 
-#include "../../video_format.h"
+#include "../../core/video_format.h"
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
