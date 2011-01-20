@@ -1,36 +1,10 @@
 #include "../../stdafx.h"
 
 #include "audio_mixer.h"
+#include "audio_transform.h"
 
 namespace caspar { namespace core {
 	
-audio_transform::audio_transform()
-	: gain_(1.0){}
-
-void audio_transform::set_gain(double value)
-{
-	tbb::spin_mutex::scoped_lock lock(mutex_);
-	gain_ = value;
-}
-
-double audio_transform::get_gain() const
-{
-	tbb::spin_mutex::scoped_lock lock(mutex_);
-	return gain_;
-}
-
-audio_transform& audio_transform::operator*=(const audio_transform &other) 
-{
-	tbb::spin_mutex::scoped_lock lock(mutex_);
-	gain_ *= other.gain_;
-	return *this;
-}
-
-const audio_transform audio_transform::operator*(const audio_transform &other) const 
-{
-	return audio_transform(*this) *= other;
-}
-
 struct audio_mixer::implementation
 {
 	std::vector<short> audio_data_;

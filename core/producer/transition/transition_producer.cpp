@@ -24,8 +24,9 @@
 #include "../../video_format.h"
 #include "../../mixer/frame/draw_frame.h"
 #include "../../mixer/frame_mixer_device.h"
-#include "../../mixer/image/image_mixer.h"
+#include "../../mixer/image/image_transform.h"
 #include "../../mixer/audio/audio_mixer.h"
+#include "../../mixer/audio/audio_transform.h"
 
 #include <boost/range/algorithm/copy.hpp>
 
@@ -140,17 +141,14 @@ struct transition_producer::implementation : boost::noncopyable
 		if(info_.type == transition::mix)
 			my_dest_frame.get_image_transform().set_opacity(alpha);		
 		else if(info_.type == transition::slide)			
-			my_dest_frame.get_image_transform().set_position((-1.0+alpha)*dir, 0.0);			
+			my_dest_frame.get_image_transform().set_image_translation((-1.0+alpha)*dir, 0.0);			
 		else if(info_.type == transition::push)
 		{
-			my_dest_frame.get_image_transform().set_position((-1.0+alpha)*dir, 0.0);
-			my_src_frame.get_image_transform().set_position((0.0+alpha)*dir, 0.0);
+			my_dest_frame.get_image_transform().set_image_translation((-1.0+alpha)*dir, 0.0);
+			my_src_frame.get_image_transform().set_image_translation((0.0+alpha)*dir, 0.0);		
 		}
-		else if(info_.type == transition::wipe)
-		{
-			my_dest_frame.get_image_transform().set_position((-1.0+alpha)*dir, 0.0);			
-			my_dest_frame.get_image_transform().set_uv((-1.0+alpha)*dir, 0.0, 0.0-(1.0-alpha)*dir, 0.0);				
-		}
+		else if(info_.type == transition::wipe)		
+			my_dest_frame.get_image_transform().set_mask_scale(alpha, 1.0);			
 
 		return draw_frame(std::move(my_src_frame), std::move(my_dest_frame));
 	}

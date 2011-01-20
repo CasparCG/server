@@ -3,7 +3,9 @@
 #include "frame_mixer_device.h"
 
 #include "audio/audio_mixer.h"
+#include "audio/audio_transform.h"
 #include "image/image_mixer.h"
+#include "image/image_transform.h"
 
 #include "frame/write_frame.h"
 #include "frame/read_frame.h"
@@ -82,15 +84,25 @@ public:
 	{
 		return make_safe<write_frame>(desc, image_mixer_.create_buffers(desc));
 	}
-
-	image_transform& image(int index) 
+		
+	image_transform get_image_transform(int index)
 	{
-		return image_transforms_[index];
+		return executor_.invoke([&]{return image_transforms_[index];});
 	}
 
-	audio_transform& audio(int index) 
+	audio_transform get_audio_transform(int index)
 	{
-		return audio_transforms_[index];
+		return executor_.invoke([&]{return audio_transforms_[index];});
+	}
+
+	void set_image_transform(int index, image_transform&& transform)
+	{
+		return executor_.invoke([&]{image_transforms_[index] = std::move(transform);});
+	}
+
+	void set_audio_transform(int index, audio_transform&& transform)
+	{
+		return executor_.invoke([&]{audio_transforms_[index] = std::move(transform);});
 	}
 };
 	
@@ -116,8 +128,9 @@ safe_ptr<write_frame> frame_mixer_device::create_frame(pixel_format::type pix_fm
 	desc.planes.push_back(pixel_format_desc::plane(get_video_format_desc().width, get_video_format_desc().height, 4));
 	return create_frame(desc);
 }
-
-image_transform& frame_mixer_device::image(int index) { return impl_->image(index);}
-audio_transform& frame_mixer_device::audio(int index) { return impl_->audio(index);}
+image_transform frame_mixer_device::get_image_transform(int index){return impl_->get_image_transform(index);}
+audio_transform frame_mixer_device::get_audio_transform(int index){return impl_->get_audio_transform(index);}
+void frame_mixer_device::set_image_transform(int index, image_transform&& transform){impl_->set_image_transform(index, std::move(transform));}
+void frame_mixer_device::set_audio_transform(int index, audio_transform&& transform){impl_->set_audio_transform(index, std::move(transform));}
 
 }}

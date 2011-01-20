@@ -53,8 +53,11 @@ public:
 	
 	const video_format_desc& get_video_format_desc() const; // nothrow
 
-	image_transform& image(int index);
-	audio_transform& audio(int index);
+	image_transform get_image_transform(int index);
+	audio_transform get_audio_transform(int index);
+
+	void set_image_transform(int index, image_transform&& transform);
+	void set_audio_transform(int index, audio_transform&& transform);
 
 private:
 	struct implementation;

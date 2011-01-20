@@ -2,7 +2,7 @@
 
 #include "image_kernel.h"
 
-#include "image_mixer.h"
+#include "image_transform.h"
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
