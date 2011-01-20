@@ -32,9 +32,9 @@ safe_ptr<core::frame_producer> create_producer(const std::vector<std::wstring>& 
 
 	const auto factories = list_of<factory_t>
 		(&core::flash::create_ct_producer)
-		(&core::image::create_image_producer)
 	//	(&image::create_image_scroll_producer)
 		(&core::ffmpeg::create_ffmpeg_producer)
+		(&core::image::create_image_producer)
 		(&core::create_decklink_producer)
 		(&core::create_color_producer);
 

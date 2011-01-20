@@ -204,26 +204,28 @@ struct flash_producer::implementation
 	{		
 		if(!frame_buffer_.try_pop(tail_))
 			CASPAR_LOG(trace) << print() << " underflow";
-		else
-		{
-			executor_.begin_invoke([=]
-			{
-				if(!renderer_)
-					return;
 
-				try
-				{
-					auto frame = draw_frame::empty();
-					do{frame = renderer_->render_frame();}
-					while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
-				}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					renderer_ = nullptr;
-				}
-			});	
-		}				
+		if(executor_.size() > 8) // Limit the call queue in-case of underflow
+			return tail_;
+
+		executor_.begin_invoke([=]
+		{
+			if(!renderer_)
+				return;
+
+			try
+			{
+				auto frame = draw_frame::empty();
+				do{frame = renderer_->render_frame();}
+				while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				renderer_ = nullptr;
+			}
+		});	
+
 		return tail_;
 	}
 	
