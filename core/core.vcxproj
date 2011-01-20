@@ -165,6 +165,7 @@
     <ClInclude Include="consumer\oal\oal_consumer.h" />
     <ClInclude Include="consumer\ogl\ogl_consumer.h" />
     <ClInclude Include="mixer\audio\audio_mixer.h" />
+    <ClInclude Include="mixer\audio\audio_transform.h" />
     <ClInclude Include="mixer\frame\draw_frame.h" />
     <ClInclude Include="mixer\frame\pixel_format.h" />
     <ClInclude Include="mixer\frame\read_frame.h" />
@@ -177,6 +178,7 @@
     <ClInclude Include="mixer\gpu\ogl_device.h" />
     <ClInclude Include="mixer\image\image_kernel.h" />
     <ClInclude Include="mixer\image\image_mixer.h" />
+    <ClInclude Include="mixer\image\image_transform.h" />
     <ClInclude Include="producer\color\color_producer.h" />
     <ClInclude Include="producer\decklink\decklink_producer.h" />
     <ClInclude Include="producer\ffmpeg\audio\audio_decoder.h" />
@@ -237,6 +239,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="mixer\audio\audio_transform.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="mixer\frame\draw_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../stdafx.h</PrecompiledHeaderFile>
@@ -272,6 +278,10 @@
     <ClCompile Include="mixer\image\image_mixer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\image\image_transform.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\color\color_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>

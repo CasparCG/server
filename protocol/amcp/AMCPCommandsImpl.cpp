@@ -24,6 +24,9 @@
 #include "AMCPProtocolStrategy.h"
 #include "../media.h"
 
+#include <core/mixer/image/image_transform.h>
+#include <core/mixer/audio/audio_transform.h>
+
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
 #include <core/producer/flash/flash_producer.h>
@@ -176,12 +179,16 @@ bool MixerCommand::DoExecute()
 			if(_parameters[1] == L"OPACITY")
 			{
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				GetChannel()->mixer().image(GetLayerIndex()).set_opacity(value);
+				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
+				transform.set_opacity(value);
+				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));
 			}
 			else if(_parameters[1] == L"GAIN")
 			{
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				GetChannel()->mixer().image(GetLayerIndex()).set_gain(value);
+				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
+				transform.set_gain(value);
+				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));
 			}
 			else if(_parameters[1] == L"FIX_RECT")
 			{
@@ -189,9 +196,10 @@ bool MixerCommand::DoExecute()
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
 				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
-				GetChannel()->mixer().image(GetLayerIndex()).set_position(x, y);
-				GetChannel()->mixer().image(GetLayerIndex()).set_size(x_s, y_s);
-				GetChannel()->mixer().image(GetLayerIndex()).set_uv(0.0, 0.0, 0.0, 0.0);
+				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
+				transform.set_image_translation(x, y);
+				transform.set_image_scale(x_s, y_s);
+				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));
 			}
 			else if(_parameters[1] == L"CLIP_RECT")
 			{
@@ -199,13 +207,14 @@ bool MixerCommand::DoExecute()
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
 				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
-				GetChannel()->mixer().image(GetLayerIndex()).set_position(x, y);
-				GetChannel()->mixer().image(GetLayerIndex()).set_size(x_s, y_s);
-				GetChannel()->mixer().image(GetLayerIndex()).set_uv(x, -1.0 + y + y_s, -1.0 + x + x_s, y);
+				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
+				transform.set_mask_translation(x, y);
+				transform.set_mask_scale(x_s, y_s);
+				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				GetChannel()->mixer().image(GetLayerIndex()) = image_transform();
+				GetChannel()->mixer().set_image_transform(GetLayerIndex(), image_transform());
 			}
 		}
 		else if(_parameters[0] == L"AUDIO")
@@ -213,17 +222,19 @@ bool MixerCommand::DoExecute()
 			if(_parameters[1] == L"GAIN")
 			{
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				GetChannel()->mixer().audio(GetLayerIndex()).set_gain(value);
+				auto transform = GetChannel()->mixer().get_audio_transform(GetLayerIndex());
+				transform.set_gain(value);
+				GetChannel()->mixer().set_audio_transform(GetLayerIndex(), std::move(transform));
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				GetChannel()->mixer().audio(GetLayerIndex()) = audio_transform();
+				GetChannel()->mixer().set_audio_transform(GetLayerIndex(), audio_transform());
 			}
 		}
 		else if(_parameters[0] == L"RESET")
 		{
-			GetChannel()->mixer().image(GetLayerIndex()) = image_transform();
-			GetChannel()->mixer().audio(GetLayerIndex()) = audio_transform();
+			GetChannel()->mixer().set_image_transform(GetLayerIndex(), image_transform());
+			GetChannel()->mixer().set_audio_transform(GetLayerIndex(), audio_transform());
 		}
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));

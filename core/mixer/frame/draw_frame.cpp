@@ -2,8 +2,10 @@
 
 #include "draw_frame.h"
 
+#include "../image/image_transform.h"
 #include "../image/image_mixer.h"
 #include "../audio/audio_mixer.h"
+#include "../audio/audio_transform.h"
 #include "pixel_format.h"
 #include "../../video_format.h"
 

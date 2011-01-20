@@ -8,7 +8,7 @@
 
 #include "../../video_format.h"
 #include "../../mixer/frame/draw_frame.h"
-#include "../../mixer/audio/audio_mixer.h"
+#include "../../mixer/audio/audio_transform.h"
 
 #include <common/env.h>
 

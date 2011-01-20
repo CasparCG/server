@@ -4,8 +4,7 @@
 
 #include "../../../video_format.h"
 #include "../../../mixer/frame/draw_frame.h"
-#include "../../../mixer/frame_mixer_device.h"
-#include "../../../mixer/image/image_mixer.h"
+#include "../../../mixer/image/image_transform.h"
 
 #include <common/memory/safe_ptr.h>
 
@@ -149,7 +148,7 @@ public:
 			});
 
 			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field frame_factory_->get_video_format_desc().mode == video_mode::upper && 	 
-				write->get_image_transform().set_position(0.0f, 1.0/static_cast<double>(height_));
+				write->get_image_transform().set_mask_translation(0.0f, 1.0/static_cast<double>(height_));
 
 			return write;
 		}

@@ -4,20 +4,7 @@
 
 namespace caspar { namespace core {
 
-class audio_transform
-{
-public:
-	audio_transform();
-
-	void set_gain(double value);
-	double get_gain() const;
-
-	audio_transform& operator*=(const audio_transform &other);
-	const audio_transform operator*(const audio_transform &other) const;
-private:
-	double gain_;
-	mutable tbb::spin_mutex mutex_;
-};
+class audio_transform;
 
 class audio_mixer
 {

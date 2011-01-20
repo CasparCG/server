@@ -216,6 +216,12 @@
     <ClInclude Include="mixer\frame_factory.h">
       <Filter>Source\mixer</Filter>
     </ClInclude>
+    <ClInclude Include="mixer\image\image_transform.h">
+      <Filter>Source\mixer\image</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\audio\audio_transform.h">
+      <Filter>Source\mixer\audio</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
@@ -325,6 +331,12 @@
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
       <Filter>Source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\image\image_transform.cpp">
+      <Filter>Source\mixer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\audio\audio_transform.cpp">
+      <Filter>Source\mixer\audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

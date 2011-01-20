@@ -2,6 +2,7 @@
 
 #include "image_mixer.h"
 #include "image_kernel.h"
+#include "image_transform.h"
 
 #include "../gpu/ogl_device.h"
 #include "../gpu/host_buffer.h"
@@ -17,114 +18,6 @@
 
 namespace caspar { namespace core {
 		
-image_transform::image_transform() 
-	: opacity_(1.0)
-	, gain_(1.0)
-	, mode_(video_mode::invalid)
-{
-	std::fill(pos_.begin(), pos_.end(), 0.0);
-	std::fill(size_.begin(), size_.end(), 1.0);
-	std::fill(uv_.begin(), uv_.end(), 0.0);
-}
-
-void image_transform::set_opacity(double value)
-{
-	tbb::spin_mutex::scoped_lock(mutex_);	
-	opacity_ = value;
-}
-
-double image_transform::get_opacity() const
-{
-	tbb::spin_mutex::scoped_lock(mutex_);
-	return opacity_;
-}
-
-void image_transform::set_gain(double value)
-{
-	tbb::spin_mutex::scoped_lock(mutex_);
-	gain_ = value;
-}
-
-double image_transform::get_gain() const
-{
-	tbb::spin_mutex::scoped_lock(mutex_);
-	return gain_;
-}
-
-void image_transform::set_position(double x, double y)
-{
-	std::array<double, 2> value = {x, y};
-	tbb::spin_mutex::scoped_lock(mutex_);
-	pos_ = value;
-}
-
-std::array<double, 2> image_transform::get_position() const
-{
-	tbb::spin_mutex::scoped_lock(mutex_);
-	return pos_;
-}
-
-void image_transform::set_size(double x, double y)
-{
-	std::array<double, 2> value = {x, y};
-	tbb::spin_mutex::scoped_lock(mutex_);
-	size_ = value;
-}
-
-std::array<double, 2> image_transform::get_size() const
-{
-	tbb::spin_mutex::scoped_lock(mutex_);
-	return size_;
-}
-
-void image_transform::set_uv(double left, double top, double right, double bottom)
-{
-	std::array<double, 4> value = {left, top, right, bottom};
-	tbb::spin_mutex::scoped_lock(mutex_);
-	uv_ = value;
-}
-
-std::array<double, 4> image_transform::get_uv() const
-{
-	tbb::spin_mutex::scoped_lock(mutex_);
-	return uv_;
-}
-
-void image_transform::set_mode(video_mode::type mode)
-{
-	tbb::spin_mutex::scoped_lock(mutex_);
-	mode_ = mode;
-}
-
-video_mode::type image_transform::get_mode() const
-{
-	tbb::spin_mutex::scoped_lock(mutex_);
-	return mode_;
-}
-
-
-image_transform& image_transform::operator*=(const image_transform &other)
-{
-	tbb::spin_mutex::scoped_lock(mutex_);
-	opacity_ *= other.opacity_;
-	mode_ = other.mode_;
-	gain_ *= other.gain_;
-	uv_[0] += other.uv_[0];
-	uv_[1] += other.uv_[1];
-	uv_[2] += other.uv_[2];
-	uv_[3] += other.uv_[3];
-	pos_[0] += other.pos_[0];
-	pos_[1] += other.pos_[1];
-	size_[0] *= other.size_[0];
-	size_[1] *= other.size_[1];
-	return *this;
-}
-
-const image_transform image_transform::operator*(const image_transform &other) const
-{
-	return image_transform(*this) *= other;
-}
-
 struct image_mixer::implementation : boost::noncopyable
 {			
 	const video_format_desc format_desc_;
@@ -149,9 +42,10 @@ public:
 		{
 			transform_stack_.push(image_transform());
 			transform_stack_.top().set_mode(video_mode::progressive);
-			transform_stack_.top().set_uv(0.0, 1.0, 1.0, 0.0);
 
 			GL(glEnable(GL_TEXTURE_2D));
+			GL(glEnable(GL_STENCIL_TEST));
+			GL(glEnable(GL_SCISSOR_TEST));
 			GL(glDisable(GL_DEPTH_TEST));		
 
 			render_targets_[0] = context_->create_device_buffer(format_desc.width, format_desc.height, 4);
@@ -198,16 +92,24 @@ public:
 				device_buffers[n]->bind();
 			}
 
-			auto& p = transform.get_position();
-			auto& s = transform.get_size();
-			auto& uv = transform.get_uv();
+			auto m_p = transform.get_mask_translation();
+			auto m_s = transform.get_mask_scale();
+			double w = static_cast<double>(format_desc_.width);
+			double h = static_cast<double>(format_desc_.height);
 
+			GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
+			
+			auto f_p = transform.get_image_translation();
+			auto f_s = transform.get_image_scale();
+			
 			glBegin(GL_QUADS);
-				glTexCoord2d(uv[0], uv[3]); glVertex2d( p[0]*2.0-1.0,		  p[1]*2.0-1.0);
-				glTexCoord2d(uv[2], uv[3]); glVertex2d((p[0]+s[0])*2.0-1.0,   p[1]*2.0-1.0);
-				glTexCoord2d(uv[2], uv[1]); glVertex2d((p[0]+s[0])*2.0-1.0,  (p[1]+s[1])*2.0-1.0);
-				glTexCoord2d(uv[0], uv[1]); glVertex2d( p[0]*2.0-1.0,		 (p[1]+s[1])*2.0-1.0);
+				glTexCoord2d(0.0, 0.0); glVertex2d( f_p[0]        *2.0-1.0,	 f_p[1]        *2.0-1.0);
+				glTexCoord2d(1.0, 0.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
+				glTexCoord2d(1.0, 1.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
+				glTexCoord2d(0.0, 1.0); glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 			glEnd();
+
+			GL(glScissor(0, 0, format_desc_.width, format_desc_.height));
 		});
 	}
 
