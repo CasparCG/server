@@ -40,8 +40,6 @@ public:
 		if(color.length() != 9 || color[0] != '#')
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color)) << msg_info("Invalid color code"));
 	}
-	
-	virtual safe_ptr<draw_frame> receive() { return frame_; }
 
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
@@ -51,6 +49,8 @@ public:
 		str >> std::hex >> value;	
 		frame_ = std::move(frame);
 	}
+	
+	virtual safe_ptr<draw_frame> receive() { return frame_; }
 	
 	virtual std::wstring print() const { return + L"color[" + color_str_ + L"]"; }
 };

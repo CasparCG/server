@@ -33,8 +33,6 @@ struct ffmpeg_producer : public frame_producer
 	
 	safe_ptr<draw_frame>				last_frame_;
 
-	video_format_desc					format_desc_;
-
 public:
 	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
 		: filename_(filename)
@@ -45,7 +43,6 @@ public:
 
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
-		format_desc_ = frame_factory->get_video_format_desc();
 		video_decoder_.initialize(frame_factory);
 	}
 		
