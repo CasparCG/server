@@ -68,64 +68,57 @@ public:
 				frames[i]->set_layer_index(i);
 			}
 		});		
-		boost::range::remove_erase(frames, draw_frame::eof());
 		boost::range::remove_erase(frames, draw_frame::empty());
 		return frames;
 	}
 
 	void load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load)
 	{
-		check_bounds(index);
 		producer->initialize(factory_);
 		executor_.invoke([&]
 		{
-			layers_[index].load(producer, play_on_load);
+			layers_.at(index).load(producer, play_on_load);
 		});
 	}
 			
 	void preview(size_t index, const safe_ptr<frame_producer>& producer)
 	{
-		check_bounds(index);
 		producer->initialize(factory_);
 		executor_.invoke([&]
 		{			
-			layers_[index].preview(producer);
+			layers_.at(index).preview(producer);
 		});
 	}
 
 	void pause(size_t index)
 	{		
-		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index].pause();
+			layers_.at(index).pause();
 		});
 	}
 
 	void play(size_t index)
 	{		
-		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index].play();
+			layers_.at(index).play();
 		});
 	}
 
 	void stop(size_t index)
 	{		
-		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index].stop();
+			layers_.at(index).stop();
 		});
 	}
 
 	void clear(size_t index)
 	{
-		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index] = std::move(layer());
+			layers_.at(index) = std::move(layer());
 		});
 	}
 		
@@ -140,46 +133,35 @@ public:
 	
 	void swap_layer(size_t index, size_t other_index)
 	{
-		check_bounds(index);
-		check_bounds(other_index);
 		executor_.invoke([&]
 		{
-			layers_[index].swap(layers_[other_index]);
+			layers_.at(index).swap(layers_[other_index]);
 		});
 	}
 
 	void swap_layer(size_t index, size_t other_index, frame_producer_device& other)
 	{
-		check_bounds(index);
-		check_bounds(other_index);
 		executor_.invoke([&]
 		{
-			layers_[index].swap(other.impl_->layers_[other_index]);
+			layers_.at(index).swap(other.impl_->layers_.at(other_index));
 		});
 	}
 
 	void swap_output(frame_producer_device& other)
 	{
-		if(other.impl_.get() == this)
+		if(other.impl_.get() == this) // Avoid deadlock.
 			return;
 
 		tbb::spin_mutex::scoped_lock lock1(output_mutex_);
 		tbb::spin_mutex::scoped_lock lock2(other.impl_->output_mutex_);
 		output_.swap(other.impl_->output_);
 	}
-
-	void check_bounds(size_t index) const
-	{
-		if(index < 0 || index >= frame_producer_device::MAX_LAYER)
-			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("index") << arg_value_info(boost::lexical_cast<std::string>(index)));
-	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const
 	{
-		check_bounds(index);
 		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
 		{			
-			return layers_[index].foreground();
+			return layers_.at(index).foreground();
 		});
 	}
 };
