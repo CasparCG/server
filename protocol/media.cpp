@@ -7,6 +7,7 @@
 #include <core/producer/flash/cg_producer.h>
 #include <core/producer/image/image_producer.h>
 #include <core/producer/decklink/decklink_producer.h>
+#include <core/producer/screen/screen_producer.h>
 
 #include <core/consumer/bluefish/bluefish_consumer.h>
 #include <core/consumer/decklink/decklink_consumer.h>
@@ -36,7 +37,8 @@ safe_ptr<core::frame_producer> create_producer(const std::vector<std::wstring>& 
 		(&core::ffmpeg::create_ffmpeg_producer)
 		(&core::image::create_image_producer)
 		(&core::create_decklink_producer)
-		(&core::create_color_producer);
+		(&core::create_color_producer)
+		(&core::create_screen_producer);
 
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));

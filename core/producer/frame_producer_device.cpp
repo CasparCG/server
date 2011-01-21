@@ -49,12 +49,13 @@ public:
 					
 	void tick()
 	{		
+		auto frames = draw();
 		output_func output;
 		{
 			tbb::spin_mutex::scoped_lock lock(output_mutex_);
 			output = output_;
 		}
-		output(draw());
+		output(frames);
 		executor_.begin_invoke([=]{tick();});
 	}
 	

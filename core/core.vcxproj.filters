@@ -64,6 +64,9 @@
     <Filter Include="Source\consumer\ffmpeg">
       <UniqueIdentifier>{b651856c-ff7e-4f90-be8a-32aba6094dbd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\producer\screen">
+      <UniqueIdentifier>{eefc7a28-4013-458d-a91f-c822749984e8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
@@ -162,6 +165,9 @@
     <ClInclude Include="producer\layer.h">
       <Filter>Source\producer</Filter>
     </ClInclude>
+    <ClInclude Include="producer\screen\screen_producer.h">
+      <Filter>Source\producer\screen</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
@@ -241,6 +247,9 @@
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
       <Filter>Source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\screen\screen_producer.cpp">
+      <Filter>Source\producer\screen</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
