@@ -14,7 +14,7 @@ class draw_frame;
 class layer : boost::noncopyable
 {
 public:
-	layer(int index = -1); // nothrow
+	layer(); // nothrow
 	layer(layer&& other); // nothrow
 	~layer();
 	layer& operator=(layer&& other); // nothrow
