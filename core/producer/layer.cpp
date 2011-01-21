@@ -112,15 +112,17 @@ layer::layer()
 {
 	impl_ = new implementation();
 }
-layer::layer(layer&& other) : impl_(std::move(other.impl_)){other.impl_ = nullptr;}
+layer::layer(layer&& other) 
+{
+	impl_ = other.impl_.compare_and_swap(nullptr, other.impl_);
+}
 layer::~layer()
 {
 	delete impl_.fetch_and_store(nullptr);
 }
 layer& layer::operator=(layer&& other)
 {
-	impl_ = std::move(other.impl_);	
-	other.impl_ = nullptr;
+	impl_ = other.impl_.compare_and_swap(nullptr, other.impl_);
 	return *this;
 }
 void layer::swap(layer& other)
