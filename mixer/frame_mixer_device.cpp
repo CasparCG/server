@@ -1,4 +1,4 @@
-#include "../StdAfx.h"
+#include "StdAfx.h"
 
 #include "frame_mixer_device.h"
 

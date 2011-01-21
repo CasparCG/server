@@ -152,21 +152,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\mixer\audio\audio_mixer.h" />
-    <ClInclude Include="..\mixer\audio\audio_transform.h" />
-    <ClInclude Include="..\mixer\frame\draw_frame.h" />
-    <ClInclude Include="..\mixer\frame\pixel_format.h" />
-    <ClInclude Include="..\mixer\frame\read_frame.h" />
-    <ClInclude Include="..\mixer\frame\write_frame.h" />
-    <ClInclude Include="..\mixer\frame_factory.h" />
-    <ClInclude Include="..\mixer\frame_mixer_device.h" />
-    <ClInclude Include="..\mixer\fwd.h" />
-    <ClInclude Include="..\mixer\gpu\device_buffer.h" />
-    <ClInclude Include="..\mixer\gpu\host_buffer.h" />
-    <ClInclude Include="..\mixer\gpu\ogl_device.h" />
-    <ClInclude Include="..\mixer\image\image_kernel.h" />
-    <ClInclude Include="..\mixer\image\image_mixer.h" />
-    <ClInclude Include="..\mixer\image\image_transform.h" />
     <ClInclude Include="channel.h" />
     <ClInclude Include="consumer\bluefish\memory.h" />
     <ClInclude Include="consumer\bluefish\bluefish_consumer.h" />
@@ -206,54 +191,6 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\mixer\audio\audio_mixer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\audio\audio_transform.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\frame\draw_frame.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\frame\read_frame.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\frame\write_frame.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\frame_mixer_device.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\gpu\device_buffer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\gpu\host_buffer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\gpu\ogl_device.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\image\image_kernel.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\image\image_mixer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\mixer\image\image_transform.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="channel.cpp" />
     <ClCompile Include="consumer\bluefish\bluefish_consumer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -390,6 +327,9 @@
   <ItemGroup>
     <ProjectReference Include="..\common\common.vcxproj">
       <Project>{02308602-7fe0-4253-b96e-22134919f56a}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\mixer\mixer.vcxproj">
+      <Project>{477e12a4-1b28-4ff7-b46d-76606bdd1891}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

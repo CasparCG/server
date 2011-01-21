@@ -64,21 +64,6 @@
     <Filter Include="Source\consumer\ffmpeg">
       <UniqueIdentifier>{b651856c-ff7e-4f90-be8a-32aba6094dbd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\mixer">
-      <UniqueIdentifier>{fe65a63a-9c77-450e-8b5a-d08ea7067053}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\mixer\frame">
-      <UniqueIdentifier>{3cf873fa-08ad-43e1-b530-fda9d8621ba4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\mixer\image">
-      <UniqueIdentifier>{300816f9-421b-4fab-82e0-acabe5b1e1b7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\mixer\audio">
-      <UniqueIdentifier>{fd06d1d1-2b0b-4913-8416-f8fa1de42442}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\mixer\gpu">
-      <UniqueIdentifier>{5e7c7a4c-4a81-4aa1-b628-0344bf89517e}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
@@ -177,51 +162,6 @@
     <ClInclude Include="producer\layer.h">
       <Filter>Source\producer</Filter>
     </ClInclude>
-    <ClInclude Include="..\mixer\frame_factory.h">
-      <Filter>Source\mixer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\frame_mixer_device.h">
-      <Filter>Source\mixer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\fwd.h">
-      <Filter>Source\mixer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\image\image_kernel.h">
-      <Filter>Source\mixer\image</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\image\image_mixer.h">
-      <Filter>Source\mixer\image</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\image\image_transform.h">
-      <Filter>Source\mixer\image</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\gpu\device_buffer.h">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\gpu\host_buffer.h">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\gpu\ogl_device.h">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\frame\draw_frame.h">
-      <Filter>Source\mixer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\frame\pixel_format.h">
-      <Filter>Source\mixer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\frame\read_frame.h">
-      <Filter>Source\mixer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\frame\write_frame.h">
-      <Filter>Source\mixer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\audio\audio_mixer.h">
-      <Filter>Source\mixer\audio</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mixer\audio\audio_transform.h">
-      <Filter>Source\mixer\audio</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
@@ -301,42 +241,6 @@
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
       <Filter>Source\producer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\frame_mixer_device.cpp">
-      <Filter>Source\mixer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\image\image_kernel.cpp">
-      <Filter>Source\mixer\image</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\image\image_mixer.cpp">
-      <Filter>Source\mixer\image</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\image\image_transform.cpp">
-      <Filter>Source\mixer\image</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\gpu\device_buffer.cpp">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\gpu\host_buffer.cpp">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\gpu\ogl_device.cpp">
-      <Filter>Source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\frame\draw_frame.cpp">
-      <Filter>Source\mixer\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\frame\read_frame.cpp">
-      <Filter>Source\mixer\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\frame\write_frame.cpp">
-      <Filter>Source\mixer\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\audio\audio_mixer.cpp">
-      <Filter>Source\mixer\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mixer\audio\audio_transform.cpp">
-      <Filter>Source\mixer\audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
