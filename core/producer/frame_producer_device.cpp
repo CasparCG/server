@@ -64,7 +64,7 @@ public:
 		{
 			for(size_t i = r.begin(); i != r.end(); ++i)
 			{
-				frames[i] = layers_[i].receive();
+				frames[i] = layers_[i].receive(i);
 				frames[i]->set_layer_index(i);
 			}
 		});		
@@ -79,7 +79,7 @@ public:
 		producer->initialize(factory_);
 		executor_.invoke([&]
 		{
-			layers_[index].load(producer, play_on_load);
+			layers_[index].load(index, producer, play_on_load);
 		});
 	}
 			
@@ -89,7 +89,7 @@ public:
 		producer->initialize(factory_);
 		executor_.invoke([&]
 		{			
-			layers_[index].preview(producer);
+			layers_[index].preview(index, producer);
 		});
 	}
 
@@ -98,7 +98,7 @@ public:
 		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index].pause();
+			layers_[index].pause(index);
 		});
 	}
 
@@ -107,7 +107,7 @@ public:
 		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index].play();
+			layers_[index].play(index);
 		});
 	}
 
@@ -116,7 +116,7 @@ public:
 		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index].stop();
+			layers_[index].stop(index);
 		});
 	}
 
