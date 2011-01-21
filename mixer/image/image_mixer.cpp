@@ -44,7 +44,6 @@ public:
 			transform_stack_.top().set_mode(video_mode::progressive);
 
 			GL(glEnable(GL_TEXTURE_2D));
-			GL(glEnable(GL_STENCIL_TEST));
 			GL(glEnable(GL_SCISSOR_TEST));
 			GL(glDisable(GL_DEPTH_TEST));		
 
@@ -88,7 +87,7 @@ public:
 
 			for(size_t n = 0; n < buffers.size(); ++n)
 			{
-				glActiveTexture(GL_TEXTURE0+n);
+				GL(glActiveTexture(GL_TEXTURE0+n));
 				device_buffers[n]->bind();
 			}
 
