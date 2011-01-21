@@ -54,7 +54,6 @@ namespace caspar { namespace core {
 	
 struct ffmpeg_consumer::implementation : boost::noncopyable
 {		
-	executor executor_;
 	const std::string filename_;
 
 	// Audio
@@ -76,6 +75,8 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 
 	boost::unique_future<void> active_;
 
+	executor executor_;
+public:
 	implementation(const std::string& filename)
 		: filename_(filename)
 		, audio_st_(nullptr)
@@ -89,6 +90,7 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 	~implementation()
 	{    
 		executor_.stop();
+		executor_.wait();
 
 		av_write_trailer(oc_.get());
 

@@ -43,7 +43,6 @@ namespace caspar { namespace core {
 struct ogl_consumer::implementation : boost::noncopyable
 {			
 	boost::unique_future<void> active_;
-	executor executor_;
 	
 	float wratio_;
 	float hratio_;
@@ -65,7 +64,8 @@ struct ogl_consumer::implementation : boost::noncopyable
 	video_format_desc format_desc_;
 	
 	sf::Window window_;
-
+	
+	executor executor_;
 public:
 	implementation(unsigned int screen_index, stretch stretch, bool windowed) 
 		: stretch_(stretch)

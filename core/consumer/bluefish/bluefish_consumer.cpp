@@ -81,7 +81,6 @@ void blue_initialize()
 struct bluefish_consumer::implementation : boost::noncopyable
 {
 	boost::unique_future<void> active_;
-	executor executor_;
 			
 	std::shared_ptr<CBlueVelvet4> blue_;
 	
@@ -98,6 +97,7 @@ struct bluefish_consumer::implementation : boost::noncopyable
 
 	const bool embed_audio_;
 
+	executor executor_;
 public:
 	implementation::implementation(unsigned int device_index, bool embed_audio) 
 		: device_index_(device_index)		
@@ -111,10 +111,13 @@ public:
 
 	~implementation()
 	{
-		disable_video_output();
+		executor_.invoke([&]
+		{
+			disable_video_output();
 
-		if(blue_)
-			blue_->device_detach();		
+			if(blue_)
+				blue_->device_detach();		
+		});
 
 		CASPAR_LOG(info) << "BLUECARD INFO: Successfully released device " << device_index_;
 	}

@@ -17,13 +17,7 @@ namespace caspar {
 class executor : boost::noncopyable
 {
 public:
-
-	enum stop_policy
-	{
-		wait,
-		no_wait
-	};
-	
+		
 	explicit executor(const std::function<void()>& f = nullptr)
 	{
 		is_running_ = false;
@@ -32,7 +26,10 @@ public:
 
 	virtual ~executor()
 	{
+		wait();
 		stop();
+		if(boost::this_thread::get_id() != thread_.get_id())
+			thread_.join();
 	}
 
 	void set_capacity(size_t capacity)
@@ -52,12 +49,15 @@ public:
 		catch(boost::broken_promise&){}
 	}
 			
-	void stop(stop_policy policy = wait) // noexcept
+	void stop() // noexcept
 	{
 		is_running_ = false;	
 		execution_queue_.push([]{});
-		if(policy == wait && boost::this_thread::get_id() != thread_.get_id())
-			thread_.join();
+	}
+
+	void wait()
+	{
+		invoke([]{});
 	}
 
 	void clear()

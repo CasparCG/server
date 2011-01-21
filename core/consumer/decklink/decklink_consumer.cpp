@@ -254,8 +254,10 @@ public:
 
 struct decklink_consumer::implementation
 {
-	executor executor_;
 	std::unique_ptr<decklink_input> input_;
+
+	executor executor_;
+public:
 
 	implementation(size_t device_index, bool embed_audio, bool internalKey)
 	{

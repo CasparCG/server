@@ -167,7 +167,6 @@ struct flash_producer::implementation
 {	
 	safe_ptr<draw_frame> tail_;
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
-	executor executor_;
 
 	std::shared_ptr<flash_renderer> renderer_;
 	std::shared_ptr<frame_factory> frame_factory_;
@@ -175,6 +174,8 @@ struct flash_producer::implementation
 	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }	
 	std::wstring filename_;
 
+	executor executor_;
+public:
 	implementation(const std::wstring& filename) 
 		: filename_(filename)
 		, tail_(draw_frame::empty())

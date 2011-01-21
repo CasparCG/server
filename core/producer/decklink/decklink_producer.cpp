@@ -204,14 +204,14 @@ public:
 };
 	
 class decklink_producer : public frame_producer
-{
-	executor executor_;
-	
+{	
 	const size_t device_index_;
 
 	std::unique_ptr<decklink_input> input_;
 	
 	const video_format_desc format_desc_;
+	
+	executor executor_;
 public:
 
 	explicit decklink_producer(const video_format_desc& format_desc, size_t device_index)
