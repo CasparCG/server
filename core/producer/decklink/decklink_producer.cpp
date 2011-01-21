@@ -203,8 +203,6 @@ public:
 	}
 };
 	
-// NOTE: With this design it will probably not be possible to do input and output from same decklink device, as there will be 2 threads trying to use the same device.
-// decklink_consumer and decklink_producer will need to use a common active object decklink_device which handles all processing for decklink device.
 class decklink_producer : public frame_producer
 {
 	executor executor_;
