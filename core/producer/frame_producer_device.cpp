@@ -35,9 +35,6 @@ public:
 		: factory_(factory)
 		, output_(output)
 	{
-		for(size_t n = 0; n < layers_.size(); ++n)
-			layers_[n] = layer(n);
-
 		executor_.start();
 		executor_.begin_invoke([=]{tick();});
 	}
@@ -66,7 +63,10 @@ public:
 		[&](const tbb::blocked_range<size_t>& r)
 		{
 			for(size_t i = r.begin(); i != r.end(); ++i)
+			{
 				frames[i] = layers_[i].receive();
+				frames[i]->set_layer_index(i);
+			}
 		});		
 		boost::range::remove_erase(frames, draw_frame::eof());
 		boost::range::remove_erase(frames, draw_frame::empty());

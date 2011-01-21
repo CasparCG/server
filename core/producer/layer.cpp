@@ -18,15 +18,13 @@ struct layer::implementation : boost::noncopyable
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	safe_ptr<draw_frame>		last_frame_;
-	const int					index_;
 	bool						is_paused_;
 
 public:
-	implementation(int index) 
+	implementation() 
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, last_frame_(draw_frame::empty())
-		, index_(index) 
 		, is_paused_(false){}
 	
 	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load)
@@ -93,7 +91,6 @@ public:
 		try
 		{
 			last_frame_ = foreground_->receive(); 
-			last_frame_->set_layer_index(index_);
 			if(last_frame_ == draw_frame::eof())
 			{
 				CASPAR_ASSERT(foreground_ != frame_producer::empty());
@@ -116,12 +113,12 @@ public:
 		return last_frame_;
 	}
 
-	std::wstring print() const { return L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]"; }
+	std::wstring print() const { return L"layer[]"; }
 };
 
-layer::layer(int index) 
+layer::layer() 
 {
-	impl_ = new implementation(index);
+	impl_ = new implementation();
 }
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){other.impl_ = nullptr;}
 layer::~layer()

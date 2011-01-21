@@ -102,7 +102,18 @@ int main(int argc, wchar_t* argv[])
 			std::wstring wcmd;
 			std::getline(std::wcin, wcmd); // TODO: It's blocking...
 			is_running = wcmd != L"exit" && wcmd != L"q";
-			if(wcmd.substr(0, 2) == L"10")
+			if(wcmd.substr(0, 2) == L"12")
+			{
+				wcmd = L"LOADBG 1-1 A LOOP AUTOPLAY\r\n";
+				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
+				wcmd = L"LOADBG 1-2 DV LOOP AUTOPLAY\r\n";
+				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
+				wcmd = L"MIXER 1-1 VIDEO FIX_RECT 0.0 0.0 0.5 0.5\r\n";
+				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
+				wcmd = L"MIXER 1-2 VIDEO FIX_RECT 0.5 0.0 0.5 0.5\r\n";
+				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
+			}
+			else if(wcmd.substr(0, 2) == L"10")
 				wcmd = L"MIXER 1-1 VIDEO CLIP_RECT 0.4 0.4 0.5 0.5";
 			if(wcmd.substr(0, 2) == L"11")
 				wcmd = L"MIXER 1-1 VIDEO FIX_RECT 0.4 0.4 0.5 0.5";
