@@ -73,6 +73,7 @@ public:
 					{
 						CASPAR_LOG_CURRENT_EXCEPTION();
 						video_decoder_.reset();
+						CASPAR_LOG(warning) << print() << " removed video-stream.";
 					}
 				}
 			}, 
@@ -89,6 +90,7 @@ public:
 					{
 						CASPAR_LOG_CURRENT_EXCEPTION();
 						audio_decoder_.reset();
+						CASPAR_LOG(warning) << print() << " removed audio-stream.";
 					}
 				}
 			});
@@ -144,7 +146,8 @@ public:
 
 safe_ptr<frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>& params)
 {			
-	static const std::vector<std::wstring> extensions = boost::assign::list_of(L"mpg")(L"avi")(L"mov")(L"dv")(L"wav")(L"mp3")(L"mp4")(L"f4v")(L"flv");
+	static const std::vector<std::wstring> extensions = boost::assign::list_of
+		(L"mpg")(L"mpeg")(L"avi")(L"mov")(L"qt")(L"webm")(L"dv")(L"mp4")(L"f4v")(L"flv")(L"mkv")(L"mka")(L"wmw")(L"wma")(L"ogg")(L"divx")(L"wav")(L"mp3");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool

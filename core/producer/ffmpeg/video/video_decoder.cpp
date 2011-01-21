@@ -153,10 +153,8 @@ public:
 				});
 			});
 
-			if(codec_context_->codec_id == CODEC_ID_DVVIDEO) // Move up one field frame_factory_->get_video_format_desc().mode == video_mode::upper && 	 
-				write->get_image_transform().set_mask_translation(0.0f, 1.0/static_cast<double>(height_));
-
-			return write;
+			if(codec_context_->codec_id == CODEC_ID_DVVIDEO && frame_factory_->get_video_format_desc().mode == video_mode::upper)
+				write->get_image_transform().set_image_translation(0.0f, 1.0/static_cast<double>(height_));
 		}
 		else
 		{
@@ -165,9 +163,8 @@ public:
 			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame->data, av_frame->linesize);	
-
-			return write;
 		}	
+		return write;
 	}
 };
 
