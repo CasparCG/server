@@ -74,7 +74,7 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory) = 0;
 
-	static safe_ptr<frame_producer> empty()  // nothrow
+	static const safe_ptr<frame_producer>& empty()  // nothrow
 	{
 		struct empty_frame_producer : public frame_producer
 		{

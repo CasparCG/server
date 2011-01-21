@@ -46,14 +46,14 @@ public:
 		
 	static safe_ptr<draw_frame> interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, video_mode::type mode);
 		
-	static safe_ptr<draw_frame> eof()
+	static const safe_ptr<draw_frame>& eof()
 	{
 		struct eof_frame : public draw_frame{};
 		static safe_ptr<draw_frame> frame = make_safe<eof_frame>();
 		return frame;
 	}
 
-	static safe_ptr<draw_frame> empty()
+	static const safe_ptr<draw_frame>& empty()
 	{
 		struct empty_frame : public draw_frame{};
 		static safe_ptr<draw_frame> frame = make_safe<empty_frame>();

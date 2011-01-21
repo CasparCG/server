@@ -16,7 +16,8 @@ public:
 	safe_ptr() : impl_(std::make_shared<T>()){}	
 	
 	safe_ptr(const safe_ptr<T>& other) : impl_(other.impl_){}  // noexcept
-	
+	safe_ptr(safe_ptr<T>&& other) : impl_(std::move(other.impl_)){}
+
 	template<typename U>
 	safe_ptr(const safe_ptr<U>& other, typename std::enable_if<std::is_convertible<U*, T*>::value, void*>::type = 0) : impl_(other.impl_){}  // noexcept
 		

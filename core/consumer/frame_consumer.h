@@ -36,7 +36,7 @@ struct frame_consumer : boost::noncopyable
 	virtual size_t buffer_depth() const = 0;
 	virtual void initialize(const video_format_desc& format_desc) = 0;
 
-	static safe_ptr<frame_consumer> empty()
+	static const safe_ptr<frame_consumer>& empty()
 	{
 		struct empty_frame_consumer : public frame_consumer
 		{
