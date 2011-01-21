@@ -46,10 +46,10 @@ public:
 
 	~implementation()
 	{
-		Stop();
 		is_running_ = false;
 		input_.try_push(std::vector<short>());
 		input_.try_push(std::vector<short>());
+		Stop();
 		CASPAR_LOG(info) << "Sucessfully ended oal_consumer";
 	}
 
