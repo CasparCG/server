@@ -22,7 +22,7 @@ struct ffmpeg_producer : public frame_producer
 {
 	input								input_;			
 	std::unique_ptr<audio_decoder>		audio_decoder_;
-	video_decoder						video_decoder_;
+	std::unique_ptr<video_decoder>		video_decoder_;
 
 	std::deque<safe_ptr<write_frame>>	video_frame_channel_;	
 	std::deque<std::vector<short>>		audio_chunk_channel_;
@@ -32,18 +32,19 @@ struct ffmpeg_producer : public frame_producer
 	const std::wstring					filename_;
 	
 	safe_ptr<draw_frame>				last_frame_;
+	std::shared_ptr<frame_factory>		frame_factory_;
 
 public:
 	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
 		: filename_(filename)
 		, last_frame_(draw_frame(draw_frame::empty()))
-		, input_(filename, loop)
-		, video_decoder_(input_.get_video_codec_context().get())		
-		, audio_decoder_(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), input_.fps()) : nullptr){}
+		, input_(filename, loop){}
 
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
-		video_decoder_.initialize(frame_factory);
+		frame_factory_ = frame_factory;
+		video_decoder_.reset(input_.get_video_codec_context().get() ? new video_decoder(input_.get_video_codec_context().get(), frame_factory) : nullptr);
+		audio_decoder_.reset(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), frame_factory->get_video_format_desc().fps) : nullptr);
 	}
 		
 	virtual safe_ptr<draw_frame> receive()
@@ -51,20 +52,28 @@ public:
 		while(ouput_channel_.empty() && !input_.is_eof())
 		{	
 			aligned_buffer video_packet;
-			if(video_frame_channel_.size() < 3)	
+			if(video_frame_channel_.size() < 3 && video_decoder_)	
 				video_packet = input_.get_video_packet();		
 			
 			aligned_buffer audio_packet;
-			if(audio_chunk_channel_.size() < 3)	
+			if(audio_chunk_channel_.size() < 3 && audio_decoder_)	
 				audio_packet = input_.get_audio_packet();		
 
 			tbb::parallel_invoke(
 			[&]
 			{ // Video Decoding and Scaling
-				if(!video_packet.empty())
+				if(!video_packet.empty() && video_decoder_)
 				{
-					auto frame = video_decoder_.execute(video_packet);
-					video_frame_channel_.push_back(std::move(frame));
+					try
+					{
+						auto frame = video_decoder_->execute(video_packet);
+						video_frame_channel_.push_back(std::move(frame));
+					}
+					catch(...)
+					{
+						CASPAR_LOG_CURRENT_EXCEPTION();
+						video_decoder_.reset();
+					}
 				}
 			}, 
 			[&] 
@@ -84,16 +93,29 @@ public:
 				}
 			});
 
-			while(!video_frame_channel_.empty() && (!audio_chunk_channel_.empty() || !audio_decoder_))
+			while((!video_frame_channel_.empty() || !video_decoder_) && (!audio_chunk_channel_.empty() || !audio_decoder_))
 			{
+				std::shared_ptr<write_frame> frame;
+
+				if(video_decoder_)
+				{
+					frame = video_frame_channel_.front();
+					video_frame_channel_.pop_front();
+				}
+
 				if(audio_decoder_) 
 				{
-					video_frame_channel_.front()->audio_data() = std::move(audio_chunk_channel_.front());
+					if(!frame)
+					{
+						frame = frame_factory_->create_frame(1, 1);
+						std::fill(frame->image_data().begin(), frame->image_data().end(), 0);
+					}
+					
+					frame->audio_data() = std::move(audio_chunk_channel_.front());
 					audio_chunk_channel_.pop_front();
 				}
 							
-				ouput_channel_.push(std::move(video_frame_channel_.front()));
-				video_frame_channel_.pop_front();
+				ouput_channel_.push(safe_ptr<write_frame>(frame));				
 			}				
 
 			if(ouput_channel_.empty() && video_packet.empty() && audio_packet.empty())			
