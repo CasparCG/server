@@ -27,18 +27,18 @@ public:
 		, last_frame_(draw_frame::empty())
 		, is_paused_(false){}
 	
-	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load)
+	void load(int index, const safe_ptr<frame_producer>& frame_producer, bool play_on_load)
 	{			
 		background_ = frame_producer;
-		CASPAR_LOG(info) << print() << " " << frame_producer->print() << " => background";
+		CASPAR_LOG(info) << print(index) << " " << frame_producer->print() << " => background";
 		if(play_on_load)
-			play();			
+			play(index);			
 	}
 
-	void preview(const safe_ptr<frame_producer>& frame_producer)
+	void preview(int index, const safe_ptr<frame_producer>& frame_producer)
 	{
-		stop();
-		load(frame_producer, false);		
+		stop(index);
+		load(index, frame_producer, false);		
 		try
 		{
 			last_frame_ = frame_producer->receive();
@@ -46,11 +46,11 @@ public:
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			clear();
+			clear(index);
 		}
 	}
 	
-	void play()
+	void play(int index)
 	{			
 		if(is_paused_)			
 			is_paused_ = false;
@@ -59,31 +59,31 @@ public:
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
 			background_ = frame_producer::empty();
-			CASPAR_LOG(info) << print() << L" background => foreground";
+			CASPAR_LOG(info) << print(index) << L" background => foreground";
 		}
 	}
 
-	void pause()
+	void pause(int)
 	{
 		is_paused_ = true;
 	}
 
-	void stop()
+	void stop(int index)
 	{
-		pause();
+		pause(index);
 		last_frame_ = draw_frame::empty();
 		foreground_ = frame_producer::empty();
-		CASPAR_LOG(warning) << print() << L" empty => foreground";
+		CASPAR_LOG(warning) << print(index) << L" empty => foreground";
 	}
 
-	void clear()
+	void clear(int index)
 	{
-		stop();
+		stop(index);
 		background_ = frame_producer::empty();
-		CASPAR_LOG(warning) << print() << L" empty => background";
+		CASPAR_LOG(warning) << print(index) << L" empty => background";
 	}
 	
-	safe_ptr<draw_frame> receive()
+	safe_ptr<draw_frame> receive(int index)
 	{		
 		if(is_paused_)
 			return last_frame_;
@@ -99,21 +99,21 @@ public:
 				following->set_leading_producer(foreground_);
 				foreground_ = following;
 
-				CASPAR_LOG(info) << print() << L" [EOF] " << foreground_->print() << " => foreground";
+				CASPAR_LOG(info) << print(index) << L" [EOF] " << foreground_->print() << " => foreground";
 
-				last_frame_ = receive();
+				last_frame_ = receive(index);
 			}
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			stop();
+			stop(index);
 		}
 
 		return last_frame_;
 	}
 
-	std::wstring print() const { return L"layer[]"; }
+	std::wstring print(int index) const { return L"layer[" + boost::lexical_cast<std::wstring>(index) + L"]"; }
 };
 
 layer::layer() 
@@ -135,13 +135,13 @@ void layer::swap(layer& other)
 {
 	impl_ = other.impl_.compare_and_swap(impl_, other.impl_);
 }
-void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load){return impl_->load(frame_producer, play_on_load);}	
-void layer::preview(const safe_ptr<frame_producer>& frame_producer){return impl_->preview(frame_producer);}	
-void layer::play(){impl_->play();}
-void layer::pause(){impl_->pause();}
-void layer::stop(){impl_->stop();}
-void layer::clear(){impl_->clear();}
-safe_ptr<draw_frame> layer::receive() {return impl_->receive();}
+void layer::load(int index, const safe_ptr<frame_producer>& frame_producer, bool play_on_load){return impl_->load(index, frame_producer, play_on_load);}	
+void layer::preview(int index, const safe_ptr<frame_producer>& frame_producer){return impl_->preview(index, frame_producer);}	
+void layer::play(int index){impl_->play(index);}
+void layer::pause(int index){impl_->pause(index);}
+void layer::stop(int index){impl_->stop(index);}
+void layer::clear(int index){impl_->clear(index);}
+safe_ptr<draw_frame> layer::receive(int index) {return impl_->receive(index);}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 }}
