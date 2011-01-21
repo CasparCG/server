@@ -90,14 +90,18 @@ public:
 		if(is_paused_)
 			return last_frame_;
 
+		if(foreground_ == frame_producer::empty())
+		{
+			last_frame_ = draw_frame::empty();
+			return last_frame_;
+		}
+
 		try
 		{
 			last_frame_ = foreground_->receive(); 
 			last_frame_->set_layer_index(index_);
 			if(last_frame_ == draw_frame::eof())
 			{
-				CASPAR_ASSERT(foreground_ != frame_producer::empty());
-
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
 				foreground_ = following;

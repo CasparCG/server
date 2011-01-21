@@ -98,7 +98,7 @@ struct video_decoder::implementation : boost::noncopyable
 	const int width_;
 	const int height_;
 	const PixelFormat pix_fmt_;
-	const pixel_format_desc desc_;
+	pixel_format_desc desc_;
 
 public:
 	explicit implementation(AVCodecContext* codec_context, const safe_ptr<frame_factory>& frame_factory) 
@@ -117,6 +117,7 @@ public:
 		{
 			CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
 
+			desc_ = get_pixel_format_desc(PIX_FMT_BGRA, width_, height_);
 			double param;
 			sws_context_.reset(sws_getContext(width_, height_, pix_fmt_, width_, height_, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 			if(!sws_context_)
@@ -135,11 +136,10 @@ public:
 		
 		if(result < 0)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("avcodec_decode_video failed"));
-
+		
+		auto write = frame_factory_->create_frame(desc_);
 		if(sws_context_ == nullptr)
 		{
-			auto write = frame_factory_->create_frame(desc_);
-
 			tbb::parallel_for(0, static_cast<int>(desc_.planes.size()), 1, [&](int n)
 			{
 				auto plane            = desc_.planes[n];
@@ -160,13 +160,11 @@ public:
 		}
 		else
 		{
-			auto write = frame_factory_->create_frame(width_, height_);
-
-			AVFrame av_frame;	
-			avcodec_get_frame_defaults(&av_frame);
-			avpicture_fill(reinterpret_cast<AVPicture*>(&av_frame), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
+			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+			avcodec_get_frame_defaults(av_frame.get());			
+			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
 		 
-			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame.data, av_frame.linesize);	
+			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame->data, av_frame->linesize);	
 
 			return write;
 		}	
