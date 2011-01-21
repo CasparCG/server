@@ -13,9 +13,8 @@ typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> 
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(AVCodecContext* codec_context);
+	explicit video_decoder(AVCodecContext* codec_context, const safe_ptr<frame_factory>& frame_factory);
 	safe_ptr<write_frame> execute(const aligned_buffer& video_packet);	
-	void initialize(const safe_ptr<frame_factory>& frame_factory);
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

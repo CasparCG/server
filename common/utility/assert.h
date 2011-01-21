@@ -2,6 +2,16 @@
 
 #include "../log/log.h"
 
-#define __ASSERT_EXPR_STR(name) #name
+#ifdef _MSC_VER
+#define _CASPAR_DBG_BREAK _CrtDbgBreak()
+#else
+#define _CASPAR_DBG_BREAK
+#endif
 
-#define CASPAR_ASSERT(expr) do{if(!(expr)) CASPAR_LOG(error) << "\nAssertion failed.\n " << __ASSERT_EXPR_STR(expr) << "\n" << __FILE__ << "\n" << __LINE__ << "\n\n";}while(0)
+#define CASPAR_ASSERT_EXPR_STR(str) #str
+
+#define CASPAR_ASSERT(expr) do{if(!(expr)) CASPAR_LOG(warning) << "\n\nAssertion Failed:\n" << \
+	CASPAR_ASSERT_EXPR_STR(expr) << "\n" \
+	__FILE__ << "\n"; \
+	_CASPAR_DBG_BREAK;\
+	}while(0);

@@ -93,7 +93,6 @@ public:
 		if(!video_codec_context_ && !audio_codex_context_)
 			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec context found."));		
 					
-
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " started.";

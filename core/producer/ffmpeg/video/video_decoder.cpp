@@ -101,13 +101,18 @@ struct video_decoder::implementation : boost::noncopyable
 	const pixel_format_desc desc_;
 
 public:
-	explicit implementation(AVCodecContext* codec_context) 
-		: codec_context_(codec_context)
+	explicit implementation(AVCodecContext* codec_context, const safe_ptr<frame_factory>& frame_factory) 
+		: frame_factory_(frame_factory)
+		, codec_context_(codec_context)
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 		, pix_fmt_(codec_context_->pix_fmt)
 		, desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
 	{
+		double frame_rate = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
+		if(abs(frame_rate - frame_factory->get_video_format_desc().fps) > std::numeric_limits<double>::min())
+			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid video framerate."));
+
 		if(desc_.pix_fmt == pixel_format::invalid)
 		{
 			CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
@@ -166,17 +171,8 @@ public:
 			return write;
 		}	
 	}
-
-	void initialize(const safe_ptr<frame_factory>& frame_factory)
-	{
-		frame_factory_ = frame_factory;		
-		double frame_rate = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
-		if(abs(frame_rate - frame_factory->get_video_format_desc().fps) > std::numeric_limits<double>::min())
-			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid video framerate."));
-	}
 };
 
-video_decoder::video_decoder(AVCodecContext* codec_context) : impl_(new implementation(codec_context)){}
+video_decoder::video_decoder(AVCodecContext* codec_context, const safe_ptr<frame_factory>& frame_factory) : impl_(new implementation(codec_context, frame_factory)){}
 safe_ptr<write_frame> video_decoder::execute(const aligned_buffer& video_packet){return impl_->execute(video_packet);}
-void video_decoder::initialize(const safe_ptr<frame_factory>& frame_factory){impl_->initialize(frame_factory); }
 }}}
