@@ -1,4 +1,4 @@
-#include "../../StdAfx.h"
+#include "../stdafx.h"
 
 #include "image_mixer.h"
 #include "image_kernel.h"

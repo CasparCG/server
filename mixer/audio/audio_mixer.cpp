@@ -1,4 +1,4 @@
-#include "../../stdafx.h"
+#include "../stdafx.h"
 
 #include "audio_mixer.h"
 #include "audio_transform.h"

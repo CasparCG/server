@@ -4,12 +4,11 @@
 
 #include <core/video_format.h>
 
-#include <boost/tuple/tuple.hpp>
-#include <boost/thread/future.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/thread/future.hpp>
 
 #include <memory>
-#include <array>
+#include <vector>
 
 namespace caspar { namespace core {
 
