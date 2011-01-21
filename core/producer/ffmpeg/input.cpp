@@ -29,7 +29,9 @@ extern "C"
 namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
-{				
+{		
+	static const size_t BUFFER_SIZE = 2 << 24;
+
 	std::shared_ptr<AVFormatContext> format_context_;	// Destroy this last
 
 	std::shared_ptr<AVCodecContext>	video_codec_context_;
@@ -47,9 +49,6 @@ struct input::implementation : boost::noncopyable
 	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> audio_packet_buffer_;
 	
 	executor executor_;
-
-	static const size_t BUFFER_SIZE = 2 << 24;
-
 public:
 	explicit implementation(const std::wstring& filename, bool loop) 
 		: loop_(loop)
@@ -146,7 +145,7 @@ public:
 				}
 			}
 			else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
-				executor_.stop(executor::no_wait);
+				executor_.stop();
 		}
 	}
 	

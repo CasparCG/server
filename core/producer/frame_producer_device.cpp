@@ -30,7 +30,6 @@ struct frame_producer_device::implementation : boost::noncopyable
 	const safe_ptr<frame_factory> factory_;
 	
 	mutable executor executor_;
-
 public:
 	implementation(const safe_ptr<frame_factory>& factory, const output_func& output)  
 		: factory_(factory)

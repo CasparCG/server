@@ -16,6 +16,17 @@ ogl_device::ogl_device()
 		context_->SetActive(true);
 	});
 }
+
+ogl_device::~ogl_device()
+{
+	invoke([=]
+	{
+		device_pools_[0].clear();
+		device_pools_[1].clear();
+		host_pools_[0].clear();
+		host_pools_[1].clear();
+	});
+}
 				
 safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride)
 {

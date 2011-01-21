@@ -33,11 +33,10 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	output_func output_;
 
-	executor executor_;
-
 	std::unordered_map<int, image_transform> image_transforms_;
 	std::unordered_map<int, audio_transform> audio_transforms_;
 
+	executor executor_;
 public:
 	implementation(const video_format_desc& format_desc, const output_func& output) 
 		: format_desc_(format_desc)
