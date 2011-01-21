@@ -5,6 +5,8 @@
 #include <Glee.h>
 #include <SFML/Window.hpp>
 
+#include <boost/foreach.hpp>
+
 namespace caspar { namespace core {
 
 ogl_device::ogl_device()
@@ -21,10 +23,10 @@ ogl_device::~ogl_device()
 {
 	invoke([=]
 	{
-		device_pools_[0].clear();
-		device_pools_[1].clear();
-		host_pools_[0].clear();
-		host_pools_[1].clear();
+		BOOST_FOREACH(auto& pool, device_pools_)
+			pool.clear();
+		BOOST_FOREACH(auto& pool, host_pools_)
+			pool.clear();
 	});
 }
 				
