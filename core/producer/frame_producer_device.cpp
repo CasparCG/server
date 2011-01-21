@@ -64,7 +64,7 @@ public:
 		{
 			for(size_t i = r.begin(); i != r.end(); ++i)
 			{
-				frames[i] = layers_[i].receive(i);
+				frames[i] = layers_[i].receive();
 				frames[i]->set_layer_index(i);
 			}
 		});		
@@ -79,7 +79,7 @@ public:
 		producer->initialize(factory_);
 		executor_.invoke([&]
 		{
-			layers_[index].load(index, producer, play_on_load);
+			layers_[index].load(producer, play_on_load);
 		});
 	}
 			
@@ -89,7 +89,7 @@ public:
 		producer->initialize(factory_);
 		executor_.invoke([&]
 		{			
-			layers_[index].preview(index, producer);
+			layers_[index].preview(producer);
 		});
 	}
 
@@ -98,7 +98,7 @@ public:
 		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index].pause(index);
+			layers_[index].pause();
 		});
 	}
 
@@ -107,7 +107,7 @@ public:
 		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index].play(index);
+			layers_[index].play();
 		});
 	}
 
@@ -116,7 +116,7 @@ public:
 		check_bounds(index);
 		executor_.invoke([&]
 		{
-			layers_[index].stop(index);
+			layers_[index].stop();
 		});
 	}
 
@@ -160,6 +160,9 @@ public:
 
 	void swap_output(frame_producer_device& other)
 	{
+		if(other.impl_.get() == this)
+			return;
+
 		tbb::spin_mutex::scoped_lock lock1(output_mutex_);
 		tbb::spin_mutex::scoped_lock lock2(other.impl_->output_mutex_);
 		output_.swap(other.impl_->output_);
