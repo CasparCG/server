@@ -40,9 +40,15 @@
 #include <common/utility/assert.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 
+#include <atlbase.h>
+
 using namespace caspar;
 using namespace caspar::core;
 using namespace caspar::protocol;
+
+// NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
+CComModule _AtlModule;
+extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
 class win32_handler_tbb_installer : public tbb::task_scheduler_observer
 {

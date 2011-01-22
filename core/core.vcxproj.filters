@@ -67,6 +67,12 @@
     <Filter Include="Source\producer\screen">
       <UniqueIdentifier>{eefc7a28-4013-458d-a91f-c822749984e8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\producer\silverlight">
+      <UniqueIdentifier>{72cb7c9e-3b8c-4a45-8ee5-26f3dd091928}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\producer\silverlight\interop">
+      <UniqueIdentifier>{865b1b03-83c0-4c59-b896-f98cd3323c00}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
@@ -168,6 +174,21 @@
     <ClInclude Include="producer\screen\screen_producer.h">
       <Filter>Source\producer\screen</Filter>
     </ClInclude>
+    <ClInclude Include="producer\silverlight\silverlight_producer.h">
+      <Filter>Source\producer\silverlight</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\silverlight\XcpPropertyBag.h">
+      <Filter>Source\producer\silverlight\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\silverlight\XcpControlHost.h">
+      <Filter>Source\producer\silverlight\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\silverlight\xcpctrl.h">
+      <Filter>Source\producer\silverlight\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\silverlight\xcpctrl_h.h">
+      <Filter>Source\producer\silverlight\interop</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="consumer\decklink\DeckLinkAPI_i.c">
@@ -251,6 +272,21 @@
     <ClCompile Include="producer\screen\screen_producer.cpp">
       <Filter>Source\producer\screen</Filter>
     </ClCompile>
+    <ClCompile Include="producer\silverlight\silverlight_producer.cpp">
+      <Filter>Source\producer\silverlight</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\silverlight\XcpControlHost.cpp">
+      <Filter>Source\producer\silverlight\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\silverlight\xcpctrl_i.c">
+      <Filter>Source\producer\silverlight\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\silverlight\xcpctrl_p.c">
+      <Filter>Source\producer\silverlight\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\silverlight\XcpPropertyBag.cpp">
+      <Filter>Source\producer\silverlight\interop</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="producer\flash\Flash9e.IDL">
@@ -267,6 +303,9 @@
     </Midl>
     <Midl Include="consumer\decklink\DeckLinkAPI_v7_3.idl">
       <Filter>Source\consumer\decklink\interop</Filter>
+    </Midl>
+    <Midl Include="producer\silverlight\xcpctrl.idl">
+      <Filter>Source\producer\silverlight\interop</Filter>
     </Midl>
   </ItemGroup>
   <ItemGroup>
