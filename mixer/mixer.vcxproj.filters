@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Afx">
+      <UniqueIdentifier>{d8d51fad-4061-4768-aaa6-d53c01611eb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\audio">
+      <UniqueIdentifier>{ad4b4d9e-2c3d-48fb-977f-edce86b653e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\image">
+      <UniqueIdentifier>{54ed246e-98e3-4544-bfbb-71912a901e8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\gpu">
+      <UniqueIdentifier>{3c5b1ceb-6788-4278-98cc-0c5865cda30a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\frame">
+      <UniqueIdentifier>{d42d9881-e19e-4128-91dd-5b7279c2b5e5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="StdAfx.cpp">
+      <Filter>Afx</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\audio_transform.cpp">
+      <Filter>Source Files\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\audio_mixer.cpp">
+      <Filter>Source Files\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image_kernel.cpp">
+      <Filter>Source Files\image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image_mixer.cpp">
+      <Filter>Source Files\image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image_transform.cpp">
+      <Filter>Source Files\image</Filter>
+    </ClCompile>
+    <ClCompile Include="gpu\host_buffer.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="gpu\ogl_device.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="gpu\device_buffer.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\read_frame.cpp">
+      <Filter>Source Files\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\write_frame.cpp">
+      <Filter>Source Files\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\draw_frame.cpp">
+      <Filter>Source Files\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="frame_mixer_device.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="StdAfx.h">
+      <Filter>Afx</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\audio_mixer.h">
+      <Filter>Source Files\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\audio_transform.h">
+      <Filter>Source Files\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image_kernel.h">
+      <Filter>Source Files\image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image_mixer.h">
+      <Filter>Source Files\image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image_transform.h">
+      <Filter>Source Files\image</Filter>
+    </ClInclude>
+    <ClInclude Include="gpu\device_buffer.h">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="gpu\host_buffer.h">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="gpu\ogl_device.h">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\draw_frame.h">
+      <Filter>Source Files\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\pixel_format.h">
+      <Filter>Source Files\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\read_frame.h">
+      <Filter>Source Files\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\write_frame.h">
+      <Filter>Source Files\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="fwd.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="frame_factory.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="frame_mixer_device.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
