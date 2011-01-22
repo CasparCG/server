@@ -39,11 +39,7 @@
 #include <boost/filesystem.hpp>
 
 namespace caspar { namespace core { namespace flash {
-
-// NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
-CComModule _AtlModule;
-extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
-
+	
 class flash_renderer
 {
 	struct co_init
