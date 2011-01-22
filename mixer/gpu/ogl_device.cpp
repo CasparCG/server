@@ -32,7 +32,7 @@ ogl_device::~ogl_device()
 				
 safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride)
 {
-	auto pool = &device_pools_[stride][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
+	auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->try_pop(buffer))		
 	{
