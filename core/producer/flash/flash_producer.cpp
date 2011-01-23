@@ -192,7 +192,7 @@ public:
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;
-		frame_buffer_.set_capacity(static_cast<size_t>(frame_factory->get_video_format_desc().fps/2.0));
+		frame_buffer_.set_capacity(static_cast<size_t>(frame_factory->get_video_format_desc().fps/4.0));
 		executor_.start();
 	}
 
