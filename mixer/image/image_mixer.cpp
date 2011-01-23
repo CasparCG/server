@@ -95,7 +95,8 @@ public:
 			auto m_s = transform.get_mask_scale();
 			double w = static_cast<double>(format_desc_.width);
 			double h = static_cast<double>(format_desc_.height);
-
+			
+			GL(glEnable(GL_SCISSOR_TEST));
 			GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
 			
 			auto f_p = transform.get_image_translation();
@@ -107,8 +108,7 @@ public:
 				glTexCoord2d(1.0, 1.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 				glTexCoord2d(0.0, 1.0); glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 			glEnd();
-
-			GL(glScissor(0, 0, format_desc_.width, format_desc_.height));
+			GL(glDisable(GL_SCISSOR_TEST));
 		});
 	}
 
