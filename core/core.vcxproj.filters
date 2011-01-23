@@ -64,9 +64,6 @@
     <Filter Include="Source\consumer\ffmpeg">
       <UniqueIdentifier>{b651856c-ff7e-4f90-be8a-32aba6094dbd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\producer\screen">
-      <UniqueIdentifier>{eefc7a28-4013-458d-a91f-c822749984e8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\producer\silverlight">
       <UniqueIdentifier>{72cb7c9e-3b8c-4a45-8ee5-26f3dd091928}</UniqueIdentifier>
     </Filter>
@@ -171,9 +168,6 @@
     <ClInclude Include="producer\layer.h">
       <Filter>Source\producer</Filter>
     </ClInclude>
-    <ClInclude Include="producer\screen\screen_producer.h">
-      <Filter>Source\producer\screen</Filter>
-    </ClInclude>
     <ClInclude Include="producer\silverlight\silverlight_producer.h">
       <Filter>Source\producer\silverlight</Filter>
     </ClInclude>
@@ -268,9 +262,6 @@
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
       <Filter>Source\producer</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\screen\screen_producer.cpp">
-      <Filter>Source\producer\screen</Filter>
     </ClCompile>
     <ClCompile Include="producer\silverlight\silverlight_producer.cpp">
       <Filter>Source\producer\silverlight</Filter>

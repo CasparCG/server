@@ -5,7 +5,7 @@
 #include <common/gl/gl_check.h>
 
 namespace caspar { namespace core {
-																																							
+																																								
 struct host_buffer::implementation : boost::noncopyable
 {	
 	GLuint pbo_;
@@ -31,7 +31,8 @@ public:
 
 		if(!pbo_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
-		CASPAR_LOG(trace) << "[host_buffer] Allocated.";
+
+		CASPAR_LOG(trace) << "[host_buffer] allocated size:" << size_ << " usage: " << (usage == write_only ? "write_only" : "read_only");
 	}	
 
 	~implementation()

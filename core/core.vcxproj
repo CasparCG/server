@@ -181,7 +181,6 @@
     <ClInclude Include="producer\image\image_producer.h" />
     <ClInclude Include="producer\image\image_scroll_producer.h" />
     <ClInclude Include="producer\layer.h" />
-    <ClInclude Include="producer\screen\screen_producer.h" />
     <ClInclude Include="producer\silverlight\silverlight_producer.h" />
     <ClInclude Include="producer\silverlight\XcpControlHost.h" />
     <ClInclude Include="producer\silverlight\xcpctrl.h" />
@@ -288,10 +287,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
-    </ClCompile>
-    <ClCompile Include="producer\screen\screen_producer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\silverlight\silverlight_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
