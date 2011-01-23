@@ -118,12 +118,6 @@ public:
 		executor_.start();
 		active_ = executor_.begin_invoke([]{});
 
-		static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
-		boost::call_once(av_register_all, av_register_all_flag);	
-		
-		static boost::once_flag avcodec_init_flag = BOOST_ONCE_INIT;
-		boost::call_once(avcodec_init, avcodec_init_flag);	
-
 		fmt_ = av_guess_format(nullptr, filename_.c_str(), nullptr);
 		if (!fmt_) 
 		{

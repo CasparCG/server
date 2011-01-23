@@ -121,9 +121,9 @@ public:
 			double param;
 			sws_context_.reset(sws_getContext(width_, height_, pix_fmt_, width_, height_, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 			if(!sws_context_)
-				BOOST_THROW_EXCEPTION(	operation_failed() <<
-										msg_info("Could not create software scaling context.") << 
-										boost::errinfo_api_function("sws_getContext"));
+				BOOST_THROW_EXCEPTION(operation_failed() <<
+									  msg_info("Could not create software scaling context.") << 
+									  boost::errinfo_api_function("sws_getContext"));
 		}
 	}
 	
@@ -152,9 +152,6 @@ public:
 					std::copy_n(decoded + y*decoded_linesize, plane.linesize, result + y*plane.linesize);
 				});
 			});
-
-			if(codec_context_->codec_id == CODEC_ID_DVVIDEO && frame_factory_->get_video_format_desc().mode == video_mode::upper)
-				write->get_image_transform().set_image_translation(0.0f, 1.0/static_cast<double>(height_));
 		}
 		else
 		{
@@ -164,6 +161,10 @@ public:
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame->data, av_frame->linesize);	
 		}	
+
+		if(codec_context_->codec_id == CODEC_ID_DVVIDEO && frame_factory_->get_video_format_desc().mode == video_mode::upper)
+			write->get_image_transform().set_image_translation(0.0f, 1.0/static_cast<double>(height_));
+
 		return write;
 	}
 };

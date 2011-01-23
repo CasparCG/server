@@ -55,13 +55,7 @@ public:
 		, video_s_index_(-1)
 		, audio_s_index_(-1)
 		, filename_(filename)
-	{		
-		static boost::once_flag av_register_all_flag = BOOST_ONCE_INIT;
-		boost::call_once(av_register_all, av_register_all_flag);	
-		
-		static boost::once_flag avcodec_init_flag = BOOST_ONCE_INIT;
-		boost::call_once(avcodec_init, avcodec_init_flag);	
-				
+	{						
 		int errn;
 		AVFormatContext* weak_format_context_;
 		if((errn = -av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr)) > 0)

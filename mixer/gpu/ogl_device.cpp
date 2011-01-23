@@ -2,6 +2,8 @@
 
 #include "ogl_device.h"
 
+#include <common/utility/assert.h>
+
 #include <Glee.h>
 #include <SFML/Window.hpp>
 
@@ -32,6 +34,8 @@ ogl_device::~ogl_device()
 				
 safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride)
 {
+	CASPAR_ASSERT(stride > 0 && stride < 5);
+	CASPAR_ASSERT(width > 0 && height > 0);
 	auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->try_pop(buffer))		
@@ -47,6 +51,8 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 	
 safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::usage_t usage)
 {
+	CASPAR_ASSERT(usage == host_buffer::write_only || usage == host_buffer::read_only);
+	CASPAR_ASSERT(size > 0);
 	auto pool = &host_pools_[usage][size];
 	std::shared_ptr<host_buffer> buffer;
 	if(!pool->try_pop(buffer))
