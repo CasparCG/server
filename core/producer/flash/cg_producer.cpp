@@ -103,7 +103,7 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, 
 
 safe_ptr<frame_producer> create_ct_producer(const std::vector<std::wstring>& params) 
 {
-	std::wstring filename = params[0] + L".ct";
+	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".ct";
 	if(!boost::filesystem::exists(filename))
 		return frame_producer::empty();
 
