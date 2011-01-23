@@ -3,7 +3,6 @@
 #include "device_buffer.h"
 
 #include <common/gl/gl_check.h>
-
 namespace caspar { namespace core {
 	
 GLenum FORMAT[] = {0, GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
@@ -30,7 +29,8 @@ public:
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
-		GL(glBindTexture(GL_TEXTURE_2D, 0));	
+		GL(glBindTexture(GL_TEXTURE_2D, 0));
+		CASPAR_LOG(trace) << "[device_buffer] allocated size:" << width*height*stride;	
 	}	
 
 	~implementation()
