@@ -40,6 +40,17 @@
 #include <common/utility/assert.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 
+#if defined(_MSC_VER)
+#pragma warning (disable : 4244)
+#endif
+
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavformat/avformat.h>
+}
+
 #include <atlbase.h>
 
 using namespace caspar;
@@ -67,8 +78,14 @@ public:
  
 int main(int argc, wchar_t* argv[])
 {
+	// Init FFMPEG
+	av_register_all();
+	avcodec_init();
+
+	// Increase time precision
 	timeBeginPeriod(1);
 
+	// Start caspar
 	std::wstringstream str;
 	str << "CasparCG " << env::version() << " " << env::version_tag();
 	SetConsoleTitle(str.str().c_str());
