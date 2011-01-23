@@ -200,8 +200,8 @@ bool MixerCommand::DoExecute()
 				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
 				transform.set_image_translation(x, y);
 				transform.set_image_scale(x_s, y_s);
-				transform.set_mask_translation(0.0, 0.0);
-				transform.set_mask_scale(1.0, 1.0);
+				transform.set_mask_translation(x, y);
+				transform.set_mask_scale(x_s, y_s);
 				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));
 			}
 			else if(_parameters[1] == L"CLIP_RECT")
@@ -216,6 +216,24 @@ bool MixerCommand::DoExecute()
 				transform.set_mask_translation(x, y);
 				transform.set_mask_scale(x_s, y_s);
 				GetChannel()->mixer().set_image_transform(GetLayerIndex(), std::move(transform));
+			}
+			else if(_parameters[1] == L"GRID")
+			{
+				int n = boost::lexical_cast<int>(_parameters.at(2));
+				double delta = 1.0/static_cast<double>(n);
+				for(int x = 0; x < n; ++x)
+				{
+					for(int y = 0; y < n; ++y)
+					{
+						int index = x+y*n;
+						auto transform = GetChannel()->mixer().get_image_transform(index);						
+						transform.set_image_translation(x*delta, y*delta);
+						transform.set_image_scale(delta, delta);			
+						transform.set_mask_translation(x*delta, y*delta);
+						transform.set_mask_scale(delta, delta);
+						GetChannel()->mixer().set_image_transform(index, std::move(transform));
+					}
+				}
 			}
 			else if(_parameters[1] == L"RESET")
 			{
