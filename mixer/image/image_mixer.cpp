@@ -44,7 +44,6 @@ public:
 			transform_stack_.top().set_mode(video_mode::progressive);
 
 			GL(glEnable(GL_TEXTURE_2D));
-			GL(glEnable(GL_SCISSOR_TEST));
 			GL(glDisable(GL_DEPTH_TEST));		
 
 			render_targets_[0] = context_->create_device_buffer(format_desc.width, format_desc.height, 4);
