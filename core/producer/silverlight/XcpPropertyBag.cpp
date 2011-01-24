@@ -1,6 +1,8 @@
 #include "XcpPropertyBag.h"
 
-#pragma warning(disable:4100)
+#ifdef _MSC_VER
+#pragma warning (disable : 4100)
+#endif
 
 XcpPropertyBag::XcpPropertyBag(){m_RefCount=0;}
 XcpPropertyBag::~XcpPropertyBag(){}
@@ -17,7 +19,9 @@ ULONG STDMETHODCALLTYPE XcpPropertyBag::AddRef(void)
 
 ULONG STDMETHODCALLTYPE XcpPropertyBag::Release(void)
 {
-	int newRefValue = InterlockedDecrement((LONG*)&m_RefCount);
+	int		newRefValue;
+	
+	newRefValue = InterlockedDecrement((LONG*)&m_RefCount);
 	if (newRefValue == 0)
 	{
 		delete this;
@@ -32,11 +36,15 @@ STDMETHODIMP XcpPropertyBag::Read(LPCOLESTR pszPropName, VARIANT *pVar, IErrorLo
 	HRESULT hr = E_INVALIDARG;
 	BSTR bstrValue = NULL;
 	  
-	if (_wcsicmp(pszPropName, L"Source") == 0) 	
-		bstrValue = SysAllocString(L"SilverlightTestApp.xap");	
-	else if (_wcsicmp(pszPropName, L"Background") == 0) 	
+	if (_wcsicmp(pszPropName, L"Source") == 0) 
+	{
+		bstrValue = SysAllocString(L"SilverlightTestApp.xap");
+	}    
+	else if (_wcsicmp(pszPropName, L"Background") == 0) 
+	{
 		bstrValue = SysAllocString(L"White");
-	
+	}
+
 	else if (_wcsicmp(pszPropName, L"Windowless") == 0) 
 	{
 		V_VT(pVar) = VT_BOOL;
@@ -50,9 +58,9 @@ STDMETHODIMP XcpPropertyBag::Read(LPCOLESTR pszPropName, VARIANT *pVar, IErrorLo
 		V_BSTR(pVar) = bstrValue;
 		hr = S_OK;
 	}
-
 	return hr;
 }
+
 	
 STDMETHODIMP XcpPropertyBag::Write(LPCOLESTR pszPropName, VARIANT *pVar)
 {
