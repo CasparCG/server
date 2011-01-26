@@ -2,9 +2,10 @@
 
 #include "layer.h"
 
-#include "../mixer/frame/draw_frame.h"
-#include "../mixer/image/image_mixer.h"
-#include "../mixer/audio/audio_mixer.h"
+#include <mixer/frame/draw_frame.h>
+#include <mixer/image/image_mixer.h>
+#include <mixer/audio/audio_mixer.h>
+#include <mixer/audio/audio_transform.h>
 #include "../producer/frame_producer.h"
 
 #include "../video_format.h"
@@ -37,7 +38,8 @@ public:
 	void preview(const safe_ptr<frame_producer>& frame_producer)
 	{
 		stop();
-		load(frame_producer, false);		
+		foreground_ = frame_producer;
+		background_ = frame_producer::empty();
 		try
 		{
 			last_frame_ = frame_producer->receive();
@@ -82,7 +84,10 @@ public:
 	safe_ptr<draw_frame> receive()
 	{		
 		if(is_paused_)
+		{
+			last_frame_->get_audio_transform().set_gain(0.0);
 			return last_frame_;
+		}
 
 		try
 		{
