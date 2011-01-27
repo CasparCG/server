@@ -38,7 +38,7 @@ STDMETHODIMP XcpPropertyBag::Read(LPCOLESTR pszPropName, VARIANT *pVar, IErrorLo
 	  
 	if (_wcsicmp(pszPropName, L"Source") == 0) 
 	{
-		bstrValue = SysAllocString(L"SilverlightTestApp.xap");
+		bstrValue = SysAllocString(L"SilverlightBalls.xap");
 	}    
 	else if (_wcsicmp(pszPropName, L"Background") == 0) 
 	{
@@ -46,7 +46,9 @@ STDMETHODIMP XcpPropertyBag::Read(LPCOLESTR pszPropName, VARIANT *pVar, IErrorLo
 	}
 	//else if (_wcsicmp(pszPropName, L"EnableGPUAcceleration") == 0) 
 	//{
-	//	bstrValue = SysAllocString(L"true");
+	//	V_VT(pVar) = VT_BOOL;
+	//	V_BOOL(pVar) = VARIANT_TRUE;
+	//	hr = S_OK;
 	//}
 
 	else if (_wcsicmp(pszPropName, L"Windowless") == 0) 
