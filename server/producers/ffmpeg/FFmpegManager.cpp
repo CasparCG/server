@@ -14,10 +14,10 @@ extern "C"
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
-	#include <libavcodec/avcodec.h>
-	#include <libavformat/avformat.h>
-	#include <libavutil/avutil.h>
-	#include <libswscale/swscale.h>
+	#include <ffmpeg/avcodec.h>
+	#include <ffmpeg/avformat.h>
+	#include <ffmpeg/avutil.h>
+	#include <ffmpeg/swscale.h>
 }
 
 namespace caspar {

@@ -91,7 +91,7 @@ using namespace utils;
 enum ControllerTransports { TCP, Serial, TransportsCount };
 enum ControllerProtocols { AMCP, CII, CLOCK, ProtocolsCount };
 
-const TCHAR* Application::versionString_(TEXT("CG 1.8.1.6"));
+const TCHAR* Application::versionString_(TEXT("CG 1.8.1.7"));
 const TCHAR* Application::serviceName_(TEXT("Caspar service"));
 
 Application::Application(const tstring& cmdline, HINSTANCE hInstance) :	   hInstance_(hInstance), logLevel_(2), logDir_(TEXT("log")), 

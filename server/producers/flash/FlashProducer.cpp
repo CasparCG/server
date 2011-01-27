@@ -36,7 +36,7 @@ using namespace utils;
 //////////////////////////////////////////////////////////////////////
 // FlashProducer
 //////////////////////////////////////////////////////////////////////
-FlashProducer::FlashProducer() : pFlashAxContainer_(0), bRunning_(false), frameBuffer_(2), pFnRenderer_(std::tr1::bind(&FlashProducer::WriteFrame, this)), pMonitor_(0), timerCount_(0)
+FlashProducer::FlashProducer() : pFlashAxContainer_(0), bRunning_(false), frameBuffer_(10), pFnRenderer_(std::tr1::bind(&FlashProducer::WriteFrame, this)), pMonitor_(0), timerCount_(0)
 {
 }
 
@@ -238,6 +238,8 @@ void FlashProducer::WriteFrame()
 
 FramePtr FlashProducer::RenderFrame()
 {	
+	const caspar::FrameFormatDescription& fmtDesc = pFrameManager_->GetFrameFormatDescription();
+	timer_.tick(fmtDesc.fps*0.95);
 	if(pFlashAxContainer_->pTimerHelper)
 	{
 		DWORD time = pFlashAxContainer_->pTimerHelper->Invoke(); // Tick flash
