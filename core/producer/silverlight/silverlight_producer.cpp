@@ -117,10 +117,6 @@ public:
 		window_.Display();
 				
 		auto frame = frame_factory_->create_frame();
-		//GL(glReadPixels(0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, frame->image_data().begin()));
-		
-		//sf::Image capture = window_.Capture();
-		//std::copy_n(capture.GetPixelsPtr(), format_desc_.size, frame->image_data().begin());
 		::BitBlt(mem_, 0, 0, format_desc_.width, format_desc_.height, screen_, 0, 0, SRCCOPY);		
 		std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
 
