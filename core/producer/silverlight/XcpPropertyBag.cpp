@@ -42,8 +42,12 @@ STDMETHODIMP XcpPropertyBag::Read(LPCOLESTR pszPropName, VARIANT *pVar, IErrorLo
 	}    
 	else if (_wcsicmp(pszPropName, L"Background") == 0) 
 	{
-		bstrValue = SysAllocString(L"White");
+		bstrValue = SysAllocString(L"Transparent");
 	}
+	//else if (_wcsicmp(pszPropName, L"EnableGPUAcceleration") == 0) 
+	//{
+	//	bstrValue = SysAllocString(L"true");
+	//}
 
 	else if (_wcsicmp(pszPropName, L"Windowless") == 0) 
 	{
