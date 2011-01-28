@@ -430,9 +430,9 @@ bool Application::Initialize()
 
 		sourceMediaManagers_.push_back(MediaManagerPtr(new FlashManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new CTManager()));
+		sourceMediaManagers_.push_back(MediaManagerPtr(new ffmpeg::FFMPEGManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaScrollMediaManager()));
-		sourceMediaManagers_.push_back(MediaManagerPtr(new ffmpeg::FFMPEGManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new ColorManager()));
 
 		colorManagerIndex_ = static_cast<int>(sourceMediaManagers_.size()-1);
