@@ -44,12 +44,12 @@ STDMETHODIMP XcpPropertyBag::Read(LPCOLESTR pszPropName, VARIANT *pVar, IErrorLo
 	{
 		bstrValue = SysAllocString(L"Transparent");
 	}
-	//else if (_wcsicmp(pszPropName, L"EnableGPUAcceleration") == 0) 
-	//{
-	//	V_VT(pVar) = VT_BOOL;
-	//	V_BOOL(pVar) = VARIANT_TRUE;
-	//	hr = S_OK;
-	//}
+	else if (_wcsicmp(pszPropName, L"EnableGPUAcceleration") == 0) 
+	{
+		V_VT(pVar) = VT_BOOL;
+		V_BOOL(pVar) = VARIANT_TRUE;
+		hr = S_OK;
+	}
 
 	else if (_wcsicmp(pszPropName, L"Windowless") == 0) 
 	{

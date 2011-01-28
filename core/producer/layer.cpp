@@ -1,18 +1,47 @@
 #include "../stdafx.h"
 
 #include "layer.h"
+#include "frame_producer.h"
+
+#include "../video_format.h"
+
+#include <common/concurrency/executor.h>
+#include <common/utility/assert.h>
 
 #include <mixer/frame/draw_frame.h>
 #include <mixer/image/image_mixer.h>
 #include <mixer/audio/audio_mixer.h>
 #include <mixer/audio/audio_transform.h>
-#include "../producer/frame_producer.h"
-
-#include "../video_format.h"
-
-#include <common/utility/assert.h>
 
 namespace caspar { namespace core {
+
+class frame_producer_remover
+{
+	executor executor_;
+
+	void do_remove(safe_ptr<frame_producer>& producer)
+	{
+		auto name = producer->print();
+		CASPAR_LOG(info) << "removing: " << name;
+		producer = frame_producer::empty();
+		CASPAR_LOG(info) << "removed: " << name;
+	}
+public:
+
+	frame_producer_remover()
+	{
+		executor_.start();
+	}
+
+	void remove(safe_ptr<frame_producer>&& producer)
+	{
+		CASPAR_ASSERT(producer.unique());
+		CASPAR_ASSERT(executor_.empty());
+		executor_.begin_invoke(std::bind(&frame_producer_remover::do_remove, this, std::move(producer)));
+	}
+};
+
+frame_producer_remover g_remover;
 
 struct layer::implementation : boost::noncopyable
 {					
@@ -32,35 +61,25 @@ public:
 	{			
 		background_ = frame_producer;
 		if(play_on_load)
-			play();			
+			play(true);		
 	}
 
 	void preview(const safe_ptr<frame_producer>& frame_producer)
 	{
-		stop();
-		foreground_ = frame_producer;
-		background_ = frame_producer::empty();
-		try
-		{
-			last_frame_ = frame_producer->receive();
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			clear();
-		}
+		load(frame_producer, true);
+		receive();
+		pause();
 	}
 	
-	void play()
+	void play(bool force = false)
 	{			
-		if(is_paused_)			
-			is_paused_ = false;
-		else
+		if(!is_paused_ || force)			
 		{
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
 			background_ = frame_producer::empty();
 		}
+		is_paused_ = false;
 	}
 
 	void pause()
@@ -98,6 +117,7 @@ public:
 
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
+				g_remover.remove(std::move(foreground_));
 				foreground_ = following;
 
 				last_frame_ = receive();
