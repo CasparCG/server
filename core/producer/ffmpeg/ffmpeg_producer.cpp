@@ -40,6 +40,11 @@ public:
 		, last_frame_(draw_frame(draw_frame::empty()))
 		, input_(filename, loop){}
 
+	~ffmpeg_producer()
+	{
+		CASPAR_LOG(info) << print() << " closing.";
+	}
+
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;

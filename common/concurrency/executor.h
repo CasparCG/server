@@ -26,7 +26,6 @@ public:
 
 	virtual ~executor()
 	{
-		wait();
 		stop();
 		if(boost::this_thread::get_id() != thread_.get_id())
 			thread_.join();

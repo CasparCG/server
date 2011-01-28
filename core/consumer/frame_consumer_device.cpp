@@ -65,15 +65,7 @@ public:
 				consumers_.erase(it);
 		});
 	}
-
-	safe_ptr<frame_consumer> get(int index)
-	{
-		return executor_.invoke([&]() -> safe_ptr<frame_consumer>
-		{
-			auto it = consumers_.find(index);
-		});
-	}
-			
+				
 	void send(const safe_ptr<const read_frame>& frame)
 	{		
 		executor_.begin_invoke([=]

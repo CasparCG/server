@@ -93,6 +93,7 @@ public:
 
 	~implementation()
 	{
+		executor_.clear();
 		CASPAR_LOG(info) << print() << " ended.";
 	}
 							
