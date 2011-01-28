@@ -111,13 +111,16 @@ public:
 
 	~implementation()
 	{
-		executor_.invoke([&]
+		if(executor_.is_running())
 		{
-			disable_video_output();
+			executor_.invoke([&]
+			{
+				disable_video_output();
 
-			if(blue_)
-				blue_->device_detach();		
+				if(blue_)
+					blue_->device_detach();		
 		});
+		}
 
 		CASPAR_LOG(info) << "BLUECARD INFO: Successfully released device " << device_index_;
 	}
