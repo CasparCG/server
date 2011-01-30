@@ -28,11 +28,27 @@ struct drawable
 class context
 {	
 	timer timer_;
-	executor executor_;
 	sf::RenderWindow window_;
 	
 	std::list<std::weak_ptr<drawable>> drawables_;
 		
+	executor executor_;
+public:					
+	template<typename Func>
+	static auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
+	{	
+		return get_instance().executor_.begin_invoke(std::forward<Func>(func));	
+	}
+
+	static void register_drawable(const std::shared_ptr<drawable>& drawable)
+	{
+		begin_invoke([=]
+		{
+			get_instance().drawables_.push_back(drawable);
+		});
+	}
+private:
+
 	void tick()
 	{
 		sf::Event e;
@@ -89,22 +105,6 @@ class context
 			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			tick();
-		});
-	}
-
-public:	
-				
-	template<typename Func>
-	static auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
-	{	
-		return get_instance().executor_.begin_invoke(std::forward<Func>(func));	
-	}
-
-	static void register_drawable(const std::shared_ptr<drawable>& drawable)
-	{
-		begin_invoke([=]
-		{
-			get_instance().drawables_.push_back(drawable);
 		});
 	}
 };
