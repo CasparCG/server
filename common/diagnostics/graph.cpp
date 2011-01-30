@@ -22,7 +22,7 @@ namespace caspar { namespace diagnostics {
 struct drawable
 {
 	virtual ~drawable(){}
-	virtual void draw(double dy, double y) = 0;
+	virtual void draw() = 0;
 };
 
 class context
@@ -46,21 +46,30 @@ class context
 
 	void render()
 	{
+		glLoadIdentity();
+		glTranslated(-1.0f, -1.0f, 0.0f);
+		glScaled(2.0f, 2.0f, 1.0f);
+
 		float dy = 1.0/static_cast<float>(std::max<int>(5, drawables_.size()));
-		float y = 1.0-dy;
+
+		glTranslated(0.0f, (1.0-dy), 0.0f);
 		for(auto it = drawables_.begin(); it != drawables_.end();)
 		{
 			auto drawable = it->lock();
 			if(drawable)
 			{
-				drawable->draw(dy, y);		
-				y -= dy;// + 0.01;
+				glPushMatrix();
+					glScaled(1.0f, dy, 1.0f);
+					drawable->draw();
+				glPopMatrix();
+				glTranslated(0.0f, -dy, 0.0f);
 				++it;
 			}
 			else			
 				it = drawables_.erase(it);			
-		}
+		}		
 	}	
+
 	static context& get_instance()
 	{
 		static context impl;
@@ -104,25 +113,20 @@ class line
 {
 	boost::circular_buffer<float> line_data_;
 	std::vector<float> tick_data_;
-	std::array<float, 3> color_;
+	color c_;
 public:
 	line(size_t res = 600)
 		: line_data_(res)
-	{
-		color(1.0f, 1.0f, 1.0f);
-	}
+		, c_(1.0f, 1.0f, 1.0f){}
 	
 	void update(float value)
 	{
 		tick_data_.push_back(value);
 	}
 	
-	void color(float r, float g, float b)
-	{
-		color_[0] = r; color_[1] = g; color_[2] = b;
-	}
+	void set_color(color c){c_ = c;}
 	
-	void draw(double dy, double y)
+	void draw()
 	{
 		float dx = 1.0f/static_cast<float>(line_data_.capacity());
 		float x = static_cast<float>(line_data_.capacity()-line_data_.size())*dx;
@@ -139,36 +143,32 @@ public:
 		}
 		
 		glBegin(GL_LINE_STRIP);
-		glColor4f(color_[0], color_[1], color_[2], 1.0f);			
+		glColor4f(c_.red, c_.green, c_.blue, 1.0f);			
 		for(size_t n = 0; n < line_data_.size(); ++n)				
-			glVertex3f((x+n*dx)*2.0f-1.0f, (y + dy * std::max(0.05f, std::min(0.95f, line_data_[n]*0.8f + 0.1f))) * 2.0f - 1.0f, 0.0f);		
+			glVertex3f(x+n*dx, std::max(0.05f, std::min(0.95f, line_data_[n]*0.8f + 0.1f)), 0.0f);		
 		glEnd();
 	}
 };
 	
 class guide
 {
-	std::array<float, 3> color_;
+	color c_;
 	float value_;
 public:
-	guide() : value_(0.0f)
-	{
-		color_[0] = color_[1] = color_[2] = 0.0f;
-	}
+	guide() : value_(0.0f){}
 
-	guide(float value, float r, float g, float b) : value_(value)
-	{
-		color_[0] = r; color_[1] = g; color_[2] = b;
-	}
+	guide(float value, color c) 
+		: value_(value)
+		, c_(c){}
 			
-	void draw(double dy, double y)
+	void draw()
 	{		
 		glEnable(GL_LINE_STIPPLE);
 		glLineStipple(3, 0xAAAA);
 		glBegin(GL_LINE_STRIP);
-		glColor4f(color_[0], color_[1], color_[2], 1.0f);				
-			glVertex3f(0.0f*2.0f-1.0f, (y + dy * (value_ * 0.8f + 0.1f)) * 2.0f - 1.0f, 0.0f);		
-			glVertex3f(1.0f*2.0f-1.0f, (y + dy * (value_ * 0.8f + 0.1f)) * 2.0f - 1.0f, 0.0f);	
+		glColor4f(c_.red, c_.green, c_.blue, 1.0f);				
+			glVertex3f(0.0f, value_ * 0.8f + 0.1f, 0.0f);		
+			glVertex3f(1.0f, value_ * 0.8f + 0.1f, 0.0f);	
 		glEnd();
 		glDisable(GL_LINE_STIPPLE);
 	}
@@ -181,8 +181,8 @@ struct graph::implementation : public drawable
 
 	implementation(const std::string&)
 	{
-		guides_["max"] = diagnostics::guide(1.0f, 0.4f, 0.4f, 0.4f);
-		guides_["min"] = diagnostics::guide(0.0f, 0.4f, 0.4f, 0.4f);
+		guides_["max"] = diagnostics::guide(1.0f, color(0.4f, 0.4f, 0.4f));
+		guides_["min"] = diagnostics::guide(0.0f, color(0.4f, 0.4f, 0.4f));
 	}
 
 	void update(const std::string& name, float value)
@@ -193,38 +193,38 @@ struct graph::implementation : public drawable
 		});
 	}
 
-	void color(const std::string& name, float r, float g, float b)
+	void set_color(const std::string& name, color c)
 	{
 		context::begin_invoke([=]
 		{
-			lines_[name].color(r, g, b);
+			lines_[name].set_color(c);
 		});
 	}
 	
-	void line(const std::string& name, float value, float r, float g, float b)
+	void add_guide(const std::string& name, float value, color c)
 	{
 		context::begin_invoke([=]
 		{
-			guides_[name] = diagnostics::guide(value, r, g, b);
+			guides_[name] = diagnostics::guide(value, c);
 		});
 	}
 
 private:
-	void draw(double dy, double y)
+	void draw()
 	{
 		glBegin(GL_QUADS);
 			glColor4f(1.0f, 1.0f, 1.0f, 0.2f);	
-			glVertex2f(0.0f*2.0f-1.0f, (y + dy*0.99 )*2.0f-1.0f);
-			glVertex2f(1.0f*2.0f-1.0f, (y + dy*0.99 )*2.0f-1.0f);
-			glVertex2f(1.0f*2.0f-1.0f, (y + dy*0.01)*2.0f-1.0f);	
-			glVertex2f(0.0f*2.0f-1.0f, (y + dy*0.01)*2.0f-1.0f);	
+			glVertex2f(1.0f, 0.99f);
+			glVertex2f(0.0f, 0.99f);
+			glVertex2f(0.0f, 0.01f);	
+			glVertex2f(1.0f, 0.01f);	
 		glEnd();
 		
 		for(auto it = guides_.begin(); it != guides_.end(); ++it)
-			it->second.draw(dy, y);
+			it->second.draw();
 
 		for(auto it = lines_.begin(); it != lines_.end(); ++it)
-			it->second.draw(dy, y);
+			it->second.draw();
 	}
 
 	implementation(implementation&);
@@ -236,8 +236,8 @@ graph::graph(const std::string& name) : impl_(new implementation(name))
 	context::register_drawable(impl_);
 }
 void graph::update(const std::string& name, float value){impl_->update(name, value);}
-void graph::color(const std::string& name, float r, float g, float b){impl_->color(name, r, g, b);}
-void graph::line(const std::string& name, float value, float r, float g, float b){impl_->line(name, value, r, g, b);}
+void graph::set_color(const std::string& name, color c){impl_->set_color(name, c);}
+void graph::add_guide(const std::string& name, float value, color c){impl_->add_guide(name, value, c);}
 
 safe_ptr<graph> create_graph(const std::string& name)
 {

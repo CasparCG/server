@@ -114,8 +114,8 @@ public:
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
 		, embed_audio_(embed_audio)
 	{
-		graph_->line("frame_time_target", 0.5, 0.5f, 0.0f, 0.0f);
-		graph_->color("frame_time", 1.0f, 0.0f, 0.0f);	
+		graph_->add_guide("frame_time_target", 0.5, diagnostics::color(0.5f, 0.0f, 0.0f));
+		graph_->set_color("frame_time", diagnostics::color(1.0f, 0.0f, 0.0f));	
 	}
 
 	~implementation()

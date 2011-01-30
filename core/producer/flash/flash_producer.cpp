@@ -76,8 +76,8 @@ public:
 		, ax_(nullptr)
 		, head_(draw_frame::empty())
 	{
-		graph_->line("frame_time_target", 0.5f, 0.5f, 0.0f, 0.0f);
-		graph_->color("frame_time", 1.0f, 0.0f, 0.0f);		
+		graph_->add_guide("frame_time_target", 0.5f, diagnostics::color(0.5f, 0.0f, 0.0f));
+		graph_->set_color("frame_time", diagnostics::color(1.0f, 0.0f, 0.0f));		
 		CASPAR_LOG(info) << print() << L" Started";
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
@@ -191,8 +191,8 @@ public:
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 
-		graph_->line("buffer_size_target", 0.5, 0.0f, 0.5f, 0.0f);	
-		graph_->color("buffer_size", 0.0f, 1.0f, 0.0f);	
+		graph_->add_guide("buffer_size_target", 0.5, diagnostics::color(0.0f, 0.5f, 0.0f));	
+		graph_->set_color("buffer_size", diagnostics::color(0.0f, 1.0f, 0.0f));	
 	}
 
 	~implementation()
