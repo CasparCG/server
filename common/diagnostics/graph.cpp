@@ -7,7 +7,7 @@
 #include "../concurrency/executor.h"
 #include "../utility/timer.h"
 
-#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
 
 #include <boost/foreach.hpp>
 #include <boost/circular_buffer.hpp>
@@ -28,12 +28,13 @@ struct drawable
 class context
 {	
 	timer timer_;
-	sf::RenderWindow window_;
+	sf::Window window_;
 	
 	std::list<std::weak_ptr<drawable>> drawables_;
 		
 	executor executor_;
 public:					
+
 	template<typename Func>
 	static auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
 	{	
@@ -47,13 +48,14 @@ public:
 			get_instance().drawables_.push_back(drawable);
 		});
 	}
+	
 private:
 
 	void tick()
 	{
 		sf::Event e;
-		while(window_.GetEvent(e)){}
-		window_.Clear();
+		while(window_.GetEvent(e)){}		
+		glClear(GL_COLOR_BUFFER_BIT);
 		render();
 		window_.Display();
 		timer_.tick(1.0/50.0);

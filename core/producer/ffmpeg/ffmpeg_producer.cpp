@@ -46,7 +46,7 @@ public:
 		, last_frame_(draw_frame(draw_frame::empty()))
 		, input_(graph_, filename, loop)
 	{
-		graph_->add_guide("frame_time_target", 0.5, diagnostics::color(0.5f, 0.0f, 0.0f));
+		graph_->add_guide("frame_time_target", 0.5, diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("frame_time",  diagnostics::color(1.0f, 0.0f, 0.0f));
 	}
 

@@ -49,8 +49,7 @@ public:
 		, image_mixer_(format_desc)
 		, output_(output)
 	{
-		graph_->add_guide("frame_time_target", 0.5f, diagnostics::color(0.5f, 0.0f, 0.0f));
-		graph_->add_guide("buffer_size_target", 1.0f, diagnostics::color(0.5f, 0.0f, 0.0f));	
+		graph_->add_guide("frame_time_target", 0.5f, diagnostics::color(1.0f, 0.0f, 0.0f));	
 		graph_->set_color("frame_time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("buffer_size", diagnostics::color( 0.0f, 1.0f, 0.0f));		
 		executor_.start();

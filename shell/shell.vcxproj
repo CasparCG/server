@@ -138,7 +138,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>sfml-audio-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;OpenGL32.lib;FreeImage.lib;GLee.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;swscale-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-system-d.lib;OpenGL32.lib;FreeImage.lib;GLee.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;swscale-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -187,7 +187,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;sfml-system.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -240,7 +240,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;sfml-system.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
