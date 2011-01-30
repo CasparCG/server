@@ -13,6 +13,19 @@ public:
 		QueryPerformanceCounter(&time_);
 	}
 
+	double elapsed()
+	{
+		LARGE_INTEGER t;
+		QueryPerformanceCounter(&t);
+		int ticks_passed = static_cast<int>(static_cast<__int64>(t.QuadPart) - static_cast<__int64>(time_.QuadPart));
+		return static_cast<double>(ticks_passed)/static_cast<double>(freq_.QuadPart);
+	}
+	
+	void reset()
+	{
+		QueryPerformanceCounter(&time_);
+	}
+
 	// Author: Ryan M. Geiss
 	// http://www.geisswerks.com/ryan/FAQS/timing.html
 	void tick(double interval)

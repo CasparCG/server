@@ -67,12 +67,12 @@ public:
 	win32_handler_tbb_installer()	{observe(true);}
 	void on_scheduler_entry(bool is_worker) 
 	{
-		CASPAR_LOG(debug) << L"Started TBB Worker Thread.";
+		//CASPAR_LOG(debug) << L"Started TBB Worker Thread.";
 		win32_exception::install_handler();
 	}
 	void on_scheduler_exit()
 	{
-		CASPAR_LOG(debug) << L"Stopped TBB Worker Thread.";
+		//CASPAR_LOG(debug) << L"Stopped TBB Worker Thread.";
 	}
 };
  
@@ -90,8 +90,8 @@ int main(int argc, wchar_t* argv[])
 	str << "CasparCG " << env::version() << " " << env::version_tag();
 	SetConsoleTitle(str.str().c_str());
 
-	CASPAR_LOG(info) << L"Starting CasparCG Video Playout Server Ver: " << env::version() << env::version_tag() << std::endl;
-	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n\n" << std::endl;
+	std::wcout << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n" << std::endl;
+	std::wcout << L"Starting CasparCG Video Playout Server Ver: " << env::version() << env::version_tag() << std::endl;
 
 	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
 	DrawMenuBar(GetConsoleWindow());
@@ -108,8 +108,6 @@ int main(int argc, wchar_t* argv[])
 
 	log::add_file_sink(env::log_folder());
 	
-	CASPAR_LOG(debug) << "Started Main Thread";
-
 	win32_handler_tbb_installer win32_handler_tbb_installer;
 	win32_exception::install_handler();
 				
@@ -170,9 +168,8 @@ int main(int argc, wchar_t* argv[])
 		std::wcout << L"Press Any Key To Exit";
 		_getwch();
 	}	
-	CASPAR_LOG(debug) << "Ended Main Thread";
 
 	timeEndPeriod(1);
-
+	
 	return 0;
 }

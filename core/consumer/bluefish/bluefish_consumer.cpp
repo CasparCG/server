@@ -27,6 +27,8 @@
 #include <mixer/frame/read_frame.h>
 
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
+#include <common/utility/timer.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -80,6 +82,9 @@ void blue_initialize()
 		
 struct bluefish_consumer::implementation : boost::noncopyable
 {
+	safe_ptr<diagnostics::graph> graph_;
+	timer perf_timer_;
+
 	boost::unique_future<void> active_;
 			
 	std::shared_ptr<CBlueVelvet4> blue_;
@@ -100,14 +105,18 @@ struct bluefish_consumer::implementation : boost::noncopyable
 	executor executor_;
 public:
 	implementation::implementation(unsigned int device_index, bool embed_audio) 
-		: device_index_(device_index)		
+		: graph_(diagnostics::create_graph("bluefish"))
+		, device_index_(device_index)		
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)
 		, vid_fmt_(VID_FMT_INVALID) 
 		, res_fmt_(RES_FMT_NORMAL) 
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
 		, embed_audio_(embed_audio)
-	{}
+	{
+		graph_->line("frame_time_target", 0.5, 0.5f, 0.0f, 0.0f);
+		graph_->color("frame_time", 1.0f, 0.0f, 0.0f);	
+	}
 
 	~implementation()
 	{
@@ -259,6 +268,8 @@ public:
 		{
 			try
 			{
+				perf_timer_.reset();
+
 				std::copy_n(frame->image_data().begin(), frame->image_data().size(), reserved_frames_.front()->image_data());
 
 				unsigned long n_field = 0;
@@ -295,6 +306,7 @@ public:
 				}
 
 				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
+				graph_->update("frame_time", static_cast<float>((perf_timer_.elapsed()-format_desc_.interval)/format_desc_.interval*0.5));
 			}
 			catch(...)
 			{

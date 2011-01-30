@@ -7,6 +7,8 @@
 #include "video/video_decoder.h"
 
 #include <core/video_format.h>
+#include <common/utility/timer.h>
+#include <common/diagnostics/graph.h>
 #include <mixer/frame/draw_frame.h>
 #include <mixer/audio/audio_transform.h>
 
@@ -20,6 +22,9 @@ namespace caspar { namespace core { namespace ffmpeg{
 	
 struct ffmpeg_producer : public frame_producer
 {
+	safe_ptr<diagnostics::graph>		graph_;
+	timer								perf_timer_;
+
 	input								input_;			
 	std::unique_ptr<audio_decoder>		audio_decoder_;
 	std::unique_ptr<video_decoder>		video_decoder_;
@@ -36,9 +41,14 @@ struct ffmpeg_producer : public frame_producer
 
 public:
 	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
-		: filename_(filename)
+		: graph_(diagnostics::create_graph("ffmpeg"))
+		, filename_(filename)
 		, last_frame_(draw_frame(draw_frame::empty()))
-		, input_(filename, loop){}
+		, input_(graph_, filename, loop)
+	{
+		graph_->line("frame_time_target", 0.5, 0.5f, 0.0f, 0.0f);
+		graph_->color("frame_time",  1.0f, 0.0f, 0.0f);
+	}
 
 	~ffmpeg_producer()
 	{
@@ -54,6 +64,8 @@ public:
 		
 	virtual safe_ptr<draw_frame> receive()
 	{
+		perf_timer_.reset();
+
 		while(ouput_channel_.empty() && !input_.is_eof())
 		{	
 			aligned_buffer video_packet;
@@ -128,6 +140,8 @@ public:
 			if(ouput_channel_.empty() && video_packet.empty() && audio_packet.empty())			
 				return last_frame_;			
 		}
+		
+		graph_->update("frame_time", static_cast<float>(perf_timer_.elapsed()/frame_factory_->get_video_format_desc().interval*0.5));
 
 		auto result = last_frame_;
 		if(!ouput_channel_.empty())

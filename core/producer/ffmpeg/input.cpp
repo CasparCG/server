@@ -5,6 +5,7 @@
 #include "../../video_format.h"
 
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/queuing_mutex.h>
@@ -32,6 +33,8 @@ struct input::implementation : boost::noncopyable
 {		
 	static const size_t BUFFER_SIZE = 2 << 24;
 
+	safe_ptr<diagnostics::graph> graph_;
+
 	std::shared_ptr<AVFormatContext> format_context_;	// Destroy this last
 
 	std::shared_ptr<AVCodecContext>	video_codec_context_;
@@ -50,12 +53,15 @@ struct input::implementation : boost::noncopyable
 	
 	executor executor_;
 public:
-	explicit implementation(const std::wstring& filename, bool loop) 
-		: loop_(loop)
+	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop) 
+		: graph_(graph)
+		, loop_(loop)
 		, video_s_index_(-1)
 		, audio_s_index_(-1)
 		, filename_(filename)
-	{						
+	{			
+		graph_->color("input_buffer_size", 0.0f, 1.0f, 1.0f);		
+
 		int errn;
 		AVFormatContext* weak_format_context_;
 		if((errn = -av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr)) > 0)
@@ -141,6 +147,7 @@ public:
 			}
 			else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
 				executor_.stop();
+			graph_->update("input_buffer_size", static_cast<float>(buffer_size_)/static_cast<float>(BUFFER_SIZE));
 		}
 	}
 	
@@ -199,7 +206,7 @@ public:
 	}
 };
 
-input::input(const std::wstring& filename, bool loop) : impl_(new implementation(filename, loop)){}
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop) : impl_(new implementation(graph, filename, loop)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
 bool input::is_eof() const{return impl_->is_eof();}

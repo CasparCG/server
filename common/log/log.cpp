@@ -102,13 +102,13 @@ void add_file_sink(const std::wstring& folder)
 
 		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
 
-		std::wcout << L"Logging [info] or higher severity to " << folder << std::endl;
+		std::wcout << L"Logging [info] or higher severity to " << folder << std::endl << std::endl;
 
 		boost::log::wcore::get()->add_sink(file_sink);
 	}
 	catch(...)
 	{
-		std::wcerr << L"Failed to Setup File Logging Sink" << std::endl;
+		std::wcerr << L"Failed to Setup File Logging Sink" << std::endl << std::endl;
 	}
 }
 

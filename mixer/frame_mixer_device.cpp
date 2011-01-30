@@ -11,6 +11,8 @@
 
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
+#include <common/utility/timer.h>
 #include <common/gl/gl_check.h>
 
 #include <core/video_format.h>
@@ -26,6 +28,9 @@ namespace caspar { namespace core {
 	
 struct frame_mixer_device::implementation : boost::noncopyable
 {		
+	safe_ptr<diagnostics::graph> graph_;
+	timer perf_timer_;
+
 	const video_format_desc format_desc_;
 
 	audio_mixer	audio_mixer_;
@@ -39,10 +44,15 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	executor executor_;
 public:
 	implementation(const video_format_desc& format_desc, const output_func& output) 
-		: format_desc_(format_desc)
+		: graph_(diagnostics::create_graph("mixer"))
+		, format_desc_(format_desc)
 		, image_mixer_(format_desc)
 		, output_(output)
 	{
+		graph_->line("frame_time_target", 0.5f, 0.5f, 0.0f, 0.0f);
+		graph_->line("buffer_size_target", 1.0f, 0.5f, 0.0f, 0.0f);	
+		graph_->color("frame_time", 1.0f, 0.0f, 0.0f);
+		graph_->color("buffer_size", 0.0f, 1.0f, 0.0f);		
 		executor_.start();
 		executor_.set_capacity(2);
 	}
@@ -56,6 +66,7 @@ public:
 	{			
 		executor_.begin_invoke([=]
 		{
+			perf_timer_.reset();
 			auto image = image_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
@@ -73,9 +84,11 @@ public:
 				audio_mixer_.end();
 			}
 			audio_mixer_.end_pass();
+			graph_->update("frame_time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 
 			output_(make_safe<const read_frame>(std::move(image.get()), std::move(audio)));
 		});
+		graph_->update("buffer_size", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}
 		
 	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc)

@@ -109,7 +109,8 @@ public:
 		
 		return begin_invoke(std::forward<Func>(func)).get();
 	}
-
+	
+	tbb::concurrent_bounded_queue<std::function<void()>>::size_type capacity() const { return execution_queue_.capacity();	}
 	tbb::concurrent_bounded_queue<std::function<void()>>::size_type size() const { return execution_queue_.size();	}
 	bool empty() const		{ return execution_queue_.empty();	}
 	bool is_running() const { return is_running_;				}	
