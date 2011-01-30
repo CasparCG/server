@@ -6,14 +6,28 @@
 
 namespace caspar { namespace diagnostics {
 	
+struct color
+{
+	float red;
+	float green;
+	float blue;
+	float alpha;
+	
+	color(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f)
+		: red(r)
+		, green(g)
+		, blue(b)
+		, alpha(a){}
+};
+
 class graph
 {
 	friend safe_ptr<graph> create_graph(const std::string& name);
 	graph(const std::string& name);
 public:
 	void update(const std::string& name, float value);
-	void color(const std::string& name, float r, float g, float b);
-	void line(const std::string& name, float value, float r, float g, float b);
+	void add_guide(const std::string& name, float value, color c);
+	void set_color(const std::string& name, color c);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

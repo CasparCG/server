@@ -60,7 +60,7 @@ public:
 		, audio_s_index_(-1)
 		, filename_(filename)
 	{			
-		graph_->color("input_buffer_size", 0.0f, 1.0f, 1.0f);		
+		graph_->set_color("input_buffer_size", diagnostics::color(0.0f, 1.0f, 1.0f));		
 
 		int errn;
 		AVFormatContext* weak_format_context_;
