@@ -32,6 +32,9 @@
     <Filter Include="Source\memory">
       <UniqueIdentifier>{9259676d-c225-4422-a50e-30d152d78dc2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\diagnostics">
+      <UniqueIdentifier>{29a29bcc-a9a0-4083-b713-c3773d18e177}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="exception\win32_exception.cpp">
@@ -45,6 +48,9 @@
     </ClCompile>
     <ClCompile Include="env.cpp">
       <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="diagnostics\graph.cpp">
+      <Filter>Source\diagnostics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -86,6 +92,9 @@
     </ClInclude>
     <ClInclude Include="utility\assert.h">
       <Filter>Source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="diagnostics\graph.h">
+      <Filter>Source\diagnostics</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

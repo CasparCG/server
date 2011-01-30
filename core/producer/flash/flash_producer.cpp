@@ -35,6 +35,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/utility/timer.h>
+#include <common/diagnostics/graph.h>
 
 #include <boost/filesystem.hpp>
 
@@ -42,6 +43,9 @@ namespace caspar { namespace core { namespace flash {
 	
 class flash_renderer
 {
+	safe_ptr<diagnostics::graph> graph_;
+	timer diag_timer_;
+
 	struct co_init
 	{
 		co_init(){CoInitialize(nullptr);}
@@ -59,10 +63,12 @@ class flash_renderer
 
 	CComObject<caspar::flash::FlashAxContainer>* ax_;
 	safe_ptr<draw_frame> head_;
-
+	
+	timer timer_;
 public:
-	flash_renderer(const std::shared_ptr<frame_factory>& frame_factory, const std::wstring& filename) 
-		: filename_(filename)
+	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<frame_factory>& frame_factory, const std::wstring& filename) 
+		: graph_(graph)
+		, filename_(filename)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, frame_factory_(frame_factory)
 		, bmp_data_(nullptr)
@@ -70,6 +76,8 @@ public:
 		, ax_(nullptr)
 		, head_(draw_frame::empty())
 	{
+		graph_->line("frame_time_target", 0.5f, 0.5f, 0.0f, 0.0f);
+		graph_->color("frame_time", 1.0f, 0.0f, 0.0f);		
 		CASPAR_LOG(info) << print() << L" Started";
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
@@ -122,27 +130,27 @@ public:
 			CASPAR_LOG(warning) << "Flash Function Call Failed. Param: " << param;
 	}
 	
-	safe_ptr<draw_frame> render_frame()
+	safe_ptr<draw_frame> render_frame(bool has_underflow)
 	{
 		if(ax_->IsEmpty())
 			return draw_frame::empty();
 
-		auto frame = render_simple_frame();
+		auto frame = render_simple_frame(has_underflow);
 		if(ax_->GetFPS()/2.0 - format_desc_.fps >= 0.0)
-			frame = draw_frame::interlace(frame, render_simple_frame(), format_desc_.mode);
+			frame = draw_frame::interlace(frame, render_simple_frame(has_underflow), format_desc_.mode);
 		return frame;
 	}
 		
-	timer timer_;
 	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"] Render thread"; }
 	std::string bprint() const{ return narrow(print()); }
 
 private:
 
-	safe_ptr<draw_frame> render_simple_frame()
+	safe_ptr<draw_frame> render_simple_frame(bool has_underflow)
 	{
-		timer_.tick(1.0/ax_->GetFPS()); // Tick doesnt work on nested timelines, force an actual sync
+		timer_.tick(1.0/ax_->GetFPS()*(has_underflow ? 0.95 : 1.0)); // Tick doesnt work on nested timelines, force an actual sync
 
+		diag_timer_.reset();
 		ax_->Tick();
 
 		if(ax_->InvalidRect())
@@ -154,13 +162,16 @@ private:
 			std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
 			head_ = frame;
 		}		
-
+		
+		graph_->update("frame_time", static_cast<float>(diag_timer_.elapsed()/(1.0/ax_->GetFPS())));
 		return head_;
 	}
 };
 
 struct flash_producer::implementation
 {	
+	safe_ptr<diagnostics::graph> graph_;
+
 	safe_ptr<draw_frame> tail_;
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
 
@@ -173,11 +184,15 @@ struct flash_producer::implementation
 	executor executor_;
 public:
 	implementation(const std::wstring& filename) 
-		: filename_(filename)
+		: graph_(diagnostics::create_graph("flash"))
+		, filename_(filename)
 		, tail_(draw_frame::empty())
 	{	
 		if(!boost::filesystem::exists(filename))
-			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));		
+			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
+
+		graph_->line("buffer_size_target", 0.5, 0.0f, 0.5f, 0.0f);	
+		graph_->color("buffer_size", 0.0f, 1.0f, 0.0f);	
 	}
 
 	~implementation()
@@ -198,6 +213,7 @@ public:
 
 	virtual safe_ptr<draw_frame> receive()
 	{		
+		graph_->update("buffer_size", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		if(!frame_buffer_.try_pop(tail_))
 			CASPAR_LOG(trace) << print() << " underflow";
 		else
@@ -210,7 +226,7 @@ public:
 				try
 				{
 					auto frame = draw_frame::empty();
-					do{frame = renderer_->render_frame();}
+					do{frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);}
 					while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
 				}
 				catch(...)
@@ -230,7 +246,7 @@ public:
 		{
 			if(!renderer_)
 			{
-				renderer_.reset(new flash_renderer(frame_factory_, filename_));
+				renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_));
 				while(frame_buffer_.try_push(draw_frame::empty())){}
 			}
 

@@ -28,6 +28,8 @@
 #include <common/gl/gl_check.h>
 #include <common/concurrency/executor.h>
 #include <common/memory/safe_ptr.h>
+#include <common/diagnostics/graph.h>
+#include <common/utility/timer.h>
 
 #include <boost/thread.hpp>
 
@@ -42,8 +44,11 @@ namespace caspar { namespace core {
 
 struct ogl_consumer::implementation : boost::noncopyable
 {			
+	safe_ptr<diagnostics::graph> graph_;
+	timer perf_timer_;
+
 	boost::unique_future<void> active_;
-	
+
 	float wratio_;
 	float hratio_;
 	
@@ -74,7 +79,11 @@ public:
 		, screen_x_(0)
 		, screen_y_(0)
 		, screen_index_(screen_index)
+		, graph_(diagnostics::create_graph("ogl_consumer"))
 	{		
+		graph_->line("frame_time_target", 0.5, 0.5f, 0.0f, 0.0f);
+		graph_->color("frame_time", 1.0f, 0.0f, 0.0f);
+
 		CASPAR_LOG(info) << "Sucessfully started ogl_consumer";
 	}
 
@@ -243,10 +252,12 @@ public:
 		active_.get();
 		active_ = executor_.begin_invoke([=]
 		{
+			perf_timer_.reset();
 			sf::Event e;
 			while(window_.GetEvent(e)){}
 			render(frame);
 			window_.Display();
+			graph_->update("frame_time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 		});
 	}
 

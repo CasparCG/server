@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Develop|Win32">
+      <Configuration>Develop</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
@@ -28,6 +32,12 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -35,6 +45,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -45,6 +58,12 @@
     <IntDir>debug\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\..\dependencies\boost_1_44_0\;..\..\dependencies\ffmpeg 0.6\include\;..\..\..\dependencies\ffmpeg 0.6\include\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\include\;..\..\..\dependencies\SFML-1.6\include\;..\..\dependencies\tbb30_20100406oss\include\;..\..\..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\ffmpeg 0.6\lib\;..\..\..\dependencies\ffmpeg 0.6\lib\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\lib\;..\..\..\dependencies\SFML-1.6\lib\;..\..\dependencies\tbb30_20100406oss\lib\;..\..\..\dependencies\tbb30_20100406oss\lib\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(ProjectDir)release\</OutDir>
+    <IntDir>release\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
     <IncludePath>..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\..\dependencies\boost_1_44_0\;..\..\dependencies\ffmpeg 0.6\include\;..\..\..\dependencies\ffmpeg 0.6\include\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\include\;..\..\..\dependencies\SFML-1.6\include\;..\..\dependencies\tbb30_20100406oss\include\;..\..\..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <LibraryPath>..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\ffmpeg 0.6\lib\;..\..\..\dependencies\ffmpeg 0.6\lib\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\lib\;..\..\..\dependencies\SFML-1.6\lib\;..\..\dependencies\tbb30_20100406oss\lib\;..\..\..\dependencies\tbb30_20100406oss\lib\;$(LibraryPath)</LibraryPath>
     <OutDir>$(ProjectDir)release\</OutDir>
@@ -91,9 +110,35 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>Disabled</Optimization>
+      <FunctionLevelLinking>
+      </FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <TreatWarningAsError>true</TreatWarningAsError>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
     <ClInclude Include="concurrency\executor.h" />
+    <ClInclude Include="diagnostics\graph.h" />
     <ClInclude Include="exception\exceptions.h" />
     <ClInclude Include="exception\win32_exception.h" />
     <ClInclude Include="gl\gl_check.h" />
@@ -107,18 +152,26 @@
     <ClInclude Include="utility\timer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="diagnostics\graph.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="exception\win32_exception.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="log\log.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="env.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

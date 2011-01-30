@@ -30,7 +30,6 @@ void win32_exception::install_handler()
 {
 #ifndef _DEBUG
 	_set_se_translator(win32_exception::Handler);
-	CASPAR_LOG(trace) << "Installed Win32 Structured Exception Handler.";
 #endif
 }
 
