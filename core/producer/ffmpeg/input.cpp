@@ -60,7 +60,7 @@ public:
 		, audio_s_index_(-1)
 		, filename_(filename)
 	{			
-		graph_->set_color("input_buffer_size", diagnostics::color(0.0f, 1.0f, 1.0f));		
+		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
 
 		int errn;
 		AVFormatContext* weak_format_context_;
@@ -147,7 +147,7 @@ public:
 			}
 			else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
 				executor_.stop();
-			graph_->update("input_buffer_size", static_cast<float>(buffer_size_)/static_cast<float>(BUFFER_SIZE));
+			graph_->update("input-buffer", static_cast<float>(buffer_size_)/static_cast<float>(BUFFER_SIZE));
 		}
 	}
 	

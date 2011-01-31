@@ -44,9 +44,6 @@ namespace caspar { namespace core {
 
 struct ogl_consumer::implementation : boost::noncopyable
 {			
-	safe_ptr<diagnostics::graph> graph_;
-	timer perf_timer_;
-
 	boost::unique_future<void> active_;
 
 	float wratio_;
@@ -70,6 +67,9 @@ struct ogl_consumer::implementation : boost::noncopyable
 	
 	sf::Window window_;
 	
+	safe_ptr<diagnostics::graph> graph_;
+	timer perf_timer_;
+
 	executor executor_;
 public:
 	implementation(unsigned int screen_index, stretch stretch, bool windowed) 
@@ -79,10 +79,10 @@ public:
 		, screen_x_(0)
 		, screen_y_(0)
 		, screen_index_(screen_index)
-		, graph_(diagnostics::create_graph("ogl_consumer"))
+		, graph_(diagnostics::create_graph("screen[" + boost::lexical_cast<std::string>(screen_index) + "]"))
 	{		
-		graph_->add_guide("frame_time_target", 0.5, diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("frame_time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->guide("frame-time", 0.5);
+		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 
 		CASPAR_LOG(info) << "Sucessfully started ogl_consumer";
 	}
@@ -257,7 +257,7 @@ public:
 			while(window_.GetEvent(e)){}
 			render(frame);
 			window_.Display();
-			graph_->update("frame_time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 		});
 	}
 
