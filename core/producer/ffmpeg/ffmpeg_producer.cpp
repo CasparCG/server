@@ -22,6 +22,8 @@ namespace caspar { namespace core { namespace ffmpeg{
 	
 struct ffmpeg_producer : public frame_producer
 {
+	const std::wstring					filename_;
+	
 	safe_ptr<diagnostics::graph>		graph_;
 	timer								perf_timer_;
 
@@ -33,21 +35,19 @@ struct ffmpeg_producer : public frame_producer
 	std::deque<std::vector<short>>		audio_chunk_channel_;
 
 	std::queue<safe_ptr<draw_frame>>	ouput_channel_;
-	
-	const std::wstring					filename_;
-	
+		
 	safe_ptr<draw_frame>				last_frame_;
 	std::shared_ptr<frame_factory>		frame_factory_;
-
 public:
 	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
-		: graph_(diagnostics::create_graph("ffmpeg"))
-		, filename_(filename)
+		: filename_(filename)
+		, graph_(diagnostics::create_graph(narrow(print())))		
 		, last_frame_(draw_frame(draw_frame::empty()))
 		, input_(graph_, filename, loop)
+		
 	{
-		graph_->add_guide("frame_time_target", 0.5, diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("frame_time",  diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->guide("frame-time", 0.5);
+		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
 	}
 
 	~ffmpeg_producer()
@@ -141,7 +141,7 @@ public:
 				return last_frame_;			
 		}
 		
-		graph_->update("frame_time", static_cast<float>(perf_timer_.elapsed()/frame_factory_->get_video_format_desc().interval*0.5));
+		graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_factory_->get_video_format_desc().interval*0.5));
 
 		auto result = last_frame_;
 		if(!ouput_channel_.empty())

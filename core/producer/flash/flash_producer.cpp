@@ -43,9 +43,6 @@ namespace caspar { namespace core { namespace flash {
 	
 class flash_renderer
 {
-	safe_ptr<diagnostics::graph> graph_;
-	timer diag_timer_;
-
 	struct co_init
 	{
 		co_init(){CoInitialize(nullptr);}
@@ -65,6 +62,9 @@ class flash_renderer
 	safe_ptr<draw_frame> head_;
 	
 	timer timer_;
+
+	safe_ptr<diagnostics::graph> graph_;
+	timer diag_timer_;
 public:
 	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<frame_factory>& frame_factory, const std::wstring& filename) 
 		: graph_(graph)
@@ -76,8 +76,8 @@ public:
 		, ax_(nullptr)
 		, head_(draw_frame::empty())
 	{
-		graph_->add_guide("frame_time_target", 0.5f, diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("frame_time", diagnostics::color(1.0f, 0.0f, 0.0f));		
+		graph_->guide("frame-time", 0.5f);
+		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));		
 		CASPAR_LOG(info) << print() << L" Started";
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
@@ -163,13 +163,15 @@ private:
 			head_ = frame;
 		}		
 		
-		graph_->update("frame_time", static_cast<float>(diag_timer_.elapsed()/(1.0/ax_->GetFPS())));
+		graph_->update("frame-time", static_cast<float>(diag_timer_.elapsed()/(1.0/ax_->GetFPS())));
 		return head_;
 	}
 };
 
 struct flash_producer::implementation
 {	
+	const std::wstring filename_;	
+
 	safe_ptr<diagnostics::graph> graph_;
 
 	safe_ptr<draw_frame> tail_;
@@ -179,19 +181,18 @@ struct flash_producer::implementation
 	std::shared_ptr<frame_factory> frame_factory_;
 	
 	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }	
-	std::wstring filename_;
 
 	executor executor_;
 public:
 	implementation(const std::wstring& filename) 
-		: graph_(diagnostics::create_graph("flash"))
-		, filename_(filename)
-		, tail_(draw_frame::empty())
+		: filename_(filename)
+		, graph_(diagnostics::create_graph(narrow(print())))
+		, tail_(draw_frame::empty())		
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 
-		graph_->set_color("buffer_size", diagnostics::color(0.0f, 1.0f, 0.0f));	
+		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));	
 	}
 
 	~implementation()
@@ -212,7 +213,7 @@ public:
 
 	virtual safe_ptr<draw_frame> receive()
 	{		
-		graph_->update("buffer_size", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
+		graph_->update("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		if(!frame_buffer_.try_pop(tail_))
 			CASPAR_LOG(trace) << print() << " underflow";
 		else

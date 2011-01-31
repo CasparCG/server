@@ -105,7 +105,7 @@ struct bluefish_consumer::implementation : boost::noncopyable
 	executor executor_;
 public:
 	implementation::implementation(unsigned int device_index, bool embed_audio) 
-		: graph_(diagnostics::create_graph("bluefish"))
+		: graph_(diagnostics::create_graph("bluefish[" + boost::lexical_cast<std::string>(device_index) + "]"))
 		, device_index_(device_index)		
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)
@@ -114,8 +114,8 @@ public:
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
 		, embed_audio_(embed_audio)
 	{
-		graph_->add_guide("frame_time_target", 0.5, diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("frame_time", diagnostics::color(1.0f, 0.0f, 0.0f));	
+		graph_->guide("frame-time", 0.5);
+		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
 	}
 
 	~implementation()
@@ -306,7 +306,7 @@ public:
 				}
 
 				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
-				graph_->update("frame_time", static_cast<float>((perf_timer_.elapsed()-format_desc_.interval)/format_desc_.interval*0.5));
+				graph_->update("frame-time", static_cast<float>((perf_timer_.elapsed()-format_desc_.interval)/format_desc_.interval*0.5));
 			}
 			catch(...)
 			{

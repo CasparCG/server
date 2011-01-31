@@ -49,9 +49,9 @@ public:
 		, image_mixer_(format_desc)
 		, output_(output)
 	{
-		graph_->add_guide("frame_time_target", 0.5f, diagnostics::color(1.0f, 0.0f, 0.0f));	
-		graph_->set_color("frame_time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("buffer_size", diagnostics::color( 0.0f, 1.0f, 0.0f));		
+		graph_->guide("frame-time", 0.5f);	
+		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->set_color("output-buffer", diagnostics::color( 0.0f, 1.0f, 0.0f));		
 		executor_.start();
 		executor_.set_capacity(2);
 	}
@@ -83,11 +83,11 @@ public:
 				audio_mixer_.end();
 			}
 			audio_mixer_.end_pass();
-			graph_->update("frame_time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 
 			output_(make_safe<const read_frame>(std::move(image.get()), std::move(audio)));
 		});
-		graph_->update("buffer_size", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+		graph_->update("output-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}
 		
 	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc)

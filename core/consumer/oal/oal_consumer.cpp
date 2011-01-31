@@ -22,6 +22,8 @@
 
 #include "oal_consumer.h"
 
+#include <common/diagnostics/graph.h>
+#include <common/utility/timer.h>
 #include <core/video_format.h>
 
 #include <mixer/frame/read_frame.h>
@@ -34,13 +36,21 @@ namespace caspar { namespace core {
 
 struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
+	safe_ptr<diagnostics::graph> graph_;
+	timer perf_timer_;
+
 	tbb::concurrent_bounded_queue<std::vector<short>> input_;
 	boost::circular_buffer<std::vector<short>> container_;
 	tbb::atomic<bool> is_running_;
+
+	video_format_desc format_desc_;
 public:
 	implementation() 
-		: container_(5)
+		: graph_(diagnostics::create_graph("audio"))
+		, container_(5)
 	{
+		graph_->guide("frame-time", 0.5);
+		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
 		is_running_ = true;
 	}
 
@@ -53,8 +63,9 @@ public:
 		CASPAR_LOG(info) << "Sucessfully ended oal_consumer";
 	}
 
-	void initialize(const video_format_desc&)
+	void initialize(const video_format_desc& format_desc)
 	{
+		format_desc_ = format_desc;
 		sf::SoundStream::Initialize(2, 48000);
 		Play();		
 		CASPAR_LOG(info) << "Sucessfully started oal_consumer";
@@ -72,12 +83,16 @@ public:
 
 	virtual bool OnGetData(sf::SoundStream::Chunk& data)
 	{		
+		graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+
 		std::vector<short> audio_data;		
 		input_.pop(audio_data);
 				
 		container_.push_back(std::move(audio_data));
 		data.Samples = container_.back().data();
-		data.NbSamples = container_.back().size();		
+		data.NbSamples = container_.back().size();	
+		
+		perf_timer_.reset();
 
 		return is_running_;
 	}

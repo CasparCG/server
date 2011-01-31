@@ -9,6 +9,7 @@
 #include "../video_format.h"
 
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
 #include <common/utility/timer.h>
 #include <common/utility/assert.h>
 
@@ -21,6 +22,9 @@ namespace caspar { namespace core {
 struct frame_consumer_device::implementation
 {
 	static int const MAX_DEPTH = 3;
+
+	safe_ptr<diagnostics::graph> graph_;
+	timer perf_timer_;
 	
 	timer clock_;
 
@@ -33,8 +37,11 @@ struct frame_consumer_device::implementation
 	executor executor_;	
 public:
 	implementation(const video_format_desc& format_desc) 
-		: format_desc_(format_desc)
+		: graph_(diagnostics::create_graph("output"))
+		, format_desc_(format_desc)
 	{		
+		graph_->guide("frame-time", 0.5f);	
+		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		executor_.set_capacity(2);
 		executor_.start();
 	}
@@ -92,6 +99,9 @@ public:
 			}
 
 			clock_.tick(1.0/format_desc_.fps);
+			
+			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+			perf_timer_.reset();
 		});
 	}
 };
