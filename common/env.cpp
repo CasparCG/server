@@ -2,6 +2,8 @@
 
 #include "env.h"
 
+#include "../version.h"
+
 #include "utility/string_convert.h"
 
 #include <boost/property_tree/ptree.hpp>
@@ -74,7 +76,7 @@ const std::wstring& env::data_folder()
 
 const std::wstring& env::version()
 {
-	static std::wstring ver = L"2.0.0.2";
+	static std::wstring ver = std::wstring(L"") + CASPAR_GEN + L"." + CASPAR_MAYOR + L"." + CASPAR_MINOR + L"." + CASPAR_REV;
 	return ver;
 }
 
