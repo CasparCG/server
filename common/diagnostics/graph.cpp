@@ -72,7 +72,7 @@ private:
 		int n = 0;
 		for(auto it = drawables_.begin(); it != drawables_.end(); ++n)
 		{
-			auto drawable = *it;
+			auto& drawable = *it;
 			if(!drawable.unique())
 			{
 				drawable->SetScale(window_.GetWidth(), window_.GetHeight()/count);
