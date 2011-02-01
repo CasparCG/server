@@ -66,6 +66,8 @@ public:
 	void initialize(const video_format_desc& format_desc)
 	{
 		format_desc_ = format_desc;
+		for(size_t n = 0; n < buffer_depth(); ++n)
+			input_.push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)); 
 		sf::SoundStream::Initialize(2, 48000);
 		Play();		
 		CASPAR_LOG(info) << "Sucessfully started oal_consumer";
@@ -73,10 +75,10 @@ public:
 	
 	void send(const safe_ptr<const read_frame>& frame)
 	{				
-		if(frame->audio_data().empty())
-			return;
-
-		input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 	
+		if(!frame->audio_data().empty())
+			input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 	
+		else
+			input_.push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)); 
 	}
 
 	size_t buffer_depth() const{return 3;}

@@ -60,8 +60,9 @@ public:
 	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load)
 	{			
 		background_ = frame_producer;
+		is_paused_ = false;
 		if(play_on_load)
-			play(true);		
+			play();		
 	}
 
 	void preview(const safe_ptr<frame_producer>& frame_producer)
@@ -71,9 +72,9 @@ public:
 		pause();
 	}
 	
-	void play(bool force = false)
+	void play()
 	{			
-		if(!is_paused_ || force)			
+		if(!is_paused_)			
 		{
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
