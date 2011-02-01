@@ -109,7 +109,7 @@ struct bootstrapper::implementation : boost::noncopyable
 				std::string name = xml_controller.first;
 				std::string protocol = xml_controller.second.get<std::string>("protocol");	
 
-				if(name == "tcpcontroller")
+				if(name == "tcp")
 				{					
 					unsigned int port = xml_controller.second.get<unsigned int>("port");
 					port = port != 0 ? port : 5250;

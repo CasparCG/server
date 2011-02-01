@@ -32,7 +32,7 @@ class context : public drawable
 	timer timer_;
 	sf::RenderWindow window_;
 	
-	std::list<std::weak_ptr<drawable>> drawables_;
+	std::list<std::shared_ptr<drawable>> drawables_;
 	std::map<size_t, sf::Font> fonts_;
 		
 	executor executor_;
@@ -72,13 +72,13 @@ private:
 		int n = 0;
 		for(auto it = drawables_.begin(); it != drawables_.end(); ++n)
 		{
-			auto drawable = it->lock();
-			if(drawable)
+			auto drawable = *it;
+			if(!drawable.unique())
 			{
 				drawable->SetScale(window_.GetWidth(), window_.GetHeight()/count);
 				drawable->SetPosition(0.0f, n* window_.GetHeight()/count);
-				target.Draw(*drawable);
-				++it;
+				target.Draw(*drawable);				
+				++it;		
 			}
 			else			
 				it = drawables_.erase(it);			
@@ -161,7 +161,8 @@ public:
 	void set_color(color c)
 	{
 		c_ = c;
-		guide_->set_color(c_);
+		if(guide_)
+			guide_->set_color(c_);
 	}
 
 	color get_color() const { return c_; }

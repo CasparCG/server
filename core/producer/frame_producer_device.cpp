@@ -22,7 +22,7 @@ namespace caspar { namespace core {
 
 struct frame_producer_device::implementation : boost::noncopyable
 {		
-	std::array<layer, frame_producer_device::MAX_LAYER> layers_;		
+	std::array<layer, frame_producer_device::MAX_LAYER+1> layers_;		
 
 	tbb::spin_mutex output_mutex_;
 	output_func output_;

@@ -943,7 +943,7 @@ bool CinfCommand::DoExecute()
 
 void GenerateChannelInfo(int index, const safe_ptr<core::channel>& pChannel, std::wstringstream& replyString)
 {
-	replyString << index << TEXT(" ") << pChannel->get_video_format_desc().name  << TEXT("\r\n") << (pChannel->producer().foreground(0).get()->print());
+	replyString << index+1 << TEXT(" ") << pChannel->get_video_format_desc().name << TEXT(" PLAYING") << TEXT("\r\n");
 }
 
 bool InfoCommand::DoExecute()
