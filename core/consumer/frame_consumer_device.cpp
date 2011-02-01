@@ -21,8 +21,6 @@ namespace caspar { namespace core {
 	
 struct frame_consumer_device::implementation
 {
-	static int const MAX_DEPTH = 3;
-
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
 	

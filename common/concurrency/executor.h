@@ -40,12 +40,8 @@ public:
 	{
 		if(is_running_.fetch_and_store(true))
 			return;
+		clear();
 		thread_ = boost::thread(f_);
-		try
-		{
-			execution_queue_.clear();
-		}
-		catch(boost::broken_promise&){}
 	}
 			
 	void stop() // noexcept
@@ -62,7 +58,15 @@ public:
 	void clear()
 	{
 		std::function<void()> func;
-		while(execution_queue_.try_pop(func)){}
+		while(true)
+		{
+			try
+			{
+				if(!execution_queue_.try_pop(func))
+					return;
+			}
+			catch(boost::broken_promise&){}
+		}
 	}
 			
 	template<typename Func>

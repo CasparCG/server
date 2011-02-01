@@ -170,6 +170,8 @@ int main(int argc, wchar_t* argv[])
 	}	
 
 	timeEndPeriod(1);
+
+	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server";
 	
 	return 0;
 }
