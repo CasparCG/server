@@ -8,6 +8,7 @@
 #include "log.h"
 
 #include "../exception/exceptions.h"
+#include "../diagnostics/sink_backend.h"
 
 #include <ios>
 #include <string>
@@ -53,12 +54,9 @@ void init()
 
 	typedef boost::log::sinks::synchronous_sink<boost::log::sinks::wtext_file_backend> file_sink_type;
 
-	typedef boost::log::sinks::asynchronous_sink<boost::log::sinks::wtext_ostream_backend> stream_sink_type;
+	typedef boost::log::sinks::asynchronous_sink<diagnostics::sink_backend> stream_sink_type;
 
-	auto stream_backend = boost::make_shared<boost::log::sinks::wtext_ostream_backend>();
-	stream_backend->add_stream(boost::shared_ptr<std::wostream>(&std::wcout, boost::log::empty_deleter()));
-	stream_backend->auto_flush(true);
-
+	auto stream_backend = boost::make_shared<diagnostics::sink_backend>();
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
 
 	stream_sink->locked_backend()->set_formatter(
@@ -86,7 +84,7 @@ void add_file_sink(const std::wstring& folder)
 			BOOST_THROW_EXCEPTION(directory_not_found());
 
 		auto file_sink = boost::make_shared<file_sink_type>(
-			boost::log::keywords::file_name = (folder + L"caspar_%Y-%m-%d_%H-%M-%S.%N.log"),
+			boost::log::keywords::file_name = (folder + L"%Y-%m-%d_%H-%M-%S.%N.log"),
 			boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
 			boost::log::keywords::auto_flush = true
 		);

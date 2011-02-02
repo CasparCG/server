@@ -26,6 +26,7 @@ class graph
 	graph(const std::string& name);
 public:
 	void update(const std::string& name, float value);
+	void tag(const std::string& name);
 	void guide(const std::string& name, float value);
 	void set_color(const std::string& name, color c);
 private:

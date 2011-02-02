@@ -77,7 +77,8 @@ public:
 		, head_(draw_frame::empty())
 	{
 		graph_->guide("frame-time", 0.5f);
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));		
+		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
+		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));			
 		CASPAR_LOG(info) << print() << L" Started";
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
@@ -128,6 +129,7 @@ public:
 	{		
 		if(!ax_->FlashCall(param))
 			CASPAR_LOG(warning) << "Flash Function Call Failed. Param: " << param;
+		graph_->tag("param");
 	}
 	
 	safe_ptr<draw_frame> render_frame(bool has_underflow)
@@ -188,6 +190,7 @@ public:
 		: filename_(filename)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, tail_(draw_frame::empty())		
+		, executor_(print())
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	

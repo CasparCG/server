@@ -105,7 +105,7 @@ struct bluefish_consumer::implementation : boost::noncopyable
 	executor executor_;
 public:
 	implementation::implementation(unsigned int device_index, bool embed_audio) 
-		: graph_(diagnostics::create_graph("bluefish[" + boost::lexical_cast<std::string>(device_index) + "]"))
+		: graph_(diagnostics::create_graph("blue[" + boost::lexical_cast<std::string>(device_index) + "]"))
 		, device_index_(device_index)		
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)

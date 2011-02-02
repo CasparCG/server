@@ -30,6 +30,7 @@ struct frame_mixer_device::implementation : boost::noncopyable
 {		
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
+	timer wait_perf_timer_;
 
 	const video_format_desc format_desc_;
 
@@ -48,9 +49,11 @@ public:
 		, format_desc_(format_desc)
 		, image_mixer_(format_desc)
 		, output_(output)
+		, executor_(L"frame_mixer_device")
 	{
 		graph_->guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->set_color("frame-wait", diagnostics::color(0.1f, 0.7f, 0.8f));
 		graph_->set_color("output-buffer", diagnostics::color( 0.0f, 1.0f, 0.0f));		
 		executor_.start();
 		executor_.set_capacity(2);
@@ -85,7 +88,9 @@ public:
 			audio_mixer_.end_pass();
 			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 
+			wait_perf_timer_.reset();
 			output_(make_safe<const read_frame>(std::move(image.get()), std::move(audio)));
+			graph_->update("frame-wait", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
 		});
 		graph_->update("output-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}

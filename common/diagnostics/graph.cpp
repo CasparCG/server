@@ -1,6 +1,7 @@
 #include "../stdafx.h"
 
 #include "graph.h"
+#include "context.h"
 
 #pragma warning (disable : 4244)
 
@@ -20,94 +21,6 @@
 
 namespace caspar { namespace diagnostics {
 
-struct drawable : public sf::Drawable
-{
-	virtual ~drawable(){}
-	virtual void render(sf::RenderTarget& target) = 0;
-	virtual void Render(sf::RenderTarget& target) const { const_cast<drawable*>(this)->render(target);}
-};
-
-class context : public drawable
-{	
-	timer timer_;
-	sf::RenderWindow window_;
-	
-	std::list<std::shared_ptr<drawable>> drawables_;
-	std::map<size_t, sf::Font> fonts_;
-		
-	executor executor_;
-public:					
-
-	template<typename Func>
-	static auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
-	{	
-		return get_instance().executor_.begin_invoke(std::forward<Func>(func));	
-	}
-
-	static void register_drawable(const std::shared_ptr<drawable>& drawable)
-	{
-		begin_invoke([=]
-		{
-			get_instance().drawables_.push_back(drawable);
-		});
-	}
-			
-private:
-
-	void tick()
-	{
-		sf::Event e;
-		while(window_.GetEvent(e)){}		
-		glClear(GL_COLOR_BUFFER_BIT);
-		window_.Draw(*this);
-		window_.Display();
-		timer_.tick(1.0/50.0);
-		executor_.begin_invoke([this]{tick();});
-	}
-
-	void render(sf::RenderTarget& target)
-	{
-		auto count = std::max<size_t>(5, drawables_.size());
-
-		int n = 0;
-		for(auto it = drawables_.begin(); it != drawables_.end(); ++n)
-		{
-			auto& drawable = *it;
-			if(!drawable.unique())
-			{
-				drawable->SetScale(window_.GetWidth(), window_.GetHeight()/count);
-				drawable->SetPosition(0.0f, n* window_.GetHeight()/count);
-				target.Draw(*drawable);				
-				++it;		
-			}
-			else			
-				it = drawables_.erase(it);			
-		}		
-	}	
-	
-	static context& get_instance()
-	{
-		static context impl;
-		return impl;
-	}
-
-	context()
-	{
-		executor_.start();
-		executor_.begin_invoke([this]
-		{
-			window_.Create(sf::VideoMode(600, 1000), "CasparCG Diagnostics");
-			window_.SetPosition(0, 0);
-			window_.SetActive();
-			glEnable(GL_BLEND);
-			glEnable(GL_LINE_SMOOTH);
-			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			tick();
-		});
-	}
-};
-	
 class guide : public drawable
 {
 	float value_;
@@ -139,17 +52,28 @@ public:
 class line : public drawable
 {
 	boost::optional<diagnostics::guide> guide_;
-	boost::circular_buffer<float> line_data_;
-	std::vector<float> tick_data_;
+	boost::circular_buffer<std::pair<float, bool>> line_data_;
+
+	std::vector<float>		tick_data_;
+	bool					tick_tag_;
 	color c_;
 public:
 	line(size_t res = 600)
 		: line_data_(res)
-		, c_(1.0f, 1.0f, 1.0f){}
+		, tick_tag_(false)
+		, c_(1.0f, 1.0f, 1.0f)
+	{
+		line_data_.push_back(std::make_pair(-1.0f, false));
+	}
 	
 	void update(float value)
 	{
 		tick_data_.push_back(value);
+	}
+	
+	void tag()
+	{
+		tick_tag_ = true;
 	}
 
 	void guide(const guide& guide)
@@ -175,22 +99,39 @@ public:
 		if(!tick_data_.empty())
 		{
 			float sum = std::accumulate(tick_data_.begin(), tick_data_.end(), 0.0) + std::numeric_limits<float>::min();
-			line_data_.push_back(static_cast<float>(sum)/static_cast<float>(tick_data_.size()));
+			line_data_.push_back(std::make_pair(static_cast<float>(sum)/static_cast<float>(tick_data_.size()), tick_tag_));
 			tick_data_.clear();
 		}
 		else if(!line_data_.empty())
 		{
-			line_data_.push_back(line_data_.back());
+			line_data_.push_back(std::make_pair(line_data_.back().first, tick_tag_));
 		}
+		tick_tag_ = false;
 
 		if(guide_)
 			target.Draw(*guide_);
 		
 		glBegin(GL_LINE_STRIP);
 		glColor4f(c_.red, c_.green, c_.blue, 1.0f);		
-		for(size_t n = 0; n < line_data_.size(); ++n)				
-			glVertex3f(x+n*dx, std::max(0.05f, std::min(0.95f, (1.0f-line_data_[n])*0.8f + 0.1f)), 0.0f);		
+		for(size_t n = 0; n < line_data_.size(); ++n)		
+			if(line_data_[n].first > -0.5)
+				glVertex3f(x+n*dx, std::max(0.05f, std::min(0.95f, (1.0f-line_data_[n].first)*0.8f + 0.1f)), 0.0f);		
 		glEnd();
+				
+		glEnable(GL_LINE_STIPPLE);
+		glLineStipple(3, 0xAAAA);
+		for(size_t n = 0; n < line_data_.size(); ++n)	
+		{
+			if(line_data_[n].second)
+			{
+				glBegin(GL_LINE_STRIP);
+				glColor4f(c_.red, c_.green, c_.blue, c_.alpha);					
+					glVertex3f(x+n*dx, 0.0f, 0.0f);				
+					glVertex3f(x+n*dx, 1.0f, 0.0f);		
+				glEnd();
+			}
+		}
+		glDisable(GL_LINE_STIPPLE);
 	}
 };
 
@@ -206,6 +147,14 @@ struct graph::implementation : public drawable
 		context::begin_invoke([=]
 		{
 			lines_[name].update(value);
+		});
+	}
+
+	void tag(const std::string& name)
+	{
+		context::begin_invoke([=]
+		{
+			lines_[name].tag();
 		});
 	}
 
@@ -283,7 +232,9 @@ graph::graph(const std::string& name) : impl_(new implementation(name))
 {
 	context::register_drawable(impl_);
 }
+
 void graph::update(const std::string& name, float value){impl_->update(name, value);}
+void graph::tag(const std::string& name){impl_->tag(name);}
 void graph::guide(const std::string& name, float value){impl_->guide(name, value);}
 void graph::set_color(const std::string& name, color c){impl_->set_color(name, c);}
 
