@@ -187,7 +187,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system-lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;sfml-system.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;sfml-system.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

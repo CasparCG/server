@@ -139,8 +139,11 @@ struct graph::implementation : public drawable
 {
 	std::map<std::string, diagnostics::line> lines_;
 	std::string name_;
+	float height_scale_;
 
-	implementation(const std::string& name) : name_(name){}
+	implementation(const std::string& name) 
+		: name_(name)
+		, height_scale_(0){}
 
 	void update(const std::string& name, float value)
 	{
@@ -177,51 +180,56 @@ struct graph::implementation : public drawable
 private:
 	void render(sf::RenderTarget& target)
 	{
-		const size_t text_size = 15;
-		const size_t text_margin = 2;
-		const size_t text_offset = text_size+text_margin*2;
-
-		sf::String text(name_.c_str(), sf::Font::GetDefaultFont(), text_size);
-		text.SetStyle(sf::String::Italic);
-		text.Move(text_margin, text_margin);
-		
 		glPushMatrix();
-		glScaled(1.0f/GetScale().x, 1.0f/GetScale().y, 1.0f);
-		target.Draw(text);
-		float x_offset = text.GetPosition().x + text.GetRect().Right + text_margin*4;
-		for(auto it = lines_.begin(); it != lines_.end(); ++it)
-		{						
-			sf::String line_text(it->first, sf::Font::GetDefaultFont(), text_size);
-			line_text.SetPosition(x_offset, text_margin);
-			auto c = it->second.get_color();
-			line_text.SetColor(sf::Color(c.red*255.0f, c.green*255.0f, c.blue*255.0f, c.alpha*255.0f));
-			target.Draw(line_text);
-			x_offset = line_text.GetRect().Right + text_margin*2;
-		}
+			glScaled(1.0f, height_scale_, 1.0f);
+			height_scale_ = std::min(1.0f, height_scale_+0.1f);
 
-		glDisable(GL_TEXTURE_2D);
-		glPopMatrix();
+			const size_t text_size = 15;
+			const size_t text_margin = 2;
+			const size_t text_offset = text_size+text_margin*2;
 
-		glBegin(GL_QUADS);
-			glColor4f(1.0f, 1.0f, 1.0f, 0.2f);	
-			glVertex2f(1.0f, 0.99f);
-			glVertex2f(0.0f, 0.99f);
-			glVertex2f(0.0f, 0.01f);	
-			glVertex2f(1.0f, 0.01f);	
-		glEnd();
-
-		glPushMatrix();
-		glTranslated(0.0f, text_offset/GetScale().y, 1.0f);
-		glScaled(1.0f, 1.0-text_offset/GetScale().y, 1.0f);
+			sf::String text(name_.c_str(), sf::Font::GetDefaultFont(), text_size);
+			text.SetStyle(sf::String::Italic);
+			text.Move(text_margin, text_margin);
 		
-		target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
-		target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
+			glPushMatrix();
+				glScaled(1.0f/GetScale().x, 1.0f/GetScale().y, 1.0f);
+				target.Draw(text);
+				float x_offset = text.GetPosition().x + text.GetRect().Right + text_margin*4;
+				for(auto it = lines_.begin(); it != lines_.end(); ++it)
+				{						
+					sf::String line_text(it->first, sf::Font::GetDefaultFont(), text_size);
+					line_text.SetPosition(x_offset, text_margin);
+					auto c = it->second.get_color();
+					line_text.SetColor(sf::Color(c.red*255.0f, c.green*255.0f, c.blue*255.0f, c.alpha*255.0f));
+					target.Draw(line_text);
+					x_offset = line_text.GetRect().Right + text_margin*2;
+				}
 
-		for(auto it = lines_.begin(); it != lines_.end(); ++it)		
-			target.Draw(it->second);
+				glDisable(GL_TEXTURE_2D);
+			glPopMatrix();
+
+			glBegin(GL_QUADS);
+				glColor4f(1.0f, 1.0f, 1.0f, 0.2f);	
+				glVertex2f(1.0f, 0.99f);
+				glVertex2f(0.0f, 0.99f);
+				glVertex2f(0.0f, 0.01f);	
+				glVertex2f(1.0f, 0.01f);	
+			glEnd();
+
+			glPushMatrix();
+				glTranslated(0.0f, text_offset/GetScale().y, 1.0f);
+				glScaled(1.0f, 1.0-text_offset/GetScale().y, 1.0f);
 		
-		glPopMatrix();
+				target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
+				target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
 
+				for(auto it = lines_.begin(); it != lines_.end(); ++it)		
+					target.Draw(it->second);
+		
+			glPopMatrix();
+
+		glPopMatrix();
 	}
 
 	implementation(implementation&);
