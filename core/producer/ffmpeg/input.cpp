@@ -104,10 +104,9 @@ public:
 
 	~implementation()
 	{
-		video_packet_buffer_.clear();
-		audio_packet_buffer_.clear();
-		cond_.notify_all();
 		executor_.clear();
+		executor_.stop();
+		cond_.notify_all();
 		CASPAR_LOG(info) << print() << " ended.";
 	}
 							
@@ -208,7 +207,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"] Buffer thread";
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"] buffer thread";
 	}
 };
 
