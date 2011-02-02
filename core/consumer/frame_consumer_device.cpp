@@ -20,10 +20,7 @@
 namespace caspar { namespace core {
 	
 struct frame_consumer_device::implementation
-{
-	safe_ptr<diagnostics::graph> graph_;
-	timer perf_timer_;
-	
+{	
 	timer clock_;
 
 	boost::circular_buffer<safe_ptr<const read_frame>> buffer_;
@@ -35,11 +32,9 @@ struct frame_consumer_device::implementation
 	executor executor_;	
 public:
 	implementation(const video_format_desc& format_desc) 
-		: graph_(diagnostics::create_graph("output"))
-		, format_desc_(format_desc)
+		: format_desc_(format_desc)
+		, executor_(L"frame_consumer_device")
 	{		
-		graph_->guide("frame-time", 0.5f);	
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		executor_.set_capacity(2);
 		executor_.start();
 	}
@@ -97,9 +92,6 @@ public:
 			}
 
 			clock_.tick(1.0/format_desc_.fps);
-			
-			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
-			perf_timer_.reset();
 		});
 	}
 };

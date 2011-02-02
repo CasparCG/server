@@ -52,6 +52,12 @@
     <ClCompile Include="diagnostics\graph.cpp">
       <Filter>Source\diagnostics</Filter>
     </ClCompile>
+    <ClCompile Include="diagnostics\context.cpp">
+      <Filter>Source\diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="diagnostics\sink_backend.cpp">
+      <Filter>Source\log</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exception\exceptions.h">
@@ -95,6 +101,12 @@
     </ClInclude>
     <ClInclude Include="diagnostics\graph.h">
       <Filter>Source\diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="diagnostics\context.h">
+      <Filter>Source\diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="diagnostics\sink_backend.h">
+      <Filter>Source\log</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

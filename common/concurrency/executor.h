@@ -14,19 +14,49 @@
 
 namespace caspar {
 
+namespace detail {
+
+typedef struct tagTHREADNAME_INFO
+{
+	DWORD dwType; // must be 0x1000
+	LPCSTR szName; // pointer to name (in user addr space)
+	DWORD dwThreadID; // thread ID (-1=caller thread)
+	DWORD dwFlags; // reserved for future use, must be zero
+} THREADNAME_INFO;
+
+inline void SetThreadName(DWORD dwThreadID, LPCSTR szThreadName)
+{
+	THREADNAME_INFO info;
+	{
+		info.dwType = 0x1000;
+		info.szName = szThreadName;
+		info.dwThreadID = dwThreadID;
+		info.dwFlags = 0;
+	}
+	__try
+	{
+		RaiseException( 0x406D1388, 0, sizeof(info)/sizeof(DWORD), (DWORD*)&info );
+	}
+	__except (EXCEPTION_CONTINUE_EXECUTION)
+	{
+	}	
+}
+
+}
+
 class executor : boost::noncopyable
 {
 public:
 		
-	explicit executor(const std::function<void()>& f = nullptr)
+	explicit executor(const std::wstring& name = L"executor") : name_(narrow(name))
 	{
 		is_running_ = false;
-		f_ = f != nullptr ? f : [this]{run();};
 	}
-
+	
 	virtual ~executor()
 	{
 		stop();
+		clear();
 		if(boost::this_thread::get_id() != thread_.get_id())
 			thread_.join();
 	}
@@ -41,7 +71,7 @@ public:
 		if(is_running_.fetch_and_store(true))
 			return;
 		clear();
-		thread_ = boost::thread(f_);
+		thread_ = boost::thread([this]{run();});
 	}
 			
 	void stop() // noexcept
@@ -130,12 +160,13 @@ private:
 
 	void run() // noexcept
 	{
-		win32_exception::install_handler();
+		win32_exception::install_handler();		
+		detail::SetThreadName(GetCurrentThreadId(), name_.c_str());
 		while(is_running_)
 			execute();
 	}
 	
-	std::function<void()> f_;
+	std::string name_;
 	boost::thread thread_;
 	tbb::atomic<bool> is_running_;
 	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;

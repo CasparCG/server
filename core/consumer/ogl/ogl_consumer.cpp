@@ -79,7 +79,7 @@ public:
 		, screen_x_(0)
 		, screen_y_(0)
 		, screen_index_(screen_index)
-		, graph_(diagnostics::create_graph("screen[" + boost::lexical_cast<std::string>(screen_index) + "]"))
+		, graph_(diagnostics::create_graph("ogl[" + boost::lexical_cast<std::string>(screen_index) + "]"))
 	{		
 		graph_->guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));

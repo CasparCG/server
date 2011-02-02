@@ -46,7 +46,7 @@ struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 	video_format_desc format_desc_;
 public:
 	implementation() 
-		: graph_(diagnostics::create_graph("audio"))
+		: graph_(diagnostics::create_graph("oal"))
 		, container_(5)
 	{
 		graph_->guide("frame-time", 0.5);

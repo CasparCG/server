@@ -12,6 +12,7 @@
 
 #include <boost/exception/error_info.hpp>
 #include <boost/thread/once.hpp>
+#include <boost/thread/thread.hpp>
 
 #include <errno.h>
 #include <system_error>
@@ -31,7 +32,7 @@ namespace caspar { namespace core { namespace ffmpeg{
 		
 struct input::implementation : boost::noncopyable
 {		
-	static const size_t BUFFER_SIZE = 2 << 24;
+	static const size_t PACKET_BUFFER_COUNT = 50;
 
 	safe_ptr<diagnostics::graph> graph_;
 
@@ -45,11 +46,12 @@ struct input::implementation : boost::noncopyable
 	bool loop_;
 	int video_s_index_;
 	int	audio_s_index_;
-
-	tbb::atomic<size_t>	buffer_size_;
-	
+		
 	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> video_packet_buffer_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> audio_packet_buffer_;
+
+	boost::condition_variable cond_;
+	boost::mutex mutex_;
 	
 	executor executor_;
 public:
@@ -59,8 +61,11 @@ public:
 		, video_s_index_(-1)
 		, audio_s_index_(-1)
 		, filename_(filename)
+		, executor_(print())
 	{			
-		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
+		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
+		graph_->set_color("stop", diagnostics::color(1.0f, 0.5f, 0.5f));
+		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
 
 		int errn;
 		AVFormatContext* weak_format_context_;
@@ -99,6 +104,9 @@ public:
 
 	~implementation()
 	{
+		video_packet_buffer_.clear();
+		audio_packet_buffer_.clear();
+		cond_.notify_all();
 		executor_.clear();
 		CASPAR_LOG(info) << print() << " ended.";
 	}
@@ -125,30 +133,34 @@ public:
 	}
 		
 	void read_file() // For every packet taken: read in a number of packets.
-	{		
-		for(size_t n = 0; buffer_size_ < BUFFER_SIZE && (n < 3 || video_packet_buffer_.size() < 3 || audio_packet_buffer_.size() < 3) && executor_.is_running(); ++n)
-		{
-			AVPacket tmp_packet;
-			safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
+	{				
+		AVPacket tmp_packet;
+		safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
 
-			if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
-			{
-				auto packet = std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size);
-				if(read_packet->stream_index == video_s_index_) 						
-				{
-					buffer_size_ += packet->size();
-					video_packet_buffer_.try_push(std::move(packet));	
-				}
-				else if(read_packet->stream_index == audio_s_index_) 	
-				{
-					buffer_size_ += packet->size();
-					audio_packet_buffer_.try_push(std::move(packet));
-				}
-			}
-			else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
-				executor_.stop();
-			graph_->update("input-buffer", static_cast<float>(buffer_size_)/static_cast<float>(BUFFER_SIZE));
+		if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
+		{
+			auto packet = std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size);
+			if(read_packet->stream_index == video_s_index_) 		
+				video_packet_buffer_.try_push(std::move(packet));	
+			else if(read_packet->stream_index == audio_s_index_) 	
+				audio_packet_buffer_.try_push(std::move(packet));		
 		}
+		else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
+		{			
+			graph_->tag("stop");
+			executor_.stop();
+		}
+		else
+			graph_->tag("seek");
+
+		boost::this_thread::yield();
+			
+		graph_->update("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
+		
+		executor_.begin_invoke([this]{read_file();});		
+		boost::unique_lock<boost::mutex> lock(mutex_);
+		while(executor_.is_running() && audio_packet_buffer_.size() > PACKET_BUFFER_COUNT && video_packet_buffer_.size() > PACKET_BUFFER_COUNT)
+			cond_.wait(lock);		
 	}
 	
 	bool seek_frame(int64_t seek_target, int flags = 0)
@@ -179,15 +191,9 @@ public:
 	
 	aligned_buffer get_packet(tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>>& buffer)
 	{
+		cond_.notify_all();
 		std::shared_ptr<aligned_buffer> packet;
-		if(buffer.try_pop(packet))
-		{
-			buffer_size_ -= packet->size();
-			if(executor_.size() < 4)
-				executor_.begin_invoke([this]{read_file();});
-			return std::move(*packet);
-		}
-		return aligned_buffer();
+		return buffer.try_pop(packet) ? std::move(*packet) : aligned_buffer();
 	}
 
 	bool is_eof() const
