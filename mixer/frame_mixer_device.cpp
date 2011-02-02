@@ -53,7 +53,7 @@ public:
 	{
 		graph_->guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("frame-wait", diagnostics::color(0.1f, 0.7f, 0.8f));
+		graph_->set_color("output-wait", diagnostics::color(0.1f, 0.7f, 0.8f));
 		graph_->set_color("output-buffer", diagnostics::color( 0.0f, 1.0f, 0.0f));		
 		executor_.start();
 		executor_.set_capacity(2);
@@ -90,7 +90,7 @@ public:
 
 			wait_perf_timer_.reset();
 			output_(make_safe<const read_frame>(std::move(image.get()), std::move(audio)));
-			graph_->update("frame-wait", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
+			graph_->update("output-wait", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
 		});
 		graph_->update("output-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}

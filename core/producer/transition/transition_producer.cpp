@@ -21,6 +21,8 @@
 
 #include "transition_producer.h"
 
+#include <common/diagnostics/graph.h>
+#include <common/utility/timer.h>
 #include <core/video_format.h>
 
 #include <mixer/frame/draw_frame.h>
@@ -44,11 +46,20 @@ struct transition_producer::implementation : boost::noncopyable
 
 	std::shared_ptr<frame_factory>	frame_factory_;
 
+	safe_ptr<diagnostics::graph> graph_;
+	timer					     perf_timer_;
+
 	implementation(const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
-		, source_producer_(frame_producer::empty()){}
+		, source_producer_(frame_producer::empty())
+		, graph_(diagnostics::create_graph(narrow(print())))
+	{
+		graph_->guide("frame-time", 0.5);
+		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->set_color("frames-left",  diagnostics::color(0.0f, 1.0f, 0.0f));
+	}
 				
 	void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
@@ -65,8 +76,17 @@ struct transition_producer::implementation : boost::noncopyable
 	{
 		source_producer_ = producer;
 	}
-		
+
 	safe_ptr<draw_frame> receive()
+	{
+		perf_timer_.reset();
+		auto frame = do_receive();
+		graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_factory_->get_video_format_desc().interval*0.5));
+		graph_->update("frames-left", static_cast<float>(info_.duration-current_frame_)/static_cast<float>(info_.duration));
+		return frame;
+	}
+		
+	safe_ptr<draw_frame> do_receive()
 	{
 		if(current_frame_++ >= info_.duration)
 			return draw_frame::eof();
@@ -156,7 +176,7 @@ struct transition_producer::implementation : boost::noncopyable
 
 	std::wstring print() const
 	{
-		return L"transition[" + (source_producer_->print()) + L" -> " + (dest_producer_->print()) + L"]";
+		return L"transition[-> " + (dest_producer_->print()) + L"]";
 	}
 };
 
