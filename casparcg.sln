@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Server", "server\Server.vcxproj", "{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Server Setup", "server setup\Server Setup.vdproj", "{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}"
+EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
 		Svn-Managed = True
@@ -10,16 +12,32 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
+		FFMPEG 0.5|Win32 = FFMPEG 0.5|Win32
 		no bluefish|Win32 = no bluefish|Win32
 		Release|Win32 = Release|Win32
+		WO Bluefish|Win32 = WO Bluefish|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Debug|Win32.ActiveCfg = Debug|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Debug|Win32.Build.0 = Debug|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.FFMPEG 0.5|Win32.ActiveCfg = Release|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.FFMPEG 0.5|Win32.Build.0 = Release|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.no bluefish|Win32.ActiveCfg = no bluefish|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.no bluefish|Win32.Build.0 = no bluefish|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Release|Win32.ActiveCfg = Release|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Release|Win32.Build.0 = Release|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.WO Bluefish|Win32.ActiveCfg = Release|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.WO Bluefish|Win32.Build.0 = Release|Win32
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.Debug|Win32.ActiveCfg = Debug
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.Debug|Win32.Build.0 = Debug
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.FFMPEG 0.5|Win32.ActiveCfg = FFMPEG 0.5
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.FFMPEG 0.5|Win32.Build.0 = FFMPEG 0.5
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.no bluefish|Win32.ActiveCfg = WO Bluefish
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.no bluefish|Win32.Build.0 = WO Bluefish
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.Release|Win32.ActiveCfg = Release
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.Release|Win32.Build.0 = Release
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.WO Bluefish|Win32.ActiveCfg = WO Bluefish
+		{A4200A1B-B458-4EBD-ACEC-F0E6B0FAA906}.WO Bluefish|Win32.Build.0 = WO Bluefish
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
