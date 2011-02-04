@@ -1032,7 +1032,7 @@ bool SetCommand::DoExecute()
 
 	if(name == TEXT("MODE"))
 	{
-		//if(this->GetChannel()->producer().SetVideoFormat(value)) TODO
+		//if(this->GetChannel()->consumer().SetVideoFormat(value)) TODO
 		//	this->SetReplyString(TEXT("202 SET MODE OK\r\n"));
 		//else
 			this->SetReplyString(TEXT("501 SET MODE FAILED\r\n"));
