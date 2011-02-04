@@ -79,17 +79,17 @@ public:
 		, screen_x_(0)
 		, screen_y_(0)
 		, screen_index_(screen_index)
-		, graph_(diagnostics::create_graph("ogl[" + boost::lexical_cast<std::string>(screen_index) + "]"))
+		, graph_(diagnostics::create_graph(narrow(print())))
 	{		
 		graph_->guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 
-		CASPAR_LOG(info) << "Sucessfully started ogl_consumer";
+		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 
 	~implementation()
 	{
-		CASPAR_LOG(info) << "Sucessfully ended ogl_consumer";
+		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
 	void initialize(const video_format_desc& format_desc)
@@ -112,13 +112,13 @@ public:
 		}
 
 		if(screen_index_ >= displayDevices.size())
-			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_"));
+			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_") << msg_info(narrow(print())));
 		
 		DEVMODE devmode;
 		memset(&devmode, 0, sizeof(devmode));
 		
 		if(!EnumDisplaySettings(displayDevices[screen_index_].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
-			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info("EnumDisplaySettings"));
+			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info(narrow(print()) + " EnumDisplaySettings"));
 		
 		screen_width_ = windowed_ ? format_desc_.width : devmode.dmPelsWidth;
 		screen_height_ = windowed_ ? format_desc_.height : devmode.dmPelsHeight;
@@ -126,10 +126,10 @@ public:
 		screen_y_ = devmode.dmPosition.y;
 #else
 		if(!windowed)
-			BOOST_THROW_EXCEPTION(not_supported() << msg_info("OGLConsumer doesn't support non-Win32 fullscreen"));
+			BOOST_THROW_EXCEPTION(not_supported() << msg_info(narrow(print() + " doesn't support non-Win32 fullscreen"));
 
 		if(screen_index != 0)
-			CASPAR_LOG(warning) << "OGLConsumer only supports screen_index=0 for non-Win32";
+			CASPAR_LOG(warning) << print() << " only supports screen_index=0 for non-Win32";
 #endif
 
 		executor_.start();
@@ -259,6 +259,11 @@ public:
 			window_.Display();
 			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 		});
+	}
+
+	std::wstring print() const
+	{
+		return L"OpenGL Device[" + boost::lexical_cast<std::wstring>(screen_index_) + L"]";
 	}
 
 	size_t buffer_depth() const{return 2;}

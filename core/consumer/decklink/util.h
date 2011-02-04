@@ -51,4 +51,18 @@ static IDeckLinkDisplayMode* get_display_mode(IDeckLinkOutput* output, video_for
 	return get_display_mode(output, GetDecklinkVideoFormat(fmt));
 }
 
+template<typename T>
+static std::wstring get_version(T& deckLinkIterator)
+{
+	IDeckLinkAPIInformation* deckLinkAPIInformation;
+	if (FAILED(deckLinkIterator->QueryInterface(IID_IDeckLinkAPIInformation, (void**)&deckLinkAPIInformation)))
+		return L"Unknown";
+	
+	BSTR ver;		
+	deckLinkAPIInformation->GetString(BMDDeckLinkAPIVersion, &ver);
+	deckLinkAPIInformation->Release();	
+		
+	return ver;					
+}
+
 }}

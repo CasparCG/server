@@ -31,7 +31,9 @@
 #include <mixer/frame/read_frame.h>
 
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
+#include <common/utility/timer.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -56,13 +58,19 @@ struct decklink_input : public IDeckLinkVideoOutputCallback, public IDeckLinkAud
 		co_init(){CoInitialize(nullptr);}
 		~co_init(){CoUninitialize();}
 	} co_;
+	
+	std::wstring	model_name_;
+	const size_t	device_index_;
+
+	std::shared_ptr<diagnostics::graph> graph_;
+	timer perf_timer_;
 
 	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
 	boost::circular_buffer<std::vector<short>> audio_container_;
+	
+	const bool		embed_audio_;
+	const bool		internal_key;
 
-	const size_t				device_index_;
-	const bool					embed_audio_;
-	const bool					internal_key;
 	CComPtr<IDeckLink>			decklink_;
 	CComQIPtr<IDeckLinkOutput>	output_;
 	CComQIPtr<IDeckLinkKeyer>	keyer_;
@@ -74,13 +82,14 @@ struct decklink_input : public IDeckLinkVideoOutputCallback, public IDeckLinkAud
 	BMDTimeValue frame_duration_;
 	unsigned long frames_scheduled_;
 	unsigned long audio_scheduled_;
-
+	
 	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> video_frame_buffer_;
 	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> audio_frame_buffer_;
 
 public:
 	decklink_input(size_t device_index, bool embed_audio, bool internalKey) 
-		: device_index_(device_index)
+		: model_name_(L"DECKLINK")
+		, device_index_(device_index)
 		, audio_container_(5)
 		, current_format_(video_format::pal)
 		, embed_audio_(embed_audio)
@@ -98,6 +107,7 @@ public:
 				output_->DisableAudioOutput();
 			output_->DisableVideoOutput();
 		}
+		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
 	void initialize(const video_format_desc& format_desc)
@@ -105,72 +115,82 @@ public:
 		format_desc_ = format_desc;
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink drivers installed."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink drivers installed."));
+		
+		static bool print_ver = false;
+		if(!print_ver)
+		{
+			CASPAR_LOG(info) << "DeckLinkAPI version: " << get_version(pDecklinkIterator);
+			print_ver = true;
+		}
 
 		size_t n = 0;
 		while(n < device_index_ && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
 
 		if(n != device_index_ || !decklink_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: No Decklink card found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink card found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
 
 		output_ = decklink_;
 		keyer_ = decklink_;
 
 		BSTR pModelName;
 		decklink_->GetModelName(&pModelName);
-		if(pModelName != nullptr)
-			CASPAR_LOG(info) << "DECKLINK: Modelname: " << pModelName;
+		model_name_ = std::wstring(pModelName);
+				
+		graph_ = diagnostics::create_graph(narrow(print()));
+		graph_->guide("tick-time", 0.5);
+		graph_->set_color("tick-time", diagnostics::color(0.4f, 0.7f, 0.7f));	
 		
 		auto display_mode = get_display_mode(output_.p, format_desc_.format);
 		if(display_mode == nullptr) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 		
 		display_mode->GetFrameRate(&frame_duration_, &frame_time_scale_);
 		current_format_ = format_desc_.format;
 
 		BMDDisplayModeSupport displayModeSupport;
 		if(FAILED(output_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, &displayModeSupport)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Card does not support requested videoformat."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 		
 		if(embed_audio_)
 		{
 			if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2, bmdAudioOutputStreamTimestamped)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable audio output."));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable audio output."));
 				
 			if(FAILED(output_->SetAudioCallback(this)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could set audio callback."));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not set audio callback."));
 		}
 
 		if(FAILED(output_->EnableVideoOutput(display_mode->GetDisplayMode(), bmdVideoOutputFlagDefault))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable video output."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video output."));
 
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to set playback completion callback."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set playback completion callback."));
 			
 		if(internal_key) 
 		{
 			if(FAILED(keyer_->Enable(FALSE)))			
-				CASPAR_LOG(error) << "DECKLINK: Failed to enable internal keye.r";			
+				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
 			else if(FAILED(keyer_->SetLevel(255)))			
-				CASPAR_LOG(error) << "DECKLINK: Keyer - Failed to set key-level to max.";
+				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
 			else
-				CASPAR_LOG(info) << "DECKLINK: Successfully configured internal keyer.";		
+				CASPAR_LOG(info) << print() << L" Successfully configured internal keyer.";		
 		}
 		else
 		{
 			if(FAILED(keyer_->Enable(TRUE)))			
-				CASPAR_LOG(error) << "DECKLINK: Failed to enable external keyer.";	
+				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
 			else
-				CASPAR_LOG(info) << "DECKLINK: Successfully configured external keyer.";			
+				CASPAR_LOG(info) << print() << L" Successfully configured external keyer.";			
 		}
 		
 		for(size_t n = 0; n < reserved_frames_.size(); ++n)
 		{
 			if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &reserved_frames_[n].second)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to create frame."));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create frame."));
 
 			if(FAILED(reserved_frames_[n].second->GetBytes(&reserved_frames_[n].first)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to get frame bytes."));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to get frame bytes."));
 		}
 					
 		auto buffer_size = static_cast<size_t>(frame_time_scale_/frame_duration_)/4;
@@ -185,11 +205,11 @@ public:
 			if(embed_audio_)
 				audio_frame_buffer_.try_push(safe_ptr<const read_frame>());
 		}
-
-		if(FAILED(output_->StartScheduledPlayback(0, frame_time_scale_, 1.0))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to schedule playback."));
 		
-		CASPAR_LOG(info) << "DECKLINK: Successfully initialized decklink for " << format_desc_.name;	
+		if(FAILED(output_->StartScheduledPlayback(0, frame_time_scale_, 1.0))) 
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to schedule playback."));
+		
+		CASPAR_LOG(info) << print() << L" Successfully initialized for " << format_desc_.name;	
 	}
 	
 	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
@@ -228,7 +248,7 @@ public:
 		audio_container_.push_back(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end()));
 
 		if(FAILED(output_->ScheduleAudioSamples(frame_audio_data, audio_samples, (audio_scheduled_++) * audio_samples, 48000, nullptr)))
-			CASPAR_LOG(error) << L"DECKLINK: Failed to schedule audio.";
+			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
 	}
 			
 	void schedule_next_video(const safe_ptr<const read_frame>& frame)
@@ -239,9 +259,11 @@ public:
 			std::fill_n(static_cast<int*>(reserved_frames_.front().first), 0, format_desc_.size/4);
 
 		if(FAILED(output_->ScheduleVideoFrame(reserved_frames_.front().second, (frames_scheduled_++) * frame_duration_, frame_duration_, frame_time_scale_)))
-			CASPAR_LOG(error) << L"DECKLINK: Failed to schedule video.";
+			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
 		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
+		graph_->update("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+		perf_timer_.reset();
 	}
 
 	void send(const safe_ptr<const read_frame>& frame)
@@ -249,6 +271,11 @@ public:
 		video_frame_buffer_.push(frame);
 		if(embed_audio_)
 			audio_frame_buffer_.push(frame);
+	}
+
+	std::wstring print() const
+	{
+		return model_name_ + L"[" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 
@@ -260,6 +287,7 @@ struct decklink_consumer::implementation
 public:
 
 	implementation(size_t device_index, bool embed_audio, bool internalKey)
+		: executor_(L"DECKLINK[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 	{
 		executor_.start();
 		executor_.invoke([&]

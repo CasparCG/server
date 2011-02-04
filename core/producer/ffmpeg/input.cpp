@@ -64,7 +64,6 @@ public:
 		, executor_(print())
 	{			
 		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
-		graph_->set_color("stop", diagnostics::color(1.0f, 0.5f, 0.5f));
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
 
 		int errn;
@@ -145,10 +144,7 @@ public:
 				audio_packet_buffer_.try_push(std::move(packet));		
 		}
 		else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
-		{			
-			graph_->tag("stop");
 			executor_.stop();
-		}
 		else
 			graph_->tag("seek");
 
