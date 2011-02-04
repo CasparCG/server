@@ -1,7 +1,6 @@
 #include "../stdafx.h"
 
 #include "graph.h"
-#include "context.h"
 
 #pragma warning (disable : 4244)
 
@@ -20,6 +19,100 @@
 #include <array>
 
 namespace caspar { namespace diagnostics {
+		
+struct drawable : public sf::Drawable
+{
+	virtual ~drawable(){}
+	virtual void render(sf::RenderTarget& target) = 0;
+	virtual void Render(sf::RenderTarget& target) const { const_cast<drawable*>(this)->render(target);}
+};
+
+class context : public drawable
+{	
+	timer timer_;
+	sf::RenderWindow window_;
+	
+	std::list<std::shared_ptr<drawable>> drawables_;
+		
+	executor executor_;
+public:					
+
+	template<typename Func>
+	static auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
+	{	
+		return get_instance().executor_.begin_invoke(std::forward<Func>(func));	
+	}
+
+	static void register_drawable(const std::shared_ptr<drawable>& drawable)
+	{
+		begin_invoke([=]
+		{
+			get_instance().do_register_drawable(drawable);
+		});
+	}
+			
+private:
+	context()
+	{
+		executor_.start();
+		executor_.begin_invoke([this]
+		{
+			window_.Create(sf::VideoMode(600, 1000), "CasparCG Diagnostics");
+			window_.SetPosition(0, 0);
+			window_.SetActive();
+			glEnable(GL_BLEND);
+			glEnable(GL_LINE_SMOOTH);
+			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			tick();
+		});
+	}
+
+	void tick()
+	{
+		sf::Event e;
+		while(window_.GetEvent(e)){}		
+		glClear(GL_COLOR_BUFFER_BIT);
+		window_.Draw(*this);
+		window_.Display();
+		timer_.tick(1.0/50.0);
+		executor_.begin_invoke([this]{tick();});
+	}
+
+	void render(sf::RenderTarget& target)
+	{
+		auto count = std::max<size_t>(10, drawables_.size());
+		float target_dy = 1.0f/static_cast<float>(count);
+
+		float last_y = 0.0f;
+		int n = 0;
+		for(auto it = drawables_.begin(); it != drawables_.end(); ++n)
+		{
+			auto& drawable = *it;
+			if(!drawable.unique())
+			{
+				drawable->SetScale(static_cast<float>(window_.GetWidth()), static_cast<float>(target_dy*window_.GetHeight()));
+				float target_y = std::max(last_y, static_cast<float>(n * window_.GetHeight())*target_dy);
+				drawable->SetPosition(0.0f, target_y);			
+				target.Draw(*drawable);				
+				++it;		
+			}
+			else	
+				it = drawables_.erase(it);			
+		}		
+	}	
+	
+	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
+	{
+		drawables_.push_back(drawable);
+	}
+	
+	static context& get_instance()
+	{
+		static context impl;
+		return impl;
+	}
+};
 
 class guide : public drawable
 {
@@ -139,11 +232,9 @@ struct graph::implementation : public drawable
 {
 	std::map<std::string, diagnostics::line> lines_;
 	std::string name_;
-	float height_scale_;
 
 	implementation(const std::string& name) 
-		: name_(name)
-		, height_scale_(0){}
+		: name_(name){}
 
 	void update(const std::string& name, float value)
 	{
@@ -180,55 +271,49 @@ struct graph::implementation : public drawable
 private:
 	void render(sf::RenderTarget& target)
 	{
+		const size_t text_size = 15;
+		const size_t text_margin = 2;
+		const size_t text_offset = text_size+text_margin*2;
+
+		sf::String text(name_.c_str(), sf::Font::GetDefaultFont(), text_size);
+		text.SetStyle(sf::String::Italic);
+		text.Move(text_margin, text_margin);
+		
 		glPushMatrix();
-			glScaled(1.0f, height_scale_, 1.0f);
-			height_scale_ = std::min(1.0f, height_scale_+0.1f);
+			glScaled(1.0f/GetScale().x, 1.0f/GetScale().y, 1.0f);
+			target.Draw(text);
+			float x_offset = text.GetPosition().x + text.GetRect().Right + text_margin*4;
+			for(auto it = lines_.begin(); it != lines_.end(); ++it)
+			{						
+				sf::String line_text(it->first, sf::Font::GetDefaultFont(), text_size);
+				line_text.SetPosition(x_offset, text_margin);
+				auto c = it->second.get_color();
+				line_text.SetColor(sf::Color(c.red*255.0f, c.green*255.0f, c.blue*255.0f, c.alpha*255.0f));
+				target.Draw(line_text);
+				x_offset = line_text.GetRect().Right + text_margin*2;
+			}
 
-			const size_t text_size = 15;
-			const size_t text_margin = 2;
-			const size_t text_offset = text_size+text_margin*2;
+			glDisable(GL_TEXTURE_2D);
+		glPopMatrix();
 
-			sf::String text(name_.c_str(), sf::Font::GetDefaultFont(), text_size);
-			text.SetStyle(sf::String::Italic);
-			text.Move(text_margin, text_margin);
+		glBegin(GL_QUADS);
+			glColor4f(1.0f, 1.0f, 1.0f, 0.2f);	
+			glVertex2f(1.0f, 0.99f);
+			glVertex2f(0.0f, 0.99f);
+			glVertex2f(0.0f, 0.01f);	
+			glVertex2f(1.0f, 0.01f);	
+		glEnd();
+
+		glPushMatrix();
+			glTranslated(0.0f, text_offset/GetScale().y, 1.0f);
+			glScaled(1.0f, 1.0-text_offset/GetScale().y, 1.0f);
 		
-			glPushMatrix();
-				glScaled(1.0f/GetScale().x, 1.0f/GetScale().y, 1.0f);
-				target.Draw(text);
-				float x_offset = text.GetPosition().x + text.GetRect().Right + text_margin*4;
-				for(auto it = lines_.begin(); it != lines_.end(); ++it)
-				{						
-					sf::String line_text(it->first, sf::Font::GetDefaultFont(), text_size);
-					line_text.SetPosition(x_offset, text_margin);
-					auto c = it->second.get_color();
-					line_text.SetColor(sf::Color(c.red*255.0f, c.green*255.0f, c.blue*255.0f, c.alpha*255.0f));
-					target.Draw(line_text);
-					x_offset = line_text.GetRect().Right + text_margin*2;
-				}
+			target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
+			target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
 
-				glDisable(GL_TEXTURE_2D);
-			glPopMatrix();
-
-			glBegin(GL_QUADS);
-				glColor4f(1.0f, 1.0f, 1.0f, 0.2f);	
-				glVertex2f(1.0f, 0.99f);
-				glVertex2f(0.0f, 0.99f);
-				glVertex2f(0.0f, 0.01f);	
-				glVertex2f(1.0f, 0.01f);	
-			glEnd();
-
-			glPushMatrix();
-				glTranslated(0.0f, text_offset/GetScale().y, 1.0f);
-				glScaled(1.0f, 1.0-text_offset/GetScale().y, 1.0f);
+			for(auto it = lines_.begin(); it != lines_.end(); ++it)		
+				target.Draw(it->second);
 		
-				target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
-				target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
-
-				for(auto it = lines_.begin(); it != lines_.end(); ++it)		
-					target.Draw(it->second);
-		
-			glPopMatrix();
-
 		glPopMatrix();
 	}
 

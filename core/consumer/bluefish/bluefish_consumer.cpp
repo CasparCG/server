@@ -128,7 +128,7 @@ public:
 
 				if(blue_)
 					blue_->device_detach();		
-		});
+			});
 		}
 
 		CASPAR_LOG(info) << "BLUECARD INFO: Successfully released device " << device_index_;
