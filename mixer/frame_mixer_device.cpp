@@ -28,11 +28,11 @@ namespace caspar { namespace core {
 	
 struct frame_mixer_device::implementation : boost::noncopyable
 {		
+	const video_format_desc format_desc_;
+
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
 	timer wait_perf_timer_;
-
-	const video_format_desc format_desc_;
 
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
@@ -45,8 +45,8 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	executor executor_;
 public:
 	implementation(const video_format_desc& format_desc, const output_func& output) 
-		: graph_(diagnostics::create_graph("mixer"))
-		, format_desc_(format_desc)
+		: format_desc_(format_desc)
+		, graph_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(format_desc)
 		, output_(output)
 		, executor_(L"frame_mixer_device")
@@ -57,11 +57,12 @@ public:
 		graph_->set_color("output-buffer", diagnostics::color( 0.0f, 1.0f, 0.0f));		
 		executor_.start();
 		executor_.set_capacity(2);
+		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
 		
 	~implementation()
 	{
-		CASPAR_LOG(info) << "Shutting down mixer-device.";
+		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
 	void send(const std::vector<safe_ptr<draw_frame>>& frames)
@@ -118,6 +119,11 @@ public:
 	void set_audio_transform(int index, audio_transform&& transform)
 	{
 		return executor_.invoke([&]{audio_transforms_[index] = std::move(transform);});
+	}
+
+	std::wstring print() const
+	{
+		return L"Video/Audio Mixer [" + format_desc_.name + L"]";
 	}
 };
 	

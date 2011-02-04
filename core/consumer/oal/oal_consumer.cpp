@@ -46,11 +46,11 @@ struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 	video_format_desc format_desc_;
 public:
 	implementation() 
-		: graph_(diagnostics::create_graph("oal"))
+		: graph_(diagnostics::create_graph(narrow(print())))
 		, container_(5)
 	{
-		graph_->guide("frame-time", 0.5);
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
+		graph_->guide("tick-time", 0.5);
+		graph_->set_color("tick-time", diagnostics::color(0.4f, 0.7f, 0.7f));	
 		is_running_ = true;
 	}
 
@@ -60,7 +60,7 @@ public:
 		input_.try_push(std::vector<short>());
 		input_.try_push(std::vector<short>());
 		Stop();
-		CASPAR_LOG(info) << "Sucessfully ended oal_consumer";
+		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
 	void initialize(const video_format_desc& format_desc)
@@ -70,7 +70,7 @@ public:
 			input_.push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)); 
 		sf::SoundStream::Initialize(2, 48000);
 		Play();		
-		CASPAR_LOG(info) << "Sucessfully started oal_consumer";
+		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 	
 	void send(const safe_ptr<const read_frame>& frame)
@@ -85,8 +85,6 @@ public:
 
 	virtual bool OnGetData(sf::SoundStream::Chunk& data)
 	{		
-		graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
-
 		std::vector<short> audio_data;		
 		input_.pop(audio_data);
 				
@@ -94,9 +92,15 @@ public:
 		data.Samples = container_.back().data();
 		data.NbSamples = container_.back().size();	
 		
+		graph_->update("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));		
 		perf_timer_.reset();
 
 		return is_running_;
+	}
+
+	std::wstring print() const
+	{
+		return L"Default Audio Device";
 	}
 };
 

@@ -82,15 +82,17 @@ void blue_initialize()
 		
 struct bluefish_consumer::implementation : boost::noncopyable
 {
-	safe_ptr<diagnostics::graph> graph_;
+	std::wstring		model_name_;
+	const unsigned int	device_index_;
+
+	std::shared_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
 
 	boost::unique_future<void> active_;
 			
 	std::shared_ptr<CBlueVelvet4> blue_;
 	
-	const unsigned int device_index_;
-	video_format_desc format_desc_;
+	video_format_desc	format_desc_;
 		
 	unsigned long	mem_fmt_;
 	unsigned long	upd_fmt_;
@@ -105,18 +107,15 @@ struct bluefish_consumer::implementation : boost::noncopyable
 	executor executor_;
 public:
 	implementation::implementation(unsigned int device_index, bool embed_audio) 
-		: graph_(diagnostics::create_graph("blue[" + boost::lexical_cast<std::string>(device_index) + "]"))
-		, device_index_(device_index)		
+		: model_name_(L"BLUEFISH")
+		, device_index_(device_index) 
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)
 		, vid_fmt_(VID_FMT_INVALID) 
 		, res_fmt_(RES_FMT_NORMAL) 
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
 		, embed_audio_(embed_audio)
-	{
-		graph_->guide("frame-time", 0.5);
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
-	}
+		, executor_(print()){}
 
 	~implementation()
 	{
@@ -130,8 +129,8 @@ public:
 					blue_->device_detach();		
 			});
 		}
-
-		CASPAR_LOG(info) << "BLUECARD INFO: Successfully released device " << device_index_;
+		
+		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
 	void initialize(const video_format_desc& format_desc)
@@ -144,11 +143,15 @@ public:
 		blue_.reset(BlueVelvetFactory4());
 
 		if(BLUE_FAIL(blue_->device_attach(device_index_, FALSE))) 
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to attach device."));
+			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to attach device."));
 	
 		int videoCardType = blue_->has_video_cardtype();
-		CASPAR_LOG(info) << TEXT("BLUECARD INFO: Card type: ") << get_card_desc(videoCardType) << TEXT(". (device ") << device_index_ << TEXT(")");
-	
+		model_name_ = get_card_desc(videoCardType);
+
+		graph_ = diagnostics::create_graph(narrow(print()));
+		graph_->guide("tick-time", 0.5);
+		graph_->set_color("tick-time", diagnostics::color(0.4f, 0.7f, 0.7f));	
+			
 		//void* pBlueDevice = blue_attach_to_device(1);
 		//EBlueConnectorPropertySetting video_routing[1];
 		//auto channel = BLUE_VIDEO_OUTPUT_CHANNEL_A;
@@ -167,7 +170,7 @@ public:
 				vid_fmt_ = videoMode;			
 		}
 		if(vid_fmt_ == VID_FMT_INVALID)
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set videomode."));
+			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
 		
 		// Set default video output channel
 		//if(BLUE_FAIL(set_card_property(blue_, DEFAULT_VIDEO_OUTPUT_CHANNEL, channel)))
@@ -175,51 +178,49 @@ public:
 
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set videomode."));
+			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
 
 		//Select Update Mode for output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_UPDATE_TYPE, upd_fmt_))) 
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set update type. "));
+			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set update type."));
 	
 		disable_video_output();
 
 		//Enable dual link output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT, 1)))
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to enable dual link."));
+			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to enable dual link."));
 
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_4224)))
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set dual link format type to 4:2:2:4. (device " + boost::lexical_cast<std::string>(device_index_) + ")"));
+			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set dual link format type to 4:2:2:4."));
 			
 		//Select output memory format
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MEMORY_FORMAT, mem_fmt_))) 
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set memory format."));
+			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set memory format."));
 		
 		//Select image orientation
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
-			CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set image orientation to normal. (device ") << device_index_ << TEXT(")");	
+			CASPAR_LOG(warning) << print() << TEXT(" Failed to set image orientation to normal.");	
 
 		// Select data range
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_RGB_DATA_RANGE, CGR_RANGE))) 
-			CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set RGB data range to CGR. (device ") << device_index_ << TEXT(")");	
+			CASPAR_LOG(warning) << print() << TEXT(" Failed to set RGB data range to CGR.");	
 		
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_PREDEFINED_COLOR_MATRIX, vid_fmt_ == VID_FMT_PAL ? MATRIX_601_CGR : MATRIX_709_CGR)))
-			CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set colormatrix to ") << (vid_fmt_ == VID_FMT_PAL ? TEXT("601 CGR") : TEXT("709 CGR")) << TEXT(". (device ") << device_index_ << TEXT(")");
+			CASPAR_LOG(warning) << print() << TEXT(" Failed to set colormatrix to ") << (vid_fmt_ == VID_FMT_PAL ? TEXT("601 CGR") : TEXT("709 CGR")) << TEXT(".");
 
 		if(!embed_audio_)
 		{
 			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, 0))) 
-				CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to disable embedded audio. (device ") << device_index_ << TEXT(")");			
-			CASPAR_LOG(info) << TEXT("BLUECARD INFO: Disabled embedded-audio. device ") << device_index_ << TEXT(")");
+				CASPAR_LOG(warning) << TEXT("BLUECARD ERROR: Failed to disable embedded audio.");			
+			CASPAR_LOG(info) << print() << TEXT(" Disabled embedded-audio.");
 		}
 		else
 		{
 			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, blue_emb_audio_enable | blue_emb_audio_group1_enable))) 
-				CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to enable embedded audio. (device ") << device_index_ << TEXT(")");			
-			CASPAR_LOG(info) << TEXT("BLUECARD INFO: Enabled embedded-audio. device ") << device_index_ << TEXT(")");
+				CASPAR_LOG(warning) << print() << TEXT(" Failed to enable embedded audio.");			
+			CASPAR_LOG(info) << print() << TEXT(" Enabled embedded-audio.");
 		}
-
-		CASPAR_LOG(info) << TEXT("BLUECARD INFO: Successfully configured bluecard for ") << format_desc_ << TEXT(". (device ") << device_index_ << TEXT(")");
-
+		
 		if (blue_->has_output_key()) 
 		{
 			int dummy = TRUE; int v4444 = FALSE; int invert = FALSE; int white = FALSE;
@@ -230,7 +231,7 @@ public:
 			blue_->Set_DownConverterSignalType(vid_fmt_ == VID_FMT_PAL ? SD_SDI : HD_SDI);	
 	
 		if(BLUE_FAIL(blue_->set_video_engine(engine_mode_)))
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("BLUECARD ERROR: Failed to set vido engine."));
+			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set video engine."));
 
 		enable_video_output();
 						
@@ -238,22 +239,21 @@ public:
 			reserved_frames_[n] = std::make_shared<blue_dma_buffer>(format_desc_.size, n);		
 				
 		executor_.start();
-
-		CASPAR_LOG(info) << TEXT("BLUECARD INFO: Successfully initialized device ") << device_index_;
-
 		active_ = executor_.begin_invoke([]{});
+
+		CASPAR_LOG(info) << print() << TEXT(" Successfully initialized for ") << format_desc_ << TEXT(".");
 	}
 	
 	void enable_video_output()
 	{
 		if(!BLUE_PASS(set_card_property(blue_, VIDEO_BLACKGENERATOR, 0)))
-			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");	
+			CASPAR_LOG(error) << print() << TEXT(" Failed to disable video output.");	
 	}
 
 	void disable_video_output()
 	{
 		if(!BLUE_PASS(set_card_property(blue_, VIDEO_BLACKGENERATOR, 1)))
-			CASPAR_LOG(error) << "BLUECARD ERROR: Failed to disable video output. (device " << device_index_ << TEXT(")");		
+			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");		
 	}
 
 	virtual void send(const safe_ptr<const read_frame>& frame)
@@ -268,8 +268,6 @@ public:
 		{
 			try
 			{
-				perf_timer_.reset();
-
 				std::copy_n(frame->image_data().begin(), frame->image_data().size(), reserved_frames_.front()->image_data());
 
 				unsigned long n_field = 0;
@@ -292,7 +290,7 @@ public:
 													BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_HANC));
 
 					if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
-						CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
+						CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
 				}
 				else
 				{
@@ -302,11 +300,12 @@ public:
 													BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
 			
 					if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
-						CASPAR_LOG(trace) << TEXT("BLUEFISH: render_buffer_update failed");
+						CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
 				}
 
 				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
-				graph_->update("frame-time", static_cast<float>((perf_timer_.elapsed()-format_desc_.interval)/format_desc_.interval*0.5));
+				graph_->update("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+				perf_timer_.reset();
 			}
 			catch(...)
 			{
@@ -338,6 +337,11 @@ public:
 			encode_hanc_frame(&hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);	
 		else
 			encode_hanc_frame_ex(card_type, &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
+	}
+	
+	std::wstring print() const
+	{
+		return model_name_ + L"[" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 
