@@ -51,7 +51,7 @@
 
 namespace caspar { namespace core {
 	
-struct decklink_input : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
+struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
 	struct co_init
 	{
@@ -75,7 +75,6 @@ struct decklink_input : public IDeckLinkVideoOutputCallback, public IDeckLinkAud
 	CComQIPtr<IDeckLinkOutput>	output_;
 	CComQIPtr<IDeckLinkKeyer>	keyer_;
 	
-	video_format::type current_format_;
 	video_format_desc format_desc_;
 
 	BMDTimeScale frame_time_scale_;
@@ -87,18 +86,17 @@ struct decklink_input : public IDeckLinkVideoOutputCallback, public IDeckLinkAud
 	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> audio_frame_buffer_;
 
 public:
-	decklink_input(size_t device_index, bool embed_audio, bool internalKey) 
+	decklink_output(size_t device_index, bool embed_audio, bool internalKey) 
 		: model_name_(L"DECKLINK")
 		, device_index_(device_index)
 		, audio_container_(5)
-		, current_format_(video_format::pal)
 		, embed_audio_(embed_audio)
 		, internal_key(internalKey)
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
 	{}
 
-	~decklink_input()
+	~decklink_output()
 	{			
 		if(output_ != nullptr) 
 		{
@@ -120,7 +118,7 @@ public:
 		static bool print_ver = false;
 		if(!print_ver)
 		{
-			CASPAR_LOG(info) << "DeckLinkAPI version: " << get_version(pDecklinkIterator);
+			CASPAR_LOG(info) << "DeckLinkAPI Version: " << get_version(pDecklinkIterator);
 			print_ver = true;
 		}
 
@@ -128,7 +126,7 @@ public:
 		while(n < device_index_ && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
 
 		if(n != device_index_ || !decklink_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink card found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink card found."));
 
 		output_ = decklink_;
 		keyer_ = decklink_;
@@ -146,7 +144,6 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 		
 		display_mode->GetFrameRate(&frame_duration_, &frame_time_scale_);
-		current_format_ = format_desc_.format;
 
 		BMDDisplayModeSupport displayModeSupport;
 		if(FAILED(output_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, &displayModeSupport)))
@@ -231,9 +228,9 @@ public:
 		
 	virtual HRESULT STDMETHODCALLTYPE RenderAudioSamples (BOOL /*preroll*/)
 	{
-		safe_ptr<const read_frame> frame;		
-		audio_frame_buffer_.pop(frame);		
-		schedule_next_audio(frame);		
+		safe_ptr<const read_frame> frame;
+		audio_frame_buffer_.pop(frame);
+		schedule_next_audio(frame);
 		return S_OK;
 	}
 
@@ -245,9 +242,9 @@ public:
 
 		auto frame_audio_data = frame->audio_data().empty() ? silence.data() : const_cast<short*>(frame->audio_data().begin());
 
-		audio_container_.push_back(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end()));
+		audio_container_.push_back(std::vector<short>(frame_audio_data, frame_audio_data+audio_samples*2));
 
-		if(FAILED(output_->ScheduleAudioSamples(frame_audio_data, audio_samples, (audio_scheduled_++) * audio_samples, 48000, nullptr)))
+		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), audio_samples, (audio_scheduled_++) * audio_samples, 48000, nullptr)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
 	}
 			
@@ -281,7 +278,7 @@ public:
 
 struct decklink_consumer::implementation
 {
-	std::unique_ptr<decklink_input> input_;
+	std::unique_ptr<decklink_output> input_;
 
 	executor executor_;
 public:
@@ -292,7 +289,7 @@ public:
 		executor_.start();
 		executor_.invoke([&]
 		{
-			input_.reset(new decklink_input(device_index, embed_audio, internalKey));
+			input_.reset(new decklink_output(device_index, embed_audio, internalKey));
 		});
 	}
 
