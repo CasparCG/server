@@ -263,7 +263,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"OpenGL Device[" + boost::lexical_cast<std::wstring>(screen_index_) + L"]";
+		return L"OpenGL Device [output-" + boost::lexical_cast<std::wstring>(screen_index_) + L"]";
 	}
 
 	size_t buffer_depth() const{return 2;}

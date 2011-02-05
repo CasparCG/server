@@ -163,6 +163,12 @@ public:
 	{
 		tick_data_.push_back(value);
 	}
+
+	void set(float value)
+	{
+		tick_data_.clear();
+		tick_data_.push_back(value);
+	}
 	
 	void tag()
 	{
@@ -241,6 +247,14 @@ struct graph::implementation : public drawable
 		context::begin_invoke([=]
 		{
 			lines_[name].update(value);
+		});
+	}
+
+	void set(const std::string& name, float value)
+	{
+		context::begin_invoke([=]
+		{
+			lines_[name].set(value);
 		});
 	}
 
@@ -327,6 +341,7 @@ graph::graph(const std::string& name) : impl_(new implementation(name))
 }
 
 void graph::update(const std::string& name, float value){impl_->update(name, value);}
+void graph::set(const std::string& name, float value){impl_->set(name, value);}
 void graph::tag(const std::string& name){impl_->tag(name);}
 void graph::guide(const std::string& name, float value){impl_->guide(name, value);}
 void graph::set_color(const std::string& name, color c){impl_->set_color(name, c);}

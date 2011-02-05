@@ -42,7 +42,11 @@ public:
 	~implementation()
 	{
 		executor_.clear();
-		CASPAR_LOG(info) << "Shutting down consumer-device.";
+		CASPAR_LOG(info) << "Removing consumers from consumer-device.";
+		executor_.invoke([this]{consumers_.clear();});
+		CASPAR_LOG(info) << "Stopping consumer-device.";
+		executor_.stop();
+		CASPAR_LOG(info) << "Releasing consumer-device.";
 	}
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)

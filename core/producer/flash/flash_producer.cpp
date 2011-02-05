@@ -216,7 +216,7 @@ public:
 
 	virtual safe_ptr<draw_frame> receive()
 	{		
-		graph_->update("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
+		graph_->set("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		if(!frame_buffer_.try_pop(tail_))
 			CASPAR_LOG(trace) << print() << " underflow";
 		else
@@ -231,6 +231,7 @@ public:
 					auto frame = draw_frame::empty();
 					do{frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);}
 					while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
+					graph_->set("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 				}
 				catch(...)
 				{

@@ -50,7 +50,7 @@ public:
 		, container_(5)
 	{
 		graph_->guide("tick-time", 0.5);
-		graph_->set_color("tick-time", diagnostics::color(0.4f, 0.7f, 0.7f));	
+		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		is_running_ = true;
 	}
 
@@ -100,7 +100,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"Default Audio Device";
+		return L"Default Audio Device [output]";
 	}
 };
 

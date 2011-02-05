@@ -126,7 +126,7 @@ public:
 		while(n < device_index_ && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
 
 		if(n != device_index_ || !decklink_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink card found."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Decklink card not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
 
 		output_ = decklink_;
 		keyer_ = decklink_;
@@ -137,7 +137,7 @@ public:
 				
 		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->guide("tick-time", 0.5);
-		graph_->set_color("tick-time", diagnostics::color(0.4f, 0.7f, 0.7f));	
+		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		
 		auto display_mode = get_display_mode(output_.p, format_desc_.format);
 		if(display_mode == nullptr) 
@@ -272,7 +272,7 @@ public:
 
 	std::wstring print() const
 	{
-		return model_name_ + L"[" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return model_name_ + L" [output-" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 
