@@ -26,8 +26,10 @@
 #include "../../consumer/decklink/DeckLinkAPI_h.h" // TODO: Change this
 #include "../../consumer/decklink/util.h" // TODO: Change this
 
+#include <common/diagnostics/graph.h>
 #include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
+#include <common/utility/timer.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
@@ -55,68 +57,80 @@ class decklink_input : public IDeckLinkInputCallback
 	} co_;
 
 	const video_format_desc format_desc_;
+	std::wstring model_name_;
 	const size_t device_index_;
+
+	std::shared_ptr<diagnostics::graph> graph_;
+	timer perf_timer_;
 
 	CComPtr<IDeckLink>			decklink_;
 	CComQIPtr<IDeckLinkInput>	input_;
 	IDeckLinkDisplayMode*		d_mode_;
 
+	std::vector<short>			audio_data_;
+
 	std::shared_ptr<frame_factory> frame_factory_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
-	safe_ptr<draw_frame> head_;
 	safe_ptr<draw_frame> tail_;
 
 public:
 
 	decklink_input(const video_format_desc& format_desc, size_t device_index, const std::shared_ptr<frame_factory>& frame_factory)
-		: device_index_(device_index)
+		: format_desc_(format_desc)
+		, device_index_(device_index)
+		, model_name_(L"DECKLINK")
 		, frame_factory_(frame_factory)
-		, head_(draw_frame::empty())
 		, tail_(draw_frame::empty())
 	{
 		frame_buffer_.set_capacity(4);
 		
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: No Decklink drivers installed."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink drivers installed."));
 
 		size_t n = 0;
 		while(n < device_index_ && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
 
 		if(n != device_index_ || !decklink_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: No Decklink card found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Decklink card not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
 
 		input_ = decklink_;
 
 		BSTR pModelName;
 		decklink_->GetModelName(&pModelName);
-		if(pModelName != nullptr)
-			CASPAR_LOG(info) << "decklink_producer: Modelname: " << pModelName;
+		model_name_ = std::wstring(pModelName);
+
+		graph_ = diagnostics::create_graph(narrow(print()));
+		graph_->guide("tick-time", 0.5);
+		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		
 		unsigned long decklinkVideoFormat = GetDecklinkVideoFormat(format_desc.format);
 		if(decklinkVideoFormat == ULONG_MAX) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: Card does not support requested videoformat."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 
 		d_mode_ = get_display_mode((BMDDisplayMode)decklinkVideoFormat);
 		if(d_mode_ == nullptr) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: Card does not support requested videoformat."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 
 		BMDDisplayModeSupport displayModeSupport;
 		if(FAILED(input_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, &displayModeSupport)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: Card does not support requested videoformat."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 
 		// NOTE: bmdFormat8BitABGR does not seem to work with Decklink HD Extreme 3D
 		if(FAILED(input_->EnableVideoInput((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, 0))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Could not enable video input."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video input."));
+
+		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2))) 
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable audio input."));
 			
 		if (FAILED(input_->SetCallback(this)) != S_OK)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("decklink_producer: Failed to set input callback."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set input callback."));
 			
 		if(FAILED(input_->StartStreams()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("DECKLINK: Failed to start input stream."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to start input stream."));
 
-		CASPAR_LOG(info) << "decklink_producer: Successfully initialized decklink for " << format_desc_.name;
+		CASPAR_LOG(info) << print() << " Successfully initialized decklink for " << format_desc_.name;
 	}
 
 	~decklink_input()
@@ -139,9 +153,12 @@ public:
 	}
 
 	// TODO: Enable audio input
-	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* /*audio*/)
-	{		
-		if(!frame_buffer_.try_push(head_) || video == nullptr)
+	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
+	{	
+		graph_->update("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+		perf_timer_.reset();
+
+		if(!video)
 			return S_OK;		
 				
 		void* bytes = nullptr;
@@ -175,7 +192,21 @@ public:
 			}
 		});
 
-		head_ = frame;
+		if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
+		{
+			auto sample_frame_count = audio->GetSampleFrameCount();
+			auto audio_data = reinterpret_cast<short*>(bytes);
+			audio_data_.insert(audio_data_.end(), audio_data, audio_data + sample_frame_count*2);
+
+			if(audio_data_.size() > 3840)
+			{
+				frame->audio_data() = std::vector<short>(audio_data_.begin(), audio_data_.begin() + 3840);
+				audio_data_.erase(audio_data_.begin(), audio_data_.begin() + 3840);
+				frame_buffer_.try_push(frame);
+			}
+		}
+		else
+			frame_buffer_.try_push(frame);
 
 		return S_OK;
 	}
@@ -200,6 +231,11 @@ public:
 	{
 		frame_buffer_.try_pop(tail_);
 		return tail_;
+	}
+
+	std::wstring print() const
+	{
+		return model_name_ + L" [input-" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 	
@@ -240,7 +276,10 @@ public:
 		return input_->get_frame();
 	}
 	
-	virtual std::wstring print() const { return + L"decklink"; }
+	std::wstring print() const
+	{
+		return input_ ? input_->print() : L"Unknown Decklink [input-" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+	}
 };
 
 safe_ptr<frame_producer> create_decklink_producer(const std::vector<std::wstring>& params)

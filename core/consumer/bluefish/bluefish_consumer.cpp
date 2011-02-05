@@ -150,7 +150,7 @@ public:
 
 		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->guide("tick-time", 0.5);
-		graph_->set_color("tick-time", diagnostics::color(0.4f, 0.7f, 0.7f));	
+		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 			
 		//void* pBlueDevice = blue_attach_to_device(1);
 		//EBlueConnectorPropertySetting video_routing[1];
@@ -341,7 +341,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L"[" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return model_name_ + L" [output-" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 

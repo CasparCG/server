@@ -38,7 +38,8 @@ safe_ptr<core::frame_producer> create_producer(const std::vector<std::wstring>& 
 		(&core::image::create_image_producer)
 		(&core::create_decklink_producer)
 		(&core::create_color_producer)
-		(&core::create_silverlight_producer);
+		//(&core::create_silverlight_producer)
+		;
 
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
