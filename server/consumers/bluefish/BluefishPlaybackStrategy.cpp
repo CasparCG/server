@@ -74,7 +74,7 @@ struct BluefishPlaybackStrategy::Implementation
 		return pFrameManager_;
 	}
 
-	void DisplayFrame(Frame* pFrame)
+	void DisplayFrame(FramePtr pFrame)
 	{
 		if(!pFrame->HasValidDataPtr() || pFrame->GetDataSize() != pFrameManager_->GetFrameFormatDescription().size)
 		{			
@@ -208,5 +208,5 @@ BluefishPlaybackStrategy::BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsu
 IVideoConsumer* BluefishPlaybackStrategy::GetConsumer(){return pImpl_->pConsumer_;}
 FramePtr BluefishPlaybackStrategy::GetReservedFrame(){return pImpl_->GetReservedFrame();}
 FrameManagerPtr BluefishPlaybackStrategy::GetFrameManager(){return pImpl_->GetFrameManager();}
-void BluefishPlaybackStrategy::DisplayFrame(Frame* pFrame){return pImpl_->DisplayFrame(pFrame);}
+void BluefishPlaybackStrategy::DisplayFrame(FramePtr pFrame){return pImpl_->DisplayFrame(pFrame);}
 }}

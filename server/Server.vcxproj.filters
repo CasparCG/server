@@ -403,6 +403,12 @@
     <ClInclude Include="consumers\bluefish\BluefishException.h">
       <Filter>consumers\bluefish</Filter>
     </ClInclude>
+    <ClInclude Include="utils\timer.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="consumers\decklink\util.h">
+      <Filter>consumers\decklink</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="utils\BitmapHolder.cpp">

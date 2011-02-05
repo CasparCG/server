@@ -37,7 +37,7 @@ public:
 	virtual ~IFramePlaybackStrategy() {}
 
 	virtual FrameManagerPtr GetFrameManager() = 0;
-	virtual void DisplayFrame(Frame*) = 0;
+	virtual void DisplayFrame(FramePtr) = 0;
 	virtual FramePtr GetReservedFrame() = 0;
 };
 typedef std::tr1::shared_ptr<IFramePlaybackStrategy> FramePlaybackStrategyPtr;

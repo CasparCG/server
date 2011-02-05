@@ -28,30 +28,30 @@
 
 #include "..\..\frame\Frame.h"
 
-namespace caspar {
-namespace decklink {
+#include <boost/noncopyable.hpp>
 
-class DecklinkVideoConsumer : public IVideoConsumer, private utils::LockableObject, utils::Noncopyable
+namespace caspar { namespace decklink {
+
+class DecklinkVideoConsumer : public IVideoConsumer, boost::noncopyable
 {
-	struct Implementation;
-	typedef std::tr1::shared_ptr<Implementation> ImplementationPtr;
-	ImplementationPtr pImpl_;
-
-	explicit DecklinkVideoConsumer(ImplementationPtr pImpl);
-
 public:
+	DecklinkVideoConsumer(unsigned int device_index);
 	virtual ~DecklinkVideoConsumer();
-
-	static VideoConsumerPtr Create();
-
+	
 	virtual IPlaybackControl* GetPlaybackControl() const;
 
-	virtual void EnableVideoOutput();
-	virtual void DisableVideoOutput();
-	virtual bool SetupDevice(unsigned int deviceIndex);
-	virtual bool ReleaseDevice();
+	virtual void EnableVideoOutput(){}
+	virtual void DisableVideoOutput(){}
+	virtual bool SetupDevice(unsigned int deviceIndex){return false;}
+	virtual bool ReleaseDevice(){return false;}
 	virtual const FrameFormatDescription& GetFrameFormatDescription() const;
 	virtual const TCHAR* GetFormatDescription() const;
+	
+	static int EnumerateDevices();
+	bool SetVideoFormat(const tstring& strDesiredFrameFormat);
+private:
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
 };
 
 }	//namespace gdi

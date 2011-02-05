@@ -34,6 +34,7 @@
 #include "FlashCommand.h"
 
 #include "..\..\utils\thread.h"
+#include "..\..\utils\timer.h"
 #include "..\..\frame\buffers\MotionFrameBuffer.h"
 
 namespace caspar
@@ -75,6 +76,8 @@ public:
 	bool Load(const tstring& filename);
 
 private:
+
+	timer timer_;
 
 	friend class FlashCommand;
 	friend class InitializeFlashCommand;

@@ -20,463 +20,346 @@
  
 #include "..\..\stdafx.h"
 
-#include "..\..\Application.h"
 #include "DecklinkVideoConsumer.h"
+#include "util.h"
+
+#include "..\..\Application.h"
+
 #include "..\..\frame\FramePlaybackControl.h"
 #include "..\..\frame\Frame.h"
 #include "..\..\frame\FramePlaybackStrategy.h"
+
 #include "DeckLinkAPI_h.h"
-#include "..\..\utils\image\Image.hpp"
-#include "..\..\utils\event.h"
+
+#include <boost/thread.hpp>
+#include <boost/circular_buffer.hpp>
+
+#include <tbb/atomic.h>
+#include <tbb/concurrent_queue.h>
 
 #include <queue>
+#include <array>
 
-namespace caspar {
-namespace decklink {
-
-
-struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallback
-{
-	//struct DecklinkFrameQueue : private caspar::utils::LockableObject
-	//{
-	//	std::queue<FramePtr> availibleFrames;
-	//	std::queue<FramePtr> scheduledFrames;
-
-	//	void add_free(FramePtr pFrame) {
-	//		availibleFrames.push(pFrame);
-	//	}
-	//};
-
-	struct DecklinkFrameManager;
-	struct DecklinkVideoFrame : public Frame {
-		explicit DecklinkVideoFrame(DecklinkFrameManager* pFactory) : factoryID_(pFactory->ID()) {
-			IDeckLinkMutableVideoFrame* pFrame = NULL;
-			const FrameFormatDescription& fmtDesc = pFactory->pConsumerImpl_->GetFrameFormatDescription();
-			if(pFactory->pConsumerImpl_->pDecklinkOutput_->CreateVideoFrame(fmtDesc.width, fmtDesc.height, fmtDesc.size/fmtDesc.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &pFrame) != S_OK) {
-				throw std::exception("DECKLINK: Failed to create frame");
-			}
-			pDecklinkFrame_ = pFrame;
-			pFrame->Release();
-
-			if(pDecklinkFrame_->GetBytes((void**)&pBytes_) != S_OK)
-				throw std::exception("DECKLINK: Failed to get bytes to frame");
-		}
-		virtual unsigned char* GetDataPtr() const {
-			HasVideo(true);
-			return pBytes_;
-		}
-		virtual bool HasValidDataPtr() const {
-			return true;
-		}
-
-		virtual unsigned int GetDataSize() const {
-			return pDecklinkFrame_->GetRowBytes() * pDecklinkFrame_->GetHeight();
-		}
-		virtual FrameMetadata GetMetadata() const {
-			IDeckLinkMutableVideoFrame* pFramePtr = pDecklinkFrame_;
-			return reinterpret_cast<FrameMetadata>(pFramePtr);
-		}
-		const utils::ID& FactoryID() const {
-			return factoryID_;
-		}
-
-		utils::ID factoryID_;
-		CComPtr<IDeckLinkMutableVideoFrame> pDecklinkFrame_;
-		unsigned char* pBytes_;
-	};
-
-	struct DecklinkPlaybackStrategy : public IFramePlaybackStrategy
+namespace caspar {namespace decklink {
+	
+struct decklink_output: public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
+{		
+	struct co_init
 	{
-		explicit DecklinkPlaybackStrategy(Implementation* pConsumerImpl) : pConsumerImpl_(pConsumerImpl), currentReservedFrameIndex_(0), totalFramesScheduled_(0)
-		{
-			for(int i = 0; i<4; ++i) {
-				reservedFrames_.push_back(pConsumerImpl_->pFrameManager_->CreateReservedFrame());
-			}
-		}
+		co_init(){CoInitialize(nullptr);}
+		~co_init(){CoUninitialize();}
+	} co_;
+	
+	std::wstring	model_name_;
+	const size_t	device_index_;
+	
+	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
+	boost::circular_buffer<std::vector<short>> audio_container_;
+	
+	const bool		embed_audio_;
+	const bool		internal_key;
 
-		FrameManagerPtr GetFrameManager()
-		{
-			return pConsumerImpl_->pFrameManager_;
-		}
+	CComPtr<IDeckLink>			decklink_;
+	CComQIPtr<IDeckLinkOutput>	output_;
+	CComQIPtr<IDeckLinkKeyer>	keyer_;
+	
+	FrameFormatDescription format_desc_;
 
-		FramePtr GetReservedFrame()
-		{
-			FramePtr pResult;
-			if(reservedFrames_.size() > currentReservedFrameIndex_) {
-				pResult = reservedFrames_[currentReservedFrameIndex_];
-				currentReservedFrameIndex_ = (currentReservedFrameIndex_+1) & 3;
-			}
-			return pResult;
-		}
+	BMDTimeScale frame_time_scale_;
+	BMDTimeValue frame_duration_;
+	unsigned long frames_scheduled_;
+	unsigned long audio_scheduled_;
+	
+	tbb::concurrent_bounded_queue<FramePtr> video_frame_buffer_;
+	tbb::concurrent_bounded_queue<std::vector<short>> audio_frame_buffer_;
 
-		void DisplayFrame(Frame* pFrame)
-		{
-			if(pFrame != NULL && pFrame->HasValidDataPtr()) {
-				if(GetFrameManager()->Owns(*pFrame)) {
-					DoRender(pFrame);
-				}
-				else {
-					FramePtr pTempFrame = GetReservedFrame();
-					if(pTempFrame && pFrame->GetDataSize() == pTempFrame->GetDataSize()) {
-						utils::image::Copy(pTempFrame->GetDataPtr(), pFrame->GetDataPtr(), pTempFrame->GetDataSize());
-						DoRender(pTempFrame.get());
-					}
-					else
-						LOG << TEXT("DECKLINK: Failed to get reserved frame");
-				}
-			}
-			else {
-				LOG << TEXT("DECKLINK: Tried to render frame with no data");
-			}
-		}
-		void DoRender(Frame* pFrame) {
-			static DWORD lastTime = 0;
-			static bool bDoLog = true;
-			DWORD timediff = timeGetTime() - lastTime;
-			if(timediff < 30) {
-				Sleep(40 - timediff);
-				lastTime += 40;
-			}
-			else
-				lastTime = timeGetTime();
-
-			if(pConsumerImpl_->pDecklinkOutput_->DisplayVideoFrameSync(reinterpret_cast<IDeckLinkMutableVideoFrame*>(pFrame->GetMetadata())) != S_OK) {
-				if(bDoLog) {
-					LOG << TEXT("DECKLINK: Failed to render frame");
-					bDoLog = false;
-				}
-			}
-			else {
-				bDoLog = true;
-			}
-//			lastFrameID_ = pFrame->ID();
-		}
-
-		int totalFramesScheduled_;
-		std::vector<FramePtr> reservedFrames_;
-		unsigned int currentReservedFrameIndex_;
-		Implementation* pConsumerImpl_;
-	};
-	friend struct DecklinkPlaybackStrategy;
-
-	struct DecklinkFrameManager : public caspar::FrameManager
-	{
-		explicit DecklinkFrameManager(Implementation* pConsumerImpl) : pConsumerImpl_(pConsumerImpl)
-		{
-			pFrameManager_.reset(new SystemFrameManager(pConsumerImpl_->GetFrameFormatDescription()));
-		}
-
-		FramePtr CreateFrame() {
-			return pFrameManager_->CreateFrame();
-		}
-
-		FramePtr CreateReservedFrame() {
-			return FramePtr(new DecklinkVideoFrame(this));
-		}
-
-		const FrameFormatDescription& GetFrameFormatDescription() const {
-			return pConsumerImpl_->GetFrameFormatDescription();
-		}
-
-		Implementation* pConsumerImpl_;
-		SystemFrameManagerPtr pFrameManager_;
-	};
-
-	typedef std::tr1::shared_ptr<DecklinkFrameManager> DecklinkFrameManagerPtr;
-
-	CComPtr<IDeckLink> pDecklink_;
-	CComQIPtr<IDeckLinkOutput> pDecklinkOutput_;
-	CComQIPtr<IDeckLinkKeyer> pDecklinkKeyer_;
-
-	FramePlaybackControlPtr pPlaybackControl_;
-	DecklinkFrameManagerPtr pFrameManager_;
-	FrameFormat currentFormat_;
-
-//	IDeckLinkMutableVideoFrame* pNextFrame_;
-
-	explicit Implementation(CComPtr<IDeckLink> pDecklink) : pDecklink_(pDecklink), currentFormat_(FFormatPAL)//, pNextFrame_(NULL)
+public:
+	decklink_output(size_t device_index, bool embed_audio, bool internalKey) 
+		: model_name_(L"DECKLINK")
+		, device_index_(device_index)
+		, audio_container_(5)
+		, embed_audio_(embed_audio)
+		, internal_key(internalKey)
+		, frames_scheduled_(0)
+		, audio_scheduled_(0)
 	{}
 
-	~Implementation()
-	{
-		ReleaseDevice();
+	~decklink_output()
+	{			
+		if(output_ != nullptr) 
+		{
+			output_->StopScheduledPlayback(0, nullptr, 0);
+			if(embed_audio_)
+				output_->DisableAudioOutput();
+			output_->DisableVideoOutput();
+		}
+		LOG << print() << L" Shutting down.";	
 	}
 
-	bool SetupDevice()
+	void initialize(const FrameFormatDescription& format_desc)
 	{
-		if(!pDecklink_)
-			return false;
+		format_desc_ = format_desc;
+		CComPtr<IDeckLinkIterator> pDecklinkIterator;
+		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
+			throw std::exception("DECKLINK: No Decklink drivers installed."); //(caspar_exception() << msg_info(narrow(print()) + " No Decklink drivers installed."));
+		
+		static bool print_ver = false;
+		if(!print_ver)
+		{
+			LOG << "DeckLinkAPI Version: " << get_version(pDecklinkIterator);
+			print_ver = true;
+		}
+
+		size_t n = 0;
+		while(n < device_index_ && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
+
+		if(n != device_index_ || !decklink_)
+			throw std::runtime_error("DECKLINK: No Decklink card found.");//(caspar_exception() << msg_info(narrow(print()) + " No Decklink card found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
+
+		output_ = decklink_;
+		keyer_ = decklink_;
 
 		BSTR pModelName;
-		pDecklink_->GetModelName(&pModelName);
-		if(pModelName != NULL)
-			LOG << TEXT("DECKLINK: Modelname: ") << pModelName;
-
-		pDecklinkOutput_ = pDecklink_;
-		if(pDecklinkOutput_ == NULL) {
-			LOG << TEXT("DECKLINK: Failed to get IDecklinkOutput interface");
-			return false;
-		}
-
-		tstring strDesiredFrameFormat = caspar::GetApplication()->GetSetting(TEXT("videomode"));
-		if(strDesiredFrameFormat.size() == 0)
-			strDesiredFrameFormat = TEXT("PAL");
-		FrameFormat casparVideoFormat = caspar::GetVideoFormat(strDesiredFrameFormat);
-		unsigned long decklinkVideoFormat = GetDecklinkVideoFormat(casparVideoFormat);
-		if(decklinkVideoFormat == ULONG_MAX) {
-			LOG << "DECKLINK: Card does not support requested videoformat: " << strDesiredFrameFormat;
-			return false;
-		}
+		decklink_->GetModelName(&pModelName);
+		model_name_ = std::wstring(pModelName);
+						
+		auto display_mode = get_display_mode(output_.p, GetVideoFormat(format_desc_.name));
+		if(display_mode == nullptr) 
+			throw std::runtime_error("DECKLINK: Card does not support requested videoformat.");//N(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 		
-		currentFormat_ = casparVideoFormat;
+		display_mode->GetFrameRate(&frame_duration_, &frame_time_scale_);
 
 		BMDDisplayModeSupport displayModeSupport;
-		if(FAILED(pDecklinkOutput_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitBGRA, &displayModeSupport))) {
-			LOG << TEXT("DECKLINK: Card does not support requested videoformat");
-			return false;
+		if(FAILED(output_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, &displayModeSupport)))
+			throw std::runtime_error("DECKLINK: Card does not support requested videoformat.");//(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
+		
+		if(embed_audio_)
+		{
+			if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2, bmdAudioOutputStreamTimestamped)))
+				throw std::runtime_error("DECKLINK: Could not enable audio output.");//(caspar_exception() << msg_info(narrow(print()) + " Could not enable audio output."));
+				
+			if(FAILED(output_->SetAudioCallback(this)))
+				throw std::runtime_error("DECKLINK: Could not set audio callback.");//(caspar_exception() << msg_info(narrow(print()) + " Could not set audio callback."));
 		}
 
-		pDecklinkOutput_->DisableAudioOutput();
-		if(FAILED(pDecklinkOutput_->EnableVideoOutput((BMDDisplayMode)decklinkVideoFormat, bmdVideoOutputFlagDefault))) {
-			LOG << TEXT("DECKLINK: Could not enable video output");
-			return false;
-		}
+		if(FAILED(output_->EnableVideoOutput(display_mode->GetDisplayMode(), bmdVideoOutputFlagDefault))) 
+			throw std::exception("DECKLINK: Could not enable video output.");//(caspar_exception() << msg_info(narrow(print()) + " Could not enable video output."));
 
-		pFrameManager_.reset(new DecklinkFrameManager(this));
-
-		if(GetApplication()->GetSetting(TEXT("internalkey")) == TEXT("true")) {
-			pDecklinkKeyer_ = pDecklink_;
-			if(pDecklinkKeyer_) {
-				bool bSuccess = true;
-				if(FAILED(pDecklinkKeyer_->Enable(FALSE))) {
-					LOG << TEXT("DECKLINK: Failed to enable internal keyer");
-					bSuccess = false;
-				}
-				if(FAILED(pDecklinkKeyer_->SetLevel(255))) {
-					LOG << TEXT("DECKLINK: Keyer - Failed to set blend-level to max");
-					bSuccess = false;
-				}
-
-				if(bSuccess)
-					LOG << TEXT("DECKLINK: Successfully configured internal keyer");
-			}
-			else {
-				LOG << TEXT("DECKLINK: Failed to get keyer-interface");
-			}
+		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
+			throw std::exception("DECKLINK: Failed to set playback completion callback.");//(caspar_exception() << msg_info(narrow(print()) + " Failed to set playback completion callback."));
+			
+		if(internal_key) 
+		{
+			if(FAILED(keyer_->Enable(FALSE)))			
+				LOG << print() << L" Failed to enable internal keyer.";			
+			else if(FAILED(keyer_->SetLevel(255)))			
+				LOG << print() << L" Failed to set key-level to max.";
+			else
+				LOG << print() << L" Successfully configured internal keyer.";		
 		}
 		else
-		{			
-			pDecklinkKeyer_ = pDecklink_;
-			if(pDecklinkKeyer_) {
-				bool bSuccess = true;
-				if(FAILED(pDecklinkKeyer_->Enable(TRUE))) {
-					LOG << TEXT("DECKLINK: Failed to enable external keyer");
-					bSuccess = false;
-				}
-
-				if(bSuccess)
-					LOG << TEXT("DECKLINK: Successfully configured external keyer");
-			}
-			else {
-				LOG << TEXT("DECKLINK: Failed to get keyer-interface");
-			}
-		}
-
-		pPlaybackControl_.reset(new FramePlaybackControl(FramePlaybackStrategyPtr(new DecklinkPlaybackStrategy(this))));
-		pPlaybackControl_->Start();
-
-		LOG << TEXT("DECKLINK: Successfully initialized decklink for ") << strDesiredFrameFormat;
-		return true;
-	}
-
-	bool ReleaseDevice()
-	{
-		if(pPlaybackControl_)
-			pPlaybackControl_->Stop();
-
-		if(pDecklinkKeyer_) {
-			pDecklinkKeyer_.Release();
-		}
-
-		if(pDecklinkOutput_) {
-			BOOL bIsRunning = FALSE;
-			pDecklinkOutput_->IsScheduledPlaybackRunning(&bIsRunning);
-			if(bIsRunning)
-				pDecklinkOutput_->StopScheduledPlayback(0, NULL, 0);
-
-			pDecklinkOutput_->DisableVideoOutput();
-		}
-
-		return true;
-	}
-
-	//void DoScheduleNextFrame() {
-	//	static int frame = 0;
-	//	static bool bLog = true;
-	//	if(pDecklinkOutput_->ScheduleVideoFrame(pNextFrame_, frame++, 1, 25) != S_OK) {
-	//		if(bLog) {
-	//			LOG << TEXT("DECKLINK: Failed to display frame");
-	//			bLog = false;
-	//		}
-	//	}
-	//	else {
-	//		if(((frame-1) % 25) == 0)
-	//			LOG << TEXT("DECKLINK: Scheduled frame ") << (frame-1);
-	//		bLog = true;
-	//	}
-	//}
-
-	// IUnknown needs o a dummy implementation
-	virtual HRESULT STDMETHODCALLTYPE	QueryInterface(REFIID iid, LPVOID *ppv) 
-	{
-		if(ppv != NULL) {
-			if(iid == IID_IUnknown) {
-				(*ppv) = this;
-				return S_OK;
-			}
-			if(iid == IID_IDeckLinkVideoOutputCallback_v7_1) {
-				(*ppv) = (IDeckLinkVideoOutputCallback_v7_1*)this;
-				return S_OK;
-			}
-			if(iid == IID_IDeckLinkVideoOutputCallback) {
-				(*ppv) = (IDeckLinkVideoOutputCallback*)this;
-				return S_OK;
-			}
-		}
-		return E_NOINTERFACE;
-	}
-	virtual ULONG STDMETHODCALLTYPE		AddRef() {return 1;}
-	virtual ULONG STDMETHODCALLTYPE		Release() {return 1;}
-
-	virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result) {
-		//DoScheduleNextFrame();
-		return S_OK;
-	}
-
-	virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped() {
-		return S_OK;
-	}
-
-	const FrameFormatDescription& GetFrameFormatDescription() const {
-		return FrameFormatDescription::FormatDescriptions[currentFormat_];
-	}
-
-	unsigned long GetDecklinkVideoFormat(FrameFormat fmt) {
-		switch(fmt)
 		{
-		case FFormatPAL:
-			return bmdModePAL;
-
-		case FFormatNTSC:
-			return bmdModeNTSC;
-
-		case FFormat576p2500:
-			return ULONG_MAX;	//not supported
-
-		case FFormat720p5000:
-			return bmdModeHD720p50;
-
-		case FFormat720p5994:
-			return bmdModeHD720p5994;
-
-		case FFormat720p6000:
-			return bmdModeHD720p60;
-
-		case FFormat1080p2397:
-			return bmdModeHD1080p2398;
-
-		case FFormat1080p2400:
-			return bmdModeHD1080p24;
-
-		case FFormat1080i5000:
-			return bmdModeHD1080i50;
-
-		case FFormat1080i5994:
-			return bmdModeHD1080i5994;
-
-		case FFormat1080i6000:
-			return bmdModeHD1080i6000;
-
-		case FFormat1080p2500:
-			return bmdModeHD1080p25;
-
-		case FFormat1080p2997:
-			return bmdModeHD1080p2997;
-
-		case FFormat1080p3000:
-			return bmdModeHD1080p30;
+			if(FAILED(keyer_->Enable(TRUE)))			
+				LOG << print() << L" Failed to enable external keyer.";	
+			else
+				LOG << print() << L" Successfully configured external keyer.";			
 		}
+		
+		for(size_t n = 0; n < reserved_frames_.size(); ++n)
+		{
+			if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &reserved_frames_[n].second)))
+				throw std::exception("DECKLINK: Failed to create frame.");//(caspar_exception() << msg_info(narrow(print()) + " Failed to create frame."));
 
-		return ULONG_MAX;
+			if(FAILED(reserved_frames_[n].second->GetBytes(&reserved_frames_[n].first)))
+				throw std::exception("DECKLINK: Failed to get frame bytes.");//(caspar_exception() << msg_info(narrow(print()) + " Failed to get frame bytes."));
+		}
+					
+		auto buffer_size = static_cast<size_t>(frame_time_scale_/frame_duration_)/4;
+		for(size_t n = 0; n < buffer_size; ++n)
+			schedule_next_video(FramePtr());
+
+		video_frame_buffer_.set_capacity(buffer_size);
+		audio_frame_buffer_.set_capacity(buffer_size);
+		
+		if(FAILED(output_->StartScheduledPlayback(0, frame_time_scale_, 1.0))) 
+			throw std::exception("DECKLINK: Failed to schedule playback.");//(caspar_exception() << msg_info(narrow(print()) + " Failed to schedule playback."));
+		
+		LOG << print() << L" Successfully initialized for " << format_desc_.name;	
+	}
+	
+	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
+	virtual ULONG STDMETHODCALLTYPE		AddRef ()							{return 1;}
+	virtual ULONG STDMETHODCALLTYPE		Release ()							{return 1;}
+	
+	virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted (IDeckLinkVideoFrame* /*completedFrame*/, BMDOutputFrameCompletionResult /*result*/)
+	{
+		FramePtr frame;		
+		video_frame_buffer_.try_pop(frame);		
+		schedule_next_video(frame);
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped (void)
+	{
+		return S_OK;
+	}
+		
+	virtual HRESULT STDMETHODCALLTYPE RenderAudioSamples (BOOL /*preroll*/)
+	{
+		int audio_samples = 1920;
+		std::vector<short> audio_data(audio_samples*2, 0);
+		audio_frame_buffer_.try_pop(audio_data);
+		schedule_next_audio(audio_data);
+		return S_OK;
+	}
+
+	void schedule_next_audio(std::vector<short>& audio_data)
+	{
+		int audio_samples = 1920;
+				
+		if(FAILED(output_->ScheduleAudioSamples(audio_data.data(), audio_samples, (frames_scheduled_) * audio_samples, 48000, nullptr)))
+			LOG << L"DECKLINK: Failed to schedule audio.";
+	}
+
+	void MixAudio(short* dest, const AudioDataChunkList& frame_audio_data, size_t audio_samples, size_t audio_nchannels)
+	{		
+		size_t size = audio_samples*audio_nchannels;
+		memset(dest, 0, size*2);
+		std::for_each(frame_audio_data.begin(), frame_audio_data.end(), [&](const audio::AudioDataChunkPtr& chunk)
+		{
+			short* src = reinterpret_cast<short*>(chunk->GetDataPtr());
+			for(size_t n = 0; n < size; ++n)
+				dest[n] = static_cast<short>(static_cast<int>(dest[n])+static_cast<int>(src[n]));
+		});
+	}
+			
+	void schedule_next_video(const FramePtr& frame)
+	{
+		if(frame)
+			std::copy(frame->GetDataPtr(), frame->GetDataPtr()+frame->GetDataSize(), static_cast<char*>(reserved_frames_.front().first));
+		else
+			std::fill_n(static_cast<int*>(reserved_frames_.front().first), 0, format_desc_.size/4);
+
+		if(FAILED(output_->ScheduleVideoFrame(reserved_frames_.front().second, (frames_scheduled_++) * frame_duration_, frame_duration_, frame_time_scale_)))
+			LOG << print() << L" Failed to schedule video.";
+
+		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
+	}
+
+	void send(const FramePtr& frame)
+	{
+		if(!frame)
+			return;
+
+		video_frame_buffer_.push(frame);
+		if(embed_audio_)
+		{
+			int audio_samples = 1920;
+			std::vector<short> frame_audio_data(audio_samples*2, 0);
+			if(frame)
+				MixAudio(frame_audio_data.data(), frame->GetAudioData(), audio_samples, 2);	
+
+			audio_frame_buffer_.push(frame_audio_data);
+		}
+	}
+
+	std::wstring print() const
+	{
+		return L"DECKLINK: " + model_name_ + L"[" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 
-DecklinkVideoConsumer::DecklinkVideoConsumer(ImplementationPtr pImpl) : pImpl_(pImpl)
-{}
+struct DecklinkVideoConsumer::implementation : public std::enable_shared_from_this<implementation>, public IFramePlaybackStrategy
+{
+	decklink_output output_;
+	DecklinkVideoConsumer* consumer_;
+	FrameManagerPtr frame_manager_;
+	FrameFormatDescription format_desc_;
+	FramePlaybackControlPtr pPlaybackControl_;
+public:
+	explicit implementation(size_t device_index, DecklinkVideoConsumer* consumer)
+		: output_(device_index, 
+					GetApplication()->GetSetting(L"embedded-audio") == L"true",
+					GetApplication()->GetSetting(L"internal-key") == L"true")
+		, consumer_(consumer)
+	{
+		auto desired_fmt = caspar::GetApplication()->GetSetting(TEXT("videomode"));
+		if(desired_fmt.empty())
+			desired_fmt = L"PAL";
+		FrameFormat caspar_fmt = caspar::GetVideoFormat(desired_fmt);
+		caspar_fmt = caspar_fmt != FFormatInvalid ? caspar_fmt : FFormatPAL;
+		format_desc_ = FrameFormatDescription::FormatDescriptions[caspar_fmt];
+		frame_manager_ = std::make_shared<SystemFrameManager>(format_desc_);
+		output_.initialize(format_desc_);
+	}
+
+	void initialize()
+	{
+		pPlaybackControl_.reset(new FramePlaybackControl(FramePlaybackStrategyPtr(this)));
+		pPlaybackControl_->Start();
+	}
+
+	~implementation()
+	{
+		pPlaybackControl_.reset();
+	}
+
+	void DisplayFrame(FramePtr frame)
+	{
+		output_.send(frame);
+	}
+
+	IVideoConsumer* GetConsumer() { return consumer_; }
+	
+	FramePtr GetReservedFrame() 
+	{
+		return frame_manager_->CreateFrame();
+	}
+
+	FrameManagerPtr GetFrameManager()
+	{
+		return frame_manager_;
+	}
+};
+
+DecklinkVideoConsumer::DecklinkVideoConsumer(unsigned int device_index) : impl_(new implementation(device_index, this))
+{
+	impl_->initialize();
+}
 
 DecklinkVideoConsumer::~DecklinkVideoConsumer()
 {}
 
-VideoConsumerPtr DecklinkVideoConsumer::Create() {
-	VideoConsumerPtr pResult;
-
-	CComPtr<IDeckLinkIterator> pDecklinkIterator;
-	HRESULT result = pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator);
-	if(FAILED(result)) {
-		LOG << TEXT("No Decklink drivers installed");
-		return pResult;
-	}
-
-	CComPtr<IDeckLink> pDecklink;
-	IDeckLink* pTempDecklink = NULL;
-	while(pDecklinkIterator->Next(&pTempDecklink) == S_OK) {
-		if(pDecklink == NULL)
-			pDecklink = pTempDecklink;
-
-		if(pTempDecklink)
-			pTempDecklink->Release();
-		pTempDecklink = NULL;
-	}
-
-	if(pDecklink == NULL) {
-		LOG << TEXT("No Decklink card found");
-		return pResult;
-	}
-
-	ImplementationPtr pImpl(new Implementation(pDecklink));
-	pResult.reset(new DecklinkVideoConsumer(pImpl));
-
-	if(pResult != 0 && pResult->SetupDevice(0) == false)
-		pResult.reset();
-
-	return pResult;
-}
-
 IPlaybackControl* DecklinkVideoConsumer::GetPlaybackControl() const
 {
-	return pImpl_->pPlaybackControl_.get();
+	return impl_->pPlaybackControl_.get();
 }
 
-bool DecklinkVideoConsumer::SetupDevice(unsigned int deviceIndex)
+const FrameFormatDescription& DecklinkVideoConsumer::GetFrameFormatDescription() const 
 {
-	return (pImpl_) ? pImpl_->SetupDevice() : false;
+	return impl_->format_desc_;
 }
 
-bool DecklinkVideoConsumer::ReleaseDevice()
+const TCHAR* DecklinkVideoConsumer::GetFormatDescription() const 
 {
-	return (pImpl_) ? pImpl_->ReleaseDevice() : false;
+	return impl_->format_desc_.name;
 }
 
-void DecklinkVideoConsumer::EnableVideoOutput(){}
-void DecklinkVideoConsumer::DisableVideoOutput(){}
-
-const FrameFormatDescription& DecklinkVideoConsumer::GetFrameFormatDescription() const {
-	return pImpl_->GetFrameFormatDescription();
-}
-const TCHAR* DecklinkVideoConsumer::GetFormatDescription() const {
-	return pImpl_->GetFrameFormatDescription().name;
+bool DecklinkVideoConsumer::SetVideoFormat(const tstring& strDesiredFrameFormat)
+{
+	return false;
 }
 
+int DecklinkVideoConsumer::EnumerateDevices()
+{
+	CComPtr<IDeckLinkIterator> pDecklinkIterator;
+	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
+		throw std::exception(); //(caspar_exception() << msg_info(narrow(print()) + " No Decklink drivers installed."));
+	
+	CComPtr<IDeckLink> decklink;
+	size_t n = 0;
+	while(pDecklinkIterator->Next(&decklink) == S_OK){++n;}	
+	return n;
+}
 
-}	//namespace decklink
-}	//namespace caspar
+}}

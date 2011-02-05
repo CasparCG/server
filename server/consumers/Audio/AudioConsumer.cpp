@@ -49,7 +49,7 @@ struct AudioConsumer::Implementation
 			return pConsumerImpl_->pFrameManager_->CreateFrame();
 		}
 
-		void DisplayFrame(Frame* pFrame)
+		void DisplayFrame(FramePtr pFrame)
 		{
 			DWORD timediff = timeGetTime() - lastTime_;
 			if(timediff < 30) {

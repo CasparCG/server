@@ -34,7 +34,7 @@ class BluefishPlaybackStrategy : public IFramePlaybackStrategy
 public:
 	explicit BluefishPlaybackStrategy(BlueFishVideoConsumer* pConsumer, unsigned int memFmt, unsigned int updFmt, unsigned vidFmt);
 
-	virtual void DisplayFrame(Frame*);
+	virtual void DisplayFrame(FramePtr);
 	virtual IVideoConsumer* GetConsumer();
 	virtual FrameManagerPtr GetFrameManager();
 	virtual FramePtr GetReservedFrame();

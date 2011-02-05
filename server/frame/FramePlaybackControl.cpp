@@ -562,12 +562,12 @@ void FramePlaybackControl::DoRender(HANDLE& handle, bool bPureCG)
 		pResultFrame = pVideoFrame;
 
 	if(pResultFrame)
-		pStrategy_->DisplayFrame(pResultFrame.get());
+		pStrategy_->DisplayFrame(pResultFrame);
 	else if(bPureCG) {
 		pResultFrame = pStrategy_->GetReservedFrame();
 		if(pResultFrame) {
 			utils::image::Clear(pResultFrame->GetDataPtr(), pResultFrame->GetDataSize());
-			pStrategy_->DisplayFrame(pResultFrame.get());
+			pStrategy_->DisplayFrame(pResultFrame);
 		}
 	}
 }

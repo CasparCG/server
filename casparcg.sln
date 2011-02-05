@@ -10,16 +10,22 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
+		FFMPEG 0.5|Win32 = FFMPEG 0.5|Win32
 		no bluefish|Win32 = no bluefish|Win32
 		Release|Win32 = Release|Win32
+		WO Bluefish|Win32 = WO Bluefish|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Debug|Win32.ActiveCfg = Debug|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Debug|Win32.Build.0 = Debug|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.FFMPEG 0.5|Win32.ActiveCfg = Release|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.FFMPEG 0.5|Win32.Build.0 = Release|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.no bluefish|Win32.ActiveCfg = no bluefish|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.no bluefish|Win32.Build.0 = no bluefish|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Release|Win32.ActiveCfg = Release|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Release|Win32.Build.0 = Release|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.WO Bluefish|Win32.ActiveCfg = Release|Win32
+		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.WO Bluefish|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

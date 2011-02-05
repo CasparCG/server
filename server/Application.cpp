@@ -91,7 +91,7 @@ using namespace utils;
 enum ControllerTransports { TCP, Serial, TransportsCount };
 enum ControllerProtocols { AMCP, CII, CLOCK, ProtocolsCount };
 
-const TCHAR* Application::versionString_(TEXT("CG 1.8.1.6"));
+const TCHAR* Application::versionString_(TEXT("CG 1.8.2.7"));
 const TCHAR* Application::serviceName_(TEXT("Caspar service"));
 
 Application::Application(const tstring& cmdline, HINSTANCE hInstance) :	   hInstance_(hInstance), logLevel_(2), logDir_(TEXT("log")), 
@@ -430,9 +430,9 @@ bool Application::Initialize()
 
 		sourceMediaManagers_.push_back(MediaManagerPtr(new FlashManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new CTManager()));
+		sourceMediaManagers_.push_back(MediaManagerPtr(new ffmpeg::FFMPEGManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaScrollMediaManager()));
-		sourceMediaManagers_.push_back(MediaManagerPtr(new ffmpeg::FFMPEGManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new ColorManager()));
 
 		colorManagerIndex_ = static_cast<int>(sourceMediaManagers_.size()-1);
@@ -440,20 +440,23 @@ bool Application::Initialize()
 		////////////////////////////
 		// SETUP VideoOut Channels
 		int videoChannelIndex = 1;
-#ifndef DISABLE_BLUEFISH
-		int videoDeviceCount = caspar::bluefish::BlueFishVideoConsumer::EnumerateDevices();
-		LOG << TEXT("BLUEFISH: Found ") << videoDeviceCount << TEXT(" video cards.");
-
-		for(int bluefishIndex = 1; bluefishIndex<=videoDeviceCount; ++bluefishIndex, ++videoChannelIndex) {
-			CreateVideoChannel(videoChannelIndex, caspar::bluefish::BlueFishVideoConsumer::Create(bluefishIndex));
-		}
-#endif
+//#ifndef DISABLE_BLUEFISH
+//		int videoDeviceCount = caspar::bluefish::BlueFishVideoConsumer::EnumerateDevices();
+//		LOG << TEXT("BLUEFISH: Found ") << videoDeviceCount << TEXT(" video cards.");
+//
+//		for(int bluefishIndex = 1; bluefishIndex<=videoDeviceCount; ++bluefishIndex, ++videoChannelIndex) {
+//			CreateVideoChannel(videoChannelIndex, caspar::bluefish::BlueFishVideoConsumer::Create(bluefishIndex));
+//		}
+//#endif
 
 		//Decklink
-		if(GetSetting(TEXT("nodecklink")) != TEXT("true")) {
-			VideoConsumerPtr pDecklinkConsumer(caspar::decklink::DecklinkVideoConsumer::Create());
-			if(pDecklinkConsumer)
-				CreateVideoChannel(videoChannelIndex++, pDecklinkConsumer);
+		if(GetSetting(TEXT("nodecklink")) != TEXT("true")) 
+		{
+			int videoDeviceCount = caspar::decklink::DecklinkVideoConsumer::EnumerateDevices();
+			LOG << TEXT("DECKLINK: Found ") << videoDeviceCount << TEXT(" video cards.");
+
+			for(int index = 1; index <= videoDeviceCount; ++index, ++videoChannelIndex) 
+				CreateVideoChannel(videoChannelIndex, std::make_shared<decklink::DecklinkVideoConsumer>(index));			
 		}
 
 		if(GetSetting(TEXT("gdichannel")) == TEXT("true") && pWindow_ != 0) {
