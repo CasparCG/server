@@ -1,5 +1,7 @@
 #pragma once
 
+#ifndef DISABLE_BLUEFISH
+
 #include <BlueVelvet4.h>
 #include "../../frame/Frame.h"
 #include "BluefishException.h"
@@ -111,3 +113,5 @@ private:
 typedef std::shared_ptr<blue_dma_buffer> blue_dma_buffer_ptr;
 
 }}
+
+#endif

@@ -20,6 +20,8 @@
  
 #include "..\..\StdAfx.h"
 
+#ifndef DISABLE_BLUEFISH
+
 #include "..\..\frame\SystemFrameManager.h"
 #include "..\..\utils\image\Image.hpp"
 #include "..\..\audio\AudioManager.h"
@@ -210,3 +212,5 @@ FramePtr BluefishPlaybackStrategy::GetReservedFrame(){return pImpl_->GetReserved
 FrameManagerPtr BluefishPlaybackStrategy::GetFrameManager(){return pImpl_->GetFrameManager();}
 void BluefishPlaybackStrategy::DisplayFrame(Frame* pFrame){return pImpl_->DisplayFrame(pFrame);}
 }}
+
+#endif

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifndef DISABLE_BLUEFISH
+
 #include <BlueVelvet4.h>
 #include "../../frame/Frame.h"
 
@@ -154,3 +156,5 @@ inline bool is_epoch_card(int card_type)
 //}
 
 }}
+
+#endif

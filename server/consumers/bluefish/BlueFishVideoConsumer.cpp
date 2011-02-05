@@ -20,6 +20,8 @@
  
 #include "..\..\StdAfx.h"
 
+#ifndef DISABLE_BLUEFISH
+
 #include <BlueVelvet4.h>
 #include "..\..\application.h"
 #include "BlueFishVideoConsumer.h"
@@ -525,3 +527,5 @@ bool BlueFishVideoConsumer::SetVideoFormat(const tstring& strDesiredFrameFormat)
 
 }	//namespace bluefish
 }	//namespace caspar
+
+#endif
