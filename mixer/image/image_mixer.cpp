@@ -74,7 +74,7 @@ public:
 		{
 			GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
 			GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-			kernel_.apply(desc.pix_fmt, transform);
+			kernel_.apply(desc, transform);
 
 			std::vector<safe_ptr<device_buffer>> device_buffers;
 			for(size_t n = 0; n < buffers.size(); ++n)

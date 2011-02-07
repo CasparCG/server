@@ -40,6 +40,7 @@
 #include <boost/thread/once.hpp>
 
 #include <memory>
+#include <array>
 
 namespace caspar { namespace core {
 	

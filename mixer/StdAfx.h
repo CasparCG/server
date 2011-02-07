@@ -70,12 +70,12 @@
 
 #include <SFML/Window.hpp>
 
-#include "../common/utility/string_convert.h"
-#include "../common/memory/safe_ptr.h"
-//#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
+#include <common/utility/string_convert.h>
+#include <common/memory/safe_ptr.h>
+//#include <common/concurrency/executor.h> // Can't include this due to MSVC lambda bug
 
-#include "../common/log/Log.h"
-#include "../common/exception/exceptions.h"
-#include "../common/exception/win32_exception.h"
+#include <common/log/Log.h>
+#include <common/exception/exceptions.h>
+#include <common/exception/win32_exception.h>
 
 #include <assert.h>

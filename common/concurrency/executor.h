@@ -10,7 +10,6 @@
 #include <boost/noncopyable.hpp>
 
 #include <functional>
-#include <array>
 
 namespace caspar {
 

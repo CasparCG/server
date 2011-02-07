@@ -117,7 +117,7 @@ public:
 		if(FAILED(input_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, &displayModeSupport)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 
-		// NOTE: bmdFormat8BitABGR does not seem to work with Decklink HD Extreme 3D
+		// NOTE: bmdFormat8BitARGB does not seem to work with Decklink HD Extreme 3D
 		if(FAILED(input_->EnableVideoInput((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, 0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video input."));
 
@@ -180,8 +180,7 @@ public:
 		unsigned char* cb = frame->image_data(1).begin();
 		unsigned char* cr = frame->image_data(2).begin();
 		
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, frame_size/4), 
-		[&](const tbb::blocked_range<size_t>& r)
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, frame_size/4), [&](const tbb::blocked_range<size_t>& r)
 		{
 			for(auto n = r.begin(); n != r.end(); ++n)
 			{
