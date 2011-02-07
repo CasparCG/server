@@ -49,6 +49,7 @@
 #include <tchar.h>
 #include <sstream>
 #include <memory>
+#include <array>
 #include <functional>
 #include <algorithm>
 #include <vector>

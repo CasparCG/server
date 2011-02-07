@@ -54,7 +54,7 @@ public:
 		graph_->guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
-		graph_->set_color("output-buffer", diagnostics::color( 0.0f, 1.0f, 0.0f));		
+		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));		
 		executor_.start();
 		executor_.set_capacity(2);
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
@@ -93,9 +93,9 @@ public:
 			graph_->update("tick-time", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
 			wait_perf_timer_.reset();
 
-			graph_->set("output-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+			graph_->set("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 		});
-		graph_->set("output-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+		graph_->set("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}
 		
 	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc)
