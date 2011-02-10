@@ -150,7 +150,8 @@ private:
 
 	safe_ptr<draw_frame> render_simple_frame(bool has_underflow)
 	{
-		timer_.tick(1.0/ax_->GetFPS()*(has_underflow ? 0.95 : 1.0)); // Tick doesnt work on nested timelines, force an actual sync
+		double frame_time = 1.0/ax_->GetFPS()*(has_underflow ? 0.95 : 1.0); 
+		timer_.tick(frame_time); // Tick doesnt work on nested timelines, force an actual sync
 
 		diag_timer_.reset();
 		ax_->Tick();
@@ -165,7 +166,7 @@ private:
 			head_ = frame;
 		}		
 		
-		graph_->update("frame-time", static_cast<float>(diag_timer_.elapsed()/(1.0/ax_->GetFPS())));
+		graph_->update("frame-time", static_cast<float>(diag_timer_.elapsed()/frame_time));
 		return head_;
 	}
 };
