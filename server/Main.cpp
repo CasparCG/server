@@ -36,6 +36,9 @@ namespace caspar {
 
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int)
 {
+	// Increase time precision
+	timeBeginPeriod(1);
+
 	int returnValue = 0;
 	tstring commandline(lpCmdLine);
 	
@@ -69,6 +72,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 			LOG << caspar::utils::LogLevel::Critical << TEXT("UNHANDLED EXCEPTION in main thread. Message: ") << ex.what();
 		}
 //	}
+
+	timeEndPeriod(1);
 
 	return returnValue;
 }
