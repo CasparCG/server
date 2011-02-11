@@ -108,7 +108,7 @@
       <BrowseInformation>true</BrowseInformation>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=1;TBB_USE_ASSERT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_ASSERT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -154,7 +154,7 @@
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=1;NDEBUG;_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=0;NDEBUG;_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <OmitFramePointers>true</OmitFramePointers>
@@ -208,7 +208,7 @@
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=1;TBB_USE_THREADING_TOOLS=1;NDEBUG;_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_THREADING_TOOLS=1;NDEBUG;_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <OmitFramePointers>true</OmitFramePointers>
@@ -262,7 +262,7 @@
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=1;TBB_USE_ASSERT=1;TBB_USE_PERFORMANCE_WARNINGS=1;_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_ASSERT=1;TBB_USE_PERFORMANCE_WARNINGS=1;_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <OmitFramePointers>true</OmitFramePointers>
