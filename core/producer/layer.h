@@ -16,7 +16,7 @@ class layer : boost::noncopyable
 public:
 	layer(); // nothrow
 	layer(layer&& other); // nothrow
-	~layer();
+	~layer(); // nothrow
 	layer& operator=(layer&& other); // nothrow
 
 	//NOTE: swap is thread-safe on "other", NOT on "this".
