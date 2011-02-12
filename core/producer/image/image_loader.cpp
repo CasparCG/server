@@ -10,17 +10,18 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/exception/errinfo_file_name.hpp>
+#include <boost/thread/once.hpp>
 
 namespace caspar { namespace core { namespace image{
-
-struct FreeImage_initializer
-{
-	FreeImage_initializer(){FreeImage_Initialise(true);}
-	~FreeImage_initializer(){FreeImage_DeInitialise();}
-} init;
-
+	
 std::shared_ptr<FIBITMAP> load_image(const std::string& filename)
 {
+	struct FreeImage_initializer
+	{
+		FreeImage_initializer(){FreeImage_Initialise(true);}
+		~FreeImage_initializer(){FreeImage_DeInitialise();}
+	} static init;
+
 	if(!boost::filesystem::exists(filename))
 		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(filename));
 
