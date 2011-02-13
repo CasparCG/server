@@ -239,7 +239,16 @@ void FlashProducer::WriteFrame()
 FramePtr FlashProducer::RenderFrame()
 {	
 	const caspar::FrameFormatDescription& fmtDesc = pFrameManager_->GetFrameFormatDescription();
-	timer_.tick(fmtDesc.fps*0.90);
+	
+	/// SYNC
+	double frame_time = 1.0/pFlashAxContainer_->GetFPS();
+	
+	if(frameBuffer_.size() < 4) // if underflow
+		frame_time *= 0.9;
+
+	timer_.tick(frame_time);
+
+	/// TICK
 	if(pFlashAxContainer_->pTimerHelper)
 	{
 		DWORD time = pFlashAxContainer_->pTimerHelper->Invoke(); // Tick flash
@@ -251,6 +260,7 @@ FramePtr FlashProducer::RenderFrame()
 		}
 	}
 
+	/// RENDER
 	if(pFlashAxContainer_->bInvalidRect_ || pCurrentFrame_ == NULL)
 	{		
 		FramePtr pNewFrame = pFrameManager_->CreateFrame();

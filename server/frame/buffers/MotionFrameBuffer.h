@@ -38,6 +38,7 @@ public:
 	explicit MotionFrameBuffer(unsigned int);
 	virtual ~MotionFrameBuffer(){}
 
+	int size() const;
 
 	virtual FramePtr front() const;
 	virtual FrameBufferFetchResult pop_front();

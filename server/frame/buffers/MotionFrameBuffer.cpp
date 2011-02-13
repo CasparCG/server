@@ -109,6 +109,12 @@ struct MotionFrameBuffer::Implementation : private utils::LockableObject
 		return writeWaitEvent_;
 	}
 
+	int size() const
+	{
+		Lock lock(*this);
+		return frameQueue_.size();
+	}
+
 	void SetCapacity(size_t capacity)
 	{
 		Lock lock(*this);
@@ -132,6 +138,11 @@ MotionFrameBuffer::MotionFrameBuffer(unsigned int maxQueueLength) : pImpl_(new I
 FramePtr MotionFrameBuffer::front() const 
 {
 	return pImpl_->front();
+}
+
+int MotionFrameBuffer::size() const 
+{
+	return pImpl_->size();
 }
 
 FrameBufferFetchResult MotionFrameBuffer::pop_front() 
