@@ -239,7 +239,7 @@ void FlashProducer::WriteFrame()
 FramePtr FlashProducer::RenderFrame()
 {	
 	const caspar::FrameFormatDescription& fmtDesc = pFrameManager_->GetFrameFormatDescription();
-	timer_.tick(fmtDesc.fps*0.95);
+	timer_.tick(fmtDesc.fps*0.90);
 	if(pFlashAxContainer_->pTimerHelper)
 	{
 		DWORD time = pFlashAxContainer_->pTimerHelper->Invoke(); // Tick flash
