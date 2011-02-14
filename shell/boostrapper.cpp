@@ -114,14 +114,13 @@ struct bootstrapper::implementation : boost::noncopyable
 
 				if(name == "tcp")
 				{					
-					unsigned int port = xml_controller.second.get<unsigned int>("port");
-					port = port != 0 ? port : 5250;
+					unsigned int port = xml_controller.second.get("port", 5250);
 					auto asyncbootstrapper = make_safe<IO::AsyncEventServer>(create_protocol(protocol), port);
 					asyncbootstrapper->Start();
 					async_servers_.push_back(asyncbootstrapper);
 				}
 				else
-					BOOST_THROW_EXCEPTION(invalid_bootstrapper() << arg_name_info(name) << msg_info("Invalid controller"));
+					BOOST_THROW_EXCEPTION(invalid_bootstrapper() << arg_name_info(name) << msg_info("Invalid controller."));
 			}
 			catch(...)
 			{

@@ -87,11 +87,11 @@ int main(int argc, wchar_t* argv[])
 
 	// Start caspar
 	std::wstringstream str;
-	str << "CasparCG " << env::version() << " " << env::version_tag();
+	str << "CasparCG " << env::version();
 	SetConsoleTitle(str.str().c_str());
 
 	std::wcout << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n" << std::endl;
-	std::wcout << L"Starting CasparCG Video Playout Server Ver: " << env::version() << env::version_tag() << std::endl;
+	std::wcout << L"Starting CasparCG Video Playout Server Ver: " << env::version() << std::endl;
 
 	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
 	DrawMenuBar(GetConsoleWindow());

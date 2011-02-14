@@ -754,7 +754,8 @@ HRESULT FlashAxContainer::CreateAxControl()
 			HRESULT hr2 = m_spOleObject->QueryInterface(__uuidof(IShockwaveFlash), (void**) &spFlash);
 			if(hr2 == S_OK && spFlash)
 			{
-				spFlash->put_WMode(TEXT("Transparent"));
+				if(FAILED(spFlash->put_WMode(TEXT("Transparent"))))
+					CASPAR_LOG(warning) << L"Failed to set flash container to transparent mode.";
 				//spFlash->put_WMode(TEXT("GPU"));
 				hResultQuality = spFlash->put_Quality2(TEXT("Best"));
 			}

@@ -80,12 +80,6 @@ const std::wstring& env::version()
 	return ver;
 }
 
-const std::wstring& env::version_tag()
-{
-	static std::wstring tag = L"Experimental";
-	return tag;
-}
-
 const boost::property_tree::ptree& env::properties()
 {
 	setup();
