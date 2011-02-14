@@ -103,10 +103,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">debug\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">release\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">release\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">release\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(Configuration)\</IntDir>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\..\dependencies\boost_1_44_0\;..\..\dependencies\ffmpeg 0.6\include\;..\..\..\dependencies\ffmpeg 0.6\include\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\include\;..\..\..\dependencies\SFML-1.6\include\;..\..\dependencies\tbb30_20100406oss\include\;..\..\..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\..\dependencies\boost_1_44_0\;..\..\dependencies\ffmpeg 0.6\include\;..\..\..\dependencies\ffmpeg 0.6\include\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\include\;..\..\..\dependencies\SFML-1.6\include\;..\..\dependencies\tbb30_20100406oss\include\;..\..\..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\..\dependencies\boost_1_44_0\;..\..\dependencies\ffmpeg 0.6\include\;..\..\..\dependencies\ffmpeg 0.6\include\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\include\;..\..\..\dependencies\SFML-1.6\include\;..\..\dependencies\tbb30_20100406oss\include\;..\..\..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
@@ -115,10 +115,10 @@
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\ffmpeg 0.6\lib\;..\..\..\dependencies\ffmpeg 0.6\lib\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\lib\;..\..\..\dependencies\SFML-1.6\lib\;..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;..\..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\ffmpeg 0.6\lib\;..\..\..\dependencies\ffmpeg 0.6\lib\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\lib\;..\..\..\dependencies\SFML-1.6\lib\;..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;..\..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\ffmpeg 0.6\lib\;..\..\..\dependencies\ffmpeg 0.6\lib\;..\..\dependencies\FreeImage\Dist\;..\..\..\dependencies\FreeImage\Dist\;..\..\dependencies\GLee5_4\;..\..\..\dependencies\GLee5_4\;..\..\dependencies\SFML-1.6\lib\;..\..\..\dependencies\SFML-1.6\lib\;..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;..\..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)debug\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)release\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">$(ProjectDir)release\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(ProjectDir)release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionName)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionName)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">$(SolutionName)</TargetName>
@@ -176,10 +176,10 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>copy $(SolutionDir)\dlls\*.dll $(OutDir)\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -229,11 +229,10 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>copy $(SolutionDir)\dlls\*.dll $(OutDir)\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">
@@ -283,11 +282,10 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>copy $(SolutionDir)\dlls\*.dll $(OutDir)\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
@@ -337,11 +335,10 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>copy $(SolutionDir)\dlls\*.dll $(OutDir)\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

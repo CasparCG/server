@@ -87,6 +87,7 @@ public:
 				audio_mixer_.end();
 			}
 			audio_mixer_.end_pass();
+
 			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 
 			output_(make_safe<const read_frame>(std::move(image.get()), std::move(audio)));
