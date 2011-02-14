@@ -109,8 +109,10 @@ public:
 		, pix_fmt_(codec_context_->pix_fmt)
 		, desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
 	{
-		double frame_rate = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
-		if(abs(frame_rate - frame_factory->get_video_format_desc().fps) > std::numeric_limits<double>::min())
+		double frame_time = static_cast<double>(codec_context_->time_base.num) / static_cast<double>(codec_context_->time_base.den);
+		double format_frame_time = 1.0/frame_factory->get_video_format_desc().fps;
+		double diff = abs(frame_time - format_frame_time);
+		if(diff > 0.0001)
 			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid video framerate."));
 
 		if(desc_.pix_fmt == pixel_format::invalid)
