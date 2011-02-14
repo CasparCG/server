@@ -150,7 +150,7 @@ private:
 
 	safe_ptr<draw_frame> render_simple_frame(bool has_underflow)
 	{
-		double frame_time = 1.0/ax_->GetFPS()*(has_underflow ? 0.95 : 1.0); 
+		double frame_time = 1.0/ax_->GetFPS()*(has_underflow ? 0.90 : 1.0); 
 		timer_.tick(frame_time); // Tick doesnt work on nested timelines, force an actual sync
 
 		diag_timer_.reset();
