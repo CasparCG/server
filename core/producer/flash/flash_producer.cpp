@@ -217,6 +217,9 @@ public:
 
 	virtual safe_ptr<draw_frame> receive()
 	{		
+		if(!renderer_)
+			return draw_frame::empty();
+
 		graph_->set("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		if(!frame_buffer_.try_pop(tail_))
 			CASPAR_LOG(trace) << print() << " underflow";
