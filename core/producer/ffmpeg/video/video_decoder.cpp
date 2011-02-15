@@ -109,11 +109,12 @@ public:
 		, pix_fmt_(codec_context_->pix_fmt)
 		, desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
 	{
+		if(codec_context_->time_base.num == 1) // Some files give an invalid numerator, try to fix it.
+			codec_context_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(codec_context_->time_base.den)))-1));
 		double frame_time = static_cast<double>(codec_context_->time_base.num) / static_cast<double>(codec_context_->time_base.den);
 		double format_frame_time = 1.0/frame_factory->get_video_format_desc().fps;
-		double diff = abs(frame_time - format_frame_time);
-		if(diff > 0.0001)
-			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid video framerate."));
+		if(abs(frame_time - format_frame_time) > 0.0001)
+			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid video framerate.") << arg_value_info(boost::lexical_cast<std::string>(frame_time)));
 
 		if(desc_.pix_fmt == pixel_format::invalid)
 		{

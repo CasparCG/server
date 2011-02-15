@@ -77,42 +77,44 @@ public:
 };
  
 int main(int argc, wchar_t* argv[])
-{
-	// Init FFMPEG
-	av_register_all();
-	avcodec_init();
-
-	// Increase time precision
-	timeBeginPeriod(1);
-
-	// Start caspar
-	std::wstringstream str;
-	str << "CasparCG " << env::version();
-	SetConsoleTitle(str.str().c_str());
-
-	std::wcout << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n" << std::endl;
-	std::wcout << L"Starting CasparCG Video Playout Server Ver: " << env::version() << std::endl;
-
-	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
-	DrawMenuBar(GetConsoleWindow());
-	MoveWindow(GetConsoleWindow(), 800, 0, 800, 1000, true);
-
-#ifdef _DEBUG
-	_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
-	_CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );
-	_CrtSetReportMode( _CRT_WARN, _CRTDBG_MODE_DEBUG );
-	_CrtSetReportMode( _CRT_ASSERT, _CRTDBG_MODE_DEBUG );
-
-	MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
-#endif
-
-	log::add_file_sink(env::log_folder());
-	
-	win32_handler_tbb_installer win32_handler_tbb_installer;
-	win32_exception::install_handler();
-				
+{	
 	try 
 	{
+		win32_handler_tbb_installer win32_handler_tbb_installer;
+		win32_exception::install_handler();
+
+		env::initialize("caspar.config");
+
+		// Init FFMPEG
+		av_register_all();
+		avcodec_init();
+
+		// Increase time precision
+		timeBeginPeriod(1);
+
+		// Start caspar
+		std::wstringstream str;
+		str << "CasparCG " << env::version();
+		SetConsoleTitle(str.str().c_str());
+
+		std::wcout << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n" << std::endl;
+		std::wcout << L"Starting CasparCG Video Playout Server Ver: " << env::version() << std::endl;
+
+		EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
+		DrawMenuBar(GetConsoleWindow());
+		MoveWindow(GetConsoleWindow(), 800, 0, 800, 1000, true);
+
+	#ifdef _DEBUG
+		_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
+		_CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );
+		_CrtSetReportMode( _CRT_WARN, _CRTDBG_MODE_DEBUG );
+		_CrtSetReportMode( _CRT_ASSERT, _CRTDBG_MODE_DEBUG );
+
+		MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
+	#endif
+
+		log::add_file_sink(env::log_folder());
+				
 		bootstrapper caspar_device;
 				
 		auto dummy = std::make_shared<IO::DummyClientInfo>();
@@ -165,7 +167,7 @@ int main(int argc, wchar_t* argv[])
 	{
 		CASPAR_LOG(fatal) << "UNHANDLED EXCEPTION in main thread.";
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		std::wcout << L"Press Any Key To Exit";
+		std::wcout << L"Press Any Key To Exit\n";
 		_getwch();
 	}	
 
