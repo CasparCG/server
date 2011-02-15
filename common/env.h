@@ -6,6 +6,7 @@ namespace caspar{
 
 struct env
 {
+	static void initialize(const std::string& filename);
 	static const std::wstring& media_folder();
 	static const std::wstring& log_folder();
 	static const std::wstring& template_folder();
