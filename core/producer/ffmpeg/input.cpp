@@ -106,7 +106,7 @@ public:
 		executor_.clear();
 		executor_.stop();
 		cond_.notify_all();
-		CASPAR_LOG(info) << print() << " ended.";
+		CASPAR_LOG(info) << print() << " stopped.";
 	}
 							
 	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index)
