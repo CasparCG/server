@@ -26,8 +26,7 @@ struct ffmpeg_producer : public frame_producer
 	
 	safe_ptr<diagnostics::graph>		graph_;
 	timer								perf_timer_;
-
-	input								input_;			
+		
 	std::unique_ptr<audio_decoder>		audio_decoder_;
 	std::unique_ptr<video_decoder>		video_decoder_;
 
@@ -38,6 +37,8 @@ struct ffmpeg_producer : public frame_producer
 		
 	safe_ptr<draw_frame>				last_frame_;
 	std::shared_ptr<frame_factory>		frame_factory_;
+
+	input								input_;	
 public:
 	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
 		: filename_(filename)
@@ -52,7 +53,7 @@ public:
 
 	~ffmpeg_producer()
 	{
-		CASPAR_LOG(info) << print() << " closing.";
+		CASPAR_LOG(info) << print() << " stopping.";
 	}
 
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
