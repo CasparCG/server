@@ -56,6 +56,7 @@ enum FrameFormat {
 	FFormat1080p2500,
 	FFormat1080p2997,
 	FFormat1080p3000,
+	FFormat1080p5000,
 	FrameFormatCount,
 	FFormatInvalid
 };
