@@ -6,6 +6,7 @@
 
 #include "../concurrency/executor.h"
 #include "../utility/timer.h"
+#include "../env.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -45,6 +46,9 @@ public:
 
 	static void register_drawable(const std::shared_ptr<drawable>& drawable)
 	{
+		if(!drawable)
+			return;
+
 		begin_invoke([=]
 		{
 			get_instance().do_register_drawable(drawable);
@@ -335,16 +339,17 @@ private:
 	implementation& operator=(implementation&);
 };
 	
-graph::graph(const std::string& name) : impl_(new implementation(name))
+graph::graph(const std::string& name) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(name) : nullptr)
 {
-	context::register_drawable(impl_);
+	if(impl_)
+		context::register_drawable(impl_);
 }
 
-void graph::update(const std::string& name, float value){impl_->update(name, value);}
-void graph::set(const std::string& name, float value){impl_->set(name, value);}
-void graph::tag(const std::string& name){impl_->tag(name);}
-void graph::guide(const std::string& name, float value){impl_->guide(name, value);}
-void graph::set_color(const std::string& name, color c){impl_->set_color(name, c);}
+void graph::update(const std::string& name, float value){if(impl_)impl_->update(name, value);}
+void graph::set(const std::string& name, float value){if(impl_)impl_->set(name, value);}
+void graph::tag(const std::string& name){if(impl_)impl_->tag(name);}
+void graph::guide(const std::string& name, float value){if(impl_)impl_->guide(name, value);}
+void graph::set_color(const std::string& name, color c){if(impl_)impl_->set_color(name, c);}
 
 safe_ptr<graph> create_graph(const std::string& name)
 {
