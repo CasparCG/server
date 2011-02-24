@@ -33,7 +33,7 @@ void env::initialize(const std::string& filename)
 	media = widen(paths.get("media-path", initialPath + "\\media\\"));
 	log = widen(paths.get("log-path", initialPath + "\\log\\"));
 	ftemplate = widen(paths.get("template-path", initialPath + "\\template\\"));
-	ftemplate_host = widen(paths.get("template-host-path", initialPath + "\\template\\cg.fth"));
+	ftemplate_host = ftemplate + L"\\" + widen(paths.get("template-host", "cg.fth"));
 	data = widen(paths.get("data-path", initialPath + "\\data\\"));
 }
 	
