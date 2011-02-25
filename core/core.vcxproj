@@ -112,6 +112,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <AdditionalDependencies>BlueHancUtils_d.lib;sfml-audio-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;OpenGL32.lib;FreeImage.lib;GLee.lib;Winmm.lib;Ws2_32.lib;BlueVelvet3_d.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;swscale-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -151,7 +152,7 @@
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=0;NDEBUG;_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -159,6 +160,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <OmitFramePointers>true</OmitFramePointers>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <PreLinkEvent>
       <Command>
@@ -205,7 +207,7 @@
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_THREADING_TOOLS=1;NDEBUG;_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -213,6 +215,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <OmitFramePointers>true</OmitFramePointers>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <PreLinkEvent>
       <Command>
@@ -259,7 +262,7 @@
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_ASSERT=1;TBB_USE_PERFORMANCE_WARNINGS=1;_VC80_UPGRADE=0x0710;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -267,6 +270,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <OmitFramePointers>true</OmitFramePointers>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <PreLinkEvent>
       <Command>
