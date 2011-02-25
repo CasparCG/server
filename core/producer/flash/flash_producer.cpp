@@ -65,6 +65,7 @@ class flash_renderer
 
 	safe_ptr<diagnostics::graph> graph_;
 	timer diag_timer_;
+	bool underflow_;
 public:
 	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<frame_factory>& frame_factory, const std::wstring& filename) 
 		: graph_(graph)
@@ -75,10 +76,12 @@ public:
 		, hdc_(CreateCompatibleDC(0), DeleteDC)
 		, ax_(nullptr)
 		, head_(draw_frame::empty())
+		, underflow_(false)
 	{
 		graph_->guide("frame-time", 0.5f);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
-		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));			
+		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
+		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));			
 		CASPAR_LOG(info) << print() << L" Started";
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
@@ -149,9 +152,13 @@ public:
 
 private:
 
-	safe_ptr<draw_frame> render_simple_frame(bool has_underflow)
+	safe_ptr<draw_frame> render_simple_frame(bool underflow)
 	{
-		double frame_time = 1.0/ax_->GetFPS()*(has_underflow ? 0.90 : 1.0); 
+		if(underflow_ != underflow)
+			graph_->tag("underflow");
+
+		underflow_ = underflow;
+		double frame_time = 1.0/ax_->GetFPS()*(underflow ? 0.90 : 1.0); 
 		timer_.tick(frame_time); // Tick doesnt work on nested timelines, force an actual sync
 
 		diag_timer_.reset();
