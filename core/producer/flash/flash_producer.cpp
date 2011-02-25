@@ -113,6 +113,7 @@ public:
 
 		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
 		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
+		CASPAR_LOG(info) << print() << L" Started";
 	}
 
 	~flash_renderer()
@@ -138,7 +139,7 @@ public:
 			return draw_frame::empty();
 
 		auto frame = render_simple_frame(has_underflow);
-		if(ax_->GetFPS()/2.0 - format_desc_.fps >= 0.0)
+		if(abs(ax_->GetFPS()/2.0 - format_desc_.fps) < 0.1)
 			frame = draw_frame::interlace(frame, render_simple_frame(has_underflow), format_desc_.mode);
 		return frame;
 	}

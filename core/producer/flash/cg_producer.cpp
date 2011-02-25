@@ -23,6 +23,7 @@ public:
 	void clear()
 	{
 		flash_producer_ = flash_producer(env::template_host());
+		flash_producer_->initialize(safe_ptr<frame_factory>(frame_factory_));
 	}
 
 	void add(int layer, const std::wstring& filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
@@ -46,7 +47,7 @@ public:
 	void stop(int layer, unsigned int)
 	{
 		CASPAR_LOG(info) << "Invoking stop-command";
-		flash_producer_->param((boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str());
+		flash_producer_->param((boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") % layer).str());
 	}
 
 	void next(int layer)
