@@ -132,6 +132,12 @@ public:
 			CASPAR_LOG(warning) << print() << " only supports screen_index=0 for non-Win32";
 #endif
 
+		if(!GLEE_ARB_pixel_buffer_object)
+			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL Extension Support: GLEE_ARB_pixel_buffer_object."));
+
+		if(!GLEE_ARB_texture_rectangle)
+			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL Extension Support: GLEE_ARB_texture_rectangle."));
+
 		executor_.start();
 		executor_.invoke([=]
 		{

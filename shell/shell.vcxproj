@@ -159,6 +159,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <AdditionalDependencies>sfml-system-d.lib;sfml-audio-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-system-d.lib;OpenGL32.lib;FreeImage.lib;GLee.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;swscale-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -205,6 +206,7 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <PreLinkEvent>
       <Command>
@@ -258,6 +260,7 @@
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <PreLinkEvent>
       <Command>
@@ -311,6 +314,7 @@
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <PreLinkEvent>
       <Command>
