@@ -892,7 +892,8 @@ bool FlashAxContainer::FlashCall(const std::wstring& str)
 	CComPtr<IShockwaveFlash> spFlash;
 	QueryControl(&spFlash);
 	CComBSTR request(str.c_str());
-
+	
+	bIsEmpty_ = false;
 	bCallSuccessful_ = false;
 	for(size_t retries = 0; !bCallSuccessful_ && retries < 4; ++retries)
 		spFlash->CallFunction(request, &result);
