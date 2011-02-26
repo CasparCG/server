@@ -21,7 +21,6 @@
 #include "..\..\stdafx.h"
 
 #if defined(_MSC_VER)
-#pragma warning (disable : 4714) // marked as __forceinline not inlined
 #pragma warning (disable : 4146)
 #endif
 
@@ -40,7 +39,7 @@
 #include <boost/filesystem.hpp>
 
 namespace caspar { namespace core { namespace flash {
-	
+		
 class flash_renderer
 {
 	struct co_init
@@ -64,10 +63,12 @@ class flash_renderer
 	timer timer_;
 
 	safe_ptr<diagnostics::graph> graph_;
-	timer diag_timer_;
-	bool underflow_;
+	timer perf_timer_;
+
+	std::function<std::wstring()> print_;
+
 public:
-	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<frame_factory>& frame_factory, const std::wstring& filename) 
+	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<frame_factory>& frame_factory, const std::wstring& filename, const std::function<std::wstring()>& print) 
 		: graph_(graph)
 		, filename_(filename)
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -76,32 +77,33 @@ public:
 		, hdc_(CreateCompatibleDC(0), DeleteDC)
 		, ax_(nullptr)
 		, head_(draw_frame::empty())
-		, underflow_(false)
+		, print_(print)
 	{
 		graph_->guide("frame-time", 0.5f);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));			
-		CASPAR_LOG(info) << print() << L" Started";
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to create FlashAxContainer"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to create FlashAxContainer"));
 		
+		ax_->set_print(print_);
+
 		if(FAILED(ax_->CreateAxControl()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Create FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to Create FlashAxControl"));
 		
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Query FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to Query FlashAxControl"));
 												
 		if(FAILED(spFlash->put_Playing(true)) )
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to start playing Flash"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to start playing Flash"));
 
 		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Load Template Host"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to Load Template Host"));
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(bprint() + "Failed to Set Scale Mode"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to Set Scale Mode"));
 														
 		ax_->SetFormat(format_desc_);
 		
@@ -116,7 +118,7 @@ public:
 
 		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
 		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
-		CASPAR_LOG(info) << print() << L" Started";
+		CASPAR_LOG(info) << print() << L" Thread started.";
 	}
 
 	~flash_renderer()
@@ -126,13 +128,13 @@ public:
 			ax_->DestroyAxControl();
 			ax_->Release();
 		}
-		CASPAR_LOG(info) << print() << L" Ended";
+		CASPAR_LOG(info) << print_() << L" Thread ended.";
 	}
 	
 	void param(const std::wstring& param)
 	{		
 		if(!ax_->FlashCall(param))
-			CASPAR_LOG(warning) << "Flash Function Call Failed. Param: " << param;
+			CASPAR_LOG(warning) << print_() << " Flash function call failed. Param: " << param << ".";
 		graph_->tag("param");
 	}
 	
@@ -142,26 +144,27 @@ public:
 			return draw_frame::empty();
 
 		auto frame = render_simple_frame(has_underflow);
-		if(abs(ax_->GetFPS()/2.0 - format_desc_.fps) < 0.1)
+		if(interlaced(ax_->GetFPS(), format_desc_))
 			frame = draw_frame::interlace(frame, render_simple_frame(has_underflow), format_desc_.mode);
 		return frame;
 	}
-		
-	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"] Render thread"; }
-	std::string bprint() const{ return narrow(print()); }
+
+	double fps() const
+	{
+		return ax_->GetFPS();	
+	}
 
 private:
 
 	safe_ptr<draw_frame> render_simple_frame(bool underflow)
 	{
-		if(underflow_ != underflow)
+		if(underflow)
 			graph_->tag("underflow");
 
-		underflow_ = underflow;
-		double frame_time = 1.0/ax_->GetFPS()*(underflow ? 0.90 : 1.0); 
+		double frame_time = 1.0/ax_->GetFPS()*(underflow ? 0.90 : 1.0); // Reduce sync-time if in underflow.
 		timer_.tick(frame_time); // Tick doesnt work on nested timelines, force an actual sync
 
-		diag_timer_.reset();
+		perf_timer_.reset();
 		ax_->Tick();
 
 		if(ax_->InvalidRect())
@@ -174,7 +177,7 @@ private:
 			head_ = frame;
 		}		
 		
-		graph_->update("frame-time", static_cast<float>(diag_timer_.elapsed()/frame_time));
+		graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_time));
 		return head_;
 	}
 };
@@ -182,6 +185,7 @@ private:
 struct flash_producer::implementation
 {	
 	const std::wstring filename_;	
+	tbb::atomic<int> fps_;
 
 	safe_ptr<diagnostics::graph> graph_;
 
@@ -190,10 +194,24 @@ struct flash_producer::implementation
 
 	std::shared_ptr<flash_renderer> renderer_;
 	std::shared_ptr<frame_factory> frame_factory_;
-	
-	std::wstring print() const{ return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]"; }	
-
+	video_format_desc format_desc_;
+			
 	executor executor_;
+		
+	std::wstring print() const
+	{ 
+		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
+					boost::lexical_cast<std::wstring>(fps_) + 
+					(interlaced(fps_, format_desc_) ? L"i" : L"p") + L"]";		
+	}	
+
+	void set_fps(double fps)
+	{
+		int fps100 = static_cast<int>(renderer_->fps()*100.0);
+		if(fps_.fetch_and_store(fps100) != fps100)
+			graph_->set_display_name(narrow(print()));	
+	}
+	
 public:
 	implementation(const std::wstring& filename) 
 		: filename_(filename)
@@ -204,6 +222,7 @@ public:
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 
+		fps_ = 0;
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));	
 	}
 
@@ -219,7 +238,8 @@ public:
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;
-		frame_buffer_.set_capacity(static_cast<size_t>(frame_factory->get_video_format_desc().fps/4.0));
+		format_desc_ = frame_factory->get_video_format_desc();
+		frame_buffer_.set_capacity(static_cast<size_t>(format_desc_.fps/4.0));
 		executor_.start();
 	}
 
@@ -227,31 +247,30 @@ public:
 	{		
 		if(!renderer_)
 			return draw_frame::empty();
-
+		
 		graph_->set("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		if(!frame_buffer_.try_pop(tail_))
-			CASPAR_LOG(trace) << print() << " underflow";
-		else
-		{
-			executor_.begin_invoke([=]
-			{
-				if(!renderer_)
-					return;
+			return tail_;
 
-				try
-				{
-					auto frame = draw_frame::empty();
-					do{frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);}
-					while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
-					graph_->set("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
-				}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					renderer_ = nullptr;
-				}
-			});	
-		}
+		executor_.begin_invoke([=]
+		{
+			if(!renderer_)
+				return;
+
+			try
+			{
+				auto frame = draw_frame::empty();
+				do{frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);}
+				while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
+				graph_->set("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
+				set_fps(renderer_->fps());
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				renderer_ = nullptr;
+			}
+		});			
 
 		return tail_;
 	}
@@ -262,13 +281,13 @@ public:
 		{
 			if(!renderer_)
 			{
-				renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_));
-				while(frame_buffer_.try_push(draw_frame::empty())){}
+				renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_, [=]{return print();}));
+				while(frame_buffer_.try_push(draw_frame::empty())){}		
 			}
 
 			try
 			{
-				renderer_->param(param);
+				renderer_->param(param);	
 			}
 			catch(...)
 			{
