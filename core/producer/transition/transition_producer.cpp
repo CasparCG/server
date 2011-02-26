@@ -40,6 +40,9 @@ struct transition_producer::implementation : boost::noncopyable
 	safe_ptr<frame_producer>	source_producer_;
 
 	std::shared_ptr<frame_factory>	frame_factory_;
+	video_format_desc				format_desc_;
+
+	std::vector<safe_ptr<draw_frame>> frame_buffer_;
 	
 	implementation(const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: current_frame_(0)
@@ -47,12 +50,14 @@ struct transition_producer::implementation : boost::noncopyable
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
 	{
+		frame_buffer_.push_back(draw_frame::empty());
 	}
 				
 	void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
 		dest_producer_->initialize(frame_factory);
 		frame_factory_ = frame_factory;
+		format_desc_ = frame_factory_->get_video_format_desc();
 	}
 
 	safe_ptr<frame_producer> get_following_producer() const
@@ -96,7 +101,7 @@ struct transition_producer::implementation : boost::noncopyable
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			producer = frame_producer::empty();
-			CASPAR_LOG(warning) << "Failed to receive frame. Removed producer from transition.";
+			CASPAR_LOG(warning) << print() << " Failed to receive frame. Removed producer from transition.";
 		}
 
 		if(frame == draw_frame::eof())
@@ -112,7 +117,7 @@ struct transition_producer::implementation : boost::noncopyable
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				producer = frame_producer::empty();
-				CASPAR_LOG(warning) << "Failed to initialize following producer.";
+				CASPAR_LOG(warning) << print() << " Failed to initialize following producer.";
 			}
 
 			return render_sub_frame(producer);
@@ -129,33 +134,54 @@ struct transition_producer::implementation : boost::noncopyable
 			return src_frame != draw_frame::eof() ? src_frame : draw_frame::empty();
 										
 		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
-
-		auto my_src_frame = draw_frame(src_frame);
-		auto my_dest_frame = draw_frame(dest_frame);
-
-		my_src_frame.get_audio_transform().set_gain(1.0-alpha);
-		my_dest_frame.get_audio_transform().set_gain(alpha);
-
+		double half_alpha_step = 0.5*1.0/static_cast<double>(info_.duration);
+		
 		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		
+		// For interalced transitions; seperate fields into seperate frames which are transitioned accordingly.
+
+		auto s_frame1 = make_safe<draw_frame>(src_frame);
+		auto s_frame2 = make_safe<draw_frame>(src_frame);
+
+		s_frame1->get_audio_transform().set_gain(0);
+		s_frame2->get_audio_transform().set_gain(1.0-alpha);
+
+		auto d_frame1 = make_safe<draw_frame>(dest_frame);
+		auto d_frame2 = make_safe<draw_frame>(dest_frame);
+		
+		d_frame1->get_audio_transform().set_gain(0);
+		d_frame2->get_audio_transform().set_gain(alpha);
+
 		if(info_.type == transition::mix)
-			my_dest_frame.get_image_transform().set_opacity(alpha);		
-		else if(info_.type == transition::slide)			
-			my_dest_frame.get_image_transform().set_image_translation((-1.0+alpha)*dir, 0.0);			
+		{
+			d_frame1->get_image_transform().set_opacity(alpha-half_alpha_step);	
+			d_frame2->get_image_transform().set_opacity(alpha);	
+		}
+		else if(info_.type == transition::slide)
+		{
+			d_frame1->get_image_transform().set_image_translation((-1.0+alpha-half_alpha_step)*dir, 0.0);	
+			d_frame2->get_image_transform().set_image_translation((-1.0+alpha)*dir, 0.0);		
+		}
 		else if(info_.type == transition::push)
 		{
-			my_dest_frame.get_image_transform().set_image_translation((-1.0+alpha)*dir, 0.0);
-			my_src_frame.get_image_transform().set_image_translation((0.0+alpha)*dir, 0.0);		
+			d_frame1->get_image_transform().set_image_translation((-1.0+alpha-half_alpha_step)*dir, 0.0);
+			d_frame2->get_image_transform().set_image_translation((-1.0+alpha)*dir, 0.0);
+
+			s_frame1->get_image_transform().set_image_translation((0.0+alpha-half_alpha_step)*dir, 0.0);	
+			s_frame2->get_image_transform().set_image_translation((0.0+alpha)*dir, 0.0);		
 		}
 		else if(info_.type == transition::wipe)		
-			my_dest_frame.get_image_transform().set_mask_scale(alpha, 1.0);			
-
-		return draw_frame(std::move(my_src_frame), std::move(my_dest_frame));
+		{
+			d_frame1->get_image_transform().set_mask_scale(alpha-half_alpha_step, 1.0);	
+			d_frame2->get_image_transform().set_mask_scale(alpha, 1.0);			
+		}
+		
+		return draw_frame(draw_frame::interlace(s_frame1, s_frame2, format_desc_.mode), draw_frame::interlace(d_frame1, d_frame2, format_desc_.mode));
 	}
 
 	std::wstring print() const
 	{
-		return L"transition[" + (dest_producer_->print()) + L"]";
+		return L"transition[" + source_producer_->print() + L"->" + dest_producer_->print() + L"]";
 	}
 };
 

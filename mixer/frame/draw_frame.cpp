@@ -103,7 +103,7 @@ audio_transform& draw_frame::get_audio_transform() { return impl_->audio_transfo
 safe_ptr<draw_frame> draw_frame::interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, video_mode::type mode)
 {			
 	if(frame1 == frame2 || mode == video_mode::progressive)
-		return frame1;
+		return frame2;
 
 	auto my_frame1 = make_safe<draw_frame>(frame1);
 	auto my_frame2 = make_safe<draw_frame>(frame2);

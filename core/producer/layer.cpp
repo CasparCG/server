@@ -18,25 +18,25 @@ namespace caspar { namespace core {
 class frame_producer_remover
 {
 	executor executor_;
+	tbb::atomic<int> count_;
 
 	void do_remove(safe_ptr<frame_producer>& producer)
 	{
-		auto name = producer->print();
-		CASPAR_LOG(info) << "removing: " << name;
 		producer = frame_producer::empty();
-		CASPAR_LOG(info) << "removed: " << name;
+		CASPAR_LOG(info) << L"frame_remover[" + boost::lexical_cast<std::wstring>(--count_) + L"] removed: " << producer->print();
 	}
 public:
 
 	frame_producer_remover()
 	{
 		executor_.start();
+		count_ = 0;
 	}
 
 	void remove(safe_ptr<frame_producer>&& producer)
 	{
 		CASPAR_ASSERT(producer.unique());
-		CASPAR_ASSERT(executor_.empty());
+		CASPAR_LOG(info) << L"frame_remover[" + boost::lexical_cast<std::wstring>(++count_) + L"] removing: " << producer->print();
 		executor_.begin_invoke(std::bind(&frame_producer_remover::do_remove, this, std::move(producer)));
 	}
 };
@@ -78,6 +78,7 @@ public:
 		{
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
+			CASPAR_LOG(info) << foreground_->print() << L" started";
 			background_ = frame_producer::empty();
 		}
 		is_paused_ = false;
@@ -120,6 +121,7 @@ public:
 				following->set_leading_producer(foreground_);
 				g_remover.remove(std::move(foreground_));
 				foreground_ = following;
+				CASPAR_LOG(info) << foreground_->print() << L" started";
 
 				last_frame_ = receive();
 			}
