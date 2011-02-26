@@ -74,4 +74,9 @@ inline std::wostream& operator<<(std::wostream& out, const video_format_desc& fo
 	return out;
 }
 
+inline	bool interlaced(double fps, const video_format_desc& format_desc)
+{
+	return abs(fps/2.0 - format_desc.fps) < 0.1;
+}
+
 }}

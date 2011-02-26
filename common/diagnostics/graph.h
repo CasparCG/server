@@ -30,6 +30,7 @@ public:
 	void tag(const std::string& name);
 	void guide(const std::string& name, float value);
 	void set_color(const std::string& name, color c);
+	void set_display_name(const std::string& name);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
