@@ -27,6 +27,9 @@ public:
 			audio_data_.resize(audio_data.size(), 0);
 
 		double gain = transform_stack_.top().get_gain();
+		if(gain < 0.001)
+			return;
+
 		tbb::parallel_for
 		(
 			tbb::blocked_range<size_t>(0, audio_data.size()),
