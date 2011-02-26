@@ -474,7 +474,7 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 			{
 				delete m_lpDD4;
 				m_lpDD4 = NULL;
-				CASPAR_LOG(info) << "flash: DirectDraw not installed. Running without DirectDraw.";
+				CASPAR_LOG(info) << print_() << " DirectDraw not installed. Running without DirectDraw.";
 				return E_NOINTERFACE;
 			}
 		}
@@ -607,12 +607,12 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("OnCommand")) != std::wstring::npos) {
 		//this is how templatehost 1.8 reports that a command has been received
-		CASPAR_LOG(info) << TEXT("TEMPLATEHOST: ") << str;
+		CASPAR_LOG(info)  << print_()  << L" Command: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
 		bCallSuccessful_ = true;
 	}
 	else if(str.find(TEXT("Activity")) != std::wstring::npos)
 	{
-		CASPAR_LOG(info) << TEXT("TEMPLATEHOST: ") << str;
+		CASPAR_LOG(info) << print_() << L" Activity: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
 
 		//this is how templatehost 1.7 reports that a command has been received
 		if(str.find(TEXT("Command recieved")) != std::wstring::npos)
@@ -626,7 +626,7 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("OnNotify")) != std::wstring::npos)
 	{
-		CASPAR_LOG(info) << TEXT("TEMPLATEHOST: ") << str;
+		CASPAR_LOG(info) << print_() << L" Notification: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
 
 		//if(pFlashProducer_ != 0 && pFlashProducer_->pMonitor_) {
 		//	std::wstring::size_type pos = str.find(TEXT('@'));
@@ -636,12 +636,13 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("IsEmpty")) != std::wstring::npos)
 	{
+		CASPAR_LOG(info) << print_() << L" Empty.";
 		ATLTRACE(_T("ShockwaveFlash::IsEmpty\n"));
 		bIsEmpty_ = true;
 	}
 	else if(str.find(TEXT("OnError")) != std::wstring::npos)
 	{
-		CASPAR_LOG(error) << "FLASHERROR: " << str;
+		CASPAR_LOG(error) << print_() << L" Error: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
 	}
 
 	CComPtr<IShockwaveFlash> spFlash;
@@ -755,7 +756,7 @@ HRESULT FlashAxContainer::CreateAxControl()
 			if(hr2 == S_OK && spFlash)
 			{
 				if(FAILED(spFlash->put_WMode(TEXT("Transparent"))))
-					CASPAR_LOG(warning) << L"Failed to set flash container to transparent mode.";
+					CASPAR_LOG(warning) << print_() << L" Failed to set flash container to transparent mode.";
 				//spFlash->put_WMode(TEXT("GPU"));
 				hResultQuality = spFlash->put_Quality2(TEXT("Best"));
 			}

@@ -26,9 +26,9 @@
 #include <atlbase.h>
 #include <atlcom.h>
 #include <atlhost.h>
-
-
 #include <ocmm.h>
+
+#include <functional>
 #include <vector>
 
 #include "../../video_format.h"
@@ -236,6 +236,8 @@ public:
 	STDMETHOD(GetTime)(VARIANT *pvtime);
 	double GetFPS();
 
+	void set_print(const std::function<std::wstring()>& print) { print_ = print;}
+
 	HRESULT CreateAxControl();
 	void DestroyAxControl();
 	HRESULT QueryControl(REFIID iid, void** ppUnk);
@@ -263,6 +265,7 @@ public:
 	ATL::CComPtr<IOleInPlaceObjectWindowless> m_spInPlaceObjectWindowless;
 
 private:
+	std::function<std::wstring()> print_;
 	TimerHelper* pTimerHelper;
 	volatile bool bInvalidRect_;
 	volatile bool bCallSuccessful_;

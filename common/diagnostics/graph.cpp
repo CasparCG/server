@@ -242,9 +242,10 @@ struct graph::implementation : public drawable
 {
 	std::map<std::string, diagnostics::line> lines_;
 	std::string name_;
+	std::string display_name_;
 
 	implementation(const std::string& name) 
-		: name_(name){}
+		: name_(name), display_name_(name_){}
 
 	void update(const std::string& name, float value)
 	{
@@ -286,6 +287,14 @@ struct graph::implementation : public drawable
 		});
 	}
 
+	void set_display_name(const std::string& name)
+	{
+		context::begin_invoke([=]
+		{
+			display_name_ = name;
+		});	
+	}
+
 private:
 	void render(sf::RenderTarget& target)
 	{
@@ -293,7 +302,7 @@ private:
 		const size_t text_margin = 2;
 		const size_t text_offset = text_size+text_margin*2;
 
-		sf::String text(name_.c_str(), sf::Font::GetDefaultFont(), text_size);
+		sf::String text(display_name_.c_str(), sf::Font::GetDefaultFont(), text_size);
 		text.SetStyle(sf::String::Italic);
 		text.Move(text_margin, text_margin);
 		
@@ -350,6 +359,7 @@ void graph::set(const std::string& name, float value){if(impl_)impl_->set(name, 
 void graph::tag(const std::string& name){if(impl_)impl_->tag(name);}
 void graph::guide(const std::string& name, float value){if(impl_)impl_->guide(name, value);}
 void graph::set_color(const std::string& name, color c){if(impl_)impl_->set_color(name, c);}
+void graph::set_display_name(const std::string& name){if(impl_)impl_->set_display_name(name);}
 
 safe_ptr<graph> create_graph(const std::string& name)
 {
