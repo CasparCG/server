@@ -186,9 +186,12 @@ struct BluefishPlaybackStrategy::Implementation
 		memset(dest, 0, size*2);
 		std::for_each(frame_audio_data.begin(), frame_audio_data.end(), [&](const audio::AudioDataChunkPtr& chunk)
 		{
-			BLUE_UINT16* src = reinterpret_cast<BLUE_UINT16*>(chunk->GetDataPtr());
-			for(size_t n = 0; n < size; ++n)
-				dest[n] = static_cast<BLUE_UINT16>(static_cast<BLUE_UINT32>(dest[n])+static_cast<BLUE_UINT32>(src[n]));
+			if(chunk->GetLength() == size*2)
+			{
+				BLUE_UINT16* src = reinterpret_cast<BLUE_UINT16*>(chunk->GetDataPtr());
+				for(size_t n = 0; n < size; ++n)
+					dest[n] = static_cast<BLUE_UINT16>(static_cast<BLUE_UINT32>(dest[n])+static_cast<BLUE_UINT32>(src[n]));
+			}
 		});
 	}
 

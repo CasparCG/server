@@ -553,6 +553,8 @@ void FramePlaybackControl::DoRender(HANDLE& handle, bool bPureCG)
 			pResultFrame = pStrategy_->GetReservedFrame();
 			if(pResultFrame) {
 				utils::image::PreOver(pResultFrame->GetDataPtr(), pVideoFrame->GetDataPtr(), pCGFrame->GetDataPtr(), pResultFrame->GetDataSize());
+				pResultFrame->GetAudioData().insert(pResultFrame->GetAudioData().end(), pVideoFrame->GetAudioData().begin(), pVideoFrame->GetAudioData().end());
+				pResultFrame->GetAudioData().insert(pResultFrame->GetAudioData().end(), pCGFrame->GetAudioData().begin(), pCGFrame->GetAudioData().end());
 			}
 		}
 		else
