@@ -13,6 +13,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "protocol", "protocol\protoc
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mixer", "mixer\mixer.vcxproj", "{477E12A4-1B28-4FF7-B46D-76606BDD1891}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{32079541-68ED-4319-91FB-0FF041642679}"
+	ProjectSection(SolutionItems) = preProject
+		..\CasparCG 2.0 Preliminary Change Log.txt = ..\CasparCG 2.0 Preliminary Change Log.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
 		Svn-Managed = True

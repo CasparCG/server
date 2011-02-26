@@ -92,7 +92,8 @@ video_mode::type image_transform::get_mode() const
 image_transform& image_transform::operator*=(const image_transform &other)
 {
 	opacity_ *= other.opacity_;
-	mode_ = other.mode_;
+	if(other.mode_ != video_mode::invalid)
+		mode_ = other.mode_;
 	gain_ *= other.gain_;
 	fill_translation_[0] += other.fill_translation_[0]*fill_scale_[0];
 	fill_translation_[1] += other.fill_translation_[1]*fill_scale_[1];
