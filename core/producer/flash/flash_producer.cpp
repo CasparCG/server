@@ -40,6 +40,11 @@
 
 namespace caspar { namespace core { namespace flash {
 		
+bool interlaced(double fps, const video_format_desc& format_desc)
+{
+	return abs(fps/2.0 - format_desc.fps) < 0.1;
+}
+
 class flash_renderer
 {
 	struct co_init
