@@ -63,11 +63,6 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
 		
-	~implementation()
-	{
-		executor_.clear();
-	}
-
 	void send(const std::vector<safe_ptr<draw_frame>>& frames)
 	{			
 		executor_.begin_invoke([=]

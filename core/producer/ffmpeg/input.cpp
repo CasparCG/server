@@ -93,17 +93,21 @@ public:
 		video_codec_context_ = open_stream(CODEC_TYPE_VIDEO, video_s_index_);
 		if(!video_codec_context_)
 			CASPAR_LOG(warning) << print() << " Could not open any video stream.";
+		else
+			fix_time_base(video_codec_context_.get());
 		
 		audio_codex_context_ = open_stream(CODEC_TYPE_AUDIO, audio_s_index_);
 		if(!audio_codex_context_)
 			CASPAR_LOG(warning) << print() << " Could not open any audio stream.";
+		else
+			fix_time_base(video_codec_context_.get());
 
 		if(!video_codec_context_ && !audio_codex_context_)
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
 				source_info(narrow(print())) << 
 				msg_info("No video or audio codec context found."));		
-					
+			
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
@@ -116,7 +120,13 @@ public:
 		cond_.notify_all();
 		CASPAR_LOG(info) << print() << " Stopped.";
 	}
-							
+			
+	void fix_time_base(AVCodecContext* context) // Some files give an invalid numerator, try to fix it.
+	{
+		if(context && context->time_base.num == 1)
+			context->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(context->time_base.den)))-1));
+	}
+
 	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index)
 	{		
 		AVStream** streams_end = format_context_->streams+format_context_->nb_streams;
@@ -211,7 +221,7 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"async_input";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"input";
 	}
 };
 
