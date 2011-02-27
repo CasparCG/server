@@ -150,13 +150,8 @@ public:
 		
 	std::wstring print() const
 	{
-		std::wstring parent_print = L"";
-		{
-			tbb::spin_mutex::scoped_lock lock(printer_mutex_);
-			if(parent_printer_)
-				parent_print = parent_printer_() + L"/";
-		}
-		return parent_print + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
+		tbb::spin_mutex::scoped_lock lock(printer_mutex_);
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
 	}
 };
 

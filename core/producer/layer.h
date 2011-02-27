@@ -22,6 +22,7 @@ public:
 	layer(layer&& other); // nothrow
 	layer& operator=(layer&& other); // nothrow
 
+	// Swap is thread-safe on "other".
 	void swap(layer& other); // nothrow 
 		
 	void load(const safe_ptr<frame_producer>& producer, bool play_on_load = false); // nothrow
