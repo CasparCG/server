@@ -96,5 +96,8 @@
     <ClInclude Include="diagnostics\graph.h">
       <Filter>Source\diagnostics</Filter>
     </ClInclude>
+    <ClInclude Include="utility\printable.h">
+      <Filter>Source\utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

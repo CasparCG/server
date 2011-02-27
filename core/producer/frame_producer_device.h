@@ -3,6 +3,7 @@
 #include "frame_producer.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/utility/printable.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
@@ -29,7 +30,7 @@ public:
 
 	typedef std::function<void(const std::vector<safe_ptr<draw_frame>>&)> output_func;
 
-	explicit frame_producer_device(const safe_ptr<frame_factory>& factory, const output_func& output);
+	explicit frame_producer_device(const safe_ptr<frame_factory>& factory, const output_func& output, const printer& printer);
 	frame_producer_device(frame_producer_device&& other);
 		
 	void load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load = false);

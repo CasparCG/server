@@ -8,6 +8,7 @@
 #include "layer.h"
 
 #include <common/concurrency/executor.h>
+#include <common/utility/printable.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/lexical_cast.hpp>
@@ -22,7 +23,9 @@ namespace caspar { namespace core {
 
 struct frame_producer_device::implementation : boost::noncopyable
 {		
-	std::array<layer, frame_producer_device::MAX_LAYER+1> layers_;		
+	const printer parent_printer_;
+
+	std::vector<layer> layers_;		
 
 	tbb::spin_mutex output_mutex_;
 	output_func output_;
@@ -30,11 +33,16 @@ struct frame_producer_device::implementation : boost::noncopyable
 	const safe_ptr<frame_factory> factory_;
 	
 	mutable executor executor_;
+
 public:
-	implementation(const safe_ptr<frame_factory>& factory, const output_func& output)  
-		: factory_(factory)
+	implementation(const safe_ptr<frame_factory>& factory, const output_func& output, const printer& parent_printer)  
+		: parent_printer_(parent_printer)
+		, factory_(factory)
 		, output_(output)
 	{
+		for(int n = 0; n < frame_producer_device::MAX_LAYER+1; ++n)
+			layers_.push_back(layer(n, parent_printer_));
+
 		executor_.start();
 		executor_.begin_invoke([=]{tick();});
 	}
@@ -73,6 +81,7 @@ public:
 
 	void load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load)
 	{
+		producer->set_parent_printer(std::bind(&layer::print, &layers_.at(index)));
 		producer->initialize(factory_);
 		executor_.invoke([&]
 		{
@@ -117,7 +126,7 @@ public:
 	{
 		executor_.invoke([&]
 		{
-			layers_.at(index) = std::move(layer());
+			layers_.at(index) = std::move(layer(index, parent_printer_));
 		});
 	}
 		
@@ -125,8 +134,8 @@ public:
 	{
 		executor_.invoke([&]
 		{
-			for(auto it = layers_.begin(); it != layers_.end(); ++it)
-				*it = std::move(layer());
+			for(size_t n = 0; n < layers_.size(); ++n)
+				layers_[n] = layer(n, parent_printer_);
 		});
 	}	
 	
@@ -165,7 +174,7 @@ public:
 	}
 };
 
-frame_producer_device::frame_producer_device(const safe_ptr<frame_factory>& factory, const output_func& output) : impl_(new implementation(factory, output)){}
+frame_producer_device::frame_producer_device(const safe_ptr<frame_factory>& factory, const output_func& output, const printer& printer) : impl_(new implementation(factory, output, printer)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 void frame_producer_device::load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
 void frame_producer_device::preview(size_t index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}

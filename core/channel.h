@@ -24,7 +24,7 @@ namespace caspar { namespace core {
 class channel : boost::noncopyable
 {
 public:
-	explicit channel(const video_format_desc& format_desc);
+	explicit channel(int index, const video_format_desc& format_desc);
 	channel(channel&& other);
 
 	frame_producer_device& producer();

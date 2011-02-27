@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/diagnostics/graph.h>
+#include <common/utility/printable.h>
 
 #include <tbb/cache_aligned_allocator.h>
 
@@ -16,7 +17,7 @@ typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> 
 class input : boost::noncopyable
 {
 public:
-	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop);
+	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, const printer& parent_printer);
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 

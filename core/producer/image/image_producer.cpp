@@ -20,6 +20,7 @@ namespace caspar { namespace core { namespace image{
 
 struct image_producer : public frame_producer
 {	
+	printer parent_printer_;
 	std::shared_ptr<frame_factory> frame_factory_;
 	std::wstring filename_;
 	safe_ptr<draw_frame> frame_;
@@ -43,10 +44,15 @@ struct image_producer : public frame_producer
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
 		frame_ = std::move(frame);
 	}
+	
+	virtual void set_parent_printer(const printer& parent_printer) 
+	{
+		parent_printer_ = parent_printer;
+	}
 
 	virtual std::wstring print() const
 	{
-		return L"image_producer. filename: " + filename_;
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"image_producer. filename: " + filename_;
 	}
 };
 

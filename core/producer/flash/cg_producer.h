@@ -17,6 +17,7 @@ public:
 	
 	virtual safe_ptr<draw_frame> receive();
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory);
+	virtual void set_parent_printer(const printer& parent_printer);
 
 	void clear();
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));

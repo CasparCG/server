@@ -23,6 +23,7 @@
 #include "../mixer/frame_factory.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/utility/printable.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -74,6 +75,8 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory) = 0;
 
+	virtual void set_parent_printer(const printer& parent_printer) = 0;
+
 	static const safe_ptr<frame_producer>& empty()  // nothrow
 	{
 		struct empty_frame_producer : public frame_producer
@@ -81,6 +84,7 @@ public:
 			virtual safe_ptr<draw_frame> receive(){return draw_frame::empty();}
 			virtual void initialize(const safe_ptr<frame_factory>&){}
 			virtual std::wstring print() const { return L"empty";}
+			virtual void set_parent_printer(const printer& parent_printer) {}
 		};
 		static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();
 		return producer;
