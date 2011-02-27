@@ -76,15 +76,9 @@ public:
 	void stop() // noexcept
 	{
 		is_running_ = false;	
-		execution_queue_.push([]{});
+		execution_queue_.try_push([]{});
 	}
-
-	void wait()
-	{
-		if(is_running_)
-			invoke([]{});
-	}
-
+	
 	void clear()
 	{
 		std::function<void()> func;

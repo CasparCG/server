@@ -27,7 +27,7 @@ class frame_producer_remover
 	{
 		auto name = producer->print();
 		producer = frame_producer::empty();
-		CASPAR_LOG(info) <<  name << L" Removed.";
+		CASPAR_LOG(info) << name << L" Removed.";
 	}
 public:
 
@@ -87,7 +87,7 @@ public:
 		{
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
-			CASPAR_LOG(info) << foreground_->print() << L" Activated.";
+			CASPAR_LOG(info) << foreground_->print() << L" Added.";
 			background_ = frame_producer::empty();
 		}
 		is_paused_ = false;
@@ -133,7 +133,7 @@ public:
 				following->set_parent_printer(boost::bind(&implementation::print, this));
 				g_remover.remove(std::move(foreground_));
 				foreground_ = following;
-				CASPAR_LOG(info) << foreground_->print() << L" Activated.";
+				CASPAR_LOG(info) << foreground_->print() << L" Added.";
 
 				last_frame_ = receive();
 			}

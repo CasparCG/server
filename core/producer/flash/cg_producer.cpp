@@ -80,8 +80,8 @@ public:
 	void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;
-		flash_producer_->initialize(frame_factory);
 		flash_producer_->set_parent_printer(parent_printer_);
+		flash_producer_->initialize(frame_factory);
 	}
 
 	void set_parent_printer(const printer& parent_printer) 
