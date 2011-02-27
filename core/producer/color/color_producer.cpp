@@ -36,7 +36,9 @@ class color_producer : public frame_producer
 
 public:
 
-	explicit color_producer(const std::wstring& color) : color_str_(color), frame_(draw_frame::empty())
+	explicit color_producer(const std::wstring& color) 
+		: color_str_(color)
+		, frame_(draw_frame::empty())
 	{
 		if(color.length() != 9 || color[0] != '#')
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color)) << msg_info("Invalid color code"));

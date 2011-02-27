@@ -43,7 +43,8 @@
 namespace caspar { namespace core {
 
 struct ogl_consumer::implementation : boost::noncopyable
-{			
+{		
+	printer parent_printer_;
 	boost::unique_future<void> active_;
 
 	float wratio_;
@@ -80,11 +81,10 @@ public:
 		, screen_y_(0)
 		, screen_index_(screen_index)
 		, graph_(diagnostics::create_graph(narrow(print())))
+		, executor_(print())
 	{		
 		graph_->guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-
-		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 
 	~implementation()
@@ -141,7 +141,7 @@ public:
 		executor_.start();
 		executor_.invoke([=]
 		{
-			window_.Create(sf::VideoMode(format_desc_.width, format_desc_.height, 32), "CasparCG", windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
+			window_.Create(sf::VideoMode(format_desc_.width, format_desc_.height, 32), narrow(print()), windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
 			window_.ShowMouseCursor(false);
 			window_.SetPosition(screen_x_, screen_y_);
 			window_.SetSize(screen_width_, screen_height_);
@@ -184,6 +184,12 @@ public:
 			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		});
 		active_ = executor_.begin_invoke([]{});
+		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
+	}
+
+	void set_parent_printer(const printer& parent_printer)
+	{
+		parent_printer_ = parent_printer;
 	}
 	
 	std::pair<float, float> None()
@@ -269,7 +275,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"OpenGL Device [output-" + boost::lexical_cast<std::wstring>(screen_index_) + L"]";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"ogl[" + boost::lexical_cast<std::wstring>(screen_index_) + L"]";
 	}
 
 	size_t buffer_depth() const{return 2;}
@@ -280,6 +286,7 @@ ogl_consumer::ogl_consumer(unsigned int screen_index, stretch stretch, bool wind
 void ogl_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t ogl_consumer::buffer_depth() const{return impl_->buffer_depth();}
 void ogl_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
+void ogl_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
 
 safe_ptr<frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params)
 {

@@ -21,6 +21,7 @@ namespace caspar { namespace core {
 	
 struct frame_consumer_device::implementation
 {	
+	const printer parent_printer_;
 	timer clock_;
 
 	boost::circular_buffer<safe_ptr<const read_frame>> buffer_;
@@ -31,8 +32,9 @@ struct frame_consumer_device::implementation
 	
 	executor executor_;	
 public:
-	implementation(const video_format_desc& format_desc) 
-		: format_desc_(format_desc)
+	implementation(const printer& parent_printer, const video_format_desc& format_desc) 
+		: parent_printer_(parent_printer)
+		, format_desc_(format_desc)
 		, executor_(L"frame_consumer_device")
 	{		
 		executor_.set_capacity(2);
@@ -51,6 +53,7 @@ public:
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
+		consumer->set_parent_printer(std::bind(&implementation::print, this));
 		consumer->initialize(format_desc_);
 		executor_.invoke([&]
 		{
@@ -98,10 +101,15 @@ public:
 			clock_.tick(1.0/format_desc_.fps);
 		});
 	}
+
+	std::wstring print() const
+	{
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"consumer";
+	}
 };
 
 frame_consumer_device::frame_consumer_device(frame_consumer_device&& other) : impl_(std::move(other.impl_)){}
-frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+frame_consumer_device::frame_consumer_device(const printer& parent_printer, const video_format_desc& format_desc) : impl_(new implementation(parent_printer, format_desc)){}
 void frame_consumer_device::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
 void frame_consumer_device::send(const safe_ptr<const read_frame>& future_frame) { impl_->send(future_frame); }

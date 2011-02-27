@@ -32,6 +32,7 @@ public:
 	decklink_consumer(decklink_consumer&& other);
 	
 	virtual void initialize(const video_format_desc& format_desc);
+	virtual void set_parent_printer(const printer& parent_printer);
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
 private:
