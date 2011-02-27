@@ -75,6 +75,31 @@ public:
 		//CASPAR_LOG(debug) << L"Stopped TBB Worker Thread.";
 	}
 };
+
+void setup_console_window()
+{	
+	auto hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
+	DrawMenuBar(GetConsoleWindow());
+
+	auto coord = GetLargestConsoleWindowSize(hOut);
+	coord.X /= 2;
+
+	SetConsoleScreenBufferSize(hOut, coord);
+
+	SMALL_RECT DisplayArea = {0, 0, 0, 0};
+	DisplayArea.Right = coord.X-1;
+	DisplayArea.Bottom = coord.Y-1;
+	SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
+		
+	std::wstringstream str;
+	str << "CasparCG Server " << env::version();
+	SetConsoleTitle(str.str().c_str());
+
+	std::wcout << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n" << std::endl;
+	std::wcout << L"Starting CasparCG Video Playout Server Ver: " << env::version() << std::endl;
+}
  
 int main(int argc, wchar_t* argv[])
 {	
@@ -93,16 +118,8 @@ int main(int argc, wchar_t* argv[])
 		timeBeginPeriod(1);
 
 		// Start caspar
-		std::wstringstream str;
-		str << "CasparCG " << env::version();
-		SetConsoleTitle(str.str().c_str());
 
-		std::wcout << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n" << std::endl;
-		std::wcout << L"Starting CasparCG Video Playout Server Ver: " << env::version() << std::endl;
-
-		EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
-		DrawMenuBar(GetConsoleWindow());
-		MoveWindow(GetConsoleWindow(), 800, 0, 800, 1000, true);
+		setup_console_window();
 
 	#ifdef _DEBUG
 		_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );

@@ -35,13 +35,13 @@ struct frame_producer_device::implementation : boost::noncopyable
 	mutable executor executor_;
 
 public:
-	implementation(const safe_ptr<frame_factory>& factory, const output_func& output, const printer& parent_printer)  
+	implementation(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output)  
 		: parent_printer_(parent_printer)
 		, factory_(factory)
 		, output_(output)
 	{
 		for(int n = 0; n < frame_producer_device::MAX_LAYER+1; ++n)
-			layers_.push_back(layer(n, parent_printer_));
+			layers_.push_back(layer(n, std::bind(&implementation::print, this)));
 
 		executor_.start();
 		executor_.begin_invoke([=]{tick();});
@@ -148,9 +148,14 @@ public:
 			return layers_.at(index).foreground();
 		});
 	}
+
+	std::wstring print() const
+	{
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"producer";
+	}
 };
 
-frame_producer_device::frame_producer_device(const safe_ptr<frame_factory>& factory, const output_func& output, const printer& printer) : impl_(new implementation(factory, output, printer)){}
+frame_producer_device::frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output) : impl_(new implementation(parent_printer, factory, output)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 void frame_producer_device::load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
 void frame_producer_device::preview(size_t index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}

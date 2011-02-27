@@ -51,6 +51,7 @@ struct transition_producer::implementation : boost::noncopyable
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
 	{
+		dest_producer_->set_parent_printer(std::bind(&implementation::dest_print, this));
 		frame_buffer_.push_back(draw_frame::empty());
 	}
 				
@@ -63,7 +64,6 @@ struct transition_producer::implementation : boost::noncopyable
 
 	virtual void set_parent_printer(const printer& parent_printer) 
 	{
-		dest_producer_->set_parent_printer(std::bind(&implementation::print, this));
 		parent_printer_ = parent_printer;
 	}
 
@@ -75,6 +75,7 @@ struct transition_producer::implementation : boost::noncopyable
 	void set_leading_producer(const safe_ptr<frame_producer>& producer)
 	{
 		source_producer_ = producer;
+		source_producer_->set_parent_printer(std::bind(&implementation::source_print, this));
 	}
 
 	safe_ptr<draw_frame> receive()
@@ -188,8 +189,11 @@ struct transition_producer::implementation : boost::noncopyable
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"transition[length:" + boost::lexical_cast<std::wstring>(info_.duration) + L"]";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"transition[" + info_.name() + L":" + boost::lexical_cast<std::wstring>(info_.duration) + L"]";
 	}
+
+	std::wstring source_print() const { return print() + L"/source";}
+	std::wstring dest_print() const { return print() + L"/dest";}
 };
 
 transition_producer::transition_producer(transition_producer&& other) : impl_(std::move(other.impl_)){}

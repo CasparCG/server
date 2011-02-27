@@ -59,6 +59,7 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 		~co_init(){CoUninitialize();}
 	} co_;
 	
+	const printer	parent_printer_;
 	std::wstring	model_name_;
 	const size_t	device_index_;
 
@@ -86,8 +87,9 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> audio_frame_buffer_;
 
 public:
-	decklink_output(size_t device_index, bool embed_audio, bool internalKey) 
-		: model_name_(L"DECKLINK")
+	decklink_output(const printer& parent_printer, size_t device_index, bool embed_audio, bool internalKey) 
+		: parent_printer_(parent_printer)
+		, model_name_(L"DECKLINK")
 		, device_index_(device_index)
 		, audio_container_(5)
 		, embed_audio_(embed_audio)
@@ -272,12 +274,13 @@ public:
 
 	std::wstring print() const
 	{
-		return model_name_ + L" [output-" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 
 struct decklink_consumer::implementation
 {
+	printer parent_printer_;
 	std::unique_ptr<decklink_output> input_;
 
 	executor executor_;
@@ -289,7 +292,7 @@ public:
 		executor_.start();
 		executor_.invoke([&]
 		{
-			input_.reset(new decklink_output(device_index, embed_audio, internalKey));
+			input_.reset(new decklink_output(parent_printer_, device_index, embed_audio, internalKey));
 		});
 	}
 
@@ -309,6 +312,11 @@ public:
 		});
 	}
 
+	void set_parent_printer(const printer& parent_printer)
+	{
+		parent_printer_ = parent_printer;
+	}
+
 	void send(const safe_ptr<const read_frame>& frame)
 	{
 		input_->send(frame);
@@ -323,6 +331,7 @@ public:
 decklink_consumer::decklink_consumer(size_t device_index, bool embed_audio, bool internalKey) : impl_(new implementation(device_index, embed_audio, internalKey)){}
 decklink_consumer::decklink_consumer(decklink_consumer&& other) : impl_(std::move(other.impl_)){}
 void decklink_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
+void decklink_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
 void decklink_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
 	

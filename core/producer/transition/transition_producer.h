@@ -51,6 +51,19 @@ struct transition_direction
 struct transition_info
 {
 	transition_info() : type(transition::cut), duration(0), direction(transition_direction::from_left){}
+
+	std::wstring name() const
+	{
+		switch(type)
+		{
+		case transition::cut: return L"cut";
+		case transition::mix: return L"mix";
+		case transition::push: return L"push";
+		case transition::slide: return L"slide";
+		case transition::wipe: return L"wipe";
+		default: return L"";
+		}
+	}
 	
 	size_t						duration;
 	transition_direction::type	direction;

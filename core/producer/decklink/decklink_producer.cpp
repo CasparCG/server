@@ -46,6 +46,8 @@
 
 #pragma warning(push)
 
+#include <functional>
+
 namespace caspar { namespace core {
 
 class decklink_input : public IDeckLinkInputCallback
@@ -103,7 +105,7 @@ public:
 		decklink_->GetModelName(&pModelName);
 		model_name_ = std::wstring(pModelName);
 
-		graph_ = diagnostics::create_graph(narrow(print()));
+		graph_ = diagnostics::create_graph(boost::bind(&decklink_input::print, this));
 		graph_->guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		

@@ -83,6 +83,7 @@ void blue_initialize()
 		
 struct bluefish_consumer::implementation : boost::noncopyable
 {
+	printer				parent_printer_;
 	std::wstring		model_name_;
 	const unsigned int	device_index_;
 
@@ -244,6 +245,11 @@ public:
 
 		CASPAR_LOG(info) << print() << TEXT(" Successfully initialized for ") << format_desc_ << TEXT(".");
 	}
+
+	void set_parent_printer(const printer& parent_printer)
+	{
+		parent_printer_ = parent_printer;
+	}
 	
 	void enable_video_output()
 	{
@@ -342,13 +348,14 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [output-" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 
 bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
 bluefish_consumer::bluefish_consumer(unsigned int device_index, bool embed_audio) : impl_(new implementation(device_index, embed_audio)){}	
 void bluefish_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
+void bluefish_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
 void bluefish_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t bluefish_consumer::buffer_depth() const{return impl_->buffer_depth();}
 	

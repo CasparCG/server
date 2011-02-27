@@ -17,6 +17,7 @@
 #include <tbb/parallel_invoke.h>
 
 #include <deque>
+#include <functional>
 
 namespace caspar { namespace core { namespace ffmpeg{
 	
@@ -26,7 +27,7 @@ struct ffmpeg_producer : public frame_producer
 	const bool							loop_;
 	printer								parent_printer_;
 	
-	safe_ptr<diagnostics::graph>		graph_;
+	std::shared_ptr<diagnostics::graph>	graph_;
 	timer								perf_timer_;
 		
 	std::unique_ptr<audio_decoder>		audio_decoder_;
@@ -44,24 +45,19 @@ struct ffmpeg_producer : public frame_producer
 public:
 	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
 		: filename_(filename)
-		, loop_(loop)
-		, graph_(diagnostics::create_graph(narrow(print())))		
+		, loop_(loop) 
 		, last_frame_(draw_frame(draw_frame::empty()))
 		
 	{
+		graph_ = diagnostics::create_graph(boost::bind(&ffmpeg_producer::print, this));	
 		graph_->guide("frame-time", 0.5);
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
 	}
-
-	~ffmpeg_producer()
-	{
-		CASPAR_LOG(info) << print() << " stopping.";
-	}
-
+	
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;
-		input_.reset(new input(graph_, filename_, loop_, std::bind(&ffmpeg_producer::print, this)));
+		input_.reset(new input(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, std::bind(&ffmpeg_producer::print, this)));
 		video_decoder_.reset(input_->get_video_codec_context().get() ? new video_decoder(input_->get_video_codec_context().get(), frame_factory) : nullptr);
 		audio_decoder_.reset(input_->get_audio_codec_context().get() ? new audio_decoder(input_->get_audio_codec_context().get(), frame_factory->get_video_format_desc().fps) : nullptr);
 	}

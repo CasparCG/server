@@ -23,15 +23,16 @@
 
 #include "frame_factory.h"
 
+#include "image/image_mixer.h"
+#include "audio/audio_mixer.h"
+
 #include "frame/write_frame.h"
 #include "frame/pixel_format.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/utility/printable.h>
 
 #include <functional>
-
-#include "image/image_mixer.h"
-#include "audio/audio_mixer.h"
 
 namespace caspar { namespace core {
 	
@@ -42,7 +43,7 @@ class frame_mixer_device : public frame_factory
 public:
 	typedef std::function<void(const safe_ptr<const read_frame>&)> output_func;
 
-	frame_mixer_device(const video_format_desc& format_desc, const output_func& output);
+	frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc, const output_func& output);
 	frame_mixer_device(frame_mixer_device&& other); // nothrow
 		
 	void send(const std::vector<safe_ptr<draw_frame>>& frames); // nothrow

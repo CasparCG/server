@@ -29,36 +29,35 @@ namespace caspar { namespace core {
 struct channel::implementation : boost::noncopyable
 {					
 	const int index_;
+	const video_format_desc format_desc_;
 
 	std::shared_ptr<frame_consumer_device>	consumer_;
 	std::shared_ptr<frame_mixer_device>		mixer_;
 	std::shared_ptr<frame_producer_device>	producer_;
 
-	const video_format_desc format_desc_;
-
 public:
 	implementation(int index, const video_format_desc& format_desc)  
 		: index_(index)
 		, format_desc_(format_desc)
-		, consumer_(new frame_consumer_device(format_desc))
-		, mixer_(new frame_mixer_device(format_desc, std::bind(&frame_consumer_device::send, consumer_.get(), std::placeholders::_1)))
-		, producer_(new frame_producer_device(safe_ptr<frame_factory>(mixer_), std::bind(&frame_mixer_device::send, mixer_.get(), std::placeholders::_1), std::bind(&implementation::print, this)))	{}
+		, consumer_(new frame_consumer_device(std::bind(&implementation::print, this), format_desc))
+		, mixer_(new frame_mixer_device(std::bind(&implementation::print, this), format_desc, std::bind(&frame_consumer_device::send, consumer_.get(), std::placeholders::_1)))
+		, producer_(new frame_producer_device(std::bind(&implementation::print, this), safe_ptr<frame_factory>(mixer_), std::bind(&frame_mixer_device::send, mixer_.get(), std::placeholders::_1)))	{}
 
 	~implementation()
 	{
 		// Shutdown order is important! Destroy all created frames to mixer before destroying mixer.
-		CASPAR_LOG(info) << print() << " shutting down channel.";
+		CASPAR_LOG(info) << print() << " Shutting down channel.";
 		producer_.reset();
-		CASPAR_LOG(info) << print() << "successfully shut down producer-device.";
+		CASPAR_LOG(info) << print() << " Successfully shut down producer-device.";
 		consumer_.reset();
-		CASPAR_LOG(info) << print() << "successfully shut down consumer-device.";
+		CASPAR_LOG(info) << print() << " Successfully shut down consumer-device.";
 		mixer_.reset();
-		CASPAR_LOG(info) << print() << "successfully shut down mixer-device.";
+		CASPAR_LOG(info) << print() << " Successfully shut down mixer-device.";
 	}
 
 	std::wstring print() const
 	{
-		return L"channel[" + boost::lexical_cast<std::wstring>(index_) + L"]";
+		return L"channel[" + format_desc_.name + L", " + boost::lexical_cast<std::wstring>(index_+1) + L"]";
 	}
 };
 
@@ -68,5 +67,6 @@ frame_producer_device& channel::producer() { return *impl_->producer_;}
 frame_mixer_device& channel::mixer() { return *impl_->mixer_;} 
 frame_consumer_device& channel::consumer() { return *impl_->consumer_;} 
 const video_format_desc& channel::get_video_format_desc() const{return impl_->format_desc_;}
+std::wstring channel::print() const { return impl_->print();}
 
 }}
