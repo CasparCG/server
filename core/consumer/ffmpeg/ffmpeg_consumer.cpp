@@ -90,8 +90,8 @@ public:
 
 	~implementation()
 	{    
+		executor_.invoke([]{});
 		executor_.stop();
-		executor_.wait();
 
 		av_write_trailer(oc_.get());
 

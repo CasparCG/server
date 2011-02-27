@@ -11,7 +11,7 @@
 
 namespace caspar { namespace core {
 
-ogl_device::ogl_device()
+ogl_device::ogl_device() : executor_(L"ogl_device")
 {
 	executor_.start();
 	invoke([=]

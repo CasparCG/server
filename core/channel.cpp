@@ -48,11 +48,11 @@ public:
 		// Shutdown order is important! Destroy all created frames to mixer before destroying mixer.
 		CASPAR_LOG(info) << print() << " Shutting down channel.";
 		producer_.reset();
-		CASPAR_LOG(info) << print() << " Successfully shut down producer-device.";
+		CASPAR_LOG(info) << print() << " Successfully shutdown producer-device.";
 		consumer_.reset();
-		CASPAR_LOG(info) << print() << " Successfully shut down consumer-device.";
+		CASPAR_LOG(info) << print() << " Successfully shutdown consumer-device.";
 		mixer_.reset();
-		CASPAR_LOG(info) << print() << " Successfully shut down mixer-device.";
+		CASPAR_LOG(info) << print() << " Successfully shutdown mixer-device.";
 	}
 
 	std::wstring print() const
