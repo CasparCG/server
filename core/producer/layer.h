@@ -18,6 +18,7 @@ class layer : boost::noncopyable
 {
 public:
 	layer(int index, const printer& parent_printer = nullptr); // nothrow
+	~layer();
 	layer(layer&& other); // nothrow
 	layer& operator=(layer&& other); // nothrow
 
@@ -38,7 +39,7 @@ public:
 	std::wstring print() const;
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	tbb::atomic<implementation*> impl_;
 };
 
 }}

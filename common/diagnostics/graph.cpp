@@ -85,7 +85,7 @@ private:
 
 	void render(sf::RenderTarget& target)
 	{
-		auto count = std::max<size_t>(10, drawables_.size());
+		auto count = std::max<size_t>(8, drawables_.size());
 		float target_dy = 1.0f/static_cast<float>(count);
 
 		float last_y = 0.0f;
@@ -241,11 +241,19 @@ public:
 struct graph::implementation : public drawable
 {
 	std::map<std::string, diagnostics::line> lines_;
+	const printer parent_printer_;
 	std::string name_;
-	std::string display_name_;
+
+	int counter_;
 
 	implementation(const std::string& name) 
-		: name_(name), display_name_(name_){}
+		: name_(name)
+		, counter_(0){}
+
+	implementation(const printer& parent_printer) 
+		: parent_printer_(parent_printer)
+		, name_(parent_printer_ ? narrow(parent_printer_()) : "")
+		, counter_(0){}
 
 	void update(const std::string& name, float value)
 	{
@@ -286,34 +294,32 @@ struct graph::implementation : public drawable
 			lines_[name].guide(diagnostics::guide(value));
 		});
 	}
-
-	void set_display_name(const std::string& name)
-	{
-		context::begin_invoke([=]
-		{
-			display_name_ = name;
-		});	
-	}
-
+	
 private:
 	void render(sf::RenderTarget& target)
 	{
+		if(counter_++ > 25) // Don't update name too often since print can be implemented with locks.
+		{
+			counter_ = 0;
+			if(parent_printer_)
+				name_ = narrow(parent_printer_());
+		}
 		const size_t text_size = 15;
 		const size_t text_margin = 2;
-		const size_t text_offset = text_size+text_margin*2;
+		const size_t text_offset = (text_size+text_margin*2)*2;
 
-		sf::String text(display_name_.c_str(), sf::Font::GetDefaultFont(), text_size);
+		sf::String text(name_.c_str(), sf::Font::GetDefaultFont(), text_size);
 		text.SetStyle(sf::String::Italic);
 		text.Move(text_margin, text_margin);
 		
 		glPushMatrix();
 			glScaled(1.0f/GetScale().x, 1.0f/GetScale().y, 1.0f);
 			target.Draw(text);
-			float x_offset = text.GetPosition().x + text.GetRect().Right + text_margin*4;
+			float x_offset = text_margin;
 			for(auto it = lines_.begin(); it != lines_.end(); ++it)
 			{						
 				sf::String line_text(it->first, sf::Font::GetDefaultFont(), text_size);
-				line_text.SetPosition(x_offset, text_margin);
+				line_text.SetPosition(x_offset, text_margin+text_offset/2);
 				auto c = it->second.get_color();
 				line_text.SetColor(sf::Color(c.red*255.0f, c.green*255.0f, c.blue*255.0f, c.alpha*255.0f));
 				target.Draw(line_text);
@@ -354,16 +360,25 @@ graph::graph(const std::string& name) : impl_(env::properties().get("configurati
 		context::register_drawable(impl_);
 }
 
+graph::graph(const printer& parent_printer) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(parent_printer) : nullptr)
+{
+	if(impl_)
+		context::register_drawable(impl_);
+}
+
 void graph::update(const std::string& name, float value){if(impl_)impl_->update(name, value);}
 void graph::set(const std::string& name, float value){if(impl_)impl_->set(name, value);}
 void graph::tag(const std::string& name){if(impl_)impl_->tag(name);}
 void graph::guide(const std::string& name, float value){if(impl_)impl_->guide(name, value);}
 void graph::set_color(const std::string& name, color c){if(impl_)impl_->set_color(name, c);}
-void graph::set_display_name(const std::string& name){if(impl_)impl_->set_display_name(name);}
 
 safe_ptr<graph> create_graph(const std::string& name)
 {
 	return safe_ptr<graph>(new graph(name));
+}
+safe_ptr<graph> create_graph(const printer& parent_printer)
+{
+	return safe_ptr<graph>(new graph(parent_printer));
 }
 
 }}

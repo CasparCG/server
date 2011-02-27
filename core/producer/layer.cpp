@@ -14,7 +14,7 @@
 #include <mixer/audio/audio_mixer.h>
 #include <mixer/audio/audio_transform.h>
 
-#include <tbb/recursive_mutex.h>
+#include <tbb/spin_mutex.h>
 
 namespace caspar { namespace core {
 
@@ -27,7 +27,7 @@ class frame_producer_remover
 	{
 		auto name = producer->print();
 		producer = frame_producer::empty();
-		CASPAR_LOG(info) << L"async_remover[" + boost::lexical_cast<std::wstring>(--count_) + L"] Removed: " << name << L".";
+		CASPAR_LOG(info) <<  name << L" Removed.";
 	}
 public:
 
@@ -40,19 +40,19 @@ public:
 	void remove(safe_ptr<frame_producer>&& producer)
 	{
 		CASPAR_ASSERT(producer.unique());
-		CASPAR_LOG(info) << L"async_remover[" + boost::lexical_cast<std::wstring>(++count_) + L"] Removing: " << producer->print() << L".";
 		executor_.begin_invoke(std::bind(&frame_producer_remover::do_remove, this, std::move(producer)));
 	}
 };
 
 frame_producer_remover g_remover;
 
+
 struct layer::implementation : boost::noncopyable
 {				
-	tbb::recursive_mutex		mutex_;
+	mutable tbb::spin_mutex		printer_mutex_;
 	printer						parent_printer_;
-	tbb::atomic<int>			index_;
-
+	int							index_;
+	
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	safe_ptr<draw_frame>		last_frame_;
@@ -60,18 +60,14 @@ struct layer::implementation : boost::noncopyable
 public:
 	implementation(int index, const printer& parent_printer) 
 		: parent_printer_(parent_printer)
+		, index_(index)
 		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, last_frame_(draw_frame::empty())
-		, is_paused_(false)
-	{
-		index_ = index;
-	}
+		, is_paused_(false){}
 	
 	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load)
 	{		
-		tbb::recursive_mutex::scoped_lock lock(mutex_);
-
 		background_ = frame_producer;
 		is_paused_ = false;
 		if(play_on_load)
@@ -80,22 +76,18 @@ public:
 
 	void preview(const safe_ptr<frame_producer>& frame_producer)
 	{
-		tbb::recursive_mutex::scoped_lock lock(mutex_);
-
 		load(frame_producer, true);
 		receive();
 		pause();
 	}
 	
 	void play()
-	{		
-		tbb::recursive_mutex::scoped_lock lock(mutex_);
-	
+	{			
 		if(!is_paused_)			
 		{
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
-			CASPAR_LOG(info) << foreground_->print() << L" Started.";
+			CASPAR_LOG(info) << foreground_->print() << L" Activated.";
 			background_ = frame_producer::empty();
 		}
 		is_paused_ = false;
@@ -103,24 +95,18 @@ public:
 
 	void pause()
 	{
-		tbb::recursive_mutex::scoped_lock lock(mutex_);
-
 		is_paused_ = true;
 	}
 
 	void stop()
 	{
-		tbb::recursive_mutex::scoped_lock lock(mutex_);
-
 		pause();
 		last_frame_ = draw_frame::empty();
 		foreground_ = frame_producer::empty();
 	}
 
 	void clear()
-	{
-		tbb::recursive_mutex::scoped_lock lock(mutex_);
-		
+	{		
 		foreground_ = frame_producer::empty();
 		background_ = frame_producer::empty();
 		last_frame_ = draw_frame::empty();
@@ -129,8 +115,6 @@ public:
 	
 	safe_ptr<draw_frame> receive()
 	{		
-		tbb::recursive_mutex::scoped_lock lock(mutex_);
-
 		if(is_paused_)
 		{
 			last_frame_->get_audio_transform().set_gain(0.0);
@@ -146,48 +130,63 @@ public:
 
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
+				following->set_parent_printer(boost::bind(&implementation::print, this));
 				g_remover.remove(std::move(foreground_));
 				foreground_ = following;
-				CASPAR_LOG(info) << foreground_->print() << L" Started.";
+				CASPAR_LOG(info) << foreground_->print() << L" Activated.";
 
 				last_frame_ = receive();
 			}
 		}
 		catch(...)
 		{
-			CASPAR_LOG(error) << print() << L"Unhandled Exception: ";
+			CASPAR_LOG(error) << print() << L" Unhandled Exception: ";
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			stop();
 		}
 
 		return last_frame_;
 	}
-	
-	void swap(implementation& other)
-	{
-		tbb::recursive_mutex::scoped_lock lock(mutex_);
-		std::swap(foreground_, other.foreground_);
-		std::swap(background_, other.background_);
-		std::swap(last_frame_, other.last_frame_);
-		std::swap(is_paused_, other.is_paused_);
-	}
-	
+		
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
+		std::wstring parent_print = L"";
+		{
+			tbb::spin_mutex::scoped_lock lock(printer_mutex_);
+			if(parent_printer_)
+				parent_print = parent_printer_() + L"/";
+		}
+		return parent_print + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
 	}
 };
 
-layer::layer(int index, const printer& parent_printer) : impl_(new implementation(index, parent_printer)){}
-layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
+layer::layer(int index, const printer& parent_printer)
+{
+	impl_ = new implementation(index, parent_printer);
+}
+layer::~layer()
+{
+	if(!impl_)
+		return;
+
+	impl_->clear();
+	delete impl_.fetch_and_store(nullptr);
+}
+layer::layer(layer&& other)
+{
+	impl_ = other.impl_.fetch_and_store(nullptr);
+}
 layer& layer::operator=(layer&& other)
 {
-	impl_ = std::move(other.impl_);
+	impl_ = other.impl_.fetch_and_store(nullptr);
 	return *this;
 }
 void layer::swap(layer& other)
 {
-	impl_->swap(*other.impl_);
+	impl_ = other.impl_.compare_and_swap(impl_, other.impl_);
+	tbb::spin_mutex::scoped_lock lock(other.impl_->printer_mutex_);
+	std::swap(impl_->index_, other.impl_->index_);
+	std::swap(impl_->parent_printer_, other.impl_->parent_printer_);
 }
 void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load){return impl_->load(frame_producer, play_on_load);}	
 void layer::preview(const safe_ptr<frame_producer>& frame_producer){return impl_->preview(frame_producer);}	

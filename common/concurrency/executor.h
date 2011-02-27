@@ -81,13 +81,15 @@ public:
 
 	void wait()
 	{
-		invoke([]{});
+		if(is_running_)
+			invoke([]{});
 	}
 
 	void clear()
 	{
 		std::function<void()> func;
-		while(true)
+		auto size = execution_queue_.size();
+		for(int n = 0; n < size; ++n)
 		{
 			try
 			{

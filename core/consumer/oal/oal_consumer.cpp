@@ -36,6 +36,7 @@ namespace caspar { namespace core {
 
 struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
+	printer parent_printer_;
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
 
@@ -72,7 +73,12 @@ public:
 		Play();		
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
-	
+
+	void set_parent_printer(const printer& parent_printer)
+	{
+		parent_printer_ = parent_printer;
+	}
+			
 	void send(const safe_ptr<const read_frame>& frame)
 	{				
 		if(!frame->audio_data().empty())
@@ -100,7 +106,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"Default Audio Device [output]";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"oal";
 	}
 };
 
@@ -109,6 +115,7 @@ oal_consumer::oal_consumer() : impl_(new implementation()){}
 void oal_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t oal_consumer::buffer_depth() const{return impl_->buffer_depth();}
 void oal_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
+void oal_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
 
 safe_ptr<frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)
 {

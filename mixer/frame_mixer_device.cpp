@@ -12,6 +12,7 @@
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
+#include <common/utility/assert.h>
 #include <common/utility/timer.h>
 #include <common/gl/gl_check.h>
 
@@ -28,6 +29,7 @@ namespace caspar { namespace core {
 	
 struct frame_mixer_device::implementation : boost::noncopyable
 {		
+	const printer			parent_printer_;
 	const video_format_desc format_desc_;
 
 	safe_ptr<diagnostics::graph> graph_;
@@ -44,12 +46,13 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	executor executor_;
 public:
-	implementation(const video_format_desc& format_desc, const output_func& output) 
-		: format_desc_(format_desc)
+	implementation(const printer& parent_printer, const video_format_desc& format_desc, const output_func& output) 
+		: parent_printer_(parent_printer)
+		, format_desc_(format_desc)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(format_desc)
 		, output_(output)
-		, executor_(L"frame_mixer_device")
+		, executor_(print())
 	{
 		graph_->guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -62,7 +65,7 @@ public:
 		
 	~implementation()
 	{
-		CASPAR_LOG(info) << print() << L" Shutting down.";	
+		executor_.clear();
 	}
 
 	void send(const std::vector<safe_ptr<draw_frame>>& frames)
@@ -126,11 +129,11 @@ public:
 
 	std::wstring print() const
 	{
-		return L"Video/Audio Mixer [" + format_desc_.name + L"]";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"mixer";
 	}
 };
 	
-frame_mixer_device::frame_mixer_device(const video_format_desc& format_desc, const output_func& output) : impl_(new implementation(format_desc, output)){}
+frame_mixer_device::frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc, const output_func& output) : impl_(new implementation(parent_printer, format_desc, output)){}
 frame_mixer_device::frame_mixer_device(frame_mixer_device&& other) : impl_(std::move(other.impl_)){}
 void frame_mixer_device::send(const std::vector<safe_ptr<draw_frame>>& frames){impl_->send(frames);}
 const video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->format_desc_; }

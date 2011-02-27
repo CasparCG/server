@@ -38,6 +38,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include <functional>
+
 namespace caspar { namespace core { namespace flash {
 		
 bool interlaced(double fps, const video_format_desc& format_desc)
@@ -197,7 +199,7 @@ struct flash_producer::implementation
 	const std::wstring filename_;	
 	tbb::atomic<int> fps_;
 
-	safe_ptr<diagnostics::graph> graph_;
+	std::shared_ptr<diagnostics::graph> graph_;
 
 	safe_ptr<draw_frame> tail_;
 	tbb::concurrent_bounded_queue<safe_ptr<draw_frame>> frame_buffer_;
@@ -214,24 +216,17 @@ struct flash_producer::implementation
 					boost::lexical_cast<std::wstring>(fps_) + 
 					(interlaced(fps_, format_desc_) ? L"i" : L"p") + L"]";		
 	}	
-
-	void set_fps(double fps)
-	{
-		int fps100 = static_cast<int>(renderer_->fps()*100.0);
-		if(fps_.fetch_and_store(fps100) != fps100)
-			graph_->set_display_name(narrow(print()));	
-	}
-	
+		
 public:
 	implementation(const std::wstring& filename) 
-		: filename_(filename)
-		, graph_(diagnostics::create_graph(narrow(print())))
+		: filename_(filename)		
 		, tail_(draw_frame::empty())		
 		, executor_(print())
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
-
+		 
+		graph_ = diagnostics::create_graph(boost::bind(&implementation::print, this));
 		fps_ = 0;
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));	
 	}
@@ -278,7 +273,7 @@ public:
 				do{frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);}
 				while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
 				graph_->set("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
-				set_fps(renderer_->fps());
+				fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));
 			}
 			catch(...)
 			{
@@ -296,7 +291,7 @@ public:
 		{
 			if(!renderer_)
 			{
-				renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_, [=]{return print();}));
+				renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, [=]{return print();}));
 				while(frame_buffer_.try_push(draw_frame::empty())){}		
 			}
 

@@ -211,7 +211,7 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"[async_input]";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"async_input";
 	}
 };
 
