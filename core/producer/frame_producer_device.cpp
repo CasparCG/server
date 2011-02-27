@@ -14,7 +14,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <tbb/parallel_for.h>
-#include <tbb/spin_mutex.h>
+#include <tbb/mutex.h>
 
 #include <array>
 #include <memory>
@@ -27,13 +27,11 @@ struct frame_producer_device::implementation : boost::noncopyable
 
 	std::vector<layer> layers_;		
 
-	tbb::spin_mutex output_mutex_;
 	output_func output_;
 
 	const safe_ptr<frame_factory> factory_;
 	
 	mutable executor executor_;
-
 public:
 	implementation(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output)  
 		: parent_printer_(parent_printer)
@@ -55,12 +53,7 @@ public:
 	void tick()
 	{		
 		auto frames = draw();
-		output_func output;
-		{
-			tbb::spin_mutex::scoped_lock lock(output_mutex_);
-			output = output_;
-		}
-		output(frames);
+		output_(draw());
 		executor_.begin_invoke([=]{tick();});
 	}
 	
@@ -123,22 +116,39 @@ public:
 	
 	void swap_layer(size_t index, size_t other_index)
 	{
-		layers_.at(index).swap(layers_[other_index]);
+		executor_.invoke([&]
+		{
+			layers_.at(index).swap(layers_[other_index]);
+		});
 	}
 
 	void swap_layer(size_t index, size_t other_index, frame_producer_device& other)
 	{
-		layers_.at(index).swap(other.impl_->layers_.at(other_index));
+		if(other.impl_.get() == this) // Avoid deadlock.
+			swap_layer(index, other_index);
+		else
+		{
+			auto func = [&]
+			{
+				layers_.at(index).swap(other.impl_->layers_.at(other_index));			
+			};
+		
+			executor_.invoke([&]{other.impl_->executor_.invoke(func);});
+		}
 	}
 
-	void swap_output(frame_producer_device& other)
+	void swap(frame_producer_device& other)
 	{
 		if(other.impl_.get() == this) // Avoid deadlock.
 			return;
 
-		tbb::spin_mutex::scoped_lock lock1(output_mutex_);
-		tbb::spin_mutex::scoped_lock lock2(other.impl_->output_mutex_);
-		output_.swap(other.impl_->output_);
+		auto func = [&]
+		{
+			for(size_t n = 0; n < frame_producer_device::MAX_LAYER+1; ++n)
+				layers_[n].swap(other.impl_->layers_[n]);
+		};
+		
+		executor_.invoke([&]{other.impl_->executor_.invoke(func);});
 	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const
@@ -157,6 +167,7 @@ public:
 
 frame_producer_device::frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output) : impl_(new implementation(parent_printer, factory, output)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
+void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
 void frame_producer_device::load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
 void frame_producer_device::preview(size_t index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
 void frame_producer_device::pause(size_t index){impl_->pause(index);}
@@ -166,6 +177,5 @@ void frame_producer_device::clear(size_t index){impl_->clear(index);}
 void frame_producer_device::clear(){impl_->clear();}
 void frame_producer_device::swap_layer(size_t index, size_t other_index){impl_->swap_layer(index, other_index);}
 void frame_producer_device::swap_layer(size_t index, size_t other_index, frame_producer_device& other){impl_->swap_layer(index, other_index, other);}
-void frame_producer_device::swap_output(frame_producer_device& other){impl_->swap_output(other);}
 boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) const{	return impl_->foreground(index);}
 }}

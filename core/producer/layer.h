@@ -18,11 +18,9 @@ class layer : boost::noncopyable
 {
 public:
 	layer(int index, const printer& parent_printer = nullptr); // nothrow
-	~layer();
 	layer(layer&& other); // nothrow
 	layer& operator=(layer&& other); // nothrow
 
-	// Swap is thread-safe on "other".
 	void swap(layer& other); // nothrow 
 		
 	void load(const safe_ptr<frame_producer>& producer, bool play_on_load = false); // nothrow
@@ -40,7 +38,7 @@ public:
 	std::wstring print() const;
 private:
 	struct implementation;
-	tbb::atomic<implementation*> impl_;
+	std::shared_ptr<implementation> impl_;
 };
 
 }}
