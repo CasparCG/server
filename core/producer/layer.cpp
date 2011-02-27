@@ -49,7 +49,6 @@ frame_producer_remover g_remover;
 
 struct layer::implementation : boost::noncopyable
 {				
-	mutable tbb::spin_mutex		printer_mutex_;
 	printer						parent_printer_;
 	int							index_;
 	
@@ -150,38 +149,28 @@ public:
 		
 	std::wstring print() const
 	{
-		tbb::spin_mutex::scoped_lock lock(printer_mutex_);
 		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
+	}
+
+	void swap(implementation& other)
+	{
+		std::swap(foreground_, other.foreground_);
+		std::swap(background_, other.background_);
+		std::swap(last_frame_, other.last_frame_);
+		std::swap(is_paused_, other.is_paused_);
 	}
 };
 
-layer::layer(int index, const printer& parent_printer)
-{
-	impl_ = new implementation(index, parent_printer);
-}
-layer::~layer()
-{
-	if(!impl_)
-		return;
-
-	impl_->clear();
-	delete impl_.fetch_and_store(nullptr);
-}
-layer::layer(layer&& other)
-{
-	impl_ = other.impl_.fetch_and_store(nullptr);
-}
+layer::layer(int index, const printer& parent_printer) : impl_(new implementation(index, parent_printer)){}
+layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
 layer& layer::operator=(layer&& other)
 {
-	impl_ = other.impl_.fetch_and_store(nullptr);
+	impl_ = std::move(other.impl_);
 	return *this;
 }
 void layer::swap(layer& other)
 {
-	impl_ = other.impl_.compare_and_swap(impl_, other.impl_);
-	tbb::spin_mutex::scoped_lock lock(other.impl_->printer_mutex_);
-	std::swap(impl_->index_, other.impl_->index_);
-	std::swap(impl_->parent_printer_, other.impl_->parent_printer_);
+	impl_->swap(*other.impl_);
 }
 void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load){return impl_->load(frame_producer, play_on_load);}	
 void layer::preview(const safe_ptr<frame_producer>& frame_producer){return impl_->preview(frame_producer);}	

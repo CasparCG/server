@@ -32,6 +32,7 @@ public:
 
 	explicit frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output);
 	frame_producer_device(frame_producer_device&& other);
+	void swap(frame_producer_device& other);
 		
 	void load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load = false);
 	void preview(size_t index, const safe_ptr<frame_producer>& producer);
@@ -42,7 +43,6 @@ public:
 	void clear();	
 	void swap_layer(size_t index, size_t other_index);
 	void swap_layer(size_t index, size_t other_index, frame_producer_device& other);
-	void swap_output(frame_producer_device& other);
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const;
 
 private:

@@ -300,7 +300,7 @@ bool SwapCommand::DoExecute()
 		{
 			auto ch1 = GetChannel();
 			auto ch2 = GetChannels().at(boost::lexical_cast<int>(_parameters[0])-1);
-			ch1->producer().swap_output(ch2->producer());
+			ch1->producer().swap(ch2->producer());
 		}
 
 		CASPAR_LOG(info) << "Swapped successfully";
