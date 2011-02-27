@@ -32,6 +32,7 @@ namespace caspar { namespace core {
 
 struct transition_producer::implementation : boost::noncopyable
 {	
+	printer	parent_printer_;
 	unsigned short				current_frame_;
 	
 	const transition_info		info_;
@@ -58,6 +59,12 @@ struct transition_producer::implementation : boost::noncopyable
 		dest_producer_->initialize(frame_factory);
 		frame_factory_ = frame_factory;
 		format_desc_ = frame_factory_->get_video_format_desc();
+	}
+
+	virtual void set_parent_printer(const printer& parent_printer) 
+	{
+		dest_producer_->set_parent_printer(std::bind(&implementation::print, this));
+		parent_printer_ = parent_printer;
 	}
 
 	safe_ptr<frame_producer> get_following_producer() const
@@ -181,7 +188,7 @@ struct transition_producer::implementation : boost::noncopyable
 
 	std::wstring print() const
 	{
-		return L"transition[" + source_producer_->print() + L"->" + dest_producer_->print() + L"]";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"transition[length:" + boost::lexical_cast<std::wstring>(info_.duration) + L"]";
 	}
 };
 
@@ -191,6 +198,7 @@ safe_ptr<draw_frame> transition_producer::receive(){return impl_->receive();}
 safe_ptr<frame_producer> transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const safe_ptr<frame_producer>& producer) { impl_->set_leading_producer(producer); }
 void transition_producer::initialize(const safe_ptr<frame_factory>& frame_factory) { impl_->initialize(frame_factory);}
+void transition_producer::set_parent_printer(const printer& parent_printer) {impl_->set_parent_printer(parent_printer);}
 std::wstring transition_producer::print() const { return impl_->print();}
 
 }}

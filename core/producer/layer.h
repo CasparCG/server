@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
+#include <common/utility/printable.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -14,7 +15,7 @@ class draw_frame;
 class layer : boost::noncopyable
 {
 public:
-	layer(); // nothrow
+	layer(int index, const printer& parent_printer = nullptr); // nothrow
 	layer(layer&& other); // nothrow
 	~layer(); // nothrow
 	layer& operator=(layer&& other); // nothrow
@@ -33,6 +34,8 @@ public:
 	safe_ptr<frame_producer> background() const; // nothrow
 
 	safe_ptr<draw_frame> receive(); // nothrow
+
+	std::wstring print() const;
 private:
 	struct implementation;
 	tbb::atomic<implementation*> impl_;

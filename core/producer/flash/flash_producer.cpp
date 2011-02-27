@@ -52,7 +52,8 @@ class flash_renderer
 		co_init(){CoInitialize(nullptr);}
 		~co_init(){CoUninitialize();}
 	} co_;
-
+	
+	printer parent_printer_;
 	const std::wstring filename_;
 	const video_format_desc format_desc_;
 
@@ -70,11 +71,15 @@ class flash_renderer
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
 
-	std::function<std::wstring()> print_;
+	std::wstring print()
+	{
+		return parent_printer_();
+	}
 
 public:
-	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<frame_factory>& frame_factory, const std::wstring& filename, const std::function<std::wstring()>& print) 
-		: graph_(graph)
+	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<frame_factory>& frame_factory, const std::wstring& filename, const printer& parent_printer) 
+		: parent_printer_(parent_printer)
+		, graph_(graph)
 		, filename_(filename)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, frame_factory_(frame_factory)
@@ -82,7 +87,6 @@ public:
 		, hdc_(CreateCompatibleDC(0), DeleteDC)
 		, ax_(nullptr)
 		, head_(draw_frame::empty())
-		, print_(print)
 	{
 		graph_->guide("frame-time", 0.5f);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
@@ -90,25 +94,25 @@ public:
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));			
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to create FlashAxContainer"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to create FlashAxContainer"));
 		
-		ax_->set_print(print_);
+		ax_->set_print(parent_printer_);
 
 		if(FAILED(ax_->CreateAxControl()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to Create FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to Create FlashAxControl"));
 		
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to Query FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to Query FlashAxControl"));
 												
 		if(FAILED(spFlash->put_Playing(true)) )
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to start playing Flash"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to start playing Flash"));
 
 		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to Load Template Host"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to Load Template Host"));
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print_()) + "Failed to Set Scale Mode"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to Set Scale Mode"));
 														
 		ax_->SetFormat(format_desc_);
 		
@@ -123,7 +127,7 @@ public:
 
 		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
 		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
-		CASPAR_LOG(info) << print() << L" Thread started.";
+		CASPAR_LOG(info) << parent_printer_() << L" Thread started.";
 	}
 
 	~flash_renderer()
@@ -133,13 +137,13 @@ public:
 			ax_->DestroyAxControl();
 			ax_->Release();
 		}
-		CASPAR_LOG(info) << print_() << L" Thread ended.";
+		CASPAR_LOG(info) << print() << L" Thread ended.";
 	}
 	
 	void param(const std::wstring& param)
 	{		
 		if(!ax_->FlashCall(param))
-			CASPAR_LOG(warning) << print_() << " Flash function call failed. Param: " << param << ".";
+			CASPAR_LOG(warning) << print() << " Flash function call failed. Param: " << param << ".";
 		graph_->tag("param");
 	}
 	
@@ -189,6 +193,7 @@ private:
 
 struct flash_producer::implementation
 {	
+	printer parent_printer_;
 	const std::wstring filename_;	
 	tbb::atomic<int> fps_;
 
@@ -205,7 +210,7 @@ struct flash_producer::implementation
 		
 	std::wstring print() const
 	{ 
-		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
 					boost::lexical_cast<std::wstring>(fps_) + 
 					(interlaced(fps_, format_desc_) ? L"i" : L"p") + L"]";		
 	}	
@@ -246,6 +251,11 @@ public:
 		format_desc_ = frame_factory->get_video_format_desc();
 		frame_buffer_.set_capacity(static_cast<size_t>(format_desc_.fps/4.0));
 		executor_.start();
+	}
+
+	virtual void set_parent_printer(const printer& parent_printer) 
+	{
+		parent_printer_ = parent_printer;
 	}
 
 	virtual safe_ptr<draw_frame> receive()
@@ -308,6 +318,7 @@ flash_producer::flash_producer(const std::wstring& filename) : impl_(new impleme
 safe_ptr<draw_frame> flash_producer::receive(){return impl_->receive();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
 void flash_producer::initialize(const safe_ptr<frame_factory>& frame_factory) { impl_->initialize(frame_factory);}
+void flash_producer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
 std::wstring flash_producer::print() const {return impl_->print();}
 
 std::wstring flash_producer::find_template(const std::wstring& template_name)

@@ -33,6 +33,7 @@ public:
 
 	virtual safe_ptr<draw_frame> receive();
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory);
+	virtual void set_parent_printer(const printer& parent_printer);
 	virtual std::wstring print() const;
 
 	void param(const std::wstring& param);
