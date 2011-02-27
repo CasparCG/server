@@ -83,76 +83,52 @@ public:
 	{
 		producer->set_parent_printer(std::bind(&layer::print, &layers_.at(index)));
 		producer->initialize(factory_);
-		executor_.invoke([&]
-		{
-			layers_.at(index).load(producer, play_on_load);
-		});
+		executor_.invoke([&]{layers_.at(index).load(producer, play_on_load);});
 	}
 			
 	void preview(size_t index, const safe_ptr<frame_producer>& producer)
 	{
 		producer->initialize(factory_);
-		executor_.invoke([&]
-		{			
-			layers_.at(index).preview(producer);
-		});
+		executor_.invoke([&]{layers_.at(index).preview(producer);});
 	}
 
 	void pause(size_t index)
 	{		
-		executor_.invoke([&]
-		{
-			layers_.at(index).pause();
-		});
+		executor_.invoke([&]{layers_.at(index).pause();});
 	}
 
 	void play(size_t index)
 	{		
-		executor_.invoke([&]
-		{
-			layers_.at(index).play();
-		});
+		executor_.invoke([&]{layers_.at(index).play();});
 	}
 
 	void stop(size_t index)
 	{		
-		executor_.invoke([&]
-		{
-			layers_.at(index).stop();
-		});
+		executor_.invoke([&]{layers_.at(index).stop();});
 	}
 
 	void clear(size_t index)
 	{
-		executor_.invoke([&]
-		{
-			layers_.at(index) = std::move(layer(index, parent_printer_));
-		});
+		executor_.invoke([&]{layers_.at(index).clear();});
 	}
 		
 	void clear()
 	{
 		executor_.invoke([&]
 		{
-			for(size_t n = 0; n < layers_.size(); ++n)
-				layers_[n] = layer(n, parent_printer_);
+			BOOST_FOREACH(auto& layer, layers_)
+				layer.clear();
 		});
 	}	
 	
 	void swap_layer(size_t index, size_t other_index)
 	{
-		executor_.invoke([&]
-		{
-			layers_.at(index).swap(layers_[other_index]);
-		});
+		layers_.at(index).swap(layers_[other_index]);
 	}
 
 	void swap_layer(size_t index, size_t other_index, frame_producer_device& other)
 	{
-		executor_.invoke([&]
-		{
-			layers_.at(index).swap(other.impl_->layers_.at(other_index));
-		});
+		layers_.at(index).swap(other.impl_->layers_.at(other_index));
 	}
 
 	void swap_output(frame_producer_device& other)
