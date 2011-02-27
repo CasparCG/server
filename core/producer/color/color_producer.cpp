@@ -32,6 +32,7 @@ class color_producer : public frame_producer
 {
 	safe_ptr<draw_frame> frame_;
 	std::wstring color_str_;
+	printer parent_printer_;
 
 public:
 
@@ -49,10 +50,12 @@ public:
 		str >> std::hex >> value;	
 		frame_ = std::move(frame);
 	}
+
+	virtual void set_parent_printer(const printer& parent_printer){parent_printer_ = parent_printer;}
 	
 	virtual safe_ptr<draw_frame> receive() { return frame_; }
 	
-	virtual std::wstring print() const { return + L"color[" + color_str_ + L"]"; }
+	virtual std::wstring print() const { return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"color[" + color_str_ + L"]"; }
 };
 
 safe_ptr<frame_producer> create_color_producer(const std::vector<std::wstring>& params)

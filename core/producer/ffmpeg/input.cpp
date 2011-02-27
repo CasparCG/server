@@ -6,6 +6,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
+#include <common/utility/printable.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/queuing_mutex.h>
@@ -34,6 +35,7 @@ struct input::implementation : boost::noncopyable
 {		
 	static const size_t PACKET_BUFFER_COUNT = 50;
 
+	printer parent_printer_;
 	safe_ptr<diagnostics::graph> graph_;
 
 	std::shared_ptr<AVFormatContext> format_context_;	// Destroy this last
@@ -55,8 +57,9 @@ struct input::implementation : boost::noncopyable
 	
 	executor executor_;
 public:
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop) 
-		: graph_(graph)
+	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, const printer& parent_printer) 
+		: parent_printer_(parent_printer)
+		, graph_(graph)
 		, loop_(loop)
 		, video_s_index_(-1)
 		, audio_s_index_(-1)
@@ -71,6 +74,7 @@ public:
 		if((errn = -av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr)) > 0)
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
+				source_info(narrow(print())) << 
 				msg_info("No format context found.") << 
 				boost::errinfo_api_function("av_open_input_file") <<
 				boost::errinfo_errno(errn) <<
@@ -81,24 +85,28 @@ public:
 		if((errn = -av_find_stream_info(format_context_.get())) > 0)
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
+				source_info(narrow(print())) << 
 				boost::errinfo_api_function("av_find_stream_info") <<
 				msg_info("No stream found.") << 
 				boost::errinfo_errno(errn));
 
 		video_codec_context_ = open_stream(CODEC_TYPE_VIDEO, video_s_index_);
 		if(!video_codec_context_)
-			CASPAR_LOG(warning) << "Could not open any video stream.";
+			CASPAR_LOG(warning) << print() << " Could not open any video stream.";
 		
 		audio_codex_context_ = open_stream(CODEC_TYPE_AUDIO, audio_s_index_);
 		if(!audio_codex_context_)
-			CASPAR_LOG(warning) << "Could not open any audio stream.";
+			CASPAR_LOG(warning) << print() << " Could not open any audio stream.";
 
 		if(!video_codec_context_ && !audio_codex_context_)
-			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("No video or audio codec context found."));		
+			BOOST_THROW_EXCEPTION(
+				file_read_error() << 
+				source_info(narrow(print())) << 
+				msg_info("No video or audio codec context found."));		
 					
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
-		CASPAR_LOG(info) << print() << " started.";
+		CASPAR_LOG(info) << print() << " Started.";
 	}
 
 	~implementation()
@@ -106,7 +114,7 @@ public:
 		executor_.clear();
 		executor_.stop();
 		cond_.notify_all();
-		CASPAR_LOG(info) << print() << " stopped.";
+		CASPAR_LOG(info) << print() << " Stopped.";
 	}
 							
 	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index)
@@ -170,7 +178,7 @@ public:
 	  
 		bool result = av_seek_frame(format_context_.get(), stream_index, seek_target, flags) >= 0;
 		if(!result)
-			CASPAR_LOG(warning) << "Failed to seek frame.";
+			CASPAR_LOG(warning) << print() << " Failed to seek frame.";
 		return result;
 	}
 		
@@ -203,11 +211,11 @@ public:
 
 	std::wstring print() const
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"] buffer thread";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"[async_input]";
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop) : impl_(new implementation(graph, filename, loop)){}
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, const printer& parent_printer) : impl_(new implementation(graph, filename, loop, parent_printer)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
 bool input::is_eof() const{return impl_->is_eof();}

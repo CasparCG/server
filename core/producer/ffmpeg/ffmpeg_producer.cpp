@@ -23,6 +23,8 @@ namespace caspar { namespace core { namespace ffmpeg{
 struct ffmpeg_producer : public frame_producer
 {
 	const std::wstring					filename_;
+	const bool							loop_;
+	printer								parent_printer_;
 	
 	safe_ptr<diagnostics::graph>		graph_;
 	timer								perf_timer_;
@@ -38,13 +40,13 @@ struct ffmpeg_producer : public frame_producer
 	safe_ptr<draw_frame>				last_frame_;
 	std::shared_ptr<frame_factory>		frame_factory_;
 
-	input								input_;	
+	std::unique_ptr<input>				input_;	
 public:
 	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
 		: filename_(filename)
+		, loop_(loop)
 		, graph_(diagnostics::create_graph(narrow(print())))		
 		, last_frame_(draw_frame(draw_frame::empty()))
-		, input_(graph_, filename, loop)
 		
 	{
 		graph_->guide("frame-time", 0.5);
@@ -59,23 +61,29 @@ public:
 	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;
-		video_decoder_.reset(input_.get_video_codec_context().get() ? new video_decoder(input_.get_video_codec_context().get(), frame_factory) : nullptr);
-		audio_decoder_.reset(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), frame_factory->get_video_format_desc().fps) : nullptr);
+		input_.reset(new input(graph_, filename_, loop_, std::bind(&ffmpeg_producer::print, this)));
+		video_decoder_.reset(input_->get_video_codec_context().get() ? new video_decoder(input_->get_video_codec_context().get(), frame_factory) : nullptr);
+		audio_decoder_.reset(input_->get_audio_codec_context().get() ? new audio_decoder(input_->get_audio_codec_context().get(), frame_factory->get_video_format_desc().fps) : nullptr);
 	}
 		
+	virtual void set_parent_printer(const printer& parent_printer) 
+	{
+		parent_printer_ = parent_printer;
+	}
+
 	virtual safe_ptr<draw_frame> receive()
 	{
 		perf_timer_.reset();
 
-		while(ouput_channel_.empty() && !input_.is_eof())
+		while(ouput_channel_.empty() && !input_->is_eof())
 		{	
 			aligned_buffer video_packet;
 			if(video_frame_channel_.size() < 3 && video_decoder_)	
-				video_packet = input_.get_video_packet();		
+				video_packet = input_->get_video_packet();		
 			
 			aligned_buffer audio_packet;
 			if(audio_chunk_channel_.size() < 3 && audio_decoder_)	
-				audio_packet = input_.get_audio_packet();		
+				audio_packet = input_->get_audio_packet();		
 
 			tbb::parallel_invoke(
 			[&]
@@ -152,7 +160,7 @@ public:
 			last_frame_->get_audio_transform().set_gain(0.0); // last_frame should not have audio
 			ouput_channel_.pop();
 		}
-		else if(input_.is_eof())
+		else if(input_->is_eof())
 			return draw_frame::eof();
 
 		return result;
@@ -160,7 +168,7 @@ public:
 
 	virtual std::wstring print() const
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 };
 

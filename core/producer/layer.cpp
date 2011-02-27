@@ -7,6 +7,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/utility/assert.h>
+#include <common/utility/printable.h>
 
 #include <mixer/frame/draw_frame.h>
 #include <mixer/image/image_mixer.h>
@@ -22,8 +23,9 @@ class frame_producer_remover
 
 	void do_remove(safe_ptr<frame_producer>& producer)
 	{
+		auto name = producer->print();
 		producer = frame_producer::empty();
-		CASPAR_LOG(info) << L"frame_remover[" + boost::lexical_cast<std::wstring>(--count_) + L"] removed: " << producer->print();
+		CASPAR_LOG(info) << L"async_remover[" + boost::lexical_cast<std::wstring>(--count_) + L"] Removed: " << name << L".";
 	}
 public:
 
@@ -36,7 +38,7 @@ public:
 	void remove(safe_ptr<frame_producer>&& producer)
 	{
 		CASPAR_ASSERT(producer.unique());
-		CASPAR_LOG(info) << L"frame_remover[" + boost::lexical_cast<std::wstring>(++count_) + L"] removing: " << producer->print();
+		CASPAR_LOG(info) << L"async_remover[" + boost::lexical_cast<std::wstring>(++count_) + L"] Removing: " << producer->print() << L".";
 		executor_.begin_invoke(std::bind(&frame_producer_remover::do_remove, this, std::move(producer)));
 	}
 };
@@ -44,18 +46,23 @@ public:
 frame_producer_remover g_remover;
 
 struct layer::implementation : boost::noncopyable
-{					
+{				
+	printer						parent_printer_;
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	safe_ptr<draw_frame>		last_frame_;
 	bool						is_paused_;
-
+	tbb::atomic<int>			index_;
 public:
-	implementation() 
-		: foreground_(frame_producer::empty())
+	implementation(int index, const printer& parent_printer) 
+		: parent_printer_(parent_printer)
+		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, last_frame_(draw_frame::empty())
-		, is_paused_(false){}
+		, is_paused_(false)
+	{
+		index_ = index;
+	}
 	
 	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load)
 	{			
@@ -78,7 +85,7 @@ public:
 		{
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
-			CASPAR_LOG(info) << foreground_->print() << L" started";
+			CASPAR_LOG(info) << foreground_->print() << L" Started.";
 			background_ = frame_producer::empty();
 		}
 		is_paused_ = false;
@@ -121,24 +128,30 @@ public:
 				following->set_leading_producer(foreground_);
 				g_remover.remove(std::move(foreground_));
 				foreground_ = following;
-				CASPAR_LOG(info) << foreground_->print() << L" started";
+				CASPAR_LOG(info) << foreground_->print() << L" Started.";
 
 				last_frame_ = receive();
 			}
 		}
 		catch(...)
 		{
+			CASPAR_LOG(error) << print() << L"Unhandled Exception: ";
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			stop();
 		}
 
 		return last_frame_;
 	}
+	
+	std::wstring print() const
+	{
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
+	}
 };
 
-layer::layer() 
+layer::layer(int index, const printer& parent_printer) 
 {
-	impl_ = new implementation();
+	impl_ = new implementation(index, parent_printer);
 }
 layer::layer(layer&& other) 
 {
@@ -156,6 +169,7 @@ layer& layer::operator=(layer&& other)
 void layer::swap(layer& other)
 {
 	impl_ = other.impl_.compare_and_swap(impl_, other.impl_);
+	impl_->index_ = other.impl_->index_.compare_and_swap(impl_->index_, other.impl_->index_);
 }
 void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load){return impl_->load(frame_producer, play_on_load);}	
 void layer::preview(const safe_ptr<frame_producer>& frame_producer){return impl_->preview(frame_producer);}	
@@ -166,4 +180,5 @@ void layer::clear(){impl_->clear();}
 safe_ptr<draw_frame> layer::receive() {return impl_->receive();}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
+std::wstring layer::print() const { return impl_->print();}
 }}

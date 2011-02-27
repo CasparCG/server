@@ -16,6 +16,9 @@ namespace caspar { namespace core { namespace flash {
 	
 struct cg_producer::implementation : boost::noncopyable
 {
+	printer parent_printer_;
+	safe_ptr<flash_producer> flash_producer_;
+	std::shared_ptr<frame_factory> frame_factory_;
 public:
 	implementation() 
 		: flash_producer_(flash_producer(env::template_host())){}
@@ -23,6 +26,7 @@ public:
 	void clear()
 	{
 		flash_producer_ = flash_producer(env::template_host());
+		flash_producer_->set_parent_printer(parent_printer_);
 		flash_producer_->initialize(safe_ptr<frame_factory>(frame_factory_));
 	}
 
@@ -77,15 +81,18 @@ public:
 	{
 		frame_factory_ = frame_factory;
 		flash_producer_->initialize(frame_factory);
+		flash_producer_->set_parent_printer(parent_printer_);
+	}
+
+	void set_parent_printer(const printer& parent_printer) 
+	{
+		parent_printer_ = parent_printer;
 	}
 
 	std::wstring print() const
 	{
 		return flash_producer_->print();
 	}
-
-	safe_ptr<flash_producer> flash_producer_;
-	std::shared_ptr<frame_factory> frame_factory_;
 };
 	
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, int render_layer)
@@ -126,5 +133,6 @@ void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
 void cg_producer::initialize(const safe_ptr<frame_factory>& frame_factory){impl_->initialize(frame_factory);}
+void cg_producer::set_parent_printer(const printer& parent_printer) { impl_->set_parent_printer(parent_printer);}
 std::wstring cg_producer::print() const{return impl_->print();}
 }}}
