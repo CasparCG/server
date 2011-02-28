@@ -384,7 +384,7 @@ bool LoadCommand::DoExecute()
 	{
 		_parameters[0] = _parameters[0];
 		auto pFP = create_producer(_parameters);		
-		GetChannel()->producer().preview(GetLayerIndex(), pFP);
+		GetChannel()->producer().load(GetLayerIndex(), pFP, false, true);
 	
 		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
 

@@ -71,17 +71,11 @@ public:
 		return frames;
 	}
 
-	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load)
+	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview)
 	{
 		producer->set_parent_printer(std::bind(&layer::print, &layers_[index]));
 		producer->initialize(factory_);
-		executor_.invoke([&]{layers_[index].load(producer, play_on_load);});
-	}
-			
-	void preview(int index, const safe_ptr<frame_producer>& producer)
-	{
-		producer->initialize(factory_);
-		executor_.invoke([&]{layers_[index].preview(producer);});
+		executor_.invoke([&]{layers_[index].load(producer, play_on_load, preview);});
 	}
 
 	void pause(int index)
@@ -179,8 +173,7 @@ public:
 frame_producer_device::frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output) : impl_(new implementation(parent_printer, factory, output)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
-void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
-void frame_producer_device::preview(int index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
+void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview){impl_->load(index, producer, play_on_load, preview);}
 void frame_producer_device::pause(int index){impl_->pause(index);}
 void frame_producer_device::play(int index){impl_->play(index);}
 void frame_producer_device::stop(int index){impl_->stop(index);}
