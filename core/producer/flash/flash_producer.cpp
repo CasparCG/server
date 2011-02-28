@@ -330,43 +330,22 @@ std::wstring flash_producer::find_template(const std::wstring& template_name)
 
 std::wstring g_version = L"Unknown";
 void setup_version()
-{
-	CComObject<caspar::flash::FlashAxContainer>* ax_ = nullptr;	
+{ 
+	HKEY   hkey;
+ 
+	DWORD dwType, dwSize;
+	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Macromedia\\FlashPlayerActiveX"), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS)
 	{
-		CComPtr<IShockwaveFlash> spFlash;
-		try
-		{
-			::CoInitialize(nullptr);
-			if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-				BOOST_THROW_EXCEPTION(caspar_exception());
-		
-			if(FAILED(ax_->CreateAxControl()))
-				BOOST_THROW_EXCEPTION(caspar_exception());
-		
-			if(FAILED(ax_->QueryControl(&spFlash)))
-				BOOST_THROW_EXCEPTION(caspar_exception());
-		}
-		catch(...){}
-	
-		if(!spFlash)
-			return;
+		wchar_t ver_str[1024];
 
-		long ver;
-		if(SUCCEEDED(spFlash->FlashVersion(&ver)))
-		{
-			auto min = boost::lexical_cast<std::wstring>((ver >> 0) & 0xFF);
-			auto may = boost::lexical_cast<std::wstring>((ver >> 16) & 0xFF);
-			g_version = may + L"." + min;
-		}
-	}
+		dwType = REG_SZ;
+		dwSize = sizeof(ver_str);
+		RegQueryValueEx(hkey, TEXT("Version"), NULL, &dwType, (PBYTE)&ver_str, &dwSize);
+ 
+		g_version = ver_str;
 
-	if(ax_)
-	{
-		ax_->DestroyAxControl();
-		ax_->Release();
+		RegCloseKey(hkey);
 	}
-	
-	::CoUninitialize();
 }
 
 std::wstring flash_producer::version()
