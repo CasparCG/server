@@ -53,6 +53,14 @@ public:
 		output_(draw());
 		executor_.begin_invoke([=]{tick();});
 	}
+		
+	layer& get_layer(int index)
+	{
+		auto it = layers_.find(index);
+		if(it == layers_.end())
+			it = layers_.insert(std::make_pair(index, layer(index, std::bind(&implementation::print, this)))).first;
+		return it->second;
+	}
 	
 	std::vector<safe_ptr<draw_frame>> draw()
 	{	
@@ -73,29 +81,29 @@ public:
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview)
 	{
-		producer->set_parent_printer(std::bind(&layer::print, &layers_[index]));
+		producer->set_parent_printer(std::bind(&layer::print, &get_layer(index)));
 		producer->initialize(factory_);
-		executor_.invoke([&]{layers_[index].load(producer, play_on_load, preview);});
+		executor_.invoke([&]{get_layer(index).load(producer, play_on_load, preview);});
 	}
 
 	void pause(int index)
 	{		
-		executor_.invoke([&]{layers_[index].pause();});
+		executor_.invoke([&]{get_layer(index).pause();});
 	}
 
 	void play(int index)
 	{		
-		executor_.invoke([&]{layers_[index].play();});
+		executor_.invoke([&]{get_layer(index).play();});
 	}
 
 	void stop(int index)
 	{		
-		executor_.invoke([&]{layers_[index].stop();});
+		executor_.invoke([&]{get_layer(index).stop();});
 	}
 
 	void clear(int index)
 	{
-		executor_.invoke([&]{layers_[index].clear();});
+		executor_.invoke([&]{get_layer(index).clear();});
 	}
 		
 	void clear()
@@ -111,7 +119,7 @@ public:
 	{
 		executor_.invoke([&]
 		{
-			layers_[index].swap(layers_[other_index]);
+			get_layer(index).swap(layers_[other_index]);
 		});
 	}
 
@@ -123,7 +131,7 @@ public:
 		{
 			auto func = [&]
 			{
-				layers_[index].swap(other.impl_->layers_.at(other_index));		
+				get_layer(index).swap(other.impl_->layers_.at(other_index));		
 
 				CASPAR_LOG(info) << print() << L" Swapped layer " << index << L" with " << other.impl_->print() << L" layer " << other_index << L".";	
 			};
@@ -151,7 +159,7 @@ public:
 			std::set_union(my_indices.begin(), my_indices.end(), other_indicies.begin(), other_indicies.end(), std::back_inserter(indices));
 			
 			BOOST_FOREACH(auto index, indices)
-				layers_[index].swap(other.impl_->layers_[index]);
+				get_layer(index).swap(other.impl_->get_layer(index));
 
 			CASPAR_LOG(info) << print() << L" Swapped layers with " << other.impl_->print() << L".";
 		};

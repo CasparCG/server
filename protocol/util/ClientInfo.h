@@ -44,7 +44,7 @@ struct ConsoleClientInfo : public caspar::IO::ClientInfo
 {
 	void Send(const std::wstring& data)
 	{
-		std::wcout << data << std::endl;
+		std::wcout << L"# " << data << L" #" << std::endl;
 	}
 	void Disconnect(){}
 };
