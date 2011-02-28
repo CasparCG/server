@@ -30,6 +30,8 @@ public:
 	
 	virtual std::wstring print() const;
 
+	static std::wstring version();
+
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

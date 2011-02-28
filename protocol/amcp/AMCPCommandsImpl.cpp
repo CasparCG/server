@@ -1009,10 +1009,19 @@ bool TlsCommand::DoExecute()
 
 bool VersionCommand::DoExecute()
 {
-	std::wstringstream replyString;
-	replyString << TEXT("201 VERSION OK\r\n") << env::version() << TEXT("\r\n");
+	std::wstring replyString = TEXT("201 VERSION OK\r\n SERVER: ") + env::version() + TEXT("\r\n");
 
-	SetReplyString(replyString.str());
+	if(_parameters.size() > 0)
+	{
+		if(_parameters[0] == L"FLASH")
+			replyString = TEXT("201 VERSION OK\r\n FLASH: ") + flash::flash_producer::version() + TEXT("\r\n");
+		else if(_parameters[0] == L"TEMPLATEHOST")
+			replyString = TEXT("201 VERSION OK\r\n TEMPLATEHOST: ") + flash::cg_producer::version() + TEXT("\r\n");
+		else if(_parameters[0] != L"SERVER")
+			replyString = TEXT("403 VERSION ERROR\r\n");
+	}
+
+	SetReplyString(replyString);
 	return true;
 }
 

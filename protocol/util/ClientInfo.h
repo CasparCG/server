@@ -21,6 +21,7 @@
 
 #include <memory>
 #include <string>
+#include <iostream>
 
 namespace caspar { namespace IO {
 
@@ -39,9 +40,12 @@ public:
 };
 typedef std::shared_ptr<ClientInfo> ClientInfoPtr;
 
-struct DummyClientInfo : public caspar::IO::ClientInfo 
+struct ConsoleClientInfo : public caspar::IO::ClientInfo 
 {
-	void Send(const std::wstring& /*data*/){}
+	void Send(const std::wstring& data)
+	{
+		std::wcout << data << std::endl;
+	}
 	void Disconnect(){}
 };
 
