@@ -18,6 +18,7 @@
 
 #include <array>
 #include <memory>
+#include <unordered_map>
 
 namespace caspar { namespace core {
 
@@ -25,7 +26,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 {		
 	const printer parent_printer_;
 
-	std::vector<layer> layers_;		
+	std::unordered_map<int, layer> layers_;		
 
 	output_func output_;
 
@@ -38,9 +39,6 @@ public:
 		, factory_(factory)
 		, output_(output)
 	{
-		for(int n = 0; n < frame_producer_device::MAX_LAYER+1; ++n)
-			layers_.push_back(layer(n, std::bind(&implementation::print, this)));
-
 		executor_.start();
 		executor_.begin_invoke([=]{tick();});
 	}
@@ -52,7 +50,6 @@ public:
 					
 	void tick()
 	{		
-		auto frames = draw();
 		output_(draw());
 		executor_.begin_invoke([=]{tick();});
 	}
@@ -62,9 +59,11 @@ public:
 		std::vector<safe_ptr<draw_frame>> frames(layers_.size(), draw_frame::empty());
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size(), 1), [&](const tbb::blocked_range<size_t>& r)
 		{
-			for(size_t i = r.begin(); i != r.end(); ++i)
+			auto it = layers_.begin();
+			std::advance(it, r.begin());
+			for(size_t i = r.begin(); i != r.end(); ++i, ++it)
 			{
-				frames[i] = layers_[i].receive();
+				frames[i] = it->second.receive();
 				frames[i]->set_layer_index(i);
 			}
 		});		
@@ -72,65 +71,65 @@ public:
 		return frames;
 	}
 
-	void load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load)
+	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load)
 	{
-		producer->set_parent_printer(std::bind(&layer::print, &layers_.at(index)));
+		producer->set_parent_printer(std::bind(&layer::print, &layers_[index]));
 		producer->initialize(factory_);
-		executor_.invoke([&]{layers_.at(index).load(producer, play_on_load);});
+		executor_.invoke([&]{layers_[index].load(producer, play_on_load);});
 	}
 			
-	void preview(size_t index, const safe_ptr<frame_producer>& producer)
+	void preview(int index, const safe_ptr<frame_producer>& producer)
 	{
 		producer->initialize(factory_);
-		executor_.invoke([&]{layers_.at(index).preview(producer);});
+		executor_.invoke([&]{layers_[index].preview(producer);});
 	}
 
-	void pause(size_t index)
+	void pause(int index)
 	{		
-		executor_.invoke([&]{layers_.at(index).pause();});
+		executor_.invoke([&]{layers_[index].pause();});
 	}
 
-	void play(size_t index)
+	void play(int index)
 	{		
-		executor_.invoke([&]{layers_.at(index).play();});
+		executor_.invoke([&]{layers_[index].play();});
 	}
 
-	void stop(size_t index)
+	void stop(int index)
 	{		
-		executor_.invoke([&]{layers_.at(index).stop();});
+		executor_.invoke([&]{layers_[index].stop();});
 	}
 
-	void clear(size_t index)
+	void clear(int index)
 	{
-		executor_.invoke([&]{layers_.at(index).clear();});
+		executor_.invoke([&]{layers_[index].clear();});
 	}
 		
 	void clear()
 	{
 		executor_.invoke([&]
 		{
-			BOOST_FOREACH(auto& layer, layers_)
-				layer.clear();
+			BOOST_FOREACH(auto& pair, layers_)
+				pair.second.clear();
 		});
 	}	
 	
-	void swap_layer(size_t index, size_t other_index)
+	void swap_layer(int index, size_t other_index)
 	{
 		executor_.invoke([&]
 		{
-			layers_.at(index).swap(layers_[other_index]);
+			layers_[index].swap(layers_[other_index]);
 		});
 	}
 
-	void swap_layer(size_t index, size_t other_index, frame_producer_device& other)
+	void swap_layer(int index, size_t other_index, frame_producer_device& other)
 	{
-		if(other.impl_.get() == this) // Avoid deadlock.
+		if(other.impl_.get() == this)
 			swap_layer(index, other_index);
 		else
 		{
 			auto func = [&]
 			{
-				layers_.at(index).swap(other.impl_->layers_.at(other_index));			
+				layers_[index].swap(other.impl_->layers_.at(other_index));			
 			};
 		
 			executor_.invoke([&]{other.impl_->executor_.invoke(func);});
@@ -139,23 +138,35 @@ public:
 
 	void swap(frame_producer_device& other)
 	{
-		if(other.impl_.get() == this) // Avoid deadlock.
+		if(other.impl_.get() == this)
 			return;
 
 		auto func = [&]
 		{
-			for(size_t n = 0; n < frame_producer_device::MAX_LAYER+1; ++n)
-				layers_[n].swap(other.impl_->layers_[n]);
+			std::set<int> my_indices;
+			BOOST_FOREACH(auto& pair, layers_)
+				my_indices.insert(pair.first);
+
+			std::set<int> other_indicies;
+			BOOST_FOREACH(auto& pair, other.impl_->layers_)
+				other_indicies.insert(pair.first);
+			
+			std::vector<int> indices;
+			std::set_union(my_indices.begin(), my_indices.end(), other_indicies.begin(), other_indicies.end(), std::back_inserter(indices));
+			
+			BOOST_FOREACH(auto index, indices)
+				layers_[index].swap(other.impl_->layers_[index]);
 		};
 		
 		executor_.invoke([&]{other.impl_->executor_.invoke(func);});
 	}
 	
-	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const
+	boost::unique_future<safe_ptr<frame_producer>> foreground(int index) const
 	{
-		return executor_.begin_invoke([=]() -> safe_ptr<frame_producer>
+		return executor_.begin_invoke([=]() mutable -> safe_ptr<frame_producer>
 		{			
-			return layers_.at(index).foreground();
+			auto it = layers_.find(index);
+			return it != layers_.end() ? it->second.foreground() : frame_producer::empty();
 		});
 	}
 
@@ -168,14 +179,14 @@ public:
 frame_producer_device::frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output) : impl_(new implementation(parent_printer, factory, output)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
-void frame_producer_device::load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
-void frame_producer_device::preview(size_t index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
-void frame_producer_device::pause(size_t index){impl_->pause(index);}
-void frame_producer_device::play(size_t index){impl_->play(index);}
-void frame_producer_device::stop(size_t index){impl_->stop(index);}
-void frame_producer_device::clear(size_t index){impl_->clear(index);}
+void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load){impl_->load(index, producer, play_on_load);}
+void frame_producer_device::preview(int index, const safe_ptr<frame_producer>& producer){impl_->preview(index, producer);}
+void frame_producer_device::pause(int index){impl_->pause(index);}
+void frame_producer_device::play(int index){impl_->play(index);}
+void frame_producer_device::stop(int index){impl_->stop(index);}
+void frame_producer_device::clear(int index){impl_->clear(index);}
 void frame_producer_device::clear(){impl_->clear();}
-void frame_producer_device::swap_layer(size_t index, size_t other_index){impl_->swap_layer(index, other_index);}
-void frame_producer_device::swap_layer(size_t index, size_t other_index, frame_producer_device& other){impl_->swap_layer(index, other_index, other);}
+void frame_producer_device::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
+void frame_producer_device::swap_layer(int index, size_t other_index, frame_producer_device& other){impl_->swap_layer(index, other_index, other);}
 boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) const{	return impl_->foreground(index);}
 }}
