@@ -33,6 +33,8 @@
 
 #include "bootstrapper.h"
 
+#include <core/producer/flash/flash_producer.h>
+
 #include <common/exception/win32_exception.h>
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
@@ -94,7 +96,7 @@ void setup_console_window()
 	SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
 		
 	std::wstringstream str;
-	str << "CasparCG Server " << env::version();
+	str << "CasparCG Server " << env::version() << L"      Flash " << flash::flash_producer::version();
 	SetConsoleTitle(str.str().c_str());
 
 	std::wcout << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n" << std::endl;
