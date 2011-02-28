@@ -49,6 +49,7 @@ frame_producer_remover g_remover;
 
 struct layer::implementation : boost::noncopyable
 {				
+	mutable tbb::spin_mutex		printer_mutex_;
 	printer						parent_printer_;
 	int							index_;
 	
@@ -149,15 +150,8 @@ public:
 		
 	std::wstring print() const
 	{
+		tbb::spin_mutex::scoped_lock lock(printer_mutex_); // Child-producers may call print asynchronously to the producer thread.
 		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
-	}
-
-	void swap(implementation& other)
-	{
-		std::swap(foreground_, other.foreground_);
-		std::swap(background_, other.background_);
-		std::swap(last_frame_, other.last_frame_);
-		std::swap(is_paused_, other.is_paused_);
 	}
 };
 
@@ -170,7 +164,10 @@ layer& layer::operator=(layer&& other)
 }
 void layer::swap(layer& other)
 {
-	impl_->swap(*other.impl_);
+	impl_.swap(other.impl_);
+	tbb::spin_mutex::scoped_lock lock(impl_->printer_mutex_);
+	std::swap(impl_->parent_printer_, other.impl_->parent_printer_);
+	std::swap(impl_->index_, other.impl_->index_);
 }
 void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load){return impl_->load(frame_producer, play_on_load);}	
 void layer::preview(const safe_ptr<frame_producer>& frame_producer){return impl_->preview(frame_producer);}	
