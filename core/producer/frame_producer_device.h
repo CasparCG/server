@@ -26,23 +26,21 @@ namespace caspar { namespace core {
 class frame_producer_device : boost::noncopyable
 {
 public:
-	static const int MAX_LAYER = 32;
-
 	typedef std::function<void(const std::vector<safe_ptr<draw_frame>>&)> output_func;
 
 	explicit frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output);
 	frame_producer_device(frame_producer_device&& other);
 	void swap(frame_producer_device& other);
 		
-	void load(size_t index, const safe_ptr<frame_producer>& producer, bool play_on_load = false);
-	void preview(size_t index, const safe_ptr<frame_producer>& producer);
-	void pause(size_t index);
-	void play(size_t index);
-	void stop(size_t index);
-	void clear(size_t index);
+	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load = false);
+	void preview(int index, const safe_ptr<frame_producer>& producer);
+	void pause(int index);
+	void play(int index);
+	void stop(int index);
+	void clear(int index);
 	void clear();	
-	void swap_layer(size_t index, size_t other_index);
-	void swap_layer(size_t index, size_t other_index, frame_producer_device& other);
+	void swap_layer(int index, size_t other_index);
+	void swap_layer(int index, size_t other_index, frame_producer_device& other);
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const;
 
 private:
