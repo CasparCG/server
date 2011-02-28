@@ -34,6 +34,7 @@
 #include "bootstrapper.h"
 
 #include <core/producer/flash/flash_producer.h>
+#include <core/producer/flash/cg_producer.h>
 
 #include <common/exception/win32_exception.h>
 #include <common/exception/exceptions.h>
@@ -98,9 +99,6 @@ void setup_console_window()
 	std::wstringstream str;
 	str << "CasparCG Server " << env::version() << L"      Flash " << flash::flash_producer::version();
 	SetConsoleTitle(str.str().c_str());
-
-	std::wcout << L"Copyright (c) 2010 Sveriges Television AB <info@casparcg.com>\n" << std::endl;
-	std::wcout << L"Starting CasparCG Video Playout Server Ver: " << env::version() << std::endl;
 }
  
 int main(int argc, wchar_t* argv[])
@@ -132,11 +130,17 @@ int main(int argc, wchar_t* argv[])
 		MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 	#endif
 
+		CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
+		CASPAR_LOG(info) << L"Starting CasparCG Video Playout Server.";
+		CASPAR_LOG(info) << L"Server Version: " << env::version();
+		CASPAR_LOG(info) << L"Flash Version: " << flash::flash_producer::version();
+		CASPAR_LOG(info) << L"Template-Host Version: " << flash::cg_producer::version();
+			 
 		log::add_file_sink(env::log_folder());
 				
 		bootstrapper caspar_device;
 				
-		auto dummy = std::make_shared<IO::DummyClientInfo>();
+		auto dummy = std::make_shared<IO::ConsoleClientInfo>();
 		amcp::AMCPProtocolStrategy amcp(caspar_device.get_channels());
 		bool is_running = true;
 		while(is_running)
