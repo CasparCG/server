@@ -66,21 +66,22 @@ public:
 		, last_frame_(draw_frame::empty())
 		, is_paused_(false){}
 	
-	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load)
+	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview)
 	{		
 		background_ = frame_producer;
 		is_paused_ = false;
+
+		if(preview)
+		{
+			play();
+			receive();
+			pause();
+		}
+
 		if(play_on_load)
-			play();		
+			play();				
 	}
 
-	void preview(const safe_ptr<frame_producer>& frame_producer)
-	{
-		load(frame_producer, true);
-		receive();
-		pause();
-	}
-	
 	void play()
 	{			
 		if(!is_paused_)			
@@ -165,12 +166,12 @@ layer& layer::operator=(layer&& other)
 void layer::swap(layer& other)
 {
 	impl_.swap(other.impl_);
+	// Printer state is not swapped.
 	tbb::spin_mutex::scoped_lock lock(impl_->printer_mutex_);
 	std::swap(impl_->parent_printer_, other.impl_->parent_printer_);
 	std::swap(impl_->index_, other.impl_->index_);
 }
-void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load){return impl_->load(frame_producer, play_on_load);}	
-void layer::preview(const safe_ptr<frame_producer>& frame_producer){return impl_->preview(frame_producer);}	
+void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview){return impl_->load(frame_producer, play_on_load, preview);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
