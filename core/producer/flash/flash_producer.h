@@ -40,6 +40,8 @@ public:
 	
 	static std::wstring find_template(const std::wstring& templateName);
 
+	static std::wstring version();
+
 private:	
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
