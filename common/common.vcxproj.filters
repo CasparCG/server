@@ -75,9 +75,6 @@
     <ClInclude Include="utility\timer.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="utility\string_convert.h">
-      <Filter>Source\utility</Filter>
-    </ClInclude>
     <ClInclude Include="gl\gl_check.h">
       <Filter>Source\gl</Filter>
     </ClInclude>
@@ -96,7 +93,10 @@
     <ClInclude Include="diagnostics\graph.h">
       <Filter>Source\diagnostics</Filter>
     </ClInclude>
-    <ClInclude Include="utility\printable.h">
+    <ClInclude Include="utility\string.h">
+      <Filter>Source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\printer.h">
       <Filter>Source\utility</Filter>
     </ClInclude>
   </ItemGroup>

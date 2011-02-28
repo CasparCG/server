@@ -17,7 +17,7 @@
 
 #include <common/env.h>
 #include <common/exception/exceptions.h>
-#include <common/utility/string_convert.h>
+#include <common/utility/string.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
