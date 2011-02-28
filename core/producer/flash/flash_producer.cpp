@@ -39,6 +39,7 @@
 #include <boost/filesystem.hpp>
 
 #include <functional>
+#include <boost/thread.hpp>
 
 namespace caspar { namespace core { namespace flash {
 		
@@ -72,7 +73,7 @@ class flash_renderer
 
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
-
+	
 	std::wstring print()
 	{
 		return parent_printer_();
@@ -115,7 +116,7 @@ public:
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to Set Scale Mode"));
-														
+						
 		ax_->SetFormat(format_desc_);
 		
 		BITMAPINFO info;
@@ -164,7 +165,7 @@ public:
 	{
 		return ax_->GetFPS();	
 	}
-
+	
 private:
 
 	safe_ptr<draw_frame> render_simple_frame(bool underflow)
@@ -325,6 +326,55 @@ std::wstring flash_producer::find_template(const std::wstring& template_name)
 		return template_name + L".ct";
 
 	return L"";
+}
+
+std::wstring g_version = L"Unknown";
+void setup_version()
+{
+	CComObject<caspar::flash::FlashAxContainer>* ax_ = nullptr;	
+	{
+		CComPtr<IShockwaveFlash> spFlash;
+		try
+		{
+			::CoInitialize(nullptr);
+			if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
+				BOOST_THROW_EXCEPTION(caspar_exception());
+		
+			if(FAILED(ax_->CreateAxControl()))
+				BOOST_THROW_EXCEPTION(caspar_exception());
+		
+			if(FAILED(ax_->QueryControl(&spFlash)))
+				BOOST_THROW_EXCEPTION(caspar_exception());
+		}
+		catch(...){}
+	
+		if(!spFlash)
+			return;
+
+		long ver;
+		if(SUCCEEDED(spFlash->FlashVersion(&ver)))
+		{
+			auto min = boost::lexical_cast<std::wstring>((ver >> 0) & 0xFF);
+			auto may = boost::lexical_cast<std::wstring>((ver >> 16) & 0xFF);
+			g_version = may + L"." + min;
+		}
+	}
+
+	if(ax_)
+	{
+		ax_->DestroyAxControl();
+		ax_->Release();
+	}
+	
+	::CoUninitialize();
+}
+
+std::wstring flash_producer::version()
+{		
+	boost::once_flag flag = BOOST_ONCE_INIT;
+	boost::call_once(setup_version, flag);
+
+	return g_version;
 }
 
 }}}
