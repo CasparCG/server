@@ -123,7 +123,9 @@ public:
 		{
 			auto func = [&]
 			{
-				layers_[index].swap(other.impl_->layers_.at(other_index));			
+				layers_[index].swap(other.impl_->layers_.at(other_index));		
+
+				CASPAR_LOG(info) << print() << L" Swapped layer " << index << L" with " << other.impl_->print() << L" layer " << other_index << L".";	
 			};
 		
 			executor_.invoke([&]{other.impl_->executor_.invoke(func);});
@@ -150,6 +152,8 @@ public:
 			
 			BOOST_FOREACH(auto index, indices)
 				layers_[index].swap(other.impl_->layers_[index]);
+
+			CASPAR_LOG(info) << print() << L" Swapped layers with " << other.impl_->print() << L".";
 		};
 		
 		executor_.invoke([&]{other.impl_->executor_.invoke(func);});

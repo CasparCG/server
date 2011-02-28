@@ -94,6 +94,9 @@ public:
 
 	void initialize(const video_format_desc& format_desc)
 	{
+		if(!GLEE_VERSION_2_1)
+			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
+
 		format_desc_ = format_desc;
 
 		screen_width_ = format_desc.width;
@@ -130,14 +133,7 @@ public:
 
 		if(screen_index != 0)
 			CASPAR_LOG(warning) << print() << " only supports screen_index=0 for non-Win32";
-#endif
-
-		if(!GLEE_ARB_pixel_buffer_object)
-			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL Extension Support: GLEE_ARB_pixel_buffer_object."));
-
-		if(!GLEE_ARB_texture_rectangle)
-			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL Extension Support: GLEE_ARB_texture_rectangle."));
-
+#endif		
 		executor_.start();
 		executor_.invoke([=]
 		{

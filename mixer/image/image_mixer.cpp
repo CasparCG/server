@@ -40,20 +40,8 @@ public:
 	{
 		context_->invoke([]
 		{
-			if(!GLEE_ARB_pixel_buffer_object)
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL Extension Support: ARB_pixel_buffer_object."));
-
-			if(!GLEE_ARB_texture_rectangle)
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL Extension Support: ARB_texture_rectangle."));
-
-			if(!GLEE_ARB_fragment_shader)
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL Extension Support: ARB_fragment_shader."));
-
-			if(!GLEE_ARB_framebuffer_object)
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL Extension Support: ARB_framebuffer_object."));
-
-			if(!GLEE_ARB_multitexture)
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL Extension Support: ARB_multitexture."));
+			if(!GLEE_VERSION_3_0)
+				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
 		});
 		
 		context_->begin_invoke([=]
