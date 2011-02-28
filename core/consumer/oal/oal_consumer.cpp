@@ -106,7 +106,7 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"oal";
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"oal[default]";
 	}
 };
 
