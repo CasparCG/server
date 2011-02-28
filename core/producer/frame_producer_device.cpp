@@ -8,7 +8,7 @@
 #include "layer.h"
 
 #include <common/concurrency/executor.h>
-#include <common/utility/printable.h>
+#include <common/utility/printer.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/lexical_cast.hpp>

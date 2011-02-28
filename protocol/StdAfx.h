@@ -69,7 +69,7 @@
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
 
-#include "../common/utility/string_convert.h"
+#include "../common/utility/string.h"
 #include "../common/memory/safe_ptr.h"
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 

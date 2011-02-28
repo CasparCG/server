@@ -4,7 +4,7 @@
 
 #include "../version.h"
 
-#include "utility/string_convert.h"
+#include "utility/string.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
