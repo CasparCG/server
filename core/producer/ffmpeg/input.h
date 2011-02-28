@@ -1,7 +1,7 @@
 #pragma once
 
 #include <common/diagnostics/graph.h>
-#include <common/utility/printable.h>
+#include <common/utility/printer.h>
 
 #include <tbb/cache_aligned_allocator.h>
 

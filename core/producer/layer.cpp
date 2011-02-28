@@ -7,7 +7,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/utility/assert.h>
-#include <common/utility/printable.h>
+#include <common/utility/printer.h>
 
 #include <mixer/frame/draw_frame.h>
 #include <mixer/image/image_mixer.h>
@@ -39,7 +39,7 @@ public:
 
 	void remove(safe_ptr<frame_producer>&& producer)
 	{
-		CASPAR_ASSERT(producer.unique());
+		CASPAR_VERIFY(producer.unique());
 		executor_.begin_invoke(std::bind(&frame_producer_remover::do_remove, this, std::move(producer)));
 	}
 };
@@ -127,7 +127,7 @@ public:
 			last_frame_ = foreground_->receive(); 
 			if(last_frame_ == draw_frame::eof())
 			{
-				CASPAR_ASSERT(foreground_ != frame_producer::empty());
+				CASPAR_VERIFY(foreground_ != frame_producer::empty());
 
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);

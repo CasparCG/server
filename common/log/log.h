@@ -15,7 +15,7 @@
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
 
-#include "../utility/string_convert.h"
+#include "../utility/string.h"
 
 namespace caspar { namespace log {
 	

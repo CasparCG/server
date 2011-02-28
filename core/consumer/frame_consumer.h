@@ -23,7 +23,7 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <common/utility/printable.h>
+#include <common/utility/printer.h>
 
 namespace caspar { namespace core {
 	

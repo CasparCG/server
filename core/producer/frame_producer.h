@@ -23,7 +23,7 @@
 #include "../mixer/frame_factory.h"
 
 #include <common/memory/safe_ptr.h>
-#include <common/utility/printable.h>
+#include <common/utility/printer.h>
 
 #include <boost/noncopyable.hpp>
 

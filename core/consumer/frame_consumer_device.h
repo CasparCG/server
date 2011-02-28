@@ -3,7 +3,7 @@
 #include "../consumer/frame_consumer.h"
 
 #include <common/memory/safe_ptr.h>
-#include <common/utility/printable.h>
+#include <common/utility/printer.h>
 
 #include <vector>
 

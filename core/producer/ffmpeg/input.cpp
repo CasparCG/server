@@ -6,7 +6,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/utility/printable.h>
+#include <common/utility/printer.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/queuing_mutex.h>

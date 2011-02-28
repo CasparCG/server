@@ -25,7 +25,7 @@
 #include <mixer/frame/read_frame.h>
 
 #include <common/concurrency/executor.h>
-#include <common/utility/string_convert.h>
+#include <common/utility/string.h>
 #include <common/env.h>
 
 #include <boost/thread/once.hpp>
