@@ -331,6 +331,7 @@ std::wstring flash_producer::find_template(const std::wstring& template_name)
 std::wstring g_version = L"Unknown";
 void setup_version()
 { 
+#ifdef WIN32
 	HKEY   hkey;
  
 	DWORD dwType, dwSize;
@@ -346,6 +347,7 @@ void setup_version()
 
 		RegCloseKey(hkey);
 	}
+#endif
 }
 
 std::wstring flash_producer::version()
