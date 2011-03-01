@@ -116,6 +116,7 @@ void oal_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(fra
 size_t oal_consumer::buffer_depth() const{return impl_->buffer_depth();}
 void oal_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
 void oal_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
+std::wstring oal_consumer::print() const { return impl_->print(); }
 
 safe_ptr<frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)
 {

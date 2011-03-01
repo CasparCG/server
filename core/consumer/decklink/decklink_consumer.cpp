@@ -326,6 +326,11 @@ public:
 	{
 		return 1;
 	}
+
+	std::wstring print() const
+	{
+		return input_->print();
+	}
 };
 
 decklink_consumer::decklink_consumer(size_t device_index, bool embed_audio, bool internalKey) : impl_(new implementation(device_index, embed_audio, internalKey)){}
@@ -334,6 +339,7 @@ void decklink_consumer::initialize(const video_format_desc& format_desc){impl_->
 void decklink_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
 void decklink_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
+std::wstring decklink_consumer::print() const{return impl_->print();}
 	
 safe_ptr<frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params)
 {

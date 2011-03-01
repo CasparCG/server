@@ -35,6 +35,7 @@ public:
 
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
+	virtual std::wstring print() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
