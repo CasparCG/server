@@ -358,7 +358,8 @@ void bluefish_consumer::initialize(const video_format_desc& format_desc){impl_->
 void bluefish_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
 void bluefish_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t bluefish_consumer::buffer_depth() const{return impl_->buffer_depth();}
-	
+std::wstring bluefish_consumer::print() const {return impl_->print();}	
+
 safe_ptr<frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"BLUEFISH")

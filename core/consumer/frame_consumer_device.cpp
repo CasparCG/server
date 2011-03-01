@@ -67,7 +67,10 @@ public:
 		{
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
+			{
+				CASPAR_LOG(info) << it->second->print() << L" Removed.";
 				consumers_.erase(it);
+			}
 		});
 	}
 				
