@@ -406,6 +406,7 @@ void ffmpeg_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(
 size_t ffmpeg_consumer::buffer_depth() const{return impl_->buffer_depth();}
 void ffmpeg_consumer::initialize(const video_format_desc& format_desc) {impl_->initialize(format_desc);}
 void ffmpeg_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
+std::wstring ffmpeg_consumer::print() const {return impl_->print();}
 
 safe_ptr<frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params)
 {

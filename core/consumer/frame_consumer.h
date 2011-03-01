@@ -20,10 +20,11 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
+#include <common/utility/printer.h>
 
 #include <boost/noncopyable.hpp>
 
-#include <common/utility/printer.h>
+#include <string>
 
 namespace caspar { namespace core {
 	
@@ -38,6 +39,7 @@ struct frame_consumer : boost::noncopyable
 	virtual size_t buffer_depth() const = 0;
 	virtual void initialize(const video_format_desc& format_desc) = 0;
 	virtual void set_parent_printer(const printer& parent_printer) = 0;
+	virtual std::wstring print() const = 0;
 
 	static const safe_ptr<frame_consumer>& empty()
 	{
@@ -45,8 +47,9 @@ struct frame_consumer : boost::noncopyable
 		{
 			virtual void send(const safe_ptr<const read_frame>&){}
 			virtual size_t buffer_depth() const{return 0;}
-			void initialize(const video_format_desc&){}
-			void set_parent_printer(const printer&){}
+			virtual void initialize(const video_format_desc&){}
+			virtual void set_parent_printer(const printer&){}
+			virtual std::wstring print() const {return L"empty";}
 		};
 		static safe_ptr<frame_consumer> consumer = make_safe<empty_frame_consumer>();
 		return consumer;
