@@ -55,7 +55,7 @@ namespace caspar { namespace core {
 struct ffmpeg_consumer::implementation : boost::noncopyable
 {		
 	printer parent_printer_;
-	const std::string filename_;
+	std::string filename_;
 
 	// Audio
 	AVStream* audio_st_;
@@ -124,6 +124,7 @@ public:
 		{
 			CASPAR_LOG(warning) << "Could not deduce output format from ffmpeg extension: using MPEG.";
 			fmt_ = av_guess_format("mpeg", nullptr, nullptr);
+			filename_ = filename_ + ".avi"; 
 		}
 		if (!fmt_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not find suitable output format"));
@@ -187,11 +188,18 @@ public:
 		}
 		
 		av_write_header(oc_.get()); // write the stream header, if any 
+
+		CASPAR_LOG(info) << print() << L" Successfully initialized.";
 	}
 	
 	void set_parent_printer(const printer& parent_printer) 
 	{
 		parent_printer_ = parent_printer;
+	}
+
+	std::wstring print() const
+	{
+		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"ffmpeg[" + widen(filename_) + L"]";
 	}
 
 	AVStream* add_video_stream(enum CodecID codec_id)
@@ -251,14 +259,13 @@ public:
 		std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
 		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), const_cast<uint8_t*>(frame->image_data().begin()), PIX_FMT_BGRA, format_desc_.width, format_desc_.height);
 				
-		AVFrame local_av_frame;
-		avcodec_get_frame_defaults(&local_av_frame);
+		std::shared_ptr<AVFrame> local_av_frame(avcodec_alloc_frame(), av_free);
 		picture_buf_.resize(avpicture_get_size(c->pix_fmt, format_desc_.width, format_desc_.height));
-		avpicture_fill(reinterpret_cast<AVPicture*>(&local_av_frame), picture_buf_.data(), c->pix_fmt, format_desc_.width, format_desc_.height);
+		avpicture_fill(reinterpret_cast<AVPicture*>(local_av_frame.get()), picture_buf_.data(), c->pix_fmt, format_desc_.width, format_desc_.height);
 
-		sws_scale(img_convert_ctx_, av_frame->data, av_frame->linesize, 0, c->height, local_av_frame.data, local_av_frame.linesize);
+		sws_scale(img_convert_ctx_, av_frame->data, av_frame->linesize, 0, c->height, local_av_frame->data, local_av_frame->linesize);
 				
-		int ret = avcodec_encode_video(c, video_outbuf_.data(), video_outbuf_.size(), &local_av_frame);
+		int ret = avcodec_encode_video(c, video_outbuf_.data(), video_outbuf_.size(), local_av_frame.get());
 				
 		int errn = -ret;
 		if (errn > 0) 
@@ -406,8 +413,8 @@ safe_ptr<frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>&
 		return frame_consumer::empty();
 	
 	// TODO: Ask stakeholders about case where file already exists.
-	boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + params[2])); // Delete the file if it exists
-	return make_safe<ffmpeg_consumer>(env::media_folder() + params[2]);
+	boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + params[1])); // Delete the file if it exists
+	return make_safe<ffmpeg_consumer>(env::media_folder() + params[1]);
 }
 
 }}

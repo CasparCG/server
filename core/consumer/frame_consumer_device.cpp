@@ -10,7 +10,6 @@
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/utility/timer.h>
 #include <common/utility/assert.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
@@ -22,7 +21,6 @@ namespace caspar { namespace core {
 struct frame_consumer_device::implementation
 {	
 	const printer parent_printer_;
-	timer clock_;
 
 	boost::circular_buffer<safe_ptr<const read_frame>> buffer_;
 
@@ -97,8 +95,6 @@ public:
 					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
 				}
 			}
-
-			clock_.tick(1.0/format_desc_.fps);
 		});
 	}
 
