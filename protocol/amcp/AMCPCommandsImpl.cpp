@@ -356,8 +356,6 @@ bool RemoveCommand::DoExecute()
 	try
 	{
 		GetChannel()->consumer().remove(GetLayerIndex());
-	
-		CASPAR_LOG(info) << "Removed " << TEXT(" successfully");
 
 		SetReplyString(TEXT("202 REMOVE OK\r\n"));
 
