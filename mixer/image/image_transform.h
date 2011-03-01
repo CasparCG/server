@@ -18,7 +18,6 @@ struct pixel_format_desc;
 class image_transform 
 {
 public:
-
 	image_transform();
 
 	void set_opacity(double value);

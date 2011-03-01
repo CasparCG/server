@@ -44,6 +44,7 @@ namespace caspar { namespace core {
 
 struct ogl_consumer::implementation : boost::noncopyable
 {		
+	timer clock_;
 	printer parent_printer_;
 	boost::unique_future<void> active_;
 
@@ -253,6 +254,8 @@ public:
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
+
+		clock_.tick(1.0/format_desc_.fps);
 	}
 		
 	void send(const safe_ptr<const read_frame>& frame)
