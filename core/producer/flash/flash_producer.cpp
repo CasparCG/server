@@ -97,25 +97,25 @@ public:
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));			
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to create FlashAxContainer"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
 		
 		ax_->set_print(parent_printer_);
 
 		if(FAILED(ax_->CreateAxControl()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to Create FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Create FlashAxControl"));
 		
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to Query FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Query FlashAxControl"));
 												
 		if(FAILED(spFlash->put_Playing(true)) )
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to start playing Flash"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to start playing Flash"));
 
 		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to Load Template Host"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Load Template Host"));
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "Failed to Set Scale Mode"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Set Scale Mode"));
 						
 		ax_->SetFormat(format_desc_);
 		
@@ -148,6 +148,9 @@ public:
 		if(!ax_->FlashCall(param))
 			CASPAR_LOG(warning) << print() << " Flash function call failed. Param: " << param << ".";
 		graph_->tag("param");
+
+		if(abs(ax_->GetFPS() / format_desc_.fps) > 0.001)
+			CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << ax_->GetFPS() << L". Should be either " << format_desc_.fps << L" or " << format_desc_.fps*2.0 << L".";
 	}
 	
 	safe_ptr<draw_frame> render_frame(bool has_underflow)
