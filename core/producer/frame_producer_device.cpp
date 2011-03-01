@@ -18,7 +18,7 @@
 
 #include <array>
 #include <memory>
-#include <unordered_map>
+#include <map>
 
 namespace caspar { namespace core {
 
@@ -26,7 +26,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 {		
 	const printer parent_printer_;
 
-	std::unordered_map<int, layer> layers_;		
+	std::map<int, layer> layers_;		
 
 	output_func output_;
 
