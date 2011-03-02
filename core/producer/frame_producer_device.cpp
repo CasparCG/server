@@ -72,7 +72,7 @@ public:
 			for(size_t i = r.begin(); i != r.end(); ++i, ++it)
 			{
 				frames[i] = it->second.receive();
-				frames[i]->set_layer_index(i);
+				frames[i]->set_layer_index(it->first);
 			}
 		});		
 		boost::range::remove_erase(frames, draw_frame::empty());
