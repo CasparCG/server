@@ -51,6 +51,8 @@
 
 #include <GLee.h>
 
+#include <boost/foreach.hpp>
+
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
 #endif
@@ -118,8 +120,17 @@ void print_version()
 	CASPAR_LOG(info) << L"Flash " << flash::get_flash_version();
 	CASPAR_LOG(info) << L"Flash-Template-Host " << flash::get_cg_version();
 	CASPAR_LOG(info) << L"FreeImage " << image::get_image_version();
-	CASPAR_LOG(info) << L"Decklink " << get_decklink_version();
-	CASPAR_LOG(info) << L"Bluefish " << get_bluefish_version();
+	
+	std::wstring decklink_devices;
+	BOOST_FOREACH(auto& device, get_decklink_device_list())
+		decklink_devices += L"\t" + device;
+	CASPAR_LOG(info) << L"Decklink " << get_decklink_version() << (decklink_devices.empty() ? L"" : L"\n\tDevices:\n" + decklink_devices);
+	
+	std::wstring bluefish_devices;
+	BOOST_FOREACH(auto& device, get_bluefish_device_list())
+		bluefish_devices += L"\t" + device;
+	CASPAR_LOG(info) << L"Bluefish " << get_bluefish_version() << (bluefish_devices.empty() ? L"" : L"\n\tDevices:\n" + bluefish_devices);
+
 	CASPAR_LOG(info) << L"FFMPEG-avcodec " << ((avcodec_version() >> 16) & 0xFF) << L"." << ((avcodec_version() >> 8) & 0xFF) << L"." << ((avcodec_version() >> 0) & 0xFF);
 	CASPAR_LOG(info) << L"FFMPEG-swscale " << ((avformat_version() >> 16) & 0xFF) << L"." << ((avformat_version() >> 8) & 0xFF) << L"." << ((avformat_version() >> 0) & 0xFF);
 	CASPAR_LOG(info) << L"FFMPEG-avformat " << ((swscale_version() >> 16) & 0xFF) << L"." << ((swscale_version() >> 8) & 0xFF) << L"." << ((swscale_version() >> 0) & 0xFF);

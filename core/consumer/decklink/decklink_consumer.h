@@ -45,6 +45,7 @@ private:
 };
 
 std::wstring get_decklink_version();
+std::vector<std::wstring> get_decklink_device_list();
 safe_ptr<frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params);
 
 
