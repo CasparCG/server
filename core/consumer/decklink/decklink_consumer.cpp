@@ -342,6 +342,28 @@ std::wstring get_decklink_version()
 		
 	return get_version(pDecklinkIterator);
 }
+
+std::vector<std::wstring> get_decklink_device_list()
+{
+	std::vector<std::wstring> devices;
+	::CoInitialize(nullptr);
+
+	CComPtr<IDeckLinkIterator> pDecklinkIterator;
+	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
+		return devices;
+		
+	CComPtr<IDeckLink>	decklink;
+	for(int n = 0; pDecklinkIterator->Next(&decklink) == S_OK; ++n)	
+	{
+		BSTR model_name = L"Unknown";
+		decklink->GetModelName(&model_name);
+		devices.push_back(L"[" + boost::lexical_cast<std::wstring>(n) + L"] " + model_name);	
+	}
+
+	::CoUninitialize();
+
+	return devices;
+}
 	
 safe_ptr<frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params)
 {
