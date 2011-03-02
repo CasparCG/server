@@ -23,6 +23,8 @@
 
 #include "../../video_format.h"
 
+#include <string>
+
 namespace caspar { namespace core {
 
 class decklink_consumer : public frame_consumer
@@ -36,11 +38,13 @@ public:
 	virtual void send(const safe_ptr<const read_frame>&);
 	virtual size_t buffer_depth() const;
 	virtual std::wstring print() const;
+
 private:
 	struct implementation;
 	std::tr1::shared_ptr<implementation> impl_;
 };
 
+std::wstring get_decklink_version();
 safe_ptr<frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params);
 
 

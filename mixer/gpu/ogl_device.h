@@ -13,6 +13,8 @@
 
 #include <array>
 
+#include <SFML/Window/Context.hpp>
+
 namespace caspar { namespace core {
 
 class ogl_device

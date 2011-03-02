@@ -135,7 +135,8 @@ void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(lay
 void cg_producer::initialize(const safe_ptr<frame_factory>& frame_factory){impl_->initialize(frame_factory);}
 void cg_producer::set_parent_printer(const printer& parent_printer) { impl_->set_parent_printer(parent_printer);}
 std::wstring cg_producer::print() const{return impl_->print();}
-std::wstring cg_producer::version() 
+
+std::wstring get_cg_version()
 {
 	return L"Unknown";
 }

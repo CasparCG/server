@@ -22,6 +22,8 @@
 #include "../../video_format.h"
 #include "../../consumer/frame_consumer.h"
 
+#include <string>
+
 namespace caspar { namespace core {
 	
 struct bluefish_exception : public caspar_exception{};
@@ -42,6 +44,7 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 	
+std::wstring get_bluefish_version();
 safe_ptr<frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params);
 
 }}

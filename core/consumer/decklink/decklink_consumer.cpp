@@ -117,13 +117,6 @@ public:
 		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink drivers installed."));
 		
-		static bool print_ver = false;
-		if(!print_ver)
-		{
-			CASPAR_LOG(info) << "DeckLinkAPI Version: " << get_version(pDecklinkIterator);
-			print_ver = true;
-		}
-
 		size_t n = 0;
 		while(n < device_index_ && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
 
@@ -340,6 +333,15 @@ void decklink_consumer::set_parent_printer(const printer& parent_printer){impl_-
 void decklink_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring decklink_consumer::print() const{return impl_->print();}
+
+std::wstring get_decklink_version() 
+{
+	CComPtr<IDeckLinkIterator> pDecklinkIterator;
+	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
+		return L"Unknown";
+		
+	return get_version(pDecklinkIterator);
+}
 	
 safe_ptr<frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params)
 {

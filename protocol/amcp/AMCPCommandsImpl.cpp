@@ -1012,9 +1012,9 @@ bool VersionCommand::DoExecute()
 	if(_parameters.size() > 0)
 	{
 		if(_parameters[0] == L"FLASH")
-			replyString = TEXT("201 VERSION OK\r\n FLASH: ") + flash::flash_producer::version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n FLASH: ") + flash::get_flash_version() + TEXT("\r\n");
 		else if(_parameters[0] == L"TEMPLATEHOST")
-			replyString = TEXT("201 VERSION OK\r\n TEMPLATEHOST: ") + flash::cg_producer::version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n TEMPLATEHOST: ") + flash::get_cg_version() + TEXT("\r\n");
 		else if(_parameters[0] != L"SERVER")
 			replyString = TEXT("403 VERSION ERROR\r\n");
 	}
