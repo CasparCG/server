@@ -103,6 +103,10 @@ public:
 
 	~silverlight_renderer()
 	{		
+		DeleteObject(bmp_);
+		DeleteDC(mem_);
+		DeleteDC(screen_);
+
 		if(host_)
 		{
 			host_->DestroyXcpControl();
