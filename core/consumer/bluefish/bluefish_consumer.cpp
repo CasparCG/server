@@ -44,9 +44,10 @@
 
 namespace caspar { namespace core {
 	
-CBlueVelvet4* (*BlueVelvetFactory4)();
-BLUE_UINT32 (*encode_hanc_frame)(struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr,BLUE_UINT32 no_audio_ch,BLUE_UINT32 no_audio_samples,BLUE_UINT32 nTypeOfSample,BLUE_UINT32 emb_audio_flag);
-BLUE_UINT32 (*encode_hanc_frame_ex)(BLUE_UINT32 card_type, struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr, BLUE_UINT32 no_audio_ch,	BLUE_UINT32 no_audio_samples, BLUE_UINT32 nTypeOfSample, BLUE_UINT32 emb_audio_flag);
+CBlueVelvet4* (*BlueVelvetFactory4)() = nullptr;
+const char*	(*BlueVelvetVersion)() = nullptr;
+BLUE_UINT32 (*encode_hanc_frame)(struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr,BLUE_UINT32 no_audio_ch,BLUE_UINT32 no_audio_samples,BLUE_UINT32 nTypeOfSample,BLUE_UINT32 emb_audio_flag) = nullptr;
+BLUE_UINT32 (*encode_hanc_frame_ex)(BLUE_UINT32 card_type, struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr, BLUE_UINT32 no_audio_ch,	BLUE_UINT32 no_audio_samples, BLUE_UINT32 nTypeOfSample, BLUE_UINT32 emb_audio_flag) = nullptr;
 
 void blue_velvet_initialize()
 {
@@ -59,6 +60,7 @@ void blue_velvet_initialize()
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll"));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
 	BlueVelvetFactory4 = reinterpret_cast<decltype(BlueVelvetFactory4)>(GetProcAddress(module, "BlueVelvetFactory4"));
+	BlueVelvetVersion = reinterpret_cast<decltype(BlueVelvetVersion)>(GetProcAddress(module, "BlueVelvetVersion"));
 }
 
 void blue_hanc_initialize()
@@ -375,7 +377,31 @@ std::wstring get_bluefish_version()
 	{
 		return L"Not found";
 	}
-	return L"Unknown";//widen(std::string(BlueVelvetVersion()));
+	if(!BlueVelvetVersion)
+		return L"Unknown";
+
+	return widen(std::string(BlueVelvetVersion()));
+}
+
+std::vector<std::wstring> get_bluefish_device_list()
+{
+	std::vector<std::wstring> devices;
+
+	try
+	{
+		blue_initialize();
+		
+		std::shared_ptr<CBlueVelvet4> blue(BlueVelvetFactory4());
+
+		for(int n = 0; BLUE_PASS(blue->device_attach(n, FALSE)); ++n)
+		{				
+			devices.push_back(L"[" + boost::lexical_cast<std::wstring>(n) + L"] " + get_card_desc(blue->has_video_cardtype()));
+			blue->device_detach();		
+		}
+	}
+	catch(...){}
+
+	return devices;
 }
 
 safe_ptr<frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params)

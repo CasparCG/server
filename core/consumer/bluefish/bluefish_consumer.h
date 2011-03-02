@@ -45,6 +45,7 @@ private:
 };
 	
 std::wstring get_bluefish_version();
+std::vector<std::wstring> get_bluefish_device_list();
 safe_ptr<frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params);
 
 }}
