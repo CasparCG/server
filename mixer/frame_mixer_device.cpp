@@ -44,6 +44,9 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	std::unordered_map<int, image_transform> image_transforms_;
 	std::unordered_map<int, audio_transform> audio_transforms_;
 
+	image_transform root_image_transform_;
+	audio_transform root_audio_transform_;
+
 	executor executor_;
 public:
 	implementation(const printer& parent_printer, const video_format_desc& format_desc, const output_func& output) 
@@ -71,7 +74,7 @@ public:
 			auto image = image_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				image_mixer_.begin(image_transforms_[frame->get_layer_index()]);
+				image_mixer_.begin(root_image_transform_*image_transforms_[frame->get_layer_index()]);
 				frame->process_image(image_mixer_);
 				image_mixer_.end();
 			}
@@ -80,7 +83,7 @@ public:
 			auto audio = audio_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				audio_mixer_.begin(audio_transforms_[frame->get_layer_index()]);
+				audio_mixer_.begin(root_audio_transform_*audio_transforms_[frame->get_layer_index()]);
 				frame->process_audio(audio_mixer_);
 				audio_mixer_.end();
 			}
@@ -111,20 +114,36 @@ public:
 	{
 		return executor_.invoke([&]{return audio_transforms_[index];});
 	}
-
-	void set_image_transform(int index, image_transform&& transform, int mix_duration)
+	
+	void set_image_transform(const image_transform& transform, int mix_duration)
 	{
 		return executor_.invoke([&]
 		{
-			image_transforms_[index] = std::move(transform);
+			root_image_transform_ = root_image_transform_;
 		});
 	}
 
-	void set_audio_transform(int index, audio_transform&& transform, int mix_duration)
+	void set_audio_transform(const audio_transform& transform, int mix_duration)
 	{
 		return executor_.invoke([&]
 		{
-			audio_transforms_[index] = std::move(transform);
+			root_audio_transform_ = root_audio_transform_;
+		});
+	}
+
+	void set_image_transform(int index, const image_transform& transform, int mix_duration)
+	{
+		return executor_.invoke([&]
+		{
+			image_transforms_[index] = transform;
+		});
+	}
+
+	void set_audio_transform(int index, const audio_transform& transform, int mix_duration)
+	{
+		return executor_.invoke([&]
+		{
+			audio_transforms_[index] = transform;
 		});
 	}
 
@@ -158,7 +177,9 @@ safe_ptr<write_frame> frame_mixer_device::create_frame(pixel_format::type pix_fm
 }
 image_transform frame_mixer_device::get_image_transform(int index){return impl_->get_image_transform(index);}
 audio_transform frame_mixer_device::get_audio_transform(int index){return impl_->get_audio_transform(index);}
-void frame_mixer_device::set_image_transform(int index, image_transform&& transform, int mix_duration){impl_->set_image_transform(index, std::move(transform), mix_duration);}
-void frame_mixer_device::set_audio_transform(int index, audio_transform&& transform, int mix_duration){impl_->set_audio_transform(index, std::move(transform), mix_duration);}
+void frame_mixer_device::set_image_transform(const image_transform& transform, int mix_duration){impl_->set_image_transform(transform, mix_duration);}
+void frame_mixer_device::set_audio_transform(const audio_transform& transform, int mix_duration){impl_->set_audio_transform(transform, mix_duration);}
+void frame_mixer_device::set_image_transform(int index, const image_transform& transform, int mix_duration){impl_->set_image_transform(index, transform, mix_duration);}
+void frame_mixer_device::set_audio_transform(int index, const audio_transform& transform, int mix_duration){impl_->set_audio_transform(index, transform, mix_duration);}
 
 }}
