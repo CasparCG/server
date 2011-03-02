@@ -57,7 +57,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"channel[" + format_desc_.name + L", " + boost::lexical_cast<std::wstring>(index_+1) + L"]";
+		return L"channel[" + boost::lexical_cast<std::wstring>(index_+1) + L"-" +  format_desc_.name + L"]";
 	}
 };
 
