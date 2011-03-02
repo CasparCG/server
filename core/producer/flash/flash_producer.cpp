@@ -331,7 +331,7 @@ std::wstring flash_producer::find_template(const std::wstring& template_name)
 	return L"";
 }
 
-std::wstring g_version = L"Unknown";
+std::wstring g_version = L"Not found";
 void setup_version()
 { 
 #ifdef WIN32
@@ -353,7 +353,7 @@ void setup_version()
 #endif
 }
 
-std::wstring flash_producer::version()
+std::wstring get_flash_version()
 {		
 	boost::once_flag flag = BOOST_ONCE_INIT;
 	boost::call_once(setup_version, flag);

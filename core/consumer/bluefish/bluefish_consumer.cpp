@@ -75,10 +75,16 @@ void blue_hanc_initialize()
 	encode_hanc_frame_ex = reinterpret_cast<decltype(encode_hanc_frame_ex)>(GetProcAddress(module, "encode_hanc_frame_ex"));
 }
 
-void blue_initialize()
+void do_blue_initialize()
 {
 	blue_velvet_initialize();
 	blue_hanc_initialize();
+}
+
+void blue_initialize()
+{
+	static boost::once_flag flag = BOOST_ONCE_INIT;
+	boost::call_once(do_blue_initialize, flag);	
 }
 		
 struct bluefish_consumer::implementation : boost::noncopyable
@@ -137,8 +143,7 @@ public:
 
 	void initialize(const video_format_desc& format_desc)
 	{
-		static boost::once_flag flag = BOOST_ONCE_INIT;
-		boost::call_once(blue_initialize, flag);	
+		blue_initialize();
 		
 		format_desc_ = format_desc;
 
@@ -359,6 +364,19 @@ void bluefish_consumer::set_parent_printer(const printer& parent_printer){impl_-
 void bluefish_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t bluefish_consumer::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring bluefish_consumer::print() const {return impl_->print();}	
+
+std::wstring get_bluefish_version()
+{
+	try
+	{
+		blue_initialize();
+	}
+	catch(...)
+	{
+		return L"Not found";
+	}
+	return L"Unknown";//widen(std::string(BlueVelvetVersion()));
+}
 
 safe_ptr<frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params)
 {

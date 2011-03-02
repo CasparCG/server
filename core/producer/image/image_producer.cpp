@@ -72,4 +72,9 @@ safe_ptr<frame_producer> create_image_producer(const  std::vector<std::wstring>&
 	return make_safe<image_producer>(filename + L"." + *ext);
 }
 
+std::wstring get_image_version()
+{
+	return widen(std::string(FreeImage_GetVersion()));
+}
+
 }}}

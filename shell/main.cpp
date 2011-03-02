@@ -35,13 +35,21 @@
 
 #include <core/producer/flash/flash_producer.h>
 #include <core/producer/flash/cg_producer.h>
+#include <core/producer/image/image_producer.h>
+#include <core/consumer/decklink/decklink_consumer.h>
+#include <core/consumer/bluefish/bluefish_consumer.h>
 
 #include <common/exception/win32_exception.h>
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
 #include <common/env.h>
 #include <common/utility/assert.h>
+
+#include <mixer/gpu/ogl_device.h>
+
 #include <protocol/amcp/AMCPProtocolStrategy.h>
+
+#include <GLee.h>
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
@@ -52,6 +60,8 @@ extern "C"
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
 	#include <libavformat/avformat.h>
+	#include <libswscale/swscale.h>
+	#include <libavcodec/avcodec.h>
 }
 
 #include <atlbase.h>
@@ -97,8 +107,44 @@ void setup_console_window()
 	SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
 		
 	std::wstringstream str;
-	str << "CasparCG Server " << env::version() << L"      Flash " << flash::flash_producer::version();
+	str << "CasparCG Server " << env::version();
 	SetConsoleTitle(str.str().c_str());
+}
+
+void print_version()
+{	
+	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
+	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
+	CASPAR_LOG(info) << L"Flash " << flash::get_flash_version();
+	CASPAR_LOG(info) << L"Flash-Template-Host " << flash::get_cg_version();
+	CASPAR_LOG(info) << L"FreeImage " << image::get_image_version();
+	CASPAR_LOG(info) << L"Decklink " << get_decklink_version();
+	CASPAR_LOG(info) << L"Bluefish " << get_bluefish_version();
+	CASPAR_LOG(info) << L"FFMPEG-avcodec " << ((avcodec_version() >> 16) & 0xFF) << L"." << ((avcodec_version() >> 8) & 0xFF) << L"." << ((avcodec_version() >> 0) & 0xFF);
+	CASPAR_LOG(info) << L"FFMPEG-swscale " << ((avformat_version() >> 16) & 0xFF) << L"." << ((avformat_version() >> 8) & 0xFF) << L"." << ((avformat_version() >> 0) & 0xFF);
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << ((swscale_version() >> 16) & 0xFF) << L"." << ((swscale_version() >> 8) & 0xFF) << L"." << ((swscale_version() >> 0) & 0xFF);
+	CASPAR_LOG(info) << L"OpenGL " << ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VERSION));})
+					 << L" "	   << ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VENDOR));});
+
+	HKEY hkey; 
+	DWORD dwType, dwSize;
+	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS)
+	{
+		wchar_t p_name_str[1024];
+		wchar_t csd_ver_str[1024];
+		wchar_t csd_build_str[1024];
+
+		dwType = REG_SZ;
+		dwSize = sizeof(p_name_str);
+
+		RegQueryValueEx(hkey, TEXT("ProductName"), NULL, &dwType, (PBYTE)&p_name_str, &dwSize);
+		RegQueryValueEx(hkey, TEXT("CSDVersion"), NULL, &dwType, (PBYTE)&csd_ver_str, &dwSize);
+		RegQueryValueEx(hkey, TEXT("CSDBuildNumber"), NULL, &dwType, (PBYTE)&csd_build_str, &dwSize);
+ 
+		RegCloseKey(hkey);
+
+		CASPAR_LOG(info) << p_name_str << L" " << csd_ver_str << L"." << csd_build_str << L"\n";
+	}
 }
  
 int main(int argc, wchar_t* argv[])
@@ -129,14 +175,10 @@ int main(int argc, wchar_t* argv[])
 
 		MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 	#endif
-
-		CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
-		CASPAR_LOG(info) << L"Starting CasparCG Video Playout Server.";
-		CASPAR_LOG(info) << L"Server Version: " << env::version();
-		CASPAR_LOG(info) << L"Flash Version: " << flash::flash_producer::version();
-		CASPAR_LOG(info) << L"Template-Host Version: " << flash::cg_producer::version();
-			 
+					 
 		log::add_file_sink(env::log_folder());
+
+		print_version();
 				
 		bootstrapper caspar_device;
 				
