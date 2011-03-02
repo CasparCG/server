@@ -2,6 +2,8 @@
 
 #include "media.h"
 
+#include <common/exception/exceptions.h>
+
 #include <core/producer/color/color_producer.h>
 #include <core/producer/ffmpeg/ffmpeg_producer.h>
 #include <core/producer/flash/cg_producer.h>
@@ -58,6 +60,9 @@ safe_ptr<core::frame_producer> create_producer(const std::vector<std::wstring>& 
 			return producer != frame_producer::empty();
 		});
 
+	if(producer == frame_producer::empty())
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
+
 	return producer;
 }
 
@@ -88,6 +93,9 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 			}
 			return consumer != frame_consumer::empty();
 		});
+	
+	if(consumer == frame_consumer::empty())
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
 
 	return consumer;
 }
