@@ -161,19 +161,19 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>../;../../../dependencies/tbb30_20100406oss/include;..\..\..\\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
+    <IncludePath>../;..\dependencies/tbb30_20100406oss/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>../;../../../dependencies/tbb30_20100406oss/include;..\..\..\\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
+    <IncludePath>../;..\dependencies/tbb30_20100406oss/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">
-    <IncludePath>../;../../../dependencies/tbb30_20100406oss/include;..\..\..\\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
+    <IncludePath>../;..\dependencies/tbb30_20100406oss/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
-    <IncludePath>../;../../../dependencies/tbb30_20100406oss/include;..\..\..\\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
+    <IncludePath>../;..\dependencies/tbb30_20100406oss/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

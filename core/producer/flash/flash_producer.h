@@ -39,12 +39,11 @@ public:
 	void param(const std::wstring& param);
 	
 	static std::wstring find_template(const std::wstring& templateName);
-
-	static std::wstring version();
-
 private:	
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
+
+std::wstring get_flash_version();
 
 }}}

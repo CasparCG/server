@@ -5,6 +5,8 @@
 #include "../../video_format.h"
 #include "../../channel.h"
 
+#include <string>
+
 namespace caspar { namespace core { namespace flash{
 		
 class cg_producer : public frame_producer
@@ -30,12 +32,12 @@ public:
 	
 	virtual std::wstring print() const;
 
-	static std::wstring version();
-
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
+
+std::wstring get_cg_version();
 
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<channel>& channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
