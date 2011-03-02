@@ -56,9 +56,11 @@ public:
 
 	image_transform get_image_transform(int index);
 	audio_transform get_audio_transform(int index);
-
-	void set_image_transform(int index, image_transform&& transform, int mix_duration = 0);
-	void set_audio_transform(int index, audio_transform&& transform, int mix_duration = 0);
+	
+	void set_image_transform(const image_transform& transform, int mix_duration = 0);
+	void set_audio_transform(const audio_transform& transform, int mix_duration = 0);
+	void set_image_transform(int index, const image_transform& transform, int mix_duration = 0);
+	void set_audio_transform(int index, const audio_transform& transform, int mix_duration = 0);
 
 private:
 	struct implementation;
