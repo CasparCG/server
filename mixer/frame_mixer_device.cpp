@@ -26,86 +26,7 @@
 #include <unordered_map>
 
 namespace caspar { namespace core {
-
-template<typename T>
-struct animated_value
-{
-	virtual T fetch() = 0;
-	virtual T fetch_and_tick(bool& done) = 0;
-	T fetch_and_tick()
-	{
-		bool dummy;
-		return fetch_and_tick(dummy);
-	}
-
-	virtual safe_ptr<animated_value<T>> source() = 0;
-	virtual safe_ptr<animated_value<T>> dest() = 0;
-};
-
-template<typename T>
-class basic_animated_value : public animated_value<T>
-{
-	T current_;
-public:
-	basic_animated_value(){}
-	basic_animated_value(const T& current) : current_(current){}
 	
-	virtual T fetch(){return current_;}
-	virtual T fetch_and_tick(bool& done)
-	{
-		done = false;
-		return current_;
-	}
-
-	virtual safe_ptr<animated_value<T>> source() {return make_safe<basic_animated_value<T>>(current_);}
-	virtual safe_ptr<animated_value<T>> dest() {return make_safe<basic_animated_value<T>>(current_);}
-};
-	
-template<typename T>
-class nested_animated_value : public animated_value<T>
-{
-	safe_ptr<animated_value<T>> source_;
-	safe_ptr<animated_value<T>> dest_;
-	const int duration_;
-	int time_;
-public:
-	nested_animated_value()
-		: source_(basic_animated_value<T>())
-		, dest_(basic_animated_value<T>())
-		, duration_(duration)
-		, time_(0){}
-	nested_animated_value(const safe_ptr<animated_value<T>>& source, const safe_ptr<animated_value<T>>& dest, int duration)
-		: source_(source)
-		, dest_(dest)
-		, duration_(duration)
-		, time_(0){}
-	
-	virtual T fetch()
-	{
-		return lerp(source_->fetch(), dest_->fetch(), duration_ < 1 ? 1.0f : static_cast<float>(time_)/static_cast<float>(duration_));
-	}
-	virtual T fetch_and_tick(bool& done)
-	{
-		done = time_ >= duration_;
-
-		bool src_done = false;
-		auto src = source_->fetch_and_tick(src_done);
-		if(src_done)
-			source_ = source_->dest();
-		
-		bool dst_done = false;
-		auto dst = dest_->fetch_and_tick(dst_done);
-		if(dst_done)
-			dest_ = dest_->dest();
-						
-		time_ = std::min(time_+1, duration_);
-		return lerp(src, dst, duration_ < 1 ? 1.0f : (static_cast<float>(time_)/static_cast<float>(duration_)));
-	}
-
-	virtual safe_ptr<animated_value<T>> source() {return source_;}
-	virtual safe_ptr<animated_value<T>> dest() {return dest_;}
-};
-
 struct frame_mixer_device::implementation : boost::noncopyable
 {		
 	const printer			parent_printer_;
@@ -124,7 +45,7 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	std::unordered_map<int, audio_transform> audio_transforms_;
 
 	image_transform root_image_transform_;
-	safe_ptr<animated_value<audio_transform>> root_audio_transform_;
+	audio_transform root_audio_transform_;
 
 	executor executor_;
 public:
@@ -135,7 +56,6 @@ public:
 		, image_mixer_(format_desc)
 		, output_(output)
 		, executor_(print())
-		, root_audio_transform_(basic_animated_value<audio_transform>())
 	{
 		graph_->guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -163,7 +83,7 @@ public:
 			auto audio = audio_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				audio_mixer_.begin(root_audio_transform_->fetch_and_tick()*audio_transforms_[frame->get_layer_index()]);
+				audio_mixer_.begin(root_audio_transform_*audio_transforms_[frame->get_layer_index()]);
 				frame->process_audio(audio_mixer_);
 				audio_mixer_.end();
 			}
@@ -184,46 +104,68 @@ public:
 	{
 		return make_safe<write_frame>(desc, image_mixer_.create_buffers(desc));
 	}
-		
-	image_transform get_image_transform(int index)
+				
+	void set_image_transform(const image_transform& transform, int)
 	{
-		return executor_.invoke([&]{return image_transforms_[index];});
-	}
-
-	audio_transform get_audio_transform(int index)
-	{
-		return executor_.invoke([&]{return audio_transforms_[index];});
-	}
-	
-	void set_image_transform(const image_transform& transform, int mix_duration)
-	{
-		return executor_.invoke([&]
+		executor_.invoke([&]
 		{
-			root_image_transform_ = root_image_transform_;
+			root_image_transform_ = transform;
 		});
 	}
 
-	void set_audio_transform(const audio_transform& transform, int mix_duration)
+	void set_audio_transform(const audio_transform& transform, int)
 	{
-		return executor_.invoke([&]
+		executor_.invoke([&]
 		{
-			root_audio_transform_ = make_safe<nested_animated_value<audio_transform>>(root_audio_transform_, make_safe<basic_animated_value<audio_transform>>(transform), mix_duration);
+			root_audio_transform_ = transform;
 		});
 	}
 
-	void set_image_transform(int index, const image_transform& transform, int mix_duration)
+	void set_image_transform(int index, const image_transform& transform, int)
 	{
-		return executor_.invoke([&]
+		executor_.invoke([&]
 		{
 			image_transforms_[index] = transform;
 		});
 	}
 
-	void set_audio_transform(int index, const audio_transform& transform, int mix_duration)
+	void set_audio_transform(int index, const audio_transform& transform, int)
+	{
+		executor_.invoke([&]
+		{
+			audio_transforms_[index] = transform;
+		});
+	}
+	
+	void apply_image_transform(const std::function<image_transform(const image_transform&)> transform, int)
 	{
 		return executor_.invoke([&]
 		{
-			audio_transforms_[index] = transform;
+			root_image_transform_ = transform(root_image_transform_);
+		});
+	}
+
+	void apply_audio_transform(const std::function<audio_transform(audio_transform)> transform, int)
+	{
+		return executor_.invoke([&]
+		{
+			root_audio_transform_ = transform(root_audio_transform_);
+		});
+	}
+
+	void apply_image_transform(int index, const std::function<image_transform(image_transform)> transform, int)
+	{
+		executor_.invoke([&]
+		{
+			image_transforms_[index] = transform(image_transforms_[index]);
+		});
+	}
+
+	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)> transform, int)
+	{
+		executor_.invoke([&]
+		{
+			audio_transforms_[index] = transform(audio_transforms_[index]);
 		});
 	}
 
@@ -255,11 +197,13 @@ safe_ptr<write_frame> frame_mixer_device::create_frame(pixel_format::type pix_fm
 	desc.planes.push_back(pixel_format_desc::plane(get_video_format_desc().width, get_video_format_desc().height, 4));
 	return create_frame(desc);
 }
-image_transform frame_mixer_device::get_image_transform(int index){return impl_->get_image_transform(index);}
-audio_transform frame_mixer_device::get_audio_transform(int index){return impl_->get_audio_transform(index);}
 void frame_mixer_device::set_image_transform(const image_transform& transform, int mix_duration){impl_->set_image_transform(transform, mix_duration);}
-void frame_mixer_device::set_audio_transform(const audio_transform& transform, int mix_duration){impl_->set_audio_transform(transform, mix_duration);}
 void frame_mixer_device::set_image_transform(int index, const image_transform& transform, int mix_duration){impl_->set_image_transform(index, transform, mix_duration);}
+void frame_mixer_device::set_audio_transform(const audio_transform& transform, int mix_duration){impl_->set_audio_transform(transform, mix_duration);}
 void frame_mixer_device::set_audio_transform(int index, const audio_transform& transform, int mix_duration){impl_->set_audio_transform(index, transform, mix_duration);}
+void frame_mixer_device::apply_image_transform(const std::function<image_transform(image_transform)>& transform, int mix_duration ){impl_->apply_image_transform(transform, mix_duration);}
+void frame_mixer_device::apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration){impl_->apply_image_transform(index, transform, mix_duration);}
+void frame_mixer_device::apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration){impl_->apply_audio_transform(transform, mix_duration);}
+void frame_mixer_device::apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration ){impl_->apply_audio_transform(index, transform, mix_duration);}
 
 }}
