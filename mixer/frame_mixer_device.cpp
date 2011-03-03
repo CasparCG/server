@@ -76,8 +76,8 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	output_func output_;
 
-	std::unordered_map<int, image_transform> image_transforms_;
-	std::unordered_map<int, audio_transform> audio_transforms_;
+	std::unordered_map<int, basic_animated_value<image_transform>> image_transforms_;
+	std::unordered_map<int, basic_animated_value<audio_transform>> audio_transforms_;
 
 	basic_animated_value<image_transform> root_image_transform_;
 	basic_animated_value<audio_transform> root_audio_transform_;
@@ -105,23 +105,37 @@ public:
 	{			
 		executor_.begin_invoke([=]
 		{
-			int num = format_desc_.mode == video_mode::progressive ? 1 : 2;
-
 			perf_timer_.reset();
 			auto image = image_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				auto transform = root_image_transform_.fetch_and_tick(num)*image_transforms_[frame->get_layer_index()];
-				image_mixer_.begin(transform);
-				frame->process_image(image_mixer_);
-				image_mixer_.end();
+				if(format_desc_.mode != video_mode::progressive)
+				{
+					auto frame1 = make_safe<draw_frame>(frame);
+					auto frame2 = make_safe<draw_frame>(frame);
+
+					frame1->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
+					frame2->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
+
+					if(frame1->get_image_transform() != frame2->get_image_transform())
+						draw_frame::interlace(frame1, frame2, format_desc_.mode)->process_image(image_mixer_);
+					else
+						frame2->process_image(image_mixer_);
+				}
+				else
+				{
+					auto frame1 = make_safe<draw_frame>(frame);
+					frame1->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
+					frame1->process_image(image_mixer_);
+				}
 			}
 			image_mixer_.end_pass();
 
 			auto audio = audio_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				auto transform = root_audio_transform_.fetch_and_tick(num)*audio_transforms_[frame->get_layer_index()];
+				int num = format_desc_.mode == video_mode::progressive ? 1 : 2;
+				auto transform = root_audio_transform_.fetch_and_tick(num)*audio_transforms_[frame->get_layer_index()].fetch_and_tick(num);
 				audio_mixer_.begin(transform);
 				frame->process_audio(audio_mixer_);
 				audio_mixer_.end();
@@ -196,19 +210,23 @@ public:
 		});
 	}
 
-	void apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int)
+	void apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration)
 	{
 		executor_.invoke([&]
 		{
-			image_transforms_[index] = transform(image_transforms_[index]);
+			auto src = image_transforms_[index].fetch();
+			auto dst = transform(src);
+			image_transforms_[index] = basic_animated_value<image_transform>(src, dst, mix_duration);
 		});
 	}
 
-	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int)
+	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration)
 	{
 		executor_.invoke([&]
 		{
-			audio_transforms_[index] = transform(audio_transforms_[index]);
+			auto src = audio_transforms_[index].fetch();
+			auto dst = transform(src);
+			audio_transforms_[index] = basic_animated_value<audio_transform>(src, dst, mix_duration);
 		});
 	}
 
