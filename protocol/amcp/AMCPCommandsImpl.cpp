@@ -203,7 +203,7 @@ bool MixerCommand::DoExecute()
 				else
 					GetChannel()->mixer().set_image_transform(GetLayerIndex(), transform, duration);
 			}
-			else if(_parameters[1] == L"FIX_RECT")
+			else if(_parameters[1] == L"FILL_RECT")
 			{
 				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[5], 0) : 0;
 				double x	= boost::lexical_cast<double>(_parameters.at(2));
@@ -211,10 +211,10 @@ bool MixerCommand::DoExecute()
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
 				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
 				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
-				transform.set_image_translation(x, y);
-				transform.set_image_scale(x_s, y_s);
-				transform.set_mask_translation(x, y);
-				transform.set_mask_scale(x_s, y_s);
+				transform.set_fill_translation(x, y);
+				transform.set_fill_scale(x_s, y_s);
+				transform.set_key_translation(x, y);
+				transform.set_key_scale(x_s, y_s);
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
@@ -222,7 +222,7 @@ bool MixerCommand::DoExecute()
 				else
 					GetChannel()->mixer().set_image_transform(transform, duration);
 			}
-			else if(_parameters[1] == L"CLIP_RECT")
+			else if(_parameters[1] == L"KEY_RECT")
 			{
 				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[5], 0) : 0;
 				double x	= boost::lexical_cast<double>(_parameters.at(2));
@@ -230,10 +230,10 @@ bool MixerCommand::DoExecute()
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
 				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
 				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
-				transform.set_image_translation(0.0, 0.0);
-				transform.set_image_scale(1.0, 1.0);
-				transform.set_mask_translation(x, y);
-				transform.set_mask_scale(x_s, y_s);
+				transform.set_fill_translation(0.0, 0.0);
+				transform.set_fill_scale(1.0, 1.0);
+				transform.set_key_translation(x, y);
+				transform.set_key_scale(x_s, y_s);
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
@@ -251,10 +251,10 @@ bool MixerCommand::DoExecute()
 					{
 						int index = x+y*n;
 						auto transform = GetChannel()->mixer().get_image_transform(index);						
-						transform.set_image_translation(x*delta, y*delta);
-						transform.set_image_scale(delta, delta);			
-						transform.set_mask_translation(x*delta, y*delta);
-						transform.set_mask_scale(delta, delta);
+						transform.set_fill_translation(x*delta, y*delta);
+						transform.set_fill_scale(delta, delta);			
+						transform.set_key_translation(x*delta, y*delta);
+						transform.set_key_scale(delta, delta);
 						GetChannel()->mixer().set_image_transform(index, transform, 0);
 					}
 				}
