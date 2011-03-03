@@ -26,7 +26,86 @@
 #include <unordered_map>
 
 namespace caspar { namespace core {
+
+template<typename T>
+struct animated_value
+{
+	virtual T fetch() = 0;
+	virtual T fetch_and_tick(bool& done) = 0;
+	T fetch_and_tick()
+	{
+		bool dummy;
+		return fetch_and_tick(dummy);
+	}
+
+	virtual safe_ptr<animated_value<T>> source() = 0;
+	virtual safe_ptr<animated_value<T>> dest() = 0;
+};
+
+template<typename T>
+class basic_animated_value : public animated_value<T>
+{
+	T current_;
+public:
+	basic_animated_value(){}
+	basic_animated_value(const T& current) : current_(current){}
 	
+	virtual T fetch(){return current_;}
+	virtual T fetch_and_tick(bool& done)
+	{
+		done = false;
+		return current_;
+	}
+
+	virtual safe_ptr<animated_value<T>> source() {return make_safe<basic_animated_value<T>>(current_);}
+	virtual safe_ptr<animated_value<T>> dest() {return make_safe<basic_animated_value<T>>(current_);}
+};
+	
+template<typename T>
+class nested_animated_value : public animated_value<T>
+{
+	safe_ptr<animated_value<T>> source_;
+	safe_ptr<animated_value<T>> dest_;
+	const int duration_;
+	int time_;
+public:
+	nested_animated_value()
+		: source_(basic_animated_value<T>())
+		, dest_(basic_animated_value<T>())
+		, duration_(duration)
+		, time_(0){}
+	nested_animated_value(const safe_ptr<animated_value<T>>& source, const safe_ptr<animated_value<T>>& dest, int duration)
+		: source_(source)
+		, dest_(dest)
+		, duration_(duration)
+		, time_(0){}
+	
+	virtual T fetch()
+	{
+		return lerp(source_->fetch(), dest_->fetch(), duration_ < 1 ? 1.0f : static_cast<float>(time_)/static_cast<float>(duration_));
+	}
+	virtual T fetch_and_tick(bool& done)
+	{
+		done = time_ >= duration_;
+
+		bool src_done = false;
+		auto src = source_->fetch_and_tick(src_done);
+		if(src_done)
+			source_ = source_->dest();
+		
+		bool dst_done = false;
+		auto dst = dest_->fetch_and_tick(dst_done);
+		if(dst_done)
+			dest_ = dest_->dest();
+						
+		time_ = std::min(time_+1, duration_);
+		return lerp(src, dst, duration_ < 1 ? 1.0f : (static_cast<float>(time_)/static_cast<float>(duration_)));
+	}
+
+	virtual safe_ptr<animated_value<T>> source() {return source_;}
+	virtual safe_ptr<animated_value<T>> dest() {return dest_;}
+};
+
 struct frame_mixer_device::implementation : boost::noncopyable
 {		
 	const printer			parent_printer_;
@@ -45,7 +124,7 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	std::unordered_map<int, audio_transform> audio_transforms_;
 
 	image_transform root_image_transform_;
-	audio_transform root_audio_transform_;
+	safe_ptr<animated_value<audio_transform>> root_audio_transform_;
 
 	executor executor_;
 public:
@@ -56,6 +135,7 @@ public:
 		, image_mixer_(format_desc)
 		, output_(output)
 		, executor_(print())
+		, root_audio_transform_(basic_animated_value<audio_transform>())
 	{
 		graph_->guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -83,7 +163,7 @@ public:
 			auto audio = audio_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				audio_mixer_.begin(root_audio_transform_*audio_transforms_[frame->get_layer_index()]);
+				audio_mixer_.begin(root_audio_transform_->fetch_and_tick()*audio_transforms_[frame->get_layer_index()]);
 				frame->process_audio(audio_mixer_);
 				audio_mixer_.end();
 			}
@@ -127,7 +207,7 @@ public:
 	{
 		return executor_.invoke([&]
 		{
-			root_audio_transform_ = root_audio_transform_;
+			root_audio_transform_ = make_safe<nested_animated_value<audio_transform>>(root_audio_transform_, make_safe<basic_animated_value<audio_transform>>(transform), mix_duration);
 		});
 	}
 

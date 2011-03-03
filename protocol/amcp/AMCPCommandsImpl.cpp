@@ -268,7 +268,7 @@ bool MixerCommand::DoExecute()
 		{
 			if(_parameters[1] == L"GAIN")
 			{
-				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
 				double value = boost::lexical_cast<double>(_parameters[2]);
 				auto transform = GetChannel()->mixer().get_audio_transform(GetLayerIndex());
 				transform.set_gain(value);

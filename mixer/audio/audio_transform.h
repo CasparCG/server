@@ -16,4 +16,6 @@ private:
 	double gain_;
 };
 
+audio_transform lerp(const audio_transform& lhs, const audio_transform& rhs, float alpha);
+
 }}
