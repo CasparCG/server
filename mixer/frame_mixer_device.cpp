@@ -135,10 +135,10 @@ public:
 			BOOST_FOREACH(auto& frame, frames)
 			{
 				int num = format_desc_.mode == video_mode::progressive ? 1 : 2;
-				auto transform = root_audio_transform_.fetch_and_tick(num)*audio_transforms_[frame->get_layer_index()].fetch_and_tick(num);
-				audio_mixer_.begin(transform);
-				frame->process_audio(audio_mixer_);
-				audio_mixer_.end();
+
+				auto frame1 = make_safe<draw_frame>(frame);
+				frame1->get_audio_transform() = root_audio_transform_.fetch_and_tick(num)*audio_transforms_[frame->get_layer_index()].fetch_and_tick(num);
+				frame1->process_audio(audio_mixer_);
 			}
 			audio_mixer_.end_pass();
 
