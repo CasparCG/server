@@ -181,27 +181,35 @@ bool MixerCommand::DoExecute()
 			{
 				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
 				double value = boost::lexical_cast<double>(_parameters.at(2));
-				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
-				transform.set_opacity(value);
+			
+				auto transform = [=](image_transform transform) -> image_transform
+				{
+					transform.set_opacity(value);
+					return transform;					
+				};
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())					
-					GetChannel()->mixer().set_image_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration);
 				else
-					GetChannel()->mixer().set_image_transform(transform, duration);
+					GetChannel()->mixer().apply_image_transform(transform, duration);
 			}
 			else if(_parameters[1] == L"GAIN")
 			{
 				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
 				double value = boost::lexical_cast<double>(_parameters.at(2));
-				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
-				transform.set_gain(value);
+				
+				auto transform = [=](image_transform transform) -> image_transform
+				{
+					transform.set_gain(value);
+					return transform;					
+				};
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().set_image_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration);
 				else
-					GetChannel()->mixer().set_image_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_image_transform(transform, duration);
 			}
 			else if(_parameters[1] == L"FILL_RECT")
 			{
@@ -210,17 +218,21 @@ bool MixerCommand::DoExecute()
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
 				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
-				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
-				transform.set_fill_translation(x, y);
-				transform.set_fill_scale(x_s, y_s);
-				transform.set_key_translation(x, y);
-				transform.set_key_scale(x_s, y_s);
+
+				auto transform = [=](image_transform transform) -> image_transform
+				{
+					transform.set_fill_translation(x, y);
+					transform.set_fill_scale(x_s, y_s);
+					transform.set_key_translation(x, y);
+					transform.set_key_scale(x_s, y_s);
+					return transform;
+				};
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().set_image_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration);
 				else
-					GetChannel()->mixer().set_image_transform(transform, duration);
+					GetChannel()->mixer().apply_image_transform(transform, duration);
 			}
 			else if(_parameters[1] == L"KEY_RECT")
 			{
@@ -229,17 +241,21 @@ bool MixerCommand::DoExecute()
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
 				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
-				auto transform = GetChannel()->mixer().get_image_transform(GetLayerIndex());
-				transform.set_fill_translation(0.0, 0.0);
-				transform.set_fill_scale(1.0, 1.0);
-				transform.set_key_translation(x, y);
-				transform.set_key_scale(x_s, y_s);
+
+				auto transform = [=](image_transform transform) -> image_transform
+				{
+					transform.set_fill_translation(0.0, 0.0);
+					transform.set_fill_scale(1.0, 1.0);
+					transform.set_key_translation(x, y);
+					transform.set_key_scale(x_s, y_s);
+					return transform;
+				};
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().set_image_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration);
 				else
-					GetChannel()->mixer().set_image_transform(transform, duration);
+					GetChannel()->mixer().apply_image_transform(transform, duration);
 			}
 			else if(_parameters[1] == L"GRID")
 			{
@@ -250,12 +266,15 @@ bool MixerCommand::DoExecute()
 					for(int y = 0; y < n; ++y)
 					{
 						int index = x+y*n;
-						auto transform = GetChannel()->mixer().get_image_transform(index);						
-						transform.set_fill_translation(x*delta, y*delta);
-						transform.set_fill_scale(delta, delta);			
-						transform.set_key_translation(x*delta, y*delta);
-						transform.set_key_scale(delta, delta);
-						GetChannel()->mixer().set_image_transform(index, transform, 0);
+						auto transform = [=](image_transform transform) -> image_transform
+						{				
+							transform.set_fill_translation(x*delta, y*delta);
+							transform.set_fill_scale(delta, delta);			
+							transform.set_key_translation(x*delta, y*delta);
+							transform.set_key_scale(delta, delta);
+							return transform;
+						};
+						GetChannel()->mixer().apply_image_transform(index, transform, 0);
 					}
 				}
 			}
@@ -270,14 +289,18 @@ bool MixerCommand::DoExecute()
 			{
 				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
 				double value = boost::lexical_cast<double>(_parameters[2]);
-				auto transform = GetChannel()->mixer().get_audio_transform(GetLayerIndex());
-				transform.set_gain(value);
 
+				auto transform = [=](audio_transform transform) -> audio_transform
+				{
+					transform.set_gain(value);
+					return transform;
+				};
+				
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().set_audio_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_audio_transform(GetLayerIndex(), transform, duration);
 				else
-					GetChannel()->mixer().set_audio_transform(transform, duration);
+					GetChannel()->mixer().apply_audio_transform(transform, duration);
 			}
 			else if(_parameters[1] == L"RESET")
 			{
