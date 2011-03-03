@@ -27,6 +27,41 @@
 
 namespace caspar { namespace core {
 	
+	
+template<typename T>
+class basic_animated_value
+{
+	T source_;
+	T dest_;
+	int duration_;
+	int time_;
+public:	
+	basic_animated_value()
+		: duration_(0)
+		, time_(0){}
+	basic_animated_value(const T& dest)
+		: source_(dest)
+		, dest_(dest)
+		, duration_(0)
+		, time_(0){}
+
+	basic_animated_value(const T& source, const T& dest, int duration)
+		: source_(source)
+		, dest_(dest)
+		, duration_(duration)
+		, time_(0){}
+	
+	virtual T fetch()
+	{
+		return lerp(source_, dest_, duration_ < 1 ? 1.0f : static_cast<float>(time_)/static_cast<float>(duration_));
+	}
+	virtual T fetch_and_tick(int num)
+	{						
+		time_ = std::min(time_+num, duration_);
+		return fetch();
+	}
+};
+
 struct frame_mixer_device::implementation : boost::noncopyable
 {		
 	const printer			parent_printer_;
@@ -44,8 +79,8 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	std::unordered_map<int, image_transform> image_transforms_;
 	std::unordered_map<int, audio_transform> audio_transforms_;
 
-	image_transform root_image_transform_;
-	audio_transform root_audio_transform_;
+	basic_animated_value<image_transform> root_image_transform_;
+	basic_animated_value<audio_transform> root_audio_transform_;
 
 	executor executor_;
 public:
@@ -70,11 +105,14 @@ public:
 	{			
 		executor_.begin_invoke([=]
 		{
+			int num = format_desc_.mode == video_mode::progressive ? 1 : 2;
+
 			perf_timer_.reset();
 			auto image = image_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				image_mixer_.begin(root_image_transform_*image_transforms_[frame->get_layer_index()]);
+				auto transform = root_image_transform_.fetch_and_tick(num)*image_transforms_[frame->get_layer_index()];
+				image_mixer_.begin(transform);
 				frame->process_image(image_mixer_);
 				image_mixer_.end();
 			}
@@ -83,7 +121,8 @@ public:
 			auto audio = audio_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				audio_mixer_.begin(root_audio_transform_*audio_transforms_[frame->get_layer_index()]);
+				auto transform = root_audio_transform_.fetch_and_tick(num)*audio_transforms_[frame->get_layer_index()];
+				audio_mixer_.begin(transform);
 				frame->process_audio(audio_mixer_);
 				audio_mixer_.end();
 			}
@@ -137,23 +176,27 @@ public:
 		});
 	}
 	
-	void apply_image_transform(const std::function<image_transform(const image_transform&)> transform, int)
+	void apply_image_transform(const std::function<image_transform(const image_transform&)>& transform, int mix_duration)
 	{
 		return executor_.invoke([&]
 		{
-			root_image_transform_ = transform(root_image_transform_);
+			auto src = root_image_transform_.fetch();
+			auto dst = transform(src);
+			root_image_transform_ = basic_animated_value<image_transform>(src, dst, mix_duration);
 		});
 	}
 
-	void apply_audio_transform(const std::function<audio_transform(audio_transform)> transform, int)
+	void apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration)
 	{
 		return executor_.invoke([&]
 		{
-			root_audio_transform_ = transform(root_audio_transform_);
+			auto src = root_audio_transform_.fetch();
+			auto dst = transform(src);
+			root_audio_transform_ = basic_animated_value<audio_transform>(src, dst, mix_duration);
 		});
 	}
 
-	void apply_image_transform(int index, const std::function<image_transform(image_transform)> transform, int)
+	void apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int)
 	{
 		executor_.invoke([&]
 		{
@@ -161,7 +204,7 @@ public:
 		});
 	}
 
-	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)> transform, int)
+	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int)
 	{
 		executor_.invoke([&]
 		{
