@@ -119,7 +119,7 @@ void print_version()
 	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
 	CASPAR_LOG(info) << L"Flash " << flash::get_flash_version();
 	CASPAR_LOG(info) << L"Flash-Template-Host " << flash::get_cg_version();
-	CASPAR_LOG(info) << L"FreeImage " << image::get_image_version();
+	CASPAR_LOG(info) << L"FreeImage " << image::get_fill_version();
 	
 	std::wstring decklink_devices;
 	BOOST_FOREACH(auto& device, get_decklink_device_list())
