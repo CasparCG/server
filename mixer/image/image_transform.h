@@ -55,4 +55,14 @@ private:
 
 image_transform lerp(const image_transform& lhs, const image_transform& rhs, float alpha);
 
+inline bool operator==(const image_transform& lhs, const image_transform& rhs)
+{
+	return memcmp(&lhs, &rhs, sizeof(image_transform)) == 0;
+}
+
+inline bool operator!=(const image_transform& lhs, const image_transform& rhs)
+{
+	return !(lhs == rhs);
+}
+
 }}
