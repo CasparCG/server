@@ -28,4 +28,17 @@ const audio_transform audio_transform::operator*(const audio_transform &other) c
 	return audio_transform(*this) *= other;
 }
 
+template<typename T>
+T mix(const T& lhs, const T& rhs, float alpha)
+{
+	return (1.0f - alpha) * lhs + alpha * rhs;
+}
+
+audio_transform lerp(const audio_transform& lhs, const audio_transform& rhs, float alpha)
+{
+	audio_transform result;
+	result.set_gain(mix(lhs.get_gain(), rhs.get_gain(), alpha));
+	return result;
+}
+
 }}
