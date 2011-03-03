@@ -30,9 +30,13 @@ namespace caspar { namespace core {
 template<typename T>
 struct animated_value
 {
-	virtual T fetch() const = 0;
-	virtual T fetch_and_tick(int num_tick = 1) = 0;
-	virtual bool is_finished() const = 0;
+	virtual T fetch() = 0;
+	virtual T fetch_and_tick(bool& done) = 0;
+	T fetch_and_tick()
+	{
+		bool dummy;
+		return fetch_and_tick(dummy);
+	}
 
 	virtual safe_ptr<animated_value<T>> source() = 0;
 	virtual safe_ptr<animated_value<T>> dest() = 0;
@@ -46,9 +50,12 @@ public:
 	basic_animated_value(){}
 	basic_animated_value(const T& current) : current_(current){}
 	
-	virtual T fetch() const { return current_;}
-	virtual T fetch_and_tick(int num_tick = 1){return current_;}
-	virtual bool is_finished() const {return false;}
+	virtual T fetch(){return current_;}
+	virtual T fetch_and_tick(bool& done)
+	{
+		done = false;
+		return current_;
+	}
 
 	virtual safe_ptr<animated_value<T>> source() {return make_safe<basic_animated_value<T>>(current_);}
 	virtual safe_ptr<animated_value<T>> dest() {return make_safe<basic_animated_value<T>>(current_);}
@@ -73,31 +80,28 @@ public:
 		, duration_(duration)
 		, time_(0){}
 	
-	virtual T fetch() const
+	virtual T fetch()
 	{
 		return lerp(source_->fetch(), dest_->fetch(), duration_ < 1 ? 1.0f : static_cast<float>(time_)/static_cast<float>(duration_));
 	}
-
-	virtual T fetch_and_tick(int num_tick = 1)
+	virtual T fetch_and_tick(bool& done)
 	{
-		auto result = lerp(source_->fetch_and_tick(), dest_->fetch_and_tick(), duration_ < 1 ? 1.0f : (static_cast<float>(time_)/static_cast<float>(duration_)));
+		done = time_ >= duration_;
 
-		if(source_->is_finished())
+		bool src_done = false;
+		auto src = source_->fetch_and_tick(src_done);
+		if(src_done)
 			source_ = source_->dest();
-
-		if(dest_->is_finished())
+		
+		bool dst_done = false;
+		auto dst = dest_->fetch_and_tick(dst_done);
+		if(dst_done)
 			dest_ = dest_->dest();
 						
-		time_ = std::min(time_+num_tick, duration_);
-
-		return result;
+		time_ = std::min(time_+1, duration_);
+		return lerp(src, dst, duration_ < 1 ? 1.0f : (static_cast<float>(time_)/static_cast<float>(duration_)));
 	}
 
-	virtual bool is_finished() const
-	{
-		return time_ >= duration_;
-	}
-	
 	virtual safe_ptr<animated_value<T>> source() {return source_;}
 	virtual safe_ptr<animated_value<T>> dest() {return dest_;}
 };
@@ -116,10 +120,10 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	output_func output_;
 
-	std::unordered_map<int, std::shared_ptr<animated_value<image_transform>>> image_transforms_;
-	std::unordered_map<int, std::shared_ptr<animated_value<audio_transform>>> audio_transforms_;
+	std::unordered_map<int, image_transform> image_transforms_;
+	std::unordered_map<int, audio_transform> audio_transforms_;
 
-	safe_ptr<animated_value<image_transform>> root_image_transform_;
+	image_transform root_image_transform_;
 	safe_ptr<animated_value<audio_transform>> root_audio_transform_;
 
 	executor executor_;
@@ -131,7 +135,6 @@ public:
 		, image_mixer_(format_desc)
 		, output_(output)
 		, executor_(print())
-		, root_image_transform_(basic_animated_value<image_transform>())
 		, root_audio_transform_(basic_animated_value<audio_transform>())
 	{
 		graph_->guide("frame-time", 0.5f);	
@@ -151,7 +154,7 @@ public:
 			auto image = image_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				image_mixer_.begin(fetch_and_tick(*root_image_transform_)*fetch_and_tick(*image_transforms_[frame->get_layer_index()]));
+				image_mixer_.begin(root_image_transform_*image_transforms_[frame->get_layer_index()]);
 				frame->process_image(image_mixer_);
 				image_mixer_.end();
 			}
@@ -160,7 +163,7 @@ public:
 			auto audio = audio_mixer_.begin_pass();
 			BOOST_FOREACH(auto& frame, frames)
 			{
-				audio_mixer_.begin(fetch_and_tick(*root_audio_transform_)*fetch_and_tick(*audio_transforms_[frame->get_layer_index()]));
+				audio_mixer_.begin(root_audio_transform_->fetch_and_tick()*audio_transforms_[frame->get_layer_index()]);
 				frame->process_audio(audio_mixer_);
 				audio_mixer_.end();
 			}
@@ -176,19 +179,7 @@ public:
 		});
 		graph_->set("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}
-
-	audio_transform fetch_and_tick(animated_value<audio_transform>& transform)
-	{
-		int num_tick = format_desc_.mode == video_mode::progressive ? 1 : 2;
-		return transform.fetch_and_tick(num_tick);
-	}
-	
-	image_transform fetch_and_tick(animated_value<image_transform>& transform)
-	{
-		int num_tick = format_desc_.mode == video_mode::progressive ? 1 : 2;
-		return transform.fetch_and_tick();
-	}
-
+		
 	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc)
 	{
 		return make_safe<write_frame>(desc, image_mixer_.create_buffers(desc));
@@ -196,19 +187,19 @@ public:
 		
 	image_transform get_image_transform(int index)
 	{
-		return executor_.invoke([&]{return image_transforms_[index]->fetch();});
+		return executor_.invoke([&]{return image_transforms_[index];});
 	}
 
 	audio_transform get_audio_transform(int index)
 	{
-		return executor_.invoke([&]{return audio_transforms_[index]->fetch();});
+		return executor_.invoke([&]{return audio_transforms_[index];});
 	}
 	
 	void set_image_transform(const image_transform& transform, int mix_duration)
 	{
 		return executor_.invoke([&]
 		{
-			root_image_transform_ = make_safe<nested_animated_value<image_transform>>(root_image_transform_, make_safe<basic_animated_value<image_transform>>(transform), mix_duration);	
+			root_image_transform_ = root_image_transform_;
 		});
 	}
 
@@ -216,7 +207,7 @@ public:
 	{
 		return executor_.invoke([&]
 		{
-			root_audio_transform_ = make_safe<nested_animated_value<audio_transform>>(root_audio_transform_, make_safe<basic_animated_value<audio_transform>>(transform), mix_duration);	
+			root_audio_transform_ = make_safe<nested_animated_value<audio_transform>>(root_audio_transform_, make_safe<basic_animated_value<audio_transform>>(transform), mix_duration);
 		});
 	}
 
@@ -224,8 +215,7 @@ public:
 	{
 		return executor_.invoke([&]
 		{
-			auto tmp = safe_ptr<animated_value<image_transform>>(image_transforms_[index]);
-			image_transforms_[index] = std::make_shared<nested_animated_value<image_transform>>(tmp, make_safe<basic_animated_value<image_transform>>(transform), mix_duration);
+			image_transforms_[index] = transform;
 		});
 	}
 
@@ -233,8 +223,7 @@ public:
 	{
 		return executor_.invoke([&]
 		{
-			auto tmp = safe_ptr<animated_value<audio_transform>>(audio_transforms_[index]);
-			audio_transforms_[index] = std::make_shared<nested_animated_value<audio_transform>>(tmp, make_safe<basic_animated_value<audio_transform>>(transform), mix_duration);
+			audio_transforms_[index] = transform;
 		});
 	}
 
