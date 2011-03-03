@@ -26,17 +26,17 @@ public:
 	void set_gain(double value);
 	double get_gain() const;
 	
-	void set_image_translation(double x, double y);
-	std::array<double, 2> get_image_translation() const;
+	void set_fill_translation(double x, double y);
+	std::array<double, 2> get_fill_translation() const;
 
-	void set_image_scale(double x, double y);
-	std::array<double, 2> get_image_scale() const;
+	void set_fill_scale(double x, double y);
+	std::array<double, 2> get_fill_scale() const;
 	
-	void set_mask_translation(double x, double y);
-	std::array<double, 2> get_mask_translation() const;
+	void set_key_translation(double x, double y);
+	std::array<double, 2> get_key_translation() const;
 
-	void set_mask_scale(double x, double y);
-	std::array<double, 2> get_mask_scale() const;
+	void set_key_scale(double x, double y);
+	std::array<double, 2> get_key_scale() const;
 
 	void set_mode(video_mode::type mode);
 	video_mode::type get_mode() const;
@@ -52,5 +52,7 @@ private:
 	std::array<double, 2> key_scale_; 
 	video_mode::type mode_;
 };
+
+image_transform lerp(const image_transform& lhs, const image_transform& rhs, float alpha);
 
 }}

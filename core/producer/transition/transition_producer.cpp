@@ -167,21 +167,21 @@ struct transition_producer::implementation : boost::noncopyable
 		}
 		else if(info_.type == transition::slide)
 		{
-			d_frame1->get_image_transform().set_image_translation((-1.0+alpha-half_alpha_step)*dir, 0.0);	
-			d_frame2->get_image_transform().set_image_translation((-1.0+alpha)*dir, 0.0);		
+			d_frame1->get_image_transform().set_fill_translation((-1.0+alpha-half_alpha_step)*dir, 0.0);	
+			d_frame2->get_image_transform().set_fill_translation((-1.0+alpha)*dir, 0.0);		
 		}
 		else if(info_.type == transition::push)
 		{
-			d_frame1->get_image_transform().set_image_translation((-1.0+alpha-half_alpha_step)*dir, 0.0);
-			d_frame2->get_image_transform().set_image_translation((-1.0+alpha)*dir, 0.0);
+			d_frame1->get_image_transform().set_fill_translation((-1.0+alpha-half_alpha_step)*dir, 0.0);
+			d_frame2->get_image_transform().set_fill_translation((-1.0+alpha)*dir, 0.0);
 
-			s_frame1->get_image_transform().set_image_translation((0.0+alpha-half_alpha_step)*dir, 0.0);	
-			s_frame2->get_image_transform().set_image_translation((0.0+alpha)*dir, 0.0);		
+			s_frame1->get_image_transform().set_fill_translation((0.0+alpha-half_alpha_step)*dir, 0.0);	
+			s_frame2->get_image_transform().set_fill_translation((0.0+alpha)*dir, 0.0);		
 		}
 		else if(info_.type == transition::wipe)		
 		{
-			d_frame1->get_image_transform().set_mask_scale(alpha-half_alpha_step, 1.0);	
-			d_frame2->get_image_transform().set_mask_scale(alpha, 1.0);			
+			d_frame1->get_image_transform().set_key_scale(alpha-half_alpha_step, 1.0);	
+			d_frame2->get_image_transform().set_key_scale(alpha, 1.0);			
 		}
 		
 		return draw_frame(draw_frame::interlace(s_frame1, s_frame2, format_desc_.mode), draw_frame::interlace(d_frame1, d_frame2, format_desc_.mode));

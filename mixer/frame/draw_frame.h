@@ -65,7 +65,8 @@ public:
 
 	void set_layer_index(int index);
 	int get_layer_index() const;
-	
+
+	std::vector<safe_ptr<draw_frame>> get_children();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
