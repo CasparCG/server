@@ -179,7 +179,7 @@ bool MixerCommand::DoExecute()
 		{
 			if(_parameters[1] == L"OPACITY")
 			{
-				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
 				double value = boost::lexical_cast<double>(_parameters.at(2));
 			
 				auto transform = [=](image_transform transform) -> image_transform
@@ -196,7 +196,7 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"GAIN")
 			{
-				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
 				double value = boost::lexical_cast<double>(_parameters.at(2));
 				
 				auto transform = [=](image_transform transform) -> image_transform
@@ -213,7 +213,7 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"FILL_RECT")
 			{
-				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[5], 0) : 0;
+				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
 				double x	= boost::lexical_cast<double>(_parameters.at(2));
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
@@ -236,7 +236,7 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"KEY_RECT")
 			{
-				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[5], 0) : 0;
+				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
 				double x	= boost::lexical_cast<double>(_parameters.at(2));
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
