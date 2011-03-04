@@ -129,6 +129,9 @@ public:
 			swap_layer(index, other_index);
 		else
 		{
+			if(factory_->get_video_format_desc() != other.impl_->factory_->get_video_format_desc())
+				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot swap between channels with different formats."));
+
 			auto func = [&]
 			{
 				get_layer(index).swap(other.impl_->layers_.at(other_index));		
@@ -144,6 +147,9 @@ public:
 	{
 		if(other.impl_.get() == this)
 			return;
+
+		if(factory_->get_video_format_desc() != other.impl_->factory_->get_video_format_desc())
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot swap between channels with different formats."));
 
 		auto func = [&]
 		{
