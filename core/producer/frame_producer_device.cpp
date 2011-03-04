@@ -103,16 +103,12 @@ public:
 
 	void clear(int index)
 	{
-		executor_.invoke([&]{get_layer(index).clear();});
+		executor_.invoke([&]{layers_.erase(index);});
 	}
 		
 	void clear()
 	{
-		executor_.invoke([&]
-		{
-			BOOST_FOREACH(auto& pair, layers_)
-				pair.second.clear();
-		});
+		executor_.invoke([&]{layers_.clear();});
 	}	
 	
 	void swap_layer(int index, size_t other_index)

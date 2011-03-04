@@ -27,7 +27,6 @@ public:
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
-	void clear(); // nothrow
 
 	safe_ptr<frame_producer> foreground() const; // nothrow
 	safe_ptr<frame_producer> background() const; // nothrow
