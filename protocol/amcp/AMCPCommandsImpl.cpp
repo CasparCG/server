@@ -244,8 +244,6 @@ bool MixerCommand::DoExecute()
 
 				auto transform = [=](image_transform transform) -> image_transform
 				{
-					transform.set_fill_translation(0.0, 0.0);
-					transform.set_fill_scale(1.0, 1.0);
 					transform.set_key_translation(x, y);
 					transform.set_key_scale(x_s, y_s);
 					return transform;
