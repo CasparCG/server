@@ -105,15 +105,7 @@ public:
 		last_frame_ = draw_frame::empty();
 		foreground_ = frame_producer::empty();
 	}
-
-	void clear()
-	{		
-		foreground_ = frame_producer::empty();
-		background_ = frame_producer::empty();
-		last_frame_ = draw_frame::empty();
-		is_paused_ = false;
-	}
-	
+		
 	safe_ptr<draw_frame> receive()
 	{		
 		if(is_paused_)
@@ -175,7 +167,6 @@ void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_lo
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
-void layer::clear(){impl_->clear();}
 safe_ptr<draw_frame> layer::receive() {return impl_->receive();}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}

@@ -5,8 +5,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common", "common\common.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "core", "core\core.vcxproj", "{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{8002D74D-4E89-4BD6-8CE8-0FE4DF14CA5D}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shell", "shell\shell.vcxproj", "{8C26C94F-8092-4769-8D84-DEA479721C5B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "protocol", "protocol\protocol.vcxproj", "{2040B361-1FB6-488E-84A5-38A580DA90DE}"
@@ -46,12 +44,6 @@ Global
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Profile|Win32.Build.0 = Amplify|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Release|Win32.ActiveCfg = Release|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Release|Win32.Build.0 = Release|Win32
-		{8002D74D-4E89-4BD6-8CE8-0FE4DF14CA5D}.Debug|Win32.ActiveCfg = Debug|Win32
-		{8002D74D-4E89-4BD6-8CE8-0FE4DF14CA5D}.Debug|Win32.Build.0 = Debug|Win32
-		{8002D74D-4E89-4BD6-8CE8-0FE4DF14CA5D}.Develop|Win32.ActiveCfg = Debug|Win32
-		{8002D74D-4E89-4BD6-8CE8-0FE4DF14CA5D}.Profile|Win32.ActiveCfg = Release|Win32
-		{8002D74D-4E89-4BD6-8CE8-0FE4DF14CA5D}.Release|Win32.ActiveCfg = Release|Win32
-		{8002D74D-4E89-4BD6-8CE8-0FE4DF14CA5D}.Release|Win32.Build.0 = Release|Win32
 		{8C26C94F-8092-4769-8D84-DEA479721C5B}.Debug|Win32.ActiveCfg = Debug|Win32
 		{8C26C94F-8092-4769-8D84-DEA479721C5B}.Debug|Win32.Build.0 = Debug|Win32
 		{8C26C94F-8092-4769-8D84-DEA479721C5B}.Develop|Win32.ActiveCfg = Develop|Win32
