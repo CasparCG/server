@@ -10,7 +10,8 @@ struct audio_mixer::implementation
 	std::vector<short> audio_data_;
 	std::stack<audio_transform> transform_stack_;
 
-	std::map<int, audio_transform> audio_transforms_;
+	std::map<int, audio_transform> prev_audio_transforms_;
+	std::map<int, audio_transform> next_audio_transforms_;
 
 public:
 	implementation()
@@ -27,12 +28,18 @@ public:
 	{		
 		if(audio_data_.empty())
 			audio_data_.resize(audio_data.size(), 0);
-
-		auto prev = audio_transforms_[tag];
+		
+		auto prev = prev_audio_transforms_[tag];
 		auto next = transform_stack_.top();
+				
+		prev_audio_transforms_[tag] = next;
+		next_audio_transforms_[tag] = next;
 
 		auto prev_gain = prev.get_gain();
 		auto next_gain = next.get_gain();
+		
+		if(prev_gain < 0.001 && next_gain < 0.001)
+			return;
 
 		tbb::parallel_for
 		(
@@ -50,7 +57,6 @@ public:
 			}
 		);
 
-		audio_transforms_[tag] = next;
 	}
 	
 	void end()
@@ -65,6 +71,11 @@ public:
 
 	void end_pass()
 	{
+		if(prev_audio_transforms_.size() != next_audio_transforms_.size())
+			CASPAR_LOG(info) << L"Removed tags: " << (prev_audio_transforms_.size() - next_audio_transforms_.size());
+
+		prev_audio_transforms_ = next_audio_transforms_;
+		next_audio_transforms_.clear();
 	}
 };
 
