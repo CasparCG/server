@@ -29,16 +29,20 @@ public:
 		if(audio_data_.empty())
 			audio_data_.resize(audio_data.size(), 0);
 		
-		auto prev = prev_audio_transforms_[tag];
 		auto next = transform_stack_.top();
-				
-		prev_audio_transforms_[tag] = next;
-		next_audio_transforms_[tag] = next;
+		auto prev = next;
 
-		auto prev_gain = prev.get_gain();
-		auto next_gain = next.get_gain();
+		auto it = prev_audio_transforms_.find(tag);
+		if(it != prev_audio_transforms_.end())
+			prev = it->second;
+				
+		next_audio_transforms_[tag] = next;
+		prev_audio_transforms_[tag] = next;
 		
-		if(prev_gain < 0.001 && next_gain < 0.001)
+		auto next_gain = next.get_gain();
+		auto prev_gain = prev.get_gain();
+		
+		if(next_gain < 0.001 && prev_gain < 0.001)
 			return;
 
 		tbb::parallel_for
