@@ -22,12 +22,14 @@ struct write_frame::implementation : boost::noncopyable
 	std::vector<safe_ptr<host_buffer>> buffers_;
 	std::vector<short> audio_data_;
 	const pixel_format_desc desc_;
+	int tag_;
 
 public:
 	implementation(write_frame& self, const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers) 
 		: self_(self)
 		, desc_(desc)
-		, buffers_(buffers){}
+		, buffers_(buffers)
+		, tag_(std::numeric_limits<int>::min()){}
 	
 	void process_image(image_mixer& mixer)
 	{
@@ -39,7 +41,7 @@ public:
 	void process_audio(audio_mixer& mixer)
 	{
 		mixer.begin(self_.get_audio_transform());
-		mixer.process(audio_data_);
+		mixer.process(audio_data_, tag_);
 		mixer.end();
 	}
 
@@ -76,4 +78,6 @@ void write_frame::process_image(image_mixer& mixer){impl_->process_image(mixer);
 void write_frame::process_audio(audio_mixer& mixer){impl_->process_audio(mixer);}
 boost::iterator_range<unsigned char*> write_frame::image_data(size_t index){return impl_->image_data(index);}
 std::vector<short>& write_frame::audio_data() { return impl_->audio_data_; }
+void write_frame::tag(int tag) { impl_->tag_ = tag;}
+int write_frame::tag() const {return impl_->tag_;}
 }}

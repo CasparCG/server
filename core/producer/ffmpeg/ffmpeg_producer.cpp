@@ -89,6 +89,7 @@ public:
 					try
 					{
 						auto frame = video_decoder_->execute(video_packet);
+						frame->tag(reinterpret_cast<int>(this));
 						video_frame_channel_.push_back(std::move(frame));
 					}
 					catch(...)
