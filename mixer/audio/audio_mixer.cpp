@@ -71,9 +71,6 @@ public:
 
 	void end_pass()
 	{
-		if(prev_audio_transforms_.size() != next_audio_transforms_.size())
-			CASPAR_LOG(info) << L"Removed tags: " << (prev_audio_transforms_.size() - next_audio_transforms_.size());
-
 		prev_audio_transforms_ = next_audio_transforms_;
 		next_audio_transforms_.clear();
 	}
