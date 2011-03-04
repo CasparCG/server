@@ -39,12 +39,6 @@ public:
 	basic_animated_value()
 		: duration_(0)
 		, time_(0){}
-	basic_animated_value(const T& dest)
-		: source_(dest)
-		, dest_(dest)
-		, duration_(0)
-		, time_(0){}
-
 	basic_animated_value(const T& source, const T& dest, int duration)
 		: source_(source)
 		, dest_(dest)
