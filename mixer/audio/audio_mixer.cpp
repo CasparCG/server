@@ -10,6 +10,8 @@ struct audio_mixer::implementation
 	std::vector<short> audio_data_;
 	std::stack<audio_transform> transform_stack_;
 
+	std::map<int, audio_transform> audio_transforms_;
+
 public:
 	implementation()
 	{
@@ -21,14 +23,16 @@ public:
 		transform_stack_.push(transform_stack_.top()*transform);
 	}
 
-	void process(const std::vector<short>& audio_data)
+	void process(const std::vector<short>& audio_data, int tag)
 	{		
 		if(audio_data_.empty())
 			audio_data_.resize(audio_data.size(), 0);
 
-		double gain = transform_stack_.top().get_gain();
-		if(gain < 0.001)
-			return;
+		auto prev = audio_transforms_[tag];
+		auto next = transform_stack_.top();
+
+		auto prev_gain = prev.get_gain();
+		auto next_gain = next.get_gain();
 
 		tbb::parallel_for
 		(
@@ -37,14 +41,18 @@ public:
 			{
 				for(size_t n = r.begin(); n < r.end(); ++n)
 				{
+					double delta = static_cast<double>(n)/static_cast<double>(audio_data_.size());
+					double sample_gain = prev_gain * (1.0 - delta) + next_gain * delta;
 					int sample = static_cast<int>(audio_data[n]);
-					sample = (static_cast<int>(gain*8192.0)*sample)/8192;
+					sample = (static_cast<int>(sample_gain*8192.0)*sample)/8192;
 					audio_data_[n] = static_cast<short>((static_cast<int>(audio_data_[n]) + sample) & 0xFFFF);
 				}
 			}
 		);
-	}
 
+		audio_transforms_[tag] = next;
+	}
+	
 	void end()
 	{
 		transform_stack_.pop();
@@ -54,13 +62,17 @@ public:
 	{
 		return std::move(audio_data_);
 	}
+
+	void end_pass()
+	{
+	}
 };
 
 audio_mixer::audio_mixer() : impl_(new implementation()){}
 void audio_mixer::begin(const audio_transform& transform){impl_->begin(transform);}
-void audio_mixer::process(const std::vector<short>& audio_data){impl_->process(audio_data);}
+void audio_mixer::process(const std::vector<short>& audio_data, int tag){impl_->process(audio_data, tag);}
 void audio_mixer::end(){impl_->end();}
 std::vector<short> audio_mixer::begin_pass(){return impl_->begin_pass();}	
-void audio_mixer::end_pass(){}
+void audio_mixer::end_pass(){impl_->end_pass();}
 
 }}

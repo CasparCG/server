@@ -32,6 +32,9 @@ public:
 
 	virtual void process_image(image_mixer& mixer);
 	virtual void process_audio(audio_mixer& mixer);
+
+	void tag(int tag);
+	int tag() const;
 	
 private:
 	struct implementation;

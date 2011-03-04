@@ -12,9 +12,9 @@ public:
 	audio_mixer();
 
 	void begin(const audio_transform& transform);
-	void process(const std::vector<short>& audio_data);
+	void process(const std::vector<short>& audio_data, int tag);
 	void end();
-	
+
 	std::vector<short> begin_pass();
 	void end_pass();
 
