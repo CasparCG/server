@@ -145,6 +145,7 @@ public:
 			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 
 			output_(make_safe<const read_frame>(std::move(image.get()), std::move(audio)));
+
 			graph_->update("tick-time", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
 			wait_perf_timer_.reset();
 
@@ -158,35 +159,43 @@ public:
 		return make_safe<write_frame>(desc, image_mixer_.create_buffers(desc));
 	}
 				
-	void set_image_transform(const image_transform& transform, int)
+	void set_image_transform(const image_transform& transform, int mix_duration)
 	{
 		executor_.invoke([&]
 		{
-			root_image_transform_ = transform;
+			auto src = root_image_transform_.fetch();
+			auto dst = transform;
+			root_image_transform_ = basic_animated_value<image_transform>(src, dst, mix_duration);
 		});
 	}
 
-	void set_audio_transform(const audio_transform& transform, int)
+	void set_audio_transform(const audio_transform& transform, int mix_duration)
 	{
 		executor_.invoke([&]
 		{
-			root_audio_transform_ = transform;
+			auto src = root_audio_transform_.fetch();
+			auto dst = transform;
+			root_audio_transform_ = basic_animated_value<audio_transform>(src, dst, mix_duration);
 		});
 	}
 
-	void set_image_transform(int index, const image_transform& transform, int)
+	void set_image_transform(int index, const image_transform& transform, int mix_duration)
 	{
 		executor_.invoke([&]
 		{
-			image_transforms_[index] = transform;
+			auto src = image_transforms_[index].fetch();
+			auto dst = transform;
+			image_transforms_[index] = basic_animated_value<image_transform>(src, dst, mix_duration);
 		});
 	}
 
-	void set_audio_transform(int index, const audio_transform& transform, int)
+	void set_audio_transform(int index, const audio_transform& transform, int mix_duration)
 	{
 		executor_.invoke([&]
 		{
-			audio_transforms_[index] = transform;
+			auto src = audio_transforms_[index].fetch();
+			auto dst = transform;
+			audio_transforms_[index] = basic_animated_value<audio_transform>(src, dst, mix_duration);
 		});
 	}
 	
