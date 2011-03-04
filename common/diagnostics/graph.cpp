@@ -381,4 +381,131 @@ safe_ptr<graph> create_graph(const printer& parent_printer)
 	return safe_ptr<graph>(new graph(parent_printer));
 }
 
+
+//namespace v2
+//{	
+//	
+//struct line::implementation
+//{
+//	std::wstring name_;
+//	boost::circular_buffer<data> ticks_;
+//
+//	implementation(const std::wstring& name) 
+//		: name_(name)
+//		, ticks_(1024){}
+//	
+//	void update_value(float value)
+//	{
+//		ticks_.push_back();
+//		ticks_.back().value = value;
+//	}
+//
+//	void set_value(float value)
+//	{
+//		ticks_.clear();
+//		update_value(value);
+//	}
+//};
+//
+//line::line(){}
+//line::line(const std::wstring& name) : impl_(new implementation(name)){}
+//std::wstring line::print() const {return impl_->name_;}
+//void line::update_value(float value){impl_->update_value(value);}
+//void line::set_value(float value){impl_->set_value(value);}
+//boost::circular_buffer<data>& line::ticks() { return impl_->ticks_;}
+//
+//struct graph::implementation
+//{
+//	std::map<std::wstring, line> lines_;
+//	color						 color_;
+//	printer						 printer_;
+//
+//	implementation(const std::wstring& name) 
+//		: printer_([=]{return name;}){}
+//
+//	implementation(const printer& parent_printer) 
+//		: printer_(parent_printer){}
+//	
+//	void update_value(const std::wstring& name, float value)
+//	{
+//		auto it = lines_.find(name);
+//		if(it == lines_.end())
+//			it = lines_.insert(std::make_pair(name, line(name))).first;
+//
+//		it->second.update_value(value);
+//	}
+//
+//	void set_value(const std::wstring& name, float value)
+//	{
+//		auto it = lines_.find(name);
+//		if(it == lines_.end())
+//			it = lines_.insert(std::make_pair(name, line(name))).first;
+//
+//		it->second.set_value(value);
+//	}
+//	
+//	void set_color(const std::wstring& name, color color)
+//	{
+//		color_ = color;
+//	}
+//
+//	std::map<std::wstring, line>& get_lines()
+//	{
+//		return lines_;
+//	}
+//	
+//	color get_color() const
+//	{
+//		return color_;
+//	}
+//
+//	std::wstring print() const
+//	{
+//		return printer_ ? printer_() : L"graph";
+//	}
+//};
+//	
+//graph::graph(const std::wstring& name) : impl_(new implementation(name)){}
+//graph::graph(const printer& parent_printer) : impl_(new implementation(parent_printer)){}
+//void graph::update_value(const std::wstring& name, float value){impl_->update_value(name, value);}
+//void graph::set_value(const std::wstring& name, float value){impl_->set_value(name, value);}
+//void graph::set_color(const std::wstring& name, color c){impl_->set_color(name, c);}
+//color graph::get_color() const {return impl_->get_color();}
+//std::wstring graph::print() const {return impl_->print();}
+//
+//safe_ptr<graph> graph::clone() const 
+//{
+//	safe_ptr<graph> clone(new graph(std::wstring(L"")));
+//	clone->impl_->printer_ = impl_->printer_;
+//	clone->impl_->lines_ = impl_->lines_;
+//	clone->impl_->color_ = impl_->color_;	
+//}
+//
+//std::map<std::wstring, line>& graph::get_lines() {impl_->get_lines();}
+//
+//std::vector<safe_ptr<graph>> g_graphs;
+//
+//safe_ptr<graph> create_graph(const std::string& name)
+//{
+//	g_graphs.push_back(make_safe<graph>(name));
+//	return g_graphs.back();
+//}
+//
+//safe_ptr<graph> create_graph(const printer& parent_printer)
+//{
+//	g_graphs.push_back(make_safe<graph>(parent_printer));
+//	return g_graphs.back();
+//}
+//
+//static std::vector<safe_ptr<graph>> get_all_graphs()
+//{
+//	std::vector<safe_ptr<graph>> graphs;
+//	BOOST_FOREACH(auto& graph, g_graphs)
+//		graphs.push_back(graph->clone());
+//
+//	return graphs;
+//}
+//
+//}
+
 }}

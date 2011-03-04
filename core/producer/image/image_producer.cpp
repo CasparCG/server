@@ -24,12 +24,7 @@ struct image_producer : public frame_producer
 	std::shared_ptr<frame_factory> frame_factory_;
 	std::wstring filename_;
 	safe_ptr<draw_frame> frame_;
-
-	image_producer(image_producer&& other) 
-		: frame_factory_(std::move(other.frame_factory_))
-		, filename_(std::move(other.filename_))
-		, frame_(draw_frame::empty()){}
-
+	
 	image_producer(const std::wstring& filename) 
 		: filename_(filename), frame_(draw_frame::empty())	{}
 	
@@ -72,7 +67,7 @@ safe_ptr<frame_producer> create_image_producer(const  std::vector<std::wstring>&
 	return make_safe<image_producer>(filename + L"." + *ext);
 }
 
-std::wstring get_fill_version()
+std::wstring get_image_version()
 {
 	return widen(std::string(FreeImage_GetVersion()));
 }

@@ -70,6 +70,9 @@
     <Filter Include="Source\producer\silverlight\interop">
       <UniqueIdentifier>{865b1b03-83c0-4c59-b896-f98cd3323c00}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\producer\diagnostics">
+      <UniqueIdentifier>{fb911bef-1f24-492e-9806-827d8609b866}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consumer\decklink\DeckLinkAPI_h.h">
