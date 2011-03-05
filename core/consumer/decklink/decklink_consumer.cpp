@@ -355,7 +355,7 @@ std::vector<std::wstring> get_decklink_device_list()
 		if(SUCCEEDED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
 		{		
 			CComPtr<IDeckLink> decklink;
-			for(int n = 0; pDecklinkIterator->Next(&decklink) == S_OK; ++n)	
+			for(int n = 1; pDecklinkIterator->Next(&decklink) == S_OK; ++n)	
 			{
 				BSTR model_name = L"Unknown";
 				decklink->GetModelName(&model_name);
