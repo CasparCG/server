@@ -84,7 +84,7 @@ public:
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, executor_(print())
 	{		
-		graph_->guide("frame-time", 0.5);
+		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 	}
 
@@ -264,7 +264,7 @@ public:
 			while(window_.GetEvent(e)){}
 			render(frame);
 			window_.Display();
-			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+			graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 		});
 	}
 

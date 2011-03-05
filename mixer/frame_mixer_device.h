@@ -32,6 +32,8 @@
 #include <common/memory/safe_ptr.h>
 #include <common/utility/printer.h>
 
+#include <boost/signals2.hpp>
+
 #include <functional>
 
 namespace caspar { namespace core {
@@ -41,9 +43,11 @@ struct video_format;
 class frame_mixer_device : public frame_factory
 {
 public:
-	typedef std::function<void(const safe_ptr<const read_frame>&)> output_func;
-
-	frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc, const output_func& output);
+	typedef boost::signals2::signal<void(const safe_ptr<const read_frame>&)> output_t;
+	 
+	boost::signals2::connection connect(const output_t::slot_type& subscriber);
+	
+	frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc);
 	frame_mixer_device(frame_mixer_device&& other); // nothrow
 		
 	void send(const std::vector<safe_ptr<draw_frame>>& frames); // nothrow

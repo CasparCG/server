@@ -159,7 +159,7 @@ public:
 		model_name_ = get_card_desc(videoCardType);
 
 		graph_ = diagnostics::create_graph(narrow(print()));
-		graph_->guide("tick-time", 0.5);
+		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 			
 		//void* pBlueDevice = blue_attach_to_device(1);
@@ -314,7 +314,7 @@ public:
 				}
 
 				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
-				graph_->update("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+				graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 				perf_timer_.reset();
 			}
 			catch(...)

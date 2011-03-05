@@ -34,11 +34,11 @@ class graph
 	graph(const std::string& name);
 	graph(const printer& parent_printer);
 public:
-	void update(const std::string& name, float value);
-	void set(const std::string& name, float value);
-	void tag(const std::string& name);
-	void guide(const std::string& name, float value);
+	void update_value(const std::string& name, float value);
+	void set_value(const std::string& name, float value);
 	void set_color(const std::string& name, color c);
+	void add_tag(const std::string& name);
+	void add_guide(const std::string& name, float value);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

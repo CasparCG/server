@@ -178,6 +178,7 @@
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <MapExports>false</MapExports>
     </Link>
     <PostBuildEvent>
       <Command>copy $(SolutionDir)\dlls\*.dll $(OutDir)\</Command>
@@ -220,7 +221,7 @@
       <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
-      <MapExports>true</MapExports>
+      <MapExports>false</MapExports>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>
       </OptimizeReferences>
@@ -274,7 +275,7 @@
       <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
-      <MapExports>true</MapExports>
+      <MapExports>false</MapExports>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>
       </OptimizeReferences>
@@ -328,7 +329,7 @@
       <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
-      <MapExports>true</MapExports>
+      <MapExports>false</MapExports>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>
       </OptimizeReferences>
