@@ -27,29 +27,40 @@ struct frame_producer_device::implementation : boost::noncopyable
 	const printer parent_printer_;
 
 	std::map<int, layer> layers_;		
-
-	output_func output_;
-
+	
 	const safe_ptr<frame_factory> factory_;
+
+	output_t output_;
 	
 	mutable executor executor_;
 public:
-	implementation(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output)  
+	implementation(const printer& parent_printer, const safe_ptr<frame_factory>& factory)  
 		: parent_printer_(parent_printer)
 		, factory_(factory)
-		, output_(output)
 	{
 		executor_.start();
-		executor_.begin_invoke([=]{tick();});
 	}
 
 	~implementation()
 	{
 		CASPAR_LOG(info) << "Shutting down producer-device.";
 	}
+
+	boost::signals2::connection connect(const output_t::slot_type& subscriber)
+	{
+		return executor_.invoke([&]() -> boost::signals2::connection
+		{
+			if(output_.empty())
+				executor_.begin_invoke([=]{tick();});		
+			return output_.connect(subscriber);
+		});
+	}
 					
 	void tick()
-	{		
+	{				
+		if(output_.empty())
+			return;				
+
 		output_(draw());
 		executor_.begin_invoke([=]{tick();});
 	}
@@ -184,8 +195,9 @@ public:
 	}
 };
 
-frame_producer_device::frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output) : impl_(new implementation(parent_printer, factory, output)){}
+frame_producer_device::frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory) : impl_(new implementation(parent_printer, factory)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
+boost::signals2::connection frame_producer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
 void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview){impl_->load(index, producer, play_on_load, preview);}
 void frame_producer_device::pause(int index){impl_->pause(index);}

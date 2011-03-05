@@ -117,7 +117,7 @@ public:
 		model_name_ = std::wstring(pModelName);
 				
 		graph_ = diagnostics::create_graph(narrow(print()));
-		graph_->guide("tick-time", 0.5);
+		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		
 		auto display_mode = get_display_mode(output_.p, format_desc_.format);
@@ -252,7 +252,7 @@ public:
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
 		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
-		graph_->update("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+		graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 		perf_timer_.reset();
 	}
 

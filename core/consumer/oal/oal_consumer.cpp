@@ -50,7 +50,7 @@ public:
 		: graph_(diagnostics::create_graph(narrow(print())))
 		, container_(5)
 	{
-		graph_->guide("tick-time", 0.5);
+		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		is_running_ = true;
 	}
@@ -94,7 +94,7 @@ public:
 		data.Samples = container_.back().data();
 		data.NbSamples = container_.back().size();	
 		
-		graph_->update("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));		
+		graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));		
 		perf_timer_.reset();
 
 		return is_running_;

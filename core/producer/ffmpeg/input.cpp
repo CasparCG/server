@@ -164,11 +164,11 @@ public:
 		else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
 			executor_.stop();
 		else
-			graph_->tag("seek");
+			graph_->add_tag("seek");
 
 		boost::this_thread::yield();
 			
-		graph_->update("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
+		graph_->update_value("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
 		
 		executor_.begin_invoke([this]{read_file();});		
 		boost::unique_lock<boost::mutex> lock(mutex_);
