@@ -113,9 +113,10 @@ public:
 			url_fclose(oc_->pb); // Close the output ffmpeg.
 	}
 
-	void initialize(const video_format_desc& format_desc)
+	void initialize(const video_format_desc& format_desc, const printer& parent_printer)
 	{
 		format_desc_ = format_desc;
+		parent_printer_ = parent_printer;
 		executor_.start();
 		active_ = executor_.begin_invoke([]{});
 
@@ -192,11 +193,6 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";
 	}
 	
-	void set_parent_printer(const printer& parent_printer) 
-	{
-		parent_printer_ = parent_printer;
-	}
-
 	std::wstring print() const
 	{
 		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"ffmpeg[" + widen(filename_) + L"]";
@@ -404,8 +400,7 @@ ffmpeg_consumer::ffmpeg_consumer(const std::wstring& filename) : impl_(new imple
 ffmpeg_consumer::ffmpeg_consumer(ffmpeg_consumer&& other) : impl_(std::move(other.impl_)){}
 void ffmpeg_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t ffmpeg_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void ffmpeg_consumer::initialize(const video_format_desc& format_desc) {impl_->initialize(format_desc);}
-void ffmpeg_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
+void ffmpeg_consumer::initialize(const video_format_desc& format_desc, const printer& parent_printer) {impl_->initialize(format_desc, parent_printer);}
 std::wstring ffmpeg_consumer::print() const {return impl_->print();}
 
 safe_ptr<frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params)

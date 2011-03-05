@@ -143,11 +143,12 @@ public:
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
-	void initialize(const video_format_desc& format_desc)
+	void initialize(const video_format_desc& format_desc, const printer& parent_printer)
 	{
 		blue_initialize();
 		
 		format_desc_ = format_desc;
+		parent_printer_ = parent_printer;
 
 		blue_.reset(BlueVelvetFactory4());
 
@@ -252,12 +253,7 @@ public:
 
 		CASPAR_LOG(info) << print() << TEXT(" Successfully initialized for ") << format_desc_ << TEXT(".");
 	}
-
-	void set_parent_printer(const printer& parent_printer)
-	{
-		parent_printer_ = parent_printer;
-	}
-	
+		
 	void enable_video_output()
 	{
 		if(!BLUE_PASS(set_card_property(blue_, VIDEO_BLACKGENERATOR, 0)))
@@ -361,8 +357,7 @@ public:
 
 bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
 bluefish_consumer::bluefish_consumer(unsigned int device_index, bool embed_audio) : impl_(new implementation(device_index, embed_audio)){}	
-void bluefish_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
-void bluefish_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
+void bluefish_consumer::initialize(const video_format_desc& format_desc, const printer& parent_printer){impl_->initialize(format_desc, parent_printer);}
 void bluefish_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t bluefish_consumer::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring bluefish_consumer::print() const {return impl_->print();}	
