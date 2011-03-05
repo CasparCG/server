@@ -26,8 +26,7 @@
 #include <unordered_map>
 
 namespace caspar { namespace core {
-	
-	
+		
 template<typename T>
 class basic_animated_value
 {
@@ -61,14 +60,14 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	const printer			parent_printer_;
 	const video_format_desc format_desc_;
 
-	safe_ptr<diagnostics::graph> graph_;
+	safe_ptr<diagnostics::graph> diag_;
 	timer perf_timer_;
 	timer wait_perf_timer_;
 
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
 
-	output_func output_;
+	output_t output_;
 
 	std::unordered_map<int, basic_animated_value<image_transform>> image_transforms_;
 	std::unordered_map<int, basic_animated_value<audio_transform>> audio_transforms_;
@@ -78,74 +77,88 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	executor executor_;
 public:
-	implementation(const printer& parent_printer, const video_format_desc& format_desc, const output_func& output) 
+	implementation(const printer& parent_printer, const video_format_desc& format_desc) 
 		: parent_printer_(parent_printer)
 		, format_desc_(format_desc)
-		, graph_(diagnostics::create_graph(narrow(print())))
+		, diag_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(format_desc)
-		, output_(output)
 		, executor_(print())
 	{
-		graph_->guide("frame-time", 0.5f);	
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
-		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));		
+		diag_->add_guide("frame-time", 0.5f);	
+		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
+		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));		
 		executor_.start();
 		executor_.set_capacity(2);
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
+	}
+
+	boost::signals2::connection connect(const output_t::slot_type& subscriber)
+	{
+		return output_.connect(subscriber);
+	}
+
+	boost::unique_future<safe_ptr<const host_buffer>> mix_image(const std::vector<safe_ptr<draw_frame>>& frames)
+	{
+		auto image = image_mixer_.begin_pass();
+		BOOST_FOREACH(auto& frame, frames)
+		{
+			if(format_desc_.mode != video_mode::progressive)
+			{
+				auto frame1 = make_safe<draw_frame>(frame);
+				auto frame2 = make_safe<draw_frame>(frame);
+
+				frame1->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
+				frame2->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
+
+				if(frame1->get_image_transform() != frame2->get_image_transform())
+					draw_frame::interlace(frame1, frame2, format_desc_.mode)->process_image(image_mixer_);
+				else
+					frame2->process_image(image_mixer_);
+			}
+			else
+			{
+				auto frame1 = make_safe<draw_frame>(frame);
+				frame1->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
+				frame1->process_image(image_mixer_);
+			}
+		}
+		image_mixer_.end_pass();
+		return std::move(image);
+	}
+
+	std::vector<short> mix_audio(const std::vector<safe_ptr<draw_frame>>& frames)
+	{
+		auto audio = audio_mixer_.begin_pass();
+		BOOST_FOREACH(auto& frame, frames)
+		{
+			int num = format_desc_.mode == video_mode::progressive ? 1 : 2;
+
+			auto frame1 = make_safe<draw_frame>(frame);
+			frame1->get_audio_transform() = root_audio_transform_.fetch_and_tick(num)*audio_transforms_[frame->get_layer_index()].fetch_and_tick(num);
+			frame1->process_audio(audio_mixer_);
+		}
+		audio_mixer_.end_pass();
+		return audio;
 	}
 		
 	void send(const std::vector<safe_ptr<draw_frame>>& frames)
 	{			
 		executor_.begin_invoke([=]
-		{
+		{			
+			diag_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 			perf_timer_.reset();
-			auto image = image_mixer_.begin_pass();
-			BOOST_FOREACH(auto& frame, frames)
-			{
-				if(format_desc_.mode != video_mode::progressive)
-				{
-					auto frame1 = make_safe<draw_frame>(frame);
-					auto frame2 = make_safe<draw_frame>(frame);
 
-					frame1->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
-					frame2->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
-
-					if(frame1->get_image_transform() != frame2->get_image_transform())
-						draw_frame::interlace(frame1, frame2, format_desc_.mode)->process_image(image_mixer_);
-					else
-						frame2->process_image(image_mixer_);
-				}
-				else
-				{
-					auto frame1 = make_safe<draw_frame>(frame);
-					frame1->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
-					frame1->process_image(image_mixer_);
-				}
-			}
-			image_mixer_.end_pass();
-
-			auto audio = audio_mixer_.begin_pass();
-			BOOST_FOREACH(auto& frame, frames)
-			{
-				int num = format_desc_.mode == video_mode::progressive ? 1 : 2;
-
-				auto frame1 = make_safe<draw_frame>(frame);
-				frame1->get_audio_transform() = root_audio_transform_.fetch_and_tick(num)*audio_transforms_[frame->get_layer_index()].fetch_and_tick(num);
-				frame1->process_audio(audio_mixer_);
-			}
-			audio_mixer_.end_pass();
-
-			graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
-
+			auto image = mix_image(frames);
+			auto audio = mix_audio(frames);
 			output_(make_safe<const read_frame>(std::move(image.get()), std::move(audio)));
 
-			graph_->update("tick-time", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
+			diag_->update_value("tick-time", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
 			wait_perf_timer_.reset();
 
-			graph_->set("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 		});
-		graph_->set("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+		diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}
 		
 	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc)
@@ -239,8 +252,9 @@ public:
 	}
 };
 	
-frame_mixer_device::frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc, const output_func& output) : impl_(new implementation(parent_printer, format_desc, output)){}
+frame_mixer_device::frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc) : impl_(new implementation(parent_printer, format_desc)){}
 frame_mixer_device::frame_mixer_device(frame_mixer_device&& other) : impl_(std::move(other.impl_)){}
+boost::signals2::connection frame_mixer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
 void frame_mixer_device::send(const std::vector<safe_ptr<draw_frame>>& frames){impl_->send(frames);}
 const video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->format_desc_; }
 safe_ptr<write_frame> frame_mixer_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		

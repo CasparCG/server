@@ -41,6 +41,8 @@
 #if !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
 #define AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_
 
+#define BOOST_PARAMETER_MAX_ARITY 7
+
 #ifdef _DEBUG
 #include <crtdbg.h>
 #endif
@@ -69,6 +71,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/signals2.hpp>
 
 #include <GLee.h>
 

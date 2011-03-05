@@ -10,6 +10,8 @@
 
 #include <functional>
 
+#include <boost/signals2.hpp>
+
 namespace caspar { namespace core {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,9 +28,11 @@ namespace caspar { namespace core {
 class frame_producer_device : boost::noncopyable
 {
 public:
-	typedef std::function<void(const std::vector<safe_ptr<draw_frame>>&)> output_func;
+	typedef boost::signals2::signal<void(const std::vector<safe_ptr<draw_frame>>&)> output_t;
+	 
+	boost::signals2::connection connect(const output_t::slot_type& subscriber);
 
-	explicit frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory, const output_func& output);
+	explicit frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory);
 	frame_producer_device(frame_producer_device&& other);
 	void swap(frame_producer_device& other);
 		

@@ -50,7 +50,7 @@ public:
 		
 	{
 		graph_ = diagnostics::create_graph(boost::bind(&ffmpeg_producer::print, this));	
-		graph_->guide("frame-time", 0.5);
+		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
 	}
 	
@@ -147,7 +147,7 @@ public:
 				return last_frame_;			
 		}
 		
-		graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_factory_->get_video_format_desc().interval*0.5));
+		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_factory_->get_video_format_desc().interval*0.5));
 
 		auto result = last_frame_;
 		if(!ouput_channel_.empty())

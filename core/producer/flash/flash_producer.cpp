@@ -91,7 +91,7 @@ public:
 		, ax_(nullptr)
 		, head_(draw_frame::empty())
 	{
-		graph_->guide("frame-time", 0.5f);
+		graph_->add_guide("frame-time", 0.5f);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));			
@@ -147,7 +147,7 @@ public:
 	{		
 		if(!ax_->FlashCall(param))
 			CASPAR_LOG(warning) << print() << " Flash function call failed. Param: " << param << ".";
-		graph_->tag("param");
+		graph_->add_tag("param");
 
 		if(abs(ax_->GetFPS() / format_desc_.fps) > 0.001)
 			CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << ax_->GetFPS() << L". Should be either " << format_desc_.fps << L" or " << format_desc_.fps*2.0 << L".";
@@ -174,7 +174,7 @@ private:
 	safe_ptr<draw_frame> render_simple_frame(bool underflow)
 	{
 		if(underflow)
-			graph_->tag("underflow");
+			graph_->add_tag("underflow");
 
 		double frame_time = 1.0/ax_->GetFPS()*(underflow ? 0.90 : 1.0); // Reduce sync-time if in underflow.
 		timer_.tick(frame_time); // Tick doesnt work on nested timelines, force an actual sync
@@ -192,7 +192,7 @@ private:
 			head_ = frame;
 		}		
 		
-		graph_->update("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_time));
+		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_time));
 		return head_;
 	}
 };
@@ -262,7 +262,7 @@ public:
 		if(!renderer_)
 			return draw_frame::empty();
 		
-		graph_->set("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
+		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		if(!frame_buffer_.try_pop(tail_))
 			return tail_;
 
@@ -276,7 +276,7 @@ public:
 				auto frame = draw_frame::empty();
 				do{frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);}
 				while(frame_buffer_.try_push(frame) && frame == draw_frame::empty());
-				graph_->set("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
+				graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 				fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));
 			}
 			catch(...)

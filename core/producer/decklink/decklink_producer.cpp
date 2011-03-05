@@ -106,7 +106,7 @@ public:
 		model_name_ = std::wstring(pModelName);
 
 		graph_ = diagnostics::create_graph(boost::bind(&decklink_input::print, this));
-		graph_->guide("tick-time", 0.5);
+		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		
 		unsigned long decklinkVideoFormat = GetDecklinkVideoFormat(format_desc.format);
@@ -159,7 +159,7 @@ public:
 	// TODO: Enable audio input
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
 	{	
-		graph_->update("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+		graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 		perf_timer_.reset();
 
 		if(!video)

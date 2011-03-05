@@ -38,6 +38,8 @@
 #	endif
 #endif
 
+#define BOOST_PARAMETER_MAX_ARITY 7
+
 #ifdef _DEBUG
 #include <crtdbg.h>
 #endif
@@ -65,6 +67,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/signals2.hpp>
 
 #include <GLee.h>
 

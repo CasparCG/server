@@ -30,31 +30,26 @@ struct channel::implementation : boost::noncopyable
 {					
 	const int index_;
 	const video_format_desc format_desc_;
+	
+	const std::shared_ptr<frame_mixer_device>	 mixer_;
+	const std::shared_ptr<frame_consumer_device> consumer_;
+	const std::shared_ptr<frame_producer_device> producer_;
 
-	std::shared_ptr<frame_consumer_device>	consumer_;
-	std::shared_ptr<frame_mixer_device>		mixer_;
-	std::shared_ptr<frame_producer_device>	producer_;
+	boost::signals2::scoped_connection mixer_connection_;
+	boost::signals2::scoped_connection producer_connection_;
 
 public:
 	implementation(int index, const video_format_desc& format_desc)  
 		: index_(index)
 		, format_desc_(format_desc)
 		, consumer_(new frame_consumer_device(std::bind(&implementation::print, this), format_desc))
-		, mixer_(new frame_mixer_device(std::bind(&implementation::print, this), format_desc, std::bind(&frame_consumer_device::send, consumer_.get(), std::placeholders::_1)))
-		, producer_(new frame_producer_device(std::bind(&implementation::print, this), safe_ptr<frame_factory>(mixer_), std::bind(&frame_mixer_device::send, mixer_.get(), std::placeholders::_1)))	{}
-
-	~implementation()
+		, mixer_(new frame_mixer_device(std::bind(&implementation::print, this), format_desc))
+		, producer_(new frame_producer_device(std::bind(&implementation::print, this), safe_ptr<frame_factory>(mixer_)))	
 	{
-		// Shutdown order is important! Destroy all created frames to mixer before destroying mixer.
-		CASPAR_LOG(info) << print() << " Shutting down channel.";
-		producer_.reset();
-		CASPAR_LOG(info) << print() << " Successfully shutdown producer-device.";
-		consumer_.reset();
-		CASPAR_LOG(info) << print() << " Successfully shutdown consumer-device.";
-		mixer_.reset();
-		CASPAR_LOG(info) << print() << " Successfully shutdown mixer-device.";
+		mixer_connection_ = mixer_->connect([=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);});
+		producer_connection_ = producer_->connect([=](const std::vector<safe_ptr<draw_frame>>& frames){mixer_->send(frames);});
 	}
-
+		
 	std::wstring print() const
 	{
 		return L"channel[" + boost::lexical_cast<std::wstring>(index_+1) + L"-" +  format_desc_.name + L"]";
