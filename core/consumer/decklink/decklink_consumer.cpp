@@ -355,12 +355,14 @@ std::vector<std::wstring> get_decklink_device_list()
 {
 	std::vector<std::wstring> devices;
 	::CoInitialize(nullptr);
+
+	try
 	{
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
 			return devices;
 		
-		CComPtr<IDeckLink>	decklink;
+		CComPtr<IDeckLink> decklink;
 		for(int n = 0; pDecklinkIterator->Next(&decklink) == S_OK; ++n)	
 		{
 			BSTR model_name = L"Unknown";
@@ -368,6 +370,7 @@ std::vector<std::wstring> get_decklink_device_list()
 			devices.push_back(L"[" + boost::lexical_cast<std::wstring>(n) + L"] " + model_name);	
 		}
 	}
+	catch(...){}
 
 	::CoUninitialize();
 
@@ -383,12 +386,14 @@ safe_ptr<frame_consumer> create_decklink_consumer(const std::vector<std::wstring
 	bool embed_audio = false;
 	bool internal_key = false;
 
-	try{if(params.size() > 1) device_index = boost::lexical_cast<int>(params[2]);}
-	catch(boost::bad_lexical_cast&){}
-	try{if(params.size() > 2) embed_audio = boost::lexical_cast<bool>(params[3]);}
-	catch(boost::bad_lexical_cast&){}
-	try{if(params.size() > 3) internal_key = boost::lexical_cast<bool>(params[4]);}
-	catch(boost::bad_lexical_cast&){}
+	if(params.size() > 1) 
+		device_index = lexical_cast_or_default<int>(params[2], device_index);
+
+	if(params.size() > 2)
+		embed_audio = lexical_cast_or_default<bool>(params[3], embed_audio);
+	
+	if(params.size() > 3) 
+		internal_key = lexical_cast_or_default<bool>(params[4], internal_key);
 
 	return make_safe<decklink_consumer>(device_index, embed_audio, internal_key);
 }
