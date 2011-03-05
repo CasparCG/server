@@ -390,7 +390,7 @@ std::vector<std::wstring> get_bluefish_device_list()
 
 		for(int n = 0; BLUE_PASS(blue->device_attach(n, FALSE)); ++n)
 		{				
-			devices.push_back(L"[" + boost::lexical_cast<std::wstring>(n) + L"] " + get_card_desc(blue->has_video_cardtype()));
+			devices.push_back(L"[" + boost::lexical_cast<std::wstring>(n+1) + L"] " + get_card_desc(blue->has_video_cardtype()));
 			blue->device_detach();		
 		}
 	}
