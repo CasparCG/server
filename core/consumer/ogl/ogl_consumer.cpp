@@ -297,10 +297,11 @@ safe_ptr<frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& pa
 	stretch stretch = stretch::fill;
 	bool windowed = true;
 	
-	try{if(params.size() > 1) screen_index = boost::lexical_cast<int>(params[2]);}
-	catch(boost::bad_lexical_cast&){}
-	try{if(params.size() > 2) windowed = boost::lexical_cast<bool>(params[3]);}
-	catch(boost::bad_lexical_cast&){}
+	if(params.size() > 1) 
+		screen_index = lexical_cast_or_default<int>(params[2], screen_index);
+
+	if(params.size() > 2) 
+		windowed = lexical_cast_or_default<bool>(params[3], windowed);
 
 	return make_safe<ogl_consumer>(screen_index, stretch, windowed);
 }
