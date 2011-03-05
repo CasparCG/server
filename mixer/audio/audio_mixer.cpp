@@ -55,7 +55,7 @@ public:
 					double delta = static_cast<double>(n)/static_cast<double>(audio_data_.size());
 					double sample_gain = prev_gain * (1.0 - delta) + next_gain * delta;
 					int sample = static_cast<int>(audio_data[n]);
-					sample = (static_cast<int>(sample_gain*8192.0)*sample)/8192;
+					sample = (static_cast<int>(sample_gain*static_cast<double>(1<<15))*sample)>>15;
 					audio_data_[n] = static_cast<short>((static_cast<int>(audio_data_[n]) + sample) & 0xFFFF);
 				}
 			}
