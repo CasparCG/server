@@ -339,13 +339,15 @@ std::wstring get_decklink_version()
 	std::wstring version = L"Unknown";
 
 	::CoInitialize(nullptr);
+
+	try
 	{
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
-		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-			return L"Unknown";
-		
-		version = get_version(pDecklinkIterator);
+		if(SUCCEEDED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))		
+			version = get_version(pDecklinkIterator);
 	}
+	catch(...){}
+
 	::CoUninitialize();
 
 	return version;
