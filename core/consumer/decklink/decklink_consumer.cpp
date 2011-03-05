@@ -87,7 +87,7 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	tbb::concurrent_bounded_queue<safe_ptr<const read_frame>> audio_frame_buffer_;
 
 public:
-	decklink_output(const printer& parent_printer, size_t device_index, bool embed_audio, bool internalKey) 
+	decklink_output(const video_format_desc& format_desc, const printer& parent_printer, size_t device_index, bool embed_audio, bool internalKey) 
 		: parent_printer_(parent_printer)
 		, model_name_(L"DECKLINK")
 		, device_index_(device_index)
@@ -96,21 +96,7 @@ public:
 		, internal_key(internalKey)
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
-	{}
-
-	~decklink_output()
-	{			
-		if(output_ != nullptr) 
-		{
-			output_->StopScheduledPlayback(0, nullptr, 0);
-			if(embed_audio_)
-				output_->DisableAudioOutput();
-			output_->DisableVideoOutput();
-		}
-		CASPAR_LOG(info) << print() << L" Shutting down.";	
-	}
-
-	void initialize(const video_format_desc& format_desc)
+		, format_desc_(format_desc)
 	{
 		format_desc_ = format_desc;
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
@@ -203,7 +189,19 @@ public:
 		
 		CASPAR_LOG(info) << print() << L" Successfully initialized for " << format_desc_.name;	
 	}
-	
+
+	~decklink_output()
+	{			
+		if(output_ != nullptr) 
+		{
+			output_->StopScheduledPlayback(0, nullptr, 0);
+			if(embed_audio_)
+				output_->DisableAudioOutput();
+			output_->DisableVideoOutput();
+		}
+		CASPAR_LOG(info) << print() << L" Shutting down.";	
+	}
+			
 	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
 	virtual ULONG STDMETHODCALLTYPE		AddRef ()							{return 1;}
 	virtual ULONG STDMETHODCALLTYPE		Release ()							{return 1;}
@@ -273,20 +271,21 @@ public:
 
 struct decklink_consumer::implementation
 {
-	printer parent_printer_;
 	std::unique_ptr<decklink_output> input_;
+	size_t device_index_;
+	bool embed_audio_;
+	bool internal_key_;
 
 	executor executor_;
 public:
 
-	implementation(size_t device_index, bool embed_audio, bool internalKey)
-		: executor_(L"DECKLINK[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
+	implementation(size_t device_index, bool embed_audio, bool internal_key)
+		: device_index_(device_index)
+		, embed_audio_(embed_audio)
+		, internal_key_(internal_key)
+		, executor_(L"DECKLINK[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 	{
 		executor_.start();
-		executor_.invoke([&]
-		{
-			input_.reset(new decklink_output(parent_printer_, device_index, embed_audio, internalKey));
-		});
 	}
 
 	~implementation()
@@ -297,19 +296,14 @@ public:
 		});
 	}
 
-	void initialize(const video_format_desc& format_desc)
+	void initialize(const video_format_desc& format_desc, const printer& parent_printer)
 	{
 		executor_.invoke([&]
 		{
-			input_->initialize(format_desc);
+			input_.reset(new decklink_output(format_desc, parent_printer, device_index_, embed_audio_, internal_key_));
 		});
 	}
-
-	void set_parent_printer(const printer& parent_printer)
-	{
-		parent_printer_ = parent_printer;
-	}
-
+	
 	void send(const safe_ptr<const read_frame>& frame)
 	{
 		input_->send(frame);
@@ -328,8 +322,7 @@ public:
 
 decklink_consumer::decklink_consumer(size_t device_index, bool embed_audio, bool internalKey) : impl_(new implementation(device_index, embed_audio, internalKey)){}
 decklink_consumer::decklink_consumer(decklink_consumer&& other) : impl_(std::move(other.impl_)){}
-void decklink_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
-void decklink_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
+void decklink_consumer::initialize(const video_format_desc& format_desc, const printer& parent_printer){impl_->initialize(format_desc, parent_printer);}
 void decklink_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring decklink_consumer::print() const{return impl_->print();}
