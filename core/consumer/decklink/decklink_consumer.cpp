@@ -339,7 +339,6 @@ std::wstring get_decklink_version()
 	std::wstring version = L"Unknown";
 
 	::CoInitialize(nullptr);
-
 	try
 	{
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
@@ -347,7 +346,6 @@ std::wstring get_decklink_version()
 			version = get_version(pDecklinkIterator);
 	}
 	catch(...){}
-
 	::CoUninitialize();
 
 	return version;
@@ -356,8 +354,8 @@ std::wstring get_decklink_version()
 std::vector<std::wstring> get_decklink_device_list()
 {
 	std::vector<std::wstring> devices;
-	::CoInitialize(nullptr);
 
+	::CoInitialize(nullptr);
 	try
 	{
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
@@ -373,7 +371,6 @@ std::vector<std::wstring> get_decklink_device_list()
 		}
 	}
 	catch(...){}
-
 	::CoUninitialize();
 
 	return devices;
