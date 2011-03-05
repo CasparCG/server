@@ -336,11 +336,19 @@ std::wstring decklink_consumer::print() const{return impl_->print();}
 
 std::wstring get_decklink_version() 
 {
-	CComPtr<IDeckLinkIterator> pDecklinkIterator;
-	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-		return L"Unknown";
+	std::wstring version = L"Unknown";
+
+	::CoInitialize(nullptr);
+	{
+		CComPtr<IDeckLinkIterator> pDecklinkIterator;
+		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
+			return L"Unknown";
 		
-	return get_version(pDecklinkIterator);
+		version = get_version(pDecklinkIterator);
+	}
+	::CoUninitialize();
+
+	return version;
 }
 
 std::vector<std::wstring> get_decklink_device_list()
