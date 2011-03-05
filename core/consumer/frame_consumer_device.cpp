@@ -51,8 +51,7 @@ public:
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
-		consumer->set_parent_printer(std::bind(&implementation::print, this));
-		consumer->initialize(format_desc_);
+		consumer->initialize(format_desc_, std::bind(&implementation::print, this));
 		executor_.invoke([&]
 		{
 			if(buffer_.capacity() < consumer->buffer_depth())

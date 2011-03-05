@@ -64,9 +64,10 @@ public:
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
-	void initialize(const video_format_desc& format_desc)
+	void initialize(const video_format_desc& format_desc, const printer& parent_printer)
 	{
 		format_desc_ = format_desc;
+		parent_printer_ = parent_printer;
 		for(size_t n = 0; n < buffer_depth(); ++n)
 			input_.push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)); 
 		sf::SoundStream::Initialize(2, 48000);
@@ -74,11 +75,6 @@ public:
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 
-	void set_parent_printer(const printer& parent_printer)
-	{
-		parent_printer_ = parent_printer;
-	}
-			
 	void send(const safe_ptr<const read_frame>& frame)
 	{				
 		if(!frame->audio_data().empty())
@@ -114,8 +110,7 @@ oal_consumer::oal_consumer(oal_consumer&& other) : impl_(std::move(other.impl_))
 oal_consumer::oal_consumer() : impl_(new implementation()){}
 void oal_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t oal_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void oal_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
-void oal_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
+void oal_consumer::initialize(const video_format_desc& format_desc, const printer& parent_printer){impl_->initialize(format_desc, parent_printer);}
 std::wstring oal_consumer::print() const { return impl_->print(); }
 
 safe_ptr<frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)

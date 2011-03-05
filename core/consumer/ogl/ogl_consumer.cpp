@@ -93,12 +93,13 @@ public:
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
-	void initialize(const video_format_desc& format_desc)
+	void initialize(const video_format_desc& format_desc, const printer& parent_printer)
 	{
 		if(!GLEE_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
-
+		
 		format_desc_ = format_desc;
+		parent_printer_ = parent_printer;
 
 		screen_width_ = format_desc.width;
 		screen_height_ = format_desc.height;
@@ -183,12 +184,7 @@ public:
 		active_ = executor_.begin_invoke([]{});
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
-
-	void set_parent_printer(const printer& parent_printer)
-	{
-		parent_printer_ = parent_printer;
-	}
-	
+		
 	std::pair<float, float> None()
 	{
 		float width = static_cast<float>(format_desc_.width)/static_cast<float>(screen_width_);
@@ -284,8 +280,7 @@ ogl_consumer::ogl_consumer(ogl_consumer&& other) : impl_(std::move(other.impl_))
 ogl_consumer::ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed) : impl_(new implementation(screen_index, stretch, windowed)){}
 void ogl_consumer::send(const safe_ptr<const read_frame>& frame){impl_->send(frame);}
 size_t ogl_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void ogl_consumer::initialize(const video_format_desc& format_desc){impl_->initialize(format_desc);}
-void ogl_consumer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
+void ogl_consumer::initialize(const video_format_desc& format_desc, const printer& parent_printer){impl_->initialize(format_desc, parent_printer);}
 std::wstring ogl_consumer::print() const {return impl_->print();}
 
 safe_ptr<frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params)
