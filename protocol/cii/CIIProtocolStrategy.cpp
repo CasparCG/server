@@ -23,10 +23,9 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
-#include "../media.h"
 #include "CIIProtocolStrategy.h"
 #include "CIICommandsimpl.h"
-#include <core/producer/flash/flash_producer.h>
+#include <modules/flash/producer/flash_producer.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/producer/frame_producer.h>
 #include <common/env.h>
@@ -175,14 +174,14 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 		fullTemplateFilename += TEXT("\\");
 	}
 	fullTemplateFilename += templateName;
-	fullTemplateFilename = core::flash::flash_producer::find_template(fullTemplateFilename);
+	fullTemplateFilename = flash_producer::find_template(fullTemplateFilename);
 	if(fullTemplateFilename.empty())
 	{
 		CASPAR_LOG(error) << "Failed to save instance of " << templateName << TEXT(" as ") << titleName << TEXT(", template ") << fullTemplateFilename << " not found";
 		return;
 	}
 	
-	auto producer = core::flash::flash_producer(env::template_folder()+TEXT("CG.fth"));
+	auto producer = flash_producer(env::template_folder()+TEXT("CG.fth"));
 
 	std::wstringstream flashParam;
 	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");
@@ -216,7 +215,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition.duration = 12;
 
 	auto pFP = create_producer(boost::assign::list_of(filename));
-	auto pTransition = safe_ptr<core::frame_producer>(transition_producer(pFP, transition));
+	auto pTransition = make_safe<core::transition_producer>(pFP, transition);
 
 	try
 	{

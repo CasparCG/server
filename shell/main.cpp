@@ -18,7 +18,8 @@
 *
 */
 
-#include <Windows.h>
+#include <windows.h>
+#include <conio.h>
 
 #include <tbb/tbbmalloc_proxy.h>
 #include <tbb/task_scheduler_observer.h>
@@ -29,48 +30,34 @@
 	#include <crtdbg.h>
 #endif
 
-#include <conio.h>
-
 #include "bootstrapper.h"
 
-#include <core/producer/flash/flash_producer.h>
-#include <core/producer/flash/cg_producer.h>
-#include <core/producer/image/image_producer.h>
-#include <core/consumer/decklink/decklink_consumer.h>
-#include <core/consumer/bluefish/bluefish_consumer.h>
+#include <modules/bluefish/bluefish.h>
 
+#include <modules/decklink/decklink.h>
+#include <modules/flash/flash.h>
+#include <modules/ffmpeg/ffmpeg.h>
+#include <modules/image/image.h>
+
+#include <common/env.h>
 #include <common/exception/win32_exception.h>
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
-#include <common/env.h>
 #include <common/utility/assert.h>
 
 #include <mixer/gpu/ogl_device.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 
-#include <GLee.h>
-
 #include <boost/foreach.hpp>
 
-#if defined(_MSC_VER)
-#pragma warning (disable : 4244)
-#endif
-
-extern "C" 
-{
-	#define __STDC_CONSTANT_MACROS
-	#define __STDC_LIMIT_MACROS
-	#include <libavformat/avformat.h>
-	#include <libswscale/swscale.h>
-	#include <libavcodec/avcodec.h>
-}
-
-#include <atlbase.h>
+#include <Glee.h>
 
 using namespace caspar;
 using namespace caspar::core;
 using namespace caspar::protocol;
+
+#include <atlbase.h>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -117,9 +104,9 @@ void print_version()
 {	
 	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
 	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
-	CASPAR_LOG(info) << L"Flash " << flash::get_flash_version();
-	CASPAR_LOG(info) << L"Flash-Template-Host " << flash::get_cg_version();
-	CASPAR_LOG(info) << L"FreeImage " << image::get_image_version();
+	CASPAR_LOG(info) << L"Flash " << get_flash_version();
+	CASPAR_LOG(info) << L"Flash-Template-Host " << get_cg_version();
+	CASPAR_LOG(info) << L"FreeImage " << get_image_version();
 	
 	std::wstring decklink_devices;
 	BOOST_FOREACH(auto& device, get_decklink_device_list())
@@ -131,9 +118,9 @@ void print_version()
 		bluefish_devices += L"\t" + device;
 	CASPAR_LOG(info) << L"Bluefish " << get_bluefish_version() << (bluefish_devices.empty() ? L"" : L"\n\tDevices:\n" + bluefish_devices);
 
-	CASPAR_LOG(info) << L"FFMPEG-avcodec " << ((avcodec_version() >> 16) & 0xFF) << L"." << ((avcodec_version() >> 8) & 0xFF) << L"." << ((avcodec_version() >> 0) & 0xFF);
-	CASPAR_LOG(info) << L"FFMPEG-swscale " << ((avformat_version() >> 16) & 0xFF) << L"." << ((avformat_version() >> 8) & 0xFF) << L"." << ((avformat_version() >> 0) & 0xFF);
-	CASPAR_LOG(info) << L"FFMPEG-avformat " << ((swscale_version() >> 16) & 0xFF) << L"." << ((swscale_version() >> 8) & 0xFF) << L"." << ((swscale_version() >> 0) & 0xFF);
+	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << get_avcodec_version();
+	CASPAR_LOG(info) << L"FFMPEG-swscale "  << get_avformat_version();
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << get_swscale_version();
 	CASPAR_LOG(info) << L"OpenGL " << ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VERSION));})
 					 << L" "	   << ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VENDOR));});
 
@@ -143,50 +130,44 @@ void print_version()
 	{
 		wchar_t p_name_str[1024];
 		wchar_t csd_ver_str[1024];
-		wchar_t csd_build_str[1024];
 
 		dwType = REG_SZ;
 		dwSize = sizeof(p_name_str);
 
-		RegQueryValueEx(hkey, TEXT("ProductName"), NULL, &dwType, (PBYTE)&p_name_str, &dwSize);
-		RegQueryValueEx(hkey, TEXT("CSDVersion"), NULL, &dwType, (PBYTE)&csd_ver_str, &dwSize);
-		RegQueryValueEx(hkey, TEXT("CSDBuildNumber"), NULL, &dwType, (PBYTE)&csd_build_str, &dwSize);
- 
+		if(RegQueryValueEx(hkey, TEXT("ProductName"), NULL, &dwType, (PBYTE)&p_name_str, &dwSize) == ERROR_SUCCESS &&
+		   RegQueryValueEx(hkey, TEXT("CSDVersion"), NULL, &dwType, (PBYTE)&csd_ver_str, &dwSize) == ERROR_SUCCESS)		
+		{
+			CASPAR_LOG(info) << p_name_str << L" " << csd_ver_str << L"." << L"\n";
+		}
+		else
+			CASPAR_LOG(warning) << "Could not read OS info." << L"\n";
+		 
 		RegCloseKey(hkey);
-
-		CASPAR_LOG(info) << p_name_str << L" " << csd_ver_str << L"." << csd_build_str << L"\n";
 	}
 }
  
 int main(int argc, wchar_t* argv[])
 {	
-	try 
-	{
-		win32_handler_tbb_installer win32_handler_tbb_installer;
-		win32_exception::install_handler();
-
-		env::initialize("caspar.config");
-
-		// Init FFMPEG
-		av_register_all();
-		avcodec_init();
-
-		// Increase time precision
-		timeBeginPeriod(1);
-
-		// Start caspar
-
-		setup_console_window();
-
 	#ifdef _DEBUG
 		_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
 		_CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );
 		_CrtSetReportMode( _CRT_WARN, _CRTDBG_MODE_DEBUG );
 		_CrtSetReportMode( _CRT_ASSERT, _CRTDBG_MODE_DEBUG );
 
-		MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
+		if(env::properties().get("configuration.debugging.remote", false))
+			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 	#endif
-					 
+		
+	// Increase time precision
+	timeBeginPeriod(1);
+	win32_handler_tbb_installer win32_handler_tbb_installer;
+	win32_exception::install_handler();
+
+	try 
+	{
+		env::initialize("caspar.config");
+		
+		setup_console_window();							 
 		log::add_file_sink(env::log_folder());
 
 		print_version();

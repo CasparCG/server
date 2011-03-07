@@ -67,4 +67,9 @@ safe_ptr<frame_producer> create_color_producer(const std::vector<std::wstring>& 
 	return make_safe<color_producer>(params[0]);
 }
 
+volatile struct reg
+{
+	reg(){register_producer_factory(create_color_producer);}
+} my_reg;
+
 }}
