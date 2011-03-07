@@ -26,6 +26,9 @@ public:
 
 	void process(const std::vector<short>& audio_data, int tag)
 	{		
+		if(!transform_stack_.top().get_has_audio())
+			return;
+
 		if(audio_data_.empty())
 			audio_data_.resize(audio_data.size(), 0);
 		

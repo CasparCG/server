@@ -24,7 +24,7 @@
 #include "CIICommandsImpl.h"
 #include <sstream>
 #include <algorithm>
-#include <core/producer/flash/cg_producer.h>
+#include <modules/flash/producer/cg_producer.h>
 
 namespace caspar { namespace protocol { namespace cii {
 
@@ -140,7 +140,7 @@ void MiscellaneousCommand::Execute()
 
 	//TODO: Need to be checked for validity
 	else if(state_ == 1)
-		core::flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->add(layer_, filename_, false, TEXT(""), xmlData_);
+		get_default_cg_producer(pCIIStrategy_->GetChannel())->add(layer_, filename_, false, TEXT(""), xmlData_);
 }
 
 
@@ -154,11 +154,11 @@ void KeydataCommand::Execute()
 
 	//TODO: Need to be checked for validity
 	else if(state_ == 1)
-		core::flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->stop(layer_, 0);
+		get_default_cg_producer(pCIIStrategy_->GetChannel())->stop(layer_, 0);
 	else if(state_ == 2)
-		core::flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->clear();
+		get_default_cg_producer(pCIIStrategy_->GetChannel())->clear();
 	else if(state_ == 3)
-		core::flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->play(layer_);
+		get_default_cg_producer(pCIIStrategy_->GetChannel())->play(layer_);
 }
 
 void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {

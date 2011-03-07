@@ -25,6 +25,7 @@
 #include <boost/noncopyable.hpp>
 
 #include <string>
+#include <vector>
 
 namespace caspar { namespace core {
 	
@@ -53,5 +54,10 @@ struct frame_consumer : boost::noncopyable
 		return consumer;
 	}
 };
+
+typedef std::function<safe_ptr<core::frame_consumer>(const std::vector<std::wstring>&)> consumer_factory_t;
+
+void register_consumer_factory(const consumer_factory_t& factory);
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
 
 }}

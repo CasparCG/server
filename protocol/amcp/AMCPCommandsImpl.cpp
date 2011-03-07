@@ -23,15 +23,14 @@
 #include "AMCPCommandsImpl.h"
 #include "AMCPProtocolStrategy.h"
 
-#include "../media.h"
-
 #include <common/env.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
-#include <core/producer/flash/flash_producer.h>
+#include <modules/flash/flash.h>
+#include <modules/flash/producer/flash_producer.h>
+#include <modules/flash/producer/cg_producer.h>
 #include <core/producer/transition/transition_producer.h>
-#include <core/producer/flash/cg_producer.h>
 
 #include <mixer/image/image_transform.h>
 #include <mixer/audio/audio_transform.h>
@@ -511,9 +510,9 @@ bool LoadbgCommand::DoExecute()
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
-		pFP = safe_ptr<core::frame_producer>(transition_producer(pFP, transitionInfo));
+		auto pFP2 = make_safe<core::transition_producer>(pFP, transitionInfo);
 		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();
-		GetChannel()->producer().load(GetLayerIndex(), pFP, autoPlay); // TODO: LOOP
+		GetChannel()->producer().load(GetLayerIndex(), pFP2, autoPlay); // TODO: LOOP
 	
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
@@ -709,14 +708,14 @@ bool CGCommand::DoExecuteAdd() {
 		}
 	}
 
-	std::wstring fullFilename = core::flash::flash_producer::find_template(env::template_folder() + _parameters[2]);
+	std::wstring fullFilename = flash_producer::find_template(env::template_folder() + _parameters[2]);
 	if(!fullFilename.empty())
 	{
 		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
 		std::wstring filename = _parameters[2];
 		filename.append(extension);
 
-		core::flash::get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(core::flash::cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
+		get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
 		SetReplyString(TEXT("202 CG OK\r\n"));
 	}
 	else
@@ -737,7 +736,7 @@ bool CGCommand::DoExecutePlay()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		core::flash::get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(core::flash::cg_producer::DEFAULT_LAYER))->play(layer);
+		get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->play(layer);
 	}
 	else
 	{
@@ -759,7 +758,7 @@ bool CGCommand::DoExecuteStop()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		core::flash::get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(core::flash::cg_producer::DEFAULT_LAYER))->stop(layer, 0);
+		get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->stop(layer, 0);
 	}
 	else 
 	{
@@ -781,7 +780,7 @@ bool CGCommand::DoExecuteNext()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		core::flash::get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(core::flash::cg_producer::DEFAULT_LAYER))->next(layer);
+		get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->next(layer);
 	}
 	else 
 	{
@@ -803,7 +802,7 @@ bool CGCommand::DoExecuteRemove()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		core::flash::get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(core::flash::cg_producer::DEFAULT_LAYER))->remove(layer);
+		get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->remove(layer);
 	}
 	else 
 	{
@@ -817,7 +816,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	core::flash::get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(core::flash::cg_producer::DEFAULT_LAYER))->clear();
+	get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->clear();
 	SetReplyString(TEXT("202 CG OK\r\n"));
 	return true;
 }
@@ -833,7 +832,7 @@ bool CGCommand::DoExecuteUpdate()
 		}
 		int layer = _ttoi(_parameters[1].c_str());
 		//TODO: Implement indirect data loading from file. Same as in Add
-		core::flash::get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(core::flash::cg_producer::DEFAULT_LAYER))->update(layer, _parameters[2]);
+		get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->update(layer, _parameters[2]);
 	}
 	else 
 	{
@@ -855,7 +854,7 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		core::flash::get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(core::flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters[2]);
+		get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters[2]);
 	}
 	else 
 	{
@@ -870,7 +869,7 @@ bool CGCommand::DoExecuteInvoke()
 bool CGCommand::DoExecuteInfo() 
 {
 	// TODO
-	//core::flash::get_default_cg_producer(GetChannel())->Info();
+	//get_default_cg_producer(GetChannel())->Info();
 	SetReplyString(TEXT("600 CG FAILED\r\n"));
 	return true;
 }
@@ -1067,9 +1066,9 @@ bool VersionCommand::DoExecute()
 	if(_parameters.size() > 0)
 	{
 		if(_parameters[0] == L"FLASH")
-			replyString = TEXT("201 VERSION OK\r\n FLASH: ") + flash::get_flash_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n FLASH: ") + get_flash_version() + TEXT("\r\n");
 		else if(_parameters[0] == L"TEMPLATEHOST")
-			replyString = TEXT("201 VERSION OK\r\n TEMPLATEHOST: ") + flash::get_cg_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n TEMPLATEHOST: ") + get_cg_version() + TEXT("\r\n");
 		else if(_parameters[0] != L"SERVER")
 			replyString = TEXT("403 VERSION ERROR\r\n");
 	}

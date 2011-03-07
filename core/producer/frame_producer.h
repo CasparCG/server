@@ -19,11 +19,11 @@
 */
 #pragma once
 
-#include "../mixer/frame/draw_frame.h"
-#include "../mixer/frame_factory.h"
-
 #include <common/memory/safe_ptr.h>
 #include <common/utility/printer.h>
+
+#include <mixer/frame/draw_frame.h>
+#include <mixer/frame_factory.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -104,5 +104,11 @@ inline std::wostream& operator<<(std::wostream& out, const safe_ptr<const frame_
 	out << producer->print().c_str();
 	return out;
 }
+
+typedef std::function<safe_ptr<core::frame_producer>(const std::vector<std::wstring>&)> producer_factory_t;
+
+void register_producer_factory(const producer_factory_t& factory);
+safe_ptr<core::frame_producer> create_producer(const std::vector<std::wstring>& params);
+
 
 }}

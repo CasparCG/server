@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="consumer">
+      <UniqueIdentifier>{4db7d9c3-08ea-4423-a303-f18737629268}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="producer">
+      <UniqueIdentifier>{c5a94fd1-4552-4f6d-97cd-24e44e662e0f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="producer\video">
+      <UniqueIdentifier>{4b0f3949-6dc5-4895-837f-4c3ef1759a90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="producer\audio">
+      <UniqueIdentifier>{6937307b-550f-48f8-9cc0-509de0e18ddc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="producer\ffmpeg_producer.cpp">
+      <Filter>producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\input.cpp">
+      <Filter>producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\video\video_decoder.cpp">
+      <Filter>producer\video</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\audio\audio_decoder.cpp">
+      <Filter>producer\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\ffmpeg_consumer.cpp">
+      <Filter>consumer</Filter>
+    </ClCompile>
+    <ClCompile Include="ffmpeg.cpp" />
+    <ClCompile Include="StdAfx.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="producer\ffmpeg_producer.h">
+      <Filter>producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\input.h">
+      <Filter>producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\video\video_decoder.h">
+      <Filter>producer\video</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\audio\audio_decoder.h">
+      <Filter>producer\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\ffmpeg_consumer.h">
+      <Filter>consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="ffmpeg.h" />
+  </ItemGroup>
+</Project>

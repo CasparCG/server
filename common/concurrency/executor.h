@@ -36,15 +36,17 @@ inline void SetThreadName(DWORD dwThreadID, LPCSTR szThreadName)
 	{
 		RaiseException( 0x406D1388, 0, sizeof(info)/sizeof(DWORD), (DWORD*)&info );
 	}
-	__except (EXCEPTION_CONTINUE_EXECUTION)
-	{
-	}	
+	__except (EXCEPTION_CONTINUE_EXECUTION){}	
 }
 
 }
 
 class executor : boost::noncopyable
 {
+	const std::string name_;
+	boost::thread thread_;
+	tbb::atomic<bool> is_running_;
+	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
 public:
 		
 	explicit executor(const std::wstring& name = L"executor") : name_(narrow(name))
@@ -159,12 +161,7 @@ private:
 		detail::SetThreadName(GetCurrentThreadId(), name_.c_str());
 		while(is_running_)
 			execute();
-	}
-	
-	std::string name_;
-	boost::thread thread_;
-	tbb::atomic<bool> is_running_;
-	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
+	}	
 };
 
 }

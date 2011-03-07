@@ -38,12 +38,14 @@
 #include "..\util\thread.h"
 
 #include "ProtocolStrategy.h"
-#include "SocketInfo.h"
 
 #include <tbb\mutex.h>
 
 namespace caspar {
 namespace IO {
+
+class SocketInfo;
+typedef std::shared_ptr<SocketInfo> SocketInfoPtr;
 
 typedef std::function<void(caspar::IO::SocketInfoPtr)> ClientDisconnectEvent;
 

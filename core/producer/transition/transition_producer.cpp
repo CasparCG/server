@@ -146,18 +146,18 @@ struct transition_producer::implementation : boost::noncopyable
 		
 		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		
-		// For interalced transitions; seperate fields into seperate frames which are transitioned accordingly.
-
+		// For interlaced transitions. Seperate fields into seperate frames which are transitioned accordingly.
+		
 		auto s_frame1 = make_safe<draw_frame>(src_frame);
 		auto s_frame2 = make_safe<draw_frame>(src_frame);
 
-		s_frame1->get_audio_transform().set_gain(0);
+		s_frame1->get_audio_transform().set_has_audio(false);
 		s_frame2->get_audio_transform().set_gain(1.0-alpha);
 
 		auto d_frame1 = make_safe<draw_frame>(dest_frame);
 		auto d_frame2 = make_safe<draw_frame>(dest_frame);
 		
-		d_frame1->get_audio_transform().set_gain(0);
+		d_frame1->get_audio_transform().set_has_audio(false);
 		d_frame2->get_audio_transform().set_gain(alpha);
 
 		if(info_.type == transition::mix)
@@ -184,7 +184,10 @@ struct transition_producer::implementation : boost::noncopyable
 			d_frame2->get_image_transform().set_key_scale(alpha, 1.0);			
 		}
 		
-		return draw_frame(draw_frame::interlace(s_frame1, s_frame2, format_desc_.mode), draw_frame::interlace(d_frame1, d_frame2, format_desc_.mode));
+		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, format_desc_.mode);
+		auto d_frame = draw_frame::interlace(d_frame1, d_frame2, format_desc_.mode);
+
+		return draw_frame(s_frame, d_frame);
 	}
 
 	std::wstring print() const

@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="producer">
+      <UniqueIdentifier>{46bdb484-2321-419b-a1c4-4b8d5d49fba9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{6abd09ae-2ad7-41fa-bfa5-f4614a07be8c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="producer\image_producer.cpp">
+      <Filter>producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\image_scroll_producer.cpp">
+      <Filter>producer</Filter>
+    </ClCompile>
+    <ClCompile Include="image.cpp" />
+    <ClCompile Include="util\image_loader.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="producer\image_producer.h">
+      <Filter>producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\image_scroll_producer.h">
+      <Filter>producer</Filter>
+    </ClInclude>
+    <ClInclude Include="image.h" />
+    <ClInclude Include="util\image_loader.h">
+      <Filter>util</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
