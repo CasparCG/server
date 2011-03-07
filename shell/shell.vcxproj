@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Amplify|Win32">
-      <Configuration>Amplify</Configuration>
+    <ProjectConfiguration Include="Profile|Win32">
+      <Configuration>Profile</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
@@ -22,7 +22,7 @@
     <ClCompile Include="boostrapper.cpp" />
     <ClCompile Include="main.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -37,6 +37,30 @@
     <ProjectReference Include="..\mixer\mixer.vcxproj">
       <Project>{477e12a4-1b28-4ff7-b46d-76606bdd1891}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\modules\bluefish\bluefish.vcxproj">
+      <Project>{69313d25-9f54-4fc9-9872-628a4dd79464}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\modules\decklink\decklink.vcxproj">
+      <Project>{d3611658-8f54-43cf-b9af-a5cf8c1102ea}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\modules\ffmpeg\ffmpeg.vcxproj">
+      <Project>{f6223af3-be0b-4b61-8406-98922ce521c2}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\modules\flash\flash.vcxproj">
+      <Project>{816deaba-3757-4306-afe0-c27cf96c4dea}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\modules\image\image.vcxproj">
+      <Project>{3e11ff65-a9da-4f80-87f2-a7c6379ed5e2}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\modules\oal\oal.vcxproj">
+      <Project>{82ed7ed6-8a15-40ec-a8af-f5e712e0da68}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\modules\ogl\ogl.vcxproj">
+      <Project>{88f974f0-d09f-4788-8cf8-f563209e60c1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\modules\silverlight\silverlight.vcxproj">
+      <Project>{b964d953-8882-454c-a935-db711d697e39}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\protocol\protocol.vcxproj">
       <Project>{2040b361-1fb6-488e-84a5-38a580da90de}</Project>
     </ProjectReference>
@@ -45,13 +69,6 @@
     <None Include="caspar.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="My Amplifier Results\r003hs\r003hs.ampl" />
-    <None Include="My Amplifier Results\r004hs\r004hs.ampl" />
-    <None Include="My Amplifier Results\r006hs\r006hs.ampl" />
-    <None Include="My Amplifier Results\r007cc\r007cc.ampl" />
-    <None Include="My Amplifier Results\r008lw\r008lw.ampl" />
-    <None Include="My Amplifier Results\r009hs\r009hs.ampl" />
-    <None Include="My Inspector Results\r000ti3\r000ti3.insp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bootstrapper.h" />
@@ -73,7 +90,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -94,7 +111,7 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'" Label="PropertySheets">
@@ -105,23 +122,23 @@
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(Configuration)\</IntDir>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\bin\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\bin\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(SolutionDir)\bin\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(SolutionDir)\bin\$(Configuration)\</OutDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionName)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionName)</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">$(SolutionName)</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(SolutionName)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(SolutionName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -130,7 +147,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
@@ -162,11 +179,11 @@
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>sfml-system-d.lib;sfml-audio-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-system-d.lib;OpenGL32.lib;FreeImage.lib;GLee.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;swscale-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Bluevelvet3_d.lib;BlueHancUtils_d.lib;sfml-system-d.lib;sfml-audio-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreSpecificDefaultLibraries>LIBC.LIB;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
       <GenerateMapFile>false</GenerateMapFile>
@@ -214,7 +231,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;sfml-system.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Bluevelvet3.lib;BlueHancUtils.lib;sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -232,13 +249,13 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>copy $(SolutionDir)\dlls\*.dll $(OutDir)\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Amplify|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">
     <PreBuildEvent>
       <Command>
       </Command>
@@ -268,7 +285,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;sfml-system.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Bluevelvet3.lib;BlueHancUtils.lib;sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -322,7 +339,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Bluevelvet3.lib;BlueHancUtils.lib;sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;SWSCALE-0.lib;tbb.lib;Glee.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

@@ -4,7 +4,8 @@
 
 #include "draw_frame.h"
 
-#include "../../core/video_format.h"
+#include <common/memory/safe_ptr.h>
+#include <core/video_format.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -59,6 +60,9 @@ public:
 		static safe_ptr<draw_frame> frame = make_safe<empty_frame>();
 		return frame;
 	}
+
+	void remove_audio();
+	void remove_image();
 
 	virtual void process_image(image_mixer& mixer);
 	virtual void process_audio(audio_mixer& mixer);

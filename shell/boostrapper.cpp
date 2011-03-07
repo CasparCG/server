@@ -1,23 +1,30 @@
 #include "bootstrapper.h"
 
+#include <common/env.h>
+#include <common/exception/exceptions.h>
+#include <common/utility/string.h>
+
 #include <core/channel.h>
 
-#include <core/consumer/oal/oal_consumer.h>
-#include <core/consumer/bluefish/bluefish_consumer.h>
-#include <core/consumer/decklink/decklink_consumer.h>
-#include <core/consumer/ogl/ogl_consumer.h>
-#include <core/consumer/ffmpeg/ffmpeg_consumer.h>
+#include <modules/bluefish/bluefish.h>
+#include <modules/decklink/decklink.h>
+#include <modules/ffmpeg/ffmpeg.h>
+#include <modules/flash/flash.h>
+#include <modules/oal/oal.h>
+#include <modules/ogl/ogl.h>
+#include <modules/silverlight/silverlight.h>
+#include <modules/image/image.h>
 
-#include <core/producer/flash/FlashAxContainer.h>
+#include <modules/oal/consumer/oal_consumer.h>
+#include <modules/bluefish/consumer/bluefish_consumer.h>
+#include <modules/decklink/consumer/decklink_consumer.h>
+#include <modules/ogl/consumer/ogl_consumer.h>
+#include <modules/ffmpeg/consumer/ffmpeg_consumer.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/cii/CIIProtocolStrategy.h>
 #include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
-
-#include <common/env.h>
-#include <common/exception/exceptions.h>
-#include <common/utility/string.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -38,11 +45,17 @@ struct bootstrapper::implementation : boost::noncopyable
 
 	implementation()												
 	{			
+		init_ffmpeg();
+		init_bluefish();
+		init_decklink();
+		init_flash();
+		init_oal();
+		init_ogl();
+		init_silverlight();
+		init_image();
+
 		setup_channels(env::properties());
 		setup_controllers(env::properties());
-	
-		if(!flash::FlashAxContainer::CheckForFlashSupport())
-			CASPAR_LOG(error) << "No flashplayer activex-control installed. Flash support will be disabled";
 	}
 
 	~implementation()

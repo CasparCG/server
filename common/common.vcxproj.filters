@@ -1,103 +1,88 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Source\concurrency">
-      <UniqueIdentifier>{644fe2e4-1199-4a0e-8d4c-63cf1ac82f1d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\exception">
-      <UniqueIdentifier>{35ca385e-c4db-4fe7-858b-0a0bb678675f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\log">
-      <UniqueIdentifier>{3b529e9b-c729-4c8a-8166-0cb8d8030973}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\utility">
-      <UniqueIdentifier>{11860e2d-8adf-4573-956b-785e59aef2b0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\gl">
-      <UniqueIdentifier>{0d94bbc2-e196-4618-a90b-19392a3a0a8e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\compiler">
+    <Filter Include="compiler">
       <UniqueIdentifier>{63471750-a430-4167-9b49-31b7a068a913}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\compiler\vs">
+    <Filter Include="compiler\vs">
       <UniqueIdentifier>{28c25c8a-1277-4d2c-9e85-5af33f9938ea}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Afx">
-      <UniqueIdentifier>{9250809a-3410-418d-95ca-ff2dcb6f0578}</UniqueIdentifier>
+    <Filter Include="concurrency">
+      <UniqueIdentifier>{644fe2e4-1199-4a0e-8d4c-63cf1ac82f1d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\memory">
+    <Filter Include="diagnostics">
+      <UniqueIdentifier>{29a29bcc-a9a0-4083-b713-c3773d18e177}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="exception">
+      <UniqueIdentifier>{35ca385e-c4db-4fe7-858b-0a0bb678675f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gl">
+      <UniqueIdentifier>{0d94bbc2-e196-4618-a90b-19392a3a0a8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="log">
+      <UniqueIdentifier>{3b529e9b-c729-4c8a-8166-0cb8d8030973}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="memory">
       <UniqueIdentifier>{9259676d-c225-4422-a50e-30d152d78dc2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\diagnostics">
-      <UniqueIdentifier>{29a29bcc-a9a0-4083-b713-c3773d18e177}</UniqueIdentifier>
+    <Filter Include="utility">
+      <UniqueIdentifier>{11860e2d-8adf-4573-956b-785e59aef2b0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="exception\win32_exception.cpp">
-      <Filter>Source\exception</Filter>
-    </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Afx</Filter>
+      <Filter>exception</Filter>
     </ClCompile>
     <ClCompile Include="log\log.cpp">
-      <Filter>Source\log</Filter>
-    </ClCompile>
-    <ClCompile Include="env.cpp">
-      <Filter>Source</Filter>
+      <Filter>log</Filter>
     </ClCompile>
     <ClCompile Include="diagnostics\graph.cpp">
-      <Filter>Source\diagnostics</Filter>
+      <Filter>diagnostics</Filter>
     </ClCompile>
+    <ClCompile Include="env.cpp" />
+    <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exception\exceptions.h">
-      <Filter>Source\exception</Filter>
+      <Filter>exception</Filter>
     </ClInclude>
     <ClInclude Include="exception\win32_exception.h">
-      <Filter>Source\exception</Filter>
+      <Filter>exception</Filter>
     </ClInclude>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h">
-      <Filter>Source\compiler\vs</Filter>
-    </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>Afx</Filter>
+      <Filter>compiler\vs</Filter>
     </ClInclude>
     <ClInclude Include="concurrency\executor.h">
-      <Filter>Source\concurrency</Filter>
+      <Filter>concurrency</Filter>
     </ClInclude>
     <ClInclude Include="log\log.h">
-      <Filter>Source\log</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\timer.h">
-      <Filter>Source\utility</Filter>
+      <Filter>log</Filter>
     </ClInclude>
     <ClInclude Include="gl\gl_check.h">
-      <Filter>Source\gl</Filter>
+      <Filter>gl</Filter>
     </ClInclude>
     <ClInclude Include="memory\page_locked_allocator.h">
-      <Filter>Source\memory</Filter>
+      <Filter>memory</Filter>
     </ClInclude>
     <ClInclude Include="memory\safe_ptr.h">
-      <Filter>Source\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="env.h">
-      <Filter>Source</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\assert.h">
-      <Filter>Source\utility</Filter>
+      <Filter>memory</Filter>
     </ClInclude>
     <ClInclude Include="diagnostics\graph.h">
-      <Filter>Source\diagnostics</Filter>
+      <Filter>diagnostics</Filter>
     </ClInclude>
-    <ClInclude Include="utility\string.h">
-      <Filter>Source\utility</Filter>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="env.h" />
+    <ClInclude Include="utility\assert.h">
+      <Filter>utility</Filter>
     </ClInclude>
     <ClInclude Include="utility\printer.h">
-      <Filter>Source\utility</Filter>
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\string.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\timer.h">
+      <Filter>utility</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

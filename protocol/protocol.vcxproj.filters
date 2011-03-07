@@ -1,112 +1,95 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Afx">
-      <UniqueIdentifier>{0289b005-5045-4798-b83e-72a4c7c1e412}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\amcp">
+    <Filter Include="amcp">
       <UniqueIdentifier>{93331f26-581b-4d15-81a6-0aae31ad3958}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\cii">
+    <Filter Include="cii">
       <UniqueIdentifier>{abb11aa5-fa66-4e76-8ea6-38f01f6e7dff}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\clk">
+    <Filter Include="clk">
       <UniqueIdentifier>{9ed5b10f-d494-4460-b868-e36357b3e04d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\util">
+    <Filter Include="util">
       <UniqueIdentifier>{ac6eb3ad-c1d7-4bae-a03d-b1fd752a0305}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="amcp\AMCPCommand.h">
-      <Filter>Source Files\amcp</Filter>
-    </ClInclude>
-    <ClInclude Include="amcp\AMCPCommandQueue.h">
-      <Filter>Source Files\amcp</Filter>
-    </ClInclude>
-    <ClInclude Include="amcp\AMCPCommandsImpl.h">
-      <Filter>Source Files\amcp</Filter>
+      <Filter>amcp</Filter>
     </ClInclude>
     <ClInclude Include="amcp\AMCPProtocolStrategy.h">
-      <Filter>Source Files\amcp</Filter>
+      <Filter>amcp</Filter>
     </ClInclude>
-    <ClInclude Include="cii\CIICommand.h">
-      <Filter>Source Files\cii</Filter>
+    <ClInclude Include="amcp\AMCPCommandQueue.h">
+      <Filter>amcp</Filter>
     </ClInclude>
-    <ClInclude Include="cii\CIICommandsImpl.h">
-      <Filter>Source Files\cii</Filter>
-    </ClInclude>
-    <ClInclude Include="cii\CIIProtocolStrategy.h">
-      <Filter>Source Files\cii</Filter>
-    </ClInclude>
-    <ClInclude Include="clk\CLKCommand.h">
-      <Filter>Source Files\clk</Filter>
-    </ClInclude>
-    <ClInclude Include="clk\CLKProtocolStrategy.h">
-      <Filter>Source Files\clk</Filter>
-    </ClInclude>
-    <ClInclude Include="StdAfx.h">
-      <Filter>Afx</Filter>
-    </ClInclude>
-    <ClInclude Include="media.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="amcp\AMCPCommandsImpl.h">
+      <Filter>amcp</Filter>
     </ClInclude>
     <ClInclude Include="util\AsyncEventServer.h">
-      <Filter>Source Files\util</Filter>
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="cii\CIICommand.h">
+      <Filter>cii</Filter>
+    </ClInclude>
+    <ClInclude Include="cii\CIIProtocolStrategy.h">
+      <Filter>cii</Filter>
+    </ClInclude>
+    <ClInclude Include="cii\CIICommandsImpl.h">
+      <Filter>cii</Filter>
+    </ClInclude>
+    <ClInclude Include="clk\CLKProtocolStrategy.h">
+      <Filter>clk</Filter>
+    </ClInclude>
+    <ClInclude Include="clk\CLKCommand.h">
+      <Filter>clk</Filter>
     </ClInclude>
     <ClInclude Include="util\ClientInfo.h">
-      <Filter>Source Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="util\ProtocolStrategy.h">
-      <Filter>Source Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="util\SocketInfo.h">
-      <Filter>Source Files\util</Filter>
+      <Filter>util</Filter>
     </ClInclude>
     <ClInclude Include="util\Thread.h">
-      <Filter>Source Files\util</Filter>
+      <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="util\ProtocolStrategy.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="util\SocketInfo.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="amcp\AMCPCommandQueue.cpp">
-      <Filter>Source Files\amcp</Filter>
+      <Filter>amcp</Filter>
     </ClCompile>
     <ClCompile Include="amcp\AMCPCommandsImpl.cpp">
-      <Filter>Source Files\amcp</Filter>
+      <Filter>amcp</Filter>
     </ClCompile>
     <ClCompile Include="amcp\AMCPProtocolStrategy.cpp">
-      <Filter>Source Files\amcp</Filter>
-    </ClCompile>
-    <ClCompile Include="cii\CIICommandsImpl.cpp">
-      <Filter>Source Files\cii</Filter>
-    </ClCompile>
-    <ClCompile Include="cii\CIIProtocolStrategy.cpp">
-      <Filter>Source Files\cii</Filter>
-    </ClCompile>
-    <ClCompile Include="clk\CLKCommand.cpp">
-      <Filter>Source Files\clk</Filter>
-    </ClCompile>
-    <ClCompile Include="clk\CLKProtocolStrategy.cpp">
-      <Filter>Source Files\clk</Filter>
-    </ClCompile>
-    <ClCompile Include="StdAfx.cpp">
-      <Filter>Afx</Filter>
-    </ClCompile>
-    <ClCompile Include="media.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>amcp</Filter>
     </ClCompile>
     <ClCompile Include="util\AsyncEventServer.cpp">
-      <Filter>Source Files\util</Filter>
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="cii\CIICommandsImpl.cpp">
+      <Filter>cii</Filter>
+    </ClCompile>
+    <ClCompile Include="cii\CIIProtocolStrategy.cpp">
+      <Filter>cii</Filter>
+    </ClCompile>
+    <ClCompile Include="clk\CLKCommand.cpp">
+      <Filter>clk</Filter>
+    </ClCompile>
+    <ClCompile Include="clk\CLKProtocolStrategy.cpp">
+      <Filter>clk</Filter>
     </ClCompile>
     <ClCompile Include="util\SocketInfo.cpp">
-      <Filter>Source Files\util</Filter>
+      <Filter>util</Filter>
     </ClCompile>
     <ClCompile Include="util\Thread.cpp">
-      <Filter>Source Files\util</Filter>
+      <Filter>util</Filter>
     </ClCompile>
+    <ClCompile Include="StdAfx.cpp" />
   </ItemGroup>
 </Project>

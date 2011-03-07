@@ -47,7 +47,6 @@
 #include <crtdbg.h>
 #endif
 
-#include <winsock2.h>
 #include <tchar.h>
 #include <sstream>
 #include <memory>
@@ -73,19 +72,13 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/signals2.hpp>
 
-#include <GLee.h>
-
-#include <SFML/Window.hpp>
-#include <SFML/Audio.hpp>
-
-#include "../common/utility/string.h"
-#include "../common/memory/safe_ptr.h"
+#include <common/utility/string.h>
+#include <common/memory/safe_ptr.h>
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
-#include "../common/log/Log.h"
-#include "../common/exception/exceptions.h"
-#include "../common/exception/win32_exception.h"
-
-#include <assert.h>
+#include <common/log/log.h>
+#include <common/exception/exceptions.h>
+#include <common/exception/win32_exception.h>
+#include <common/utility/assert.h>
 
 #endif
