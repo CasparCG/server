@@ -5,9 +5,8 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <tbb/atomic.h>
-
 #include <memory>
+#include <numeric>
 
 namespace caspar { namespace core {
 

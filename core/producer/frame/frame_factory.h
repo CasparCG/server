@@ -19,16 +19,17 @@
 */
 #pragma once
 
-#include "write_frame.h"
-
 #include "pixel_format.h"
-#include "../../video_format.h"
 
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
+	
+class write_frame;
+struct pixel_format_desc;
+struct video_format_desc;
 		
 struct frame_factory : boost::noncopyable
 {

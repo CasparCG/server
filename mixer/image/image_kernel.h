@@ -1,12 +1,11 @@
 #pragma once
 
-#include <core/video_format.h>
-#include <core/producer/frame/pixel_format.h>
-
 #include <memory>
 
 namespace caspar { namespace core {
 
+struct pixel_format_desc;
+class image_transform;
 class image_transform;
 
 class image_kernel

@@ -8,16 +8,20 @@
 #include "../gpu/device_buffer.h"
 #include "../gpu/gpu_write_frame.h"
 
+#include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
-#include <common/concurrency/executor.h>
 
 #include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/pixel_format.h>
+#include <core/video_format.h>
 
 #include <boost/cast.hpp>
 
 #include <Glee.h>
 #include <SFML/Window/Context.hpp>
+
+#include <array>
 #include <unordered_map>
 
 namespace caspar { namespace core {

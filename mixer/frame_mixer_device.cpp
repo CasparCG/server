@@ -16,14 +16,8 @@
 #include <common/diagnostics/graph.h>
 #include <common/utility/assert.h>
 #include <common/utility/timer.h>
-#include <common/gl/gl_check.h>
 
 #include <core/video_format.h>
-
-#include <tbb/concurrent_queue.h>
-#include <tbb/concurrent_unordered_map.h>
-
-#include <boost/range/algorithm.hpp>
 
 #include <unordered_map>
 
@@ -100,8 +94,11 @@ public:
 		return output_.connect(subscriber);
 	}
 
-	boost::unique_future<safe_ptr<const host_buffer>> mix_image(const std::vector<safe_ptr<basic_frame>>& frames)
+	boost::unique_future<safe_ptr<const host_buffer>> mix_image(std::vector<safe_ptr<basic_frame>> frames)
 	{
+		frames.erase(std::remove(frames.begin(), frames.end(), basic_frame::empty()), frames.end());
+		frames.erase(std::remove(frames.begin(), frames.end(), basic_frame::eof()), frames.end());
+
 		auto image = image_mixer_.begin_pass();
 		BOOST_FOREACH(auto& frame, frames)
 		{

@@ -28,7 +28,7 @@ public:
 		: frames_(std::move(frames))
 		, index_(std::numeric_limits<int>::min()) {}
 	
-	void accept(basic_frame& self, frame_visitor& visitor)
+	void accept(const basic_frame& self, frame_visitor& visitor)
 	{
 		visitor.begin(self);
 		BOOST_FOREACH(auto frame, frames_)

@@ -12,8 +12,6 @@
 
 namespace caspar { namespace core {
 	
-struct pixel_format_desc;
-
 class write_frame : public basic_frame, boost::noncopyable
 {
 public:			
@@ -28,7 +26,5 @@ public:
 	virtual void tag(int tag) = 0;
 	virtual int tag() const = 0;
 };
-typedef std::shared_ptr<write_frame> write_frame_impl_ptr;
-
 
 }}
