@@ -60,16 +60,11 @@ public:
 		static safe_ptr<basic_frame> frame = make_safe<empty_frame>();
 		return frame;
 	}
-
-	void remove_audio();
-	void remove_image();
-
+	
 	virtual void accept(frame_visitor& visitor);
 
 	void set_layer_index(int index);
 	int get_layer_index() const;
-
-	std::vector<safe_ptr<basic_frame>> get_children();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

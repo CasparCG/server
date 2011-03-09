@@ -118,6 +118,5 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 
 void basic_frame::set_layer_index(int index) { impl_->index_ = index; }
 int basic_frame::get_layer_index() const { return impl_->index_; }
-std::vector<safe_ptr<basic_frame>> basic_frame::get_children(){return impl_->frames_;}
 	
 }}
