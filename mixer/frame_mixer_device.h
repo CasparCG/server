@@ -21,13 +21,14 @@
 
 #include "fwd.h"
 
-#include "frame/frame_factory.h"
+#include <core/video_format.h>
+#include <core/producer/frame/pixel_format.h>
+#include <core/producer/frame/frame_factory.h>
 
 #include "image/image_mixer.h"
 #include "audio/audio_mixer.h"
 
-#include "frame/write_frame.h"
-#include "frame/pixel_format.h"
+#include "gpu/gpu_write_frame.h"
 
 #include <common/memory/safe_ptr.h>
 #include <common/utility/printer.h>

@@ -1,10 +1,10 @@
 #include "../stdafx.h"
 
 #include "audio_mixer.h"
-#include "audio_transform.h"
 
-#include "../frame/basic_frame.h"
-#include "../frame/write_frame.h"
+#include "../gpu/gpu_write_frame.h"
+
+#include <core/producer/frame/audio_transform.h>
 
 namespace caspar { namespace core {
 	

@@ -19,13 +19,14 @@
 */
 #pragma once
 
-#include "../fwd.h"
+#include "write_frame.h"
 
 #include "pixel_format.h"
+#include "../../video_format.h"
 
 #include <common/memory/safe_ptr.h>
 
-#include <core/video_format.h>
+#include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
 		

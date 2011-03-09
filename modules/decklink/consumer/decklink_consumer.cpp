@@ -28,7 +28,7 @@
 
 #include <core/video_format.h>
 
-#include <mixer/frame/read_frame.h>
+#include <core/consumer/frame/read_frame.h>
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
@@ -177,7 +177,7 @@ public:
 					
 		auto buffer_size = static_cast<size_t>(frame_time_scale_/frame_duration_)/4;
 		for(size_t n = 0; n < buffer_size; ++n)
-			schedule_next_video(safe_ptr<const core::read_frame>());
+			schedule_next_video(core::read_frame::empty());
 
 		video_frame_buffer_.set_capacity(buffer_size);
 		audio_frame_buffer_.set_capacity(buffer_size);

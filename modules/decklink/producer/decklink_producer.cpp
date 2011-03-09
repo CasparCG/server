@@ -30,7 +30,7 @@
 #include <common/exception/exceptions.h>
 #include <common/utility/timer.h>
 
-#include <mixer/frame/write_frame.h>
+#include <core/producer/frame/write_frame.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
