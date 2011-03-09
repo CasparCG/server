@@ -29,7 +29,7 @@
 
 #include <core/video_format.h>
 
-#include <mixer/frame/draw_frame.h>
+#include <mixer/frame/basic_frame.h>
 #include <mixer/frame_mixer_device.h>
 
 #include <common/concurrency/executor.h>
@@ -67,7 +67,7 @@ class flash_renderer
 	std::shared_ptr<void> bmp_;
 
 	CComObject<caspar::flash::FlashAxContainer>* ax_;
-	safe_ptr<core::draw_frame> head_;
+	safe_ptr<core::basic_frame> head_;
 	
 	timer timer_;
 
@@ -89,7 +89,7 @@ public:
 		, bmp_data_(nullptr)
 		, hdc_(CreateCompatibleDC(0), DeleteDC)
 		, ax_(nullptr)
-		, head_(core::draw_frame::empty())
+		, head_(core::basic_frame::empty())
 	{
 		graph_->add_guide("frame-time", 0.5f);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
@@ -153,14 +153,14 @@ public:
 			CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << ax_->GetFPS() << L". Should be either " << format_desc_.fps << L" or " << format_desc_.fps*2.0 << L".";
 	}
 	
-	safe_ptr<core::draw_frame> render_frame(bool has_underflow)
+	safe_ptr<core::basic_frame> render_frame(bool has_underflow)
 	{
 		if(ax_->IsEmpty())
-			return core::draw_frame::empty();
+			return core::basic_frame::empty();
 
 		auto frame = render_simple_frame(has_underflow);
 		if(interlaced(ax_->GetFPS(), format_desc_))
-			frame = core::draw_frame::interlace(frame, render_simple_frame(has_underflow), format_desc_.mode);
+			frame = core::basic_frame::interlace(frame, render_simple_frame(has_underflow), format_desc_.mode);
 		return frame;
 	}
 
@@ -171,7 +171,7 @@ public:
 	
 private:
 
-	safe_ptr<core::draw_frame> render_simple_frame(bool underflow)
+	safe_ptr<core::basic_frame> render_simple_frame(bool underflow)
 	{
 		if(underflow)
 			graph_->add_tag("underflow");
@@ -205,8 +205,8 @@ struct flash_producer::implementation
 
 	std::shared_ptr<diagnostics::graph> graph_;
 
-	safe_ptr<core::draw_frame> tail_;
-	tbb::concurrent_bounded_queue<safe_ptr<core::draw_frame>> frame_buffer_;
+	safe_ptr<core::basic_frame> tail_;
+	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
 
 	std::shared_ptr<flash_renderer> renderer_;
 	std::shared_ptr<core::frame_factory> frame_factory_;
@@ -224,7 +224,7 @@ struct flash_producer::implementation
 public:
 	implementation(const std::wstring& filename) 
 		: filename_(filename)		
-		, tail_(core::draw_frame::empty())		
+		, tail_(core::basic_frame::empty())		
 		, executor_(print())
 	{	
 		if(!boost::filesystem::exists(filename))
@@ -257,10 +257,10 @@ public:
 		parent_printer_ = parent_printer;
 	}
 
-	virtual safe_ptr<core::draw_frame> receive()
+	virtual safe_ptr<core::basic_frame> receive()
 	{		
 		if(!renderer_)
-			return core::draw_frame::empty();
+			return core::basic_frame::empty();
 		
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		if(!frame_buffer_.try_pop(tail_))
@@ -273,9 +273,9 @@ public:
 
 			try
 			{
-				auto frame = core::draw_frame::empty();
+				auto frame = core::basic_frame::empty();
 				do{frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);}
-				while(frame_buffer_.try_push(frame) && frame == core::draw_frame::empty());
+				while(frame_buffer_.try_push(frame) && frame == core::basic_frame::empty());
 				graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 				fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));
 			}
@@ -296,7 +296,7 @@ public:
 			if(!renderer_)
 			{
 				renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, [=]{return print();}));
-				while(frame_buffer_.try_push(core::draw_frame::empty())){}		
+				while(frame_buffer_.try_push(core::basic_frame::empty())){}		
 			}
 
 			try
@@ -314,7 +314,7 @@ public:
 
 flash_producer::flash_producer(flash_producer&& other) : impl_(std::move(other.impl_)){}
 flash_producer::flash_producer(const std::wstring& filename) : impl_(new implementation(filename)){}
-safe_ptr<core::draw_frame> flash_producer::receive(){return impl_->receive();}
+safe_ptr<core::basic_frame> flash_producer::receive(){return impl_->receive();}
 void flash_producer::param(const std::wstring& param){impl_->param(param);}
 void flash_producer::initialize(const safe_ptr<core::frame_factory>& frame_factory) { impl_->initialize(frame_factory);}
 void flash_producer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}

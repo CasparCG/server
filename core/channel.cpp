@@ -6,7 +6,7 @@
 #include "mixer/frame_mixer_device.h"
 #include "producer/frame_producer_device.h"
 
-#include "mixer/frame/draw_frame.h"
+#include "mixer/frame/basic_frame.h"
 #include "mixer/frame_mixer_device.h"
 
 #include "producer/layer.h"
@@ -47,7 +47,7 @@ public:
 		, producer_(new frame_producer_device(std::bind(&implementation::print, this), safe_ptr<frame_factory>(mixer_)))	
 	{
 		mixer_connection_ = mixer_->connect([=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);});
-		producer_connection_ = producer_->connect([=](const std::vector<safe_ptr<draw_frame>>& frames){mixer_->send(frames);});
+		producer_connection_ = producer_->connect([=](const std::vector<safe_ptr<basic_frame>>& frames){mixer_->send(frames);});
 	}
 		
 	std::wstring print() const

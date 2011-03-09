@@ -5,7 +5,7 @@
 #include <core/video_format.h>
 
 #include <mixer/frame_mixer_device.h>
-#include <mixer/frame/draw_frame.h>
+#include <mixer/frame/basic_frame.h>
 
 #include <common/env.h>
 
@@ -23,12 +23,12 @@ struct image_producer : public core::frame_producer
 	printer parent_printer_;
 	std::shared_ptr<core::frame_factory> frame_factory_;
 	std::wstring filename_;
-	safe_ptr<core::draw_frame> frame_;
+	safe_ptr<core::basic_frame> frame_;
 	
 	image_producer(const std::wstring& filename) 
-		: filename_(filename), frame_(core::draw_frame::empty())	{}
+		: filename_(filename), frame_(core::basic_frame::empty())	{}
 	
-	virtual safe_ptr<core::draw_frame> receive(){return frame_;}
+	virtual safe_ptr<core::basic_frame> receive(){return frame_;}
 
 	virtual void initialize(const safe_ptr<core::frame_factory>& frame_factory)
 	{

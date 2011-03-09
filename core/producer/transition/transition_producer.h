@@ -76,7 +76,7 @@ public:
 	explicit transition_producer(const safe_ptr<frame_producer>& destination, const transition_info& info);
 	transition_producer(transition_producer&& other);
 
-	virtual safe_ptr<draw_frame> receive();
+	virtual safe_ptr<basic_frame> receive();
 
 	virtual safe_ptr<frame_producer> get_following_producer() const;
 	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer);

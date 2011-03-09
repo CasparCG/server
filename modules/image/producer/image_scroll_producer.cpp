@@ -2,8 +2,8 @@
 //
 //#include "image_loader.h"
 //
-//#include "../../mixer/draw_frame.h"
-//#include "../../mixer/draw_frame.h"
+//#include "../../mixer/basic_frame.h"
+//#include "../../mixer/basic_frame.h"
 //#include "../../video_format.h"
 //#include "../../mixer/frame_mixer_device.h"
 //#include "../../configuration.h"
@@ -65,7 +65,7 @@
 //			std::copy_n(&pBits[i* width * 4], width * 4, &image_.get()[i * image_width_ * 4]);
 //	}
 //
-//	draw_frame do_receive()
+//	basic_frame do_receive()
 //	{
 //		auto frame = frame_factory_->create_frame(format_desc_.width, format_desc_.height);
 //		std::fill(frame.image_data().begin(), frame.image_data().end(), 0);
@@ -110,14 +110,14 @@
 //		return std::move(frame);
 //	}
 //		
-//	safe_ptr<draw_frame> receive()
+//	safe_ptr<basic_frame> receive()
 //	{		
 //		if(format_desc_.mode != video_mode::progressive)				
 //		{
-//			draw_frame frame1;
-//			draw_frame frame2;
+//			basic_frame frame1;
+//			basic_frame frame2;
 //			tbb::parallel_invoke([&]{ frame1 = std::move(do_receive()); }, [&]{ frame2 = std::move(do_receive()); });
-//			return draw_frame::interlace(std::move(frame1), std::move(frame2), format_desc_.mode);
+//			return basic_frame::interlace(std::move(frame1), std::move(frame2), format_desc_.mode);
 //		}			
 //
 //		return receive();	

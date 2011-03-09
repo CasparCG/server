@@ -12,7 +12,7 @@
 namespace caspar { namespace core {
 
 class frame_producer;
-class draw_frame;
+class basic_frame;
 
 class layer : boost::noncopyable
 {
@@ -31,7 +31,7 @@ public:
 	safe_ptr<frame_producer> foreground() const; // nothrow
 	safe_ptr<frame_producer> background() const; // nothrow
 
-	safe_ptr<draw_frame> receive(); // nothrow
+	safe_ptr<basic_frame> receive(); // nothrow
 
 	std::wstring print() const;
 private:

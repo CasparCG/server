@@ -6,7 +6,7 @@
 
 #include <core/video_format.h>
 
-#include <mixer/frame/draw_frame.h>
+#include <mixer/frame/basic_frame.h>
 #include <mixer/image/image_transform.h>
 
 #include <tbb/parallel_for.h>

@@ -2,7 +2,7 @@
 
 #include "write_frame.h"
 
-#include "draw_frame.h"
+#include "basic_frame.h"
 #include "pixel_format.h"
 
 #include "../image/image_mixer.h"
@@ -43,6 +43,7 @@ public:
 		auto ptr = static_cast<unsigned char*>(buffers_[index]->data());
 		return boost::iterator_range<unsigned char*>(ptr, ptr+buffers_[index]->size());
 	}
+
 	const boost::iterator_range<const unsigned char*> image_data(size_t index) const
 	{
 		if(index >= buffers_.size() || !buffers_[index]->data())

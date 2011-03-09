@@ -52,7 +52,7 @@ public:
 	frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc);
 	frame_mixer_device(frame_mixer_device&& other); // nothrow
 		
-	void send(const std::vector<safe_ptr<draw_frame>>& frames); // nothrow
+	void send(const std::vector<safe_ptr<basic_frame>>& frames); // nothrow
 		
 	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc);		
 	safe_ptr<write_frame> create_frame(size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra);			

@@ -9,7 +9,7 @@
 #include <core/video_format.h>
 #include <common/utility/timer.h>
 #include <common/diagnostics/graph.h>
-#include <mixer/frame/draw_frame.h>
+#include <mixer/frame/basic_frame.h>
 #include <mixer/audio/audio_transform.h>
 
 #include <common/env.h>
@@ -37,9 +37,9 @@ struct ffmpeg_producer : public core::frame_producer
 	std::deque<safe_ptr<core::write_frame>>	video_frame_channel_;	
 	std::deque<std::vector<short>>			audio_chunk_channel_;
 
-	std::queue<safe_ptr<core::draw_frame>>	ouput_channel_;
+	std::queue<safe_ptr<core::basic_frame>>	ouput_channel_;
 		
-	safe_ptr<core::draw_frame>				last_frame_;
+	safe_ptr<core::basic_frame>				last_frame_;
 	std::shared_ptr<core::frame_factory>	frame_factory_;
 
 	std::unique_ptr<input>				input_;	
@@ -47,7 +47,7 @@ public:
 	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
 		: filename_(filename)
 		, loop_(loop) 
-		, last_frame_(core::draw_frame(core::draw_frame::empty()))
+		, last_frame_(core::basic_frame(core::basic_frame::empty()))
 		
 	{
 		graph_ = diagnostics::create_graph(boost::bind(&ffmpeg_producer::print, this));	
@@ -68,7 +68,7 @@ public:
 		parent_printer_ = parent_printer;
 	}
 
-	virtual safe_ptr<core::draw_frame> receive()
+	virtual safe_ptr<core::basic_frame> receive()
 	{
 		perf_timer_.reset();
 
@@ -154,12 +154,12 @@ public:
 		if(!ouput_channel_.empty())
 		{
 			result = std::move(ouput_channel_.front());
-			last_frame_ = core::draw_frame(result);
+			last_frame_ = core::basic_frame(result);
 			last_frame_->get_audio_transform().set_gain(0.0); // last_frame should not have audio
 			ouput_channel_.pop();
 		}
 		else if(input_->is_eof())
-			return core::draw_frame::eof();
+			return core::basic_frame::eof();
 
 		return result;
 	}

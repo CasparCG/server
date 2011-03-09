@@ -23,7 +23,7 @@
 
 #include <core/video_format.h>
 
-#include <mixer/frame/draw_frame.h>
+#include <mixer/frame/basic_frame.h>
 #include <mixer/image/image_transform.h>
 #include <mixer/audio/audio_mixer.h>
 #include <mixer/audio/audio_transform.h>
@@ -43,7 +43,7 @@ struct transition_producer::implementation : boost::noncopyable
 	std::shared_ptr<frame_factory>	frame_factory_;
 	video_format_desc				format_desc_;
 
-	std::vector<safe_ptr<draw_frame>> frame_buffer_;
+	std::vector<safe_ptr<basic_frame>> frame_buffer_;
 	
 	implementation(const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: current_frame_(0)
@@ -52,7 +52,7 @@ struct transition_producer::implementation : boost::noncopyable
 		, source_producer_(frame_producer::empty())
 	{
 		dest_producer_->set_parent_printer(std::bind(&implementation::dest_print, this));
-		frame_buffer_.push_back(draw_frame::empty());
+		frame_buffer_.push_back(basic_frame::empty());
 	}
 				
 	void initialize(const safe_ptr<frame_factory>& frame_factory)
@@ -78,13 +78,13 @@ struct transition_producer::implementation : boost::noncopyable
 		source_producer_->set_parent_printer(std::bind(&implementation::source_print, this));
 	}
 
-	safe_ptr<draw_frame> receive()
+	safe_ptr<basic_frame> receive()
 	{
 		if(current_frame_++ >= info_.duration)
-			return draw_frame::eof();
+			return basic_frame::eof();
 
-		auto source = draw_frame::empty();
-		auto dest = draw_frame::empty();
+		auto source = basic_frame::empty();
+		auto dest = basic_frame::empty();
 
 		tbb::parallel_invoke
 		(
@@ -95,12 +95,12 @@ struct transition_producer::implementation : boost::noncopyable
 		return compose(dest, source);
 	}
 	
-	safe_ptr<draw_frame> render_sub_frame(safe_ptr<frame_producer>& producer)
+	safe_ptr<basic_frame> render_sub_frame(safe_ptr<frame_producer>& producer)
 	{
 		if(producer == frame_producer::empty())
-			return draw_frame::eof();
+			return basic_frame::eof();
 
-		auto frame = draw_frame::eof();
+		auto frame = basic_frame::eof();
 		try
 		{
 			frame = producer->receive();
@@ -112,7 +112,7 @@ struct transition_producer::implementation : boost::noncopyable
 			CASPAR_LOG(warning) << print() << " Failed to receive frame. Removed producer from transition.";
 		}
 
-		if(frame == draw_frame::eof())
+		if(frame == basic_frame::eof())
 		{
 			try
 			{
@@ -133,13 +133,13 @@ struct transition_producer::implementation : boost::noncopyable
 		return frame;
 	}
 					
-	safe_ptr<draw_frame> compose(const safe_ptr<draw_frame>& dest_frame, const safe_ptr<draw_frame>& src_frame) 
+	safe_ptr<basic_frame> compose(const safe_ptr<basic_frame>& dest_frame, const safe_ptr<basic_frame>& src_frame) 
 	{	
-		if(dest_frame == draw_frame::eof() && src_frame == draw_frame::eof())
-			return draw_frame::eof();
+		if(dest_frame == basic_frame::eof() && src_frame == basic_frame::eof())
+			return basic_frame::eof();
 
 		if(info_.type == transition::cut)		
-			return src_frame != draw_frame::eof() ? src_frame : draw_frame::empty();
+			return src_frame != basic_frame::eof() ? src_frame : basic_frame::empty();
 										
 		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
 		double half_alpha_step = 0.5*1.0/static_cast<double>(info_.duration);
@@ -148,14 +148,14 @@ struct transition_producer::implementation : boost::noncopyable
 		
 		// For interlaced transitions. Seperate fields into seperate frames which are transitioned accordingly.
 		
-		auto s_frame1 = make_safe<draw_frame>(src_frame);
-		auto s_frame2 = make_safe<draw_frame>(src_frame);
+		auto s_frame1 = make_safe<basic_frame>(src_frame);
+		auto s_frame2 = make_safe<basic_frame>(src_frame);
 
 		s_frame1->get_audio_transform().set_has_audio(false);
 		s_frame2->get_audio_transform().set_gain(1.0-alpha);
 
-		auto d_frame1 = make_safe<draw_frame>(dest_frame);
-		auto d_frame2 = make_safe<draw_frame>(dest_frame);
+		auto d_frame1 = make_safe<basic_frame>(dest_frame);
+		auto d_frame2 = make_safe<basic_frame>(dest_frame);
 		
 		d_frame1->get_audio_transform().set_has_audio(false);
 		d_frame2->get_audio_transform().set_gain(alpha);
@@ -184,10 +184,10 @@ struct transition_producer::implementation : boost::noncopyable
 			d_frame2->get_image_transform().set_key_scale(alpha, 1.0);			
 		}
 		
-		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, format_desc_.mode);
-		auto d_frame = draw_frame::interlace(d_frame1, d_frame2, format_desc_.mode);
+		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, format_desc_.mode);
+		auto d_frame = basic_frame::interlace(d_frame1, d_frame2, format_desc_.mode);
 
-		return draw_frame(s_frame, d_frame);
+		return basic_frame(s_frame, d_frame);
 	}
 
 	std::wstring print() const
@@ -201,7 +201,7 @@ struct transition_producer::implementation : boost::noncopyable
 
 transition_producer::transition_producer(transition_producer&& other) : impl_(std::move(other.impl_)){}
 transition_producer::transition_producer(const safe_ptr<frame_producer>& dest, const transition_info& info) : impl_(new implementation(dest, info)){}
-safe_ptr<draw_frame> transition_producer::receive(){return impl_->receive();}
+safe_ptr<basic_frame> transition_producer::receive(){return impl_->receive();}
 safe_ptr<frame_producer> transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const safe_ptr<frame_producer>& producer) { impl_->set_leading_producer(producer); }
 void transition_producer::initialize(const safe_ptr<frame_factory>& frame_factory) { impl_->initialize(frame_factory);}
