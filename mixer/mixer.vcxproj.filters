@@ -4,9 +4,6 @@
     <Filter Include="audio">
       <UniqueIdentifier>{ad4b4d9e-2c3d-48fb-977f-edce86b653e1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="frame">
-      <UniqueIdentifier>{d42d9881-e19e-4128-91dd-5b7279c2b5e5}</UniqueIdentifier>
-    </Filter>
     <Filter Include="gpu">
       <UniqueIdentifier>{3c5b1ceb-6788-4278-98cc-0c5865cda30a}</UniqueIdentifier>
     </Filter>
@@ -27,12 +24,6 @@
     <ClCompile Include="gpu\device_buffer.cpp">
       <Filter>gpu</Filter>
     </ClCompile>
-    <ClCompile Include="frame\read_frame.cpp">
-      <Filter>frame</Filter>
-    </ClCompile>
-    <ClCompile Include="frame\write_frame.cpp">
-      <Filter>frame</Filter>
-    </ClCompile>
     <ClCompile Include="frame_mixer_device.cpp" />
     <ClCompile Include="StdAfx.cpp" />
     <ClCompile Include="image\image_kernel.cpp">
@@ -41,14 +32,11 @@
     <ClCompile Include="image\image_mixer.cpp">
       <Filter>image</Filter>
     </ClCompile>
-    <ClCompile Include="frame\basic_frame.cpp">
-      <Filter>frame</Filter>
+    <ClCompile Include="gpu\gpu_read_frame.cpp">
+      <Filter>gpu</Filter>
     </ClCompile>
-    <ClCompile Include="image\image_transform.cpp">
-      <Filter>image</Filter>
-    </ClCompile>
-    <ClCompile Include="audio\audio_transform.cpp">
-      <Filter>audio</Filter>
+    <ClCompile Include="gpu\gpu_write_frame.cpp">
+      <Filter>gpu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -64,15 +52,6 @@
     <ClInclude Include="gpu\ogl_device.h">
       <Filter>gpu</Filter>
     </ClInclude>
-    <ClInclude Include="frame\pixel_format.h">
-      <Filter>frame</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\read_frame.h">
-      <Filter>frame</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\write_frame.h">
-      <Filter>frame</Filter>
-    </ClInclude>
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="frame_mixer_device.h" />
     <ClInclude Include="fwd.h" />
@@ -82,20 +61,11 @@
     <ClInclude Include="image\image_mixer.h">
       <Filter>image</Filter>
     </ClInclude>
-    <ClInclude Include="frame\frame_visitor.h">
-      <Filter>frame</Filter>
+    <ClInclude Include="gpu\gpu_write_frame.h">
+      <Filter>gpu</Filter>
     </ClInclude>
-    <ClInclude Include="frame\frame_factory.h">
-      <Filter>frame</Filter>
-    </ClInclude>
-    <ClInclude Include="frame\basic_frame.h">
-      <Filter>frame</Filter>
-    </ClInclude>
-    <ClInclude Include="image\image_transform.h">
-      <Filter>image</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\audio_transform.h">
-      <Filter>audio</Filter>
+    <ClInclude Include="gpu\gpu_read_frame.h">
+      <Filter>gpu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

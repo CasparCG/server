@@ -271,9 +271,6 @@
     <ProjectReference Include="..\..\core\core.vcxproj">
       <Project>{79388c20-6499-4bf6-b8b9-d8c33d7d4ddd}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\mixer\mixer.vcxproj">
-      <Project>{477e12a4-1b28-4ff7-b46d-76606bdd1891}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

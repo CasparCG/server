@@ -29,7 +29,7 @@
 
 #include <core/video_format.h>
 
-#include <mixer/frame/basic_frame.h>
+#include <core/producer/frame/basic_frame.h>
 #include <mixer/frame_mixer_device.h>
 
 #include <common/concurrency/executor.h>

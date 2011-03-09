@@ -2,11 +2,10 @@
 
 #include "../fwd.h"
 
-#include "basic_frame.h"
+#include <core/producer/frame/write_frame.h>
+#include <core/video_format.h>
 
 #include "../gpu/host_buffer.h"
-
-#include <core/video_format.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -18,14 +17,14 @@ namespace caspar { namespace core {
 	
 struct pixel_format_desc;
 
-class write_frame : public basic_frame, boost::noncopyable
+class gpu_write_frame : public core::write_frame
 {
 public:	
-	explicit write_frame(const pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers);
-	write_frame(write_frame&& other);
-	write_frame& operator=(write_frame&& other);
+	explicit gpu_write_frame(const pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers);
+	gpu_write_frame(gpu_write_frame&& other);
+	gpu_write_frame& operator=(gpu_write_frame&& other);
 	
-	void swap(write_frame& other);
+	void swap(gpu_write_frame& other);
 		
 	boost::iterator_range<unsigned char*> image_data(size_t plane_index = 0);	
 	std::vector<short>& audio_data();
@@ -45,7 +44,7 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<write_frame> write_frame_impl_ptr;
+typedef std::shared_ptr<gpu_write_frame> gpu_write_frame_impl_ptr;
 
 
 }}

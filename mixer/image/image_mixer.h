@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../frame/frame_visitor.h"
+#include <core/producer/frame/frame_visitor.h>
 
 #include "../gpu/host_buffer.h"
 
@@ -17,7 +17,7 @@ namespace caspar { namespace core {
 struct pixel_format_desc;	
 class image_transform;
 
-class image_mixer : public frame_visitor, boost::noncopyable
+class image_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
 	image_mixer(const video_format_desc& format_desc);

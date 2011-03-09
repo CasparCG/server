@@ -2,18 +2,17 @@
 
 #include "image_mixer.h"
 #include "image_kernel.h"
-#include "image_transform.h"
-
-#include "../frame/basic_frame.h"
-#include "../frame/write_frame.h"
 
 #include "../gpu/ogl_device.h"
 #include "../gpu/host_buffer.h"
 #include "../gpu/device_buffer.h"
+#include "../gpu/gpu_write_frame.h"
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
 #include <common/concurrency/executor.h>
+
+#include <core/producer/frame/image_transform.h>
 
 #include <Glee.h>
 #include <SFML/Window/Context.hpp>
@@ -78,8 +77,9 @@ public:
 		
 	void visit(write_frame& frame)
 	{
-		auto& desc = frame.get_pixel_format_desc();
-		auto& buffers = frame.get_plane_buffers();
+		auto gpu_frame = static_cast<gpu_write_frame*>(&frame);
+		auto& desc = gpu_frame->get_pixel_format_desc();
+		auto& buffers = gpu_frame->get_plane_buffers();
 
 		auto transform = transform_stack_.top();
 		context_->begin_invoke([=]

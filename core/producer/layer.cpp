@@ -9,10 +9,8 @@
 #include <common/utility/assert.h>
 #include <common/utility/printer.h>
 
-#include <mixer/frame/basic_frame.h>
-#include <mixer/image/image_mixer.h>
-#include <mixer/audio/audio_mixer.h>
-#include <mixer/audio/audio_transform.h>
+#include "../producer/frame/basic_frame.h"
+#include "../producer/frame/audio_transform.h"
 
 #include <tbb/spin_mutex.h>
 

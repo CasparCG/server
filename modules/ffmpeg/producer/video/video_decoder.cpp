@@ -6,8 +6,8 @@
 
 #include <core/video_format.h>
 
-#include <mixer/frame/basic_frame.h>
-#include <mixer/image/image_transform.h>
+#include <core/producer/frame/basic_frame.h>
+#include <core/producer/frame/image_transform.h>
 
 #include <tbb/parallel_for.h>
 

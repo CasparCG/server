@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 7.00.0555 */
-/* at Wed Mar 09 11:25:59 2011
+/* at Wed Mar 09 13:57:51 2011
  */
 /* Compiler settings for interop\DeckLinkAPI.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 7.00.0555 
@@ -476,6 +476,8 @@ enum _BMDDisplayMode
     {	bmdModeNTSC	= 0x6e747363,
 	bmdModeNTSC2398	= 0x6e743233,
 	bmdModePAL	= 0x70616c20,
+	bmdModeNTSCp	= 0x6e747370,
+	bmdModePALp	= 0x70616c70,
 	bmdModeHD1080p2398	= 0x32337073,
 	bmdModeHD1080p24	= 0x32347073,
 	bmdModeHD1080p25	= 0x48703235,
@@ -664,6 +666,7 @@ enum _BMDVideo3DPackingFormat
     {	bmdVideo3DPackingSidebySideHalf	= 0x73627368,
 	bmdVideo3DPackingLinebyLine	= 0x6c62796c,
 	bmdVideo3DPackingTopAndBottom	= 0x7461626f,
+	bmdVideo3DPackingFramePacking	= 0x6672706b,
 	bmdVideo3DPackingLeftOnly	= 0x6c656674,
 	bmdVideo3DPackingRightOnly	= 0x72696768
     } 	BMDVideo3DPackingFormat;
@@ -2809,7 +2812,7 @@ EXTERN_C const IID IID_IDeckLinkVideoFrame3DExtensions;
         virtual BMDVideo3DPackingFormat STDMETHODCALLTYPE Get3DPackingFormat( void) = 0;
         
         virtual HRESULT STDMETHODCALLTYPE GetFrameForRightEye( 
-            /* [in] */ IDeckLinkVideoFrame **rightEyeFrame) = 0;
+            /* [out] */ IDeckLinkVideoFrame **rightEyeFrame) = 0;
         
     };
     
@@ -2836,7 +2839,7 @@ EXTERN_C const IID IID_IDeckLinkVideoFrame3DExtensions;
         
         HRESULT ( STDMETHODCALLTYPE *GetFrameForRightEye )( 
             IDeckLinkVideoFrame3DExtensions * This,
-            /* [in] */ IDeckLinkVideoFrame **rightEyeFrame);
+            /* [out] */ IDeckLinkVideoFrame **rightEyeFrame);
         
         END_INTERFACE
     } IDeckLinkVideoFrame3DExtensionsVtbl;

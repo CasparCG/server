@@ -6,11 +6,12 @@
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 
-#include <core/video_format.h>
 #include <common/utility/timer.h>
 #include <common/diagnostics/graph.h>
-#include <mixer/frame/basic_frame.h>
-#include <mixer/audio/audio_transform.h>
+
+#include <core/producer/frame/basic_frame.h>
+#include <core/producer/frame/audio_transform.h>
+#include <core/video_format.h>
 
 #include <common/env.h>
 #include <common/utility/timer.h>
