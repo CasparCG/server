@@ -9,7 +9,7 @@
 #include <common/utility/assert.h>
 #include <common/utility/printer.h>
 
-#include <mixer/frame/draw_frame.h>
+#include <mixer/frame/basic_frame.h>
 #include <mixer/image/image_mixer.h>
 #include <mixer/audio/audio_mixer.h>
 #include <mixer/audio/audio_transform.h>
@@ -55,7 +55,7 @@ struct layer::implementation : boost::noncopyable
 	
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
-	safe_ptr<draw_frame>		last_frame_;
+	safe_ptr<basic_frame>		last_frame_;
 	bool						is_paused_;
 public:
 	implementation(int index, const printer& parent_printer) 
@@ -63,7 +63,7 @@ public:
 		, index_(index)
 		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
-		, last_frame_(draw_frame::empty())
+		, last_frame_(basic_frame::empty())
 		, is_paused_(false){}
 	
 	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview)
@@ -102,11 +102,11 @@ public:
 	void stop()
 	{
 		pause();
-		last_frame_ = draw_frame::empty();
+		last_frame_ = basic_frame::empty();
 		foreground_ = frame_producer::empty();
 	}
 		
-	safe_ptr<draw_frame> receive()
+	safe_ptr<basic_frame> receive()
 	{		
 		if(is_paused_)
 		{
@@ -117,7 +117,7 @@ public:
 		try
 		{
 			last_frame_ = foreground_->receive(); 
-			if(last_frame_ == draw_frame::eof())
+			if(last_frame_ == basic_frame::eof())
 			{
 				CASPAR_VERIFY(foreground_ != frame_producer::empty());
 
@@ -167,7 +167,7 @@ void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_lo
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
-safe_ptr<draw_frame> layer::receive() {return impl_->receive();}
+safe_ptr<basic_frame> layer::receive() {return impl_->receive();}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 std::wstring layer::print() const { return impl_->print();}

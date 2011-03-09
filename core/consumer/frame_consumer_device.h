@@ -11,7 +11,7 @@
 
 namespace caspar { namespace core {
 	
-class draw_frame;
+class basic_frame;
 struct video_format_desc;
 
 class frame_consumer_device : boost::noncopyable

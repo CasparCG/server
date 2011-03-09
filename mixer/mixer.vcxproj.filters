@@ -47,7 +47,7 @@
     <ClCompile Include="image\image_transform.cpp">
       <Filter>image</Filter>
     </ClCompile>
-    <ClCompile Include="frame\draw_frame.cpp">
+    <ClCompile Include="frame\basic_frame.cpp">
       <Filter>frame</Filter>
     </ClCompile>
   </ItemGroup>
@@ -91,10 +91,10 @@
     <ClInclude Include="frame\frame_visitor.h">
       <Filter>frame</Filter>
     </ClInclude>
-    <ClInclude Include="frame\draw_frame.h">
+    <ClInclude Include="frame\frame_factory.h">
       <Filter>frame</Filter>
     </ClInclude>
-    <ClInclude Include="frame\frame_factory.h">
+    <ClInclude Include="frame\basic_frame.h">
       <Filter>frame</Filter>
     </ClInclude>
   </ItemGroup>

@@ -22,7 +22,7 @@
 #include <common/memory/safe_ptr.h>
 #include <common/utility/printer.h>
 
-#include <mixer/frame/draw_frame.h>
+#include <mixer/frame/basic_frame.h>
 #include <mixer/frame/frame_factory.h>
 
 #include <boost/noncopyable.hpp>
@@ -38,7 +38,7 @@ public:
 	virtual ~frame_producer(){}	
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	/// \fn	virtual draw_frame :::receive() = 0;
+	/// \fn	virtual basic_frame :::receive() = 0;
 	///
 	/// \brief	Renders a frame.
 	/// 		
@@ -46,7 +46,7 @@ public:
 	///
 	/// \return	The frame. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual safe_ptr<draw_frame> receive() = 0;
+	virtual safe_ptr<basic_frame> receive() = 0;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	/// \fn	virtual std::shared_ptr<frame_producer> :::get_following_producer() const
@@ -81,7 +81,7 @@ public:
 	{
 		struct empty_frame_producer : public frame_producer
 		{
-			virtual safe_ptr<draw_frame> receive(){return draw_frame::empty();}
+			virtual safe_ptr<basic_frame> receive(){return basic_frame::empty();}
 			virtual void initialize(const safe_ptr<frame_factory>&){}
 			virtual std::wstring print() const { return L"empty";}
 			virtual void set_parent_printer(const printer& parent_printer) {}

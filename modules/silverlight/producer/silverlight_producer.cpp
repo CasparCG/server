@@ -58,7 +58,7 @@ class silverlight_renderer
 	
 	CComObject<XcpControlHost>* host_;
 	tbb::spin_mutex mutex_;
-	safe_ptr<core::draw_frame> last_frame_;
+	safe_ptr<core::basic_frame> last_frame_;
 
 	sf::RenderWindow window_;
 			
@@ -71,7 +71,7 @@ public:
 	silverlight_renderer(const std::shared_ptr<core::frame_factory>& frame_factory) 
 		: frame_factory_(frame_factory)
 		, format_desc_(frame_factory->get_video_format_desc())
-		, last_frame_(core::draw_frame::empty())
+		, last_frame_(core::basic_frame::empty())
 		, host_(nullptr)
 		, id_(rand())
 		, window_(sf::VideoMode(format_desc_.width, format_desc_.height, 32), boost::lexical_cast<std::string>(id_), sf::Style::None)
@@ -126,7 +126,7 @@ public:
 		last_frame_ = frame;
 	}
 		
-	safe_ptr<core::draw_frame> get_frame()
+	safe_ptr<core::basic_frame> get_frame()
 	{		
 		tbb::spin_mutex::scoped_lock lock(mutex_);
 		return last_frame_;
@@ -160,7 +160,7 @@ public:
 
 	}
 
-	virtual safe_ptr<core::draw_frame> receive()
+	virtual safe_ptr<core::basic_frame> receive()
 	{
 		executor_.begin_invoke([=]
 		{

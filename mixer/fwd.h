@@ -6,7 +6,7 @@ namespace caspar { namespace core {
 	
 class read_frame;
 class write_frame;
-class draw_frame;
+class basic_frame;
 
 class image_mixer;
 struct frame_factory;
