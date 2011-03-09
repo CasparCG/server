@@ -119,7 +119,7 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 
 		BMDDisplayModeSupport displayModeSupport;
-		if(FAILED(input_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, &displayModeSupport)))
+		if(FAILED(input_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, bmdVideoOutputFlagDefault, &displayModeSupport, nullptr)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 
 		// NOTE: bmdFormat8BitARGB does not seem to work with Decklink HD Extreme 3D
