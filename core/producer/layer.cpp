@@ -3,9 +3,8 @@
 #include "layer.h"
 #include "frame_producer.h"
 
-#include "../video_format.h"
-
 #include <common/concurrency/executor.h>
+#include <common/exception/exceptions.h>
 #include <common/utility/assert.h>
 #include <common/utility/printer.h>
 
@@ -19,7 +18,6 @@ namespace caspar { namespace core {
 class frame_producer_remover
 {
 	executor executor_;
-	tbb::atomic<int> count_;
 
 	void do_remove(safe_ptr<frame_producer>& producer)
 	{
@@ -27,12 +25,12 @@ class frame_producer_remover
 		producer = frame_producer::empty();
 		CASPAR_LOG(info) << name << L" Removed.";
 	}
+
 public:
 
-	frame_producer_remover()
+	frame_producer_remover() : executor_(L"frame_producer_remover")
 	{
 		executor_.start();
-		count_ = 0;
 	}
 
 	void remove(safe_ptr<frame_producer>&& producer)
@@ -43,7 +41,6 @@ public:
 };
 
 frame_producer_remover g_remover;
-
 
 struct layer::implementation : boost::noncopyable
 {				
@@ -121,7 +118,7 @@ public:
 
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
-				following->set_parent_printer(boost::bind(&implementation::print, this));
+				following->set_parent_printer([=]{return print();});
 				g_remover.remove(std::move(foreground_));
 				foreground_ = following;
 				CASPAR_LOG(info) << foreground_->print() << L" Added.";

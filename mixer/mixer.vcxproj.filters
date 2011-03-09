@@ -54,7 +54,6 @@
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="frame_mixer_device.h" />
-    <ClInclude Include="fwd.h" />
     <ClInclude Include="image\image_kernel.h">
       <Filter>image</Filter>
     </ClInclude>

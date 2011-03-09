@@ -4,8 +4,8 @@
 
 #include <core/video_format.h>
 
-#include <mixer/frame_mixer_device.h>
 #include <core/producer/frame/basic_frame.h>
+#include <core/producer/frame/write_frame.h>
 
 #include <common/env.h>
 

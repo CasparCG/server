@@ -30,7 +30,7 @@
 #include <core/video_format.h>
 
 #include <core/producer/frame/basic_frame.h>
-#include <mixer/frame_mixer_device.h>
+#include <core/producer/frame/write_frame.h>
 
 #include <common/concurrency/executor.h>
 #include <common/utility/timer.h>

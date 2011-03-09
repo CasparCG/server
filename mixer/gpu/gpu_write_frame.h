@@ -1,9 +1,7 @@
 #pragma once
 
-#include "../fwd.h"
-
+#include <common/memory/safe_ptr.h>
 #include <core/producer/frame/write_frame.h>
-#include <core/video_format.h>
 
 #include "../gpu/host_buffer.h"
 
