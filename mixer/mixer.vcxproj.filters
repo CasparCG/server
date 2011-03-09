@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="audio\audio_transform.cpp">
-      <Filter>audio</Filter>
-    </ClCompile>
     <ClCompile Include="audio\audio_mixer.cpp">
       <Filter>audio</Filter>
     </ClCompile>
@@ -44,18 +41,18 @@
     <ClCompile Include="image\image_mixer.cpp">
       <Filter>image</Filter>
     </ClCompile>
+    <ClCompile Include="frame\basic_frame.cpp">
+      <Filter>frame</Filter>
+    </ClCompile>
     <ClCompile Include="image\image_transform.cpp">
       <Filter>image</Filter>
     </ClCompile>
-    <ClCompile Include="frame\basic_frame.cpp">
-      <Filter>frame</Filter>
+    <ClCompile Include="audio\audio_transform.cpp">
+      <Filter>audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="audio\audio_mixer.h">
-      <Filter>audio</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\audio_transform.h">
       <Filter>audio</Filter>
     </ClInclude>
     <ClInclude Include="gpu\device_buffer.h">
@@ -79,9 +76,6 @@
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="frame_mixer_device.h" />
     <ClInclude Include="fwd.h" />
-    <ClInclude Include="image\image_transform.h">
-      <Filter>image</Filter>
-    </ClInclude>
     <ClInclude Include="image\image_kernel.h">
       <Filter>image</Filter>
     </ClInclude>
@@ -96,6 +90,12 @@
     </ClInclude>
     <ClInclude Include="frame\basic_frame.h">
       <Filter>frame</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image_transform.h">
+      <Filter>image</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\audio_transform.h">
+      <Filter>audio</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

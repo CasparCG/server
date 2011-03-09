@@ -79,7 +79,7 @@ public:
 	void visit(write_frame& frame)
 	{
 		auto& desc = frame.get_pixel_format_desc();
-		auto& buffers = frame.buffers();
+		auto& buffers = frame.get_plane_buffers();
 
 		auto transform = transform_stack_.top();
 		context_->begin_invoke([=]
