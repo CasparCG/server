@@ -4,8 +4,6 @@
 
 #include "../gpu/host_buffer.h"
 
-#include <core/video_format.h>
-
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
 
@@ -14,6 +12,7 @@
 
 namespace caspar { namespace core {
 
+struct video_format_desc;
 struct pixel_format_desc;	
 class image_transform;
 

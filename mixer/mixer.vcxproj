@@ -78,7 +78,6 @@
   <ItemGroup>
     <ClInclude Include="audio\audio_mixer.h" />
     <ClInclude Include="frame_mixer_device.h" />
-    <ClInclude Include="fwd.h" />
     <ClInclude Include="gpu\device_buffer.h" />
     <ClInclude Include="gpu\gpu_read_frame.h" />
     <ClInclude Include="gpu\gpu_write_frame.h" />

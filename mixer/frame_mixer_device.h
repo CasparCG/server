@@ -19,21 +19,14 @@
 */
 #pragma once
 
-#include "fwd.h"
-
-#include <core/video_format.h>
-#include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_factory.h>
+#include <core/producer/frame/pixel_format.h>
 
 #include "image/image_mixer.h"
 #include "audio/audio_mixer.h"
 
-#include "gpu/gpu_write_frame.h"
-
 #include <common/memory/safe_ptr.h>
 #include <common/utility/printer.h>
-
-#include <core/video_format.h>
 
 #include <boost/signals2.hpp>
 
@@ -41,7 +34,9 @@
 
 namespace caspar { namespace core {
 	
-struct video_format;
+struct video_format_desc;
+class read_frame;
+class write_frame;
 
 class frame_mixer_device : public frame_factory
 {
