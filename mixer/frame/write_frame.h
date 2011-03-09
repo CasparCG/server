@@ -21,17 +21,17 @@ struct pixel_format_desc;
 class write_frame : public basic_frame, boost::noncopyable
 {
 public:	
-	explicit write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers);
+	explicit write_frame(const pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers);
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
 	
 	void swap(write_frame& other);
 		
-	boost::iterator_range<unsigned char*> image_data(size_t index = 0);	
+	boost::iterator_range<unsigned char*> image_data(size_t plane_index = 0);	
 	std::vector<short>& audio_data();
 	
-	boost::iterator_range<const unsigned char*> image_data(size_t index = 0) const;
-	const std::vector<short>& audio_data() const;
+	const boost::iterator_range<const unsigned char*> image_data(size_t plane_index = 0) const;
+	const boost::iterator_range<const short*> audio_data() const;
 
 	virtual void accept(frame_visitor& visitor);
 
@@ -39,7 +39,7 @@ public:
 	int tag() const;
 
 	const pixel_format_desc& get_pixel_format_desc() const;
-	std::vector<safe_ptr<host_buffer>>& buffers();
+	std::vector<safe_ptr<host_buffer>>& get_plane_buffers();
 	
 private:
 	struct implementation;
