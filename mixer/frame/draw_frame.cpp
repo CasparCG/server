@@ -22,6 +22,7 @@ struct draw_frame::implementation
 	audio_transform audio_transform_;
 
 	int index_;
+
 public:
 	implementation(const std::vector<safe_ptr<draw_frame>>& frames) 
 		: frames_(frames)
@@ -30,20 +31,12 @@ public:
 		: frames_(std::move(frames))
 		, index_(std::numeric_limits<int>::min()) {}
 	
-	void process_image(image_mixer& mixer)
+	void accept(draw_frame& self, frame_visitor& visitor)
 	{
-		mixer.begin(image_transform_);
+		visitor.begin(self);
 		BOOST_FOREACH(auto frame, frames_)
-			frame->process_image(mixer);
-		mixer.end();
-	}
-
-	void process_audio(audio_mixer& mixer)
-	{
-		mixer.begin(audio_transform_);
-		BOOST_FOREACH(auto frame, frames_)
-			frame->process_audio(mixer);
-		mixer.end();
+			frame->accept(visitor);
+		visitor.end();
 	}	
 };
 	
@@ -92,8 +85,7 @@ draw_frame& draw_frame::operator=(draw_frame&& other)
 	temp.swap(*this);
 	return *this;
 }
-void draw_frame::process_image(image_mixer& mixer){impl_->process_image(mixer);}
-void draw_frame::process_audio(audio_mixer& mixer){impl_->process_audio(mixer);}
+void draw_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 const image_transform& draw_frame::get_image_transform() const { return impl_->image_transform_;}
 image_transform& draw_frame::get_image_transform() { return impl_->image_transform_;}

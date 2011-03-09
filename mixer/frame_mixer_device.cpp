@@ -112,15 +112,15 @@ public:
 				frame2->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
 
 				if(frame1->get_image_transform() != frame2->get_image_transform())
-					draw_frame::interlace(frame1, frame2, format_desc_.mode)->process_image(image_mixer_);
+					draw_frame::interlace(frame1, frame2, format_desc_.mode)->accept(image_mixer_);
 				else
-					frame2->process_image(image_mixer_);
+					frame2->accept(image_mixer_);
 			}
 			else
 			{
 				auto frame1 = make_safe<draw_frame>(frame);
 				frame1->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
-				frame1->process_image(image_mixer_);
+				frame1->accept(image_mixer_);
 			}
 		}
 		image_mixer_.end_pass();
@@ -136,7 +136,7 @@ public:
 
 			auto frame1 = make_safe<draw_frame>(frame);
 			frame1->get_audio_transform() = root_audio_transform_.fetch_and_tick(num)*audio_transforms_[frame->get_layer_index()].fetch_and_tick(num);
-			frame1->process_audio(audio_mixer_);
+			frame1->accept(audio_mixer_);
 		}
 		audio_mixer_.end_pass();
 		return audio;

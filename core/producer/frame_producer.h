@@ -23,7 +23,7 @@
 #include <common/utility/printer.h>
 
 #include <mixer/frame/draw_frame.h>
-#include <mixer/frame_factory.h>
+#include <mixer/frame/frame_factory.h>
 
 #include <boost/noncopyable.hpp>
 

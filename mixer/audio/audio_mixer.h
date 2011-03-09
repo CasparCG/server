@@ -1,19 +1,19 @@
 #pragma once
 
-#include <tbb/spin_mutex.h>
+#include "../frame/frame_visitor.h"
 
 namespace caspar { namespace core {
 
 class audio_transform;
 
-class audio_mixer
+class audio_mixer : public frame_visitor
 {
 public:
 	audio_mixer();
 
-	void begin(const audio_transform& transform);
-	void process(const std::vector<short>& audio_data, int tag);
-	void end();
+	virtual void begin(const draw_frame& frame);
+	virtual void visit(write_frame& frame);
+	virtual void end();
 
 	std::vector<short> begin_pass();
 	void end_pass();

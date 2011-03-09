@@ -97,10 +97,11 @@
     <ClInclude Include="audio\audio_mixer.h" />
     <ClInclude Include="audio\audio_transform.h" />
     <ClInclude Include="frame\draw_frame.h" />
+    <ClInclude Include="frame\frame_factory.h" />
+    <ClInclude Include="frame\frame_visitor.h" />
     <ClInclude Include="frame\pixel_format.h" />
     <ClInclude Include="frame\read_frame.h" />
     <ClInclude Include="frame\write_frame.h" />
-    <ClInclude Include="frame_factory.h" />
     <ClInclude Include="frame_mixer_device.h" />
     <ClInclude Include="fwd.h" />
     <ClInclude Include="gpu\device_buffer.h" />
