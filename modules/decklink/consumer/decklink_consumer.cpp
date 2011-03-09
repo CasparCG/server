@@ -129,7 +129,7 @@ public:
 		display_mode->GetFrameRate(&frame_duration_, &frame_time_scale_);
 
 		BMDDisplayModeSupport displayModeSupport;
-		if(FAILED(output_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, &displayModeSupport)))
+		if(FAILED(output_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, bmdVideoOutputFlagDefault, &displayModeSupport, nullptr)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 		
 		if(embed_audio_)
@@ -139,6 +139,8 @@ public:
 				
 			if(FAILED(output_->SetAudioCallback(this)))
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not set audio callback."));
+
+			CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
 		}
 
 		if(FAILED(output_->EnableVideoOutput(display_mode->GetDisplayMode(), bmdVideoOutputFlagDefault))) 
