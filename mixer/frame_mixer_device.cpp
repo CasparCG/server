@@ -2,12 +2,14 @@
 
 #include "frame_mixer_device.h"
 
+#include "gpu/gpu_read_frame.h"
+#include "gpu/gpu_write_frame.h"
+
+#include <core/producer/frame/audio_transform.h>
+#include <core/producer/frame/image_transform.h>
+
 #include "audio/audio_mixer.h"
-#include "audio/audio_transform.h"
-#include "frame/write_frame.h"
-#include "frame/read_frame.h"
 #include "image/image_mixer.h"
-#include "image/image_transform.h"
 
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
@@ -151,7 +153,7 @@ public:
 
 			auto image = mix_image(frames);
 			auto audio = mix_audio(frames);
-			output_(make_safe<const read_frame>(std::move(image.get()), std::move(audio)));
+			output_(make_safe<const gpu_read_frame>(std::move(image.get()), std::move(audio)));
 
 			diag_->update_value("tick-time", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
 			wait_perf_timer_.reset();
@@ -163,7 +165,7 @@ public:
 		
 	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc)
 	{
-		return make_safe<write_frame>(desc, image_mixer_.create_buffers(desc));
+		return make_safe<gpu_write_frame>(desc, image_mixer_.create_buffers(desc));
 	}
 				
 	void set_image_transform(const image_transform& transform, int mix_duration)

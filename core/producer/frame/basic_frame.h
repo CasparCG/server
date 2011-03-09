@@ -1,11 +1,9 @@
 #pragma once
 
-#include "../fwd.h"
-
 #include "frame_visitor.h"
+#include "../../video_format.h"
 
 #include <common/memory/safe_ptr.h>
-#include <core/video_format.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -23,7 +21,6 @@ class basic_frame
 {
 public:
 	basic_frame();	
-	basic_frame(safe_ptr<write_frame>&& image, std::vector<short>&& audio);
 	basic_frame(const safe_ptr<basic_frame>& frame);
 	basic_frame(safe_ptr<basic_frame>&& frame);
 	basic_frame(const std::vector<safe_ptr<basic_frame>>& frames);

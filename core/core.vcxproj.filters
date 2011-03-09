@@ -13,13 +13,17 @@
     <Filter Include="producer\color">
       <UniqueIdentifier>{78b16c14-bf29-4511-9122-684ff513dbf5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="producer\frame">
+      <UniqueIdentifier>{b19721c1-8dd1-45fb-b9e3-212b548ebbb6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="consumer\frame">
+      <UniqueIdentifier>{fc8d2ce0-e849-4f8e-83bf-494ab4455b80}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
       <Filter>producer\transition</Filter>
     </ClInclude>
-    <ClInclude Include="video_format.h" />
-    <ClInclude Include="producer\layer.h" />
     <ClInclude Include="channel.h" />
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="consumer\frame_consumer_device.h">
@@ -37,15 +41,41 @@
     <ClInclude Include="producer\color\color_producer.h">
       <Filter>producer\color</Filter>
     </ClInclude>
+    <ClInclude Include="producer\layer.h">
+      <Filter>producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame\audio_transform.h">
+      <Filter>producer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame\basic_frame.h">
+      <Filter>producer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame\frame_factory.h">
+      <Filter>producer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame\frame_visitor.h">
+      <Filter>producer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame\image_transform.h">
+      <Filter>producer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame\pixel_format.h">
+      <Filter>producer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame\write_frame.h">
+      <Filter>producer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\frame\read_frame.h">
+      <Filter>consumer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="video_format.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
       <Filter>producer\transition</Filter>
     </ClCompile>
-    <ClCompile Include="producer\layer.cpp" />
     <ClCompile Include="channel.cpp" />
     <ClCompile Include="StdAfx.cpp" />
-    <ClCompile Include="video_format.cpp" />
     <ClCompile Include="consumer\frame_consumer.cpp">
       <Filter>consumer</Filter>
     </ClCompile>
@@ -61,5 +91,18 @@
     <ClCompile Include="producer\color\color_producer.cpp">
       <Filter>producer\color</Filter>
     </ClCompile>
+    <ClCompile Include="producer\layer.cpp">
+      <Filter>producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\frame\basic_frame.cpp">
+      <Filter>producer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\frame\image_transform.cpp">
+      <Filter>producer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\frame\audio_transform.cpp">
+      <Filter>producer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="video_format.cpp" />
   </ItemGroup>
 </Project>

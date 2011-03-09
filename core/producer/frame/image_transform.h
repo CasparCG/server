@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../gpu/host_buffer.h"
-
 #include <core/video_format.h>
 
 #include <boost/tuple/tuple.hpp>

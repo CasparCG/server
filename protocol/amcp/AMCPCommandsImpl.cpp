@@ -32,8 +32,8 @@
 #include <modules/flash/producer/cg_producer.h>
 #include <core/producer/transition/transition_producer.h>
 
-#include <mixer/image/image_transform.h>
-#include <mixer/audio/audio_transform.h>
+#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/audio_transform.h>
 
 #include <algorithm>
 #include <locale>

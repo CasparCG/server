@@ -2,8 +2,8 @@
 
 #include "frame_producer_device.h"
 
-#include <mixer/frame/basic_frame.h>
-#include <mixer/frame/frame_factory.h>
+#include <core/producer/frame/basic_frame.h>
+#include <core/producer/frame/frame_factory.h>
 
 #include "layer.h"
 

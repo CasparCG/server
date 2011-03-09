@@ -1,12 +1,14 @@
 #pragma once
 
-#include "../frame/frame_visitor.h"
+#include <core/producer/frame/frame_visitor.h>
+
+#include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
 
 class audio_transform;
 
-class audio_mixer : public frame_visitor
+class audio_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
 	audio_mixer();

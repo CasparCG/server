@@ -5,10 +5,6 @@
 #include "consumer/frame_consumer_device.h"
 #include "mixer/frame_mixer_device.h"
 #include "producer/frame_producer_device.h"
-
-#include "mixer/frame/basic_frame.h"
-#include "mixer/frame_mixer_device.h"
-
 #include "producer/layer.h"
 
 #include <common/concurrency/executor.h>

@@ -2,10 +2,10 @@
 
 #include "image_kernel.h"
 
-#include "image_transform.h"
-
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
+
+#include <core/producer/frame/image_transform.h>
 
 #include <Glee.h>
 

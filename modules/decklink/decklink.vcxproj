@@ -255,14 +255,10 @@
   </ItemGroup>
   <ItemGroup>
     <Midl Include="interop\DeckLinkAPI.idl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">interop\</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">interop\</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">interop\</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">interop\</OutputDirectory>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">true</ExcludedFromBuild>
     </Midl>
     <Midl Include="interop\DeckLinkAPI_v7_1.idl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">true</ExcludedFromBuild>
@@ -289,9 +285,6 @@
     </ProjectReference>
     <ProjectReference Include="..\..\core\core.vcxproj">
       <Project>{79388c20-6499-4bf6-b8b9-d8c33d7d4ddd}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\mixer\mixer.vcxproj">
-      <Project>{477e12a4-1b28-4ff7-b46d-76606bdd1891}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

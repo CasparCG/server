@@ -22,8 +22,8 @@
 #include <common/memory/safe_ptr.h>
 #include <common/utility/printer.h>
 
-#include <mixer/frame/basic_frame.h>
-#include <mixer/frame/frame_factory.h>
+#include "../producer/frame/basic_frame.h"
+#include "../producer/frame/frame_factory.h"
 
 #include <boost/noncopyable.hpp>
 

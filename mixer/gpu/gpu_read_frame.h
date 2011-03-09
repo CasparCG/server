@@ -2,6 +2,8 @@
 
 #include "../gpu/host_buffer.h"	
 
+#include <core/consumer/frame/read_frame.h>
+
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 
@@ -12,11 +14,10 @@
 
 namespace caspar { namespace core {
 	
-class read_frame
+class gpu_read_frame : public core::read_frame
 {
 public:
-	read_frame();
-	read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data);
+	gpu_read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data);
 
 	const boost::iterator_range<const unsigned char*> image_data() const;
 	const boost::iterator_range<const short*> audio_data() const;
