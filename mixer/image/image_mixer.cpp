@@ -14,6 +14,8 @@
 
 #include <core/producer/frame/image_transform.h>
 
+#include <boost/cast.hpp>
+
 #include <Glee.h>
 #include <SFML/Window/Context.hpp>
 #include <unordered_map>
@@ -77,7 +79,7 @@ public:
 		
 	void visit(write_frame& frame)
 	{
-		auto gpu_frame = static_cast<gpu_write_frame*>(&frame);
+		auto gpu_frame = boost::polymorphic_downcast<gpu_write_frame*>(&frame);
 		auto& desc = gpu_frame->get_pixel_format_desc();
 		auto& buffers = gpu_frame->get_plane_buffers();
 
