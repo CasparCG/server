@@ -4,6 +4,9 @@
 #include "image_kernel.h"
 #include "image_transform.h"
 
+#include "../frame/draw_frame.h"
+#include "../frame/write_frame.h"
+
 #include "../gpu/ogl_device.h"
 #include "../gpu/host_buffer.h"
 #include "../gpu/device_buffer.h"
@@ -68,13 +71,16 @@ public:
 		glDeleteFramebuffersEXT(1, &fbo_);
 	}
 
-	void begin(const image_transform& transform)
+	void begin(const draw_frame& frame)
 	{
-		transform_stack_.push(transform_stack_.top()*transform);
+		transform_stack_.push(transform_stack_.top()*frame.get_image_transform());
 	}
 		
-	void render(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>>& buffers)
+	void visit(write_frame& frame)
 	{
+		auto& desc = frame.get_pixel_format_desc();
+		auto& buffers = frame.buffers();
+
 		auto transform = transform_stack_.top();
 		context_->begin_invoke([=]
 		{
@@ -155,8 +161,8 @@ public:
 };
 
 image_mixer::image_mixer(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void image_mixer::begin(const image_transform& transform) {	impl_->begin(transform);}
-void image_mixer::process(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>>& buffers){	impl_->render(desc, buffers);}
+void image_mixer::begin(const draw_frame& frame){impl_->begin(frame);}
+void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<const host_buffer>> image_mixer::begin_pass(){	return impl_->begin_pass();}
 void image_mixer::end_pass(){impl_->end_pass();}

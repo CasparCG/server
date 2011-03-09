@@ -22,7 +22,7 @@
 
 #include "color_producer.h"
 
-#include <mixer/frame/draw_frame.h>
+#include <mixer/frame/write_frame.h>
 
 #include <sstream>
 

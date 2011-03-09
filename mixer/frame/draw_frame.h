@@ -2,7 +2,7 @@
 
 #include "../fwd.h"
 
-#include "draw_frame.h"
+#include "frame_visitor.h"
 
 #include <common/memory/safe_ptr.h>
 #include <core/video_format.h>
@@ -64,8 +64,7 @@ public:
 	void remove_audio();
 	void remove_image();
 
-	virtual void process_image(image_mixer& mixer);
-	virtual void process_audio(audio_mixer& mixer);
+	virtual void accept(frame_visitor& visitor);
 
 	void set_layer_index(int index);
 	int get_layer_index() const;

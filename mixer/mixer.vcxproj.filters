@@ -36,9 +36,6 @@
     <ClCompile Include="frame\write_frame.cpp">
       <Filter>frame</Filter>
     </ClCompile>
-    <ClCompile Include="frame\draw_frame.cpp">
-      <Filter>frame</Filter>
-    </ClCompile>
     <ClCompile Include="frame_mixer_device.cpp" />
     <ClCompile Include="StdAfx.cpp" />
     <ClCompile Include="image\image_kernel.cpp">
@@ -49,6 +46,9 @@
     </ClCompile>
     <ClCompile Include="image\image_transform.cpp">
       <Filter>image</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\draw_frame.cpp">
+      <Filter>frame</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -67,9 +67,6 @@
     <ClInclude Include="gpu\ogl_device.h">
       <Filter>gpu</Filter>
     </ClInclude>
-    <ClInclude Include="frame\draw_frame.h">
-      <Filter>frame</Filter>
-    </ClInclude>
     <ClInclude Include="frame\pixel_format.h">
       <Filter>frame</Filter>
     </ClInclude>
@@ -80,7 +77,6 @@
       <Filter>frame</Filter>
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="frame_factory.h" />
     <ClInclude Include="frame_mixer_device.h" />
     <ClInclude Include="fwd.h" />
     <ClInclude Include="image\image_transform.h">
@@ -91,6 +87,15 @@
     </ClInclude>
     <ClInclude Include="image\image_mixer.h">
       <Filter>image</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\frame_visitor.h">
+      <Filter>frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\draw_frame.h">
+      <Filter>frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\frame_factory.h">
+      <Filter>frame</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -22,7 +22,6 @@
 
 #include "decklink_producer.h"
 
-#include <mixer/frame/draw_frame.h>
 #include "../interop/DeckLinkAPI_h.h" // TODO: Change this
 #include "../util/util.h" // TODO: Change this
 
@@ -30,6 +29,8 @@
 #include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
 #include <common/utility/timer.h>
+
+#include <mixer/frame/write_frame.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>

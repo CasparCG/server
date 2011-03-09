@@ -21,7 +21,7 @@
 
 #include "fwd.h"
 
-#include "frame_factory.h"
+#include "frame/frame_factory.h"
 
 #include "image/image_mixer.h"
 #include "audio/audio_mixer.h"
@@ -31,6 +31,8 @@
 
 #include <common/memory/safe_ptr.h>
 #include <common/utility/printer.h>
+
+#include <core/video_format.h>
 
 #include <boost/signals2.hpp>
 

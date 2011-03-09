@@ -19,15 +19,16 @@
 */
 #pragma once
 
-#include "fwd.h"
+#include "../fwd.h"
 
-#include "frame/write_frame.h"
-#include "frame/pixel_format.h"
+#include "pixel_format.h"
 
 #include <common/memory/safe_ptr.h>
 
+#include <core/video_format.h>
+
 namespace caspar { namespace core {
-	
+		
 struct frame_factory : boost::noncopyable
 {
 	virtual safe_ptr<write_frame> create_frame(const pixel_format_desc& desc) = 0;
