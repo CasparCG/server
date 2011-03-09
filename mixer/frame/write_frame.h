@@ -29,12 +29,17 @@ public:
 		
 	boost::iterator_range<unsigned char*> image_data(size_t index = 0);	
 	std::vector<short>& audio_data();
+	
+	boost::iterator_range<const unsigned char*> image_data(size_t index = 0) const;
+	const std::vector<short>& audio_data() const;
 
-	virtual void process_image(image_mixer& mixer);
-	virtual void process_audio(audio_mixer& mixer);
+	virtual void accept(frame_visitor& visitor);
 
 	void tag(int tag);
 	int tag() const;
+
+	const pixel_format_desc& get_pixel_format_desc() const;
+	std::vector<safe_ptr<host_buffer>>& buffers();
 	
 private:
 	struct implementation;

@@ -3,7 +3,7 @@
 #include "frame_producer_device.h"
 
 #include <mixer/frame/draw_frame.h>
-#include <mixer/frame_factory.h>
+#include <mixer/frame/frame_factory.h>
 
 #include "layer.h"
 
