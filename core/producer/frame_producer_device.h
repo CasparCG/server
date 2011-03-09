@@ -28,7 +28,7 @@ namespace caspar { namespace core {
 class frame_producer_device : boost::noncopyable
 {
 public:
-	typedef boost::signals2::signal<void(const std::vector<safe_ptr<draw_frame>>&)> output_t;
+	typedef boost::signals2::signal<void(const std::vector<safe_ptr<basic_frame>>&)> output_t;
 	 
 	boost::signals2::connection connect(const output_t::slot_type& subscriber);
 

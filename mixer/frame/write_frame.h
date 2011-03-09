@@ -2,7 +2,7 @@
 
 #include "../fwd.h"
 
-#include "draw_frame.h"
+#include "basic_frame.h"
 
 #include "../gpu/host_buffer.h"
 
@@ -18,7 +18,7 @@ namespace caspar { namespace core {
 	
 struct pixel_format_desc;
 
-class write_frame : public draw_frame, boost::noncopyable
+class write_frame : public basic_frame, boost::noncopyable
 {
 public:	
 	explicit write_frame(const pixel_format_desc& desc, std::vector<safe_ptr<host_buffer>> buffers);

@@ -75,8 +75,8 @@ class decklink_input : public IDeckLinkInputCallback
 
 	std::shared_ptr<core::frame_factory> frame_factory_;
 
-	tbb::concurrent_bounded_queue<safe_ptr<core::draw_frame>> frame_buffer_;
-	safe_ptr<core::draw_frame> tail_;
+	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
+	safe_ptr<core::basic_frame> tail_;
 
 public:
 
@@ -86,7 +86,7 @@ public:
 		, device_index_(device_index)
 		, model_name_(L"DECKLINK")
 		, frame_factory_(frame_factory)
-		, tail_(core::draw_frame::empty())
+		, tail_(core::basic_frame::empty())
 	{
 		frame_buffer_.set_capacity(4);
 		
@@ -231,7 +231,7 @@ public:
 		return nullptr;
 	}
 
-	safe_ptr<core::draw_frame> get_frame()
+	safe_ptr<core::basic_frame> get_frame()
 	{
 		frame_buffer_.try_pop(tail_);
 		return tail_;
@@ -278,7 +278,7 @@ public:
 
 	virtual void set_parent_printer(const printer& parent_printer) { parent_printer_ = parent_printer;}
 	
-	virtual safe_ptr<core::draw_frame> receive()
+	virtual safe_ptr<core::basic_frame> receive()
 	{
 		return input_->get_frame();
 	}

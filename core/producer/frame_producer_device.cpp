@@ -2,7 +2,7 @@
 
 #include "frame_producer_device.h"
 
-#include <mixer/frame/draw_frame.h>
+#include <mixer/frame/basic_frame.h>
 #include <mixer/frame/frame_factory.h>
 
 #include "layer.h"
@@ -73,9 +73,9 @@ public:
 		return it->second;
 	}
 	
-	std::vector<safe_ptr<draw_frame>> draw()
+	std::vector<safe_ptr<basic_frame>> draw()
 	{	
-		std::vector<safe_ptr<draw_frame>> frames(layers_.size(), draw_frame::empty());
+		std::vector<safe_ptr<basic_frame>> frames(layers_.size(), basic_frame::empty());
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size(), 1), [&](const tbb::blocked_range<size_t>& r)
 		{
 			auto it = layers_.begin();
@@ -86,7 +86,7 @@ public:
 				frames[i]->set_layer_index(it->first);
 			}
 		});		
-		boost::range::remove_erase(frames, draw_frame::empty());
+		boost::range::remove_erase(frames, basic_frame::empty());
 		return frames;
 	}
 

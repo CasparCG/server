@@ -3,7 +3,7 @@
 #include "audio_mixer.h"
 #include "audio_transform.h"
 
-#include "../frame/draw_frame.h"
+#include "../frame/basic_frame.h"
 #include "../frame/write_frame.h"
 
 namespace caspar { namespace core {
@@ -22,7 +22,7 @@ public:
 		transform_stack_.push(audio_transform());
 	}
 	
-	void begin(const draw_frame& frame)
+	void begin(const basic_frame& frame)
 	{
 		transform_stack_.push(transform_stack_.top()*frame.get_audio_transform());
 	}
@@ -95,7 +95,7 @@ public:
 };
 
 audio_mixer::audio_mixer() : impl_(new implementation()){}
-void audio_mixer::begin(const draw_frame& frame){impl_->begin(frame);}
+void audio_mixer::begin(const basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
 std::vector<short> audio_mixer::begin_pass(){return impl_->begin_pass();}	

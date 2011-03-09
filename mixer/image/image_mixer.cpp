@@ -4,7 +4,7 @@
 #include "image_kernel.h"
 #include "image_transform.h"
 
-#include "../frame/draw_frame.h"
+#include "../frame/basic_frame.h"
 #include "../frame/write_frame.h"
 
 #include "../gpu/ogl_device.h"
@@ -71,7 +71,7 @@ public:
 		glDeleteFramebuffersEXT(1, &fbo_);
 	}
 
-	void begin(const draw_frame& frame)
+	void begin(const basic_frame& frame)
 	{
 		transform_stack_.push(transform_stack_.top()*frame.get_image_transform());
 	}
@@ -161,7 +161,7 @@ public:
 };
 
 image_mixer::image_mixer(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void image_mixer::begin(const draw_frame& frame){impl_->begin(frame);}
+void image_mixer::begin(const basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<const host_buffer>> image_mixer::begin_pass(){	return impl_->begin_pass();}

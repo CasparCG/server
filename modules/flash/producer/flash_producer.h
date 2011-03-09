@@ -31,7 +31,7 @@ public:
 	explicit flash_producer(const std::wstring& filename);
 	flash_producer(flash_producer&& other);
 
-	virtual safe_ptr<core::draw_frame> receive();
+	virtual safe_ptr<core::basic_frame> receive();
 	virtual void initialize(const safe_ptr<core::frame_factory>& frame_factory);
 	virtual void set_parent_printer(const printer& parent_printer);
 	virtual std::wstring print() const;

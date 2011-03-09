@@ -98,27 +98,27 @@ public:
 		return output_.connect(subscriber);
 	}
 
-	boost::unique_future<safe_ptr<const host_buffer>> mix_image(const std::vector<safe_ptr<draw_frame>>& frames)
+	boost::unique_future<safe_ptr<const host_buffer>> mix_image(const std::vector<safe_ptr<basic_frame>>& frames)
 	{
 		auto image = image_mixer_.begin_pass();
 		BOOST_FOREACH(auto& frame, frames)
 		{
 			if(format_desc_.mode != video_mode::progressive)
 			{
-				auto frame1 = make_safe<draw_frame>(frame);
-				auto frame2 = make_safe<draw_frame>(frame);
+				auto frame1 = make_safe<basic_frame>(frame);
+				auto frame2 = make_safe<basic_frame>(frame);
 
 				frame1->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
 				frame2->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
 
 				if(frame1->get_image_transform() != frame2->get_image_transform())
-					draw_frame::interlace(frame1, frame2, format_desc_.mode)->accept(image_mixer_);
+					basic_frame::interlace(frame1, frame2, format_desc_.mode)->accept(image_mixer_);
 				else
 					frame2->accept(image_mixer_);
 			}
 			else
 			{
-				auto frame1 = make_safe<draw_frame>(frame);
+				auto frame1 = make_safe<basic_frame>(frame);
 				frame1->get_image_transform() = root_image_transform_.fetch_and_tick(1)*image_transforms_[frame->get_layer_index()].fetch_and_tick(1);
 				frame1->accept(image_mixer_);
 			}
@@ -127,14 +127,14 @@ public:
 		return std::move(image);
 	}
 
-	std::vector<short> mix_audio(const std::vector<safe_ptr<draw_frame>>& frames)
+	std::vector<short> mix_audio(const std::vector<safe_ptr<basic_frame>>& frames)
 	{
 		auto audio = audio_mixer_.begin_pass();
 		BOOST_FOREACH(auto& frame, frames)
 		{
 			int num = format_desc_.mode == video_mode::progressive ? 1 : 2;
 
-			auto frame1 = make_safe<draw_frame>(frame);
+			auto frame1 = make_safe<basic_frame>(frame);
 			frame1->get_audio_transform() = root_audio_transform_.fetch_and_tick(num)*audio_transforms_[frame->get_layer_index()].fetch_and_tick(num);
 			frame1->accept(audio_mixer_);
 		}
@@ -142,7 +142,7 @@ public:
 		return audio;
 	}
 		
-	void send(const std::vector<safe_ptr<draw_frame>>& frames)
+	void send(const std::vector<safe_ptr<basic_frame>>& frames)
 	{			
 		executor_.begin_invoke([=]
 		{			
@@ -255,7 +255,7 @@ public:
 frame_mixer_device::frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc) : impl_(new implementation(parent_printer, format_desc)){}
 frame_mixer_device::frame_mixer_device(frame_mixer_device&& other) : impl_(std::move(other.impl_)){}
 boost::signals2::connection frame_mixer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
-void frame_mixer_device::send(const std::vector<safe_ptr<draw_frame>>& frames){impl_->send(frames);}
+void frame_mixer_device::send(const std::vector<safe_ptr<basic_frame>>& frames){impl_->send(frames);}
 const video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->format_desc_; }
 safe_ptr<write_frame> frame_mixer_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		
 safe_ptr<write_frame> frame_mixer_device::create_frame(size_t width, size_t height, pixel_format::type pix_fmt)

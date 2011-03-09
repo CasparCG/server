@@ -22,7 +22,7 @@ class image_mixer : public frame_visitor, boost::noncopyable
 public:
 	image_mixer(const video_format_desc& format_desc);
 	
-	virtual void begin(const draw_frame& frame);
+	virtual void begin(const basic_frame& frame);
 	virtual void visit(write_frame& frame);
 	virtual void end();
 

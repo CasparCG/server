@@ -30,7 +30,7 @@ namespace caspar { namespace core {
 	
 class color_producer : public frame_producer
 {
-	safe_ptr<draw_frame> frame_;
+	safe_ptr<basic_frame> frame_;
 	std::wstring color_str_;
 	printer parent_printer_;
 
@@ -38,7 +38,7 @@ public:
 
 	explicit color_producer(const std::wstring& color) 
 		: color_str_(color)
-		, frame_(draw_frame::empty())
+		, frame_(basic_frame::empty())
 	{
 		if(color.length() != 9 || color[0] != '#')
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color)) << msg_info("Invalid color code"));
@@ -55,7 +55,7 @@ public:
 
 	virtual void set_parent_printer(const printer& parent_printer){parent_printer_ = parent_printer;}
 	
-	virtual safe_ptr<draw_frame> receive() { return frame_; }
+	virtual safe_ptr<basic_frame> receive() { return frame_; }
 	
 	virtual std::wstring print() const { return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"color[" + color_str_ + L"]"; }
 };
