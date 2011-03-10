@@ -139,7 +139,7 @@ public:
 		executor_.start();
 		executor_.invoke([=]
 		{
-			window_.Create(sf::VideoMode(format_desc_.width, format_desc_.height, 32), narrow(print()), windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
+			window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
 			window_.ShowMouseCursor(false);
 			window_.SetPosition(screen_x_, screen_y_);
 			window_.SetSize(screen_width_, screen_height_);
