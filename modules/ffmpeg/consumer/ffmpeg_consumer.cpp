@@ -86,6 +86,7 @@ public:
 		, img_convert_ctx_(nullptr)
 		, video_outbuf_(1920*1080*4)
 		, audio_outbuf_(48000)
+		, executor_(L"ffmpeg_consumer")
 	{}
 
 	~implementation()

@@ -41,7 +41,7 @@ using namespace core;
 const std::wstring CIIProtocolStrategy::MessageDelimiter = TEXT("\r\n");
 const TCHAR CIIProtocolStrategy::TokenDelimiter = TEXT('\\');
 
-CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<safe_ptr<core::channel>>& channels) : pChannel_(channels.at(0))
+CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<safe_ptr<core::channel>>& channels) : pChannel_(channels.at(0)), executor_(L"CIIProtocolStrategy")
 {
 	executor_.start();
 }

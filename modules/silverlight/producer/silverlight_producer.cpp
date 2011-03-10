@@ -143,7 +143,7 @@ struct silverlight_producer : public core::frame_producer
 
 public:
 
-	silverlight_producer()
+	silverlight_producer() : executor_(print())
 	{}
 	
 	virtual void initialize(const safe_ptr<core::frame_factory>& frame_factory)

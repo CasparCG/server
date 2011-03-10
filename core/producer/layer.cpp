@@ -35,7 +35,7 @@ public:
 
 	void remove(safe_ptr<frame_producer>&& producer)
 	{
-		CASPAR_VERIFY(producer.unique());
+		CASPAR_VERIFY(producer == frame_producer::empty() || producer.unique());
 		executor_.begin_invoke(std::bind(&frame_producer_remover::do_remove, this, std::move(producer)));
 	}
 };
