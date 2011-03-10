@@ -148,12 +148,12 @@ public:
 		return std::shared_ptr<AVCodecContext>((*stream)->codec, avcodec_close);
 	}
 		
-	void read_file() // For every packet taken: read in a number of packets.
-	{				
+	void read_file()
+	{					
 		AVPacket tmp_packet;
 		safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
 
-		if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_safe_ptr<read_frame> or av_close_input_file
+		if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_read_frame or av_close_input_file
 		{
 			auto packet = std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size);
 			if(read_packet->stream_index == video_s_index_) 		
@@ -164,10 +164,8 @@ public:
 		else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
 			executor_.stop();
 		else
-			graph_->add_tag("seek");
-
-		boost::this_thread::yield();
-			
+			graph_->add_tag("seek");		
+					
 		graph_->update_value("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
 		
 		executor_.begin_invoke([this]{read_file();});		

@@ -53,16 +53,16 @@ public:
 						
 		current_chunk_.insert(current_chunk_.end(), audio_buffer_.data(), audio_buffer_.data() + written_bytes/2);
 
-		std::vector<std::vector<short>> chunks_;
+		std::vector<std::vector<short>> chunks;
 				
 		const auto last = current_chunk_.end() - current_chunk_.size() % audio_frame_size_;
 
 		for(auto it = current_chunk_.begin(); it != last; it += audio_frame_size_)		
-			chunks_.push_back(std::vector<short>(it, it + audio_frame_size_));		
+			chunks.push_back(std::vector<short>(it, it + audio_frame_size_));		
 
 		current_chunk_.erase(current_chunk_.begin(), last);
 		
-		return chunks_;
+		return chunks;
 	}
 };
 

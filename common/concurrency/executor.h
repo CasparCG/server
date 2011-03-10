@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../exception/win32_exception.h"
+#include "../utility/assert.h"
 #include "../log/log.h"
 
 #include <tbb/atomic.h>
@@ -49,7 +50,7 @@ class executor : boost::noncopyable
 	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
 public:
 		
-	explicit executor(const std::wstring& name = L"executor") : name_(narrow(name))
+	explicit executor(const std::wstring& name) : name_(narrow(name))
 	{
 		is_running_ = false;
 	}
@@ -128,7 +129,7 @@ public:
 			catch(boost::task_already_started&){}
 			catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
 		});
-
+					
 		return std::move(future);		
 	}
 	

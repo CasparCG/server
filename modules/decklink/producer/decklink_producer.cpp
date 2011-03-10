@@ -257,7 +257,8 @@ public:
 
 	explicit decklink_producer(const core::video_format_desc& format_desc, size_t device_index)
 		: format_desc_(format_desc) 
-		, device_index_(device_index){}
+		, device_index_(device_index)
+		, executor_(print()){}
 
 	~decklink_producer()
 	{	
