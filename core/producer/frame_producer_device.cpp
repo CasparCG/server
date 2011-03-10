@@ -37,6 +37,7 @@ public:
 	implementation(const printer& parent_printer, const safe_ptr<frame_factory>& factory)  
 		: parent_printer_(parent_printer)
 		, factory_(factory)
+		, executor_(print())
 	{
 		executor_.start();
 	}

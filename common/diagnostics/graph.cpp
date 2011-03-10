@@ -56,7 +56,7 @@ public:
 	}
 			
 private:
-	context()
+	context() : executor_(L"diagnostics")
 	{
 		executor_.start();
 		executor_.begin_invoke([this]
