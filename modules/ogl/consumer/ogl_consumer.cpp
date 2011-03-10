@@ -47,12 +47,9 @@ struct ogl_consumer::implementation : boost::noncopyable
 	timer clock_;
 	printer parent_printer_;
 	boost::unique_future<void> active_;
-
-	float wratio_;
-	float hratio_;
-	
-	float wSize_;
-	float hSize_;
+		
+	float width_;
+	float height_;
 
 	GLuint				  texture_;
 	std::array<GLuint, 2> pbos_;
@@ -60,8 +57,6 @@ struct ogl_consumer::implementation : boost::noncopyable
 	const bool windowed_;
 	unsigned int screen_width_;
 	unsigned int screen_height_;
-	unsigned int screen_x_;
-	unsigned int screen_y_;
 	const unsigned int screen_index_;
 				
 	const stretch stretch_;
@@ -78,8 +73,6 @@ public:
 		: stretch_(stretch)
 		, windowed_(windowed)
 		, texture_(0)
-		, screen_x_(0)
-		, screen_y_(0)
 		, screen_index_(screen_index)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, executor_(print())
@@ -127,8 +120,6 @@ public:
 		
 		screen_width_ = windowed_ ? format_desc_.width : devmode.dmPelsWidth;
 		screen_height_ = windowed_ ? format_desc_.height : devmode.dmPelsHeight;
-		screen_x_ = devmode.dmPosition.x;
-		screen_y_ = devmode.dmPosition.y;
 #else
 		if(!windowed)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info(narrow(print() + " doesn't support non-Win32 fullscreen"));
@@ -139,9 +130,9 @@ public:
 		executor_.start();
 		executor_.invoke([=]
 		{
-			window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), windowed_ ? sf::Style::Titlebar : sf::Style::Fullscreen);
+			window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), windowed_ ? sf::Style::Resize : sf::Style::Fullscreen);
 			window_.ShowMouseCursor(false);
-			window_.SetPosition(screen_x_, screen_y_);
+			window_.SetPosition(devmode.dmPosition.x, devmode.dmPosition.y);
 			window_.SetSize(screen_width_, screen_height_);
 			window_.SetActive();
 			GL(glEnable(GL_TEXTURE_2D));
@@ -150,19 +141,7 @@ public:
 			GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
 			glLoadIdentity();
 				
-			wratio_ = static_cast<float>(format_desc_.width)/static_cast<float>(format_desc_.width);
-			hratio_ = static_cast<float>(format_desc_.height)/static_cast<float>(format_desc_.height);
-
-			std::pair<float, float> target_ratio = None();
-			if(stretch_ == fill)
-				target_ratio = Fill();
-			else if(stretch_ == uniform)
-				target_ratio = Uniform();
-			else if(stretch_ == uniform_to_fill)
-				target_ratio = UniformToFill();
-
-			wSize_ = target_ratio.first;
-			hSize_ = target_ratio.second;
+			calculate_aspect();
 			
 			glGenTextures(1, &texture_);
 			glBindTexture(GL_TEXTURE_2D, texture_);
@@ -183,6 +162,28 @@ public:
 		});
 		active_ = executor_.begin_invoke([]{});
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
+	}
+
+	void calculate_aspect()
+	{
+		if(windowed_)
+		{
+			screen_height_ = window_.GetHeight();
+			screen_width_ = window_.GetWidth();
+		}
+		
+		GL(glViewport(0, 0, screen_width_, screen_height_));
+
+		std::pair<float, float> target_ratio = None();
+		if(stretch_ == fill)
+			target_ratio = Fill();
+		else if(stretch_ == uniform)
+			target_ratio = Uniform();
+		else if(stretch_ == uniform_to_fill)
+			target_ratio = UniformToFill();
+
+		width_ = target_ratio.first;
+		height_ = target_ratio.second;
 	}
 		
 	std::pair<float, float> None()
@@ -241,10 +242,10 @@ public:
 				
 		GL(glClear(GL_COLOR_BUFFER_BIT));			
 		glBegin(GL_QUADS);
-				glTexCoord2f(0.0f,	  hratio_);	glVertex2f(-wSize_, -hSize_);
-				glTexCoord2f(wratio_, hratio_);	glVertex2f( wSize_, -hSize_);
-				glTexCoord2f(wratio_, 0.0f);	glVertex2f( wSize_,  hSize_);
-				glTexCoord2f(0.0f,	  0.0f);	glVertex2f(-wSize_,  hSize_);
+				glTexCoord2f(0.0f,	  1.0f);	glVertex2f(-width_, -height_);
+				glTexCoord2f(1.0f,	  1.0f);	glVertex2f( width_, -height_);
+				glTexCoord2f(1.0f,	  0.0f);	glVertex2f( width_,  height_);
+				glTexCoord2f(0.0f,	  0.0f);	glVertex2f(-width_,  height_);
 		glEnd();
 		
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -261,7 +262,11 @@ public:
 		{
 			perf_timer_.reset();
 			sf::Event e;
-			while(window_.GetEvent(e)){}
+			while(window_.GetEvent(e))
+			{
+				if(e.Type == sf::Event::Resized)
+					 calculate_aspect();
+			}
 			render(frame);
 			window_.Display();
 			graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
