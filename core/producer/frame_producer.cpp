@@ -1,6 +1,7 @@
 #include "../StdAfx.h"
 
 #include "frame_producer.h"
+#include "color/color_producer.h"
 
 #include <common/memory/safe_ptr.h>
 
@@ -36,6 +37,9 @@ safe_ptr<core::frame_producer> create_producer(const std::vector<std::wstring>& 
 			}
 			return producer != frame_producer::empty();
 		});
+
+	if(producer == frame_producer::empty())
+		producer = create_color_producer(params);
 
 	if(producer == frame_producer::empty())
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
