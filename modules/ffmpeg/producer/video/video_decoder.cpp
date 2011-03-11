@@ -110,11 +110,6 @@ public:
 		, pix_fmt_(codec_context_->pix_fmt)
 		, desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
 	{
-		double frame_time = static_cast<double>(codec_context_->time_base.num) / static_cast<double>(codec_context_->time_base.den);
-		double format_frame_time = 1.0/frame_factory->get_video_format_desc().fps;
-		if(abs(frame_time - format_frame_time) > 0.0001)
-			BOOST_THROW_EXCEPTION(file_read_error() << msg_info("Invalid video framerate.") << arg_value_info(boost::lexical_cast<std::string>(frame_time)));
-
 		if(desc_.pix_fmt == core::pixel_format::invalid)
 		{
 			CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
