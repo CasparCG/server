@@ -67,6 +67,9 @@ struct ogl_consumer::implementation : boost::noncopyable
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
 
+	size_t square_width_;
+	size_t square_height_;
+
 	executor executor_;
 public:
 	implementation(unsigned int screen_index, stretch stretch, bool windowed) 
@@ -94,6 +97,20 @@ public:
 		format_desc_ = format_desc;
 		parent_printer_ = parent_printer;
 
+		square_width_ = format_desc_.width;
+		square_height_ = format_desc_.height;
+						
+		if(format_desc_.format == core::video_format::pal)
+		{
+			square_width_ = 768;
+			square_height_ = 576;
+		}
+		else if(format_desc_.format == core::video_format::ntsc)
+		{
+			square_width_ = 720;
+			square_height_ = 547;
+		}
+
 		screen_width_ = format_desc.width;
 		screen_height_ = format_desc.height;
 #ifdef _WIN32
@@ -118,8 +135,8 @@ public:
 		if(!EnumDisplaySettings(displayDevices[screen_index_].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
 			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info(narrow(print()) + " EnumDisplaySettings"));
 		
-		screen_width_ = windowed_ ? format_desc_.width : devmode.dmPelsWidth;
-		screen_height_ = windowed_ ? format_desc_.height : devmode.dmPelsHeight;
+		screen_width_ = windowed_ ? square_width_ : devmode.dmPelsWidth;
+		screen_height_ = windowed_ ? square_height_ : devmode.dmPelsHeight;
 #else
 		if(!windowed)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info(narrow(print() + " doesn't support non-Win32 fullscreen"));
@@ -188,15 +205,15 @@ public:
 		
 	std::pair<float, float> None()
 	{
-		float width = static_cast<float>(format_desc_.width)/static_cast<float>(screen_width_);
-		float height = static_cast<float>(format_desc_.height)/static_cast<float>(screen_height_);
+		float width = static_cast<float>(square_width_)/static_cast<float>(screen_width_);
+		float height = static_cast<float>(square_height_)/static_cast<float>(screen_height_);
 
 		return std::make_pair(width, height);
 	}
 
 	std::pair<float, float> Uniform()
 	{
-		float aspect = static_cast<float>(format_desc_.width)/static_cast<float>(format_desc_.height);
+		float aspect = static_cast<float>(square_width_)/static_cast<float>(square_height_);
 		float width = std::min(1.0f, static_cast<float>(screen_height_)*aspect/static_cast<float>(screen_width_));
 		float height = static_cast<float>(screen_width_*width)/static_cast<float>(screen_height_*aspect);
 
@@ -210,8 +227,8 @@ public:
 
 	std::pair<float, float> UniformToFill()
 	{
-		float wr = static_cast<float>(format_desc_.width)/static_cast<float>(screen_width_);
-		float hr = static_cast<float>(format_desc_.height)/static_cast<float>(screen_height_);
+		float wr = static_cast<float>(square_width_)/static_cast<float>(screen_width_);
+		float hr = static_cast<float>(square_height_)/static_cast<float>(screen_height_);
 		float r_inv = 1.0f/std::min(wr, hr);
 
 		float width = wr*r_inv;
