@@ -63,6 +63,12 @@ public:
 		input_.reset(new input(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, std::bind(&ffmpeg_producer::print, this)));
 		video_decoder_.reset(input_->get_video_codec_context().get() ? new video_decoder(input_->get_video_codec_context().get(), frame_factory) : nullptr);
 		audio_decoder_.reset(input_->get_audio_codec_context().get() ? new audio_decoder(input_->get_audio_codec_context().get(), frame_factory->get_video_format_desc().fps) : nullptr);
+
+		double frame_time = 1.0f/input_->fps();
+		double format_frame_time = 1.0/frame_factory->get_video_format_desc().fps;
+		if(abs(frame_time - format_frame_time) > 0.0001)
+			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback.";
+
 	}
 		
 	virtual void set_parent_printer(const printer& parent_printer) 
