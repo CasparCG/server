@@ -35,7 +35,8 @@ public:
 
 	void remove(safe_ptr<frame_producer>&& producer)
 	{
-		CASPAR_VERIFY(producer == frame_producer::empty() || producer.unique());
+		if(producer != frame_producer::empty() && !producer.unique())
+			CASPAR_LOG(debug) << producer->print() << L" was not destroyed on dedicated destruction thread.";
 		executor_.begin_invoke(std::bind(&frame_producer_remover::do_remove, this, std::move(producer)));
 	}
 };
