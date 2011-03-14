@@ -323,7 +323,6 @@
     <ClInclude Include="Utils\Semaphore.h" />
     <ClInclude Include="utils\TaskQueue.h" />
     <ClInclude Include="Utils\Thread.h" />
-    <ClInclude Include="utils\timer.h" />
     <ClInclude Include="utils\Types.hpp" />
     <ClInclude Include="utils\UnhandledException.h" />
     <ClInclude Include="Utils\Win32Exception.h" />
