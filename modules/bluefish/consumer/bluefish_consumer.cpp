@@ -271,9 +271,6 @@ public:
 			try
 			{
 				std::copy_n(frame->image_data().begin(), frame->image_data().size(), reserved_frames_.front()->image_data());
-
-				unsigned long n_field = 0;
-				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
 				
 				if(embed_audio_)
 				{		
@@ -304,6 +301,9 @@ public:
 					if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
 						CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
 				}
+
+				unsigned long n_field = 0;
+				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
 
 				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 				graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
