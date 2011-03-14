@@ -86,15 +86,15 @@ struct BluefishPlaybackStrategy::Implementation
 
 		utils::image::Copy(reservedFrames_.front()->image_data(), pFrame->GetDataPtr(), pFrame->GetDataSize());					
 		render_func_(reservedFrames_.front(), pFrame->GetAudioData());
+		
+		unsigned long fieldCount = 0;
+		pSDK_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
 
 		std::rotate(reservedFrames_.begin(), reservedFrames_.begin() + 1, reservedFrames_.end());
 	}
 	
 	void DoRender(const blue_dma_buffer_ptr& buffer, const AudioDataChunkList& frame_audio_data) 
-	{
-		unsigned long fieldCount = 0;
-		pSDK_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
-		
+	{		
 		pSDK_->system_buffer_write_async(buffer->image_data(), buffer->image_size(), 0, buffer->id(), 0);
 		if(BLUE_FAIL(pSDK_->render_buffer_update(buffer->id())))
 		{
@@ -112,9 +112,6 @@ struct BluefishPlaybackStrategy::Implementation
 	{				
 		static const size_t audio_samples = 1920;
 		static const size_t audio_nchannels = 2;
-
-		unsigned long fieldCount = 0;
-		pSDK_->wait_output_video_synch(UPD_FMT_FRAME, fieldCount);
 		
 		MixAudio(reinterpret_cast<BLUE_UINT16*>(audio_buffer_.get()), frame_audio_data, audio_samples, audio_nchannels);		
 		EncodeHANC(reinterpret_cast<BLUE_UINT32*>(buffer->hanc_data()), audio_buffer_.get(), audio_samples, audio_nchannels);

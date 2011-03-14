@@ -240,14 +240,6 @@ FramePtr FlashProducer::RenderFrame()
 {	
 	const caspar::FrameFormatDescription& fmtDesc = pFrameManager_->GetFrameFormatDescription();
 	
-	/// SYNC
-	double frame_time = 1.0/pFlashAxContainer_->GetFPS();
-	
-	if(frameBuffer_.size() < 4) // if underflow
-		frame_time *= 0.9;
-
-	timer_.tick(frame_time);
-
 	/// TICK
 	if(pFlashAxContainer_->pTimerHelper)
 	{
