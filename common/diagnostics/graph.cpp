@@ -5,7 +5,6 @@
 #pragma warning (disable : 4244)
 
 #include "../concurrency/executor.h"
-#include "../utility/timer.h"
 #include "../env.h"
 
 #include <SFML/Graphics.hpp>
@@ -30,7 +29,6 @@ struct drawable : public sf::Drawable
 
 class context : public drawable
 {	
-	timer timer_;
 	sf::RenderWindow window_;
 	
 	std::list<std::shared_ptr<drawable>> drawables_;
@@ -79,7 +77,7 @@ private:
 		glClear(GL_COLOR_BUFFER_BIT);
 		window_.Draw(*this);
 		window_.Display();
-		timer_.tick(1.0/50.0);
+		boost::this_thread::sleep(boost::posix_time::milliseconds(20));
 		executor_.begin_invoke([this]{tick();});
 	}
 
