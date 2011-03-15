@@ -21,7 +21,7 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_0BE0C4CBA17C48458EA6BF38345D8A15"
+        "MsmKey" = "8:_20DA37DF7AD14DF2A4BA1226E79A17EE"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -58,6 +58,12 @@
         "Entry"
         {
         "MsmKey" = "8:_90748A08681946F4BAE6F30E6CC2DDB3"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_9BDB7A0597414462B85BC2D38BB0EC74"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -251,7 +257,7 @@
                 {
                 "Name" = "8:.NET Framework"
                 "Message" = "8:[VSDNETMSG]"
-                "FrameworkVersion" = "8:3.5.30729    "
+                "FrameworkVersion" = "8:3.5.30729     "
                 "AllowLaterVersions" = "11:FALSE"
                 "InstallUrl" = "8:http://go.microsoft.com/fwlink/?LinkId=76617"
                 }
@@ -263,26 +269,6 @@
             {
             "SourcePath" = "8:..\\README.TXT"
             "TargetName" = "8:README.TXT"
-            "Tag" = "8:"
-            "Folder" = "8:_9375E488732B409C8187CC9603423443"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_0BE0C4CBA17C48458EA6BF38345D8A15"
-            {
-            "SourcePath" = "8:..\\ChangeLog.txt"
-            "TargetName" = "8:ChangeLog.txt"
             "Tag" = "8:"
             "Folder" = "8:_9375E488732B409C8187CC9603423443"
             "Condition" = "8:"
@@ -612,7 +598,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:CasparCG Server 1.8.2"
         "ProductCode" = "8:{31AAE628-5F8B-4311-B733-4099CEEBC0B3}"
-        "PackageCode" = "8:{71279E03-98AB-4937-BE27-6880C535D4EB}"
+        "PackageCode" = "8:{09DDCC04-FFA6-43AB-8475-6205F5CBD3CB}"
         "UpgradeCode" = "8:{E02D764D-FA5E-4AE2-BF0C-D9B632065D1E}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
@@ -1544,6 +1530,34 @@
         }
         "MergeModule"
         {
+            "{CEE29DC0-9FBA-4B99-8D47-5BC643D9B626}:_20DA37DF7AD14DF2A4BA1226E79A17EE"
+            {
+            "UseDynamicProperties" = "11:TRUE"
+            "IsDependency" = "11:FALSE"
+            "SourcePath" = "8:C:\\Program Files\\Common Files\\Merge Modules\\Microsoft_VC100_CRT_x86.msm"
+                "Properties"
+                {
+                }
+            "LanguageId" = "3:0"
+            "Exclude" = "11:FALSE"
+            "Folder" = "8:"
+            "Feature" = "8:"
+            "IsolateTo" = "8:"
+            }
+            "{CEE29DC0-9FBA-4B99-8D47-5BC643D9B626}:_9BDB7A0597414462B85BC2D38BB0EC74"
+            {
+            "UseDynamicProperties" = "11:TRUE"
+            "IsDependency" = "11:FALSE"
+            "SourcePath" = "8:C:\\Program Files\\Common Files\\Merge Modules\\Microsoft_VC100_ATL_x86.msm"
+                "Properties"
+                {
+                }
+            "LanguageId" = "3:0"
+            "Exclude" = "11:FALSE"
+            "Folder" = "8:"
+            "Feature" = "8:"
+            "IsolateTo" = "8:"
+            }
         }
         "ProjectOutput"
         {
