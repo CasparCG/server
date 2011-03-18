@@ -16,6 +16,7 @@
 
 #include <common/env.h>
 #include <common/utility/timer.h>
+#include <common/utility/assert.h>
 
 #include <tbb/parallel_invoke.h>
 
@@ -67,7 +68,7 @@ public:
 		double frame_time = 1.0f/input_->fps();
 		double format_frame_time = 1.0/frame_factory->get_video_format_desc().fps;
 		if(abs(frame_time - format_frame_time) > 0.0001)
-			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback.";
+			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback. frame-time: " << frame_time;
 
 	}
 		
@@ -80,7 +81,7 @@ public:
 	{
 		perf_timer_.reset();
 
-		while(ouput_channel_.empty() && !input_->is_eof())
+		while(ouput_channel_.size() < 2 && !input_->is_eof())
 		{	
 			aligned_buffer video_packet;
 			if(video_frame_channel_.size() < 3 && video_decoder_)	
@@ -161,14 +162,25 @@ public:
 		auto result = last_frame_;
 		if(!ouput_channel_.empty())
 		{
-			result = std::move(ouput_channel_.front());
-			last_frame_ = core::basic_frame(result);
-			last_frame_->get_audio_transform().set_gain(0.0); // last_frame should not have audio
-			ouput_channel_.pop();
+			result = get_frame();
+
+			bool interlace = abs(input_->fps()/2.0 - frame_factory_->get_video_format_desc().fps) < 0.001;
+			if(interlace && !ouput_channel_.empty())
+				result = core::basic_frame::interlace(result, get_frame(), frame_factory_->get_video_format_desc().mode);
 		}
 		else if(input_->is_eof())
-			return core::basic_frame::eof();
+			result = core::basic_frame::eof();
+		
+		return result;
+	}
 
+	core::basic_frame get_frame()
+	{
+		CASPAR_ASSERT(!ouput_channel_.empty());
+		auto result = std::move(ouput_channel_.front());
+		last_frame_ = core::basic_frame(result);
+		last_frame_->get_audio_transform().set_gain(0.0); // last_frame should not have audio
+		ouput_channel_.pop();
 		return result;
 	}
 
