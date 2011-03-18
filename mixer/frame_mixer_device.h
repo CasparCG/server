@@ -68,6 +68,9 @@ public:
 	void apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration = 0);
 	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration = 0);
 
+	void reset_image_transform(int mix_duration = 0);
+	void reset_audio_transform(int mix_duration = 0);
+
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
