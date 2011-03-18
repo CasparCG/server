@@ -277,7 +277,8 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				GetChannel()->mixer().set_image_transform(GetLayerIndex(), image_transform());
+				int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+				GetChannel()->mixer().reset_image_transform(duration);
 			}
 		}
 		else if(_parameters[0] == L"AUDIO")
@@ -301,13 +302,15 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				GetChannel()->mixer().set_audio_transform(GetLayerIndex(), audio_transform());
+				int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+				GetChannel()->mixer().reset_audio_transform(duration);
 			}
 		}
 		else if(_parameters[0] == L"RESET")
 		{
-			GetChannel()->mixer().set_image_transform(GetLayerIndex(), image_transform());
-			GetChannel()->mixer().set_audio_transform(GetLayerIndex(), audio_transform());
+			int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			GetChannel()->mixer().reset_image_transform(duration);
+			GetChannel()->mixer().reset_audio_transform(duration);
 		}
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));
