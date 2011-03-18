@@ -81,5 +81,8 @@
     <ClInclude Include="utility\string.h">
       <Filter>utility</Filter>
     </ClInclude>
+    <ClInclude Include="utility\timer.h">
+      <Filter>utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
