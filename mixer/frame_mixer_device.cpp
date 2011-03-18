@@ -245,6 +245,26 @@ public:
 		});
 	}
 
+	void reset_image_transform(int mix_duration)
+	{
+		executor_.invoke([&]
+		{
+			BOOST_FOREACH(auto& t, image_transforms_)			
+				 t.second = basic_animated_value<image_transform>(t.second.fetch(), image_transform(), mix_duration);			
+			root_image_transform_ = basic_animated_value<image_transform>(root_image_transform_.fetch(), image_transform(), mix_duration);
+		});
+	}
+
+	void reset_audio_transform(int mix_duration)
+	{
+		executor_.invoke([&]
+		{
+			BOOST_FOREACH(auto& t, audio_transforms_)
+				t.second = basic_animated_value<audio_transform>(t.second.fetch(), audio_transform(), mix_duration);
+			root_audio_transform_ = basic_animated_value<audio_transform>(root_audio_transform_.fetch(), audio_transform(), mix_duration);
+		});
+	}
+
 	std::wstring print() const
 	{
 		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"mixer";
@@ -282,5 +302,7 @@ void frame_mixer_device::apply_image_transform(const std::function<image_transfo
 void frame_mixer_device::apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration){impl_->apply_image_transform(index, transform, mix_duration);}
 void frame_mixer_device::apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration){impl_->apply_audio_transform(transform, mix_duration);}
 void frame_mixer_device::apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration ){impl_->apply_audio_transform(index, transform, mix_duration);}
+void frame_mixer_device::reset_image_transform(int mix_duration){impl_->reset_image_transform(mix_duration);}
+void frame_mixer_device::reset_audio_transform(int mix_duration){impl_->reset_audio_transform(mix_duration);}
 
 }}
