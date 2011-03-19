@@ -8,6 +8,7 @@
 #include <core/producer/frame/audio_transform.h>
 #include <core/producer/frame/image_transform.h>
 
+#include "tween.h"
 #include "audio/audio_mixer.h"
 #include "image/image_mixer.h"
 
@@ -24,25 +25,28 @@
 namespace caspar { namespace core {
 		
 template<typename T>
-class basic_animated_value
+class tweened_transform
 {
 	T source_;
 	T dest_;
 	int duration_;
 	int time_;
+	std::wstring tween_;
 public:	
-	basic_animated_value()
+	tweened_transform()
 		: duration_(0)
-		, time_(0){}
-	basic_animated_value(const T& source, const T& dest, int duration)
+		, time_(0)
+		, tween_(L"linear"){}
+	tweened_transform(const T& source, const T& dest, int duration, const std::wstring& tween = L"linear")
 		: source_(source)
 		, dest_(dest)
 		, duration_(duration)
-		, time_(0){}
+		, time_(0)
+		, tween_(tween){}
 	
 	virtual T fetch()
 	{
-		return lerp(source_, dest_, duration_ < 1 ? 1.0f : static_cast<float>(time_)/static_cast<float>(duration_));
+		return tween(source_, dest_, std::bind(&caspar::tween<double>, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, tween_), duration_ < 1 ? 1.0f : static_cast<float>(time_)/static_cast<float>(duration_));
 	}
 	virtual T fetch_and_tick(int num)
 	{						
@@ -65,11 +69,11 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	output_t output_;
 
-	std::unordered_map<int, basic_animated_value<image_transform>> image_transforms_;
-	std::unordered_map<int, basic_animated_value<audio_transform>> audio_transforms_;
+	std::unordered_map<int, tweened_transform<image_transform>> image_transforms_;
+	std::unordered_map<int, tweened_transform<audio_transform>> audio_transforms_;
 
-	basic_animated_value<image_transform> root_image_transform_;
-	basic_animated_value<audio_transform> root_audio_transform_;
+	tweened_transform<image_transform> root_image_transform_;
+	tweened_transform<audio_transform> root_audio_transform_;
 
 	executor executor_;
 public:
@@ -165,103 +169,103 @@ public:
 		return make_safe<gpu_write_frame>(desc, image_mixer_.create_buffers(desc));
 	}
 				
-	void set_image_transform(const image_transform& transform, int mix_duration)
+	void set_image_transform(const image_transform& transform, int mix_duration, const std::wstring& tween)
 	{
 		executor_.invoke([&]
 		{
 			auto src = root_image_transform_.fetch();
 			auto dst = transform;
-			root_image_transform_ = basic_animated_value<image_transform>(src, dst, mix_duration);
+			root_image_transform_ = tweened_transform<image_transform>(src, dst, mix_duration, tween);
 		});
 	}
 
-	void set_audio_transform(const audio_transform& transform, int mix_duration)
+	void set_audio_transform(const audio_transform& transform, int mix_duration, const std::wstring& tween)
 	{
 		executor_.invoke([&]
 		{
 			auto src = root_audio_transform_.fetch();
 			auto dst = transform;
-			root_audio_transform_ = basic_animated_value<audio_transform>(src, dst, mix_duration);
+			root_audio_transform_ = tweened_transform<audio_transform>(src, dst, mix_duration, tween);
 		});
 	}
 
-	void set_image_transform(int index, const image_transform& transform, int mix_duration)
+	void set_image_transform(int index, const image_transform& transform, int mix_duration, const std::wstring& tween)
 	{
 		executor_.invoke([&]
 		{
 			auto src = image_transforms_[index].fetch();
 			auto dst = transform;
-			image_transforms_[index] = basic_animated_value<image_transform>(src, dst, mix_duration);
+			image_transforms_[index] = tweened_transform<image_transform>(src, dst, mix_duration, tween);
 		});
 	}
 
-	void set_audio_transform(int index, const audio_transform& transform, int mix_duration)
+	void set_audio_transform(int index, const audio_transform& transform, int mix_duration, const std::wstring& tween)
 	{
 		executor_.invoke([&]
 		{
 			auto src = audio_transforms_[index].fetch();
 			auto dst = transform;
-			audio_transforms_[index] = basic_animated_value<audio_transform>(src, dst, mix_duration);
+			audio_transforms_[index] = tweened_transform<audio_transform>(src, dst, mix_duration, tween);
 		});
 	}
 	
-	void apply_image_transform(const std::function<image_transform(const image_transform&)>& transform, int mix_duration)
+	void apply_image_transform(const std::function<image_transform(const image_transform&)>& transform, int mix_duration, const std::wstring& tween)
 	{
 		return executor_.invoke([&]
 		{
 			auto src = root_image_transform_.fetch();
 			auto dst = transform(src);
-			root_image_transform_ = basic_animated_value<image_transform>(src, dst, mix_duration);
+			root_image_transform_ = tweened_transform<image_transform>(src, dst, mix_duration, tween);
 		});
 	}
 
-	void apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration)
+	void apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration, const std::wstring& tween)
 	{
 		return executor_.invoke([&]
 		{
 			auto src = root_audio_transform_.fetch();
 			auto dst = transform(src);
-			root_audio_transform_ = basic_animated_value<audio_transform>(src, dst, mix_duration);
+			root_audio_transform_ = tweened_transform<audio_transform>(src, dst, mix_duration, tween);
 		});
 	}
 
-	void apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration)
+	void apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration, const std::wstring& tween)
 	{
 		executor_.invoke([&]
 		{
 			auto src = image_transforms_[index].fetch();
 			auto dst = transform(src);
-			image_transforms_[index] = basic_animated_value<image_transform>(src, dst, mix_duration);
+			image_transforms_[index] = tweened_transform<image_transform>(src, dst, mix_duration, tween);
 		});
 	}
 
-	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration)
+	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration, const std::wstring& tween)
 	{
 		executor_.invoke([&]
 		{
 			auto src = audio_transforms_[index].fetch();
 			auto dst = transform(src);
-			audio_transforms_[index] = basic_animated_value<audio_transform>(src, dst, mix_duration);
+			audio_transforms_[index] = tweened_transform<audio_transform>(src, dst, mix_duration, tween);
 		});
 	}
 
-	void reset_image_transform(int mix_duration)
+	void reset_image_transform(int mix_duration, const std::wstring& tween)
 	{
 		executor_.invoke([&]
 		{
 			BOOST_FOREACH(auto& t, image_transforms_)			
-				 t.second = basic_animated_value<image_transform>(t.second.fetch(), image_transform(), mix_duration);			
-			root_image_transform_ = basic_animated_value<image_transform>(root_image_transform_.fetch(), image_transform(), mix_duration);
+				 t.second = tweened_transform<image_transform>(t.second.fetch(), image_transform(), mix_duration, tween);			
+			root_image_transform_ = tweened_transform<image_transform>(root_image_transform_.fetch(), image_transform(), mix_duration, tween);
 		});
 	}
 
-	void reset_audio_transform(int mix_duration)
+	void reset_audio_transform(int mix_duration, const std::wstring& tween)
 	{
 		executor_.invoke([&]
 		{
 			BOOST_FOREACH(auto& t, audio_transforms_)
-				t.second = basic_animated_value<audio_transform>(t.second.fetch(), audio_transform(), mix_duration);
-			root_audio_transform_ = basic_animated_value<audio_transform>(root_audio_transform_.fetch(), audio_transform(), mix_duration);
+				t.second = tweened_transform<audio_transform>(t.second.fetch(), audio_transform(), mix_duration, tween);
+			root_audio_transform_ = tweened_transform<audio_transform>(root_audio_transform_.fetch(), audio_transform(), mix_duration, tween);
 		});
 	}
 
@@ -294,15 +298,15 @@ safe_ptr<write_frame> frame_mixer_device::create_frame(pixel_format::type pix_fm
 	desc.planes.push_back(pixel_format_desc::plane(get_video_format_desc().width, get_video_format_desc().height, 4));
 	return create_frame(desc);
 }
-void frame_mixer_device::set_image_transform(const image_transform& transform, int mix_duration){impl_->set_image_transform(transform, mix_duration);}
-void frame_mixer_device::set_image_transform(int index, const image_transform& transform, int mix_duration){impl_->set_image_transform(index, transform, mix_duration);}
-void frame_mixer_device::set_audio_transform(const audio_transform& transform, int mix_duration){impl_->set_audio_transform(transform, mix_duration);}
-void frame_mixer_device::set_audio_transform(int index, const audio_transform& transform, int mix_duration){impl_->set_audio_transform(index, transform, mix_duration);}
-void frame_mixer_device::apply_image_transform(const std::function<image_transform(image_transform)>& transform, int mix_duration ){impl_->apply_image_transform(transform, mix_duration);}
-void frame_mixer_device::apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration){impl_->apply_image_transform(index, transform, mix_duration);}
-void frame_mixer_device::apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration){impl_->apply_audio_transform(transform, mix_duration);}
-void frame_mixer_device::apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration ){impl_->apply_audio_transform(index, transform, mix_duration);}
-void frame_mixer_device::reset_image_transform(int mix_duration){impl_->reset_image_transform(mix_duration);}
-void frame_mixer_device::reset_audio_transform(int mix_duration){impl_->reset_audio_transform(mix_duration);}
+void frame_mixer_device::set_image_transform(const image_transform& transform, int mix_duration, const std::wstring& tween){impl_->set_image_transform(transform, mix_duration, tween);}
+void frame_mixer_device::set_image_transform(int index, const image_transform& transform, int mix_duration, const std::wstring& tween){impl_->set_image_transform(index, transform, mix_duration, tween);}
+void frame_mixer_device::set_audio_transform(const audio_transform& transform, int mix_duration, const std::wstring& tween){impl_->set_audio_transform(transform, mix_duration, tween);}
+void frame_mixer_device::set_audio_transform(int index, const audio_transform& transform, int mix_duration, const std::wstring& tween){impl_->set_audio_transform(index, transform, mix_duration, tween);}
+void frame_mixer_device::apply_image_transform(const std::function<image_transform(image_transform)>& transform, int mix_duration, const std::wstring& tween){impl_->apply_image_transform(transform, mix_duration, tween);}
+void frame_mixer_device::apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration, const std::wstring& tween){impl_->apply_image_transform(index, transform, mix_duration, tween);}
+void frame_mixer_device::apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration, const std::wstring& tween){impl_->apply_audio_transform(transform, mix_duration, tween);}
+void frame_mixer_device::apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration, const std::wstring& tween){impl_->apply_audio_transform(index, transform, mix_duration, tween);}
+void frame_mixer_device::reset_image_transform(int mix_duration, const std::wstring& tween){impl_->reset_image_transform(mix_duration, tween);}
+void frame_mixer_device::reset_audio_transform(int mix_duration, const std::wstring& tween){impl_->reset_audio_transform(mix_duration, tween);}
 
 }}

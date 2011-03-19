@@ -40,16 +40,10 @@ const audio_transform audio_transform::operator*(const audio_transform &other) c
 	return audio_transform(*this) *= other;
 }
 
-template<typename T>
-T mix(const T& lhs, const T& rhs, float alpha)
-{
-	return (1.0f - alpha) * lhs + alpha * rhs;
-}
-
-audio_transform lerp(const audio_transform& lhs, const audio_transform& rhs, float alpha)
+audio_transform tween(const audio_transform& lhs, const audio_transform& rhs, const std::function<double(double, double, double)>& tweener, float alpha)
 {
 	audio_transform result;
-	result.set_gain(mix(lhs.get_gain(), rhs.get_gain(), alpha));
+	result.set_gain(tweener(lhs.get_gain(), rhs.get_gain(), alpha));
 	result.set_has_audio(lhs.get_has_audio() || rhs.get_has_audio());
 	return result;
 }

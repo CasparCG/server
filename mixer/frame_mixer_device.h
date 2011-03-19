@@ -56,20 +56,20 @@ public:
 	
 	const video_format_desc& get_video_format_desc() const; // nothrow
 
-	void set_image_transform(const image_transform& transform, int mix_duration = 0);
-	void set_image_transform(int index, const image_transform& transform, int mix_duration = 0);
+	void set_image_transform(const image_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void set_image_transform(int index, const image_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
 
-	void set_audio_transform(const audio_transform& transform, int mix_duration = 0);
-	void set_audio_transform(int index, const audio_transform& transform, int mix_duration = 0);
+	void set_audio_transform(const audio_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void set_audio_transform(int index, const audio_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
 	
-	void apply_image_transform(const std::function<image_transform(image_transform)>& transform, int mix_duration = 0);
-	void apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration = 0);
+	void apply_image_transform(const std::function<image_transform(image_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
 
-	void apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration = 0);
-	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration = 0);
+	void apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
 
-	void reset_image_transform(int mix_duration = 0);
-	void reset_audio_transform(int mix_duration = 0);
+	void reset_image_transform(int mix_duration = 0, const std::wstring& tween = L"linear");
+	void reset_audio_transform(int mix_duration = 0, const std::wstring& tween = L"linear");
 
 private:
 	struct implementation;

@@ -20,6 +20,6 @@ private:
 	bool audio_;
 };
 
-audio_transform lerp(const audio_transform& lhs, const audio_transform& rhs, float alpha);
+audio_transform tween(const audio_transform& lhs, const audio_transform& rhs, const std::function<double(double, double, double)>& tweener, float alpha);
 
 }}

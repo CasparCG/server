@@ -179,6 +179,8 @@ bool MixerCommand::DoExecute()
 			if(_parameters[1] == L"OPACITY")
 			{
 				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
+				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
+
 				double value = boost::lexical_cast<double>(_parameters.at(2));
 			
 				auto transform = [=](image_transform transform) -> image_transform
@@ -189,13 +191,14 @@ bool MixerCommand::DoExecute()
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())					
-					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration, tween);
 				else
-					GetChannel()->mixer().apply_image_transform(transform, duration);
+					GetChannel()->mixer().apply_image_transform(transform, duration, tween);
 			}
 			else if(_parameters[1] == L"GAIN")
 			{
 				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
+				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
 				double value = boost::lexical_cast<double>(_parameters.at(2));
 				
 				auto transform = [=](image_transform transform) -> image_transform
@@ -206,13 +209,14 @@ bool MixerCommand::DoExecute()
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration, tween);
 				else
-					GetChannel()->mixer().apply_image_transform(transform, duration);
+					GetChannel()->mixer().apply_image_transform(transform, duration, tween);
 			}
 			else if(_parameters[1] == L"FILL_RECT")
 			{
 				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
+				std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
 				double x	= boost::lexical_cast<double>(_parameters.at(2));
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
@@ -229,13 +233,14 @@ bool MixerCommand::DoExecute()
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration, tween);
 				else
-					GetChannel()->mixer().apply_image_transform(transform, duration);
+					GetChannel()->mixer().apply_image_transform(transform, duration, tween);
 			}
 			else if(_parameters[1] == L"KEY_RECT")
 			{
 				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
+				std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
 				double x	= boost::lexical_cast<double>(_parameters.at(2));
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
@@ -250,12 +255,14 @@ bool MixerCommand::DoExecute()
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration, tween);
 				else
-					GetChannel()->mixer().apply_image_transform(transform, duration);
+					GetChannel()->mixer().apply_image_transform(transform, duration, tween);
 			}
 			else if(_parameters[1] == L"GRID")
 			{
+				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
+				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
 				int n = boost::lexical_cast<int>(_parameters.at(2));
 				double delta = 1.0/static_cast<double>(n);
 				for(int x = 0; x < n; ++x)
@@ -271,7 +278,7 @@ bool MixerCommand::DoExecute()
 							transform.set_key_scale(delta, delta);
 							return transform;
 						};
-						GetChannel()->mixer().apply_image_transform(index, transform, 0);
+						GetChannel()->mixer().apply_image_transform(index, transform, duration, tween);
 					}
 				}
 			}
