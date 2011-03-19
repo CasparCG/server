@@ -31,22 +31,22 @@ class tweened_transform
 	T dest_;
 	int duration_;
 	int time_;
-	std::wstring tween_;
+	std::function<double(double,double,double)> tweener_;
 public:	
 	tweened_transform()
 		: duration_(0)
 		, time_(0)
-		, tween_(L"linear"){}
+		, tweener_(get_tweener<double>(L"linear")){}
 	tweened_transform(const T& source, const T& dest, int duration, const std::wstring& tween = L"linear")
 		: source_(source)
 		, dest_(dest)
 		, duration_(duration)
 		, time_(0)
-		, tween_(tween){}
+		, tweener_(get_tweener<double>(tween)){}
 	
 	virtual T fetch()
 	{
-		return tween(source_, dest_, std::bind(&caspar::tween<double>, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, tween_), duration_ < 1 ? 1.0f : static_cast<float>(time_)/static_cast<float>(duration_));
+		return tween(source_, dest_, tweener_, duration_ < 1 ? 1.0f : static_cast<float>(time_)/static_cast<float>(duration_));
 	}
 	virtual T fetch_and_tick(int num)
 	{						
