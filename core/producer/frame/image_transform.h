@@ -46,7 +46,7 @@ private:
 	video_mode::type mode_;
 };
 
-image_transform lerp(const image_transform& lhs, const image_transform& rhs, float alpha);
+image_transform tween(const image_transform& lhs, const image_transform& rhs, const std::function<double(double, double, double)>& tweener, float alpha);
 
 inline bool operator==(const image_transform& lhs, const image_transform& rhs)
 {
