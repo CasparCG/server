@@ -66,5 +66,6 @@
     <ClInclude Include="gpu\gpu_read_frame.h">
       <Filter>gpu</Filter>
     </ClInclude>
+    <ClInclude Include="tween.h" />
   </ItemGroup>
 </Project>
