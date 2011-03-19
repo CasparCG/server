@@ -65,12 +65,12 @@ inline T ease_out_in_cubic(T b, T e, T d)
 }
 
 template<typename T>
-inline T tween(T b, T e, T d, std::wstring name = L"linear")
+inline std::function<T(T,T,T)> get_tweener(std::wstring name = L"linear")
 {
 	std::transform(name.begin(), name.end(), name.begin(), std::tolower);
 
 	typedef std::function<T(T,T,T)> tween_func;
-	static std::unordered_map<std::wstring, tween_func> tweens = boost::assign::map_list_of
+	static const std::unordered_map<std::wstring, tween_func> tweens = boost::assign::map_list_of
 		(L"linear", ease_none<T>)
 		(L"easenone", ease_none<T>)
 		(L"easeinsine", ease_in_sine<T>)
@@ -86,10 +86,10 @@ inline T tween(T b, T e, T d, std::wstring name = L"linear")
 	if(it == tweens.end())
 	{
 		CASPAR_LOG(warning) << L" Invalid tween: " << name << L" fallback to \"linear\".";
-		return ease_none(b, e, d);
+		it = tweens.find(L"linear");
 	}
 
-	return it->second(b, e, d);
+	return it->second;
 };
 
 }
