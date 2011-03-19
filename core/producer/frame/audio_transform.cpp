@@ -40,10 +40,10 @@ const audio_transform audio_transform::operator*(const audio_transform &other) c
 	return audio_transform(*this) *= other;
 }
 
-audio_transform tween(const audio_transform& lhs, const audio_transform& rhs, const std::function<double(double, double, double)>& tweener, float alpha)
+audio_transform tween(const audio_transform& lhs, const audio_transform& rhs, const std::function<double(double, double, double)>& tweener, double delta)
 {
 	audio_transform result;
-	result.set_gain(tweener(lhs.get_gain(), rhs.get_gain(), alpha));
+	result.set_gain(tweener(lhs.get_gain(), rhs.get_gain(), delta));
 	result.set_has_audio(lhs.get_has_audio() || rhs.get_has_audio());
 	return result;
 }
