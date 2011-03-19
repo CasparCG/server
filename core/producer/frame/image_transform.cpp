@@ -113,18 +113,18 @@ const image_transform image_transform::operator*(const image_transform &other) c
 	return image_transform(*this) *= other;
 }
 
-image_transform tween(const image_transform& lhs, const image_transform& rhs, const std::function<double(double, double, double)>& tweener, float alpha)
+image_transform tween(const image_transform& lhs, const image_transform& rhs, const std::function<double(double, double, double)>& tweener, double delta)
 {
 	CASPAR_ASSERT(lhs.get_mode() == rhs.get_mode() || lhs.get_mode() == video_mode::invalid || rhs.get_mode() == video_mode::invalid);
 
 	image_transform result;	
 	result.set_mode(rhs.get_mode() != video_mode::invalid ? rhs.get_mode() : lhs.get_mode());
-	result.set_gain(tweener(lhs.get_gain(), rhs.get_gain(), alpha));
-	result.set_opacity(tweener(lhs.get_opacity(), rhs.get_opacity(), alpha));
-	result.set_fill_translation(tweener(lhs.get_fill_translation()[0], rhs.get_fill_translation()[0], alpha), tweener(lhs.get_fill_translation()[1], rhs.get_fill_translation()[1], alpha));
-	result.set_fill_scale(tweener(lhs.get_fill_scale()[0], rhs.get_fill_scale()[0], alpha), tweener(lhs.get_fill_scale()[1], rhs.get_fill_scale()[1], alpha));
-	result.set_key_translation(tweener(lhs.get_key_translation()[0], rhs.get_key_translation()[0], alpha), tweener(lhs.get_key_translation()[1], rhs.get_key_translation()[1], alpha));
-	result.set_key_scale(tweener(lhs.get_key_scale()[0], rhs.get_key_scale()[0], alpha), tweener(lhs.get_key_scale()[1], rhs.get_key_scale()[1], alpha));
+	result.set_gain(tweener(lhs.get_gain(), rhs.get_gain(), delta));
+	result.set_opacity(tweener(lhs.get_opacity(), rhs.get_opacity(), delta));
+	result.set_fill_translation(tweener(lhs.get_fill_translation()[0], rhs.get_fill_translation()[0], delta), tweener(lhs.get_fill_translation()[1], rhs.get_fill_translation()[1], delta));
+	result.set_fill_scale(tweener(lhs.get_fill_scale()[0], rhs.get_fill_scale()[0], delta), tweener(lhs.get_fill_scale()[1], rhs.get_fill_scale()[1], delta));
+	result.set_key_translation(tweener(lhs.get_key_translation()[0], rhs.get_key_translation()[0], delta), tweener(lhs.get_key_translation()[1], rhs.get_key_translation()[1], delta));
+	result.set_key_scale(tweener(lhs.get_key_scale()[0], rhs.get_key_scale()[0], delta), tweener(lhs.get_key_scale()[1], rhs.get_key_scale()[1], delta));
 	
 	return result;
 }
