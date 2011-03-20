@@ -84,5 +84,8 @@
     <ClInclude Include="utility\timer.h">
       <Filter>utility</Filter>
     </ClInclude>
+    <ClInclude Include="utility\tweener.h">
+      <Filter>utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

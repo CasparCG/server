@@ -8,7 +8,6 @@
 #include <core/producer/frame/audio_transform.h>
 #include <core/producer/frame/image_transform.h>
 
-#include "tween.h"
 #include "audio/audio_mixer.h"
 #include "image/image_mixer.h"
 
@@ -17,6 +16,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/utility/assert.h>
 #include <common/utility/timer.h>
+#include <common/utility/tweener.h>
 
 #include <core/video_format.h>
 
@@ -31,22 +31,22 @@ class tweened_transform
 	T dest_;
 	int duration_;
 	int time_;
-	std::function<double(double,double,double)> tweener_;
+	tweener_t tweener_;
 public:	
 	tweened_transform()
 		: duration_(0)
 		, time_(0)
-		, tweener_(get_tweener<double>(L"linear")){}
+		, tweener_(get_tweener(L"linear")){}
 	tweened_transform(const T& source, const T& dest, int duration, const std::wstring& tween = L"linear")
 		: source_(source)
 		, dest_(dest)
 		, duration_(duration)
 		, time_(0)
-		, tweener_(get_tweener<double>(tween)){}
+		, tweener_(get_tweener(tween)){}
 	
 	virtual T fetch()
 	{
-		return tween(source_, dest_, tweener_, duration_ < 1 ? 1.0f : static_cast<float>(time_)/static_cast<float>(duration_));
+		return tween(static_cast<double>(time_), source_, dest_, static_cast<double>(duration_)+0.000001, tweener_);
 	}
 	virtual T fetch_and_tick(int num)
 	{						

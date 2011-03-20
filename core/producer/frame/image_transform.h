@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/utility/tweener.h>
 #include <core/video_format.h>
 
 #include <array>
@@ -46,7 +47,7 @@ private:
 	video_mode::type mode_;
 };
 
-image_transform tween(const image_transform& lhs, const image_transform& rhs, const std::function<double(double, double, double)>& tweener, double delta);
+image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener);
 
 inline bool operator==(const image_transform& lhs, const image_transform& rhs)
 {
