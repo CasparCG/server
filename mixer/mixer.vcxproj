@@ -86,7 +86,6 @@
     <ClInclude Include="image\image_kernel.h" />
     <ClInclude Include="image\image_mixer.h" />
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="tween.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\common\common.vcxproj">

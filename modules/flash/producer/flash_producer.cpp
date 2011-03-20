@@ -69,8 +69,6 @@ class flash_renderer
 	CComObject<caspar::flash::FlashAxContainer>* ax_;
 	safe_ptr<core::basic_frame> head_;
 	
-	timer timer_;
-
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
 	
@@ -176,8 +174,7 @@ private:
 		if(underflow)
 			graph_->add_tag("underflow");
 
-		double frame_time = 1.0/ax_->GetFPS()*(underflow ? 0.90 : 1.0); // Reduce sync-time if in underflow.
-		timer_.tick(frame_time); // Tick doesnt work on nested timelines, force an actual sync
+		double frame_time = 1.0/ax_->GetFPS();
 
 		perf_timer_.reset();
 		ax_->Tick();
