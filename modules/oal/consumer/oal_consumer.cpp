@@ -21,8 +21,8 @@
 #include "oal_consumer.h"
 
 #include <common/diagnostics/graph.h>
-#include <common/utility/timer.h>
 #include <common/log/log.h>
+#include <common/utility/timer.h>
 
 #include <core/video_format.h>
 
@@ -55,6 +55,7 @@ public:
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		is_running_ = true;
+		input_.set_capacity(4);
 	}
 
 	~implementation()

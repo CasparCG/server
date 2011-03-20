@@ -223,6 +223,7 @@
     <ClInclude Include="utility\printer.h" />
     <ClInclude Include="utility\string.h" />
     <ClInclude Include="utility\timer.h" />
+    <ClInclude Include="utility\tweener.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="diagnostics\graph.cpp">

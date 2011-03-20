@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/utility/tweener.h>
+
 namespace caspar { namespace core {
 
 class audio_transform
@@ -20,6 +22,6 @@ private:
 	bool audio_;
 };
 
-audio_transform tween(const audio_transform& lhs, const audio_transform& rhs, const std::function<double(double, double, double)>& tweener, double delta);
+audio_transform tween(double time, const audio_transform& source, const audio_transform& dest, double duration, const tweener_t& tweener);
 
 }}
