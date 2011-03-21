@@ -140,9 +140,9 @@ struct transition_producer::implementation : boost::noncopyable
 		if(info_.type == transition::cut)		
 			return src_frame != basic_frame::eof() ? src_frame : basic_frame::empty();
 										
-		double alpha = static_cast<double>(current_frame_)/static_cast<double>(info_.duration);
-		double half_alpha_step = 0.5*1.0/static_cast<double>(info_.duration);
-		
+		double delta1 = info_.tweener(current_frame_*2-1, 0.0, 1.0, info_.duration*2);
+		double delta2 = info_.tweener(current_frame_*2, 0.0, 1.0, info_.duration*2);  
+
 		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		
 		// For interlaced transitions. Seperate fields into seperate frames which are transitioned accordingly.
@@ -151,36 +151,36 @@ struct transition_producer::implementation : boost::noncopyable
 		auto s_frame2 = make_safe<basic_frame>(src_frame);
 
 		s_frame1->get_audio_transform().set_has_audio(false);
-		s_frame2->get_audio_transform().set_gain(1.0-alpha);
+		s_frame2->get_audio_transform().set_gain(1.0-delta2);
 
 		auto d_frame1 = make_safe<basic_frame>(dest_frame);
 		auto d_frame2 = make_safe<basic_frame>(dest_frame);
 		
 		d_frame1->get_audio_transform().set_has_audio(false);
-		d_frame2->get_audio_transform().set_gain(alpha);
+		d_frame2->get_audio_transform().set_gain(delta2);
 
 		if(info_.type == transition::mix)
 		{
-			d_frame1->get_image_transform().set_opacity(alpha-half_alpha_step);	
-			d_frame2->get_image_transform().set_opacity(alpha);	
+			d_frame1->get_image_transform().set_opacity(delta1);	
+			d_frame2->get_image_transform().set_opacity(delta2);	
 		}
 		else if(info_.type == transition::slide)
 		{
-			d_frame1->get_image_transform().set_fill_translation((-1.0+alpha-half_alpha_step)*dir, 0.0);	
-			d_frame2->get_image_transform().set_fill_translation((-1.0+alpha)*dir, 0.0);		
+			d_frame1->get_image_transform().set_fill_translation((-1.0+delta1)*dir, 0.0);	
+			d_frame2->get_image_transform().set_fill_translation((-1.0+delta2)*dir, 0.0);		
 		}
 		else if(info_.type == transition::push)
 		{
-			d_frame1->get_image_transform().set_fill_translation((-1.0+alpha-half_alpha_step)*dir, 0.0);
-			d_frame2->get_image_transform().set_fill_translation((-1.0+alpha)*dir, 0.0);
+			d_frame1->get_image_transform().set_fill_translation((-1.0+delta1)*dir, 0.0);
+			d_frame2->get_image_transform().set_fill_translation((-1.0+delta2)*dir, 0.0);
 
-			s_frame1->get_image_transform().set_fill_translation((0.0+alpha-half_alpha_step)*dir, 0.0);	
-			s_frame2->get_image_transform().set_fill_translation((0.0+alpha)*dir, 0.0);		
+			s_frame1->get_image_transform().set_fill_translation((0.0+delta1)*dir, 0.0);	
+			s_frame2->get_image_transform().set_fill_translation((0.0+delta2)*dir, 0.0);		
 		}
 		else if(info_.type == transition::wipe)		
 		{
-			d_frame1->get_image_transform().set_key_scale(alpha-half_alpha_step, 1.0);	
-			d_frame2->get_image_transform().set_key_scale(alpha, 1.0);			
+			d_frame1->get_image_transform().set_key_scale(delta1, 1.0);	
+			d_frame2->get_image_transform().set_key_scale(delta2, 1.0);			
 		}
 		
 		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, format_desc_.mode);

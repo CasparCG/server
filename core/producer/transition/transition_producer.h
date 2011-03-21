@@ -21,6 +21,8 @@
 
 #include "../frame_producer.h"
 
+#include <common/utility/tweener.h>
+
 #include <string>
 #include <memory>
 
@@ -50,7 +52,11 @@ struct transition_direction
 
 struct transition_info
 {
-	transition_info() : type(transition::cut), duration(0), direction(transition_direction::from_left){}
+	transition_info() 
+		: type(transition::cut)
+		, duration(0)
+		, direction(transition_direction::from_left)
+		, tweener(get_tweener(L"linear")){}
 
 	std::wstring name() const
 	{
@@ -68,6 +74,7 @@ struct transition_info
 	size_t						duration;
 	transition_direction::type	direction;
 	transition::type			type;
+	tweener_t					tweener;
 };
 
 class transition_producer : public frame_producer
