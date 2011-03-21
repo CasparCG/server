@@ -1,3 +1,6 @@
+
+// The following code is based on Tweener for actionscript, http://code.google.com/p/tweener/
+//
 //Disclaimer for Robert Penner's Easing Equations license:
 //
 //TERMS OF USE - EASING EQUATIONS
