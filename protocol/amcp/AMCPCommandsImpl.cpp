@@ -45,6 +45,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/regex.hpp>
 
 #if defined(_MSC_VER)
 #pragma warning (push, 1) // TODO: Legacy code, just disable warnings
@@ -464,54 +465,87 @@ bool LoadCommand::DoExecute()
 	}
 }
 
+
+
+//std::function<std::wstring()> channel_cg_add_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
+//{
+//	static boost::wregex expr(L"^CG\\s(?<CHANNEL>\\d+)-?(?<LAYER>\\d+)?\\sADD\\s(?<FLASH_LAYER>\\d+)\\s(?<TEMPLATE>\\S+)\\s?(?<START_LABEL>\\S\\S+)?\\s?(?<PLAY_ON_LOAD>\\d)?\\s?(?<DATA>.*)?");
+//
+//	boost::wsmatch what;
+//	if(!boost::regex_match(message, what, expr))
+//		return nullptr;
+//
+//	auto info = channel_info::parse(what, channels);
+//
+//	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
+//
+//	std::wstring templatename = what["TEMPLATE"].str();
+//	bool play_on_load = what["PLAY_ON_LOAD"].matched ? what["PLAY_ON_LOAD"].str() != L"0" : 0;
+//	std::wstring start_label = what["START_LABEL"].str();	
+//	std::wstring data = get_data(what["DATA"].str());
+//	
+//	boost::replace_all(templatename, "\"", "");
+//
+//	return [=]() -> std::wstring
+//	{	
+//		std::wstring fullFilename = flash::flash_producer::find_template(server::template_folder() + templatename);
+//		if(fullFilename.empty())
+//			BOOST_THROW_EXCEPTION(file_not_found());
+//	
+//		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
+//		std::wstring filename = templatename;
+//		filename.append(extension);
+//
+//		flash::get_default_cg_producer(info.channel, std::max<int>(DEFAULT_CHANNEL_LAYER+1, info.layer_index))
+//			->add(flash_layer_index, filename, play_on_load, start_label, data);
+//
+//		CASPAR_LOG(info) << L"Executed [amcp_channel_cg_add]";
+//		return L"";
+//	};
+
 bool LoadbgCommand::DoExecute()
 {
 	transition_info transitionInfo;
 	
 	bool bLoop = false;
-	unsigned short transitionParameterIndex = 1;
 
-	if(_parameters.size() > 1 && _parameters[1] == TEXT("LOOP"))
-		++transitionParameterIndex;
+	// TRANSITION
 
-	//Setup transition info
-	if(_parameters.size() > transitionParameterIndex)	//type
+	std::wstring message;
+	for(size_t n = 0; n < _parameters.size(); ++n)
+		message += _parameters[n] + L" ";
+		
+	static const boost::wregex expr(L".*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE)\\s*(?<DURATION>\\d+)\\s*(?<TWEEN>EASE\\w*)?\\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*");
+	boost::wsmatch what;
+	if(boost::regex_match(message, what, expr))
 	{
-		std::wstring transitionType = _parameters[transitionParameterIndex];
+		auto transition = what["TRANSITION"].str();
+		transitionInfo.duration = lexical_cast_or_default<size_t>(what["DURATION"].str());
+		auto direction = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
+		auto tween = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
+		transitionInfo.tweener = get_tweener(tween);		
 
-		if(transitionType == TEXT("CUT"))
+		if(transition == TEXT("CUT"))
 			transitionInfo.type = transition::cut;
-		else if(transitionType == TEXT("MIX"))
+		else if(transition == TEXT("MIX"))
 			transitionInfo.type = transition::mix;
-		else if(transitionType == TEXT("PUSH"))
+		else if(transition == TEXT("PUSH"))
 			transitionInfo.type = transition::push;
-		else if(transitionType == TEXT("SLIDE"))
+		else if(transition == TEXT("SLIDE"))
 			transitionInfo.type = transition::slide;
-		else if(transitionType == TEXT("WIPE"))
+		else if(transition == TEXT("WIPE"))
 			transitionInfo.type = transition::wipe;
-
-		if(_parameters.size() > static_cast<unsigned short>(transitionParameterIndex+1))	//duration
-		{
-			int duration = _ttoi(_parameters[transitionParameterIndex+1].c_str());
-			if(duration > 0)
-				transitionInfo.duration = duration;
-
-			if(_parameters.size() > static_cast<unsigned short>(transitionParameterIndex+2))	//direction
-			{
-				std::wstring direction = _parameters[transitionParameterIndex+2];
-
-				if(direction == TEXT("FROMLEFT"))
-					transitionInfo.direction = transition_direction::from_left;
-				else if(direction == TEXT("FROMRIGHT"))
-					transitionInfo.direction = transition_direction::from_right;
-				else if(direction == TEXT("LEFT"))
-					transitionInfo.direction = transition_direction::from_right;
-				else if(direction == TEXT("RIGHT"))
-					transitionInfo.direction = transition_direction::from_left;
-			}
-		}
+		
+		if(direction == TEXT("FROMLEFT"))
+			transitionInfo.direction = transition_direction::from_left;
+		else if(direction == TEXT("FROMRIGHT"))
+			transitionInfo.direction = transition_direction::from_right;
+		else if(direction == TEXT("LEFT"))
+			transitionInfo.direction = transition_direction::from_right;
+		else if(direction == TEXT("RIGHT"))
+			transitionInfo.direction = transition_direction::from_left;
 	}
-
+	
 	//Perform loading of the clip
 	try
 	{

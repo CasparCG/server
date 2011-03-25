@@ -10,7 +10,7 @@ audio_transform::audio_transform()
 
 void audio_transform::set_gain(double value)
 {
-	gain_ = value;
+	gain_ = std::max(0.0, value);
 }
 
 double audio_transform::get_gain() const
