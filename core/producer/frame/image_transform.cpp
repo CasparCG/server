@@ -19,7 +19,7 @@ image_transform::image_transform()
 
 void image_transform::set_opacity(double value)
 {
-	opacity_ = value;
+	opacity_ = std::max(value, 0.0);
 }
 
 double image_transform::get_opacity() const
@@ -29,7 +29,7 @@ double image_transform::get_opacity() const
 
 void image_transform::set_gain(double value)
 {
-	gain_ = value;
+	gain_ = std::max(0.0, value);
 }
 
 double image_transform::get_gain() const
