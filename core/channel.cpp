@@ -57,6 +57,7 @@ frame_producer_device& channel::producer() { return *impl_->producer_;}
 frame_mixer_device& channel::mixer() { return *impl_->mixer_;} 
 frame_consumer_device& channel::consumer() { return *impl_->consumer_;} 
 const video_format_desc& channel::get_video_format_desc() const{return impl_->format_desc_;}
+void channel::set_video_format_desc(const video_format_desc& format_desc){impl_ = make_safe<implementation>(impl_->index_, format_desc);}
 std::wstring channel::print() const { return impl_->print();}
 
 }}
