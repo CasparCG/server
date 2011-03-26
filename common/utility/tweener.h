@@ -357,6 +357,7 @@ inline tweener_t get_tweener(std::wstring name = L"linear")
 	std::transform(name.begin(), name.end(), name.begin(), std::tolower);
 
 	static const std::unordered_map<std::wstring, tweener_t> tweens = boost::assign::map_list_of	
+		(L"",					ease_none		   )	
 		(L"linear",				ease_none		   )	
 		(L"easenone",			ease_none		   )
 		(L"easeinquad",			ease_in_quad	   )
@@ -403,7 +404,7 @@ inline tweener_t get_tweener(std::wstring name = L"linear")
 	auto it = tweens.find(name);
 	if(it == tweens.end())
 	{
-		CASPAR_LOG(warning) << L" Invalid tween: " << name << L" fallback to \"linear\".";
+		CASPAR_LOG(warning) << L"Invalid tween: " << name << L" fallback to \"linear\".";
 		it = tweens.find(L"linear");
 	}
 
