@@ -1137,10 +1137,14 @@ bool SetCommand::DoExecute()
 
 	if(name == TEXT("MODE"))
 	{
-		//if(this->GetChannel()->consumer().SetVideoFormat(value)) TODO
-		//	this->SetReplyString(TEXT("202 SET MODE OK\r\n"));
-		//else
-			this->SetReplyString(TEXT("501 SET MODE FAILED\r\n"));
+		auto format_desc = core::video_format_desc::get(value);
+		if(format_desc.format != core::video_format::invalid)
+		{
+			GetChannel()->set_video_format_desc(format_desc);
+			SetReplyString(TEXT("202 SET MODE OK\r\n"));
+		}
+		else
+			SetReplyString(TEXT("501 SET MODE FAILED\r\n"));
 	}
 	else
 	{

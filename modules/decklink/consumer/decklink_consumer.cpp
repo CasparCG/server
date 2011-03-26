@@ -64,6 +64,7 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	const printer	parent_printer_;
 	std::wstring	model_name_;
 	const size_t	device_index_;
+	tbb::atomic<bool> is_running_;
 
 	std::shared_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
@@ -100,6 +101,7 @@ public:
 		, audio_scheduled_(0)
 		, format_desc_(format_desc)
 	{
+		is_running_ = true;
 		format_desc_ = format_desc;
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
@@ -195,7 +197,11 @@ public:
 	}
 
 	~decklink_output()
-	{			
+	{		
+		is_running_ = false;
+		video_frame_buffer_.try_push(core::read_frame::empty());
+		audio_frame_buffer_.try_push(core::read_frame::empty());
+
 		if(output_ != nullptr) 
 		{
 			output_->StopScheduledPlayback(0, nullptr, 0);
@@ -212,9 +218,13 @@ public:
 	
 	virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted (IDeckLinkVideoFrame* /*completedFrame*/, BMDOutputFrameCompletionResult /*result*/)
 	{
+		if(!is_running_)
+			return S_OK;
+
 		safe_ptr<const core::read_frame> frame;		
 		video_frame_buffer_.pop(frame);		
 		schedule_next_video(frame);
+
 		return S_OK;
 	}
 
@@ -225,9 +235,13 @@ public:
 		
 	virtual HRESULT STDMETHODCALLTYPE RenderAudioSamples (BOOL /*preroll*/)
 	{
+		if(!is_running_)
+			return S_OK;
+
 		safe_ptr<const core::read_frame> frame;
 		audio_frame_buffer_.pop(frame);
 		schedule_next_audio(frame);
+
 		return S_OK;
 	}
 
