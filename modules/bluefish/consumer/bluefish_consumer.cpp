@@ -347,9 +347,13 @@ public:
 	}
 };
 
-bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
 bluefish_consumer::bluefish_consumer(unsigned int device_index, bool embed_audio) : impl_(new implementation(device_index, embed_audio)){}	
-void bluefish_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer){impl_->initialize(format_desc, parent_printer);}
+bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
+void bluefish_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+{
+	impl_.reset(new implementation(impl_->device_index_, impl_->embed_audio_));
+	impl_->initialize(format_desc, parent_printer);
+}
 void bluefish_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t bluefish_consumer::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring bluefish_consumer::print() const {return impl_->print();}	

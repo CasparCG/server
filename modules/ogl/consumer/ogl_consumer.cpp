@@ -300,7 +300,11 @@ ogl_consumer::ogl_consumer(ogl_consumer&& other) : impl_(std::move(other.impl_))
 ogl_consumer::ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed) : impl_(new implementation(screen_index, stretch, windowed)){}
 void ogl_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t ogl_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void ogl_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer){impl_->initialize(format_desc, parent_printer);}
+void ogl_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+{
+	impl_.reset(new implementation(impl_->screen_index_, impl_->stretch_, impl_->windowed_));
+	impl_->initialize(format_desc, parent_printer);
+}
 std::wstring ogl_consumer::print() const {return impl_->print();}
 
 safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params)
