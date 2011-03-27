@@ -79,7 +79,6 @@ class decklink_input : public IDeckLinkInputCallback
 	safe_ptr<core::basic_frame> tail_;
 
 public:
-
 	decklink_input(const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory, const printer& parent_printer)
 		: parent_printer_(parent_printer)
 		, format_desc_(format_desc)
