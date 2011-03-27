@@ -401,7 +401,11 @@ ffmpeg_consumer::ffmpeg_consumer(const std::wstring& filename) : impl_(new imple
 ffmpeg_consumer::ffmpeg_consumer(ffmpeg_consumer&& other) : impl_(std::move(other.impl_)){}
 void ffmpeg_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t ffmpeg_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void ffmpeg_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer) {impl_->initialize(format_desc, parent_printer);}
+void ffmpeg_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+{
+	impl_.reset(new implementation(impl_->filename_));
+	impl_->initialize(format_desc, parent_printer);
+}
 std::wstring ffmpeg_consumer::print() const {return impl_->print();}
 
 safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params)
