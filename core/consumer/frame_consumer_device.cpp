@@ -26,7 +26,7 @@ struct frame_consumer_device::implementation
 
 	std::map<int, std::shared_ptr<frame_consumer>> consumers_; // Valid iterators after erase
 	
-	const video_format_desc format_desc_;
+	video_format_desc format_desc_;
 	
 	executor executor_;	
 public:
@@ -51,7 +51,7 @@ public:
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
-		consumer->initialize(format_desc_, std::bind(&implementation::print, this));
+		consumer->initialize(format_desc_, [this]{return print();});
 		executor_.invoke([&]
 		{
 			if(buffer_.capacity() < consumer->buffer_depth())
@@ -104,10 +104,23 @@ public:
 	{
 		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"consumer";
 	}
+	
+	void set_video_format_desc(const video_format_desc& format_desc)
+	{
+		auto p =  [this]{return print();};
+		executor_.invoke([&]
+		{
+			format_desc_ = format_desc;
+			buffer_.clear();
+			BOOST_FOREACH(auto& consumer, consumers_)
+				consumer.second->initialize(format_desc_, p);
+		});
+	}
 };
 
 frame_consumer_device::frame_consumer_device(const printer& parent_printer, const video_format_desc& format_desc) : impl_(new implementation(parent_printer, format_desc)){}
 void frame_consumer_device::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
 void frame_consumer_device::send(const safe_ptr<const read_frame>& future_frame) { impl_->send(future_frame); }
+void frame_consumer_device::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 }}

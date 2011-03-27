@@ -25,11 +25,11 @@ namespace caspar { namespace core {
 struct channel::implementation : boost::noncopyable
 {					
 	const int index_;
-	const video_format_desc format_desc_;
+	video_format_desc format_desc_;
 	
-	const std::shared_ptr<frame_mixer_device>	 mixer_;
-	const std::shared_ptr<frame_consumer_device> consumer_;
-	const std::shared_ptr<frame_producer_device> producer_;
+	std::shared_ptr<frame_mixer_device>	 mixer_;
+	std::shared_ptr<frame_consumer_device> consumer_;
+	std::shared_ptr<frame_producer_device> producer_;
 
 	boost::signals2::scoped_connection mixer_connection_;
 	boost::signals2::scoped_connection producer_connection_;
@@ -49,6 +49,20 @@ public:
 	{
 		return L"channel[" + boost::lexical_cast<std::wstring>(index_+1) + L"-" +  format_desc_.name + L"]";
 	}
+
+	void set_video_format_desc(const video_format_desc& format_desc)
+	{
+		format_desc_ = format_desc;
+		producer_connection_.disconnect();
+		mixer_connection_.disconnect();
+
+		consumer_->set_video_format_desc(format_desc_);
+		mixer_.reset(new frame_mixer_device([=]{return print();}, format_desc_));
+		producer_.reset(new frame_producer_device([=]{return print();}, safe_ptr<frame_factory>(mixer_)));
+
+		mixer_connection_ = mixer_->connect([=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);});
+		producer_connection_ = producer_->connect([=](const std::vector<safe_ptr<basic_frame>>& frames){mixer_->send(frames);});
+	}
 };
 
 channel::channel(int index, const video_format_desc& format_desc) : impl_(new implementation(index, format_desc)){}
@@ -57,7 +71,7 @@ frame_producer_device& channel::producer() { return *impl_->producer_;}
 frame_mixer_device& channel::mixer() { return *impl_->mixer_;} 
 frame_consumer_device& channel::consumer() { return *impl_->consumer_;} 
 const video_format_desc& channel::get_video_format_desc() const{return impl_->format_desc_;}
-void channel::set_video_format_desc(const video_format_desc& format_desc){impl_ = make_safe<implementation>(impl_->index_, format_desc);}
+void channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 std::wstring channel::print() const { return impl_->print();}
 
 }}

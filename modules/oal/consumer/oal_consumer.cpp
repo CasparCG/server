@@ -48,14 +48,22 @@ struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 
 	core::video_format_desc format_desc_;
 public:
-	implementation() 
-		: graph_(diagnostics::create_graph(narrow(print())))
+	implementation(const core::video_format_desc& format_desc, const printer& parent_printer) 
+		: parent_printer_(parent_printer)
+		, graph_(diagnostics::create_graph(narrow(print())))
 		, container_(5)
+		, format_desc_(format_desc)
 	{
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		is_running_ = true;
 		input_.set_capacity(4);
+		for(size_t n = 0; n < buffer_depth(); ++n)
+			input_.push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)); 
+
+		sf::SoundStream::Initialize(2, 48000);
+		Play();		
+		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 
 	~implementation()
@@ -66,18 +74,7 @@ public:
 		Stop();
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
-
-	void initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
-	{
-		format_desc_ = format_desc;
-		parent_printer_ = parent_printer;
-		for(size_t n = 0; n < buffer_depth(); ++n)
-			input_.push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)); 
-		sf::SoundStream::Initialize(2, 48000);
-		Play();		
-		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
-	}
-
+	
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{				
 		if(!frame->audio_data().empty())
@@ -109,11 +106,11 @@ public:
 	}
 };
 
+oal_consumer::oal_consumer(){}
 oal_consumer::oal_consumer(oal_consumer&& other) : impl_(std::move(other.impl_)){}
-oal_consumer::oal_consumer() : impl_(new implementation()){}
 void oal_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t oal_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void oal_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer){impl_->initialize(format_desc, parent_printer);}
+void oal_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer){impl_.reset(new implementation(format_desc, parent_printer));}
 std::wstring oal_consumer::print() const { return impl_->print(); }
 
 safe_ptr<core::frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)
