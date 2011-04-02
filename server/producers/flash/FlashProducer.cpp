@@ -28,6 +28,7 @@
 #include "..\..\utils\image\Image.hpp"
 #include "..\..\application.h"
 #include "..\..\frame\BitmapFrameManager.h"
+#include <tbb/parallel_invoke.h>
 
 namespace caspar {
 
@@ -224,9 +225,17 @@ void FlashProducer::WriteFields()
 	
 	FramePtr pNextFrame1 = RenderFrame();
 	FramePtr pNextFrame2 = RenderFrame();
-
+	
 	if(pNextFrame1 != pNextFrame2)
-		utils::image::CopyField(pNextFrame1->GetDataPtr(), pNextFrame2->GetDataPtr(), 1, fmtDesc.width, fmtDesc.height); // TODO: at this point we should spawn work as a task to allow rendering of next frame while copying
+	{
+		FramePtr pNewFrame = pFrameManager_->CreateFrame();
+		tbb::parallel_invoke
+		(
+			[&]{utils::image::CopyField(pNewFrame->GetDataPtr(), pNextFrame1->GetDataPtr(), 0, fmtDesc.width, fmtDesc.height);},
+			[&]{utils::image::CopyField(pNewFrame->GetDataPtr(), pNextFrame2->GetDataPtr(), 1, fmtDesc.width, fmtDesc.height);}
+		);
+		pNextFrame1 = pNewFrame;
+	}
 
 	frameBuffer_.push_back(pNextFrame1);
 }
