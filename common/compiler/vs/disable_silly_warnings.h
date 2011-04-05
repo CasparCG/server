@@ -7,6 +7,7 @@
 #pragma warning (disable : 4482) // nonstandard extension used: enum 'enum' used in qualified name
 #pragma warning (disable : 4503) // decorated name length exceeded, name was truncated
 #pragma warning (disable : 4512) // assignment operator could not be generated
+#pragma warning (disable : 4702) //  unreachable code
 #pragma warning (disable : 4714) // marked as __forceinline not inlined
 #endif
 
