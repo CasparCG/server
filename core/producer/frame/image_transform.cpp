@@ -120,7 +120,7 @@ image_transform tween(double time, const image_transform& source, const image_tr
 		return tweener(time, source, dest-source, duration);
 	};
 
-	CASPAR_ASSERT(lhs.get_mode() == rhs.get_mode() || lhs.get_mode() == video_mode::invalid || rhs.get_mode() == video_mode::invalid);
+	CASPAR_ASSERT(source.get_mode() == dest.get_mode() || source.get_mode() == video_mode::invalid || dest.get_mode() == video_mode::invalid);
 
 	image_transform result;	
 	result.set_mode(dest.get_mode() != video_mode::invalid ? dest.get_mode() : source.get_mode());
