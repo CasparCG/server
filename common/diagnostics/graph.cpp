@@ -255,42 +255,27 @@ struct graph::implementation : public drawable
 
 	void update(const std::string& name, float value)
 	{
-		context::begin_invoke([=]
-		{
-			lines_[name].update(value);
-		});
+		lines_[name].update(value);
 	}
 
 	void set(const std::string& name, float value)
 	{
-		context::begin_invoke([=]
-		{
-			lines_[name].set(value);
-		});
+		lines_[name].set(value);
 	}
 
 	void tag(const std::string& name)
 	{
-		context::begin_invoke([=]
-		{
-			lines_[name].tag();
-		});
+		lines_[name].tag();
 	}
 
 	void set_color(const std::string& name, color c)
 	{
-		context::begin_invoke([=]
-		{
-			lines_[name].set_color(c);
-		});
+		lines_[name].set_color(c);
 	}
 	
 	void guide(const std::string& name, float value)
 	{
-		context::begin_invoke([=]
-		{
-			lines_[name].guide(diagnostics::guide(value));
-		});
+		lines_[name].guide(diagnostics::guide(value));	
 	}
 	
 private:
@@ -364,11 +349,61 @@ graph::graph(const printer& parent_printer) : impl_(env::properties().get("confi
 		context::register_drawable(impl_);
 }
 
-void graph::update_value(const std::string& name, float value){if(impl_)impl_->update(name, value);}
-void graph::set_value(const std::string& name, float value){if(impl_)impl_->set(name, value);}
-void graph::set_color(const std::string& name, color c){if(impl_)impl_->set_color(name, c);}
-void graph::add_tag(const std::string& name){if(impl_)impl_->tag(name);}
-void graph::add_guide(const std::string& name, float value){if(impl_)impl_->guide(name, value);}
+void graph::update_value(const std::string& name, float value)
+{
+	if(impl_)
+	{	
+		auto p = impl_;
+		context::begin_invoke([=]
+		{	
+			p->update(name, value);
+		});
+	}
+}
+void graph::set_value(const std::string& name, float value)
+{
+	if(impl_)
+	{		
+		auto p = impl_;
+		context::begin_invoke([=]
+		{	
+			p->set(name, value);
+		});
+	}
+}
+void graph::set_color(const std::string& name, color c)
+{	
+	if(impl_)
+	{		
+		auto p = impl_;
+		context::begin_invoke([=]
+		{	
+			p->set_color(name, c);
+		});
+	}
+}
+void graph::add_tag(const std::string& name)
+{	
+	if(impl_)
+	{		
+		auto p = impl_;
+		context::begin_invoke([=]
+		{	
+			p->tag(name);
+		});
+	}
+}
+void graph::add_guide(const std::string& name, float value)
+{	
+	if(impl_)
+	{		
+		auto p = impl_;
+		context::begin_invoke([=]
+		{	
+			p->guide(name, value);
+		});
+	}
+}
 
 safe_ptr<graph> create_graph(const std::string& name)
 {

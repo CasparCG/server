@@ -218,6 +218,7 @@
     <ClInclude Include="memory\page_locked_allocator.h" />
     <ClInclude Include="memory\safe_ptr.h" />
     <ClInclude Include="env.h" />
+    <ClInclude Include="printable.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="utility\assert.h" />
     <ClInclude Include="utility\printer.h" />
