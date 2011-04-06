@@ -232,13 +232,18 @@ public:
 	}
 	
 	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
-	{
+	{	
 		frame_factory_ = frame_factory;
 		format_desc_ = frame_factory->get_video_format_desc();
 		frame_buffer_.set_capacity(4);
 		graph_ = diagnostics::create_graph([this]{return print();});
-		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));	
+		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
+		
 		executor_.start();
+		executor_.begin_invoke([=]
+		{
+			init_renderer();
+		});
 	}
 	
 	virtual safe_ptr<core::basic_frame> receive()
@@ -278,10 +283,7 @@ public:
 		executor_.begin_invoke([=]
 		{
 			if(!renderer_)
-			{
-				renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_));
-				while(frame_buffer_.try_push(core::basic_frame::empty())){}		
-			}
+				init_renderer();
 
 			try
 			{
@@ -301,6 +303,12 @@ public:
 					boost::lexical_cast<std::wstring>(fps_) + 
 					(interlaced(fps_, format_desc_) ? L"i" : L"p") + L"]";		
 	}	
+
+	void init_renderer()
+	{
+		renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_));
+		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
+	}
 };
 
 safe_ptr<core::frame_producer> create_flash_producer(const std::vector<std::wstring>& params)
