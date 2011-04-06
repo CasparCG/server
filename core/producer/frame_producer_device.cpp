@@ -8,7 +8,6 @@
 #include "layer.h"
 
 #include <common/concurrency/executor.h>
-#include <common/utility/printer.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/lexical_cast.hpp>
@@ -22,10 +21,8 @@
 
 namespace caspar { namespace core {
 
-struct frame_producer_device::implementation : public object, boost::noncopyable
+struct frame_producer_device::implementation : boost::noncopyable
 {		
-	const printer parent_printer_;
-
 	std::map<int, layer> layers_;		
 	
 	const safe_ptr<frame_factory> factory_;
@@ -34,10 +31,9 @@ struct frame_producer_device::implementation : public object, boost::noncopyable
 	
 	mutable executor executor_;
 public:
-	implementation(const printer& parent_printer, const safe_ptr<frame_factory>& factory)  
-		: parent_printer_(parent_printer)
-		, factory_(factory)
-		, executor_(print())
+	implementation(const safe_ptr<frame_factory>& factory)  
+		: factory_(factory)
+		, executor_(L"frame_producer_device")
 	{
 		executor_.start();
 	}
@@ -70,7 +66,7 @@ public:
 	{
 		auto it = layers_.find(index);
 		if(it == layers_.end())
-			it = layers_.insert(std::make_pair(index, layer(this, index))).first;
+			it = layers_.insert(std::make_pair(index, layer(index))).first;
 		return it->second;
 	}
 	
@@ -191,11 +187,11 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"producer";
+		return L"frame_producer_device";
 	}
 };
 
-frame_producer_device::frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory) : impl_(new implementation(parent_printer, factory)){}
+frame_producer_device::frame_producer_device(const safe_ptr<frame_factory>& factory) : impl_(new implementation(factory)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 boost::signals2::connection frame_producer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}

@@ -6,7 +6,6 @@
 #include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
 #include <common/utility/assert.h>
-#include <common/utility/printer.h>
 
 #include "../producer/frame/basic_frame.h"
 #include "../producer/frame/audio_transform.h"
@@ -43,28 +42,26 @@ public:
 
 frame_producer_remover g_remover;
 
-struct layer::implementation : public object, boost::noncopyable
+struct layer::implementation : boost::noncopyable
 {				
-	mutable tbb::spin_mutex		printer_mutex_;
-	printer						parent_printer_;
-	int							index_;
+	tbb::atomic<int>			index_;
 	
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	safe_ptr<basic_frame>		last_frame_;
 	bool						is_paused_;
 public:
-	implementation(const object* parent, int index) 
-		: object(parent)
-		, index_(index)
-		, foreground_(frame_producer::empty())
+	implementation(int index) 
+		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, last_frame_(basic_frame::empty())
-		, is_paused_(false){}
+		, is_paused_(false)
+	{
+		index_ = index;
+	}
 	
 	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview)
 	{		
-		frame_producer->set_parent(this);
 		background_ = frame_producer;
 		is_paused_ = false;
 
@@ -120,7 +117,6 @@ public:
 
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
-				following->set_parent(this);
 				g_remover.remove(std::move(foreground_));
 				foreground_ = following;
 				CASPAR_LOG(info) << foreground_->print() << L" Added.";
@@ -140,12 +136,11 @@ public:
 		
 	std::wstring print() const
 	{
-		tbb::spin_mutex::scoped_lock lock(printer_mutex_); // Child-producers may call print asynchronously to the producer thread.
-		return object::print() + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
+		return L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
 	}
 };
 
-layer::layer(const object* parent, int index) : impl_(new implementation(parent, index)){}
+layer::layer(int index) : impl_(new implementation(index)){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
 layer& layer::operator=(layer&& other)
 {
@@ -156,8 +151,6 @@ void layer::swap(layer& other)
 {
 	impl_.swap(other.impl_);
 	// Printer state is not swapped.
-	tbb::spin_mutex::scoped_lock lock(impl_->printer_mutex_);
-	std::swap(impl_->parent_printer_, other.impl_->parent_printer_);
 	std::swap(impl_->index_, other.impl_->index_);
 }
 void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview){return impl_->load(frame_producer, play_on_load, preview);}	

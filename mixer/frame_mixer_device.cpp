@@ -57,7 +57,6 @@ public:
 
 struct frame_mixer_device::implementation : boost::noncopyable
 {		
-	const printer			parent_printer_;
 	const video_format_desc format_desc_;
 
 	safe_ptr<diagnostics::graph> diag_;
@@ -77,9 +76,8 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	executor executor_;
 public:
-	implementation(const printer& parent_printer, const video_format_desc& format_desc) 
-		: parent_printer_(parent_printer)
-		, format_desc_(format_desc)
+	implementation( const video_format_desc& format_desc) 
+		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(format_desc)
 		, executor_(print())
@@ -271,11 +269,11 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"mixer";
+		return L"frame_mixer_device";
 	}
 };
 	
-frame_mixer_device::frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc) : impl_(new implementation(parent_printer, format_desc)){}
+frame_mixer_device::frame_mixer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 frame_mixer_device::frame_mixer_device(frame_mixer_device&& other) : impl_(std::move(other.impl_)){}
 boost::signals2::connection frame_mixer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
 void frame_mixer_device::send(const std::vector<safe_ptr<basic_frame>>& frames){impl_->send(frames);}

@@ -83,13 +83,11 @@ public:
 	explicit transition_producer(const safe_ptr<frame_producer>& destination, const transition_info& info);
 	transition_producer(transition_producer&& other);
 
+	// frame_producer
 	virtual safe_ptr<basic_frame> receive();
-
 	virtual safe_ptr<frame_producer> get_following_producer() const;
-
 	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer);
 	virtual void set_frame_factory(const safe_ptr<frame_factory>& frame_factory);
-
 	virtual std::wstring print() const;
 private:
 	struct implementation;

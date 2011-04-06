@@ -40,7 +40,7 @@ public:
 	explicit ogl_consumer(unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
 	ogl_consumer(ogl_consumer&& other);
 	
-	virtual void initialize(const core::video_format_desc& format_desc, const printer& parent_printer);
+	virtual void initialize(const core::video_format_desc& format_desc);
 	virtual void send(const safe_ptr<const core::read_frame>&);
 	virtual size_t buffer_depth() const;
 	virtual std::wstring print() const;

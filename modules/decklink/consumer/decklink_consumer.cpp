@@ -61,7 +61,6 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 		~co_init(){CoUninitialize();}
 	} co_;
 	
-	const printer	parent_printer_;
 	std::wstring	model_name_;
 	const size_t	device_index_;
 	tbb::atomic<bool> is_running_;
@@ -90,9 +89,8 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	tbb::concurrent_bounded_queue<safe_ptr<const core::read_frame>> audio_frame_buffer_;
 
 public:
-	decklink_output(const core::video_format_desc& format_desc, const printer& parent_printer, size_t device_index, bool embed_audio, bool internalKey) 
-		: parent_printer_(parent_printer)
-		, model_name_(L"DECKLINK")
+	decklink_output(const core::video_format_desc& format_desc,size_t device_index, bool embed_audio, bool internalKey) 
+		:  model_name_(L"DECKLINK")
 		, device_index_(device_index)
 		, audio_container_(5)
 		, embed_audio_(embed_audio)
@@ -283,7 +281,7 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 
@@ -314,11 +312,11 @@ public:
 		});
 	}
 
-	void initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+	void initialize(const core::video_format_desc& format_desc)
 	{
 		executor_.invoke([&]
 		{
-			input_.reset(new decklink_output(format_desc, parent_printer, device_index_, embed_audio_, internal_key_));
+			input_.reset(new decklink_output(format_desc, device_index_, embed_audio_, internal_key_));
 		});
 	}
 	
@@ -340,7 +338,7 @@ public:
 
 decklink_consumer::decklink_consumer(size_t device_index, bool embed_audio, bool internalKey) : impl_(new implementation(device_index, embed_audio, internalKey)){}
 decklink_consumer::decklink_consumer(decklink_consumer&& other) : impl_(std::move(other.impl_)){}
-void decklink_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer){impl_->initialize(format_desc, parent_printer);}
+void decklink_consumer::initialize(const core::video_format_desc& format_desc){impl_->initialize(format_desc);}
 void decklink_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring decklink_consumer::print() const{return impl_->print();}

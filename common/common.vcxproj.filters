@@ -78,9 +78,6 @@
     <ClInclude Include="utility\assert.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="utility\printer.h">
-      <Filter>utility</Filter>
-    </ClInclude>
     <ClInclude Include="utility\string.h">
       <Filter>utility</Filter>
     </ClInclude>
@@ -90,6 +87,5 @@
     <ClInclude Include="utility\tweener.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="object.h" />
   </ItemGroup>
 </Project>

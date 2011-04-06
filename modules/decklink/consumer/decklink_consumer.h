@@ -34,7 +34,7 @@ public:
 	explicit decklink_consumer(size_t device_index, bool embed_audio = false, bool internal_key = false);
 	decklink_consumer(decklink_consumer&& other);
 	
-	virtual void initialize(const core::video_format_desc& format_desc, const printer& parent_printer);
+	virtual void initialize(const core::video_format_desc& format_desc);
 	virtual void send(const safe_ptr<const core::read_frame>&);
 	virtual size_t buffer_depth() const;
 	virtual std::wstring print() const;
