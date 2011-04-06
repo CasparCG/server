@@ -20,7 +20,6 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
-#include <common/object.h>
 
 #include "../producer/frame/basic_frame.h"
 #include "../producer/frame/frame_factory.h"
@@ -33,7 +32,7 @@
 
 namespace caspar { namespace core {
 
-class frame_producer : public object, boost::noncopyable
+class frame_producer : boost::noncopyable
 {
 public:
 	virtual ~frame_producer(){}	
@@ -77,6 +76,8 @@ public:
 	virtual void set_frame_factory(const safe_ptr<frame_factory>& frame_factory) = 0;
 
 	virtual void param(const std::wstring&){}
+
+	virtual std::wstring print() const = 0;
 	
 	static const safe_ptr<frame_producer>& empty()  // nothrow
 	{
@@ -84,7 +85,6 @@ public:
 		{
 			virtual safe_ptr<basic_frame> receive(){return basic_frame::empty();}
 			virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
-			virtual void set_parent(const object* parent) {}
 			virtual std::wstring print() const { return L"empty";}
 		};
 		static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();

@@ -6,7 +6,6 @@
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/utility/printer.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/queuing_mutex.h>
@@ -35,7 +34,6 @@ struct input::implementation : boost::noncopyable
 {		
 	static const size_t PACKET_BUFFER_COUNT = 50;
 
-	printer parent_printer_;
 	safe_ptr<diagnostics::graph> graph_;
 
 	std::shared_ptr<AVFormatContext> format_context_;	// Destroy this last
@@ -57,9 +55,8 @@ struct input::implementation : boost::noncopyable
 	
 	executor executor_;
 public:
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, const printer& parent_printer) 
-		: parent_printer_(parent_printer)
-		, graph_(graph)
+	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop) 
+		: graph_(graph)
 		, loop_(loop)
 		, video_s_index_(-1)
 		, audio_s_index_(-1)
@@ -219,11 +216,11 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"input";
+		return L"ffmpeg_input";
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, const printer& parent_printer) : impl_(new implementation(graph, filename, loop, parent_printer)){}
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop) : impl_(new implementation(graph, filename, loop)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
 bool input::is_eof() const{return impl_->is_eof();}

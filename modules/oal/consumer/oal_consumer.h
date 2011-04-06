@@ -32,7 +32,7 @@ public:
 	explicit oal_consumer();
 	oal_consumer(oal_consumer&& other);
 
-	virtual void initialize(const core::video_format_desc& format_desc, const printer& parent_printer);	
+	virtual void initialize(const core::video_format_desc& format_desc);	
 
 	virtual void send(const safe_ptr<const core::read_frame>&);
 	virtual size_t buffer_depth() const;

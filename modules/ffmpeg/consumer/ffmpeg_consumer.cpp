@@ -54,7 +54,6 @@ namespace caspar {
 	
 struct ffmpeg_consumer::implementation : boost::noncopyable
 {		
-	printer parent_printer_;
 	std::string filename_;
 
 	// Audio
@@ -114,10 +113,9 @@ public:
 			url_fclose(oc_->pb); // Close the output ffmpeg.
 	}
 
-	void initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+	void initialize(const core::video_format_desc& format_desc)
 	{
 		format_desc_ = format_desc;
-		parent_printer_ = parent_printer;
 		executor_.start();
 		active_ = executor_.begin_invoke([]{});
 
@@ -196,7 +194,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"ffmpeg[" + widen(filename_) + L"]";
+		return L"ffmpeg[" + widen(filename_) + L"]";
 	}
 
 	AVStream* add_video_stream(enum CodecID codec_id)
@@ -401,10 +399,10 @@ ffmpeg_consumer::ffmpeg_consumer(const std::wstring& filename) : impl_(new imple
 ffmpeg_consumer::ffmpeg_consumer(ffmpeg_consumer&& other) : impl_(std::move(other.impl_)){}
 void ffmpeg_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t ffmpeg_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void ffmpeg_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+void ffmpeg_consumer::initialize(const core::video_format_desc& format_desc)
 {
 	impl_.reset(new implementation(impl_->filename_));
-	impl_->initialize(format_desc, parent_printer);
+	impl_->initialize(format_desc);
 }
 std::wstring ffmpeg_consumer::print() const {return impl_->print();}
 

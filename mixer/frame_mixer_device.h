@@ -26,7 +26,6 @@
 #include "audio/audio_mixer.h"
 
 #include <common/memory/safe_ptr.h>
-#include <common/utility/printer.h>
 
 #include <boost/signals2.hpp>
 
@@ -45,7 +44,7 @@ public:
 	 
 	boost::signals2::connection connect(const output_t::slot_type& subscriber);
 	
-	frame_mixer_device(const printer& parent_printer, const video_format_desc& format_desc);
+	frame_mixer_device(const video_format_desc& format_desc);
 	frame_mixer_device(frame_mixer_device&& other); // nothrow
 		
 	void send(const std::vector<safe_ptr<basic_frame>>& frames); // nothrow

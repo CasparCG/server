@@ -20,8 +20,6 @@ namespace caspar { namespace core {
 	
 struct frame_consumer_device::implementation
 {	
-	const printer parent_printer_;
-
 	boost::circular_buffer<safe_ptr<const read_frame>> buffer_;
 
 	std::map<int, std::shared_ptr<frame_consumer>> consumers_; // Valid iterators after erase
@@ -30,9 +28,8 @@ struct frame_consumer_device::implementation
 	
 	executor executor_;	
 public:
-	implementation(const printer& parent_printer, const video_format_desc& format_desc) 
-		: parent_printer_(parent_printer)
-		, format_desc_(format_desc)
+	implementation( const video_format_desc& format_desc) 
+		: format_desc_(format_desc)
 		, executor_(L"frame_consumer_device")
 	{		
 		executor_.set_capacity(2);
@@ -51,7 +48,7 @@ public:
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
-		consumer->initialize(format_desc_, [this]{return print();});
+		consumer->initialize(format_desc_);
 		executor_.invoke([&]
 		{
 			if(buffer_.capacity() < consumer->buffer_depth())
@@ -102,23 +99,22 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"consumer";
+		return L"frame_consumer_device";
 	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
-		auto p =  [this]{return print();};
 		executor_.invoke([&]
 		{
 			format_desc_ = format_desc;
 			buffer_.clear();
 			BOOST_FOREACH(auto& consumer, consumers_)
-				consumer.second->initialize(format_desc_, p);
+				consumer.second->initialize(format_desc_);
 		});
 	}
 };
 
-frame_consumer_device::frame_consumer_device(const printer& parent_printer, const video_format_desc& format_desc) : impl_(new implementation(parent_printer, format_desc)){}
+frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 void frame_consumer_device::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
 void frame_consumer_device::send(const safe_ptr<const read_frame>& future_frame) { impl_->send(future_frame); }

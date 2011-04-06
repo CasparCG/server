@@ -45,7 +45,6 @@ namespace caspar {
 struct ogl_consumer::implementation : boost::noncopyable
 {		
 	timer clock_;
-	printer parent_printer_;
 	boost::unique_future<void> active_;
 		
 	float width_;
@@ -89,13 +88,12 @@ public:
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
-	void initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+	void initialize(const core::video_format_desc& format_desc)
 	{
 		if(!GLEE_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 		
 		format_desc_ = format_desc;
-		parent_printer_ = parent_printer;
 
 		square_width_ = format_desc_.width;
 		square_height_ = format_desc_.height;
@@ -290,7 +288,7 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"ogl[" + boost::lexical_cast<std::wstring>(screen_index_) + L"]";
+		return L"ogl[" + boost::lexical_cast<std::wstring>(screen_index_) + L"]";
 	}
 
 	size_t buffer_depth() const{return 2;}
@@ -300,10 +298,10 @@ ogl_consumer::ogl_consumer(ogl_consumer&& other) : impl_(std::move(other.impl_))
 ogl_consumer::ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed) : impl_(new implementation(screen_index, stretch, windowed)){}
 void ogl_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t ogl_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void ogl_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+void ogl_consumer::initialize(const core::video_format_desc& format_desc)
 {
 	impl_.reset(new implementation(impl_->screen_index_, impl_->stretch_, impl_->windowed_));
-	impl_->initialize(format_desc, parent_printer);
+	impl_->initialize(format_desc);
 }
 std::wstring ogl_consumer::print() const {return impl_->print();}
 

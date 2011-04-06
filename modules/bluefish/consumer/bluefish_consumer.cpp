@@ -81,7 +81,6 @@ void blue_initialize()
 		
 struct bluefish_consumer::implementation : boost::noncopyable
 {
-	printer				parent_printer_;
 	std::wstring		model_name_;
 	const unsigned int	device_index_;
 
@@ -137,10 +136,9 @@ public:
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
-	void initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+	void initialize(const core::video_format_desc& format_desc)
 	{		
 		format_desc_ = format_desc;
-		parent_printer_ = parent_printer;
 
 		blue_.reset(BlueVelvetFactory4());
 
@@ -343,16 +341,16 @@ public:
 	
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 
 bluefish_consumer::bluefish_consumer(unsigned int device_index, bool embed_audio) : impl_(new implementation(device_index, embed_audio)){}	
 bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
-void bluefish_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer)
+void bluefish_consumer::initialize(const core::video_format_desc& format_desc)
 {
 	impl_.reset(new implementation(impl_->device_index_, impl_->embed_audio_));
-	impl_->initialize(format_desc, parent_printer);
+	impl_->initialize(format_desc);
 }
 void bluefish_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t bluefish_consumer::buffer_depth() const{return impl_->buffer_depth();}
