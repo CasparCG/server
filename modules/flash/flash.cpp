@@ -4,6 +4,7 @@
 
 #include "producer/cg_producer.h"
 #include "producer/flash_producer.h"
+#include "producer/flash_producer.h"
 
 #include <common/env.h>
 
@@ -12,6 +13,12 @@ namespace caspar{
 void init_flash()
 {
 	core::register_producer_factory(create_ct_producer);
+
+	try
+	{
+		create_flash_producer(boost::assign::list_of(env::template_host()));
+	}
+	catch(...){}
 }
 
 std::wstring get_cg_version()
