@@ -220,15 +220,17 @@ public:
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 		 
 		fps_ = 0;
+		executor_.start();
 	}
 
 	~flash_producer()
 	{
 		executor_.clear();
+		CASPAR_ASSERT(executor_.is_running());
 		executor_.invoke([=]
 		{
 			renderer_ = nullptr;
-		});
+		});		
 	}
 	
 	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
@@ -239,7 +241,6 @@ public:
 		graph_ = diagnostics::create_graph([this]{return print();});
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
-		executor_.start();
 		executor_.begin_invoke([=]
 		{
 			init_renderer();
