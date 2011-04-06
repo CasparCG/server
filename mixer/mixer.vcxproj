@@ -139,10 +139,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)bin\$(Configuration)\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)bin\$(Configuration)\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(ProjectDir)bin\$(Configuration)\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(ProjectDir)bin\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\;..\common;..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\;..\common;..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\;..\common;..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>

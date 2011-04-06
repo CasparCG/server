@@ -20,19 +20,20 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
-#include <common/utility/printer.h>
+#include <common/object.h>
 
 #include "../producer/frame/basic_frame.h"
 #include "../producer/frame/frame_factory.h"
 
 #include <boost/noncopyable.hpp>
 
-#include <string>
+#include <functional>
 #include <ostream>
+#include <string>
 
 namespace caspar { namespace core {
 
-class frame_producer : boost::noncopyable
+class frame_producer : public object, boost::noncopyable
 {
 public:
 	virtual ~frame_producer(){}	
@@ -67,30 +68,28 @@ public:
 	virtual void set_leading_producer(const safe_ptr<frame_producer>& /*producer*/) {}  // nothrow
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	/// \fn	virtual void :::initialize(const safe_ptr<frame_factory>& frame_factory) = 0;
+	/// \fn	virtual void :::set_frame_factory(const safe_ptr<frame_factory>& frame_factory) = 0;
 	///
-	/// \brief	Provides the frame frame_factory used to create frames and initializes the producer. 
+	/// \brief	Sets the frame frame_factory used to create frames. 
 	///
 	/// \param	frame_factory	The frame frame_factory. 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual void initialize(const safe_ptr<frame_factory>& frame_factory) = 0;
+	virtual void set_frame_factory(const safe_ptr<frame_factory>& frame_factory) = 0;
 
-	virtual void set_parent_printer(const printer& parent_printer) = 0;
-
+	virtual void param(const std::wstring&){}
+	
 	static const safe_ptr<frame_producer>& empty()  // nothrow
 	{
 		struct empty_frame_producer : public frame_producer
 		{
 			virtual safe_ptr<basic_frame> receive(){return basic_frame::empty();}
-			virtual void initialize(const safe_ptr<frame_factory>&){}
+			virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
+			virtual void set_parent(const object* parent) {}
 			virtual std::wstring print() const { return L"empty";}
-			virtual void set_parent_printer(const printer& parent_printer) {}
 		};
 		static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();
 		return producer;
 	}
-
-	virtual std::wstring print() const = 0; // nothrow
 };
 
 inline std::wostream& operator<<(std::wostream& out, const frame_producer& producer)

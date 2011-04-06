@@ -86,9 +86,10 @@ public:
 	virtual safe_ptr<basic_frame> receive();
 
 	virtual safe_ptr<frame_producer> get_following_producer() const;
+
 	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer);
-	virtual void initialize(const safe_ptr<frame_factory>& frame_factory);
-	virtual void set_parent_printer(const printer& parent_printer);
+	virtual void set_frame_factory(const safe_ptr<frame_factory>& frame_factory);
+
 	virtual std::wstring print() const;
 private:
 	struct implementation;

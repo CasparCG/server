@@ -43,7 +43,7 @@ public:
 
 frame_producer_remover g_remover;
 
-struct layer::implementation : boost::noncopyable
+struct layer::implementation : public object, boost::noncopyable
 {				
 	mutable tbb::spin_mutex		printer_mutex_;
 	printer						parent_printer_;
@@ -54,8 +54,8 @@ struct layer::implementation : boost::noncopyable
 	safe_ptr<basic_frame>		last_frame_;
 	bool						is_paused_;
 public:
-	implementation(int index, const printer& parent_printer) 
-		: parent_printer_(parent_printer)
+	implementation(const object* parent, int index) 
+		: object(parent)
 		, index_(index)
 		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
@@ -64,6 +64,7 @@ public:
 	
 	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview)
 	{		
+		frame_producer->set_parent(this);
 		background_ = frame_producer;
 		is_paused_ = false;
 
@@ -119,7 +120,7 @@ public:
 
 				auto following = foreground_->get_following_producer();
 				following->set_leading_producer(foreground_);
-				following->set_parent_printer([=]{return print();});
+				following->set_parent(this);
 				g_remover.remove(std::move(foreground_));
 				foreground_ = following;
 				CASPAR_LOG(info) << foreground_->print() << L" Added.";
@@ -140,11 +141,11 @@ public:
 	std::wstring print() const
 	{
 		tbb::spin_mutex::scoped_lock lock(printer_mutex_); // Child-producers may call print asynchronously to the producer thread.
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
+		return object::print() + L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
 	}
 };
 
-layer::layer(int index, const printer& parent_printer) : impl_(new implementation(index, parent_printer)){}
+layer::layer(const object* parent, int index) : impl_(new implementation(parent, index)){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
 layer& layer::operator=(layer&& other)
 {

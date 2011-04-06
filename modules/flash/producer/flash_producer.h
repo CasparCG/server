@@ -25,23 +25,8 @@
 
 namespace caspar {
 
-class flash_producer : public core::frame_producer
-{
-public:
-	explicit flash_producer(const std::wstring& filename);
-	flash_producer(flash_producer&& other);
+safe_ptr<core::frame_producer> create_flash_producer(const std::vector<std::wstring>& params);
 
-	virtual safe_ptr<core::basic_frame> receive();
-	virtual void initialize(const safe_ptr<core::frame_factory>& frame_factory);
-	virtual void set_parent_printer(const printer& parent_printer);
-	virtual std::wstring print() const;
-
-	void param(const std::wstring& param);
-	
-	static std::wstring find_template(const std::wstring& templateName);
-private:	
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
-};
+std::wstring find_flash_template(const std::wstring& templateName);
 
 }
