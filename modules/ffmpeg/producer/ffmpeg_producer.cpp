@@ -29,7 +29,6 @@ struct ffmpeg_producer : public core::frame_producer
 {
 	const std::wstring					filename_;
 	const bool							loop_;
-	printer								parent_printer_;
 	
 	std::shared_ptr<diagnostics::graph>	graph_;
 	timer								perf_timer_;
@@ -58,7 +57,7 @@ public:
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
 	}
 	
-	virtual void initialize(const safe_ptr<core::frame_factory>& frame_factory)
+	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;
 		input_.reset(new input(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, std::bind(&ffmpeg_producer::print, this)));
@@ -72,11 +71,6 @@ public:
 
 	}
 		
-	virtual void set_parent_printer(const printer& parent_printer) 
-	{
-		parent_printer_ = parent_printer;
-	}
-
 	virtual safe_ptr<core::basic_frame> receive()
 	{
 		perf_timer_.reset();
@@ -186,7 +180,7 @@ public:
 
 	virtual std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
+		return frame_producer::print() + L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 };
 

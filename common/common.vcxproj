@@ -68,25 +68,25 @@
     <IncludePath>..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <LibraryPath>..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\;$(LibraryPath)</LibraryPath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)bin\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <LibraryPath>..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\;$(LibraryPath)</LibraryPath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)bin\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">
     <IncludePath>..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <LibraryPath>..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\;$(LibraryPath)</LibraryPath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)bin\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
     <IncludePath>..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\dependencies\boost_1_44_0\;..\dependencies\ffmpeg 0.6\include\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\include\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
     <LibraryPath>..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\;$(LibraryPath)</LibraryPath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)bin\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -218,7 +218,7 @@
     <ClInclude Include="memory\page_locked_allocator.h" />
     <ClInclude Include="memory\safe_ptr.h" />
     <ClInclude Include="env.h" />
-    <ClInclude Include="printable.h" />
+    <ClInclude Include="object.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="utility\assert.h" />
     <ClInclude Include="utility\printer.h" />
@@ -251,6 +251,12 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="utility\string.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

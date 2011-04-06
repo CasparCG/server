@@ -59,7 +59,7 @@ class decklink_input : public IDeckLinkInputCallback
 		~co_init(){CoUninitialize();}
 	} co_;
 
-	printer parent_printer_;
+	const object* parent_;
 	const core::video_format_desc format_desc_;
 	std::wstring model_name_;
 	const size_t device_index_;
@@ -79,11 +79,11 @@ class decklink_input : public IDeckLinkInputCallback
 	safe_ptr<core::basic_frame> tail_;
 
 public:
-	decklink_input(const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory, const printer& parent_printer)
-		: parent_printer_(parent_printer)
+	decklink_input(const object* parent, const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory)
+		: parent_(parent)
 		, format_desc_(format_desc)
 		, device_index_(device_index)
-		, model_name_(L"DECKLINK")
+		, model_name_(L"decklink")
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
 	{
@@ -238,14 +238,13 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L" [" + model_name_ + L"device:" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return static_cast<const core::frame_producer*>(parent_)->print() + L" [" + model_name_ + L"device:" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 	
 class decklink_producer : public core::frame_producer
 {	
 	const size_t device_index_;
-	printer parent_printer_;
 
 	std::unique_ptr<decklink_input> input_;
 	
@@ -257,7 +256,7 @@ public:
 	explicit decklink_producer(const core::video_format_desc& format_desc, size_t device_index)
 		: format_desc_(format_desc) 
 		, device_index_(device_index)
-		, executor_(print()){}
+		, executor_(L"decklink_producer"){}
 
 	~decklink_producer()
 	{	
@@ -267,17 +266,15 @@ public:
 		});
 	}
 
-	virtual void initialize(const safe_ptr<core::frame_factory>& frame_factory)
+	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
 	{
 		executor_.start();
 		executor_.invoke([=]
 		{
-			input_.reset(new decklink_input(format_desc_, device_index_, frame_factory, parent_printer_));
+			input_.reset(new decklink_input(this, format_desc_, device_index_, frame_factory));
 		});
 	}
-
-	virtual void set_parent_printer(const printer& parent_printer) { parent_printer_ = parent_printer;}
-	
+		
 	virtual safe_ptr<core::basic_frame> receive()
 	{
 		return input_->get_frame();
@@ -285,7 +282,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return  (parent_printer_ ? parent_printer_() + L"/" : L"") + (input_ ? input_->print() : L"Unknown Decklink [input-" + boost::lexical_cast<std::wstring>(device_index_) + L"]");
+		return (input_ ? input_->print() : L"Unknown Decklink [input-" + boost::lexical_cast<std::wstring>(device_index_) + L"]");
 	}
 };
 

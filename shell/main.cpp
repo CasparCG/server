@@ -101,7 +101,7 @@ void setup_console_window()
 }
 
 void print_version()
-{	
+{
 	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
 	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
 	CASPAR_LOG(info) << L"Flash " << get_flash_version();
@@ -147,7 +147,7 @@ void print_version()
 }
  
 int main(int argc, wchar_t* argv[])
-{	
+{		
 	#ifdef _DEBUG
 		_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
 		_CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );

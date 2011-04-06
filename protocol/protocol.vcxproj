@@ -163,20 +163,23 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>../;..\dependencies/tbb30_20100406oss/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
-    <OutDir>$(ProjectDir)\bin\$(Configuration)\</OutDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>../;..\dependencies/tbb30_20100406oss/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
-    <OutDir>$(ProjectDir)\bin\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)\bin\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">
     <IncludePath>../;..\dependencies/tbb30_20100406oss/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
-    <OutDir>$(ProjectDir)\bin\$(Configuration)\</OutDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
     <IncludePath>../;..\dependencies/tbb30_20100406oss/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
-    <OutDir>$(ProjectDir)\bin\$(Configuration)\</OutDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

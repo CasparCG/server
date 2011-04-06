@@ -20,34 +20,33 @@ namespace caspar {
 
 struct image_producer : public core::frame_producer
 {	
-	printer parent_printer_;
 	std::shared_ptr<core::frame_factory> frame_factory_;
 	std::wstring filename_;
 	safe_ptr<core::basic_frame> frame_;
+	decltype(load_image(L"")) bitmap_;
 	
-	image_producer(const std::wstring& filename) 
-		: filename_(filename), frame_(core::basic_frame::empty())	{}
+	explicit image_producer(const std::wstring& filename) 
+		: filename_(filename)
+		, frame_(core::basic_frame::empty())	
+		, bitmap_(load_image(filename_))
+	{
+		FreeImage_FlipVertical(bitmap_.get());
+	}
 	
 	virtual safe_ptr<core::basic_frame> receive(){return frame_;}
 
-	virtual void initialize(const safe_ptr<core::frame_factory>& frame_factory)
+	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;
-		auto bitmap = load_image(filename_);
-		FreeImage_FlipVertical(bitmap.get());
-		auto frame = frame_factory->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
-		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
+		auto frame = frame_factory->create_frame(FreeImage_GetWidth(bitmap_.get()), FreeImage_GetHeight(bitmap_.get()));
+		std::copy_n(FreeImage_GetBits(bitmap_.get()), frame->image_data().size(), frame->image_data().begin());
+		bitmap_.reset();
 		frame_ = std::move(frame);
 	}
 	
-	virtual void set_parent_printer(const printer& parent_printer) 
-	{
-		parent_printer_ = parent_printer;
-	}
-
 	virtual std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"image_producer. filename: " + filename_;
+		return frame_producer::print() + L"image_producer[" + filename_ + L"]";
 	}
 };
 

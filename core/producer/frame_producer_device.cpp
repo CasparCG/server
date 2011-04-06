@@ -22,7 +22,7 @@
 
 namespace caspar { namespace core {
 
-struct frame_producer_device::implementation : boost::noncopyable
+struct frame_producer_device::implementation : public object, boost::noncopyable
 {		
 	const printer parent_printer_;
 
@@ -70,7 +70,7 @@ public:
 	{
 		auto it = layers_.find(index);
 		if(it == layers_.end())
-			it = layers_.insert(std::make_pair(index, layer(index, std::bind(&implementation::print, this)))).first;
+			it = layers_.insert(std::make_pair(index, layer(this, index))).first;
 		return it->second;
 	}
 	
@@ -93,8 +93,7 @@ public:
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview)
 	{
-		producer->set_parent_printer(std::bind(&layer::print, &get_layer(index)));
-		producer->initialize(factory_);
+		producer->set_frame_factory(factory_);
 		executor_.invoke([&]{get_layer(index).load(producer, play_on_load, preview);});
 	}
 

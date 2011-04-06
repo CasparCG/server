@@ -752,7 +752,7 @@ bool CGCommand::DoExecuteAdd() {
 		}
 	}
 
-	std::wstring fullFilename = flash_producer::find_template(env::template_folder() + _parameters[2]);
+	std::wstring fullFilename = find_flash_template(env::template_folder() + _parameters[2]);
 	if(!fullFilename.empty())
 	{
 		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
