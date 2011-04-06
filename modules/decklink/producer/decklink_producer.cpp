@@ -30,6 +30,7 @@
 #include <common/exception/exceptions.h>
 #include <common/utility/timer.h>
 
+#include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/write_frame.h>
 
 #include <tbb/concurrent_queue.h>
@@ -59,7 +60,6 @@ class decklink_input : public IDeckLinkInputCallback
 		~co_init(){CoUninitialize();}
 	} co_;
 
-	const object* parent_;
 	const core::video_format_desc format_desc_;
 	std::wstring model_name_;
 	const size_t device_index_;
@@ -79,9 +79,8 @@ class decklink_input : public IDeckLinkInputCallback
 	safe_ptr<core::basic_frame> tail_;
 
 public:
-	decklink_input(const object* parent, const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory)
-		: parent_(parent)
-		, format_desc_(format_desc)
+	decklink_input(const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory)
+		: format_desc_(format_desc)
 		, device_index_(device_index)
 		, model_name_(L"decklink")
 		, frame_factory_(frame_factory)
@@ -235,10 +234,10 @@ public:
 		frame_buffer_.try_pop(tail_);
 		return tail_;
 	}
-
+	
 	std::wstring print() const
 	{
-		return static_cast<const core::frame_producer*>(parent_)->print() + L" [" + model_name_ + L"device:" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return L" [" + model_name_ + L"device:" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 	
@@ -271,7 +270,7 @@ public:
 		executor_.start();
 		executor_.invoke([=]
 		{
-			input_.reset(new decklink_input(this, format_desc_, device_index_, frame_factory));
+			input_.reset(new decklink_input(format_desc_, device_index_, frame_factory));
 		});
 	}
 		
@@ -282,7 +281,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return (input_ ? input_->print() : L"Unknown Decklink [input-" + boost::lexical_cast<std::wstring>(device_index_) + L"]");
+		return input_ ? input_->print() : L"decklink_producer";
 	}
 };
 

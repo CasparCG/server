@@ -34,7 +34,6 @@ class color_producer : public frame_producer
 	std::wstring color_str_;
 
 public:
-
 	explicit color_producer(const std::wstring& color) 
 		: color_str_(color)
 		, frame_(basic_frame::empty())
@@ -54,7 +53,7 @@ public:
 		
 	virtual safe_ptr<basic_frame> receive() { return frame_; }
 	
-	virtual std::wstring print() const { return frame_producer::print() + L"color[" + color_str_ + L"]"; }
+	virtual std::wstring print() const { return L"color[" + color_str_ + L"]"; }
 };
 
 safe_ptr<frame_producer> create_color_producer(const std::vector<std::wstring>& params)

@@ -8,7 +8,6 @@
 #include "producer/layer.h"
 
 #include <common/concurrency/executor.h>
-#include <common/utility/printer.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
 
@@ -38,9 +37,9 @@ public:
 	implementation(int index, const video_format_desc& format_desc)  
 		: index_(index)
 		, format_desc_(format_desc)
-		, consumer_(new frame_consumer_device([=]{return print();}, format_desc))
-		, mixer_(new frame_mixer_device([=]{return print();}, format_desc))
-		, producer_(new frame_producer_device([=]{return print();}, safe_ptr<frame_factory>(mixer_)))	
+		, consumer_(new frame_consumer_device(format_desc))
+		, mixer_(new frame_mixer_device(format_desc))
+		, producer_(new frame_producer_device(safe_ptr<frame_factory>(mixer_)))	
 		, mixer_connection_(mixer_->connect([=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);}))
 		, producer_connection_(producer_->connect([=](const std::vector<safe_ptr<basic_frame>>& frames){mixer_->send(frames);}))
 	{}
@@ -57,8 +56,8 @@ public:
 		mixer_connection_.disconnect();
 
 		consumer_->set_video_format_desc(format_desc_);
-		mixer_.reset(new frame_mixer_device([=]{return print();}, format_desc_));
-		producer_.reset(new frame_producer_device([=]{return print();}, safe_ptr<frame_factory>(mixer_)));
+		mixer_.reset(new frame_mixer_device(format_desc_));
+		producer_.reset(new frame_producer_device(safe_ptr<frame_factory>(mixer_)));
 
 		mixer_connection_ = mixer_->connect([=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);});
 		producer_connection_ = producer_->connect([=](const std::vector<safe_ptr<basic_frame>>& frames){mixer_->send(frames);});

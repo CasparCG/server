@@ -60,7 +60,7 @@ public:
 	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;
-		input_.reset(new input(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, std::bind(&ffmpeg_producer::print, this)));
+		input_.reset(new input(safe_ptr<diagnostics::graph>(graph_), filename_, loop_));
 		video_decoder_.reset(input_->get_video_codec_context().get() ? new video_decoder(input_->get_video_codec_context().get(), frame_factory) : nullptr);
 		audio_decoder_.reset(input_->get_audio_codec_context().get() ? new audio_decoder(input_->get_audio_codec_context().get(), frame_factory->get_video_format_desc().fps) : nullptr);
 
@@ -180,7 +180,7 @@ public:
 
 	virtual std::wstring print() const
 	{
-		return frame_producer::print() + L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 };
 

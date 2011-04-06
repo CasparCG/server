@@ -50,7 +50,6 @@ struct transition_producer::implementation : boost::noncopyable
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
 	{
-		dest_producer_->set_parent(self_);
 		frame_buffer_.push_back(basic_frame::empty());
 	}
 				
@@ -68,7 +67,6 @@ struct transition_producer::implementation : boost::noncopyable
 	void set_leading_producer(const safe_ptr<frame_producer>& producer)
 	{
 		source_producer_ = producer;
-		source_producer_->set_parent(self_);
 	}
 
 	safe_ptr<basic_frame> receive()
@@ -112,7 +110,6 @@ struct transition_producer::implementation : boost::noncopyable
 				auto following = producer->get_following_producer();
 				following->set_frame_factory(safe_ptr<frame_factory>(frame_factory_));
 				following->set_leading_producer(producer);
-				following->set_parent(self_);
 				producer = std::move(following);
 			}
 			catch(...)
@@ -185,7 +182,7 @@ struct transition_producer::implementation : boost::noncopyable
 		return basic_frame(s_frame, d_frame);
 	}
 
-	virtual std::wstring print() const
+	std::wstring print() const
 	{
 		return L"transition[" + info_.name() + L":" + boost::lexical_cast<std::wstring>(info_.duration) + L"]";
 	}
@@ -200,7 +197,7 @@ safe_ptr<basic_frame> transition_producer::receive(){return impl_->receive();}
 safe_ptr<frame_producer> transition_producer::get_following_producer() const{return impl_->get_following_producer();}
 void transition_producer::set_leading_producer(const safe_ptr<frame_producer>& producer) { impl_->set_leading_producer(producer); }
 void transition_producer::set_frame_factory(const safe_ptr<frame_factory>& frame_factory) { impl_->set_frame_factory(frame_factory);}
-std::wstring transition_producer::print() const { return frame_producer::print();}// + impl_->print();}
+std::wstring transition_producer::print() const { return impl_->print();}
 
 }}
 

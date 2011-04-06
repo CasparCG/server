@@ -161,7 +161,7 @@ public:
 		return renderer_->get_frame();
 	}
 
-	std::wstring print() const{ return frame_producer::print() + L"silverlight"; }	
+	std::wstring print() const{ return L"silverlight"; }	
 };
 
 safe_ptr<core::frame_producer> create_silverlight_producer(const std::vector<std::wstring>& params)

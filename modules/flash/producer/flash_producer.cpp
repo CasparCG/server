@@ -29,6 +29,7 @@
 
 #include <core/video_format.h>
 
+#include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/write_frame.h>
 
@@ -57,7 +58,6 @@ class flash_renderer
 		~co_init(){CoUninitialize();}
 	} co_;
 	
-	const object* parent_;
 	const std::wstring filename_;
 	const core::video_format_desc format_desc_;
 
@@ -74,9 +74,8 @@ class flash_renderer
 	timer perf_timer_;
 	
 public:
-	flash_renderer(const object* parent, const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
-		: parent_(parent)
-		, graph_(graph)
+	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
+		: graph_(graph)
 		, filename_(filename)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, frame_factory_(frame_factory)
@@ -165,9 +164,9 @@ public:
 	
 	std::wstring print()
 	{
-		return parent_->print();
+		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]";		
 	}
-
+	
 private:
 
 	safe_ptr<core::basic_frame> render_simple_frame(bool underflow)
@@ -280,7 +279,7 @@ public:
 		{
 			if(!renderer_)
 			{
-				renderer_.reset(new flash_renderer(this, safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_));
+				renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_));
 				while(frame_buffer_.try_push(core::basic_frame::empty())){}		
 			}
 
@@ -298,7 +297,7 @@ public:
 		
 	virtual std::wstring print() const
 	{ 
-		return frame_producer::print() + L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
+		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
 					boost::lexical_cast<std::wstring>(fps_) + 
 					(interlaced(fps_, format_desc_) ? L"i" : L"p") + L"]";		
 	}	

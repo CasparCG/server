@@ -25,14 +25,11 @@ public:
 	implementation(const cg_producer* self) 
 		: self_(self)
 		, flash_producer_(create_flash_producer(boost::assign::list_of(env::template_host())))
-	{
-		flash_producer_->set_parent(self_);
-	}
+	{}
 
 	void clear()
 	{
 		flash_producer_ = create_flash_producer(boost::assign::list_of(env::template_host()));
-		flash_producer_->set_parent(self_);
 		flash_producer_->set_frame_factory(safe_ptr<core::frame_factory>(frame_factory_));
 	}
 
@@ -91,7 +88,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return L"cg";
+		return flash_producer_->print();
 	}
 };
 	
@@ -133,6 +130,6 @@ void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
 void cg_producer::set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory){impl_->set_frame_factory(frame_factory);}
-std::wstring cg_producer::print() const{return frame_producer::print() + impl_->print();}
+std::wstring cg_producer::print() const{return impl_->print();}
 
 }

@@ -38,7 +38,6 @@ namespace caspar {
 
 struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
-	printer parent_printer_;
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
 
@@ -48,9 +47,8 @@ struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 
 	core::video_format_desc format_desc_;
 public:
-	implementation(const core::video_format_desc& format_desc, const printer& parent_printer) 
-		: parent_printer_(parent_printer)
-		, graph_(diagnostics::create_graph(narrow(print())))
+	implementation(const core::video_format_desc& format_desc) 
+		: graph_(diagnostics::create_graph(narrow(print())))
 		, container_(5)
 		, format_desc_(format_desc)
 	{
@@ -102,7 +100,7 @@ public:
 
 	std::wstring print() const
 	{
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"oal[default]";
+		return L"oal[default]";
 	}
 };
 
@@ -110,7 +108,7 @@ oal_consumer::oal_consumer(){}
 oal_consumer::oal_consumer(oal_consumer&& other) : impl_(std::move(other.impl_)){}
 void oal_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t oal_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void oal_consumer::initialize(const core::video_format_desc& format_desc, const printer& parent_printer){impl_.reset(new implementation(format_desc, parent_printer));}
+void oal_consumer::initialize(const core::video_format_desc& format_desc){impl_.reset(new implementation(format_desc));}
 std::wstring oal_consumer::print() const { return impl_->print(); }
 
 safe_ptr<core::frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)

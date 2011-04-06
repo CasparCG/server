@@ -3,7 +3,6 @@
 #include "frame_producer.h"
 
 #include <common/memory/safe_ptr.h>
-#include <common/utility/printer.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
@@ -32,7 +31,7 @@ public:
 	 
 	boost::signals2::connection connect(const output_t::slot_type& subscriber);
 
-	explicit frame_producer_device(const printer& parent_printer, const safe_ptr<frame_factory>& factory);
+	explicit frame_producer_device(const safe_ptr<frame_factory>& factory);
 	frame_producer_device(frame_producer_device&& other);
 	void swap(frame_producer_device& other);
 		

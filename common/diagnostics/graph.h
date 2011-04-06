@@ -2,8 +2,7 @@
 
 #include "../memory/safe_ptr.h"
 
-#include "../utility/printer.h"
-
+#include <functional>
 #include <string>
 #include <vector>
 #include <map>
@@ -11,7 +10,11 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/circular_buffer.hpp>
 
-namespace caspar { namespace diagnostics {
+namespace caspar {
+		
+typedef std::function<std::wstring()> printer;
+	
+namespace diagnostics {
 	
 struct color
 {

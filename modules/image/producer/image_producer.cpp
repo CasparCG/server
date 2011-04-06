@@ -46,7 +46,7 @@ struct image_producer : public core::frame_producer
 	
 	virtual std::wstring print() const
 	{
-		return frame_producer::print() + L"image_producer[" + filename_ + L"]";
+		return L"image_producer[" + filename_ + L"]";
 	}
 };
 
