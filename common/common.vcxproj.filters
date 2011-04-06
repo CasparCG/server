@@ -41,6 +41,9 @@
     </ClCompile>
     <ClCompile Include="env.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="utility\string.cpp">
+      <Filter>utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exception\exceptions.h">
@@ -87,6 +90,6 @@
     <ClInclude Include="utility\tweener.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="printable.h" />
+    <ClInclude Include="object.h" />
   </ItemGroup>
 </Project>

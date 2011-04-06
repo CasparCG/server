@@ -32,7 +32,6 @@ class color_producer : public frame_producer
 {
 	safe_ptr<basic_frame> frame_;
 	std::wstring color_str_;
-	printer parent_printer_;
 
 public:
 
@@ -44,7 +43,7 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color)) << msg_info("Invalid color code"));
 	}
 
-	virtual void initialize(const safe_ptr<frame_factory>& frame_factory)
+	virtual void set_frame_factory(const safe_ptr<frame_factory>& frame_factory)
 	{
 		auto frame = frame_factory->create_frame(1, 1, pixel_format::bgra);
 		auto& value = *reinterpret_cast<unsigned long*>(frame->image_data().begin());
@@ -52,12 +51,10 @@ public:
 		str >> std::hex >> value;	
 		frame_ = std::move(frame);
 	}
-
-	virtual void set_parent_printer(const printer& parent_printer){parent_printer_ = parent_printer;}
-	
+		
 	virtual safe_ptr<basic_frame> receive() { return frame_; }
 	
-	virtual std::wstring print() const { return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"color[" + color_str_ + L"]"; }
+	virtual std::wstring print() const { return frame_producer::print() + L"color[" + color_str_ + L"]"; }
 };
 
 safe_ptr<frame_producer> create_color_producer(const std::vector<std::wstring>& params)

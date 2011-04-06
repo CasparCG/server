@@ -32,6 +32,7 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/write_frame.h>
 
+#include <common/env.h>
 #include <common/concurrency/executor.h>
 #include <common/utility/timer.h>
 #include <common/diagnostics/graph.h>
@@ -56,7 +57,7 @@ class flash_renderer
 		~co_init(){CoUninitialize();}
 	} co_;
 	
-	printer parent_printer_;
+	const object* parent_;
 	const std::wstring filename_;
 	const core::video_format_desc format_desc_;
 
@@ -72,14 +73,9 @@ class flash_renderer
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
 	
-	std::wstring print()
-	{
-		return parent_printer_();
-	}
-
 public:
-	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const printer& parent_printer) 
-		: parent_printer_(parent_printer)
+	flash_renderer(const object* parent, const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
+		: parent_(parent)
 		, graph_(graph)
 		, filename_(filename)
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -97,7 +93,7 @@ public:
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
 		
-		ax_->set_print(parent_printer_);
+		ax_->set_print([this]{return L"";});
 
 		if(FAILED(ax_->CreateAxControl()))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Create FlashAxControl"));
@@ -128,7 +124,7 @@ public:
 
 		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
 		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
-		CASPAR_LOG(info) << parent_printer_() << L" Thread started.";
+		CASPAR_LOG(info) << print() << L" Thread started.";
 	}
 
 	~flash_renderer()
@@ -147,7 +143,7 @@ public:
 			CASPAR_LOG(warning) << print() << " Flash function call failed. Param: " << param << ".";
 		graph_->add_tag("param");
 
-		if(abs(ax_->GetFPS() / format_desc_.fps) > 0.001)
+		if(abs(ax_->GetFPS() - format_desc_.fps) > 0.001 && abs(ax_->GetFPS()/2.0 - format_desc_.fps) > 0.001)
 			CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << ax_->GetFPS() << L". Should be either " << format_desc_.fps << L" or " << format_desc_.fps*2.0 << L".";
 	}
 	
@@ -167,6 +163,11 @@ public:
 		return ax_->GetFPS();	
 	}
 	
+	std::wstring print()
+	{
+		return parent_->print();
+	}
+
 private:
 
 	safe_ptr<core::basic_frame> render_simple_frame(bool underflow)
@@ -194,9 +195,8 @@ private:
 	}
 };
 
-struct flash_producer::implementation
+struct flash_producer : public core::frame_producer
 {	
-	printer parent_printer_;
 	const std::wstring filename_;	
 	tbb::atomic<int> fps_;
 
@@ -211,28 +211,19 @@ struct flash_producer::implementation
 			
 	executor executor_;
 		
-	std::wstring print() const
-	{ 
-		return (parent_printer_ ? parent_printer_() + L"/" : L"") + L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
-					boost::lexical_cast<std::wstring>(fps_) + 
-					(interlaced(fps_, format_desc_) ? L"i" : L"p") + L"]";		
-	}	
-		
 public:
-	implementation(const std::wstring& filename) 
+	flash_producer(const std::wstring& filename) 
 		: filename_(filename)		
 		, tail_(core::basic_frame::empty())		
-		, executor_(print())
+		, executor_(L"flash_producer")
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 		 
-		graph_ = diagnostics::create_graph(boost::bind(&implementation::print, this));
 		fps_ = 0;
-		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));	
 	}
 
-	~implementation()
+	~flash_producer()
 	{
 		executor_.clear();
 		executor_.invoke([=]
@@ -241,19 +232,16 @@ public:
 		});
 	}
 	
-	virtual void initialize(const safe_ptr<core::frame_factory>& frame_factory)
+	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
 	{
 		frame_factory_ = frame_factory;
 		format_desc_ = frame_factory->get_video_format_desc();
-		frame_buffer_.set_capacity(static_cast<size_t>(format_desc_.fps/4.0));
+		frame_buffer_.set_capacity(4);
+		graph_ = diagnostics::create_graph([this]{return print();});
+		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));	
 		executor_.start();
 	}
-
-	virtual void set_parent_printer(const printer& parent_printer) 
-	{
-		parent_printer_ = parent_printer;
-	}
-
+	
 	virtual safe_ptr<core::basic_frame> receive()
 	{		
 		if(!renderer_)
@@ -286,13 +274,13 @@ public:
 		return tail_;
 	}
 	
-	void param(const std::wstring& param) 
+	virtual void param(const std::wstring& param) 
 	{	
 		executor_.begin_invoke([=]
 		{
 			if(!renderer_)
 			{
-				renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, [=]{return print();}));
+				renderer_.reset(new flash_renderer(this, safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_));
 				while(frame_buffer_.try_push(core::basic_frame::empty())){}		
 			}
 
@@ -307,17 +295,23 @@ public:
 			}
 		});
 	}
+		
+	virtual std::wstring print() const
+	{ 
+		return frame_producer::print() + L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
+					boost::lexical_cast<std::wstring>(fps_) + 
+					(interlaced(fps_, format_desc_) ? L"i" : L"p") + L"]";		
+	}	
 };
 
-flash_producer::flash_producer(flash_producer&& other) : impl_(std::move(other.impl_)){}
-flash_producer::flash_producer(const std::wstring& filename) : impl_(new implementation(filename)){}
-safe_ptr<core::basic_frame> flash_producer::receive(){return impl_->receive();}
-void flash_producer::param(const std::wstring& param){impl_->param(param);}
-void flash_producer::initialize(const safe_ptr<core::frame_factory>& frame_factory) { impl_->initialize(frame_factory);}
-void flash_producer::set_parent_printer(const printer& parent_printer){impl_->set_parent_printer(parent_printer);}
-std::wstring flash_producer::print() const {return impl_->print();}
+safe_ptr<core::frame_producer> create_flash_producer(const std::vector<std::wstring>& params)
+{
+	std::wstring filename = env::template_folder() + L"\\" + params[0];
+	
+	return make_safe<flash_producer>(filename);
+}
 
-std::wstring flash_producer::find_template(const std::wstring& template_name)
+std::wstring find_flash_template(const std::wstring& template_name)
 {
 	if(boost::filesystem::exists(template_name + L".ft")) 
 		return template_name + L".ft";

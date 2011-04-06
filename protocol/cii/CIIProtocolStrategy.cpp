@@ -174,18 +174,18 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 		fullTemplateFilename += TEXT("\\");
 	}
 	fullTemplateFilename += templateName;
-	fullTemplateFilename = flash_producer::find_template(fullTemplateFilename);
+	fullTemplateFilename = find_flash_template(fullTemplateFilename);
 	if(fullTemplateFilename.empty())
 	{
 		CASPAR_LOG(error) << "Failed to save instance of " << templateName << TEXT(" as ") << titleName << TEXT(", template ") << fullTemplateFilename << " not found";
 		return;
 	}
 	
-	auto producer = flash_producer(env::template_folder()+TEXT("CG.fth"));
+	auto producer = create_flash_producer(boost::assign::list_of(env::template_folder()+TEXT("CG.fth")));
 
 	std::wstringstream flashParam;
 	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");
-	producer.param(flashParam.str());
+	producer->param(flashParam.str());
 
 	CASPAR_LOG(info) << "Saved an instance of " << templateName << TEXT(" as ") << titleName ;
 

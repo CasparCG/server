@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/object.h>
 #include <common/memory/safe_ptr.h>
 #include <common/utility/printer.h>
 
@@ -16,7 +17,7 @@ class basic_frame;
 class layer : boost::noncopyable
 {
 public:
-	layer(int index = std::numeric_limits<int>::min(), const printer& parent_printer = nullptr); // nothrow
+	explicit layer(const object* parent = nullptr, int index = std::numeric_limits<int>::min()); // nothrow
 	layer(layer&& other); // nothrow
 	layer& operator=(layer&& other); // nothrow
 

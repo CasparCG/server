@@ -135,18 +135,14 @@ public:
 
 struct silverlight_producer : public core::frame_producer
 {				
-	std::wstring print() const{ return L"silverlight[]"; }	
-
 	std::unique_ptr<silverlight_renderer> renderer_;
 	
 	executor executor_;
-
 public:
 
-	silverlight_producer() : executor_(print())
-	{}
+	silverlight_producer() : executor_(L"silverlight"){}
 	
-	virtual void initialize(const safe_ptr<core::frame_factory>& frame_factory)
+	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
 	{
 		executor_.start();
 		executor_.invoke([=]
@@ -154,12 +150,7 @@ public:
 			renderer_.reset(new silverlight_renderer(frame_factory));
 		});
 	}
-
-	void set_parent_printer(const printer& parent_printer)
-	{
-
-	}
-
+	
 	virtual safe_ptr<core::basic_frame> receive()
 	{
 		executor_.begin_invoke([=]
@@ -169,6 +160,8 @@ public:
 
 		return renderer_->get_frame();
 	}
+
+	std::wstring print() const{ return frame_producer::print() + L"silverlight"; }	
 };
 
 safe_ptr<core::frame_producer> create_silverlight_producer(const std::vector<std::wstring>& params)
