@@ -39,6 +39,19 @@ struct transition
 		slide,
 		wipe
 	};
+
+	static std::wstring print(type t)
+	{
+		switch(t)
+		{
+		case transition::cut:	return L"cut";
+		case transition::mix:	return L"mix";
+		case transition::push:	return L"push";
+		case transition::slide: return L"slide";
+		case transition::wipe:	return L"wipe";
+		default:				return L"";
+		}
+	}
 };
 
 struct transition_direction
@@ -57,41 +70,13 @@ struct transition_info
 		, duration(0)
 		, direction(transition_direction::from_left)
 		, tweener(get_tweener(L"linear")){}
-
-	std::wstring name() const
-	{
-		switch(type)
-		{
-		case transition::cut: return L"cut";
-		case transition::mix: return L"mix";
-		case transition::push: return L"push";
-		case transition::slide: return L"slide";
-		case transition::wipe: return L"wipe";
-		default: return L"";
-		}
-	}
-	
+		
 	size_t						duration;
 	transition_direction::type	direction;
 	transition::type			type;
 	tweener_t					tweener;
 };
 
-class transition_producer : public frame_producer
-{
-public:
-	explicit transition_producer(const safe_ptr<frame_producer>& destination, const transition_info& info);
-	transition_producer(transition_producer&& other);
-
-	// frame_producer
-	virtual safe_ptr<basic_frame> receive();
-	virtual safe_ptr<frame_producer> get_following_producer() const;
-	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer);
-	virtual void set_frame_factory(const safe_ptr<frame_factory>& frame_factory);
-	virtual std::wstring print() const;
-private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
-};
+safe_ptr<frame_producer> create_transition_producer(const video_format_desc& format_desc, const safe_ptr<frame_producer>& destination, const transition_info& info);
 
 }}

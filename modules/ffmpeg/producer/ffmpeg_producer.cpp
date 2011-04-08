@@ -46,20 +46,16 @@ struct ffmpeg_producer : public core::frame_producer
 
 	std::unique_ptr<input>				input_;	
 public:
-	explicit ffmpeg_producer(const std::wstring& filename, bool loop) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop) 
 		: filename_(filename)
 		, loop_(loop) 
 		, last_frame_(core::basic_frame(core::basic_frame::empty()))
-		
+		, frame_factory_(frame_factory)		
 	{
 		graph_ = diagnostics::create_graph(boost::bind(&ffmpeg_producer::print, this));	
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
-	}
-	
-	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
-	{
-		frame_factory_ = frame_factory;
+
 		input_.reset(new input(safe_ptr<diagnostics::graph>(graph_), filename_, loop_));
 		video_decoder_.reset(input_->get_video_codec_context().get() ? new video_decoder(input_->get_video_codec_context().get(), frame_factory) : nullptr);
 		audio_decoder_.reset(input_->get_audio_codec_context().get() ? new audio_decoder(input_->get_audio_codec_context().get(), frame_factory->get_video_format_desc().fps) : nullptr);
@@ -68,9 +64,8 @@ public:
 		double format_frame_time = 1.0/frame_factory->get_video_format_desc().fps;
 		if(abs(frame_time - format_frame_time) > 0.0001)
 			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback. frame-time: " << frame_time;
-
 	}
-		
+			
 	virtual safe_ptr<core::basic_frame> receive()
 	{
 		perf_timer_.reset();
@@ -134,7 +129,7 @@ public:
 
 				if(audio_decoder_) 
 				{
-					if(!frame)
+					if(!frame) // If there is no video create a dummy frame.
 					{
 						frame = frame_factory_->create_frame(1, 1);
 						std::fill(frame->image_data().begin(), frame->image_data().end(), 0);
@@ -154,14 +149,8 @@ public:
 		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_factory_->get_video_format_desc().interval*0.5));
 
 		auto result = last_frame_;
-		if(!ouput_channel_.empty())
-		{
-			result = get_frame();
-
-			bool interlace = abs(input_->fps()/2.0 - frame_factory_->get_video_format_desc().fps) < 0.001;
-			if(interlace && !ouput_channel_.empty())
-				result = core::basic_frame::interlace(result, get_frame(), frame_factory_->get_video_format_desc().mode);
-		}
+		if(!ouput_channel_.empty())		
+			result = get_frame(); // TODO: Support 50p		
 		else if(input_->is_eof())
 			result = core::basic_frame::eof();
 		
@@ -184,7 +173,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_ffmpeg_producer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {			
 	static const std::vector<std::wstring> extensions = boost::assign::list_of
 		(L"mpg")(L"mpeg")(L"avi")(L"mov")(L"qt")(L"webm")(L"dv")(L"mp4")(L"f4v")(L"flv")(L"mkv")(L"mka")(L"wmw")(L"wma")(L"ogg")(L"divx")(L"wav")(L"mp3");
@@ -201,7 +190,7 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const std::vector<std::wst
 	std::wstring path = filename + L"." + *ext;
 	bool loop = std::find(params.begin(), params.end(), L"LOOP") != params.end();
 	
-	return make_safe<ffmpeg_producer>(path, loop);
+	return make_safe<ffmpeg_producer>(frame_factory, path, loop);
 }
 
 }

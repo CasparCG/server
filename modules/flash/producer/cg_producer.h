@@ -14,10 +14,9 @@ class cg_producer : public core::frame_producer
 public:
 	static const unsigned int DEFAULT_LAYER = 9999;
 
-	explicit cg_producer();
+	explicit cg_producer(const safe_ptr<core::frame_factory>& frame_factory);
 	cg_producer(cg_producer&& other);
 	
-	void clear();
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));
 	void remove(int layer);
 	void play(int layer);
@@ -28,7 +27,6 @@ public:
 	
 	// frame_producer
 	virtual safe_ptr<core::basic_frame> receive();
-	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory);
 	virtual std::wstring print() const;
 
 private:
@@ -37,6 +35,6 @@ private:
 };
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::channel>& channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
-safe_ptr<core::frame_producer> create_ct_producer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
 
 }

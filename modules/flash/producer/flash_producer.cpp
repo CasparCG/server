@@ -205,20 +205,31 @@ struct flash_producer : public core::frame_producer
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
 
 	std::shared_ptr<flash_renderer> renderer_;
-	std::shared_ptr<core::frame_factory> frame_factory_;
-	core::video_format_desc format_desc_;
+	safe_ptr<core::frame_factory> frame_factory_;
+	const core::video_format_desc format_desc_;
 			
 	executor executor_;
 		
 public:
-	flash_producer(const std::wstring& filename) 
+	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
 		: filename_(filename)		
 		, tail_(core::basic_frame::empty())		
+		, frame_factory_(frame_factory)
+		, format_desc_(frame_factory->get_video_format_desc())
 		, executor_(L"flash_producer")
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 		 
+		frame_buffer_.set_capacity(4);
+		graph_ = diagnostics::create_graph([this]{return print();});
+		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
+		
+		executor_.begin_invoke([=]
+		{
+			init_renderer();
+		});
+
 		fps_ = 0;
 		executor_.start();
 	}
@@ -232,21 +243,7 @@ public:
 			renderer_ = nullptr;
 		});		
 	}
-	
-	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
-	{	
-		frame_factory_ = frame_factory;
-		format_desc_ = frame_factory->get_video_format_desc();
-		frame_buffer_.set_capacity(4);
-		graph_ = diagnostics::create_graph([this]{return print();});
-		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
-		executor_.begin_invoke([=]
-		{
-			init_renderer();
-		});
-	}
-	
 	virtual safe_ptr<core::basic_frame> receive()
 	{		
 		if(!renderer_)
@@ -312,11 +309,11 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_flash_producer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	std::wstring filename = env::template_folder() + L"\\" + params[0];
 	
-	return make_safe<flash_producer>(filename);
+	return make_safe<flash_producer>(frame_factory, filename);
 }
 
 std::wstring find_flash_template(const std::wstring& template_name)

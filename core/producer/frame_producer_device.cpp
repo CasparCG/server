@@ -25,14 +25,14 @@ struct frame_producer_device::implementation : boost::noncopyable
 {		
 	std::map<int, layer> layers_;		
 	
-	const safe_ptr<frame_factory> factory_;
+	const video_format_desc format_desc_;
 
 	output_t output_;
 	
 	mutable executor executor_;
 public:
-	implementation(const safe_ptr<frame_factory>& factory)  
-		: factory_(factory)
+	implementation(const video_format_desc& format_desc)  
+		: format_desc_(format_desc)
 		, executor_(L"frame_producer_device")
 	{
 		executor_.start();
@@ -84,12 +84,12 @@ public:
 			}
 		});		
 		boost::range::remove_erase(frames, basic_frame::empty());
+		boost::range::remove_erase(frames, basic_frame::eof());
 		return frames;
 	}
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview)
 	{
-		producer->set_frame_factory(factory_);
 		executor_.invoke([&]{get_layer(index).load(producer, play_on_load, preview);});
 	}
 
@@ -132,7 +132,7 @@ public:
 			swap_layer(index, other_index);
 		else
 		{
-			if(factory_->get_video_format_desc() != other.impl_->factory_->get_video_format_desc())
+			if(format_desc_ != other.impl_->format_desc_)
 				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot swap between channels with different formats."));
 
 			auto func = [&]
@@ -151,7 +151,7 @@ public:
 		if(other.impl_.get() == this)
 			return;
 
-		if(factory_->get_video_format_desc() != other.impl_->factory_->get_video_format_desc())
+		if(format_desc_ != other.impl_->format_desc_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot swap between channels with different formats."));
 
 		auto func = [&]
@@ -191,7 +191,7 @@ public:
 	}
 };
 
-frame_producer_device::frame_producer_device(const safe_ptr<frame_factory>& factory) : impl_(new implementation(factory)){}
+frame_producer_device::frame_producer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 boost::signals2::connection frame_producer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}

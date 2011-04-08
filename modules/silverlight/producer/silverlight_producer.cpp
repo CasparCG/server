@@ -140,9 +140,7 @@ struct silverlight_producer : public core::frame_producer
 	executor executor_;
 public:
 
-	silverlight_producer() : executor_(L"silverlight"){}
-	
-	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
+	silverlight_producer(const safe_ptr<core::frame_factory>& frame_factory) : executor_(L"silverlight")
 	{
 		executor_.start();
 		executor_.invoke([=]
@@ -150,7 +148,7 @@ public:
 			renderer_.reset(new silverlight_renderer(frame_factory));
 		});
 	}
-	
+		
 	virtual safe_ptr<core::basic_frame> receive()
 	{
 		executor_.begin_invoke([=]
@@ -164,7 +162,7 @@ public:
 	std::wstring print() const{ return L"silverlight"; }	
 };
 
-safe_ptr<core::frame_producer> create_silverlight_producer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_silverlight_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	//std::wstring filename = env::template_folder() + L"\\" + params[0] + L".xap";
 	//if(!boost::filesystem::exists(filename))
@@ -172,7 +170,7 @@ safe_ptr<core::frame_producer> create_silverlight_producer(const std::vector<std
 	if(params[0] != L"SILVER")
 		return core::frame_producer::empty();
 
-	return make_safe<silverlight_producer>();
+	return make_safe<silverlight_producer>(frame_factory);
 }
 
 }

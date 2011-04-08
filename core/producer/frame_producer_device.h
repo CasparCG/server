@@ -31,7 +31,7 @@ public:
 	 
 	boost::signals2::connection connect(const output_t::slot_type& subscriber);
 
-	explicit frame_producer_device(const safe_ptr<frame_factory>& factory);
+	explicit frame_producer_device(const video_format_desc& format_desc);
 	frame_producer_device(frame_producer_device&& other);
 	void swap(frame_producer_device& other);
 		

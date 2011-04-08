@@ -156,7 +156,7 @@ void KeydataCommand::Execute()
 	else if(state_ == 1)
 		get_default_cg_producer(pCIIStrategy_->GetChannel())->stop(layer_, 0);
 	else if(state_ == 2)
-		get_default_cg_producer(pCIIStrategy_->GetChannel())->clear();
+		pCIIStrategy_->GetChannel()->producer()->clear(cg_producer::DEFAULT_LAYER);
 	else if(state_ == 3)
 		get_default_cg_producer(pCIIStrategy_->GetChannel())->play(layer_);
 }

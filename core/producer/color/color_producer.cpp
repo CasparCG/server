@@ -34,33 +34,30 @@ class color_producer : public frame_producer
 	std::wstring color_str_;
 
 public:
-	explicit color_producer(const std::wstring& color) 
+	explicit color_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
 		: color_str_(color)
 		, frame_(basic_frame::empty())
 	{
 		if(color.length() != 9 || color[0] != '#')
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color)) << msg_info("Invalid color code"));
-	}
 
-	virtual void set_frame_factory(const safe_ptr<frame_factory>& frame_factory)
-	{
 		auto frame = frame_factory->create_frame(1, 1, pixel_format::bgra);
 		auto& value = *reinterpret_cast<unsigned long*>(frame->image_data().begin());
 		std::wstringstream str(color_str_.substr(1));
 		str >> std::hex >> value;	
 		frame_ = std::move(frame);
 	}
-		
+			
 	virtual safe_ptr<basic_frame> receive() { return frame_; }
 	
 	virtual std::wstring print() const { return L"color[" + color_str_ + L"]"; }
 };
 
-safe_ptr<frame_producer> create_color_producer(const std::vector<std::wstring>& params)
+safe_ptr<frame_producer> create_color_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.empty() || params[0].at(0) != '#')
 		return frame_producer::empty();
-	return make_safe<color_producer>(params[0]);
+	return make_safe<color_producer>(frame_factory, params[0]);
 }
 
 }}

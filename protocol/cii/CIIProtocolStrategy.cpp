@@ -181,7 +181,7 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 		return;
 	}
 	
-	auto producer = create_flash_producer(boost::assign::list_of(env::template_folder()+TEXT("CG.fth")));
+	auto producer = create_flash_producer(this->GetChannel()->mixer(), boost::assign::list_of(env::template_folder()+TEXT("CG.fth")));
 
 	std::wstringstream flashParam;
 	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");
@@ -197,8 +197,8 @@ void CIIProtocolStrategy::DisplayTemplate(const std::wstring& titleName)
 {
 	try
 	{
-		pChannel_->producer().load(0, GetPreparedTemplate(titleName));
-		pChannel_->producer().play(0);
+		pChannel_->producer()->load(0, GetPreparedTemplate(titleName));
+		pChannel_->producer()->play(0);
 
 		CASPAR_LOG(info) << L"Displayed title " << titleName ;
 	}
@@ -214,12 +214,12 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition.type = transition::mix;
 	transition.duration = 12;
 
-	auto pFP = create_producer(boost::assign::list_of(filename));
-	auto pTransition = make_safe<core::transition_producer>(pFP, transition);
+	auto pFP = create_producer(GetChannel()->mixer(), boost::assign::list_of(filename));
+	auto pTransition = create_transition_producer(GetChannel()->get_video_format_desc(), pFP, transition);
 
 	try
 	{
-		pChannel_->producer().load(0, pTransition);
+		pChannel_->producer()->load(0, pTransition);
 	}
 	catch(...)
 	{
@@ -228,7 +228,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 		return;
 	}
 
-	pChannel_->producer().play(0);
+	pChannel_->producer()->play(0);
 
 	CASPAR_LOG(info) << L"Displayed " << filename;
 }

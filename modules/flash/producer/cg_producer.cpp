@@ -18,21 +18,14 @@ namespace caspar {
 	
 struct cg_producer::implementation : boost::noncopyable
 {
-	const cg_producer* self_;
+	safe_ptr<core::frame_factory> frame_factory_;
 	safe_ptr<core::frame_producer> flash_producer_;
-	std::shared_ptr<core::frame_factory> frame_factory_;
 public:
-	implementation(const cg_producer* self) 
-		: self_(self)
-		, flash_producer_(create_flash_producer(boost::assign::list_of(env::template_host())))
+	implementation(const safe_ptr<core::frame_factory>& frame_factory) 
+		: frame_factory_(frame_factory)
+		, flash_producer_(create_flash_producer(frame_factory_, boost::assign::list_of(env::template_host())))
 	{}
-
-	void clear()
-	{
-		flash_producer_ = create_flash_producer(boost::assign::list_of(env::template_host()));
-		flash_producer_->set_frame_factory(safe_ptr<core::frame_factory>(frame_factory_));
-	}
-
+	
 	void add(int layer, const std::wstring& filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
 	{
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command";
@@ -79,13 +72,7 @@ public:
 	{
 		return flash_producer_->receive();
 	}
-		
-	void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
-	{
-		frame_factory_ = frame_factory;
-		flash_producer_->set_frame_factory(frame_factory);
-	}
-	
+			
 	std::wstring print() const
 	{
 		return flash_producer_->print();
@@ -96,32 +83,32 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::channel>& cha
 {	
 	try
 	{
-		return dynamic_pointer_cast<cg_producer>(channel->producer().foreground(render_layer).get());
+		return dynamic_pointer_cast<cg_producer>(channel->producer()->foreground(render_layer).get());
 	}
 	catch(std::bad_cast&)
 	{
-		auto producer = make_safe<cg_producer>();		
-		channel->producer().load(render_layer, producer, true); 
+		safe_ptr<core::frame_factory> factory = channel->mixer();
+		auto producer = make_safe<cg_producer>(factory);		
+		channel->producer()->load(render_layer, producer, true); 
 		return producer;
 	}
 }
 
-safe_ptr<core::frame_producer> create_ct_producer(const std::vector<std::wstring>& params) 
+safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
 {
 	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".ct";
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
 
-	auto producer = make_safe<cg_producer>();
+	auto producer = make_safe<cg_producer>(frame_factory);
 	producer->add(0, filename, 1);
 
 	return producer;
 }
 
-cg_producer::cg_producer() : impl_(new implementation(this)){}
+cg_producer::cg_producer(const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(frame_factory)){}
 cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<core::basic_frame> cg_producer::receive(){return impl_->receive();}
-void cg_producer::clear(){impl_->clear();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}
 void cg_producer::play(int layer){impl_->play(layer);}
@@ -129,7 +116,6 @@ void cg_producer::stop(int layer, unsigned int mix_out_duration){impl_->stop(lay
 void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
-void cg_producer::set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory){impl_->set_frame_factory(frame_factory);}
 std::wstring cg_producer::print() const{return impl_->print();}
 
 }
