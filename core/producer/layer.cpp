@@ -3,96 +3,66 @@
 #include "layer.h"
 #include "frame_producer.h"
 
-#include <common/concurrency/executor.h>
-#include <common/exception/exceptions.h>
-#include <common/utility/assert.h>
-
 #include "../producer/frame/basic_frame.h"
 #include "../producer/frame/audio_transform.h"
 
-#include <tbb/spin_mutex.h>
-
 namespace caspar { namespace core {
-
-class frame_producer_remover
-{
-	executor executor_;
-
-	void do_remove(safe_ptr<frame_producer>& producer)
-	{
-		auto name = producer->print();
-		producer = frame_producer::empty();
-		CASPAR_LOG(info) << name << L" Removed.";
-	}
-
-public:
-
-	frame_producer_remover() : executor_(L"frame_producer_remover")
-	{
-		executor_.start();
-	}
-
-	void remove(safe_ptr<frame_producer>&& producer)
-	{
-		if(producer != frame_producer::empty() && !producer.unique())
-			CASPAR_LOG(debug) << producer->print() << L" was not destroyed on dedicated destruction thread.";
-		executor_.begin_invoke(std::bind(&frame_producer_remover::do_remove, this, std::move(producer)));
-	}
-};
-
-frame_producer_remover g_remover;
-
+	
 struct layer::implementation : boost::noncopyable
 {				
-	tbb::atomic<int>			index_;
-	
+	int							index_;	
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	safe_ptr<basic_frame>		last_frame_;
 	bool						is_paused_;
 public:
 	implementation(int index) 
-		: foreground_(frame_producer::empty())
+		: index_(index)
+		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, last_frame_(basic_frame::empty())
-		, is_paused_(false)
-	{
-		index_ = index;
-	}
+		, is_paused_(false){}
 	
-	void load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview)
-	{		
-		background_ = frame_producer;
-		is_paused_ = false;
+	void pause() 
+	{
+		is_paused_ = true; 
+	}
 
-		if(preview)
+	void resume()
+	{
+		if(is_paused_)
+			CASPAR_LOG(info) << foreground_->print() << L" Resumed.";
+		is_paused_ = false;
+	}
+
+	void load(const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview)
+	{		
+		background_ = producer;
+
+		if(play_on_load)
+			play();		
+		else if(preview)
 		{
 			play();
 			receive();
 			pause();
 		}
 
-		if(play_on_load)
-			play();				
+		CASPAR_LOG(info) << producer->print() << L" Loaded.";
 	}
-
+	
 	void play()
 	{			
-		if(!is_paused_)			
+		if(background_ != frame_producer::empty())
 		{
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
-			CASPAR_LOG(info) << foreground_->print() << L" Added.";
 			background_ = frame_producer::empty();
+			CASPAR_LOG(info) << foreground_->print() << L" Active.";
 		}
-		is_paused_ = false;
+		resume();
 	}
-
-	void pause()
-	{
-		is_paused_ = true;
-	}
-
+	
 	void stop()
 	{
 		pause();
@@ -102,17 +72,10 @@ public:
 		
 	safe_ptr<basic_frame> receive()
 	{		
-		if(is_paused_)
-		{
-			last_frame_->get_audio_transform().set_gain(0.0);
-			return last_frame_;
-		}
-
-		auto keep_alive = foreground_;
-		last_frame_ = core::receive(foreground_);
-
-		if(keep_alive != foreground_)
-			g_remover.remove(std::move(keep_alive));
+		if(is_paused_)		
+			last_frame_->get_audio_transform().set_has_audio(false);		
+		else
+			last_frame_ = core::receive(foreground_);
 
 		return last_frame_;
 	}
@@ -131,10 +94,11 @@ layer& layer::operator=(layer&& other)
 	return *this;
 }
 void layer::swap(layer& other)
-{
-	impl_.swap(other.impl_);
-	// Printer state is not swapped.
-	std::swap(impl_->index_, other.impl_->index_);
+{	
+	std::swap(impl_->foreground_, other.impl_->foreground_);
+	std::swap(impl_->background_, other.impl_->background_);
+	std::swap(impl_->last_frame_, other.impl_->last_frame_);
+	std::swap(impl_->is_paused_	, other.impl_->is_paused_ );
 }
 void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview){return impl_->load(frame_producer, play_on_load, preview);}	
 void layer::play(){impl_->play();}
