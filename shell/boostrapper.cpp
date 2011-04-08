@@ -95,17 +95,17 @@ struct bootstrapper::implementation : boost::noncopyable
 							stretch = stretch::uniform_to_fill;
 
 						bool windowed = xml_consumer.second.get("windowed", false);
-						channels_.back()->consumer().add(index++, ogl_consumer(device, stretch, windowed));
+						channels_.back()->consumer()->add(index++, ogl_consumer(device, stretch, windowed));
 					}
 					else if(name == "bluefish")					
-						channels_.back()->consumer().add(index++, bluefish_consumer(xml_consumer.second.get("device", 0), 
+						channels_.back()->consumer()->add(index++, bluefish_consumer(xml_consumer.second.get("device", 0), 
 																					xml_consumer.second.get("embedded-audio", true)));					
 					else if(name == "decklink")
-						channels_.back()->consumer().add(index++, decklink_consumer(xml_consumer.second.get("device", 0), 
+						channels_.back()->consumer()->add(index++, decklink_consumer(xml_consumer.second.get("device", 0), 
 																					xml_consumer.second.get("embedded-audio", true), 
 																					xml_consumer.second.get("internal-key", false)));
 					else if(name == "audio")
-						channels_.back()->consumer().add(index++, oal_consumer());			
+						channels_.back()->consumer()->add(index++, oal_consumer());			
 				}
 				catch(...)
 				{

@@ -252,10 +252,17 @@ class decklink_producer : public core::frame_producer
 	executor executor_;
 public:
 
-	explicit decklink_producer(const core::video_format_desc& format_desc, size_t device_index)
+	explicit decklink_producer(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index)
 		: format_desc_(format_desc) 
 		, device_index_(device_index)
-		, executor_(L"decklink_producer"){}
+		, executor_(L"decklink_producer")
+	{
+		executor_.start();
+		executor_.invoke([=]
+		{
+			input_.reset(new decklink_input(format_desc_, device_index_, frame_factory));
+		});
+	}
 
 	~decklink_producer()
 	{	
@@ -264,16 +271,7 @@ public:
 			input_ = nullptr;
 		});
 	}
-
-	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
-	{
-		executor_.start();
-		executor_.invoke([=]
-		{
-			input_.reset(new decklink_input(format_desc_, device_index_, frame_factory));
-		});
-	}
-		
+			
 	virtual safe_ptr<core::basic_frame> receive()
 	{
 		return input_->get_frame();
@@ -285,7 +283,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_decklink_producer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_decklink_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
@@ -304,7 +302,7 @@ safe_ptr<core::frame_producer> create_decklink_producer(const std::vector<std::w
 		format_desc = format_desc.format != core::video_format::invalid ? format_desc : core::video_format_desc::get(L"PAL");
 	}
 
-	return make_safe<decklink_producer>(format_desc, device_index);
+	return make_safe<decklink_producer>(frame_factory, format_desc, device_index);
 }
 
 }

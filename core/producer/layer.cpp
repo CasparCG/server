@@ -108,28 +108,11 @@ public:
 			return last_frame_;
 		}
 
-		try
-		{
-			last_frame_ = foreground_->receive(); 
-			if(last_frame_ == basic_frame::eof())
-			{
-				CASPAR_VERIFY(foreground_ != frame_producer::empty());
+		auto keep_alive = foreground_;
+		last_frame_ = core::receive(foreground_);
 
-				auto following = foreground_->get_following_producer();
-				following->set_leading_producer(foreground_);
-				g_remover.remove(std::move(foreground_));
-				foreground_ = following;
-				CASPAR_LOG(info) << foreground_->print() << L" Added.";
-
-				last_frame_ = receive();
-			}
-		}
-		catch(...)
-		{
-			CASPAR_LOG(error) << print() << L" Unhandled Exception: ";
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			stop();
-		}
+		if(keep_alive != foreground_)
+			g_remover.remove(std::move(keep_alive));
 
 		return last_frame_;
 	}

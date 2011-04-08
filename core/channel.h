@@ -27,9 +27,9 @@ public:
 	explicit channel(int index, const video_format_desc& format_desc);
 	channel(channel&& other);
 
-	frame_producer_device& producer();
-	frame_mixer_device& mixer();
-	frame_consumer_device& consumer();
+	const safe_ptr<frame_producer_device>& producer();
+	const safe_ptr<frame_mixer_device>& mixer();
+	const safe_ptr<frame_consumer_device>& consumer();
 
 	const video_format_desc& get_video_format_desc() const;
 	void set_video_format_desc(const video_format_desc& format_desc);

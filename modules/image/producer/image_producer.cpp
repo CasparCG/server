@@ -20,29 +20,22 @@ namespace caspar {
 
 struct image_producer : public core::frame_producer
 {	
-	std::shared_ptr<core::frame_factory> frame_factory_;
 	std::wstring filename_;
 	safe_ptr<core::basic_frame> frame_;
-	decltype(load_image(L"")) bitmap_;
 	
-	explicit image_producer(const std::wstring& filename) 
+	explicit image_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
 		: filename_(filename)
 		, frame_(core::basic_frame::empty())	
-		, bitmap_(load_image(filename_))
 	{
-		FreeImage_FlipVertical(bitmap_.get());
+		auto bitmap = load_image(filename_);
+		FreeImage_FlipVertical(bitmap.get());
+		auto frame = frame_factory->create_frame(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
+		frame_ = std::move(frame);
 	}
 	
 	virtual safe_ptr<core::basic_frame> receive(){return frame_;}
 
-	virtual void set_frame_factory(const safe_ptr<core::frame_factory>& frame_factory)
-	{
-		frame_factory_ = frame_factory;
-		auto frame = frame_factory->create_frame(FreeImage_GetWidth(bitmap_.get()), FreeImage_GetHeight(bitmap_.get()));
-		std::copy_n(FreeImage_GetBits(bitmap_.get()), frame->image_data().size(), frame->image_data().begin());
-		bitmap_.reset();
-		frame_ = std::move(frame);
-	}
 	
 	virtual std::wstring print() const
 	{
@@ -50,7 +43,7 @@ struct image_producer : public core::frame_producer
 	}
 };
 
-safe_ptr<core::frame_producer> create_image_producer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_image_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
@@ -63,7 +56,7 @@ safe_ptr<core::frame_producer> create_image_producer(const std::vector<std::wstr
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return make_safe<image_producer>(filename + L"." + *ext);
+	return make_safe<image_producer>(frame_factory, filename + L"." + *ext);
 }
 
 

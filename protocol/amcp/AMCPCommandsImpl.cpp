@@ -164,7 +164,7 @@ void AMCPCommand::SendReply()
 
 void AMCPCommand::Clear() 
 {
-	pChannel_->producer().clear();
+	pChannel_->producer()->clear();
 	pClientInfo_.reset();
 	channelIndex_ = 0;
 	_parameters.clear();
@@ -192,9 +192,9 @@ bool MixerCommand::DoExecute()
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())					
-					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration, tween);
+					GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
 				else
-					GetChannel()->mixer().apply_image_transform(transform, duration, tween);
+					GetChannel()->mixer()->apply_image_transform(transform, duration, tween);
 			}
 			else if(_parameters[1] == L"GAIN")
 			{
@@ -210,9 +210,9 @@ bool MixerCommand::DoExecute()
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration, tween);
+					GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
 				else
-					GetChannel()->mixer().apply_image_transform(transform, duration, tween);
+					GetChannel()->mixer()->apply_image_transform(transform, duration, tween);
 			}
 			else if(_parameters[1] == L"FILL_RECT")
 			{
@@ -234,9 +234,9 @@ bool MixerCommand::DoExecute()
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration, tween);
+					GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
 				else
-					GetChannel()->mixer().apply_image_transform(transform, duration, tween);
+					GetChannel()->mixer()->apply_image_transform(transform, duration, tween);
 			}
 			else if(_parameters[1] == L"KEY_RECT")
 			{
@@ -256,9 +256,9 @@ bool MixerCommand::DoExecute()
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().apply_image_transform(GetLayerIndex(), transform, duration, tween);
+					GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
 				else
-					GetChannel()->mixer().apply_image_transform(transform, duration, tween);
+					GetChannel()->mixer()->apply_image_transform(transform, duration, tween);
 			}
 			else if(_parameters[1] == L"GRID")
 			{
@@ -279,14 +279,14 @@ bool MixerCommand::DoExecute()
 							transform.set_key_scale(delta, delta);
 							return transform;
 						};
-						GetChannel()->mixer().apply_image_transform(index, transform, duration, tween);
+						GetChannel()->mixer()->apply_image_transform(index, transform, duration, tween);
 					}
 				}
 			}
 			else if(_parameters[1] == L"RESET")
 			{
 				int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[2], 0) : 0;
-				GetChannel()->mixer().reset_image_transform(duration);
+				GetChannel()->mixer()->reset_image_transform(duration);
 			}
 		}
 		else if(_parameters[0] == L"AUDIO")
@@ -304,21 +304,21 @@ bool MixerCommand::DoExecute()
 				
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer().apply_audio_transform(GetLayerIndex(), transform, duration);
+					GetChannel()->mixer()->apply_audio_transform(GetLayerIndex(), transform, duration);
 				else
-					GetChannel()->mixer().apply_audio_transform(transform, duration);
+					GetChannel()->mixer()->apply_audio_transform(transform, duration);
 			}
 			else if(_parameters[1] == L"RESET")
 			{
 				int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[2], 0) : 0;
-				GetChannel()->mixer().reset_audio_transform(duration);
+				GetChannel()->mixer()->reset_audio_transform(duration);
 			}
 		}
 		else if(_parameters[0] == L"RESET")
 		{
 			int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[2], 0) : 0;
-			GetChannel()->mixer().reset_image_transform(duration);
-			GetChannel()->mixer().reset_audio_transform(duration);
+			GetChannel()->mixer()->reset_image_transform(duration);
+			GetChannel()->mixer()->reset_audio_transform(duration);
 		}
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));
@@ -355,13 +355,13 @@ bool SwapCommand::DoExecute()
 			int l1 = GetLayerIndex();
 			int l2 = boost::lexical_cast<int>(strs.at(1));
 
-			ch1->producer().swap_layer(l1, l2, ch2->producer());
+			ch1->producer()->swap_layer(l1, l2, *ch2->producer());
 		}
 		else
 		{
 			auto ch1 = GetChannel();
 			auto ch2 = GetChannels().at(boost::lexical_cast<int>(_parameters[0])-1);
-			ch1->producer().swap(ch2->producer());
+			ch1->producer()->swap(*ch2->producer());
 		}
 
 		CASPAR_LOG(info) << "Swapped successfully";
@@ -389,7 +389,7 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->consumer().add(GetLayerIndex(), create_consumer(_parameters));
+		GetChannel()->consumer()->add(GetLayerIndex(), create_consumer(_parameters));
 	
 		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
 
@@ -416,7 +416,7 @@ bool RemoveCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->consumer().remove(GetLayerIndex());
+		GetChannel()->consumer()->remove(GetLayerIndex());
 
 		SetReplyString(TEXT("202 REMOVE OK\r\n"));
 
@@ -442,8 +442,8 @@ bool LoadCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(_parameters);		
-		GetChannel()->producer().load(GetLayerIndex(), pFP, false, true);
+		auto pFP = create_producer(GetChannel()->mixer(), _parameters);		
+		GetChannel()->producer()->load(GetLayerIndex(), pFP, false, true);
 	
 		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
 
@@ -550,13 +550,13 @@ bool LoadbgCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(_parameters);
+		auto pFP = create_producer(GetChannel()->mixer(), _parameters);
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
-		auto pFP2 = make_safe<core::transition_producer>(pFP, transitionInfo);
+		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc(), pFP, transitionInfo);
 		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();
-		GetChannel()->producer().load(GetLayerIndex(), pFP2, autoPlay); // TODO: LOOP
+		GetChannel()->producer()->load(GetLayerIndex(), pFP2, autoPlay); // TODO: LOOP
 	
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
@@ -581,7 +581,7 @@ bool PauseCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->producer().pause(GetLayerIndex());
+		GetChannel()->producer()->pause(GetLayerIndex());
 		SetReplyString(TEXT("202 PAUSE OK\r\n"));
 		return true;
 	}
@@ -597,7 +597,7 @@ bool PlayCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->producer().play(GetLayerIndex());
+		GetChannel()->producer()->play(GetLayerIndex());
 		SetReplyString(TEXT("202 PLAY OK\r\n"));
 		return true;
 	}
@@ -613,7 +613,7 @@ bool StopCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->producer().stop(GetLayerIndex());
+		GetChannel()->producer()->stop(GetLayerIndex());
 		SetReplyString(TEXT("202 STOP OK\r\n"));
 		return true;
 	}
@@ -629,9 +629,9 @@ bool ClearCommand::DoExecute()
 {
 	int index = GetLayerIndex(std::numeric_limits<int>::min());
 	if(index != std::numeric_limits<int>::min())
-		GetChannel()->producer().clear(index);
+		GetChannel()->producer()->clear(index);
 	else
-		GetChannel()->producer().clear();
+		GetChannel()->producer()->clear();
 		
 	SetReplyString(TEXT("202 CLEAR OK\r\n"));
 
@@ -860,7 +860,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	get_default_cg_producer(safe_ptr<core::channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->clear();
+	GetChannel()->producer()->clear(GetLayerIndex(cg_producer::DEFAULT_LAYER));
 	SetReplyString(TEXT("202 CG OK\r\n"));
 	return true;
 }
