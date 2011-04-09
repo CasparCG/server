@@ -75,7 +75,7 @@ public:
 		if(is_paused_)		
 			last_frame_->get_audio_transform().set_has_audio(false);		
 		else
-			last_frame_ = core::receive(foreground_);
+			last_frame_ = receive_and_follow(foreground_);
 
 		return last_frame_;
 	}
@@ -95,9 +95,9 @@ layer& layer::operator=(layer&& other)
 }
 void layer::swap(layer& other)
 {	
-	std::swap(impl_->foreground_, other.impl_->foreground_);
-	std::swap(impl_->background_, other.impl_->background_);
-	std::swap(impl_->last_frame_, other.impl_->last_frame_);
+	impl_->foreground_.swap(other.impl_->foreground_);
+	impl_->background_.swap(other.impl_->background_);
+	impl_->last_frame_.swap(other.impl_->last_frame_);
 	std::swap(impl_->is_paused_	, other.impl_->is_paused_ );
 }
 void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview){return impl_->load(frame_producer, play_on_load, preview);}	

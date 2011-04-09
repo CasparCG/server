@@ -50,9 +50,11 @@ class executor : boost::noncopyable
 	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
 public:
 		
-	explicit executor(const std::wstring& name) : name_(narrow(name))
+	explicit executor(const std::wstring& name, bool auto_start = false) : name_(narrow(name))
 	{
 		is_running_ = false;
+		if(auto_start)
+			start();
 	}
 	
 	virtual ~executor()
