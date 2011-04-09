@@ -132,7 +132,7 @@ struct transition_producer : public frame_producer
 
 	std::wstring print() const
 	{
-		return L"transition[" + transition::print(info_.type) + L":" + boost::lexical_cast<std::wstring>(info_.duration) + L"]";
+		return L"transition";
 	}
 };
 

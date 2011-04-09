@@ -39,19 +39,6 @@ struct transition
 		slide,
 		wipe
 	};
-
-	static std::wstring print(type t)
-	{
-		switch(t)
-		{
-		case transition::cut:	return L"cut";
-		case transition::mix:	return L"mix";
-		case transition::push:	return L"push";
-		case transition::slide: return L"slide";
-		case transition::wipe:	return L"wipe";
-		default:				return L"";
-		}
-	}
 };
 
 struct transition_direction
