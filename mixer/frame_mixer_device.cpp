@@ -162,9 +162,9 @@ public:
 		diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}
 		
-	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc)
+	safe_ptr<write_frame> create_frame(void* tag, const pixel_format_desc& desc)
 	{
-		return make_safe<gpu_write_frame>(desc, image_mixer_.create_buffers(desc));
+		return make_safe<gpu_write_frame>(reinterpret_cast<int>(tag), desc, image_mixer_.create_buffers(desc));
 	}
 				
 	void set_image_transform(const image_transform& transform, int mix_duration, const std::wstring& tween)
@@ -278,23 +278,23 @@ frame_mixer_device::frame_mixer_device(frame_mixer_device&& other) : impl_(std::
 boost::signals2::connection frame_mixer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
 void frame_mixer_device::send(const std::vector<safe_ptr<basic_frame>>& frames){impl_->send(frames);}
 const video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->format_desc_; }
-safe_ptr<write_frame> frame_mixer_device::create_frame(const pixel_format_desc& desc){ return impl_->create_frame(desc); }		
-safe_ptr<write_frame> frame_mixer_device::create_frame(size_t width, size_t height, pixel_format::type pix_fmt)
+safe_ptr<write_frame> frame_mixer_device::create_frame(void* tag, const pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
+safe_ptr<write_frame> frame_mixer_device::create_frame(void* tag, size_t width, size_t height, pixel_format::type pix_fmt)
 {
 	// Create bgra frame
 	pixel_format_desc desc;
 	desc.pix_fmt = pix_fmt;
-	desc.planes.push_back(pixel_format_desc::plane(width, height, 4));
-	return create_frame(desc);
+	desc.planes.push_back( pixel_format_desc::plane(width, height, 4));
+	return create_frame(tag, desc);
 }
 			
-safe_ptr<write_frame> frame_mixer_device::create_frame(pixel_format::type pix_fmt)
+safe_ptr<write_frame> frame_mixer_device::create_frame(void* tag, pixel_format::type pix_fmt)
 {
 	// Create bgra frame with output resolution
 	pixel_format_desc desc;
 	desc.pix_fmt = pix_fmt;
-	desc.planes.push_back(pixel_format_desc::plane(get_video_format_desc().width, get_video_format_desc().height, 4));
-	return create_frame(desc);
+	desc.planes.push_back( pixel_format_desc::plane(get_video_format_desc().width, get_video_format_desc().height, 4));
+	return create_frame(tag, desc);
 }
 void frame_mixer_device::set_image_transform(const image_transform& transform, int mix_duration, const std::wstring& tween){impl_->set_image_transform(transform, mix_duration, tween);}
 void frame_mixer_device::set_image_transform(int index, const image_transform& transform, int mix_duration, const std::wstring& tween){impl_->set_image_transform(index, transform, mix_duration, tween);}

@@ -87,8 +87,7 @@ public:
 				{
 					try
 					{
-						auto frame = video_decoder_->execute(video_packet);
-						frame->tag(reinterpret_cast<int>(this));
+						auto frame = video_decoder_->execute(this, video_packet);
 						video_frame_channel_.push_back(std::move(frame));
 					}
 					catch(...)
@@ -131,7 +130,7 @@ public:
 				{
 					if(!frame) // If there is no video create a dummy frame.
 					{
-						frame = frame_factory_->create_frame(1, 1);
+						frame = frame_factory_->create_frame(this, 1, 1);
 						std::fill(frame->image_data().begin(), frame->image_data().end(), 0);
 					}
 					

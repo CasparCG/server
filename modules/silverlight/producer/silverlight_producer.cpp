@@ -118,7 +118,7 @@ public:
 		while (window_.GetEvent(Event)){}
 		window_.Display();
 				
-		auto frame = frame_factory_->create_frame();
+		auto frame = frame_factory_->create_frame(this);
 		::BitBlt(mem_, 0, 0, format_desc_.width, format_desc_.height, screen_, 0, 0, SRCCOPY);		
 		std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
 
