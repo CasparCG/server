@@ -41,10 +41,10 @@ public:
 		if(color.length() != 9 || color[0] != '#')
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color)) << msg_info("Invalid color code"));
 
-		auto frame = frame_factory->create_frame(1, 1, pixel_format::bgra);
+		auto frame = frame_factory->create_frame(this, 1, 1, pixel_format::bgra);
 		auto& value = *reinterpret_cast<unsigned long*>(frame->image_data().begin());
 		std::wstringstream str(color_str_.substr(1));
-		str >> std::hex >> value;	
+		str >> std::hex >> value;
 		frame_ = std::move(frame);
 	}
 			

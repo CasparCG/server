@@ -23,10 +23,10 @@ struct gpu_write_frame::implementation : boost::noncopyable
 	int tag_;
 
 public:
-	implementation(const pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers) 
+	implementation(int tag, const pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers) 
 		: desc_(desc)
 		, buffers_(buffers)
-		, tag_(std::numeric_limits<int>::min()){}
+		, tag_(tag){}
 	
 	void accept(gpu_write_frame& self, frame_visitor& visitor)
 	{
@@ -52,7 +52,7 @@ public:
 	}
 };
 	
-gpu_write_frame::gpu_write_frame(const pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers) : impl_(new implementation(desc, buffers)){}
+gpu_write_frame::gpu_write_frame(int tag, const pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers) : impl_(new implementation(tag, desc, buffers)){}
 gpu_write_frame::gpu_write_frame(gpu_write_frame&& other) : impl_(std::move(other.impl_)){}
 void gpu_write_frame::swap(gpu_write_frame& other){impl_.swap(other.impl_);}
 gpu_write_frame& gpu_write_frame::operator=(gpu_write_frame&& other)
@@ -72,7 +72,6 @@ const boost::iterator_range<const short*> gpu_write_frame::audio_data() const
 {
 	return boost::iterator_range<const short*>(impl_->audio_data_.data(), impl_->audio_data_.data() + impl_->audio_data_.size());
 }
-void gpu_write_frame::tag(int tag) { impl_->tag_ = tag;}
 int gpu_write_frame::tag() const {return impl_->tag_;}
 const pixel_format_desc& gpu_write_frame::get_pixel_format_desc() const{return impl_->desc_;}
 std::vector<safe_ptr<host_buffer>>& gpu_write_frame::get_plane_buffers(){return impl_->buffers_;}

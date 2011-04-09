@@ -49,9 +49,9 @@ public:
 		
 	void send(const std::vector<safe_ptr<basic_frame>>& frames); // nothrow
 		
-	safe_ptr<write_frame> create_frame(const pixel_format_desc& desc);		
-	safe_ptr<write_frame> create_frame(size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra);			
-	safe_ptr<write_frame> create_frame(pixel_format::type pix_fmt = pixel_format::bgra);
+	safe_ptr<write_frame> create_frame(void* tag, const pixel_format_desc& desc);		
+	safe_ptr<write_frame> create_frame(void* tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra);			
+	safe_ptr<write_frame> create_frame(void* tag, pixel_format::type pix_fmt = pixel_format::bgra);
 	
 	const video_format_desc& get_video_format_desc() const; // nothrow
 

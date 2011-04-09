@@ -173,7 +173,7 @@ public:
 		desc.planes.push_back(core::pixel_format_desc::plane(d_mode_->GetWidth(),   d_mode_->GetHeight(), 1));
 		desc.planes.push_back(core::pixel_format_desc::plane(d_mode_->GetWidth()/2, d_mode_->GetHeight(), 1));
 		desc.planes.push_back(core::pixel_format_desc::plane(d_mode_->GetWidth()/2, d_mode_->GetHeight(), 1));			
-		auto frame = frame_factory_->create_frame(desc);
+		auto frame = frame_factory_->create_frame(this, desc);
 
 		unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
 		int frame_size = (d_mode_->GetWidth() * 16 / 8) * d_mode_->GetHeight();

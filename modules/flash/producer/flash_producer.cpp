@@ -184,7 +184,7 @@ private:
 			std::fill_n(bmp_data_, format_desc_.size, 0);
 			ax_->DrawControl(static_cast<HDC>(hdc_.get()));
 		
-			auto frame = frame_factory_->create_frame();
+			auto frame = frame_factory_->create_frame(this);
 			std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
 			head_ = frame;
 		}		

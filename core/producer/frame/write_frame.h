@@ -23,7 +23,6 @@ public:
 
 	virtual void accept(frame_visitor& visitor) = 0;
 
-	virtual void tag(int tag) = 0;
 	virtual int tag() const = 0;
 };
 
