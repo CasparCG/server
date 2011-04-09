@@ -12,8 +12,11 @@ namespace caspar { namespace core {
 std::vector<const producer_factory_t> p_factories;
 tbb::spin_rw_mutex p_factories_mutex;
 
-safe_ptr<basic_frame> receive(safe_ptr<frame_producer>& producer)
-{
+safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
+{	
+	if(producer == frame_producer::empty())
+		return basic_frame::eof();
+
 	auto frame = basic_frame::eof();
 	try
 	{
@@ -23,6 +26,7 @@ safe_ptr<basic_frame> receive(safe_ptr<frame_producer>& producer)
 	{
 		try
 		{
+			// Producer will be removed since frame == basic_frame::eof.
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(warning) << producer->print() << " Failed to receive frame. Removing producer.";
 		}
@@ -32,14 +36,10 @@ safe_ptr<basic_frame> receive(safe_ptr<frame_producer>& producer)
 	if(frame == basic_frame::eof())
 	{
 		auto following = producer->get_following_producer();
-		if(following == frame_producer::empty())
-			producer = frame_producer::eof();
-		else
-		{
-			following->set_leading_producer(producer);
-			producer = std::move(following);
-			return receive(producer);
-		}
+		following->set_leading_producer(producer);
+		producer = std::move(following);		
+
+		return receive_and_follow(producer);
 	}
 	return frame;
 }

@@ -32,24 +32,19 @@ namespace caspar { namespace core {
 struct transition_producer : public frame_producer
 {	
 	const video_format_desc		format_desc_;
-	unsigned short				current_frame_;
+	uint32_t					current_frame_;
 	
 	const transition_info		info_;
 	
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
-	
-	std::vector<safe_ptr<basic_frame>> frame_buffer_;
-	
+		
 	transition_producer(const video_format_desc& format_desc, const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: format_desc_(format_desc)
 		, current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
-		, source_producer_(frame_producer::empty())
-	{
-		frame_buffer_.push_back(basic_frame::empty());
-	}
+		, source_producer_(frame_producer::empty()){}
 					
 	safe_ptr<frame_producer> get_following_producer() const
 	{
@@ -71,8 +66,8 @@ struct transition_producer : public frame_producer
 
 		tbb::parallel_invoke
 		(
-			[&]{dest   = core::receive(dest_producer_);},
-			[&]{source = core::receive(source_producer_);}
+			[&]{dest   = receive_and_follow(dest_producer_);},
+			[&]{source = receive_and_follow(source_producer_);}
 		);
 
 		return compose(dest, source);
@@ -84,7 +79,7 @@ struct transition_producer : public frame_producer
 			return basic_frame::eof();
 
 		if(info_.type == transition::cut)		
-			return src_frame != basic_frame::eof() ? src_frame : basic_frame::empty();
+			return src_frame;
 										
 		double delta1 = info_.tweener(current_frame_*2-1, 0.0, 1.0, info_.duration*2);
 		double delta2 = info_.tweener(current_frame_*2, 0.0, 1.0, info_.duration*2);  
@@ -139,9 +134,6 @@ struct transition_producer : public frame_producer
 	{
 		return L"transition[" + transition::print(info_.type) + L":" + boost::lexical_cast<std::wstring>(info_.duration) + L"]";
 	}
-
-	std::wstring source_print() const { return print() + L"/source";}
-	std::wstring dest_print() const { return print() + L"/dest";}
 };
 
 safe_ptr<frame_producer> create_transition_producer(const video_format_desc& format_desc, const safe_ptr<frame_producer>& destination, const transition_info& info)
