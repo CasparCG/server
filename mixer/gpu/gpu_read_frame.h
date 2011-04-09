@@ -12,7 +12,7 @@
 
 #include <common/memory/safe_ptr.h>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 	
 class gpu_read_frame : public core::read_frame
 {

@@ -24,13 +24,13 @@
 #include <array>
 #include <unordered_map>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 		
 struct image_mixer::implementation : boost::noncopyable
 {			
-	const video_format_desc format_desc_;
+	const core::video_format_desc format_desc_;
 	
-	std::stack<image_transform> transform_stack_;
+	std::stack<core::image_transform> transform_stack_;
 
 	GLuint fbo_;
 	std::array<std::shared_ptr<device_buffer>, 2> render_targets_;
@@ -42,7 +42,7 @@ struct image_mixer::implementation : boost::noncopyable
 	safe_ptr<ogl_device> context_;
 
 public:
-	implementation(const video_format_desc& format_desc) 
+	implementation(const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)
 		, context_(ogl_device::create())
 	{
@@ -54,8 +54,8 @@ public:
 		
 		context_->begin_invoke([=]
 		{
-			transform_stack_.push(image_transform());
-			transform_stack_.top().set_mode(video_mode::progressive);
+			transform_stack_.push(core::image_transform());
+			transform_stack_.top().set_mode(core::video_mode::progressive);
 
 			GL(glEnable(GL_TEXTURE_2D));
 			GL(glDisable(GL_DEPTH_TEST));		
@@ -76,12 +76,12 @@ public:
 		glDeleteFramebuffersEXT(1, &fbo_);
 	}
 
-	void begin(const basic_frame& frame)
+	void begin(const core::basic_frame& frame)
 	{
 		transform_stack_.push(transform_stack_.top()*frame.get_image_transform());
 	}
 		
-	void visit(write_frame& frame)
+	void visit(core::write_frame& frame)
 	{
 		auto gpu_frame = boost::polymorphic_downcast<gpu_write_frame*>(&frame);
 		auto& desc = gpu_frame->get_pixel_format_desc();
@@ -155,10 +155,10 @@ public:
 		});
 	}
 		
-	std::vector<safe_ptr<host_buffer>> create_buffers(const pixel_format_desc& format)
+	std::vector<safe_ptr<host_buffer>> create_buffers(const core::pixel_format_desc& format)
 	{
 		std::vector<safe_ptr<host_buffer>> buffers;
-		std::transform(format.planes.begin(), format.planes.end(), std::back_inserter(buffers), [&](const pixel_format_desc::plane& plane) -> safe_ptr<host_buffer>
+		std::transform(format.planes.begin(), format.planes.end(), std::back_inserter(buffers), [&](const core::pixel_format_desc::plane& plane)
 		{
 			return context_->create_host_buffer(plane.size, host_buffer::write_only);
 		});
@@ -166,12 +166,12 @@ public:
 	}
 };
 
-image_mixer::image_mixer(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
-void image_mixer::begin(const basic_frame& frame){impl_->begin(frame);}
-void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
+image_mixer::image_mixer(const core::video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+void image_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
+void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<const host_buffer>> image_mixer::begin_pass(){	return impl_->begin_pass();}
 void image_mixer::end_pass(){impl_->end_pass();}
-std::vector<safe_ptr<host_buffer>> image_mixer::create_buffers(const pixel_format_desc& format){return impl_->create_buffers(format);}
+std::vector<safe_ptr<host_buffer>> image_mixer::create_buffers(const core::pixel_format_desc& format){return impl_->create_buffers(format);}
 
 }}

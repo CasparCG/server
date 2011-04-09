@@ -6,7 +6,7 @@
 
 #include <common/gl/gl_check.h>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 																																							
 struct gpu_read_frame::implementation : boost::noncopyable
 {

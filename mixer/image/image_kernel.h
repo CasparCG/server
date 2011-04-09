@@ -2,17 +2,16 @@
 
 #include <memory>
 
-namespace caspar { namespace core {
+#include <core/producer/frame/pixel_format.h>
+#include <core/producer/frame/image_transform.h>
 
-struct pixel_format_desc;
-class image_transform;
-class image_transform;
-
+namespace caspar { namespace mixer {
+	
 class image_kernel
 {
 public:
 	image_kernel();
-	void apply(const pixel_format_desc& pix_desc, const image_transform& mode);
+	void apply(const core::pixel_format_desc& pix_desc, const core::image_transform& mode);
 
 private:
 	struct implementation;

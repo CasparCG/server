@@ -3,7 +3,7 @@
 #include "device_buffer.h"
 
 #include <common/gl/gl_check.h>
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 	
 GLenum FORMAT[] = {0, GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
 GLenum INTERNAL_FORMAT[] = {0, GL_LUMINANCE8, GL_LUMINANCE8_ALPHA8, GL_RGB8, GL_RGBA8};	
