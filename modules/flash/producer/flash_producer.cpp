@@ -72,6 +72,8 @@ class flash_renderer
 	
 	safe_ptr<diagnostics::graph> graph_;
 	timer perf_timer_;
+
+	high_prec_timer timer_;
 	
 public:
 	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
@@ -171,10 +173,12 @@ private:
 
 	safe_ptr<core::basic_frame> render_simple_frame(bool underflow)
 	{
+		double frame_time = 1.0/ax_->GetFPS();
+
 		if(underflow)
 			graph_->add_tag("underflow");
-
-		double frame_time = 1.0/ax_->GetFPS();
+		else
+			timer_.tick(frame_time);
 
 		perf_timer_.reset();
 		ax_->Tick();
