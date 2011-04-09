@@ -423,11 +423,8 @@ inline tweener_t get_tweener(std::wstring name = L"linear")
 
 	auto it = tweens.find(name);
 	if(it == tweens.end())
-	{
-		CASPAR_LOG(warning) << L"Invalid tween: " << name << L" fallback to \"linear\".";
 		it = tweens.find(L"linear");
-	}
-
+	
 	return [=](double t, double b, double c, double d)
 	{
 		return it->second(t, b, c, d, params);

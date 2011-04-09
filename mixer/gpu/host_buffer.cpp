@@ -4,7 +4,7 @@
 
 #include <common/gl/gl_check.h>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 																																								
 struct host_buffer::implementation : boost::noncopyable
 {	

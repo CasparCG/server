@@ -2,6 +2,7 @@
 
 #include <common/memory/safe_ptr.h>
 #include <core/producer/frame/write_frame.h>
+#include <core/producer/frame/pixel_format.h>
 
 #include "../gpu/host_buffer.h"
 
@@ -11,20 +12,18 @@
 #include <memory>
 #include <vector>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 	
-struct pixel_format_desc;
-
 class gpu_write_frame : public core::write_frame
 {
 public:	
-	explicit gpu_write_frame(int tag, const pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers);
+	explicit gpu_write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers);
 	gpu_write_frame(gpu_write_frame&& other);
 	gpu_write_frame& operator=(gpu_write_frame&& other);
 	
 	void swap(gpu_write_frame& other);
 
-	const pixel_format_desc& get_pixel_format_desc() const;
+	const core::pixel_format_desc& get_pixel_format_desc() const;
 	std::vector<safe_ptr<host_buffer>>& get_plane_buffers();
 		
 	// core::write_frame
@@ -34,7 +33,7 @@ public:
 	virtual const boost::iterator_range<const unsigned char*> image_data(size_t plane_index = 0) const;
 	virtual const boost::iterator_range<const short*> audio_data() const;
 
-	virtual void accept(frame_visitor& visitor);
+	virtual void accept(core::frame_visitor& visitor);
 
 	virtual int tag() const;
 	

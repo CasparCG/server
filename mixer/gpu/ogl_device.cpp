@@ -9,7 +9,7 @@
 
 #include <boost/foreach.hpp>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 
 ogl_device::ogl_device() : executor_(L"ogl_device")
 {
