@@ -255,9 +255,8 @@ public:
 	explicit decklink_producer(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index)
 		: format_desc_(format_desc) 
 		, device_index_(device_index)
-		, executor_(L"decklink_producer")
+		, executor_(L"decklink_producer", true)
 	{
-		executor_.start();
 		executor_.invoke([=]
 		{
 			input_.reset(new decklink_input(format_desc_, device_index_, frame_factory));
