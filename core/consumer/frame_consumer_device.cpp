@@ -36,16 +36,6 @@ public:
 		executor_.start();
 	}
 
-	~implementation()
-	{
-		executor_.clear();
-		CASPAR_LOG(info) << "Removing consumers from consumer-device.";
-		executor_.invoke([this]{consumers_.clear();});
-		CASPAR_LOG(info) << "Stopping consumer-device.";
-		executor_.stop();
-		CASPAR_LOG(info) << "Releasing consumer-device.";
-	}
-
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
 		consumer->initialize(format_desc_);
@@ -64,7 +54,7 @@ public:
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
 			{
-				CASPAR_LOG(info) << it->second->print() << L" Removed.";
+				CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
 				consumers_.erase(it);
 			}
 		});
@@ -91,7 +81,7 @@ public:
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
 					consumers_.erase(it++);
-					CASPAR_LOG(warning) << "Removed consumer from frame_consumer_device.";
+					CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
 				}
 			}
 		});

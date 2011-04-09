@@ -50,12 +50,6 @@
     <ClInclude Include="producer\frame\basic_frame.h">
       <Filter>producer\frame</Filter>
     </ClInclude>
-    <ClInclude Include="producer\frame\frame_factory.h">
-      <Filter>producer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame\frame_visitor.h">
-      <Filter>producer\frame</Filter>
-    </ClInclude>
     <ClInclude Include="producer\frame\image_transform.h">
       <Filter>producer\frame</Filter>
     </ClInclude>
@@ -69,6 +63,12 @@
       <Filter>consumer\frame</Filter>
     </ClInclude>
     <ClInclude Include="video_format.h" />
+    <ClInclude Include="producer\frame\frame_visitor.h">
+      <Filter>producer\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\frame\frame_factory.h">
+      <Filter>producer\frame</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
