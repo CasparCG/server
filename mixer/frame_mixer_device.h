@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include <core/consumer/frame/read_frame.h>
+#include <core/producer/frame/write_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/pixel_format.h>
 
@@ -31,41 +33,37 @@
 
 #include <functional>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 	
-struct video_format_desc;
-class read_frame;
-class write_frame;
-
-class frame_mixer_device : public frame_factory
+class frame_mixer_device : public core::frame_factory
 {
 public:
-	typedef boost::signals2::signal<void(const safe_ptr<const read_frame>&)> output_t;
+	typedef boost::signals2::signal<void(const safe_ptr<const core::read_frame>&)> output_t;
 	 
 	boost::signals2::connection connect(const output_t::slot_type& subscriber);
 	
-	frame_mixer_device(const video_format_desc& format_desc);
+	frame_mixer_device(const core::video_format_desc& format_desc);
 	frame_mixer_device(frame_mixer_device&& other); // nothrow
 		
-	void send(const std::vector<safe_ptr<basic_frame>>& frames); // nothrow
+	void send(const std::vector<safe_ptr<core::basic_frame>>& frames); // nothrow
 		
-	safe_ptr<write_frame> create_frame(void* tag, const pixel_format_desc& desc);		
-	safe_ptr<write_frame> create_frame(void* tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra);			
-	safe_ptr<write_frame> create_frame(void* tag, pixel_format::type pix_fmt = pixel_format::bgra);
+	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc);		
+	safe_ptr<core::write_frame> create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt = core::pixel_format::bgra);			
+	safe_ptr<core::write_frame> create_frame(void* tag, core::pixel_format::type pix_fmt = core::pixel_format::bgra);
 	
-	const video_format_desc& get_video_format_desc() const; // nothrow
+	const core::video_format_desc& get_video_format_desc() const; // nothrow
 
-	void set_image_transform(const image_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
-	void set_image_transform(int index, const image_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void set_image_transform(const core::image_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void set_image_transform(int index, const core::image_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
 
-	void set_audio_transform(const audio_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
-	void set_audio_transform(int index, const audio_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void set_audio_transform(const core::audio_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void set_audio_transform(int index, const core::audio_transform& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
 	
-	void apply_image_transform(const std::function<image_transform(image_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_image_transform(int index, const std::function<image_transform(image_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_image_transform(const std::function<core::image_transform(core::image_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
 
-	void apply_audio_transform(const std::function<audio_transform(audio_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_audio_transform(int index, const std::function<audio_transform(audio_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_audio_transform(const std::function<core::audio_transform(core::audio_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
 
 	void reset_image_transform(int mix_duration = 0, const std::wstring& tween = L"linear");
 	void reset_audio_transform(int mix_duration = 0, const std::wstring& tween = L"linear");

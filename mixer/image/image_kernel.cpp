@@ -15,7 +15,7 @@
 
 #include <unordered_map>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 
 class shader_program : boost::noncopyable
 {
@@ -135,10 +135,10 @@ GLubyte lower_pattern[] = {
 
 struct image_kernel::implementation : boost::noncopyable
 {	
-	std::unordered_map<pixel_format::type, shader_program> shaders_;
+	std::unordered_map<core::pixel_format::type, shader_program> shaders_;
 
 public:
-	std::unordered_map<pixel_format::type, shader_program>& shaders()
+	std::unordered_map<core::pixel_format::type, shader_program>& shaders()
 	{
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_BLEND));
@@ -193,7 +193,7 @@ public:
 			"}																		"			
 			"																		";
 			
-		shaders_[pixel_format::abgr] = shader_program(common_vertex, common_fragment +
+		shaders_[core::pixel_format::abgr] = shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -201,7 +201,7 @@ public:
 			"	gl_FragColor = abgr.argb * gain;									"
 			"}																		");
 		
-		shaders_[pixel_format::argb]= shader_program(common_vertex, common_fragment +
+		shaders_[core::pixel_format::argb]= shader_program(common_vertex, common_fragment +
 
 			"void main()															"	
 			"{																		"
@@ -209,7 +209,7 @@ public:
 			"	gl_FragColor = argb.grab * gl_Color * gain;							"
 			"}																		");
 		
-		shaders_[pixel_format::bgra]= shader_program(common_vertex, common_fragment +
+		shaders_[core::pixel_format::bgra]= shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -217,7 +217,7 @@ public:
 			"	gl_FragColor = bgra.rgba * gl_Color * gain;							"
 			"}																		");
 		
-		shaders_[pixel_format::rgba] = shader_program(common_vertex, common_fragment +
+		shaders_[core::pixel_format::rgba] = shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -225,7 +225,7 @@ public:
 			"	gl_FragColor = rgba.bgra * gl_Color * gain;							"
 			"}																		");
 		
-		shaders_[pixel_format::ycbcr] = shader_program(common_vertex, common_fragment +
+		shaders_[core::pixel_format::ycbcr] = shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -239,7 +239,7 @@ public:
 			"		gl_FragColor = ycbcra_to_bgra_sd(y, cb, cr, a) * gl_Color * gain;"
 			"}																		");
 		
-		shaders_[pixel_format::ycbcra] = shader_program(common_vertex, common_fragment +
+		shaders_[core::pixel_format::ycbcra] = shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
@@ -259,16 +259,16 @@ public:
 
 image_kernel::image_kernel() : impl_(new implementation()){}
 
-void image_kernel::apply(const pixel_format_desc& pix_desc, const image_transform& transform)
+void image_kernel::apply(const core::pixel_format_desc& pix_desc, const core::image_transform& transform)
 {
 	impl_->shaders()[pix_desc.pix_fmt].use();
 
 	GL(glUniform1f(impl_->shaders()[pix_desc.pix_fmt].get_location("gain"), static_cast<GLfloat>(transform.get_gain())));
 	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("HD"), pix_desc.planes.at(0).height > 700 ? 1 : 0));
 
-	if(transform.get_mode() == video_mode::upper)
+	if(transform.get_mode() == core::video_mode::upper)
 		glPolygonStipple(upper_pattern);
-	else if(transform.get_mode() == video_mode::lower)
+	else if(transform.get_mode() == core::video_mode::lower)
 		glPolygonStipple(lower_pattern);
 	else
 		glPolygonStipple(progressive_pattern);

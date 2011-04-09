@@ -15,7 +15,7 @@
 
 #include <SFML/Window/Context.hpp>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 
 class ogl_device
 {	

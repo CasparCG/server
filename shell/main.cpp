@@ -121,8 +121,8 @@ void print_version()
 	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << get_avcodec_version();
 	CASPAR_LOG(info) << L"FFMPEG-swscale "  << get_avformat_version();
 	CASPAR_LOG(info) << L"FFMPEG-avformat " << get_swscale_version();
-	CASPAR_LOG(info) << L"OpenGL " << ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VERSION));})
-					 << L" "	   << ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VENDOR));});
+	CASPAR_LOG(info) << L"OpenGL " << mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VERSION));})
+					 << L" "	   << mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VENDOR));});
 
 	HKEY hkey; 
 	DWORD dwType, dwSize;

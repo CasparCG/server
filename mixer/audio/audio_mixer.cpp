@@ -6,28 +6,28 @@
 
 #include <core/producer/frame/audio_transform.h>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 	
 struct audio_mixer::implementation
 {
 	std::vector<short> audio_data_;
-	std::stack<audio_transform> transform_stack_;
+	std::stack<core::audio_transform> transform_stack_;
 
-	std::map<int, audio_transform> prev_audio_transforms_;
-	std::map<int, audio_transform> next_audio_transforms_;
+	std::map<int, core::audio_transform> prev_audio_transforms_;
+	std::map<int, core::audio_transform> next_audio_transforms_;
 
 public:
 	implementation()
 	{
-		transform_stack_.push(audio_transform());
+		transform_stack_.push(core::audio_transform());
 	}
 	
-	void begin(const basic_frame& frame)
+	void begin(const core::basic_frame& frame)
 	{
 		transform_stack_.push(transform_stack_.top()*frame.get_audio_transform());
 	}
 
-	void visit(const write_frame& frame)
+	void visit(const core::write_frame& frame)
 	{
 		if(!transform_stack_.top().get_has_audio())
 			return;
@@ -72,7 +72,7 @@ public:
 	}
 
 
-	void begin(const audio_transform& transform)
+	void begin(const core::audio_transform& transform)
 	{
 		transform_stack_.push(transform_stack_.top()*transform);
 	}
@@ -95,8 +95,8 @@ public:
 };
 
 audio_mixer::audio_mixer() : impl_(new implementation()){}
-void audio_mixer::begin(const basic_frame& frame){impl_->begin(frame);}
-void audio_mixer::visit(write_frame& frame){impl_->visit(frame);}
+void audio_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
+void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
 std::vector<short> audio_mixer::begin_pass(){return impl_->begin_pass();}	
 void audio_mixer::end_pass(){impl_->end_pass();}

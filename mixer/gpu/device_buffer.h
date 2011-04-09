@@ -6,7 +6,7 @@
 
 #include <memory>
 
-namespace caspar { namespace core {
+namespace caspar { namespace mixer {
 	
 class device_buffer : boost::noncopyable
 {
