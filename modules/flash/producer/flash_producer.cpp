@@ -220,7 +220,7 @@ public:
 		, tail_(core::basic_frame::empty())		
 		, frame_factory_(frame_factory)
 		, format_desc_(frame_factory->get_video_format_desc())
-		, executor_(L"flash_producer")
+		, executor_(L"flash_producer", true)
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
@@ -235,7 +235,6 @@ public:
 		});
 
 		fps_ = 0;
-		executor_.start();
 	}
 
 	~flash_producer()
