@@ -147,12 +147,15 @@ public:
 	{			
 		executor_.begin_invoke([=]
 		{			
-			diag_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
 			perf_timer_.reset();
 
-			auto image = mix_image(frames);
+			auto image_future = mix_image(frames);
 			auto audio = mix_audio(frames);
-			output_(make_safe<const gpu_read_frame>(std::move(image.get()), std::move(audio)));
+			auto image = image_future.get();
+
+			diag_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+
+			output_(make_safe<const gpu_read_frame>(std::move(image), std::move(audio)));
 
 			diag_->update_value("tick-time", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
 			wait_perf_timer_.reset();
