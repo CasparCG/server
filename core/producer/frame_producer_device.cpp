@@ -83,8 +83,6 @@ public:
 				frames[i]->set_layer_index(it->first);
 			}
 		});		
-		boost::range::remove_erase(frames, basic_frame::empty());
-		boost::range::remove_erase(frames, basic_frame::eof());
 		return frames;
 	}
 
