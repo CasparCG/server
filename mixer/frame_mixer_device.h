@@ -66,7 +66,9 @@ public:
 	void apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, int mix_duration = 0, const std::wstring& tween = L"linear");
 
 	void reset_image_transform(int mix_duration = 0, const std::wstring& tween = L"linear");
+	void reset_image_transform(int index, int mix_duration = 0, const std::wstring& tween = L"linear");
 	void reset_audio_transform(int mix_duration = 0, const std::wstring& tween = L"linear");
+	void reset_audio_transform(int index, int mix_duration = 0, const std::wstring& tween = L"linear");
 
 private:
 	struct implementation;
