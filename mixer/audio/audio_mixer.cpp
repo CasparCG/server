@@ -33,7 +33,7 @@ public:
 			return;
 
 		auto& audio_data = frame.audio_data();
-		auto tag = frame.tag();
+		auto tag = frame.tag(); // Get the identifier for the audio-stream.
 
 		if(audio_data_.empty())
 			audio_data_.resize(audio_data.size(), 0);
@@ -45,8 +45,7 @@ public:
 		if(it != prev_audio_transforms_.end())
 			prev = it->second;
 				
-		next_audio_transforms_[tag] = next;
-		prev_audio_transforms_[tag] = next;
+		next_audio_transforms_[tag] = next; // Store all active tags, inactive tags will be removed in end_pass.
 		
 		auto next_gain = next.get_gain();
 		auto prev_gain = prev.get_gain();
@@ -89,8 +88,7 @@ public:
 
 	void end_pass()
 	{
-		prev_audio_transforms_ = next_audio_transforms_;
-		next_audio_transforms_.clear();
+		prev_audio_transforms_ = std::move(next_audio_transforms_);
 	}
 };
 
