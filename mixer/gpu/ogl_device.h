@@ -32,7 +32,7 @@ public:
 
 	static safe_ptr<ogl_device> create()
 	{
-		static safe_ptr<ogl_device> instance(new ogl_device());
+		static safe_ptr<ogl_device> instance(new ogl_device()); // Use the same ogl-device for all channels inorder to ensure that frames are always valid for all "context".
 		return instance;
 	}
 
