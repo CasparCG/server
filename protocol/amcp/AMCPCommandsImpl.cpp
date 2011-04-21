@@ -452,7 +452,7 @@ bool LoadCommand::DoExecute()
 	{
 		_parameters[0] = _parameters[0];
 		auto pFP = create_producer(GetChannel()->mixer(), _parameters);		
-		GetChannel()->producer()->load(GetLayerIndex(), pFP, false, true);
+		GetChannel()->producer()->load(GetLayerIndex(), pFP, true);
 	
 		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
 
@@ -564,8 +564,7 @@ bool LoadbgCommand::DoExecute()
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
 		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc(), pFP, transitionInfo);
-		bool autoPlay = std::find(_parameters.begin(), _parameters.end(), TEXT("AUTOPLAY")) != _parameters.end();
-		GetChannel()->producer()->load(GetLayerIndex(), pFP2, autoPlay); // TODO: LOOP
+		GetChannel()->producer()->load(GetLayerIndex(), pFP2); // TODO: LOOP
 	
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
@@ -606,7 +605,21 @@ bool PlayCommand::DoExecute()
 {
 	try
 	{
+		if(!_parameters.empty())
+		{
+			LoadbgCommand lbg;
+			lbg.SetChannel(GetChannel());
+			lbg.SetChannelIndex(GetChannelIndex());
+			lbg.SetLayerIntex(GetLayerIndex());
+			lbg.SetClientInfo(GetClientInfo());
+			for(auto it = _parameters.begin(); it != _parameters.end(); ++it)
+				lbg.AddParameter(*it);
+			if(!lbg.Execute())
+				CASPAR_LOG(warning) << " Failed to play.";
+		}
+
 		GetChannel()->producer()->play(GetLayerIndex());
+		
 		SetReplyString(TEXT("202 PLAY OK\r\n"));
 		return true;
 	}
