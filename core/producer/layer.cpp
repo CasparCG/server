@@ -8,7 +8,7 @@
 
 namespace caspar { namespace core {
 	
-struct layer::implementation : boost::noncopyable
+struct layer::implementation
 {				
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
@@ -21,15 +21,8 @@ public:
 		, last_frame_(basic_frame::empty())
 		, is_paused_(false){}
 	
-	void pause() 
-	{
-		is_paused_ = true; 
-	}
-
-	void resume()
-	{
-		is_paused_ = false;
-	}
+	void pause(){is_paused_ = true;}
+	void resume(){is_paused_ = false;}
 
 	void load(const safe_ptr<frame_producer>& producer, bool preview)
 	{		
@@ -77,6 +70,13 @@ layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
 layer& layer::operator=(layer&& other)
 {
 	impl_ = std::move(other.impl_);
+	return *this;
+}
+layer::layer(const layer& other) : impl_(new implementation(*other.impl_)){}
+layer& layer::operator=(const layer& other)
+{
+	layer tmp(other);
+	tmp.swap(*this);
 	return *this;
 }
 void layer::swap(layer& other)

@@ -45,7 +45,7 @@ public:
 	frame_mixer_device(const core::video_format_desc& format_desc);
 	frame_mixer_device(frame_mixer_device&& other); // nothrow
 		
-	void send(const std::vector<safe_ptr<core::basic_frame>>& frames); // nothrow
+	void send(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
 		
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc);		
 	safe_ptr<core::write_frame> create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt = core::pixel_format::bgra);			

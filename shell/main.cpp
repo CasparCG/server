@@ -184,9 +184,9 @@ int main(int argc, wchar_t* argv[])
 			is_running = wcmd != L"exit" && wcmd != L"q";
 			if(wcmd.substr(0, 2) == L"12")
 			{
-				wcmd = L"LOADBG 1-1 A LOOP AUTOPLAY\r\n";
+				wcmd = L"LOADBG 1-1 A LOOP \r\nPLAY 1-1\r\n";
 				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
-				wcmd = L"LOADBG 1-2 DV LOOP AUTOPLAY\r\n";
+				wcmd = L"LOADBG 1-2 DV LOOP AUTOPLAY\r\nnPLAY 1-1\r\n";
 				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
 				wcmd = L"MIXER 1-1 VIDEO FIX_RECT 0.0 0.0 0.5 0.5\r\n";
 				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
@@ -198,15 +198,15 @@ int main(int argc, wchar_t* argv[])
 			if(wcmd.substr(0, 2) == L"11")
 				wcmd = L"MIXER 1-1 VIDEO FIX_RECT 0.4 0.4 0.5 0.5";
 			else if(wcmd.substr(0, 1) == L"1")
-				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP AUTOPLAY";
+				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
 			else if(wcmd.substr(0, 1) == L"2")
-				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" PUSH 100 LOOP AUTOPLAY";
+				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" PUSH 100 LOOP \r\nPLAY 1-1";
 			else if(wcmd.substr(0, 1) == L"3")
-				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" MIX 100 LOOP AUTOPLAY";
+				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" MIX 100 LOOP \r\nPLAY 1-1";
 			else if(wcmd.substr(0, 1) == L"4")
-				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" WIPE 100 LOOP AUTOPLAY";
+				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" WIPE 100 LOOP \r\nPLAY 1-1";
 			else if(wcmd.substr(0, 1) == L"5")
-				wcmd = L"LOADBG 1-2 " + wcmd.substr(1, wcmd.length()-1) + L" LOOP AUTOPLAY";
+				wcmd = L"LOADBG 1-2 " + wcmd.substr(1, wcmd.length()-1) + L" LOOP \r\nPLAY 1-2";
 			else if(wcmd.substr(0, 1) == L"6")
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
 			else if(wcmd.substr(0, 1) == L"7")

@@ -14,6 +14,7 @@
 
 #include <tbb/parallel_for.h>
 #include <tbb/mutex.h>
+#include <tbb/combinable.h>
 
 #include <array>
 #include <memory>
@@ -62,20 +63,24 @@ public:
 		executor_.begin_invoke([=]{tick();});
 	}
 			
-	std::vector<safe_ptr<basic_frame>> draw()
+	std::map<int, safe_ptr<basic_frame>> draw()
 	{	
-		std::vector<safe_ptr<basic_frame>> frames(layers_.size(), basic_frame::empty());
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, frames.size(), 1), [&](const tbb::blocked_range<size_t>& r)
+		tbb::combinable<std::map<int, safe_ptr<basic_frame>>> frames;
+
+		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](decltype(*layers_.begin())& pair)
 		{
-			auto it = layers_.begin();
-			std::advance(it, r.begin());
-			for(size_t i = r.begin(); i != r.end(); ++i, ++it)
-			{
-				frames[i] = it->second.receive();
-				frames[i]->set_layer_index(it->first);
-			}
-		});		
-		return frames;
+			auto frame = pair.second.receive();
+			if(frame != basic_frame::empty() && frame != basic_frame::eof())
+				frames.local()[pair.first] = frame;		
+		});
+
+		std::map<int, safe_ptr<basic_frame>> result;
+		frames.combine_each([&](const std::map<int, safe_ptr<basic_frame>>& map)
+		{
+			result.insert(map.begin(), map.end());
+		});
+
+		return result;
 	}
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview)
@@ -127,7 +132,7 @@ public:
 
 			auto func = [&]
 			{
-				layers_[index].swap(other.impl_->layers_.at(other_index));		
+				layers_[index].swap(other.impl_->layers_[other_index]);		
 
 				CASPAR_LOG(info) << print() << L" Swapped layer " << index << L" with " << other.impl_->print() << L" layer " << other_index << L".";	
 			};
@@ -146,7 +151,7 @@ public:
 
 		auto func = [&]
 		{
-			auto sel_first = [](const decltype(*layers_.begin())& pair){return pair.first;};
+			auto sel_first = [](const std::pair<int, layer>& pair){return pair.first;};
 
 			std::set<int> indices;
 			std::transform(layers_.begin(), layers_.end(), std::inserter(indices, indices.begin()), sel_first);
@@ -162,12 +167,11 @@ public:
 		executor_.invoke([&]{other.impl_->executor_.invoke(func);});
 	}
 	
-	boost::unique_future<safe_ptr<frame_producer>> foreground(int index) const
+	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
 	{
-		return executor_.begin_invoke([=]() mutable -> safe_ptr<frame_producer>
+		return executor_.begin_invoke([=]
 		{			
-			auto it = layers_.find(index);
-			return it != layers_.end() ? it->second.foreground() : frame_producer::empty();
+			return layers_[index].foreground();
 		});
 	}
 
@@ -189,5 +193,5 @@ void frame_producer_device::clear(int index){impl_->clear(index);}
 void frame_producer_device::clear(){impl_->clear();}
 void frame_producer_device::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
 void frame_producer_device::swap_layer(int index, size_t other_index, frame_producer_device& other){impl_->swap_layer(index, other_index, other);}
-boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) const{	return impl_->foreground(index);}
+boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) {	return impl_->foreground(index);}
 }}

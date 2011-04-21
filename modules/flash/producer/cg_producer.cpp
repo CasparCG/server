@@ -90,6 +90,7 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::channel>& cha
 		safe_ptr<core::frame_factory> factory = channel->mixer();
 		auto producer = make_safe<cg_producer>(factory);		
 		channel->producer()->load(render_layer, producer, true); 
+		channel->producer()->play(render_layer);
 		return producer;
 	}
 }
