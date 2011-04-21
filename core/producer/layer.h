@@ -15,13 +15,13 @@ class basic_frame;
 class layer : boost::noncopyable
 {
 public:
-	explicit layer(int index = std::numeric_limits<int>::min()); // nothrow
+	layer(); // nothrow
 	layer(layer&& other); // nothrow
 	layer& operator=(layer&& other); // nothrow
 
 	void swap(layer& other); // nothrow 
 		
-	void load(const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview); // nothrow
+	void load(const safe_ptr<frame_producer>& producer, bool preview); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
@@ -30,8 +30,6 @@ public:
 	safe_ptr<frame_producer> background() const; // nothrow
 
 	safe_ptr<basic_frame> receive(); // nothrow
-
-	std::wstring print() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

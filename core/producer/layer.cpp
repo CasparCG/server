@@ -10,15 +10,13 @@ namespace caspar { namespace core {
 	
 struct layer::implementation : boost::noncopyable
 {				
-	int							index_;	
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	safe_ptr<basic_frame>		last_frame_;
 	bool						is_paused_;
 public:
-	implementation(int index) 
-		: index_(index)
-		, foreground_(frame_producer::empty())
+	implementation() 
+		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, last_frame_(basic_frame::empty())
 		, is_paused_(false){}
@@ -30,25 +28,19 @@ public:
 
 	void resume()
 	{
-		if(is_paused_)
-			CASPAR_LOG(info) << foreground_->print() << L" Resumed.";
 		is_paused_ = false;
 	}
 
-	void load(const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview)
+	void load(const safe_ptr<frame_producer>& producer, bool preview)
 	{		
 		background_ = producer;
 
-		if(play_on_load)
-			play();		
-		else if(preview)
+		if(preview)
 		{
 			play();
 			receive();
 			pause();
 		}
-
-		CASPAR_LOG(info) << producer->print() << L" Loaded.";
 	}
 	
 	void play()
@@ -58,7 +50,6 @@ public:
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
 			background_ = frame_producer::empty();
-			CASPAR_LOG(info) << foreground_->print() << L" Active.";
 		}
 		resume();
 	}
@@ -79,14 +70,9 @@ public:
 
 		return last_frame_;
 	}
-		
-	std::wstring print() const
-	{
-		return L"layer[" + boost::lexical_cast<std::wstring>(index_) + L"]";
-	}
 };
 
-layer::layer(int index) : impl_(new implementation(index)){}
+layer::layer() : impl_(new implementation()){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
 layer& layer::operator=(layer&& other)
 {
@@ -95,17 +81,13 @@ layer& layer::operator=(layer&& other)
 }
 void layer::swap(layer& other)
 {	
-	impl_->foreground_.swap(other.impl_->foreground_);
-	impl_->background_.swap(other.impl_->background_);
-	impl_->last_frame_.swap(other.impl_->last_frame_);
-	std::swap(impl_->is_paused_	, other.impl_->is_paused_ );
+	impl_.swap(other.impl_);
 }
-void layer::load(const safe_ptr<frame_producer>& frame_producer, bool play_on_load, bool preview){return impl_->load(frame_producer, play_on_load, preview);}	
+void layer::load(const safe_ptr<frame_producer>& frame_producer, bool preview){return impl_->load(frame_producer, preview);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 safe_ptr<basic_frame> layer::receive() {return impl_->receive();}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
-std::wstring layer::print() const { return impl_->print();}
 }}
