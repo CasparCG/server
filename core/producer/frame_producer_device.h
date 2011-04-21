@@ -27,7 +27,7 @@ namespace caspar { namespace core {
 class frame_producer_device : boost::noncopyable
 {
 public:
-	typedef boost::signals2::signal<void(const std::vector<safe_ptr<basic_frame>>&)> output_t;
+	typedef boost::signals2::signal<void(const std::map<int, safe_ptr<basic_frame>>&)> output_t;
 	 
 	boost::signals2::connection connect(const output_t::slot_type& subscriber);
 
@@ -43,7 +43,7 @@ public:
 	void clear();	
 	void swap_layer(int index, size_t other_index);
 	void swap_layer(int index, size_t other_index, frame_producer_device& other);
-	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index) const;
+	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index);
 
 private:
 	struct implementation;

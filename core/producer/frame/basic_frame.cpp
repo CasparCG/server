@@ -17,16 +17,12 @@ struct basic_frame::implementation
 
 	image_transform image_transform_;	
 	audio_transform audio_transform_;
-
-	int index_;
-
+	
 public:
 	implementation(const std::vector<safe_ptr<basic_frame>>& frames) 
-		: frames_(frames)
-		, index_(std::numeric_limits<int>::min()) {}
+		: frames_(frames) {}
 	implementation(std::vector<safe_ptr<basic_frame>>&& frames) 
-		: frames_(std::move(frames))
-		, index_(std::numeric_limits<int>::min()) {}
+		: frames_(std::move(frames)){}
 	
 	void accept(const basic_frame& self, frame_visitor& visitor)
 	{
@@ -112,8 +108,5 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 	frames.push_back(my_frame2);
 	return make_safe<basic_frame>(frames);
 }
-
-void basic_frame::set_layer_index(int index) { impl_->index_ = index; }
-int basic_frame::get_layer_index() const { return impl_->index_; }
 	
 }}

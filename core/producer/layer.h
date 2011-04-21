@@ -12,12 +12,14 @@ namespace caspar { namespace core {
 class frame_producer;
 class basic_frame;
 
-class layer : boost::noncopyable
+class layer //: boost::noncopyable
 {
 public:
 	layer(); // nothrow
 	layer(layer&& other); // nothrow
 	layer& operator=(layer&& other); // nothrow
+	layer(const layer&);
+	layer& operator=(const layer&);
 
 	void swap(layer& other); // nothrow 
 		

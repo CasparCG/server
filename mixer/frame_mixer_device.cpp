@@ -103,11 +103,8 @@ public:
 		return output_.connect(subscriber);
 	}
 
-	boost::unique_future<safe_ptr<const host_buffer>> mix_image(std::vector<safe_ptr<core::basic_frame>> frames)
-	{
-		frames.erase(std::remove(frames.begin(), frames.end(), core::basic_frame::empty()), frames.end());
-		frames.erase(std::remove(frames.begin(), frames.end(), core::basic_frame::eof()), frames.end());
-		
+	boost::unique_future<safe_ptr<const host_buffer>> mix_image(std::map<int, safe_ptr<core::basic_frame>> frames)
+	{		
 		auto& root_image_transform = boost::fusion::at_key<core::image_transform>(root_transforms_);
 		auto& image_transforms = boost::fusion::at_key<core::image_transform>(transforms_);
 
@@ -116,11 +113,11 @@ public:
 		{
 			if(format_desc_.mode != core::video_mode::progressive)
 			{
-				auto frame1 = make_safe<core::basic_frame>(frame);
-				auto frame2 = make_safe<core::basic_frame>(frame);
+				auto frame1 = make_safe<core::basic_frame>(frame.second);
+				auto frame2 = make_safe<core::basic_frame>(frame.second);
 				
-				frame1->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame->get_layer_index()].fetch_and_tick(1);
-				frame2->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame->get_layer_index()].fetch_and_tick(1);
+				frame1->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame.first].fetch_and_tick(1);
+				frame2->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame.first].fetch_and_tick(1);
 
 				if(frame1->get_image_transform() != frame2->get_image_transform())
 					core::basic_frame::interlace(frame1, frame2, format_desc_.mode)->accept(image_mixer_);
@@ -129,8 +126,8 @@ public:
 			}
 			else
 			{
-				auto frame1 = make_safe<core::basic_frame>(frame);
-				frame1->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame->get_layer_index()].fetch_and_tick(1);
+				auto frame1 = make_safe<core::basic_frame>(frame.second);
+				frame1->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame.first].fetch_and_tick(1);
 				frame1->accept(image_mixer_);
 			}
 		}
@@ -138,7 +135,7 @@ public:
 		return std::move(image);
 	}
 
-	std::vector<short> mix_audio(const std::vector<safe_ptr<core::basic_frame>>& frames)
+	std::vector<short> mix_audio(const std::map<int, safe_ptr<core::basic_frame>>& frames)
 	{
 		auto& root_audio_transform = boost::fusion::at_key<core::audio_transform>(root_transforms_);
 		auto& audio_transforms = boost::fusion::at_key<core::audio_transform>(transforms_);
@@ -148,15 +145,15 @@ public:
 		{
 			int num = format_desc_.mode == core::video_mode::progressive ? 1 : 2;
 
-			auto frame1 = make_safe<core::basic_frame>(frame);
-			frame1->get_audio_transform() = root_audio_transform.fetch_and_tick(num)*audio_transforms[frame->get_layer_index()].fetch_and_tick(num);
+			auto frame1 = make_safe<core::basic_frame>(frame.second);
+			frame1->get_audio_transform() = root_audio_transform.fetch_and_tick(num)*audio_transforms[frame.first].fetch_and_tick(num);
 			frame1->accept(audio_mixer_);
 		}
 		audio_mixer_.end_pass();
 		return audio;
 	}
 		
-	void send(const std::vector<safe_ptr<core::basic_frame>>& frames)
+	void send(const std::map<int, safe_ptr<core::basic_frame>>& frames)
 	{			
 		executor_.begin_invoke([=]
 		{			
@@ -266,7 +263,7 @@ public:
 frame_mixer_device::frame_mixer_device(const core::video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 frame_mixer_device::frame_mixer_device(frame_mixer_device&& other) : impl_(std::move(other.impl_)){}
 boost::signals2::connection frame_mixer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
-void frame_mixer_device::send(const std::vector<safe_ptr<core::basic_frame>>& frames){impl_->send(frames);}
+void frame_mixer_device::send(const std::map<int, safe_ptr<core::basic_frame>>& frames){impl_->send(frames);}
 const core::video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->format_desc_; }
 safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
 safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
