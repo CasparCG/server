@@ -61,15 +61,7 @@ public:
 		output_(draw());
 		executor_.begin_invoke([=]{tick();});
 	}
-		
-	layer& get_layer(int index)
-	{
-		auto it = layers_.find(index);
-		if(it == layers_.end())
-			it = layers_.insert(std::make_pair(index, layer(index))).first;
-		return it->second;
-	}
-	
+			
 	std::vector<safe_ptr<basic_frame>> draw()
 	{	
 		std::vector<safe_ptr<basic_frame>> frames(layers_.size(), basic_frame::empty());
@@ -86,24 +78,24 @@ public:
 		return frames;
 	}
 
-	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview)
+	void load(int index, const safe_ptr<frame_producer>& producer, bool preview)
 	{
-		executor_.invoke([&]{get_layer(index).load(producer, play_on_load, preview);});
+		executor_.invoke([&]{layers_[index].load(producer, preview);});
 	}
 
 	void pause(int index)
 	{		
-		executor_.invoke([&]{get_layer(index).pause();});
+		executor_.invoke([&]{layers_[index].pause();});
 	}
 
 	void play(int index)
 	{		
-		executor_.invoke([&]{get_layer(index).play();});
+		executor_.invoke([&]{layers_[index].play();});
 	}
 
 	void stop(int index)
 	{		
-		executor_.invoke([&]{get_layer(index).stop();});
+		executor_.invoke([&]{layers_[index].stop();});
 	}
 
 	void clear(int index)
@@ -120,7 +112,7 @@ public:
 	{
 		executor_.invoke([&]
 		{
-			get_layer(index).swap(layers_[other_index]);
+			layers_[index].swap(layers_[other_index]);
 		});
 	}
 
@@ -135,7 +127,7 @@ public:
 
 			auto func = [&]
 			{
-				get_layer(index).swap(other.impl_->layers_.at(other_index));		
+				layers_[index].swap(other.impl_->layers_.at(other_index));		
 
 				CASPAR_LOG(info) << print() << L" Swapped layer " << index << L" with " << other.impl_->print() << L" layer " << other_index << L".";	
 			};
@@ -154,19 +146,15 @@ public:
 
 		auto func = [&]
 		{
-			std::set<int> my_indices;
-			BOOST_FOREACH(auto& pair, layers_)
-				my_indices.insert(pair.first);
+			auto sel_first = [](const decltype(*layers_.begin())& pair){return pair.first;};
 
-			std::set<int> other_indicies;
-			BOOST_FOREACH(auto& pair, other.impl_->layers_)
-				other_indicies.insert(pair.first);
-			
-			std::vector<int> indices;
-			std::set_union(my_indices.begin(), my_indices.end(), other_indicies.begin(), other_indicies.end(), std::back_inserter(indices));
-			
-			BOOST_FOREACH(auto index, indices)
-				get_layer(index).swap(other.impl_->get_layer(index));
+			std::set<int> indices;
+			std::transform(layers_.begin(), layers_.end(), std::inserter(indices, indices.begin()), sel_first);
+			std::transform(other.impl_->layers_.begin(), other.impl_->layers_.end(), std::inserter(indices, indices.begin()), sel_first);
+			std::for_each(indices.begin(), indices.end(), [&](int index)
+			{
+				layers_[index].swap(other.impl_->layers_[index]);
+			});					
 
 			CASPAR_LOG(info) << print() << L" Swapped layers with " << other.impl_->print() << L".";
 		};
@@ -193,7 +181,7 @@ frame_producer_device::frame_producer_device(const video_format_desc& format_des
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 boost::signals2::connection frame_producer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
-void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load, bool preview){impl_->load(index, producer, play_on_load, preview);}
+void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool preview){impl_->load(index, producer, preview);}
 void frame_producer_device::pause(int index){impl_->pause(index);}
 void frame_producer_device::play(int index){impl_->play(index);}
 void frame_producer_device::stop(int index){impl_->stop(index);}

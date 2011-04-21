@@ -35,7 +35,7 @@ public:
 	frame_producer_device(frame_producer_device&& other);
 	void swap(frame_producer_device& other);
 		
-	void load(int index, const safe_ptr<frame_producer>& producer, bool play_on_load = false, bool preview = false);
+	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false);
 	void pause(int index);
 	void play(int index);
 	void stop(int index);
