@@ -59,9 +59,6 @@ public:
 	}
 	
 	virtual void accept(frame_visitor& visitor);
-
-	void set_layer_index(int index);
-	int get_layer_index() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
