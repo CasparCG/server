@@ -26,7 +26,7 @@ struct channel::implementation : boost::noncopyable
 	const int index_;
 	video_format_desc format_desc_;
 	
-	safe_ptr<mixer::frame_mixer_device>	 mixer_;
+	safe_ptr<mixer::frame_mixer_device> mixer_;
 	safe_ptr<frame_consumer_device> consumer_;
 	safe_ptr<frame_producer_device> producer_;
 

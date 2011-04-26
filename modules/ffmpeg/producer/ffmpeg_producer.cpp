@@ -78,12 +78,15 @@ public:
 			
 			aligned_buffer audio_packet;
 			if(audio_chunk_channel_.size() < 3 && audio_decoder_)	
-				audio_packet = input_->get_audio_packet();		
+				audio_packet = input_->get_audio_packet();	
+
+			if(video_packet.empty() && audio_packet.empty()) // Skip frame if lagging.			 
+				break;
 
 			tbb::parallel_invoke(
 			[&]
-			{ // Video Decoding and Scaling
-				if(!video_packet.empty() && video_decoder_)
+			{
+				if(!video_packet.empty() && video_decoder_) // Video Decoding.
 				{
 					try
 					{
@@ -99,8 +102,8 @@ public:
 				}
 			}, 
 			[&] 
-			{ // Audio Decoding
-				if(!audio_packet.empty() && audio_decoder_)
+			{ 
+				if(!audio_packet.empty() && audio_decoder_) // Audio Decoding.
 				{
 					try
 					{
@@ -152,6 +155,8 @@ public:
 			result = get_frame(); // TODO: Support 50p		
 		else if(input_->is_eof())
 			result = core::basic_frame::eof();
+		else
+			graph_->add_tag("lag");
 		
 		return result;
 	}
