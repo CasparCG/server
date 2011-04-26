@@ -6,8 +6,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="caspar.config" />
+    <None Include="CasparCG.ico" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bootstrapper.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="shell.rc" />
   </ItemGroup>
 </Project>
