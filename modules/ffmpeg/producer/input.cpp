@@ -158,7 +158,7 @@ public:
 			else if(read_packet->stream_index == audio_s_index_) 	
 				audio_packet_buffer_.try_push(std::move(packet));		
 		}
-		else if(!loop_ || !seek_frame(0, AVSEEK_FLAG_BACKWARD)) // TODO: av_seek_frame does not work for all formats
+		else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
 			executor_.stop();
 		else
 			graph_->add_tag("seek");		
@@ -169,22 +169,6 @@ public:
 		boost::unique_lock<boost::mutex> lock(mutex_);
 		while(executor_.is_running() && audio_packet_buffer_.size() > PACKET_BUFFER_COUNT && video_packet_buffer_.size() > PACKET_BUFFER_COUNT)
 			cond_.wait(lock);		
-	}
-	
-	bool seek_frame(int64_t seek_target, int flags = 0)
-	{  
-		static const AVRational TIME_BASE_Q = {1, AV_TIME_BASE};
-		
-		int stream_index = std::max(video_s_index_, audio_s_index_);
-		seek_target *= AV_TIME_BASE;
-
-		if(stream_index >= 0)	  
-			seek_target = av_rescale_q(seek_target, TIME_BASE_Q, format_context_->streams[stream_index]->time_base);
-	  
-		bool result = av_seek_frame(format_context_.get(), stream_index, seek_target, flags) >= 0;
-		if(!result)
-			CASPAR_LOG(warning) << print() << " Failed to seek frame.";
-		return result;
 	}
 		
 	aligned_buffer get_video_packet()

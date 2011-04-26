@@ -31,7 +31,7 @@ namespace caspar { namespace core {
 class color_producer : public frame_producer
 {
 	safe_ptr<basic_frame> frame_;
-	std::wstring color_str_;
+	const std::wstring color_str_;
 
 public:
 	explicit color_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
