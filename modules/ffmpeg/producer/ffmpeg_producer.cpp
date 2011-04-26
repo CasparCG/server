@@ -153,7 +153,7 @@ public:
 		auto result = last_frame_;
 		if(!ouput_channel_.empty())		
 			result = get_frame(); // TODO: Support 50p		
-		else if(input_->is_eof())
+		else if(!input_->is_running())
 			result = core::basic_frame::eof();
 		else
 			graph_->add_tag("lag");

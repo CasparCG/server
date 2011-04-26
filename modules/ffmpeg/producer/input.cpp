@@ -159,7 +159,10 @@ public:
 				audio_packet_buffer_.try_push(std::move(packet));		
 		}
 		else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
+		{
 			executor_.stop();
+			CASPAR_LOG(info) << print() << " eof";
+		}	
 		else
 			graph_->add_tag("seek");		
 					
@@ -208,6 +211,7 @@ input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& file
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
 bool input::is_eof() const{return impl_->is_eof();}
+bool input::is_running() const {return impl_->executor_.is_running();}
 aligned_buffer input::get_video_packet(){return impl_->get_video_packet();}
 aligned_buffer input::get_audio_packet(){return impl_->get_audio_packet();}
 double input::fps() const { return impl_->fps(); }
