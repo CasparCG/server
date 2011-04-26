@@ -18,6 +18,8 @@
 *
 */
 
+#include "resource.h"
+
 #include <windows.h>
 #include <conio.h>
 
@@ -79,7 +81,7 @@ public:
 };
 
 void setup_console_window()
-{	
+{	 
 	auto hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
@@ -208,7 +210,7 @@ int main(int argc, wchar_t* argv[])
 			else if(wcmd.substr(0, 1) == L"5")
 				wcmd = L"LOADBG 1-2 " + wcmd.substr(1, wcmd.length()-1) + L" LOOP \r\nPLAY 1-2";
 			else if(wcmd.substr(0, 1) == L"6")
-				wcmd = L"CG 1-2 ADD 1 THING 1";
+				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
 			else if(wcmd.substr(0, 1) == L"7")
 				wcmd = L"LOAD 1-1 720p2500";
 			else if(wcmd.substr(0, 1) == L"8")
