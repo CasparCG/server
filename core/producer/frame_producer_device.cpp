@@ -39,11 +39,6 @@ public:
 		executor_.start();
 	}
 
-	~implementation()
-	{
-		CASPAR_LOG(info) << "Shutting down producer-device.";
-	}
-
 	boost::signals2::connection connect(const output_t::slot_type& subscriber)
 	{
 		return executor_.invoke([&]() -> boost::signals2::connection
@@ -115,10 +110,7 @@ public:
 	
 	void swap_layer(int index, size_t other_index)
 	{
-		executor_.invoke([&]
-		{
-			layers_[index].swap(layers_[other_index]);
-		});
+		executor_.invoke([&]{layers_[index].swap(layers_[other_index]);});
 	}
 
 	void swap_layer(int index, size_t other_index, frame_producer_device& other)
@@ -130,12 +122,7 @@ public:
 			if(format_desc_ != other.impl_->format_desc_)
 				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot swap between channels with different formats."));
 
-			auto func = [&]
-			{
-				layers_[index].swap(other.impl_->layers_[other_index]);		
-
-				CASPAR_LOG(info) << print() << L" Swapped layer " << index << L" with " << other.impl_->print() << L" layer " << other_index << L".";	
-			};
+			auto func = [&]{layers_[index].swap(other.impl_->layers_[other_index]);};
 		
 			executor_.invoke([&]{other.impl_->executor_.invoke(func);});
 		}
@@ -154,14 +141,14 @@ public:
 			auto sel_first = [](const std::pair<int, layer>& pair){return pair.first;};
 
 			std::set<int> indices;
-			std::transform(layers_.begin(), layers_.end(), std::inserter(indices, indices.begin()), sel_first);
-			std::transform(other.impl_->layers_.begin(), other.impl_->layers_.end(), std::inserter(indices, indices.begin()), sel_first);
+			auto inserter = std::inserter(indices, indices.begin());
+
+			std::transform(layers_.begin(), layers_.end(), inserter, sel_first);
+			std::transform(other.impl_->layers_.begin(), other.impl_->layers_.end(), inserter, sel_first);
 			std::for_each(indices.begin(), indices.end(), [&](int index)
 			{
 				layers_[index].swap(other.impl_->layers_[index]);
 			});					
-
-			CASPAR_LOG(info) << print() << L" Swapped layers with " << other.impl_->print() << L".";
 		};
 		
 		executor_.invoke([&]{other.impl_->executor_.invoke(func);});
@@ -169,15 +156,7 @@ public:
 	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
 	{
-		return executor_.begin_invoke([=]
-		{			
-			return layers_[index].foreground();
-		});
-	}
-
-	std::wstring print() const
-	{
-		return L"frame_producer_device";
+		return executor_.begin_invoke([=]{return layers_[index].foreground();});
 	}
 };
 
