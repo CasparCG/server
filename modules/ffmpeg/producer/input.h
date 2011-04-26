@@ -24,6 +24,7 @@ public:
 	aligned_buffer get_audio_packet();
 
 	bool is_eof() const;
+	bool is_running() const;
 	double fps() const;
 private:
 	struct implementation;
