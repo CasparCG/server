@@ -206,6 +206,18 @@ safe_ptr<T> dynamic_pointer_cast(const safe_ptr<U>& p)
 }
 
 template<typename T>
+safe_ptr<T> make_safe(const std::shared_ptr<T>& ptr)
+{
+	return safe_ptr<T>(ptr);
+}
+
+template<typename T>
+safe_ptr<T> make_safe(std::shared_ptr<T>&& ptr)
+{
+	return safe_ptr<T>(std::move(ptr));
+}
+
+template<typename T>
 safe_ptr<T> make_safe()
 {
 	return safe_ptr<T>();
