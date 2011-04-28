@@ -20,11 +20,7 @@
 
 #include "resource.h"
 
-#include <windows.h>
-#include <conio.h>
-
-#include <tbb/tbbmalloc_proxy.h>
-#include <tbb/task_scheduler_observer.h>
+#include "server.h"
 
 #ifdef _DEBUG
 	#define _CRTDBG_MAP_ALLOC
@@ -32,7 +28,15 @@
 	#include <crtdbg.h>
 #endif
 
-#include "bootstrapper.h"
+#define NOMINMAX
+
+#include <windows.h>
+#include <conio.h>
+
+// tbbmalloc_proxy: 
+// Replace the standard memory allocation routines in Microsoft* C/C++ RTL 
+// (malloc/free, global new/delete, etc.) with the TBB memory allocator. 
+#include <tbb/tbbmalloc_proxy.h>
 
 #include <modules/bluefish/bluefish.h>
 
@@ -45,19 +49,20 @@
 #include <common/exception/win32_exception.h>
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
+#include <common/os/windows/current_version.h>
+#include <common/os/windows/system_info.h>
 #include <common/utility/assert.h>
 
 #include <mixer/gpu/ogl_device.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 
+#include <tbb/task_scheduler_observer.h>
+#include <tbb/task_scheduler_init.h>
+
 #include <boost/foreach.hpp>
 
 #include <Glee.h>
-
-using namespace caspar;
-using namespace caspar::core;
-using namespace caspar::protocol;
 
 #include <atlbase.h>
 
@@ -65,28 +70,15 @@ using namespace caspar::protocol;
 CComModule _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
-class win32_handler_tbb_installer : public tbb::task_scheduler_observer
-{
-public:
-	win32_handler_tbb_installer()	{observe(true);}
-	void on_scheduler_entry(bool is_worker) 
-	{
-		//CASPAR_LOG(debug) << L"Started TBB Worker Thread.";
-		win32_exception::install_handler();
-	}
-	void on_scheduler_exit()
-	{
-		//CASPAR_LOG(debug) << L"Stopped TBB Worker Thread.";
-	}
-};
-
 void setup_console_window()
 {	 
 	auto hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
+	// Disable close button in console to avoid shutdown without cleanup.
 	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
 	DrawMenuBar(GetConsoleWindow());
 
+	// Configure console size and position.
 	auto coord = GetLargestConsoleWindowSize(hOut);
 	coord.X /= 2;
 
@@ -97,92 +89,108 @@ void setup_console_window()
 	DisplayArea.Bottom = coord.Y-1;
 	SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
 		
+	// Set console title.
 	std::wstringstream str;
-	str << "CasparCG Server " << env::version();
+	str << "CasparCG Server " << caspar::env::version();
 	SetConsoleTitle(str.str().c_str());
 }
 
-void print_version()
+void print_info()
 {
 	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
-	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
-	CASPAR_LOG(info) << L"Flash " << get_flash_version();
-	CASPAR_LOG(info) << L"Flash-Template-Host " << get_cg_version();
-	CASPAR_LOG(info) << L"FreeImage " << get_image_version();
+	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << caspar::env::version();
+	CASPAR_LOG(info) << L"on " << caspar::get_win_product_name() << L" " << caspar::get_win_sp_version();
+	CASPAR_LOG(info) << caspar::get_cpu_info();
+	CASPAR_LOG(info) << caspar::get_system_product_name();
+	CASPAR_LOG(info) << L"Flash " << caspar::get_flash_version();
+	CASPAR_LOG(info) << L"Flash-Template-Host " << caspar::get_cg_version();
+	CASPAR_LOG(info) << L"FreeImage " << caspar::get_image_version();
 	
 	std::wstring decklink_devices;
-	BOOST_FOREACH(auto& device, get_decklink_device_list())
+	BOOST_FOREACH(auto& device, caspar::get_decklink_device_list())
 		decklink_devices += L"\t" + device;
-	CASPAR_LOG(info) << L"Decklink " << get_decklink_version() << (decklink_devices.empty() ? L"" : L"\n\tDevices:\n" + decklink_devices);
+	CASPAR_LOG(info) << L"Decklink " << caspar::get_decklink_version() << (decklink_devices.empty() ? L"" : L"\n\tDevices:\n" + decklink_devices);
 	
 	std::wstring bluefish_devices;
-	BOOST_FOREACH(auto& device, get_bluefish_device_list())
+	BOOST_FOREACH(auto& device, caspar::get_bluefish_device_list())
 		bluefish_devices += L"\t" + device;
-	CASPAR_LOG(info) << L"Bluefish " << get_bluefish_version() << (bluefish_devices.empty() ? L"" : L"\n\tDevices:\n" + bluefish_devices);
+	CASPAR_LOG(info) << L"Bluefish " << caspar::get_bluefish_version() << (bluefish_devices.empty() ? L"" : L"\n\tDevices:\n" + bluefish_devices);
 
-	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << get_avcodec_version();
-	CASPAR_LOG(info) << L"FFMPEG-swscale "  << get_avformat_version();
-	CASPAR_LOG(info) << L"FFMPEG-avformat " << get_swscale_version();
-	CASPAR_LOG(info) << L"OpenGL " << mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VERSION));})
-					 << L" "	   << mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VENDOR));});
-
-	HKEY hkey; 
-	DWORD dwType, dwSize;
-	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS)
-	{
-		wchar_t p_name_str[1024];
-		wchar_t csd_ver_str[1024];
-
-		dwType = REG_SZ;
-		dwSize = sizeof(p_name_str);
-
-		if(RegQueryValueEx(hkey, TEXT("ProductName"), NULL, &dwType, (PBYTE)&p_name_str, &dwSize) == ERROR_SUCCESS &&
-		   RegQueryValueEx(hkey, TEXT("CSDVersion"), NULL, &dwType, (PBYTE)&csd_ver_str, &dwSize) == ERROR_SUCCESS)		
-		{
-			CASPAR_LOG(info) << p_name_str << L" " << csd_ver_str << L"." << L"\n";
-		}
-		else
-			CASPAR_LOG(warning) << "Could not read OS info." << L"\n";
-		 
-		RegCloseKey(hkey);
-	}
+	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::get_avcodec_version();
+	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::get_avformat_version();
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::get_swscale_version();
+	CASPAR_LOG(info) << L"OpenGL " << caspar::mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VERSION));})
+					 << L" "	   << caspar::mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VENDOR));});
+	CASPAR_LOG(info) << L"\n\n";
 }
  
 int main(int argc, wchar_t* argv[])
-{		
+{	
+	// Install unstructured exception handler.
+	caspar::win32_exception::install_handler();
+
+	// Create atleast two threads to avoid async issues with legacy code running on unicore systems.
+	tbb::task_scheduler_init init(std::max(tbb::task_scheduler_init::default_num_threads(), 2));
+
+	// Set debug mode.
 	#ifdef _DEBUG
 		_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
 		_CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );
 		_CrtSetReportMode( _CRT_WARN, _CRTDBG_MODE_DEBUG );
 		_CrtSetReportMode( _CRT_ASSERT, _CRTDBG_MODE_DEBUG );
-
-		if(env::properties().get("configuration.debugging.remote", false))
-			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 	#endif
 		
-	// Increase time precision
-	timeBeginPeriod(1);
-	win32_handler_tbb_installer win32_handler_tbb_installer;
-	win32_exception::install_handler();
+	// Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
+	struct inc_prec
+	{
+		inc_prec(){timeBeginPeriod(1);}
+		~inc_prec(){timeEndPeriod(1);}
+	} inc_prec;	
 
+	// Install unstructured exception handlers into all tbb threads.
+	struct tbb_thread_installer : public tbb::task_scheduler_observer
+	{
+		tbb_thread_installer(){observe(true);}
+		void on_scheduler_entry(bool is_worker)
+		{
+			caspar::win32_exception::install_handler(); 
+		}
+	} tbb_thread_installer;
+	
 	try 
 	{
-		env::initialize("caspar.config");
-		
-		setup_console_window();							 
-		log::add_file_sink(env::log_folder());
+		// Configure environment properties from configuration.
+		caspar::env::configure("caspar.config");
 
-		print_version();
+	#ifdef _DEBUG
+		if(env::properties().get("configuration.debugging.remote", false))
+			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
+	#endif	 
+
+		// Start logging to file.
+		caspar::log::add_file_sink(caspar::env::log_folder());
+		
+		// Setup console window.
+		setup_console_window();
+
+		// Print environment information.
+		print_info();
 				
-		bootstrapper caspar_device;
+		// Create server object which initializes channels, protocols and controllers.
+		caspar::server caspar_server;
 				
-		auto dummy = std::make_shared<IO::ConsoleClientInfo>();
-		amcp::AMCPProtocolStrategy amcp(caspar_device.get_channels());
+		// Create a amcp parser for console commands.
+		caspar::protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.get_channels());
+
+		// Create a dummy client which prints amcp responses to console.
+		auto dummy = std::make_shared<caspar::IO::ConsoleClientInfo>();
+
 		bool is_running = true;
 		while(is_running)
 		{
 			std::wstring wcmd;
 			std::getline(std::wcin, wcmd); // TODO: It's blocking...
+
 			is_running = wcmd != L"exit" && wcmd != L"q";
 			if(wcmd.substr(0, 2) == L"12")
 			{
@@ -226,13 +234,11 @@ int main(int argc, wchar_t* argv[])
 	{
 		CASPAR_LOG(fatal) << "UNHANDLED EXCEPTION in main thread.";
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		std::wcout << L"Press Any Key To Exit\n";
+		std::wcout << L"Press Any Key To Exit.\n";
 		_getwch();
 	}	
-
-	timeEndPeriod(1);
-
-	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server";
+	
+	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 	
 	return 0;
 }
