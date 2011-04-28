@@ -203,7 +203,8 @@
       <MapExports>false</MapExports>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"</Command>
+      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
+copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -257,7 +258,8 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"</Command>
+      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
+copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">
@@ -311,7 +313,8 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"</Command>
+      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
+copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
@@ -365,7 +368,8 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"</Command>
+      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
+copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
