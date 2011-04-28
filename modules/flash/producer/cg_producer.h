@@ -36,6 +36,11 @@ public:
 	explicit cg_producer(const safe_ptr<core::frame_factory>& frame_factory);
 	cg_producer(cg_producer&& other);
 	
+	// frame_producer
+	virtual safe_ptr<core::basic_frame> receive();
+	virtual std::wstring print() const;
+
+	//cg_producer
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));
 	void remove(int layer);
 	void play(int layer);
@@ -43,10 +48,6 @@ public:
 	void next(int layer);
 	void update(int layer, const std::wstring& data);
 	void invoke(int layer, const std::wstring& label);
-	
-	// frame_producer
-	virtual safe_ptr<core::basic_frame> receive();
-	virtual std::wstring print() const;
 
 private:
 	struct implementation;

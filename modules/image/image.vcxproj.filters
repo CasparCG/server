@@ -12,9 +12,6 @@
     <ClCompile Include="producer\image_producer.cpp">
       <Filter>producer</Filter>
     </ClCompile>
-    <ClCompile Include="producer\image_scroll_producer.cpp">
-      <Filter>producer</Filter>
-    </ClCompile>
     <ClCompile Include="image.cpp" />
     <ClCompile Include="util\image_loader.cpp">
       <Filter>util</Filter>
@@ -22,9 +19,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\image_producer.h">
-      <Filter>producer</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\image_scroll_producer.h">
       <Filter>producer</Filter>
     </ClInclude>
     <ClInclude Include="image.h" />

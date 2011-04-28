@@ -117,8 +117,22 @@ public:
 		{
 			format_desc_ = format_desc;
 			buffer_.clear();
-			BOOST_FOREACH(auto& consumer, consumers_)
-				consumer.second->initialize(format_desc_);
+			
+			auto it = consumers_.begin();
+			while(it != consumers_.end())
+			{
+				try
+				{
+					it->second->initialize(format_desc_);
+					++it;
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					consumers_.erase(it++);
+					CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
+				}
+			}
 		});
 	}
 };

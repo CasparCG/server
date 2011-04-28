@@ -31,7 +31,7 @@ namespace caspar { namespace core {
 
 struct transition_producer : public frame_producer
 {	
-	const video_format_desc		format_desc_;
+	const video_mode::type		mode_;
 	uint32_t					current_frame_;
 	
 	const transition_info		info_;
@@ -39,8 +39,8 @@ struct transition_producer : public frame_producer
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
 		
-	explicit transition_producer(const video_format_desc& format_desc, const safe_ptr<frame_producer>& dest, const transition_info& info) 
-		: format_desc_(format_desc)
+	explicit transition_producer(const video_mode::type& mode, const safe_ptr<frame_producer>& dest, const transition_info& info) 
+		: mode_(mode)
 		, current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
@@ -133,16 +133,16 @@ struct transition_producer : public frame_producer
 			d_frame2->get_image_transform().set_key_scale(delta2, 1.0);			
 		}
 		
-		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, format_desc_.mode);
-		auto d_frame = basic_frame::interlace(d_frame1, d_frame2, format_desc_.mode);
+		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);
+		auto d_frame = basic_frame::interlace(d_frame1, d_frame2, mode_);
 
 		return basic_frame(s_frame, d_frame);
 	}
 };
 
-safe_ptr<frame_producer> create_transition_producer(const video_format_desc& format_desc, const safe_ptr<frame_producer>& destination, const transition_info& info)
+safe_ptr<frame_producer> create_transition_producer(const video_mode::type& mode, const safe_ptr<frame_producer>& destination, const transition_info& info)
 {
-	return make_safe<transition_producer>(format_desc, destination, info);
+	return make_safe<transition_producer>(mode, destination, info);
 }
 
 }}

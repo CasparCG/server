@@ -39,7 +39,7 @@ namespace caspar {
 
 struct image_producer : public core::frame_producer
 {	
-	std::wstring filename_;
+	const std::wstring filename_;
 	safe_ptr<core::basic_frame> frame_;
 	
 	explicit image_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
@@ -53,9 +53,10 @@ struct image_producer : public core::frame_producer
 		frame_ = std::move(frame);
 	}
 	
-	virtual safe_ptr<core::basic_frame> receive(){return frame_;}
+	// frame_producer
 
-	
+	virtual safe_ptr<core::basic_frame> receive(){return frame_;}
+		
 	virtual std::wstring print() const
 	{
 		return L"image_producer[" + filename_ + L"]";

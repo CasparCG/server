@@ -26,8 +26,8 @@
 #pragma warning (disable : 4714) // marked as __forceinline not inlined
 #endif
 
-#include <boost/filesystem.hpp>
 #include <boost/exception/errinfo_file_name.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/thread/once.hpp>
 
 namespace caspar { 
