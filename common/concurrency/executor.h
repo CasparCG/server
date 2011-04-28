@@ -69,14 +69,14 @@ class executor : boost::noncopyable
 	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
 public:
 		
-	explicit executor(const std::wstring& name, bool auto_start = false) : name_(narrow(name))
+	explicit executor(const std::wstring& name, bool auto_start = false) : name_(narrow(name)) // noexcept
 	{
 		is_running_ = false;
 		if(auto_start)
 			start();
 	}
 	
-	virtual ~executor()
+	virtual ~executor() // noexcept
 	{
 		stop();
 		clear();
@@ -84,7 +84,7 @@ public:
 			thread_.join();
 	}
 
-	void set_capacity(size_t capacity)
+	void set_capacity(size_t capacity) // noexcept
 	{
 		execution_queue_.set_capacity(capacity);
 	}
@@ -103,7 +103,7 @@ public:
 		execution_queue_.try_push([]{});
 	}
 	
-	void clear()
+	void clear() // noexcept
 	{
 		std::function<void()> func;
 		auto size = execution_queue_.size();
@@ -136,6 +136,7 @@ public:
 			catch(boost::task_already_started&){}
 		}));
 				
+		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
 		struct task_adaptor_t
 		{
 			task_adaptor_t(const task_adaptor_t& other) : task(std::move(other.task)){}
@@ -157,6 +158,9 @@ public:
 	template<typename Func>
 	auto invoke(Func&& func) -> decltype(func())
 	{
+		if(!is_running_)
+			start();
+
 		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
 			return func();
 		
