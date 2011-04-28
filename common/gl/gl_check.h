@@ -107,7 +107,7 @@ inline void SMFL_GLCheckError(const std::string& expr, const std::string& File, 
 	}
 }
 
-//#ifdef _DEBUG
+#ifdef _DEBUG
 	
 #define CASPAR_GL_EXPR_STR(expr) #expr
 
@@ -117,8 +117,8 @@ inline void SMFL_GLCheckError(const std::string& expr, const std::string& File, 
 		(expr);  \
 		caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__);\
 	}while(0);
-//#else
-//#define GL(expr) expr
-//#endif
+#else
+#define GL(expr) expr
+#endif
 
 }}
