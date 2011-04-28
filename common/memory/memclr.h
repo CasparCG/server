@@ -27,7 +27,6 @@ static void* fast_memclr(void* dest, size_t count)
 {
 	assert(count % 128 == 0);
 	assert(dest != nullptr);
-	assert(source != nullptr);
 
 	__asm   
 	{              
