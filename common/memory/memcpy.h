@@ -74,6 +74,9 @@ static void* fast_memcpy(void* dest, const void* source, size_t count)
 
 static void* fast_memcpy(void* dest, const void* source, size_t num)
 {   
+	if(num < 2048)
+		return memcpy(dest, source, num);
+
 	tbb::affinity_partitioner ap;
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, num/128), [&](const tbb::blocked_range<size_t>& r)
 	{       
