@@ -4,7 +4,6 @@ CasparCG Video and Graphics Playout Server
 Thank you for your interest in CasparCG. The included software
 is provided as-is by Sveriges Televison AB.
 
-
 LICENSING
 ================================================
 CasparCG is distributed under the GNU General Public 

@@ -38,9 +38,19 @@ public:
 	const audio_transform operator*(const audio_transform &other) const;
 private:
 	double gain_;
-	bool audio_;
+	bool has_audio_;
 };
 
 audio_transform tween(double time, const audio_transform& source, const audio_transform& dest, double duration, const tweener_t& tweener);
+
+inline bool operator==(const audio_transform& lhs, const audio_transform& rhs)
+{
+	return memcmp(&lhs, &rhs, sizeof(audio_transform)) == 0;
+}
+
+inline bool operator!=(const audio_transform& lhs, const audio_transform& rhs)
+{
+	return !(lhs == rhs);
+}
 
 }}

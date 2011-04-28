@@ -23,6 +23,7 @@
 #include <core/video_format.h>
 
 #include <array>
+#include <type_traits>
 
 namespace caspar { namespace core {
 

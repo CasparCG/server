@@ -32,12 +32,18 @@ namespace caspar { namespace core {
 class read_frame
 {
 public:
-	virtual const boost::iterator_range<const unsigned char*> image_data() const {return boost::iterator_range<const unsigned char*>();}
-	virtual const boost::iterator_range<const short*> audio_data() const {return boost::iterator_range<const short*>();}
+	virtual const boost::iterator_range<const unsigned char*> image_data() const = 0;
+	virtual const boost::iterator_range<const short*> audio_data() const = 0;
 
 	static safe_ptr<const read_frame> empty()
 	{
-		return safe_ptr<const read_frame>();
+		struct empty : public read_frame
+		{			
+			virtual const boost::iterator_range<const unsigned char*> image_data() const {return boost::iterator_range<const unsigned char*>();}
+			virtual const boost::iterator_range<const short*> audio_data() const {return boost::iterator_range<const short*>();}
+		};
+		static safe_ptr<const empty> frame;
+		return frame;
 	}
 };
 

@@ -126,6 +126,8 @@ void print_info()
  
 int main(int argc, wchar_t* argv[])
 {	
+	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
+	
 	// Install unstructured exception handler.
 	caspar::win32_exception::install_handler();
 
