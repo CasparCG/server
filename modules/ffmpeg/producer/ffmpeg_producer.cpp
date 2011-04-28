@@ -161,7 +161,7 @@ public:
 					audio_chunk_channel_.pop_front();
 				}
 							
-				ouput_channel_.push(safe_ptr<core::write_frame>(frame));				
+				ouput_channel_.push(make_safe(frame));				
 			}				
 
 			if(ouput_channel_.empty() && video_packet.empty() && audio_packet.empty())			
