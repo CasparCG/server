@@ -25,12 +25,9 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include <tbb/spin_rw_mutex.h>
-
 namespace caspar { namespace core {
 	
-std::vector<const producer_factory_t> p_factories;
-tbb::spin_rw_mutex p_factories_mutex;
+std::vector<const producer_factory_t> g_factories;
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 {	
@@ -64,22 +61,9 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 	return frame;
 }
 
-std::wostream& operator<<(std::wostream& out, const frame_producer& producer)
-{
-	out << producer.print().c_str();
-	return out;
-}
-
-std::wostream& operator<<(std::wostream& out, const safe_ptr<const frame_producer>& producer)
-{
-	out << producer->print().c_str();
-	return out;
-}
-
 void register_producer_factory(const producer_factory_t& factory)
 {
-	tbb::spin_rw_mutex::scoped_lock(p_factories_mutex, true);
-	p_factories.push_back(factory);
+	g_factories.push_back(factory);
 }
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
@@ -87,9 +71,8 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 	
-	tbb::spin_rw_mutex::scoped_lock(p_factories_mutex, false);
 	auto producer = frame_producer::empty();
-	std::any_of(p_factories.begin(), p_factories.end(), [&](const producer_factory_t& factory) -> bool
+	std::any_of(g_factories.begin(), g_factories.end(), [&](const producer_factory_t& factory) -> bool
 		{
 			try
 			{

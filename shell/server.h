@@ -29,11 +29,7 @@
 #include <vector>
 
 namespace caspar {
-
-std::vector<safe_ptr<core::channel>> initialize_channels();
-	
-struct invalid_bootstrapper : virtual boost::exception, virtual std::exception {};
-
+		
 class server : boost::noncopyable
 {
 public:

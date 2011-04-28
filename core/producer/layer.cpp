@@ -48,8 +48,9 @@ public:
 	{		
 		background_ = producer;
 
-		if(preview)
+		if(preview) 
 		{
+			// Play the first frame and pause.
 			play();
 			receive();
 			pause();
@@ -95,8 +96,8 @@ layer& layer::operator=(layer&& other)
 layer::layer(const layer& other) : impl_(new implementation(*other.impl_)){}
 layer& layer::operator=(const layer& other)
 {
-	layer tmp(other);
-	tmp.swap(*this);
+	layer temp(other);
+	temp.swap(*this);
 	return *this;
 }
 void layer::swap(layer& other)

@@ -39,24 +39,26 @@ struct transition_producer : public frame_producer
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
 		
-	transition_producer(const video_format_desc& format_desc, const safe_ptr<frame_producer>& dest, const transition_info& info) 
+	explicit transition_producer(const video_format_desc& format_desc, const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: format_desc_(format_desc)
 		, current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty()){}
-					
-	safe_ptr<frame_producer> get_following_producer() const
+	
+	// frame_producer
+
+	virtual safe_ptr<frame_producer> get_following_producer() const
 	{
 		return dest_producer_;
 	}
 	
-	void set_leading_producer(const safe_ptr<frame_producer>& producer)
+	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer)
 	{
 		source_producer_ = producer;
 	}
 
-	safe_ptr<basic_frame> receive()
+	virtual safe_ptr<basic_frame> receive()
 	{
 		if(current_frame_++ >= info_.duration)
 			return basic_frame::eof();
@@ -72,6 +74,13 @@ struct transition_producer : public frame_producer
 
 		return compose(dest, source);
 	}
+
+	virtual std::wstring print() const
+	{
+		return L"transition";
+	}
+
+	// transition_producer
 						
 	safe_ptr<basic_frame> compose(const safe_ptr<basic_frame>& dest_frame, const safe_ptr<basic_frame>& src_frame) 
 	{	
@@ -128,11 +137,6 @@ struct transition_producer : public frame_producer
 		auto d_frame = basic_frame::interlace(d_frame1, d_frame2, format_desc_.mode);
 
 		return basic_frame(s_frame, d_frame);
-	}
-
-	std::wstring print() const
-	{
-		return L"transition";
 	}
 };
 

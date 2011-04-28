@@ -153,7 +153,7 @@ struct server::implementation : boost::noncopyable
 					async_servers_.push_back(asyncbootstrapper);
 				}
 				else
-					BOOST_THROW_EXCEPTION(invalid_bootstrapper() << arg_name_info(name) << msg_info("Invalid controller."));
+					BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info(name) << msg_info("Invalid controller."));
 			}
 			catch(...)
 			{
@@ -171,7 +171,7 @@ struct server::implementation : boost::noncopyable
 		else if(name == "CLOCK")
 			return make_safe<CLK::CLKProtocolStrategy>(channels_);
 		
-		BOOST_THROW_EXCEPTION(invalid_bootstrapper() << arg_name_info("name") << arg_value_info(name) << msg_info("Invalid protocol"));
+		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info("name") << arg_value_info(name) << msg_info("Invalid protocol"));
 	}
 };
 

@@ -23,8 +23,6 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include <vector>
-
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
