@@ -14,6 +14,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documentation", "documentation", "{32079541-68ED-4319-91FB-0FF041642679}"
 	ProjectSection(SolutionItems) = preProject
 		..\CasparCG 2.0 Preliminary Change Log.txt = ..\CasparCG 2.0 Preliminary Change Log.txt
+		COPYING.txt = COPYING.txt
+		README.txt = README.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "modules", "modules", "{C54DA43E-4878-45DB-B76D-35970553672C}"
