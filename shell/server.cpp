@@ -1,4 +1,4 @@
-#include "bootstrapper.h"
+#include "server.h"
 
 #include <common/env.h>
 #include <common/exception/exceptions.h>
@@ -38,7 +38,7 @@ namespace caspar {
 using namespace core;
 using namespace protocol;
 
-struct bootstrapper::implementation : boost::noncopyable
+struct server::implementation : boost::noncopyable
 {
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
 	std::vector<safe_ptr<channel>> channels_;
@@ -155,9 +155,9 @@ struct bootstrapper::implementation : boost::noncopyable
 	}
 };
 
-bootstrapper::bootstrapper() : impl_(new implementation()){}
+server::server() : impl_(new implementation()){}
 
-const std::vector<safe_ptr<channel>> bootstrapper::get_channels() const
+const std::vector<safe_ptr<channel>> server::get_channels() const
 {
 	return impl_->channels_;
 }

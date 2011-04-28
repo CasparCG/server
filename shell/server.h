@@ -9,13 +9,15 @@
 #include <vector>
 
 namespace caspar {
+
+std::vector<safe_ptr<core::channel>> initialize_channels();
 	
 struct invalid_bootstrapper : virtual boost::exception, virtual std::exception {};
 
-class bootstrapper : boost::noncopyable
+class server : boost::noncopyable
 {
 public:
-	bootstrapper();
+	server();
 
 	const std::vector<safe_ptr<core::channel>> get_channels() const;
 
