@@ -26,11 +26,14 @@ http://www.threadingbuildingblocks.org/
 CasparCG uses FreeImage under the GPLv2. Get more info about FreeImage at: 
 http://freeimage.sourceforge.net/
 
-CasparCG uses SFML.
+CasparCG uses SFML under the zlib/libpng License. Get more info about SFML at:
+http://www.sfml-dev.org/
 
-CasparCG uses Glee.
+CasparCG uses Glee under the modified BSD license. Get more info about Glee at:
+http://elf-stone.com/
 
-CasparCG uses boost.
+CasparCG uses boost under the Boost Software License, Version 1.0. Get more info about boost at:
+http://www.boost.org/
 
 AUTHORS
 ================================================
