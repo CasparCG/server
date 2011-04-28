@@ -32,6 +32,7 @@
 #include <common/gl/gl_check.h>
 #include <common/concurrency/executor.h>
 #include <common/memory/safe_ptr.h>
+#include <common/memory/memcpy.h>
 #include <common/diagnostics/graph.h>
 #include <common/utility/timer.h>
 
@@ -249,7 +250,7 @@ public:
 		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
 		if(ptr)
 		{
-			std::copy(frame->image_data().begin(), frame->image_data().end(), reinterpret_cast<char*>(ptr));
+			fast_memcpy(reinterpret_cast<char*>(ptr), frame->image_data().begin(), frame->image_data().size());
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 		}
 
