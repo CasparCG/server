@@ -56,6 +56,8 @@ public:
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		is_running_ = true;
 		input_.set_capacity(4);
+
+		// Fill input buffer with silence.
 		for(size_t n = 0; n < buffer_depth(); ++n)
 			input_.push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)); 
 

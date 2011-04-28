@@ -563,7 +563,7 @@ bool LoadbgCommand::DoExecute()
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
-		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc(), pFP, transitionInfo);
+		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc().mode, pFP, transitionInfo);
 		GetChannel()->producer()->load(GetLayerIndex(), pFP2); // TODO: LOOP
 	
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
