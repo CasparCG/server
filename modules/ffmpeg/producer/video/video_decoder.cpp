@@ -163,6 +163,7 @@ public:
 				auto decoded          = decoded_frame->data[n];
 				auto decoded_linesize = decoded_frame->linesize[n];
 				
+				// Copy line by line since ffmpeg sometimes pads each line.
 				tbb::parallel_for(0, static_cast<int>(desc_.planes[n].height), 1, [&](int y)
 				{
 					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
@@ -171,6 +172,7 @@ public:
 		}
 		else
 		{
+			// Uses sws_scale when we don't support the provided color-space.
 			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 			avcodec_get_frame_defaults(av_frame.get());			
 			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
@@ -178,6 +180,7 @@ public:
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame->data, av_frame->linesize);	
 		}	
 
+		// DVVIDEO is in lower field. Make it upper field if needed.
 		if(codec_context_->codec_id == CODEC_ID_DVVIDEO && frame_factory_->get_video_format_desc().mode == core::video_mode::upper)
 			write->get_image_transform().set_fill_translation(0.0f, 1.0/static_cast<double>(height_));
 
