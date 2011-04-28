@@ -29,21 +29,21 @@
 
 #include <core/video_format.h>
 
-#include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/basic_frame.h>
+#include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/write_frame.h>
 
 #include <common/env.h>
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
 #include <common/utility/timer.h>
-#include <common/diagnostics/graph.h>
 
 #include <boost/filesystem.hpp>
+#include <boost/thread.hpp>
 
 #include <functional>
-#include <boost/thread.hpp>
 
 namespace caspar {
 		
@@ -248,6 +248,8 @@ public:
 			renderer_ = nullptr;
 		});		
 	}
+
+	// frame_producer
 		
 	virtual safe_ptr<core::basic_frame> receive()
 	{		
@@ -306,6 +308,8 @@ public:
 					boost::lexical_cast<std::wstring>(fps_) + 
 					(interlaced(fps_, format_desc_) ? L"i" : L"p") + L"]";		
 	}	
+
+	// flash_producer
 
 	void init_renderer()
 	{

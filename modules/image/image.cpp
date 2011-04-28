@@ -27,8 +27,7 @@
 
 #include <FreeImage.h>
 
-namespace caspar
-{
+namespace caspar {
 
 void init_image()
 {

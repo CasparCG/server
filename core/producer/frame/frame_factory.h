@@ -33,9 +33,9 @@ struct video_format_desc;
 		
 struct frame_factory : boost::noncopyable
 {
-	virtual safe_ptr<write_frame> create_frame(void* tag, const pixel_format_desc& desc) = 0;
-	virtual safe_ptr<write_frame> create_frame(void* tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra) = 0;		
-	virtual safe_ptr<write_frame> create_frame(void* tag, pixel_format::type pix_fmt = pixel_format::bgra) = 0;
+	virtual safe_ptr<write_frame> create_frame(void* video_stream_tag, const pixel_format_desc& desc) = 0;
+	virtual safe_ptr<write_frame> create_frame(void* video_stream_tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra) = 0;		
+	virtual safe_ptr<write_frame> create_frame(void* video_stream_tag, pixel_format::type pix_fmt = pixel_format::bgra) = 0;
 	
 	virtual const video_format_desc& get_video_format_desc() const = 0; // nothrow
 };
