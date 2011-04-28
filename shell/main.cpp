@@ -38,7 +38,7 @@
 #include <atlbase.h>
 #include <conio.h>
 
-#include <mixer/gpu/ogl_device.h>
+#include <core/mixer/gpu/ogl_device.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 

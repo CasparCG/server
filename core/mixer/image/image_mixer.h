@@ -19,24 +19,37 @@
 */
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <core/video_format.h>
+#include <core/producer/frame/frame_visitor.h>
+#include <core/producer/frame/pixel_format.h>
 
-#include <core/mixer/frame_mixer_device.h>
+#include "../gpu/host_buffer.h"
 
-struct AVCodecContext;
+#include <boost/noncopyable.hpp>
+#include <boost/thread/future.hpp>
 
-namespace caspar {
+#include <memory>
+#include <vector>
+
+namespace caspar { namespace mixer {
 	
-typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> aligned_buffer;
-
-class video_decoder : boost::noncopyable
+class image_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	explicit video_decoder(AVCodecContext* codec_context, const safe_ptr<core::frame_factory>& frame_factory);
-	safe_ptr<core::write_frame> execute(void* tag, const aligned_buffer& video_packet);	
+	image_mixer(const core::video_format_desc& format_desc);
+	
+	virtual void begin(const core::basic_frame& frame);
+	virtual void visit(core::write_frame& frame);
+	virtual void end();
+
+	boost::unique_future<safe_ptr<const host_buffer>> begin_pass();
+	void end_pass();
+
+	std::vector<safe_ptr<host_buffer>> create_buffers(const core::pixel_format_desc& format);
+
 private:
 	struct implementation;
-	safe_ptr<implementation> impl_;
+	std::shared_ptr<implementation> impl_;
 };
 
-}
+}}

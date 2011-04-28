@@ -9,8 +9,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shell", "shell\shell.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "protocol", "protocol\protocol.vcxproj", "{2040B361-1FB6-488E-84A5-38A580DA90DE}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mixer", "mixer\mixer.vcxproj", "{477E12A4-1B28-4FF7-B46D-76606BDD1891}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documentation", "documentation", "{32079541-68ED-4319-91FB-0FF041642679}"
 	ProjectSection(SolutionItems) = preProject
 		..\CasparCG 2.0 Preliminary Change Log.txt = ..\CasparCG 2.0 Preliminary Change Log.txt
@@ -80,14 +78,6 @@ Global
 		{2040B361-1FB6-488E-84A5-38A580DA90DE}.Profile|Win32.Build.0 = Profile|Win32
 		{2040B361-1FB6-488E-84A5-38A580DA90DE}.Release|Win32.ActiveCfg = Release|Win32
 		{2040B361-1FB6-488E-84A5-38A580DA90DE}.Release|Win32.Build.0 = Release|Win32
-		{477E12A4-1B28-4FF7-B46D-76606BDD1891}.Debug|Win32.ActiveCfg = Debug|Win32
-		{477E12A4-1B28-4FF7-B46D-76606BDD1891}.Debug|Win32.Build.0 = Debug|Win32
-		{477E12A4-1B28-4FF7-B46D-76606BDD1891}.Develop|Win32.ActiveCfg = Develop|Win32
-		{477E12A4-1B28-4FF7-B46D-76606BDD1891}.Develop|Win32.Build.0 = Develop|Win32
-		{477E12A4-1B28-4FF7-B46D-76606BDD1891}.Profile|Win32.ActiveCfg = Profile|Win32
-		{477E12A4-1B28-4FF7-B46D-76606BDD1891}.Profile|Win32.Build.0 = Profile|Win32
-		{477E12A4-1B28-4FF7-B46D-76606BDD1891}.Release|Win32.ActiveCfg = Release|Win32
-		{477E12A4-1B28-4FF7-B46D-76606BDD1891}.Release|Win32.Build.0 = Release|Win32
 		{69313D25-9F54-4FC9-9872-628A4DD79464}.Debug|Win32.ActiveCfg = Debug|Win32
 		{69313D25-9F54-4FC9-9872-628A4DD79464}.Debug|Win32.Build.0 = Debug|Win32
 		{69313D25-9F54-4FC9-9872-628A4DD79464}.Develop|Win32.ActiveCfg = Develop|Win32
