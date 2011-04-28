@@ -22,9 +22,9 @@
 #include "video_decoder.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/memory/memcpy.h>
 
 #include <core/video_format.h>
-
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/write_frame.h>
 #include <core/producer/frame/image_transform.h>
@@ -165,7 +165,7 @@ public:
 				
 				tbb::parallel_for(0, static_cast<int>(desc_.planes[n].height), 1, [&](int y)
 				{
-					std::copy_n(decoded + y*decoded_linesize, plane.linesize, result + y*plane.linesize);
+					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 				});
 			});
 		}
