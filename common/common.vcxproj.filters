@@ -28,6 +28,12 @@
     <Filter Include="utility">
       <UniqueIdentifier>{11860e2d-8adf-4573-956b-785e59aef2b0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="os">
+      <UniqueIdentifier>{49ed2765-f23e-4a1b-9d6a-f80d510b92e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="os\windows">
+      <UniqueIdentifier>{1f3002ae-ebb8-4195-8cf3-1a5b87822f38}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="exception\win32_exception.cpp">
@@ -86,6 +92,18 @@
     </ClInclude>
     <ClInclude Include="utility\tweener.h">
       <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\memcpy.h">
+      <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\memclr.h">
+      <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="os\windows\current_version.h">
+      <Filter>os\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="os\windows\system_info.h">
+      <Filter>os\windows</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -35,6 +35,8 @@
 
 #include <common/env.h>
 #include <common/concurrency/executor.h>
+#include <common/memory/memcpy.h>
+#include <common/memory/memclr.h>
 #include <common/utility/timer.h>
 #include <common/diagnostics/graph.h>
 
@@ -185,11 +187,11 @@ private:
 
 		if(ax_->InvalidRect())
 		{			
-			std::fill_n(bmp_data_, format_desc_.size, 0);
+			fast_memclr(bmp_data_,  format_desc_.size);
 			ax_->DrawControl(static_cast<HDC>(hdc_.get()));
 		
 			auto frame = frame_factory_->create_frame(this);
-			std::copy_n(bmp_data_, format_desc_.size, frame->image_data().begin());
+			fast_memcpy(frame->image_data().begin(), bmp_data_, format_desc_.size);
 			head_ = frame;
 		}		
 		

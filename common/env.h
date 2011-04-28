@@ -2,19 +2,19 @@
 
 #include <boost/property_tree/ptree.hpp>
 
-namespace caspar{
+#include <string>
 
-struct env
-{
-	static void initialize(const std::string& filename);
-	static const std::wstring& media_folder();
-	static const std::wstring& log_folder();
-	static const std::wstring& template_folder();
-	static const std::wstring& template_host();
-	static const std::wstring& data_folder();
-	static const std::wstring& version();
+namespace caspar { namespace env {
 
-	static const boost::property_tree::ptree& properties();
-};
+void configure(const std::string& filename);
 
-};
+const std::wstring& media_folder();
+const std::wstring& log_folder();
+const std::wstring& template_folder();
+const std::wstring& template_host();
+const std::wstring& data_folder();
+const std::wstring& version();
+
+const boost::property_tree::ptree& properties();
+
+} }
