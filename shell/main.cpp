@@ -17,10 +17,14 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
-
 #include "resource.h"
 
 #include "server.h"
+
+// tbbmalloc_proxy: 
+// Replace the standard memory allocation routines in Microsoft* C/C++ RTL 
+// (malloc/free, global new/delete, etc.) with the TBB memory allocator. 
+#include <tbb/tbbmalloc_proxy.h>
 
 #ifdef _DEBUG
 	#define _CRTDBG_MAP_ALLOC
@@ -31,15 +35,14 @@
 #define NOMINMAX
 
 #include <windows.h>
+#include <atlbase.h>
 #include <conio.h>
 
-// tbbmalloc_proxy: 
-// Replace the standard memory allocation routines in Microsoft* C/C++ RTL 
-// (malloc/free, global new/delete, etc.) with the TBB memory allocator. 
-#include <tbb/tbbmalloc_proxy.h>
+#include <mixer/gpu/ogl_device.h>
+
+#include <protocol/amcp/AMCPProtocolStrategy.h>
 
 #include <modules/bluefish/bluefish.h>
-
 #include <modules/decklink/decklink.h>
 #include <modules/flash/flash.h>
 #include <modules/ffmpeg/ffmpeg.h>
@@ -53,18 +56,12 @@
 #include <common/os/windows/system_info.h>
 #include <common/utility/assert.h>
 
-#include <mixer/gpu/ogl_device.h>
-
-#include <protocol/amcp/AMCPProtocolStrategy.h>
+#include <Glee.h>
 
 #include <tbb/task_scheduler_observer.h>
 #include <tbb/task_scheduler_init.h>
 
 #include <boost/foreach.hpp>
-
-#include <Glee.h>
-
-#include <atlbase.h>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -162,7 +159,7 @@ int main(int argc, wchar_t* argv[])
 		caspar::env::configure("caspar.config");
 
 	#ifdef _DEBUG
-		if(env::properties().get("configuration.debugging.remote", false))
+		if(caspar::env::properties().get("configuration.debugging.remote", false))
 			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 	#endif	 
 
