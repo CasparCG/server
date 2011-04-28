@@ -41,14 +41,18 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color)) << msg_info("Invalid color code"));
 
 		auto frame = frame_factory->create_frame(this, 1, 1, pixel_format::bgra);
+		
+		// Read color from hex-string and write to frame pixel.
 		auto& value = *reinterpret_cast<unsigned long*>(frame->image_data().begin());
 		std::wstringstream str(color_str_.substr(1));
 		str >> std::hex >> value;
+
 		frame_ = std::move(frame);
 	}
+
+	// frame_producer
 			
-	virtual safe_ptr<basic_frame> receive() { return frame_; }
-	
+	virtual safe_ptr<basic_frame> receive() { return frame_; }	
 	virtual std::wstring print() const { return L"color[" + color_str_ + L"]"; }
 };
 

@@ -25,7 +25,7 @@ namespace caspar { namespace core {
 	
 audio_transform::audio_transform()
 	: gain_(1.0)
-	, audio_(true){}
+	, has_audio_(true){}
 
 void audio_transform::set_gain(double value)
 {
@@ -39,18 +39,18 @@ double audio_transform::get_gain() const
 
 void audio_transform::set_has_audio(bool value)
 {
-	audio_ = value;
+	has_audio_ = value;
 }
 
 bool audio_transform::get_has_audio() const
 {
-	return audio_;
+	return has_audio_;
 }
 
 audio_transform& audio_transform::operator*=(const audio_transform &other) 
 {
 	gain_ *= other.gain_;
-	audio_ &= other.audio_;
+	has_audio_ &= other.has_audio_;
 	return *this;
 }
 

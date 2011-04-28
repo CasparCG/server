@@ -25,7 +25,7 @@ namespace caspar {
 
 static void* fast_memclr(void* dest, size_t count)
 {
-	assert(count % (16*4) == 0);
+	assert(count % 128 == 0);
 	assert(dest != nullptr);
 	assert(source != nullptr);
 

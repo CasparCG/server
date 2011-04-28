@@ -27,8 +27,8 @@
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 
-#include <memory>
 #include <array>
+#include <memory>
 #include <vector>
 
 namespace caspar { namespace core {
@@ -65,15 +65,13 @@ public:
 		
 	static const safe_ptr<basic_frame>& eof()
 	{
-		struct eof_frame : public basic_frame{};
-		static safe_ptr<basic_frame> frame = make_safe<eof_frame>();
+		static safe_ptr<basic_frame> frame = make_safe<basic_frame>();
 		return frame;
 	}
 
 	static const safe_ptr<basic_frame>& empty()
 	{
-		struct empty_frame : public basic_frame{};
-		static safe_ptr<basic_frame> frame = make_safe<empty_frame>();
+		static safe_ptr<basic_frame> frame = make_safe<basic_frame>();
 		return frame;
 	}
 	

@@ -29,7 +29,7 @@ namespace internal {
 
 static void* fast_memcpy(void* dest, const void* source, size_t count)
 {
-	assert(count % (16*8) == 0);
+	assert(count % 128 == 0);
 	assert(dest != nullptr);
 	assert(source != nullptr);
 
@@ -74,11 +74,11 @@ static void* fast_memcpy(void* dest, const void* source, size_t count)
 
 static void* fast_memcpy(void* dest, const void* source, size_t num)
 {   
-	tbb::affinity_partitioner partitioner;
+	tbb::affinity_partitioner ap;
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, num/128), [&](const tbb::blocked_range<size_t>& r)
 	{       
 		internal::fast_memcpy(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128);   
-	}, partitioner);   
+	}, ap);   
 	return dest;
 }
 

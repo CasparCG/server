@@ -85,8 +85,8 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	unsigned long frames_scheduled_;
 	unsigned long audio_scheduled_;
 	
-	tbb::concurrent_bounded_queue<safe_ptr<const core::read_frame>> video_frame_buffer_;
-	tbb::concurrent_bounded_queue<safe_ptr<const core::read_frame>> audio_frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> video_frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> audio_frame_buffer_;
 
 public:
 	decklink_output(const core::video_format_desc& format_desc,size_t device_index, bool embed_audio, bool internalKey) 
@@ -183,9 +183,9 @@ public:
 		audio_frame_buffer_.set_capacity(buffer_size);
 		for(size_t n = 0; n < std::max<size_t>(2, buffer_size-2); ++n)
 		{
-			video_frame_buffer_.try_push(safe_ptr<const core::read_frame>());
+			video_frame_buffer_.try_push(core::read_frame::empty());
 			if(embed_audio_)
-				audio_frame_buffer_.try_push(safe_ptr<const core::read_frame>());
+				audio_frame_buffer_.try_push(core::read_frame::empty());
 		}
 		
 		if(FAILED(output_->StartScheduledPlayback(0, frame_time_scale_, 1.0))) 
@@ -219,9 +219,9 @@ public:
 		if(!is_running_)
 			return S_OK;
 
-		safe_ptr<const core::read_frame> frame;		
+		std::shared_ptr<const core::read_frame> frame;	
 		video_frame_buffer_.pop(frame);		
-		schedule_next_video(frame);
+		schedule_next_video(safe_ptr<const core::read_frame>(frame));
 
 		return S_OK;
 	}
@@ -236,9 +236,9 @@ public:
 		if(!is_running_)
 			return S_OK;
 
-		safe_ptr<const core::read_frame> frame;
+		std::shared_ptr<const core::read_frame> frame;
 		audio_frame_buffer_.pop(frame);
-		schedule_next_audio(frame);
+		schedule_next_audio(safe_ptr<const core::read_frame>(frame));
 
 		return S_OK;
 	}
