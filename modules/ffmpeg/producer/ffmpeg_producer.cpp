@@ -74,6 +74,7 @@ public:
 		graph_ = diagnostics::create_graph(boost::bind(&ffmpeg_producer::print, this));	
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));		
 
 		input_.reset(new input(safe_ptr<diagnostics::graph>(graph_), filename_, loop_));
 		video_decoder_.reset(input_->get_video_codec_context().get() ? new video_decoder(input_->get_video_codec_context().get(), frame_factory) : nullptr);
@@ -175,7 +176,7 @@ public:
 		else if(!input_->is_running())
 			result = core::basic_frame::eof();
 		else
-			graph_->add_tag("lag");
+			graph_->add_tag("underflow");
 		
 		return result;
 	}

@@ -28,6 +28,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
+#include <common/memory/memcpy.h>
 #include <common/utility/timer.h>
 
 #include <tbb/concurrent_queue.h>
@@ -268,7 +269,7 @@ public:
 		{
 			try
 			{
-				std::copy_n(frame->image_data().begin(), frame->image_data().size(), reserved_frames_.front()->image_data());
+				fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
 				
 				if(embed_audio_)
 				{		
