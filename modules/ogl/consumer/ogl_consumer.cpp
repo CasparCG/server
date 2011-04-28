@@ -300,7 +300,8 @@ void ogl_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->se
 size_t ogl_consumer::buffer_depth() const{return impl_->buffer_depth();}
 void ogl_consumer::initialize(const core::video_format_desc& format_desc)
 {
-	impl_.reset(new implementation(impl_->screen_index_, impl_->stretch_, impl_->windowed_));
+	if(impl_->executor_.is_running())
+		impl_.reset(new implementation(impl_->screen_index_, impl_->stretch_, impl_->windowed_));
 	impl_->initialize(format_desc);
 }
 std::wstring ogl_consumer::print() const {return impl_->print();}
