@@ -19,24 +19,22 @@
 */
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <memory>
 
-#include <core/mixer/frame_mixer_device.h>
+#include <core/producer/frame/pixel_format.h>
+#include <core/producer/frame/image_transform.h>
 
-struct AVCodecContext;
-
-namespace caspar {
+namespace caspar { namespace mixer {
 	
-typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> aligned_buffer;
-
-class video_decoder : boost::noncopyable
+class image_kernel
 {
 public:
-	explicit video_decoder(AVCodecContext* codec_context, const safe_ptr<core::frame_factory>& frame_factory);
-	safe_ptr<core::write_frame> execute(void* tag, const aligned_buffer& video_packet);	
+	image_kernel();
+	void apply(const core::pixel_format_desc& pix_desc, const core::image_transform& mode);
+
 private:
 	struct implementation;
-	safe_ptr<implementation> impl_;
+	std::shared_ptr<implementation> impl_;
 };
 
-}
+}}

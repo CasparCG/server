@@ -72,10 +72,10 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\;..\dependencies\boost_1_44_0\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\;..\dependencies\boost_1_44_0\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\;..\dependencies\boost_1_44_0\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\;..\dependencies\boost_1_44_0\;..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\;..\dependencies\boost_1_44_0\;..\dependencies\tbb30_20100406oss\include\;..\dependencies\SFML-1.6\include;..\dependencies\GLee5_4;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\;..\dependencies\boost_1_44_0\;..\dependencies\tbb30_20100406oss\include\;..\dependencies\SFML-1.6\include;..\dependencies\GLee5_4;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\;..\dependencies\boost_1_44_0\;..\dependencies\tbb30_20100406oss\include\;..\dependencies\SFML-1.6\include;..\dependencies\GLee5_4;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\;..\dependencies\boost_1_44_0\;..\dependencies\tbb30_20100406oss\include\;..\dependencies\SFML-1.6\include;..\dependencies\GLee5_4;$(IncludePath)</IncludePath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\dependencies\boost_1_44_0\stage\lib\;..\dependencies\ffmpeg 0.6\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\GLee5_4\;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
@@ -251,6 +251,15 @@
     <ClInclude Include="consumer\frame\read_frame.h" />
     <ClInclude Include="consumer\frame_consumer_device.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
+    <ClInclude Include="mixer\audio\audio_mixer.h" />
+    <ClInclude Include="mixer\frame_mixer_device.h" />
+    <ClInclude Include="mixer\gpu\device_buffer.h" />
+    <ClInclude Include="mixer\gpu\gpu_read_frame.h" />
+    <ClInclude Include="mixer\gpu\gpu_write_frame.h" />
+    <ClInclude Include="mixer\gpu\host_buffer.h" />
+    <ClInclude Include="mixer\gpu\ogl_device.h" />
+    <ClInclude Include="mixer\image\image_kernel.h" />
+    <ClInclude Include="mixer\image\image_mixer.h" />
     <ClInclude Include="producer\color\color_producer.h" />
     <ClInclude Include="producer\frame\audio_transform.h" />
     <ClInclude Include="producer\frame\basic_frame.h" />
@@ -284,6 +293,60 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\audio\audio_mixer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\frame_mixer_device.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\device_buffer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\gpu_read_frame.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\gpu_write_frame.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\host_buffer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\ogl_device.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\image\image_kernel.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="mixer\image\image_mixer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\color\color_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -350,9 +413,6 @@
   <ItemGroup>
     <ProjectReference Include="..\common\common.vcxproj">
       <Project>{02308602-7fe0-4253-b96e-22134919f56a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\mixer\mixer.vcxproj">
-      <Project>{477e12a4-1b28-4ff7-b46d-76606bdd1891}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
