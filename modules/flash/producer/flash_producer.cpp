@@ -223,7 +223,7 @@ public:
 		, tail_(core::basic_frame::empty())		
 		, frame_factory_(frame_factory)
 		, format_desc_(frame_factory->get_video_format_desc())
-		, executor_(L"flash_producer", true)
+		, executor_(L"flash_producer")
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	

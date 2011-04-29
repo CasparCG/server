@@ -69,11 +69,9 @@ class executor : boost::noncopyable
 	tbb::concurrent_bounded_queue<std::function<void()>> execution_queue_;
 public:
 		
-	explicit executor(const std::wstring& name, bool auto_start = false) : name_(narrow(name)) // noexcept
+	explicit executor(const std::wstring& name) : name_(narrow(name)) // noexcept
 	{
 		is_running_ = false;
-		if(auto_start)
-			start();
 	}
 	
 	virtual ~executor() // noexcept
@@ -87,14 +85,6 @@ public:
 	void set_capacity(size_t capacity) // noexcept
 	{
 		execution_queue_.set_capacity(capacity);
-	}
-
-	void start() // noexcept
-	{
-		if(is_running_.fetch_and_store(true))
-			return;
-		clear();
-		thread_ = boost::thread([this]{run();});
 	}
 			
 	void stop() // noexcept
@@ -121,6 +111,9 @@ public:
 	template<typename Func>
 	auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
 	{	
+		if(!is_running_)
+			start();
+
 		typedef boost::packaged_task<decltype(func())> task_type;
 				
 		auto task = task_type(std::forward<Func>(func));
@@ -158,9 +151,6 @@ public:
 	template<typename Func>
 	auto invoke(Func&& func) -> decltype(func())
 	{
-		if(!is_running_)
-			start();
-
 		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
 			return func();
 		
@@ -173,6 +163,14 @@ public:
 	bool is_running() const { return is_running_;				}	
 		
 private:
+
+	void start() // noexcept
+	{
+		if(is_running_.fetch_and_store(true))
+			return;
+		clear();
+		thread_ = boost::thread([this]{run();});
+	}
 	
 	void execute() // noexcept
 	{

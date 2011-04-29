@@ -116,7 +116,6 @@ public:
 	void initialize(const core::video_format_desc& format_desc)
 	{
 		format_desc_ = format_desc;
-		executor_.start();
 		active_ = executor_.begin_invoke([]{});
 
 		fmt_ = av_guess_format(nullptr, filename_.c_str(), nullptr);

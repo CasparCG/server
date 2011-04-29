@@ -75,7 +75,6 @@ public:
 private:
 	context() : executor_(L"diagnostics")
 	{
-		executor_.start();
 		executor_.begin_invoke([this]
 		{
 			window_.Create(sf::VideoMode(600, 1000), "CasparCG Diagnostics");

@@ -54,10 +54,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 public:
 	implementation(const video_format_desc& format_desc)  
 		: format_desc_(format_desc)
-		, executor_(L"frame_producer_device")
-	{
-		executor_.start();
-	}
+		, executor_(L"frame_producer_device"){}
 
 	boost::signals2::connection connect(const output_t::slot_type& subscriber)
 	{
