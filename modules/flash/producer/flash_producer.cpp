@@ -22,6 +22,7 @@
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4146)
+#pragma warning (disable : 4244)
 #endif
 
 #include "flash_producer.h"
@@ -234,6 +235,7 @@ public:
 	{
 		executor_.clear();
 		CASPAR_ASSERT(executor_.is_running());
+		frame_buffer_.clear();
 		executor_.invoke([=]
 		{
 			renderer_ = nullptr;
@@ -243,10 +245,7 @@ public:
 	// frame_producer
 		
 	virtual safe_ptr<core::basic_frame> receive()
-	{		
-		if(!renderer_)
-			return core::basic_frame::empty();
-		
+	{				
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		if(!frame_buffer_.try_pop(tail_))
 			return tail_;
