@@ -13,47 +13,33 @@ http://casparcg.com/
 http://casparcg.com/forum/
 http://casparcg.com/wiki/
 
-CasparCG uses libraries from the FFmpeg project under the 
-GPLv2 Licence. FFmpeg is a trademark of Fabrice Bellard, originator 
-of the FFmpeg project. Get more info about FFmpeg at: 
-http://ffmpeg.org/
+CasparCG uses FFmpeg(http://ffmpeg.org/) under the GPLv2 Licence. 
+FFmpeg is a trademark of Fabrice Bellard, originator of the FFmpeg project.
 
-CasparCG uses the Threading Building Blocks library under
-the GPLv2 Licence. Get more info on Threading Building Blocks at: 
-http://www.threadingbuildingblocks.org/
+CasparCG uses the Threading Building Blocks(http://www.threadingbuildingblocks.org/) library under the GPLv2 Licence.
 
-CasparCG uses FreeImage under the GPLv2. Get more info about FreeImage at: 
-http://freeimage.sourceforge.net/
+CasparCG uses FreeImage(http://freeimage.sourceforge.net/) under the GPLv2.
 
-CasparCG uses SFML under the zlib/libpng License. Get more info about SFML at:
-http://www.sfml-dev.org/
+CasparCG uses SFML(http://www.sfml-dev.org/) under the zlib/libpng License.
 
-CasparCG uses Glee under the modified BSD license. Get more info about Glee at:
-http://elf-stone.com/
+CasparCG uses Glee(http://elf-stone.com/) under the modified BSD license.
 
-CasparCG uses boost under the Boost Software License, Version 1.0. Get more info about boost at:
-http://www.boost.org/
+CasparCG uses boost(http://www.boost.org/) under the Boost Software License, Version 1.0.
 
-AUTHORS
+AUTHORS - People who have written the CasparCG Server Software (sorted alphabetically by last name).
 ================================================
-
-These are the names of the people who have written the CasparCG Server Software.
-The names are sorted alphabetically by last name.
 
 	Niklas Andersson (1.0-1.8)
 	Robert Nagy		 (1.7-2.0+)
 	Peter Karlsson	 (2.0+)
 
-CREDITS
+CREDITS - People who have contributed to the CasparCG Project (sorted alphabetically by last name).
 ================================================
 
-These are the names of the people who have contributed to the
-CasparCG Project. The names are sorted alphabetically by last name.
-
-  Niklas Andersson		
-  Jonas Gustafsson		
-  Jonas Hummelstrand	
-  Andreas Jeansson		
-  Peter Karlsson		
-  Robert Nagy			
-  Olle Soprani
+	Niklas	Andersson		
+	Jonas Gustafsson		
+	Jonas Hummelstrand	
+	Andreas Jeansson		
+	Peter Karlsson		
+	Robert Nagy			
+	Olle Soprani

@@ -223,7 +223,7 @@ public:
 		, tail_(core::basic_frame::empty())		
 		, frame_factory_(frame_factory)
 		, format_desc_(frame_factory->get_video_format_desc())
-		, executor_(L"flash_producer")
+		, executor_(L"flash_producer", true)
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
@@ -232,7 +232,6 @@ public:
 		graph_ = diagnostics::create_graph([this]{return print();});
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
-		executor_.start();
 		executor_.begin_invoke([=]
 		{
 			init_renderer();
