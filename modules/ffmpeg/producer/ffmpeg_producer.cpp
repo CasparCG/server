@@ -37,6 +37,8 @@
 #include <common/utility/timer.h>
 #include <common/utility/assert.h>
 
+#include <boost/timer.hpp>
+
 #include <tbb/parallel_invoke.h>
 
 #include <deque>
@@ -50,7 +52,7 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool							loop_;
 	
 	std::shared_ptr<diagnostics::graph>	graph_;
-	timer								perf_timer_;
+	boost::timer								perf_timer_;
 		
 	std::unique_ptr<audio_decoder>		audio_decoder_;
 	std::unique_ptr<video_decoder>		video_decoder_;
@@ -88,7 +90,7 @@ public:
 			
 	virtual safe_ptr<core::basic_frame> receive()
 	{
-		perf_timer_.reset();
+		perf_timer_.restart();
 
 		while(ouput_channel_.size() < 2 && !input_->is_eof())
 		{	

@@ -144,7 +144,6 @@ public:
 		if(screen_index != 0)
 			CASPAR_LOG(warning) << print() << " only supports screen_index=0 for non-Win32";
 #endif		
-		executor_.start();
 		executor_.invoke([=]
 		{
 			window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), windowed_ ? sf::Style::Resize : sf::Style::Fullscreen);

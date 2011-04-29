@@ -37,6 +37,7 @@
 #include <tbb/atomic.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/timer.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 4996)
@@ -65,7 +66,7 @@ class decklink_input : public IDeckLinkInputCallback
 	const size_t device_index_;
 
 	std::shared_ptr<diagnostics::graph> graph_;
-	timer perf_timer_;
+	boost::timer perf_timer_;
 
 	CComPtr<IDeckLink>			decklink_;
 	CComQIPtr<IDeckLinkInput>	input_;
@@ -159,7 +160,7 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
 	{	
 		graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
-		perf_timer_.reset();
+		perf_timer_.restart();
 
 		if(!video)
 			return S_OK;		
@@ -255,7 +256,7 @@ public:
 	explicit decklink_producer(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index)
 		: format_desc_(format_desc) 
 		, device_index_(device_index)
-		, executor_(L"decklink_producer", true)
+		, executor_(L"decklink_producer")
 	{
 		executor_.invoke([=]
 		{
