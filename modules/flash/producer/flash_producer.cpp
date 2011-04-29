@@ -232,6 +232,7 @@ public:
 		graph_ = diagnostics::create_graph([this]{return print();});
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
+		executor_.start();
 		executor_.begin_invoke([=]
 		{
 			init_renderer();
