@@ -47,6 +47,7 @@ const video_format_desc format_descs[video_format::count] =
 	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		25,			TEXT("1080p2500"),	video_format::x1080p2500),
 	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		30/1.001,	TEXT("1080p2997"),	video_format::x1080p2997),
 	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		30,			TEXT("1080p3000"),	video_format::x1080p3000),
+	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		50,			TEXT("1080p5000"),	video_format::x1080p5000),
 	DEFINE_VIDEOFORMATDESC(0,		0, video_mode::invalid,			-1,			TEXT("invalid"),	video_format::invalid	)
 };
 
