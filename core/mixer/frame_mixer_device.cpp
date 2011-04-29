@@ -130,6 +130,7 @@ public:
 		auto image = image_mixer_.begin_pass();
 		BOOST_FOREACH(auto& frame, frames)
 		{
+			// Apply root transform and render.
 			if(format_desc_.mode != core::video_mode::progressive)
 			{
 				auto frame1 = make_safe<core::basic_frame>(frame.second);
