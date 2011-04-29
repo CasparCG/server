@@ -157,10 +157,10 @@ public:
 	{
 		return context_->begin_invoke([=]() -> safe_ptr<const host_buffer>
 		{
-			reading_->map(); // Open host buffer for reading.
-			render_targets_[0]->attach(0); // Render to the next target
-			GL(glClear(GL_COLOR_BUFFER_BIT)); // Clear the new target
-			return make_safe(reading_);
+			reading_->map();
+			render_targets_[0]->attach(0);
+			GL(glClear(GL_COLOR_BUFFER_BIT));
+			return safe_ptr<const host_buffer>(reading_);
 		});
 	}
 
@@ -168,9 +168,9 @@ public:
 	{
 		context_->begin_invoke([=]
 		{
-			reading_ = context_->create_host_buffer(format_desc_.size, host_buffer::read_only); // Create a new host buffer.
-			render_targets_[0]->write(*reading_); // Move data to host buffer.
-			std::rotate(render_targets_.begin(), render_targets_.begin() + 1, render_targets_.end()); // Set new render target.
+			reading_ = context_->create_host_buffer(format_desc_.size, host_buffer::read_only);
+			render_targets_[0]->write(*reading_);
+			std::rotate(render_targets_.begin(), render_targets_.begin() + 1, render_targets_.end());
 		});
 	}
 		
