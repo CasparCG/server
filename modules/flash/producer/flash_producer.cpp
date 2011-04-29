@@ -301,20 +301,20 @@ public:
 			auto frame = core::basic_frame::empty();
 			if(abs(renderer_->fps()/2.0 - format_desc_.fps) < 0.1) //flash 50, format 50i
 			{
-				auto frame1 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);
-				auto frame2 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);
+				auto frame1 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-3);
+				auto frame2 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-3);
 				frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));
 				frame = frame2;
 			}
 			else if(abs(renderer_->fps()- format_desc_.fps/2.0 ) < 0.1) //flash 25, format 50p
 			{
-				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);
+				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-3);
 				frame_buffer_.push(frame);
 				frame_buffer_.push(frame);
 			}
 			else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // flash 25, format 50i or flash 50, format 50p
 			{
-				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);
+				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-3);
 				frame_buffer_.push(frame);
 			}
 
