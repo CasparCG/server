@@ -153,24 +153,26 @@ public:
 			return core::basic_frame::empty();
 
 		double frame_time = 1.0/ax_->GetFPS();
-
-		if(has_underflow)
-			graph_->add_tag("underflow");
-		else
-			timer_.tick(frame_time);
-
+		
 		perf_timer_.restart();
 		ax_->Tick();
-
-		if(ax_->InvalidRect())
-		{			
-			fast_memclr(bmp_data_,  format_desc_.size);
-			ax_->DrawControl(static_cast<HDC>(hdc_.get()));
+		if(has_underflow)
+		{
+			graph_->add_tag("underflow");
+		}
+		else
+		{
+			timer_.tick(frame_time);		
+			if(ax_->InvalidRect())
+			{			
+				fast_memclr(bmp_data_,  format_desc_.size);
+				ax_->DrawControl(static_cast<HDC>(hdc_.get()));
 		
-			auto frame = frame_factory_->create_frame(this);
-			fast_memcpy(frame->image_data().begin(), bmp_data_, format_desc_.size);
-			head_ = frame;
-		}		
+				auto frame = frame_factory_->create_frame(this);
+				fast_memcpy(frame->image_data().begin(), bmp_data_, format_desc_.size);
+				head_ = frame;
+			}		
+		}
 		
 		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_time));
 		return head_;
