@@ -38,6 +38,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/circular_buffer.hpp>
+#include <boost/timer.hpp>
 
 #include <array>
 
@@ -66,7 +67,7 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	tbb::atomic<bool> is_running_;
 
 	std::shared_ptr<diagnostics::graph> graph_;
-	timer perf_timer_;
+	boost::timer perf_timer_;
 
 	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
 	boost::circular_buffer<std::vector<short>> audio_container_;
@@ -269,7 +270,7 @@ public:
 
 		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 		graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
-		perf_timer_.reset();
+		perf_timer_.restart();
 	}
 
 	void send(const safe_ptr<const core::read_frame>& frame)

@@ -33,6 +33,8 @@
 
 #include <tbb/concurrent_queue.h>
 
+#include <boost/timer.hpp>
+
 #include <BlueVelvet4.h>
 #include <BlueHancUtils.h>
 
@@ -86,7 +88,7 @@ struct bluefish_consumer::implementation : boost::noncopyable
 	const unsigned int	device_index_;
 
 	std::shared_ptr<diagnostics::graph> graph_;
-	timer perf_timer_;
+	boost::timer perf_timer_;
 
 	boost::unique_future<void> active_;
 			
@@ -306,7 +308,7 @@ public:
 
 				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 				graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
-				perf_timer_.reset();
+				perf_timer_.restart();
 			}
 			catch(...)
 			{
@@ -350,6 +352,7 @@ bluefish_consumer::bluefish_consumer(unsigned int device_index, bool embed_audio
 bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
 void bluefish_consumer::initialize(const core::video_format_desc& format_desc)
 {
+	// TODO: Ugly
 	impl_.reset(new implementation(impl_->device_index_, impl_->embed_audio_));
 	impl_->initialize(format_desc);
 }

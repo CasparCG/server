@@ -31,6 +31,7 @@
 #include <SFML/Audio.hpp>
 
 #include <boost/circular_buffer.hpp>
+#include <boost/timer.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -39,7 +40,7 @@ namespace caspar {
 struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 {
 	safe_ptr<diagnostics::graph> graph_;
-	timer perf_timer_;
+	boost::timer perf_timer_;
 
 	tbb::concurrent_bounded_queue<std::vector<short>> input_;
 	boost::circular_buffer<std::vector<short>> container_;
@@ -95,7 +96,7 @@ public:
 		data.NbSamples = container_.back().size();	
 		
 		graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));		
-		perf_timer_.reset();
+		perf_timer_.restart();
 
 		return is_running_;
 	}
