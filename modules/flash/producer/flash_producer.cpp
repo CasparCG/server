@@ -48,11 +48,6 @@
 
 namespace caspar {
 		
-bool interlaced(double fps, const core::video_format_desc& format_desc)
-{
-	return abs(fps/2.0 - format_desc.fps) < 0.1;
-}
-
 class flash_renderer
 {
 	struct co_init
@@ -156,29 +151,9 @@ public:
 		if(ax_->IsEmpty())
 			return core::basic_frame::empty();
 
-		auto frame = render_simple_frame(has_underflow);
-		if(interlaced(ax_->GetFPS(), format_desc_))
-			frame = core::basic_frame::interlace(frame, render_simple_frame(has_underflow), format_desc_.mode);
-		return frame;
-	}
-
-	double fps() const
-	{
-		return ax_->GetFPS();	
-	}
-	
-	std::wstring print()
-	{
-		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]";		
-	}
-	
-private:
-
-	safe_ptr<core::basic_frame> render_simple_frame(bool underflow)
-	{
 		double frame_time = 1.0/ax_->GetFPS();
 
-		if(underflow)
+		if(has_underflow)
 			graph_->add_tag("underflow");
 		else
 			timer_.tick(frame_time);
@@ -198,6 +173,16 @@ private:
 		
 		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_time));
 		return head_;
+	}
+
+	double fps() const
+	{
+		return ax_->GetFPS();	
+	}
+	
+	std::wstring print()
+	{
+		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]";		
 	}
 };
 
@@ -228,7 +213,7 @@ public:
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 		 
-		frame_buffer_.set_capacity(4);
+		frame_buffer_.set_capacity(5);
 		graph_ = diagnostics::create_graph([this]{return print();});
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
@@ -236,6 +221,11 @@ public:
 		{
 			init_renderer();
 		});
+				
+		executor_.begin_invoke([=]
+		{
+			render();
+		});		
 
 		fps_ = 0;
 	}
@@ -260,27 +250,7 @@ public:
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		if(!frame_buffer_.try_pop(tail_))
 			return tail_;
-
-		executor_.begin_invoke([=]
-		{
-			if(!renderer_)
-				return;
-
-			try
-			{
-				auto frame = core::basic_frame::empty();
-				do{frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);}
-				while(frame_buffer_.try_push(frame) && frame == core::basic_frame::empty());
-				graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
-				fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				renderer_ = nullptr;
-			}
-		});			
-
+		
 		return tail_;
 	}
 	
@@ -306,8 +276,7 @@ public:
 	virtual std::wstring print() const
 	{ 
 		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
-					boost::lexical_cast<std::wstring>(fps_) + 
-					(interlaced(fps_, format_desc_) ? L"i" : L"p") + L"]";		
+					boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
 
 	// flash_producer
@@ -316,6 +285,54 @@ public:
 	{
 		renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_));
 		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
+	}
+
+	void render()
+	{
+		if(!renderer_)
+		{
+			frame_buffer_.push(core::basic_frame::empty());
+			return;
+		}
+
+		try
+		{		
+			auto frame = core::basic_frame::empty();
+			if(abs(renderer_->fps()/2.0 - format_desc_.fps) < 0.1) //flash 50, format 50i
+			{
+				auto frame1 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);
+				auto frame2 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);
+				frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));
+				frame = frame2;
+			}
+			else if(abs(renderer_->fps()- format_desc_.fps/2.0 ) < 0.1) //flash 25, format 50p
+			{
+				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);
+				frame_buffer_.push(frame);
+				frame_buffer_.push(frame);
+			}
+			else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // flash 25, format 50i or flash 50, format 50p
+			{
+				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);
+				frame_buffer_.push(frame);
+			}
+				
+			// Fill buffer when there is opportunity.
+			while(frame == core::basic_frame::empty() && frame_buffer_.try_push(frame)){}
+						
+			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
+			fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));
+
+			executor_.begin_invoke([=]
+			{
+				render();
+			});			
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			renderer_ = nullptr;
+		}
 	}
 };
 

@@ -129,7 +129,7 @@ int main(int argc, wchar_t* argv[])
 	caspar::win32_exception::install_handler();
 
 	// Create atleast two threads to avoid async issues with legacy code running on unicore systems.
-	tbb::task_scheduler_init init(std::max(tbb::task_scheduler_init::default_num_threads(), 2));
+	//tbb::task_scheduler_init init(std::max(tbb::task_scheduler_init::default_num_threads(), 2));
 
 	// Set debug mode.
 	#ifdef _DEBUG
