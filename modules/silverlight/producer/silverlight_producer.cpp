@@ -142,6 +142,7 @@ public:
 
 	silverlight_producer(const safe_ptr<core::frame_factory>& frame_factory) : executor_(L"silverlight")
 	{
+		executor_.start();
 		executor_.invoke([=]
 		{
 			renderer_.reset(new silverlight_renderer(frame_factory));

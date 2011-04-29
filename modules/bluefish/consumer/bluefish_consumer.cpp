@@ -241,6 +241,7 @@ public:
 		for(size_t n = 0; n < reserved_frames_.size(); ++n)
 			reserved_frames_[n] = std::make_shared<blue_dma_buffer>(format_desc_.size, n);		
 				
+		executor_.start();
 		active_ = executor_.begin_invoke([]{});
 
 		CASPAR_LOG(info) << print() << TEXT(" Successfully initialized for ") << format_desc_ << TEXT(".");
