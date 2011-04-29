@@ -401,6 +401,7 @@ void ffmpeg_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_-
 size_t ffmpeg_consumer::buffer_depth() const{return impl_->buffer_depth();}
 void ffmpeg_consumer::initialize(const core::video_format_desc& format_desc)
 {
+	// TODO: Ugly
 	impl_.reset(new implementation(impl_->filename_));
 	impl_->initialize(format_desc);
 }

@@ -42,6 +42,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
+#include <boost/timer.hpp>
 
 #include <functional>
 
@@ -73,7 +74,7 @@ class flash_renderer
 	safe_ptr<core::basic_frame> head_;
 	
 	safe_ptr<diagnostics::graph> graph_;
-	timer perf_timer_;
+	boost::timer perf_timer_;
 
 	high_prec_timer timer_;
 	
@@ -182,7 +183,7 @@ private:
 		else
 			timer_.tick(frame_time);
 
-		perf_timer_.reset();
+		perf_timer_.restart();
 		ax_->Tick();
 
 		if(ax_->InvalidRect())
