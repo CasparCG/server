@@ -37,6 +37,7 @@
 #include <common/utility/timer.h>
 
 #include <boost/thread.hpp>
+#include <boost/timer.hpp>
 
 #include <algorithm>
 #include <array>
@@ -45,7 +46,7 @@ namespace caspar {
 
 struct ogl_consumer::implementation : boost::noncopyable
 {		
-	timer clock_;
+	boost::timer clock_;
 	boost::unique_future<void> active_;
 		
 	float width_;
@@ -65,7 +66,7 @@ struct ogl_consumer::implementation : boost::noncopyable
 	sf::Window window_;
 	
 	safe_ptr<diagnostics::graph> graph_;
-	timer perf_timer_;
+	boost::timer perf_timer_;
 
 	size_t square_width_;
 	size_t square_height_;
@@ -274,7 +275,7 @@ public:
 		active_.get();
 		active_ = executor_.begin_invoke([=]
 		{
-			perf_timer_.reset();
+			perf_timer_.restart();
 			sf::Event e;
 			while(window_.GetEvent(e))
 			{
@@ -301,6 +302,7 @@ void ogl_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->se
 size_t ogl_consumer::buffer_depth() const{return impl_->buffer_depth();}
 void ogl_consumer::initialize(const core::video_format_desc& format_desc)
 {
+	// TODO: Ugly
 	if(impl_->executor_.is_running())
 		impl_.reset(new implementation(impl_->screen_index_, impl_->stretch_, impl_->windowed_));
 	impl_->initialize(format_desc);

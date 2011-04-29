@@ -41,6 +41,7 @@
 
 #include <boost/fusion/container/map.hpp>
 #include <boost/fusion/include/at_key.hpp>
+#include <boost/timer.hpp>
 
 #include <unordered_map>
 
@@ -83,8 +84,8 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	const core::video_format_desc format_desc_;
 
 	safe_ptr<diagnostics::graph> diag_;
-	timer perf_timer_;
-	timer wait_perf_timer_;
+	boost::timer perf_timer_;
+	boost::timer wait_perf_timer_;
 
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
@@ -176,7 +177,7 @@ public:
 	{			
 		executor_.begin_invoke([=]
 		{			
-			perf_timer_.reset();
+			perf_timer_.restart();
 
 			auto image_future = mix_image(frames);
 			auto audio = mix_audio(frames);
@@ -187,7 +188,7 @@ public:
 			output_(make_safe<const gpu_read_frame>(std::move(image), std::move(audio)));
 
 			diag_->update_value("tick-time", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
-			wait_perf_timer_.reset();
+			wait_perf_timer_.restart();
 
 			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 		});
