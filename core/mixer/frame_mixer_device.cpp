@@ -114,7 +114,6 @@ public:
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
 		executor_.set_capacity(2);	
-		executor_.start();
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
 

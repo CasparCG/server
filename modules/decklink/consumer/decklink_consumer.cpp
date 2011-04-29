@@ -288,7 +288,7 @@ public:
 
 struct decklink_consumer::implementation
 {
-	std::unique_ptr<decklink_output> input_;
+	std::unique_ptr<decklink_output> output_;
 	size_t device_index_;
 	bool embed_audio_;
 	bool internal_key_;
@@ -300,16 +300,13 @@ public:
 		: device_index_(device_index)
 		, embed_audio_(embed_audio)
 		, internal_key_(internal_key)
-		, executor_(L"DECKLINK[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
-	{
-		executor_.start();
-	}
+		, executor_(L"DECKLINK[" + boost::lexical_cast<std::wstring>(device_index) + L"]"){}
 
 	~implementation()
 	{
 		executor_.invoke([&]
 		{
-			input_ = nullptr;
+			output_ = nullptr;
 		});
 	}
 
@@ -317,13 +314,13 @@ public:
 	{
 		executor_.invoke([&]
 		{
-			input_.reset(new decklink_output(format_desc, device_index_, embed_audio_, internal_key_));
+			output_.reset(new decklink_output(format_desc, device_index_, embed_audio_, internal_key_));
 		});
 	}
 	
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{
-		input_->send(frame);
+		output_->send(frame);
 	}
 
 	size_t buffer_depth() const
@@ -333,7 +330,7 @@ public:
 
 	std::wstring print() const
 	{
-		return input_->print();
+		return output_->print();
 	}
 };
 
