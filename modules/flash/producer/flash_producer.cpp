@@ -316,10 +316,7 @@ public:
 				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-2);
 				frame_buffer_.push(frame);
 			}
-				
-			// Fill buffer when there is opportunity.
-			while(frame == core::basic_frame::empty() && frame_buffer_.try_push(frame)){}
-						
+
 			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 			fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));
 
