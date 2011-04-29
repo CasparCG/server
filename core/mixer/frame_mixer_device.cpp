@@ -114,6 +114,7 @@ public:
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
 		executor_.set_capacity(2);	
+		executor_.start();
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
 
@@ -130,7 +131,6 @@ public:
 		auto image = image_mixer_.begin_pass();
 		BOOST_FOREACH(auto& frame, frames)
 		{
-			// Apply root transform and render.
 			if(format_desc_.mode != core::video_mode::progressive)
 			{
 				auto frame1 = make_safe<core::basic_frame>(frame.second);

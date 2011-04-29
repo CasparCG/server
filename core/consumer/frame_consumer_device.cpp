@@ -52,6 +52,7 @@ public:
 		, executor_(L"frame_consumer_device")
 	{		
 		executor_.set_capacity(2);
+		executor_.start();
 	}
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)

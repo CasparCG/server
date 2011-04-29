@@ -32,6 +32,7 @@ namespace caspar { namespace mixer {
 
 ogl_device::ogl_device() : executor_(L"ogl_device")
 {
+	executor_.start();
 	invoke([=]
 	{
 		context_.reset(new sf::Context());
