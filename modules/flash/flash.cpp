@@ -39,9 +39,9 @@ std::wstring get_cg_version()
 	return L"Unknown";
 }
 
-std::wstring g_version = L"Not found";
-void setup_version()
-{ 
+std::wstring get_flash_version()
+{		
+	std::wstring version = L"Not found";
 #ifdef WIN32
 	HKEY   hkey;
  
@@ -54,19 +54,12 @@ void setup_version()
 		dwSize = sizeof(ver_str);
 		RegQueryValueEx(hkey, TEXT("Version"), NULL, &dwType, (PBYTE)&ver_str, &dwSize);
  
-		g_version = ver_str;
+		version = ver_str;
 
 		RegCloseKey(hkey);
 	}
 #endif
-}
-
-std::wstring get_flash_version()
-{		
-	boost::once_flag flag = BOOST_ONCE_INIT;
-	boost::call_once(setup_version, flag);
-
-	return g_version;
+	return version;
 }
 
 }
