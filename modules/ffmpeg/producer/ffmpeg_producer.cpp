@@ -37,9 +37,9 @@
 #include <common/utility/timer.h>
 #include <common/utility/assert.h>
 
-#include <boost/timer.hpp>
-
 #include <tbb/parallel_invoke.h>
+
+#include <boost/timer.hpp>
 
 #include <deque>
 #include <functional>

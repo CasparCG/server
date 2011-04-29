@@ -124,6 +124,7 @@ public:
 				source_info(narrow(print())) << 
 				msg_info("No video or audio codec context found."));		
 			
+		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
 	}
