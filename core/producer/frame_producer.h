@@ -42,7 +42,7 @@ public:
 	virtual void param(const std::wstring&){}
 
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
-	virtual void set_leading_producer(const safe_ptr<frame_producer>& /*producer*/) {}  // nothrow
+	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
 		
 	static const safe_ptr<frame_producer>& empty() // nothrow
 	{

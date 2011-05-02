@@ -121,9 +121,17 @@ struct server::implementation : boost::noncopyable
 						channels_.back()->consumer()->add(index++, bluefish_consumer(xml_consumer.second.get("device", 0), 
 																					xml_consumer.second.get("embedded-audio", true)));					
 					else if(name == "decklink")
+					{
+						auto key_str = xml_consumer.second.get("key", "default");
+						auto key = decklink_consumer::default_key;
+						if(key_str == "internal")
+							key = decklink_consumer::internal_key;
+						else if(key_str == "external")
+							key = decklink_consumer::external_key;
 						channels_.back()->consumer()->add(index++, decklink_consumer(xml_consumer.second.get("device", 0), 
 																					xml_consumer.second.get("embedded-audio", true), 
-																					xml_consumer.second.get("internal-key", false)));
+																					key));
+					}
 					else if(name == "audio")
 						channels_.back()->consumer()->add(index++, oal_consumer());			
 				}
