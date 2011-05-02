@@ -19,17 +19,14 @@
 */
 #pragma once
 
+#include <common/memory/safe_ptr.h>
+
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 
-#include <memory>
-#include <vector>
-
-#include <common/memory/safe_ptr.h>
-
 namespace caspar { namespace core {
 	
-class read_frame
+class read_frame : boost::noncopyable
 {
 public:
 	virtual const boost::iterator_range<const unsigned char*> image_data() const = 0;
