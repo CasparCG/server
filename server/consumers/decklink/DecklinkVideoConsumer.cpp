@@ -264,23 +264,23 @@ struct DecklinkVideoConsumer::Implementation : public IDeckLinkVideoOutputCallba
 				LOG << TEXT("DECKLINK: Failed to get keyer-interface");
 			}
 		}
-		else
-		{			
-			pDecklinkKeyer_ = pDecklink_;
-			if(pDecklinkKeyer_) {
-				bool bSuccess = true;
-				if(FAILED(pDecklinkKeyer_->Enable(TRUE))) {
-					LOG << TEXT("DECKLINK: Failed to enable external keyer");
-					bSuccess = false;
-				}
+		//else
+		//{			
+		//	pDecklinkKeyer_ = pDecklink_;
+		//	if(pDecklinkKeyer_) {
+		//		bool bSuccess = true;
+		//		if(FAILED(pDecklinkKeyer_->Enable(TRUE))) {
+		//			LOG << TEXT("DECKLINK: Failed to enable external keyer");
+		//			bSuccess = false;
+		//		}
 
-				if(bSuccess)
-					LOG << TEXT("DECKLINK: Successfully configured external keyer");
-			}
-			else {
-				LOG << TEXT("DECKLINK: Failed to get keyer-interface");
-			}
-		}
+		//		if(bSuccess)
+		//			LOG << TEXT("DECKLINK: Successfully configured external keyer");
+		//	}
+		//	else {
+		//		LOG << TEXT("DECKLINK: Failed to get keyer-interface");
+		//	}
+		//}
 
 		pPlaybackControl_.reset(new FramePlaybackControl(FramePlaybackStrategyPtr(new DecklinkPlaybackStrategy(this))));
 		pPlaybackControl_->Start();
