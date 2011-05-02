@@ -161,7 +161,7 @@ public:
 	{
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_BLEND));
-		GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));	
+		GL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE));
 
 		if(shaders_.empty())
 		{
