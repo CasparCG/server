@@ -25,11 +25,10 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/signals2.hpp>
 #include <boost/thread/future.hpp>
 
 #include <functional>
-
-#include <boost/signals2.hpp>
 
 namespace caspar { namespace core {
 

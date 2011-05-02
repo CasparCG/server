@@ -24,15 +24,12 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <memory>
-#include <numeric>
-
 namespace caspar { namespace core {
 
 class frame_producer;
 class basic_frame;
 
-class layer //: boost::noncopyable
+class layer : boost::noncopyable
 {
 public:
 	layer(); // nothrow
@@ -54,7 +51,7 @@ public:
 	safe_ptr<basic_frame> receive(); // nothrow
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }}

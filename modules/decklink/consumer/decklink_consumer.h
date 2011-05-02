@@ -31,7 +31,15 @@ namespace caspar {
 class decklink_consumer : public core::frame_consumer
 {
 public:
-	explicit decklink_consumer(size_t device_index, bool embed_audio = false, bool internal_key = false);
+
+	enum key
+	{
+		external_key,
+		internal_key,
+		default_key
+	};
+
+	explicit decklink_consumer(size_t device_index, bool embed_audio = false, key key = default_key);
 	decklink_consumer(decklink_consumer&& other);
 	
 	virtual void initialize(const core::video_format_desc& format_desc);
