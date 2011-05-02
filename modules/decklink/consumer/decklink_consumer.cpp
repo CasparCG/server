@@ -163,6 +163,8 @@ public:
 		{
 			if(FAILED(keyer_->Enable(TRUE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
+			else if(FAILED(keyer_->SetLevel(255)))			
+				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
 			else
 				CASPAR_LOG(info) << print() << L" Successfully configured external keyer.";			
 		}
