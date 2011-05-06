@@ -46,7 +46,6 @@ namespace caspar {
 
 struct ogl_consumer::implementation : boost::noncopyable
 {		
-	boost::timer clock_;
 	boost::unique_future<void> active_;
 		
 	float width_;
@@ -81,6 +80,7 @@ public:
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, executor_(print())
 	{		
+		executor_.set_capacity(3);
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 	}
@@ -177,7 +177,6 @@ public:
 			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		});
-		active_ = executor_.begin_invoke([]{});
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 
@@ -272,8 +271,10 @@ public:
 		
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{
-		active_.get();
-		active_ = executor_.begin_invoke([=]
+		if(executor_.size() >= executor_.capacity()-1)
+			return;
+
+		executor_.begin_invoke([=]
 		{
 			perf_timer_.restart();
 			sf::Event e;
