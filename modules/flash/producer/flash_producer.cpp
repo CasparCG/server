@@ -154,15 +154,17 @@ public:
 
 		double frame_time = 1.0/ax_->GetFPS();
 		
-		perf_timer_.restart();
-		ax_->Tick();
 		if(has_underflow)
 		{
+			ax_->Tick();
 			graph_->add_tag("underflow");
 		}
 		else
 		{
-			timer_.tick(frame_time);		
+			timer_.tick(frame_time);				
+			perf_timer_.restart();
+
+			ax_->Tick();
 			if(ax_->InvalidRect())
 			{			
 				fast_memclr(bmp_data_,  format_desc_.size);
@@ -174,7 +176,7 @@ public:
 			}		
 		}
 		
-		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_time));
+		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_time)*0.5f);
 		return head_;
 	}
 
@@ -216,7 +218,7 @@ public:
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 		 
-		frame_buffer_.set_capacity(5);
+		frame_buffer_.set_capacity(3);
 		graph_ = diagnostics::create_graph([this]{return print();});
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
@@ -236,7 +238,6 @@ public:
 	~flash_producer()
 	{
 		executor_.clear();
-		CASPAR_ASSERT(executor_.is_running());
 		frame_buffer_.clear();
 		executor_.invoke([=]
 		{
