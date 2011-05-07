@@ -62,9 +62,7 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 		~co_init(){CoUninitialize();}
 	} co_;
 	
-	const size_t	device_index_;
-	const bool		embed_audio_;
-	const decklink_consumer::key		key_;
+	const decklink_consumer::configuration config_;
 
 	std::wstring	model_name_;
 	tbb::atomic<bool> is_running_;
@@ -75,8 +73,9 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, 3> reserved_frames_;
 	boost::circular_buffer<std::vector<short>> audio_container_;
 	
-	CComPtr<IDeckLink>			decklink_;
-	CComQIPtr<IDeckLinkOutput>	output_;
+	CComPtr<IDeckLink>					decklink_;
+	CComQIPtr<IDeckLinkOutput>			output_;
+	CComQIPtr<IDeckLinkConfiguration>	configuration_;
 	
 	core::video_format_desc format_desc_;
 
@@ -89,12 +88,10 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> audio_frame_buffer_;
 
 public:
-	decklink_output(const core::video_format_desc& format_desc,size_t device_index, bool embed_audio, decklink_consumer::key key) 
+	decklink_output(const decklink_consumer::configuration& config, const core::video_format_desc& format_desc) 
 		:  model_name_(L"DECKLINK")
-		, device_index_(device_index)
+		, config_(config)
 		, audio_container_(5)
-		, embed_audio_(embed_audio)
-		, key_(key)
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
 		, format_desc_(format_desc)
@@ -106,10 +103,10 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink drivers installed."));
 		
 		size_t n = 0;
-		while(n < device_index_ && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
+		while(n < config_.device_index && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
 
-		if(n != device_index_ || !decklink_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Decklink card not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
+		if(n != config_.device_index || !decklink_)
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Decklink card not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(config_.device_index)));
 		
 		BSTR pModelName;
 		decklink_->GetModelName(&pModelName);
@@ -120,6 +117,7 @@ public:
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		
 		output_ = decklink_;
+		configuration_ = decklink_;
 
 		auto display_mode = get_display_mode(output_.p, format_desc_.format);
 		if(display_mode == nullptr) 
@@ -131,7 +129,7 @@ public:
 		if(FAILED(output_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, bmdVideoOutputFlagDefault, &displayModeSupport, nullptr)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 		
-		if(embed_audio_)
+		if(config_.embed_audio)
 		{
 			if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2, bmdAudioOutputStreamTimestamped)))
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable audio output."));
@@ -142,14 +140,17 @@ public:
 			CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
 		}
 
+		if(config_.low_latency)
+			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
+		
 		if(FAILED(output_->EnableVideoOutput(display_mode->GetDisplayMode(), bmdVideoOutputFlagDefault))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video output."));
-
+		
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set playback completion callback."));
 			
 		CComQIPtr<IDeckLinkKeyer> keyer = decklink_;
-		if(key_ == decklink_consumer::internal_key) 
+		if(config_.keyer == decklink_consumer::internal_key) 
 		{
 			if(FAILED(keyer->Enable(FALSE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
@@ -158,7 +159,7 @@ public:
 			else
 				CASPAR_LOG(info) << print() << L" Successfully configured internal keyer.";		
 		}
-		else if(key_ == decklink_consumer::external_key)
+		else if(config.keyer == decklink_consumer::external_key)
 		{
 			if(FAILED(keyer->Enable(TRUE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
@@ -189,7 +190,7 @@ public:
 		for(size_t n = 0; n < std::max<size_t>(2, buffer_size-2); ++n)
 		{
 			video_frame_buffer_.try_push(core::read_frame::empty());
-			if(embed_audio_)
+			if(config_.embed_audio)
 				audio_frame_buffer_.try_push(core::read_frame::empty());
 		}
 		
@@ -208,7 +209,7 @@ public:
 		if(output_ != nullptr) 
 		{
 			output_->StopScheduledPlayback(0, nullptr, 0);
-			if(embed_audio_)
+			if(config_.embed_audio)
 				output_->DisableAudioOutput();
 			output_->DisableVideoOutput();
 		}
@@ -280,31 +281,27 @@ public:
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{
 		video_frame_buffer_.push(frame);
-		if(embed_audio_)
+		if(config_.embed_audio)
 			audio_frame_buffer_.push(frame);
 	}
 
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(config_.device_index) + L"]";
 	}
 };
 
 struct decklink_consumer::implementation
 {
 	std::unique_ptr<decklink_output> input_;
-	size_t device_index_;
-	bool embed_audio_;
-	decklink_consumer::key key_;
+	decklink_consumer::configuration config_;
 
 	executor executor_;
 public:
 
-	implementation(size_t device_index, bool embed_audio, decklink_consumer::key key)
-		: device_index_(device_index)
-		, embed_audio_(embed_audio)
-		, key_(key)
-		, executor_(L"DECKLINK[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
+	implementation(const decklink_consumer::configuration& config)
+		: config_(config)
+		, executor_(L"DECKLINK[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
 	{
 		executor_.start();
 	}
@@ -321,7 +318,7 @@ public:
 	{
 		executor_.invoke([&]
 		{
-			input_.reset(new decklink_output(format_desc, device_index_, embed_audio_, key_));
+			input_.reset(new decklink_output(config_, format_desc));
 		});
 	}
 	
@@ -341,38 +338,35 @@ public:
 	}
 };
 
-decklink_consumer::decklink_consumer(size_t device_index, bool embed_audio, key key) : impl_(new implementation(device_index, embed_audio, key)){}
+decklink_consumer::decklink_consumer(const configuration& config) : impl_(new implementation(config)){}
 decklink_consumer::decklink_consumer(decklink_consumer&& other) : impl_(std::move(other.impl_)){}
 void decklink_consumer::initialize(const core::video_format_desc& format_desc){impl_->initialize(format_desc);}
 void decklink_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
 size_t decklink_consumer::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring decklink_consumer::print() const{return impl_->print();}
 	
-safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params) 
 {
 	if(params.size() < 1 || params[0] != L"DECKLINK")
 		return core::frame_consumer::empty();
 	
-	int device_index = 1;
-	bool embed_audio = false;
-	auto key = decklink_consumer::default_key;
+	decklink_consumer::configuration config;
 
 	if(params.size() > 1) 
-		device_index = lexical_cast_or_default<int>(params[2], device_index);
+		config.device_index = lexical_cast_or_default<int>(params[2], config.device_index);
 
 	if(params.size() > 2)
-		embed_audio = lexical_cast_or_default<bool>(params[3], embed_audio);
+		config.embed_audio = lexical_cast_or_default<bool>(params[3], config.embed_audio);
 	
-
 	if(params.size() > 3) 
 	{
 		if(params[4] == L"INTERNAL_KEY")
-			key = decklink_consumer::internal_key;
+			config.keyer = decklink_consumer::internal_key;
 		else if(params[4] == L"EXTERNAL_KEY")
-			key = decklink_consumer::external_key;
+			config.keyer = decklink_consumer::external_key;
 	}
 
-	return make_safe<decklink_consumer>(device_index, embed_audio, key);
+	return make_safe<decklink_consumer>(config);
 }
 
 }

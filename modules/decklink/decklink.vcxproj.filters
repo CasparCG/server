@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="interop\DeckLinkAPI_i.c">
-      <Filter>interop</Filter>
-    </ClCompile>
     <ClCompile Include="consumer\decklink_consumer.cpp">
       <Filter>consumer</Filter>
     </ClCompile>
@@ -26,11 +23,11 @@
     </ClCompile>
     <ClCompile Include="decklink.cpp" />
     <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="interop\DeckLinkAPI_i.c">
+      <Filter>interop</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="interop\DeckLinkAPI_h.h">
-      <Filter>interop</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\decklink_consumer.h">
       <Filter>consumer</Filter>
     </ClInclude>
@@ -41,6 +38,12 @@
     <ClInclude Include="decklink.h" />
     <ClInclude Include="util\util.h">
       <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="interop\DeckLinkAPIVersion.h">
+      <Filter>interop</Filter>
+    </ClInclude>
+    <ClInclude Include="interop\DeckLinkAPI_h.h">
+      <Filter>interop</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
