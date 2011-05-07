@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 7.00.0555 */
-/* at Wed Mar 09 22:31:19 2011
+/* at Sat May 07 17:24:25 2011
  */
 /* Compiler settings for interop\DeckLinkAPI.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 7.00.0555 
@@ -209,6 +209,18 @@ typedef struct CDeckLinkIterator CDeckLinkIterator;
 #endif 	/* __CDeckLinkIterator_FWD_DEFINED__ */
 
 
+#ifndef __CDeckLinkAPIInformation_FWD_DEFINED__
+#define __CDeckLinkAPIInformation_FWD_DEFINED__
+
+#ifdef __cplusplus
+typedef class CDeckLinkAPIInformation CDeckLinkAPIInformation;
+#else
+typedef struct CDeckLinkAPIInformation CDeckLinkAPIInformation;
+#endif /* __cplusplus */
+
+#endif 	/* __CDeckLinkAPIInformation_FWD_DEFINED__ */
+
+
 #ifndef __CDeckLinkGLScreenPreviewHelper_FWD_DEFINED__
 #define __CDeckLinkGLScreenPreviewHelper_FWD_DEFINED__
 
@@ -231,6 +243,12 @@ typedef struct CDeckLinkVideoConversion CDeckLinkVideoConversion;
 #endif /* __cplusplus */
 
 #endif 	/* __CDeckLinkVideoConversion_FWD_DEFINED__ */
+
+
+#ifndef __IDeckLinkDeckControl_v7_9_FWD_DEFINED__
+#define __IDeckLinkDeckControl_v7_9_FWD_DEFINED__
+typedef interface IDeckLinkDeckControl_v7_9 IDeckLinkDeckControl_v7_9;
+#endif 	/* __IDeckLinkDeckControl_v7_9_FWD_DEFINED__ */
 
 
 #ifndef __IDeckLinkDisplayModeIterator_v7_6_FWD_DEFINED__
@@ -595,7 +613,9 @@ enum _BMDDisplayModeSupport
 typedef /* [v1_enum] */ 
 enum _BMDTimecodeFormat
     {	bmdTimecodeRP188	= 0x72703138,
+	bmdTimecodeRP188Field2	= 0x72703132,
 	bmdTimecodeVITC	= 0x76697463,
+	bmdTimecodeVITCField2	= 0x76697432,
 	bmdTimecodeSerial	= 0x73657269
     } 	BMDTimecodeFormat;
 
@@ -672,9 +692,17 @@ enum _BMDVideo3DPackingFormat
     } 	BMDVideo3DPackingFormat;
 
 typedef /* [v1_enum] */ 
+enum _BMDIdleVideoOutputOperation
+    {	bmdIdleVideoOutputBlack	= 0x626c6163,
+	bmdIdleVideoOutputLastFrame	= 0x6c616661
+    } 	BMDIdleVideoOutputOperation;
+
+typedef /* [v1_enum] */ 
 enum _BMDDeckLinkConfigurationID
-    {	bmdDeckLinkConfigUse1080pNotPsF	= 0x6670726f,
+    {	bmdDeckLinkConfigSwapSerialRxTx	= 0x73737274,
+	bmdDeckLinkConfigUse1080pNotPsF	= 0x6670726f,
 	bmdDeckLinkConfigHDMI3DPackingFormat	= 0x33647066,
+	bmdDeckLinkConfigBypass	= 0x62797073,
 	bmdDeckLinkConfigAnalogAudioConsumerLevels	= 0x6161636c,
 	bmdDeckLinkConfigFieldFlickerRemoval	= 0x66646672,
 	bmdDeckLinkConfigHD1080p24ToHD1080i5994Conversion	= 0x746f3539,
@@ -686,6 +714,14 @@ enum _BMDDeckLinkConfigurationID
 	bmdDeckLinkConfigVideoOutputConversionMode	= 0x766f636d,
 	bmdDeckLinkConfigAnalogVideoOutputFlags	= 0x61766f66,
 	bmdDeckLinkConfigReferenceInputTimingOffset	= 0x676c6f74,
+	bmdDeckLinkConfigVideoOutputIdleOperation	= 0x766f696f,
+	bmdDeckLinkConfigVideoOutputComponentLumaGain	= 0x6f636c67,
+	bmdDeckLinkConfigVideoOutputComponentChromaBlueGain	= 0x6f636362,
+	bmdDeckLinkConfigVideoOutputComponentChromaRedGain	= 0x6f636372,
+	bmdDeckLinkConfigVideoOutputCompositeLumaGain	= 0x6f696c67,
+	bmdDeckLinkConfigVideoOutputCompositeChromaGain	= 0x6f696367,
+	bmdDeckLinkConfigVideoOutputSVideoLumaGain	= 0x6f736c67,
+	bmdDeckLinkConfigVideoOutputSVideoChromaGain	= 0x6f736367,
 	bmdDeckLinkConfigVideoInputConnection	= 0x7669636e,
 	bmdDeckLinkConfigAnalogVideoInputFlags	= 0x61766966,
 	bmdDeckLinkConfigVideoInputConversionMode	= 0x7669636d,
@@ -693,6 +729,13 @@ enum _BMDDeckLinkConfigurationID
 	bmdDeckLinkConfigVANCSourceLine1Mapping	= 0x76736c31,
 	bmdDeckLinkConfigVANCSourceLine2Mapping	= 0x76736c32,
 	bmdDeckLinkConfigVANCSourceLine3Mapping	= 0x76736c33,
+	bmdDeckLinkConfigVideoInputComponentLumaGain	= 0x69636c67,
+	bmdDeckLinkConfigVideoInputComponentChromaBlueGain	= 0x69636362,
+	bmdDeckLinkConfigVideoInputComponentChromaRedGain	= 0x69636372,
+	bmdDeckLinkConfigVideoInputCompositeLumaGain	= 0x69696c67,
+	bmdDeckLinkConfigVideoInputCompositeChromaGain	= 0x69696367,
+	bmdDeckLinkConfigVideoInputSVideoLumaGain	= 0x69736c67,
+	bmdDeckLinkConfigVideoInputSVideoChromaGain	= 0x69736367,
 	bmdDeckLinkConfigAudioInputConnection	= 0x6169636e,
 	bmdDeckLinkConfigAnalogAudioInputScaleChannel1	= 0x61697331,
 	bmdDeckLinkConfigAnalogAudioInputScaleChannel2	= 0x61697332,
@@ -715,11 +758,19 @@ enum _BMDDeckLinkAttributeID
 	BMDDeckLinkSupportsInputFormatDetection	= 0x696e6664,
 	BMDDeckLinkHasReferenceInput	= 0x6872696e,
 	BMDDeckLinkHasSerialPort	= 0x68737074,
+	BMDDeckLinkHasAnalogVideoOutputGain	= 0x61766f67,
+	BMDDeckLinkCanOnlyAdjustOverallVideoOutputGain	= 0x6f766f67,
+	BMDDeckLinkHasVideoInputAntiAliasingFilter	= 0x6161666c,
+	BMDDeckLinkHasBypass	= 0x62797073,
 	BMDDeckLinkMaximumAudioChannels	= 0x6d616368,
 	BMDDeckLinkNumberOfSubDevices	= 0x6e736264,
 	BMDDeckLinkSubDeviceIndex	= 0x73756269,
 	BMDDeckLinkVideoOutputConnections	= 0x766f636e,
 	BMDDeckLinkVideoInputConnections	= 0x7669636e,
+	BMDDeckLinkVideoInputGainMinimum	= 0x7669676d,
+	BMDDeckLinkVideoInputGainMaximum	= 0x76696778,
+	BMDDeckLinkVideoOutputGainMinimum	= 0x766f676d,
+	BMDDeckLinkVideoOutputGainMaximum	= 0x766f6778,
 	BMDDeckLinkSerialPortDeviceName	= 0x736c706e
     } 	BMDDeckLinkAttributeID;
 
@@ -797,6 +848,8 @@ enum _BMDDeckControlError
 	bmdDeckControlNoTapeInDeckError	= 0x6e746572,
 	bmdDeckControlNoVideoFromCardError	= 0x6e766663,
 	bmdDeckControlNoCommunicationError	= 0x6e636f6d,
+	bmdDeckControlBufferTooSmallError	= 0x6274736d,
+	bmdDeckControlBadChecksumError	= 0x63686b73,
 	bmdDeckControlUnknownError	= 0x756e6572
     } 	BMDDeckControlError;
 
@@ -4025,7 +4078,7 @@ EXTERN_C const IID IID_IDeckLinkDeckControl;
 
 #if defined(__cplusplus) && !defined(CINTERFACE)
     
-    MIDL_INTERFACE("A4D81043-0619-42B7-8ED6-602D29041DF7")
+    MIDL_INTERFACE("522A9E39-0F3C-4742-94EE-D80DE335DA1D")
     IDeckLinkDeckControl : public IUnknown
     {
     public:
@@ -4045,6 +4098,14 @@ EXTERN_C const IID IID_IDeckLinkDeckControl;
         
         virtual HRESULT STDMETHODCALLTYPE SetStandby( 
             /* [in] */ BOOL standbyOn) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SendCommand( 
+            /* [in] */ unsigned char *inBuffer,
+            /* [in] */ unsigned long inBufferSize,
+            /* [out] */ unsigned char *outBuffer,
+            /* [out] */ unsigned long *outDataSize,
+            /* [in] */ unsigned long outBufferSize,
+            /* [out] */ BMDDeckControlError *error) = 0;
         
         virtual HRESULT STDMETHODCALLTYPE Play( 
             /* [out] */ BMDDeckControlError *error) = 0;
@@ -4184,6 +4245,15 @@ EXTERN_C const IID IID_IDeckLinkDeckControl;
         HRESULT ( STDMETHODCALLTYPE *SetStandby )( 
             IDeckLinkDeckControl * This,
             /* [in] */ BOOL standbyOn);
+        
+        HRESULT ( STDMETHODCALLTYPE *SendCommand )( 
+            IDeckLinkDeckControl * This,
+            /* [in] */ unsigned char *inBuffer,
+            /* [in] */ unsigned long inBufferSize,
+            /* [out] */ unsigned char *outBuffer,
+            /* [out] */ unsigned long *outDataSize,
+            /* [in] */ unsigned long outBufferSize,
+            /* [out] */ BMDDeckControlError *error);
         
         HRESULT ( STDMETHODCALLTYPE *Play )( 
             IDeckLinkDeckControl * This,
@@ -4346,6 +4416,9 @@ EXTERN_C const IID IID_IDeckLinkDeckControl;
 #define IDeckLinkDeckControl_SetStandby(This,standbyOn)	\
     ( (This)->lpVtbl -> SetStandby(This,standbyOn) ) 
 
+#define IDeckLinkDeckControl_SendCommand(This,inBuffer,inBufferSize,outBuffer,outDataSize,outBufferSize,error)	\
+    ( (This)->lpVtbl -> SendCommand(This,inBuffer,inBufferSize,outBuffer,outDataSize,outBufferSize,error) ) 
+
 #define IDeckLinkDeckControl_Play(This,error)	\
     ( (This)->lpVtbl -> Play(This,error) ) 
 
@@ -4449,6 +4522,14 @@ class DECLSPEC_UUID("D9EDA3B3-2887-41FA-B724-017CF1EB1D37")
 CDeckLinkIterator;
 #endif
 
+EXTERN_C const CLSID CLSID_CDeckLinkAPIInformation;
+
+#ifdef __cplusplus
+
+class DECLSPEC_UUID("263CA19F-ED09-482E-9F9D-84005783A237")
+CDeckLinkAPIInformation;
+#endif
+
 EXTERN_C const CLSID CLSID_CDeckLinkGLScreenPreviewHelper;
 
 #ifdef __cplusplus
@@ -4464,6 +4545,433 @@ EXTERN_C const CLSID CLSID_CDeckLinkVideoConversion;
 class DECLSPEC_UUID("7DBBBB11-5B7B-467D-AEA4-CEA468FD368C")
 CDeckLinkVideoConversion;
 #endif
+
+#ifndef __IDeckLinkDeckControl_v7_9_INTERFACE_DEFINED__
+#define __IDeckLinkDeckControl_v7_9_INTERFACE_DEFINED__
+
+/* interface IDeckLinkDeckControl_v7_9 */
+/* [helpstring][uuid][object] */ 
+
+
+EXTERN_C const IID IID_IDeckLinkDeckControl_v7_9;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("A4D81043-0619-42B7-8ED6-602D29041DF7")
+    IDeckLinkDeckControl_v7_9 : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE Open( 
+            /* [in] */ BMDTimeScale timeScale,
+            /* [in] */ BMDTimeValue timeValue,
+            /* [in] */ BOOL timecodeIsDropFrame,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE Close( 
+            /* [in] */ BOOL standbyOn) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetCurrentState( 
+            /* [out] */ BMDDeckControlMode *mode,
+            /* [out] */ BMDDeckControlVTRControlState *vtrControlState,
+            /* [out] */ BMDDeckControlStatusFlags *flags) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetStandby( 
+            /* [in] */ BOOL standbyOn) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE Play( 
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE Stop( 
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE TogglePlayStop( 
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE Eject( 
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GoToTimecode( 
+            /* [in] */ BMDTimecodeBCD timecode,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE FastForward( 
+            /* [in] */ BOOL viewTape,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE Rewind( 
+            /* [in] */ BOOL viewTape,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE StepForward( 
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE StepBack( 
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE Jog( 
+            /* [in] */ double rate,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE Shuttle( 
+            /* [in] */ double rate,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetTimecodeString( 
+            /* [out] */ BSTR *currentTimeCode,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetTimecode( 
+            /* [out] */ IDeckLinkTimecode **currentTimecode,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetTimecodeBCD( 
+            /* [out] */ BMDTimecodeBCD *currentTimecode,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetPreroll( 
+            /* [in] */ unsigned long prerollSeconds) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetPreroll( 
+            /* [out] */ unsigned long *prerollSeconds) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetExportOffset( 
+            /* [in] */ long exportOffsetFields) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetExportOffset( 
+            /* [out] */ long *exportOffsetFields) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetManualExportOffset( 
+            /* [out] */ long *deckManualExportOffsetFields) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetCaptureOffset( 
+            /* [in] */ long captureOffsetFields) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetCaptureOffset( 
+            /* [out] */ long *captureOffsetFields) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE StartExport( 
+            /* [in] */ BMDTimecodeBCD inTimecode,
+            /* [in] */ BMDTimecodeBCD outTimecode,
+            /* [in] */ BMDDeckControlExportModeOpsFlags exportModeOps,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE StartCapture( 
+            /* [in] */ BOOL useVITC,
+            /* [in] */ BMDTimecodeBCD inTimecode,
+            /* [in] */ BMDTimecodeBCD outTimecode,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetDeviceID( 
+            /* [out] */ unsigned short *deviceId,
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE Abort( void) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE CrashRecordStart( 
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE CrashRecordStop( 
+            /* [out] */ BMDDeckControlError *error) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetCallback( 
+            /* [in] */ IDeckLinkDeckControlStatusCallback *callback) = 0;
+        
+    };
+    
+#else 	/* C style interface */
+
+    typedef struct IDeckLinkDeckControl_v7_9Vtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            __RPC__deref_out  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            IDeckLinkDeckControl_v7_9 * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            IDeckLinkDeckControl_v7_9 * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *Open )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ BMDTimeScale timeScale,
+            /* [in] */ BMDTimeValue timeValue,
+            /* [in] */ BOOL timecodeIsDropFrame,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *Close )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ BOOL standbyOn);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetCurrentState )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDDeckControlMode *mode,
+            /* [out] */ BMDDeckControlVTRControlState *vtrControlState,
+            /* [out] */ BMDDeckControlStatusFlags *flags);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetStandby )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ BOOL standbyOn);
+        
+        HRESULT ( STDMETHODCALLTYPE *Play )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *Stop )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *TogglePlayStop )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *Eject )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *GoToTimecode )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ BMDTimecodeBCD timecode,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *FastForward )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ BOOL viewTape,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *Rewind )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ BOOL viewTape,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *StepForward )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *StepBack )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *Jog )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ double rate,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *Shuttle )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ double rate,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetTimecodeString )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BSTR *currentTimeCode,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetTimecode )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ IDeckLinkTimecode **currentTimecode,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetTimecodeBCD )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDTimecodeBCD *currentTimecode,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetPreroll )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ unsigned long prerollSeconds);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetPreroll )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ unsigned long *prerollSeconds);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetExportOffset )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ long exportOffsetFields);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetExportOffset )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ long *exportOffsetFields);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetManualExportOffset )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ long *deckManualExportOffsetFields);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetCaptureOffset )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ long captureOffsetFields);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetCaptureOffset )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ long *captureOffsetFields);
+        
+        HRESULT ( STDMETHODCALLTYPE *StartExport )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ BMDTimecodeBCD inTimecode,
+            /* [in] */ BMDTimecodeBCD outTimecode,
+            /* [in] */ BMDDeckControlExportModeOpsFlags exportModeOps,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *StartCapture )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ BOOL useVITC,
+            /* [in] */ BMDTimecodeBCD inTimecode,
+            /* [in] */ BMDTimecodeBCD outTimecode,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetDeviceID )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ unsigned short *deviceId,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *Abort )( 
+            IDeckLinkDeckControl_v7_9 * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *CrashRecordStart )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *CrashRecordStop )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [out] */ BMDDeckControlError *error);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetCallback )( 
+            IDeckLinkDeckControl_v7_9 * This,
+            /* [in] */ IDeckLinkDeckControlStatusCallback *callback);
+        
+        END_INTERFACE
+    } IDeckLinkDeckControl_v7_9Vtbl;
+
+    interface IDeckLinkDeckControl_v7_9
+    {
+        CONST_VTBL struct IDeckLinkDeckControl_v7_9Vtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define IDeckLinkDeckControl_v7_9_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define IDeckLinkDeckControl_v7_9_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define IDeckLinkDeckControl_v7_9_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define IDeckLinkDeckControl_v7_9_Open(This,timeScale,timeValue,timecodeIsDropFrame,error)	\
+    ( (This)->lpVtbl -> Open(This,timeScale,timeValue,timecodeIsDropFrame,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_Close(This,standbyOn)	\
+    ( (This)->lpVtbl -> Close(This,standbyOn) ) 
+
+#define IDeckLinkDeckControl_v7_9_GetCurrentState(This,mode,vtrControlState,flags)	\
+    ( (This)->lpVtbl -> GetCurrentState(This,mode,vtrControlState,flags) ) 
+
+#define IDeckLinkDeckControl_v7_9_SetStandby(This,standbyOn)	\
+    ( (This)->lpVtbl -> SetStandby(This,standbyOn) ) 
+
+#define IDeckLinkDeckControl_v7_9_Play(This,error)	\
+    ( (This)->lpVtbl -> Play(This,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_Stop(This,error)	\
+    ( (This)->lpVtbl -> Stop(This,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_TogglePlayStop(This,error)	\
+    ( (This)->lpVtbl -> TogglePlayStop(This,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_Eject(This,error)	\
+    ( (This)->lpVtbl -> Eject(This,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_GoToTimecode(This,timecode,error)	\
+    ( (This)->lpVtbl -> GoToTimecode(This,timecode,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_FastForward(This,viewTape,error)	\
+    ( (This)->lpVtbl -> FastForward(This,viewTape,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_Rewind(This,viewTape,error)	\
+    ( (This)->lpVtbl -> Rewind(This,viewTape,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_StepForward(This,error)	\
+    ( (This)->lpVtbl -> StepForward(This,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_StepBack(This,error)	\
+    ( (This)->lpVtbl -> StepBack(This,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_Jog(This,rate,error)	\
+    ( (This)->lpVtbl -> Jog(This,rate,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_Shuttle(This,rate,error)	\
+    ( (This)->lpVtbl -> Shuttle(This,rate,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_GetTimecodeString(This,currentTimeCode,error)	\
+    ( (This)->lpVtbl -> GetTimecodeString(This,currentTimeCode,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_GetTimecode(This,currentTimecode,error)	\
+    ( (This)->lpVtbl -> GetTimecode(This,currentTimecode,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_GetTimecodeBCD(This,currentTimecode,error)	\
+    ( (This)->lpVtbl -> GetTimecodeBCD(This,currentTimecode,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_SetPreroll(This,prerollSeconds)	\
+    ( (This)->lpVtbl -> SetPreroll(This,prerollSeconds) ) 
+
+#define IDeckLinkDeckControl_v7_9_GetPreroll(This,prerollSeconds)	\
+    ( (This)->lpVtbl -> GetPreroll(This,prerollSeconds) ) 
+
+#define IDeckLinkDeckControl_v7_9_SetExportOffset(This,exportOffsetFields)	\
+    ( (This)->lpVtbl -> SetExportOffset(This,exportOffsetFields) ) 
+
+#define IDeckLinkDeckControl_v7_9_GetExportOffset(This,exportOffsetFields)	\
+    ( (This)->lpVtbl -> GetExportOffset(This,exportOffsetFields) ) 
+
+#define IDeckLinkDeckControl_v7_9_GetManualExportOffset(This,deckManualExportOffsetFields)	\
+    ( (This)->lpVtbl -> GetManualExportOffset(This,deckManualExportOffsetFields) ) 
+
+#define IDeckLinkDeckControl_v7_9_SetCaptureOffset(This,captureOffsetFields)	\
+    ( (This)->lpVtbl -> SetCaptureOffset(This,captureOffsetFields) ) 
+
+#define IDeckLinkDeckControl_v7_9_GetCaptureOffset(This,captureOffsetFields)	\
+    ( (This)->lpVtbl -> GetCaptureOffset(This,captureOffsetFields) ) 
+
+#define IDeckLinkDeckControl_v7_9_StartExport(This,inTimecode,outTimecode,exportModeOps,error)	\
+    ( (This)->lpVtbl -> StartExport(This,inTimecode,outTimecode,exportModeOps,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_StartCapture(This,useVITC,inTimecode,outTimecode,error)	\
+    ( (This)->lpVtbl -> StartCapture(This,useVITC,inTimecode,outTimecode,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_GetDeviceID(This,deviceId,error)	\
+    ( (This)->lpVtbl -> GetDeviceID(This,deviceId,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_Abort(This)	\
+    ( (This)->lpVtbl -> Abort(This) ) 
+
+#define IDeckLinkDeckControl_v7_9_CrashRecordStart(This,error)	\
+    ( (This)->lpVtbl -> CrashRecordStart(This,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_CrashRecordStop(This,error)	\
+    ( (This)->lpVtbl -> CrashRecordStop(This,error) ) 
+
+#define IDeckLinkDeckControl_v7_9_SetCallback(This,callback)	\
+    ( (This)->lpVtbl -> SetCallback(This,callback) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __IDeckLinkDeckControl_v7_9_INTERFACE_DEFINED__ */
+
 
 #ifndef __IDeckLinkDisplayModeIterator_v7_6_INTERFACE_DEFINED__
 #define __IDeckLinkDisplayModeIterator_v7_6_INTERFACE_DEFINED__

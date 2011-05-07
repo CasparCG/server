@@ -227,8 +227,8 @@
     </ClCompile>
     <ClCompile Include="decklink.cpp" />
     <ClCompile Include="interop\DeckLinkAPI_i.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -248,6 +248,7 @@
   <ItemGroup>
     <ClInclude Include="consumer\decklink_consumer.h" />
     <ClInclude Include="decklink.h" />
+    <ClInclude Include="interop\DeckLinkAPIVersion.h" />
     <ClInclude Include="interop\DeckLinkAPI_h.h" />
     <ClInclude Include="producer\decklink_producer.h" />
     <ClInclude Include="StdAfx.h" />
@@ -260,9 +261,9 @@
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">interop\</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">interop\</OutputDirectory>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </Midl>
     <Midl Include="interop\DeckLinkAPI_v7_1.idl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">true</ExcludedFromBuild>

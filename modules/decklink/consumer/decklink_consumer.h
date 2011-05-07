@@ -39,7 +39,21 @@ public:
 		default_key
 	};
 
-	explicit decklink_consumer(size_t device_index, bool embed_audio = false, key key = default_key);
+	struct configuration
+	{
+		size_t device_index;
+		bool embed_audio;
+		key keyer;
+		bool low_latency;
+
+		configuration() 
+			: device_index(1)
+			, embed_audio(false)
+			, keyer(default_key)
+			, low_latency(false){}
+	};
+
+	explicit decklink_consumer(const configuration& config);
 	decklink_consumer(decklink_consumer&& other);
 	
 	virtual void initialize(const core::video_format_desc& format_desc);

@@ -51,7 +51,7 @@ public:
 		: format_desc_(format_desc)
 		, executor_(L"frame_consumer_device")
 	{		
-		executor_.set_capacity(2);
+		executor_.set_capacity(1);
 		executor_.start();
 	}
 

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2009 Blackmagic Design
+** Copyright (c) 2011 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -241,7 +241,9 @@ typedef [v1_enum] enum	_BMDDisplayModeSupport {
 
 typedef [v1_enum] enum	_BMDTimecodeFormat {
     bmdTimecodeRP188                                   = /* 'rp18' */ 0x72703138,
+    bmdTimecodeRP188Field2                             = /* 'rp12' */ 0x72703132,
     bmdTimecodeVITC                                    = /* 'vitc' */ 0x76697463,
+    bmdTimecodeVITCField2                              = /* 'vit2' */ 0x76697432,
     bmdTimecodeSerial                                  = /* 'seri' */ 0x73657269
 } BMDTimecodeFormat;
 
@@ -336,9 +338,21 @@ typedef [v1_enum] enum	_BMDVideo3DPackingFormat {
 } BMDVideo3DPackingFormat;
 
 
+/* Enum BMDIdleVideoOutputOperation - Video output operation when not playing video */
+
+typedef [v1_enum] enum	_BMDIdleVideoOutputOperation {
+    bmdIdleVideoOutputBlack                            = /* 'blac' */ 0x626C6163,
+    bmdIdleVideoOutputLastFrame                        = /* 'lafa' */ 0x6C616661
+} BMDIdleVideoOutputOperation;
+
+
 /* Enum BMDDeckLinkConfigurationID - DeckLink Configuration ID */
 
 typedef [v1_enum] enum	_BMDDeckLinkConfigurationID {
+
+    /* Serial port Flags */
+
+    bmdDeckLinkConfigSwapSerialRxTx                    = /* 'ssrt' */ 0x73737274,
 
     /* Video Input/Output Flags */
 
@@ -347,6 +361,7 @@ typedef [v1_enum] enum	_BMDDeckLinkConfigurationID {
     /* Video Input/Output Integers */
 
     bmdDeckLinkConfigHDMI3DPackingFormat               = /* '3dpf' */ 0x33647066,
+    bmdDeckLinkConfigBypass                            = /* 'byps' */ 0x62797073,
 
     /* Audio Input/Output Flags */
 
@@ -367,6 +382,17 @@ typedef [v1_enum] enum	_BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigVideoOutputConversionMode         = /* 'vocm' */ 0x766F636D,
     bmdDeckLinkConfigAnalogVideoOutputFlags            = /* 'avof' */ 0x61766F66,
     bmdDeckLinkConfigReferenceInputTimingOffset        = /* 'glot' */ 0x676C6F74,
+    bmdDeckLinkConfigVideoOutputIdleOperation          = /* 'voio' */ 0x766F696F,
+
+    /* Video Output Floats */
+
+    bmdDeckLinkConfigVideoOutputComponentLumaGain      = /* 'oclg' */ 0x6F636C67,
+    bmdDeckLinkConfigVideoOutputComponentChromaBlueGain = /* 'occb' */ 0x6F636362,
+    bmdDeckLinkConfigVideoOutputComponentChromaRedGain = /* 'occr' */ 0x6F636372,
+    bmdDeckLinkConfigVideoOutputCompositeLumaGain      = /* 'oilg' */ 0x6F696C67,
+    bmdDeckLinkConfigVideoOutputCompositeChromaGain    = /* 'oicg' */ 0x6F696367,
+    bmdDeckLinkConfigVideoOutputSVideoLumaGain         = /* 'oslg' */ 0x6F736C67,
+    bmdDeckLinkConfigVideoOutputSVideoChromaGain       = /* 'oscg' */ 0x6F736367,
 
     /* Video Input Integers */
 
@@ -377,6 +403,16 @@ typedef [v1_enum] enum	_BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigVANCSourceLine1Mapping            = /* 'vsl1' */ 0x76736C31,
     bmdDeckLinkConfigVANCSourceLine2Mapping            = /* 'vsl2' */ 0x76736C32,
     bmdDeckLinkConfigVANCSourceLine3Mapping            = /* 'vsl3' */ 0x76736C33,
+
+    /* Video Input Floats */
+
+    bmdDeckLinkConfigVideoInputComponentLumaGain       = /* 'iclg' */ 0x69636C67,
+    bmdDeckLinkConfigVideoInputComponentChromaBlueGain = /* 'iccb' */ 0x69636362,
+    bmdDeckLinkConfigVideoInputComponentChromaRedGain  = /* 'iccr' */ 0x69636372,
+    bmdDeckLinkConfigVideoInputCompositeLumaGain       = /* 'iilg' */ 0x69696C67,
+    bmdDeckLinkConfigVideoInputCompositeChromaGain     = /* 'iicg' */ 0x69696367,
+    bmdDeckLinkConfigVideoInputSVideoLumaGain          = /* 'islg' */ 0x69736C67,
+    bmdDeckLinkConfigVideoInputSVideoChromaGain        = /* 'iscg' */ 0x69736367,
 
     /* Audio Input Integers */
 
@@ -416,6 +452,10 @@ typedef [v1_enum] enum	_BMDDeckLinkAttributeID {
     BMDDeckLinkSupportsInputFormatDetection            = /* 'infd' */ 0x696E6664,
     BMDDeckLinkHasReferenceInput                       = /* 'hrin' */ 0x6872696E,
     BMDDeckLinkHasSerialPort                           = /* 'hspt' */ 0x68737074,
+    BMDDeckLinkHasAnalogVideoOutputGain                = /* 'avog' */ 0x61766F67,
+    BMDDeckLinkCanOnlyAdjustOverallVideoOutputGain     = /* 'ovog' */ 0x6F766F67,
+    BMDDeckLinkHasVideoInputAntiAliasingFilter         = /* 'aafl' */ 0x6161666C,
+    BMDDeckLinkHasBypass                               = /* 'byps' */ 0x62797073,
 
     /* Integers */
 
@@ -424,6 +464,13 @@ typedef [v1_enum] enum	_BMDDeckLinkAttributeID {
     BMDDeckLinkSubDeviceIndex                          = /* 'subi' */ 0x73756269,
     BMDDeckLinkVideoOutputConnections                  = /* 'vocn' */ 0x766F636E,
     BMDDeckLinkVideoInputConnections                   = /* 'vicn' */ 0x7669636E,
+
+    /* Floats */
+
+    BMDDeckLinkVideoInputGainMinimum                   = /* 'vigm' */ 0x7669676D,
+    BMDDeckLinkVideoInputGainMaximum                   = /* 'vigx' */ 0x76696778,
+    BMDDeckLinkVideoOutputGainMinimum                  = /* 'vogm' */ 0x766F676D,
+    BMDDeckLinkVideoOutputGainMaximum                  = /* 'vogx' */ 0x766F6778,
 
     /* Strings */
 
@@ -526,6 +573,8 @@ typedef [v1_enum] enum	_BMDDeckControlError {
     bmdDeckControlNoTapeInDeckError                    = /* 'nter' */ 0x6E746572,
     bmdDeckControlNoVideoFromCardError                 = /* 'nvfc' */ 0x6E766663,
     bmdDeckControlNoCommunicationError                 = /* 'ncom' */ 0x6E636F6D,
+    bmdDeckControlBufferTooSmallError                  = /* 'btsm' */ 0x6274736D,
+    bmdDeckControlBadChecksumError                     = /* 'chks' */ 0x63686B73,
     bmdDeckControlUnknownError                         = /* 'uner' */ 0x756E6572
 } BMDDeckControlError;
 
@@ -1025,7 +1074,7 @@ interface IDeckLinkDeckControl;
 
 [
     object,
-    uuid(A4D81043-0619-42B7-8ED6-602D29041DF7),
+    uuid(522A9E39-0F3C-4742-94EE-D80DE335DA1D),
     helpstring("Deck Control main interface")
 ] interface IDeckLinkDeckControl : IUnknown
 {
@@ -1033,6 +1082,7 @@ interface IDeckLinkDeckControl;
     HRESULT Close([in] BOOL standbyOn);
     HRESULT GetCurrentState([out] BMDDeckControlMode *mode, [out] BMDDeckControlVTRControlState *vtrControlState, [out] BMDDeckControlStatusFlags *flags);
     HRESULT SetStandby([in] BOOL standbyOn);
+    HRESULT SendCommand([in] unsigned char *inBuffer, [in] unsigned long inBufferSize, [out] unsigned char *outBuffer, [out] unsigned long *outDataSize, [in] unsigned long outBufferSize, [out] BMDDeckControlError *error);
     HRESULT Play([out] BMDDeckControlError *error);
     HRESULT Stop([out] BMDDeckControlError *error);
     HRESULT TogglePlayStop([out] BMDDeckControlError *error);
@@ -1077,6 +1127,14 @@ importlib("stdole2.tlb");
 };
 
 [
+    uuid(263CA19F-ED09-482E-9F9D-84005783A237),
+    helpstring("CDeckLinkAPIInformation Class")
+] coclass CDeckLinkAPIInformation
+{
+    [default] interface IDeckLinkAPIInformation;
+};
+
+[
     uuid(F63E77C7-B655-4A4A-9AD0-3CA85D394343),
     helpstring("CDeckLinkGLScreenPreviewHelper Class")
 ] coclass CDeckLinkGLScreenPreviewHelper
@@ -1094,6 +1152,7 @@ importlib("stdole2.tlb");
 
 
 // import deprecated interfaces
+#include "DeckLinkAPI_v7_9.idl"
 #include "DeckLinkAPI_v7_6.idl"
 #include "DeckLinkAPI_v7_3.idl"
 #include "DeckLinkAPI_v7_1.idl"

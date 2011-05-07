@@ -122,15 +122,19 @@ struct server::implementation : boost::noncopyable
 																					xml_consumer.second.get("embedded-audio", true)));					
 					else if(name == "decklink")
 					{
+						decklink_consumer::configuration config;
+						
 						auto key_str = xml_consumer.second.get("key", "default");
-						auto key = decklink_consumer::default_key;
 						if(key_str == "internal")
-							key = decklink_consumer::internal_key;
+							config.keyer = decklink_consumer::internal_key;
 						else if(key_str == "external")
-							key = decklink_consumer::external_key;
-						channels_.back()->consumer()->add(index++, decklink_consumer(xml_consumer.second.get("device", 0), 
-																					xml_consumer.second.get("embedded-audio", true), 
-																					key));
+							config.keyer = decklink_consumer::external_key;
+
+						config.device_index = xml_consumer.second.get("device", 0);
+						config.embed_audio = xml_consumer.second.get("embedded-audio", false);
+						config.low_latency = xml_consumer.second.get("low-latency", false);
+
+						channels_.back()->consumer()->add(index++, decklink_consumer(config));
 					}
 					else if(name == "audio")
 						channels_.back()->consumer()->add(index++, oal_consumer());			
