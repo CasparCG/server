@@ -20,52 +20,16 @@
 #pragma once
 
 #include <core/consumer/frame_consumer.h>
-
 #include <core/video_format.h>
+
+#include <boost/property_tree/ptree.hpp>
 
 #include <string>
 #include <vector>
 
 namespace caspar { 
-
-class decklink_consumer : public core::frame_consumer
-{
-public:
-
-	enum key
-	{
-		external_key,
-		internal_key,
-		default_key
-	};
-
-	struct configuration
-	{
-		size_t device_index;
-		bool embed_audio;
-		key keyer;
-		bool low_latency;
-
-		configuration() 
-			: device_index(1)
-			, embed_audio(false)
-			, keyer(default_key)
-			, low_latency(false){}
-	};
-
-	explicit decklink_consumer(const configuration& config);
-	decklink_consumer(decklink_consumer&& other);
 	
-	virtual void initialize(const core::video_format_desc& format_desc);
-	virtual void send(const safe_ptr<const core::read_frame>&);
-	virtual size_t buffer_depth() const;
-	virtual std::wstring print() const;
-
-private:
-	struct implementation;
-	std::tr1::shared_ptr<implementation> impl_;
-};
-
 safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_decklink_consumer_ptree(const boost::property_tree::ptree& ptree);
 
 }
