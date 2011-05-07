@@ -81,53 +81,7 @@ struct configuration
 		: device_index(1)
 		, embedded_audio(false)
 		, keyer(default_key)
-		, latency(default_latency)
-	{}
-	configuration(const boost::property_tree::ptree& ptree)
-		: device_index(1)
-		, embedded_audio(false)
-		, keyer(default_key)
-		, latency(default_latency)
-	{	
-		auto key_str = ptree.get("key", "default");
-		if(key_str == "internal")
-			keyer = internal_key;
-		else if(key_str == "external")
-			keyer = external_key;
-
-		auto latency_str = ptree.get("latency", "default");
-		if(latency_str == "normal")
-			latency = normal_latency;
-		else if(latency_str == "low")
-			latency = low_latency;
-
-		device_index = ptree.get("device", 0);
-		embedded_audio  = ptree.get("embedded-audio", false);
-	}
-
-	configuration(const std::vector<std::wstring>& params)
-		: device_index(1)
-		, embedded_audio(false)
-		, keyer(default_key)
-		, latency(default_latency)
-	{
-		if(params.size() > 0)
-			device_index = lexical_cast_or_default<int>(params[0], device_index);
-
-		{
-			auto it = std::find(params.begin(), params.end(), L"INTERNAL_KEY");
-			if(it != params.end())
-				keyer = internal_key;
-			else
-			{
-				auto it = std::find(params.begin(), params.end(), L"EXTERNAL_KEY");
-				if(it != params.end())
-					keyer = external_key;
-			}
-		}
-		
-		embedded_audio = std::find(params.begin(), params.end(), L"EMBED_AUDIO") != params.end();	
-	}
+		, latency(default_latency){}
 };
 
 struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
@@ -442,12 +396,46 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::w
 	if(params.size() < 1 || params[0] != L"DECKLINK")
 		return core::frame_consumer::empty();
 	
-	return make_safe<decklink_consumer>(configuration(std::vector<std::wstring>(params.begin()+1, params.end())));
+	configuration config;
+		
+	if(params.size() > 1)
+		config.device_index = lexical_cast_or_default<int>(params[1], config.device_index);
+		
+	auto it = std::find(params.begin(), params.end(), L"INTERNAL_KEY");
+	if(it != params.end())
+		config.keyer = internal_key;
+	else
+	{
+		auto it = std::find(params.begin(), params.end(), L"EXTERNAL_KEY");
+		if(it != params.end())
+			config.keyer = external_key;
+	}
+		
+	config.embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
+
+	return make_safe<decklink_consumer>(config);
 }
 
 safe_ptr<core::frame_consumer> create_decklink_consumer_ptree(const boost::property_tree::ptree& ptree) 
 {
-	return make_safe<decklink_consumer>(configuration(ptree));
+	configuration config;
+
+	auto key_str = ptree.get("key", "default");
+	if(key_str == "internal")
+		config.keyer = internal_key;
+	else if(key_str == "external")
+		config.keyer = external_key;
+
+	auto latency_str = ptree.get("latency", "default");
+	if(latency_str == "normal")
+		config.latency = normal_latency;
+	else if(latency_str == "low")
+		config.latency = low_latency;
+
+	config.device_index = ptree.get("device", 0);
+	config.embedded_audio  = ptree.get("embedded-audio", false);
+
+	return make_safe<decklink_consumer>(config);
 }
 
 }

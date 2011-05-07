@@ -104,11 +104,11 @@ struct bluefish_consumer::implementation : boost::noncopyable
 	
 	std::array<blue_dma_buffer_ptr, 3> reserved_frames_;	
 
-	const bool embed_audio_;
+	const bool embedded_audio_;
 
 	executor executor_;
 public:
-	implementation::implementation(unsigned int device_index, bool embed_audio) 
+	implementation::implementation(unsigned int device_index, bool embedded_audio) 
 		: model_name_(L"BLUEFISH")
 		, device_index_(device_index) 
 		, mem_fmt_(MEM_FMT_ARGB_PC)
@@ -116,10 +116,10 @@ public:
 		, vid_fmt_(VID_FMT_INVALID) 
 		, res_fmt_(RES_FMT_NORMAL) 
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
-		, embed_audio_(embed_audio)
+		, embedded_audio_(embedded_audio)
 		, executor_(print())
 	{
-		if(!BlueVelvetFactory4 || (embed_audio_ && (!encode_hanc_frame || !encode_hanc_frame)))
+		if(!BlueVelvetFactory4 || (embedded_audio_ && (!encode_hanc_frame || !encode_hanc_frame)))
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Bluefish drivers not found."));
 	}
 
@@ -211,7 +211,7 @@ public:
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_PREDEFINED_COLOR_MATRIX, vid_fmt_ == VID_FMT_PAL ? MATRIX_601_CGR : MATRIX_709_CGR)))
 			CASPAR_LOG(warning) << print() << TEXT(" Failed to set colormatrix to ") << (vid_fmt_ == VID_FMT_PAL ? TEXT("601 CGR") : TEXT("709 CGR")) << TEXT(".");
 
-		if(!embed_audio_)
+		if(!embedded_audio_)
 		{
 			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, 0))) 
 				CASPAR_LOG(warning) << TEXT("BLUECARD ERROR: Failed to disable embedded audio.");			
@@ -273,7 +273,7 @@ public:
 			{
 				fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
 				
-				if(embed_audio_)
+				if(embedded_audio_)
 				{		
 					auto frame_audio_data = frame->audio_data().empty() ? silence.data() : const_cast<short*>(frame->audio_data().begin());
 
@@ -348,12 +348,12 @@ public:
 	}
 };
 
-bluefish_consumer::bluefish_consumer(unsigned int device_index, bool embed_audio) : impl_(new implementation(device_index, embed_audio)){}	
+bluefish_consumer::bluefish_consumer(unsigned int device_index, bool embedded_audio) : impl_(new implementation(device_index, embedded_audio)){}	
 bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
 void bluefish_consumer::initialize(const core::video_format_desc& format_desc)
 {
 	// TODO: Ugly
-	impl_.reset(new implementation(impl_->device_index_, impl_->embed_audio_));
+	impl_.reset(new implementation(impl_->device_index_, impl_->embedded_audio_));
 	impl_->initialize(format_desc);
 }
 void bluefish_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
@@ -404,15 +404,12 @@ safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::w
 		return core::frame_consumer::empty();
 		
 	int device_index = 1;
-	bool embed_audio = false;
-
 	if(params.size() > 1)
-		device_index = lexical_cast_or_default<int>(params[2]);
+		device_index = lexical_cast_or_default<int>(params[1], 1);
 
-	if(params.size() > 2) 
-		embed_audio = lexical_cast_or_default<bool>(params[3]);
+	bool embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 
-	return make_safe<bluefish_consumer>(device_index, embed_audio);
+	return make_safe<bluefish_consumer>(device_index, embedded_audio);
 }
 
 }
