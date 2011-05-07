@@ -222,7 +222,7 @@ public:
 			if(FAILED(reserved_frames_[n].second->GetBytes(&reserved_frames_[n].first)))
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to get frame bytes."));
 		}
-					
+
 		CASPAR_LOG(info) << print() << L" Buffer-depth: " << BUFFER_SIZE;
 		
 		for(size_t n = 0; n < BUFFER_SIZE; ++n)

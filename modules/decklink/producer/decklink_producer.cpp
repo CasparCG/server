@@ -121,7 +121,7 @@ public:
 		if(FAILED(input_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, bmdVideoOutputFlagDefault, &displayModeSupport, nullptr)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
 
-		// NOTE: bmdFormat8BitARGB does not seem to work with Decklink HD Extreme 3D
+		// NOTE: bmdFormat8BitARGB is not supported.
 		if(FAILED(input_->EnableVideoInput((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, 0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video input."));
 
@@ -156,7 +156,6 @@ public:
 		return S_OK;
 	}
 
-	// TODO: Enable audio input
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
 	{	
 		graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
