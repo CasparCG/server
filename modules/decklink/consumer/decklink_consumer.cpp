@@ -109,8 +109,9 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	CComPtr<IDeckLink>					decklink_;
 	CComQIPtr<IDeckLinkOutput>			output_;
 	CComQIPtr<IDeckLinkConfiguration>	configuration_;
-	
-	core::video_format_desc format_desc_;
+	CComQIPtr<IDeckLinkKeyer>			keyer_;
+
+	const core::video_format_desc format_desc_;
 
 	BMDTimeScale frame_time_scale_;
 	BMDTimeValue frame_duration_;
@@ -130,7 +131,6 @@ public:
 		, format_desc_(format_desc)
 	{
 		is_running_ = true;
-		format_desc_ = format_desc;
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink drivers installed."));
@@ -151,6 +151,7 @@ public:
 		
 		output_ = decklink_;
 		configuration_ = decklink_;
+		keyer_ = decklink_;
 
 		auto display_mode = get_display_mode(output_.p, format_desc_.format);
 		if(display_mode == nullptr) 
@@ -186,21 +187,20 @@ public:
 		else
 			CASPAR_LOG(info) << print() << L" Uses driver latency settings.";	
 		
-		CComQIPtr<IDeckLinkKeyer> keyer = decklink_;
 		if(config_.keyer == internal_key) 
 		{
-			if(FAILED(keyer->Enable(FALSE)))			
+			if(FAILED(keyer_->Enable(FALSE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
-			else if(FAILED(keyer->SetLevel(255)))			
+			else if(FAILED(keyer_->SetLevel(255)))			
 				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
 			else
 				CASPAR_LOG(info) << print() << L" Enabled internal keyer.";		
 		}
 		else if(config.keyer == external_key)
 		{
-			if(FAILED(keyer->Enable(TRUE)))			
+			if(FAILED(keyer_->Enable(TRUE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
-			else if(FAILED(keyer->SetLevel(255)))			
+			else if(FAILED(keyer_->SetLevel(255)))			
 				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
 			else
 				CASPAR_LOG(info) << print() << L" Enabled external keyer.";			
@@ -323,7 +323,7 @@ public:
 			
 	void schedule_next_video(const safe_ptr<const core::read_frame>& frame)
 	{
-		if(!frame->image_data().empty())
+		if(static_cast<size_t>(frame->image_data().size()) == format_desc_.size)
 			fast_memcpy(reserved_frames_.front().first, frame->image_data().begin(), frame->image_data().size());
 		else
 			fast_memclr(reserved_frames_.front().first, format_desc_.size);
