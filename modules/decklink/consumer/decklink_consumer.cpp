@@ -277,6 +277,7 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped (void)
 	{
 		is_running_ = false;
+		CASPAR_LOG(info) << print() << L"Scheduled playback has stopped.";
 		return S_OK;
 	}
 		
@@ -338,6 +339,9 @@ public:
 
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{
+		if(!is_running_)
+			return;
+
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
 
