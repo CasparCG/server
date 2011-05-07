@@ -218,7 +218,7 @@ public:
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 		 
-		frame_buffer_.set_capacity(3);
+		frame_buffer_.set_capacity(2);
 		graph_ = diagnostics::create_graph([this]{return print();});
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
