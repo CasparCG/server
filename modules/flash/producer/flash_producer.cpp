@@ -154,27 +154,24 @@ public:
 
 		double frame_time = 1.0/ax_->GetFPS();
 		
-		if(has_underflow)
-		{
-			ax_->Tick();
-			graph_->add_tag("underflow");
-		}
+		if(!has_underflow)			
+			timer_.tick(frame_time);	
 		else
-		{
-			timer_.tick(frame_time);				
-			perf_timer_.restart();
+			graph_->add_tag("underflow");
+			
+		perf_timer_.restart();
 
-			ax_->Tick();
-			if(ax_->InvalidRect())
-			{			
-				fast_memclr(bmp_data_,  format_desc_.size);
-				ax_->DrawControl(static_cast<HDC>(hdc_.get()));
+		ax_->Tick();
+		if(ax_->InvalidRect())
+		{			
+			fast_memclr(bmp_data_,  format_desc_.size);
+			ax_->DrawControl(static_cast<HDC>(hdc_.get()));
 		
-				auto frame = frame_factory_->create_frame(this);
-				fast_memcpy(frame->image_data().begin(), bmp_data_, format_desc_.size);
-				head_ = frame;
-			}		
-		}
+			auto frame = frame_factory_->create_frame(this);
+			fast_memcpy(frame->image_data().begin(), bmp_data_, format_desc_.size);
+			head_ = frame;
+		}		
+		
 		
 		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_time)*0.5f);
 		return head_;
@@ -195,6 +192,7 @@ struct flash_producer : public core::frame_producer
 {	
 	const std::wstring filename_;	
 	tbb::atomic<int> fps_;
+	bool underfow_;
 
 	std::shared_ptr<diagnostics::graph> graph_;
 
@@ -227,11 +225,6 @@ public:
 			init_renderer();
 		});
 				
-		executor_.begin_invoke([=]
-		{
-			render();
-		});		
-
 		fps_ = 0;
 	}
 
@@ -287,11 +280,15 @@ public:
 	{
 		renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_));
 		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
+		executor_.begin_invoke([=]
+		{
+			render(renderer_);
+		});		
 	}
 
-	void render()
+	void render(const std::shared_ptr<flash_renderer>& renderer)
 	{
-		if(!renderer_)
+		if(renderer_ != renderer) // Make sure the recursive calls are only for a specific instance.
 		{
 			frame_buffer_.push(core::basic_frame::empty());
 			return;
@@ -302,20 +299,20 @@ public:
 			auto frame = core::basic_frame::empty();
 			if(abs(renderer_->fps()/2.0 - format_desc_.fps) < 0.1) //flash 50, format 50i
 			{
-				auto frame1 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-3);
-				auto frame2 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-3);
+				auto frame1 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
+				auto frame2 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
 				frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));
 				frame = frame2;
 			}
 			else if(abs(renderer_->fps()- format_desc_.fps/2.0 ) < 0.1) //flash 25, format 50p
 			{
-				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-3);
+				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
 				frame_buffer_.push(frame);
 				frame_buffer_.push(frame);
 			}
 			else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // flash 25, format 50i or flash 50, format 50p
 			{
-				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity()-3);
+				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
 				frame_buffer_.push(frame);
 			}
 
@@ -324,7 +321,7 @@ public:
 
 			executor_.begin_invoke([=]
 			{
-				render();
+				render(renderer);
 			});			
 		}
 		catch(...)
