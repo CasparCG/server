@@ -28,7 +28,7 @@
 
 namespace caspar { 
 	
-static BMDDisplayMode GetDecklinkVideoFormat(core::video_format::type fmt) 
+static BMDDisplayMode get_decklink_video_format(core::video_format::type fmt) 
 {
 	switch(fmt)
 	{
@@ -47,17 +47,17 @@ static BMDDisplayMode GetDecklinkVideoFormat(core::video_format::type fmt)
 	case core::video_format::x1080p2500:	return bmdModeHD1080p25;
 	case core::video_format::x1080p2997:	return bmdModeHD1080p2997;
 	case core::video_format::x1080p3000:	return bmdModeHD1080p30;
-	default:						return (BMDDisplayMode)ULONG_MAX;
+	default:								return (BMDDisplayMode)ULONG_MAX;
 	}
 }
 	
 template<typename T>
-static IDeckLinkDisplayMode* get_display_mode(const T& output, BMDDisplayMode format)
+static CComPtr<IDeckLinkDisplayMode> get_display_mode(const T& device, BMDDisplayMode format)
 {
 	CComPtr<IDeckLinkDisplayModeIterator> iterator;
-	IDeckLinkDisplayMode*				mode;
+	CComPtr<IDeckLinkDisplayMode>    	  mode;
 	
-	if(FAILED(output->GetDisplayModeIterator(&iterator)))
+	if(FAILED(device->GetDisplayModeIterator(&iterator)))
 		return nullptr;
 
 	while(SUCCEEDED(iterator->Next(&mode)) && mode != nullptr)
@@ -70,9 +70,9 @@ static IDeckLinkDisplayMode* get_display_mode(const T& output, BMDDisplayMode fo
 }
 
 template<typename T>
-static IDeckLinkDisplayMode* get_display_mode(const T& output, core::video_format::type fmt)
-{
-	return get_display_mode(output, GetDecklinkVideoFormat(fmt));
+static CComPtr<IDeckLinkDisplayMode> get_display_mode(const T& output, core::video_format::type fmt)
+{	
+	return get_display_mode(output, get_decklink_video_format(fmt));
 }
 
 template<typename T>
@@ -90,13 +90,12 @@ static std::wstring get_version(T& iterator)
 
 static CComPtr<IDeckLink> get_device(size_t device_index)
 {
-	CComPtr<IDeckLink> decklink;
-
 	CComPtr<IDeckLinkIterator> pDecklinkIterator;
 	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
 		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink drivers installed."));
 		
 	size_t n = 0;
+	CComPtr<IDeckLink> decklink;
 	while(n < device_index && pDecklinkIterator->Next(&decklink) == S_OK){++n;}	
 
 	if(n != device_index || !decklink)

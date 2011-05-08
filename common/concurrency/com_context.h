@@ -50,6 +50,8 @@ public:
 	T* operator->() const { return instance_.get();}  // noexcept
 
 	T* get() const { return instance_.get();}  // noexcept
+
+	operator bool() const {return get() != nullptr;}
 };
 
 }
