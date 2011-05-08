@@ -19,9 +19,12 @@
 */
 #pragma once
 
+#include <common/exception/exceptions.h>
 #include <core/video_format.h>
 
 #include "../interop/DeckLinkAPI_h.h"
+
+#include <atlbase.h>
 
 namespace caspar { 
 	
@@ -48,9 +51,10 @@ static BMDDisplayMode GetDecklinkVideoFormat(core::video_format::type fmt)
 	}
 }
 	
-static IDeckLinkDisplayMode* get_display_mode(IDeckLinkOutput* output, BMDDisplayMode format)
+template<typename T>
+static IDeckLinkDisplayMode* get_display_mode(const T& output, BMDDisplayMode format)
 {
-	IDeckLinkDisplayModeIterator*		iterator;
+	CComPtr<IDeckLinkDisplayModeIterator> iterator;
 	IDeckLinkDisplayMode*				mode;
 	
 	if(FAILED(output->GetDisplayModeIterator(&iterator)))
@@ -61,27 +65,52 @@ static IDeckLinkDisplayMode* get_display_mode(IDeckLinkOutput* output, BMDDispla
 		if(mode->GetDisplayMode() == format)
 			return mode;
 	}
-	iterator->Release();
+
 	return nullptr;
 }
 
-static IDeckLinkDisplayMode* get_display_mode(IDeckLinkOutput* output, core::video_format::type fmt)
+template<typename T>
+static IDeckLinkDisplayMode* get_display_mode(const T& output, core::video_format::type fmt)
 {
 	return get_display_mode(output, GetDecklinkVideoFormat(fmt));
 }
 
 template<typename T>
-static std::wstring get_version(T& deckLinkIterator)
+static std::wstring get_version(T& iterator)
 {
-	IDeckLinkAPIInformation* deckLinkAPIInformation;
-	if (FAILED(deckLinkIterator->QueryInterface(IID_IDeckLinkAPIInformation, (void**)&deckLinkAPIInformation)))
+	CComQIPtr<IDeckLinkAPIInformation> info = iterator;
+	if (!info)
 		return L"Unknown";
 	
 	BSTR ver;		
-	deckLinkAPIInformation->GetString(BMDDeckLinkAPIVersion, &ver);
-	deckLinkAPIInformation->Release();	
+	info->GetString(BMDDeckLinkAPIVersion, &ver);
 		
 	return ver;					
+}
+
+static CComPtr<IDeckLink> get_device(size_t device_index)
+{
+	CComPtr<IDeckLink> decklink;
+
+	CComPtr<IDeckLinkIterator> pDecklinkIterator;
+	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink drivers installed."));
+		
+	size_t n = 0;
+	while(n < device_index && pDecklinkIterator->Next(&decklink) == S_OK){++n;}	
+
+	if(n != device_index || !decklink)
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink card not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index)));
+		
+	return decklink;
+}
+
+template <typename T>
+static std::wstring get_model_name(const T& device)
+{	
+	BSTR pModelName;
+	device->GetModelName(&pModelName);
+	return std::wstring(pModelName);
 }
 
 }

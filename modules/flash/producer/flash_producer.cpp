@@ -70,7 +70,8 @@ class flash_renderer
 	safe_ptr<core::basic_frame> head_;
 	
 	safe_ptr<diagnostics::graph> graph_;
-	boost::timer perf_timer_;
+	boost::timer frame_timer_;
+	boost::timer tick_timer_;
 
 	high_prec_timer timer_;
 	
@@ -87,6 +88,8 @@ public:
 	{
 		graph_->add_guide("frame-time", 0.5f);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
+		graph_->add_guide("tick-time", 0.5);
+		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));			
 		
@@ -149,17 +152,20 @@ public:
 	
 	safe_ptr<core::basic_frame> render_frame(bool has_underflow)
 	{
-		if(ax_->IsEmpty())
-			return core::basic_frame::empty();
+		float frame_time = 1.0f/ax_->GetFPS();
 
-		double frame_time = 1.0/ax_->GetFPS();
+		graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
+		tick_timer_.restart();
+
+		if(ax_->IsEmpty())
+			return core::basic_frame::empty();		
 		
 		if(!has_underflow)			
 			timer_.tick(frame_time);	
 		else
 			graph_->add_tag("underflow");
 			
-		perf_timer_.restart();
+		frame_timer_.restart();
 
 		ax_->Tick();
 		if(ax_->InvalidRect())
@@ -171,9 +177,8 @@ public:
 			fast_memcpy(frame->image_data().begin(), bmp_data_, format_desc_.size);
 			head_ = frame;
 		}		
-		
-		
-		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_time)*0.5f);
+				
+		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);
 		return head_;
 	}
 
