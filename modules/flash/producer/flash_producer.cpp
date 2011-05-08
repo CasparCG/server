@@ -49,6 +49,37 @@
 
 namespace caspar {
 		
+class bitmap
+{
+public:
+	bitmap(size_t width, size_t height)
+		: bmp_data_(nullptr)
+		, hdc_(CreateCompatibleDC(0), DeleteDC)
+	{	
+		BITMAPINFO info;
+		memset(&info, 0, sizeof(BITMAPINFO));
+		info.bmiHeader.biBitCount = 32;
+		info.bmiHeader.biCompression = BI_RGB;
+		info.bmiHeader.biHeight = -height;
+		info.bmiHeader.biPlanes = 1;
+		info.bmiHeader.biSize = sizeof(BITMAPINFO);
+		info.bmiHeader.biWidth = width;
+
+		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
+		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
+	}
+
+	operator HDC() {return static_cast<HDC>(hdc_.get());}
+
+	BYTE* data() { return bmp_data_;}
+	const BYTE* data() const { return bmp_data_;}
+
+private:
+	BYTE* bmp_data_;	
+	std::shared_ptr<void> hdc_;
+	std::shared_ptr<void> bmp_;
+};
+
 class flash_renderer
 {	
 	const std::wstring filename_;
@@ -56,12 +87,9 @@ class flash_renderer
 
 	const std::shared_ptr<core::frame_factory> frame_factory_;
 	
-	BYTE* bmp_data_;	
-	std::shared_ptr<void> hdc_;
-	std::shared_ptr<void> bmp_;
-
 	CComObject<caspar::flash::FlashAxContainer>* ax_;
 	safe_ptr<core::basic_frame> head_;
+	bitmap bmp_;
 	
 	safe_ptr<diagnostics::graph> graph_;
 	boost::timer frame_timer_;
@@ -75,10 +103,9 @@ public:
 		, filename_(filename)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, frame_factory_(frame_factory)
-		, bmp_data_(nullptr)
-		, hdc_(CreateCompatibleDC(0), DeleteDC)
 		, ax_(nullptr)
 		, head_(core::basic_frame::empty())
+		, bmp_(format_desc_.width, format_desc_.height)
 	{
 		graph_->add_guide("frame-time", 0.5f);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
@@ -108,19 +135,8 @@ public:
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Set Scale Mode"));
 						
-		ax_->SetFormat(format_desc_);
-		
-		BITMAPINFO info;
-		memset(&info, 0, sizeof(BITMAPINFO));
-		info.bmiHeader.biBitCount = 32;
-		info.bmiHeader.biCompression = BI_RGB;
-		info.bmiHeader.biHeight = -format_desc_.height;
-		info.bmiHeader.biPlanes = 1;
-		info.bmiHeader.biSize = sizeof(BITMAPINFO);
-		info.bmiHeader.biWidth = format_desc_.width;
-
-		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
-		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
+		ax_->SetFormat(format_desc_);		
+	
 		CASPAR_LOG(info) << print() << L" Thread started.";
 	}
 
@@ -164,11 +180,11 @@ public:
 		ax_->Tick();
 		if(ax_->InvalidRect())
 		{			
-			fast_memclr(bmp_data_,  format_desc_.size);
-			ax_->DrawControl(static_cast<HDC>(hdc_.get()));
+			fast_memclr(bmp_.data(),  format_desc_.size);
+			ax_->DrawControl(bmp_);
 		
 			auto frame = frame_factory_->create_frame(this);
-			fast_memcpy(frame->image_data().begin(), bmp_data_, format_desc_.size);
+			fast_memcpy(frame->image_data().begin(), bmp_.data(), format_desc_.size);
 			head_ = frame;
 		}		
 				

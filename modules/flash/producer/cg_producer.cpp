@@ -19,19 +19,14 @@
 */
 #include "../StdAfx.h"
 
-#include <common/env.h>
-
 #include "cg_producer.h"
 
 #include "flash_producer.h"
 
+#include <common/env.h>
+
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
-
-#include <boost/assign.hpp>
-
-using boost::format;
-using boost::io::group;
 		
 namespace caspar {
 	

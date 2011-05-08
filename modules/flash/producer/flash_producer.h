@@ -21,7 +21,10 @@
 
 #include <core/producer/frame_producer.h>
 
-#include <memory>
+#include <common/memory/safe_ptr.h>
+
+#include <vector>
+#include <string>
 
 namespace caspar {
 
