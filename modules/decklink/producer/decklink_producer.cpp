@@ -22,12 +22,13 @@
 
 #include "decklink_producer.h"
 
-#include "../interop/DeckLinkAPI_h.h" // TODO: Change this
-#include "../util/util.h" // TODO: Change this
+#include "../interop/DeckLinkAPI_h.h"
+#include "../util/util.h"
 
 #include <common/diagnostics/graph.h>
-#include <common/concurrency/executor.h>
+#include <common/concurrency/com_context.h>
 #include <common/exception/exceptions.h>
+#include <common/memory/memclr.h>
 #include <common/utility/timer.h>
 
 #include <core/producer/frame/frame_factory.h>
@@ -53,25 +54,20 @@
 
 namespace caspar { 
 
-class decklink_input : public IDeckLinkInputCallback
-{
-	struct co_init
-	{
-		co_init(){CoInitialize(nullptr);}
-		~co_init(){CoUninitialize();}
-	} co_;
+class decklink_producer : public IDeckLinkInputCallback
+{	
+	static const size_t SAMPLES_PER_FRAME = 3840;
 
+	CComPtr<IDeckLink>				decklink_;
+	CComQIPtr<IDeckLinkInput>		input_;
+	
+	const std::wstring model_name_;
 	const core::video_format_desc format_desc_;
-	std::wstring model_name_;
 	const size_t device_index_;
 
 	std::shared_ptr<diagnostics::graph> graph_;
 	boost::timer perf_timer_;
-
-	CComPtr<IDeckLink>			decklink_;
-	CComQIPtr<IDeckLinkInput>	input_;
-	IDeckLinkDisplayMode*		d_mode_;
-
+	
 	std::vector<short>			audio_data_;
 
 	std::shared_ptr<core::frame_factory> frame_factory_;
@@ -79,50 +75,40 @@ class decklink_input : public IDeckLinkInputCallback
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
 	safe_ptr<core::basic_frame> tail_;
 
+	std::exception_ptr exception_;
+
 public:
-	decklink_input(const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory)
-		: format_desc_(format_desc)
+	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory)
+		: decklink_(get_device(device_index))
+		, input_(decklink_)
+		, model_name_(get_model_name(decklink_))
+		, format_desc_(format_desc)
 		, device_index_(device_index)
-		, model_name_(L"decklink")
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
 	{
-		frame_buffer_.set_capacity(4);
+		frame_buffer_.set_capacity(2);
 		
-		CComPtr<IDeckLinkIterator> pDecklinkIterator;
-		if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " No Decklink drivers installed."));
-
-		size_t n = 0;
-		while(n < device_index_ && pDecklinkIterator->Next(&decklink_) == S_OK){++n;}	
-
-		if(n != device_index_ || !decklink_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Decklink card not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index_)));
-
-		input_ = decklink_;
-
-		BSTR pModelName;
-		decklink_->GetModelName(&pModelName);
-		model_name_ = std::wstring(pModelName);
-
-		graph_ = diagnostics::create_graph(boost::bind(&decklink_input::print, this));
+		graph_ = diagnostics::create_graph(boost::bind(&decklink_producer::print, this));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
+		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
+		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
-		unsigned long decklinkVideoFormat = GetDecklinkVideoFormat(format_desc.format);
-		if(decklinkVideoFormat == ULONG_MAX) 
+		auto display_mode = get_display_mode(input_, format_desc_.format);
+		if(!display_mode) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
+		
+		// NOTE: For some reason the code below fails even for PAL.
+		//BMDDisplayModeSupport displayModeSupport;
+		//if(FAILED(input_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, bmdVideoOutputFlagDefault, &displayModeSupport, nullptr)) || displayModeSupport == bmdDisplayModeNotSupported)
+		//	BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
+		//else if(displayModeSupport == bmdDisplayModeSupportedWithConversion)
+		//	CASPAR_LOG(warning) << print() << " Display mode is supported with conversion.";
 
-		d_mode_ = get_display_mode((BMDDisplayMode)decklinkVideoFormat);
-		if(d_mode_ == nullptr) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
-
-		BMDDisplayModeSupport displayModeSupport;
-		if(FAILED(input_->DoesSupportVideoMode((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, bmdVideoOutputFlagDefault, &displayModeSupport, nullptr)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
-
-		// NOTE: bmdFormat8BitARGB is not supported.
-		if(FAILED(input_->EnableVideoInput((BMDDisplayMode)decklinkVideoFormat, bmdFormat8BitYUV, 0))) 
+		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
+		if(FAILED(input_->EnableVideoInput(display_mode->GetDisplayMode(), bmdFormat8BitYUV, 0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video input."));
 
 		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2))) 
@@ -137,7 +123,7 @@ public:
 		CASPAR_LOG(info) << print() << " successfully initialized decklink for " << format_desc_.name;
 	}
 
-	~decklink_input()
+	~decklink_producer()
 	{
 		if(input_ != nullptr) 
 		{
@@ -152,133 +138,107 @@ public:
 		
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents /*notificationEvents*/, IDeckLinkDisplayMode* newDisplayMode, BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/)
 	{
-		d_mode_ = newDisplayMode;
 		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
 	{	
-		graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
-		perf_timer_.restart();
+		try
+		{
+			graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+			perf_timer_.restart();
+						
+			core::pixel_format_desc desc;
+			desc.pix_fmt = core::pixel_format::ycbcr;
+			desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width,   format_desc_.height, 1));
+			desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));
+			desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));			
+			auto frame = frame_factory_->create_frame(this, desc);
+						
+			void* bytes = nullptr;
+			video->GetBytes(&bytes);
+			unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
+			const size_t frame_size = (format_desc_.width * 16 / 8) * format_desc_.height;
 
-		if(!video)
-			return S_OK;		
-				
-		void* bytes = nullptr;
-		if(FAILED(video->GetBytes(&bytes)))
-			return S_OK;
-
-		core::pixel_format_desc desc;
-		desc.pix_fmt = core::pixel_format::ycbcr;
-		desc.planes.push_back(core::pixel_format_desc::plane(d_mode_->GetWidth(),   d_mode_->GetHeight(), 1));
-		desc.planes.push_back(core::pixel_format_desc::plane(d_mode_->GetWidth()/2, d_mode_->GetHeight(), 1));
-		desc.planes.push_back(core::pixel_format_desc::plane(d_mode_->GetWidth()/2, d_mode_->GetHeight(), 1));			
-		auto frame = frame_factory_->create_frame(this, desc);
-
-		unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
-		int frame_size = (d_mode_->GetWidth() * 16 / 8) * d_mode_->GetHeight();
-
-		// Convert to planar YUV422
-		unsigned char* y  = frame->image_data(0).begin();
-		unsigned char* cb = frame->image_data(1).begin();
-		unsigned char* cr = frame->image_data(2).begin();
+			// Convert to planar YUV422
+			unsigned char* y  = frame->image_data(0).begin();
+			unsigned char* cb = frame->image_data(1).begin();
+			unsigned char* cr = frame->image_data(2).begin();
 		
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, frame_size/4), [&](const tbb::blocked_range<size_t>& r)
-		{
-			for(auto n = r.begin(); n != r.end(); ++n)
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, frame_size/4), [&](const tbb::blocked_range<size_t>& r)
 			{
-				cb[n]	  = data[n*4+0];
-				y [n*2+0] = data[n*4+1];
-				cr[n]	  = data[n*4+2];
-				y [n*2+1] = data[n*4+3];
-			}
-		});
+				for(auto n = r.begin(); n != r.end(); ++n)
+				{
+					cb[n]	  = data[n*4+0];
+					y [n*2+0] = data[n*4+1];
+					cr[n]	  = data[n*4+2];
+					y [n*2+1] = data[n*4+3];
+				}
+			});
 
-		if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
-		{
-			auto sample_frame_count = audio->GetSampleFrameCount();
-			auto audio_data = reinterpret_cast<short*>(bytes);
-			audio_data_.insert(audio_data_.end(), audio_data, audio_data + sample_frame_count*2);
-
-			if(audio_data_.size() > 3840)
+			// It is assumed that audio is always equal or ahead of video.
+			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{
-				frame->audio_data() = std::vector<short>(audio_data_.begin(), audio_data_.begin() + 3840);
-				audio_data_.erase(audio_data_.begin(), audio_data_.begin() + 3840);
-				frame_buffer_.try_push(frame);
+				auto sample_frame_count = audio->GetSampleFrameCount();
+				auto audio_data = reinterpret_cast<short*>(bytes);
+				audio_data_.insert(audio_data_.end(), audio_data, audio_data + sample_frame_count*2);
+
+				if(audio_data_.size() > SAMPLES_PER_FRAME)
+				{
+					frame->audio_data() = std::vector<short>(audio_data_.begin(), audio_data_.begin() + SAMPLES_PER_FRAME);
+					audio_data_.erase(audio_data_.begin(), audio_data_.begin() + SAMPLES_PER_FRAME);
+				}
 			}
+
+			if(!frame_buffer_.try_push(frame))
+				graph_->add_tag("dropped-frame");
+			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 		}
-		else
-			frame_buffer_.try_push(frame);
+		catch(...)
+		{
+			exception_ = std::current_exception();
+			return E_FAIL;
+		}
 
 		return S_OK;
 	}
-
-	IDeckLinkDisplayMode* get_display_mode(BMDDisplayMode mode)
-	{	
-		CComPtr<IDeckLinkDisplayModeIterator>	iterator;
-		IDeckLinkDisplayMode*					d_mode;
 	
-		if (input_->GetDisplayModeIterator(&iterator) != S_OK)
-			return nullptr;
-
-		while (iterator->Next(&d_mode) == S_OK)
-		{
-			if(d_mode->GetDisplayMode() == mode)
-				return d_mode;
-		}
-		return nullptr;
-	}
-
 	safe_ptr<core::basic_frame> get_frame()
 	{
-		frame_buffer_.try_pop(tail_);
+		if(exception_ != nullptr)
+			std::rethrow_exception(exception_);
+
+		if(!frame_buffer_.try_pop(tail_))
+			graph_->add_tag("late-frame");
+		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 		return tail_;
 	}
 	
 	std::wstring print() const
 	{
-		return L" [" + model_name_ + L"device:" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 	
-class decklink_producer : public core::frame_producer
-{	
-	const size_t device_index_;
-
-	std::unique_ptr<decklink_input> input_;
-	
-	const core::video_format_desc format_desc_;
-	
-	executor executor_;
+class decklink_producer_proxy : public core::frame_producer
+{		
+	com_context<decklink_producer> context_;
 public:
 
-	explicit decklink_producer(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index)
-		: format_desc_(format_desc) 
-		, device_index_(device_index)
-		, executor_(L"decklink_producer", true)
+	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index)
+		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 	{
-		executor_.invoke([=]
-		{
-			input_.reset(new decklink_input(format_desc_, device_index_, frame_factory));
-		});
+		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory);}); 
 	}
-
-	~decklink_producer()
-	{	
-		executor_.invoke([this]
-		{
-			input_ = nullptr;
-		});
-	}
-			
+				
 	virtual safe_ptr<core::basic_frame> receive()
 	{
-		return input_->get_frame();
+		return context_->get_frame();
 	}
 	
 	std::wstring print() const
 	{
-		return input_ ? input_->print() : L"decklink_producer";
+		return context_->print();
 	}
 };
 
@@ -289,19 +249,17 @@ safe_ptr<core::frame_producer> create_decklink_producer(const safe_ptr<core::fra
 
 	size_t device_index = 1;
 	if(params.size() > 1)
-	{
-		try{device_index = boost::lexical_cast<int>(params[1]);}
-		catch(boost::bad_lexical_cast&){}
-	}
+		device_index = lexical_cast_or_default(params[1], 1);
 
 	core::video_format_desc format_desc = core::video_format_desc::get(L"PAL");
 	if(params.size() > 2)
 	{
-		format_desc = core::video_format_desc::get(params[2]);
-		format_desc = format_desc.format != core::video_format::invalid ? format_desc : core::video_format_desc::get(L"PAL");
+		auto desc = core::video_format_desc::get(params[2]);
+		if(desc.format != core::video_format::invalid)
+			format_desc = desc;
 	}
 
-	return make_safe<decklink_producer>(frame_factory, format_desc, device_index);
+	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index);
 }
 
 }
