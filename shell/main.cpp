@@ -125,9 +125,6 @@ int main(int argc, wchar_t* argv[])
 {	
 	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
 	
-	// Install structured exception handler.
-	caspar::win32_exception::install_handler();
-
 	// Set debug mode.
 	#ifdef _DEBUG
 		_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
@@ -135,7 +132,13 @@ int main(int argc, wchar_t* argv[])
 		_CrtSetReportMode( _CRT_WARN, _CRTDBG_MODE_DEBUG );
 		_CrtSetReportMode( _CRT_ASSERT, _CRTDBG_MODE_DEBUG );
 	#endif
-		
+
+	// Increase process priotity.
+	SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
+
+	// Install structured exception handler.
+	caspar::win32_exception::install_handler();
+			
 	// Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
 	struct inc_prec
 	{
