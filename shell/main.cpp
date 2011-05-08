@@ -227,11 +227,11 @@ int main(int argc, wchar_t* argv[])
 	{
 		CASPAR_LOG(fatal) << "UNHANDLED EXCEPTION in main thread.";
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		std::wcout << L"Press Any Key To Exit.\n";
-		_getwch();
 	}	
 	
 	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
-	
+	Sleep(100); // CAPSAR_LOG is asynchronous. Try to get text in correct order.
+	std::wcout << L"Press Any Key To Exit.\n";
+	_getwch();
 	return 0;
 }

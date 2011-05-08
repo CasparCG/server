@@ -41,14 +41,14 @@ public:
 
 		if (time_.QuadPart != 0)
 		{
-			int ticks_to_wait = static_cast<int>(static_cast<double>(freq_.QuadPart) * interval);
-			int done = 0;
+			__int64 ticks_to_wait = static_cast<int>(static_cast<double>(freq_.QuadPart) * interval);
+			__int64 done = 0;
 			do
 			{
 				QueryPerformanceCounter(&t);
 				
-				int ticks_passed = static_cast<int>(static_cast<__int64>(t.QuadPart) - static_cast<__int64>(time_.QuadPart));
-				int ticks_left = ticks_to_wait - ticks_passed;
+				__int64 ticks_passed = static_cast<__int64>(t.QuadPart) - static_cast<__int64>(time_.QuadPart);
+				__int64 ticks_left = ticks_to_wait - ticks_passed;
 
 				if (t.QuadPart < time_.QuadPart)    // time wrap
 					done = 1;
@@ -63,7 +63,7 @@ public:
 					// otherwise, do a few Sleep(0)'s, which just give up the timeslice,
 					//   but don't really save cpu or battery, but do pass a tiny
 					//   amount of time.
-					if (ticks_left > static_cast<int>((freq_.QuadPart*2)/1000))
+					if (ticks_left > static_cast<__int64>((freq_.QuadPart*2)/1000))
 						Sleep(1);
 					else                        
 						for (int i = 0; i < 10; ++i) 
