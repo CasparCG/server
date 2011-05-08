@@ -23,7 +23,6 @@
 
 #include "producer/cg_producer.h"
 #include "producer/flash_producer.h"
-#include "producer/flash_producer.h"
 
 #include <common/env.h>
 

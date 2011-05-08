@@ -239,7 +239,7 @@ public:
 	{	
 		context_.begin_invoke([=]
 		{
-			if(!context_.get())
+			if(!context_)
 				initialize();
 
 			try
