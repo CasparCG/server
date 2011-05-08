@@ -24,30 +24,19 @@
 #include <core/video_format.h>
 #include <core/consumer/frame_consumer.h>
 
+#include <boost/property_tree/ptree.hpp>
+
 #include <string>
 
 namespace caspar { 
-	
-struct bluefish_exception : public caspar_exception{};
 
-class bluefish_consumer : public core::frame_consumer
-{
-public:
-	explicit bluefish_consumer(unsigned int device_index, bool embed_audio = false);
-	bluefish_consumer(bluefish_consumer&& other);
-	
-	virtual void initialize(const core::video_format_desc& format_desc);
-	virtual void send(const safe_ptr<const core::read_frame>&);
-	virtual size_t buffer_depth() const;
-	virtual std::wstring print() const;
-private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
-};
-	
+struct bluefish_exception : virtual caspar_exception{};
+		
 void blue_initialize();
 std::wstring get_bluefish_version();
 std::vector<std::wstring> get_bluefish_device_list();
+
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree);
 
 }

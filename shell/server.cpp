@@ -118,8 +118,7 @@ struct server::implementation : boost::noncopyable
 						channels_.back()->consumer()->add(index++, ogl_consumer(device, stretch, windowed));
 					}
 					else if(name == "bluefish")					
-						channels_.back()->consumer()->add(index++, bluefish_consumer(xml_consumer.second.get("device", 0), 
-																					xml_consumer.second.get("embedded-audio", true)));					
+						channels_.back()->consumer()->add(index++, create_bluefish_consumer(xml_consumer.second));					
 					else if(name == "decklink")					
 						channels_.back()->consumer()->add(index++, create_decklink_consumer(xml_consumer.second));					
 					else if(name == "audio")
