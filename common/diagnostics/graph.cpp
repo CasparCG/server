@@ -232,7 +232,7 @@ public:
 			target.Draw(*guide_);
 		
 		glBegin(GL_LINE_STRIP);
-		glColor4f(c_.red, c_.green, c_.blue, 1.0f);		
+		glColor4f(c_.red, c_.green, c_.blue, 0.7f);		
 		for(size_t n = 0; n < line_data_.size(); ++n)		
 			if(line_data_[n].first > -0.5)
 				glVertex3f(x+n*dx, std::max(0.05f, std::min(0.95f, (1.0f-line_data_[n].first)*0.8f + 0.1f)), 0.0f);		
