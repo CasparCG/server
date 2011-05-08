@@ -82,7 +82,7 @@ void blue_initialize()
 	blue_hanc_initialize();
 }
 		
-struct bluefish_consumer::implementation : boost::noncopyable
+struct bluefish_consumer : boost::noncopyable
 {
 	std::wstring		model_name_;
 	const unsigned int	device_index_;
@@ -90,59 +90,43 @@ struct bluefish_consumer::implementation : boost::noncopyable
 	std::shared_ptr<diagnostics::graph> graph_;
 	boost::timer perf_timer_;
 
-	boost::unique_future<void> active_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> frame_buffer_;
 			
 	std::shared_ptr<CBlueVelvet4> blue_;
 	
-	core::video_format_desc	format_desc_;
+	const core::video_format_desc	format_desc_;
 		
-	unsigned long	mem_fmt_;
-	unsigned long	upd_fmt_;
-	EVideoMode		vid_fmt_; 
-	unsigned long	res_fmt_; 
-	unsigned long	engine_mode_;
+	const unsigned long	mem_fmt_;
+	const unsigned long	upd_fmt_;
+	const unsigned long	res_fmt_; 
+	unsigned long engine_mode_;
+	EVideoMode	vid_fmt_; 
 	
 	std::array<blue_dma_buffer_ptr, 3> reserved_frames_;	
 
 	const bool embedded_audio_;
 
+	tbb::atomic<bool> is_running_;
 	executor executor_;
 public:
-	implementation::implementation(unsigned int device_index, bool embedded_audio) 
+	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio) 
 		: model_name_(L"BLUEFISH")
 		, device_index_(device_index) 
+		, format_desc_(format_desc)
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)
-		, vid_fmt_(VID_FMT_INVALID) 
 		, res_fmt_(RES_FMT_NORMAL) 
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
+		, vid_fmt_(VID_FMT_INVALID) 
 		, embedded_audio_(embedded_audio)
-		, executor_(print())
+		, executor_(print(), true)
 	{
+		is_running_ = true;
+		frame_buffer_.set_capacity(1);
+
 		if(!BlueVelvetFactory4 || (embedded_audio_ && (!encode_hanc_frame || !encode_hanc_frame)))
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Bluefish drivers not found."));
-	}
-
-	~implementation()
-	{
-		if(executor_.is_running())
-		{
-			executor_.invoke([&]
-			{
-				disable_video_output();
-
-				if(blue_)
-					blue_->device_detach();		
-			});
-		}
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
 		
-		CASPAR_LOG(info) << print() << L" Shutting down.";	
-	}
-
-	void initialize(const core::video_format_desc& format_desc)
-	{		
-		format_desc_ = format_desc;
-
 		blue_.reset(BlueVelvetFactory4());
 
 		if(BLUE_FAIL(blue_->device_attach(device_index_, FALSE))) 
@@ -241,12 +225,25 @@ public:
 		for(size_t n = 0; n < reserved_frames_.size(); ++n)
 			reserved_frames_[n] = std::make_shared<blue_dma_buffer>(format_desc_.size, n);		
 				
-		executor_.start();
-		active_ = executor_.begin_invoke([]{});
-
 		CASPAR_LOG(info) << print() << TEXT(" Successfully initialized for ") << format_desc_ << TEXT(".");
 	}
+
+	~bluefish_consumer()
+	{
+		is_running_ = false;
+		frame_buffer_.clear();
+		executor_.clear();
+		executor_.invoke([&]
+		{
+			disable_video_output();
+
+			if(blue_)
+				blue_->device_detach();		
+		});
 		
+		CASPAR_LOG(info) << print() << L" Shutting down.";	
+	}
+
 	void enable_video_output()
 	{
 		if(!BLUE_PASS(set_card_property(blue_, VIDEO_BLACKGENERATOR, 0)))
@@ -262,15 +259,21 @@ public:
 	virtual void send(const safe_ptr<const core::read_frame>& frame)
 	{			
 		static std::vector<short> silence(MAX_HANC_BUFFER_SIZE, 0);
-		
-		size_t audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps);
-		size_t audio_nchannels = 2;
-		
-		active_.get();
-		active_ = executor_.begin_invoke([=]
+				
+		if(!is_running_)
+			return;
+
+		frame_buffer_.push(frame);
+		executor_.begin_invoke([this]
 		{
 			try
 			{
+				const size_t audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps);
+				const size_t audio_nchannels = 2;
+
+				std::shared_ptr<const core::read_frame> frame;
+				frame_buffer_.pop(frame);
+
 				fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
 				
 				if(embedded_audio_)
@@ -348,17 +351,32 @@ public:
 	}
 };
 
-bluefish_consumer::bluefish_consumer(unsigned int device_index, bool embedded_audio) : impl_(new implementation(device_index, embedded_audio)){}	
-bluefish_consumer::bluefish_consumer(bluefish_consumer&& other) : impl_(std::move(other.impl_)){}
-void bluefish_consumer::initialize(const core::video_format_desc& format_desc)
+struct bluefish_consumer_proxy : public core::frame_consumer
 {
-	// TODO: Ugly
-	impl_.reset(new implementation(impl_->device_index_, impl_->embedded_audio_));
-	impl_->initialize(format_desc);
-}
-void bluefish_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
-size_t bluefish_consumer::buffer_depth() const{return impl_->buffer_depth();}
-std::wstring bluefish_consumer::print() const {return impl_->print();}	
+	std::unique_ptr<bluefish_consumer> consumer_;
+	const size_t device_index_;
+	const bool embedded_audio_;
+public:
+
+	bluefish_consumer_proxy(size_t device_index, bool embedded_audio)
+		: device_index_(device_index)
+		, embedded_audio_(embedded_audio){}
+	
+	void initialize(const core::video_format_desc& format_desc)
+	{
+		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_));
+	}
+	
+	void send(const safe_ptr<const core::read_frame>& frame)
+	{
+		consumer_->send(frame);
+	}
+	
+	std::wstring print() const
+	{
+		return consumer_->print();
+	}
+};	
 
 std::wstring get_bluefish_version()
 {
@@ -409,7 +427,15 @@ safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::w
 
 	bool embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 
-	return make_safe<bluefish_consumer>(device_index, embedded_audio);
+	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio);
+}
+
+safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree) 
+{	
+	auto device_index = ptree.get("device", 0);
+	auto embedded_audio  = ptree.get("embedded-audio", false);
+
+	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio);
 }
 
 }

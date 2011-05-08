@@ -56,8 +56,6 @@ namespace caspar {
 
 class decklink_producer : public IDeckLinkInputCallback
 {	
-	static const size_t SAMPLES_PER_FRAME = 3840;
-
 	CComPtr<IDeckLink>				decklink_;
 	CComQIPtr<IDeckLinkInput>		input_;
 	
@@ -179,14 +177,17 @@ public:
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{
+				const size_t audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps);
+				const size_t audio_nchannels = 2;
+
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<short*>(bytes);
 				audio_data_.insert(audio_data_.end(), audio_data, audio_data + sample_frame_count*2);
 
-				if(audio_data_.size() > SAMPLES_PER_FRAME)
+				if(audio_data_.size() > audio_samples*audio_nchannels)
 				{
-					frame->audio_data() = std::vector<short>(audio_data_.begin(), audio_data_.begin() + SAMPLES_PER_FRAME);
-					audio_data_.erase(audio_data_.begin(), audio_data_.begin() + SAMPLES_PER_FRAME);
+					frame->audio_data() = std::vector<short>(audio_data_.begin(), audio_data_.begin() +  audio_samples*audio_nchannels);
+					audio_data_.erase(audio_data_.begin(), audio_data_.begin() +  audio_samples*audio_nchannels);
 				}
 			}
 
