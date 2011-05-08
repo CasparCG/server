@@ -28,9 +28,9 @@ void init_bluefish()
 	try
 	{
 		blue_initialize();
+		core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_bluefish_consumer(params);});
 	}
 	catch(...){}
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_bluefish_consumer(params);});
 }
 
 }
