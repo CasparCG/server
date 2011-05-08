@@ -105,5 +105,8 @@
     <ClInclude Include="os\windows\system_info.h">
       <Filter>os\windows</Filter>
     </ClInclude>
+    <ClInclude Include="concurrency\com_context.h">
+      <Filter>concurrency</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

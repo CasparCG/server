@@ -44,7 +44,7 @@ namespace caspar{
 
 void init_decklink()
 {
-	core::register_consumer_factory(create_decklink_consumer);
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_decklink_consumer(params);});
 	core::register_producer_factory(create_decklink_producer);
 }
 

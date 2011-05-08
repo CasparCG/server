@@ -30,6 +30,6 @@
 namespace caspar { 
 	
 safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params);
-safe_ptr<core::frame_consumer> create_decklink_consumer_ptree(const boost::property_tree::ptree& ptree);
+safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tree::ptree& ptree);
 
 }
