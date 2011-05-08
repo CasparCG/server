@@ -35,7 +35,7 @@
 #include <core/producer/frame/write_frame.h>
 
 #include <common/env.h>
-#include <common/concurrency/executor.h>
+#include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
@@ -50,17 +50,11 @@
 namespace caspar {
 		
 class flash_renderer
-{
-	struct co_init
-	{
-		co_init(){CoInitialize(nullptr);}
-		~co_init(){CoUninitialize();}
-	} co_;
-	
+{	
 	const std::wstring filename_;
 	const core::video_format_desc format_desc_;
 
-	std::shared_ptr<core::frame_factory> frame_factory_;
+	const std::shared_ptr<core::frame_factory> frame_factory_;
 	
 	BYTE* bmp_data_;	
 	std::shared_ptr<void> hdc_;
@@ -96,7 +90,7 @@ public:
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
 		
-		ax_->set_print([this]{return L"";});
+		ax_->set_print([this]{return L"flash_renderer";});
 
 		if(FAILED(ax_->CreateAxControl()))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Create FlashAxControl"));
@@ -161,7 +155,7 @@ public:
 			return core::basic_frame::empty();		
 		
 		if(!has_underflow)			
-			timer_.tick(frame_time);	
+			timer_.tick(frame_time); // This will block the thread.
 		else
 			graph_->add_tag("underflow");
 			
@@ -196,51 +190,39 @@ public:
 struct flash_producer : public core::frame_producer
 {	
 	const std::wstring filename_;	
+	const safe_ptr<core::frame_factory> frame_factory_;
+
 	tbb::atomic<int> fps_;
-	bool underfow_;
 
 	std::shared_ptr<diagnostics::graph> graph_;
 
 	safe_ptr<core::basic_frame> tail_;
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
-
-	std::shared_ptr<flash_renderer> renderer_;
-	safe_ptr<core::frame_factory> frame_factory_;
-	const core::video_format_desc format_desc_;
-			
-	executor executor_;
-		
+				
+	com_context<flash_renderer> context_;		
 public:
 	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
 		: filename_(filename)		
-		, tail_(core::basic_frame::empty())		
 		, frame_factory_(frame_factory)
-		, format_desc_(frame_factory->get_video_format_desc())
-		, executor_(L"flash_producer", true)
+		, tail_(core::basic_frame::empty())		
+		, context_(L"flash_producer")
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 		 
-		frame_buffer_.set_capacity(2);
+		fps_ = 0;
+
 		graph_ = diagnostics::create_graph([this]{return print();});
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
-		executor_.begin_invoke([=]
-		{
-			init_renderer();
-		});
-				
-		fps_ = 0;
+		frame_buffer_.set_capacity(2);
+
+		initialize();				
 	}
 
 	~flash_producer()
 	{
-		executor_.clear();
 		frame_buffer_.clear();
-		executor_.invoke([=]
-		{
-			renderer_ = nullptr;
-		});		
 	}
 
 	// frame_producer
@@ -248,27 +230,27 @@ public:
 	virtual safe_ptr<core::basic_frame> receive()
 	{				
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
-		if(!frame_buffer_.try_pop(tail_))
-			return tail_;
-		
+
+		frame_buffer_.try_pop(tail_);		
 		return tail_;
 	}
 	
 	virtual void param(const std::wstring& param) 
 	{	
-		executor_.begin_invoke([=]
+		context_.begin_invoke([=]
 		{
-			if(!renderer_)
-				init_renderer();
+			if(!context_.get())
+				initialize();
 
 			try
 			{
-				renderer_->param(param);	
+				context_->param(param);	
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				renderer_ = nullptr;
+				context_.reset(nullptr);
+				frame_buffer_.push(core::basic_frame::empty());
 			}
 		});
 	}
@@ -281,59 +263,55 @@ public:
 
 	// flash_producer
 
-	void init_renderer()
+	void initialize()
 	{
-		renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_));
+		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_);});
 		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
-		executor_.begin_invoke([=]
-		{
-			render(renderer_);
-		});		
+		render(context_.get());
 	}
 
-	void render(const std::shared_ptr<flash_renderer>& renderer)
-	{
-		if(renderer_ != renderer) // Make sure the recursive calls are only for a specific instance.
+	void render(const flash_renderer* renderer)
+	{		
+		context_.begin_invoke([=]
 		{
-			frame_buffer_.push(core::basic_frame::empty());
-			return;
-		}
+			if(context_.get() != renderer) // Since initialize will start a new recursive call make sure the recursive calls are only for a specific instance.
+				return;
 
-		try
-		{		
-			auto frame = core::basic_frame::empty();
-			if(abs(renderer_->fps()/2.0 - format_desc_.fps) < 0.1) //flash 50, format 50i
-			{
-				auto frame1 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
-				auto frame2 = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
-				frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));
-				frame = frame2;
-			}
-			else if(abs(renderer_->fps()- format_desc_.fps/2.0 ) < 0.1) //flash 25, format 50p
-			{
-				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
-				frame_buffer_.push(frame);
-				frame_buffer_.push(frame);
-			}
-			else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // flash 25, format 50i or flash 50, format 50p
-			{
-				frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
-				frame_buffer_.push(frame);
-			}
+			try
+			{		
+				const auto& format_desc = frame_factory_->get_video_format_desc();
+				auto frame = core::basic_frame::empty();
+				if(abs(context_->fps()/2.0 - format_desc.fps) < 0.1) // flash 50fps, format 50i
+				{
+					auto frame1 = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
+					auto frame2 = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
+					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.mode));
+					frame = frame2;
+				}
+				else if(abs(context_->fps()- format_desc.fps/2.0 ) < 0.1) // flash 25fps, format 50p
+				{
+					frame = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
+					frame_buffer_.push(frame);
+					frame_buffer_.push(frame);
+				}
+				else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // flash 25fps, format 50i or flash 50fps, format 50p
+				{
+					frame = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
+					frame_buffer_.push(frame);
+				}
 
-			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
-			fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));
+				graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
+				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));
 
-			executor_.begin_invoke([=]
-			{
 				render(renderer);
-			});			
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			renderer_ = nullptr;
-		}
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				context_.reset(nullptr);
+				frame_buffer_.push(core::basic_frame::empty());
+			}
+		});
 	}
 };
 

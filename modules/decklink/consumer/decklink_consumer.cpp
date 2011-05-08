@@ -30,7 +30,7 @@
 
 #include <core/consumer/frame/read_frame.h>
 
-#include <common/concurrency/executor.h>
+#include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/memory/memcpy.h>
@@ -84,16 +84,10 @@ struct configuration
 		, latency(default_latency){}
 };
 
-struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
+struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
 	static const size_t BUFFER_SIZE = 4;
-	
-	struct co_init
-	{
-		co_init(){CoInitialize(nullptr);}
-		~co_init(){CoUninitialize();}
-	} co_;
-	
+		
 	const configuration config_;
 
 	CComPtr<IDeckLink>					decklink_;
@@ -123,7 +117,7 @@ struct decklink_output : public IDeckLinkVideoOutputCallback, public IDeckLinkAu
 	boost::timer tick_timer_;
 
 public:
-	decklink_output(const configuration& config, const core::video_format_desc& format_desc) 
+	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc) 
 		: config_(config)
 		, decklink_(get_device(config.device_index))
 		, output_(decklink_)
@@ -235,7 +229,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully initialized for " << format_desc_.name;	
 	}
 
-	~decklink_output()
+	~decklink_consumer()
 	{		
 		is_running_ = false;
 		video_frame_buffer_.clear();
@@ -356,42 +350,30 @@ public:
 	}
 };
 
-struct decklink_consumer : public core::frame_consumer
+struct decklink_consumer_proxy : public core::frame_consumer
 {
-	std::unique_ptr<decklink_output> input_;
-	configuration config_;
+	const configuration config_;
 
-	executor executor_;
+	com_context<decklink_consumer> context_;
 public:
 
-	decklink_consumer(const configuration& config)
+	decklink_consumer_proxy(const configuration& config)
 		: config_(config)
-		, executor_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]", true){}
-
-	~decklink_consumer()
-	{
-		executor_.invoke([&]
-		{
-			input_ = nullptr;
-		});
-	}
-
+		, context_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]"){}
+	
 	void initialize(const core::video_format_desc& format_desc)
 	{
-		executor_.invoke([&]
-		{
-			input_.reset(new decklink_output(config_, format_desc));
-		});
+		context_.reset([&]{return new decklink_consumer(config_, format_desc);});
 	}
 	
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{
-		input_->send(frame);
+		context_->send(frame);
 	}
 	
 	std::wstring print() const
 	{
-		return input_->print();
+		return context_->print();
 	}
 };	
 
@@ -405,22 +387,22 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::w
 	if(params.size() > 1)
 		config.device_index = lexical_cast_or_default<int>(params[1], config.device_index);
 		
-	auto it = std::find(params.begin(), params.end(), L"INTERNAL_KEY");
-	if(it != params.end())
+	if(std::find(params.begin(), params.end(), L"INTERNAL_KEY") != params.end())
 		config.keyer = internal_key;
-	else
-	{
-		auto it = std::find(params.begin(), params.end(), L"EXTERNAL_KEY");
-		if(it != params.end())
-			config.keyer = external_key;
-	}
+	else if(std::find(params.begin(), params.end(), L"EXTERNAL_KEY") != params.end())
+		config.keyer = external_key;
+	
+	if(std::find(params.begin(), params.end(), L"LOW_LATENCY") != params.end())
+		config.latency = low_latency;
+	else if(std::find(params.begin(), params.end(), L"NORMAL_LATENCY") != params.end())
+		config.latency = normal_latency;
 		
 	config.embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 
-	return make_safe<decklink_consumer>(config);
+	return make_safe<decklink_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_decklink_consumer_ptree(const boost::property_tree::ptree& ptree) 
+safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tree::ptree& ptree) 
 {
 	configuration config;
 
@@ -439,7 +421,7 @@ safe_ptr<core::frame_consumer> create_decklink_consumer_ptree(const boost::prope
 	config.device_index = ptree.get("device", 0);
 	config.embedded_audio  = ptree.get("embedded-audio", false);
 
-	return make_safe<decklink_consumer>(config);
+	return make_safe<decklink_consumer_proxy>(config);
 }
 
 }
