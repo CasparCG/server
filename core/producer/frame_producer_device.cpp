@@ -25,12 +25,15 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 
+#include <common/diagnostics/graph.h>
+
 #include "layer.h"
 
 #include <common/concurrency/executor.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/timer.hpp>
 
 #include <tbb/parallel_for.h>
 #include <tbb/mutex.h>
@@ -47,16 +50,30 @@ struct frame_producer_device::implementation : boost::noncopyable
 	std::map<int, layer> layers_;		
 	
 	const video_format_desc format_desc_;
+	
+	safe_ptr<diagnostics::graph> diag_;
 
 	output_t output_;
+
+	boost::timer frame_timer_;
+	boost::timer tick_timer_;
+	boost::timer output_timer_;
 	
 	mutable executor executor_;
 public:
 	implementation(const video_format_desc& format_desc)  
 		: format_desc_(format_desc)
-		, executor_(L"frame_producer_device")
+		, diag_(diagnostics::create_graph(std::string("frame_producer_device")))
+		, executor_(L"frame_producer_device", true)
 	{
-		executor_.start();
+		diag_->add_guide("frame-time", 0.5f);	
+		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
+		diag_->set_color("output-time", diagnostics::color(0.5f, 1.0f, 0.2f));
+		executor_.begin_invoke([]
+		{
+			SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
+		});
 	}
 
 	boost::signals2::connection connect(const output_t::slot_type& subscriber)
@@ -73,13 +90,18 @@ public:
 	{				
 		if(output_.empty())
 			return;				
-
+		
+		output_timer_.restart();
 		output_(draw());
+		diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()/format_desc_.interval*0.5));
+
 		executor_.begin_invoke([=]{tick();});
 	}
 			
 	std::map<int, safe_ptr<basic_frame>> draw()
 	{	
+		frame_timer_.restart();
+
 		tbb::combinable<std::map<int, safe_ptr<basic_frame>>> frames;
 
 		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](decltype(*layers_.begin())& pair)
@@ -94,6 +116,11 @@ public:
 		{
 			result.insert(map.begin(), map.end());
 		});
+
+		diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()/format_desc_.interval*0.5));
+				
+		diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/format_desc_.interval*0.5));
+		tick_timer_.restart();
 
 		return result;
 	}

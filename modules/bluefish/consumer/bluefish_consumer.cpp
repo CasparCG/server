@@ -88,7 +88,9 @@ struct bluefish_consumer : boost::noncopyable
 	const unsigned int	device_index_;
 
 	std::shared_ptr<diagnostics::graph> graph_;
-	boost::timer perf_timer_;
+	boost::timer frame_timer_;
+	boost::timer tick_timer_;
+	boost::timer sync_timer_;
 
 	boost::unique_future<void> active_;
 			
@@ -134,6 +136,10 @@ public:
 		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
+		graph_->add_guide("frame-time", 0.5f);	
+		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->add_guide("frame-time", 0.5f);	
+		graph_->set_color("sync-time", diagnostics::color(0.5f, 1.0f, 0.2f));
 			
 		//void* pBlueDevice = blue_attach_to_device(1);
 		//EBlueConnectorPropertySetting video_routing[1];
@@ -261,11 +267,18 @@ public:
 		{
 			try
 			{
+				frame_timer_.restart();
+
 				const size_t audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps);
 				const size_t audio_nchannels = 2;
 				
 				fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
 				
+				sync_timer_.restart();
+				unsigned long n_field = 0;
+				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
+				graph_->update_value("sync-time", static_cast<float>(sync_timer_.elapsed()/format_desc_.interval*0.5));
+
 				if(embedded_audio_)
 				{		
 					auto frame_audio_data = frame->audio_data().empty() ? silence.data() : const_cast<short*>(frame->audio_data().begin());
@@ -296,12 +309,12 @@ public:
 						CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
 				}
 
-				unsigned long n_field = 0;
-				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
-
 				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
-				graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
-				perf_timer_.restart();
+				
+				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()/format_desc_.interval*0.5));
+
+				graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/format_desc_.interval*0.5));
+				tick_timer_.restart();
 			}
 			catch(...)
 			{

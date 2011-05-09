@@ -84,8 +84,8 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	const core::video_format_desc format_desc_;
 
 	safe_ptr<diagnostics::graph> diag_;
-	boost::timer perf_timer_;
-	boost::timer wait_perf_timer_;
+	boost::timer frame_timer_;
+	boost::timer tick_timer_;
 
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
@@ -107,14 +107,18 @@ public:
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(format_desc)
-		, executor_(L"frame_mixer_device")
+		, executor_(L"frame_mixer_device", true)
 	{
 		diag_->add_guide("frame-time", 0.5f);	
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
 		executor_.set_capacity(1);	
-		executor_.start();
+		executor_.begin_invoke([]
+		{
+			SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
+		});
+
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
 
@@ -176,21 +180,20 @@ public:
 	void send(const std::map<int, safe_ptr<core::basic_frame>>& frames)
 	{			
 		executor_.begin_invoke([=]
-		{			
-			perf_timer_.restart();
+		{		
+			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));	
+			frame_timer_.restart();
 
 			auto image_future = mix_image(frames);
 			auto audio = mix_audio(frames);
 			auto image = image_future.get();
 
-			diag_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+			diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()/format_desc_.interval*0.5));
 
 			output_(make_safe<const gpu_read_frame>(std::move(image), std::move(audio)));
 
-			diag_->update_value("tick-time", static_cast<float>(wait_perf_timer_.elapsed()/format_desc_.interval*0.5));
-			wait_perf_timer_.restart();
-
-			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+			diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/format_desc_.interval*0.5));
+			tick_timer_.restart();
 		});
 		diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}
