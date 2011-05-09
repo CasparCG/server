@@ -134,7 +134,7 @@ int main(int argc, wchar_t* argv[])
 	#endif
 
 	// Increase process priotity.
-	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
 
 	// Install structured exception handler.
 	caspar::win32_exception::install_handler();
