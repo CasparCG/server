@@ -34,6 +34,7 @@
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/timer.hpp>
 
 namespace caspar { namespace core {
 	
@@ -43,16 +44,30 @@ struct frame_consumer_device::implementation
 
 	std::map<int, std::shared_ptr<frame_consumer>> consumers_; // Valid iterators after erase
 	
+	safe_ptr<diagnostics::graph> diag_;
+
 	video_format_desc format_desc_;
+
+	boost::timer frame_timer_;
+	boost::timer tick_timer_;
 	
 	executor executor_;	
 public:
 	implementation( const video_format_desc& format_desc) 
 		: format_desc_(format_desc)
-		, executor_(L"frame_consumer_device")
+		, diag_(diagnostics::create_graph(std::string("frame_consumer_device")))
+		, executor_(L"frame_consumer_device", true)
 	{		
+		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
+		diag_->add_guide("frame-time", 0.5f);	
+		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
+
 		executor_.set_capacity(1);
-		executor_.start();
+		executor_.begin_invoke([]
+		{
+			SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
+		});
 	}
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
@@ -82,7 +97,10 @@ public:
 	void send(const safe_ptr<const read_frame>& frame)
 	{		
 		executor_.begin_invoke([=]
-		{	
+		{
+			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+			frame_timer_.restart();
+
 			buffer_.push_back(std::move(frame));
 
 			if(!buffer_.full())
@@ -103,7 +121,12 @@ public:
 					CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
 				}
 			}
+			diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()/format_desc_.interval*0.5));
+			
+			diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/format_desc_.interval*0.5));
+			tick_timer_.restart();
 		});
+		diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 	}
 
 	std::wstring print() const
