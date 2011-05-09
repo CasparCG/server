@@ -86,8 +86,6 @@ struct configuration
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
-	static const size_t BUFFER_SIZE = 4;
-		
 	const configuration config_;
 
 	CComPtr<IDeckLink>					decklink_;
@@ -107,7 +105,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	unsigned long frames_scheduled_;
 	unsigned long audio_scheduled_;
 		
-	std::array<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>, BUFFER_SIZE+1> reserved_frames_;
+	std::vector<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>> reserved_frames_;
 	boost::circular_buffer<std::vector<short>> audio_container_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> video_frame_buffer_;
@@ -115,6 +113,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	
 	std::shared_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
+
+	size_t buffer_size_;
 
 public:
 	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc) 
@@ -128,6 +128,7 @@ public:
 		, audio_container_(5)
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
+		, buffer_size_(5) // Minimum buffer-size (4 + 1 tolerance).
 	{
 		is_running_ = true;
 						
@@ -159,6 +160,8 @@ public:
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not set audio callback."));
 
 			CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
+
+			buffer_size_ = 6; //  Minimum buffer-size with embedded-audio (5 + 1 tolerance).
 		}
 
 		if(config.latency == normal_latency)
@@ -173,7 +176,7 @@ public:
 		}
 		else
 			CASPAR_LOG(info) << print() << L" Uses driver latency settings.";	
-		
+				
 		if(config.keyer == internal_key) 
 		{
 			if(FAILED(keyer_->Enable(FALSE)))			
@@ -201,18 +204,24 @@ public:
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set playback completion callback."));
 					
-		BOOST_FOREACH(auto& frame, reserved_frames_)
+		for(size_t n = 0; n < buffer_size_+1; ++n)
 		{
-			if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &frame.second)))
+			CComPtr<IDeckLinkMutableVideoFrame> frame;
+
+			if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &frame)))
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create frame."));
 
-			if(FAILED(frame.second->GetBytes(&frame.first)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to get frame bytes."));
-		}
+			void* bytes = nullptr;
 
-		CASPAR_LOG(info) << print() << L" Buffer-depth: " << BUFFER_SIZE;
+			if(FAILED(frame->GetBytes(&bytes)) || bytes == nullptr)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to get frame bytes."));
+
+			reserved_frames_.push_back(std::make_pair(bytes, frame));
+		}
 		
-		for(size_t n = 0; n < BUFFER_SIZE; ++n)
+		CASPAR_LOG(info) << print() << L" Buffer-depth: " << buffer_size_;
+		
+		for(size_t n = 0; n < buffer_size_; ++n)
 			schedule_next_video(core::read_frame::empty());
 
 		video_frame_buffer_.set_capacity(2);
@@ -342,7 +351,10 @@ public:
 		video_frame_buffer_.push(frame);
 		if(config_.embedded_audio)
 			audio_frame_buffer_.push(frame);
+		
 	}
+
+	size_t buffer_depth() const {return 1;}
 
 	std::wstring print() const
 	{
@@ -361,19 +373,24 @@ public:
 		: config_(config)
 		, context_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]"){}
 	
-	void initialize(const core::video_format_desc& format_desc)
+	virtual void initialize(const core::video_format_desc& format_desc)
 	{
 		context_.reset([&]{return new decklink_consumer(config_, format_desc);});
 	}
 	
-	void send(const safe_ptr<const core::read_frame>& frame)
+	virtual void send(const safe_ptr<const core::read_frame>& frame)
 	{
 		context_->send(frame);
 	}
 	
-	std::wstring print() const
+	virtual std::wstring print() const
 	{
 		return context_->print();
+	}
+
+	virtual size_t buffer_depth() const 
+	{
+		return context_->buffer_depth();
 	}
 };	
 
