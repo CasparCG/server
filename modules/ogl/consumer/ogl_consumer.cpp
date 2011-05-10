@@ -285,7 +285,7 @@ public:
 			}
 			render(frame);
 			window_.Display();
-			graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+			graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()*format_desc_.fps*0.5));
 		});
 	}
 

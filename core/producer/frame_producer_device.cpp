@@ -93,7 +93,7 @@ public:
 		
 		output_timer_.restart();
 		output_(draw());
-		diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()/format_desc_.interval*0.5));
+		diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()*format_desc_.fps*0.5));
 
 		executor_.begin_invoke([=]{tick();});
 	}
@@ -117,9 +117,9 @@ public:
 			result.insert(map.begin(), map.end());
 		});
 
-		diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()/format_desc_.interval*0.5));
+		diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 				
-		diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/format_desc_.interval*0.5));
+		diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
 		tick_timer_.restart();
 
 		return result;

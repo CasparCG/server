@@ -26,29 +26,41 @@
 
 #include <array>
 
-#define DEFINE_VIDEOFORMATDESC(w, h, m, f, s, fmt) { (fmt), (w), (h), (m), (m == video_mode::progressive ? f : f/2.0), (1.0/(m == video_mode::progressive ? f : f/2.0)), ((w)*(h)*4), (s)}
+#define DEFINE_VIDEOFORMATDESC(fmt, w, h, m, scale, duration, name) \
+{ \
+	(fmt), \
+	(w), \
+	(h), \
+	(m), \
+	((double)scale/(double)duration),\
+	(scale),\
+	(duration),\
+	(m == video_mode::progressive ? 1 : 2),\
+	((w)*(h)*4),\
+	(name)\
+}
 
 namespace caspar { namespace core {
 	
 const video_format_desc format_descs[video_format::count] =  
 {									   
-	DEFINE_VIDEOFORMATDESC(720,  576,  video_mode::upper,			50,			TEXT("pal"),		video_format::pal		), 
-	DEFINE_VIDEOFORMATDESC(720,  486,  video_mode::lower,			60/1.001,	TEXT("ntsc"),		video_format::ntsc		), 
-	DEFINE_VIDEOFORMATDESC(720,  576,  video_mode::progressive,		25,			TEXT("576p2500"),	video_format::x576p2500	),
-	DEFINE_VIDEOFORMATDESC(1280, 720,  video_mode::progressive,		25,			TEXT("720p2500"),	video_format::x720p2500	), 
-	DEFINE_VIDEOFORMATDESC(1280, 720,  video_mode::progressive,		50,			TEXT("720p5000"),	video_format::x720p5000	), 
-	DEFINE_VIDEOFORMATDESC(1280, 720,  video_mode::progressive,		60/1.001,	TEXT("720p5994"),	video_format::x720p5994	),
-	DEFINE_VIDEOFORMATDESC(1280, 720,  video_mode::progressive,		60,			TEXT("720p6000"),	video_format::x720p6000	),
-	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		24/1.001,	TEXT("1080p2397"),	video_format::x1080p2397),
-	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		24,			TEXT("1080p2400"),	video_format::x1080p2400),
-	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::upper,			50,			TEXT("1080i5000"),	video_format::x1080i5000),
-	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::upper,			60/1.001,	TEXT("1080i5994"),	video_format::x1080i5994),
-	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::upper,			60,			TEXT("1080i6000"),	video_format::x1080i6000),
-	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		25,			TEXT("1080p2500"),	video_format::x1080p2500),
-	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		30/1.001,	TEXT("1080p2997"),	video_format::x1080p2997),
-	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		30,			TEXT("1080p3000"),	video_format::x1080p3000),
-	DEFINE_VIDEOFORMATDESC(1920, 1080, video_mode::progressive,		50,			TEXT("1080p5000"),	video_format::x1080p5000),
-	DEFINE_VIDEOFORMATDESC(0,		0, video_mode::invalid,			-1,			TEXT("invalid"),	video_format::invalid	)
+	DEFINE_VIDEOFORMATDESC(video_format::pal		,720,  576,  video_mode::upper,			25,		1,		TEXT("pal")		), 
+	DEFINE_VIDEOFORMATDESC(video_format::ntsc		,720,  486,  video_mode::lower,			30000,	1001,	TEXT("ntsc")	), 
+	DEFINE_VIDEOFORMATDESC(video_format::x576p2500	,720,  576,  video_mode::progressive,	25,		1,		TEXT("576p2500")),
+	DEFINE_VIDEOFORMATDESC(video_format::x720p2500	,1280, 720,  video_mode::progressive,	25,		1,		TEXT("720p2500")), 
+	DEFINE_VIDEOFORMATDESC(video_format::x720p5000	,1280, 720,  video_mode::progressive,	50,		1,		TEXT("720p5000")), 
+	DEFINE_VIDEOFORMATDESC(video_format::x720p5994	,1280, 720,  video_mode::progressive,	60000,	1001,	TEXT("720p5994")),
+	DEFINE_VIDEOFORMATDESC(video_format::x720p6000	,1280, 720,  video_mode::progressive,	60,		1,		TEXT("720p6000")),
+	DEFINE_VIDEOFORMATDESC(video_format::x1080p2397	,1920, 1080, video_mode::progressive,	24000,	1001,	TEXT("1080p2398")),
+	DEFINE_VIDEOFORMATDESC(video_format::x1080p2400	,1920, 1080, video_mode::progressive,	24,		1,		TEXT("1080p2400")),
+	DEFINE_VIDEOFORMATDESC(video_format::x1080i5000	,1920, 1080, video_mode::upper,			25,		1,		TEXT("1080i5000")),
+	DEFINE_VIDEOFORMATDESC(video_format::x1080i5994	,1920, 1080, video_mode::upper,			60000,	1001,	TEXT("1080i5994")),
+	DEFINE_VIDEOFORMATDESC(video_format::x1080i6000	,1920, 1080, video_mode::upper,			60,		1,		TEXT("1080i6000")),
+	DEFINE_VIDEOFORMATDESC(video_format::x1080p2500	,1920, 1080, video_mode::progressive,	25,		1,		TEXT("1080p2500")),
+	DEFINE_VIDEOFORMATDESC(video_format::x1080p2997	,1920, 1080, video_mode::progressive,	30000,	1001,	TEXT("1080p2997")),
+	DEFINE_VIDEOFORMATDESC(video_format::x1080p3000	,1920, 1080, video_mode::progressive,	30,		1,		TEXT("1080p3000")),
+	DEFINE_VIDEOFORMATDESC(video_format::x1080p5000	,1920, 1080, video_mode::progressive,	50,		1,		TEXT("1080p5000")),
+	DEFINE_VIDEOFORMATDESC(video_format::invalid	,0,		0, video_mode::invalid,			0,		1,		TEXT("invalid"))
 };
 
 const video_format_desc& video_format_desc::get(video_format::type format)	
