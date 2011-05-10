@@ -277,7 +277,7 @@ public:
 				sync_timer_.restart();
 				unsigned long n_field = 0;
 				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
-				graph_->update_value("sync-time", static_cast<float>(sync_timer_.elapsed()/format_desc_.interval*0.5));
+				graph_->update_value("sync-time", static_cast<float>(sync_timer_.elapsed()*format_desc_.fps*0.5));
 
 				if(embedded_audio_)
 				{		
@@ -311,9 +311,9 @@ public:
 
 				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 				
-				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()/format_desc_.interval*0.5));
+				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 
-				graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/format_desc_.interval*0.5));
+				graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
 				tick_timer_.restart();
 			}
 			catch(...)

@@ -166,7 +166,7 @@ public:
 class line : public drawable
 {
 	boost::optional<diagnostics::guide> guide_;
-	boost::circular_buffer<std::pair<float, bool>> line_data_;
+	boost::circular_buffer<std::pair<double, bool>> line_data_;
 
 	std::vector<float>		tick_data_;
 	bool					tick_tag_;
@@ -180,12 +180,12 @@ public:
 		line_data_.push_back(std::make_pair(-1.0f, false));
 	}
 	
-	void update(float value)
+	void update(double value)
 	{
 		tick_data_.push_back(value);
 	}
 
-	void set(float value)
+	void set(double value)
 	{
 		tick_data_.clear();
 		tick_data_.push_back(value);
@@ -235,7 +235,7 @@ public:
 		glColor4f(c_.red, c_.green, c_.blue, 0.7f);		
 		for(size_t n = 0; n < line_data_.size(); ++n)		
 			if(line_data_[n].first > -0.5)
-				glVertex3f(x+n*dx, std::max(0.05f, std::min(0.95f, (1.0f-line_data_[n].first)*0.8f + 0.1f)), 0.0f);		
+				glVertex3d(x+n*dx, std::max(0.05, std::min(0.95, (1.0f-line_data_[n].first)*0.8 + 0.1f)), 0.0);		
 		glEnd();
 				
 		glEnable(GL_LINE_STIPPLE);
@@ -272,12 +272,12 @@ struct graph::implementation : public drawable
 		, name_(parent_printer_ ? narrow(parent_printer_()) : "")
 		, counter_(0){}
 
-	void update(const std::string& name, float value)
+	void update(const std::string& name, double value)
 	{
 		lines_[name].update(value);
 	}
 
-	void set(const std::string& name, float value)
+	void set(const std::string& name, double value)
 	{
 		lines_[name].set(value);
 	}
@@ -292,7 +292,7 @@ struct graph::implementation : public drawable
 		lines_[name].set_color(c);
 	}
 	
-	void guide(const std::string& name, float value)
+	void guide(const std::string& name, double value)
 	{
 		lines_[name].guide(diagnostics::guide(value));	
 	}
@@ -368,7 +368,7 @@ graph::graph(const printer& parent_printer) : impl_(env::properties().get("confi
 		context::register_drawable(impl_);
 }
 
-void graph::update_value(const std::string& name, float value)
+void graph::update_value(const std::string& name, double value)
 {
 	if(impl_)
 	{	
@@ -379,7 +379,7 @@ void graph::update_value(const std::string& name, float value)
 		});
 	}
 }
-void graph::set_value(const std::string& name, float value)
+void graph::set_value(const std::string& name, double value)
 {
 	if(impl_)
 	{		
@@ -412,7 +412,7 @@ void graph::add_tag(const std::string& name)
 		});
 	}
 }
-void graph::add_guide(const std::string& name, float value)
+void graph::add_guide(const std::string& name, double value)
 {	
 	if(impl_)
 	{		

@@ -94,19 +94,10 @@ public:
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
-		auto display_mode = get_display_mode(input_, format_desc_.format);
-		if(!display_mode) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
+		auto display_mode = get_display_mode(input_, format_desc_.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
 		
-		// NOTE: For some reason the code below fails even for PAL.
-		//BMDDisplayModeSupport displayModeSupport;
-		//if(FAILED(input_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, bmdVideoOutputFlagDefault, &displayModeSupport, nullptr)) || displayModeSupport == bmdDisplayModeNotSupported)
-		//	BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
-		//else if(displayModeSupport == bmdDisplayModeSupportedWithConversion)
-		//	CASPAR_LOG(warning) << print() << " Display mode is supported with conversion.";
-
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
-		if(FAILED(input_->EnableVideoInput(display_mode->GetDisplayMode(), bmdFormat8BitYUV, 0))) 
+		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video input."));
 
 		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2))) 
@@ -143,7 +134,7 @@ public:
 	{	
 		try
 		{
-			graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));
+			graph_->update_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);
 			perf_timer_.restart();
 						
 			core::pixel_format_desc desc;

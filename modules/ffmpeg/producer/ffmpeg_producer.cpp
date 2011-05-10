@@ -170,7 +170,7 @@ public:
 				return last_frame_;			
 		}
 		
-		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()/frame_factory_->get_video_format_desc().interval*0.5));
+		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
 
 		auto result = last_frame_;
 		if(!ouput_channel_.empty())		
