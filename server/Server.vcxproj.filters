@@ -71,12 +71,6 @@
     <Filter Include="frame\buffers">
       <UniqueIdentifier>{5f57e8d6-78fb-4784-9dea-91e0c95d8aec}</UniqueIdentifier>
     </Filter>
-    <Filter Include="producers\ffmpeg\video">
-      <UniqueIdentifier>{a6fee242-7d42-4f2e-8c32-ebc57afc38bc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="producers\ffmpeg\audio">
-      <UniqueIdentifier>{b820b516-95a2-48ac-a302-75e1280375ae}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\Icon2.ico">
@@ -239,9 +233,6 @@
     <ClInclude Include="cg\FlashCGProxy.h">
       <Filter>cg</Filter>
     </ClInclude>
-    <ClInclude Include="Producers\ffmpeg\FFmpegManager.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
     <ClInclude Include="Producers\flash\AxFlash.h">
       <Filter>producers\flash</Filter>
     </ClInclude>
@@ -378,36 +369,6 @@
       <Filter>frame\buffers</Filter>
     </ClInclude>
     <ClInclude Include="string_convert.h" />
-    <ClInclude Include="producers\ffmpeg\video\FFMPEGVideoScaler.h">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\video\FFMPEGVideoDeinterlacer.h">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\video\FFMPEGVideoDecoder.h">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\audio\FFMPEGAudioDecoder.h">
-      <Filter>producers\ffmpeg\audio</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGException.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGProducer.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGFrameOutput.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGInput.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGOutput.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="producers\ffmpeg\FFMPEGPacket.h">
-      <Filter>producers\ffmpeg</Filter>
-    </ClInclude>
     <ClInclude Include="utils\UnhandledException.h">
       <Filter>utils</Filter>
     </ClInclude>
@@ -419,6 +380,9 @@
     </ClInclude>
     <ClInclude Include="utils\functiontask.hpp">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="producers\ffmpeg\ffmpegmanager.h">
+      <Filter>producers\ffmpeg</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -527,9 +491,6 @@
     <ClCompile Include="cg\FlashCGProxy.cpp">
       <Filter>cg</Filter>
     </ClCompile>
-    <ClCompile Include="Producers\ffmpeg\FFmpegManager.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
     <ClCompile Include="producers\flash\CTManager.cpp">
       <Filter>producers\flash</Filter>
     </ClCompile>
@@ -629,35 +590,11 @@
     <ClCompile Include="frame\buffers\StaticFrameBuffer.cpp">
       <Filter>frame\buffers</Filter>
     </ClCompile>
-    <ClCompile Include="producers\ffmpeg\video\FFMPEGVideoDecoder.cpp">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\video\FFMPEGVideoScaler.cpp">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\video\FFMPEGVideoDeinterlacer.cpp">
-      <Filter>producers\ffmpeg\video</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\audio\FFMPEGAudioDecoder.cpp">
-      <Filter>producers\ffmpeg\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGFrameOutput.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGInput.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGOutput.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGPacket.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGProducer.cpp">
-      <Filter>producers\ffmpeg</Filter>
-    </ClCompile>
     <ClCompile Include="consumers\bluefish\BluefishFrameManager.cpp">
       <Filter>consumers\decklink</Filter>
+    </ClCompile>
+    <ClCompile Include="producers\ffmpeg\FFmpegManager.cpp">
+      <Filter>producers\ffmpeg</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

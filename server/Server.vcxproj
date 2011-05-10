@@ -83,7 +83,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>GLee.lib;Dxguid.lib;Dsound.lib;Winmm.lib;Ws2_32.lib;BlueVelvet3_d.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;swscale-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>GLee.lib;Dxguid.lib;Dsound.lib;Winmm.lib;Ws2_32.lib;BlueVelvet3_d.lib;avformat-51.lib;avcodec-51.lib;avutil-49.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -179,7 +179,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>Dxguid.lib;Dsound.lib;Winmm.lib;Ws2_32.lib;avformat-52.lib;avcodec-52.lib;avutil-50.lib;swscale-0.lib;GLee.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Dxguid.lib;Dsound.lib;Winmm.lib;Ws2_32.lib;avformat-51.lib;avcodec-51.lib;avutil-49.lib;GLee.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -214,16 +214,7 @@
     <ClInclude Include="frame\buffers\FrameBuffer.h" />
     <ClInclude Include="frame\buffers\MotionFrameBuffer.h" />
     <ClInclude Include="frame\buffers\StaticFrameBuffer.h" />
-    <ClInclude Include="producers\ffmpeg\audio\FFMPEGAudioDecoder.h" />
-    <ClInclude Include="producers\ffmpeg\FFMPEGException.h" />
-    <ClInclude Include="producers\ffmpeg\FFMPEGFrameOutput.h" />
-    <ClInclude Include="producers\ffmpeg\FFMPEGInput.h" />
-    <ClInclude Include="producers\ffmpeg\FFMPEGOutput.h" />
-    <ClInclude Include="producers\ffmpeg\FFMPEGPacket.h" />
-    <ClInclude Include="producers\ffmpeg\FFMPEGProducer.h" />
-    <ClInclude Include="producers\ffmpeg\video\FFMPEGVideoDecoder.h" />
-    <ClInclude Include="producers\ffmpeg\video\FFMPEGVideoDeinterlacer.h" />
-    <ClInclude Include="producers\ffmpeg\video\FFMPEGVideoScaler.h" />
+    <ClInclude Include="producers\ffmpeg\ffmpegmanager.h" />
     <ClInclude Include="string_convert.h" />
     <ClInclude Include="Utils\Allocator.h" />
     <ClInclude Include="utils\BitmapHolder.h" />
@@ -282,7 +273,6 @@
     <ClInclude Include="consumers\decklink\DecklinkVideoConsumer.h" />
     <ClInclude Include="cg\CGControl.h" />
     <ClInclude Include="cg\FlashCGProxy.h" />
-    <ClInclude Include="Producers\ffmpeg\FFmpegManager.h" />
     <ClInclude Include="Producers\flash\AxFlash.h" />
     <ClInclude Include="producers\flash\CTManager.h" />
     <ClInclude Include="Producers\flash\FlashAxContainer.h" />
@@ -348,53 +338,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="producers\ffmpeg\audio\FFMPEGAudioDecoder.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGFrameOutput.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGInput.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <ExpandAttributedSource Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExpandAttributedSource>
-      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AssemblyAndSourceCode</AssemblerOutput>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGOutput.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGPacket.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\FFMPEGProducer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\video\FFMPEGVideoDecoder.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\video\FFMPEGVideoDeinterlacer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producers\ffmpeg\video\FFMPEGVideoScaler.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
+    <ClCompile Include="producers\ffmpeg\FFmpegManager.cpp" />
     <ClCompile Include="utils\BitmapHolder.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
@@ -603,11 +547,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="Producers\ffmpeg\FFmpegManager.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='no bluefish|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producers\flash\CTManager.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\StdAfx.h</PrecompiledHeaderFile>
