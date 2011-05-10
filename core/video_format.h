@@ -71,7 +71,9 @@ struct video_format_desc
 	size_t					height;		// output frame height
 	video_mode::type		mode;		// progressive, interlaced upper field first, interlaced lower field first
 	double					fps;		// actual framerate, e.g. i50 = 25 fps, p50 = 50 fps
-	double					interval;	// time between frames
+	size_t					time_scale;
+	size_t					duration;
+	size_t					field_count;
 	size_t					size;		// output frame size in bytes 
 	std::wstring			name;		// name of output format
 

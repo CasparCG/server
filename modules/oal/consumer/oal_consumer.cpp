@@ -95,7 +95,7 @@ public:
 		data.Samples = container_.back().data();
 		data.NbSamples = container_.back().size();	
 		
-		graph_->update_value("tick-time", static_cast<float>(perf_timer_.elapsed()/format_desc_.interval*0.5));		
+		graph_->update_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);		
 		perf_timer_.restart();
 
 		return is_running_;

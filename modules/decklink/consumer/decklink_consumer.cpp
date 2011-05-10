@@ -35,14 +35,13 @@
 #include <common/exception/exceptions.h>
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
-#include <common/utility/timer.h>
 
 #include <tbb/concurrent_queue.h>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 
-#include <array>
+#include <vector>
 
 #pragma warning(push)
 #pragma warning(disable : 4996)
@@ -100,8 +99,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	const std::wstring model_name_;
 	const core::video_format_desc format_desc_;
 
-	BMDTimeScale frame_time_scale_;
-	BMDTimeValue frame_duration_;
 	unsigned long frames_scheduled_;
 	unsigned long audio_scheduled_;
 		
@@ -125,10 +122,9 @@ public:
 		, keyer_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
-		, audio_container_(5)
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
-		, buffer_size_(5) // Minimum buffer-size (4 + 1 tolerance).
+		, buffer_size_(4) // Minimum buffer-size (3 + 1 tolerance).
 	{
 		is_running_ = true;
 						
@@ -139,86 +135,17 @@ public:
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("flushed-frame", diagnostics::color(0.3f, 0.3f, 0.6f));
 		
-		auto display_mode = get_display_mode(output_, format_desc_.format);
-		if(display_mode == nullptr) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
-		
-		display_mode->GetFrameRate(&frame_duration_, &frame_time_scale_);
-
-		BMDDisplayModeSupport displayModeSupport;
-		if(FAILED(output_->DoesSupportVideoMode(display_mode->GetDisplayMode(), bmdFormat8BitBGRA, bmdVideoOutputFlagDefault, &displayModeSupport, nullptr)) || displayModeSupport == bmdDisplayModeNotSupported)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Card does not support requested videoformat."));
-		else if(displayModeSupport == bmdDisplayModeSupportedWithConversion)
-			CASPAR_LOG(warning) << print() << " Display mode is supported with conversion.";
-
+		enable_video(get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault));
+				
 		if(config.embedded_audio)
-		{
-			if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2, bmdAudioOutputStreamTimestamped)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable audio output."));
+			enable_audio();
+
+		set_latency(config.latency);				
+		set_keyer(config.keyer);
+							
+		audio_container_.set_capacity(buffer_size_+1);
+		allocate_frames(buffer_size_+1);
 				
-			if(FAILED(output_->SetAudioCallback(this)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not set audio callback."));
-
-			CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
-
-			buffer_size_ = 6; //  Minimum buffer-size with embedded-audio (5 + 1 tolerance).
-		}
-
-		if(config.latency == normal_latency)
-		{
-			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
-			CASPAR_LOG(info) << print() << L" Enabled normal-latency mode";
-		}
-		else if(config.latency == low_latency)
-		{			
-			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
-			CASPAR_LOG(info) << print() << L" Enabled low-latency mode";
-		}
-		else
-			CASPAR_LOG(info) << print() << L" Uses driver latency settings.";	
-				
-		if(config.keyer == internal_key) 
-		{
-			if(FAILED(keyer_->Enable(FALSE)))			
-				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
-			else if(FAILED(keyer_->SetLevel(255)))			
-				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
-			else
-				CASPAR_LOG(info) << print() << L" Enabled internal keyer.";		
-		}
-		else if(config.keyer == external_key)
-		{
-			if(FAILED(keyer_->Enable(TRUE)))			
-				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
-			else if(FAILED(keyer_->SetLevel(255)))			
-				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
-			else
-				CASPAR_LOG(info) << print() << L" Enabled external keyer.";			
-		}
-		else
-			CASPAR_LOG(info) << print() << L" Uses driver keyer settings.";	
-
-		if(FAILED(output_->EnableVideoOutput(display_mode->GetDisplayMode(), bmdVideoOutputFlagDefault))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video output."));
-		
-		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set playback completion callback."));
-					
-		for(size_t n = 0; n < buffer_size_+1; ++n)
-		{
-			CComPtr<IDeckLinkMutableVideoFrame> frame;
-
-			if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &frame)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create frame."));
-
-			void* bytes = nullptr;
-
-			if(FAILED(frame->GetBytes(&bytes)) || bytes == nullptr)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to get frame bytes."));
-
-			reserved_frames_.push_back(std::make_pair(bytes, frame));
-		}
-		
 		CASPAR_LOG(info) << print() << L" Buffer-depth: " << buffer_size_;
 		
 		for(size_t n = 0; n < buffer_size_; ++n)
@@ -231,7 +158,7 @@ public:
 			output_->BeginAudioPreroll();
 		else
 		{
-			if(FAILED(output_->StartScheduledPlayback(0, frame_time_scale_, 1.0))) 
+			if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) 
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to schedule playback."));
 		}
 		
@@ -255,11 +182,88 @@ public:
 		}
 	}
 			
-	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
-	virtual ULONG STDMETHODCALLTYPE		AddRef ()							{return 1;}
-	virtual ULONG STDMETHODCALLTYPE		Release ()							{return 1;}
+	void set_latency(latency latency)
+	{		
+		if(latency == normal_latency)
+		{
+			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
+			CASPAR_LOG(info) << print() << L" Enabled normal-latency mode";
+		}
+		else if(latency == low_latency)
+		{			
+			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
+			CASPAR_LOG(info) << print() << L" Enabled low-latency mode";
+		}
+		else
+			CASPAR_LOG(info) << print() << L" Uses driver latency settings.";	
+	}
+
+	void set_keyer(key keyer)
+	{
+		if(keyer == internal_key) 
+		{
+			if(FAILED(keyer_->Enable(FALSE)))			
+				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
+			else if(FAILED(keyer_->SetLevel(255)))			
+				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
+			else
+				CASPAR_LOG(info) << print() << L" Enabled internal keyer.";		
+		}
+		else if(keyer == external_key)
+		{
+			if(FAILED(keyer_->Enable(TRUE)))			
+				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
+			else if(FAILED(keyer_->SetLevel(255)))			
+				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
+			else
+				CASPAR_LOG(info) << print() << L" Enabled external keyer.";			
+		}
+		else
+			CASPAR_LOG(info) << print() << L" Uses driver keyer settings.";	
+	}
 	
-	virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* /*completedFrame*/, BMDOutputFrameCompletionResult result)
+	void enable_audio()
+	{
+		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2, bmdAudioOutputStreamTimestamped)))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable audio output."));
+				
+		if(FAILED(output_->SetAudioCallback(this)))
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not set audio callback."));
+
+		CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
+
+		buffer_size_ = 5; //  Minimum buffer-size with embedded-audio (4 + 1 tolerance).
+	}
+
+	void enable_video(BMDDisplayMode display_mode)
+	{
+		if(FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault))) 
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video output."));
+		
+		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set playback completion callback."));
+	}
+
+	void allocate_frames(size_t count)
+	{
+		std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>> frame;
+		std::generate_n(std::back_inserter(reserved_frames_), count, [&]() -> decltype(frame)
+		{
+			if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &frame.second)))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create frame."));
+
+			if(FAILED(frame.second->GetBytes(&frame.first)) || frame.first == nullptr)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to get frame bytes."));
+
+			return frame;
+		});
+	}
+
+	STDMETHOD (QueryInterface(REFIID, LPVOID*))	{return E_NOINTERFACE;}
+	STDMETHOD_(ULONG, AddRef())					{return 1;}
+	STDMETHOD_(ULONG, Release())				{return 1;}
+	
+	STDMETHOD(ScheduledFrameCompleted(IDeckLinkVideoFrame* /*completedFrame*/, BMDOutputFrameCompletionResult result))
 	{
 		if(!is_running_)
 			return E_FAIL;
@@ -278,14 +282,14 @@ public:
 		return S_OK;
 	}
 
-	virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped (void)
+	STDMETHOD(ScheduledPlaybackHasStopped())
 	{
 		is_running_ = false;
 		CASPAR_LOG(info) << print() << L" Scheduled playback has stopped.";
 		return S_OK;
 	}
 		
-	virtual HRESULT STDMETHODCALLTYPE RenderAudioSamples(BOOL preroll)
+	STDMETHOD(RenderAudioSamples(BOOL preroll))
 	{
 		if(!is_running_)
 			return E_FAIL;
@@ -294,14 +298,13 @@ public:
 		{
 			if(preroll)
 			{
-				if(FAILED(output_->StartScheduledPlayback(0, frame_time_scale_, 1.0)))
+				if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0)))
 					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to schedule playback."));
 			}
 
 			std::shared_ptr<const core::read_frame> frame;
 			audio_frame_buffer_.pop(frame);
-			schedule_next_audio(safe_ptr<const core::read_frame>(frame));
-		
+			schedule_next_audio(safe_ptr<const core::read_frame>(frame));		
 		}
 		catch(...)
 		{
@@ -332,30 +335,27 @@ public:
 		else
 			fast_memclr(reserved_frames_.front().first, format_desc_.size);
 
-		if(FAILED(output_->ScheduleVideoFrame(reserved_frames_.front().second, (frames_scheduled_++) * frame_duration_, frame_duration_, frame_time_scale_)))
+		if(FAILED(output_->ScheduleVideoFrame(reserved_frames_.front().second, (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
 		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
-		graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/format_desc_.interval)*0.5f);
+		graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 		tick_timer_.restart();
 	}
 
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{
-		if(!is_running_)
-			return;
-
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
 
+		if(!is_running_)
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Is not running."));
+
 		video_frame_buffer_.push(frame);
 		if(config_.embedded_audio)
-			audio_frame_buffer_.push(frame);
-		
+			audio_frame_buffer_.push(frame);		
 	}
-
-	size_t buffer_depth() const {return 1;}
-
+	
 	std::wstring print() const
 	{
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(config_.device_index) + L"]";
@@ -386,11 +386,6 @@ public:
 	virtual std::wstring print() const
 	{
 		return context_->print();
-	}
-
-	virtual size_t buffer_depth() const 
-	{
-		return context_->buffer_depth();
 	}
 };	
 
@@ -442,3 +437,51 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tr
 }
 
 }
+
+/*
+##############################################################################
+Pre-rolling
+
+Mail: 2011-05-09
+
+Yoshan
+BMD Developer Support
+developer@blackmagic-design.com
+
+-----------------------------------------------------------------------------
+
+Thanks for your inquiry. The minimum number of frames that you can preroll 
+for scheduled playback is three frames for video and four frames for audio. 
+As you mentioned if you preroll less frames then playback will not start or
+playback will be very sporadic. From our experience with Media Express, we 
+recommended that at least seven frames are prerolled for smooth playback. 
+
+Regarding the bmdDeckLinkConfigLowLatencyVideoOutput flag:
+There can be around 3 frames worth of latency on scheduled output.
+When the bmdDeckLinkConfigLowLatencyVideoOutput flag is used this latency is
+reduced  or removed for scheduled playback. If the DisplayVideoFrameSync() 
+method is used, the bmdDeckLinkConfigLowLatencyVideoOutput setting will 
+guarantee that the provided frame will be output as soon the previous 
+frame output has been completed.
+################################################################################
+*/
+
+/*
+##############################################################################
+Async DMA Transfer without redundant copying
+
+Mail: 2011-05-10
+
+Yoshan
+BMD Developer Support
+developer@blackmagic-design.com
+
+-----------------------------------------------------------------------------
+
+Thanks for your inquiry. You could try subclassing IDeckLinkMutableVideoFrame 
+and providing a pointer to your video buffer when GetBytes() is called. 
+This may help to keep copying to a minimum. Please ensure that the pixel 
+format is in bmdFormat10BitYUV, otherwise the DeckLink API / driver will 
+have to colourspace convert which may result in additional copying.
+################################################################################
+*/

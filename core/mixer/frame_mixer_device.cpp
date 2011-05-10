@@ -188,11 +188,11 @@ public:
 			auto audio = mix_audio(frames);
 			auto image = image_future.get();
 
-			diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()/format_desc_.interval*0.5));
+			diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 
 			output_(make_safe<const gpu_read_frame>(std::move(image), std::move(audio)));
 
-			diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/format_desc_.interval*0.5));
+			diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
 			tick_timer_.restart();
 		});
 		diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));

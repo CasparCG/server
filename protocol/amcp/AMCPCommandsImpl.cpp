@@ -616,6 +616,8 @@ bool PlayCommand::DoExecute()
 				lbg.AddParameter(*it);
 			if(!lbg.Execute())
 				CASPAR_LOG(warning) << " Failed to play.";
+
+			CASPAR_LOG(info) << "Playing " << _parameters[0];
 		}
 
 		GetChannel()->producer()->play(GetLayerIndex());
