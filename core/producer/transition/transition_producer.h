@@ -20,6 +20,7 @@
 #pragma once
 
 #include "../frame_producer.h"
+#include "../../video_format.h"
 
 #include <common/utility/tweener.h>
 
