@@ -21,7 +21,6 @@
 
 #include "video_decoder.h"
 
-#include <common/memory/safe_ptr.h>
 #include <common/memory/memcpy.h>
 
 #include <core/video_format.h>
@@ -30,8 +29,6 @@
 #include <core/producer/frame/image_transform.h>
 
 #include <tbb/parallel_for.h>
-
-#include <algorithm>
 
 #if defined(_MSC_VER)
 #pragma warning (push)

@@ -21,6 +21,8 @@
 #include "../StdAfx.h"
 
 #include "frame_producer.h"
+#include "frame/basic_frame.h"
+
 #include "color/color_producer.h"
 #include "separated/separated_producer.h"
 
@@ -29,6 +31,18 @@
 namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
+
+const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
+{
+	struct empty_frame_producer : public frame_producer
+	{
+		virtual safe_ptr<basic_frame> receive(){return basic_frame::empty();}
+		virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
+		virtual std::wstring print() const { return L"empty";}
+	};
+	static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();
+	return producer;
+}	
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 {	

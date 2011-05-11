@@ -21,7 +21,8 @@
 
 #include "color_producer.h"
 
-#include <core/producer/frame/write_frame.h>
+#include "../frame/basic_frame.h"
+#include "../frame/write_frame.h"
 
 #include <sstream>
 

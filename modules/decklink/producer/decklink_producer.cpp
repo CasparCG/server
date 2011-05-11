@@ -29,7 +29,6 @@
 #include <common/concurrency/com_context.h>
 #include <common/exception/exceptions.h>
 #include <common/memory/memclr.h>
-#include <common/utility/timer.h>
 
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/write_frame.h>

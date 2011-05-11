@@ -22,6 +22,7 @@
 
 #include "channel.h"
 
+#include "video_format.h"
 #include "consumer/frame_consumer_device.h"
 #include "mixer/frame_mixer_device.h"
 #include "producer/frame_producer_device.h"
