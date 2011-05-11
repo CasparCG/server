@@ -127,5 +127,14 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 	frames.push_back(my_frame2);
 	return make_safe<basic_frame>(frames);
 }
+
+safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key)
+{
+	std::vector<safe_ptr<basic_frame>> frames;
+	key->get_image_transform().set_is_key(true);
+	frames.push_back(key);
+	frames.push_back(fill);
+	return make_safe<basic_frame>(frames);
+}
 	
 }}

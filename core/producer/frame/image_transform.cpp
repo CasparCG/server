@@ -29,6 +29,7 @@ image_transform::image_transform()
 	: opacity_(1.0)
 	, gain_(1.0)
 	, mode_(video_mode::invalid)
+	, is_key_(false)
 {
 	std::fill(fill_translation_.begin(), fill_translation_.end(), 0.0);
 	std::fill(fill_scale_.begin(), fill_scale_.end(), 1.0);
@@ -116,6 +117,7 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	if(other.mode_ != video_mode::invalid)
 		mode_ = other.mode_;
 	gain_ *= other.gain_;
+	is_key_ = other.is_key_;
 	fill_translation_[0] += other.fill_translation_[0]*fill_scale_[0];
 	fill_translation_[1] += other.fill_translation_[1]*fill_scale_[1];
 	fill_scale_[0] *= other.fill_scale_[0];
@@ -132,6 +134,9 @@ const image_transform image_transform::operator*(const image_transform &other) c
 	return image_transform(*this) *= other;
 }
 
+void image_transform::set_is_key(bool value){is_key_ = value;}
+bool image_transform::get_is_key() const{return is_key_;}
+
 image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener)
 {	
 	auto do_tween = [](double time, double source, double dest, double duration, const tweener_t& tweener)
@@ -143,6 +148,7 @@ image_transform tween(double time, const image_transform& source, const image_tr
 
 	image_transform result;	
 	result.set_mode(dest.get_mode() != video_mode::invalid ? dest.get_mode() : source.get_mode());
+	result.set_is_key(dest.get_is_key());
 	result.set_gain(do_tween(time, source.get_gain(), dest.get_gain(), duration, tweener));
 	result.set_opacity(do_tween(time, source.get_opacity(), dest.get_opacity(), duration, tweener));
 	result.set_fill_translation(do_tween(time, source.get_fill_translation()[0], dest.get_fill_translation()[0], duration, tweener), do_tween(time, source.get_fill_translation()[1], dest.get_fill_translation()[1], duration, tweener));

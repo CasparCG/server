@@ -59,7 +59,7 @@ struct image_mixer::implementation : boost::noncopyable
 	image_kernel kernel_;
 
 	safe_ptr<ogl_device> context_;
-
+	std::shared_ptr<device_buffer> key_;
 public:
 	implementation(const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)
@@ -103,16 +103,13 @@ public:
 	void visit(core::write_frame& frame)
 	{
 		auto gpu_frame = boost::polymorphic_downcast<gpu_write_frame*>(&frame);
-		auto& desc = gpu_frame->get_pixel_format_desc();
-		auto& buffers = gpu_frame->get_plane_buffers();
+		auto desc = gpu_frame->get_pixel_format_desc();
+		auto buffers = gpu_frame->get_plane_buffers();
+		auto is_key_frame = gpu_frame->get_image_transform().get_is_key();
 
 		auto transform = transform_stack_.top();
 		context_->begin_invoke([=]
 		{
-			GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
-			GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-			kernel_.apply(desc, transform);
-
 			std::vector<safe_ptr<device_buffer>> device_buffers;
 			for(size_t n = 0; n < buffers.size(); ++n)
 			{
@@ -120,31 +117,51 @@ public:
 				texture->read(*buffers[n]);
 				device_buffers.push_back(texture);
 			}
-
-			for(size_t n = 0; n < buffers.size(); ++n)
+						
+			if(is_key_frame) // Its a key_frame just bind the texture for use during the next frame.
 			{
-				GL(glActiveTexture(GL_TEXTURE0+n));
-				device_buffers[n]->bind();
+				if(!device_buffers.empty())				
+					key_ = device_buffers[0];				
 			}
+			else
+			{
+				for(size_t n = 0; n < buffers.size(); ++n)
+				{
+					GL(glActiveTexture(GL_TEXTURE0+n));
+					device_buffers[n]->bind();
+				}
+						
+				if(key_)
+				{
+					GL(glActiveTexture(GL_TEXTURE0+3));
+					key_->bind();
+				}
 
-			auto m_p = transform.get_key_translation();
-			auto m_s = transform.get_key_scale();
-			double w = static_cast<double>(format_desc_.width);
-			double h = static_cast<double>(format_desc_.height);
+				GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
+				GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+				kernel_.apply(desc, transform, key_ != nullptr);
+						
+				auto m_p = transform.get_key_translation();
+				auto m_s = transform.get_key_scale();
+				double w = static_cast<double>(format_desc_.width);
+				double h = static_cast<double>(format_desc_.height);
 			
-			GL(glEnable(GL_SCISSOR_TEST));
-			GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
+				GL(glEnable(GL_SCISSOR_TEST));
+				GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
 			
-			auto f_p = transform.get_fill_translation();
-			auto f_s = transform.get_fill_scale();
+				auto f_p = transform.get_fill_translation();
+				auto f_s = transform.get_fill_scale();
 			
-			glBegin(GL_QUADS);
-				glTexCoord2d(0.0, 0.0); glVertex2d( f_p[0]        *2.0-1.0,	 f_p[1]        *2.0-1.0);
-				glTexCoord2d(1.0, 0.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
-				glTexCoord2d(1.0, 1.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-				glTexCoord2d(0.0, 1.0); glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-			glEnd();
-			GL(glDisable(GL_SCISSOR_TEST));
+				glBegin(GL_QUADS);
+					glTexCoord2d(0.0, 0.0); glVertex2d( f_p[0]        *2.0-1.0,	 f_p[1]        *2.0-1.0);
+					glTexCoord2d(1.0, 0.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
+					glTexCoord2d(1.0, 1.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
+					glTexCoord2d(0.0, 1.0); glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
+				glEnd();
+				GL(glDisable(GL_SCISSOR_TEST));
+				
+				key_ = nullptr;
+			}
 		});
 	}
 

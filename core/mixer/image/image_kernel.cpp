@@ -177,6 +177,7 @@ public:
 			"uniform sampler2D	plane[4];											"
 			"uniform float		gain;												"
 			"uniform bool		HD;													"
+			"uniform bool		has_separate_key;									"
 																				
 			// NOTE: YCbCr, ITU-R, http://www.intersil.com/data/an/an9717.pdf		
 			// TODO: Support for more yuv formats might be needed.					
@@ -252,6 +253,8 @@ public:
 			"	float cb = texture2D(plane[1], gl_TexCoord[0].st).r;				"
 			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;				"
 			"	float a = 1.0;														"	
+			"	if(has_separate_key)												"
+			"		a = texture2D(plane[3], gl_TexCoord[0].st).r+0.2;					"
 			"	if(HD)																"
 			"		gl_FragColor = ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain;"
 			"	else																"
@@ -278,12 +281,13 @@ public:
 
 image_kernel::image_kernel() : impl_(new implementation()){}
 
-void image_kernel::apply(const core::pixel_format_desc& pix_desc, const core::image_transform& transform)
+void image_kernel::apply(const core::pixel_format_desc& pix_desc, const core::image_transform& transform, bool has_separate_key)
 {
 	impl_->shaders()[pix_desc.pix_fmt].use();
 
 	GL(glUniform1f(impl_->shaders()[pix_desc.pix_fmt].get_location("gain"), static_cast<GLfloat>(transform.get_gain())));
 	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("HD"), pix_desc.planes.at(0).height > 700 ? 1 : 0));
+	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("has_separate_key"), has_separate_key ? 1 : 0));
 
 	if(transform.get_mode() == core::video_mode::upper)
 		glPolygonStipple(upper_pattern);
