@@ -179,8 +179,6 @@ public:
 	~decklink_consumer()
 	{		
 		is_running_ = false;
-		video_frame_buffer_.clear();
-		audio_frame_buffer_.clear();
 		video_frame_buffer_.try_push(core::read_frame::empty());
 		audio_frame_buffer_.try_push(core::read_frame::empty());
 
@@ -263,6 +261,13 @@ public:
 	STDMETHOD_(ULONG, AddRef())					{return 1;}
 	STDMETHOD_(ULONG, Release())				{return 1;}
 	
+	STDMETHOD(ScheduledPlaybackHasStopped())
+	{
+		is_running_ = false;
+		CASPAR_LOG(info) << print() << L" Scheduled playback has stopped.";
+		return S_OK;
+	}
+
 	STDMETHOD(ScheduledFrameCompleted(IDeckLinkVideoFrame* completed_frame, BMDOutputFrameCompletionResult result))
 	{
 		if(!is_running_)
@@ -292,13 +297,6 @@ public:
 			return E_FAIL;
 		}
 
-		return S_OK;
-	}
-
-	STDMETHOD(ScheduledPlaybackHasStopped())
-	{
-		is_running_ = false;
-		CASPAR_LOG(info) << print() << L" Scheduled playback has stopped.";
 		return S_OK;
 	}
 		
