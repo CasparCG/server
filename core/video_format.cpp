@@ -37,7 +37,11 @@
 	(duration),\
 	(m == video_mode::progressive ? 1 : 2),\
 	((w)*(h)*4),\
-	(name)\
+	(name),\
+	(2),\
+	(48000),\
+	(2),\
+	(static_cast<size_t>(48000.0*2.0/((double)scale/(double)duration)))\
 }
 
 namespace caspar { namespace core {
@@ -60,7 +64,7 @@ const video_format_desc format_descs[video_format::count] =
 	DEFINE_VIDEOFORMATDESC(video_format::x1080p2997	,1920, 1080, video_mode::progressive,	30000,	1001,	TEXT("1080p2997")),
 	DEFINE_VIDEOFORMATDESC(video_format::x1080p3000	,1920, 1080, video_mode::progressive,	30,		1,		TEXT("1080p3000")),
 	DEFINE_VIDEOFORMATDESC(video_format::x1080p5000	,1920, 1080, video_mode::progressive,	50,		1,		TEXT("1080p5000")),
-	DEFINE_VIDEOFORMATDESC(video_format::invalid	,0,		0, video_mode::invalid,			0,		1,		TEXT("invalid"))
+	DEFINE_VIDEOFORMATDESC(video_format::invalid	,0,		0, video_mode::invalid,			1,		1,		TEXT("invalid"))
 };
 
 const video_format_desc& video_format_desc::get(video_format::type format)	
