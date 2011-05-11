@@ -83,6 +83,38 @@ struct configuration
 		, latency(default_latency){}
 };
 
+class decklink_frame_adapter : public IDeckLinkVideoFrame
+{
+	safe_ptr<const core::read_frame> frame_;
+	core::video_format_desc format_desc_;
+public:
+	decklink_frame_adapter(const safe_ptr<const core::read_frame>& frame, const core::video_format_desc& format_desc)
+		: frame_(frame)
+		, format_desc_(format_desc){}
+	
+	STDMETHOD (QueryInterface(REFIID, LPVOID*))	{return E_NOINTERFACE;}
+	STDMETHOD_(ULONG, AddRef())					{return 1;}
+	STDMETHOD_(ULONG, Release())				{return 1;}
+
+	STDMETHOD_(long, GetWidth())				{return format_desc_.width;}        
+    STDMETHOD_(long, GetHeight())				{return format_desc_.height;}        
+    STDMETHOD_(long, GetRowBytes())				{return format_desc_.width*4;}        
+	STDMETHOD_(BMDPixelFormat, GetPixelFormat()){return bmdFormat8BitBGRA;}        
+    STDMETHOD_(BMDFrameFlags, GetFlags())		{return bmdFrameFlagDefault;}
+        
+    STDMETHOD(GetBytes(void** buffer))
+	{
+		static std::vector<unsigned char> zeros(1920*1080*4, 0);
+		*buffer = const_cast<unsigned char*>(frame_->image_data().begin());
+		if(static_cast<size_t>(frame_->image_data().size()) != format_desc_.size)
+			*buffer = zeros.data();
+		return S_OK;
+	}
+        
+    STDMETHOD(GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode)){return S_FALSE;}        
+    STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
+};
+
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
 	const configuration config_;
@@ -98,11 +130,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 		
 	const std::wstring model_name_;
 	const core::video_format_desc format_desc_;
+	const size_t buffer_size_;
 
 	unsigned long frames_scheduled_;
 	unsigned long audio_scheduled_;
 		
-	std::vector<std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>>> reserved_frames_;
+	std::list<decklink_frame_adapter> frame_container_; // Must be std::list in order to guarantee that pointers are always valid.
 	boost::circular_buffer<std::vector<short>> audio_container_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> video_frame_buffer_;
@@ -111,7 +144,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	std::shared_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
 
-	size_t buffer_size_;
 
 public:
 	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc) 
@@ -122,12 +154,16 @@ public:
 		, keyer_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
+		, buffer_size_(config.embedded_audio ? 5 : 4) // Minimum buffer-size (3 + 1 tolerance).
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
-		, buffer_size_(4) // Minimum buffer-size (3 + 1 tolerance).
+		, audio_container_(buffer_size_+1)
 	{
 		is_running_ = true;
-						
+				
+		video_frame_buffer_.set_capacity(1);
+		audio_frame_buffer_.set_capacity(1);
+
 		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
@@ -142,17 +178,9 @@ public:
 
 		set_latency(config.latency);				
 		set_keyer(config.keyer);
-							
-		audio_container_.set_capacity(buffer_size_+1);
-		allocate_frames(buffer_size_+1);
-				
-		CASPAR_LOG(info) << print() << L" Buffer-depth: " << buffer_size_;
-		
+								
 		for(size_t n = 0; n < buffer_size_; ++n)
 			schedule_next_video(core::read_frame::empty());
-
-		video_frame_buffer_.set_capacity(2);
-		audio_frame_buffer_.set_capacity(2);
 		
 		if(config.embedded_audio)
 			output_->BeginAudioPreroll();
@@ -162,6 +190,7 @@ public:
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to schedule playback."));
 		}
 		
+		CASPAR_LOG(info) << print() << L" Buffer depth: " << buffer_size_;		
 		CASPAR_LOG(info) << print() << L" Successfully initialized for " << format_desc_.name;	
 	}
 
@@ -231,8 +260,6 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not set audio callback."));
 
 		CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
-
-		buffer_size_ = 5; //  Minimum buffer-size with embedded-audio (4 + 1 tolerance).
 	}
 
 	void enable_video(BMDDisplayMode display_mode)
@@ -243,41 +270,39 @@ public:
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set playback completion callback."));
 	}
-
-	void allocate_frames(size_t count)
-	{
-		std::pair<void*, CComPtr<IDeckLinkMutableVideoFrame>> frame;
-		std::generate_n(std::back_inserter(reserved_frames_), count, [&]() -> decltype(frame)
-		{
-			if(FAILED(output_->CreateVideoFrame(format_desc_.width, format_desc_.height, format_desc_.size/format_desc_.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &frame.second)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create frame."));
-
-			if(FAILED(frame.second->GetBytes(&frame.first)) || frame.first == nullptr)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to get frame bytes."));
-
-			return frame;
-		});
-	}
-
+	
 	STDMETHOD (QueryInterface(REFIID, LPVOID*))	{return E_NOINTERFACE;}
 	STDMETHOD_(ULONG, AddRef())					{return 1;}
 	STDMETHOD_(ULONG, Release())				{return 1;}
 	
-	STDMETHOD(ScheduledFrameCompleted(IDeckLinkVideoFrame* /*completedFrame*/, BMDOutputFrameCompletionResult result))
+	STDMETHOD(ScheduledFrameCompleted(IDeckLinkVideoFrame* completed_frame, BMDOutputFrameCompletionResult result))
 	{
 		if(!is_running_)
 			return E_FAIL;
+		
+		try
+		{
+			if(result == bmdOutputFrameDisplayedLate)
+				graph_->add_tag("late-frame");
+			else if(result == bmdOutputFrameDropped)
+				graph_->add_tag("dropped-frame");
+			else if(result == bmdOutputFrameFlushed)
+				graph_->add_tag("flushed-frame");
 
-		if(result == bmdOutputFrameDisplayedLate)
-			graph_->add_tag("late-frame");
-		else if(result == bmdOutputFrameDropped)
-			graph_->add_tag("dropped-frame");
-		else if(result == bmdOutputFrameFlushed)
-			graph_->add_tag("flushed-frame");
+			frame_container_.erase(std::remove_if(frame_container_.begin(), frame_container_.end(), [&](const decklink_frame_adapter& frame)
+			{
+				return &frame == completed_frame;
+			}), frame_container_.end());
 
-		std::shared_ptr<const core::read_frame> frame;	
-		video_frame_buffer_.pop(frame);		
-		schedule_next_video(safe_ptr<const core::read_frame>(frame));
+			std::shared_ptr<const core::read_frame> frame;	
+			video_frame_buffer_.pop(frame);		
+			schedule_next_video(safe_ptr<const core::read_frame>(frame));			
+		}
+		catch(...)
+		{
+			exception_ = std::current_exception();
+			return E_FAIL;
+		}
 
 		return S_OK;
 	}
@@ -330,15 +355,10 @@ public:
 			
 	void schedule_next_video(const safe_ptr<const core::read_frame>& frame)
 	{
-		if(static_cast<size_t>(frame->image_data().size()) == format_desc_.size)
-			fast_memcpy(reserved_frames_.front().first, frame->image_data().begin(), frame->image_data().size());
-		else
-			fast_memclr(reserved_frames_.front().first, format_desc_.size);
-
-		if(FAILED(output_->ScheduleVideoFrame(reserved_frames_.front().second, (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
+		frame_container_.push_back(decklink_frame_adapter(frame, format_desc_));
+		if(FAILED(output_->ScheduleVideoFrame(&frame_container_.back(), (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
-		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
 		graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 		tick_timer_.restart();
 	}
@@ -350,10 +370,10 @@ public:
 
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Is not running."));
-
-		video_frame_buffer_.push(frame);
+		
 		if(config_.embedded_audio)
-			audio_frame_buffer_.push(frame);		
+			audio_frame_buffer_.push(frame);	
+		video_frame_buffer_.push(frame);	
 	}
 	
 	std::wstring print() const
