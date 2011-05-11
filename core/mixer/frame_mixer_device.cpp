@@ -30,10 +30,12 @@
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/utility/assert.h>
-#include <common/utility/timer.h>
 #include <common/utility/tweener.h>
 
+#include <core/consumer/frame/read_frame.h>
+#include <core/producer/frame/write_frame.h>
+#include <core/producer/frame/frame_factory.h>
+#include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/audio_transform.h>
 #include <core/producer/frame/image_transform.h>
 

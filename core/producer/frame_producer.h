@@ -21,15 +21,17 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include "../producer/frame/basic_frame.h"
-#include "../producer/frame/frame_factory.h"
+#include "frame/frame_factory.h"
 
 #include <boost/noncopyable.hpp>
 
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace caspar { namespace core {
+
+class basic_frame;
 
 class frame_producer : boost::noncopyable
 {
@@ -44,17 +46,7 @@ public:
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
 		
-	static const safe_ptr<frame_producer>& empty() // nothrow
-	{
-		struct empty_frame_producer : public frame_producer
-		{
-			virtual safe_ptr<basic_frame> receive(){return basic_frame::empty();}
-			virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
-			virtual std::wstring print() const { return L"empty";}
-		};
-		static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();
-		return producer;
-	}	
+	static const safe_ptr<frame_producer>& empty(); // nothrow
 };
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer);

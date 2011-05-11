@@ -19,13 +19,8 @@
 */
 #pragma once
 
-#include <core/consumer/frame/read_frame.h>
-#include <core/producer/frame/write_frame.h>
-#include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame/pixel_format.h>
-
-#include "image/image_mixer.h"
-#include "audio/audio_mixer.h"
+#include "../producer/frame/pixel_format.h"
+#include "../producer/frame/frame_factory.h"
 
 #include <common/memory/safe_ptr.h>
 
@@ -33,7 +28,19 @@
 
 #include <functional>
 
-namespace caspar { namespace mixer {
+namespace caspar { 
+
+namespace core {
+
+class read_frame;
+class write_frame;
+class basic_frame;
+class audio_transform;
+class image_transform;
+
+}
+
+namespace mixer {
 	
 class frame_mixer_device : public core::frame_factory
 {

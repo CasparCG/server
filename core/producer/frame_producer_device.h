@@ -28,9 +28,9 @@
 #include <boost/signals2.hpp>
 #include <boost/thread/future.hpp>
 
-#include <functional>
-
 namespace caspar { namespace core {
+
+struct video_format_desc;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \class	frame_producer_device
@@ -48,10 +48,11 @@ class frame_producer_device : boost::noncopyable
 public:
 	typedef boost::signals2::signal<void(const std::map<int, safe_ptr<basic_frame>>&)> output_t;
 	 
-	boost::signals2::connection connect(const output_t::slot_type& subscriber);
-
 	explicit frame_producer_device(const video_format_desc& format_desc);
 	frame_producer_device(frame_producer_device&& other);
+	
+	boost::signals2::connection connect(const output_t::slot_type& subscriber);
+
 	void swap(frame_producer_device& other);
 		
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false);
