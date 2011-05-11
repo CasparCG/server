@@ -26,8 +26,6 @@
 
 #include "../interop/DeckLinkAPI_h.h"
 
-#include <core/video_format.h>
-
 #include <core/consumer/frame/read_frame.h>
 
 #include <common/concurrency/com_context.h>
@@ -40,18 +38,6 @@
 
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
-
-#include <vector>
-
-#pragma warning(push)
-#pragma warning(disable : 4996)
-
-	#include <atlbase.h>
-
-	#include <atlcom.h>
-	#include <atlhost.h>
-
-#pragma warning(push)
 
 namespace caspar { 
 	
@@ -71,9 +57,9 @@ enum latency
 
 struct configuration
 {
-	size_t device_index;
-	bool embedded_audio;
-	key keyer;
+	size_t	device_index;
+	bool	embedded_audio;
+	key		keyer;
 	latency latency;
 	
 	configuration()
@@ -85,8 +71,8 @@ struct configuration
 
 class decklink_frame_adapter : public IDeckLinkVideoFrame
 {
-	safe_ptr<const core::read_frame> frame_;
-	core::video_format_desc format_desc_;
+	const safe_ptr<const core::read_frame>	frame_;
+	const core::video_format_desc			format_desc_;
 public:
 	decklink_frame_adapter(const safe_ptr<const core::read_frame>& frame, const core::video_format_desc& format_desc)
 		: frame_(frame)
@@ -144,7 +130,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	std::shared_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
 
-
 public:
 	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc) 
 		: config_(config)
@@ -185,10 +170,7 @@ public:
 		if(config.embedded_audio)
 			output_->BeginAudioPreroll();
 		else
-		{
-			if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) 
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to schedule playback."));
-		}
+			start_playback();
 		
 		CASPAR_LOG(info) << print() << L" Buffer depth: " << buffer_size_;		
 		CASPAR_LOG(info) << print() << L" Successfully initialized for " << format_desc_.name;	
@@ -270,6 +252,12 @@ public:
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set playback completion callback."));
 	}
+
+	void start_playback()
+	{
+		if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) 
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to schedule playback."));
+	}
 	
 	STDMETHOD (QueryInterface(REFIID, LPVOID*))	{return E_NOINTERFACE;}
 	STDMETHOD_(ULONG, AddRef())					{return 1;}
@@ -289,10 +277,10 @@ public:
 			else if(result == bmdOutputFrameFlushed)
 				graph_->add_tag("flushed-frame");
 
-			frame_container_.erase(std::remove_if(frame_container_.begin(), frame_container_.end(), [&](const decklink_frame_adapter& frame)
+			frame_container_.erase(std::find_if(frame_container_.begin(), frame_container_.end(), [&](const decklink_frame_adapter& frame)
 			{
 				return &frame == completed_frame;
-			}), frame_container_.end());
+			}));
 
 			std::shared_ptr<const core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);		
@@ -321,15 +309,12 @@ public:
 		
 		try
 		{
-			if(preroll)
-			{
-				if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0)))
-					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to schedule playback."));
-			}
-
 			std::shared_ptr<const core::read_frame> frame;
 			audio_frame_buffer_.pop(frame);
 			schedule_next_audio(safe_ptr<const core::read_frame>(frame));		
+
+			if(preroll)
+				start_playback();
 		}
 		catch(...)
 		{
@@ -343,13 +328,14 @@ public:
 	void schedule_next_audio(const safe_ptr<const core::read_frame>& frame)
 	{
 		static std::vector<short> silence(48000, 0);
+		
+		const int sample_count = format_desc_.audio_samples_per_frame;
+		const int sample_frame_count = sample_count/2;
 
-		int audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps)*2; // Audio samples per channel
+		const short* frame_audio_data = frame->audio_data().size() == sample_count ? frame->audio_data().begin() : silence.data();
+		audio_container_.push_back(std::vector<short>(frame_audio_data, frame_audio_data+sample_count));
 
-		const short* frame_audio_data = frame->audio_data().size() == audio_samples ? frame->audio_data().begin() : silence.data();
-		audio_container_.push_back(std::vector<short>(frame_audio_data, frame_audio_data+audio_samples));
-
-		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), audio_samples/2, (audio_scheduled_++) * audio_samples/2, 48000, nullptr)))
+		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), sample_frame_count, (audio_scheduled_++) * sample_frame_count, format_desc_.audio_sample_rate, nullptr)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
 	}
 			
