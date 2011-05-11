@@ -19,22 +19,13 @@
 */
 #pragma once
 
+#include "../frame_producer.h"
+
+#include <string>
 #include <memory>
 
-#include <core/producer/frame/pixel_format.h>
-#include <core/producer/frame/image_transform.h>
-
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 	
-class image_kernel
-{
-public:
-	image_kernel();
-	void apply(const core::pixel_format_desc& pix_desc, const core::image_transform& mode, bool has_seperate_key);
-
-private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
-};
+safe_ptr<frame_producer> create_separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key);
 
 }}
