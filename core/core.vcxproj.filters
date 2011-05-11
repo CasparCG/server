@@ -31,6 +31,9 @@
     <Filter Include="mixer\gpu">
       <UniqueIdentifier>{2d2ae7ff-03d7-4e8c-a298-fb41ee42a885}</UniqueIdentifier>
     </Filter>
+    <Filter Include="producer\separated">
+      <UniqueIdentifier>{cf834e89-32d6-47bc-8d5a-10e032f88e15}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
@@ -108,6 +111,9 @@
     <ClInclude Include="mixer\audio\audio_mixer.h">
       <Filter>mixer\audio</Filter>
     </ClInclude>
+    <ClInclude Include="producer\separated\separated_producer.h">
+      <Filter>producer\separated</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -169,6 +175,9 @@
     </ClCompile>
     <ClCompile Include="mixer\audio\audio_mixer.cpp">
       <Filter>mixer\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\separated\separated_producer.cpp">
+      <Filter>producer\separated</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

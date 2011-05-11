@@ -62,6 +62,7 @@ public:
 	audio_transform& get_audio_transform();
 		
 	static safe_ptr<basic_frame> interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, video_mode::type mode);
+	static safe_ptr<basic_frame> fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key);
 		
 	static const safe_ptr<basic_frame>& eof()
 	{

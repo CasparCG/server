@@ -22,6 +22,7 @@
 
 #include "frame_producer.h"
 #include "color/color_producer.h"
+#include "separated/separated_producer.h"
 
 #include <common/memory/safe_ptr.h>
 
@@ -66,7 +67,7 @@ void register_producer_factory(const producer_factory_t& factory)
 	g_factories.push_back(factory);
 }
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
@@ -90,6 +91,29 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 
 	if(producer == frame_producer::empty())
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
+
+	return producer;
+}
+
+
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+{	
+	auto producer = do_create_producer(my_frame_factory, params);
+	auto key_producer = frame_producer::empty();
+	
+	try // to find a key file.
+	{
+		auto params_copy = params;
+		if(params_copy.size() > 0)
+		{
+			params_copy[0] += L"_A";
+			key_producer = do_create_producer(my_frame_factory, params_copy);			
+		}
+	}
+	catch(...){}
+
+	if(key_producer != frame_producer::empty())
+		return create_separated_producer(producer, key_producer);
 
 	return producer;
 }

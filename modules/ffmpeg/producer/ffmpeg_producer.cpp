@@ -162,6 +162,8 @@ public:
 					frame->audio_data() = std::move(audio_chunk_channel_.front());
 					audio_chunk_channel_.pop_front();
 				}
+				else
+					frame->get_audio_transform().set_has_audio(false);
 							
 				ouput_channel_.push(make_safe(frame));				
 			}				
