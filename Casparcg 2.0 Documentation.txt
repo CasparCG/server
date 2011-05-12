@@ -136,8 +136,6 @@ CasparCG 2.0 currently only supports a GPU-accelerated OpenGL 3.1 mixer.
 **********************************************************************************
 1.3. Protocols
 **********************************************************************************
-CasparCG 2.0 officially supports only the AMCP protocol. However, there are 
-implementations of use case specified protocols.
 
 ==================================================================================
 2. Advanced Media Control Protocol (AMCP) 2.0
