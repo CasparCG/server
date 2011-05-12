@@ -1,0 +1,950 @@
+##################################################################################
+CasparCG 2.0 Documentation
+##################################################################################
+==================================================================================
+Document History
+==================================================================================
+
+Version		Date			Description			Author
+----------------------------------------------------------------------------------
+1			2011-05-12		Initial draft.		Robert Nagy
+
+==================================================================================
+1. CasparCG Server
+==================================================================================
+The CasparCG 2.0 Server is based open tree components types; "producers", "mixers" and 
+"consumers" which in combined configurations make up a "channel". The server also
+has "protocols" for communication and controlling.
+
+	Producer - Renders and plays media such as video, animations, images and audio.
+	A producer listens for commands and data sent from a client controller, then 
+	loads and renders that media and sends it to the next stage in the rendering 
+	pipeline (the mixer).
+	
+	Consumer - Receives playing media such as video, animations, images and audio 
+	from a producer and displays that media on a specified output, for example a 
+	window on the computer monitor or an SDI card.
+
+	Mixer - Composites video- and audio-streams received from producers on different 
+	layers.	Also performs various video and audio transformations on the video-streams.
+
+	Protocol - Recevies, parses and executes commands.
+
+----------------------------------------------------------------------------------
+Figure 1. A simplified diagram of the CasparCG 2.0 Architecture.
+----------------------------------------------------------------------------------
+  |----------|     ##################
+  | PROTOCOL |<--- | TCP CONNECTION |
+  |----------|	   ##################
+     |    ^
+	 |    |  commands/responses
+	 v    |
+  |----------| <-   empty frame   <- |----------| <-   frame format  <- |----------|
+  | PRODUCER |                       |   MIXER	|                       | CONSUMER |
+  |----------| -> rendered frames -> |----------| -> formatted frame -> |----------|
+   	   ^								|   ^							  |
+   	   | data							|	|							  | frame
+   	   |								v	|							  v
+    ########					       #######						 ##################
+    | FILE |					       | GPU |						 | DISPLAY DEVICE |
+    ########					       #######						 ##################
+**********************************************************************************
+1.1. Producers
+**********************************************************************************
+CasparCG 2.0 currently (fully or partially) supports the following producers:
+
+	Name				File Extensions					Description
+	--------------------------------------------------------------------------
+	flash				swf
+
+	cg					ft
+
+	ct					ct								Plays "compressed templates"
+														zip file containing a 
+														flash-template together with 
+														required media and data xml.
+
+	ffmpeg				mpg, mpeg, avi, mov, qt,		Plays regular video and/or
+						webm, dv, mp4, f4v, flw, mkv,	audio
+						mka, wmv, ogg, divx, xvid, 
+						wav, mp3, m2v
+
+	image				tga, png, bmp, jpg, jpeg, gif	Plays images.
+						tiff
+
+	decklink											Plays input from a decklink
+														device.
+														
+----------------------------------------------------------------------------------
+1.2.1. Flash Producer (flash)
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+1.2.2. Template Graphics Producer (cg)
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+1.2.3. Compressed Template Graphics Producer (ct)
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+1.2.4. FFMPEG Producer (ffmpeg)
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+1.2.5. Image Producer (image)
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+1.2.5. Decklink Producer (decklink)
+----------------------------------------------------------------------------------
+**********************************************************************************
+1.2. Consumers
+**********************************************************************************
+CasparCG 2.0 currently (fully or partially) supports the following producers:
+
+	Name				Description
+	------------------------------------------
+	bluefish			Plays video and/or audio  to a bluefish-device.
+
+	decklink			Plays video and/or audio  to a decklink-device.
+		
+	ffmpeg				Plays video and/or audio to a file.				
+						
+	oal					Plays audio to the default system audio-device.		
+	
+	ogl					Plays video to a windowed or fullscreen window.		
+
+----------------------------------------------------------------------------------
+1.2.1. Bluefish Consumer (bluefish)
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+1.2.2. Decklink Consumer (decklink)
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+1.2.3. FFMPEG Consumer (ffmpeg)
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+1.2.4. OpenAL Consumer (openal)
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+1.2.5. OpenGL Consumer (opengl)
+----------------------------------------------------------------------------------
+		
+**********************************************************************************
+1.3. Mixers
+**********************************************************************************
+CasparCG 2.0 currently only supports a GPU-accelerated OpenGL 3.1 mixer.	
+					
+**********************************************************************************
+1.3. Protocols
+**********************************************************************************
+CasparCG 2.0 officially supports only the AMCP protocol. However, there are 
+implementations of use case specified protocols.
+
+==================================================================================
+2. Advanced Media Control Protocol (AMCP) 2.0
+==================================================================================
+The AMCP protocol is the main communication protocol used to control and query 
+CasparCG 2.0.
+
+- All communication is presumed to be encoded in UTF-8.
+- Each command has to be terminated with both a carriage return and a linefeed 
+character. (\r\n, <CR><LF>, <0x0D><0x0A> or <13><10>, whichever your programming 
+language likes best).
+- The whole command string is case insensitive.
+- Since the parameters in a command is separated by spaces, you need to enclose
+the parameter with quotation marks if you want it to contain spaces.
+
+**********************************************************************************
+2.1. Backward Compatibility
+**********************************************************************************
+The AMCP 2.0 protocol implementation is mostly backward compatible with the 
+previous AMCP 1.8 and 1.7.1 protocols. This is achieved by providing default 
+values for parameters used by the AMCP 2.0 protocol.
+
+----------------------------------------------------------------------------------
+2.1.1. Breaking Changes
+----------------------------------------------------------------------------------
+- CLEAR command will also clear any visible template graphic in the specified
+container.
+- CLS command will recurse into subfolders.
+
+**********************************************************************************
+2.2 Special sequences
+**********************************************************************************
+Since bare quotation marks are used to keep parameters with spaces in one piece, 
+there has to be another way to indicate a quotation mark in a string. Enter special 
+sequences. They behave as in most programming languages. The escape character is 
+backslash (’\’). In order to get a quotation mark you enter \”. The full list of 
+valid sequences is just below.
+
+	\” - Quotation mark.
+	\\ - Backslash.
+	\n - New line
+
+These sequences apply to all parameters, it doesn’t matter if it’s a file name or 
+a long string of xml-data.
+
+**********************************************************************************
+2.3. Command Specification
+**********************************************************************************
+----------------------------------------------------------------------------------
+2.3.1. Required Value
+----------------------------------------------------------------------------------
+Syntax: 
+
+	[my_value_name:my_type,my_type2] 	
+
+Description: 
+
+	Required value with one of the comma separated types “my_typex”.
+
+Examples:
+
+	[transition:CUT,MIX,PUSH,WIPE] - A required value for "transition" which 
+										can be either CUT, MIX, PUSH or WIPE.
+	>> CUT
+	<< CUT
+
+	[channel:int] - A required value for "channel" which must a signed
+					integer.
+	>> 1
+	<< 1
+----------------------------------------------------------------------------------
+2.3.2. Optional Expression
+----------------------------------------------------------------------------------
+Syntax: 
+
+	{my_expr|my_default_expr} 	
+
+Description: 
+
+	Optional expression where “my_def_expr” is used if no expression 
+	is provided. If |"my_def_expr" is not provided then it is 
+	assumed to evaluate to |"".
+
+Examples:
+
+	{-[layer:int]|-0} - An optional expression which will be evaluated
+						to "-0" if not provided.
+	>> -2
+	<< -2
+			
+	>> 
+	<< -0
+
+	{[tween:string]} - An optional expression will be evaluated to an 
+						emptry string if not provided.
+
+	>> easeinsine
+	<< easeinsine
+
+	>>
+	<<
+
+**********************************************************************************
+2.4. Basic Commands
+**********************************************************************************
+----------------------------------------------------------------------------------
+2.4.1. LOADBG
+----------------------------------------------------------------------------------
+Syntax: 
+
+	LOADBG [channel:int]{-[layer:int]|-0} [clip:string] {[loop:LOOP]}
+	 {[transition:CUT,MIX,PUSH,WIPE] [duration:uint] {[tween:string]|linear} 
+	 {[direction:LEFT,RIGHT]|RIGHT}|CUT 0}
+
+Description: 
+
+	Loads a clip in the background and prepares it for playout. 
+	
+	The string "clip" will be parsed by available registered producer factories. If
+	a successfully match is found then the producer will be loaded into the background.
+	
+	If a file with the same name (extension excluded) but with the additional 
+	postfix "_a" is found this file will be used as key for the main "clip".
+
+	Supplying the "loop" value will cause the clip to loop.
+
+Examples: 	
+	
+	LOADBG 1 MY_FILE PUSH 20 EASEINSINE
+	LOADBG 1-1 MY_FILE SLIDE 10 LEFT
+	LOADBG 1-0 MY_FILE
+
+Note: 
+
+	See Appendix A: Tweener for supported values for tween.
+
+----------------------------------------------------------------------------------
+2.4.2. LOAD
+----------------------------------------------------------------------------------
+Syntax: 
+
+	LOAD [channel:int]{-[layer:int]|-0}
+
+Description: 
+
+	Loads a clip to the foreground and plays the first frame before pausing. If
+	any clip is playing on the target foreground then this clip will be replaced.
+	
+Examples: 
+	
+	LOAD 1 MY_FILE
+	LOAD 1-1 MY_FILE
+
+Note:
+
+	See 1.2.1. LOADBG for additional details.
+	
+----------------------------------------------------------------------------------
+2.4.3. PLAY
+----------------------------------------------------------------------------------
+Syntax:
+
+	PLAY [channel:int]{-[layer:int]|-0} {"additional parameters"}
+	 
+Description: 
+
+	Moves clip from background to foreground and starts playing it. If a
+	transition (see LOADBG) is prepared it will be executed.
+	
+	If "additional 	parameters" (see LOADBG) is provided then the provided clip 
+	will first be loaded to the background.
+	
+Examples: 	
+
+	>> PLAY 1 MY_FILE PUSH 20 EASEINSINE
+	>> PLAY 1-1 MY_FILE SLIDE 10 LEFT
+	>> PLAY 1-0 MY_FILE
+
+Note: 
+
+	See 1.2.1. LOADBG for additional details.
+
+----------------------------------------------------------------------------------
+2.4.4. PAUSE
+----------------------------------------------------------------------------------
+Syntax:
+
+	PAUSE [channel:int]{-[layer:int]|-0}
+
+Description: 
+
+	Pauses foreground clip.
+	
+Examples: 	
+	
+	>> PAUSE 1
+	>> PAUSE 1-1
+
+----------------------------------------------------------------------------------
+2.4.5. STOP
+----------------------------------------------------------------------------------
+Syntax: 
+
+	PAUSE [channel:int]{-[layer:int]|-0}
+
+Description: 
+
+	Removes foreground clip.
+	
+Examples: 	
+
+	>> STOP 1
+	>> STOP 1-1
+
+----------------------------------------------------------------------------------
+2.4.6. CLEAR
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CLEAR [channel:int]{-[layer:int]}
+
+Description: 
+
+	Removes all clips (both foreground and background). If no layer is specified 
+	then all layers in the specified channel are cleared.
+	
+Examples: 	
+
+	>> CLEAR 1
+	>> CLEAR 1-1
+
+----------------------------------------------------------------------------------
+2.4.7. SWAP
+----------------------------------------------------------------------------------
+Syntax: 
+
+	SWAP [channel1:int]{-[layer1:int]} [channel2:int]{-[layer2:int]}
+
+Description: 
+
+	Swaps layers between channels (both foreground and background will be swapped). 
+	If layers are not specified then all layers in respective channel will be swapped.
+	
+Examples: 	
+
+	>> SWAP 1 2
+	>> SWAP 1-1 2-3
+	
+----------------------------------------------------------------------------------
+2.4.8. ADD
+----------------------------------------------------------------------------------
+Syntax: 
+
+	ADD [channel:int]{-[layer:int]|-0} [parameters:string]
+
+Description: 
+
+	The string "clip" will be parsed by available registered consumer factories. If
+	a successfull match is found a consumer will be created and added to the channel.
+
+Examples: 	
+
+	>> ADD 1 DECKLINK 1 PAL
+	>> ADD 1-2 BLUEFISH 1 PAL
+	
+----------------------------------------------------------------------------------
+2.4.8. REMOVE
+----------------------------------------------------------------------------------
+Syntax: 
+
+	REMOVE [channel:int]{-[layer:int]|-0}
+
+Description: 
+
+	Removes an existing consumer from channel.
+	
+Examples: 	
+
+	>> REMOVE 1
+	>> REMOVE 1-2
+	
+**********************************************************************************
+2.5. Data Commands
+**********************************************************************************
+The DATA commands are convenient to use when you have large datasets that might not 
+be available at broadcast-time. DATA allows you to store a dataset on the 
+CasparCG Server and assign it to a much shorter name. This name can then be used to 
+recall the data when displaying a template graphic.
+
+----------------------------------------------------------------------------------
+2.5.1. DATA STORE
+----------------------------------------------------------------------------------
+Syntax:
+	
+	DATA STORE [name:string] [data:string]
+
+Description:
+
+	Stores the dataset data under the name name.
+
+Examples:
+
+	>> DATA STORE my_data "Some useful data"
+	
+----------------------------------------------------------------------------------
+2.5.2. DATA RETRIEVE
+----------------------------------------------------------------------------------
+Syntax:
+	
+	DATA RETRIEVE [name:string] [data:string]
+
+Description:
+
+	Returns the data saved under the name "name".
+		
+----------------------------------------------------------------------------------
+2.5.3. DATA LIST
+----------------------------------------------------------------------------------
+Syntax:
+	
+	DATA LIST
+
+Description:
+
+	Returns a list of all saved datasets.
+	
+**********************************************************************************
+2.6. Template Graphics Commands
+**********************************************************************************
+----------------------------------------------------------------------------------
+2.6.1. Template Data
+----------------------------------------------------------------------------------
+Data to templates is sent in xml formatted as follows:
+
+<templateData>
+	<componentData id="f0">
+		<data id="text" value="Niklas P Andersson" /> </componentData>
+	<componentData id="f1">
+		<data id="text" value="Developer" />
+	</componentData>
+	<componentData id="f2">
+		<data id="text" value="Providing an example" />
+	</componentData>
+</templateData> 
+
+The node under each componentData is sent directly into the specified component. 
+This makes it possible to provide completely custom data to templates. The data-nodes 
+in this example is just the way the default CasparCG textfield wants its data. 
+More information about this will be provided with the tools and actionscript classes 
+required to build your own templates.
+
+'A complete call' to CG ADD (see below), correctly escaped and with the data above 
+would look like this:
+
+CG 1 ADD 0 "demo/test" 1 "<templateData><componentData id=\"f0\"><data id=\"text\" 
+value=\"Niklas P Andersson\"></data> </componentData><componentData id=\"f1\"><data 
+id=\"text\" value=\"developer\"></data></componentData><componentData id=\"f2\"><data 
+id=\"text\" value=\"Providing an example\"></data> </componentData></templateData>"
+
+----------------------------------------------------------------------------------
+2.6.2. CG ADD
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CG [channel:int]{-[layer:int]|-0} ADD [flash_layer:uint] [template:string]
+	 [play-on-load:0,1] [data]
+
+Description: 
+
+	Prepares a template for displaying. It won’t show until you call CG PLAY 
+	(unless you supply the play-on-load flag, 1 for true). Data is either inline 
+	xml or a reference to a saved dataset. 
+	Please see 2.5.1 for a complete example with data.
+	
+Examples: 	
+
+	>> CG 1 ADD 10 svtnews/info 1
+
+----------------------------------------------------------------------------------
+2.6.2. CG REMOVE
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CG [channel:int]{-[layer:int]|-0} REMOVE [flash_layer:uint]
+
+Description: 
+
+	Removes the visible template from a specific layer.
+	
+----------------------------------------------------------------------------------
+2.6.3. CG CLEAR
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CG [channel:int]{-[layer:int]|-0} CLEAR [flash_layer:uint]
+
+Description: 
+
+	Clears all layers and any state that might be stored. What this actually does 
+	behind the scene is to create a new instance of the 
+	Adobe Flash player ActiveX controller in memory.
+
+----------------------------------------------------------------------------------
+2.6.4. CG PLAY
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CG [channel:int]{-[layer:int]|-0} PLAY [flash_layer:uint]
+
+Description: 
+
+	Plays / displays the template in the specified layer.
+
+----------------------------------------------------------------------------------
+2.6.5. CG STOP
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CG [channel:int]{-[layer:int]|-0} STOP [flash_layer:uint]
+
+Description: 
+
+	Stops and removes the template from the specified layer. This is different 
+	than REMOVE in that the template gets a chance to animate out when it is stopped.
+
+----------------------------------------------------------------------------------
+2.6.6. CG NEXT
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CG [channel:int]{-[layer:int]|-0} NEXT [flash_layer:uint]
+
+Description: 
+
+	Triggers a ”continue” in the template on the specified layer. This is used to 
+	control animations that has multiple discreet steps.
+
+----------------------------------------------------------------------------------
+2.6.7. CG GOTO
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CG [channel:int]{-[layer:int]|-0} GOTO [flash_layer:uint] [label:string]
+
+Description: 
+
+	Jumps to the specified label in the template on the specified layer.
+
+----------------------------------------------------------------------------------
+2.6.8. CG UPDATE
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CG [channel:int]{-[layer:int]|-0} GOTO [flash_layer:uint] [data:string]
+
+Description: 
+
+	Sends new data to the template on specified layer. Data is either inline xml 
+	or a reference to a saved dataset.
+
+----------------------------------------------------------------------------------
+2.6.9. CG INVOKE
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CG [channel:int]{-[layer:int]|-0} GOTO [flash_layer:uint] [method:string]
+
+Description: 
+
+	Calls a custom method in the document class of the template on the specified 
+	layer. The method must return void and take no parameters.
+
+**********************************************************************************
+2.7. Mixer Commands
+**********************************************************************************
+----------------------------------------------------------------------------------
+2.7.1. MIXER VIDEO IS_KEY
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER VIDEO [channel:int]{-[layer:int]|-0} IS_KEY {is_key:0,1|0}
+
+Description: 
+
+	If "is_key" equals 1 then the specified layer will not be rendered, 
+	instead it will be used as the key for the layer above.
+	
+Examples: 	
+
+	>> MIXER VIDEO 1-0 IS_KEY 1
+
+----------------------------------------------------------------------------------
+2.7.2. MIXER VIDEO OPACITY
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER VIDEO [channel:int]{-[layer:int]|-0} OPACITY {opacity:float} 
+	 {[duration:uint] {[tween:string]|linear}|0 linear}
+
+Description: 
+
+	Changes the opacity of the specified layer.
+	
+Examples: 	
+
+	>> MIXER VIDEO 1-0 OPACITY 0.5 25 easeinsine
+	
+----------------------------------------------------------------------------------
+2.7.3. MIXER VIDEO GAIN
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER VIDEO [channel:int]{-[layer:int]|-0} GAIN {opacity:float} 
+	 {[duration:uint] {[tween:string]|linear}|0 linear}
+
+Description: 
+
+	Changes the gain of the specified layer.
+	
+Examples: 	
+
+	>> MIXER VIDEO 1-0 GAIN 0.5 25 easeinsine
+	
+----------------------------------------------------------------------------------
+2.7.4. MIXER VIDEO FILL_RECT
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER VIDEO [channel:int]{-[layer:int]|-0} FILL_RECT [x:float] [y:float]
+	 [x-scale:float] [y-slace:float] {[duration:uint] {[tween:string]|linear}|0 linear}
+
+Description: 
+
+	Scales the video stream on the specified layer.
+	
+Examples: 	
+
+	>> MIXER VIDEO 1-0 FILL_RECT 0.25 0.25 0.5 0.5 25 easeinsine
+
+Note:
+
+	This feature is not yet fully supported (2011-05-12) for interlaced video sources 
+	since the frames are not deinterlaced before scaling.
+
+----------------------------------------------------------------------------------
+2.7.5. MIXER VIDEO KEY_RECT
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER VIDEO [channel:int]{-[layer:int]|-0} KEY_RECT [x:float] [y:float]
+	 [x-scale:float] [y-slace:float] {[duration:uint] {[tween:string]|linear}|0 linear}
+
+Description: 
+
+	Masks the video stream on the specified layer.
+	
+Examples: 	
+
+	>> MIXER VIDEO 1-0 KEY_RECT 0.25 0.25 0.5 0.5 25 easeinsine
+		
+----------------------------------------------------------------------------------
+2.7.6. MIXER VIDEO GRID
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER VIDEO [channel:int] GRID [resolution:uint] {[duration:uint] 
+	 {[tween:string]|linear}|0 linear}
+
+Description: 
+
+	Creates a grid of video streams in ascending order of the layer index, e.g.
+	if resolution equals 2 then a 2x2 grid of layers will be created.
+	
+Examples: 	
+
+	>> MIXER VIDEO 1 GRID 2
+
+Note:
+
+	This feature is not yet fully supported (2011-05-12) for interlaced video sources 
+	since the frames are not deinterlaced before scaling.
+	
+----------------------------------------------------------------------------------
+2.7.7. MIXER VIDEO RESET
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER VIDEO [channel:int]{-[layer:int]|-0} RESET {[duration:uint] 
+	 {[tween:string]|linear}|0 linear}
+
+Description: 
+
+	Reset all video transformations.
+	
+Examples: 	
+
+	>> MIXER VIDEO 1 RESET
+	>> MIXER VIDEO 1-0 RESET
+	
+----------------------------------------------------------------------------------
+2.7.8. MIXER AUDIO GAIN
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER AUDIO [channel:int]{-[layer:int]|-0} GAIN {opacity:float} 
+	 {[duration:uint] {[tween:string]|linear}|0 linear}
+
+Description: 
+
+	Changes the gain(volume) of the specified layer.
+	
+Examples: 	
+
+	>> MIXER AUDIO 1-0 GAIN 0.5 25 easeinsine
+		
+----------------------------------------------------------------------------------
+2.7.9. MIXER AUDIO RESET
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER AUDIO [channel:int]{-[layer:int]|-0} RESET {[duration:uint] 
+	 {[tween:string]|linear}|0 linear}
+
+Description: 
+
+	Reset all audio transformations.
+	
+Examples: 	
+
+	>> MIXER AUDIO 1 RESET
+	>> MIXER AUDIO 1-0 RESET
+
+----------------------------------------------------------------------------------
+2.7.10. MIXER RESET
+----------------------------------------------------------------------------------
+Syntax: 
+
+	MIXER RESET [channel:int]{-[layer:int]|-0}
+
+Description: 
+
+	Reset all transformations.
+	
+Examples: 	
+
+	>> MIXER AUDIO 1 RESET
+	>> MIXER AUDIO 1-0 RESET
+
+**********************************************************************************
+2.8. Query Commands
+**********************************************************************************
+----------------------------------------------------------------------------------
+2.8.1. CINF
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CINF [filename:string]
+
+Description: 
+
+	Returns information about a mediafile.
+
+----------------------------------------------------------------------------------
+2.8.2. CLS
+----------------------------------------------------------------------------------
+Syntax: 
+
+	CLS
+
+Description: 
+
+	Lists all mediafiles.
+
+----------------------------------------------------------------------------------
+2.8.3. TLS
+----------------------------------------------------------------------------------
+Syntax: 
+
+	TLS {folder:string|./}
+
+Description: 
+
+	Lists all templates. Lists only templates in the specified folder, if provided.
+
+----------------------------------------------------------------------------------
+2.8.4. VERSION
+----------------------------------------------------------------------------------
+Syntax: 
+
+	VERSION
+
+Description: 
+
+	Returns the version of the server.
+
+	
+----------------------------------------------------------------------------------
+2.8.5. INFO
+----------------------------------------------------------------------------------
+Syntax: 
+
+	INFO [channel:int]
+
+Description: 
+
+	Returns information about the channels on the server. Use this without parameters 
+	to check how many channels a server has.
+	
+**********************************************************************************
+2.9. Misc Commands
+**********************************************************************************
+----------------------------------------------------------------------------------
+2.9.1. BYE
+----------------------------------------------------------------------------------
+Syntax: 
+
+	BYE
+
+Description: 
+
+	Disconnects from the server.
+	
+**********************************************************************************
+2.10. Return Codes
+**********************************************************************************
+		
+----------------------------------------------------------------------------------
+2.10.1. Information
+----------------------------------------------------------------------------------
+
+	100 [action] - Information about an event.
+	101 [action] - Information about an event. A line of data is being returned.
+	
+----------------------------------------------------------------------------------
+2.10.2. Successfull
+----------------------------------------------------------------------------------
+
+	200 [command] OK		- The command has been executed
+	201 [command] OK		- The command has been executed and a line of data is
+							being returned
+	202 [command] OK		- The command has been executed and several lines of
+							data are being returned (terminated by an empty line).
+
+----------------------------------------------------------------------------------
+2.10.3. Client Error
+----------------------------------------------------------------------------------
+
+	400 ERROR				- Command not understood
+	401 [command] ERROR		- Illegal channel
+	402 [command] ERROR		- Parameter missing
+	403 [command] ERROR		- Illegal parameter
+	404 [command] ERROR		- Media file not found
+
+----------------------------------------------------------------------------------
+2.10.4. Server Error
+----------------------------------------------------------------------------------
+
+	500 FAILED				- Internal server error
+	501 [command] FAILED	- Internal server error
+	502 [command] FAILED	- Media file unreadable
+
+==================================================================================
+APPENDIX A : TWEENER
+==================================================================================
+
+The following list specifies all supported tweens.
+
+linear			
+easenone		
+easeinquad		
+easeoutquad	
+aseinoutquad	
+easeoutinquad	
+easeincubic	
+easeoutcubic	
+easeinoutcubic
+easeoutincubic
+easeinquart 	
+easeoutquart	
+easeinoutquart
+easeoutinquart
+easeinquint	
+easeoutquint	
+easeinoutquint
+easeoutinquint
+easeinsine		
+easeoutsine	
+easeinoutsine	
+easeoutinsine	
+easeinexpo		
+easeoutexpo	
+easeinoutexpo	
+easeoutinexpo	
+easeincirc		
+easeoutcirc	
+easeinoutcirc	
+easeoutincirc	
+easeinelastic	
+easeoutelastic
+easeinoutelastic
+easeoutinelastic
+easeinback		
+easeoutback	
+easeinoutback	
+easeoutintback
+easeoutbounce	
+easeinbounce	
+easeinoutbounce
+easeoutinbounce
+
+
+
