@@ -212,24 +212,12 @@ public:
 			"	return color;														"
 			"}																		"			
 			"																		";
-		
-		shaders_[core::pixel_format::gray] = shader_program(common_vertex, common_fragment +
-
-			"void main()															"
-			"{																		"
-			"	vec4 rgba = texture2D(plane[0], gl_TexCoord[0].st).rrr;				"
-			"	if(has_separate_key)												"
-			"		rgba.a = texture2D(plane[3], gl_TexCoord[0].st).r;				"
-			"	gl_FragColor = rgba * gain;											"
-			"}																		");
-
+			
 		shaders_[core::pixel_format::abgr] = shader_program(common_vertex, common_fragment +
 
 			"void main()															"
 			"{																		"
 			"	vec4 abgr = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(has_separate_key)												"
-			"		rgba.b = texture2D(plane[3], gl_TexCoord[0].st).r;				"
 			"	gl_FragColor = abgr.argb * gain;									"
 			"}																		");
 		
@@ -238,8 +226,6 @@ public:
 			"void main()															"	
 			"{																		"
 			"	vec4 argb = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(has_separate_key)												"
-			"		rgba.b = texture2D(plane[3], gl_TexCoord[0].st).r;				"
 			"	gl_FragColor = argb.grab * gl_Color * gain;							"
 			"}																		");
 		
@@ -248,8 +234,6 @@ public:
 			"void main()															"
 			"{																		"
 			"	vec4 bgra = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(has_separate_key)												"
-			"		rgba.a = texture2D(plane[3], gl_TexCoord[0].st).r;				"
 			"	gl_FragColor = bgra.rgba * gl_Color * gain;							"
 			"}																		");
 		
@@ -258,8 +242,6 @@ public:
 			"void main()															"
 			"{																		"
 			"	vec4 rgba = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(has_separate_key)												"
-			"		rgba.a = texture2D(plane[3], gl_TexCoord[0].st).r;				"
 			"	gl_FragColor = rgba.bgra * gl_Color * gain;							"
 			"}																		");
 		
@@ -272,7 +254,7 @@ public:
 			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;				"
 			"	float a = 1.0;														"	
 			"	if(has_separate_key)												"
-			"		a = texture2D(plane[3], gl_TexCoord[0].st).r;					"
+			"		a = texture2D(plane[3], gl_TexCoord[0].st).r+0.2;					"
 			"	if(HD)																"
 			"		gl_FragColor = ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain;"
 			"	else																"
