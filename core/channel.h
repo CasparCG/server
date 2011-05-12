@@ -31,16 +31,6 @@
 
 namespace caspar { namespace core {
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \class	channel
-///
-/// \brief
-/// 		
-///                |**********| <-   empty frame   <- |***********| <-   frame format  <- |**********|
-///   PROTOCOL ->  | PRODUCER |                       |   MIXER	  |                       | CONSUMER |  -> DISPLAY DEVICE
-///                |**********| -> rendered frames -> |***********| -> formatted frame -> |**********|
-///   
-////////////////////////////////////////////////////////////////////////////////////////////////////
 class channel : boost::noncopyable
 {
 public:
