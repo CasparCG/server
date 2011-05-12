@@ -124,6 +124,9 @@ public:
 				source_info(narrow(print())) << 
 				msg_info("No video or audio codec context found."));		
 			
+		if(video_codec_context_->hwaccel != nullptr || video_codec_context_->hwaccel_context != nullptr)
+			CASPAR_LOG(info) << print() << " Found hwaccel.";
+
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
