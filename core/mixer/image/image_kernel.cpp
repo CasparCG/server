@@ -212,7 +212,17 @@ public:
 			"	return color;														"
 			"}																		"			
 			"																		";
-			
+		
+		shaders_[core::pixel_format::gray] = shader_program(common_vertex, common_fragment +
+
+			"void main()															"
+			"{																		"
+			"	vec4 rgba = texture2D(plane[0], gl_TexCoord[0].st).rrr;				"
+			"	if(has_separate_key)												"
+			"		rgba.a = texture2D(plane[3], gl_TexCoord[0].st).r;				"
+			"	gl_FragColor = rgba * gain;											"
+			"}																		");
+
 		shaders_[core::pixel_format::abgr] = shader_program(common_vertex, common_fragment +
 
 			"void main()															"
