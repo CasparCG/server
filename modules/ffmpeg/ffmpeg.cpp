@@ -44,6 +44,13 @@ void init_ffmpeg()
 {
 	av_register_all();
 	avcodec_init();
+	
+    AVHWAccel* hwaccel = av_hwaccel_next(nullptr);
+    while(hwaccel != nullptr)
+	{
+       CASPAR_LOG(info) << "FFMPEG: Found HW-accelerated: " << hwaccel->name;
+	   hwaccel = av_hwaccel_next(hwaccel);
+    }
 
 	core::register_consumer_factory(create_ffmpeg_consumer);
 	core::register_producer_factory(create_ffmpeg_producer);
