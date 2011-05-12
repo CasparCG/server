@@ -165,7 +165,6 @@ values for parameters used by the AMCP 2.0 protocol.
 ----------------------------------------------------------------------------------
 - CLEAR command will also clear any visible template graphic in the specified
 container.
-- CLS command will recurse into subfolders.
 
 **********************************************************************************
 2.2 Special sequences
