@@ -42,39 +42,39 @@ Figure 1. A simplified diagram of the CasparCG 2.0 Architecture.
   |----------| <-   empty frame   <- |----------| <-   frame format  <- |----------|
   | PRODUCER |                       |   MIXER	|                       | CONSUMER |
   |----------| -> rendered frames -> |----------| -> formatted frame -> |----------|
-   	   ^								|   ^							  |
-   	   | data							|	|							  | frame
-   	   |								v	|							  v
-    ########					       #######						 ##################
-    | FILE |					       | GPU |						 | DISPLAY DEVICE |
-    ########					       #######						 ##################
+   	   ^				|     ^				      |
+   	   | data			|     |				      | frame
+   	   |				v     |				      v
+    ########				#######			        ##################
+    | FILE |				| GPU |				| DISPLAY DEVICE |
+    ########				#######				##################
 
 **********************************************************************************
 1.1. Producers
 **********************************************************************************
 CasparCG 2.0 currently (fully or partially) supports the following producers:
 
-	Name				File Extensions					Description
+	Name				File Extensions			Description
 	--------------------------------------------------------------------------
 	flash				swf
 
-	cg					ft
+	cg				ft
 
-	ct					ct								Plays "compressed templates"
-														zip file containing a 
-														flash-template together with 
-														required media and data xml.
+	ct				ct				Plays "compressed templates"
+									zip file containing a 
+									flash-template together with 
+									required media and data xml.
 
-	ffmpeg				mpg, mpeg, avi, mov, qt,		Plays regular video and/or
-						webm, dv, mp4, f4v, flw, mkv,	audio
-						mka, wmv, ogg, divx, xvid, 
-						wav, mp3, m2v
+	ffmpeg				mpg, mpeg, avi, mov, qt,	Plays regular video and/or
+					webm, dv, mp4, f4v, flw, mkv,	audio
+					mka, wmv, ogg, divx, xvid, 
+					wav, mp3, m2v
 
 	image				tga, png, bmp, jpg, jpeg, gif	Plays images.
 						tiff
 
-	decklink											Plays input from a decklink
-														device.
+	decklink							Plays input from a decklink
+									device.
 														
 ----------------------------------------------------------------------------------
 1.2.1. Flash Producer (flash)
@@ -100,17 +100,17 @@ CasparCG 2.0 currently (fully or partially) supports the following producers:
 **********************************************************************************
 CasparCG 2.0 currently (fully or partially) supports the following producers:
 
-	Name				Description
+	Name		Description
 	------------------------------------------
-	bluefish			Plays video and/or audio  to a bluefish-device.
+	bluefish	Plays video and/or audio  to a bluefish-device.
 
-	decklink			Plays video and/or audio  to a decklink-device.
+	decklink	Plays video and/or audio  to a decklink-device.
 		
-	ffmpeg				Plays video and/or audio to a file.				
+	ffmpeg		Plays video and/or audio to a file.				
 						
-	oal					Plays audio to the default system audio-device.		
+	oal		Plays audio to the default system audio-device.		
 	
-	ogl					Plays video to a windowed or fullscreen window.		
+	ogl		Plays video to a windowed or fullscreen window.		
 
 ----------------------------------------------------------------------------------
 1.2.1. Bluefish Consumer (bluefish)
@@ -201,12 +201,12 @@ Description:
 Examples:
 
 	[transition:CUT,MIX,PUSH,WIPE] - A required value for "transition" which 
-										can be either CUT, MIX, PUSH or WIPE.
+					 can be either CUT, MIX, PUSH or WIPE.
 	>> CUT
 	<< CUT
 
 	[channel:int] - A required value for "channel" which must a signed
-					integer.
+			integer.
 	>> 1
 	<< 1
 ----------------------------------------------------------------------------------
@@ -225,7 +225,7 @@ Description:
 Examples:
 
 	{-[layer:int]|-0} - An optional expression which will be evaluated
-						to "-0" if not provided.
+			    to "-0" if not provided.
 	>> -2
 	<< -2
 			
@@ -233,7 +233,7 @@ Examples:
 	<< -0
 
 	{[tween:string]} - An optional expression will be evaluated to an 
-						emptry string if not provided.
+			   emptry string if not provided.
 
 	>> easeinsine
 	<< easeinsine
