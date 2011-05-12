@@ -631,6 +631,10 @@ Description:
 Examples: 	
 
 	>> MIXER VIDEO 1-0 IS_KEY 1
+	
+Note:
+
+	See Appendix A: Tweener for supported values for tween.
 
 ----------------------------------------------------------------------------------
 2.7.2. MIXER VIDEO OPACITY
@@ -648,6 +652,10 @@ Examples:
 
 	>> MIXER VIDEO 1-0 OPACITY 0.5 25 easeinsine
 	
+Note:
+
+	See Appendix A: Tweener for supported values for tween.
+	
 ----------------------------------------------------------------------------------
 2.7.3. MIXER VIDEO GAIN
 ----------------------------------------------------------------------------------
@@ -663,6 +671,10 @@ Description:
 Examples: 	
 
 	>> MIXER VIDEO 1-0 GAIN 0.5 25 easeinsine
+	
+Note:
+
+	See Appendix A: Tweener for supported values for tween.
 	
 ----------------------------------------------------------------------------------
 2.7.4. MIXER VIDEO FILL_RECT
@@ -684,6 +696,8 @@ Note:
 
 	This feature is not yet fully supported (2011-05-12) for interlaced video sources 
 	since the frames are not deinterlaced before scaling.
+	
+	See Appendix A: Tweener for supported values for tween.
 
 ----------------------------------------------------------------------------------
 2.7.5. MIXER VIDEO KEY_RECT
@@ -700,6 +714,10 @@ Description:
 Examples: 	
 
 	>> MIXER VIDEO 1-0 KEY_RECT 0.25 0.25 0.5 0.5 25 easeinsine
+	
+Note:
+
+	See Appendix A: Tweener for supported values for tween.
 		
 ----------------------------------------------------------------------------------
 2.7.6. MIXER VIDEO GRID
@@ -723,6 +741,7 @@ Note:
 	This feature is not yet fully supported (2011-05-12) for interlaced video sources 
 	since the frames are not deinterlaced before scaling.
 	
+	See Appendix A: Tweener for supported values for tween.
 ----------------------------------------------------------------------------------
 2.7.7. MIXER VIDEO RESET
 ----------------------------------------------------------------------------------
@@ -740,6 +759,10 @@ Examples:
 	>> MIXER VIDEO 1 RESET
 	>> MIXER VIDEO 1-0 RESET
 	
+Note:
+
+	See Appendix A: Tweener for supported values for tween.
+	
 ----------------------------------------------------------------------------------
 2.7.8. MIXER AUDIO GAIN
 ----------------------------------------------------------------------------------
@@ -755,6 +778,10 @@ Description:
 Examples: 	
 
 	>> MIXER AUDIO 1-0 GAIN 0.5 25 easeinsine
+	
+Note:
+
+	See Appendix A: Tweener for supported values for tween.
 		
 ----------------------------------------------------------------------------------
 2.7.9. MIXER AUDIO RESET
@@ -772,13 +799,18 @@ Examples:
 
 	>> MIXER AUDIO 1 RESET
 	>> MIXER AUDIO 1-0 RESET
+	
+Note:
+
+	See Appendix A: Tweener for supported values for tween.
 
 ----------------------------------------------------------------------------------
 2.7.10. MIXER RESET
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER RESET [channel:int]{-[layer:int]|-0}
+	MIXER RESET [channel:int]{-[layer:int]|-0} {[duration:uint] 
+	 {[tween:string]|linear}|0 linear}
 
 Description: 
 
@@ -788,6 +820,10 @@ Examples:
 
 	>> MIXER AUDIO 1 RESET
 	>> MIXER AUDIO 1-0 RESET
+	
+Note:
+
+	See Appendix A: Tweener for supported values for tween.
 
 **********************************************************************************
 2.8. Query Commands
