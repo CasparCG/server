@@ -105,6 +105,7 @@ public:
 		auto gpu_frame = boost::polymorphic_downcast<gpu_write_frame*>(&frame);
 		auto desc = gpu_frame->get_pixel_format_desc();
 		auto buffers = gpu_frame->get_plane_buffers();
+		auto is_key_frame = gpu_frame->get_image_transform().get_is_key();
 
 		auto transform = transform_stack_.top();
 		context_->begin_invoke([=]
@@ -117,7 +118,7 @@ public:
 				device_buffers.push_back(texture);
 			}
 						
-			if(transform.get_is_key()) // Its a key_frame just save buffer for next frame.
+			if(is_key_frame) // Its a key_frame just bind the texture for use during the next frame.
 			{
 				if(!device_buffers.empty())				
 					key_ = device_buffers[0];				
@@ -157,9 +158,9 @@ public:
 					glTexCoord2d(1.0, 1.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 					glTexCoord2d(0.0, 1.0); glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 				glEnd();
-				GL(glDisable(GL_SCISSOR_TEST));		
-
-				key_ = nullptr;		
+				GL(glDisable(GL_SCISSOR_TEST));
+				
+				key_ = nullptr;
 			}
 		});
 	}
