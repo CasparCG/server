@@ -48,7 +48,7 @@ void init_ffmpeg()
     AVHWAccel* hwaccel = av_hwaccel_next(nullptr);
     while(hwaccel != nullptr)
 	{
-       CASPAR_LOG(info) << "FFMPEG: Found HW-accelerated: " << hwaccel->name;
+       CASPAR_LOG(info) << "FFMPEG: Found hwaccel: " << hwaccel->name;
 	   hwaccel = av_hwaccel_next(hwaccel);
     }
 
