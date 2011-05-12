@@ -832,11 +832,11 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	VERSION
+	VERSION {[component:SERVER,FLASH,TEMPLATEHOST]|SERVER}
 
 Description: 
 
-	Returns the version of the server.
+	Returns the version of specified component.
 
 	
 ----------------------------------------------------------------------------------
