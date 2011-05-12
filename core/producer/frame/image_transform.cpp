@@ -117,7 +117,7 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	if(other.mode_ != video_mode::invalid)
 		mode_ = other.mode_;
 	gain_ *= other.gain_;
-	is_key_ |= other.is_key_;
+	is_key_ = other.is_key_;
 	fill_translation_[0] += other.fill_translation_[0]*fill_scale_[0];
 	fill_translation_[1] += other.fill_translation_[1]*fill_scale_[1];
 	fill_scale_[0] *= other.fill_scale_[0];
@@ -148,7 +148,7 @@ image_transform tween(double time, const image_transform& source, const image_tr
 
 	image_transform result;	
 	result.set_mode(dest.get_mode() != video_mode::invalid ? dest.get_mode() : source.get_mode());
-	result.set_is_key(source.get_is_key() | dest.get_is_key());
+	result.set_is_key(dest.get_is_key());
 	result.set_gain(do_tween(time, source.get_gain(), dest.get_gain(), duration, tweener));
 	result.set_opacity(do_tween(time, source.get_opacity(), dest.get_opacity(), duration, tweener));
 	result.set_fill_translation(do_tween(time, source.get_fill_translation()[0], dest.get_fill_translation()[0], duration, tweener), do_tween(time, source.get_fill_translation()[1], dest.get_fill_translation()[1], duration, tweener));

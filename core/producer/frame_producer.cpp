@@ -127,10 +127,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	catch(...){}
 
 	if(key_producer != frame_producer::empty())
-	{
-		CASPAR_LOG(info) << "Found and loaded separate key.";
 		return create_separated_producer(producer, key_producer);
-	}	
 
 	return producer;
 }

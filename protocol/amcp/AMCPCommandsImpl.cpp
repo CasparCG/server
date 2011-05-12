@@ -177,22 +177,7 @@ bool MixerCommand::DoExecute()
 	{	
 		if(_parameters[0] == L"VIDEO")
 		{
-			if(_parameters[1] == L"IS_KEY")
-			{
-				bool value = lexical_cast_or_default(_parameters.at(2), false);
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_is_key(value);
-					return transform;					
-				};
-
-				int layer = GetLayerIndex(std::numeric_limits<int>::min());
-				if(layer != std::numeric_limits<int>::min())					
-					GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, 0);
-				else
-					GetChannel()->mixer()->apply_image_transform(transform, 0);
-			}
-			else if(_parameters[1] == L"OPACITY")
+			if(_parameters[1] == L"OPACITY")
 			{
 				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[3], 0) : 0;
 				std::wstring tween = _parameters.size() > 3 ? _parameters[4] : L"linear";
