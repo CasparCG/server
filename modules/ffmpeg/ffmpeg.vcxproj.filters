@@ -51,5 +51,6 @@
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="ffmpeg.h" />
+    <ClInclude Include="ffmpeg_error.h" />
   </ItemGroup>
 </Project>

@@ -42,7 +42,7 @@ struct audio_decoder::implementation : boost::noncopyable
 {
 	typedef std::vector<short, tbb::cache_aligned_allocator<short>> buffer;
 	
-	AVCodecContext*	codec_context_;
+	AVCodecContext* codec_context_;
 
 	buffer audio_buffer_;	
 	buffer current_chunk_;
@@ -62,10 +62,19 @@ public:
 			BOOST_THROW_EXCEPTION(null_argument() << arg_name_info("codec_context"));						
 	}
 		
-	std::vector<std::vector<short>> execute(const aligned_buffer& audio_packet)
-	{			
+	std::vector<std::vector<short>> execute(const std::shared_ptr<aligned_buffer>& audio_packet)
+	{				
+		if(!audio_packet)
+			return std::vector<std::vector<short>>();
+
+		if(audio_packet->empty()) // Need to flush
+		{
+			avcodec_flush_buffers(codec_context_);
+			return std::vector<std::vector<short>>();
+		}
+
 		int written_bytes = audio_buffer_.size()*2 - FF_INPUT_BUFFER_PADDING_SIZE;
-		const int errn = avcodec_decode_audio2(codec_context_, audio_buffer_.data(), &written_bytes, audio_packet.data(), audio_packet.size());
+		const int errn = avcodec_decode_audio2(codec_context_, audio_buffer_.data(), &written_bytes, audio_packet->data(), audio_packet->size());
 
 		if(errn < 0 || codec_context_->sample_rate != SAMPLE_RATE || codec_context_->channels != 2)
 		{	
@@ -91,5 +100,5 @@ public:
 };
 
 audio_decoder::audio_decoder(AVCodecContext* codec_context, double fps) : impl_(new implementation(codec_context, fps)){}
-std::vector<std::vector<short>> audio_decoder::execute(const aligned_buffer& audio_packet){return impl_->execute(audio_packet);}
+std::vector<std::vector<short>> audio_decoder::execute(const std::shared_ptr<aligned_buffer>& audio_packet){return impl_->execute(audio_packet);}
 }

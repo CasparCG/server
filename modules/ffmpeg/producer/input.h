@@ -35,12 +35,12 @@ typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> 
 class input : boost::noncopyable
 {
 public:
-	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop);
+	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start_frame, int end_frame);
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 
-	aligned_buffer get_video_packet();
-	aligned_buffer get_audio_packet();
+	std::shared_ptr<aligned_buffer> get_video_packet();
+	std::shared_ptr<aligned_buffer> get_audio_packet();
 
 	bool has_packet() const;
 	bool is_running() const;
