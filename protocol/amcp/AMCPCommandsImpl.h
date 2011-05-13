@@ -29,6 +29,12 @@ std::wstring ListMedia();
 std::wstring ListTemplates();
 
 namespace amcp {
+	
+class ParamCommand : public AMCPCommandBase<true, AddToQueue, 2>
+{
+	std::wstring print() const { return L"ParamCommand";}
+	bool DoExecute();
+};
 
 class MixerCommand : public AMCPCommandBase<true, AddToQueue, 2>
 {

@@ -248,9 +248,9 @@ safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3)
 }
 
 template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4>
-safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&&)
+safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4)
 {
-	return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P3>(p4)));
+	return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4)));
 }
 
 }

@@ -96,9 +96,6 @@ struct transition_producer : public frame_producer
 						
 	safe_ptr<basic_frame> compose(const safe_ptr<basic_frame>& dest_frame, const safe_ptr<basic_frame>& src_frame) 
 	{	
-		if(dest_frame == basic_frame::eof() && src_frame == basic_frame::eof())
-			return basic_frame::eof();
-
 		if(info_.type == transition::cut)		
 			return src_frame;
 										

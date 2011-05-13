@@ -206,6 +206,11 @@ public:
 	{
 		return executor_.begin_invoke([=]{return layers_[index].foreground();});
 	}
+	
+	boost::unique_future<safe_ptr<frame_producer>> background(int index)
+	{
+		return executor_.begin_invoke([=]{return layers_[index].background();});
+	}
 };
 
 frame_producer_device::frame_producer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
@@ -220,5 +225,6 @@ void frame_producer_device::clear(int index){impl_->clear(index);}
 void frame_producer_device::clear(){impl_->clear();}
 void frame_producer_device::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
 void frame_producer_device::swap_layer(int index, size_t other_index, frame_producer_device& other){impl_->swap_layer(index, other_index, other);}
-boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) {	return impl_->foreground(index);}
+boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) {return impl_->foreground(index);}
+boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::background(size_t index) {return impl_->background(index);}
 }}

@@ -170,6 +170,31 @@ void AMCPCommand::Clear()
 	_parameters.clear();
 }
 
+bool ParamCommand::DoExecute()
+{	
+	//Perform loading of the clip
+	try
+	{
+		auto what = _parameters.at(2);
+		if(what == L"B")
+			GetChannel()->producer()->background(GetLayerIndex()).get()->param(_parameters.at(3));
+		else if(what == L"F")
+			GetChannel()->producer()->foreground(GetLayerIndex()).get()->param(_parameters.at(3));
+	
+		CASPAR_LOG(info) << "Executed param: " <<  _parameters[0] << TEXT(" successfully");
+
+		SetReplyString(TEXT("202 PARAM OK\r\n"));
+
+		return true;
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("502 PARAM FAILED\r\n"));
+		return false;
+	}
+}
+
 bool MixerCommand::DoExecute()
 {	
 	//Perform loading of the clip
