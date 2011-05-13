@@ -38,14 +38,11 @@ class audio_transform;
 		
 class basic_frame
 {
+	basic_frame(std::vector<safe_ptr<basic_frame>>&& frames);
 public:
 	basic_frame();	
 	basic_frame(const safe_ptr<basic_frame>& frame);
 	basic_frame(safe_ptr<basic_frame>&& frame);
-	basic_frame(const std::vector<safe_ptr<basic_frame>>& frames);
-	basic_frame(std::vector<safe_ptr<basic_frame>>&& frame);
-	basic_frame(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2);
-	basic_frame(safe_ptr<basic_frame>&& frame1, safe_ptr<basic_frame>&& frame2);
 
 	void swap(basic_frame& other);
 	
@@ -62,6 +59,7 @@ public:
 	audio_transform& get_audio_transform();
 		
 	static safe_ptr<basic_frame> interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, video_mode::type mode);
+	static safe_ptr<basic_frame> combine(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2);
 	static safe_ptr<basic_frame> fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key);
 		
 	static const safe_ptr<basic_frame>& eof()

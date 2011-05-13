@@ -53,7 +53,6 @@ public:
 };
 	
 basic_frame::basic_frame() : impl_(new implementation(std::vector<safe_ptr<basic_frame>>())){}
-basic_frame::basic_frame(const std::vector<safe_ptr<basic_frame>>& frames) : impl_(new implementation(frames)){}
 basic_frame::basic_frame(std::vector<safe_ptr<basic_frame>>&& frames) : impl_(new implementation(std::move(frames))){}
 basic_frame::basic_frame(const basic_frame& other) : impl_(new implementation(*other.impl_)){}
 basic_frame::basic_frame(const safe_ptr<basic_frame>& frame)
@@ -68,21 +67,6 @@ basic_frame::basic_frame(safe_ptr<basic_frame>&& frame)
 	frames.push_back(std::move(frame));
 	impl_.reset(new implementation(std::move(frames)));
 }
-basic_frame::basic_frame(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2)
-{
-	std::vector<safe_ptr<basic_frame>> frames;
-	frames.push_back(frame1);
-	frames.push_back(frame2);
-	impl_.reset(new implementation(std::move(frames)));
-}
-basic_frame::basic_frame(safe_ptr<basic_frame>&& frame1, safe_ptr<basic_frame>&& frame2)
-{
-	std::vector<safe_ptr<basic_frame>> frames;
-	frames.push_back(std::move(frame1));
-	frames.push_back(std::move(frame2));
-	impl_.reset(new implementation(std::move(frames)));
-}
-
 void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
 basic_frame& basic_frame::operator=(const basic_frame& other)
 {
@@ -108,7 +92,10 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 {			
 	if(frame1 == basic_frame::empty() && frame2 == basic_frame::empty())
 		return basic_frame::empty();
-
+	
+	if(frame1 == basic_frame::eof() && frame2 == basic_frame::eof())
+		return basic_frame::eof();
+	
 	if(frame1 == frame2 || mode == video_mode::progressive)
 		return frame2;
 
@@ -128,11 +115,31 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 	std::vector<safe_ptr<basic_frame>> frames;
 	frames.push_back(my_frame1);
 	frames.push_back(my_frame2);
-	return make_safe<basic_frame>(frames);
+	return basic_frame(std::move(frames));
+}
+
+safe_ptr<basic_frame> basic_frame::combine(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2)
+{
+	if(frame1 == basic_frame::empty() && frame2 == basic_frame::empty())
+		return basic_frame::empty();
+	
+	if(frame1 == basic_frame::eof() && frame2 == basic_frame::eof())
+		return basic_frame::eof();
+	
+	std::vector<safe_ptr<basic_frame>> frames;
+	frames.push_back(frame1);
+	frames.push_back(frame2);
+	return basic_frame(std::move(frames));
 }
 
 safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key)
 {
+	if(fill == basic_frame::empty() && key == basic_frame::empty())
+		return basic_frame::empty();
+	
+	if(fill == basic_frame::eof() && key == basic_frame::eof())
+		return basic_frame::eof();
+
 	if(key == basic_frame::empty())
 		return fill;
 
@@ -140,7 +147,7 @@ safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fil
 	key->get_image_transform().set_is_key(true);
 	frames.push_back(key);
 	frames.push_back(fill);
-	return make_safe<basic_frame>(std::move(frames));
+	return basic_frame(std::move(frames));
 }
 	
 }}
