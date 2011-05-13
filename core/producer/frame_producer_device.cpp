@@ -91,8 +91,9 @@ public:
 		if(output_.empty())
 			return;				
 		
+		auto frame = draw();
 		output_timer_.restart();
-		output_(draw());
+		output_(frame);
 		diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()*format_desc_.fps*0.5));
 
 		executor_.begin_invoke([=]{tick();});
@@ -107,7 +108,7 @@ public:
 		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](decltype(*layers_.begin())& pair)
 		{
 			auto frame = pair.second.receive();
-			if(frame != basic_frame::empty() && frame != basic_frame::eof())
+			if(is_concrete_frame(frame))
 				frames.local()[pair.first] = frame;		
 		});
 

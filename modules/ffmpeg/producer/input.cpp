@@ -51,7 +51,7 @@ namespace caspar {
 		
 struct input::implementation : boost::noncopyable
 {		
-	static const size_t PACKET_BUFFER_COUNT = 50;
+	static const size_t PACKET_BUFFER_COUNT = 25;
 
 	safe_ptr<diagnostics::graph> graph_;
 
@@ -72,6 +72,7 @@ struct input::implementation : boost::noncopyable
 	boost::condition_variable cond_;
 	boost::mutex mutex_;
 	
+	std::exception_ptr exception_;
 	executor executor_;
 public:
 	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop) 
@@ -86,25 +87,23 @@ public:
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
 
 		int errn;
-		AVFormatContext* weak_format_context_;
-		if((errn = -av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr)) > 0)
+		AVFormatContext* weak_format_context_ = nullptr;
+		if((errn = av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr)) < 0 || weak_format_context_ == nullptr)
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
 				source_info(narrow(print())) << 
-				msg_info("No format context found.") << 
 				boost::errinfo_api_function("av_open_input_file") <<
-				boost::errinfo_errno(errn) <<
+				boost::errinfo_errno(AVUNERROR(errn)) <<
 				boost::errinfo_file_name(narrow(filename)));
 
 		format_context_.reset(weak_format_context_, av_close_input_file);
 			
-		if((errn = -av_find_stream_info(format_context_.get())) > 0)
+		if((errn = av_find_stream_info(format_context_.get())) < 0)
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
 				source_info(narrow(print())) << 
 				boost::errinfo_api_function("av_find_stream_info") <<
-				msg_info("No stream found.") << 
-				boost::errinfo_errno(errn));
+				boost::errinfo_errno(AVUNERROR(errn)));
 
 		video_codec_context_ = open_stream(CODEC_TYPE_VIDEO, video_s_index_);
 		if(!video_codec_context_)
@@ -124,9 +123,6 @@ public:
 				source_info(narrow(print())) << 
 				msg_info("No video or audio codec context found."));		
 			
-		if(video_codec_context_->hwaccel != nullptr || video_codec_context_->hwaccel_context != nullptr)
-			CASPAR_LOG(info) << print() << " Found hwaccel.";
-
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
@@ -168,32 +164,66 @@ public:
 	}
 		
 	void read_file()
-	{					
-		AVPacket tmp_packet;
-		safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
+	{		
+		try
+		{
+			AVPacket tmp_packet;
+			safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
 
-		if (av_read_frame(format_context_.get(), read_packet.get()) >= 0) // NOTE: read_packet is only valid until next call of av_read_frame or av_close_input_file
-		{
-			auto packet = std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size);
-			if(read_packet->stream_index == video_s_index_) 		
-				video_packet_buffer_.try_push(std::move(packet));	
-			else if(read_packet->stream_index == audio_s_index_) 	
-				audio_packet_buffer_.try_push(std::move(packet));		
+			auto read_frame_ret = av_read_frame(format_context_.get(), read_packet.get());
+			if(read_frame_ret == AVERROR_EOF || read_frame_ret == AVERROR_IO)
+			{
+				if(loop_)
+				{
+					auto seek_frame_ret = av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD);
+					if(seek_frame_ret >= 0)
+						graph_->add_tag("seek");
+					else
+					{
+						BOOST_THROW_EXCEPTION(
+							invalid_operation() <<
+							boost::errinfo_api_function("av_seek_frame") <<
+							boost::errinfo_errno(AVUNERROR(seek_frame_ret)));
+					}	
+				}	
+				else
+					stop();
+			}
+			else if(read_frame_ret < 0)
+			{
+				BOOST_THROW_EXCEPTION(
+					invalid_operation() <<
+					boost::errinfo_api_function("av_read_frame") <<
+					boost::errinfo_errno(AVUNERROR(read_frame_ret)));
+			}
+			else
+			{
+				auto packet = std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size);
+				if(read_packet->stream_index == video_s_index_) 		
+					video_packet_buffer_.try_push(std::move(packet));	
+				else if(read_packet->stream_index == audio_s_index_) 	
+					audio_packet_buffer_.try_push(std::move(packet));	
+			}
+			
+			graph_->update_value("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
 		}
-		else if(!loop_ || av_seek_frame(format_context_.get(), -1, 0, AVSEEK_FLAG_BACKWARD) < 0) // TODO: av_seek_frame does not work for all formats
+		catch(...)
 		{
-			executor_.stop();
-			CASPAR_LOG(info) << print() << " eof";
-		}	
-		else
-			graph_->add_tag("seek");		
-					
-		graph_->update_value("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
+			stop();
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			return;
+		}
 		
 		executor_.begin_invoke([this]{read_file();});		
 		boost::unique_lock<boost::mutex> lock(mutex_);
 		while(executor_.is_running() && audio_packet_buffer_.size() > PACKET_BUFFER_COUNT && video_packet_buffer_.size() > PACKET_BUFFER_COUNT)
 			cond_.wait(lock);		
+	}
+
+	void stop()
+	{
+		executor_.stop();
+		CASPAR_LOG(info) << print() << " eof";
 	}
 		
 	aligned_buffer get_video_packet()
@@ -205,6 +235,11 @@ public:
 	{
 		return get_packet(audio_packet_buffer_);
 	}
+
+	bool has_packet() const
+	{
+		return !video_packet_buffer_.empty() || !audio_packet_buffer_.empty();
+	}
 	
 	aligned_buffer get_packet(tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>>& buffer)
 	{
@@ -212,12 +247,7 @@ public:
 		std::shared_ptr<aligned_buffer> packet;
 		return buffer.try_pop(packet) ? std::move(*packet) : aligned_buffer();
 	}
-
-	bool is_eof() const
-	{
-		return !executor_.is_running() && video_packet_buffer_.empty() && audio_packet_buffer_.empty();
-	}
-		
+			
 	double fps() const
 	{
 		return static_cast<double>(video_codec_context_->time_base.den) / static_cast<double>(video_codec_context_->time_base.num);
@@ -232,7 +262,7 @@ public:
 input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop) : impl_(new implementation(graph, filename, loop)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
-bool input::is_eof() const{return impl_->is_eof();}
+bool input::has_packet() const{return impl_->has_packet();}
 bool input::is_running() const {return impl_->executor_.is_running();}
 aligned_buffer input::get_video_packet(){return impl_->get_video_packet();}
 aligned_buffer input::get_audio_packet(){return impl_->get_audio_packet();}

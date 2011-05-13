@@ -38,13 +38,17 @@ struct transition_producer : public frame_producer
 	
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
+	safe_ptr<basic_frame>		last_dest_;
+	safe_ptr<basic_frame>		last_source_;
 		
 	explicit transition_producer(const video_mode::type& mode, const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
 		, current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
-		, source_producer_(frame_producer::empty()){}
+		, source_producer_(frame_producer::empty())
+		, last_dest_(core::basic_frame::empty())
+		, last_source_(core::basic_frame::empty()){}
 	
 	// frame_producer
 
@@ -62,22 +66,30 @@ struct transition_producer : public frame_producer
 	{
 		if(current_frame_++ >= info_.duration)
 			return basic_frame::eof();
-
-		auto source = basic_frame::empty();
-		auto dest = basic_frame::empty();
-
+		
 		tbb::parallel_invoke
 		(
-			[&]{dest   = receive_and_follow(dest_producer_);},
-			[&]{source = receive_and_follow(source_producer_);}
+			[&]{last_dest_   = receive_and_follow_w_last(dest_producer_, last_dest_);},
+			[&]{last_source_ = receive_and_follow_w_last(source_producer_, last_source_);}
 		);
 
-		return compose(dest, source);
+		return compose(last_dest_, last_source_);
 	}
 
 	virtual std::wstring print() const
 	{
 		return L"transition";
+	}
+
+	safe_ptr<basic_frame> receive_and_follow_w_last(safe_ptr<frame_producer>& producer, safe_ptr<basic_frame> last_frame)
+	{
+		auto frame = core::receive_and_follow(producer);
+		if(frame == basic_frame::late())
+		{
+			last_frame->get_audio_transform().set_has_audio(false);
+			return last_frame;
+		}
+		return frame;
 	}
 
 	// transition_producer
@@ -132,9 +144,15 @@ struct transition_producer : public frame_producer
 			d_frame1->get_image_transform().set_key_scale(delta1, 1.0);	
 			d_frame2->get_image_transform().set_key_scale(delta2, 1.0);			
 		}
-		
+				
 		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);
-		auto d_frame = basic_frame::interlace(d_frame1, d_frame2, mode_);
+		auto d_frame = d_frame1->get_image_transform() == d_frame2->get_image_transform() ? d_frame2 : basic_frame::interlace(d_frame1, d_frame2, mode_);
+
+		if(dest_frame == core::basic_frame::empty())
+			return s_frame;
+
+		if(src_frame == core::basic_frame::empty())
+			return d_frame;
 
 		return basic_frame(s_frame, d_frame);
 	}

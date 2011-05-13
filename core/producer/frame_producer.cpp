@@ -67,10 +67,11 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 
 	if(frame == basic_frame::eof())
 	{
+		CASPAR_LOG(info) << producer->print() << " End Of File.";
 		auto following = producer->get_following_producer();
 		following->set_leading_producer(producer);
 		producer = std::move(following);		
-
+		
 		return receive_and_follow(producer);
 	}
 	return frame;
