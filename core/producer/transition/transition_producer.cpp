@@ -87,7 +87,7 @@ struct transition_producer : public frame_producer
 		if(frame == basic_frame::late())
 		{
 			last_frame->get_audio_transform().set_has_audio(false);
-			return last_frame;
+			frame = last_frame;
 		}
 		return frame;
 	}
@@ -147,14 +147,8 @@ struct transition_producer : public frame_producer
 				
 		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);
 		auto d_frame = d_frame1->get_image_transform() == d_frame2->get_image_transform() ? d_frame2 : basic_frame::interlace(d_frame1, d_frame2, mode_);
-
-		if(dest_frame == core::basic_frame::empty())
-			return s_frame;
-
-		if(src_frame == core::basic_frame::empty())
-			return d_frame;
-
-		return basic_frame(s_frame, d_frame);
+		
+		return basic_frame::combine(s_frame, d_frame);
 	}
 };
 
