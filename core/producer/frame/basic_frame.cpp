@@ -106,6 +106,9 @@ audio_transform& basic_frame::get_audio_transform() { return impl_->audio_transf
 
 safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, video_mode::type mode)
 {			
+	if(frame1 == basic_frame::empty() && frame2 == basic_frame::empty())
+		return basic_frame::empty();
+
 	if(frame1 == frame2 || mode == video_mode::progressive)
 		return frame2;
 
@@ -130,11 +133,14 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 
 safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key)
 {
+	if(key == basic_frame::empty())
+		return fill;
+
 	std::vector<safe_ptr<basic_frame>> frames;
 	key->get_image_transform().set_is_key(true);
 	frames.push_back(key);
 	frames.push_back(fill);
-	return make_safe<basic_frame>(frames);
+	return make_safe<basic_frame>(std::move(frames));
 }
 	
 }}

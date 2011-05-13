@@ -77,12 +77,17 @@ public:
 		
 	safe_ptr<basic_frame> receive()
 	{		
-		if(is_paused_)		
-			last_frame_->get_audio_transform().set_has_audio(false);		
-		else
-			last_frame_ = receive_and_follow(foreground_);
+		if(is_paused_)
+			return last_frame_;
 
-		return last_frame_;
+		auto next_frame = receive_and_follow(foreground_);
+		if(next_frame == core::basic_frame::late())
+			return last_frame_;
+				
+		last_frame_ = basic_frame(next_frame);
+		last_frame_->get_audio_transform().set_has_audio(false);
+
+		return next_frame;
 	}
 };
 
