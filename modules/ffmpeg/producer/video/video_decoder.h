@@ -33,7 +33,7 @@ class video_decoder : boost::noncopyable
 {
 public:
 	explicit video_decoder(AVCodecContext* codec_context, const safe_ptr<core::frame_factory>& frame_factory);
-	std::shared_ptr<core::write_frame> execute(void* tag, const aligned_buffer& video_packet);	
+	std::shared_ptr<core::write_frame> execute(void* tag, const std::shared_ptr<aligned_buffer>& video_packet);	
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

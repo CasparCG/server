@@ -65,12 +65,12 @@ struct ffmpeg_producer : public core::frame_producer
 	std::unique_ptr<video_decoder>		video_decoder_;
 	std::unique_ptr<audio_decoder>		audio_decoder_;
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop, int start_frame, int end_frame) 
 		: filename_(filename)
 		, loop_(loop) 
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
-		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop_)
+		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, start_frame, end_frame)
 		, video_decoder_(input_.get_video_codec_context().get() ? new video_decoder(input_.get_video_codec_context().get(), frame_factory) : nullptr)
 		, audio_decoder_(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), frame_factory->get_video_format_desc().fps) : nullptr)
 	{
@@ -117,9 +117,9 @@ public:
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 
-	void try_decode_video_packet(const aligned_buffer& video_packet)
+	void try_decode_video_packet(const std::shared_ptr<aligned_buffer>& video_packet)
 	{
-		if(!video_packet.empty() && video_decoder_) // Video Decoding.
+		if(video_decoder_) // Video Decoding.
 		{
 			try
 			{
@@ -136,9 +136,9 @@ public:
 		}
 	}
 
-	void try_decode_audio_packet(const aligned_buffer& audio_packet)
+	void try_decode_audio_packet(const std::shared_ptr<aligned_buffer>& audio_packet)
 	{
-		if(audio_chunk_buffer_.size() < 3 && !audio_packet.empty() && audio_decoder_) // Audio Decoding.
+		if(audio_decoder_) // Audio Decoding.
 		{
 			try
 			{
@@ -223,8 +223,25 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 
 	std::wstring path = filename + L"." + *ext;
 	bool loop = std::find(params.begin(), params.end(), L"LOOP") != params.end();
+
+	static const boost::wregex expr(L"\\((?<START>\\d+)(,(?<END>\\d+)?)?\\)");//(,(?<END>\\d+))?\\]"); // boost::regex has no repeated captures?
+	boost::wsmatch what;
+	auto it = std::find_if(params.begin(), params.end(), [&](const std::wstring& str)
+	{
+		return boost::regex_match(str, what, expr);
+	});
+
+	int start = -1;
+	int end = -1;
+
+	if(it != params.end())
+	{
+		start = lexical_cast_or_default(what["START"].str(), -1);
+		if(what["END"].matched)
+			end = lexical_cast_or_default(what["END"].str(), -1);
+	}
 	
-	return make_safe<ffmpeg_producer>(frame_factory, path, loop);
+	return make_safe<ffmpeg_producer>(frame_factory, path, loop, start, end);
 }
 
 }

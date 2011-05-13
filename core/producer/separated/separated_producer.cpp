@@ -30,14 +30,14 @@ namespace caspar { namespace core {
 struct separated_producer : public frame_producer
 {		
 	safe_ptr<frame_producer>	fill_producer_;
-	safe_ptr<frame_producer>	key_producer;
+	safe_ptr<frame_producer>	key_producer_;
 	safe_ptr<basic_frame>		last_fill_;
 	safe_ptr<basic_frame>		last_key_;
 	safe_ptr<basic_frame>		last_frame_;
 		
 	explicit separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key) 
 		: fill_producer_(fill)
-		, key_producer(key)
+		, key_producer_(key)
 		, last_fill_(core::basic_frame::empty())
 		, last_key_(core::basic_frame::empty())
 		, last_frame_(core::basic_frame::empty()){}
@@ -56,7 +56,7 @@ struct separated_producer : public frame_producer
 			[&]
 			{
 				if(last_key_ == core::basic_frame::empty())
-					last_key_ = receive_and_follow(key_producer);
+					last_key_ = receive_and_follow(key_producer_);
 			}
 		);
 

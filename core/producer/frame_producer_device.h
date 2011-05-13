@@ -64,6 +64,7 @@ public:
 	void swap_layer(int index, size_t other_index);
 	void swap_layer(int index, size_t other_index, frame_producer_device& other);
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index);
+	boost::unique_future<safe_ptr<frame_producer>> background(size_t index);
 
 private:
 	struct implementation;
