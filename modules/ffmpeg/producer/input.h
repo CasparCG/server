@@ -42,7 +42,7 @@ public:
 	aligned_buffer get_video_packet();
 	aligned_buffer get_audio_packet();
 
-	bool is_eof() const;
+	bool has_packet() const;
 	bool is_running() const;
 	double fps() const;
 private:

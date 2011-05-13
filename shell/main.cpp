@@ -117,8 +117,7 @@ void print_info()
 	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::get_avformat_version();
 	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::get_swscale_version();
 	CASPAR_LOG(info) << L"OpenGL " << caspar::mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VERSION));})
-					 << L" "	   << caspar::mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VENDOR));});
-	CASPAR_LOG(info) << L"\n\n";
+					 << L" "	   << caspar::mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VENDOR));}) << "\n\n";
 }
  
 int main(int argc, wchar_t* argv[])

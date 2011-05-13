@@ -65,11 +65,16 @@ public:
 	std::vector<std::vector<short>> execute(const aligned_buffer& audio_packet)
 	{			
 		int written_bytes = audio_buffer_.size()*2 - FF_INPUT_BUFFER_PADDING_SIZE;
-		const int result = avcodec_decode_audio2(codec_context_, audio_buffer_.data(), &written_bytes, audio_packet.data(), audio_packet.size());
+		const int errn = avcodec_decode_audio2(codec_context_, audio_buffer_.data(), &written_bytes, audio_packet.data(), audio_packet.size());
 
-		if(result <= 0 || codec_context_->sample_rate != SAMPLE_RATE || codec_context_->channels != 2)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Invalid audio stream"));
-						
+		if(errn < 0 || codec_context_->sample_rate != SAMPLE_RATE || codec_context_->channels != 2)
+		{	
+			BOOST_THROW_EXCEPTION(
+				invalid_operation() <<
+				boost::errinfo_api_function("avcodec_decode_audio2") <<
+				boost::errinfo_errno(AVUNERROR(errn)));
+		}
+
 		current_chunk_.insert(current_chunk_.end(), audio_buffer_.data(), audio_buffer_.data() + written_bytes/2);
 
 		std::vector<std::vector<short>> chunks;
