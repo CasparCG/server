@@ -193,7 +193,7 @@ private:
 		if(codec == nullptr)
 			return nullptr;
 			
-		if((-avcodec_open((*stream)->codec, codec)) > 0)		
+		if(avcodec_open((*stream)->codec, codec) < 0)		
 			return nullptr;
 		
 		s_index = (*stream)->index;
@@ -291,8 +291,8 @@ private:
 	packet get_packet(tbb::concurrent_bounded_queue<packet>& buffer)
 	{
 		packet packet;
-		buffer.try_pop(packet);
-		cond_.notify_all();
+		if(buffer.try_pop(packet))
+			cond_.notify_all();
 		return packet;
 	}
 
