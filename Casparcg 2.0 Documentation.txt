@@ -249,7 +249,7 @@ Syntax:
 
 	LOADBG [channel:int]{-[layer:int]|-0} [clip:string] {[loop:LOOP]}
 	 {[transition:CUT,MIX,PUSH,WIPE] [duration:uint] {[tween:string]|linear} 
-	 {[direction:LEFT,RIGHT]|RIGHT}|CUT 0}
+	 {[direction:LEFT,RIGHT]|RIGHT}|CUT 0} {([start_frame:uint]{,[end_frame:uint]})|(0)}
 
 Description: 
 
@@ -278,7 +278,8 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	LOAD [channel:int]{-[layer:int]|-0}
+	LOAD [channel:int]{-[layer:int]|-0} [clip:string] {[loop:LOOP]} 
+	 {([start_frame:uint]{,[end_frame:uint]})|(0)}
 
 Description: 
 
@@ -418,6 +419,22 @@ Examples:
 	>> REMOVE 1
 	>> REMOVE 1-2
 	
+----------------------------------------------------------------------------------
+2.4.9. PARAM
+----------------------------------------------------------------------------------
+Syntax: 
+
+	PARAM [channel:int]{-[layer:int]|-0} [param:string]
+
+Description: 
+
+	Calls param method on the specified producer with the provided "param" string.
+	
+Examples: 	
+
+	>> PARAM 1 LOOP
+	>> PARAM 1-2 "SEEK_FRAME 25"
+
 **********************************************************************************
 2.5. Data Commands
 **********************************************************************************
