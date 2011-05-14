@@ -30,6 +30,9 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/mutex.h>
 
+#include <boost/range/iterator_range.hpp>
+#include <boost/range/algorithm.hpp>
+
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
 #endif
@@ -180,13 +183,13 @@ private:
 
 	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index) const
 	{		
-		AVStream** streams_end = format_context_->streams+format_context_->nb_streams;
-		AVStream** stream = std::find_if(format_context_->streams, streams_end, [&](AVStream* stream) 
+		const auto streams = boost::iterator_range<AVStream**>(format_context_->streams, format_context_->streams+format_context_->nb_streams);
+		const auto stream = boost::find_if(streams, [&](AVStream* stream) 
 		{
 			return stream != nullptr && stream->codec->codec_type == codec_type;
 		});
 		
-		if(stream == streams_end) 
+		if(stream == streams.end()) 
 			return nullptr;
 		
 		auto codec = avcodec_find_decoder((*stream)->codec->codec_id);			
@@ -261,7 +264,7 @@ private:
 	void seek_frame(int64_t frame, int flags = 0)
 	{  	
 		// Convert from frames into seconds.
-		auto ts = frame*static_cast<int64_t>((AV_TIME_BASE*get_default_context()->time_base.num) / get_default_context()->time_base.den);
+		const auto ts = frame*static_cast<int64_t>((AV_TIME_BASE*get_default_context()->time_base.num) / get_default_context()->time_base.den);
 
 		const int errn = av_seek_frame(format_context_.get(), -1, ts, flags | AVSEEK_FLAG_FRAME);
 
