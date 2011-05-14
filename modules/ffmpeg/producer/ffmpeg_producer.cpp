@@ -117,7 +117,7 @@ public:
 	{
 		perf_timer_.restart();
 
-		for(size_t n = 0; ouput_channel_.size() < 2 && input_.has_packet() && n < 32; ++n) // 32 packets should be enough. Otherwise there probably was an error and we want to avoid infinite recursion.
+		for(size_t n = 0; ouput_channel_.size() < 2 && input_.has_packet() && n < 32; ++n) // 32 packets should be enough. Otherwise there probably was an error and we want to avoid infinite looping.
 		{	
 			tbb::parallel_invoke
 			(
@@ -231,7 +231,7 @@ public:
 
 	bool is_eof() const
 	{
-		return ouput_channel_.empty() && (!video_decoder_ && !audio_decoder_) || !input_.is_running();
+		return ouput_channel_.empty() && ((!video_decoder_ && !audio_decoder_) || !input_.is_running());
 	}
 };
 
