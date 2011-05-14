@@ -147,7 +147,7 @@ public:
 		}
 	}
 	
-	std::vector<safe_ptr<core::write_frame>> execute(void* tag, const packet& video_packet)
+	std::vector<safe_ptr<core::write_frame>> execute(const packet& video_packet)
 	{				
 		std::vector<safe_ptr<core::write_frame>> result;
 
@@ -172,15 +172,15 @@ public:
 			}
 		
 			if(frame_finished != 0)		
-				result.push_back(make_write_frame(tag, decoded_frame));
+				result.push_back(make_write_frame(decoded_frame));
 		}
 
 		return result;
 	}
 
-	safe_ptr<core::write_frame> make_write_frame(void* tag, safe_ptr<AVFrame> decoded_frame)
+	safe_ptr<core::write_frame> make_write_frame(safe_ptr<AVFrame> decoded_frame)
 	{		
-		auto write = frame_factory_->create_frame(tag, desc_);
+		auto write = frame_factory_->create_frame(this, desc_);
 		if(sws_context_ == nullptr)
 		{
 			tbb::parallel_for(0, static_cast<int>(desc_.planes.size()), 1, [&](int n)
@@ -216,6 +216,6 @@ public:
 };
 
 video_decoder::video_decoder(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(codec_context, frame_factory)){}
-std::vector<safe_ptr<core::write_frame>> video_decoder::execute(void* tag, const packet& video_packet){return impl_->execute(tag, video_packet);}
+std::vector<safe_ptr<core::write_frame>> video_decoder::execute(const packet& video_packet){return impl_->execute(video_packet);}
 
 }

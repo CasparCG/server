@@ -48,7 +48,7 @@ namespace caspar {
 struct ffmpeg_producer : public core::frame_producer
 {
 	static const size_t						DECODED_PACKET_BUFFER_SIZE = 4;
-	static const size_t						MAX_PACKET_OFFSET = 64; // 64 packets should be enough. Otherwise there probably was an error and we want to avoid infinite looping.
+	static const size_t						MAX_PACKET_OFFSET = 64; // Avoid infinite looping.
 
 	const std::wstring						filename_;
 	const bool								loop_;
@@ -78,7 +78,7 @@ public:
 		
 		double frame_time = 1.0f/input_.fps();
 		double format_frame_time = 1.0/frame_factory->get_video_format_desc().fps;
-		if(abs(frame_time - format_frame_time) > 0.0001)
+		if(abs(frame_time - format_frame_time) > 0.0001 && abs(frame_time - format_frame_time/2) > 0.0001)
 			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback. frame-time: " << frame_time;
 
 		try
@@ -89,8 +89,7 @@ public:
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			video_decoder_.reset();
-			CASPAR_LOG(warning) << print() << " removed video-stream.";
+			CASPAR_LOG(warning) << print() << " failed to initialize video-decoder.";
 		}
 		
 		try
@@ -101,8 +100,7 @@ public:
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			audio_decoder_.reset();
-			CASPAR_LOG(warning) << print() << " removed audio-stream.";
+			CASPAR_LOG(warning) << print() << " failed to initialize audio-decoder.";
 		}		
 
 		if(!video_decoder_ && !audio_decoder_)
@@ -119,7 +117,7 @@ public:
 		frame_timer_.restart();
 
 		std::shared_ptr<core::basic_frame> frame;	
-		for(size_t n = 0; !frame && n < MAX_PACKET_OFFSET; ++n) 
+		for(size_t n = 0; !frame && input_.has_packet() && n < MAX_PACKET_OFFSET ; ++n) 
 			frame = try_decode_frame();
 		
 		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
@@ -144,9 +142,6 @@ public:
 	
 	std::shared_ptr<core::basic_frame> try_decode_frame()
 	{
-		if(!input_.has_packet())
-			return nullptr;
-
 		tbb::parallel_invoke
 		(
 			[&]
@@ -171,7 +166,7 @@ public:
 
 		try
 		{
-			boost::range::push_back(video_frame_buffer_, video_decoder_->execute(this, video_packet));
+			boost::range::push_back(video_frame_buffer_, video_decoder_->execute(video_packet));
 		}
 		catch(...)
 		{
