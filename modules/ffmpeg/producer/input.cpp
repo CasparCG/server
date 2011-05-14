@@ -17,6 +17,10 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
+#if defined(_MSC_VER)
+#pragma warning (disable : 4244)
+#endif
+
 #include "..\stdafx.h"
 
 #include "input.h"
@@ -33,9 +37,6 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/range/algorithm.hpp>
 
-#if defined(_MSC_VER)
-#pragma warning (disable : 4244)
-#endif
 
 extern "C" 
 {
@@ -48,7 +49,7 @@ namespace caspar {
 		
 struct input::implementation : boost::noncopyable
 {		
-	static const size_t PACKET_BUFFER_COUNT = 25;
+	static const size_t PACKET_BUFFER_COUNT = 50;
 
 	safe_ptr<diagnostics::graph> graph_;
 
@@ -211,6 +212,9 @@ private:
 		
 	void read_file()
 	{		
+		if(audio_packet_buffer_.size() > 4 && video_packet_buffer_.size() > 4)
+			boost::this_thread::yield(); // There is enough packets, no hurry.
+
 		try
 		{
 			AVPacket tmp_packet;
