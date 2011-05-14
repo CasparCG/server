@@ -56,8 +56,6 @@
 #include <common/os/windows/system_info.h>
 #include <common/utility/assert.h>
 
-#include <Glee.h>
-
 #include <tbb/task_scheduler_observer.h>
 #include <tbb/task_scheduler_init.h>
 
@@ -116,8 +114,7 @@ void print_info()
 	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::get_avcodec_version();
 	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::get_avformat_version();
 	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::get_swscale_version();
-	CASPAR_LOG(info) << L"OpenGL " << caspar::mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VERSION));})
-					 << L" "	   << caspar::mixer::ogl_device::create()->invoke([]{return reinterpret_cast<const char*>(glGetString(GL_VENDOR));}) << "\n\n";
+	CASPAR_LOG(info) << L"OpenGL " << caspar::mixer::ogl_device::get_version() << "\n\n";
 }
  
 int main(int argc, wchar_t* argv[])
