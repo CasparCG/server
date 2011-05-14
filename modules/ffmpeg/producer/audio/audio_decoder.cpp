@@ -21,6 +21,8 @@
 
 #include "audio_decoder.h"
 
+#include <common/utility/algorithm.h>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -39,14 +41,12 @@ extern "C"
 namespace caspar {
 
 struct audio_decoder::implementation : boost::noncopyable
-{
-	typedef std::vector<short, tbb::cache_aligned_allocator<short>> buffer;
-	
+{	
 	AVCodecContext* codec_context_;
 		
 	const core::video_format_desc format_desc_;
 
-	buffer current_chunk_;
+	std::vector<short> current_chunk_;
 
 public:
 	explicit implementation(AVCodecContext* codec_context, const core::video_format_desc& format_desc) 
@@ -97,13 +97,10 @@ public:
 
 		current_chunk_.resize(s + written_bytes/2);
 
-		const auto last = current_chunk_.end() - current_chunk_.size() % format_desc_.audio_samples_per_frame;
-		
-		std::vector<std::vector<short>> chunks;
-		for(auto it = current_chunk_.begin(); it != last; it += format_desc_.audio_samples_per_frame)		
-			chunks.push_back(std::vector<short>(it, it + format_desc_.audio_samples_per_frame));		
+		auto chunks = split(current_chunk_, format_desc_.audio_samples_per_frame);
 
-		current_chunk_.erase(current_chunk_.begin(), last);
+		current_chunk_ = chunks.back();
+		chunks.pop_back();
 		
 		return chunks;
 	}

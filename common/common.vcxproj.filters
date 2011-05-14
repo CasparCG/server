@@ -108,5 +108,8 @@
     <ClInclude Include="concurrency\com_context.h">
       <Filter>concurrency</Filter>
     </ClInclude>
+    <ClInclude Include="utility\algorithm.h">
+      <Filter>utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
