@@ -71,44 +71,43 @@ public:
 		}
 	}
 		
-	std::vector<std::vector<short>> execute(const std::shared_ptr<aligned_buffer>& audio_packet)
-	{				
-		if(!audio_packet)
-			return std::vector<std::vector<short>>();
+	std::vector<std::vector<short>> execute(const packet& audio_packet)
+	{	
+		std::vector<std::vector<short>> result;
 
-		if(audio_packet->empty()) // Need to flush
+		switch(audio_packet.type)
 		{
+		case flush_packet:
 			avcodec_flush_buffers(codec_context_);
-			return std::vector<std::vector<short>>();
+			break;
+		case data_packet:
+			auto s = current_chunk_.size();
+			current_chunk_.resize(s + 4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2);
+		
+			int written_bytes = (current_chunk_.size() - s)*2 - FF_INPUT_BUFFER_PADDING_SIZE;
+			const int errn = avcodec_decode_audio2(codec_context_, &current_chunk_[s], &written_bytes, audio_packet.data->data(), audio_packet.data->size());
+			if(errn < 0)
+			{	
+				BOOST_THROW_EXCEPTION(
+					invalid_operation() <<
+					boost::errinfo_api_function("avcodec_decode_audio2") <<
+					boost::errinfo_errno(AVUNERROR(errn)));
+			}
+
+			current_chunk_.resize(s + written_bytes/2);
+
+			const auto last = current_chunk_.end() - current_chunk_.size() % format_desc_.audio_samples_per_frame;
+		
+			for(auto it = current_chunk_.begin(); it != last; it += format_desc_.audio_samples_per_frame)		
+				result.push_back(std::vector<short>(it, it + format_desc_.audio_samples_per_frame));		
+
+			current_chunk_.erase(current_chunk_.begin(), last);
 		}
-
-		auto s = current_chunk_.size();
-		current_chunk_.resize(s + 4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2);
-		
-		int written_bytes = (current_chunk_.size() - s)*2 - FF_INPUT_BUFFER_PADDING_SIZE;
-		const int errn = avcodec_decode_audio2(codec_context_, &current_chunk_[s], &written_bytes, audio_packet->data(), audio_packet->size());
-		if(errn < 0)
-		{	
-			BOOST_THROW_EXCEPTION(
-				invalid_operation() <<
-				boost::errinfo_api_function("avcodec_decode_audio2") <<
-				boost::errinfo_errno(AVUNERROR(errn)));
-		}
-
-		current_chunk_.resize(s + written_bytes/2);
-
-		const auto last = current_chunk_.end() - current_chunk_.size() % format_desc_.audio_samples_per_frame;
-		
-		std::vector<std::vector<short>> chunks;
-		for(auto it = current_chunk_.begin(); it != last; it += format_desc_.audio_samples_per_frame)		
-			chunks.push_back(std::vector<short>(it, it + format_desc_.audio_samples_per_frame));		
-
-		current_chunk_.erase(current_chunk_.begin(), last);
-		
-		return chunks;
+				
+		return result;
 	}
 };
 
 audio_decoder::audio_decoder(AVCodecContext* codec_context, const core::video_format_desc& format_desc) : impl_(new implementation(codec_context, format_desc)){}
-std::vector<std::vector<short>> audio_decoder::execute(const std::shared_ptr<aligned_buffer>& audio_packet){return impl_->execute(audio_packet);}
+std::vector<std::vector<short>> audio_decoder::execute(const packet& audio_packet){return impl_->execute(audio_packet);}
 }

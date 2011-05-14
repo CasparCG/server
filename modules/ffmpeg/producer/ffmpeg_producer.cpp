@@ -34,43 +34,38 @@
 #include <core/video_format.h>
 
 #include <common/env.h>
-#include <common/utility/timer.h>
-#include <common/utility/assert.h>
 
 #include <tbb/parallel_invoke.h>
 
 #include <boost/timer.hpp>
 
 #include <deque>
-#include <functional>
 
 namespace caspar {
 	
 struct ffmpeg_producer : public core::frame_producer
 {
-	const std::wstring					filename_;
-	const bool							loop_;
+	const std::wstring						filename_;
+	const bool								loop_;
 	
-	std::shared_ptr<diagnostics::graph>	graph_;
-	boost::timer						perf_timer_;
+	std::shared_ptr<diagnostics::graph>		graph_;
+	boost::timer							frame_timer_;
 		
 	std::deque<safe_ptr<core::write_frame>>	video_frame_buffer_;	
 	std::deque<std::vector<short>>			audio_chunk_buffer_;
-
-	std::queue<safe_ptr<core::basic_frame>>	ouput_channel_;
-		
+			
 	std::shared_ptr<core::frame_factory>	frame_factory_;
 
-	input								input_;	
-	std::unique_ptr<video_decoder>		video_decoder_;
-	std::unique_ptr<audio_decoder>		audio_decoder_;
+	input									input_;	
+	std::unique_ptr<video_decoder>			video_decoder_;
+	std::unique_ptr<audio_decoder>			audio_decoder_;
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop, int start_frame, int end_frame) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop, int start, int length) 
 		: filename_(filename)
 		, loop_(loop) 
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
-		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, start_frame, end_frame)
+		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, start, length)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -83,7 +78,7 @@ public:
 
 		try
 		{			
-			video_decoder_.reset(input_.get_video_codec_context().get() ? 
+			video_decoder_.reset(input_.get_video_codec_context() ? 
 				new video_decoder(input_.get_video_codec_context().get(), frame_factory) : nullptr);
 		}
 		catch(...)
@@ -95,7 +90,7 @@ public:
 		
 		try
 		{			
-			audio_decoder_.reset(input_.get_audio_codec_context().get() ? 
+			audio_decoder_.reset(input_.get_audio_codec_context() ? 
 				new audio_decoder(input_.get_audio_codec_context().get(), frame_factory->get_video_format_desc()) : nullptr);
 		}
 		catch(...)
@@ -109,15 +104,17 @@ public:
 		{
 			BOOST_THROW_EXCEPTION(
 				caspar_exception() <<
+				source_info(narrow(print())) << 
 				msg_info("Failed to initialize any decoder"));
 		}
 	}
 
 	virtual safe_ptr<core::basic_frame> receive()
 	{
-		perf_timer_.restart();
+		frame_timer_.restart();
 
-		for(size_t n = 0; ouput_channel_.size() < 2 && input_.has_packet() && n < 32; ++n) // 32 packets should be enough. Otherwise there probably was an error and we want to avoid infinite looping.
+		std::shared_ptr<core::basic_frame> frame;	
+		for(size_t n = 0; !frame && input_.has_packet() && n < 64; ++n) // 64 packets should be enough. Otherwise there probably was an error and we want to avoid infinite looping.
 		{	
 			tbb::parallel_invoke
 			(
@@ -133,12 +130,22 @@ public:
 				}
 			);			
 
-			merge_audio_and_video();	
+			frame = try_merge_audio_and_video();	
 		}
 		
-		graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
+		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
 					
-		return get_next_frame();
+		if(frame)
+			return make_safe(frame);
+		
+		if(!input_.is_running())
+			return core::basic_frame::eof();
+
+		if(!video_decoder_ && !audio_decoder_)
+			return core::basic_frame::eof();
+			
+		graph_->add_tag("underflow");
+		return core::basic_frame::late();	
 	}
 
 	virtual std::wstring print() const
@@ -146,43 +153,43 @@ public:
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 
-	void try_decode_video_packet(const std::shared_ptr<aligned_buffer>& video_packet)
+	void try_decode_video_packet(const packet& video_packet)
 	{
-		if(video_decoder_) // Video Decoding.
+		if(!video_decoder_) // Video Decoding.
+			return;
+
+		try
 		{
-			try
-			{
-				auto frames = video_decoder_->execute(this, video_packet);
-				video_frame_buffer_.insert(video_frame_buffer_.end(), frames.begin(), frames.end());
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				video_decoder_.reset();
-				CASPAR_LOG(warning) << print() << " removed video-stream.";
-			}
+			auto frames = video_decoder_->execute(this, video_packet);
+			video_frame_buffer_.insert(video_frame_buffer_.end(), frames.begin(), frames.end());
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			video_decoder_.reset();
+			CASPAR_LOG(warning) << print() << " removed video-stream.";
 		}
 	}
 
-	void try_decode_audio_packet(const std::shared_ptr<aligned_buffer>& audio_packet)
+	void try_decode_audio_packet(const packet& audio_packet)
 	{
-		if(audio_decoder_) // Audio Decoding.
+		if(!audio_decoder_) // Audio Decoding.
+			return;
+
+		try
 		{
-			try
-			{
-				auto chunks = audio_decoder_->execute(audio_packet);
-				audio_chunk_buffer_.insert(audio_chunk_buffer_.end(), chunks.begin(), chunks.end());
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				audio_decoder_.reset();
-				CASPAR_LOG(warning) << print() << " removed audio-stream.";
-			}
+			auto chunks = audio_decoder_->execute(audio_packet);
+			audio_chunk_buffer_.insert(audio_chunk_buffer_.end(), chunks.begin(), chunks.end());
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			audio_decoder_.reset();
+			CASPAR_LOG(warning) << print() << " removed audio-stream.";
 		}
 	}
 
-	void merge_audio_and_video()
+	std::shared_ptr<core::basic_frame> try_merge_audio_and_video()
 	{		
 		std::shared_ptr<core::write_frame> frame;	
 
@@ -209,29 +216,7 @@ public:
 			audio_chunk_buffer_.pop_front();
 		}
 		
-		if(frame)
-			ouput_channel_.push(make_safe(frame));			
-	}
-		
-	safe_ptr<core::basic_frame> get_next_frame()
-	{
-		if(is_eof())
-			return core::basic_frame::eof();
-
-		if(ouput_channel_.empty())
-		{
-			graph_->add_tag("underflow");
-			return core::basic_frame::late();			
-		}
-
-		auto frame = std::move(ouput_channel_.front());
-		ouput_channel_.pop();		
-		return frame;
-	}
-
-	bool is_eof() const
-	{
-		return ouput_channel_.empty() && ((!video_decoder_ && !audio_decoder_) || !input_.is_running());
+		return frame;	
 	}
 };
 
@@ -252,7 +237,7 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 	std::wstring path = filename + L"." + *ext;
 	bool loop = std::find(params.begin(), params.end(), L"LOOP") != params.end();
 
-	static const boost::wregex expr(L"\\((?<START>\\d+)(,(?<END>\\d+)?)?\\)");//(,(?<END>\\d+))?\\]"); // boost::regex has no repeated captures?
+	static const boost::wregex expr(L"\\((?<START>\\d+)(,(?<LENGTH>\\d+)?)?\\)");//(,(?<END>\\d+))?\\]"); // boost::regex has no repeated captures?
 	boost::wsmatch what;
 	auto it = std::find_if(params.begin(), params.end(), [&](const std::wstring& str)
 	{
@@ -260,16 +245,16 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 	});
 
 	int start = -1;
-	int end = -1;
+	int length = -1;
 
 	if(it != params.end())
 	{
 		start = lexical_cast_or_default(what["START"].str(), -1);
-		if(what["END"].matched)
-			end = lexical_cast_or_default(what["END"].str(), -1);
+		if(what["LENGTH"].matched)
+			length = lexical_cast_or_default(what["LENGTH"].str(), -1);
 	}
 	
-	return make_safe<ffmpeg_producer>(frame_factory, path, loop, start, end);
+	return make_safe<ffmpeg_producer>(frame_factory, path, loop, start, length);
 }
 
 }

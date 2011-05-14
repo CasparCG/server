@@ -21,7 +21,7 @@
 
 #include <common/diagnostics/graph.h>
 
-#include <tbb/cache_aligned_allocator.h>
+#include "packet.h"
 
 #include <memory>
 #include <string>
@@ -30,17 +30,15 @@ struct AVCodecContext;
 
 namespace caspar {
 	
-typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> aligned_buffer;
-
 class input : boost::noncopyable
 {
 public:
-	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start_frame, int end_frame);
+	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length);
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 
-	std::shared_ptr<aligned_buffer> get_video_packet();
-	std::shared_ptr<aligned_buffer> get_audio_packet();
+	packet get_video_packet();
+	packet get_audio_packet();
 
 	bool has_packet() const;
 	bool is_running() const;
