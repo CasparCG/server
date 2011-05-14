@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include <core/video_format.h>
+
 #include <tbb/cache_aligned_allocator.h>
 
 #include <boost/noncopyable.hpp>
@@ -35,7 +37,7 @@ typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> 
 class audio_decoder : boost::noncopyable
 {
 public:
-	explicit audio_decoder(AVCodecContext* codec_context, double fps);
+	explicit audio_decoder(AVCodecContext* codec_context, const core::video_format_desc& format_desc);
 	std::vector<std::vector<short>> execute(const std::shared_ptr<aligned_buffer>& audio_packet);
 private:
 	struct implementation;

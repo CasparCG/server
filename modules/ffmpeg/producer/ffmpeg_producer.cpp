@@ -71,8 +71,6 @@ public:
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
 		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, start_frame, end_frame)
-		, video_decoder_(input_.get_video_codec_context().get() ? new video_decoder(input_.get_video_codec_context().get(), frame_factory) : nullptr)
-		, audio_decoder_(input_.get_audio_codec_context().get() ? new audio_decoder(input_.get_audio_codec_context().get(), frame_factory->get_video_format_desc().fps) : nullptr)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -82,6 +80,37 @@ public:
 		double format_frame_time = 1.0/frame_factory->get_video_format_desc().fps;
 		if(abs(frame_time - format_frame_time) > 0.0001)
 			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback. frame-time: " << frame_time;
+
+		try
+		{			
+			video_decoder_.reset(input_.get_video_codec_context().get() ? 
+				new video_decoder(input_.get_video_codec_context().get(), frame_factory) : nullptr);
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			video_decoder_.reset();
+			CASPAR_LOG(warning) << print() << " removed video-stream.";
+		}
+		
+		try
+		{			
+			audio_decoder_.reset(input_.get_audio_codec_context().get() ? 
+				new audio_decoder(input_.get_audio_codec_context().get(), frame_factory->get_video_format_desc()) : nullptr);
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			audio_decoder_.reset();
+			CASPAR_LOG(warning) << print() << " removed audio-stream.";
+		}		
+
+		if(!video_decoder_ && !audio_decoder_)
+		{
+			BOOST_THROW_EXCEPTION(
+				caspar_exception() <<
+				msg_info("Failed to initialize any decoder"));
+		}
 	}
 
 	virtual safe_ptr<core::basic_frame> receive()
