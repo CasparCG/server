@@ -59,24 +59,34 @@
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
-#include <tbb/concurrent_unordered_map.h>
 #include <tbb/parallel_invoke.h>
 #include <tbb/parallel_for.h>
-#include <tbb/parallel_for_each.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
 
-#include "../common/utility/string.h"
-#include "../common/memory/safe_ptr.h"
+#include <common/utility/string.h>
+#include <common/utility/assert.h>
+#include <common/memory/safe_ptr.h>
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
-#include "../common/log/Log.h"
-#include "../common/exception/exceptions.h"
-#include "../common/exception/win32_exception.h"
+#include <common/log/log.h>
+#include <common/exception/exceptions.h>
+#include <common/exception/win32_exception.h>
 
-#include <assert.h>
+#pragma warning(push, 1)
+
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavformat/avformat.h>
+	#include <libavcodec/avcodec.h>
+	#include <libswscale/swscale.h>
+}
+
+#pragma warning(pop)
 
 #endif

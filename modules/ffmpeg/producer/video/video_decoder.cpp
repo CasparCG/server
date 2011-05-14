@@ -118,19 +118,19 @@ struct video_decoder::implementation : boost::noncopyable
 {	
 	std::shared_ptr<SwsContext>					sws_context_;
 	const std::shared_ptr<core::frame_factory>	frame_factory_;
-	AVCodecContext*								codec_context_;
+	AVCodecContext&								codec_context_;
 	const int									width_;
 	const int									height_;
 	const PixelFormat							pix_fmt_;
 	core::pixel_format_desc						desc_;
 
 public:
-	explicit implementation(AVCodecContext* codec_context, const safe_ptr<core::frame_factory>& frame_factory) 
+	explicit implementation(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) 
 		: frame_factory_(frame_factory)
 		, codec_context_(codec_context)
-		, width_(codec_context_->width)
-		, height_(codec_context_->height)
-		, pix_fmt_(codec_context_->pix_fmt)
+		, width_(codec_context_.width)
+		, height_(codec_context_.height)
+		, pix_fmt_(codec_context_.pix_fmt)
 		, desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
 	{
 		if(desc_.pix_fmt == core::pixel_format::invalid)
@@ -154,13 +154,13 @@ public:
 		switch(video_packet.type)
 		{
 		case flush_packet:
-			avcodec_flush_buffers(codec_context_);
+			avcodec_flush_buffers(&codec_context_);
 			break;
 		case data_packet:		
 			safe_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 			int frame_finished = 0;
-			const int errn = avcodec_decode_video(codec_context_, decoded_frame.get(), &frame_finished, video_packet.data->data(), video_packet.data->size());
+			const int errn = avcodec_decode_video(&codec_context_, decoded_frame.get(), &frame_finished, video_packet.data->data(), video_packet.data->size());
 		
 			if(errn < 0)
 			{
@@ -208,14 +208,14 @@ public:
 		}	
 
 		// DVVIDEO is in lower field. Make it upper field if needed.
-		if(codec_context_->codec_id == CODEC_ID_DVVIDEO && frame_factory_->get_video_format_desc().mode == core::video_mode::upper)
+		if(codec_context_.codec_id == CODEC_ID_DVVIDEO && frame_factory_->get_video_format_desc().mode == core::video_mode::upper)
 			write->get_image_transform().set_fill_translation(0.0f, 1.0/static_cast<double>(height_));
 
 		return write;
 	}
 };
 
-video_decoder::video_decoder(AVCodecContext* codec_context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(codec_context, frame_factory)){}
+video_decoder::video_decoder(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(codec_context, frame_factory)){}
 std::vector<safe_ptr<core::write_frame>> video_decoder::execute(void* tag, const packet& video_packet){return impl_->execute(tag, video_packet);}
 
 }

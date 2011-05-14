@@ -35,7 +35,7 @@ namespace core {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(AVCodecContext* codec_context, const safe_ptr<core::frame_factory>& frame_factory);
+	explicit video_decoder(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory);
 	std::vector<safe_ptr<core::write_frame>> execute(void* tag, const packet& video_packet);	
 private:
 	struct implementation;

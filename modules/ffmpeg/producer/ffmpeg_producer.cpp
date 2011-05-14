@@ -38,6 +38,8 @@
 #include <tbb/parallel_invoke.h>
 
 #include <boost/timer.hpp>
+#include <boost/range/algorithm.hpp>
+#include <boost/range/algorithm_ext.hpp>
 
 #include <deque>
 
@@ -45,6 +47,9 @@ namespace caspar {
 	
 struct ffmpeg_producer : public core::frame_producer
 {
+	static const size_t						DECODED_PACKET_BUFFER_SIZE = 4;
+	static const size_t						MAX_PACKET_OFFSET = 64; // 64 packets should be enough. Otherwise there probably was an error and we want to avoid infinite looping.
+
 	const std::wstring						filename_;
 	const bool								loop_;
 	
@@ -79,7 +84,7 @@ public:
 		try
 		{			
 			video_decoder_.reset(input_.get_video_codec_context() ? 
-				new video_decoder(input_.get_video_codec_context().get(), frame_factory) : nullptr);
+				new video_decoder(*input_.get_video_codec_context(), frame_factory) : nullptr);
 		}
 		catch(...)
 		{
@@ -91,7 +96,7 @@ public:
 		try
 		{			
 			audio_decoder_.reset(input_.get_audio_codec_context() ? 
-				new audio_decoder(input_.get_audio_codec_context().get(), frame_factory->get_video_format_desc()) : nullptr);
+				new audio_decoder(*input_.get_audio_codec_context(), frame_factory->get_video_format_desc()) : nullptr);
 		}
 		catch(...)
 		{
@@ -114,24 +119,8 @@ public:
 		frame_timer_.restart();
 
 		std::shared_ptr<core::basic_frame> frame;	
-		for(size_t n = 0; !frame && input_.has_packet() && n < 64; ++n) // 64 packets should be enough. Otherwise there probably was an error and we want to avoid infinite looping.
-		{	
-			tbb::parallel_invoke
-			(
-				[&]
-				{
-					if(video_frame_buffer_.size() < 3)
-						try_decode_video_packet(input_.get_video_packet());
-				}, 
-				[&]
-				{
-					if(audio_chunk_buffer_.size() < 3)
-						try_decode_audio_packet(input_.get_audio_packet());
-				}
-			);			
-
-			frame = try_merge_audio_and_video();	
-		}
+		for(size_t n = 0; !frame && n < MAX_PACKET_OFFSET; ++n) 
+			frame = try_decode_frame();
 		
 		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
 					
@@ -147,21 +136,42 @@ public:
 		graph_->add_tag("underflow");
 		return core::basic_frame::late();	
 	}
-
+	
 	virtual std::wstring print() const
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
+	
+	std::shared_ptr<core::basic_frame> try_decode_frame()
+	{
+		if(!input_.has_packet())
+			return nullptr;
+
+		tbb::parallel_invoke
+		(
+			[&]
+			{
+				if(video_frame_buffer_.size() < DECODED_PACKET_BUFFER_SIZE)
+					try_decode_video_packet(input_.get_video_packet());
+			}, 
+			[&]
+			{
+				if(audio_chunk_buffer_.size() < DECODED_PACKET_BUFFER_SIZE)
+					try_decode_audio_packet(input_.get_audio_packet());
+			}
+		);			
+
+		return try_merge_audio_and_video();	
+	}
 
 	void try_decode_video_packet(const packet& video_packet)
 	{
-		if(!video_decoder_) // Video Decoding.
+		if(!video_decoder_)
 			return;
 
 		try
 		{
-			auto frames = video_decoder_->execute(this, video_packet);
-			video_frame_buffer_.insert(video_frame_buffer_.end(), frames.begin(), frames.end());
+			boost::range::push_back(video_frame_buffer_, video_decoder_->execute(this, video_packet));
 		}
 		catch(...)
 		{
@@ -173,13 +183,12 @@ public:
 
 	void try_decode_audio_packet(const packet& audio_packet)
 	{
-		if(!audio_decoder_) // Audio Decoding.
+		if(!audio_decoder_)
 			return;
 
 		try
 		{
-			auto chunks = audio_decoder_->execute(audio_packet);
-			audio_chunk_buffer_.insert(audio_chunk_buffer_.end(), chunks.begin(), chunks.end());
+			boost::range::push_back(audio_chunk_buffer_, audio_decoder_->execute(audio_packet));
 		}
 		catch(...)
 		{
