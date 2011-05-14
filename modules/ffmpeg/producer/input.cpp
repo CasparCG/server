@@ -58,12 +58,12 @@ struct input::implementation : boost::noncopyable
 	const bool			loop_;
 	int					video_s_index_;
 	int					audio_s_index_;
-	const int			start_frame_;
-	const int			end_frame_;
+	const int			start_;
+	const int			length_;
 	int					eof_count_;
 		
-	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> video_packet_buffer_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> audio_packet_buffer_;
+	tbb::concurrent_bounded_queue<packet> video_packet_buffer_;
+	tbb::concurrent_bounded_queue<packet> audio_packet_buffer_;
 
 	boost::condition_variable	cond_;
 	boost::mutex				mutex_;
@@ -71,25 +71,17 @@ struct input::implementation : boost::noncopyable
 	std::exception_ptr exception_;
 	executor executor_;
 public:
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start_frame, int end_frame) 
+	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length) 
 		: graph_(graph)
 		, loop_(loop)
 		, video_s_index_(-1)
 		, audio_s_index_(-1)
 		, filename_(filename)
 		, executor_(print())
-		, start_frame_(std::max(start_frame, 0))
-		, end_frame_(end_frame)
-		, eof_count_(end_frame-start_frame)
+		, start_(std::max(start, 0))
+		, length_(length)
+		, eof_count_(length)
 	{			
-		if(end_frame_ > 0 && end_frame <= start_frame_)
-		{	
-			BOOST_THROW_EXCEPTION(
-				invalid_argument() << 
-				source_info(narrow(print())) << 
-				msg_info("End-frame cannot be lower than start-frame."));	
-		}
-
 		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
 
@@ -137,8 +129,8 @@ public:
 				msg_info("No video or audio codec context found."));	
 		}
 
-		if(start_frame_ != 0)			
-			seek_frame(start_frame_);
+		if(start_ != 0)			
+			seek_frame(start_);
 					
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
@@ -152,12 +144,12 @@ public:
 		cond_.notify_all();
 	}
 		
-	std::shared_ptr<aligned_buffer> get_video_packet()
+	packet get_video_packet()
 	{
 		return get_packet(video_packet_buffer_);
 	}
 
-	std::shared_ptr<aligned_buffer> get_audio_packet()
+	packet get_audio_packet()
 	{
 		return get_packet(audio_packet_buffer_);
 	}
@@ -226,9 +218,9 @@ private:
 			{
 				if(loop_)
 				{
-					seek_frame(start_frame_, AVSEEK_FLAG_BACKWARD);
+					seek_frame(start_, AVSEEK_FLAG_BACKWARD);
 					// AVCodecContext.frame_number is not reset. Increase the target frame_number.
-					eof_count_ += end_frame_ - start_frame_; 
+					eof_count_ += length_; 
 					graph_->add_tag("seek");	
 				}	
 				else
@@ -246,9 +238,9 @@ private:
 			else
 			{
 				if(read_packet->stream_index == video_s_index_) 		
-					video_packet_buffer_.try_push(std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size));	
-				else if(read_packet->stream_index == audio_s_index_) 	
-					audio_packet_buffer_.try_push(std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size));	
+					video_packet_buffer_.try_push(packet(read_packet->data, read_packet->data + read_packet->size));	
+				else if(read_packet->stream_index)
+					audio_packet_buffer_.try_push(packet(read_packet->data, read_packet->data + read_packet->size));	
 			}
 						
 			graph_->update_value("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
@@ -284,24 +276,24 @@ private:
 		}
 
 		// Notify decoders to flush buffers.
-		video_packet_buffer_.try_push(std::make_shared<aligned_buffer>());	
-		audio_packet_buffer_.try_push(std::make_shared<aligned_buffer>());
-	}
-		
+		video_packet_buffer_.try_push(flush_packet);	
+		audio_packet_buffer_.try_push(flush_packet);
+	}		
 
 	bool is_eof(int errn)
 	{
-		if(end_frame_ != -1)
+		if(length_ != -1)
 			return get_default_context()->frame_number > eof_count_;		
 
 		return errn == AVERROR_EOF || errn == AVERROR_IO;
 	}
 		
-	std::shared_ptr<aligned_buffer> get_packet(tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>>& buffer)
+	packet get_packet(tbb::concurrent_bounded_queue<packet>& buffer)
 	{
+		packet packet;
+		buffer.try_pop(packet);
 		cond_.notify_all();
-		std::shared_ptr<aligned_buffer> packet;
-		return buffer.try_pop(packet) ? packet : nullptr;
+		return packet;
 	}
 
 	std::wstring print() const
@@ -310,12 +302,13 @@ private:
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start_frame, int end_frame) : impl_(new implementation(graph, filename, loop, start_frame, end_frame)){}
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length) 
+	: impl_(new implementation(graph, filename, loop, start, length)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
 bool input::has_packet() const{return impl_->has_packet();}
 bool input::is_running() const {return impl_->executor_.is_running();}
-std::shared_ptr<aligned_buffer> input::get_video_packet(){return impl_->get_video_packet();}
-std::shared_ptr<aligned_buffer> input::get_audio_packet(){return impl_->get_audio_packet();}
+packet input::get_video_packet(){return impl_->get_video_packet();}
+packet input::get_audio_packet(){return impl_->get_audio_packet();}
 double input::fps() const { return impl_->fps(); }
 }

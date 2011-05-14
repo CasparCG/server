@@ -249,7 +249,7 @@ Syntax:
 
 	LOADBG [channel:int]{-[layer:int]|-0} [clip:string] {[loop:LOOP]}
 	 {[transition:CUT,MIX,PUSH,WIPE] [duration:uint] {[tween:string]|linear} 
-	 {[direction:LEFT,RIGHT]|RIGHT}|CUT 0} {([start_frame:uint]{,[end_frame:uint]})|(0)}
+	 {[direction:LEFT,RIGHT]|RIGHT}|CUT 0} {([start:uint]{,[length:uint]})|(0)}
 
 Description: 
 
