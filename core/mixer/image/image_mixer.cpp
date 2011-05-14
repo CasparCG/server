@@ -58,20 +58,18 @@ struct image_mixer::implementation : boost::noncopyable
 
 	image_kernel kernel_;
 
-	safe_ptr<ogl_device> context_;
 	std::shared_ptr<device_buffer> key_;
 public:
 	implementation(const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)
-		, context_(ogl_device::create())
 	{
-		context_->invoke([]
+		ogl_device::invoke([]
 		{
 			if(!GLEE_VERSION_3_0)
 				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
 		});
 		
-		context_->begin_invoke([=]
+		ogl_device::begin_invoke([=]
 		{
 			transform_stack_.push(core::image_transform());
 			transform_stack_.top().set_mode(core::video_mode::progressive);
@@ -79,14 +77,14 @@ public:
 			GL(glEnable(GL_TEXTURE_2D));
 			GL(glDisable(GL_DEPTH_TEST));		
 
-			render_targets_[0] = context_->create_device_buffer(format_desc.width, format_desc.height, 4);
-			render_targets_[1] = context_->create_device_buffer(format_desc.width, format_desc.height, 4);
+			render_targets_[0] = ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4);
+			render_targets_[1] = ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4);
 			
 			GL(glGenFramebuffers(1, &fbo_));		
 			GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
 			GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
 
-			reading_ = context_->create_host_buffer(format_desc_.size, host_buffer::read_only);
+			reading_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
 		});
 	}
 
@@ -107,12 +105,12 @@ public:
 		auto buffers = gpu_frame->get_plane_buffers();
 
 		auto transform = transform_stack_.top();
-		context_->begin_invoke([=]
+		ogl_device::begin_invoke([=]
 		{
 			std::vector<safe_ptr<device_buffer>> device_buffers;
 			for(size_t n = 0; n < buffers.size(); ++n)
 			{
-				auto texture = context_->create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
+				auto texture = ogl_device::create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
 				texture->read(*buffers[n]);
 				device_buffers.push_back(texture);
 			}
@@ -171,7 +169,7 @@ public:
 
 	boost::unique_future<safe_ptr<const host_buffer>> begin_pass()
 	{
-		return context_->begin_invoke([=]() -> safe_ptr<const host_buffer>
+		return ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
 		{
 			reading_->map();
 			render_targets_[0]->attach(0);
@@ -182,9 +180,9 @@ public:
 
 	void end_pass()
 	{
-		context_->begin_invoke([=]
+		ogl_device::begin_invoke([=]
 		{
-			reading_ = context_->create_host_buffer(format_desc_.size, host_buffer::read_only);
+			reading_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
 			render_targets_[0]->write(*reading_);
 			std::rotate(render_targets_.begin(), render_targets_.begin() + 1, render_targets_.end());
 		});
@@ -195,7 +193,7 @@ public:
 		std::vector<safe_ptr<host_buffer>> buffers;
 		std::transform(format.planes.begin(), format.planes.end(), std::back_inserter(buffers), [&](const core::pixel_format_desc::plane& plane)
 		{
-			return context_->create_host_buffer(plane.size, host_buffer::write_only);
+			return ogl_device::create_host_buffer(plane.size, host_buffer::write_only);
 		});
 		return buffers;
 	}

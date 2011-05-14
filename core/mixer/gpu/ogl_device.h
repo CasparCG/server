@@ -46,29 +46,53 @@ class ogl_device
 	executor executor_;
 
 	ogl_device();
-public:	
-	virtual ~ogl_device();
+	~ogl_device();
 
-	static safe_ptr<ogl_device> create()
+	static ogl_device& get_instance()
 	{
-		static safe_ptr<ogl_device> instance(new ogl_device()); // Use the same ogl-device for all channels inorder to ensure that frames are always valid for all "context".
-		return instance;
+		static ogl_device device;
+		return device;
 	}
-
+	
 	template<typename Func>
-	auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
+	auto do_begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
 	{			
 		return executor_.begin_invoke(std::forward<Func>(func));
 	}
 	
 	template<typename Func>
-	auto invoke(Func&& func) -> decltype(func())
+	auto do_invoke(Func&& func) -> decltype(func())
 	{
 		return executor_.invoke(std::forward<Func>(func));
 	}
 		
-	safe_ptr<device_buffer> create_device_buffer(size_t width, size_t height, size_t stride);
-	safe_ptr<host_buffer> create_host_buffer(size_t size, host_buffer::usage_t usage);
+	safe_ptr<device_buffer> do_create_device_buffer(size_t width, size_t height, size_t stride);
+	safe_ptr<host_buffer> do_create_host_buffer(size_t size, host_buffer::usage_t usage);
+public:		
+	
+	template<typename Func>
+	static auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
+	{			
+		return get_instance().do_begin_invoke(std::forward<Func>(func));
+	}
+	
+	template<typename Func>
+	static auto invoke(Func&& func) -> decltype(func())
+	{
+		return get_instance().do_invoke(std::forward<Func>(func));
+	}
+		
+	static safe_ptr<device_buffer> create_device_buffer(size_t width, size_t height, size_t stride)
+	{
+		return get_instance().do_create_device_buffer(width, height, stride);
+	}
+
+	static safe_ptr<host_buffer> create_host_buffer(size_t size, host_buffer::usage_t usage)
+	{
+		return get_instance().do_create_host_buffer(size, usage);
+	}
+
+	static std::wstring get_version();
 };
 
 }}
