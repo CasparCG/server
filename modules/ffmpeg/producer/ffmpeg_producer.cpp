@@ -48,13 +48,13 @@ struct ffmpeg_producer : public core::frame_producer
 	const std::wstring						filename_;
 	const bool								loop_;
 	
-	std::shared_ptr<diagnostics::graph>		graph_;
+	const safe_ptr<diagnostics::graph>		graph_;
 	boost::timer							frame_timer_;
 		
 	std::deque<safe_ptr<core::write_frame>>	video_frame_buffer_;	
 	std::deque<std::vector<short>>			audio_chunk_buffer_;
 			
-	std::shared_ptr<core::frame_factory>	frame_factory_;
+	const safe_ptr<core::frame_factory>		frame_factory_;
 
 	input									input_;	
 	std::unique_ptr<video_decoder>			video_decoder_;
@@ -226,16 +226,16 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 		(L"mpg")(L"mpeg")(L"avi")(L"mov")(L"qt")(L"webm")(L"dv")(L"mp4")(L"f4v")(L"flv")(L"mkv")(L"mka")(L"wmv")(L"wma")(L"ogg")(L"divx")(L"xvid")(L"wav")(L"mp3")(L"m2v");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
 	
-	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
-		{					
-			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
-		});
+	auto ext = boost::find_if(extensions, [&](const std::wstring& ex)
+	{					
+		return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+	});
 
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
 	std::wstring path = filename + L"." + *ext;
-	bool loop = std::find(params.begin(), params.end(), L"LOOP") != params.end();
+	bool loop = boost::find(params, L"LOOP") != params.end();
 
 	static const boost::wregex expr(L"\\((?<START>\\d+)(,(?<LENGTH>\\d+)?)?\\)");//(,(?<END>\\d+))?\\]"); // boost::regex has no repeated captures?
 	boost::wsmatch what;
