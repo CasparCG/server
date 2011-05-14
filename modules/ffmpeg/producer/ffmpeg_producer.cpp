@@ -152,9 +152,8 @@ public:
 		{
 			try
 			{
-				auto frame = video_decoder_->execute(this, video_packet);
-				if(frame)
-					video_frame_buffer_.push_back(make_safe(std::move(frame)));
+				auto frames = video_decoder_->execute(this, video_packet);
+				video_frame_buffer_.insert(video_frame_buffer_.end(), frames.begin(), frames.end());
 			}
 			catch(...)
 			{
