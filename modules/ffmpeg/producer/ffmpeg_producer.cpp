@@ -25,40 +25,45 @@
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 
+#include <common/utility/timer.h>
 #include <common/diagnostics/graph.h>
-#include <common/env.h>
-#include <common/utility/algorithm.h>
 
-#include <core/video_format.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/write_frame.h>
 #include <core/producer/frame/audio_transform.h>
+#include <core/video_format.h>
+
+#include <common/env.h>
+#include <common/utility/timer.h>
+#include <common/utility/assert.h>
 
 #include <tbb/parallel_invoke.h>
 
 #include <boost/timer.hpp>
 
 #include <deque>
+#include <functional>
 
 namespace caspar {
 	
 struct ffmpeg_producer : public core::frame_producer
 {
-	const std::wstring						filename_;
-	const bool								loop_;
+	const std::wstring					filename_;
+	const bool							loop_;
 	
-	std::shared_ptr<diagnostics::graph>		graph_;
-	boost::timer							perf_timer_;
+	std::shared_ptr<diagnostics::graph>	graph_;
+	boost::timer						perf_timer_;
 		
 	std::deque<safe_ptr<core::write_frame>>	video_frame_buffer_;	
 	std::deque<std::vector<short>>			audio_chunk_buffer_;
-	std::queue<safe_ptr<core::basic_frame>>	output_channel_;
+
+	std::queue<safe_ptr<core::basic_frame>>	ouput_channel_;
 		
 	std::shared_ptr<core::frame_factory>	frame_factory_;
 
-	input									input_;	
-	std::unique_ptr<video_decoder>			video_decoder_;
-	std::unique_ptr<audio_decoder>			audio_decoder_;
+	input								input_;	
+	std::unique_ptr<video_decoder>		video_decoder_;
+	std::unique_ptr<audio_decoder>		audio_decoder_;
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop, int start_frame, int end_frame) 
 		: filename_(filename)
@@ -112,7 +117,7 @@ public:
 	{
 		perf_timer_.restart();
 
-		for(size_t n = 0; output_channel_.size() < 2 && input_.has_packet() && n < 32; ++n) // 32 packets should be enough. Otherwise there probably was an error and we want to avoid infinite recursion.
+		for(size_t n = 0; ouput_channel_.size() < 2 && input_.has_packet() && n < 32; ++n) // 32 packets should be enough. Otherwise there probably was an error and we want to avoid infinite recursion.
 		{	
 			tbb::parallel_invoke
 			(
@@ -184,12 +189,16 @@ public:
 
 		if(!video_frame_buffer_.empty() && !audio_chunk_buffer_.empty())
 		{
-			frame = pop_front(video_frame_buffer_);
-			frame->audio_data() = pop_front(audio_chunk_buffer_);
+			frame = video_frame_buffer_.front();				
+			video_frame_buffer_.pop_front();
+				
+			frame->audio_data() = std::move(audio_chunk_buffer_.front());
+			audio_chunk_buffer_.pop_front();	
 		}
 		else if(!video_frame_buffer_.empty() && !audio_decoder_)
 		{
-			frame = pop_front(video_frame_buffer_);
+			frame = video_frame_buffer_.front();				
+			video_frame_buffer_.pop_front();
 			frame->get_audio_transform().set_has_audio(false);	
 		}
 		else if(!audio_chunk_buffer_.empty() && !video_decoder_)
@@ -197,11 +206,12 @@ public:
 			frame = frame_factory_->create_frame(this, 1, 1);
 			std::fill(frame->image_data().begin(), frame->image_data().end(), 0);
 				
-			frame->audio_data() = pop_front(audio_chunk_buffer_);
+			frame->audio_data() = std::move(audio_chunk_buffer_.front());
+			audio_chunk_buffer_.pop_front();
 		}
 		
 		if(frame)
-			output_channel_.push(make_safe(frame));			
+			ouput_channel_.push(make_safe(frame));			
 	}
 		
 	safe_ptr<core::basic_frame> get_next_frame()
@@ -209,18 +219,20 @@ public:
 		if(is_eof())
 			return core::basic_frame::eof();
 
-		if(output_channel_.empty())
+		if(ouput_channel_.empty())
 		{
 			graph_->add_tag("underflow");
 			return core::basic_frame::late();			
 		}
 
-		return pop_front(output_channel_);
+		auto frame = std::move(ouput_channel_.front());
+		ouput_channel_.pop();		
+		return frame;
 	}
 
 	bool is_eof() const
 	{
-		return output_channel_.empty() && (!video_decoder_ && !audio_decoder_) || !input_.is_running();
+		return ouput_channel_.empty() && (!video_decoder_ && !audio_decoder_) || !input_.is_running();
 	}
 };
 
