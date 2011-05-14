@@ -28,16 +28,8 @@
 #include <common/diagnostics/graph.h>
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/queuing_mutex.h>
+#include <tbb/mutex.h>
 
-#include <boost/exception/error_info.hpp>
-#include <boost/thread/once.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/regex.hpp>
-
-#include <errno.h>
-#include <system_error>
-		
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
 #endif
@@ -62,20 +54,19 @@ struct input::implementation : boost::noncopyable
 	std::shared_ptr<AVCodecContext>	video_codec_context_;
 	std::shared_ptr<AVCodecContext>	audio_codex_context_;
 	
-	const std::wstring filename_;
-
-	bool loop_;
-	int video_s_index_;
-	int	audio_s_index_;
-	const int start_frame_;
-	const int end_frame_;
-	int eof_count_;
+	const std::wstring	filename_;
+	const bool			loop_;
+	int					video_s_index_;
+	int					audio_s_index_;
+	const int			start_frame_;
+	const int			end_frame_;
+	int					eof_count_;
 		
 	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> video_packet_buffer_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>> audio_packet_buffer_;
 
-	boost::condition_variable cond_;
-	boost::mutex mutex_;
+	boost::condition_variable	cond_;
+	boost::mutex				mutex_;
 	
 	std::exception_ptr exception_;
 	executor executor_;
@@ -92,10 +83,12 @@ public:
 		, eof_count_(end_frame-start_frame)
 	{			
 		if(end_frame_ > 0 && end_frame <= start_frame_)
+		{	
 			BOOST_THROW_EXCEPTION(
 				invalid_argument() << 
 				source_info(narrow(print())) << 
 				msg_info("End-frame cannot be lower than start-frame."));	
+		}
 
 		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
@@ -114,12 +107,14 @@ public:
 		format_context_.reset(weak_format_context_, av_close_input_file);
 			
 		if((errn = av_find_stream_info(format_context_.get())) < 0)
+		{	
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
 				source_info(narrow(print())) << 
 				msg_info(av_error_str(errn)) <<
 				boost::errinfo_api_function("av_find_stream_info") <<
 				boost::errinfo_errno(AVUNERROR(errn)));
+		}
 
 		video_codec_context_ = open_stream(CODEC_TYPE_VIDEO, video_s_index_);
 		if(!video_codec_context_)
@@ -131,15 +126,17 @@ public:
 		if(!audio_codex_context_)
 			CASPAR_LOG(warning) << print() << " Could not open any audio stream.";
 		else
-			fix_time_base(video_codec_context_.get());
+			fix_time_base(audio_codex_context_.get());
 
 		if(!video_codec_context_ && !audio_codex_context_)
+		{	
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
 				msg_info(av_error_str(errn)) <<
 				source_info(narrow(print())) << 
 				msg_info("No video or audio codec context found."));	
-		
+		}
+
 		if(start_frame_ != 0)			
 			seek_frame(start_frame_);
 					
@@ -153,20 +150,49 @@ public:
 		executor_.clear();
 		executor_.stop();
 		cond_.notify_all();
+	}
+		
+	std::shared_ptr<aligned_buffer> get_video_packet()
+	{
+		return get_packet(video_packet_buffer_);
+	}
+
+	std::shared_ptr<aligned_buffer> get_audio_packet()
+	{
+		return get_packet(audio_packet_buffer_);
+	}
+
+	bool has_packet() const
+	{
+		return !video_packet_buffer_.empty() || !audio_packet_buffer_.empty();
+	}
+				
+	double fps()
+	{
+		return static_cast<double>(get_default_context()->time_base.den) / static_cast<double>(get_default_context()->time_base.num);
+	}
+
+private:
+
+	void stop()
+	{
+		executor_.stop();
 		CASPAR_LOG(info) << print() << " Stopped.";
 	}
 			
-	void fix_time_base(AVCodecContext* context) // Some files give an invalid numerator, try to fix it.
+	void fix_time_base(AVCodecContext* context) const // Some files give an invalid numerator, try to fix it.
 	{
 		if(context && context->time_base.num == 1)
 			context->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(context->time_base.den)))-1));
 	}
 
-	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index)
+	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index) const
 	{		
 		AVStream** streams_end = format_context_->streams+format_context_->nb_streams;
-		AVStream** stream = std::find_if(format_context_->streams, streams_end, 
-			[&](AVStream* stream) { return stream != nullptr && stream->codec->codec_type == codec_type ;});
+		AVStream** stream = std::find_if(format_context_->streams, streams_end, [&](AVStream* stream) 
+		{
+			return stream != nullptr && stream->codec->codec_type == codec_type;
+		});
 		
 		if(stream == streams_end) 
 			return nullptr;
@@ -187,14 +213,6 @@ public:
 	{
 		return video_codec_context_ ? video_codec_context_ : audio_codex_context_;
 	}
-
-	bool is_eof(int errn)
-	{
-		if(end_frame_ != -1)
-			return get_default_context()->frame_number > eof_count_;		
-
-		return errn == AVERROR_EOF || errn == AVERROR_IO;
-	}
 		
 	void read_file()
 	{		
@@ -203,8 +221,8 @@ public:
 			AVPacket tmp_packet;
 			safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
 
-			auto read_frame_ret = av_read_frame(format_context_.get(), read_packet.get());
-			if(is_eof(read_frame_ret))
+			const int errn = av_read_frame(format_context_.get(), read_packet.get());
+			if(is_eof(errn))
 			{
 				if(loop_)
 				{
@@ -216,22 +234,21 @@ public:
 				else
 					stop();
 			}
-			else if(read_frame_ret < 0)
+			else if(errn < 0)
 			{
 				BOOST_THROW_EXCEPTION(
 					invalid_operation() <<
-					msg_info(av_error_str(read_frame_ret)) <<
+					msg_info(av_error_str(errn)) <<
 					source_info(narrow(print())) << 
 					boost::errinfo_api_function("av_read_frame") <<
-					boost::errinfo_errno(AVUNERROR(read_frame_ret)));
+					boost::errinfo_errno(AVUNERROR(errn)));
 			}
 			else
 			{
-				auto packet = std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size);
 				if(read_packet->stream_index == video_s_index_) 		
-					video_packet_buffer_.try_push(std::move(packet));	
+					video_packet_buffer_.try_push(std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size));	
 				else if(read_packet->stream_index == audio_s_index_) 	
-					audio_packet_buffer_.try_push(std::move(packet));	
+					audio_packet_buffer_.try_push(std::make_shared<aligned_buffer>(read_packet->data, read_packet->data + read_packet->size));	
 			}
 						
 			graph_->update_value("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
@@ -249,27 +266,6 @@ public:
 			cond_.wait(lock);		
 	}
 
-	void stop()
-	{
-		executor_.stop();
-		CASPAR_LOG(info) << print() << " eof";
-	}
-		
-	std::shared_ptr<aligned_buffer> get_video_packet()
-	{
-		return get_packet(video_packet_buffer_);
-	}
-
-	std::shared_ptr<aligned_buffer> get_audio_packet()
-	{
-		return get_packet(audio_packet_buffer_);
-	}
-
-	bool has_packet() const
-	{
-		return !video_packet_buffer_.empty() || !audio_packet_buffer_.empty();
-	}
-	
 	void seek_frame(int64_t frame, int flags = 0)
 	{  	
 		// Convert from frames into seconds.
@@ -278,28 +274,34 @@ public:
 		const int errn = av_seek_frame(format_context_.get(), -1, ts, flags | AVSEEK_FLAG_FRAME);
 
 		if(errn < 0)
+		{	
 			BOOST_THROW_EXCEPTION(
 				invalid_operation() << 
 				source_info(narrow(print())) << 
 				msg_info(av_error_str(errn)) <<
 				boost::errinfo_api_function("seek_frame") <<
 				boost::errinfo_errno(AVUNERROR(errn)));
-		
+		}
+
 		// Notify decoders to flush buffers.
 		video_packet_buffer_.try_push(std::make_shared<aligned_buffer>());	
 		audio_packet_buffer_.try_push(std::make_shared<aligned_buffer>());
 	}
-	
+		
+
+	bool is_eof(int errn)
+	{
+		if(end_frame_ != -1)
+			return get_default_context()->frame_number > eof_count_;		
+
+		return errn == AVERROR_EOF || errn == AVERROR_IO;
+	}
+		
 	std::shared_ptr<aligned_buffer> get_packet(tbb::concurrent_bounded_queue<std::shared_ptr<aligned_buffer>>& buffer)
 	{
 		cond_.notify_all();
 		std::shared_ptr<aligned_buffer> packet;
 		return buffer.try_pop(packet) ? packet : nullptr;
-	}
-			
-	double fps()
-	{
-		return static_cast<double>(get_default_context()->time_base.den) / static_cast<double>(get_default_context()->time_base.num);
 	}
 
 	std::wstring print() const

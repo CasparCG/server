@@ -192,7 +192,7 @@ public:
 		}
 		else
 		{
-			// Uses sws_scale when we don't support the provided color-space.
+			// Uses sws_scale when we don't support the provided colorspace.
 			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 			avcodec_get_frame_defaults(av_frame.get());			
 			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
