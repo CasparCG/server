@@ -19,21 +19,24 @@
 */
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include "../packet.h"
 
-#include <core/mixer/frame_mixer_device.h>
+#include <common/memory/safe_ptr.h>
 
 struct AVCodecContext;
 
 namespace caspar {
 	
-typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> aligned_buffer;
+namespace core {
+	struct frame_factory;
+	class write_frame;
+}
 
 class video_decoder : boost::noncopyable
 {
 public:
 	explicit video_decoder(AVCodecContext* codec_context, const safe_ptr<core::frame_factory>& frame_factory);
-	std::vector<safe_ptr<core::write_frame>> execute(void* tag, const std::shared_ptr<aligned_buffer>& video_packet);	
+	std::vector<safe_ptr<core::write_frame>> execute(void* tag, const packet& video_packet);	
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

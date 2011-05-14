@@ -28,6 +28,8 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/write_frame.h>
 #include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/pixel_format.h>
+#include <core/producer/frame/frame_factory.h>
 
 #include <tbb/parallel_for.h>
 
@@ -145,37 +147,33 @@ public:
 		}
 	}
 	
-	std::vector<safe_ptr<core::write_frame>> execute(void* tag, const std::shared_ptr<aligned_buffer>& video_packet)
+	std::vector<safe_ptr<core::write_frame>> execute(void* tag, const packet& video_packet)
 	{				
 		std::vector<safe_ptr<core::write_frame>> result;
 
-		if(!video_packet)
-			return result;
-
-		if(video_packet->empty()) // Need to flush
+		switch(video_packet.type)
 		{
+		case flush_packet:
 			avcodec_flush_buffers(codec_context_);
-			return result;
-		}
+			break;
+		case data_packet:		
+			safe_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
-		safe_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
-
-		int frame_finished = 0;
-		const int errn = avcodec_decode_video(codec_context_, decoded_frame.get(), &frame_finished, video_packet->data(), video_packet->size());
+			int frame_finished = 0;
+			const int errn = avcodec_decode_video(codec_context_, decoded_frame.get(), &frame_finished, video_packet.data->data(), video_packet.data->size());
 		
-		if(errn < 0)
-		{
-			BOOST_THROW_EXCEPTION(
-				invalid_operation() <<
-				msg_info(av_error_str(errn)) <<
-				boost::errinfo_api_function("avcodec_decode_video") <<
-				boost::errinfo_errno(AVUNERROR(errn)));
+			if(errn < 0)
+			{
+				BOOST_THROW_EXCEPTION(
+					invalid_operation() <<
+					msg_info(av_error_str(errn)) <<
+					boost::errinfo_api_function("avcodec_decode_video") <<
+					boost::errinfo_errno(AVUNERROR(errn)));
+			}
+		
+			if(frame_finished != 0)		
+				result.push_back(make_write_frame(tag, decoded_frame));
 		}
-		
-		if(frame_finished == 0)
-			return result;
-		
-		result.push_back(make_write_frame(tag, decoded_frame));
 
 		return result;
 	}
@@ -201,7 +199,7 @@ public:
 		}
 		else
 		{
-			// Uses sws_scale when we don't support the provided colorspace.
+			// Use sws_scale when provided colorspace has no hw-accel.
 			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 			avcodec_get_frame_defaults(av_frame.get());			
 			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
@@ -218,6 +216,6 @@ public:
 };
 
 video_decoder::video_decoder(AVCodecContext* codec_context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(codec_context, frame_factory)){}
-std::vector<safe_ptr<core::write_frame>> video_decoder::execute(void* tag, const std::shared_ptr<aligned_buffer>& video_packet){return impl_->execute(tag, video_packet);}
+std::vector<safe_ptr<core::write_frame>> video_decoder::execute(void* tag, const packet& video_packet){return impl_->execute(tag, video_packet);}
 
 }

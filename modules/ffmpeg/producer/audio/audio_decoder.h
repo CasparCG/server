@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include "../packet.h"
+
 #include <core/video_format.h>
 
 #include <tbb/cache_aligned_allocator.h>
@@ -32,13 +34,11 @@ struct AVCodecContext;
 
 namespace caspar {
 	
-typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> aligned_buffer;
-
 class audio_decoder : boost::noncopyable
 {
 public:
 	explicit audio_decoder(AVCodecContext* codec_context, const core::video_format_desc& format_desc);
-	std::vector<std::vector<short>> execute(const std::shared_ptr<aligned_buffer>& audio_packet);
+	std::vector<std::vector<short>> execute(const packet& audio_packet);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
