@@ -1,0 +1,206 @@
+#define _XOPEN_SOURCE 600 /* for usleep */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavfilter/avfiltergraph.h>
+#include <libavfilter/vsrc_buffer.h>
+
+const char *filter_descr = "scale=78:24,format=gray";
+
+static AVFormatContext *avf;
+static AVCodecContext *video_dec;
+AVFilterContext *video_in_filter;
+AVFilterContext *video_out_filter;
+AVFilterGraph *filter_graph;
+static int video_stream = -1;
+static int64_t last_pts = AV_NOPTS_VALUE;
+
+static void fatal_libav_error(const char *tag, int r)
+{
+    char buf[1024];
+
+    av_strerror(r, buf, sizeof(buf));
+    fprintf(stderr, "%s: %s\n", tag, buf);
+    exit(1);
+}
+
+static void open_input_file(const char *filename)
+{
+    int r, i;
+    AVCodec *codec;
+    AVCodecContext *avc;
+
+    avcodec_register_all();
+    av_register_all();
+    r = av_open_input_file(&avf, filename, NULL, 0, NULL);
+    if (r < 0)
+        fatal_libav_error("av_open_input_file", r);
+    r = av_find_stream_info(avf);
+    if (r < 0)
+        fatal_libav_error("av_find_stream_info", r);
+
+    /* Find a video stream */
+    for (i = 0; i < (int)avf->nb_streams; i) {
+        avc = avf->streams[i]->codec;
+        if (!video_dec && avc->codec_type == CODEC_TYPE_VIDEO) {
+            video_dec = avc;
+            video_stream = i;
+        }
+    }
+    /* Init the video decoder */
+    if (video_dec) {
+        codec = avcodec_find_decoder(video_dec->codec_id);
+        if (!codec) {
+            fprintf(stderr, "Unable to find video decoder\n");
+            exit(1);
+        }
+        r = avcodec_open(video_dec, codec);
+        if (r < 0)
+            fatal_libav_error("avcodec_open", r);
+    }
+}
+
+static void init_filters(const char *filters)
+{
+    char args[256];
+    int r;
+    AVFilter *vf_buffer = avfilter_get_by_name("buffer");
+    AVFilter *vf_nullsink = avfilter_get_by_name("nullsink");
+    AVFilterInOut *outputs = av_malloc(sizeof(AVFilterInOut));
+    AVFilterInOut *inputs  = av_malloc(sizeof(AVFilterInOut));
+
+
+    filter_graph = avfilter_graph_alloc();
+
+    /* Buffer video source: the decoded frames from the codec will be
+     * inserted here. */
+    snprintf(args, sizeof(args), "%d:%d:%d:%d:%d", video_dec->width,
+             video_dec->height, video_dec->pix_fmt,
+             video_dec->time_base.num, video_dec->time_base.den);
+    r = avfilter_graph_create_filter(&video_in_filter, vf_buffer, "src", args,
+                                     NULL, filter_graph);
+    if (r < 0)
+        fatal_libav_error("avfilter_graph_create_filter: buffer", r);
+
+    /* Null video sink: to terminate the filter chain. */
+    r = avfilter_graph_create_filter(&video_out_filter, vf_nullsink, "out",
+                                     NULL, NULL, filter_graph);
+    if (r < 0)
+        fatal_libav_error("avfilter_graph_create_filter: nullsink", r);
+
+    /* Endpoints for the filter graph. */
+    outputs->name       = av_strdup("in");
+    outputs->filter_ctx = video_in_filter;
+    outputs->pad_idx    = 0;
+    outputs->next       = NULL;
+    inputs->name       = av_strdup("out");
+    inputs->filter_ctx = video_out_filter;
+    inputs->pad_idx    = 0;
+    inputs->next       = NULL;
+    r = avfilter_graph_parse(filter_graph, filters, inputs, outputs, NULL);
+    if (r < 0)
+        fatal_libav_error("avfilter_graph_parse", r);
+
+    r = avfilter_graph_config(filter_graph, NULL);
+    if (r < 0)
+        fatal_libav_error("avfilter_graph_config", r);
+}
+
+static void display_frame(AVFilterLink *link)
+{
+    AVFilterBufferRef *ob;
+    int x, y;
+    uint8_t *p0, *p;
+    int64_t delay;
+
+    ob = link->cur_buf;
+    if (ob->pts != AV_NOPTS_VALUE) {
+        if (last_pts != AV_NOPTS_VALUE) {
+            /* sleep roughly the right amount of time;
+             * usleep is in microseconds, just like AV_TIME_BASE. */
+            delay = av_rescale_q(ob->pts - last_pts,
+                                 link->time_base,
+                                 AV_TIME_BASE_Q);
+            if (delay > 0 && delay < 1000000)
+                usleep(delay);
+        }
+        last_pts = ob->pts;
+    }
+    /* ob->data, ob->linesize and ob->pts could be copied to an AVFrame
+     * structure. */
+    /* Trivial ASCII grayscale display. */
+    p0 = ob->data[0];
+    puts("\033c");
+    for (y = 0; y < link->h; y) {
+        p = p0;
+        for (x = 0; x < link->w; x)
+            putchar(" .-#"[*(p) / 52]);
+        putchar('\n');
+        p0 = ob->linesize[0];
+    }
+    fflush(stdout);
+}
+
+static void got_video_frame(AVFrame *frame)
+{
+    int r;
+    AVFilterLink *out = video_out_filter->inputs[0];
+
+    av_vsrc_buffer_add_frame(video_in_filter, frame, frame->pts,
+                             video_dec->sample_aspect_ratio);
+    while (avfilter_poll_frame(out)) {
+        r = avfilter_request_frame(out);
+        if (r < 0)
+            fatal_libav_error("avfilter_request_frame", r);
+        if (!out->cur_buf)
+            fatal_libav_error("avfilter_request_frame", AVERROR(ENOENT));
+        display_frame(out);
+    }
+}
+
+int main(int argc, char **argv)
+{
+    int r;
+    AVPacket packet;
+    AVFrame frame;
+    int got_frame;
+
+    if (argc != 2) {
+        fprintf(stderr, "Usage: api_example file\n");
+        exit(1);
+    }
+    avcodec_register_all();
+    avfilter_register_all();
+    av_register_all();
+    open_input_file(argv[1]);
+    init_filters(filter_descr);
+    /* Read all packets. */
+    while (1) {
+        r = av_read_frame(avf, &packet);
+        if (r < 0)
+            break;
+        if (packet.stream_index == video_stream) {
+            avcodec_get_frame_defaults(&frame);
+            got_frame = 0;
+            if (packet.pts != AV_NOPTS_VALUE)
+                video_dec->reordered_opaque =
+                    av_rescale_q(packet.pts,
+                                 avf->streams[video_stream]->time_base,
+                                 video_dec->time_base);
+            r = avcodec_decode_video2(video_dec, &frame, &got_frame, &packet);
+            if (r < 0)
+                fatal_libav_error("avcodec_decode_video2", r);
+            if (got_frame) {
+                if (frame.pts == AV_NOPTS_VALUE)
+                    frame.pts = frame.reordered_opaque;
+                got_video_frame(&frame);
+            }
+        }
+        av_free_packet(&packet);
+    }
+
+    return 0;
+}
