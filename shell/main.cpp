@@ -121,6 +121,8 @@ int main(int argc, wchar_t* argv[])
 {	
 	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
 	
+	CASPAR_LOG(info) << L"THIS IS AN UNSTABLE BUILD";
+
 	// Set debug mode.
 	#ifdef _DEBUG
 		_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
