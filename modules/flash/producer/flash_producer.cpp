@@ -212,7 +212,6 @@ struct flash_producer : public core::frame_producer
 
 	std::shared_ptr<diagnostics::graph> graph_;
 
-	safe_ptr<core::basic_frame> tail_;
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
 				
 	com_context<flash_renderer> context_;		
@@ -220,7 +219,6 @@ public:
 	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
-		, tail_(core::basic_frame::empty())		
 		, context_(L"flash_producer")
 	{	
 		if(!boost::filesystem::exists(filename))
@@ -247,8 +245,9 @@ public:
 	{				
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
-		frame_buffer_.try_pop(tail_);		
-		return tail_;
+		auto frame = core::basic_frame::late();
+		frame_buffer_.try_pop(frame);		
+		return frame;
 	}
 	
 	virtual void param(const std::wstring& param) 
