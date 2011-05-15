@@ -66,17 +66,10 @@ struct separated_producer : public frame_producer
 		if(last_fill_ == core::basic_frame::late() || last_key_ == core::basic_frame::late()) // One of the producers is lagging, keep them in sync.
 			return last_frame_;
 		
-		if(last_key_ == basic_frame::eof())
-		{
-			last_frame_ = last_fill_;
-			last_fill_ = basic_frame::empty();
-		}
-		else
-		{
-			last_frame_= basic_frame::fill_and_key(last_fill_, last_key_);
-			last_fill_ = basic_frame::empty();
-			last_key_ = basic_frame::empty();
-		}
+		last_frame_= basic_frame::fill_and_key(last_fill_, last_key_);
+
+		last_fill_ = basic_frame::empty();
+		last_key_ = basic_frame::empty();
 
 		return last_frame_;
 	}

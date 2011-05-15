@@ -207,7 +207,7 @@ public:
 		}
 		else if(!video_frame_buffer_.empty() && !audio_decoder_)
 		{
-			frame = video_frame_buffer_.front();				
+			frame = std::move(video_frame_buffer_.front());				
 			video_frame_buffer_.pop_front();
 			frame->get_audio_transform().set_has_audio(false);	
 		}
