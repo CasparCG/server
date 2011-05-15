@@ -94,7 +94,7 @@ const std::wstring& data_folder()
 
 const std::wstring& version()
 {
-	static std::wstring ver = std::wstring(L"") + CASPAR_GEN + L"." + CASPAR_MAYOR + L"." + CASPAR_MINOR + L"." + CASPAR_REV;
+	static std::wstring ver = std::wstring(L"") + CASPAR_GEN + L"." + CASPAR_MAYOR + L"." + CASPAR_MINOR + L"." + CASPAR_REV + L" UNSTABLE";
 	return ver;
 }
 
