@@ -55,18 +55,27 @@ enum latency
 	default_latency
 };
 
+enum output_pixels
+{
+	fill_and_key,
+	fill_only,
+	key_only
+};
+
 struct configuration
 {
 	size_t	device_index;
 	bool	embedded_audio;
 	key		keyer;
 	latency latency;
+	output_pixels  output;
 	
 	configuration()
 		: device_index(1)
 		, embedded_audio(false)
 		, keyer(default_key)
-		, latency(default_latency){}
+		, latency(default_latency)
+		, output(fill_and_key){}
 };
 
 class decklink_frame_adapter : public IDeckLinkVideoFrame
@@ -101,6 +110,70 @@ public:
     STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
 };
 
+std::shared_ptr<IDeckLinkVideoFrame> make_alpha_only_frame(const CComQIPtr<IDeckLinkOutput>& decklink, const safe_ptr<const core::read_frame>& frame, const core::video_format_desc& format_desc)
+{
+	IDeckLinkMutableVideoFrame* result;
+
+	if(FAILED(decklink->CreateVideoFrame(format_desc.width, format_desc.height, format_desc.size/format_desc.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &result)))
+		BOOST_THROW_EXCEPTION(caspar_exception());
+
+	void* bytes = nullptr;
+	if(FAILED(result->GetBytes(&bytes)))
+		BOOST_THROW_EXCEPTION(caspar_exception());
+		
+	unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
+
+	if(static_cast<size_t>(frame->image_data().size()) == format_desc.size)
+	{
+		tbb::parallel_for(tbb::blocked_range<int>(0, frame->image_data().size()/4), [&](const tbb::blocked_range<int>& r)
+		{
+			for(int n = r.begin(); n != r.end(); ++n)
+			{
+				data[n*4+0] = frame->image_data()[n*4+3];
+				data[n*4+1] = frame->image_data()[n*4+3];
+				data[n*4+2] = frame->image_data()[n*4+3];
+				data[n*4+3] = 255;
+			}
+		});
+	}
+	else
+		memset(data, 0, format_desc.size);
+
+	return std::shared_ptr<IDeckLinkVideoFrame>(result, [](IDeckLinkMutableVideoFrame* p) {p->Release();});
+}
+
+std::shared_ptr<IDeckLinkVideoFrame> make_fill_only_frame(const CComQIPtr<IDeckLinkOutput>& decklink, const safe_ptr<const core::read_frame>& frame, const core::video_format_desc& format_desc)
+{
+	IDeckLinkMutableVideoFrame* result;
+
+	if(FAILED(decklink->CreateVideoFrame(format_desc.width, format_desc.height, format_desc.size/format_desc.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &result)))
+		BOOST_THROW_EXCEPTION(caspar_exception());
+
+	void* bytes = nullptr;
+	if(FAILED(result->GetBytes(&bytes)))
+		BOOST_THROW_EXCEPTION(caspar_exception());
+		
+	unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
+
+	if(static_cast<size_t>(frame->image_data().size()) == format_desc.size)
+	{
+		tbb::parallel_for(tbb::blocked_range<int>(0, frame->image_data().size()/4), [&](const tbb::blocked_range<int>& r)
+		{
+			for(int n = r.begin(); n != r.end(); ++n)
+			{
+				data[n*4+0] = frame->image_data()[n*4+0];
+				data[n*4+1] = frame->image_data()[n*4+1];
+				data[n*4+2] = frame->image_data()[n*4+2];
+				data[n*4+3] = 255;
+			}
+		});
+	}
+	else
+		memset(data, 0, format_desc.size);
+
+	return std::shared_ptr<IDeckLinkVideoFrame>(result, [](IDeckLinkMutableVideoFrame* p) {p->Release();});
+}
+
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
 	const configuration config_;
@@ -121,7 +194,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	unsigned long frames_scheduled_;
 	unsigned long audio_scheduled_;
 		
-	std::list<decklink_frame_adapter> frame_container_; // Must be std::list in order to guarantee that pointers are always valid.
+	std::list<std::shared_ptr<IDeckLinkVideoFrame>> frame_container_; // Must be std::list in order to guarantee that pointers are always valid.
 	boost::circular_buffer<std::vector<short>> audio_container_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> video_frame_buffer_;
@@ -282,9 +355,9 @@ public:
 			else if(result == bmdOutputFrameFlushed)
 				graph_->add_tag("flushed-frame");
 
-			frame_container_.erase(std::find_if(frame_container_.begin(), frame_container_.end(), [&](const decklink_frame_adapter& frame)
+			frame_container_.erase(std::find_if(frame_container_.begin(), frame_container_.end(), [&](const std::shared_ptr<IDeckLinkVideoFrame> frame)
 			{
-				return &frame == completed_frame;
+				return frame.get() == completed_frame;
 			}));
 
 			std::shared_ptr<const core::read_frame> frame;	
@@ -339,8 +412,16 @@ public:
 			
 	void schedule_next_video(const safe_ptr<const core::read_frame>& frame)
 	{
-		frame_container_.push_back(decklink_frame_adapter(frame, format_desc_));
-		if(FAILED(output_->ScheduleVideoFrame(&frame_container_.back(), (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
+		std::shared_ptr<IDeckLinkVideoFrame> deck_frame;
+		if(config_.output == key_only)
+			deck_frame = make_alpha_only_frame(output_, frame, format_desc_);
+		else if(config_.output == fill_only)
+			deck_frame = make_fill_only_frame(output_, frame, format_desc_);
+		else 
+			deck_frame = std::make_shared<decklink_frame_adapter>(frame, format_desc_);
+
+		frame_container_.push_back(deck_frame);
+		if(FAILED(output_->ScheduleVideoFrame(frame_container_.back().get(), (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
 		graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
@@ -433,6 +514,12 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tr
 		config.latency = normal_latency;
 	else if(latency_str == "low")
 		config.latency = low_latency;
+
+	auto output_str = ptree.get("output", "fill_and_key");
+	if(output_str == "fill_only")
+		config.output = fill_only;
+	else if(output_str == "key_only")
+		config.output = key_only;
 
 	config.device_index = ptree.get("device", 0);
 	config.embedded_audio  = ptree.get("embedded-audio", false);
