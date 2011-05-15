@@ -108,5 +108,8 @@
     <ClInclude Include="concurrency\com_context.h">
       <Filter>concurrency</Filter>
     </ClInclude>
+    <ClInclude Include="memory\memshfl.h">
+      <Filter>memory</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
