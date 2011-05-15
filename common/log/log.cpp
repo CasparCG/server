@@ -82,9 +82,10 @@ void init()
 
 	stream_sink->locked_backend()->set_formatter(
 		boost::log::formatters::wstream
-			<< L"[" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(traits_t::thread_id_attr_name())
-			<< L"] [" << boost::log::formatters::attr<severity_level >(boost::log::sources::aux::severity_attribute_name<wchar_t>::get())
-			<< L"] " << boost::log::formatters::message<wchar_t>()
+			//<< L"[" << boost::log::formatters::date_time<std::tm>(L"TimeStamp") << L"] "
+			<< L"[" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(L"ThreadID") << L"] "
+			<< L"[" << boost::log::formatters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) << L"] "
+			<< boost::log::formatters::message<wchar_t>()
 	);
 
 	boost::log::wcore::get()->add_sink(stream_sink);
@@ -112,11 +113,10 @@ void add_file_sink(const std::wstring& folder)
 
 		file_sink->locked_backend()->set_formatter(
 			boost::log::formatters::wstream
-				<< boost::log::formatters::attr<unsigned int>(traits_t::line_id_attr_name())
-				<< L" [" << boost::log::formatters::date_time< posix_time::ptime >(traits_t::time_stamp_attr_name())
-				<< L"] [" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(traits_t::thread_id_attr_name())
-				<< L"] [" << boost::log::formatters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get())
-				<< L"] " << boost::log::formatters::message<wchar_t>()
+				//<< L"[" << boost::log::formatters::date_time<std::tm>(L"TimeStamp") << L"] "
+				<< L"[" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(L"ThreadID") << L"] "
+				<< L"[" << boost::log::formatters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) << L"] "
+				<< boost::log::formatters::message<wchar_t>()
 		);
 
 		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
