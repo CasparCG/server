@@ -140,7 +140,7 @@ safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fil
 	if(fill == basic_frame::eof() && key == basic_frame::eof())
 		return basic_frame::eof();
 
-	if(key == basic_frame::empty())
+	if(key == basic_frame::empty() || key == basic_frame::eof())
 		return fill;
 
 	std::vector<safe_ptr<basic_frame>> frames;
