@@ -58,7 +58,6 @@ enum latency
 enum output_pixels
 {
 	fill_and_key,
-	fill_only,
 	key_only
 };
 
@@ -110,6 +109,30 @@ public:
     STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
 };
 
+void make_alpha(void* dest, const void* source, size_t count)
+{	
+	__m128i*	   dest128 = reinterpret_cast<__m128i*>(dest);	
+	const __m128i* source128 = reinterpret_cast<const __m128i*>(source);
+
+	count /= 16; // 128 bit
+
+	__m128i xmm0, xmm1, xmm2, xmm3;
+
+	const __m128i mask128 = _mm_set_epi8(3, 3, 3, 3, 7, 7, 7, 7, 11, 11, 11, 11, 15, 15, 15, 15);
+	for(size_t n = 0; n < count/4; ++n)
+	{
+		xmm0 = _mm_load_si128(source128++);	
+		xmm1 = _mm_load_si128(source128++);	
+		xmm2 = _mm_load_si128(source128++);	
+		xmm3 = _mm_load_si128(source128++);	
+
+		_mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm0, mask128));
+		_mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm1, mask128));
+		_mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm2, mask128));
+		_mm_stream_si128(dest128++, _mm_shuffle_epi8(xmm3, mask128));
+	}
+}
+
 std::shared_ptr<IDeckLinkVideoFrame> make_alpha_only_frame(const CComQIPtr<IDeckLinkOutput>& decklink, const safe_ptr<const core::read_frame>& frame, const core::video_format_desc& format_desc)
 {
 	IDeckLinkMutableVideoFrame* result;
@@ -125,48 +148,12 @@ std::shared_ptr<IDeckLinkVideoFrame> make_alpha_only_frame(const CComQIPtr<IDeck
 
 	if(static_cast<size_t>(frame->image_data().size()) == format_desc.size)
 	{
-		tbb::parallel_for(tbb::blocked_range<int>(0, frame->image_data().size()/4), [&](const tbb::blocked_range<int>& r)
-		{
-			for(int n = r.begin(); n != r.end(); ++n)
-			{
-				data[n*4+0] = frame->image_data()[n*4+3];
-				data[n*4+1] = frame->image_data()[n*4+3];
-				data[n*4+2] = frame->image_data()[n*4+3];
-				data[n*4+3] = 255;
-			}
-		});
-	}
-	else
-		memset(data, 0, format_desc.size);
-
-	return std::shared_ptr<IDeckLinkVideoFrame>(result, [](IDeckLinkMutableVideoFrame* p) {p->Release();});
-}
-
-std::shared_ptr<IDeckLinkVideoFrame> make_fill_only_frame(const CComQIPtr<IDeckLinkOutput>& decklink, const safe_ptr<const core::read_frame>& frame, const core::video_format_desc& format_desc)
-{
-	IDeckLinkMutableVideoFrame* result;
-
-	if(FAILED(decklink->CreateVideoFrame(format_desc.width, format_desc.height, format_desc.size/format_desc.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &result)))
-		BOOST_THROW_EXCEPTION(caspar_exception());
-
-	void* bytes = nullptr;
-	if(FAILED(result->GetBytes(&bytes)))
-		BOOST_THROW_EXCEPTION(caspar_exception());
-		
-	unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
-
-	if(static_cast<size_t>(frame->image_data().size()) == format_desc.size)
-	{
-		tbb::parallel_for(tbb::blocked_range<int>(0, frame->image_data().size()/4), [&](const tbb::blocked_range<int>& r)
-		{
-			for(int n = r.begin(); n != r.end(); ++n)
-			{
-				data[n*4+0] = frame->image_data()[n*4+0];
-				data[n*4+1] = frame->image_data()[n*4+1];
-				data[n*4+2] = frame->image_data()[n*4+2];
-				data[n*4+3] = 255;
-			}
-		});
+		size_t count = frame->image_data().size();
+		tbb::affinity_partitioner ap;
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, count/128), [&](const tbb::blocked_range<size_t>& r)
+		{       
+			make_alpha(reinterpret_cast<char*>(data) + r.begin()*128, reinterpret_cast<const char*>(frame->image_data().begin()) + r.begin()*128, r.size()*128);   
+		}, ap);
 	}
 	else
 		memset(data, 0, format_desc.size);
@@ -415,8 +402,6 @@ public:
 		std::shared_ptr<IDeckLinkVideoFrame> deck_frame;
 		if(config_.output == key_only)
 			deck_frame = make_alpha_only_frame(output_, frame, format_desc_);
-		else if(config_.output == fill_only)
-			deck_frame = make_fill_only_frame(output_, frame, format_desc_);
 		else 
 			deck_frame = std::make_shared<decklink_frame_adapter>(frame, format_desc_);
 
@@ -516,9 +501,7 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tr
 		config.latency = low_latency;
 
 	auto output_str = ptree.get("output", "fill_and_key");
-	if(output_str == "fill_only")
-		config.output = fill_only;
-	else if(output_str == "key_only")
+	if(output_str == "key_only")
 		config.output = key_only;
 
 	config.device_index = ptree.get("device", 0);
