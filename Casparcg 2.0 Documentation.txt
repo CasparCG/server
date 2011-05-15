@@ -636,7 +636,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER VIDEO [channel:int]{-[layer:int]|-0} IS_KEY {is_key:0,1|0}
+	MIXER [channel:int]{-[layer:int]|-0} VIDEO IS_KEY {is_key:0,1|0}
 
 Description: 
 
@@ -656,7 +656,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER VIDEO [channel:int]{-[layer:int]|-0} OPACITY {opacity:float} 
+	MIXER [channel:int]{-[layer:int]|-0} VIDEO OPACITY {opacity:float} 
 	 {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -676,7 +676,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER VIDEO [channel:int]{-[layer:int]|-0} GAIN {opacity:float} 
+	MIXER [channel:int]{-[layer:int]|-0} VIDEO GAIN {opacity:float} 
 	 {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -696,7 +696,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER VIDEO [channel:int]{-[layer:int]|-0} FILL_RECT [x:float] [y:float]
+	MIXER [channel:int]{-[layer:int]|-0} VIDEO FILL_RECT [x:float] [y:float]
 	 [x-scale:float] [y-slace:float] {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -719,7 +719,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER VIDEO [channel:int]{-[layer:int]|-0} KEY_RECT [x:float] [y:float]
+	MIXER [channel:int]{-[layer:int]|-0} VIDEO KEY_RECT [x:float] [y:float]
 	 [x-scale:float] [y-slace:float] {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -739,7 +739,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER VIDEO [channel:int] GRID [resolution:uint] {[duration:uint] 
+	MIXER [channel:int] GRID [resolution:uint] VIDEO {[duration:uint] 
 	 {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -762,7 +762,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER VIDEO [channel:int]{-[layer:int]|-0} RESET {[duration:uint] 
+	MIXER [channel:int]{-[layer:int]|-0} VIDEO RESET {[duration:uint] 
 	 {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -783,7 +783,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER AUDIO [channel:int]{-[layer:int]|-0} GAIN {opacity:float} 
+	MIXER [channel:int]{-[layer:int]|-0} AUDIO GAIN {opacity:float} 
 	 {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -803,7 +803,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER AUDIO [channel:int]{-[layer:int]|-0} RESET {[duration:uint] 
+	MIXER [channel:int]{-[layer:int]|-0} AUDIO RESET {[duration:uint] 
 	 {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -824,7 +824,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER RESET [channel:int]{-[layer:int]|-0} {[duration:uint] 
+	MIXER [channel:int]{-[layer:int]|-0} RESET {[duration:uint] 
 	 {[tween:string]|linear}|0 linear}
 
 Description: 
