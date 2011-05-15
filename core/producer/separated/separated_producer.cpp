@@ -31,16 +31,14 @@ struct separated_producer : public frame_producer
 {		
 	safe_ptr<frame_producer>	fill_producer_;
 	safe_ptr<frame_producer>	key_producer_;
-	safe_ptr<basic_frame>		last_fill_;
-	safe_ptr<basic_frame>		last_key_;
-	safe_ptr<basic_frame>		last_frame_;
+	safe_ptr<basic_frame>		fill_;
+	safe_ptr<basic_frame>		key_;
 		
 	explicit separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key) 
 		: fill_producer_(fill)
 		, key_producer_(key)
-		, last_fill_(core::basic_frame::empty())
-		, last_key_(core::basic_frame::empty())
-		, last_frame_(core::basic_frame::empty()){}
+		, fill_(core::basic_frame::empty())
+		, key_(core::basic_frame::empty()){}
 	
 	// frame_producer
 	
@@ -50,28 +48,28 @@ struct separated_producer : public frame_producer
 		(
 			[&]
 			{
-				if(last_fill_ == core::basic_frame::empty())
-					last_fill_ = receive_and_follow(fill_producer_);
+				if(fill_ == core::basic_frame::empty())
+					fill_ = receive_and_follow(fill_producer_);
 			},
 			[&]
 			{
-				if(last_key_ == core::basic_frame::empty())
-					last_key_ = receive_and_follow(key_producer_);
+				if(key_ == core::basic_frame::empty())
+					key_ = receive_and_follow(key_producer_);
 			}
 		);
 
-		if(last_fill_ == basic_frame::eof())
+		if(fill_ == basic_frame::eof())
 			return basic_frame::eof();
 
-		if(last_fill_ == core::basic_frame::late() || last_key_ == core::basic_frame::late()) // One of the producers is lagging, keep them in sync.
-			return last_frame_;
+		if(fill_ == core::basic_frame::late() || key_ == core::basic_frame::late()) // One of the producers is lagging, keep them in sync.
+			return core::basic_frame::late();
 		
-		last_frame_= basic_frame::fill_and_key(last_fill_, last_key_);
+		auto frame = basic_frame::fill_and_key(fill_, key_);
 
-		last_fill_ = basic_frame::empty();
-		last_key_ = basic_frame::empty();
+		fill_ = basic_frame::empty();
+		key_ = basic_frame::empty();
 
-		return last_frame_;
+		return frame;
 	}
 
 	virtual std::wstring print() const
