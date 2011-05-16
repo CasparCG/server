@@ -58,8 +58,8 @@ public:
 	image_transform& operator*=(const image_transform &other);
 	const image_transform operator*(const image_transform &other) const;
 
-	void set_is_key(bool value);
-	bool get_is_key() const;
+	void set_key_depth(size_t depth);
+	size_t get_key_depth() const;
 private:
 	double opacity_;
 	double gain_;
@@ -68,7 +68,7 @@ private:
 	std::array<double, 2> key_translation_; 
 	std::array<double, 2> key_scale_; 
 	video_mode::type mode_;
-	bool is_key_;
+	size_t key_depth_;
 };
 
 image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener);
