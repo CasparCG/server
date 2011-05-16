@@ -123,7 +123,7 @@ void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, caspar::IO::C
 			}
 			else if(currentCommand_.command_ != CLKCommand::CLKInvalidCommand) {
 				if(!bClockLoaded_) {
-					pCGControl_->Add(0, TEXT("hawrysklocka/clock"), true, TEXT(""), currentCommand_.GetData());
+					pCGControl_->Add(0, TEXT("hawrysklocka/clock.ft"), true, TEXT(""), currentCommand_.GetData());
 					bClockLoaded_ = true;
 				}
 				else {
