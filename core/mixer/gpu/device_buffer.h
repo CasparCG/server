@@ -39,7 +39,7 @@ public:
 	void bind();
 	void unbind();
 
-	void attach(int index);
+	void attach(int index = 0);
 	void read(host_buffer& source);
 	void write(host_buffer& target);
 	

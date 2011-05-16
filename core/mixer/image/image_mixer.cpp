@@ -58,12 +58,7 @@ struct image_mixer::implementation : boost::noncopyable
 
 	image_kernel kernel_;
 
-	struct keyer
-	{
-		std::shared_ptr<device_buffer> key;
-		size_t depth;
-	} keyer_;
-
+	std::shared_ptr<device_buffer> key_;
 public:
 	implementation(const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)
@@ -105,56 +100,48 @@ public:
 		
 	void visit(core::write_frame& frame)
 	{
-		auto gpu_frame = dynamic_cast<gpu_write_frame*>(&frame);
-		if(!gpu_frame)
-			return;
+		auto gpu_frame = boost::polymorphic_downcast<gpu_write_frame*>(&frame);
+		auto desc = gpu_frame->get_pixel_format_desc();
+		auto buffers = gpu_frame->get_plane_buffers();
 
-		auto desc		= gpu_frame->get_pixel_format_desc();
-		auto buffers	= gpu_frame->get_plane_buffers();
-		auto transform	= transform_stack_.top();
-		
-		if(buffers.empty())		
-			return;
-
+		auto transform = transform_stack_.top();
 		ogl_device::begin_invoke([=]
-		{								
-			if(transform.get_key_depth() > 0) // Its a key_frame just save buffer for next frame.
+		{
+			std::vector<safe_ptr<device_buffer>> device_buffers;
+			for(size_t n = 0; n < buffers.size(); ++n)
 			{
-				auto texture = create_device_buffer(desc.planes[0]);
-				texture->read(*buffers[0]);
-				keyer_.key = texture;
-				keyer_.depth = transform.get_key_depth();						
+				auto texture = ogl_device::create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
+				texture->read(*buffers[n]);
+				device_buffers.push_back(texture);
+			}
+						
+			if(transform.get_is_key()) // Its a key_frame just save buffer for next frame.
+			{
+				if(!device_buffers.empty())				
+					key_ = device_buffers[0];				
 			}
 			else
-			{				
-				const bool   has_separate_key = keyer_.depth > 0;
-				const size_t max_index		  = has_separate_key ? 3 : 4;
-				
-				std::vector<safe_ptr<device_buffer>> device_buffers;
-				for(size_t n = 0; n < std::min(max_index, buffers.size()); ++n)
-				{
-					auto texture = create_device_buffer(desc.planes[n]);
-					texture->read(*buffers[n]);
-					device_buffers.push_back(texture);
-				}	
-
-				if(has_separate_key && keyer_.key)
-					device_buffers.push_back(make_safe(keyer_.key));
-
-				for(size_t n = 0; n < device_buffers.size(); ++n)
+			{
+				for(size_t n = 0; n < buffers.size(); ++n)
 				{
 					GL(glActiveTexture(GL_TEXTURE0+n));
 					device_buffers[n]->bind();
 				}
 						
+				if(key_)
+				{
+					GL(glActiveTexture(GL_TEXTURE0+3));
+					key_->bind();
+				}
+
 				GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
 				GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-				kernel_.apply(desc, transform, has_separate_key);
+				kernel_.apply(desc, transform, key_ != nullptr);
 						
 				auto m_p = transform.get_key_translation();
 				auto m_s = transform.get_key_scale();
-				auto w   = static_cast<double>(format_desc_.width);
-				auto h   = static_cast<double>(format_desc_.height);
+				double w = static_cast<double>(format_desc_.width);
+				double h = static_cast<double>(format_desc_.height);
 			
 				GL(glEnable(GL_SCISSOR_TEST));
 				GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
@@ -170,10 +157,7 @@ public:
 				glEnd();
 				GL(glDisable(GL_SCISSOR_TEST));		
 
-				if(keyer_.depth == 0)
-					keyer_.key.reset();
-				else
-					--keyer_.depth;
+				key_ = nullptr;		
 			}
 		});
 	}
@@ -187,7 +171,6 @@ public:
 	{
 		return ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
 		{
-			keyer_.depth = 0;
 			reading_->map();
 			render_targets_[0]->attach(0);
 			GL(glClear(GL_COLOR_BUFFER_BIT));
@@ -203,11 +186,6 @@ public:
 			render_targets_[0]->write(*reading_);
 			std::rotate(render_targets_.begin(), render_targets_.begin() + 1, render_targets_.end());
 		});
-	}
-
-	safe_ptr<device_buffer> create_device_buffer(const core::pixel_format_desc::plane& plane)
-	{
-		return ogl_device::create_device_buffer(plane.width, plane.height, plane.channels);
 	}
 		
 	std::vector<safe_ptr<host_buffer>> create_buffers(const core::pixel_format_desc& format)
