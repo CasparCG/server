@@ -144,7 +144,7 @@ safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fil
 		return fill;
 
 	std::vector<safe_ptr<basic_frame>> frames;
-	key->get_image_transform().set_is_key(true);
+	key->get_image_transform().set_key_depth(1);
 	frames.push_back(key);
 	frames.push_back(fill);
 	return basic_frame(std::move(frames));
