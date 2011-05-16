@@ -41,9 +41,8 @@ public:
 	virtual void begin(const core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
-
-	boost::unique_future<safe_ptr<const host_buffer>> begin_pass();
-	void end_pass();
+	
+	boost::unique_future<safe_ptr<const host_buffer>> render();
 
 	std::vector<safe_ptr<host_buffer>> create_buffers(const core::pixel_format_desc& format);
 
