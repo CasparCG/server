@@ -35,7 +35,7 @@
 #include <core/producer/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <boost/cast.hpp>
+#include <boost/foreach.hpp>
 
 #include <Glee.h>
 #include <SFML/Window/Context.hpp>
@@ -53,15 +53,26 @@ struct image_mixer::implementation : boost::noncopyable
 
 	GLuint fbo_;
 	std::array<std::shared_ptr<device_buffer>, 2> render_targets_;
+	std::shared_ptr<device_buffer> key_target_;
+	bool is_key_;
 
 	std::shared_ptr<host_buffer> reading_;
 
 	image_kernel kernel_;
 
-	std::shared_ptr<device_buffer> key_;
+	struct render_item
+	{
+		core::pixel_format_desc desc;
+		std::vector<safe_ptr<host_buffer>> buffers;
+		core::image_transform transform;
+	};
+
+	std::vector<render_item> render_queue_;
+
 public:
 	implementation(const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)
+		, is_key_(false)
 	{
 		ogl_device::invoke([]
 		{
@@ -76,7 +87,8 @@ public:
 
 			GL(glEnable(GL_TEXTURE_2D));
 			GL(glDisable(GL_DEPTH_TEST));		
-
+			
+			key_target_ = ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4);
 			render_targets_[0] = ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4);
 			render_targets_[1] = ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4);
 			
@@ -99,67 +111,18 @@ public:
 	}
 		
 	void visit(core::write_frame& frame)
-	{
-		auto gpu_frame = boost::polymorphic_downcast<gpu_write_frame*>(&frame);
-		auto desc = gpu_frame->get_pixel_format_desc();
-		auto buffers = gpu_frame->get_plane_buffers();
+	{		
+		auto gpu_frame = dynamic_cast<gpu_write_frame*>(&frame);
+		if(!gpu_frame)
+			return;
 
-		auto transform = transform_stack_.top();
-		ogl_device::begin_invoke([=]
-		{
-			std::vector<safe_ptr<device_buffer>> device_buffers;
-			for(size_t n = 0; n < buffers.size(); ++n)
-			{
-				auto texture = ogl_device::create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
-				texture->read(*buffers[n]);
-				device_buffers.push_back(texture);
-			}
-						
-			if(transform.get_is_key()) // Its a key_frame just save buffer for next frame.
-			{
-				if(!device_buffers.empty())				
-					key_ = device_buffers[0];				
-			}
-			else
-			{
-				for(size_t n = 0; n < buffers.size(); ++n)
-				{
-					GL(glActiveTexture(GL_TEXTURE0+n));
-					device_buffers[n]->bind();
-				}
-						
-				if(key_)
-				{
-					GL(glActiveTexture(GL_TEXTURE0+3));
-					key_->bind();
-				}
+		render_item item;
 
-				GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
-				GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-				kernel_.apply(desc, transform, key_ != nullptr);
-						
-				auto m_p = transform.get_key_translation();
-				auto m_s = transform.get_key_scale();
-				double w = static_cast<double>(format_desc_.width);
-				double h = static_cast<double>(format_desc_.height);
-			
-				GL(glEnable(GL_SCISSOR_TEST));
-				GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
-			
-				auto f_p = transform.get_fill_translation();
-				auto f_s = transform.get_fill_scale();
-			
-				glBegin(GL_QUADS);
-					glTexCoord2d(0.0, 0.0); glVertex2d( f_p[0]        *2.0-1.0,	 f_p[1]        *2.0-1.0);
-					glTexCoord2d(1.0, 0.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
-					glTexCoord2d(1.0, 1.0); glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-					glTexCoord2d(0.0, 1.0); glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-				glEnd();
-				GL(glDisable(GL_SCISSOR_TEST));		
+		item.desc = gpu_frame->get_pixel_format_desc();
+		item.buffers = gpu_frame->get_plane_buffers();
+		item.transform = transform_stack_.top();
 
-				key_ = nullptr;		
-			}
-		});
+		render_queue_.push_back(item);
 	}
 
 	void end()
@@ -167,27 +130,103 @@ public:
 		transform_stack_.pop();
 	}
 
-	boost::unique_future<safe_ptr<const host_buffer>> begin_pass()
+	boost::unique_future<safe_ptr<const host_buffer>> render()
 	{
+		auto queue = render_queue_;
+		render_queue_.clear();
 		return ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
 		{
-			reading_->map();
-			render_targets_[0]->attach(0);
+			is_key_ = false;
+			key_target_->attach();
+			GL(glClear(GL_COLOR_BUFFER_BIT));	
+
+			// START_PASS
+			auto result = reading_;
+			result->map();
+			render_targets_[0]->attach();
 			GL(glClear(GL_COLOR_BUFFER_BIT));
-			return safe_ptr<const host_buffer>(reading_);
+
+			BOOST_FOREACH(auto item, queue)
+				render(item);			
+
+			// END PASS
+			reading_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
+			render_targets_[0]->attach();
+			render_targets_[0]->write(*reading_);
+			std::rotate(render_targets_.begin(), render_targets_.begin() + 1, render_targets_.end());
+
+			return make_safe(result);
 		});
 	}
 
-	void end_pass()
-	{
-		ogl_device::begin_invoke([=]
+	void render(const render_item& item)
+	{		
+		const auto desc		 = item.desc;
+		auto	   buffers	 = item.buffers;
+		const auto transform = item.transform;
+				
+		// Setup key and kernel
+
+		if(transform.get_is_key())
 		{
-			reading_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
-			render_targets_[0]->write(*reading_);
-			std::rotate(render_targets_.begin(), render_targets_.begin() + 1, render_targets_.end());
-		});
+			kernel_.apply(desc, transform, false);
+			if(!is_key_)
+			{
+				key_target_->attach();
+				is_key_ = true;
+				GL(glClear(GL_COLOR_BUFFER_BIT));		
+			}
+		}		
+		else
+		{						
+			kernel_.apply(desc, transform, is_key_);	
+			if(is_key_)
+			{
+				if(buffers.size() == 4)
+					buffers.pop_back();
+				is_key_ = false;
+
+				render_targets_[0]->attach();			
+				GL(glActiveTexture(GL_TEXTURE0+3));
+				key_target_->bind();
+			}	
+		}	
+
+		// Bind textures
+
+		std::vector<safe_ptr<device_buffer>> textures;
+		for(size_t n = 0; n < buffers.size(); ++n)
+		{
+			GL(glActiveTexture(GL_TEXTURE0+n));
+			auto texture = ogl_device::create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
+			texture->read(*buffers[n]);
+			texture->bind();
+			textures.push_back(texture);
+		}			
+
+		GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
+		GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+						
+		auto m_p = transform.get_key_translation();
+		auto m_s = transform.get_key_scale();
+		double w = static_cast<double>(format_desc_.width);
+		double h = static_cast<double>(format_desc_.height);
+
+		GL(glEnable(GL_SCISSOR_TEST));
+		GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
+			
+		auto f_p = transform.get_fill_translation();
+		auto f_s = transform.get_fill_scale();
+			
+		glBegin(GL_QUADS);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex2d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
+		glEnd();
+		GL(glDisable(GL_SCISSOR_TEST));		
 	}
-		
+			
 	std::vector<safe_ptr<host_buffer>> create_buffers(const core::pixel_format_desc& format)
 	{
 		std::vector<safe_ptr<host_buffer>> buffers;
@@ -203,8 +242,7 @@ image_mixer::image_mixer(const core::video_format_desc& format_desc) : impl_(new
 void image_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
-boost::unique_future<safe_ptr<const host_buffer>> image_mixer::begin_pass(){	return impl_->begin_pass();}
-void image_mixer::end_pass(){impl_->end_pass();}
+boost::unique_future<safe_ptr<const host_buffer>> image_mixer::render(){return impl_->render();}
 std::vector<safe_ptr<host_buffer>> image_mixer::create_buffers(const core::pixel_format_desc& format){return impl_->create_buffers(format);}
 
 }}
