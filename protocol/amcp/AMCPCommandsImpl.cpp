@@ -202,12 +202,12 @@ bool MixerCommand::DoExecute()
 	{	
 		if(_parameters[0] == L"VIDEO")
 		{
-			if(_parameters[1] == L"IS_KEY")
+			if(_parameters[1] == L"KEY_DEPTH")
 			{
-				bool value = lexical_cast_or_default(_parameters.at(2), false);
+				size_t value = lexical_cast_or_default(_parameters.at(2), 0);
 				auto transform = [=](image_transform transform) -> image_transform
 				{
-					transform.set_is_key(value);
+					transform.set_key_depth(value);
 					return transform;					
 				};
 
@@ -219,10 +219,9 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"OPACITY")
 			{
-				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 3 ? _parameters[4] : L"linear";
-
 				double value = boost::lexical_cast<double>(_parameters.at(2));
+				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
+				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
 			
 				auto transform = [=](image_transform transform) -> image_transform
 				{
@@ -238,9 +237,9 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"GAIN")
 			{
-				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 3 ? _parameters[4] : L"linear";
 				double value = boost::lexical_cast<double>(_parameters.at(2));
+				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
+				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
 				
 				auto transform = [=](image_transform transform) -> image_transform
 				{
@@ -256,12 +255,12 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"FILL_RECT")
 			{
-				int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[6], 0) : 0;
-				std::wstring tween = _parameters.size() > 6 ? _parameters[7] : L"linear";
 				double x	= boost::lexical_cast<double>(_parameters.at(2));
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
 				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
+				int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[6], 0) : 0;
+				std::wstring tween = _parameters.size() > 6 ? _parameters[7] : L"linear";
 
 				auto transform = [=](image_transform transform) -> image_transform
 				{
@@ -280,12 +279,12 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"KEY_RECT")
 			{
-				int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[6], 0) : 0;
-				std::wstring tween = _parameters.size() > 6 ? _parameters[7] : L"linear";
 				double x	= boost::lexical_cast<double>(_parameters.at(2));
 				double y	= boost::lexical_cast<double>(_parameters.at(3));
 				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
 				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
+				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
+				std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
 
 				auto transform = [=](image_transform transform) -> image_transform
 				{
@@ -302,9 +301,10 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"GRID")
 			{
-				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 3 ? _parameters[4] : L"linear";
 				int n = boost::lexical_cast<int>(_parameters.at(2));
+				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
+				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
+
 				double delta = 1.0/static_cast<double>(n);
 				for(int x = 0; x < n; ++x)
 				{
@@ -325,8 +325,8 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[2], 0) : 0;
-				std::wstring tween = _parameters.size() > 2 ? _parameters[3] : L"linear";
+				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+				std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
@@ -339,9 +339,9 @@ bool MixerCommand::DoExecute()
 		{
 			if(_parameters[1] == L"GAIN")
 			{
-				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 3 ? _parameters[4] : L"linear";
-				double value = boost::lexical_cast<double>(_parameters[2]);
+				double value = boost::lexical_cast<double>(_parameters.at(2));
+				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
+				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
 
 				auto transform = [=](audio_transform transform) -> audio_transform
 				{
@@ -357,15 +357,15 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"RESET")
 			{
-				int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[2], 0) : 0;
-				std::wstring tween = _parameters.size() > 2 ? _parameters[3] : L"linear";
+				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+				std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 				GetChannel()->mixer()->reset_audio_transform(duration, tween);
 			}
 		}
 		else if(_parameters[0] == L"RESET")
 		{
-			int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[2], 0) : 0;
-			std::wstring tween = _parameters.size() > 2 ? _parameters[3] : L"linear";
+			int duration = _parameters.size() > 1 ? lexical_cast_or_default(_parameters[1], 0) : 0;
+			std::wstring tween = _parameters.size() > 2 ? _parameters[2] : L"linear";
 			GetChannel()->mixer()->reset_image_transform(duration, tween);
 			GetChannel()->mixer()->reset_audio_transform(duration, tween);
 		}

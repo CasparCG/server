@@ -632,20 +632,20 @@ Description:
 **********************************************************************************
 
 ----------------------------------------------------------------------------------
-2.7.1. MIXER VIDEO IS_KEY
+2.7.1. MIXER VIDEO KEY_DEPTH
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} VIDEO IS_KEY {is_key:0,1|0}
+	MIXER [channel:int]{-[layer:int]|-0} VIDEO KEY_DEPTH [key_depth:uint]
 
 Description: 
 
-	If "is_key" equals 1 then the specified layer will not be rendered, 
-	instead it will be used as the key for the layer above.
+	If "key_depth" is greater than 0 then the specified layer will not be rendered, 
+	instead it will be used as the key for the "key_depth" number of layers above.
 	
 Examples: 	
 
-	>> MIXER VIDEO 1-0 IS_KEY 1
+	>> MIXER VIDEO 1-0 KEY_DEPTH 2
 	
 Note:
 
