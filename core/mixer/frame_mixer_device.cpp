@@ -134,7 +134,6 @@ public:
 		auto& root_image_transform = boost::fusion::at_key<core::image_transform>(root_transforms_);
 		auto& image_transforms = boost::fusion::at_key<core::image_transform>(transforms_);
 
-		auto image = image_mixer_.begin_pass();
 		BOOST_FOREACH(auto& frame, frames)
 		{
 			if(format_desc_.mode != core::video_mode::progressive)
@@ -157,8 +156,8 @@ public:
 				frame1->accept(image_mixer_);
 			}
 		}
-		image_mixer_.end_pass();
-		return std::move(image);
+
+		return image_mixer_.render();
 	}
 
 	std::vector<short> mix_audio(const std::map<int, safe_ptr<core::basic_frame>>& frames)

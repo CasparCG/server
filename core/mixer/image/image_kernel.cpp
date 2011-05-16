@@ -169,6 +169,7 @@ public:
 			"void main()															"
 			"{																		"
 			"	gl_TexCoord[0] = gl_MultiTexCoord0;									"
+			"	gl_TexCoord[1] = gl_MultiTexCoord1;									"
 			"	gl_FrontColor = gl_Color;											"
 			"	gl_Position = ftransform();											"
 			"}																		";
@@ -219,7 +220,7 @@ public:
 			"{																		"
 			"	vec4 rgba = vec4(texture2D(plane[0], gl_TexCoord[0].st).rrr, 1.0);	"
 			"	if(has_separate_key)												"
-			"		rgba.a = texture2D(plane[3], gl_TexCoord[0].st).r;				"
+			"		rgba.a = texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = rgba * gain;											"
 			"}																		");
 
@@ -229,7 +230,7 @@ public:
 			"{																		"
 			"	vec4 abgr = texture2D(plane[0], gl_TexCoord[0].st);					"
 			"	if(has_separate_key)												"
-			"		abgr.b = texture2D(plane[3], gl_TexCoord[0].st).r;				"
+			"		abgr.b = texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = abgr.argb * gain;									"
 			"}																		");
 		
@@ -239,7 +240,7 @@ public:
 			"{																		"
 			"	vec4 argb = texture2D(plane[0], gl_TexCoord[0].st);					"
 			"	if(has_separate_key)												"
-			"		argb.b = texture2D(plane[3], gl_TexCoord[0].st).r;				"
+			"		argb.b = texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = argb.grab * gl_Color * gain;							"
 			"}																		");
 		
@@ -249,7 +250,7 @@ public:
 			"{																		"
 			"	vec4 bgra = texture2D(plane[0], gl_TexCoord[0].st);					"
 			"	if(has_separate_key)												"
-			"		bgra.a = texture2D(plane[3], gl_TexCoord[0].st).r;				"
+			"		bgra.a = texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = bgra.rgba * gl_Color * gain;							"
 			"}																		");
 		
@@ -259,7 +260,7 @@ public:
 			"{																		"
 			"	vec4 rgba = texture2D(plane[0], gl_TexCoord[0].st);					"
 			"	if(has_separate_key)												"
-			"		rgba.a = texture2D(plane[3], gl_TexCoord[0].st).r;				"
+			"		rgba.a = texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = rgba.bgra * gl_Color * gain;							"
 			"}																		");
 		
@@ -272,7 +273,7 @@ public:
 			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;				"
 			"	float a = 1.0;														"	
 			"	if(has_separate_key)												"
-			"		a = texture2D(plane[3], gl_TexCoord[0].st).r;					"
+			"		a = texture2D(plane[3], gl_TexCoord[1].st).r;					"
 			"	if(HD)																"
 			"		gl_FragColor = ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain;"
 			"	else																"
