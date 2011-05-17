@@ -42,6 +42,9 @@ public:
 	virtual void begin(const core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
+
+	void begin_layer();
+	void end_layer();
 	
 	boost::unique_future<safe_ptr<const host_buffer>> render();
 

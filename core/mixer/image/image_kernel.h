@@ -30,7 +30,7 @@ class image_kernel
 {
 public:
 	image_kernel();
-	void draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& mode, bool has_seperate_key);
+	void draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& mode, bool local_key, bool layer_key);
 
 private:
 	struct implementation;

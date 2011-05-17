@@ -204,7 +204,7 @@ int main(int argc, wchar_t* argv[])
 			else if(wcmd.substr(0, 1) == L"1")
 				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
 			else if(wcmd.substr(0, 1) == L"2")
-				wcmd = L"MIXER 1-1 VIDEO KEY_DEPTH 1";
+				wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
 			else if(wcmd.substr(0, 1) == L"3")
 				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" MIX 100 LOOP \r\nPLAY 1-1";
 			else if(wcmd.substr(0, 1) == L"4")

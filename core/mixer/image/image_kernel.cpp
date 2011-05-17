@@ -108,6 +108,7 @@ public:
 		glUniform1i(glGetUniformLocation(program_, "plane[1]"), 1);
 		glUniform1i(glGetUniformLocation(program_, "plane[2]"), 2);
 		glUniform1i(glGetUniformLocation(program_, "plane[3]"), 3);
+		glUniform1i(glGetUniformLocation(program_, "plane[4]"), 4);
 	}
 
 	GLint get_location(const char* name)
@@ -175,10 +176,11 @@ public:
 			"}																		";
 
 		std::string common_fragment = 
-			"uniform sampler2D	plane[4];											"
+			"uniform sampler2D	plane[5];											"
 			"uniform float		gain;												"
 			"uniform bool		HD;													"
-			"uniform bool		has_separate_key;									"
+			"uniform bool		local_key;											"
+			"uniform bool		layer_key;											"
 																				
 			// NOTE: YCbCr, ITU-R, http://www.intersil.com/data/an/an9717.pdf		
 			// TODO: Support for more yuv formats might be needed.					
@@ -219,8 +221,10 @@ public:
 			"void main()															"
 			"{																		"
 			"	vec4 rgba = vec4(texture2D(plane[0], gl_TexCoord[0].st).rrr, 1.0);	"
-			"	if(has_separate_key)												"
+			"	if(local_key)														"
 			"		rgba.a = texture2D(plane[3], gl_TexCoord[1].st).r;				"
+			"	if(layer_key)														"
+			"		rgba.a *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = rgba * gain;											"
 			"}																		");
 
@@ -229,8 +233,10 @@ public:
 			"void main()															"
 			"{																		"
 			"	vec4 abgr = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(has_separate_key)												"
+			"	if(local_key)														"
 			"		abgr.b = texture2D(plane[3], gl_TexCoord[1].st).r;				"
+			"	if(layer_key)														"
+			"		abgr.b *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = abgr.argb * gain;									"
 			"}																		");
 		
@@ -239,8 +245,10 @@ public:
 			"void main()															"	
 			"{																		"
 			"	vec4 argb = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(has_separate_key)												"
+			"	if(local_key)														"
 			"		argb.b = texture2D(plane[3], gl_TexCoord[1].st).r;				"
+			"	if(layer_key)														"
+			"		argb.b *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = argb.grab * gl_Color * gain;							"
 			"}																		");
 		
@@ -249,8 +257,10 @@ public:
 			"void main()															"
 			"{																		"
 			"	vec4 bgra = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(has_separate_key)												"
+			"	if(local_key)														"
 			"		bgra.a = texture2D(plane[3], gl_TexCoord[1].st).r;				"
+			"	if(layer_key)														"
+			"		bgra.a *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = bgra.rgba * gl_Color * gain;							"
 			"}																		");
 		
@@ -259,8 +269,10 @@ public:
 			"void main()															"
 			"{																		"
 			"	vec4 rgba = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(has_separate_key)												"
+			"	if(local_key)														"
 			"		rgba.a = texture2D(plane[3], gl_TexCoord[1].st).r;				"
+			"	if(layer_key)														"
+			"		rgba.a *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
 			"	gl_FragColor = rgba.bgra * gl_Color * gain;							"
 			"}																		");
 		
@@ -272,8 +284,10 @@ public:
 			"	float cb = texture2D(plane[1], gl_TexCoord[0].st).r;				"
 			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;				"
 			"	float a = 1.0;														"	
-			"	if(has_separate_key)												"
+			"	if(local_key)														"
 			"		a = texture2D(plane[3], gl_TexCoord[1].st).r;					"
+			"	if(layer_key)														"
+			"		a *= texture2D(plane[4], gl_TexCoord[1].st).r;					"
 			"	if(HD)																"
 			"		gl_FragColor = ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain;"
 			"	else																"
@@ -287,7 +301,13 @@ public:
 			"	float y  = texture2D(plane[0], gl_TexCoord[0].st).r;				"
 			"	float cb = texture2D(plane[1], gl_TexCoord[0].st).r;				"
 			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;				"
-			"	float a  = texture2D(plane[3], gl_TexCoord[0].st).r;				"
+			"	float a  = 1.0;														"
+			"	if(local_key)														"
+			"		a = texture2D(plane[3], gl_TexCoord[1].st).r;					"
+			"	else																"
+			"		a  = texture2D(plane[3], gl_TexCoord[0].st).r;					"
+			"	if(layer_key)														"
+			"		a *= texture2D(plane[4], gl_TexCoord[1].st).r;					"
 			"	if(HD)																"
 			"		gl_FragColor = ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain;"
 			"	else																"
@@ -300,7 +320,7 @@ public:
 
 image_kernel::image_kernel() : impl_(new implementation()){}
 
-void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, bool has_separate_key)
+void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, bool local_key, bool layer_key)
 {
 	GL(glEnable(GL_TEXTURE_2D));
 	GL(glDisable(GL_DEPTH_TEST));	
@@ -309,7 +329,8 @@ void image_kernel::draw(size_t width, size_t height, const core::pixel_format_de
 
 	GL(glUniform1f(impl_->shaders()[pix_desc.pix_fmt].get_location("gain"), static_cast<GLfloat>(transform.get_gain())));
 	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("HD"), pix_desc.planes.at(0).height > 700 ? 1 : 0));
-	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("has_separate_key"), has_separate_key ? 1 : 0));
+	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("local_key"), local_key ? 1 : 0));
+	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("layer_key"), layer_key ? 1 : 0));
 
 	if(transform.get_mode() == core::video_mode::upper)
 		glPolygonStipple(upper_pattern);

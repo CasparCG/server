@@ -37,7 +37,10 @@ public:
 	size_t height() const;
 		
 	void bind();
+	void bind(int index);
 	void unbind();
+
+	void clear();
 
 	void attach(int index = 0);
 	void read(host_buffer& source);
