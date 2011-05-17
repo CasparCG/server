@@ -297,14 +297,14 @@ public:
 				const auto& format_desc = frame_factory_->get_video_format_desc();
 				auto frame = core::basic_frame::empty();
 
-				if(abs(context_->fps()/2.0 - format_desc.fps) < 0.1) // flash == 2 * format -> interlace
+				if(abs(context_->fps()/2.0 - format_desc.fps) < 0.01) // flash == 2 * format -> interlace
 				{
 					auto frame1 = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
 					auto frame2 = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
 					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.mode));
 					frame = frame2;
 				}
-				else if(abs(context_->fps()- format_desc.fps/2.0 ) < 0.1) // format == 2 * flash -> duplicate
+				else if(abs(context_->fps()- format_desc.fps/2.0) < 0.01) // format == 2 * flash -> duplicate
 				{
 					frame = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
 					frame_buffer_.push(frame);

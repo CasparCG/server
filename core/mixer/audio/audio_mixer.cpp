@@ -29,7 +29,7 @@ namespace caspar { namespace mixer {
 	
 struct audio_mixer::implementation
 {
-	std::vector<short> audio_data_;
+	std::deque<std::vector<short>> audio_data_;
 	std::stack<core::audio_transform> transform_stack_;
 
 	std::map<int, core::audio_transform> prev_audio_transforms_;
@@ -39,6 +39,10 @@ public:
 	implementation()
 	{
 		transform_stack_.push(core::audio_transform());
+
+		// 2 frames delay
+		audio_data_.push_back(std::vector<short>());
+		audio_data_.push_back(std::vector<short>());
 	}
 	
 	void begin(const core::basic_frame& frame)
@@ -54,8 +58,8 @@ public:
 		auto& audio_data = frame.audio_data();
 		auto tag = frame.tag(); // Get the identifier for the audio-stream.
 
-		if(audio_data_.empty())
-			audio_data_.resize(audio_data.size(), 0);
+		if(audio_data_.back().empty())
+			audio_data_.back().resize(audio_data.size(), 0);
 		
 		auto next = transform_stack_.top();
 		auto prev = next;
@@ -79,11 +83,11 @@ public:
 			{
 				for(size_t n = r.begin(); n < r.end(); ++n)
 				{
-					double alpha = static_cast<double>(n)/static_cast<double>(audio_data_.size());
+					double alpha = static_cast<double>(n)/static_cast<double>(audio_data_.back().size());
 					double sample_gain = prev_gain * (1.0 - alpha) + next_gain * alpha;
 					int sample = static_cast<int>(audio_data[n]);
 					sample = (static_cast<int>(sample_gain*static_cast<double>(1<<15))*sample)>>15;
-					audio_data_[n] = static_cast<short>((static_cast<int>(audio_data_[n]) + sample) & 0xFFFF);
+					audio_data_.back()[n] = static_cast<short>((static_cast<int>(audio_data_.back()[n]) + sample) & 0xFFFF);
 				}
 			}
 		);
@@ -102,7 +106,12 @@ public:
 
 	std::vector<short> begin_pass()
 	{
-		return std::move(audio_data_);
+		auto result = std::move(audio_data_.front());
+		audio_data_.pop_front();
+		
+		audio_data_.push_back(std::vector<short>());
+
+		return result;
 	}
 
 	void end_pass()
