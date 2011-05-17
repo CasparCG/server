@@ -91,7 +91,7 @@ struct server::implementation : boost::noncopyable
 		{		
 			auto format_desc = video_format_desc::get(widen(xml_channel.second.get("videomode", "PAL")));		
 			if(format_desc.format == video_format::invalid)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid videomode."));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
 			channels_.push_back(channel(channels_.size(), format_desc));
 			
@@ -108,7 +108,9 @@ struct server::implementation : boost::noncopyable
 					else if(name == "decklink")					
 						channels_.back()->consumer()->add(index++, create_decklink_consumer(xml_consumer.second));					
 					else if(name == "audio")
-						channels_.back()->consumer()->add(index++, oal_consumer());			
+						channels_.back()->consumer()->add(index++, oal_consumer());		
+				else
+					BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info(name) << msg_info("Invalid consumer."));	
 				}
 				catch(...)
 				{
