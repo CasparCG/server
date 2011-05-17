@@ -300,7 +300,7 @@ public:
 
 image_kernel::image_kernel() : impl_(new implementation()){}
 
-void image_kernel::apply(const core::pixel_format_desc& pix_desc, const core::image_transform& transform, bool has_separate_key)
+void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, bool has_separate_key)
 {
 	impl_->shaders()[pix_desc.pix_fmt].use();
 
@@ -314,6 +314,28 @@ void image_kernel::apply(const core::pixel_format_desc& pix_desc, const core::im
 		glPolygonStipple(lower_pattern);
 	else
 		glPolygonStipple(progressive_pattern);
+			
+	GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
+	GL(glViewport(0, 0, width, height));
+						
+	auto m_p = transform.get_key_translation();
+	auto m_s = transform.get_key_scale();
+	double w = static_cast<double>(width);
+	double h = static_cast<double>(height);
+
+	GL(glEnable(GL_SCISSOR_TEST));
+	GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
+			
+	auto f_p = transform.get_fill_translation();
+	auto f_s = transform.get_fill_scale();
+			
+	glBegin(GL_QUADS);
+		glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex2d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0);
+		glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
+		glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
+		glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
+	glEnd();
+	GL(glDisable(GL_SCISSOR_TEST));	
 }
 
 }}
