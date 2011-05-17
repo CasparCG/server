@@ -103,7 +103,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"oal[default]";
+		return L"oal[" + format_desc_.name + L"]";
 	}
 };
 

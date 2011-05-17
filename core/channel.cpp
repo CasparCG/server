@@ -63,7 +63,9 @@ public:
 		, producer_(new frame_producer_device(format_desc_))	
 		, mixer_connection_(mixer_->connect([=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);}))
 		, producer_connection_(producer_->connect([=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);}))
-	{}
+	{
+		CASPAR_LOG(info) << print() << " Successfully Initialized.";
+	}
 		
 	std::wstring print() const
 	{

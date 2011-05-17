@@ -201,7 +201,7 @@ public:
 			start_playback();
 		
 		CASPAR_LOG(info) << print() << L" Buffer depth: " << buffer_size_;		
-		CASPAR_LOG(info) << print() << L" Successfully initialized for " << format_desc_.name;	
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 
 	~decklink_consumer()
@@ -396,7 +396,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(config_.device_index) + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(config_.device_index) + L"|" +  format_desc_.name + L"]";
 	}
 };
 

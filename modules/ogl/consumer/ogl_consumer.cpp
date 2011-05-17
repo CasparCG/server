@@ -44,7 +44,7 @@
 
 namespace caspar {
 
-struct ogl_consumer::implementation : boost::noncopyable
+struct ogl_consumer : boost::noncopyable
 {		
 	boost::unique_future<void> active_;
 		
@@ -72,26 +72,18 @@ struct ogl_consumer::implementation : boost::noncopyable
 
 	executor executor_;
 public:
-	implementation(unsigned int screen_index, stretch stretch, bool windowed) 
+	ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed, const core::video_format_desc& format_desc) 
 		: stretch_(stretch)
 		, windowed_(windowed)
 		, texture_(0)
 		, screen_index_(screen_index)
+		, format_desc_(format_desc_)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, executor_(print())
 	{		
 		executor_.set_capacity(3);
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-	}
-
-	~implementation()
-	{
-		CASPAR_LOG(info) << print() << L" Shutting down.";	
-	}
-
-	void initialize(const core::video_format_desc& format_desc)
-	{
 		if(!GLEE_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 		
@@ -177,9 +169,9 @@ public:
 			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		});
-		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
+		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
-
+	
 	void calculate_aspect()
 	{
 		if(windowed_)
@@ -290,32 +282,51 @@ public:
 	}
 
 	std::wstring print() const
-	{
-		return L"ogl[" + boost::lexical_cast<std::wstring>(screen_index_) + L"]";
+	{	
+		return  L"ogl[" + boost::lexical_cast<std::wstring>(screen_index_) + L"|" + format_desc_.name + L"]";
 	}
 
 	size_t buffer_depth() const{return 2;}
 };
 
-ogl_consumer::ogl_consumer(ogl_consumer&& other) : impl_(std::move(other.impl_)){}
-ogl_consumer::ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed) : impl_(new implementation(screen_index, stretch, windowed)){}
-void ogl_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
-size_t ogl_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void ogl_consumer::initialize(const core::video_format_desc& format_desc)
+
+struct ogl_consumer_proxy : public core::frame_consumer
 {
-	// TODO: Ugly
-	if(impl_->executor_.is_running())
-		impl_.reset(new implementation(impl_->screen_index_, impl_->stretch_, impl_->windowed_));
-	impl_->initialize(format_desc);
-}
-std::wstring ogl_consumer::print() const {return impl_->print();}
+	size_t screen_index_;
+	caspar::stretch stretch_;
+	bool windowed_;
+
+	std::unique_ptr<ogl_consumer> consumer_;
+
+public:
+
+	ogl_consumer_proxy(size_t screen_index, stretch stretch, bool windowed)
+		: screen_index_(screen_index)
+		, stretch_(stretch)
+		, windowed_(windowed){}
+	
+	virtual void initialize(const core::video_format_desc& format_desc)
+	{
+		consumer_.reset(new ogl_consumer(screen_index_, stretch_, windowed_, format_desc));
+	}
+	
+	virtual void send(const safe_ptr<const core::read_frame>& frame)
+	{
+		consumer_->send(frame);
+	}
+	
+	virtual std::wstring print() const
+	{
+		return consumer_->print();
+	}
+};	
 
 safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"OGL")
 		return core::frame_consumer::empty();
 	
-	unsigned int screen_index = 0;
+	size_t screen_index = 0;
 	stretch stretch = stretch::fill;
 	bool windowed = true;
 	
@@ -325,7 +336,22 @@ safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstrin
 	if(params.size() > 2) 
 		windowed = lexical_cast_or_default<bool>(params[3], windowed);
 
-	return make_safe<ogl_consumer>(screen_index, stretch, windowed);
+	return make_safe<ogl_consumer_proxy>(screen_index, stretch, windowed);
+}
+
+safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::ptree& ptree) 
+{
+	size_t screen_index = ptree.get("device", 0);
+	bool windowed =ptree.get("windowed", true);
+	
+	stretch stretch = stretch::fill;
+	auto key_str = ptree.get("stretch", "default");
+	if(key_str == "uniform")
+		stretch = stretch::uniform;
+	else if(key_str == "uniform_to_fill")
+		stretch = stretch::uniform_to_fill;
+
+	return make_safe<ogl_consumer_proxy>(screen_index, stretch, windowed);
 }
 
 }

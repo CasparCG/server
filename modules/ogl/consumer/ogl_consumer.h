@@ -23,6 +23,7 @@
 #include <core/video_format.h>
 
 #include <vector>
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar {
 	
@@ -34,21 +35,7 @@ enum stretch
 	uniform_to_fill
 };
 
-class ogl_consumer : public core::frame_consumer
-{
-public:	
-	explicit ogl_consumer(unsigned int screen_index = 0, stretch stretch = stretch::fill, bool windowed = false);
-	ogl_consumer(ogl_consumer&& other);
-	
-	virtual void initialize(const core::video_format_desc& format_desc);
-	virtual void send(const safe_ptr<const core::read_frame>&);
-	virtual size_t buffer_depth() const;
-	virtual std::wstring print() const;
-private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
-};
-
 safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::ptree& ptree);
 
 }

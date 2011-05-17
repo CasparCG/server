@@ -100,23 +100,9 @@ struct server::implementation : boost::noncopyable
 			{
 				try
 				{
-					std::string name = xml_consumer.first;
+					const std::string name = xml_consumer.first;
 					if(name == "ogl")
-					{			
-						int device = xml_consumer.second.get("device", 0);
-			
-						stretch stretch = stretch::fill;
-						std::string stretchStr = xml_consumer.second.get("stretch", "");
-						if(stretchStr == "none")
-							stretch = stretch::none;
-						else if(stretchStr == "uniform")
-							stretch = stretch::uniform;
-						else if(stretchStr == "uniformtofill")
-							stretch = stretch::uniform_to_fill;
-
-						bool windowed = xml_consumer.second.get("windowed", false);
-						channels_.back()->consumer()->add(index++, ogl_consumer(device, stretch, windowed));
-					}
+						channels_.back()->consumer()->add(index++, create_ogl_consumer(xml_consumer.second));					
 					else if(name == "bluefish")					
 						channels_.back()->consumer()->add(index++, create_bluefish_consumer(xml_consumer.second));					
 					else if(name == "decklink")					

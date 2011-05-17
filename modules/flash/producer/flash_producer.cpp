@@ -156,7 +156,7 @@ public:
 			CASPAR_LOG(warning) << print() << " Flash function call failed. Param: " << param << ".";
 		graph_->add_tag("param");
 
-		if(abs(ax_->GetFPS() - format_desc_.fps) > 0.001 && abs(ax_->GetFPS()/2.0 - format_desc_.fps) > 0.001)
+		if(abs(ax_->GetFPS() - format_desc_.fps) > 0.01 && abs(ax_->GetFPS()/2.0 - format_desc_.fps) > 0.01)
 			CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << ax_->GetFPS() << L". Should be either " << format_desc_.fps << L" or " << format_desc_.fps*2.0 << L".";
 	}
 	
