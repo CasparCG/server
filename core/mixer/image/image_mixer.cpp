@@ -201,9 +201,10 @@ public:
 
 		// Setup key and kernel
 
+		bool has_separate_key = false;
+
 		if(transform.get_is_key())
 		{
-			kernel_.apply(desc, transform, false);
 			if(!is_key_)
 			{
 				key_target_->attach();
@@ -213,38 +214,20 @@ public:
 		}		
 		else
 		{						
-			kernel_.apply(desc, transform, is_key_);	
 			if(is_key_)
 			{
+				has_separate_key = true;
 				is_key_ = false;
 
 				render_targets_[0]->attach();			
 				GL(glActiveTexture(GL_TEXTURE0+3));
 				key_target_->bind();
 			}	
-		}		
+		}	
 
-		GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
-		GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-						
-		auto m_p = transform.get_key_translation();
-		auto m_s = transform.get_key_scale();
-		double w = static_cast<double>(format_desc_.width);
-		double h = static_cast<double>(format_desc_.height);
+		// Draw
 
-		GL(glEnable(GL_SCISSOR_TEST));
-		GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
-			
-		auto f_p = transform.get_fill_translation();
-		auto f_s = transform.get_fill_scale();
-			
-		glBegin(GL_QUADS);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex2d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-		glEnd();
-		GL(glDisable(GL_SCISSOR_TEST));		
+		kernel_.draw(format_desc_.width, format_desc_.height, desc, transform, has_separate_key);	
 	}
 			
 	std::vector<safe_ptr<host_buffer>> create_buffers(const core::pixel_format_desc& format)
