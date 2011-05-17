@@ -133,9 +133,11 @@ public:
 	{		
 		auto& root_image_transform = boost::fusion::at_key<core::image_transform>(root_transforms_);
 		auto& image_transforms = boost::fusion::at_key<core::image_transform>(transforms_);
-
+		
 		BOOST_FOREACH(auto& frame, frames)
 		{
+			image_mixer_.begin_layer();
+			
 			if(format_desc_.mode != core::video_mode::progressive)
 			{
 				auto frame1 = make_safe<core::basic_frame>(frame.second);
@@ -155,6 +157,8 @@ public:
 				frame1->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame.first].fetch_and_tick(1);
 				frame1->accept(image_mixer_);
 			}
+
+			image_mixer_.end_layer();
 		}
 
 		return image_mixer_.render();
