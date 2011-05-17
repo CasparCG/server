@@ -42,7 +42,7 @@ public:
 
 	virtual void accept(frame_visitor& visitor) = 0;
 
-	virtual int tag() const = 0;
+	virtual int tag() const = 0; // Tag which identifies current video-stream.
 };
 
 }}

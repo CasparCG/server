@@ -72,15 +72,8 @@ public:
 };
 	
 gpu_write_frame::gpu_write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers) : impl_(new implementation(tag, desc, buffers)){}
-gpu_write_frame::gpu_write_frame(gpu_write_frame&& other) : impl_(std::move(other.impl_)){}
-void gpu_write_frame::swap(gpu_write_frame& other){impl_.swap(other.impl_);}
-gpu_write_frame& gpu_write_frame::operator=(gpu_write_frame&& other)
-{
-	gpu_write_frame temp(std::move(other));
-	temp.swap(*this);
-	return *this;
-}
 void gpu_write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
+
 boost::iterator_range<unsigned char*> gpu_write_frame::image_data(size_t index){return impl_->image_data(index);}
 std::vector<short>& gpu_write_frame::audio_data() { return impl_->audio_data_; }
 const boost::iterator_range<const unsigned char*> gpu_write_frame::image_data(size_t index) const
