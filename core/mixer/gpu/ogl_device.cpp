@@ -22,6 +22,7 @@
 #include "ogl_device.h"
 
 #include <common/utility/assert.h>
+#include <common/gl/gl_check.h>
 
 #include <Glee.h>
 #include <SFML/Window.hpp>
@@ -30,13 +31,19 @@
 
 namespace caspar { namespace mixer {
 
-ogl_device::ogl_device() : executor_(L"ogl_device")
+ogl_device::ogl_device() : executor_(L"ogl_device", true)
 {
-	executor_.start();
 	invoke([=]
 	{
 		context_.reset(new sf::Context());
 		context_->SetActive(true);
+						
+		if(!GLEE_VERSION_3_0)
+			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
+
+		GL(glGenFramebuffers(1, &fbo_));		
+		GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
+		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
 	});
 }
 
@@ -48,6 +55,7 @@ ogl_device::~ogl_device()
 			pool.clear();
 		BOOST_FOREACH(auto& pool, host_pools_)
 			pool.clear();
+		glDeleteFramebuffersEXT(1, &fbo_);
 	});
 }
 				
