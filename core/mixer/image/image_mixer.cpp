@@ -46,27 +46,28 @@
 namespace caspar { namespace mixer {
 		
 struct image_mixer::implementation : boost::noncopyable
-{			
-	const core::video_format_desc format_desc_;
-	
-	std::stack<core::image_transform> transform_stack_;
-
-	GLuint fbo_;
-	std::array<std::shared_ptr<device_buffer>, 2> render_targets_;
-	std::shared_ptr<device_buffer> key_target_;
-	bool is_key_;
-
-	std::shared_ptr<host_buffer> reading_;
-
-	image_kernel kernel_;
-
+{	
 	struct render_item
 	{
 		core::pixel_format_desc desc;
 		std::vector<safe_ptr<device_buffer>> textures;
 		core::image_transform transform;
 	};
+
+	const core::video_format_desc format_desc_;
 	
+	std::stack<core::image_transform> transform_stack_;
+
+	bool is_key_;
+
+	safe_ptr<device_buffer>	front_target_;
+	safe_ptr<device_buffer>	back_target_;
+	safe_ptr<device_buffer>	key_target_;
+
+	safe_ptr<host_buffer>	reading_;
+
+	image_kernel kernel_;
+		
 	std::vector<render_item> waiting_queue_;
 	std::vector<render_item> render_queue_;
 
@@ -74,38 +75,14 @@ public:
 	implementation(const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)
 		, is_key_(false)
+		, back_target_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
+		, front_target_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
+		, key_target_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
+		, reading_(ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only))
 	{
-		ogl_device::invoke([]
-		{
-			if(!GLEE_VERSION_3_0)
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
-		});
-		
-		ogl_device::begin_invoke([=]
-		{
-			transform_stack_.push(core::image_transform());
-			transform_stack_.top().set_mode(core::video_mode::progressive);
-
-			GL(glEnable(GL_TEXTURE_2D));
-			GL(glDisable(GL_DEPTH_TEST));		
-			
-			key_target_ = ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4);
-			render_targets_[0] = ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4);
-			render_targets_[1] = ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4);
-			
-			GL(glGenFramebuffers(1, &fbo_));		
-			GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
-			GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
-
-			reading_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
-		});
+		transform_stack_.push(core::image_transform());
 	}
-
-	~implementation()
-	{
-		glDeleteFramebuffersEXT(1, &fbo_);
-	}
-
+	
 	void begin(const core::basic_frame& frame)
 	{
 		transform_stack_.push(transform_stack_.top()*frame.get_image_transform());
@@ -150,7 +127,7 @@ public:
 		auto result = ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
 		{
 			reading_->map(); // Might block.
-			return make_safe(reading_);
+			return reading_;
 		});
 			
 		ogl_device::begin_invoke([=]
@@ -162,7 +139,7 @@ public:
 			key_target_->attach();
 			GL(glClear(GL_COLOR_BUFFER_BIT));	
 
-			render_targets_[0]->attach();
+			front_target_->attach();
 			GL(glClear(GL_COLOR_BUFFER_BIT));
 
 			// Render items.
@@ -177,9 +154,9 @@ public:
 			// Start read-back.
 
 			reading_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
-			render_targets_[0]->attach();
-			render_targets_[0]->write(*reading_);
-			std::swap(render_targets_[0], render_targets_[1]);
+			front_target_->attach();
+			front_target_->write(*reading_);
+			std::swap(front_target_, back_target_);
 		});
 
 		return std::move(result);
@@ -219,7 +196,7 @@ public:
 				has_separate_key = true;
 				is_key_ = false;
 
-				render_targets_[0]->attach();			
+				front_target_->attach();			
 				GL(glActiveTexture(GL_TEXTURE0+3));
 				key_target_->bind();
 			}	

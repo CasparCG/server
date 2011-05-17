@@ -19,7 +19,7 @@
 */
 #pragma once
 
-#include <memory>
+#include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/image_transform.h>
@@ -34,7 +34,7 @@ public:
 
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }}

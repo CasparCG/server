@@ -204,18 +204,18 @@ bool MixerCommand::DoExecute()
 		{
 			if(_parameters[1] == L"IS_KEY")
 			{
-				bool value = lexical_cast_or_default(_parameters.at(2), false);
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_is_key(value);
-					return transform;					
-				};
+				//bool value = lexical_cast_or_default(_parameters.at(2), false);
+				//auto transform = [=](image_transform transform) -> image_transform
+				//{
+				//	transform.set_is_key(value);
+				//	return transform;					
+				//};
 
-				int layer = GetLayerIndex(std::numeric_limits<int>::min());
-				if(layer != std::numeric_limits<int>::min())					
-					GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, 0);
-				else
-					GetChannel()->mixer()->apply_image_transform(transform, 0);
+				//int layer = GetLayerIndex(std::numeric_limits<int>::min());
+				//if(layer != std::numeric_limits<int>::min())					
+				//	GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, 0);
+				//else
+				//	GetChannel()->mixer()->apply_image_transform(transform, 0);
 			}
 			else if(_parameters[1] == L"OPACITY")
 			{

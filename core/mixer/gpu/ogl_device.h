@@ -42,6 +42,8 @@ class ogl_device
 	
 	std::array<tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<std::shared_ptr<device_buffer>>>, 4> device_pools_;
 	std::array<tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<std::shared_ptr<host_buffer>>>, 2> host_pools_;
+	
+	unsigned int fbo_;
 
 	executor executor_;
 

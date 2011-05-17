@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include <common/memory/safe_ptr.h>
+
 #include <core/video_format.h>
 #include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
@@ -28,7 +30,6 @@
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
 
-#include <memory>
 #include <vector>
 
 namespace caspar { namespace mixer {
@@ -48,7 +49,7 @@ public:
 
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }}
