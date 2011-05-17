@@ -71,7 +71,7 @@ struct server::implementation : boost::noncopyable
 		init_flash();
 		init_oal();
 		init_ogl();
-		init_silverlight();
+		//init_silverlight();
 		init_image();
 
 		setup_channels(env::properties());
