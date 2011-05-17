@@ -229,7 +229,7 @@ public:
 
 		active_ = executor_.begin_invoke([]{});
 				
-		CASPAR_LOG(info) << print() << TEXT(" Successfully initialized for ") << format_desc_ << TEXT(".");
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
 	~bluefish_consumer()
@@ -348,7 +348,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
 	}
 };
 
@@ -408,7 +408,7 @@ std::vector<std::wstring> get_bluefish_device_list()
 
 		for(int n = 1; BLUE_PASS(blue->device_attach(n, FALSE)); ++n)
 		{				
-			devices.push_back(L"[" + boost::lexical_cast<std::wstring>(n) + L"] " + get_card_desc(blue->has_video_cardtype()));
+			devices.push_back(std::wstring(get_card_desc(blue->has_video_cardtype())) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");
 			blue->device_detach();		
 		}
 	}

@@ -28,7 +28,7 @@ namespace caspar
 
 void init_ogl()
 {
-	core::register_consumer_factory(create_ogl_consumer);
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ogl_consumer(params);});
 }
 
 }
