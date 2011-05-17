@@ -62,6 +62,12 @@ public:
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
 	}
 
+	void bind(int index)
+	{
+		GL(glActiveTexture(GL_TEXTURE0+index));
+		bind();
+	}
+
 	void unbind()
 	{
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
@@ -91,6 +97,12 @@ public:
 	{
 		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, id_, 0));
 	}
+
+	void clear()
+	{
+		attach(0);
+		GL(glClear(GL_COLOR_BUFFER_BIT));
+	}
 };
 
 device_buffer::device_buffer(size_t width, size_t height, size_t stride) : impl_(new implementation(width, height, stride)){}
@@ -99,8 +111,10 @@ size_t device_buffer::width() const { return impl_->width_; }
 size_t device_buffer::height() const { return impl_->height_; }
 void device_buffer::attach(int index){impl_->attach(index);}
 void device_buffer::bind(){impl_->bind();}
+void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
 void device_buffer::read(host_buffer& source){impl_->read(source);}
 void device_buffer::write(host_buffer& target){impl_->write(target);}
+void device_buffer::clear(){impl_->clear();}
 
 }}

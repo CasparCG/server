@@ -56,29 +56,33 @@ struct image_mixer::implementation : boost::noncopyable
 
 	const core::video_format_desc format_desc_;
 	
-	std::stack<core::image_transform> transform_stack_;
-
-	bool is_key_;
-
-	safe_ptr<device_buffer>	front_target_;
-	safe_ptr<device_buffer>	back_target_;
-	safe_ptr<device_buffer>	key_target_;
-
-	safe_ptr<host_buffer>	reading_;
-
+	std::stack<core::image_transform>		transform_stack_;
+	std::vector<std::vector<render_item>>	transferring_queue_;
+	std::vector<std::vector<render_item>>	render_queue_;
+	
 	image_kernel kernel_;
 		
-	std::vector<render_item> waiting_queue_;
-	std::vector<render_item> render_queue_;
+	safe_ptr<host_buffer>	read_buffer_;
+	
+	safe_ptr<device_buffer>	draw_buffer_;
+	safe_ptr<device_buffer>	write_buffer_;
+
+	safe_ptr<device_buffer>	local_key_buffer_;
+	safe_ptr<device_buffer>	layer_key_buffer_;
+
+	bool local_key_;
+	bool layer_key_;
 
 public:
 	implementation(const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)
-		, is_key_(false)
-		, back_target_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
-		, front_target_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
-		, key_target_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
-		, reading_(ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only))
+		, read_buffer_(ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only))
+		, draw_buffer_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
+		, write_buffer_	(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
+		, local_key_buffer_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 1))
+		, layer_key_buffer_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 1))
+		, local_key_(false)
+		, layer_key_(false)
 	{
 		transform_stack_.push(core::image_transform());
 	}
@@ -93,10 +97,10 @@ public:
 		auto gpu_frame = dynamic_cast<gpu_write_frame*>(&frame);
 		if(!gpu_frame)
 			return;
-		
-		auto desc = gpu_frame->get_pixel_format_desc();
-		auto buffers = gpu_frame->get_plane_buffers();
-		auto transform = transform_stack_.top();
+				
+		auto desc		= gpu_frame->get_pixel_format_desc();
+		auto buffers	= gpu_frame->get_plane_buffers();
+		auto transform	= transform_stack_.top()*gpu_frame->get_image_transform();
 
 		ogl_device::begin_invoke([=]
 		{
@@ -105,15 +109,16 @@ public:
 			item.desc = desc;
 			item.transform = transform;
 			
+			// Start transfer from host to device.
+
 			for(size_t n = 0; n < buffers.size(); ++n)
 			{
-				GL(glActiveTexture(GL_TEXTURE0+n));
 				auto texture = ogl_device::create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
 				texture->read(*buffers[n]);
 				item.textures.push_back(texture);
 			}	
 
-			waiting_queue_.push_back(item);
+			transferring_queue_.back().push_back(item);
 		});
 	}
 
@@ -122,89 +127,105 @@ public:
 		transform_stack_.pop();
 	}
 
+	void begin_layer()
+	{
+		ogl_device::begin_invoke([=]
+		{
+			transferring_queue_.push_back(std::vector<render_item>());
+		});
+	}
+
+	void end_layer()
+	{
+	}
+
 	boost::unique_future<safe_ptr<const host_buffer>> render()
 	{
 		auto result = ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
 		{
-			reading_->map(); // Might block.
-			return reading_;
+			read_buffer_->map(); // Might block.
+			return read_buffer_;
 		});
 			
 		ogl_device::begin_invoke([=]
 		{
-			is_key_ = false;
+			local_key_ = false;
+			layer_key_ = false;
 
-			// Clear and bind frame-buffers.
+			// Clear buffers.
+			local_key_buffer_->clear();
+			layer_key_buffer_->clear();
+			draw_buffer_->clear();
 
-			key_target_->attach();
-			GL(glClear(GL_COLOR_BUFFER_BIT));	
+			// Draw items in device.
 
-			front_target_->attach();
-			GL(glClear(GL_COLOR_BUFFER_BIT));
+			BOOST_FOREACH(auto layer, render_queue_)
+			{
+				draw_buffer_->attach();	
 
-			// Render items.
+				BOOST_FOREACH(auto item, layer)			
+					draw(item);	
+								
+				layer_key_ = local_key_; // If there was only key in last layer then use it as key for the entire next layer.
+				local_key_ = false;
 
-			BOOST_FOREACH(auto item, render_queue_)
-				render(item);			
+				std::swap(local_key_buffer_, layer_key_buffer_);
+				layer_key_buffer_->bind(4);
+			}
 
 			// Move waiting items to queue.
 
-			render_queue_ = std::move(waiting_queue_);
+			render_queue_ = std::move(transferring_queue_);
 
-			// Start read-back.
+			// Start transfer from device to host.
 
-			reading_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
-			front_target_->attach();
-			front_target_->write(*reading_);
-			std::swap(front_target_, back_target_);
+			read_buffer_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
+			draw_buffer_->attach();
+			draw_buffer_->write(*read_buffer_);
+
+			std::swap(draw_buffer_, write_buffer_);
 		});
 
 		return std::move(result);
 	}
-
-	void render(const render_item& item)
-	{		
-		const auto desc		 = item.desc;
-		auto	   textures	 = item.textures;
-		const auto transform = item.transform;
-				
+	
+	void draw(const render_item& item)
+	{						
 		// Bind textures
 
-		for(size_t n = 0; n < textures.size(); ++n)
-		{
-			GL(glActiveTexture(GL_TEXTURE0+n));
-			textures[n]->bind();
-		}		
+		for(size_t n = 0; n < item.textures.size(); ++n)
+			item.textures[n]->bind(n);		
 
 		// Setup key and kernel
 
-		bool has_separate_key = false;
-
-		if(transform.get_is_key())
+		bool local_key = false;
+		bool layer_key = false;
+		
+		if(item.transform.get_is_key())
 		{
-			if(!is_key_)
+			if(!local_key_)
 			{
-				key_target_->attach();
-				is_key_ = true;
-				GL(glClear(GL_COLOR_BUFFER_BIT));		
+				local_key_buffer_->clear();
+				local_key_buffer_->attach();
+				local_key_ = true;
 			}
 		}		
 		else
-		{						
-			if(is_key_)
-			{
-				has_separate_key = true;
-				is_key_ = false;
+		{		
+			local_key = local_key_;
+			layer_key = layer_key_;
 
-				front_target_->attach();			
-				GL(glActiveTexture(GL_TEXTURE0+3));
-				key_target_->bind();
-			}	
+			if(local_key_)
+			{
+				local_key_buffer_->bind(3);
+				draw_buffer_->attach();	
+				local_key_ = false;
+			}			
 		}	
 
 		// Draw
 
-		kernel_.draw(format_desc_.width, format_desc_.height, desc, transform, has_separate_key);	
+		kernel_.draw(format_desc_.width, format_desc_.height, item.desc, item.transform, local_key, layer_key);	
 	}
 			
 	std::vector<safe_ptr<host_buffer>> create_buffers(const core::pixel_format_desc& format)
@@ -224,5 +245,7 @@ void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<const host_buffer>> image_mixer::render(){return impl_->render();}
 std::vector<safe_ptr<host_buffer>> image_mixer::create_buffers(const core::pixel_format_desc& format){return impl_->create_buffers(format);}
+void image_mixer::begin_layer(){impl_->begin_layer();}
+void image_mixer::end_layer(){impl_->end_layer();}
 
 }}
