@@ -63,10 +63,11 @@ struct image_mixer::implementation : boost::noncopyable
 	struct render_item
 	{
 		core::pixel_format_desc desc;
-		std::vector<safe_ptr<host_buffer>> buffers;
+		std::vector<safe_ptr<device_buffer>> textures;
 		core::image_transform transform;
 	};
-
+	
+	std::vector<render_item> waiting_queue_;
 	std::vector<render_item> render_queue_;
 
 public:
@@ -115,14 +116,28 @@ public:
 		auto gpu_frame = dynamic_cast<gpu_write_frame*>(&frame);
 		if(!gpu_frame)
 			return;
+		
+		auto desc = gpu_frame->get_pixel_format_desc();
+		auto buffers = gpu_frame->get_plane_buffers();
+		auto transform = transform_stack_.top();
 
-		render_item item;
+		ogl_device::begin_invoke([=]
+		{
+			render_item item;
 
-		item.desc = gpu_frame->get_pixel_format_desc();
-		item.buffers = gpu_frame->get_plane_buffers();
-		item.transform = transform_stack_.top();
+			item.desc = desc;
+			item.transform = transform;
+			
+			for(size_t n = 0; n < buffers.size(); ++n)
+			{
+				GL(glActiveTexture(GL_TEXTURE0+n));
+				auto texture = ogl_device::create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
+				texture->read(*buffers[n]);
+				item.textures.push_back(texture);
+			}	
 
-		render_queue_.push_back(item);
+			waiting_queue_.push_back(item);
+		});
 	}
 
 	void end()
@@ -132,39 +147,58 @@ public:
 
 	boost::unique_future<safe_ptr<const host_buffer>> render()
 	{
-		auto queue = render_queue_;
-		render_queue_.clear();
-		return ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
+		auto result = ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
+		{
+			reading_->map(); // Might block.
+			return make_safe(reading_);
+		});
+			
+		ogl_device::begin_invoke([=]
 		{
 			is_key_ = false;
+
+			// Clear and bind frame-buffers.
+
 			key_target_->attach();
 			GL(glClear(GL_COLOR_BUFFER_BIT));	
 
-			// START_PASS
-			auto result = reading_;
-			result->map();
 			render_targets_[0]->attach();
 			GL(glClear(GL_COLOR_BUFFER_BIT));
 
-			BOOST_FOREACH(auto item, queue)
+			// Render items.
+
+			BOOST_FOREACH(auto item, render_queue_)
 				render(item);			
 
-			// END PASS
+			// Move waiting items to queue.
+
+			render_queue_ = std::move(waiting_queue_);
+
+			// Start read-back.
+
 			reading_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
 			render_targets_[0]->attach();
 			render_targets_[0]->write(*reading_);
-			std::rotate(render_targets_.begin(), render_targets_.begin() + 1, render_targets_.end());
-
-			return make_safe(result);
+			std::swap(render_targets_[0], render_targets_[1]);
 		});
+
+		return std::move(result);
 	}
 
 	void render(const render_item& item)
 	{		
 		const auto desc		 = item.desc;
-		auto	   buffers	 = item.buffers;
+		auto	   textures	 = item.textures;
 		const auto transform = item.transform;
 				
+		// Bind textures
+
+		for(size_t n = 0; n < textures.size(); ++n)
+		{
+			GL(glActiveTexture(GL_TEXTURE0+n));
+			textures[n]->bind();
+		}		
+
 		// Setup key and kernel
 
 		if(transform.get_is_key())
@@ -182,27 +216,13 @@ public:
 			kernel_.apply(desc, transform, is_key_);	
 			if(is_key_)
 			{
-				if(buffers.size() == 4)
-					buffers.pop_back();
 				is_key_ = false;
 
 				render_targets_[0]->attach();			
 				GL(glActiveTexture(GL_TEXTURE0+3));
 				key_target_->bind();
 			}	
-		}	
-
-		// Bind textures
-
-		std::vector<safe_ptr<device_buffer>> textures;
-		for(size_t n = 0; n < buffers.size(); ++n)
-		{
-			GL(glActiveTexture(GL_TEXTURE0+n));
-			auto texture = ogl_device::create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
-			texture->read(*buffers[n]);
-			texture->bind();
-			textures.push_back(texture);
-		}			
+		}		
 
 		GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
 		GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
