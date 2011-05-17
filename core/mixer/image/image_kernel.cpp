@@ -302,6 +302,9 @@ image_kernel::image_kernel() : impl_(new implementation()){}
 
 void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, bool has_separate_key)
 {
+	GL(glEnable(GL_TEXTURE_2D));
+	GL(glDisable(GL_DEPTH_TEST));	
+
 	impl_->shaders()[pix_desc.pix_fmt].use();
 
 	GL(glUniform1f(impl_->shaders()[pix_desc.pix_fmt].get_location("gain"), static_cast<GLfloat>(transform.get_gain())));
