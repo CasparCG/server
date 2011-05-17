@@ -110,7 +110,7 @@ struct server::implementation : boost::noncopyable
 					else if(name == "audio")
 						channels_.back()->consumer()->add(index++, oal_consumer());		
 				else
-					BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info(name) << msg_info("Invalid consumer."));	
+					CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
 				}
 				catch(...)
 				{
@@ -138,7 +138,7 @@ struct server::implementation : boost::noncopyable
 					async_servers_.push_back(asyncbootstrapper);
 				}
 				else
-					BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info(name) << msg_info("Invalid controller."));
+					CASPAR_LOG(warning) << "Invalid controller: " << widen(name);	
 			}
 			catch(...)
 			{
