@@ -37,10 +37,6 @@ class gpu_write_frame : public core::write_frame
 {
 public:	
 	explicit gpu_write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers);
-	gpu_write_frame(gpu_write_frame&& other);
-	gpu_write_frame& operator=(gpu_write_frame&& other);
-	
-	void swap(gpu_write_frame& other);
 
 	const core::pixel_format_desc& get_pixel_format_desc() const;
 	std::vector<safe_ptr<host_buffer>>& get_plane_buffers();
