@@ -123,8 +123,8 @@ std::shared_ptr<IDeckLinkVideoFrame> make_alpha_only_frame(const CComQIPtr<IDeck
 	void* bytes = nullptr;
 	if(FAILED(result->GetBytes(&bytes)))
 		BOOST_THROW_EXCEPTION(caspar_exception());
-
-	fast_memsfhl(reinterpret_cast<unsigned char*>(bytes), frame->image_data().begin(), frame->image_data().size(), 0x03030303, 0x07070707, 0x0B0B0B0B, 0x0F0F0F0F);
+			
+	fast_memsfhl(reinterpret_cast<unsigned char*>(bytes), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 
 	return std::shared_ptr<IDeckLinkVideoFrame>(result, [](IDeckLinkMutableVideoFrame* p) {p->Release();});
 }
