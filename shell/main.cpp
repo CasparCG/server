@@ -101,15 +101,13 @@ void print_info()
 	CASPAR_LOG(info) << L"Flash-Template-Host " << caspar::get_cg_version();
 	CASPAR_LOG(info) << L"FreeImage " << caspar::get_image_version();
 	
-	std::wstring decklink_devices;
+	CASPAR_LOG(info) << L"Decklink " << caspar::get_decklink_version();
 	BOOST_FOREACH(auto& device, caspar::get_decklink_device_list())
-		decklink_devices += L"\t" + device;
-	CASPAR_LOG(info) << L"Decklink " << caspar::get_decklink_version() << (decklink_devices.empty() ? L"" : L"\n\tDevices:\n" + decklink_devices);
-	
-	std::wstring bluefish_devices;
+		CASPAR_LOG(info) << device;
+		
+	CASPAR_LOG(info) << L"Bluefish " << caspar::get_bluefish_version();
 	BOOST_FOREACH(auto& device, caspar::get_bluefish_device_list())
-		bluefish_devices += L"\t" + device;
-	CASPAR_LOG(info) << L"Bluefish " << caspar::get_bluefish_version() << (bluefish_devices.empty() ? L"" : L"\n\tDevices:\n" + bluefish_devices);
+		CASPAR_LOG(info) << device;
 
 	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::get_avcodec_version();
 	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::get_avformat_version();

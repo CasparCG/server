@@ -80,7 +80,7 @@ std::vector<std::wstring> get_decklink_device_list()
 			{
 				BSTR model_name = L"Unknown";
 				decklink->GetModelName(&model_name);
-				devices.push_back(L"[" + boost::lexical_cast<std::wstring>(n) + L"] " + model_name);	
+				devices.push_back(std::wstring(model_name) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");	
 			}
 		}
 	}
