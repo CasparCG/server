@@ -228,17 +228,20 @@ private:
 				if(loop_)
 				{
 					seek_frame(start_, AVSEEK_FLAG_BACKWARD);
-					// AVCodecContext.frame_number is not reset. Increase the target frame_number.
-					eof_count_ += length_; 
-					graph_->add_tag("seek");	
+					eof_count_ += length_; // AVCodecContext.frame_number is not reset. Increase the target frame_number.
+					graph_->add_tag("seek");		
+					CASPAR_LOG(info) << print() << " Received EOF. Looping.";			
 				}	
 				else
+				{
 					stop();
+					CASPAR_LOG(info) << print() << " Received EOF. Stopping.";
+				}
 			}
 			else if(errn < 0)
 			{
 				BOOST_THROW_EXCEPTION(
-					invalid_operation() <<
+					file_read_error() <<
 					msg_info(av_error_str(errn)) <<
 					source_info(narrow(print())) << 
 					boost::errinfo_api_function("av_read_frame") <<
@@ -300,7 +303,10 @@ private:
 		if(length_ != -1)
 			return get_default_context()->frame_number > eof_count_;		
 
-		return errn == AVERROR_EOF;
+		if(-errn == EIO)
+			CASPAR_LOG(warning) << print() << " Received EIO, assuming EOF";
+
+		return errn == AVERROR_EOF || -errn == EIO; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 		
 	packet get_packet(tbb::concurrent_bounded_queue<packet>& buffer)

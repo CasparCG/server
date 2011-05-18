@@ -35,6 +35,8 @@ extern "C"
 	#define __STDC_LIMIT_MACROS
 	#include <libavformat/avformat.h>
 	#include <libswscale/swscale.h>
+	#include <libavutil/avutil.h>
+	#include <libavfilter/avfilter.h>
 }
 
 namespace caspar {
@@ -59,6 +61,20 @@ std::wstring get_avformat_version()
 {
 	std::wstringstream str;
 	str << ((avformat_version() >> 16) & 0xFF) << L"." << ((avformat_version() >> 8) & 0xFF) << L"." << ((avformat_version() >> 0) & 0xFF);
+	return str.str();
+}
+
+std::wstring get_avutil_version()
+{
+	std::wstringstream str;
+	str << ((avutil_version() >> 16) & 0xFF) << L"." << ((avutil_version() >> 8) & 0xFF) << L"." << ((avutil_version() >> 0) & 0xFF);
+	return str.str();
+}
+
+std::wstring get_avfilter_version()
+{
+	std::wstringstream str;
+	str << ((avfilter_version() >> 16) & 0xFF) << L"." << ((avfilter_version() >> 8) & 0xFF) << L"." << ((avfilter_version() >> 0) & 0xFF);
 	return str.str();
 }
 
