@@ -37,7 +37,6 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/range/algorithm.hpp>
 
-
 extern "C" 
 {
 	#define __STDC_CONSTANT_MACROS
@@ -112,13 +111,13 @@ public:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		video_codec_context_ = open_stream(CODEC_TYPE_VIDEO, video_s_index_);
+		video_codec_context_ = open_stream(AVMEDIA_TYPE_VIDEO, video_s_index_);
 		if(!video_codec_context_)
 			CASPAR_LOG(warning) << print() << " Could not open any video stream.";
 		else
 			fix_time_base(video_codec_context_.get());
 		
-		audio_codex_context_ = open_stream(CODEC_TYPE_AUDIO, audio_s_index_);
+		audio_codex_context_ = open_stream(AVMEDIA_TYPE_AUDIO, audio_s_index_);
 		if(!audio_codex_context_)
 			CASPAR_LOG(warning) << print() << " Could not open any audio stream.";
 		else
@@ -217,11 +216,14 @@ private:
 
 		try
 		{
-			AVPacket tmp_packet;
-			safe_ptr<AVPacket> read_packet(&tmp_packet, av_free_packet);	
+			std::shared_ptr<AVPacket> read_packet(new AVPacket(), [](AVPacket* p)
+			{
+				av_free_packet(p);
+				delete p;
+			});
 
-			const int errn = av_read_frame(format_context_.get(), read_packet.get());
-			if(is_eof(errn))
+			const int errn = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame.
+			if(is_eof(errn))														  // Use av_dup_packet to extend its life.
 			{
 				if(loop_)
 				{
@@ -245,9 +247,15 @@ private:
 			else
 			{
 				if(read_packet->stream_index == video_s_index_) 		
-					video_packet_buffer_.try_push(packet(read_packet->data, read_packet->data + read_packet->size));	
-				else if(read_packet->stream_index)
-					audio_packet_buffer_.try_push(packet(read_packet->data, read_packet->data + read_packet->size));	
+				{					
+					av_dup_packet(read_packet.get());
+					video_packet_buffer_.try_push(packet(read_packet));	
+				}
+				else if(read_packet->stream_index)	
+				{					
+					av_dup_packet(read_packet.get());
+					audio_packet_buffer_.try_push(packet(read_packet));	
+				}
 			}
 						
 			graph_->update_value("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
@@ -292,7 +300,7 @@ private:
 		if(length_ != -1)
 			return get_default_context()->frame_number > eof_count_;		
 
-		return errn == AVERROR_EOF || errn == AVERROR_IO;
+		return errn == AVERROR_EOF;
 	}
 		
 	packet get_packet(tbb::concurrent_bounded_queue<packet>& buffer)

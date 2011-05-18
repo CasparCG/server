@@ -64,7 +64,7 @@ public:
 		}
 	}
 		
-	std::vector<std::vector<short>> execute(const packet& audio_packet)
+	std::vector<std::vector<short>> execute(packet&& audio_packet)
 	{	
 		std::vector<std::vector<short>> result;
 
@@ -78,7 +78,7 @@ public:
 			current_chunk_.resize(s + 4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2);
 		
 			int written_bytes = (current_chunk_.size() - s)*2 - FF_INPUT_BUFFER_PADDING_SIZE;
-			const int errn = avcodec_decode_audio2(&codec_context_, &current_chunk_[s], &written_bytes, audio_packet.data->data(), audio_packet.data->size());
+			const int errn = avcodec_decode_audio3(&codec_context_, &current_chunk_[s], &written_bytes, audio_packet.av_packet.get());
 			if(errn < 0)
 			{	
 				BOOST_THROW_EXCEPTION(
@@ -102,5 +102,5 @@ public:
 };
 
 audio_decoder::audio_decoder(AVCodecContext& codec_context, const core::video_format_desc& format_desc) : impl_(new implementation(codec_context, format_desc)){}
-std::vector<std::vector<short>> audio_decoder::execute(const packet& audio_packet){return impl_->execute(audio_packet);}
+std::vector<std::vector<short>> audio_decoder::execute(packet&& audio_packet){return impl_->execute(std::move(audio_packet));}
 }

@@ -260,10 +260,6 @@
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">interop\</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">interop\</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">interop\</OutputDirectory>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </Midl>
     <Midl Include="interop\DeckLinkAPI_v7_1.idl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">true</ExcludedFromBuild>
