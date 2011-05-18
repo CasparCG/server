@@ -38,7 +38,7 @@ public:
 	channel(channel&& other);
 
 	const safe_ptr<frame_producer_device>& producer();
-	const safe_ptr<mixer::frame_mixer_device>& mixer();
+	const safe_ptr<frame_mixer_device>& mixer();
 	const safe_ptr<frame_consumer_device>& consumer();
 
 	const video_format_desc& get_video_format_desc() const;

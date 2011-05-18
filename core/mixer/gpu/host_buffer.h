@@ -23,7 +23,7 @@
 
 #include <memory>
 
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 		
 class host_buffer : boost::noncopyable
 {

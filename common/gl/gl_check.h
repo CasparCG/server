@@ -24,88 +24,9 @@
 
 #pragma once
 
-#include <Glee.h>
-
-#include "../exception/exceptions.h"
-#include "../log/log.h"
-
-#include <boost/lexical_cast.hpp>
-
 namespace caspar { namespace gl {
-
-struct gl_error : virtual caspar_exception{};
-		
-inline void SMFL_GLCheckError(const std::string& expr, const std::string& File, unsigned int Line)
-{
-	// Get the last error
-	GLenum ErrorCode = glGetError();
-
-	if (ErrorCode != GL_NO_ERROR)
-	{
-		std::string Error = "unknown error";
-		std::string Desc  = "no description";
-
-		// Decode the error code
-		switch (ErrorCode)
-		{
-			case GL_INVALID_ENUM :
-			{
-				Error = "GL_INVALID_ENUM";
-				Desc  = "an unacceptable value has been specified for an enumerated argument";
-				break;
-			}
-
-			case GL_INVALID_VALUE :
-			{
-				Error = "GL_INVALID_VALUE";
-				Desc  = "a numeric argument is out of range";
-				break;
-			}
-
-			case GL_INVALID_OPERATION :
-			{
-				Error = "GL_INVALID_OPERATION";
-				Desc  = "the specified operation is not allowed in the current state";
-				break;
-			}
-
-			case GL_STACK_OVERFLOW :
-			{
-				Error = "GL_STACK_OVERFLOW";
-				Desc  = "this command would cause a stack overflow";
-				break;
-			}
-
-			case GL_STACK_UNDERFLOW :
-			{
-				Error = "GL_STACK_UNDERFLOW";
-				Desc  = "this command would cause a stack underflow";
-				break;
-			}
-
-			case GL_OUT_OF_MEMORY :
-			{
-				Error = "GL_OUT_OF_MEMORY";
-				Desc  = "there is not enough memory left to execute the command";
-				break;
-			}
-
-			case GL_INVALID_FRAMEBUFFER_OPERATION_EXT :
-			{
-				Error = "GL_INVALID_FRAMEBUFFER_OPERATION_EXT";
-				Desc  = "the object bound to FRAMEBUFFER_BINDING_EXT is not \"framebuffer complete\"";
-				break;
-			}
-		}
-
-		// Log the error
-		CASPAR_LOG(error) << "An internal OpenGL call failed in "
-				  << File.substr(File.find_last_of("\\/") + 1).c_str() << " (" << Line << ") : "
-				  << Error.c_str() << ", " << Desc.c_str()
-				  << ", " << expr.c_str()
-				  << std::endl;
-	}
-}
+			
+void SMFL_GLCheckError(const std::string& expr, const std::string& File, unsigned int Line);
 
 #ifdef _DEBUG
 	

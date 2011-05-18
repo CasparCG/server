@@ -19,42 +19,43 @@
 */
 #pragma once
 
-#include "../write_frame.h"
+#include "gpu/host_buffer.h"	
 
 #include <common/memory/safe_ptr.h>
 
-#include <core/video_format.h>
-#include <core/producer/frame/frame_visitor.h>
-#include <core/producer/frame/pixel_format.h>
-
-#include "../gpu/host_buffer.h"
-
 #include <boost/noncopyable.hpp>
-#include <boost/thread/future.hpp>
+#include <boost/range/iterator_range.hpp>
 
+#include <memory>
 #include <vector>
 
 namespace caspar { namespace core {
 	
-class image_mixer : public core::frame_visitor, boost::noncopyable
+class read_frame : boost::noncopyable
 {
 public:
-	image_mixer(const core::video_format_desc& format_desc);
-	
-	virtual void begin(const core::basic_frame& frame);
-	virtual void visit(core::write_frame& frame);
-	virtual void end();
+	read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data);
 
-	void begin_layer();
-	void end_layer();
+	virtual const boost::iterator_range<const unsigned char*> image_data() const;
+	virtual const boost::iterator_range<const short*> audio_data() const;
 	
-	boost::unique_future<safe_ptr<const host_buffer>> render();
+	static safe_ptr<const read_frame> empty()
+	{
+		struct empty : public read_frame
+		{			
+			virtual const boost::iterator_range<const unsigned char*> image_data() const {return boost::iterator_range<const unsigned char*>();}
+			virtual const boost::iterator_range<const short*> audio_data() const {return boost::iterator_range<const short*>();}
+		};
+		static safe_ptr<const empty> frame;
+		return frame;
+	}
 
-	std::vector<safe_ptr<host_buffer>> create_buffers(const core::pixel_format_desc& format);
+protected:
+	read_frame(){}
 
 private:
 	struct implementation;
-	safe_ptr<implementation> impl_;
+	std::shared_ptr<implementation> impl_;
 };
 
 }}

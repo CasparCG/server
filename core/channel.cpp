@@ -47,7 +47,7 @@ struct channel::implementation : boost::noncopyable
 	const int index_;
 	video_format_desc format_desc_;
 	
-	safe_ptr<mixer::frame_mixer_device> mixer_; // Mixer must be destroyed last in order to make sure that all frames have been returned to the pool.
+	safe_ptr<frame_mixer_device> mixer_; // Mixer must be destroyed last in order to make sure that all frames have been returned to the pool.
 	safe_ptr<frame_consumer_device> consumer_;
 	safe_ptr<frame_producer_device> producer_;
 
@@ -59,7 +59,7 @@ public:
 		: index_(index)
 		, format_desc_(format_desc)
 		, consumer_(new frame_consumer_device(format_desc))
-		, mixer_(new mixer::frame_mixer_device(format_desc))
+		, mixer_(new frame_mixer_device(format_desc))
 		, producer_(new frame_producer_device(format_desc_))	
 		, mixer_connection_(mixer_->connect([=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);}))
 		, producer_connection_(producer_->connect([=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);}))
@@ -79,7 +79,7 @@ public:
 		mixer_connection_.disconnect();
 
 		consumer_->set_video_format_desc(format_desc_);
-		mixer_ = make_safe<mixer::frame_mixer_device>(format_desc_);
+		mixer_ = make_safe<frame_mixer_device>(format_desc_);
 		producer_ = make_safe<frame_producer_device>(format_desc_);
 
 		mixer_connection_ = mixer_->connect([=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);});
@@ -90,7 +90,7 @@ public:
 channel::channel(int index, const video_format_desc& format_desc) : impl_(new implementation(index, format_desc)){}
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
 const safe_ptr<frame_producer_device>& channel::producer() { return impl_->producer_;} 
-const safe_ptr<mixer::frame_mixer_device>& channel::mixer() { return impl_->mixer_;} 
+const safe_ptr<frame_mixer_device>& channel::mixer() { return impl_->mixer_;} 
 const safe_ptr<frame_consumer_device>& channel::consumer() { return impl_->consumer_;} 
 const video_format_desc& channel::get_video_format_desc() const{return impl_->format_desc_;}
 void channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}

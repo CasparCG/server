@@ -32,9 +32,9 @@
 
 #include <array>
 
-#include <SFML/Window/Context.hpp>
+#include "../../dependencies\SFML-1.6\include\SFML/Window/Context.hpp"
 
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 
 class ogl_device
 {	

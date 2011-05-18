@@ -28,6 +28,9 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
+#include <windows.h>
+#include <Glee.h>
+
 #include "compiler\vs\disable_silly_warnings.h"
 
 #include <string>

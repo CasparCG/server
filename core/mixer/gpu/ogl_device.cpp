@@ -24,12 +24,9 @@
 #include <common/utility/assert.h>
 #include <common/gl/gl_check.h>
 
-#include <Glee.h>
-#include <SFML/Window.hpp>
-
 #include <boost/foreach.hpp>
 
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 
 ogl_device::ogl_device() : executor_(L"ogl_device", true)
 {

@@ -24,7 +24,7 @@
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/image_transform.h>
 
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 	
 class image_kernel
 {

@@ -28,13 +28,11 @@
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/image_transform.h>
 
-#include <Glee.h>
-
 #include <boost/noncopyable.hpp>
 
 #include <unordered_map>
 
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 
 class shader_program : boost::noncopyable
 {
@@ -62,7 +60,7 @@ public:
 			GL(glDeleteObjectARB(vertex_shader));
 			std::stringstream str;
 			str << "Failed to compile vertex shader:" << std::endl << info << std::endl;
-			BOOST_THROW_EXCEPTION(gl::gl_error() << msg_info(str.str()));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
 		}
 			
 		const char* fragment_source = fragment_source_str.c_str();
@@ -80,7 +78,7 @@ public:
 			GL(glDeleteObjectARB(fragmemt_shader));
 			std::stringstream str;
 			str << "Failed to compile fragment shader:" << std::endl << info << std::endl;
-			BOOST_THROW_EXCEPTION(gl::gl_error() << msg_info(str.str()));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
 		}
 			
 		program_ = glCreateProgramObjectARB();
@@ -101,7 +99,7 @@ public:
 			GL(glDeleteObjectARB(program_));
 			std::stringstream str;
 			str << "Failed to link shader program:" << std::endl << info << std::endl;
-			BOOST_THROW_EXCEPTION(gl::gl_error() << msg_info(str.str()));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
 		}
 		GL(glUseProgramObjectARB(program_));
 		glUniform1i(glGetUniformLocation(program_, "plane[0]"), 0);
