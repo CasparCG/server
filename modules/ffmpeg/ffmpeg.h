@@ -25,6 +25,8 @@ void init_ffmpeg();
 
 std::wstring get_avcodec_version();
 std::wstring get_avformat_version();
+std::wstring get_avutil_version();
+std::wstring get_avfilter_version();
 std::wstring get_swscale_version();
 
 }

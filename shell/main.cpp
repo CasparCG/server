@@ -110,8 +110,10 @@ void print_info()
 		CASPAR_LOG(info) << device;
 
 	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::get_avcodec_version();
-	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::get_avformat_version();
-	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::get_swscale_version();
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::get_avformat_version();
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::get_avfilter_version();
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::get_avutil_version();
+	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::get_swscale_version();
 	CASPAR_LOG(info) << L"OpenGL " << caspar::core::ogl_device::get_version() << "\n\n";
 }
  
