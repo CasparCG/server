@@ -42,6 +42,10 @@ public:
 		: frames_(frames) {}
 	implementation(std::vector<safe_ptr<basic_frame>>&& frames) 
 		: frames_(std::move(frames)){}
+	implementation(safe_ptr<basic_frame>&& frame) 
+		{ frames_.push_back(std::move(frame));}
+	implementation(const safe_ptr<basic_frame>& frame) 
+		{ frames_.push_back(frame);}
 	
 	void accept(const basic_frame& self, frame_visitor& visitor)
 	{
@@ -53,20 +57,10 @@ public:
 };
 	
 basic_frame::basic_frame() : impl_(new implementation(std::vector<safe_ptr<basic_frame>>())){}
-basic_frame::basic_frame(std::vector<safe_ptr<basic_frame>>&& frames) : impl_(new implementation(std::move(frames))){}
 basic_frame::basic_frame(const basic_frame& other) : impl_(new implementation(*other.impl_)){}
-basic_frame::basic_frame(const safe_ptr<basic_frame>& frame)
-{
-	std::vector<safe_ptr<basic_frame>> frames;
-	frames.push_back(frame);
-	impl_.reset(new implementation(std::move(frames)));
-}
-basic_frame::basic_frame(safe_ptr<basic_frame>&& frame)
-{
-	std::vector<safe_ptr<basic_frame>> frames;
-	frames.push_back(std::move(frame));
-	impl_.reset(new implementation(std::move(frames)));
-}
+basic_frame::basic_frame(std::vector<safe_ptr<basic_frame>>&& frames) : impl_(new implementation(frames)){}
+basic_frame::basic_frame(const safe_ptr<basic_frame>& frame) : impl_(new implementation(frame)){}
+basic_frame::basic_frame(safe_ptr<basic_frame>&& frame)  : impl_(new implementation(std::move(frame))){}
 void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
 basic_frame& basic_frame::operator=(const basic_frame& other)
 {

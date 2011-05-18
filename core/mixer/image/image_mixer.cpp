@@ -163,7 +163,6 @@ public:
 				local_key_ = false;
 
 				std::swap(local_key_buffer_, layer_key_buffer_);
-				layer_key_buffer_->bind(4);
 			}
 
 			// Move waiting items to queue.
@@ -173,7 +172,6 @@ public:
 			// Start transfer from device to host.
 
 			read_buffer_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
-			draw_buffer_->attach();
 			draw_buffer_->write(*read_buffer_);
 
 			std::swap(draw_buffer_, write_buffer_);
@@ -213,7 +211,10 @@ public:
 				local_key_buffer_->bind(3);
 				draw_buffer_->attach();	
 				local_key_ = false;
-			}			
+			}		
+
+			if(layer_key_)
+				layer_key_buffer_->bind(4);
 		}	
 
 		// Draw
