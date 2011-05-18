@@ -26,7 +26,7 @@
 
 #include <core/video_format.h>
 #include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/write_frame.h>
+#include <core/mixer/write_frame.h>
 #include <core/producer/frame/image_transform.h>
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_factory.h>

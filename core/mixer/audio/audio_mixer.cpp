@@ -21,11 +21,10 @@
 
 #include "audio_mixer.h"
 
-#include "../gpu/gpu_write_frame.h"
-
+#include <core/mixer/write_frame.h>
 #include <core/producer/frame/audio_transform.h>
 
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 	
 struct audio_mixer::implementation
 {

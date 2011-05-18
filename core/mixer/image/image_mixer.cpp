@@ -25,7 +25,7 @@
 #include "../gpu/ogl_device.h"
 #include "../gpu/host_buffer.h"
 #include "../gpu/device_buffer.h"
-#include "../gpu/gpu_write_frame.h"
+#include "../write_frame.h"
 
 #include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
@@ -37,13 +37,10 @@
 
 #include <boost/foreach.hpp>
 
-#include <Glee.h>
-#include <SFML/Window/Context.hpp>
-
 #include <array>
 #include <unordered_map>
 
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 		
 struct image_mixer::implementation : boost::noncopyable
 {	
@@ -93,14 +90,10 @@ public:
 	}
 		
 	void visit(core::write_frame& frame)
-	{		
-		auto gpu_frame = dynamic_cast<gpu_write_frame*>(&frame);
-		if(!gpu_frame)
-			return;
-				
-		auto desc		= gpu_frame->get_pixel_format_desc();
-		auto buffers	= gpu_frame->get_plane_buffers();
-		auto transform	= transform_stack_.top()*gpu_frame->get_image_transform();
+	{						
+		auto desc		= frame.get_pixel_format_desc();
+		auto buffers	= frame.get_plane_buffers();
+		auto transform	= transform_stack_.top()*frame.get_image_transform();
 
 		ogl_device::begin_invoke([=]
 		{

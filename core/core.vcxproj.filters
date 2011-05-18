@@ -16,9 +16,6 @@
     <Filter Include="producer\frame">
       <UniqueIdentifier>{b19721c1-8dd1-45fb-b9e3-212b548ebbb6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="consumer\frame">
-      <UniqueIdentifier>{fc8d2ce0-e849-4f8e-83bf-494ab4455b80}</UniqueIdentifier>
-    </Filter>
     <Filter Include="mixer">
       <UniqueIdentifier>{e480e128-a351-4dc6-a7ab-f58b480f6afd}</UniqueIdentifier>
     </Filter>
@@ -71,12 +68,6 @@
     <ClInclude Include="producer\frame\pixel_format.h">
       <Filter>producer\frame</Filter>
     </ClInclude>
-    <ClInclude Include="producer\frame\write_frame.h">
-      <Filter>producer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\frame\read_frame.h">
-      <Filter>consumer\frame</Filter>
-    </ClInclude>
     <ClInclude Include="video_format.h" />
     <ClInclude Include="producer\frame\frame_visitor.h">
       <Filter>producer\frame</Filter>
@@ -93,12 +84,6 @@
     <ClInclude Include="mixer\image\image_mixer.h">
       <Filter>mixer\image</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\gpu\gpu_read_frame.h">
-      <Filter>mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\gpu_write_frame.h">
-      <Filter>mixer\gpu</Filter>
-    </ClInclude>
     <ClInclude Include="mixer\gpu\host_buffer.h">
       <Filter>mixer\gpu</Filter>
     </ClInclude>
@@ -113,6 +98,12 @@
     </ClInclude>
     <ClInclude Include="producer\separated\separated_producer.h">
       <Filter>producer\separated</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\read_frame.h">
+      <Filter>mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\write_frame.h">
+      <Filter>mixer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -158,12 +149,6 @@
     <ClCompile Include="mixer\image\image_kernel.cpp">
       <Filter>mixer\image</Filter>
     </ClCompile>
-    <ClCompile Include="mixer\gpu\gpu_read_frame.cpp">
-      <Filter>mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\gpu_write_frame.cpp">
-      <Filter>mixer\gpu</Filter>
-    </ClCompile>
     <ClCompile Include="mixer\gpu\host_buffer.cpp">
       <Filter>mixer\gpu</Filter>
     </ClCompile>
@@ -178,6 +163,12 @@
     </ClCompile>
     <ClCompile Include="producer\separated\separated_producer.cpp">
       <Filter>producer\separated</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\read_frame.cpp">
+      <Filter>mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\write_frame.cpp">
+      <Filter>mixer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

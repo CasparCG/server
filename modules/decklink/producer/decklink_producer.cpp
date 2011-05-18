@@ -31,7 +31,7 @@
 #include <common/memory/memclr.h>
 
 #include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame/write_frame.h>
+#include <core/mixer/write_frame.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>

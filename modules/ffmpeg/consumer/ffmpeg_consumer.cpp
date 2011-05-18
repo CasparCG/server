@@ -22,7 +22,7 @@
 
 #include "ffmpeg_consumer.h"
 
-#include <core/consumer/frame/read_frame.h>
+#include <core/mixer/read_frame.h>
 
 #include <common/concurrency/executor.h>
 #include <common/utility/string.h>

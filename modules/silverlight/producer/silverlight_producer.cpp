@@ -31,7 +31,7 @@
 
 #include <core/video_format.h>
 
-#include <core/producer/frame/write_frame.h>
+#include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_factory.h>
 
 #include <common/concurrency/executor.h>

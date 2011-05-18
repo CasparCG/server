@@ -32,7 +32,7 @@
 
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame/write_frame.h>
+#include <core/mixer/write_frame.h>
 
 #include <common/env.h>
 #include <common/concurrency/com_context.h>

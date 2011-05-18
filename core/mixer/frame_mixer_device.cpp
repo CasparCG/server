@@ -21,8 +21,8 @@
 
 #include "frame_mixer_device.h"
 
-#include "gpu/gpu_read_frame.h"
-#include "gpu/gpu_write_frame.h"
+#include "read_frame.h"
+#include "write_frame.h"
 
 #include "audio/audio_mixer.h"
 #include "image/image_mixer.h"
@@ -32,8 +32,10 @@
 #include <common/diagnostics/graph.h>
 #include <common/utility/tweener.h>
 
-#include <core/consumer/frame/read_frame.h>
-#include <core/producer/frame/write_frame.h>
+
+#include <core/mixer/read_frame.h>
+#include <core/mixer/write_frame.h>
+#include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/audio_transform.h>
@@ -47,7 +49,7 @@
 
 #include <unordered_map>
 
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 		
 template<typename T>
 class tweened_transform
@@ -195,7 +197,7 @@ public:
 
 			diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 
-			output_(make_safe<const gpu_read_frame>(std::move(image), std::move(audio)));
+			output_(make_safe<const read_frame>(std::move(image), std::move(audio)));
 
 			diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
 			tick_timer_.restart();
@@ -205,7 +207,7 @@ public:
 		
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
 	{
-		return make_safe<gpu_write_frame>(reinterpret_cast<int>(tag), desc, image_mixer_.create_buffers(desc));
+		return make_safe<write_frame>(reinterpret_cast<int>(tag), desc, image_mixer_.create_buffers(desc));
 	}
 			
 	template<typename T>	

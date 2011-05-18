@@ -26,7 +26,7 @@
 
 #include "../interop/DeckLinkAPI_h.h"
 
-#include <core/consumer/frame/read_frame.h>
+#include <core/mixer/read_frame.h>
 
 #include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
