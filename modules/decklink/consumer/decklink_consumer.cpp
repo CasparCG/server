@@ -110,25 +110,6 @@ public:
     STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
 };
 
-std::shared_ptr<IDeckLinkVideoFrame> make_alpha_only_frame(const CComQIPtr<IDeckLinkOutput>& decklink, const safe_ptr<const core::read_frame>& frame, const core::video_format_desc& format_desc)
-{
-	if(static_cast<size_t>(frame->image_data().size()) != format_desc.size)
-		return std::make_shared<decklink_frame_adapter>(frame, format_desc);
-
-	IDeckLinkMutableVideoFrame* result;
-
-	if(FAILED(decklink->CreateVideoFrame(format_desc.width, format_desc.height, format_desc.size/format_desc.height, bmdFormat8BitBGRA, bmdFrameFlagDefault, &result)))
-		BOOST_THROW_EXCEPTION(caspar_exception());
-
-	void* bytes = nullptr;
-	if(FAILED(result->GetBytes(&bytes)))
-		BOOST_THROW_EXCEPTION(caspar_exception());
-			
-	fast_memsfhl(reinterpret_cast<unsigned char*>(bytes), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-
-	return std::shared_ptr<IDeckLinkVideoFrame>(result, [](IDeckLinkMutableVideoFrame* p) {p->Release();});
-}
-
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
 	const configuration config_;
@@ -367,13 +348,7 @@ public:
 			
 	void schedule_next_video(const safe_ptr<const core::read_frame>& frame)
 	{
-		std::shared_ptr<IDeckLinkVideoFrame> deck_frame;
-		if(config_.output == key_only)
-			deck_frame = make_alpha_only_frame(output_, frame, format_desc_);
-		else 
-			deck_frame = std::make_shared<decklink_frame_adapter>(frame, format_desc_);
-
-		frame_container_.push_back(deck_frame);
+		frame_container_.push_back(std::make_shared<decklink_frame_adapter>(frame, format_desc_));
 		if(FAILED(output_->ScheduleVideoFrame(frame_container_.back().get(), (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
@@ -425,6 +400,11 @@ public:
 	{
 		return context_->print();
 	}
+
+	virtual bool key_only() const
+	{
+		return (config_.output == caspar::key_only);
+	}
 };	
 
 safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params) 
@@ -448,6 +428,7 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::w
 		config.latency = normal_latency;
 		
 	config.embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
+	config.output = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end() ? key_only : fill_and_key;
 
 	return make_safe<decklink_consumer_proxy>(config);
 }

@@ -38,6 +38,7 @@ struct frame_consumer : boost::noncopyable
 	
 	virtual void send(const safe_ptr<const read_frame>& frame) = 0;
 	virtual size_t buffer_depth() const {return 1;}
+	virtual bool key_only() const{ return false;}
 	virtual void initialize(const video_format_desc& format_desc) = 0;
 	virtual std::wstring print() const = 0;
 

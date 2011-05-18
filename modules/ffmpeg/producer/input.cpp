@@ -110,8 +110,8 @@ public:
 				boost::errinfo_api_function("av_find_stream_info") <<
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
-
-		video_codec_context_ = open_stream(AVMEDIA_TYPE_VIDEO, video_s_index_);
+		
+		video_codec_context_ = open_stream(AVMEDIA_TYPE_VIDEO, video_s_index_, 4);
 		if(!video_codec_context_)
 			CASPAR_LOG(warning) << print() << " Could not open any video stream.";
 		else
@@ -122,7 +122,7 @@ public:
 			CASPAR_LOG(warning) << print() << " Could not open any audio stream.";
 		else
 			fix_time_base(audio_codex_context_.get());
-
+		
 		if(!video_codec_context_ && !audio_codex_context_)
 		{	
 			BOOST_THROW_EXCEPTION(
@@ -131,7 +131,7 @@ public:
 				source_info(narrow(print())) << 
 				msg_info("No video or audio codec context found."));	
 		}
-
+		
 		if(start_ != 0)			
 			seek_frame(start_);
 					
@@ -181,7 +181,7 @@ private:
 			context->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(context->time_base.den)))-1));
 	}
 
-	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index) const
+	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index, int thread_count = -1) const
 	{		
 		const auto streams = boost::iterator_range<AVStream**>(format_context_->streams, format_context_->streams+format_context_->nb_streams);
 		const auto stream = boost::find_if(streams, [&](AVStream* stream) 

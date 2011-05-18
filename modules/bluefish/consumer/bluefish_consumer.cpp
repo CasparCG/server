@@ -357,11 +357,13 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	std::unique_ptr<bluefish_consumer> consumer_;
 	const size_t device_index_;
 	const bool embedded_audio_;
+	bool key_only_;
 public:
 
-	bluefish_consumer_proxy(size_t device_index, bool embedded_audio)
+	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
 		: device_index_(device_index)
-		, embedded_audio_(embedded_audio){}
+		, embedded_audio_(embedded_audio)
+		, key_only_(key_only){}
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
@@ -376,6 +378,11 @@ public:
 	virtual std::wstring print() const
 	{
 		return consumer_->print();
+	}
+
+	virtual bool key_only() const
+	{
+		return key_only_;
 	}
 };	
 
@@ -427,16 +434,18 @@ safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::w
 		device_index = lexical_cast_or_default<int>(params[1], 1);
 
 	bool embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
+	bool key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio);
+	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree) 
 {	
 	auto device_index = ptree.get("device", 0);
 	auto embedded_audio  = ptree.get("embedded-audio", false);
+	bool key_only = (ptree.get("output", "fill_and_key") == "key_only");
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio);
+	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
 }
