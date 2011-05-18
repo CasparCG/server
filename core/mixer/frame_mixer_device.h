@@ -40,7 +40,7 @@ class image_transform;
 
 }
 
-namespace mixer {
+namespace core {
 	
 class frame_mixer_device : public core::frame_factory
 {

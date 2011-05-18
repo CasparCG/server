@@ -50,6 +50,9 @@
     <ClCompile Include="utility\string.cpp">
       <Filter>utility</Filter>
     </ClCompile>
+    <ClCompile Include="gl\gl_check.cpp">
+      <Filter>gl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exception\exceptions.h">

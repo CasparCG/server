@@ -47,6 +47,10 @@
 #include <crtdbg.h>
 #endif
 
+#include <Windows.h>
+#include <GLee.h>
+#include <SFML/Window.hpp>
+
 #include <tchar.h>
 #include <sstream>
 #include <memory>

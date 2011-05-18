@@ -24,7 +24,7 @@
 
 #include <boost/noncopyable.hpp>
 
-namespace caspar { namespace mixer {
+namespace caspar { namespace core {
 	
 class audio_mixer : public core::frame_visitor, boost::noncopyable
 {
