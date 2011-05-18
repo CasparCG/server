@@ -19,26 +19,17 @@
 */
 #pragma once
 
-#include <core/video_format.h>
 #include <core/consumer/frame_consumer.h>
+#include <core/video_format.h>
+
+#include <boost/property_tree/ptree.hpp>
+
+#include <string>
+#include <vector>
 
 namespace caspar { 
 	
-class ffmpeg_consumer : public core::frame_consumer
-{
-public:	
-	explicit ffmpeg_consumer(const std::wstring& filename);
-	ffmpeg_consumer(ffmpeg_consumer&& other);
-	
-	virtual void initialize(const core::video_format_desc& format_desc);
-	virtual void send(const safe_ptr<const core::read_frame>&);
-	virtual size_t buffer_depth() const;
-	virtual std::wstring print() const;
-private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
-};
-
 safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree);
 
 }

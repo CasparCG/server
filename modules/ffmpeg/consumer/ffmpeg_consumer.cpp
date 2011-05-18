@@ -52,7 +52,7 @@ extern "C"
 
 namespace caspar { 
 	
-struct ffmpeg_consumer::implementation : boost::noncopyable
+struct ffmpeg_consumer : boost::noncopyable
 {		
 	std::string filename_;
 
@@ -77,7 +77,7 @@ struct ffmpeg_consumer::implementation : boost::noncopyable
 
 	executor executor_;
 public:
-	implementation(const std::string& filename)
+	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc)
 		: filename_(filename)
 		, audio_st_(nullptr)
 		, video_st_(nullptr)
@@ -85,44 +85,15 @@ public:
 		, img_convert_ctx_(nullptr)
 		, video_outbuf_(1920*1080*4)
 		, audio_outbuf_(48000)
-		, executor_(L"ffmpeg_consumer")
-	{}
-
-	~implementation()
-	{    
-		executor_.invoke([]{});
-		executor_.stop();
-
-		av_write_trailer(oc_.get());
-
-		// Close each codec.
-		if (video_st_)		
-			avcodec_close(video_st_->codec);
-		
-		if (audio_st_)
-			avcodec_close(audio_st_->codec);
-				
-		// Free the streams.
-		for(size_t i = 0; i < oc_->nb_streams; ++i) 
-		{
-			av_freep(&oc_->streams[i]->codec);
-			av_freep(&oc_->streams[i]);
-		}
-
-		if (!(fmt_->flags & AVFMT_NOFILE)) 
-			url_fclose(oc_->pb); // Close the output ffmpeg.
-	}
-
-	void initialize(const core::video_format_desc& format_desc)
+		, format_desc_(format_desc)
+		, executor_(L"ffmpeg_consumer", true)
 	{
-		format_desc_ = format_desc;
-		executor_.start();
 		active_ = executor_.begin_invoke([]{});
 
 		fmt_ = av_guess_format(nullptr, filename_.c_str(), nullptr);
 		if (!fmt_) 
 		{
-			CASPAR_LOG(warning) << "Could not deduce output format from ffmpeg extension: using MPEG.";
+			CASPAR_LOG(info) << "Could not deduce output format from ffmpeg extension: using MPEG.";
 			fmt_ = av_guess_format("mpeg", nullptr, nullptr);
 			filename_ = filename_ + ".avi"; 
 		}
@@ -189,9 +160,34 @@ public:
 		
 		av_write_header(oc_.get()); // write the stream header, if any 
 
-		CASPAR_LOG(info) << print() << L" Successfully initialized.";
+		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
-	
+
+	~ffmpeg_consumer()
+	{    
+		executor_.invoke([]{});
+		executor_.stop();
+
+		av_write_trailer(oc_.get());
+
+		// Close each codec.
+		if (video_st_)		
+			avcodec_close(video_st_->codec);
+		
+		if (audio_st_)
+			avcodec_close(audio_st_->codec);
+				
+		// Free the streams.
+		for(size_t i = 0; i < oc_->nb_streams; ++i) 
+		{
+			av_freep(&oc_->streams[i]->codec);
+			av_freep(&oc_->streams[i]);
+		}
+
+		if (!(fmt_->flags & AVFMT_NOFILE)) 
+			url_fclose(oc_->pb); // Close the output ffmpeg.
+	}
+		
 	std::wstring print() const
 	{
 		return L"ffmpeg[" + widen(filename_) + L"]";
@@ -242,6 +238,9 @@ public:
   
 	void encode_video_frame(const safe_ptr<const core::read_frame>& frame)
 	{ 
+		if(!video_st_)
+			return;
+
 		AVCodecContext* c = video_st_->codec;
  
 		if (img_convert_ctx_ == nullptr) 
@@ -345,7 +344,10 @@ public:
 	}
 
 	bool encode_audio_packet()
-	{				
+	{		
+		if(!audio_st_)
+			return false;
+
 		auto c = audio_st_->codec;
 
 		auto frame_bytes = c->frame_size * 2 * 2; // samples per frame * 2 channels * 2 bytes per sample
@@ -395,17 +397,39 @@ public:
 	size_t buffer_depth() const { return 1; }
 };
 
-ffmpeg_consumer::ffmpeg_consumer(const std::wstring& filename) : impl_(new implementation(narrow(filename))){}
-ffmpeg_consumer::ffmpeg_consumer(ffmpeg_consumer&& other) : impl_(std::move(other.impl_)){}
-void ffmpeg_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
-size_t ffmpeg_consumer::buffer_depth() const{return impl_->buffer_depth();}
-void ffmpeg_consumer::initialize(const core::video_format_desc& format_desc)
+struct ffmpeg_consumer_proxy : public core::frame_consumer
 {
-	// TODO: Ugly
-	impl_.reset(new implementation(impl_->filename_));
-	impl_->initialize(format_desc);
-}
-std::wstring ffmpeg_consumer::print() const {return impl_->print();}
+	const std::wstring filename_;
+	const bool key_only_;
+
+	std::unique_ptr<ffmpeg_consumer> consumer_;
+
+public:
+
+	ffmpeg_consumer_proxy(const std::wstring& filename, bool key_only)
+		: filename_(filename)
+		, key_only_(key_only){}
+	
+	virtual void initialize(const core::video_format_desc& format_desc)
+	{
+		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc));
+	}
+	
+	virtual void send(const safe_ptr<const core::read_frame>& frame)
+	{
+		consumer_->send(frame);
+	}
+	
+	virtual std::wstring print() const
+	{
+		return consumer_->print();
+	}
+
+	virtual bool key_only() const
+	{
+		return key_only_;
+	}
+};	
 
 safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params)
 {
@@ -414,7 +438,17 @@ safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wst
 	
 	// TODO: Ask stakeholders about case where file already exists.
 	boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + params[1])); // Delete the file if it exists
-	return make_safe<ffmpeg_consumer>(env::media_folder() + params[1]);
+	bool key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
+
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + params[1], key_only);
+}
+
+safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree)
+{
+	std::string filename = ptree.get<std::string>("filename");
+	bool key_only = (ptree.get("output", "fill_and_key") == "key_only");
+	
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + widen(filename), key_only);
 }
 
 }

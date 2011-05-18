@@ -26,21 +26,25 @@
 #include "frame_consumer_device.h"
 
 #include "../video_format.h"
+#include "../mixer/gpu/ogl_device.h"
+#include "../mixer/read_frame.h"
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/utility/assert.h>
+#include <common/memory/memshfl.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
+#include <boost/range/algorithm.hpp>
 
 namespace caspar { namespace core {
 	
 struct frame_consumer_device::implementation
 {	
-	boost::circular_buffer<safe_ptr<const read_frame>> buffer_;
+	boost::circular_buffer<std::pair<safe_ptr<const read_frame>,safe_ptr<const read_frame>>> buffer_;
 
 	std::map<int, std::shared_ptr<frame_consumer>> consumers_; // Valid iterators after erase
 	
@@ -100,18 +104,31 @@ public:
 		{
 			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 			frame_timer_.restart();
+			
+			auto key_frame = read_frame::empty();
 
-			buffer_.push_back(std::move(frame));
+			if(boost::range::find_if(consumers_, [](const decltype(*consumers_.begin())& p){return p.second->key_only();}) != consumers_.end())
+			{
+				// Currently do key_only transform on cpu. Unsure if the extra 400MB/s (1080p50) overhead is worth it to do it on gpu.
+				auto key_data = ogl_device::create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
+				fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				std::vector<short> audio_data(frame->audio_data().begin(), frame->audio_data().end());
+				key_frame = make_safe<const read_frame>(std::move(key_data), std::move(audio_data));
+			}
+
+			buffer_.push_back(std::make_pair(std::move(frame), std::move(key_frame)));
 
 			if(!buffer_.full())
 				return;
+
 	
 			auto it = consumers_.begin();
 			while(it != consumers_.end())
 			{
 				try
 				{
-					it->second->send(buffer_[it->second->buffer_depth()-1]);
+					auto p = buffer_[it->second->buffer_depth()-1];
+					it->second->send(it->second->key_only() ? p.second : p.first);
 					++it;
 				}
 				catch(...)
