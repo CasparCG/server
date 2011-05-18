@@ -124,7 +124,7 @@ void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInf
 			{
 				if(!bClockLoaded_) 
 				{
-					get_default_cg_producer(pChannel_)->add(0, TEXT("hawrysklocka/clock"), true, TEXT(""), currentCommand_.GetData());
+					get_default_cg_producer(pChannel_)->add(0, TEXT("hawrysklocka/clock.ft"), true, TEXT(""), currentCommand_.GetData());
 					bClockLoaded_ = true;
 				}
 				else 
