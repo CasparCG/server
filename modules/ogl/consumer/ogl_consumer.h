@@ -26,14 +26,6 @@
 #include <boost/property_tree/ptree.hpp>
 
 namespace caspar {
-	
-enum stretch
-{
-	none,
-	uniform,
-	fill,
-	uniform_to_fill
-};
 
 safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params);
 safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::ptree& ptree);

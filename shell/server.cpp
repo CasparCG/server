@@ -106,11 +106,13 @@ struct server::implementation : boost::noncopyable
 					else if(name == "bluefish")					
 						channels_.back()->consumer()->add(index++, create_bluefish_consumer(xml_consumer.second));					
 					else if(name == "decklink")					
-						channels_.back()->consumer()->add(index++, create_decklink_consumer(xml_consumer.second));					
+						channels_.back()->consumer()->add(index++, create_decklink_consumer(xml_consumer.second));				
+					else if(name == "file")					
+						channels_.back()->consumer()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
 					else if(name == "audio")
 						channels_.back()->consumer()->add(index++, oal_consumer());		
-				else
-					CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
+					else if(name != "<xmlcomment>")
+						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
 				}
 				catch(...)
 				{

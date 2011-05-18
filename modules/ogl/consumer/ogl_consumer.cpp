@@ -43,6 +43,14 @@
 #include <array>
 
 namespace caspar {
+		
+enum stretch
+{
+	none,
+	uniform,
+	fill,
+	uniform_to_fill
+};
 
 struct ogl_consumer : boost::noncopyable
 {		
@@ -295,15 +303,17 @@ struct ogl_consumer_proxy : public core::frame_consumer
 	size_t screen_index_;
 	caspar::stretch stretch_;
 	bool windowed_;
+	bool key_only_;
 
 	std::unique_ptr<ogl_consumer> consumer_;
 
 public:
 
-	ogl_consumer_proxy(size_t screen_index, stretch stretch, bool windowed)
+	ogl_consumer_proxy(size_t screen_index, stretch stretch, bool windowed, bool key_only)
 		: screen_index_(screen_index)
 		, stretch_(stretch)
-		, windowed_(windowed){}
+		, windowed_(windowed)
+		, key_only_(key_only){}
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
@@ -318,6 +328,11 @@ public:
 	virtual std::wstring print() const
 	{
 		return consumer_->print();
+	}
+
+	virtual bool key_only() const
+	{
+		return key_only_;
 	}
 };	
 
@@ -336,7 +351,9 @@ safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstrin
 	if(params.size() > 2) 
 		windowed = lexical_cast_or_default<bool>(params[3], windowed);
 
-	return make_safe<ogl_consumer_proxy>(screen_index, stretch, windowed);
+	bool key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
+
+	return make_safe<ogl_consumer_proxy>(screen_index, stretch, windowed, key_only);
 }
 
 safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::ptree& ptree) 
@@ -351,7 +368,9 @@ safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::p
 	else if(key_str == "uniform_to_fill")
 		stretch = stretch::uniform_to_fill;
 
-	return make_safe<ogl_consumer_proxy>(screen_index, stretch, windowed);
+	bool key_only = (ptree.get("output", "fill_and_key") == "key_only");
+
+	return make_safe<ogl_consumer_proxy>(screen_index, stretch, windowed, key_only);
 }
 
 }
