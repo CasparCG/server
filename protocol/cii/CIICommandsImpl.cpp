@@ -98,6 +98,7 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
 	{
 		filename_ = parameters[5];
 		filename_ = filename_.substr(0, filename_.find_last_of(TEXT('.')));
+		filename_.append(L".ft");
 		state_ = 0;
 		return;
 	}
@@ -183,10 +184,12 @@ void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {
 
 	if(parameters[1].at(0) == 27)	//NEPTUNE:	Y\<27>\X			Stop layer X.
 		state_ = 1;
-	else if(static_cast<unsigned char>(parameters[1].at(0)) == 254)	//NEPTUNE:	Y\<254>			Clear Canvas. 
+	else if(static_cast<unsigned char>(parameters[1].at(1)) == 190)	//NEPTUNE:	Y\<254>			Clear Canvas. 
 		state_ = 2;
-	else if(static_cast<unsigned char>(parameters[1].at(0)) == 213)	//NEPTUNE:	Y\<213><243>\X	Play layer X. 
-		state_ = 3;
+	else if(static_cast<unsigned char>(parameters[1].at(1)) == 149)	//NEPTUNE:	Y\<213><243>\X	Play layer X. 
+		state_ = 3;													//UPDATE 2011-05-09: These char-codes are aparently not valid after converting to wide-chars
+																	//the correct sequence is <195><149><195><179> 
+		
 }
 
 }}}

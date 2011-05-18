@@ -20,16 +20,12 @@
 #pragma once
 
 #include "frame_visitor.h"
-#include "../../video_format.h"
+
+#include <core/video_format.h>
 
 #include <common/memory/safe_ptr.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
-
-#include <array>
-#include <memory>
-#include <vector>
 
 namespace caspar { namespace core {
 
@@ -83,7 +79,7 @@ public:
 	virtual void accept(frame_visitor& visitor);
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 inline bool is_concrete_frame(const safe_ptr<basic_frame>& frame)

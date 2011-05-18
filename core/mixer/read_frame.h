@@ -33,6 +33,7 @@ namespace caspar { namespace core {
 	
 class read_frame : boost::noncopyable
 {
+	read_frame(){}
 public:
 	read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data);
 
@@ -49,10 +50,6 @@ public:
 		static safe_ptr<const empty> frame;
 		return frame;
 	}
-
-protected:
-	read_frame(){}
-
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

@@ -86,6 +86,7 @@ public:
 	
 	void write(host_buffer& target)
 	{
+		attach(0);
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
 		target.unmap();
 		target.bind();

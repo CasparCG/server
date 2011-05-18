@@ -81,5 +81,5 @@ const boost::iterator_range<const short*> write_frame::audio_data() const
 }
 int write_frame::tag() const {return impl_->tag_;}
 const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
-std::vector<safe_ptr<host_buffer>>& write_frame::get_plane_buffers(){return impl_->buffers_;}
+const std::vector<safe_ptr<host_buffer>>& write_frame::get_plane_buffers() const{return impl_->buffers_;}
 }}
