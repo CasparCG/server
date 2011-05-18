@@ -159,14 +159,14 @@ public:
 		return try_merge_audio_and_video();	
 	}
 
-	void try_decode_video_packet(const packet& video_packet)
+	void try_decode_video_packet(packet&& video_packet)
 	{
 		if(!video_decoder_)
 			return;
 
 		try
 		{
-			boost::range::push_back(video_frame_buffer_, video_decoder_->execute(video_packet));
+			boost::range::push_back(video_frame_buffer_, video_decoder_->execute(std::move(video_packet)));
 		}
 		catch(...)
 		{
@@ -176,14 +176,14 @@ public:
 		}
 	}
 
-	void try_decode_audio_packet(const packet& audio_packet)
+	void try_decode_audio_packet(packet&& audio_packet)
 	{
 		if(!audio_decoder_)
 			return;
 
 		try
 		{
-			boost::range::push_back(audio_chunk_buffer_, audio_decoder_->execute(audio_packet));
+			boost::range::push_back(audio_chunk_buffer_, audio_decoder_->execute(std::move(audio_packet)));
 		}
 		catch(...)
 		{
