@@ -43,6 +43,7 @@ extern "C"
 	#define __STDC_LIMIT_MACROS
 	#include <libswscale/swscale.h>
 	#include <libavformat/avformat.h>
+	#include <libavcodec/avcodec.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)
@@ -147,7 +148,7 @@ public:
 		}
 	}
 	
-	std::vector<safe_ptr<core::write_frame>> execute(const packet& video_packet)
+	std::vector<safe_ptr<core::write_frame>> execute(packet&& video_packet)
 	{				
 		std::vector<safe_ptr<core::write_frame>> result;
 
@@ -160,7 +161,7 @@ public:
 			safe_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 			int frame_finished = 0;
-			const int errn = avcodec_decode_video(&codec_context_, decoded_frame.get(), &frame_finished, video_packet.data->data(), video_packet.data->size());
+			const int errn = avcodec_decode_video2(&codec_context_, decoded_frame.get(), &frame_finished, video_packet.av_packet.get());
 		
 			if(errn < 0)
 			{
@@ -216,6 +217,6 @@ public:
 };
 
 video_decoder::video_decoder(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(codec_context, frame_factory)){}
-std::vector<safe_ptr<core::write_frame>> video_decoder::execute(const packet& video_packet){return impl_->execute(video_packet);}
+std::vector<safe_ptr<core::write_frame>> video_decoder::execute(packet&& video_packet){return impl_->execute(std::move(video_packet));}
 
 }

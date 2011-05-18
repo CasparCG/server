@@ -1,7 +1,8 @@
 #pragma once
 
 #include <vector>
-#include <tbb/cache_aligned_allocator.h>
+
+#include <memory>
 
 namespace caspar {
 	
@@ -14,18 +15,15 @@ enum packet_type
 
 struct packet
 {
-	typedef std::vector<unsigned char, tbb::cache_aligned_allocator<unsigned char>> aligned_buffer;
-
 	packet_type type;
-	std::shared_ptr<aligned_buffer> data;
-
+	std::shared_ptr<AVPacket> av_packet;
+	
 	packet(packet_type t = empty_packet) 
 		: type(t){}
 
-	template<typename T>
-	packet(T first, T last) 
+	packet(const std::shared_ptr<AVPacket>& av_packet) 
 		: type(data_packet)
-		, data(new aligned_buffer(first, last)){}
+		, av_packet(av_packet){}
 };
 
 }
