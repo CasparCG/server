@@ -81,25 +81,11 @@ void thread_free(AVCodecContext* s)
 	CASPAR_LOG(info) << "Released ffmpeg tbb context.";
 }
 
-std::regex get_slice_regex()
-{
-	auto s = env::properties().get("configuration.ffmpeg.slice-threads-regex", "");
-	boost::algorithm::erase_all(s, " ");
-	boost::algorithm::erase_all(s, "\n");
-	return std::regex(s);
-}
-
-bool allow_slice_thread(int id)
-{
-	static std::regex e = get_slice_regex();
-	return std::regex_match(boost::lexical_cast<std::string>(id), e);
-}
-
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 {
-	auto id = codec->id;
 	avctx->thread_count = 1;
-	if(allow_slice_thread(id) && // Some codecs don't like to have multiple multithreaded decoding instances. Only enable for those we know work.
+	// Some codecs don't like to have multiple multithreaded decoding instances. Only enable for those we know work.
+	if(codec->id == CODEC_ID_MPEG2VIDEO && 
 	  (codec->capabilities & CODEC_CAP_SLICE_THREADS) && 
 	  (avctx->thread_type & FF_THREAD_SLICE))
 	{
