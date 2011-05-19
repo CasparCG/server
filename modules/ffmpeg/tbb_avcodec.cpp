@@ -17,8 +17,23 @@ extern "C"
 }
 
 namespace caspar {
-	
-int task_execute(AVCodecContext* s, std::function<int(void* arg, int arg_size, int jobnr, int threadnr)>&& func, void* arg, int* ret, int count, int size)
+		
+int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2), void* arg, int* ret, int count, int size)
+{
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, count), [&](const tbb::blocked_range<size_t>& r)
+	{
+		for(size_t n = r.begin(); n != r.end(); ++n)		
+		{
+			int r = func(s, reinterpret_cast<uint8_t*>(arg) + n*size);
+			if(ret)
+				ret[n] = r;
+		}
+	});
+
+	return 0;
+}
+
+int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg2, int, int), void* arg, int* ret, int count)
 {	
     tbb::atomic<int> counter;
 	counter = 0;
@@ -32,29 +47,13 @@ int task_execute(AVCodecContext* s, std::function<int(void* arg, int arg_size, i
 			if(jobnr >= count)
 				break;
 
-			int r = func(arg, size, jobnr, threadnr);
+			int r = func(s, arg, jobnr, threadnr);
 			if (ret)
 				ret[jobnr] = r;
 		}
 	});
-	
-    return 0;
-}
-	
-int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2), void* arg, int* ret, int count, int size)
-{
-	return task_execute(s, [&](void* arg, int arg_size, int jobnr, int threadnr) -> int
-	{
-		return func(s, reinterpret_cast<uint8_t*>(arg) + jobnr*size);
-	}, arg, ret, count, size);
-}
 
-int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg2, int, int), void* arg, int* ret, int count)
-{
-	return task_execute(s, [&](void* arg, int arg_size, int jobnr, int threadnr) -> int
-	{
-		return func(s, arg, jobnr, threadnr);
-	}, arg, ret, count, 0);
+	return 0;
 }
 
 void thread_init(AVCodecContext* s)
