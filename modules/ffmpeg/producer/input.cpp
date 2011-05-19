@@ -25,6 +25,7 @@
 
 #include "input.h"
 #include "../ffmpeg_error.h"
+#include "../tbb_avcodec.h"
 
 #include <core/video_format.h>
 
@@ -111,7 +112,7 @@ public:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 		
-		video_codec_context_ = open_stream(AVMEDIA_TYPE_VIDEO, video_s_index_, 4);
+		video_codec_context_ = open_stream(AVMEDIA_TYPE_VIDEO, video_s_index_, true);
 		if(!video_codec_context_)
 			CASPAR_LOG(warning) << print() << " Could not open any video stream.";
 		else
@@ -181,7 +182,7 @@ private:
 			context->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(context->time_base.den)))-1));
 	}
 
-	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index, int thread_count = -1) const
+	std::shared_ptr<AVCodecContext> open_stream(int codec_type, int& s_index, bool tbb = false) const
 	{		
 		const auto streams = boost::iterator_range<AVStream**>(format_context_->streams, format_context_->streams+format_context_->nb_streams);
 		const auto stream = boost::find_if(streams, [&](AVStream* stream) 
@@ -196,12 +197,21 @@ private:
 		if(codec == nullptr)
 			return nullptr;
 			
-		if(avcodec_open((*stream)->codec, codec) < 0)		
-			return nullptr;
-		
 		s_index = (*stream)->index;
 
-		return std::shared_ptr<AVCodecContext>((*stream)->codec, avcodec_close);
+		if(!tbb)
+		{
+			if(avcodec_open((*stream)->codec, codec) < 0)		
+				return nullptr;
+			return std::shared_ptr<AVCodecContext>((*stream)->codec, avcodec_close);
+		}
+		else
+		{
+			if(tbb_avcodec_open((*stream)->codec, codec) < 0)		
+				return nullptr;
+			return std::shared_ptr<AVCodecContext>((*stream)->codec, tbb_avcodec_close);
+		}		
+
 	}
 	
 	std::shared_ptr<AVCodecContext>& get_default_context()
