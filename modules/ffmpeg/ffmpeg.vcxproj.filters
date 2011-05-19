@@ -32,6 +32,7 @@
     </ClCompile>
     <ClCompile Include="ffmpeg.cpp" />
     <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="tbb_avcodec.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\ffmpeg_producer.h">
@@ -55,5 +56,6 @@
     <ClInclude Include="producer\packet.h">
       <Filter>producer</Filter>
     </ClInclude>
+    <ClInclude Include="tbb_avcodec.h" />
   </ItemGroup>
 </Project>
