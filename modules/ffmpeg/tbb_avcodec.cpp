@@ -57,11 +57,8 @@ int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg
 	}, arg, ret, count, 0);
 }
 
-int thread_init(AVCodecContext *s)
+void thread_init(AVCodecContext* s)
 {
-    if(!(s->thread_type & FF_THREAD_SLICE))	       
-       return 0;    
-
 	static const size_t MAX_THREADS = 16; // See mpegvideo.h
 	static int dummy_opaque;
 
@@ -72,20 +69,21 @@ int thread_init(AVCodecContext *s)
     s->thread_count		  = MAX_THREADS; // We are using a task-scheduler, so use as many "threads/tasks" as possible. 
 
 	CASPAR_LOG(info) << "Initialized ffmpeg tbb context.";
-
-    return 0;
 }
 
 void thread_free(AVCodecContext* s)
 {
 	s->thread_opaque = nullptr;
+
 	CASPAR_LOG(info) << "Released ffmpeg tbb context.";
 }
 
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 {
-	thread_init(avctx);
-	// ff_thread_init will not be executed since thread_opaque != nullptr.
+	avctx->thread_count = 1;
+	if((codec->capabilities & CODEC_CAP_SLICE_THREADS) && (avctx->thread_type & FF_THREAD_SLICE))
+		thread_init(avctx);
+	// ff_thread_init will not be executed since thread_opaque != nullptr || thread_count == 1.
 	return avcodec_open(avctx, codec); 
 }
 
