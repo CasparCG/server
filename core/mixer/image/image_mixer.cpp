@@ -184,7 +184,7 @@ public:
 	}
 	
 	void draw(const render_item& item)
-	{						
+	{		
 		// Bind textures
 
 		for(size_t n = 0; n < item.textures.size(); ++n)
@@ -195,28 +195,28 @@ public:
 		bool local_key = false;
 		bool layer_key = false;
 		
-		if(item.transform.get_is_key())
+		if(item.transform.get_is_key()) // This is a key frame, render it to the local_key buffer for later use.
 		{
-			if(!local_key_)
+			if(!local_key_) // Initialize local-key if it is not active.
 			{
 				local_key_buffer_->clear();
 				local_key_buffer_->attach();
 				local_key_ = true;
 			}
 		}		
-		else
+		else // This is a normal frame. Use key buffers if they are active.
 		{		
 			local_key = local_key_;
 			layer_key = layer_key_;
 
-			if(local_key_)
+			if(local_key_) // Use local key if we have it.
 			{
 				local_key_buffer_->bind(LOCAL_KEY_INDEX);
 				draw_buffer_->attach();	
-				local_key_ = false;
+				local_key_ = false; // Use it only one time.
 			}		
 
-			if(layer_key_)
+			if(layer_key_) // Use layer key if we have it.
 				layer_key_buffer_->bind(LAYER_KEY_INDEX);
 		}	
 
