@@ -17,12 +17,9 @@ extern "C"
 }
 
 namespace caspar {
-
-struct thread_context{};
-
-int task_execute(AVCodecContext* s, const std::function<int(void* arg, int arg_size, int jobnr, int threadnr)>& func, void* arg, int* ret, int count, int size)
+	
+int task_execute(AVCodecContext* s, std::function<int(void* arg, int arg_size, int jobnr, int threadnr)>&& func, void* arg, int* ret, int count, int size)
 {	
-	// jobnr global for all threads? Doesn't order matter?
     tbb::atomic<int> counter;
 	counter = 0;
 		
@@ -62,17 +59,17 @@ int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg
 
 int thread_init(AVCodecContext *s)
 {
-	// Only makes sense for slicing since decode is already called through task scheduler.
     if(!(s->thread_type & FF_THREAD_SLICE))	       
        return 0;    
 
 	static const size_t MAX_THREADS = 16; // See mpegvideo.h
+	static int dummy_opaque;
 
     s->active_thread_type = FF_THREAD_SLICE;
-	s->thread_opaque	  = malloc(sizeof(thread_context));	 
+	s->thread_opaque	  = &dummy_opaque; 
     s->execute			  = thread_execute;
     s->execute2			  = thread_execute2;
-    s->thread_count		  = MAX_THREADS; // We are using a taskscheduler, so use as many "threads/tasks" as possible. 
+    s->thread_count		  = MAX_THREADS; // We are using a task-scheduler, so use as many "threads/tasks" as possible. 
 
 	CASPAR_LOG(info) << "Initialized ffmpeg tbb context.";
 
@@ -81,12 +78,7 @@ int thread_init(AVCodecContext *s)
 
 void thread_free(AVCodecContext* s)
 {
-	if(!s->thread_opaque)
-		return;
-	
-	free(s->thread_opaque);	
 	s->thread_opaque = nullptr;
-
 	CASPAR_LOG(info) << "Released ffmpeg tbb context.";
 }
 
