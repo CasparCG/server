@@ -44,6 +44,9 @@ namespace caspar { namespace core {
 		
 struct image_mixer::implementation : boost::noncopyable
 {	
+	static const size_t LOCAL_KEY_INDEX = 3;
+	static const size_t LAYER_KEY_INDEX = 4;
+
 	struct render_item
 	{
 		core::pixel_format_desc desc;
@@ -208,13 +211,13 @@ public:
 
 			if(local_key_)
 			{
-				local_key_buffer_->bind(3);
+				local_key_buffer_->bind(LOCAL_KEY_INDEX);
 				draw_buffer_->attach();	
 				local_key_ = false;
 			}		
 
 			if(layer_key_)
-				layer_key_buffer_->bind(4);
+				layer_key_buffer_->bind(LAYER_KEY_INDEX);
 		}	
 
 		// Draw

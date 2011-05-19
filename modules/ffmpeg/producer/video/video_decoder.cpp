@@ -192,9 +192,10 @@ public:
 				auto decoded_linesize = decoded_frame->linesize[n];
 				
 				// Copy line by line since ffmpeg sometimes pads each line.
-				tbb::parallel_for(0, static_cast<int>(desc_.planes[n].height), 1, [&](int y)
+				tbb::parallel_for(tbb::blocked_range<size_t>(0, static_cast<int>(desc_.planes[n].height)), [&](const tbb::blocked_range<size_t>& r)
 				{
-					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+					for(size_t y = r.begin(); y != r.end(); ++y)
+						memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 				});
 			});
 		}
