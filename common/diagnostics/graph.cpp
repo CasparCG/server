@@ -77,7 +77,8 @@ private:
 	{
 		executor_.start();
 		executor_.begin_invoke([this]
-		{
+		{			
+			SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
 			window_.Create(sf::VideoMode(600, 1000), "CasparCG Diagnostics");
 			window_.SetPosition(0, 0);
 			window_.SetActive();
