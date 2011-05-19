@@ -5,9 +5,13 @@
 #include "tbb_avcodec.h"
 
 #include <common/log/log.h>
+#include <common/env.h>
 
 #include <tbb/task.h>
 #include <tbb/atomic.h>
+
+#include <regex>
+#include <boost/algorithm/string.hpp>
 
 extern "C" 
 {
@@ -77,11 +81,30 @@ void thread_free(AVCodecContext* s)
 	CASPAR_LOG(info) << "Released ffmpeg tbb context.";
 }
 
+std::regex get_slice_regex()
+{
+	auto s = env::properties().get("configuration.ffmpeg.slice-threads-regex", "");
+	boost::algorithm::erase_all(s, " ");
+	boost::algorithm::erase_all(s, "\n");
+	return std::regex(s);
+}
+
+bool allow_slice_thread(int id)
+{
+	static std::regex e = get_slice_regex();
+	return std::regex_match(boost::lexical_cast<std::string>(id), e);
+}
+
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 {
+	auto id = codec->id;
 	avctx->thread_count = 1;
-	if((codec->capabilities & CODEC_CAP_SLICE_THREADS) && (avctx->thread_type & FF_THREAD_SLICE))
+	if(allow_slice_thread(id) && // Some codecs don't like to have multiple multithreaded decoding instances. Only enable for those we know work.
+	  (codec->capabilities & CODEC_CAP_SLICE_THREADS) && 
+	  (avctx->thread_type & FF_THREAD_SLICE))
+	{
 		thread_init(avctx);
+	}	
 	// ff_thread_init will not be executed since thread_opaque != nullptr || thread_count == 1.
 	return avcodec_open(avctx, codec); 
 }

@@ -69,11 +69,16 @@ public:
 				
 		next_audio_transforms_[tag] = next; // Store all active tags, inactive tags will be removed in end_pass.
 		
-		auto next_gain = next.get_gain();
-		auto prev_gain = prev.get_gain();
 		
-		if(next_gain < 0.001 && prev_gain < 0.001)
+		if(next.get_gain() < 0.001 && prev.get_gain() < 0.001)
 			return;
+		
+		static const int BASE = 1<<15;
+
+		auto next_gain = static_cast<int>(next.get_gain()*BASE);
+		auto prev_gain = static_cast<int>(prev.get_gain()*BASE);
+		
+		int n_samples = audio_data_.back().size();
 
 		tbb::parallel_for
 		(
@@ -82,10 +87,10 @@ public:
 			{
 				for(size_t n = r.begin(); n < r.end(); ++n)
 				{
-					double alpha = static_cast<double>(n)/static_cast<double>(audio_data_.back().size());
-					double sample_gain = prev_gain * (1.0 - alpha) + next_gain * alpha;
-					int sample = static_cast<int>(audio_data[n]);
-					sample = (static_cast<int>(sample_gain*static_cast<double>(1<<15))*sample)>>15;
+					int sample_gain = (prev_gain - (prev_gain * n)/n_samples) + (next_gain * n)/n_samples;
+					
+					int sample = (static_cast<int>(audio_data[n])*sample_gain)/BASE;
+					
 					audio_data_.back()[n] = static_cast<short>((static_cast<int>(audio_data_.back()[n]) + sample) & 0xFFFF);
 				}
 			}
