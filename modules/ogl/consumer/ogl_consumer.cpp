@@ -368,7 +368,7 @@ safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::p
 	else if(key_str == "uniform_to_fill")
 		stretch = stretch::uniform_to_fill;
 
-	bool key_only = (ptree.get("output", "fill_and_key") == "key_only");
+	bool key_only = ptree.get("key-only", false);
 
 	return make_safe<ogl_consumer_proxy>(screen_index, stretch, windowed, key_only);
 }

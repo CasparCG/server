@@ -434,16 +434,16 @@ safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::w
 		device_index = lexical_cast_or_default<int>(params[1], 1);
 
 	bool embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
-	bool key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
+	bool key_only		= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
 
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree) 
 {	
-	auto device_index = ptree.get("device", 0);
+	auto device_index	 = ptree.get("device",		   0);
 	auto embedded_audio  = ptree.get("embedded-audio", false);
-	bool key_only = (ptree.get("output", "fill_and_key") == "key_only");
+	bool key_only		 = ptree.get("key-only",	   false);
 
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
