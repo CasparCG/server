@@ -446,7 +446,7 @@ safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wst
 safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree)
 {
 	std::string filename = ptree.get<std::string>("filename");
-	bool key_only = (ptree.get("output", "fill_and_key") == "key_only");
+	bool key_only		 = ptree.get("key-only", false);
 	
 	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + widen(filename), key_only);
 }

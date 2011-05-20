@@ -42,40 +42,20 @@
 
 namespace caspar { 
 	
-enum key
-{
-	external_key,
-	internal_key,
-	default_key
-};
-
-enum latency
-{
-	low_latency,
-	normal_latency,
-	default_latency
-};
-
-enum output_pixels
-{
-	fill_and_key,
-	key_only
-};
-
 struct configuration
 {
 	size_t	device_index;
 	bool	embedded_audio;
-	key		keyer;
-	latency latency;
-	output_pixels  output;
+	bool	external_key;
+	bool	low_latency;
+	bool	key_only;
 	
 	configuration()
 		: device_index(1)
 		, embedded_audio(false)
-		, keyer(default_key)
-		, latency(default_latency)
-		, output(fill_and_key){}
+		, external_key(false)
+		, low_latency(false)
+		, key_only(false){}
 };
 
 class decklink_frame_adapter : public IDeckLinkVideoFrame
@@ -170,8 +150,8 @@ public:
 		if(config.embedded_audio)
 			enable_audio();
 
-		set_latency(config.latency);				
-		set_keyer(config.keyer);
+		set_latency(config.low_latency);				
+		set_keyer(config.external_key);
 								
 		for(size_t n = 0; n < buffer_size_; ++n)
 			schedule_next_video(core::read_frame::empty());
@@ -200,25 +180,23 @@ public:
 		}
 	}
 			
-	void set_latency(latency latency)
+	void set_latency(bool low_latency)
 	{		
-		if(latency == normal_latency)
+		if(!low_latency)
 		{
 			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
 			CASPAR_LOG(info) << print() << L" Enabled normal-latency mode";
 		}
-		else if(latency == low_latency)
+		else
 		{			
 			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
 			CASPAR_LOG(info) << print() << L" Enabled low-latency mode";
 		}
-		else
-			CASPAR_LOG(info) << print() << L" Uses driver latency settings.";	
 	}
 
-	void set_keyer(key keyer)
+	void set_keyer(bool external_key)
 	{
-		if(keyer == internal_key) 
+		if(!external_key) 
 		{
 			if(FAILED(keyer_->Enable(FALSE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
@@ -227,7 +205,7 @@ public:
 			else
 				CASPAR_LOG(info) << print() << L" Enabled internal keyer.";		
 		}
-		else if(keyer == external_key)
+		else
 		{
 			if(FAILED(keyer_->Enable(TRUE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
@@ -236,8 +214,6 @@ public:
 			else
 				CASPAR_LOG(info) << print() << L" Enabled external keyer.";			
 		}
-		else
-			CASPAR_LOG(info) << print() << L" Uses driver keyer settings.";	
 	}
 	
 	void enable_audio()
@@ -403,7 +379,7 @@ public:
 
 	virtual bool key_only() const
 	{
-		return (config_.output == caspar::key_only);
+		return config_.key_only;
 	}
 };	
 
@@ -416,19 +392,11 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::w
 		
 	if(params.size() > 1)
 		config.device_index = lexical_cast_or_default<int>(params[1], config.device_index);
-		
-	if(std::find(params.begin(), params.end(), L"INTERNAL_KEY") != params.end())
-		config.keyer = internal_key;
-	else if(std::find(params.begin(), params.end(), L"EXTERNAL_KEY") != params.end())
-		config.keyer = external_key;
 	
-	if(std::find(params.begin(), params.end(), L"LOW_LATENCY") != params.end())
-		config.latency = low_latency;
-	else if(std::find(params.begin(), params.end(), L"NORMAL_LATENCY") != params.end())
-		config.latency = normal_latency;
-		
-	config.embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
-	config.output = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end() ? key_only : fill_and_key;
+	config.external_key		= std::find(params.begin(), params.end(), L"EXTERNAL_KEY")	 != params.end();
+	config.low_latency		= std::find(params.begin(), params.end(), L"LOW_LATENCY")	 != params.end();
+	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
+	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
 
 	return make_safe<decklink_consumer_proxy>(config);
 }
@@ -437,24 +405,11 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tr
 {
 	configuration config;
 
-	auto key_str = ptree.get("key", "default");
-	if(key_str == "internal")
-		config.keyer = internal_key;
-	else if(key_str == "external")
-		config.keyer = external_key;
-
-	auto latency_str = ptree.get("latency", "default");
-	if(latency_str == "normal")
-		config.latency = normal_latency;
-	else if(latency_str == "low")
-		config.latency = low_latency;
-
-	auto output_str = ptree.get("output", "fill_and_key");
-	if(output_str == "key_only")
-		config.output = key_only;
-
-	config.device_index = ptree.get("device", 0);
-	config.embedded_audio  = ptree.get("embedded-audio", false);
+	config.external_key		= ptree.get("external-key",	  false);
+	config.low_latency		= ptree.get("low-latency",	  false);
+	config.key_only			= ptree.get("key-only",		  false);
+	config.device_index		= ptree.get("device",		  0);
+	config.embedded_audio	= ptree.get("embedded-audio", false);
 
 	return make_safe<decklink_consumer_proxy>(config);
 }
