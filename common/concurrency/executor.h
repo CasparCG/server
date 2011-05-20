@@ -102,6 +102,11 @@ public:
 		is_running_ = false;	
 		execution_queue_.try_push([]{});
 	}
+
+	void wait()
+	{
+		invoke([]{});
+	}
 	
 	void clear() // noexcept
 	{
