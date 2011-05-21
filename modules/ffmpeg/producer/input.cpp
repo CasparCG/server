@@ -46,26 +46,91 @@ extern "C"
 }
 
 namespace caspar {
+	
+static const size_t PACKET_BUFFER_COUNT = 100; // Assume that av_read_frame distance between audio and video packets is less than PACKET_BUFFER_COUNT.
+
+class stream
+{
+	std::shared_ptr<AVCodecContext>	ctx_;
+	int index_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> buffer_;
+
+public:
+
+	stream()
+		: index_(-1)
+	{
+		buffer_.set_capacity(PACKET_BUFFER_COUNT);
+	}
+
+	int open(std::shared_ptr<AVFormatContext>& fctx, AVMediaType media_type)
+	{		
+		const auto streams = boost::iterator_range<AVStream**>(fctx->streams, fctx->streams+fctx->nb_streams);
+		const auto stream = boost::find_if(streams, [&](AVStream* stream) 
+		{
+			return stream && stream->codec->codec_type == media_type;
+		});
+		
+		if(stream == streams.end()) 
+			return AVERROR_STREAM_NOT_FOUND;
+		
+		auto codec = avcodec_find_decoder((*stream)->codec->codec_id);			
+		if(!codec)
+			return AVERROR_DECODER_NOT_FOUND;
+			
+		index_ = (*stream)->index;
+
+		int errn = tbb_avcodec_open((*stream)->codec, codec);
+		if(errn >= 0)
+		{
+			ctx_.reset((*stream)->codec, tbb_avcodec_close);
+
+			// Some files give an invalid time_base numerator, try to fix it.
+			if(ctx_ && ctx_->time_base.num == 1)
+				ctx_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(ctx_->time_base.den)))-1));
+		}
+		return errn;	
+	}
+
+	std::shared_ptr<AVPacket> pop()
+	{
+		std::shared_ptr<AVPacket> pkt;
+		buffer_.try_pop(pkt);
+		return pkt;
+	}
+
+	void push(const std::shared_ptr<AVPacket>& pkt)
+	{
+		if(pkt->stream_index != index_)
+			return;
+
+		av_dup_packet(pkt.get());
+		buffer_.push(pkt);	
+	}
+
+	const std::shared_ptr<AVCodecContext>& ctx() { return ctx_; }
+
+	operator bool(){return ctx_ != nullptr;}
+
+	double fps() const { return !ctx_ ? -1.0 : static_cast<double>(ctx_->time_base.den) / static_cast<double>(ctx_->time_base.num); }
+
+	bool empty() const { return buffer_.empty();}
+	int size() const { return buffer_.size();}
+};
 		
 struct input::implementation : boost::noncopyable
 {		
-	static const size_t PACKET_BUFFER_COUNT = 100; // Assume that av_read_frame distance between audio and video packets is less than PACKET_BUFFER_COUNT.
-
 	safe_ptr<diagnostics::graph> graph_;
 
 	std::shared_ptr<AVFormatContext> format_context_;	// Destroy this last
-
-	std::shared_ptr<AVCodecContext>	video_codec_context_;
-	std::shared_ptr<AVCodecContext>	audio_codex_context_;
-	
+		
 	const std::wstring	filename_;
 	const bool			loop_;
-	int					video_s_index_;
-	int					audio_s_index_;
-	const int			start_;
-		
-	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> video_packet_buffer_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> audio_packet_buffer_;
+	const int			start_;		
+	double				fps_;
+
+	stream video_stream_;
+	stream audio_stream_;
 		
 	std::exception_ptr exception_;
 	executor executor_;
@@ -73,8 +138,6 @@ public:
 	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
 		: graph_(graph)
 		, loop_(loop)
-		, video_s_index_(-1)
-		, audio_s_index_(-1)
 		, filename_(filename)
 		, executor_(print())
 		, start_(std::max(start, 0))
@@ -110,15 +173,15 @@ public:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 		
-		errn = open_stream(video_codec_context_, AVMEDIA_TYPE_VIDEO, video_s_index_);
-		if(errn < 0 || !video_codec_context_)
+		errn = video_stream_.open(format_context_, AVMEDIA_TYPE_VIDEO);
+		if(errn < 0)
 			CASPAR_LOG(warning) << print() << L" Could not open video stream: " << widen(av_error_str(errn));
 		
-		errn = open_stream(audio_codex_context_, AVMEDIA_TYPE_AUDIO, audio_s_index_);
-		if(errn < 0 || !audio_codex_context_)
+		errn = audio_stream_.open(format_context_, AVMEDIA_TYPE_AUDIO);
+		if(errn < 0)
 			CASPAR_LOG(warning) << print() << L" Could not open audio stream: " << widen(av_error_str(errn));
 		
-		if(!video_codec_context_ && !audio_codex_context_)
+		if(!video_stream_ && !audio_stream_)
 		{	
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
@@ -126,9 +189,8 @@ public:
 				msg_info("No video or audio codec context found."));	
 		}
 
-		video_packet_buffer_.set_capacity(PACKET_BUFFER_COUNT);
-		audio_packet_buffer_.set_capacity(PACKET_BUFFER_COUNT);
-		
+		fps_ = video_stream_ ? video_stream_.fps() : audio_stream_.fps();
+
 		if(start_ != 0)			
 			seek_frame(start_);
 					
@@ -144,22 +206,22 @@ public:
 		
 	std::shared_ptr<AVPacket> get_video_packet()
 	{
-		return get_packet(video_packet_buffer_);
+		return video_stream_.pop();
 	}
 
 	std::shared_ptr<AVPacket> get_audio_packet()
 	{
-		return get_packet(audio_packet_buffer_);
+		return audio_stream_.pop();
 	}
 
 	bool has_packet() const
 	{
-		return !video_packet_buffer_.empty() || !audio_packet_buffer_.empty();
+		return !video_stream_.empty() || !audio_stream_.empty();
 	}
 				
 	double fps()
 	{
-		return static_cast<double>(get_default_context()->time_base.den) / static_cast<double>(get_default_context()->time_base.num);
+		return fps_;
 	}
 
 private:
@@ -172,44 +234,10 @@ private:
 		CASPAR_LOG(info) << print() << " Stopping.";
 	}
 			
-	int open_stream(std::shared_ptr<AVCodecContext>& ctx, int codec_type, int& s_index) const
-	{		
-		const auto streams = boost::iterator_range<AVStream**>(format_context_->streams, format_context_->streams+format_context_->nb_streams);
-		const auto stream = boost::find_if(streams, [&](AVStream* stream) 
-		{
-			return stream != nullptr && stream->codec->codec_type == codec_type;
-		});
-		
-		if(stream == streams.end()) 
-			return AVERROR_STREAM_NOT_FOUND;
-		
-		auto codec = avcodec_find_decoder((*stream)->codec->codec_id);			
-		if(codec == nullptr)
-			return AVERROR_DECODER_NOT_FOUND;
-			
-		s_index = (*stream)->index;
-
-		int errn = tbb_avcodec_open((*stream)->codec, codec);
-		if(errn >= 0)
-		{
-			ctx.reset((*stream)->codec, tbb_avcodec_close);
-
-			// Some files give an invalid time_base numerator, try to fix it.
-			if(ctx && ctx->time_base.num == 1)
-				ctx->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(ctx->time_base.den)))-1));
-		}
-		return errn;	
-	}
-	
-	std::shared_ptr<AVCodecContext>& get_default_context()
-	{
-		return video_codec_context_ ? video_codec_context_ : audio_codex_context_;
-	}
-		
 	void read_file()
 	{		
-		if(audio_packet_buffer_.size() > 4 && video_packet_buffer_.size() > 4)
-			boost::this_thread::sleep(boost::posix_time::millisec(5)); // There are enough packets, no hurry.
+		if(audio_stream_.size() > 4 && video_stream_.size() > 4)
+			boost::this_thread::yield(); // There are enough packets, no hurry.
 
 		try
 		{
@@ -245,13 +273,11 @@ private:
 			}
 			else
 			{
-				if(read_packet->stream_index == video_s_index_) 		
-					push_packet(video_packet_buffer_, read_packet);
-				else if(read_packet->stream_index == audio_s_index_)	
-					push_packet(audio_packet_buffer_, read_packet);
+				video_stream_.push(read_packet);
+				audio_stream_.push(read_packet);
 			}
 						
-			graph_->update_value("input-buffer", static_cast<float>(video_packet_buffer_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
+			graph_->update_value("input-buffer", static_cast<float>(std::max(video_stream_.size(), audio_stream_.size()))/static_cast<float>(PACKET_BUFFER_COUNT));		
 		}
 		catch(...)
 		{
@@ -266,7 +292,7 @@ private:
 	void seek_frame(int64_t frame, int flags = 0)
 	{  	
 		// Convert from frames into seconds.
-		const auto ts = frame*static_cast<int64_t>((AV_TIME_BASE*get_default_context()->time_base.num) / get_default_context()->time_base.den);
+		const auto ts = frame*static_cast<int64_t>(AV_TIME_BASE/fps_);
 
 		const int errn = av_seek_frame(format_context_.get(), -1, ts, flags | AVSEEK_FLAG_FRAME);
 		if(errn < 0)
@@ -288,19 +314,6 @@ private:
 		return errn == AVERROR_EOF || errn == AVERROR(EIO); // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 	
-	void push_packet(tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>& buffer, const std::shared_ptr<AVPacket>& read_packet)
-	{
-		av_dup_packet(read_packet.get());
-		buffer.push(read_packet);	
-	}
-
-	std::shared_ptr<AVPacket> get_packet(tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>& buffer)
-	{
-		std::shared_ptr<AVPacket> packet;
-		buffer.try_pop(packet);
-		return packet;
-	}
-
 	std::wstring print() const
 	{
 		return L"ffmpeg_input[" + filename_ + L"]";
@@ -309,8 +322,8 @@ private:
 
 input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
 	: impl_(new implementation(graph, filename, loop, start)){}
-const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
-const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
+const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_stream_.ctx();}
+const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_stream_.ctx();}
 bool input::has_packet() const{return impl_->has_packet();}
 bool input::is_running() const {return impl_->executor_.is_running();}
 std::shared_ptr<AVPacket> input::get_video_packet(){return impl_->get_video_packet();}
