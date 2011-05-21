@@ -21,8 +21,6 @@
 
 #include <common/diagnostics/graph.h>
 
-#include "packet.h"
-
 #include <memory>
 #include <string>
 
@@ -33,12 +31,12 @@ namespace caspar {
 class input : boost::noncopyable
 {
 public:
-	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length);
+	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start);
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 
-	packet get_video_packet();
-	packet get_audio_packet();
+	std::shared_ptr<AVPacket> get_video_packet();
+	std::shared_ptr<AVPacket> get_audio_packet();
 
 	bool has_packet() const;
 	bool is_running() const;

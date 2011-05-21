@@ -313,7 +313,6 @@
     <ClInclude Include="producer\audio\audio_decoder.h" />
     <ClInclude Include="producer\ffmpeg_producer.h" />
     <ClInclude Include="producer\input.h" />
-    <ClInclude Include="producer\packet.h" />
     <ClInclude Include="producer\video\video_decoder.h" />
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="tbb_avcodec.h" />
