@@ -53,9 +53,6 @@
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="ffmpeg.h" />
     <ClInclude Include="ffmpeg_error.h" />
-    <ClInclude Include="producer\packet.h">
-      <Filter>producer</Filter>
-    </ClInclude>
     <ClInclude Include="tbb_avcodec.h" />
   </ItemGroup>
 </Project>

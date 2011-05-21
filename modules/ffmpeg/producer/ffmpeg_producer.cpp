@@ -70,7 +70,7 @@ public:
 		, loop_(loop) 
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
-		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, start, length)
+		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, start)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -159,7 +159,7 @@ public:
 		return try_merge_audio_and_video();	
 	}
 
-	void try_decode_video_packet(packet&& video_packet)
+	void try_decode_video_packet(std::shared_ptr<AVPacket>&& video_packet)
 	{
 		if(!video_decoder_)
 			return;
@@ -176,7 +176,7 @@ public:
 		}
 	}
 
-	void try_decode_audio_packet(packet&& audio_packet)
+	void try_decode_audio_packet(std::shared_ptr<AVPacket>&& audio_packet)
 	{
 		if(!audio_decoder_)
 			return;
