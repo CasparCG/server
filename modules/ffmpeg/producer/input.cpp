@@ -85,7 +85,7 @@ public:
 		int errn;
 
 		AVFormatContext* weak_format_context_ = nullptr;
-		errn = errn = av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr);
+		errn = av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr);
 		if(errn < 0 || weak_format_context_ == nullptr)
 		{	
 			BOOST_THROW_EXCEPTION(
@@ -99,7 +99,7 @@ public:
 
 		format_context_.reset(weak_format_context_, av_close_input_file);
 			
-		errn = errn = av_find_stream_info(format_context_.get());
+		errn = av_find_stream_info(format_context_.get());
 		if(errn < 0)
 		{	
 			BOOST_THROW_EXCEPTION(
@@ -209,7 +209,7 @@ private:
 	void read_file()
 	{		
 		if(audio_packet_buffer_.size() > 4 && video_packet_buffer_.size() > 4)
-			boost::this_thread::yield(); // There are enough packets, no hurry.
+			boost::this_thread::sleep(boost::posix_time::millisec(5)); // There are enough packets, no hurry.
 
 		try
 		{
@@ -275,7 +275,7 @@ private:
 				invalid_operation() << 
 				source_info(narrow(print())) << 
 				msg_info(av_error_str(errn)) <<
-				boost::errinfo_api_function("seek_frame") <<
+				boost::errinfo_api_function("av_seek_frame") <<
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 	}		
