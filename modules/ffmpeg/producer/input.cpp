@@ -63,16 +63,14 @@ struct input::implementation : boost::noncopyable
 	int					video_s_index_;
 	int					audio_s_index_;
 	const int			start_;
-	const int			length_;
-	int					eof_count_;
 		
-	tbb::concurrent_bounded_queue<packet> video_packet_buffer_;
-	tbb::concurrent_bounded_queue<packet> audio_packet_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> video_packet_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> audio_packet_buffer_;
 		
 	std::exception_ptr exception_;
 	executor executor_;
 public:
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length) 
+	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
 		: graph_(graph)
 		, loop_(loop)
 		, video_s_index_(-1)
@@ -80,8 +78,6 @@ public:
 		, filename_(filename)
 		, executor_(print())
 		, start_(std::max(start, 0))
-		, length_(length)
-		, eof_count_(length)
 	{		
 		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
@@ -146,12 +142,12 @@ public:
 		stop();
 	}
 		
-	packet get_video_packet()
+	std::shared_ptr<AVPacket> get_video_packet()
 	{
 		return get_packet(video_packet_buffer_);
 	}
 
-	packet get_audio_packet()
+	std::shared_ptr<AVPacket> get_audio_packet()
 	{
 		return get_packet(audio_packet_buffer_);
 	}
@@ -229,7 +225,6 @@ private:
 				if(loop_)
 				{
 					seek_frame(start_, AVSEEK_FLAG_BACKWARD);
-					eof_count_ += length_; // AVCodecContext.frame_number is not reset. Increase the target frame_number.
 					graph_->add_tag("seek");		
 					CASPAR_LOG(info) << print() << " Received EOF. Looping.";			
 				}	
@@ -283,32 +278,25 @@ private:
 				boost::errinfo_api_function("seek_frame") <<
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
-
-		// Notify decoders to flush buffers.
-		video_packet_buffer_.try_push(flush_packet);	
-		audio_packet_buffer_.try_push(flush_packet);
 	}		
 
 	bool is_eof(int errn)
 	{
-		if(length_ != -1)
-			return get_default_context()->frame_number > eof_count_;		
-
 		if(errn == AVERROR(EIO))
 			CASPAR_LOG(warning) << print() << " Received EIO, assuming EOF";
 
 		return errn == AVERROR_EOF || errn == AVERROR(EIO); // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 	
-	void push_packet(tbb::concurrent_bounded_queue<packet>& buffer, const std::shared_ptr<AVPacket>& read_packet)
+	void push_packet(tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>& buffer, const std::shared_ptr<AVPacket>& read_packet)
 	{
 		av_dup_packet(read_packet.get());
-		buffer.push(packet(read_packet));	
+		buffer.push(read_packet);	
 	}
 
-	packet get_packet(tbb::concurrent_bounded_queue<packet>& buffer)
+	std::shared_ptr<AVPacket> get_packet(tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>& buffer)
 	{
-		packet packet;
+		std::shared_ptr<AVPacket> packet;
 		buffer.try_pop(packet);
 		return packet;
 	}
@@ -319,13 +307,13 @@ private:
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length) 
-	: impl_(new implementation(graph, filename, loop, start, length)){}
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
+	: impl_(new implementation(graph, filename, loop, start)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_codec_context_;}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_codex_context_;}
 bool input::has_packet() const{return impl_->has_packet();}
 bool input::is_running() const {return impl_->executor_.is_running();}
-packet input::get_video_packet(){return impl_->get_video_packet();}
-packet input::get_audio_packet(){return impl_->get_audio_packet();}
+std::shared_ptr<AVPacket> input::get_video_packet(){return impl_->get_video_packet();}
+std::shared_ptr<AVPacket> input::get_audio_packet(){return impl_->get_audio_packet();}
 double input::fps() const { return impl_->fps(); }
 }
