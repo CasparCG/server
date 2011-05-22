@@ -21,6 +21,7 @@
 #include "../StdAfx.h"
 
 #include "frame_producer_device.h"
+#include "destroy_producer_proxy.h"
 
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
@@ -128,7 +129,7 @@ public:
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview)
 	{
-		executor_.invoke([&]{layers_[index].load(producer, preview);});
+		executor_.invoke([&]{layers_[index].load(make_safe<destroy_producer_proxy>(producer), preview);});
 	}
 
 	void pause(int index)
