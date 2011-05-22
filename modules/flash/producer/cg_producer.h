@@ -33,7 +33,7 @@ class cg_producer : public core::frame_producer
 public:
 	static const unsigned int DEFAULT_LAYER = 9999;
 
-	explicit cg_producer(const safe_ptr<core::frame_factory>& frame_factory);
+	explicit cg_producer(const safe_ptr<core::frame_producer>& producer);
 	cg_producer(cg_producer&& other);
 	
 	// frame_producer
