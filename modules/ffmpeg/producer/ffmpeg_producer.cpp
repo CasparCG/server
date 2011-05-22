@@ -110,6 +110,17 @@ public:
 				source_info(narrow(print())) << 
 				msg_info("Failed to initialize any decoder"));
 		}
+			
+		// Take some time to read the first packets
+		Sleep(40);
+
+		// Pre-roll since first frames can be heavy.
+		while(video_frame_buffer_.size() < DECODED_PACKET_BUFFER_SIZE && 
+			  audio_chunk_buffer_.size() < DECODED_PACKET_BUFFER_SIZE && 
+			  input_.has_packet())
+		{
+			try_decode_packet();
+		}
 	}
 
 	virtual safe_ptr<core::basic_frame> receive()
@@ -118,8 +129,8 @@ public:
 
 		std::shared_ptr<core::basic_frame> frame;	
 		for(size_t n = 0; !frame && input_.has_packet() && n < MAX_PACKET_OFFSET ; ++n) 
-			frame = try_decode_frame();
-		
+			frame = try_get_frame();
+				
 		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
 					
 		if(frame)
@@ -140,7 +151,7 @@ public:
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 	
-	std::shared_ptr<core::basic_frame> try_decode_frame()
+	void try_decode_packet()
 	{
 		tbb::parallel_invoke
 		(
@@ -154,9 +165,7 @@ public:
 				if(audio_chunk_buffer_.size() < DECODED_PACKET_BUFFER_SIZE)
 					try_decode_audio_packet(input_.get_audio_packet());
 			}
-		);			
-
-		return try_merge_audio_and_video();	
+		);	
 	}
 
 	void try_decode_video_packet(std::shared_ptr<AVPacket>&& video_packet)
@@ -193,8 +202,10 @@ public:
 		}
 	}
 
-	std::shared_ptr<core::basic_frame> try_merge_audio_and_video()
+	std::shared_ptr<core::basic_frame> try_get_frame()
 	{		
+		try_decode_packet();
+
 		std::shared_ptr<core::write_frame> frame;	
 
 		if(!video_frame_buffer_.empty() && !audio_chunk_buffer_.empty())
