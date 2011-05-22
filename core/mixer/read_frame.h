@@ -25,6 +25,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
+#include <boost/thread.hpp>
 
 #include <memory>
 #include <vector>
@@ -35,6 +36,7 @@ class read_frame : boost::noncopyable
 {
 	read_frame(){}
 public:
+	read_frame(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<short>&& audio_data);
 	read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data);
 
 	virtual const boost::iterator_range<const unsigned char*> image_data() const;

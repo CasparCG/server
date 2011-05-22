@@ -76,6 +76,9 @@ void thread_init(AVCodecContext* s)
 
 void thread_free(AVCodecContext* s)
 {
+	if(!s->thread_opaque)
+		return;
+
 	s->thread_opaque = nullptr;
 
 	CASPAR_LOG(info) << "Released ffmpeg tbb context.";

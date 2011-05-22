@@ -27,23 +27,30 @@ namespace caspar { namespace core {
 																																							
 struct read_frame::implementation : boost::noncopyable
 {
-	safe_ptr<const host_buffer> image_data_;
+	boost::unique_future<safe_ptr<const host_buffer>> image_data_;
 	std::vector<short> audio_data_;
 
 public:
-	implementation(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data) 
+	implementation(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<short>&& audio_data) 
 		: image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data)){}	
 };
 
-read_frame::read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data) : impl_(new implementation(std::move(image_data), std::move(audio_data))){}
+read_frame::read_frame(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<short>&& audio_data) 
+	: impl_(new implementation(std::move(image_data), std::move(audio_data))){}
+read_frame::read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data) 
+{
+	boost::promise<safe_ptr<const host_buffer>> p;
+	p.set_value(std::move(image_data));
+	impl_.reset(new implementation(std::move(p.get_future()), std::move(audio_data)));
+}
 
 const boost::iterator_range<const unsigned char*> read_frame::image_data() const
 {
-	if(!impl_->image_data_->data())
+	if(!impl_->image_data_.get()->data())
 		return boost::iterator_range<const unsigned char*>();
-	auto ptr = static_cast<const unsigned char*>(impl_->image_data_->data());
-	return boost::iterator_range<const unsigned char*>(ptr, ptr + impl_->image_data_->size());
+	auto ptr = static_cast<const unsigned char*>(impl_->image_data_.get()->data());
+	return boost::iterator_range<const unsigned char*>(ptr, ptr + impl_->image_data_.get()->size());
 }
 const boost::iterator_range<const short*> read_frame::audio_data() const
 {

@@ -237,7 +237,7 @@ private:
 	void read_file()
 	{		
 		if(audio_stream_.size() > 4 && video_stream_.size() > 4)
-			boost::this_thread::yield(); // There are enough packets, no hurry.
+			Sleep(5); // There are enough packets, no hurry.
 
 		try
 		{

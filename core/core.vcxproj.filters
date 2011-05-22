@@ -75,9 +75,6 @@
     <ClInclude Include="producer\frame\frame_factory.h">
       <Filter>producer\frame</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\frame_mixer_device.h">
-      <Filter>mixer</Filter>
-    </ClInclude>
     <ClInclude Include="mixer\image\image_kernel.h">
       <Filter>mixer\image</Filter>
     </ClInclude>
@@ -103,6 +100,9 @@
       <Filter>mixer</Filter>
     </ClInclude>
     <ClInclude Include="mixer\write_frame.h">
+      <Filter>mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\frame_mixer_device.h">
       <Filter>mixer</Filter>
     </ClInclude>
   </ItemGroup>
