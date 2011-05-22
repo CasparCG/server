@@ -39,8 +39,7 @@ public:
 	{
 		transform_stack_.push(core::audio_transform());
 
-		// 2 frames delay
-		audio_data_.push_back(std::vector<short>());
+		// frame delay
 		audio_data_.push_back(std::vector<short>());
 	}
 	
