@@ -32,12 +32,10 @@ namespace caspar {
 	
 struct cg_producer::implementation : boost::noncopyable
 {
-	safe_ptr<core::frame_factory> frame_factory_;
 	safe_ptr<core::frame_producer> flash_producer_;
 public:
-	implementation(const safe_ptr<core::frame_factory>& frame_factory) 
-		: frame_factory_(frame_factory)
-		, flash_producer_(create_flash_producer(frame_factory_, boost::assign::list_of(env::template_host())))
+	implementation(const safe_ptr<core::frame_producer>& frame_producer) 
+		: flash_producer_(frame_producer)
 	{}
 	
 	void add(int layer, const std::wstring& filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
@@ -95,18 +93,16 @@ public:
 	
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::channel>& channel, int render_layer)
 {	
-	try
+	auto flash_producer = channel->producer()->foreground(render_layer).get();
+
+	if(flash_producer->print().find(L"flash") == std::string::npos)
 	{
-		return dynamic_pointer_cast<cg_producer>(channel->producer()->foreground(render_layer).get());
-	}
-	catch(std::bad_cast&)
-	{
-		safe_ptr<core::frame_factory> factory = channel->mixer();
-		auto producer = make_safe<cg_producer>(factory);		
-		channel->producer()->load(render_layer, producer, true); 
+		flash_producer = create_flash_producer(channel->mixer(), boost::assign::list_of(env::template_host()));	
+		channel->producer()->load(render_layer, flash_producer, true); 
 		channel->producer()->play(render_layer);
-		return producer;
 	}
+
+	return make_safe<cg_producer>(flash_producer);
 }
 
 safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
@@ -114,14 +110,15 @@ safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_fac
 	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".ct";
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
-
-	auto producer = make_safe<cg_producer>(frame_factory);
+	
+	auto flash_producer = create_flash_producer(frame_factory, boost::assign::list_of(env::template_host()));	
+	auto producer = make_safe<cg_producer>(flash_producer);
 	producer->add(0, filename, 1);
 
 	return producer;
 }
 
-cg_producer::cg_producer(const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(frame_factory)){}
+cg_producer::cg_producer(const safe_ptr<core::frame_producer>& frame_producer) : impl_(new implementation(frame_producer)){}
 cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<core::basic_frame> cg_producer::receive(){return impl_->receive();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
