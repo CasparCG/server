@@ -36,7 +36,11 @@ class audio_decoder : boost::noncopyable
 {
 public:
 	explicit audio_decoder(AVCodecContext& codec_context, const core::video_format_desc& format_desc);
-	std::vector<std::vector<short>> execute(std::shared_ptr<AVPacket>&& audio_packet);
+	void push(std::shared_ptr<AVPacket>&& audio_packet);
+	
+	bool empty() const;
+	std::vector<short> front();
+	void pop();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

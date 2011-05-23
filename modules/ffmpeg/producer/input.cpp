@@ -92,11 +92,9 @@ public:
 		return errn;	
 	}
 
-	std::shared_ptr<AVPacket> pop()
+	bool try_pop(std::shared_ptr<AVPacket>& pkt)
 	{
-		std::shared_ptr<AVPacket> pkt;
-		buffer_.try_pop(pkt);
-		return pkt;
+		return buffer_.try_pop(pkt);
 	}
 
 	void push(const std::shared_ptr<AVPacket>& pkt)
@@ -207,21 +205,17 @@ public:
 		stop();
 	}
 		
-	std::shared_ptr<AVPacket> get_video_packet()
+
+	bool try_pop_video_packet(std::shared_ptr<AVPacket>& packet)
 	{
-		return video_stream_.pop();
+		return video_stream_.try_pop(packet);
 	}
 
-	std::shared_ptr<AVPacket> get_audio_packet()
+	bool try_pop_audio_packet(std::shared_ptr<AVPacket>& packet)
 	{
-		return audio_stream_.pop();
+		return audio_stream_.try_pop(packet);
 	}
 
-	bool has_packet() const
-	{
-		return !video_stream_.empty() || !audio_stream_.empty();
-	}
-				
 	double fps()
 	{
 		return fps_;
@@ -232,8 +226,12 @@ private:
 	void stop()
 	{
 		executor_.stop();
-		get_video_packet();
-		get_audio_packet();
+
+		// Unblock thread.
+		std::shared_ptr<AVPacket> packet;
+		try_pop_video_packet(packet);
+		try_pop_audio_packet(packet);
+
 		CASPAR_LOG(info) << print() << " Stopping.";
 	}
 
@@ -332,9 +330,8 @@ input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& file
 	: impl_(new implementation(graph, filename, loop, start)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_stream_.ctx();}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_stream_.ctx();}
-bool input::has_packet() const{return impl_->has_packet();}
 bool input::is_running() const {return impl_->executor_.is_running();}
-std::shared_ptr<AVPacket> input::get_video_packet(){return impl_->get_video_packet();}
-std::shared_ptr<AVPacket> input::get_audio_packet(){return impl_->get_audio_packet();}
+bool input::try_pop_video_packet(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_video_packet(packet);}
+bool input::try_pop_audio_packet(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_audio_packet(packet);}
 double input::fps() const { return impl_->fps(); }
 }
