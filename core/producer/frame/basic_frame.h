@@ -27,6 +27,8 @@
 
 #include <boost/range/iterator_range.hpp>
 
+#include <vector>
+
 namespace caspar { namespace core {
 
 class image_transform;

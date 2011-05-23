@@ -82,7 +82,7 @@ public:
 
 	safe_ptr<core::basic_frame> receive()
 	{
-		return flash_producer_->receive();
+		return core::receive(flash_producer_);
 	}
 			
 	std::wstring print() const

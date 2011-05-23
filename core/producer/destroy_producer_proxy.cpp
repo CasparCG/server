@@ -56,7 +56,7 @@ destroy_producer_proxy::~destroy_producer_proxy()
 	g_destroyer.destroy(std::move(producer_));
 }
 
-safe_ptr<basic_frame> destroy_producer_proxy::receive(){return producer_->receive();}  
+safe_ptr<basic_frame> destroy_producer_proxy::receive(){return core::receive(producer_);}  
 std::wstring destroy_producer_proxy::print() const {return producer_->print();}   
 
 void destroy_producer_proxy::param(const std::wstring& param){producer_->param(param);}  

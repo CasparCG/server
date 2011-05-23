@@ -153,6 +153,12 @@ public:
 	{				
 		if(!video_packet)
 			return;
+
+		if(video_packet->size == 0)
+		{
+			avcodec_flush_buffers(&codec_context_);
+			return;
+		}
 	
 		safe_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
