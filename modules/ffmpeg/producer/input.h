@@ -35,10 +35,11 @@ public:
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 
-	std::shared_ptr<AVPacket> get_video_packet();
-	std::shared_ptr<AVPacket> get_audio_packet();
+	bool try_pop_video_packet(std::shared_ptr<AVPacket>& packet);
+	bool try_pop_audio_packet(std::shared_ptr<AVPacket>& packet);
 
-	bool has_packet() const;
+	bool has_video_packet() const;
+	bool has_audio_packet() const;
 	bool is_running() const;
 	double fps() const;
 private:

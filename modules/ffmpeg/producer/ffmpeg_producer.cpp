@@ -47,18 +47,11 @@ namespace caspar {
 	
 struct ffmpeg_producer : public core::frame_producer
 {
-	static const size_t						DECODED_PACKET_BUFFER_SIZE = 4;
-	static const size_t						MAX_PACKET_OFFSET = 64; // Avoid infinite looping.
-
 	const std::wstring						filename_;
-	const bool								loop_;
 	
 	const safe_ptr<diagnostics::graph>		graph_;
 	boost::timer							frame_timer_;
-		
-	std::deque<safe_ptr<core::write_frame>>	video_frame_buffer_;	
-	std::deque<std::vector<short>>			audio_chunk_buffer_;
-			
+					
 	const safe_ptr<core::frame_factory>		frame_factory_;
 
 	input									input_;	
@@ -67,10 +60,9 @@ struct ffmpeg_producer : public core::frame_producer
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop, int start, int length) 
 		: filename_(filename)
-		, loop_(loop) 
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
-		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop_, start)
+		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop, start)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -80,155 +72,93 @@ public:
 		double format_frame_time = 1.0/frame_factory->get_video_format_desc().fps;
 		if(abs(frame_time - format_frame_time) > 0.0001 && abs(frame_time - format_frame_time/2) > 0.0001)
 			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback. frame-time: " << frame_time;
-
-		try
-		{			
-			video_decoder_.reset(input_.get_video_codec_context() ? 
-				new video_decoder(*input_.get_video_codec_context(), frame_factory) : nullptr);
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << print() << " failed to initialize video-decoder.";
-		}
 		
-		try
-		{			
-			audio_decoder_.reset(input_.get_audio_codec_context() ? 
-				new audio_decoder(*input_.get_audio_codec_context(), frame_factory->get_video_format_desc()) : nullptr);
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << print() << " failed to initialize audio-decoder.";
-		}		
-
-		if(!video_decoder_ && !audio_decoder_)
-		{
-			BOOST_THROW_EXCEPTION(
-				caspar_exception() <<
-				source_info(narrow(print())) << 
-				msg_info("Failed to initialize any decoder"));
-		}
+		video_decoder_.reset(input_.get_video_codec_context() ? 
+			new video_decoder(*input_.get_video_codec_context(), frame_factory) : nullptr);
 			
-		// Pre-roll since first frames can be heavy.
-		while(video_frame_buffer_.size() < DECODED_PACKET_BUFFER_SIZE && 
-			  audio_chunk_buffer_.size() < DECODED_PACKET_BUFFER_SIZE && 
-			  input_.has_packet())
-		{
-			try_decode_packet();
-		}
+		audio_decoder_.reset(input_.get_audio_codec_context() ? 
+			new audio_decoder(*input_.get_audio_codec_context(), frame_factory->get_video_format_desc()) : nullptr);		
+					
+		// Fill buffers.
+		decode_next_packets();
 	}
 
 	virtual safe_ptr<core::basic_frame> receive()
 	{
 		frame_timer_.restart();
 
-		std::shared_ptr<core::basic_frame> frame;	
-		for(size_t n = 0; !frame && input_.has_packet() && n < MAX_PACKET_OFFSET ; ++n) 
-			frame = try_get_frame();
+		auto result = decode_frame();
 				
 		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
 					
-		if(frame)
-			return make_safe(frame);
-		
-		if(!input_.is_running())
-			return core::basic_frame::eof();
-
-		if(!video_decoder_ && !audio_decoder_)
-			return core::basic_frame::eof();
-			
-		graph_->add_tag("underflow");
-		return core::basic_frame::late();	
+		return result;
 	}
 	
 	virtual std::wstring print() const
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
-	
-	void try_decode_packet()
+
+	void decode_next_packets()
 	{
 		tbb::parallel_invoke
 		(
 			[&]
 			{
-				if(video_frame_buffer_.size() < DECODED_PACKET_BUFFER_SIZE)
-					try_decode_video_packet(input_.get_video_packet());
+				std::shared_ptr<AVPacket> pkt;
+				for(int n = 0; n < 8 && video_decoder_ && video_decoder_->empty() && input_.try_pop_video_packet(pkt); ++n)
+					video_decoder_->push(std::move(pkt));
 			}, 
 			[&]
 			{
-				if(audio_chunk_buffer_.size() < DECODED_PACKET_BUFFER_SIZE)
-					try_decode_audio_packet(input_.get_audio_packet());
+				std::shared_ptr<AVPacket> pkt;
+				for(int n = 0; n < 8 && audio_decoder_ && audio_decoder_->empty() && input_.try_pop_audio_packet(pkt); ++n)
+					audio_decoder_->push(std::move(pkt));
 			}
 		);	
 	}
 
-	void try_decode_video_packet(std::shared_ptr<AVPacket>&& video_packet)
+	safe_ptr<core::basic_frame> decode_frame()
 	{
-		if(!video_decoder_)
-			return;
+		decode_next_packets();
 
-		try
+		if(video_decoder_ && !video_decoder_->empty() && audio_decoder_ && !audio_decoder_->empty())
 		{
-			boost::range::push_back(video_frame_buffer_, video_decoder_->execute(std::move(video_packet)));
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			video_decoder_.reset();
-			CASPAR_LOG(warning) << print() << " removed video-stream.";
-		}
-	}
-
-	void try_decode_audio_packet(std::shared_ptr<AVPacket>&& audio_packet)
-	{
-		if(!audio_decoder_)
-			return;
-
-		try
-		{
-			boost::range::push_back(audio_chunk_buffer_, audio_decoder_->execute(std::move(audio_packet)));
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			audio_decoder_.reset();
-			CASPAR_LOG(warning) << print() << " removed audio-stream.";
-		}
-	}
-
-	std::shared_ptr<core::basic_frame> try_get_frame()
-	{		
-		try_decode_packet();
-
-		std::shared_ptr<core::write_frame> frame;	
-
-		if(!video_frame_buffer_.empty() && !audio_chunk_buffer_.empty())
-		{
-			frame = video_frame_buffer_.front();				
-			video_frame_buffer_.pop_front();
+			auto frame = std::move(video_decoder_->front());				
+			video_decoder_->pop();
 				
-			frame->audio_data() = std::move(audio_chunk_buffer_.front());
-			audio_chunk_buffer_.pop_front();	
+			frame->audio_data() = std::move(audio_decoder_->front());
+			audio_decoder_->pop();
+
+			return frame;
 		}
-		else if(!video_frame_buffer_.empty() && !audio_decoder_)
+		else if(video_decoder_ && !video_decoder_->empty() && !audio_decoder_)
 		{
-			frame = std::move(video_frame_buffer_.front());				
-			video_frame_buffer_.pop_front();
+			auto frame = std::move(video_decoder_->front());				
+			video_decoder_->pop();
 			frame->get_audio_transform().set_has_audio(false);	
+
+			return frame;
 		}
-		else if(!audio_chunk_buffer_.empty() && !video_decoder_)
+		else if(audio_decoder_ && !audio_decoder_->empty() && !video_decoder_)
 		{
-			frame = frame_factory_->create_frame(this, 1, 1);
+			auto frame = frame_factory_->create_frame(this, 1, 1);
 			std::fill(frame->image_data().begin(), frame->image_data().end(), 0);
 				
-			frame->audio_data() = std::move(audio_chunk_buffer_.front());
-			audio_chunk_buffer_.pop_front();
+			frame->audio_data() = std::move(audio_decoder_->front());
+			audio_decoder_->pop();
+
+			return frame;
 		}
-		
-		return frame;	
+		else if(!input_.is_running() || (!video_decoder_ && !audio_decoder_))
+		{
+			return core::basic_frame::eof();
+		}
+		else
+		{
+			graph_->add_tag("underflow");
+			return core::basic_frame::late();
+		}
 	}
 };
 

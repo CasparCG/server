@@ -39,14 +39,14 @@ extern "C"
 namespace caspar {
 
 struct audio_decoder::implementation : boost::noncopyable
-{
-	typedef std::vector<short, tbb::cache_aligned_allocator<short>> aligned_buffer;
-	
+{	
 	AVCodecContext& codec_context_;
 		
 	const core::video_format_desc format_desc_;
 
-	aligned_buffer current_chunk_;
+	std::vector<short> current_chunk_;
+
+	std::vector<std::vector<short>> chunks_;
 
 public:
 	explicit implementation(AVCodecContext& codec_context, const core::video_format_desc& format_desc) 
@@ -64,12 +64,10 @@ public:
 		}
 	}
 		
-	std::vector<std::vector<short>> execute(std::shared_ptr<AVPacket>&& audio_packet)
+	void push(std::shared_ptr<AVPacket>&& audio_packet)
 	{	
-		std::vector<std::vector<short>> result;
-
 		if(!audio_packet)
-			return result;
+			return;
 
 		auto s = current_chunk_.size();
 		current_chunk_.resize(s + 4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2);
@@ -89,14 +87,30 @@ public:
 		const auto last = current_chunk_.end() - current_chunk_.size() % format_desc_.audio_samples_per_frame;
 		
 		for(auto it = current_chunk_.begin(); it != last; it += format_desc_.audio_samples_per_frame)		
-			result.push_back(std::vector<short>(it, it + format_desc_.audio_samples_per_frame));		
+			chunks_.push_back(std::vector<short>(it, it + format_desc_.audio_samples_per_frame));		
 
 		current_chunk_.erase(current_chunk_.begin(), last);
-				
-		return result;
+	}
+
+	bool empty() const
+	{
+		return chunks_.empty();
+	}
+
+	std::vector<short> front()
+	{
+		return chunks_.front();
+	}
+
+	void pop()
+	{
+		chunks_.pop_back();
 	}
 };
 
 audio_decoder::audio_decoder(AVCodecContext& codec_context, const core::video_format_desc& format_desc) : impl_(new implementation(codec_context, format_desc)){}
-std::vector<std::vector<short>> audio_decoder::execute(std::shared_ptr<AVPacket>&& audio_packet){return impl_->execute(std::move(audio_packet));}
+void audio_decoder::push(std::shared_ptr<AVPacket>&& audio_packet){impl_->push(std::move(audio_packet));}
+bool audio_decoder::empty() const {return impl_->empty();}
+std::vector<short> audio_decoder::front() {return impl_->front();}
+void audio_decoder::pop(){impl_->pop();}
 }
