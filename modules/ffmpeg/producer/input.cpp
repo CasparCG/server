@@ -106,6 +106,16 @@ public:
 		buffer_.push(pkt);	
 	}
 
+	void flush()
+	{
+		if(index_ == -1)
+			return;
+
+		std::shared_ptr<AVPacket> flsh_pkt(new AVPacket);
+		flsh_pkt->size = 0;
+		buffer_.push(flsh_pkt);	
+	}
+
 	const std::shared_ptr<AVCodecContext>& ctx() { return ctx_; }
 
 	operator bool(){return ctx_ != nullptr;}
@@ -310,6 +320,9 @@ private:
 				boost::errinfo_api_function("av_seek_frame") <<
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
+
+		video_stream_.flush();
+		audio_stream_.flush();
 	}		
 
 	bool is_eof(int errn)

@@ -37,8 +37,8 @@ struct separated_producer : public frame_producer
 	explicit separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key) 
 		: fill_producer_(fill)
 		, key_producer_(key)
-		, fill_(core::basic_frame::empty())
-		, key_(core::basic_frame::empty()){}
+		, fill_(core::basic_frame::late())
+		, key_(core::basic_frame::late()){}
 	
 	// frame_producer
 	
@@ -48,12 +48,12 @@ struct separated_producer : public frame_producer
 		(
 			[&]
 			{
-				if(fill_ == core::basic_frame::empty())
+				if(fill_ == core::basic_frame::late())
 					fill_ = receive_and_follow(fill_producer_);
 			},
 			[&]
 			{
-				if(key_ == core::basic_frame::empty())
+				if(key_ == core::basic_frame::late())
 					key_ = receive_and_follow(key_producer_);
 			}
 		);
@@ -66,8 +66,8 @@ struct separated_producer : public frame_producer
 		
 		auto frame = basic_frame::fill_and_key(fill_, key_);
 
-		fill_ = basic_frame::empty();
-		key_ = basic_frame::empty();
+		fill_ = basic_frame::late();
+		key_ = basic_frame::late();
 
 		return frame;
 	}
