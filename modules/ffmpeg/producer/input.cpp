@@ -239,7 +239,7 @@ private:
 
 	void read_file()
 	{		
-		if(video_stream_.size() > 4) // Don't check audio_stream since audio is always before video.
+		if(video_stream_.size() > 4 || audio_stream_.size() > 4) // audio is always before video.
 			Sleep(5); // There are enough packets, no hurry.
 
 		read_next_packet();
