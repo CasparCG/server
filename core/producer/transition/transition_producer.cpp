@@ -38,17 +38,13 @@ struct transition_producer : public frame_producer
 	
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
-	safe_ptr<basic_frame>		last_dest_;
-	safe_ptr<basic_frame>		last_source_;
 		
 	explicit transition_producer(const video_mode::type& mode, const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
 		, current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
-		, source_producer_(frame_producer::empty())
-		, last_dest_(core::basic_frame::empty())
-		, last_source_(core::basic_frame::empty()){}
+		, source_producer_(frame_producer::empty()){}
 	
 	// frame_producer
 
@@ -67,31 +63,23 @@ struct transition_producer : public frame_producer
 		if(current_frame_++ >= info_.duration)
 			return basic_frame::eof();
 		
+		safe_ptr<core::basic_frame> dest;
+		safe_ptr<core::basic_frame> source;
+
 		tbb::parallel_invoke
 		(
-			[&]{last_dest_   = receive_and_follow_w_last(dest_producer_, last_dest_);},
-			[&]{last_source_ = receive_and_follow_w_last(source_producer_, last_source_);}
+			[&]{dest   = receive_and_follow_w_last(dest_producer_);},
+			[&]{source = receive_and_follow_w_last(source_producer_);}
 		);
 
-		return compose(last_dest_, last_source_);
+		return compose(dest, source);
 	}
 
 	virtual std::wstring print() const
 	{
 		return L"transition";
 	}
-
-	safe_ptr<basic_frame> receive_and_follow_w_last(safe_ptr<frame_producer>& producer, safe_ptr<basic_frame> last_frame)
-	{
-		auto frame = core::receive_and_follow(producer);
-		if(frame == basic_frame::late())
-		{
-			last_frame->get_audio_transform().set_has_audio(false);
-			frame = last_frame;
-		}
-		return frame;
-	}
-
+	
 	// transition_producer
 						
 	safe_ptr<basic_frame> compose(const safe_ptr<basic_frame>& dest_frame, const safe_ptr<basic_frame>& src_frame) 

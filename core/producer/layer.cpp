@@ -32,13 +32,11 @@ struct layer::implementation
 {				
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
-	safe_ptr<basic_frame>		last_frame_;
 	bool						is_paused_;
 public:
 	implementation() 
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
-		, last_frame_(basic_frame::empty())
 		, is_paused_(false){}
 	
 	void pause(){is_paused_ = true;}
@@ -71,23 +69,15 @@ public:
 	void stop()
 	{
 		pause();
-		last_frame_ = basic_frame::empty();
 		foreground_ = frame_producer::empty();
 	}
 		
 	safe_ptr<basic_frame> receive()
 	{		
 		if(is_paused_)
-			return last_frame_;
-
-		auto next_frame = receive_and_follow(foreground_);
-		if(next_frame == core::basic_frame::late())
-			return last_frame_;
-				
-		last_frame_ = basic_frame(next_frame);
-		last_frame_->get_audio_transform().set_has_audio(false);
-
-		return next_frame;
+			return foreground_->last_frame();
+		
+		return receive_and_follow_w_last(foreground_);
 	}
 };
 

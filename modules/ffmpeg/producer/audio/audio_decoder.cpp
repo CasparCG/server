@@ -68,6 +68,12 @@ public:
 	{	
 		if(!audio_packet)
 			return;
+		
+		if(audio_packet->size == 0)
+		{
+			avcodec_flush_buffers(&codec_context_);
+			return;
+		}
 
 		auto s = current_chunk_.size();
 		current_chunk_.resize(s + 4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2);

@@ -19,6 +19,9 @@
 */
 #pragma once
 
+#include "frame/basic_frame.h"
+#include "frame/audio_transform.h"
+
 #include <common/memory/safe_ptr.h>
 
 #include "frame/frame_factory.h"
@@ -36,9 +39,9 @@ class basic_frame;
 class frame_producer : boost::noncopyable
 {
 public:
+	frame_producer() : last_frame_(core::basic_frame::empty()){}
 	virtual ~frame_producer(){}	
 
-	virtual safe_ptr<basic_frame> receive() = 0;
 	virtual std::wstring print() const = 0; // nothrow
 
 	virtual void param(const std::wstring&){}
@@ -47,9 +50,21 @@ public:
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
 		
 	static const safe_ptr<frame_producer>& empty(); // nothrow
+
+	safe_ptr<core::basic_frame> last_frame() const {return last_frame_;}
+	
+private:
+	virtual safe_ptr<basic_frame> receive() = 0;
+	friend safe_ptr<basic_frame> receive(safe_ptr<frame_producer>& producer);
+
+	safe_ptr<basic_frame> receive_w_last();
+
+	safe_ptr<core::basic_frame> last_frame_;
 };
 
+safe_ptr<basic_frame> receive(safe_ptr<frame_producer>& producer);
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer);
+safe_ptr<basic_frame> receive_and_follow_w_last(safe_ptr<frame_producer>& producer);
 
 typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.

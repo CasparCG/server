@@ -44,6 +44,22 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 	return producer;
 }	
 
+safe_ptr<basic_frame> frame_producer::receive_w_last()
+{
+	auto frame = receive();
+	if(frame != core::basic_frame::late())
+	{
+		last_frame_ = make_safe<basic_frame>(frame);
+		last_frame_->get_audio_transform().set_has_audio(false);
+	}	
+	return frame;
+}
+
+safe_ptr<basic_frame> receive(safe_ptr<frame_producer>& producer)
+{
+	return producer->receive_w_last();
+}
+
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 {	
 	if(producer == frame_producer::empty())
@@ -52,7 +68,7 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 	auto frame = basic_frame::eof();
 	try
 	{
-		frame = producer->receive();
+		frame = receive(producer);
 	}
 	catch(...)
 	{
@@ -74,6 +90,14 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 		
 		return receive_and_follow(producer);
 	}
+	return frame;
+}
+
+safe_ptr<basic_frame> receive_and_follow_w_last(safe_ptr<frame_producer>& producer)
+{
+	auto frame = receive_and_follow(producer);
+	if(frame == basic_frame::late())
+		frame = producer->last_frame();
 	return frame;
 }
 
