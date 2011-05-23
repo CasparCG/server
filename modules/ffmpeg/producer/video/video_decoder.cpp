@@ -124,6 +124,7 @@ struct video_decoder::implementation : boost::noncopyable
 	const int									height_;
 	const PixelFormat							pix_fmt_;
 	core::pixel_format_desc						desc_;
+	std::vector<safe_ptr<core::write_frame>>	frames_;
 
 public:
 	explicit implementation(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) 
@@ -148,12 +149,10 @@ public:
 		}
 	}
 	
-	std::vector<safe_ptr<core::write_frame>> execute(std::shared_ptr<AVPacket>&& video_packet)
+	void push(std::shared_ptr<AVPacket>&& video_packet)
 	{				
-		std::vector<safe_ptr<core::write_frame>> result;
-
 		if(!video_packet)
-			return result;
+			return;
 	
 		safe_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
@@ -170,9 +169,7 @@ public:
 		}
 		
 		if(frame_finished != 0)		
-			result.push_back(make_write_frame(decoded_frame));
-
-		return result;
+			frames_.push_back(make_write_frame(decoded_frame));
 	}
 
 	safe_ptr<core::write_frame> make_write_frame(safe_ptr<AVFrame> decoded_frame)
@@ -211,9 +208,27 @@ public:
 
 		return write;
 	}
+
+	bool empty() const
+	{
+		return frames_.empty();
+	}
+
+	safe_ptr<core::write_frame> front()
+	{
+		return frames_.front();
+	}
+
+	void pop()
+	{
+		frames_.pop_back();
+	}
 };
 
 video_decoder::video_decoder(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(codec_context, frame_factory)){}
-std::vector<safe_ptr<core::write_frame>> video_decoder::execute(std::shared_ptr<AVPacket>&& video_packet){return impl_->execute(std::move(video_packet));}
+void video_decoder::push(std::shared_ptr<AVPacket>&& video_packet){impl_->push(std::move(video_packet));}
+bool video_decoder::empty() const {return impl_->empty();}
+safe_ptr<core::write_frame> video_decoder::front() {return impl_->front();}
+void video_decoder::pop(){impl_->pop();}
 
 }
