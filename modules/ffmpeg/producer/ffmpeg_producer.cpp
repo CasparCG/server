@@ -111,9 +111,6 @@ public:
 				msg_info("Failed to initialize any decoder"));
 		}
 			
-		// Take some time to read the first packets
-		Sleep(40);
-
 		// Pre-roll since first frames can be heavy.
 		while(video_frame_buffer_.size() < DECODED_PACKET_BUFFER_SIZE && 
 			  audio_chunk_buffer_.size() < DECODED_PACKET_BUFFER_SIZE && 

@@ -193,7 +193,10 @@ public:
 
 		if(start_ != 0)			
 			seek_frame(start_);
-					
+
+		for(size_t n = 0; n < 16; ++n) // Read some packets for pre-rolling.
+			read_next_packet();
+							
 		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
@@ -233,12 +236,19 @@ private:
 		get_audio_packet();
 		CASPAR_LOG(info) << print() << " Stopping.";
 	}
-			
+
 	void read_file()
 	{		
-		if(audio_stream_.size() > 4 && video_stream_.size() > 4)
+		if(video_stream_.size() > 4) // Don't check audio_stream since audio is always before video.
 			Sleep(5); // There are enough packets, no hurry.
 
+		read_next_packet();
+
+		executor_.begin_invoke([this]{read_file();});
+	}
+			
+	void read_next_packet()
+	{		
 		try
 		{
 			std::shared_ptr<AVPacket> read_packet(new AVPacket(), [](AVPacket* p)
@@ -284,9 +294,7 @@ private:
 			stop();
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			return;
-		}
-						
-		executor_.begin_invoke([this]{read_file();});		
+		}	
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
