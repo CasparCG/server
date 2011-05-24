@@ -40,18 +40,16 @@ namespace caspar {
 
 struct audio_decoder::implementation : boost::noncopyable
 {	
-	AVCodecContext& codec_context_;
-		
-	const core::video_format_desc format_desc_;
-
-	std::vector<short> current_chunk_;
-
-	std::vector<std::vector<short>> chunks_;
-
+	AVCodecContext&					codec_context_;		
+	const core::video_format_desc	format_desc_;
+	std::vector<short>				current_chunk_;
+	std::vector<std::vector<short>> chunks_;		
+	size_t							frame_number_;
 public:
 	explicit implementation(AVCodecContext& codec_context, const core::video_format_desc& format_desc) 
 		: codec_context_(codec_context)
-		, format_desc_(format_desc)		
+		, format_desc_(format_desc)	
+		, frame_number_(0)
 	{
 		if(codec_context_.sample_rate != static_cast<int>(format_desc_.audio_sample_rate) || 
 		   codec_context_.channels != static_cast<int>(format_desc_.audio_channels))
@@ -63,20 +61,19 @@ public:
 				arg_name_info("codec_context"));
 		}
 	}
-		
-	void push(std::shared_ptr<AVPacket>&& audio_packet)
-	{	
+			
+	void push(const std::shared_ptr<AVPacket>& audio_packet)
+	{			
 		if(!audio_packet)
-			return;
-		
-		if(audio_packet->size == 0)
-		{
+		{	
 			avcodec_flush_buffers(&codec_context_);
+			current_chunk_.clear();
+			frame_number_ = 0;
 			return;
 		}
-
+				
 		auto s = current_chunk_.size();
-		current_chunk_.resize(s + 4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2);
+		current_chunk_.resize(s + 4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2, 0);
 		
 		int written_bytes = (current_chunk_.size() - s)*2 - FF_INPUT_BUFFER_PADDING_SIZE;
 		const int errn = avcodec_decode_audio3(&codec_context_, &current_chunk_[s], &written_bytes, audio_packet.get());
@@ -110,13 +107,15 @@ public:
 
 	void pop()
 	{
+		++frame_number_;
 		chunks_.pop_back();
 	}
 };
 
 audio_decoder::audio_decoder(AVCodecContext& codec_context, const core::video_format_desc& format_desc) : impl_(new implementation(codec_context, format_desc)){}
-void audio_decoder::push(std::shared_ptr<AVPacket>&& audio_packet){impl_->push(std::move(audio_packet));}
+void audio_decoder::push(const std::shared_ptr<AVPacket>& audio_packet){impl_->push(std::move(audio_packet));}
 bool audio_decoder::empty() const {return impl_->empty();}
 std::vector<short> audio_decoder::front() {return impl_->front();}
 void audio_decoder::pop(){impl_->pop();}
+size_t audio_decoder::frame_number() const{return impl_->frame_number_;}
 }
