@@ -124,7 +124,7 @@ struct video_decoder::implementation : boost::noncopyable
 	const int									height_;
 	const PixelFormat							pix_fmt_;
 	core::pixel_format_desc						desc_;
-	std::vector<safe_ptr<core::write_frame>>	frames_;
+	std::deque<safe_ptr<core::write_frame>>		frames_;
 	size_t										frame_number_;
 
 public:
@@ -228,7 +228,7 @@ public:
 	void pop()
 	{
 		++frame_number_;
-		frames_.pop_back();
+		frames_.pop_front();
 	}
 };
 
