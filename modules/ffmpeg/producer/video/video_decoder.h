@@ -34,11 +34,14 @@ class video_decoder : boost::noncopyable
 {
 public:
 	explicit video_decoder(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory);
-	void push(std::shared_ptr<AVPacket>&& video_packet);	
+	void push(const std::shared_ptr<AVPacket>& video_packet);	
 
 	bool empty() const;
 	safe_ptr<core::write_frame> front();
 	void pop();
+	
+	size_t frame_number() const;
+
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

@@ -57,10 +57,14 @@ class stream
 
 public:
 
-	stream()
-		: index_(-1)
+	stream() : index_(-1)
 	{
 		buffer_.set_capacity(PACKET_BUFFER_COUNT);
+	}
+
+	~stream()
+	{
+		CASPAR_LOG(trace) << "##: " << size();
 	}
 
 	int open(std::shared_ptr<AVFormatContext>& fctx, AVMediaType media_type)
@@ -99,23 +103,17 @@ public:
 
 	void push(const std::shared_ptr<AVPacket>& pkt)
 	{
-		if(pkt->stream_index != index_)
+		if(pkt && pkt->stream_index != index_)
 			return;
 
-		av_dup_packet(pkt.get());
+		if(pkt)
+			av_dup_packet(pkt.get());
+
 		buffer_.push(pkt);	
 	}
 
-	void flush()
-	{
-		if(index_ == -1)
-			return;
-
-		std::shared_ptr<AVPacket> flsh_pkt(new AVPacket);
-		flsh_pkt->size = 0;
-		buffer_.push(flsh_pkt);	
-	}
-
+	int index() const {return index_;}
+	
 	const std::shared_ptr<AVCodecContext>& ctx() { return ctx_; }
 
 	operator bool(){return ctx_ != nullptr;}
@@ -150,7 +148,8 @@ public:
 		, executor_(print())
 		, start_(std::max(start, 0))
 	{		
-		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
+		graph_->set_color("audio-input-buffer", diagnostics::color(0.5f, 1.0f, 0.2f));
+		graph_->set_color("video-input-buffer", diagnostics::color(0.2f, 0.5f, 1.0f));
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
 		
 		int errn;
@@ -215,14 +214,13 @@ public:
 		stop();
 	}
 		
-
 	bool try_pop_video_packet(std::shared_ptr<AVPacket>& packet)
 	{
 		return video_stream_.try_pop(packet);
 	}
 
 	bool try_pop_audio_packet(std::shared_ptr<AVPacket>& packet)
-	{
+	{	
 		return audio_stream_.try_pop(packet);
 	}
 
@@ -295,7 +293,8 @@ private:
 				audio_stream_.push(read_packet);
 			}
 						
-			graph_->update_value("input-buffer", static_cast<float>(std::max(video_stream_.size(), audio_stream_.size()))/static_cast<float>(PACKET_BUFFER_COUNT));		
+			graph_->update_value("video-input-buffer", static_cast<float>(video_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
+			graph_->update_value("audio-input-buffer", static_cast<float>(audio_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
 		}
 		catch(...)
 		{
@@ -307,10 +306,17 @@ private:
 
 	void seek_frame(int64_t frame, int flags = 0)
 	{  	
-		// Convert from frames into seconds.
-		const auto ts = frame*static_cast<int64_t>(AV_TIME_BASE/fps_);
+		static const AVRational base_q = {1, AV_TIME_BASE};
 
-		const int errn = av_seek_frame(format_context_.get(), -1, ts, flags | AVSEEK_FLAG_FRAME);
+		// Convert from frames into seconds.
+		auto seek_target = frame*static_cast<int64_t>(AV_TIME_BASE/fps_);
+
+		int stream_index = video_stream_.index() >= 0 ? video_stream_.index() : audio_stream_.index();
+
+		if(stream_index >= 0)		
+			seek_target = av_rescale_q(seek_target, base_q, format_context_->streams[stream_index]->time_base);
+
+		const int errn = av_seek_frame(format_context_.get(), stream_index, seek_target, flags);
 		if(errn < 0)
 		{	
 			BOOST_THROW_EXCEPTION(
@@ -321,8 +327,8 @@ private:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		video_stream_.flush();
-		audio_stream_.flush();
+		video_stream_.push(nullptr);
+		audio_stream_.push(nullptr);
 	}		
 
 	bool is_eof(int errn)
@@ -339,7 +345,7 @@ private:
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length) 
 	: impl_(new implementation(graph, filename, loop, start)){}
 const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_stream_.ctx();}
 const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_stream_.ctx();}

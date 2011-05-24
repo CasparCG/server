@@ -25,6 +25,7 @@
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 
+#include <common/utility/assert.h>
 #include <common/utility/timer.h>
 #include <common/diagnostics/graph.h>
 
@@ -62,7 +63,7 @@ public:
 		: filename_(filename)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
-		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop, start)
+		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop, start, length)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time",  diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -105,17 +106,38 @@ public:
 		(
 			[&]
 			{
+				if(!video_decoder_)
+					return;
+
 				std::shared_ptr<AVPacket> pkt;
-				for(int n = 0; n < 8 && video_decoder_ && video_decoder_->empty() && input_.try_pop_video_packet(pkt); ++n)
-					video_decoder_->push(std::move(pkt));
+				for(int n = 0; n < 16 && video_decoder_->empty() && input_.try_pop_video_packet(pkt); ++n)				
+					video_decoder_->push(pkt);				
 			}, 
 			[&]
 			{
-				std::shared_ptr<AVPacket> pkt;
-				for(int n = 0; n < 8 && audio_decoder_ && audio_decoder_->empty() && input_.try_pop_audio_packet(pkt); ++n)
-					audio_decoder_->push(std::move(pkt));
+				if(!audio_decoder_)
+					return;
+				
+				std::shared_ptr<AVPacket> pkt;	
+				for(int n = 0; n < 16 && audio_decoder_->empty() && input_.try_pop_audio_packet(pkt); ++n)				
+					audio_decoder_->push(pkt);				
 			}
-		);	
+		);
+		
+		// Sync up audio with video on start. Last frame sometimes have more samples than required. Remove those.
+		if(audio_decoder_ && video_decoder_ && video_decoder_->frame_number() == 0)
+		{
+			std::shared_ptr<AVPacket> pkt;
+			while(audio_decoder_->frame_number() > 0 && input_.try_pop_audio_packet(pkt))
+			{
+				audio_decoder_->push(pkt);
+				if(audio_decoder_->frame_number() > 0)
+					audio_decoder_->pop();
+			}
+			
+			for(int n = 0; n < 16 && audio_decoder_->empty() && input_.try_pop_audio_packet(pkt); ++n)				
+				audio_decoder_->push(pkt);		
+		}
 	}
 
 	safe_ptr<core::basic_frame> decode_frame()
@@ -129,7 +151,7 @@ public:
 				
 			frame->audio_data() = std::move(audio_decoder_->front());
 			audio_decoder_->pop();
-
+			
 			return frame;
 		}
 		else if(video_decoder_ && !video_decoder_->empty() && !audio_decoder_)
@@ -137,7 +159,7 @@ public:
 			auto frame = std::move(video_decoder_->front());				
 			video_decoder_->pop();
 			frame->get_audio_transform().set_has_audio(false);	
-
+			
 			return frame;
 		}
 		else if(audio_decoder_ && !audio_decoder_->empty() && !video_decoder_)

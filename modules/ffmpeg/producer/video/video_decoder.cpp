@@ -125,6 +125,7 @@ struct video_decoder::implementation : boost::noncopyable
 	const PixelFormat							pix_fmt_;
 	core::pixel_format_desc						desc_;
 	std::vector<safe_ptr<core::write_frame>>	frames_;
+	size_t										frame_number_;
 
 public:
 	explicit implementation(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) 
@@ -134,6 +135,7 @@ public:
 		, height_(codec_context_.height)
 		, pix_fmt_(codec_context_.pix_fmt)
 		, desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
+		, frame_number_(0)
 	{
 		if(desc_.pix_fmt == core::pixel_format::invalid)
 		{
@@ -148,18 +150,16 @@ public:
 									  boost::errinfo_api_function("sws_getContext"));
 		}
 	}
-	
-	void push(std::shared_ptr<AVPacket>&& video_packet)
+
+	void push(const std::shared_ptr<AVPacket>& video_packet)
 	{				
 		if(!video_packet)
-			return;
-
-		if(video_packet->size == 0)
-		{
+		{	
 			avcodec_flush_buffers(&codec_context_);
+			frame_number_ = 0;
 			return;
 		}
-	
+
 		safe_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 		int frame_finished = 0;
@@ -227,14 +227,16 @@ public:
 
 	void pop()
 	{
+		++frame_number_;
 		frames_.pop_back();
 	}
 };
 
 video_decoder::video_decoder(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(codec_context, frame_factory)){}
-void video_decoder::push(std::shared_ptr<AVPacket>&& video_packet){impl_->push(std::move(video_packet));}
+void video_decoder::push(const std::shared_ptr<AVPacket>& video_packet){impl_->push(std::move(video_packet));}
 bool video_decoder::empty() const {return impl_->empty();}
 safe_ptr<core::write_frame> video_decoder::front() {return impl_->front();}
 void video_decoder::pop(){impl_->pop();}
+size_t video_decoder::frame_number() const{return impl_->frame_number_;}
 
 }

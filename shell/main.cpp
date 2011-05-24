@@ -81,7 +81,7 @@ void setup_console_window()
 
 	SMALL_RECT DisplayArea = {0, 0, 0, 0};
 	DisplayArea.Right = coord.X-1;
-	DisplayArea.Bottom = coord.Y-1;
+	DisplayArea.Bottom = (coord.Y-1)/2;
 	SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
 		
 	// Set console title.

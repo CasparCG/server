@@ -24,6 +24,8 @@
 #include <memory>
 #include <string>
 
+#include <boost/iterator/iterator_facade.hpp>
+
 struct AVCodecContext;
 
 namespace caspar {
@@ -31,21 +33,49 @@ namespace caspar {
 class input : boost::noncopyable
 {
 public:
-	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start);
+	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length);
 	const std::shared_ptr<AVCodecContext>& get_video_codec_context() const;
 	const std::shared_ptr<AVCodecContext>& get_audio_codec_context() const;
 
 	bool try_pop_video_packet(std::shared_ptr<AVPacket>& packet);
 	bool try_pop_audio_packet(std::shared_ptr<AVPacket>& packet);
 
-	bool has_video_packet() const;
-	bool has_audio_packet() const;
 	bool is_running() const;
 	double fps() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
+//
+//class input_video_iterator : public boost::iterator_facade<input_video_iterator, std::shared_ptr<AVPacket>, boost::forward_traversal_tag>
+//{
+//	std::shared_ptr<AVPacket> pkt_;
+//	input* input_;
+//public:
+//	input_video_iterator() : input_(nullptr){}
+//
+//    input_video_iterator(input& input)
+//      : input_(&input) {}
+//
+//    input_video_iterator(const input_video_iterator& other)
+//      : input_(other.input_) {}
+//
+// private:
+//    friend class boost::iterator_core_access;
+//
+//    void increment() 
+//	{
+//		if(input_ && !input_->try_pop_video_packet(pkt_))
+//			input_ = nullptr;
+//	}
+//
+//    bool equal(input_video_iterator const& other) const
+//    {
+//        return input_ == other.input_;
+//    }
+//
+//    std::shared_ptr<AVPacket> const& dereference() const { return pkt_; }
+//};
 
 	
 }
