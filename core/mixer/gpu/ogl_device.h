@@ -94,6 +94,11 @@ public:
 		return get_instance().do_create_host_buffer(size, usage);
 	}
 
+	static void yield()
+	{
+		get_instance().executor_.yield();
+	}
+
 	static std::wstring get_version();
 };
 

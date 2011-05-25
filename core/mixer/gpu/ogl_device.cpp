@@ -28,7 +28,7 @@
 
 namespace caspar { namespace core {
 
-ogl_device::ogl_device() : executor_(L"ogl_device", true)
+ogl_device::ogl_device() : executor_(L"ogl_device")
 {
 	invoke([=]
 	{
@@ -67,12 +67,16 @@ safe_ptr<device_buffer> ogl_device::do_create_device_buffer(size_t width, size_t
 		executor_.invoke([&]
 		{
 			buffer = std::make_shared<device_buffer>(width, height, stride);
-		});	
+
+			if(glGetError() != GL_NO_ERROR)
+				BOOST_THROW_EXCEPTION(std::bad_alloc());
+
+		}, high_priority);	
 		executor_.begin_invoke([=]
 		{
 			auto buffer = std::make_shared<device_buffer>(width, height, stride);
 			pool->try_push(buffer);
-		});	
+		}, high_priority);	
 	}
 			
 	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*){pool->push(buffer);});
@@ -93,7 +97,11 @@ safe_ptr<host_buffer> ogl_device::do_create_host_buffer(size_t size, host_buffer
 				buffer->map();
 			else
 				buffer->unmap();
-		});	
+
+			if(glGetError() != GL_NO_ERROR)
+				BOOST_THROW_EXCEPTION(std::bad_alloc());
+
+		}, high_priority);	
 		executor_.begin_invoke([=]
 		{
 			auto buffer = std::make_shared<host_buffer>(size, usage);
@@ -102,7 +110,7 @@ safe_ptr<host_buffer> ogl_device::do_create_host_buffer(size_t size, host_buffer
 			else
 				buffer->unmap();
 			pool->try_push(buffer);
-		});	
+		}, high_priority);	
 	}
 	
 	return safe_ptr<host_buffer>(buffer.get(), [=](host_buffer*)
@@ -113,8 +121,10 @@ safe_ptr<host_buffer> ogl_device::do_create_host_buffer(size_t size, host_buffer
 				buffer->map();
 			else
 				buffer->unmap();
-			pool->push(buffer);
-		});
+			
+			if(glGetError() == GL_NO_ERROR)
+				pool->push(buffer);
+		}, high_priority);
 	});
 }
 

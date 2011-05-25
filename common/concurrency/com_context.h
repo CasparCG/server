@@ -15,8 +15,7 @@ class com_context : public executor
 {
 	std::unique_ptr<T> instance_;
 public:
-	com_context(const std::wstring& name)
-		: executor(name, true)
+	com_context(const std::wstring& name) : executor(name)
 	{
 		executor::begin_invoke([]
 		{
@@ -26,7 +25,6 @@ public:
 
 	~com_context()
 	{
-		executor::clear();
 		executor::invoke([&]
 		{
 			instance_.reset(nullptr);

@@ -194,7 +194,19 @@ int main(int argc, wchar_t* argv[])
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
 			else if(wcmd.substr(0, 1) == L"X")
 			{
-				int num = boost::lexical_cast<int>(wcmd.substr(1, 2));
+				int num = 0;
+				std::wstring file;
+				try
+				{
+					num = boost::lexical_cast<int>(wcmd.substr(1, 2));
+					file = wcmd.substr(4, wcmd.length()-1);
+				}
+				catch(...)
+				{
+					num = boost::lexical_cast<int>(wcmd.substr(1, 1));
+					file = wcmd.substr(3, wcmd.length()-1);
+				}
+
 				int n = 0;
 				int num2 = num;
 				while(num2 > 0)
@@ -203,7 +215,6 @@ int main(int argc, wchar_t* argv[])
 					n++;
 				}
 
-				auto file = wcmd.substr(4, wcmd.length()-1);
 				wcmd = L"MIXER 1 VIDEO GRID " + boost::lexical_cast<std::wstring>(n);
 
 				for(int i = 1; i <= num; ++i)
