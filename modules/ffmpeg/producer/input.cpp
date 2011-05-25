@@ -199,7 +199,6 @@ public:
 		for(size_t n = 0; n < 16; ++n) // Read some packets for pre-rolling.
 			read_next_packet();
 							
-		executor_.start();
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
 	}

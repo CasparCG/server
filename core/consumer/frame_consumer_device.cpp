@@ -60,7 +60,7 @@ public:
 	implementation( const video_format_desc& format_desc) 
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(std::string("frame_consumer_device")))
-		, executor_(L"frame_consumer_device", true)
+		, executor_(L"frame_consumer_device")
 	{		
 		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
 		diag_->add_guide("frame-time", 0.5f);	

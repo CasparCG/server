@@ -153,8 +153,11 @@ public:
 				draw_buffer_->attach();	
 
 				BOOST_FOREACH(auto item, layer)			
+				{	
+					ogl_device::yield(); // Allow quick buffer allocation to execute.
 					draw(item);	
-								
+				}
+
 				layer_key_ = local_key_; // If there was only key in last layer then use it as key for the entire next layer.
 				local_key_ = false;
 

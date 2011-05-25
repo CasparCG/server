@@ -30,7 +30,7 @@ struct destroyer
 {
 	executor executor_;
 
-	destroyer() : executor_(L"destroyer", true){}
+	destroyer() : executor_(L"destroyer"){}
 	
 	void destroy(safe_ptr<frame_producer>&& producer)
 	{
