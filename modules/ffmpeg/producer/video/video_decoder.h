@@ -21,8 +21,7 @@
 
 #include <common/memory/safe_ptr.h>
 
-struct AVCodecContext;
-
+#include "../input.h"
 namespace caspar {
 	
 namespace core {
@@ -33,14 +32,8 @@ namespace core {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory);
-	void push(const std::shared_ptr<AVPacket>& video_packet);	
-
-	bool empty() const;
-	safe_ptr<core::write_frame> front();
-	void pop();
-	
-	size_t frame_number() const;
+	explicit video_decoder(input& input, const safe_ptr<core::frame_factory>& frame_factory);
+	std::deque<std::pair<int, safe_ptr<core::write_frame>>> receive();	
 
 private:
 	struct implementation;
