@@ -72,14 +72,14 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\;..\..\common;..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\;..\..\common;..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\;..\..\common;..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\;..\..\common;..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\tbb30_20100406oss\include\;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\tbb30_20100406oss\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\;..\..\common;..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\tbb\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\;..\..\common;..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\tbb\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\;..\..\common;..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\tbb\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\;..\..\common;..\..\dependencies\BluefishSDK_V5_8_0_31\Inc\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\tbb\include\;$(IncludePath)</IncludePath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\dependencies\BluefishSDK_V5_8_0_31\Lib\;..\..\dependencies\boost_1_44_0\stage\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(ProjectDir)bin\$(Configuration)\</OutDir>
@@ -108,7 +108,7 @@
       <BrowseInformation>true</BrowseInformation>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_ASSERT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TBB_USE_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_ASSERT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
