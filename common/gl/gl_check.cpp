@@ -101,11 +101,14 @@ void SMFL_GLCheckError(const std::string& expr, const std::string& File, unsigne
 		}
 
 		// Log the error
-		CASPAR_LOG(error) << "An internal OpenGL call failed in "
+		std::stringstream str;
+		str << "An internal OpenGL call failed in "
 				  << File.substr(File.find_last_of("\\/") + 1).c_str() << " (" << Line << ") : "
 				  << Error.c_str() << ", " << Desc.c_str()
 				  << ", " << expr.c_str()
 				  << std::endl;
+		BOOST_THROW_EXCEPTION(caspar_exception() <<
+			msg_info(str.str()));
 	}
 }
 

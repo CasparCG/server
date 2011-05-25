@@ -111,7 +111,7 @@ public:
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(format_desc)
-		, executor_(L"frame_mixer_device", true)
+		, executor_(L"frame_mixer_device")
 	{
 		diag_->add_guide("frame-time", 0.5f);	
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));

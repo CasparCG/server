@@ -43,7 +43,6 @@ const TCHAR CIIProtocolStrategy::TokenDelimiter = TEXT('\\');
 
 CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<safe_ptr<core::channel>>& channels) : pChannel_(channels.at(0)), executor_(L"CIIProtocolStrategy")
 {
-	executor_.start();
 }
 
 void CIIProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo) 

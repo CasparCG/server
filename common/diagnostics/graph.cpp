@@ -75,7 +75,6 @@ public:
 private:
 	context() : executor_(L"diagnostics")
 	{
-		executor_.start();
 		executor_.begin_invoke([this]
 		{			
 			SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);

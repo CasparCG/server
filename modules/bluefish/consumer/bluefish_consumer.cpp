@@ -120,7 +120,7 @@ public:
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
 		, vid_fmt_(VID_FMT_INVALID) 
 		, embedded_audio_(embedded_audio)
-		, executor_(print(), true)
+		, executor_(print())
 	{
 		if(!BlueVelvetFactory4 || (embedded_audio_ && (!encode_hanc_frame || !encode_hanc_frame)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
@@ -234,7 +234,6 @@ public:
 
 	~bluefish_consumer()
 	{
-		executor_.clear();
 		executor_.invoke([&]
 		{
 			disable_video_output();

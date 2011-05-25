@@ -86,7 +86,7 @@ public:
 		, video_outbuf_(1920*1080*4)
 		, audio_outbuf_(48000)
 		, format_desc_(format_desc)
-		, executor_(L"ffmpeg_consumer", true)
+		, executor_(L"ffmpeg_consumer")
 	{
 		active_ = executor_.begin_invoke([]{});
 
