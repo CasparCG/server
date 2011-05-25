@@ -55,14 +55,14 @@ public:
 	
 private:
 	virtual safe_ptr<basic_frame> receive() = 0;
-	friend safe_ptr<basic_frame> receive(safe_ptr<frame_producer>& producer);
+	friend safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer);
 
 	safe_ptr<basic_frame> receive_w_last();
 
 	safe_ptr<core::basic_frame> last_frame_;
 };
 
-safe_ptr<basic_frame> receive(safe_ptr<frame_producer>& producer);
+safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer);
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer);
 safe_ptr<basic_frame> receive_and_follow_w_last(safe_ptr<frame_producer>& producer);
 

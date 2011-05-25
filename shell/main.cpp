@@ -186,42 +186,29 @@ int main(int argc, wchar_t* argv[])
 			std::getline(std::wcin, wcmd); // TODO: It's blocking...
 
 			is_running = wcmd != L"exit" && wcmd != L"q";
-			if(wcmd.substr(0, 2) == L"11")
-			{
-				auto file = wcmd.substr(3, wcmd.length()-1);
-				wcmd = L"MIXER 1 VIDEO GRID 3";
-				wcmd += L"\r\nPLAY 1-1 " + file + L" SLIDE 100 LOOP";
-				wcmd += L"\r\nPLAY 1-2 " + file + L" SLIDE 100 LOOP";
-				wcmd += L"\r\nPLAY 1-3 " + file + L" SLIDE 100 LOOP";
-				wcmd += L"\r\nPLAY 1-4 " + file + L" SLIDE 100 LOOP";
-				wcmd += L"\r\nPLAY 1-5 " + file + L" SLIDE 100 LOOP";
-				wcmd += L"\r\nPLAY 1-6 " + file + L" SLIDE 100 LOOP";
-				wcmd += L"\r\nPLAY 1-7 " + file + L" SLIDE 100 LOOP";
-				wcmd += L"\r\nPLAY 1-8 " + file + L" SLIDE 100 LOOP";
-				wcmd += L"\r\nPLAY 1-9 " + file + L" SLIDE 100 LOOP";
-			}
-			else if(wcmd.substr(0, 2) == L"10")
-				wcmd = L"MIXER 1-1 VIDEO CLIP_RECT 0.4 0.4 0.5 0.5";
-			if(wcmd.substr(0, 2) == L"11")
-				wcmd = L"MIXER 1-1 VIDEO FIX_RECT 0.4 0.4 0.5 0.5";
-			else if(wcmd.substr(0, 1) == L"1")
+			if(wcmd.substr(0, 1) == L"1")
 				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
 			else if(wcmd.substr(0, 1) == L"2")
 				wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
 			else if(wcmd.substr(0, 1) == L"3")
-				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" MIX 100 LOOP \r\nPLAY 1-1";
-			else if(wcmd.substr(0, 1) == L"4")
-				wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" WIPE 100 LOOP \r\nPLAY 1-1";
-			else if(wcmd.substr(0, 1) == L"5")
-				wcmd = L"LOADBG 1-2 " + wcmd.substr(1, wcmd.length()-1) + L" LOOP \r\nPLAY 1-2";
-			else if(wcmd.substr(0, 1) == L"6")
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
-			else if(wcmd.substr(0, 1) == L"7")
-				wcmd = L"CG 1-2 ADD 1 " + wcmd.substr(1, wcmd.length()-1) + L" 1";
-			else if(wcmd.substr(0, 1) == L"8")
-				wcmd = L"LOAD 1-1 #FFFFFFFF AUTOPLAY";
-			else if(wcmd.substr(0, 1) == L"9")
-				wcmd = L"LOADBG 1-2 " + wcmd.substr(1, wcmd.length()-1) + L" [1.0-2.0] LOOP AUTOPLAY";
+			else if(wcmd.substr(0, 1) == L"X")
+			{
+				int num = boost::lexical_cast<int>(wcmd.substr(1, 2));
+				int n = 0;
+				int num2 = num;
+				while(num2 > 0)
+				{
+					num2 >>= 1;
+					n++;
+				}
+
+				auto file = wcmd.substr(4, wcmd.length()-1);
+				wcmd = L"MIXER 1 VIDEO GRID " + boost::lexical_cast<std::wstring>(n);
+
+				for(int i = 1; i <= num; ++i)
+					wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" SLIDE 100 LOOP";
+			}
 
 			wcmd += L"\r\n";
 			amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
