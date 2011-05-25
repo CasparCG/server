@@ -58,6 +58,9 @@ struct ffmpeg_producer : public core::frame_producer
 	input									input_;	
 	std::unique_ptr<video_decoder>			video_decoder_;
 	std::unique_ptr<audio_decoder>			audio_decoder_;
+
+	std::deque<std::pair<int, std::vector<short>>> audio_chunks_;
+	std::deque<std::pair<int, safe_ptr<core::write_frame>>> video_frames_;
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop, int start, int length) 
 		: filename_(filename)
@@ -75,13 +78,13 @@ public:
 			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback. frame-time: " << frame_time;
 		
 		video_decoder_.reset(input_.get_video_codec_context() ? 
-			new video_decoder(*input_.get_video_codec_context(), frame_factory) : nullptr);
+			new video_decoder(input_, frame_factory) : nullptr);
 			
 		audio_decoder_.reset(input_.get_audio_codec_context() ? 
-			new audio_decoder(*input_.get_audio_codec_context(), frame_factory->get_video_format_desc()) : nullptr);		
+			new audio_decoder(input_, frame_factory->get_video_format_desc()) : nullptr);		
 					
 		// Fill buffers.
-		decode_next_packets();
+		decode_packets();
 	}
 
 	virtual safe_ptr<core::basic_frame> receive()
@@ -100,75 +103,62 @@ public:
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 
-	void decode_next_packets()
+	void decode_packets()
 	{
 		tbb::parallel_invoke
 		(
 			[&]
 			{
-				if(!video_decoder_)
-					return;
-
-				std::shared_ptr<AVPacket> pkt;
-				for(int n = 0; n < 16 && video_decoder_->empty() && input_.try_pop_video_packet(pkt); ++n)				
-					video_decoder_->push(pkt);				
+				if(video_decoder_ && video_frames_.empty())
+					video_frames_ = video_decoder_->receive();		
 			}, 
 			[&]
 			{
-				if(!audio_decoder_)
-					return;
-				
-				std::shared_ptr<AVPacket> pkt;	
-				for(int n = 0; n < 16 && audio_decoder_->empty() && input_.try_pop_audio_packet(pkt); ++n)				
-					audio_decoder_->push(pkt);				
+				if(audio_decoder_ && audio_chunks_.empty())
+					audio_chunks_ = audio_decoder_->receive();			
 			}
 		);
 		
-		// Sync up audio with video on start. Last frame sometimes have more samples than required. Remove those.
-		if(audio_decoder_ && video_decoder_ && video_decoder_->frame_number() == 0)
+		if(audio_decoder_ && video_decoder_ && !video_frames_.empty() && !audio_chunks_.empty() &&
+		   video_frames_.front().first == 0 && audio_chunks_.front().first != 0)
 		{
-			std::shared_ptr<AVPacket> pkt;
-			while(audio_decoder_->frame_number() > 0 && input_.try_pop_audio_packet(pkt))
-			{
-				audio_decoder_->push(pkt);
-				if(audio_decoder_->frame_number() > 0)
-					audio_decoder_->pop();
-			}
-			
-			for(int n = 0; n < 16 && audio_decoder_->empty() && input_.try_pop_audio_packet(pkt); ++n)				
-				audio_decoder_->push(pkt);		
+			audio_decoder_->restart();
+			audio_chunks_ = audio_decoder_->receive();		
 		}
+		
+		CASPAR_ASSERT(!(video_decoder_ && audio_decoder_ && !video_frames_.empty() && !audio_chunks_.empty()) ||
+				      video_frames_.front().first == audio_chunks_.front().first);
 	}
 
 	safe_ptr<core::basic_frame> decode_frame()
 	{
-		decode_next_packets();
+		decode_packets();
 
-		if(video_decoder_ && !video_decoder_->empty() && audio_decoder_ && !audio_decoder_->empty())
+		if(video_decoder_ && audio_decoder_ && !video_frames_.empty() && !audio_chunks_.empty())
 		{
-			auto frame = std::move(video_decoder_->front());				
-			video_decoder_->pop();
+			auto frame = std::move(video_frames_.front().second);				
+			video_frames_.pop_front();
 				
-			frame->audio_data() = std::move(audio_decoder_->front());
-			audio_decoder_->pop();
+			frame->audio_data() = std::move(audio_chunks_.front().second);
+			audio_chunks_.pop_front();
 			
 			return frame;
 		}
-		else if(video_decoder_ && !video_decoder_->empty() && !audio_decoder_)
+		else if(video_decoder_ && !audio_decoder_ && !video_frames_.empty())
 		{
-			auto frame = std::move(video_decoder_->front());				
-			video_decoder_->pop();
+			auto frame = std::move(video_frames_.front().second);				
+			video_frames_.pop_front();
 			frame->get_audio_transform().set_has_audio(false);	
 			
 			return frame;
 		}
-		else if(audio_decoder_ && !audio_decoder_->empty() && !video_decoder_)
+		else if(audio_decoder_ && !video_decoder_ && !audio_chunks_.empty())
 		{
 			auto frame = frame_factory_->create_frame(this, 1, 1);
 			std::fill(frame->image_data().begin(), frame->image_data().end(), 0);
 				
-			frame->audio_data() = std::move(audio_decoder_->front());
-			audio_decoder_->pop();
+			frame->audio_data() = std::move(audio_chunks_.front().second);
+			audio_chunks_.pop_front();
 
 			return frame;
 		}

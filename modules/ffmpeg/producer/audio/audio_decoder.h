@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include "../input.h"
+
 #include <core/video_format.h>
 
 #include <tbb/cache_aligned_allocator.h>
@@ -35,14 +37,11 @@ namespace caspar {
 class audio_decoder : boost::noncopyable
 {
 public:
-	explicit audio_decoder(AVCodecContext& codec_context, const core::video_format_desc& format_desc);
+	explicit audio_decoder(input& input, const core::video_format_desc& format_desc);
 
-	void push(const std::shared_ptr<AVPacket>& audio_packet);
-	std::vector<short> front();
-	void pop();	
-	bool empty() const;
+	std::deque<std::pair<int, std::vector<short>>> receive();
 
-	size_t frame_number() const;
+	void restart();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
