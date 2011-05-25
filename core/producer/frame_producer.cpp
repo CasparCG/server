@@ -55,7 +55,7 @@ safe_ptr<basic_frame> frame_producer::receive_w_last()
 	return frame;
 }
 
-safe_ptr<basic_frame> receive(safe_ptr<frame_producer>& producer)
+safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer)
 {
 	return producer->receive_w_last();
 }
