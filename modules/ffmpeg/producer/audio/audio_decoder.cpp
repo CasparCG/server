@@ -40,16 +40,20 @@ namespace caspar {
 
 struct audio_decoder::implementation : boost::noncopyable
 {	
+	input&							input_;
 	AVCodecContext&					codec_context_;		
 	const core::video_format_desc	format_desc_;
 	std::vector<short>				current_chunk_;
 	std::vector<std::vector<short>> chunks_;		
 	size_t							frame_number_;
+	bool							restarting_;
 public:
-	explicit implementation(AVCodecContext& codec_context, const core::video_format_desc& format_desc) 
-		: codec_context_(codec_context)
+	explicit implementation(input& input, const core::video_format_desc& format_desc) 
+		: input_(input)
+		, codec_context_(*input_.get_audio_codec_context())
 		, format_desc_(format_desc)	
 		, frame_number_(0)
+		, restarting_(false)
 	{
 		if(codec_context_.sample_rate != static_cast<int>(format_desc_.audio_sample_rate) || 
 		   codec_context_.channels != static_cast<int>(format_desc_.audio_channels))
@@ -61,16 +65,33 @@ public:
 				arg_name_info("codec_context"));
 		}
 	}
-			
-	void push(const std::shared_ptr<AVPacket>& audio_packet)
+		
+	std::deque<std::pair<int, std::vector<short>>> receive()
+	{
+		std::deque<std::pair<int, std::vector<short>>> result;
+		
+		std::shared_ptr<AVPacket> pkt;
+		for(int n = 0; n < 32 && result.empty() && input_.try_pop_audio_packet(pkt); ++n)	
+			result = decode(pkt);
+
+		return result;
+	}
+
+	std::deque<std::pair<int, std::vector<short>>> decode(const std::shared_ptr<AVPacket>& audio_packet)
 	{			
+		std::deque<std::pair<int, std::vector<short>>> result;
+
 		if(!audio_packet)
 		{	
 			avcodec_flush_buffers(&codec_context_);
 			current_chunk_.clear();
 			frame_number_ = 0;
-			return;
+			restarting_ = false;
+			return result;
 		}
+
+		if(restarting_)
+			return result;
 				
 		auto s = current_chunk_.size();
 		current_chunk_.resize(s + 4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2, 0);
@@ -90,32 +111,20 @@ public:
 		const auto last = current_chunk_.end() - current_chunk_.size() % format_desc_.audio_samples_per_frame;
 		
 		for(auto it = current_chunk_.begin(); it != last; it += format_desc_.audio_samples_per_frame)		
-			chunks_.push_back(std::vector<short>(it, it + format_desc_.audio_samples_per_frame));		
+			result.push_back(std::make_pair(frame_number_++, std::vector<short>(it, it + format_desc_.audio_samples_per_frame)));		
 
 		current_chunk_.erase(current_chunk_.begin(), last);
+
+		return result;
 	}
 
-	bool empty() const
+	void restart()
 	{
-		return chunks_.empty();
-	}
-
-	std::vector<short> front()
-	{
-		return chunks_.front();
-	}
-
-	void pop()
-	{
-		++frame_number_;
-		chunks_.pop_back();
+		restarting_ = true;
 	}
 };
 
-audio_decoder::audio_decoder(AVCodecContext& codec_context, const core::video_format_desc& format_desc) : impl_(new implementation(codec_context, format_desc)){}
-void audio_decoder::push(const std::shared_ptr<AVPacket>& audio_packet){impl_->push(std::move(audio_packet));}
-bool audio_decoder::empty() const {return impl_->empty();}
-std::vector<short> audio_decoder::front() {return impl_->front();}
-void audio_decoder::pop(){impl_->pop();}
-size_t audio_decoder::frame_number() const{return impl_->frame_number_;}
+audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc) : impl_(new implementation(input, format_desc)){}
+std::deque<std::pair<int, std::vector<short>>> audio_decoder::receive(){return impl_->receive();}
+void audio_decoder::restart(){impl_->restart();}
 }

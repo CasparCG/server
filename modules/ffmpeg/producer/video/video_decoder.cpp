@@ -116,7 +116,8 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width,
 }
 
 struct video_decoder::implementation : boost::noncopyable
-{	
+{
+	input& input_;
 	std::shared_ptr<SwsContext>					sws_context_;
 	const std::shared_ptr<core::frame_factory>	frame_factory_;
 	AVCodecContext&								codec_context_;
@@ -124,13 +125,13 @@ struct video_decoder::implementation : boost::noncopyable
 	const int									height_;
 	const PixelFormat							pix_fmt_;
 	core::pixel_format_desc						desc_;
-	std::deque<safe_ptr<core::write_frame>>		frames_;
 	size_t										frame_number_;
 
 public:
-	explicit implementation(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) 
-		: frame_factory_(frame_factory)
-		, codec_context_(codec_context)
+	explicit implementation(input& input, const safe_ptr<core::frame_factory>& frame_factory) 
+		: input_(input)
+		, frame_factory_(frame_factory)
+		, codec_context_(*input_.get_video_codec_context())
 		, width_(codec_context_.width)
 		, height_(codec_context_.height)
 		, pix_fmt_(codec_context_.pix_fmt)
@@ -151,13 +152,26 @@ public:
 		}
 	}
 
-	void push(const std::shared_ptr<AVPacket>& video_packet)
-	{				
+	std::deque<std::pair<int, safe_ptr<core::write_frame>>> receive()
+	{
+		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
+		
+		std::shared_ptr<AVPacket> pkt;
+		for(int n = 0; n < 32 && result.empty() && input_.try_pop_video_packet(pkt); ++n)	
+			result = decode(pkt);
+
+		return result;
+	}
+
+	std::deque<std::pair<int, safe_ptr<core::write_frame>>> decode(const std::shared_ptr<AVPacket>& video_packet)
+	{			
+		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
+
 		if(!video_packet)
 		{	
 			avcodec_flush_buffers(&codec_context_);
 			frame_number_ = 0;
-			return;
+			return result;
 		}
 
 		safe_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
@@ -175,7 +189,9 @@ public:
 		}
 		
 		if(frame_finished != 0)		
-			frames_.push_back(make_write_frame(decoded_frame));
+			result.push_back(std::make_pair(frame_number_++, make_write_frame(decoded_frame)));
+
+		return result;
 	}
 
 	safe_ptr<core::write_frame> make_write_frame(safe_ptr<AVFrame> decoded_frame)
@@ -214,29 +230,9 @@ public:
 
 		return write;
 	}
-
-	bool empty() const
-	{
-		return frames_.empty();
-	}
-
-	safe_ptr<core::write_frame> front()
-	{
-		return frames_.front();
-	}
-
-	void pop()
-	{
-		++frame_number_;
-		frames_.pop_front();
-	}
 };
 
-video_decoder::video_decoder(AVCodecContext& codec_context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(codec_context, frame_factory)){}
-void video_decoder::push(const std::shared_ptr<AVPacket>& video_packet){impl_->push(std::move(video_packet));}
-bool video_decoder::empty() const {return impl_->empty();}
-safe_ptr<core::write_frame> video_decoder::front() {return impl_->front();}
-void video_decoder::pop(){impl_->pop();}
-size_t video_decoder::frame_number() const{return impl_->frame_number_;}
+video_decoder::video_decoder(input& input, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(input, frame_factory)){}
+std::deque<std::pair<int, safe_ptr<core::write_frame>>> video_decoder::receive(){return impl_->receive();}
 
 }

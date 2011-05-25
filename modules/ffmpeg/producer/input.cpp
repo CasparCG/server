@@ -61,33 +61,28 @@ public:
 	{
 		buffer_.set_capacity(PACKET_BUFFER_COUNT);
 	}
-
-	~stream()
-	{
-		CASPAR_LOG(trace) << "##: " << size();
-	}
-
+	
 	int open(std::shared_ptr<AVFormatContext>& fctx, AVMediaType media_type)
 	{		
 		const auto streams = boost::iterator_range<AVStream**>(fctx->streams, fctx->streams+fctx->nb_streams);
-		const auto stream = boost::find_if(streams, [&](AVStream* stream) 
+		const auto it = boost::find_if(streams, [&](AVStream* stream) 
 		{
 			return stream && stream->codec->codec_type == media_type;
 		});
 		
-		if(stream == streams.end()) 
+		if(it == streams.end()) 
 			return AVERROR_STREAM_NOT_FOUND;
 		
-		auto codec = avcodec_find_decoder((*stream)->codec->codec_id);			
+		auto codec = avcodec_find_decoder((*it)->codec->codec_id);			
 		if(!codec)
 			return AVERROR_DECODER_NOT_FOUND;
 			
-		index_ = (*stream)->index;
+		index_ = (*it)->index;
 
-		int errn = tbb_avcodec_open((*stream)->codec, codec);
+		int errn = tbb_avcodec_open((*it)->codec, codec);
 		if(errn >= 0)
 		{
-			ctx_.reset((*stream)->codec, tbb_avcodec_close);
+			ctx_.reset((*it)->codec, tbb_avcodec_close);
 
 			// Some files give an invalid time_base numerator, try to fix it.
 			if(ctx_ && ctx_->time_base.num == 1)
@@ -216,12 +211,18 @@ public:
 		
 	bool try_pop_video_packet(std::shared_ptr<AVPacket>& packet)
 	{
-		return video_stream_.try_pop(packet);
+		bool result = video_stream_.try_pop(packet);
+		if(result && !packet)
+			graph_->add_tag("video-input-buffer");
+		return result;
 	}
 
 	bool try_pop_audio_packet(std::shared_ptr<AVPacket>& packet)
 	{	
-		return audio_stream_.try_pop(packet);
+		bool result = audio_stream_.try_pop(packet);
+		if(result && !packet)
+			graph_->add_tag("audio-input-buffer");
+		return result;
 	}
 
 	double fps()

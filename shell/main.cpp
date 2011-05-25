@@ -186,16 +186,19 @@ int main(int argc, wchar_t* argv[])
 			std::getline(std::wcin, wcmd); // TODO: It's blocking...
 
 			is_running = wcmd != L"exit" && wcmd != L"q";
-			if(wcmd.substr(0, 2) == L"12")
+			if(wcmd.substr(0, 2) == L"11")
 			{
-				wcmd = L"LOADBG 1-1 A LOOP \r\nPLAY 1-1\r\n";
-				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
-				wcmd = L"LOADBG 1-2 DV LOOP AUTOPLAY\r\nnPLAY 1-1\r\n";
-				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
-				wcmd = L"MIXER 1-1 VIDEO FIX_RECT 0.0 0.0 0.5 0.5\r\n";
-				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
-				wcmd = L"MIXER 1-2 VIDEO FIX_RECT 0.5 0.0 0.5 0.5\r\n";
-				amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
+				auto file = wcmd.substr(3, wcmd.length()-1);
+				wcmd = L"MIXER 1 VIDEO GRID 3";
+				wcmd += L"\r\nPLAY 1-1 " + file + L" SLIDE 100 LOOP";
+				wcmd += L"\r\nPLAY 1-2 " + file + L" SLIDE 100 LOOP";
+				wcmd += L"\r\nPLAY 1-3 " + file + L" SLIDE 100 LOOP";
+				wcmd += L"\r\nPLAY 1-4 " + file + L" SLIDE 100 LOOP";
+				wcmd += L"\r\nPLAY 1-5 " + file + L" SLIDE 100 LOOP";
+				wcmd += L"\r\nPLAY 1-6 " + file + L" SLIDE 100 LOOP";
+				wcmd += L"\r\nPLAY 1-7 " + file + L" SLIDE 100 LOOP";
+				wcmd += L"\r\nPLAY 1-8 " + file + L" SLIDE 100 LOOP";
+				wcmd += L"\r\nPLAY 1-9 " + file + L" SLIDE 100 LOOP";
 			}
 			else if(wcmd.substr(0, 2) == L"10")
 				wcmd = L"MIXER 1-1 VIDEO CLIP_RECT 0.4 0.4 0.5 0.5";
