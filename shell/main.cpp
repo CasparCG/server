@@ -87,6 +87,15 @@ void setup_console_window()
 	// Set console title.
 	std::wstringstream str;
 	str << "CasparCG Server " << caspar::env::version();
+#ifdef COMPILE_RELEASE
+	str << " Release";
+#elif  COMPILE_PROFILE
+	str << " Profile";
+#elif  COMPILE_DEVELOP
+	str << " Develop";
+#elif  COMPILE_DEBUG
+	str << " Debug";
+#endif
 	SetConsoleTitle(str.str().c_str());
 }
 

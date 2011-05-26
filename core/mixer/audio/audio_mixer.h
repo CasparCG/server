@@ -35,8 +35,7 @@ public:
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
-	void begin_pass();
-	std::vector<short> end_pass();
+	std::vector<short> mix();
 
 private:
 	struct implementation;

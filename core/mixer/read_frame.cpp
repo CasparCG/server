@@ -28,41 +28,41 @@ namespace caspar { namespace core {
 struct read_frame::implementation : boost::noncopyable
 {
 	boost::unique_future<safe_ptr<const host_buffer>> image_data_;
-	std::vector<short> audio_data_;
+	std::vector<int16_t> audio_data_;
 
 public:
-	implementation(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<short>&& audio_data) 
+	implementation(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
 		: image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data)){}	
 };
 
-read_frame::read_frame(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<short>&& audio_data) 
+read_frame::read_frame(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
 	: impl_(new implementation(std::move(image_data), std::move(audio_data))){}
-read_frame::read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data) 
+read_frame::read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
 {
 	boost::promise<safe_ptr<const host_buffer>> p;
 	p.set_value(std::move(image_data));
 	impl_.reset(new implementation(std::move(p.get_future()), std::move(audio_data)));
 }
 
-const boost::iterator_range<const unsigned char*> read_frame::image_data() const
+const boost::iterator_range<const uint8_t*> read_frame::image_data() const
 {
 	try
 	{
 		if(!impl_->image_data_.get()->data())
-			return boost::iterator_range<const unsigned char*>();
-		auto ptr = static_cast<const unsigned char*>(impl_->image_data_.get()->data());
-		return boost::iterator_range<const unsigned char*>(ptr, ptr + impl_->image_data_.get()->size());
+			return boost::iterator_range<const uint8_t*>();
+		auto ptr = static_cast<const uint8_t*>(impl_->image_data_.get()->data());
+		return boost::iterator_range<const uint8_t*>(ptr, ptr + impl_->image_data_.get()->size());
 	}
 	catch(...) // image_data_ future might store exception.
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		return boost::iterator_range<const unsigned char*>();
+		return boost::iterator_range<const uint8_t*>();
 	}
 }
-const boost::iterator_range<const short*> read_frame::audio_data() const
+const boost::iterator_range<const int16_t*> read_frame::audio_data() const
 {
-	return boost::iterator_range<const short*>(impl_->audio_data_.data(), impl_->audio_data_.data() + impl_->audio_data_.size());
+	return boost::iterator_range<const int16_t*>(impl_->audio_data_.data(), impl_->audio_data_.data() + impl_->audio_data_.size());
 }
 
 }}

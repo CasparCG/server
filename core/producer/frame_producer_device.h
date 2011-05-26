@@ -45,7 +45,9 @@ struct video_format_desc;
 class frame_producer_device : boost::noncopyable
 {
 public:
-	explicit frame_producer_device(const video_format_desc& format_desc, const std::function<void(const std::map<int, safe_ptr<basic_frame>>&)>& output);
+	typedef std::function<void(const std::map<int, safe_ptr<basic_frame>>&)> output_t;
+
+	explicit frame_producer_device(const video_format_desc& format_desc, const output_t& output);
 	frame_producer_device(frame_producer_device&& other);
 
 	void swap(frame_producer_device& other);

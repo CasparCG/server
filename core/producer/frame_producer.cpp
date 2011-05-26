@@ -44,7 +44,7 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 	return producer;
 }	
 
-safe_ptr<basic_frame> frame_producer::receive_w_last()
+safe_ptr<basic_frame> frame_producer::receive_save_last()
 {
 	auto frame = receive();
 	if(frame != core::basic_frame::late())
@@ -57,7 +57,7 @@ safe_ptr<basic_frame> frame_producer::receive_w_last()
 
 safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer)
 {
-	return producer->receive_w_last();
+	return producer->receive_save_last();
 }
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)

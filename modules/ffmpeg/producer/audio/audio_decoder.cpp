@@ -43,8 +43,7 @@ struct audio_decoder::implementation : boost::noncopyable
 	input&							input_;
 	AVCodecContext&					codec_context_;		
 	const core::video_format_desc	format_desc_;
-	std::vector<short>				current_chunk_;
-	std::vector<std::vector<short>> chunks_;		
+	std::vector<int16_t>			current_chunk_;	
 	size_t							frame_number_;
 	bool							restarting_;
 public:
@@ -77,9 +76,9 @@ public:
 		return result;
 	}
 
-	std::deque<std::pair<int, std::vector<short>>> decode(const std::shared_ptr<AVPacket>& audio_packet)
+	std::deque<std::pair<int, std::vector<int16_t>>> decode(const std::shared_ptr<AVPacket>& audio_packet)
 	{			
-		std::deque<std::pair<int, std::vector<short>>> result;
+		std::deque<std::pair<int, std::vector<int16_t>>> result;
 
 		if(!audio_packet)
 		{	
@@ -111,7 +110,7 @@ public:
 		const auto last = current_chunk_.end() - current_chunk_.size() % format_desc_.audio_samples_per_frame;
 		
 		for(auto it = current_chunk_.begin(); it != last; it += format_desc_.audio_samples_per_frame)		
-			result.push_back(std::make_pair(frame_number_++, std::vector<short>(it, it + format_desc_.audio_samples_per_frame)));		
+			result.push_back(std::make_pair(frame_number_++, std::vector<int16_t>(it, it + format_desc_.audio_samples_per_frame)));		
 
 		current_chunk_.erase(current_chunk_.begin(), last);
 
@@ -125,6 +124,6 @@ public:
 };
 
 audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc) : impl_(new implementation(input, format_desc)){}
-std::deque<std::pair<int, std::vector<short>>> audio_decoder::receive(){return impl_->receive();}
+std::deque<std::pair<int, std::vector<int16_t>>> audio_decoder::receive(){return impl_->receive();}
 void audio_decoder::restart(){impl_->restart();}
 }
