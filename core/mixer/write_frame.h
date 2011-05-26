@@ -25,6 +25,7 @@
 #include <core/producer/frame/pixel_format.h>
 
 #include "gpu/host_buffer.h"
+#include "gpu/device_buffer.h"
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -37,7 +38,7 @@ namespace caspar { namespace core {
 class write_frame : public core::basic_frame, boost::noncopyable
 {
 public:	
-	explicit write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers);
+	explicit write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures);
 			
 	// core::write_frame
 	virtual boost::iterator_range<unsigned char*> image_data(size_t plane_index = 0);	
@@ -45,6 +46,9 @@ public:
 	
 	virtual const boost::iterator_range<const unsigned char*> image_data(size_t plane_index = 0) const;
 	virtual const boost::iterator_range<const short*> audio_data() const;
+
+	void commit(size_t plane_index);
+	void commit();
 
 	virtual void accept(core::frame_visitor& visitor);
 
@@ -54,7 +58,8 @@ private:
 	friend class image_mixer;
 
 	const core::pixel_format_desc& get_pixel_format_desc() const;
-	const std::vector<safe_ptr<host_buffer>>& get_plane_buffers() const;
+	const std::vector<safe_ptr<device_buffer>>& get_textures() const;
+	const std::vector<safe_ptr<host_buffer>>& get_buffers() const;
 
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

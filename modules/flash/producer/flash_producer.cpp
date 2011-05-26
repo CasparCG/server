@@ -185,6 +185,7 @@ public:
 		
 			auto frame = frame_factory_->create_frame(this);
 			fast_memcpy(frame->image_data().begin(), bmp_.data(), format_desc_.size);
+			frame->commit();
 			head_ = frame;
 		}		
 				

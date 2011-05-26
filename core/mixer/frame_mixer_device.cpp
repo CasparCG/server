@@ -171,7 +171,7 @@ public:
 		auto& root_audio_transform = boost::fusion::at_key<core::audio_transform>(root_transforms_);
 		auto& audio_transforms = boost::fusion::at_key<core::audio_transform>(transforms_);
 
-		auto audio = audio_mixer_.begin_pass();
+		audio_mixer_.begin_pass();
 		BOOST_FOREACH(auto& frame, frames)
 		{
 			int num = format_desc_.mode == core::video_mode::progressive ? 1 : 2;
@@ -180,8 +180,7 @@ public:
 			frame1->get_audio_transform() = root_audio_transform.fetch_and_tick(num)*audio_transforms[frame.first].fetch_and_tick(num);
 			frame1->accept(audio_mixer_);
 		}
-		audio_mixer_.end_pass();
-		return audio;
+		return audio_mixer_.end_pass();
 	}
 		
 	void send(const std::map<int, safe_ptr<core::basic_frame>>& frames)
@@ -205,8 +204,8 @@ public:
 	}
 		
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
-	{
-		return make_safe<write_frame>(reinterpret_cast<int>(tag), desc, image_mixer_.create_buffers(desc));
+	{		
+		return image_mixer_.create_frame(tag, desc);
 	}
 			
 	template<typename T>	

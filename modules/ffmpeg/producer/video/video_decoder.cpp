@@ -33,6 +33,8 @@
 
 #include <tbb/parallel_for.h>
 
+#include <boost/range/algorithm_ext.hpp>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -158,7 +160,7 @@ public:
 		
 		std::shared_ptr<AVPacket> pkt;
 		for(int n = 0; n < 32 && result.empty() && input_.try_pop_video_packet(pkt); ++n)	
-			result = decode(pkt);
+			boost::range::push_back(result, decode(pkt));
 
 		return result;
 	}
@@ -212,6 +214,8 @@ public:
 					for(size_t y = r.begin(); y != r.end(); ++y)
 						memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 				});
+
+				write->commit(n);
 			});
 		}
 		else
@@ -222,6 +226,8 @@ public:
 			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
 		 
 			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame->data, av_frame->linesize);	
+
+			write->commit();
 		}	
 
 		// DVVIDEO is in lower field. Make it upper field if needed.

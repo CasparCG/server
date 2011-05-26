@@ -21,6 +21,8 @@
 
 #include "write_frame.h"
 
+#include "gpu/ogl_device.h"
+
 #include <core/producer/frame/pixel_format.h>
 
 #include <common/gl/gl_check.h>
@@ -32,15 +34,18 @@ namespace caspar { namespace core {
 struct write_frame::implementation : boost::noncopyable
 {				
 	std::vector<safe_ptr<host_buffer>> buffers_;
+	std::vector<safe_ptr<device_buffer>> textures_;
 	std::vector<short> audio_data_;
 	const core::pixel_format_desc desc_;
 	int tag_;
 
 public:
-	implementation(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers) 
+	implementation(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures) 
 		: desc_(desc)
 		, buffers_(buffers)
-		, tag_(tag){}
+		, textures_(textures)
+		, tag_(tag)
+	{}
 	
 	void accept(write_frame& self, core::frame_visitor& visitor)
 	{
@@ -64,9 +69,29 @@ public:
 		auto ptr = static_cast<const unsigned char*>(buffers_[index]->data());
 		return boost::iterator_range<const unsigned char*>(ptr, ptr+buffers_[index]->size());
 	}
+
+	void commit()
+	{
+		for(size_t n = 0; n < buffers_.size(); ++n)
+			commit(n);
+	}
+
+	void commit(size_t plane_index)
+	{
+		if(plane_index >= buffers_.size())
+			return;
+				
+		auto texture = textures_[plane_index];
+		auto buffer = std::move(buffers_[plane_index]);
+
+		ogl_device::begin_invoke([=]
+		{
+			texture->read(*buffer);
+		});
+	}
 };
 	
-write_frame::write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers) : impl_(new implementation(tag, desc, buffers)){}
+write_frame::write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures) : impl_(new implementation(tag, desc, buffers, textures)){}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 boost::iterator_range<unsigned char*> write_frame::image_data(size_t index){return impl_->image_data(index);}
@@ -81,5 +106,8 @@ const boost::iterator_range<const short*> write_frame::audio_data() const
 }
 int write_frame::tag() const {return impl_->tag_;}
 const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
-const std::vector<safe_ptr<host_buffer>>& write_frame::get_plane_buffers() const{return impl_->buffers_;}
+const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
+const std::vector<safe_ptr<host_buffer>>& write_frame::get_buffers() const{return impl_->buffers_;}
+void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
+void write_frame::commit(){impl_->commit();}
 }}
