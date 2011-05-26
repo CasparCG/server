@@ -49,16 +49,15 @@ struct image_mixer::implementation : boost::noncopyable
 
 	struct render_item
 	{
-		core::pixel_format_desc desc;
+		pixel_format_desc					 desc;
 		std::vector<safe_ptr<device_buffer>> textures;
-		core::image_transform transform;
+		core::image_transform				 transform;
 	};
 
 	const core::video_format_desc format_desc_;
 	
 	std::stack<core::image_transform>		transform_stack_;
-	std::vector<std::vector<render_item>>	transferring_queue_;
-	std::vector<std::vector<render_item>>	render_queue_;
+	std::queue<std::queue<render_item>>		render_queue_;
 	
 	image_kernel kernel_;
 			
@@ -90,29 +89,9 @@ public:
 	}
 		
 	void visit(core::write_frame& frame)
-	{						
-		auto desc		= frame.get_pixel_format_desc();
-		auto buffers	= frame.get_plane_buffers();
-		auto transform	= transform_stack_.top()*frame.get_image_transform();
-
-		ogl_device::begin_invoke([=]
-		{
-			render_item item;
-
-			item.desc = desc;
-			item.transform = transform;
-			
-			// Start transfer from host to device.
-
-			for(size_t n = 0; n < buffers.size(); ++n)
-			{
-				auto texture = ogl_device::create_device_buffer(desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
-				texture->read(*buffers[n]);
-				item.textures.push_back(texture);
-			}	
-
-			transferring_queue_.back().push_back(item);
-		});
+	{			
+		render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.top()*frame.get_image_transform()};	
+		render_queue_.back().push(item);
 	}
 
 	void end()
@@ -122,10 +101,7 @@ public:
 
 	void begin_layer()
 	{
-		ogl_device::begin_invoke([=]
-		{
-			transferring_queue_.push_back(std::vector<render_item>());
-		});
+		render_queue_.push(std::queue<render_item>());
 	}
 
 	void end_layer()
@@ -135,8 +111,10 @@ public:
 	boost::unique_future<safe_ptr<const host_buffer>> render()
 	{
 		auto result = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
-					
-		ogl_device::begin_invoke([=]
+			
+		auto render_queue = std::move(render_queue_);
+
+		ogl_device::begin_invoke([=]() mutable
 		{
 			local_key_ = false;
 			layer_key_ = false;
@@ -148,14 +126,18 @@ public:
 
 			// Draw items in device.
 
-			BOOST_FOREACH(auto layer, render_queue_)
+			while(!render_queue.empty())
 			{
+				auto layer = render_queue.front();
+				render_queue.pop();
+				
 				draw_buffer_->attach();	
 
-				BOOST_FOREACH(auto item, layer)			
-				{	
+				while(!layer.empty())
+				{
+					draw(layer.front());
+					layer.pop();
 					ogl_device::yield(); // Allow quick buffer allocation to execute.
-					draw(item);	
 				}
 
 				layer_key_ = local_key_; // If there was only key in last layer then use it as key for the entire next layer.
@@ -163,10 +145,6 @@ public:
 
 				std::swap(local_key_buffer_, layer_key_buffer_);
 			}
-
-			// Move waiting items to queue.
-
-			render_queue_ = std::move(transferring_queue_);
 
 			// Start transfer from device to host.
 
@@ -224,14 +202,23 @@ public:
 		kernel_.draw(format_desc_.width, format_desc_.height, item.desc, item.transform, local_key, layer_key);	
 	}
 			
-	std::vector<safe_ptr<host_buffer>> create_buffers(const core::pixel_format_desc& format)
+	safe_ptr<write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
 	{
 		std::vector<safe_ptr<host_buffer>> buffers;
-		std::transform(format.planes.begin(), format.planes.end(), std::back_inserter(buffers), [&](const core::pixel_format_desc::plane& plane)
+		std::vector<safe_ptr<device_buffer>> textures;
+		ogl_device::invoke([&]
 		{
-			return ogl_device::create_host_buffer(plane.size, host_buffer::write_only);
+			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers), [&](const core::pixel_format_desc::plane& plane)
+			{
+				return ogl_device::create_host_buffer(plane.size, host_buffer::write_only);
+			});
+			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures), [&](const core::pixel_format_desc::plane& plane)
+			{
+				return ogl_device::create_device_buffer(plane.width, plane.height, plane.channels);
+			});
 		});
-		return buffers;
+
+		return make_safe<write_frame>(reinterpret_cast<int>(tag), desc, buffers, textures);
 	}
 };
 
@@ -240,7 +227,7 @@ void image_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<const host_buffer>> image_mixer::render(){return impl_->render();}
-std::vector<safe_ptr<host_buffer>> image_mixer::create_buffers(const core::pixel_format_desc& format){return impl_->create_buffers(format);}
+safe_ptr<write_frame> image_mixer::create_frame(void* tag, const core::pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
 void image_mixer::begin_layer(){impl_->begin_layer();}
 void image_mixer::end_layer(){impl_->end_layer();}
 

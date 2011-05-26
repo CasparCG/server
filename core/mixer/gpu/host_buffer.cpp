@@ -45,7 +45,8 @@ public:
 	{
 		GL(glGenBuffers(1, &pbo_));
 		GL(glBindBuffer(target_, pbo_));
-		GL(glBufferData(target_, size_, NULL, usage_));	
+		if(usage_ != write_only)	
+			GL(glBufferData(target_, size_, NULL, usage_));	
 		GL(glBindBuffer(target_, 0));
 
 		if(!pbo_)
@@ -63,6 +64,9 @@ public:
 	{
 		if(data_)
 			return;
+
+		if(usage_ == write_only)			
+			GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
 		
 		GL(glBindBuffer(target_, pbo_));
 		data_ = glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY);  

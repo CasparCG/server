@@ -35,8 +35,8 @@ public:
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
-	std::vector<short> begin_pass();
-	void end_pass();
+	void begin_pass();
+	std::vector<short> end_pass();
 
 private:
 	struct implementation;
