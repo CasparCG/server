@@ -32,14 +32,13 @@ public:
 		});
 	}
 	
-	void reset(const std::function<T*()>& factory)
+	void reset(const std::function<T*()>& factory = nullptr)
 	{
 		executor::invoke([&]
 		{
+			instance_.reset();
 			if(factory)
 				instance_.reset(factory());
-			else
-				instance_.reset(nullptr);
 		});
 	}
 

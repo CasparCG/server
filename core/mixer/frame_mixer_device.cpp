@@ -94,7 +94,7 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
 
-	output_t output_;
+	std::function<void(const safe_ptr<const core::read_frame>&)> output_;
 	
 	typedef std::unordered_map<int, tweened_transform<core::image_transform>> image_transforms;
 	typedef std::unordered_map<int, tweened_transform<core::audio_transform>> audio_transforms;
@@ -107,10 +107,11 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	executor executor_;
 public:
-	implementation(const core::video_format_desc& format_desc) 
+	implementation(const core::video_format_desc& format_desc, const std::function<void(const safe_ptr<const core::read_frame>&)>& output) 
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(format_desc)
+		, output_(output)
 		, executor_(L"frame_mixer_device")
 	{
 		diag_->add_guide("frame-time", 0.5f);	
@@ -125,12 +126,7 @@ public:
 
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
-
-	boost::signals2::connection connect(const output_t::slot_type& subscriber)
-	{
-		return output_.connect(subscriber);
-	}
-
+	
 	boost::unique_future<safe_ptr<const host_buffer>> mix_image(std::map<int, safe_ptr<core::basic_frame>> frames)
 	{		
 		auto& root_image_transform = boost::fusion::at_key<core::image_transform>(root_transforms_);
@@ -288,9 +284,8 @@ public:
 	}
 };
 	
-frame_mixer_device::frame_mixer_device(const core::video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+frame_mixer_device::frame_mixer_device(const core::video_format_desc& format_desc, const std::function<void(const safe_ptr<const core::read_frame>&)>& output) : impl_(new implementation(format_desc, output)){}
 frame_mixer_device::frame_mixer_device(frame_mixer_device&& other) : impl_(std::move(other.impl_)){}
-boost::signals2::connection frame_mixer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
 void frame_mixer_device::send(const std::map<int, safe_ptr<core::basic_frame>>& frames){impl_->send(frames);}
 const core::video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->format_desc_; }
 safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
