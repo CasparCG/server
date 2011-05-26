@@ -37,7 +37,6 @@
 #include <boost/timer.hpp>
 
 #include <tbb/parallel_for.h>
-#include <tbb/mutex.h>
 
 #include <array>
 #include <memory>
@@ -47,21 +46,18 @@ namespace caspar { namespace core {
 
 struct frame_producer_device::implementation : boost::noncopyable
 {		
-	std::map<int, layer> layers_;		
-	
-	const video_format_desc format_desc_;
-	
+	std::map<int, layer>		 layers_;		
+	const video_format_desc		 format_desc_;	
 	safe_ptr<diagnostics::graph> diag_;
+	const output_t				 output_;
 
-	const std::function<void(const std::map<int, safe_ptr<basic_frame>>&)> output_;
-
-	boost::timer frame_timer_;
-	boost::timer tick_timer_;
-	boost::timer output_timer_;
+	boost::timer				 frame_timer_;
+	boost::timer				 tick_timer_;
+	boost::timer				 output_timer_;
 	
-	mutable executor executor_;
+	mutable executor			 executor_;
 public:
-	implementation(const video_format_desc& format_desc, const std::function<void(const std::map<int, safe_ptr<basic_frame>>&)>& output)  
+	implementation(const video_format_desc& format_desc, const output_t& output)  
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(std::string("frame_producer_device")))
 		, executor_(L"frame_producer_device")
@@ -198,7 +194,7 @@ public:
 	}
 };
 
-frame_producer_device::frame_producer_device(const video_format_desc& format_desc, const std::function<void(const std::map<int, safe_ptr<basic_frame>>&)>& output) : impl_(new implementation(format_desc, output)){}
+frame_producer_device::frame_producer_device(const video_format_desc& format_desc, const output_t& output) : impl_(new implementation(format_desc, output)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
 void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool preview){impl_->load(index, producer, preview);}

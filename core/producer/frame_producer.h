@@ -54,10 +54,11 @@ public:
 	safe_ptr<core::basic_frame> last_frame() const {return last_frame_;}
 	
 private:
-	virtual safe_ptr<basic_frame> receive() = 0;
 	friend safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer);
 
-	safe_ptr<basic_frame> receive_w_last();
+	virtual safe_ptr<basic_frame> receive() = 0;
+
+	safe_ptr<basic_frame> receive_save_last();
 
 	safe_ptr<core::basic_frame> last_frame_;
 };

@@ -39,7 +39,7 @@ class audio_decoder : boost::noncopyable
 public:
 	explicit audio_decoder(input& input, const core::video_format_desc& format_desc);
 
-	std::deque<std::pair<int, std::vector<short>>> receive();
+	std::deque<std::pair<int, std::vector<int16_t>>> receive();
 
 	void restart();
 private:
