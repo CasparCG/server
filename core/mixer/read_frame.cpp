@@ -47,10 +47,18 @@ read_frame::read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<sho
 
 const boost::iterator_range<const unsigned char*> read_frame::image_data() const
 {
-	if(!impl_->image_data_.get()->data())
+	try
+	{
+		if(!impl_->image_data_.get()->data())
+			return boost::iterator_range<const unsigned char*>();
+		auto ptr = static_cast<const unsigned char*>(impl_->image_data_.get()->data());
+		return boost::iterator_range<const unsigned char*>(ptr, ptr + impl_->image_data_.get()->size());
+	}
+	catch(...) // image_data_ future might store exception.
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
 		return boost::iterator_range<const unsigned char*>();
-	auto ptr = static_cast<const unsigned char*>(impl_->image_data_.get()->data());
-	return boost::iterator_range<const unsigned char*>(ptr, ptr + impl_->image_data_.get()->size());
+	}
 }
 const boost::iterator_range<const short*> read_frame::audio_data() const
 {
