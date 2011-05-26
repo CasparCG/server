@@ -201,7 +201,6 @@ private:
 		detail::SetThreadName(GetCurrentThreadId(), name_.c_str());
 		while(is_running_)
 			execute();
-		is_running_ = false;
 	}	
 };
 

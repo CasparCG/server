@@ -107,19 +107,18 @@ public:
 		transform_stack_.pop();
 	}
 
-	std::vector<short> begin_pass()
+	void begin_pass()
 	{
-		auto result = std::move(audio_data_.front());
-		audio_data_.pop_front();
-		
 		audio_data_.push_back(std::vector<short>());
-
-		return result;
 	}
 
-	void end_pass()
+	std::vector<short>  end_pass()
 	{
 		prev_audio_transforms_ = std::move(next_audio_transforms_);
+
+		auto result = std::move(audio_data_.front());
+		audio_data_.pop_front();		
+		return result;
 	}
 };
 
@@ -127,7 +126,7 @@ audio_mixer::audio_mixer() : impl_(new implementation()){}
 void audio_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
-std::vector<short> audio_mixer::begin_pass(){return impl_->begin_pass();}	
-void audio_mixer::end_pass(){impl_->end_pass();}
+void audio_mixer::begin_pass(){ impl_->begin_pass();}	
+std::vector<short> audio_mixer::end_pass(){return impl_->end_pass();}
 
 }}

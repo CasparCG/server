@@ -164,6 +164,8 @@ public:
 				}
 			});
 
+			frame->commit();
+
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{
