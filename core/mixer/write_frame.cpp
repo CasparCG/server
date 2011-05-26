@@ -82,7 +82,7 @@ public:
 			return;
 				
 		auto texture = textures_[plane_index];
-		auto buffer = std::move(buffers_[plane_index]);
+		auto buffer = std::move(buffers_[plane_index]); // Release buffer once done.
 
 		ogl_device::begin_invoke([=]
 		{

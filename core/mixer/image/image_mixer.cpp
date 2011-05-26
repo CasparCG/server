@@ -111,7 +111,7 @@ public:
 	boost::unique_future<safe_ptr<const host_buffer>> render()
 	{
 		auto result = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
-			
+
 		auto render_queue = std::move(render_queue_);
 
 		ogl_device::begin_invoke([=]() mutable
@@ -152,6 +152,8 @@ public:
 
 			std::swap(draw_buffer_, write_buffer_);
 		});
+
+		// While transferring do additional work which was queued during rendering.
 		
 		return ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
 		{
