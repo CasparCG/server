@@ -38,7 +38,6 @@
 
 #include <tbb/parallel_for.h>
 #include <tbb/mutex.h>
-#include <tbb/combinable.h>
 
 #include <array>
 #include <memory>
@@ -54,7 +53,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 	
 	safe_ptr<diagnostics::graph> diag_;
 
-	output_t output_;
+	const std::function<void(const std::map<int, safe_ptr<basic_frame>>&)> output_;
 
 	boost::timer frame_timer_;
 	boost::timer tick_timer_;
@@ -62,10 +61,11 @@ struct frame_producer_device::implementation : boost::noncopyable
 	
 	mutable executor executor_;
 public:
-	implementation(const video_format_desc& format_desc)  
+	implementation(const video_format_desc& format_desc, const std::function<void(const std::map<int, safe_ptr<basic_frame>>&)>& output)  
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(std::string("frame_producer_device")))
 		, executor_(L"frame_producer_device")
+		, output_(output)
 	{
 		diag_->add_guide("frame-time", 0.5f);	
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -75,23 +75,11 @@ public:
 		{
 			SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
 		});
+		executor_.begin_invoke([=]{tick();});		
 	}
-
-	boost::signals2::connection connect(const output_t::slot_type& subscriber)
-	{
-		return executor_.invoke([&]() -> boost::signals2::connection
-		{
-			if(output_.empty())
-				executor_.begin_invoke([=]{tick();});		
-			return output_.connect(subscriber);
-		});
-	}
-					
+			
 	void tick()
 	{				
-		if(output_.empty())
-			return;				
-		
 		auto frame = draw();
 		output_timer_.restart();
 		output_(frame);
@@ -104,27 +92,23 @@ public:
 	{	
 		frame_timer_.restart();
 
-		tbb::combinable<std::map<int, safe_ptr<basic_frame>>> frames;
+		std::map<int, safe_ptr<basic_frame>> frames;
+		for(auto it = layers_.begin(); it != layers_.end(); ++it)
+			frames[it->first] = basic_frame::empty();
 
 		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](decltype(*layers_.begin())& pair)
 		{
 			auto frame = pair.second.receive();
 			if(is_concrete_frame(frame))
-				frames.local()[pair.first] = frame;		
+				frames[pair.first] = frame;		
 		});
-
-		std::map<int, safe_ptr<basic_frame>> result;
-		frames.combine_each([&](const std::map<int, safe_ptr<basic_frame>>& map)
-		{
-			result.insert(map.begin(), map.end());
-		});
-
+		
 		diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
-				
+
 		diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
 		tick_timer_.restart();
 
-		return result;
+		return frames;
 	}
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview)
@@ -214,9 +198,8 @@ public:
 	}
 };
 
-frame_producer_device::frame_producer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+frame_producer_device::frame_producer_device(const video_format_desc& format_desc, const std::function<void(const std::map<int, safe_ptr<basic_frame>>&)>& output) : impl_(new implementation(format_desc, output)){}
 frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
-boost::signals2::connection frame_producer_device::connect(const output_t::slot_type& subscriber){return impl_->connect(subscriber);}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
 void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool preview){impl_->load(index, producer, preview);}
 void frame_producer_device::pause(int index){impl_->pause(index);}

@@ -24,9 +24,8 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include <boost/signals2.hpp>
-
 #include <functional>
+#include <map>
 
 namespace caspar { 
 
@@ -44,12 +43,8 @@ namespace core {
 	
 class frame_mixer_device : public core::frame_factory
 {
-public:
-	typedef boost::signals2::signal<void(const safe_ptr<const core::read_frame>&)> output_t;
-	 
-	boost::signals2::connection connect(const output_t::slot_type& subscriber);
-	
-	frame_mixer_device(const core::video_format_desc& format_desc);
+public:	
+	frame_mixer_device(const core::video_format_desc& format_desc, const std::function<void(const safe_ptr<const core::read_frame>&)>& output);
 	frame_mixer_device(frame_mixer_device&& other); // nothrow
 		
 	void send(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow

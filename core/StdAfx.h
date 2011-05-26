@@ -51,17 +51,15 @@
 #include <GLee.h>
 #include <SFML/Window.hpp>
 
-#include <tchar.h>
-#include <sstream>
-#include <memory>
+#include <algorithm>
 #include <array>
 #include <functional>
-#include <algorithm>
-#include <vector>
 #include <deque>
+#include <map>
+#include <memory>
 #include <queue>
 #include <string>
-#include <math.h>
+#include <vector>
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
@@ -74,7 +72,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
-#include <boost/signals2.hpp>
 
 #include <common/utility/string.h>
 #include <common/memory/safe_ptr.h>

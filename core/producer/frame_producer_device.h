@@ -25,7 +25,6 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
-#include <boost/signals2.hpp>
 #include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
@@ -46,12 +45,8 @@ struct video_format_desc;
 class frame_producer_device : boost::noncopyable
 {
 public:
-	typedef boost::signals2::signal<void(const std::map<int, safe_ptr<basic_frame>>&)> output_t;
-	 
-	explicit frame_producer_device(const video_format_desc& format_desc);
+	explicit frame_producer_device(const video_format_desc& format_desc, const std::function<void(const std::map<int, safe_ptr<basic_frame>>&)>& output);
 	frame_producer_device(frame_producer_device&& other);
-	
-	boost::signals2::connection connect(const output_t::slot_type& subscriber);
 
 	void swap(frame_producer_device& other);
 		
