@@ -27,19 +27,18 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
-#include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
-
+	
 class channel : boost::noncopyable
 {
 public:
 	explicit channel(int index, const video_format_desc& format_desc);
 	channel(channel&& other);
 
-	const safe_ptr<frame_producer_device>& producer();
-	const safe_ptr<frame_mixer_device>& mixer();
-	const safe_ptr<frame_consumer_device>& consumer();
+	safe_ptr<frame_producer_device> producer();
+	safe_ptr<frame_mixer_device>	mixer();
+	safe_ptr<frame_consumer_device> consumer();
 
 	const video_format_desc& get_video_format_desc() const;
 	void set_video_format_desc(const video_format_desc& format_desc);
