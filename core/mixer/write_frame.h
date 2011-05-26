@@ -41,13 +41,13 @@ public:
 	explicit write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures);
 			
 	// core::write_frame
-	virtual boost::iterator_range<unsigned char*> image_data(size_t plane_index = 0);	
-	virtual std::vector<short>& audio_data();
+	virtual boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
+	virtual std::vector<int16_t>& audio_data();
 	
-	virtual const boost::iterator_range<const unsigned char*> image_data(size_t plane_index = 0) const;
-	virtual const boost::iterator_range<const short*> audio_data() const;
+	virtual const boost::iterator_range<const uint8_t*> image_data(size_t plane_index = 0) const;
+	virtual const boost::iterator_range<const int16_t*> audio_data() const;
 
-	void commit(size_t plane_index);
+	void commit(uint32_t plane_index);
 	void commit();
 
 	virtual void accept(core::frame_visitor& visitor);

@@ -35,12 +35,12 @@ struct write_frame::implementation : boost::noncopyable
 {				
 	std::vector<safe_ptr<host_buffer>> buffers_;
 	std::vector<safe_ptr<device_buffer>> textures_;
-	std::vector<short> audio_data_;
+	std::vector<int16_t> audio_data_;
 	const core::pixel_format_desc desc_;
-	int tag_;
+	int32_t tag_;
 
 public:
-	implementation(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures) 
+	implementation(int32_t tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures) 
 		: desc_(desc)
 		, buffers_(buffers)
 		, textures_(textures)
@@ -54,20 +54,20 @@ public:
 		visitor.end();
 	}
 
-	boost::iterator_range<unsigned char*> image_data(size_t index)
+	boost::iterator_range<uint8_t*> image_data(size_t index)
 	{
 		if(index >= buffers_.size() || !buffers_[index]->data())
-			return boost::iterator_range<const unsigned char*>();
-		auto ptr = static_cast<unsigned char*>(buffers_[index]->data());
-		return boost::iterator_range<unsigned char*>(ptr, ptr+buffers_[index]->size());
+			return boost::iterator_range<const uint8_t*>();
+		auto ptr = static_cast<uint8_t*>(buffers_[index]->data());
+		return boost::iterator_range<uint8_t*>(ptr, ptr+buffers_[index]->size());
 	}
 
-	const boost::iterator_range<const unsigned char*> image_data(size_t index) const
+	const boost::iterator_range<const uint8_t*> image_data(size_t index) const
 	{
 		if(index >= buffers_.size() || !buffers_[index]->data())
-			return boost::iterator_range<const unsigned char*>();
-		auto ptr = static_cast<const unsigned char*>(buffers_[index]->data());
-		return boost::iterator_range<const unsigned char*>(ptr, ptr+buffers_[index]->size());
+			return boost::iterator_range<const uint8_t*>();
+		auto ptr = static_cast<const uint8_t*>(buffers_[index]->data());
+		return boost::iterator_range<const uint8_t*>(ptr, ptr+buffers_[index]->size());
 	}
 
 	void commit()
@@ -91,20 +91,20 @@ public:
 	}
 };
 	
-write_frame::write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures) : impl_(new implementation(tag, desc, buffers, textures)){}
+write_frame::write_frame(int32_t tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures) : impl_(new implementation(tag, desc, buffers, textures)){}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
 
-boost::iterator_range<unsigned char*> write_frame::image_data(size_t index){return impl_->image_data(index);}
-std::vector<short>& write_frame::audio_data() { return impl_->audio_data_; }
-const boost::iterator_range<const unsigned char*> write_frame::image_data(size_t index) const
+boost::iterator_range<uint8_t*> write_frame::image_data(size_t index){return impl_->image_data(index);}
+std::vector<int16_t>& write_frame::audio_data() { return impl_->audio_data_; }
+const boost::iterator_range<const uint8_t*> write_frame::image_data(size_t index) const
 {
-	return boost::iterator_range<const unsigned char*>(impl_->image_data(index).begin(), impl_->image_data(index).end());
+	return boost::iterator_range<const uint8_t*>(impl_->image_data(index).begin(), impl_->image_data(index).end());
 }
-const boost::iterator_range<const short*> write_frame::audio_data() const
+const boost::iterator_range<const int16_t*> write_frame::audio_data() const
 {
-	return boost::iterator_range<const short*>(impl_->audio_data_.data(), impl_->audio_data_.data() + impl_->audio_data_.size());
+	return boost::iterator_range<const int16_t*>(impl_->audio_data_.data(), impl_->audio_data_.data() + impl_->audio_data_.size());
 }
-int write_frame::tag() const {return impl_->tag_;}
+int32_t write_frame::tag() const {return impl_->tag_;}
 const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
 const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
 const std::vector<safe_ptr<host_buffer>>& write_frame::get_buffers() const{return impl_->buffers_;}

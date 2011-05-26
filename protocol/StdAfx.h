@@ -47,6 +47,7 @@
 #include <crtdbg.h>
 #endif
 
+#include <cstdint>
 #include <winsock2.h>
 #include <tchar.h>
 #include <sstream>

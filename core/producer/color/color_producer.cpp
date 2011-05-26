@@ -44,7 +44,7 @@ public:
 		auto frame = frame_factory->create_frame(this, 1, 1, pixel_format::bgra);
 		
 		// Read color from hex-string and write to frame pixel.
-		auto& value = *reinterpret_cast<unsigned long*>(frame->image_data().begin());
+		auto& value = *reinterpret_cast<uint32_t*>(frame->image_data().begin());
 		std::wstringstream str(color_str_.substr(1));
 		str >> std::hex >> value;
 

@@ -36,18 +36,18 @@ class read_frame : boost::noncopyable
 {
 	read_frame(){}
 public:
-	read_frame(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<short>&& audio_data);
-	read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<short>&& audio_data);
+	read_frame(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<int16_t>&& audio_data);
+	read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<int16_t>&& audio_data);
 
-	virtual const boost::iterator_range<const unsigned char*> image_data() const;
-	virtual const boost::iterator_range<const short*> audio_data() const;
+	virtual const boost::iterator_range<const uint8_t*> image_data() const;
+	virtual const boost::iterator_range<const int16_t*> audio_data() const;
 	
 	static safe_ptr<const read_frame> empty()
 	{
 		struct empty : public read_frame
 		{			
-			virtual const boost::iterator_range<const unsigned char*> image_data() const {return boost::iterator_range<const unsigned char*>();}
-			virtual const boost::iterator_range<const short*> audio_data() const {return boost::iterator_range<const short*>();}
+			virtual const boost::iterator_range<const uint8_t*> image_data() const {return boost::iterator_range<const uint8_t*>();}
+			virtual const boost::iterator_range<const int16_t*> audio_data() const {return boost::iterator_range<const int16_t*>();}
 		};
 		static safe_ptr<const empty> frame;
 		return frame;
