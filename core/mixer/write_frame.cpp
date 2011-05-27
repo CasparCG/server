@@ -22,6 +22,8 @@
 #include "write_frame.h"
 
 #include "gpu/ogl_device.h"
+#include "gpu/host_buffer.h"
+#include "gpu/device_buffer.h"
 
 #include <core/producer/frame/pixel_format.h>
 

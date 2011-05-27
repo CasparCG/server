@@ -48,8 +48,8 @@ public:
 	implementation(int index, const video_format_desc& format_desc)  
 		: index_(index)
 		, format_desc_(format_desc)
-		, mixer_(new frame_mixer_device(format_desc, [=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);}))
 		, consumer_(new frame_consumer_device(format_desc))
+		, mixer_(new frame_mixer_device(format_desc, [=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);}))
 		, producer_(new frame_producer_device(format_desc_, [=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);}))	
 	{
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
