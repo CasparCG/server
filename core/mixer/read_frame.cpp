@@ -34,6 +34,26 @@ public:
 	implementation(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
 		: image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data)){}	
+
+	const boost::iterator_range<const uint8_t*> image_data()
+	{
+		try
+		{
+			if(!image_data_.get()->data())
+				return boost::iterator_range<const uint8_t*>();
+			auto ptr = static_cast<const uint8_t*>(image_data_.get()->data());
+			return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_.get()->size());
+		}
+		catch(...) // image_data_ future might store exception.
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			return boost::iterator_range<const uint8_t*>();
+		}
+	}
+	const boost::iterator_range<const int16_t*> audio_data() const
+	{
+		return boost::iterator_range<const int16_t*>(audio_data_.data(), audio_data_.data() + audio_data_.size());
+	}
 };
 
 read_frame::read_frame(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
@@ -45,24 +65,7 @@ read_frame::read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<int
 	impl_.reset(new implementation(std::move(p.get_future()), std::move(audio_data)));
 }
 
-const boost::iterator_range<const uint8_t*> read_frame::image_data() const
-{
-	try
-	{
-		if(!impl_->image_data_.get()->data())
-			return boost::iterator_range<const uint8_t*>();
-		auto ptr = static_cast<const uint8_t*>(impl_->image_data_.get()->data());
-		return boost::iterator_range<const uint8_t*>(ptr, ptr + impl_->image_data_.get()->size());
-	}
-	catch(...) // image_data_ future might store exception.
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-		return boost::iterator_range<const uint8_t*>();
-	}
-}
-const boost::iterator_range<const int16_t*> read_frame::audio_data() const
-{
-	return boost::iterator_range<const int16_t*>(impl_->audio_data_.data(), impl_->audio_data_.data() + impl_->audio_data_.size());
-}
+const boost::iterator_range<const uint8_t*> read_frame::image_data() const{return impl_->image_data();}
+const boost::iterator_range<const int16_t*> read_frame::audio_data() const{return impl_->audio_data();}
 
 }}
