@@ -270,10 +270,7 @@ public:
 		
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{
-		if(executor_.size() >= executor_.capacity()-1)
-			return;
-
-		executor_.begin_invoke([=]
+		executor_.try_begin_invoke([=]
 		{
 			perf_timer_.restart();
 			sf::Event e;
@@ -332,6 +329,11 @@ public:
 	virtual bool key_only() const
 	{
 		return key_only_;
+	}
+
+	virtual bool has_synchronization_clock() const 
+	{
+		return false;
 	}
 };	
 

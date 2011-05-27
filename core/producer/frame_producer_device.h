@@ -31,17 +31,6 @@ namespace caspar { namespace core {
 
 struct video_format_desc;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \class	frame_producer_device
-///
-/// \brief
-/// 		
-///                |**********| <-   empty frame   <- |***********| <-   frame format  <- |**********|
-///   PROTOCOL ->  | PRODUCER |                       |   MIXER	  |                       | CONSUMER |  -> DISPLAY DEVICE
-///                |**********| -> rendered frames -> |***********| -> formatted frame -> |**********|
-///   
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 class frame_producer_device : boost::noncopyable
 {
 public:
