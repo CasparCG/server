@@ -24,9 +24,6 @@
 #include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
 
-#include "gpu/host_buffer.h"
-#include "gpu/device_buffer.h"
-
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 
@@ -34,13 +31,15 @@
 #include <vector>
 
 namespace caspar { namespace core {
+
+class host_buffer;
+class device_buffer;
 	
 class write_frame : public core::basic_frame, boost::noncopyable
 {
 public:	
 	explicit write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures);
 			
-	// core::write_frame
 	virtual boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
 	virtual std::vector<int16_t>& audio_data();
 	

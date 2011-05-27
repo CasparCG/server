@@ -32,6 +32,7 @@
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/utility/assert.h>
+#include <common/utility/timer.h>
 #include <common/memory/memshfl.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
@@ -44,6 +45,8 @@ namespace caspar { namespace core {
 	
 struct frame_consumer_device::implementation
 {	
+	high_prec_timer timer_;
+
 	boost::circular_buffer<std::pair<safe_ptr<const read_frame>,safe_ptr<const read_frame>>> buffer_;
 
 	std::map<int, std::shared_ptr<frame_consumer>> consumers_; // Valid iterators after erase
@@ -102,12 +105,15 @@ public:
 	{		
 		executor_.begin_invoke([=]
 		{
+			if(!std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p){return p.second->has_synchronization_clock();}))
+				timer_.tick(1.0/format_desc_.fps);
+
 			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 			frame_timer_.restart();
 			
 			auto key_frame = read_frame::empty();
 
-			if(boost::range::find_if(consumers_, [](const decltype(*consumers_.begin())& p){return p.second->key_only();}) != consumers_.end())
+			if(std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p){return p.second->key_only();}))
 			{
 				// Currently do key_only transform on cpu. Unsure if the extra 400MB/s (1080p50) overhead is worth it to do it on gpu.
 				auto key_data = ogl_device::create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
@@ -120,7 +126,6 @@ public:
 
 			if(!buffer_.full())
 				return;
-
 	
 			auto it = consumers_.begin();
 			while(it != consumers_.end())

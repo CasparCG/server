@@ -68,6 +68,23 @@ enum priority
 	priority_count
 };
 
+namespace internal
+{
+	template<typename T>
+	struct move_on_copy
+	{
+		move_on_copy(const move_on_copy<T>& other) : value(std::move(other.value)){}
+		move_on_copy(T&& value) : value(std::move(value)){}
+		mutable T value;
+	};
+
+	template<typename T>
+	move_on_copy<T> make_move_on_copy(T&& value)
+	{
+		return move_on_copy<T>(std::move(value));
+	}
+}
+
 class executor : boost::noncopyable
 {
 	const std::string name_;
@@ -76,7 +93,27 @@ class executor : boost::noncopyable
 	
 	typedef tbb::concurrent_bounded_queue<std::function<void()>> function_queue;
 	function_queue execution_queue_[priority_count];
-	
+		
+	template<typename Func>
+	auto create_task(Func&& func) -> boost::packaged_task<decltype(func())> // noexcept
+	{	
+		typedef boost::packaged_task<decltype(func())> task_type;
+				
+		auto task = task_type(std::forward<Func>(func));
+		
+		task.set_wait_callback(std::function<void(task_type&)>([=](task_type& my_task) // The std::function wrapper is required in order to add ::result_type to functor class.
+		{
+			try
+			{
+				if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
+					my_task();
+			}
+			catch(boost::task_already_started&){}
+		}));
+				
+		return std::move(task);
+	}
+
 public:
 		
 	explicit executor(const std::wstring& name) : name_(narrow(name)) // noexcept
@@ -88,12 +125,7 @@ public:
 	virtual ~executor() // noexcept
 	{
 		stop();
-		
-		std::function<void()> func;
-		while(execution_queue_[normal_priority].try_pop(func)){} // Wake all waiting push threads.
-
-		if(boost::this_thread::get_id() != thread_.get_id())
-			thread_.join();
+		join();
 	}
 
 	void set_capacity(size_t capacity) // noexcept
@@ -111,40 +143,24 @@ public:
 	{
 		invoke([]{});
 	}
+
+	void join()
+	{
+		if(boost::this_thread::get_id() != thread_.get_id())
+			thread_.join();
+	}
 				
 	template<typename Func>
 	auto begin_invoke(Func&& func, priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
-		typedef boost::packaged_task<decltype(func())> task_type;
-				
-		auto task = task_type(std::forward<Func>(func));
-		auto future = task.get_future();
-		
-		if(!is_running_)
-			return std::move(future);	
-
-		task.set_wait_callback(std::function<void(task_type&)>([=](task_type& my_task) // The std::function wrapper is required in order to add ::result_type to functor class.
-		{
-			try
-			{
-				if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
-					my_task();
-			}
-			catch(boost::task_already_started&){}
-		}));
-				
 		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
-		struct task_adaptor_t
-		{
-			task_adaptor_t(const task_adaptor_t& other) : task(std::move(other.task)){}
-			task_adaptor_t(task_type&& task) : task(std::move(task)){}
-			void operator()() const { task(); }
-			mutable task_type task;
-		} task_adaptor(std::move(task));
+		auto task_adaptor = internal::make_move_on_copy(create_task(func));
+
+		auto future = task_adaptor.value.get_future();
 
 		execution_queue_[priority].push([=]
 		{
-			try{task_adaptor();}
+			try{task_adaptor.value();}
 			catch(boost::task_already_started&){}
 			catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
 		});
@@ -154,7 +170,28 @@ public:
 					
 		return std::move(future);		
 	}
-	
+
+	template<typename Func>
+	auto try_begin_invoke(Func&& func, priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
+	{
+		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
+		auto task_adaptor = internal::make_move_on_copy(create_task(func));
+		
+		auto future = task_adaptor.value.get_future();
+
+		if(priority == normal_priority || execution_queue_[normal_priority].try_push(nullptr))
+		{			
+			execution_queue_[priority].try_push([=]
+			{
+				try{task_adaptor.value();}
+				catch(boost::task_already_started&){}
+				catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
+			});
+		}
+		
+		return std::move(future);			
+	}
+
 	template<typename Func>
 	auto invoke(Func&& func, priority prioriy = normal_priority) -> decltype(func()) // noexcept
 	{
@@ -162,6 +199,15 @@ public:
 			return func();
 		
 		return begin_invoke(std::forward<Func>(func), prioriy).get();
+	}
+
+	template<typename Func>
+	auto try_invoke(Func&& func, priority prioriy = normal_priority) -> decltype(func()) // noexcept
+	{
+		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
+			return func();
+		
+		return try_begin_invoke(std::forward<Func>(func), prioriy).get();
 	}
 
 	void yield() // noexcept

@@ -41,6 +41,7 @@ struct frame_consumer : boost::noncopyable
 	virtual bool key_only() const{ return false;}
 	virtual void initialize(const video_format_desc& format_desc) = 0;
 	virtual std::wstring print() const = 0;
+	virtual bool has_synchronization_clock() const {return true;}
 
 	static const safe_ptr<frame_consumer>& empty()
 	{
