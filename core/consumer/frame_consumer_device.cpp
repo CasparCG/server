@@ -45,15 +45,17 @@ namespace caspar { namespace core {
 	
 struct frame_consumer_device::implementation
 {	
+	typedef std::pair<safe_ptr<const read_frame>, safe_ptr<const read_frame>> fill_and_key;
+	
+	boost::circular_buffer<fill_and_key> buffer_;
+
+	std::map<int, safe_ptr<frame_consumer>> consumers_;
+	
 	high_prec_timer timer_;
 
-	boost::circular_buffer<std::pair<safe_ptr<const read_frame>,safe_ptr<const read_frame>>> buffer_;
-
-	std::map<int, std::shared_ptr<frame_consumer>> consumers_; // Valid iterators after erase
-	
-	safe_ptr<diagnostics::graph> diag_;
-
 	video_format_desc format_desc_;
+
+	safe_ptr<diagnostics::graph> diag_;
 
 	boost::timer frame_timer_;
 	boost::timer tick_timer_;
@@ -84,7 +86,10 @@ public:
 		{
 			if(buffer_.capacity() < consumer->buffer_depth())
 				buffer_.set_capacity(consumer->buffer_depth());
-			consumers_[index] = std::move(consumer);
+
+			this->remove(index);
+			consumers_.insert(std::make_pair(index, consumer));
+			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
 		});
 	}
 
@@ -100,60 +105,65 @@ public:
 			}
 		});
 	}
-				
+
+	bool has_synchronization_clock()
+	{
+		return std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p)
+		{
+			return p.second->has_synchronization_clock();
+		});
+	}
+
+	safe_ptr<const read_frame> get_key_frame(const safe_ptr<const read_frame>& frame)
+	{
+		bool has_key_only = std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p)
+		{
+			return p.second->key_only();
+		});
+
+		if(has_key_only)
+		{
+			// Currently do key_only transform on cpu. Unsure if the extra 400MB/s (1080p50) overhead is worth it to do it on gpu.
+			auto key_data = ogl_device::create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
+			fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			std::vector<short> audio_data(frame->audio_data().begin(), frame->audio_data().end());
+			return make_safe<const read_frame>(std::move(key_data), std::move(audio_data));
+		}
+		
+		return read_frame::empty();
+	}
+					
 	void send(const safe_ptr<const read_frame>& frame)
 	{		
 		executor_.begin_invoke([=]
 		{
-			if(!std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p){return p.second->has_synchronization_clock();}))
+			if(!has_synchronization_clock())
 				timer_.tick(1.0/format_desc_.fps);
 
 			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 			frame_timer_.restart();
 			
-			auto key_frame = read_frame::empty();
-
-			if(std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p){return p.second->key_only();}))
-			{
-				// Currently do key_only transform on cpu. Unsure if the extra 400MB/s (1080p50) overhead is worth it to do it on gpu.
-				auto key_data = ogl_device::create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
-				fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-				std::vector<short> audio_data(frame->audio_data().begin(), frame->audio_data().end());
-				key_frame = make_safe<const read_frame>(std::move(key_data), std::move(audio_data));
-			}
-
-			buffer_.push_back(std::make_pair(std::move(frame), std::move(key_frame)));
+			buffer_.push_back(std::make_pair(std::move(frame), get_key_frame(frame)));
 
 			if(!buffer_.full())
 				return;
 	
-			auto it = consumers_.begin();
-			while(it != consumers_.end())
+			for_each_consumer([&](safe_ptr<frame_consumer>& consumer)
 			{
-				try
-				{
-					auto p = buffer_[it->second->buffer_depth()-1];
-					it->second->send(it->second->key_only() ? p.second : p.first);
-					++it;
-				}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					consumers_.erase(it++);
-					CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
-				}
-			}
-			diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
+				auto pair = buffer_[consumer->buffer_depth()-1];
+
+				if(static_cast<size_t>(pair.first->image_data().size()) != format_desc_.size)
+					return;
+
+				consumer->send(consumer->key_only() ? pair.second : pair.first);
+			});
+
+			diag_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 			
-			diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
+			diag_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 		});
 		diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
-	}
-
-	std::wstring print() const
-	{
-		return L"frame_consumer_device";
 	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
@@ -162,23 +172,36 @@ public:
 		{
 			format_desc_ = format_desc;
 			buffer_.clear();
-			
-			auto it = consumers_.begin();
-			while(it != consumers_.end())
+						
+			for_each_consumer([&](safe_ptr<frame_consumer>& consumer)
 			{
-				try
-				{
-					it->second->initialize(format_desc_);
-					++it;
-				}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					consumers_.erase(it++);
-					CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
-				}
-			}
+				consumer->initialize(format_desc_);
+			});
 		});
+	}
+	
+	void for_each_consumer(const std::function<void(safe_ptr<frame_consumer>& consumer)>& func)
+	{
+		auto it = consumers_.begin();
+		while(it != consumers_.end())
+		{
+			try
+			{
+				func(it->second);
+				++it;
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				consumers_.erase(it++);
+				CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
+			}
+		}
+	}
+
+	std::wstring print() const
+	{
+		return L"frame_consumer_device";
 	}
 };
 
