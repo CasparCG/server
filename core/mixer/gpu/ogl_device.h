@@ -57,15 +57,15 @@ class ogl_device
 	}
 	
 	template<typename Func>
-	auto do_begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
+	auto do_begin_invoke(Func&& func, priority priority) -> boost::unique_future<decltype(func())> // noexcept
 	{			
-		return executor_.begin_invoke(std::forward<Func>(func));
+		return executor_.begin_invoke(std::forward<Func>(func), priority);
 	}
 	
 	template<typename Func>
-	auto do_invoke(Func&& func) -> decltype(func())
+	auto do_invoke(Func&& func, priority priority) -> decltype(func())
 	{
-		return executor_.invoke(std::forward<Func>(func));
+		return executor_.invoke(std::forward<Func>(func), priority);
 	}
 		
 	safe_ptr<device_buffer> do_create_device_buffer(size_t width, size_t height, size_t stride);
@@ -73,15 +73,15 @@ class ogl_device
 public:		
 	
 	template<typename Func>
-	static auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
+	static auto begin_invoke(Func&& func, priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{			
-		return get_instance().do_begin_invoke(std::forward<Func>(func));
+		return get_instance().do_begin_invoke(std::forward<Func>(func), priority);
 	}
 	
 	template<typename Func>
-	static auto invoke(Func&& func) -> decltype(func())
+	static auto invoke(Func&& func, priority priority = normal_priority) -> decltype(func())
 	{
-		return get_instance().do_invoke(std::forward<Func>(func));
+		return get_instance().do_invoke(std::forward<Func>(func), priority);
 	}
 		
 	static safe_ptr<device_buffer> create_device_buffer(size_t width, size_t height, size_t stride)

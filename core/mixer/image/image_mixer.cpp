@@ -61,6 +61,7 @@ struct image_mixer::implementation : boost::noncopyable
 	
 	image_kernel kernel_;
 			
+	safe_ptr<host_buffer>	read_buffer_;
 	safe_ptr<device_buffer>	draw_buffer_;
 	safe_ptr<device_buffer>	write_buffer_;
 
@@ -73,6 +74,7 @@ struct image_mixer::implementation : boost::noncopyable
 public:
 	implementation(const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)
+		, read_buffer_(ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only))
 		, draw_buffer_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
 		, write_buffer_	(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
 		, local_key_buffer_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 1))
@@ -110,7 +112,13 @@ public:
 
 	boost::unique_future<safe_ptr<const host_buffer>> render()
 	{
-		auto result = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
+		auto read_buffer = read_buffer_;
+
+		auto result = ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
+		{
+			read_buffer->map(); // Might block.
+			return read_buffer;
+		});
 
 		auto render_queue = std::move(render_queue_);
 
@@ -148,18 +156,15 @@ public:
 
 			// Start transfer from device to host.
 
-			draw_buffer_->write(*result);
+			read_buffer_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
+			draw_buffer_->write(*read_buffer_);
 
 			std::swap(draw_buffer_, write_buffer_);
 		});
 
 		// While transferring do additional work which was queued during rendering.
 		
-		return ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
-		{
-			result->map(); // Might block.
-			return result;
-		});
+		return std::move(result);
 	}
 	
 	void draw(const render_item& item)
