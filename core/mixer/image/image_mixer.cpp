@@ -161,9 +161,7 @@ public:
 
 			std::swap(draw_buffer_, write_buffer_);
 		});
-
-		// While transferring do additional work which was queued during rendering.
-		
+				
 		return std::move(result);
 	}
 	

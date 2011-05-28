@@ -51,6 +51,7 @@ struct frame_consumer : boost::noncopyable
 			virtual size_t buffer_depth() const{return 0;}
 			virtual void initialize(const video_format_desc&){}
 			virtual std::wstring print() const {return L"empty";}
+			virtual bool has_synchronization_clock() const {return false;}
 		};
 		static safe_ptr<frame_consumer> consumer = make_safe<empty_frame_consumer>();
 		return consumer;
