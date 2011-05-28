@@ -64,15 +64,14 @@ public:
 			prev = it->second;
 				
 		next_audio_transforms_[tag] = next; // Store all active tags, inactive tags will be removed in end_pass.
-		
-		
+				
 		if(next.get_gain() < 0.001 && prev.get_gain() < 0.001)
 			return;
 		
 		static const int BASE = 1<<15;
 
-		auto next_gain = static_cast<int32_t>(next.get_gain()*BASE);
-		auto prev_gain = static_cast<int32_t>(prev.get_gain()*BASE);
+		auto next_gain = static_cast<int>(next.get_gain()*BASE);
+		auto prev_gain = static_cast<int>(prev.get_gain()*BASE);
 		
 		int n_samples = audio_data_.size();
 
@@ -85,9 +84,9 @@ public:
 				{
 					int sample_gain = (prev_gain - (prev_gain * n)/n_samples) + (next_gain * n)/n_samples;
 					
-					int sample = (static_cast<int32_t>(audio_data[n])*sample_gain)/BASE;
+					int sample = (static_cast<int>(audio_data[n])*sample_gain)/BASE;
 					
-					audio_data_[n] = static_cast<int16_t>((static_cast<int32_t>(audio_data_[n]) + sample) & 0xFFFF);
+					audio_data_[n] = static_cast<int16_t>((static_cast<int>(audio_data_[n]) + sample) & 0xFFFF);
 				}
 			}
 		);
@@ -105,7 +104,7 @@ public:
 	}
 
 
-	std::vector<short> mix()
+	std::vector<int16_t> mix()
 	{
 		prev_audio_transforms_ = std::move(next_audio_transforms_);	
 		return std::move(audio_data_);
@@ -116,6 +115,6 @@ audio_mixer::audio_mixer() : impl_(new implementation()){}
 void audio_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
-std::vector<short> audio_mixer::mix(){return impl_->mix();}
+std::vector<int16_t> audio_mixer::mix(){return impl_->mix();}
 
 }}
