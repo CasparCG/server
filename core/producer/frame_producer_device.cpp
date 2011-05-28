@@ -76,27 +76,32 @@ public:
 			
 	void tick()
 	{				
-		auto frame = draw();
-		output_timer_.restart();
-		output_(frame);
-		diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()*format_desc_.fps*0.5));
+		try
+		{
+			auto frame = render();
+			output_timer_.restart();
+			output_(frame);
+			diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()*format_desc_.fps*0.5));
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 
 		executor_.begin_invoke([=]{tick();});
 	}
 			
-	std::map<int, safe_ptr<basic_frame>> draw()
+	std::map<int, safe_ptr<basic_frame>> render()
 	{	
 		frame_timer_.restart();
 
 		std::map<int, safe_ptr<basic_frame>> frames;
-		for(auto it = layers_.begin(); it != layers_.end(); ++it)
-			frames[it->first] = basic_frame::empty();
+		BOOST_FOREACH(auto& layer, layers_)
+			frames[layer.first] = basic_frame::empty();
 
 		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](decltype(*layers_.begin())& pair)
 		{
-			auto frame = pair.second.receive();
-			if(is_concrete_frame(frame))
-				frames[pair.first] = frame;		
+			frames[pair.first] = pair.second.receive();
 		});
 		
 		diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
