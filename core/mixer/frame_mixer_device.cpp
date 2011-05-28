@@ -127,7 +127,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
 	
-	boost::unique_future<safe_ptr<const host_buffer>> mix_image(std::map<int, safe_ptr<core::basic_frame>> frames)
+	boost::unique_future<safe_ptr<host_buffer>> mix_image(std::map<int, safe_ptr<core::basic_frame>> frames)
 	{		
 		auto& root_image_transform = boost::fusion::at_key<core::image_transform>(root_transforms_);
 		auto& image_transforms = boost::fusion::at_key<core::image_transform>(transforms_);
@@ -162,7 +162,7 @@ public:
 		return image_mixer_.render();
 	}
 
-	std::vector<short> mix_audio(const std::map<int, safe_ptr<core::basic_frame>>& frames)
+	std::vector<int16_t> mix_audio(const std::map<int, safe_ptr<core::basic_frame>>& frames)
 	{
 		auto& root_audio_transform = boost::fusion::at_key<core::audio_transform>(root_transforms_);
 		auto& audio_transforms = boost::fusion::at_key<core::audio_transform>(transforms_);
