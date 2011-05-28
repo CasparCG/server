@@ -168,7 +168,7 @@ class line : public drawable
 	boost::optional<diagnostics::guide> guide_;
 	boost::circular_buffer<std::pair<double, bool>> line_data_;
 
-	std::vector<float>		tick_data_;
+	std::vector<double>		tick_data_;
 	bool					tick_tag_;
 	color c_;
 public:
