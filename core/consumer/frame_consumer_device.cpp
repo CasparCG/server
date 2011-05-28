@@ -35,11 +35,8 @@
 #include <common/utility/timer.h>
 #include <common/memory/memshfl.h>
 
-#include <boost/range/algorithm_ext/erase.hpp>
-#include <boost/range/algorithm.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
-#include <boost/range/algorithm.hpp>
 
 namespace caspar { namespace core {
 	
@@ -84,8 +81,7 @@ public:
 		consumer->initialize(format_desc_);
 		executor_.invoke([&]
 		{
-			if(buffer_.capacity() < consumer->buffer_depth())
-				buffer_.set_capacity(consumer->buffer_depth());
+			buffer_.set_capacity(std::max(buffer_.capacity(), consumer->buffer_depth()));
 
 			this->remove(index);
 			consumers_.insert(std::make_pair(index, consumer));
@@ -126,7 +122,7 @@ public:
 			// Currently do key_only transform on cpu. Unsure if the extra 400MB/s (1080p50) overhead is worth it to do it on gpu.
 			auto key_data = ogl_device::create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
 			fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-			std::vector<short> audio_data(frame->audio_data().begin(), frame->audio_data().end());
+			std::vector<int16_t> audio_data(frame->audio_data().begin(), frame->audio_data().end());
 			return make_safe<const read_frame>(std::move(key_data), std::move(audio_data));
 		}
 		
@@ -143,7 +139,7 @@ public:
 			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 			frame_timer_.restart();
 			
-			buffer_.push_back(std::make_pair(std::move(frame), get_key_frame(frame)));
+			buffer_.push_back(std::make_pair(frame, get_key_frame(frame)));
 
 			if(!buffer_.full())
 				return;
