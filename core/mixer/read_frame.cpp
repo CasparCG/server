@@ -21,7 +21,7 @@
 
 #include "read_frame.h"
 
-#include <common/gl/gl_check.h>
+#include "gpu/host_buffer.h"	
 
 namespace caspar { namespace core {
 																																							

@@ -23,15 +23,12 @@
 #include <type_traits>
 #include <exception>
 
-#include <tbb/spin_mutex.h>
-
 namespace caspar {
 	
 template<typename T>
 class safe_ptr
 {	
 	std::shared_ptr<T> impl_;
-	tbb::spin_mutex mutex_;
 	template <typename> friend class safe_ptr;
 public:
 	typedef T element_type;

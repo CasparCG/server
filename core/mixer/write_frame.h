@@ -20,9 +20,8 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
+
 #include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_visitor.h>
-#include <core/producer/frame/pixel_format.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -34,6 +33,8 @@ namespace caspar { namespace core {
 
 class host_buffer;
 class device_buffer;
+struct frame_visitor;
+struct pixel_format_desc;
 	
 class write_frame : public core::basic_frame, boost::noncopyable
 {

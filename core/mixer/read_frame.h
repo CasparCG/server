@@ -19,19 +19,19 @@
 */
 #pragma once
 
-#include "gpu/host_buffer.h"	
-
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
-#include <boost/thread.hpp>
+#include <boost/thread/future.hpp>
 
 #include <memory>
 #include <vector>
 
 namespace caspar { namespace core {
 	
+class host_buffer;
+
 class read_frame : boost::noncopyable
 {
 	read_frame(){}

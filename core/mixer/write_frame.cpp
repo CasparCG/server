@@ -25,11 +25,8 @@
 #include "gpu/host_buffer.h"
 #include "gpu/device_buffer.h"
 
+#include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
-
-#include <common/gl/gl_check.h>
-
-#include <boost/range/algorithm.hpp>
 
 namespace caspar { namespace core {
 																																							
