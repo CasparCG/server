@@ -36,8 +36,8 @@ class read_frame : boost::noncopyable
 {
 	read_frame(){}
 public:
-	read_frame(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<int16_t>&& audio_data);
-	read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<int16_t>&& audio_data);
+	read_frame(boost::unique_future<safe_ptr<host_buffer>>&& image_data, std::vector<int16_t>&& audio_data);
+	read_frame(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data);
 
 	virtual const boost::iterator_range<const uint8_t*> image_data() const;
 	virtual const boost::iterator_range<const int16_t*> audio_data() const;

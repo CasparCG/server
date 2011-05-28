@@ -22,16 +22,17 @@
 #include "read_frame.h"
 
 #include "gpu/host_buffer.h"	
+#include "gpu/ogl_device.h"
 
 namespace caspar { namespace core {
 																																							
 struct read_frame::implementation : boost::noncopyable
 {
-	boost::unique_future<safe_ptr<const host_buffer>> image_data_;
+	boost::unique_future<safe_ptr<host_buffer>> image_data_;
 	std::vector<int16_t> audio_data_;
 
 public:
-	implementation(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
+	implementation(boost::unique_future<safe_ptr<host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
 		: image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data)){}	
 
@@ -39,6 +40,14 @@ public:
 	{
 		try
 		{
+			if(!image_data_.get()->data())
+			{
+				ogl_device::invoke([&]
+				{
+					image_data_.get()->map();
+				}, high_priority);
+			}
+
 			if(!image_data_.get()->data())
 				return boost::iterator_range<const uint8_t*>();
 			auto ptr = static_cast<const uint8_t*>(image_data_.get()->data());
@@ -56,11 +65,11 @@ public:
 	}
 };
 
-read_frame::read_frame(boost::unique_future<safe_ptr<const host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
+read_frame::read_frame(boost::unique_future<safe_ptr<host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
 	: impl_(new implementation(std::move(image_data), std::move(audio_data))){}
-read_frame::read_frame(safe_ptr<const host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
+read_frame::read_frame(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
 {
-	boost::promise<safe_ptr<const host_buffer>> p;
+	boost::promise<safe_ptr<host_buffer>> p;
 	p.set_value(std::move(image_data));
 	impl_.reset(new implementation(std::move(p.get_future()), std::move(audio_data)));
 }

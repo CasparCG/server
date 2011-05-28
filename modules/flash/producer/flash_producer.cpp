@@ -67,6 +67,9 @@ public:
 
 		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
 		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
+
+		if(!bmp_data_)
+			BOOST_THROW_EXCEPTION(std::bad_alloc());
 	}
 
 	operator HDC() {return static_cast<HDC>(hdc_.get());}

@@ -110,19 +110,13 @@ public:
 	{
 	}
 
-	boost::unique_future<safe_ptr<const host_buffer>> render()
+	boost::unique_future<safe_ptr<host_buffer>> render()
 	{
 		auto read_buffer = read_buffer_;
-
-		auto result = ogl_device::begin_invoke([=]() -> safe_ptr<const host_buffer>
-		{
-			read_buffer->map(); // Might block.
-			return read_buffer;
-		});
-
+		
 		auto render_queue = std::move(render_queue_);
 
-		ogl_device::begin_invoke([=]() mutable
+		return ogl_device::begin_invoke([=]() mutable -> safe_ptr<host_buffer>
 		{
 			local_key_ = false;
 			layer_key_ = false;
@@ -154,15 +148,14 @@ public:
 				std::swap(local_key_buffer_, layer_key_buffer_);
 			}
 
-			// Start transfer from device to host.
-
-			read_buffer_ = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);
-			draw_buffer_->write(*read_buffer_);
-
 			std::swap(draw_buffer_, write_buffer_);
+
+			// Start transfer from device to host.	
+			auto result = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);					
+			write_buffer_->write(*result);
+
+			return result;
 		});
-				
-		return std::move(result);
 	}
 	
 	void draw(const render_item& item)
@@ -231,7 +224,7 @@ image_mixer::image_mixer(const core::video_format_desc& format_desc) : impl_(new
 void image_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
-boost::unique_future<safe_ptr<const host_buffer>> image_mixer::render(){return impl_->render();}
+boost::unique_future<safe_ptr<host_buffer>> image_mixer::render(){return impl_->render();}
 safe_ptr<write_frame> image_mixer::create_frame(void* tag, const core::pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
 void image_mixer::begin_layer(){impl_->begin_layer();}
 void image_mixer::end_layer(){impl_->end_layer();}
