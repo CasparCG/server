@@ -147,10 +147,7 @@ public:
 			for_each_consumer([&](safe_ptr<frame_consumer>& consumer)
 			{
 				auto pair = buffer_[consumer->buffer_depth()-1];
-
-				if(static_cast<size_t>(pair.first->image_data().size()) != format_desc_.size)
-					return;
-
+				
 				consumer->send(consumer->key_only() ? pair.second : pair.first);
 			});
 
