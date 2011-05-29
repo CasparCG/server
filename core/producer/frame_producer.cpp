@@ -22,6 +22,7 @@
 
 #include "frame_producer.h"
 #include "frame/basic_frame.h"
+#include "frame/audio_transform.h"
 
 #include "color/color_producer.h"
 #include "separated/separated_producer.h"
@@ -31,6 +32,8 @@
 namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
+
+frame_producer::frame_producer() : last_frame_(core::basic_frame::empty()){}
 
 const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 {

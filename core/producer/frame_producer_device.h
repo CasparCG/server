@@ -27,6 +27,8 @@
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
 
+#include <functional>
+
 namespace caspar { namespace core {
 
 struct video_format_desc;

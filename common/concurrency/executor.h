@@ -68,6 +68,14 @@ enum priority
 	priority_count
 };
 
+enum priority_class
+{
+	high_priority_class,
+	above_normal_priority_class,
+	normal_priority_class,
+	below_normal_priority_clas
+};
+
 namespace internal
 {
 	template<typename T>
@@ -131,6 +139,21 @@ public:
 	void set_capacity(size_t capacity) // noexcept
 	{
 		execution_queue_[normal_priority].set_capacity(capacity);
+	}
+
+	void set_priority_class(priority_class p)
+	{
+		begin_invoke([=]
+		{
+			if(p == high_priority_class)
+				SetThreadPriority(GetCurrentThread(), HIGH_PRIORITY_CLASS);
+			if(p == above_normal_priority_class)
+				SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
+			else if(p == normal_priority_class)
+				SetThreadPriority(GetCurrentThread(), NORMAL_PRIORITY_CLASS);
+			else if(p == below_normal_priority_clas)
+				SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
+		});
 	}
 				
 	void stop() // noexcept

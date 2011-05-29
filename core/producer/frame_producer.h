@@ -19,12 +19,9 @@
 */
 #pragma once
 
-#include "frame/basic_frame.h"
-#include "frame/audio_transform.h"
+#include "frame/frame_factory.h"
 
 #include <common/memory/safe_ptr.h>
-
-#include "frame/frame_factory.h"
 
 #include <boost/noncopyable.hpp>
 
@@ -39,7 +36,7 @@ class basic_frame;
 class frame_producer : boost::noncopyable
 {
 public:
-	frame_producer() : last_frame_(core::basic_frame::empty()){}
+	frame_producer();
 	virtual ~frame_producer(){}	
 
 	virtual std::wstring print() const = 0; // nothrow
