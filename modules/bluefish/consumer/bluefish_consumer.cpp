@@ -244,6 +244,11 @@ public:
 		
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
+	
+	const core::video_format_desc& get_video_format_desc() const
+	{
+		return format_desc_;
+	}
 
 	void enable_video_output()
 	{
@@ -372,6 +377,11 @@ public:
 	virtual void send(const safe_ptr<const core::read_frame>& frame)
 	{
 		consumer_->send(frame);
+	}
+
+	virtual const core::video_format_desc& get_video_format_desc() const
+	{
+		return consumer_->get_video_format_desc();
 	}
 	
 	virtual std::wstring print() const

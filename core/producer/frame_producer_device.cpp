@@ -22,6 +22,8 @@
 
 #include "frame_producer_device.h"
 
+#include "../channel_context.h"
+
 #include "layer.h"
 
 #include <core/producer/frame/basic_frame.h>
@@ -73,7 +75,6 @@ public:
 struct frame_producer_device::implementation : boost::noncopyable
 {		
 	std::map<int, layer>		 layers_;		
-	const video_format_desc		 format_desc_;	
 	const output_t				 output_;
 	
 	safe_ptr<diagnostics::graph> diag_;
@@ -81,14 +82,11 @@ struct frame_producer_device::implementation : boost::noncopyable
 	boost::timer				 tick_timer_;
 	boost::timer				 output_timer_;
 	
-	executor&					 context_;
-	executor&					 destroy_context_;
+	channel_context&			channel_;
 public:
-	implementation(executor& context, executor& destroy_context, const video_format_desc& format_desc, const output_t& output)  
-		: format_desc_(format_desc)
-		, diag_(diagnostics::create_graph(std::string("frame_producer_device")))
-		, context_(context)
-		, destroy_context_(destroy_context)
+	implementation(channel_context& channel, const output_t& output)  
+		: diag_(diagnostics::create_graph(std::string("frame_producer_device")))
+		, channel_(channel)
 		, output_(output)
 	{
 		diag_->add_guide("frame-time", 0.5f);	
@@ -96,7 +94,7 @@ public:
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		diag_->set_color("output-time", diagnostics::color(0.5f, 1.0f, 0.2f));
 
-		context_.begin_invoke([=]{tick();});		
+		channel_.execution.begin_invoke([=]{tick();});		
 	}
 			
 	void tick()
@@ -106,14 +104,14 @@ public:
 			auto frame = render();
 			output_timer_.restart();
 			output_(frame);
-			diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()*format_desc_.fps*0.5));
+			diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()*channel_.format_desc.fps*0.5));
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		context_.begin_invoke([=]{tick();});
+		channel_.execution.begin_invoke([=]{tick();});
 	}
 			
 	std::map<int, safe_ptr<basic_frame>> render()
@@ -129,9 +127,9 @@ public:
 			frames[pair.first] = pair.second.receive();
 		});
 		
-		diag_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
+		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.format_desc.fps*0.5);
 
-		diag_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
+		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
 		tick_timer_.restart();
 
 		return frames;
@@ -139,37 +137,37 @@ public:
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview)
 	{
-		context_.invoke([&]{layers_[index].load(make_safe<destroy_producer_proxy>(destroy_context_, producer), preview);});
+		channel_.execution.invoke([&]{layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction, producer), preview);});
 	}
 
 	void pause(int index)
 	{		
-		context_.invoke([&]{layers_[index].pause();});
+		channel_.execution.invoke([&]{layers_[index].pause();});
 	}
 
 	void play(int index)
 	{		
-		context_.invoke([&]{layers_[index].play();});
+		channel_.execution.invoke([&]{layers_[index].play();});
 	}
 
 	void stop(int index)
 	{		
-		context_.invoke([&]{layers_[index].stop();});
+		channel_.execution.invoke([&]{layers_[index].stop();});
 	}
 
 	void clear(int index)
 	{
-		context_.invoke([&]{layers_.erase(index);});
+		channel_.execution.invoke([&]{layers_.erase(index);});
 	}
 		
 	void clear()
 	{
-		context_.invoke([&]{layers_.clear();});
+		channel_.execution.invoke([&]{layers_.clear();});
 	}	
 	
 	void swap_layer(int index, size_t other_index)
 	{
-		context_.invoke([&]{layers_[index].swap(layers_[other_index]);});
+		channel_.execution.invoke([&]{layers_[index].swap(layers_[other_index]);});
 	}
 
 	void swap_layer(int index, size_t other_index, frame_producer_device& other)
@@ -178,12 +176,12 @@ public:
 			swap_layer(index, other_index);
 		else
 		{
-			if(format_desc_ != other.impl_->format_desc_)
+			if(channel_.format_desc != other.impl_->channel_.format_desc)
 				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot swap between channels with different formats."));
 
 			auto func = [&]{layers_[index].swap(other.impl_->layers_[other_index]);};
 		
-			context_.invoke([&]{other.impl_->context_.invoke(func);});
+			channel_.execution.invoke([&]{other.impl_->channel_.execution.invoke(func);});
 		}
 	}
 
@@ -192,7 +190,7 @@ public:
 		if(other.impl_.get() == this)
 			return;
 
-		if(format_desc_ != other.impl_->format_desc_)
+		if(channel_.format_desc != other.impl_->channel_.format_desc)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot swap between channels with different formats."));
 
 		auto func = [&]
@@ -210,23 +208,22 @@ public:
 			});					
 		};
 		
-		context_.invoke([&]{other.impl_->context_.invoke(func);});
+		channel_.execution.invoke([&]{other.impl_->channel_.execution.invoke(func);});
 	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
 	{
-		return context_.begin_invoke([=]{return layers_[index].foreground();});
+		return channel_.execution.begin_invoke([=]{return layers_[index].foreground();});
 	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> background(int index)
 	{
-		return context_.begin_invoke([=]{return layers_[index].background();});
+		return channel_.execution.begin_invoke([=]{return layers_[index].background();});
 	}
 };
 
-frame_producer_device::frame_producer_device(executor& context, executor& destroy_context, const video_format_desc& format_desc, const output_t& output)
-	: impl_(new implementation(context, destroy_context, format_desc, output)){}
-frame_producer_device::frame_producer_device(frame_producer_device&& other) : impl_(std::move(other.impl_)){}
+frame_producer_device::frame_producer_device(channel_context& channel, const output_t& output)
+	: impl_(new implementation(channel, output)){}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
 void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool preview){impl_->load(index, producer, preview);}
 void frame_producer_device::pause(int index){impl_->pause(index);}

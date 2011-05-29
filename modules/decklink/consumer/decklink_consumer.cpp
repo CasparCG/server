@@ -180,6 +180,11 @@ public:
 		}
 	}
 			
+	const core::video_format_desc& get_video_format_desc() const
+	{
+		return format_desc_;
+	}
+
 	void set_latency(bool low_latency)
 	{		
 		if(!low_latency)
@@ -380,6 +385,11 @@ public:
 	virtual bool key_only() const
 	{
 		return config_.key_only;
+	}
+		
+	virtual const core::video_format_desc& get_video_format_desc() const
+	{
+		return context_->get_video_format_desc();
 	}
 };	
 
