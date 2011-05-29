@@ -27,28 +27,30 @@ namespace caspar { namespace core {
 																																							
 struct read_frame::implementation : boost::noncopyable
 {
-	boost::unique_future<safe_ptr<host_buffer>> image_data_;
+	boost::unique_future<safe_ptr<host_buffer>> future_image_data_;
+	std::shared_ptr<host_buffer> image_data_;
 	std::vector<int16_t> audio_data_;
 
 public:
-	implementation(boost::unique_future<safe_ptr<host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
-		: image_data_(std::move(image_data))
+	implementation(boost::unique_future<safe_ptr<host_buffer>>&& future_image_data, std::vector<int16_t>&& audio_data) 
+		: future_image_data_(std::move(future_image_data))
 		, audio_data_(std::move(audio_data)){}	
 
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
 		try
 		{
-			if(!image_data_.get()->data())
-				return boost::iterator_range<const uint8_t*>();
-			auto ptr = static_cast<const uint8_t*>(image_data_.get()->data());
-			return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_.get()->size());
+			if(!image_data_)
+				image_data_ = future_image_data_.get();
 		}
 		catch(...) // image_data_ future might store exception.
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			return boost::iterator_range<const uint8_t*>();
 		}
+
+		auto ptr = static_cast<const uint8_t*>(image_data_->data());
+		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_->size());
 	}
 	const boost::iterator_range<const int16_t*> audio_data() const
 	{

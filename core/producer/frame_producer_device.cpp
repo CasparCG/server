@@ -21,25 +21,20 @@
 #include "../StdAfx.h"
 
 #include "frame_producer_device.h"
+
+#include "layer.h"
 #include "destroy_producer_proxy.h"
 
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 
 #include <common/diagnostics/graph.h>
-
-#include "layer.h"
-
 #include <common/concurrency/executor.h>
 
-#include <boost/range/algorithm_ext/erase.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/timer.hpp>
 
 #include <tbb/parallel_for.h>
 
-#include <array>
-#include <memory>
 #include <map>
 
 namespace caspar { namespace core {
@@ -48,14 +43,14 @@ struct frame_producer_device::implementation : boost::noncopyable
 {		
 	std::map<int, layer>		 layers_;		
 	const video_format_desc		 format_desc_;	
-	safe_ptr<diagnostics::graph> diag_;
 	const output_t				 output_;
-
+	
+	safe_ptr<diagnostics::graph> diag_;
 	boost::timer				 frame_timer_;
 	boost::timer				 tick_timer_;
 	boost::timer				 output_timer_;
 	
-	mutable executor			 executor_;
+	executor					executor_;
 public:
 	implementation(const video_format_desc& format_desc, const output_t& output)  
 		: format_desc_(format_desc)
@@ -67,10 +62,8 @@ public:
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		diag_->set_color("output-time", diagnostics::color(0.5f, 1.0f, 0.2f));
-		executor_.begin_invoke([]
-		{
-			SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
-		});
+
+		executor_.set_priority_class(above_normal_priority_class);
 		executor_.begin_invoke([=]{tick();});		
 	}
 			
@@ -104,9 +97,9 @@ public:
 			frames[pair.first] = pair.second.receive();
 		});
 		
-		diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
+		diag_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 
-		diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
+		diag_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 		tick_timer_.restart();
 
 		return frames;
