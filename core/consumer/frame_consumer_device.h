@@ -31,9 +31,6 @@ class executor;
 	
 namespace core {
 	
-class basic_frame;
-struct video_format_desc;
-class ogl_device;
 struct channel_context;
 
 class frame_consumer_device : boost::noncopyable
@@ -44,7 +41,7 @@ public:
 	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);
 
-	void send(const safe_ptr<read_frame>& future_frame); // nothrow
+	void send(const safe_ptr<read_frame>& frame); // nothrow
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

@@ -187,5 +187,5 @@ frame_consumer_device::frame_consumer_device(channel_context& channel)
 	: impl_(new implementation(channel)){}
 void frame_consumer_device::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
-void frame_consumer_device::send(const safe_ptr<read_frame>& future_frame) { impl_->send(future_frame); }
+void frame_consumer_device::send(const safe_ptr<read_frame>& frame) { impl_->send(frame); }
 }}
