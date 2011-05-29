@@ -113,6 +113,7 @@ void oal_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->se
 size_t oal_consumer::buffer_depth() const{return impl_->buffer_depth();}
 void oal_consumer::initialize(const core::video_format_desc& format_desc){impl_.reset(new implementation(format_desc));}
 std::wstring oal_consumer::print() const { return impl_->print(); }
+const core::video_format_desc& oal_consumer::get_video_format_desc() const{return impl_->format_desc_;}
 
 safe_ptr<core::frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)
 {

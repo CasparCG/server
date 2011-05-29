@@ -133,6 +133,17 @@ void ogl_device::yield()
 	executor_.yield();
 }
 
+void ogl_device::gc()
+{
+	//begin_invoke([=]
+	//{		
+	//	BOOST_FOREACH(auto& pool, device_pools_)
+	//		pool.clear();
+	//	BOOST_FOREACH(auto& pool, host_pools_)
+	//		pool.clear();
+	//});
+}
+
 std::wstring ogl_device::get_version()
 {	
 	static std::wstring ver;

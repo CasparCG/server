@@ -36,14 +36,14 @@ class executor;
 namespace core {
 
 struct video_format_desc;
+struct channel_context;
 
 class frame_producer_device : boost::noncopyable
 {
 public:
 	typedef std::function<void(const std::map<int, safe_ptr<basic_frame>>&)> output_t;
 
-	explicit frame_producer_device(executor& context, executor& destroy_context, const video_format_desc& format_desc, const output_t& output);
-	frame_producer_device(frame_producer_device&& other);
+	explicit frame_producer_device(channel_context& channel, const output_t& output);
 
 	void swap(frame_producer_device& other);
 		

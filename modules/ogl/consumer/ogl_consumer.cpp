@@ -179,6 +179,11 @@ public:
 		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
 	
+	const core::video_format_desc& get_video_format_desc() const
+	{
+		return format_desc_;
+	}
+
 	void calculate_aspect()
 	{
 		if(windowed_)
@@ -334,6 +339,11 @@ public:
 	virtual bool has_synchronization_clock() const 
 	{
 		return false;
+	}
+
+	virtual const core::video_format_desc& get_video_format_desc() const
+	{
+		return consumer_->get_video_format_desc();
 	}
 };	
 

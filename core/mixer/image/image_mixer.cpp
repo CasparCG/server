@@ -27,6 +27,8 @@
 #include "../gpu/device_buffer.h"
 #include "../write_frame.h"
 
+#include "../../channel_context.h"
+
 #include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
@@ -54,15 +56,13 @@ struct image_mixer::implementation : boost::noncopyable
 		core::image_transform				 transform;
 	};
 
-	const core::video_format_desc format_desc_;
+	channel_context&						channel_;
 	
 	std::stack<core::image_transform>		transform_stack_;
 	std::queue<std::queue<render_item>>		render_queue_;
 	
 	image_kernel kernel_;
-	
-	ogl_device& ogl_;
-	
+		
 	safe_ptr<host_buffer>	read_buffer_;
 	safe_ptr<device_buffer>	draw_buffer_;
 	safe_ptr<device_buffer>	write_buffer_;
@@ -74,14 +74,13 @@ struct image_mixer::implementation : boost::noncopyable
 	bool layer_key_;
 	
 public:
-	implementation(const core::video_format_desc& format_desc, ogl_device& ogl) 
-		: format_desc_(format_desc)
-		, ogl_(ogl)
-		, read_buffer_(ogl_.create_host_buffer(format_desc_.size, host_buffer::read_only))
-		, draw_buffer_(ogl_.create_device_buffer(format_desc.width, format_desc.height, 4))
-		, write_buffer_	(ogl_.create_device_buffer(format_desc.width, format_desc.height, 4))
-		, local_key_buffer_(ogl_.create_device_buffer(format_desc.width, format_desc.height, 1))
-		, layer_key_buffer_(ogl_.create_device_buffer(format_desc.width, format_desc.height, 1))
+	implementation(channel_context& channel) 
+		: channel_(channel)
+		, read_buffer_(channel.ogl.create_host_buffer(channel.format_desc.size, host_buffer::read_only))
+		, draw_buffer_(channel.ogl.create_device_buffer(channel.format_desc.width, channel_.format_desc.height, 4))
+		, write_buffer_	(channel.ogl.create_device_buffer(channel.format_desc.width, channel_.format_desc.height, 4))
+		, local_key_buffer_(channel.ogl.create_device_buffer(channel.format_desc.width, channel_.format_desc.height, 1))
+		, layer_key_buffer_(channel.ogl.create_device_buffer(channel.format_desc.width, channel_.format_desc.height, 1))
 		, local_key_(false)
 		, layer_key_(false)
 	{
@@ -113,10 +112,20 @@ public:
 	{
 	}
 
-	boost::unique_future<safe_ptr<host_buffer>> render()
+	void reinitialize_buffers()
+	{
+		read_buffer_	  = channel_.ogl.create_host_buffer(channel_.format_desc.size, host_buffer::read_only);
+		draw_buffer_	  = channel_.ogl.create_device_buffer(channel_.format_desc.width, channel_.format_desc.height, 4);
+		write_buffer_	  = channel_.ogl.create_device_buffer(channel_.format_desc.width, channel_.format_desc.height, 4);
+		local_key_buffer_ = channel_.ogl.create_device_buffer(channel_.format_desc.width, channel_.format_desc.height, 1);
+		layer_key_buffer_ = channel_.ogl.create_device_buffer(channel_.format_desc.width, channel_.format_desc.height, 1);
+		channel_.ogl.gc();
+	}
+
+	safe_ptr<host_buffer> render()
 	{		
 		auto read_buffer = read_buffer_;
-		auto result = ogl_.begin_invoke([=]()  -> safe_ptr<host_buffer>
+		auto result = channel_.ogl.begin_invoke([=]()  -> safe_ptr<host_buffer>
 		{
 			read_buffer->map();
 			return read_buffer;
@@ -124,8 +133,11 @@ public:
 
 		auto render_queue = std::move(render_queue_);
 
-		ogl_.begin_invoke([=]() mutable
+		channel_.ogl.begin_invoke([=]() mutable
 		{
+			if(draw_buffer_->width() != channel_.format_desc.width || draw_buffer_->height() != channel_.format_desc.height)
+				reinitialize_buffers();
+
 			local_key_ = false;
 			layer_key_ = false;
 
@@ -147,7 +159,7 @@ public:
 				{
 					draw(layer.front());
 					layer.pop();
-					ogl_.yield(); // Allow quick buffer allocation to execute.
+					channel_.ogl.yield(); // Allow quick buffer allocation to execute.
 				}
 
 				layer_key_ = local_key_; // If there was only key in last layer then use it as key for the entire next layer.
@@ -159,11 +171,11 @@ public:
 			std::swap(draw_buffer_, write_buffer_);
 
 			// Start transfer from device to host.	
-			read_buffer_ = ogl_.create_host_buffer(format_desc_.size, host_buffer::read_only);					
+			read_buffer_ = channel_.ogl.create_host_buffer(channel_.format_desc.size, host_buffer::read_only);					
 			write_buffer_->write(*read_buffer_);
 		});
 
-		return std::move(result);
+		return std::move(result.get());
 	}
 	
 	void draw(const render_item& item)
@@ -205,20 +217,20 @@ public:
 
 		// Draw
 
-		kernel_.draw(format_desc_.width, format_desc_.height, item.desc, item.transform, local_key, layer_key);	
+		kernel_.draw(channel_.format_desc.width, channel_.format_desc.height, item.desc, item.transform, local_key, layer_key);	
 	}
 			
 	safe_ptr<write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
 	{
-		return make_safe<write_frame>(ogl_, reinterpret_cast<int>(tag), desc);
+		return make_safe<write_frame>(channel_.ogl, reinterpret_cast<int>(tag), desc);
 	}
 };
 
-image_mixer::image_mixer(const core::video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(format_desc, ogl)){}
+image_mixer::image_mixer(channel_context& channel) : impl_(new implementation(channel)){}
 void image_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
-boost::unique_future<safe_ptr<host_buffer>> image_mixer::render(){return impl_->render();}
+safe_ptr<host_buffer> image_mixer::render(){return impl_->render();}
 safe_ptr<write_frame> image_mixer::create_frame(void* tag, const core::pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
 void image_mixer::begin_layer(){impl_->begin_layer();}
 void image_mixer::end_layer(){impl_->end_layer();}

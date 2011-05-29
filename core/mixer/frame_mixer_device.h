@@ -39,19 +39,19 @@ class basic_frame;
 class audio_transform;
 class image_transform;
 class ogl_device;
+struct channel_context;
 
 class frame_mixer_device : public core::frame_factory
 {
 public:	
 	typedef std::function<void(const safe_ptr<core::read_frame>&)> output_t;
 
-	frame_mixer_device(executor& context, const core::video_format_desc& format_desc, const output_t& output, ogl_device& ogl);
+	frame_mixer_device(channel_context& channel, const output_t& output);
 		
 	void send(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
 		
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc);		
-	safe_ptr<core::write_frame> create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt = core::pixel_format::bgra);			
-	safe_ptr<core::write_frame> create_frame(void* tag, core::pixel_format::type pix_fmt = core::pixel_format::bgra);
+	safe_ptr<core::write_frame> create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt = core::pixel_format::bgra);		
 	
 	const core::video_format_desc& get_video_format_desc() const; // nothrow
 
