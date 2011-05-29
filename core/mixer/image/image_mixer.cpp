@@ -60,7 +60,9 @@ struct image_mixer::implementation : boost::noncopyable
 	std::queue<std::queue<render_item>>		render_queue_;
 	
 	image_kernel kernel_;
-			
+	
+	safe_ptr<ogl_device> ogl_;
+	
 	safe_ptr<host_buffer>	read_buffer_;
 	safe_ptr<device_buffer>	draw_buffer_;
 	safe_ptr<device_buffer>	write_buffer_;
@@ -70,15 +72,16 @@ struct image_mixer::implementation : boost::noncopyable
 
 	bool local_key_;
 	bool layer_key_;
-
+	
 public:
-	implementation(const core::video_format_desc& format_desc) 
+	implementation(const core::video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
 		: format_desc_(format_desc)
-		, read_buffer_(ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only))
-		, draw_buffer_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
-		, write_buffer_	(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 4))
-		, local_key_buffer_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 1))
-		, layer_key_buffer_(ogl_device::create_device_buffer(format_desc.width, format_desc.height, 1))
+		, ogl_(ogl)
+		, read_buffer_(ogl_->create_host_buffer(format_desc_.size, host_buffer::read_only))
+		, draw_buffer_(ogl_->create_device_buffer(format_desc.width, format_desc.height, 4))
+		, write_buffer_	(ogl_->create_device_buffer(format_desc.width, format_desc.height, 4))
+		, local_key_buffer_(ogl_->create_device_buffer(format_desc.width, format_desc.height, 1))
+		, layer_key_buffer_(ogl_->create_device_buffer(format_desc.width, format_desc.height, 1))
 		, local_key_(false)
 		, layer_key_(false)
 	{
@@ -111,12 +114,17 @@ public:
 	}
 
 	boost::unique_future<safe_ptr<host_buffer>> render()
-	{
+	{		
 		auto read_buffer = read_buffer_;
-		
+		auto result = ogl_->begin_invoke([=]()  -> safe_ptr<host_buffer>
+		{
+			read_buffer->map();
+			return read_buffer;
+		});
+
 		auto render_queue = std::move(render_queue_);
 
-		return ogl_device::begin_invoke([=]() mutable -> safe_ptr<host_buffer>
+		ogl_->begin_invoke([=]() mutable
 		{
 			local_key_ = false;
 			layer_key_ = false;
@@ -139,7 +147,7 @@ public:
 				{
 					draw(layer.front());
 					layer.pop();
-					ogl_device::yield(); // Allow quick buffer allocation to execute.
+					ogl_->yield(); // Allow quick buffer allocation to execute.
 				}
 
 				layer_key_ = local_key_; // If there was only key in last layer then use it as key for the entire next layer.
@@ -151,11 +159,11 @@ public:
 			std::swap(draw_buffer_, write_buffer_);
 
 			// Start transfer from device to host.	
-			auto result = ogl_device::create_host_buffer(format_desc_.size, host_buffer::read_only);					
-			write_buffer_->write(*result);
-
-			return result;
+			read_buffer_ = ogl_->create_host_buffer(format_desc_.size, host_buffer::read_only);					
+			write_buffer_->write(*read_buffer_);
 		});
+
+		return std::move(result);
 	}
 	
 	void draw(const render_item& item)
@@ -204,23 +212,23 @@ public:
 	{
 		std::vector<safe_ptr<host_buffer>> buffers;
 		std::vector<safe_ptr<device_buffer>> textures;
-		ogl_device::invoke([&]
+		ogl_->invoke([&]
 		{
 			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers), [&](const core::pixel_format_desc::plane& plane)
 			{
-				return ogl_device::create_host_buffer(plane.size, host_buffer::write_only);
+				return ogl_->create_host_buffer(plane.size, host_buffer::write_only);
 			});
 			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures), [&](const core::pixel_format_desc::plane& plane)
 			{
-				return ogl_device::create_device_buffer(plane.width, plane.height, plane.channels);
+				return ogl_->create_device_buffer(plane.width, plane.height, plane.channels);
 			});
 		});
 
-		return make_safe<write_frame>(reinterpret_cast<int>(tag), desc, buffers, textures);
+		return make_safe<write_frame>(reinterpret_cast<int>(tag), desc, buffers, textures, ogl_);
 	}
 };
 
-image_mixer::image_mixer(const core::video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+image_mixer::image_mixer(const core::video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) : impl_(new implementation(format_desc, ogl)){}
 void image_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}

@@ -31,6 +31,7 @@
 namespace caspar { namespace core {
 	
 class host_buffer;
+class ogl_device;
 
 class read_frame : boost::noncopyable
 {
@@ -41,7 +42,7 @@ public:
 
 	virtual const boost::iterator_range<const uint8_t*> image_data() const;
 	virtual const boost::iterator_range<const int16_t*> audio_data() const;
-	
+		
 	static safe_ptr<const read_frame> empty()
 	{
 		struct empty : public read_frame

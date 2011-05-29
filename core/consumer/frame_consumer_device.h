@@ -29,16 +29,17 @@ namespace caspar { namespace core {
 	
 class basic_frame;
 struct video_format_desc;
+class ogl_device;
 
 class frame_consumer_device : boost::noncopyable
 {
 public:
-	explicit frame_consumer_device(const video_format_desc& format_desc);
+	explicit frame_consumer_device(const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);
 
-	void send(const safe_ptr<const read_frame>& future_frame); // nothrow
+	void send(const safe_ptr<read_frame>& future_frame); // nothrow
 	
 	void set_video_format_desc(const video_format_desc& format_desc);
 private:

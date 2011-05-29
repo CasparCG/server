@@ -56,7 +56,7 @@ ogl_device::~ogl_device()
 	});
 }
 				
-safe_ptr<device_buffer> ogl_device::do_create_device_buffer(size_t width, size_t height, size_t stride)
+safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride)
 {
 	CASPAR_VERIFY(stride > 0 && stride < 5);
 	CASPAR_VERIFY(width > 0 && height > 0);
@@ -82,7 +82,7 @@ safe_ptr<device_buffer> ogl_device::do_create_device_buffer(size_t width, size_t
 	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*){pool->push(buffer);});
 }
 	
-safe_ptr<host_buffer> ogl_device::do_create_host_buffer(size_t size, host_buffer::usage_t usage)
+safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::usage_t usage)
 {
 	CASPAR_VERIFY(usage == host_buffer::write_only || usage == host_buffer::read_only);
 	CASPAR_VERIFY(size > 0);
@@ -128,10 +128,21 @@ safe_ptr<host_buffer> ogl_device::do_create_host_buffer(size_t size, host_buffer
 	});
 }
 
+void ogl_device::yield()
+{
+	executor_.yield();
+}
+
 std::wstring ogl_device::get_version()
 {	
-	return widen(invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
-	+ " "	+ invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));	
+	static std::wstring ver;
+	if(ver.empty())
+	{
+		ogl_device tmp;
+		ver = widen(tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
+		+ " "	+ tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));	
+	}
+	return ver;
 }
 
 }}

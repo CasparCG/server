@@ -24,6 +24,7 @@
 #include <common/exception/exceptions.h>
 #include <common/utility/string.h>
 
+#include <core/mixer/gpu/ogl_device.h>
 #include <core/channel.h>
 
 #include <modules/bluefish/bluefish.h>
@@ -58,10 +59,12 @@ namespace caspar {
 using namespace core;
 using namespace protocol;
 
+
 struct server::implementation : boost::noncopyable
 {
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
-	std::vector<safe_ptr<channel>> channels_;
+	std::vector<safe_ptr<channel>>				channels_;
+	safe_ptr<ogl_device>						ogl_;
 
 	implementation()												
 	{			
@@ -93,7 +96,7 @@ struct server::implementation : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(channel(channels_.size(), format_desc));
+			channels_.push_back(channel(channels_.size(), format_desc, ogl_));
 			
 			int index = 0;
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))
