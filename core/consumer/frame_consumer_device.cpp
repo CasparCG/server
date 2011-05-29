@@ -57,29 +57,28 @@ struct frame_consumer_device::implementation
 	boost::timer frame_timer_;
 	boost::timer tick_timer_;
 
-	safe_ptr<ogl_device> ogl_;
+	ogl_device& ogl_;
 	
-	executor executor_;	
+	executor& context_;	
 public:
-	implementation( const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
+	implementation(executor& context, const video_format_desc& format_desc, ogl_device& ogl) 
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(std::string("frame_consumer_device")))
 		, ogl_(ogl)
-		, executor_(L"frame_consumer_device")
+		, context_(context)
 	{		
 		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
 		diag_->add_guide("frame-time", 0.5f);	
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 
-		executor_.set_capacity(1);
-		executor_.set_priority_class(above_normal_priority_class);
+		context_.set_priority_class(above_normal_priority_class);
 	}
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
 		consumer->initialize(format_desc_);
-		executor_.invoke([&]
+		context_.invoke([&]
 		{
 			buffer_.set_capacity(std::max(buffer_.capacity(), consumer->buffer_depth()));
 
@@ -91,7 +90,7 @@ public:
 
 	void remove(int index)
 	{
-		executor_.invoke([&]
+		context_.invoke([&]
 		{
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
@@ -120,7 +119,7 @@ public:
 		if(has_key_only)
 		{
 			// Currently do key_only transform on cpu. Unsure if the extra 400MB/s (1080p50) overhead is worth it to do it on gpu.
-			auto key_data = ogl_->create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
+			auto key_data = ogl_.create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
 			fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			std::vector<int16_t> audio_data(frame->audio_data().begin(), frame->audio_data().end());
 			return make_safe<read_frame>(std::move(key_data), std::move(audio_data));
@@ -131,12 +130,12 @@ public:
 					
 	void send(const safe_ptr<read_frame>& frame)
 	{		
-		executor_.begin_invoke([=]
+		context_.invoke([=]
 		{
 			if(!has_synchronization_clock())
 				timer_.tick(1.0/format_desc_.fps);
 
-			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+			diag_->set_value("input-buffer", static_cast<float>(context_.size())/static_cast<float>(context_.capacity()));
 			frame_timer_.restart();
 						
 			buffer_.push_back(std::make_pair(frame, get_key_frame(frame)));
@@ -156,12 +155,12 @@ public:
 			diag_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 		});
-		diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+		diag_->set_value("input-buffer", static_cast<float>(context_.size())/static_cast<float>(context_.capacity()));
 	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
-		executor_.invoke([&]
+		context_.invoke([&]
 		{
 			format_desc_ = format_desc;
 			buffer_.clear();
@@ -198,8 +197,8 @@ public:
 	}
 };
 
-frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
-	: impl_(new implementation(format_desc, ogl)){}
+frame_consumer_device::frame_consumer_device(executor& context, const video_format_desc& format_desc, ogl_device& ogl) 
+	: impl_(new implementation(context, format_desc, ogl)){}
 void frame_consumer_device::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
 void frame_consumer_device::send(const safe_ptr<read_frame>& future_frame) { impl_->send(future_frame); }

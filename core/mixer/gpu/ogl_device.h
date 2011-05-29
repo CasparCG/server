@@ -28,6 +28,7 @@
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
 
+#include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
 
 #include <array>
@@ -36,7 +37,7 @@
 
 namespace caspar { namespace core {
 
-class ogl_device
+class ogl_device : boost::noncopyable
 {	
 	std::unique_ptr<sf::Context> context_;
 	

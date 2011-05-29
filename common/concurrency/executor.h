@@ -73,7 +73,7 @@ enum priority_class
 	high_priority_class,
 	above_normal_priority_class,
 	normal_priority_class,
-	below_normal_priority_clas
+	below_normal_priority_class
 };
 
 namespace internal
@@ -151,7 +151,7 @@ public:
 				SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
 			else if(p == normal_priority_class)
 				SetThreadPriority(GetCurrentThread(), NORMAL_PRIORITY_CLASS);
-			else if(p == below_normal_priority_clas)
+			else if(p == below_normal_priority_class)
 				SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
 		});
 	}
