@@ -95,9 +95,7 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
-
-	output_t output_;
-	
+		
 	typedef std::unordered_map<int, tweened_transform<core::image_transform>> image_transforms;
 	typedef std::unordered_map<int, tweened_transform<core::audio_transform>> audio_transforms;
 
@@ -106,12 +104,13 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	
 	boost::fusion::map<boost::fusion::pair<core::image_transform, tweened_transform<core::image_transform>>,
 					boost::fusion::pair<core::audio_transform, tweened_transform<core::audio_transform>>> root_transforms_;
+
+	std::queue<safe_ptr<read_frame>> frame_buffer_;
 public:
-	implementation(channel_context& channel, const output_t& output) 
+	implementation(channel_context& channel) 
 		: channel_(channel)
 		, diag_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(channel_)
-		, output_(output)
 	{
 		diag_->add_guide("frame-time", 0.5f);	
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -185,12 +184,22 @@ public:
 			
 			diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.format_desc.fps*0.5);
 
-			output_(make_safe<read_frame>(std::move(image), std::move(audio)));
+			frame_buffer_.push(make_safe<read_frame>(std::move(image), std::move(audio)));
 
 			diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
 			tick_timer_.restart();
 		});
 		diag_->set_value("input-buffer", static_cast<float>(channel_.execution.size())/static_cast<float>(channel_.execution.capacity()));
+	}
+
+	safe_ptr<read_frame> receive()
+	{
+		return channel_.execution.invoke([=]() -> safe_ptr<read_frame>
+		{
+			auto frame = frame_buffer_.front();
+			frame_buffer_.pop();
+			return frame;
+		});
 	}
 		
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
@@ -278,8 +287,7 @@ public:
 	}
 };
 	
-frame_mixer_device::frame_mixer_device(channel_context& channel, const output_t& output)
-	: impl_(new implementation(channel, output)){}
+frame_mixer_device::frame_mixer_device(channel_context& channel) : impl_(new implementation(channel)){}
 void frame_mixer_device::send(const std::map<int, safe_ptr<core::basic_frame>>& frames){impl_->send(frames);}
 const core::video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->channel_.format_desc; }
 safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
@@ -303,5 +311,5 @@ void frame_mixer_device::reset_image_transform(unsigned int mix_duration, const 
 void frame_mixer_device::reset_image_transform(int index, unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::image_transform>(index, mix_duration, tween);}
 void frame_mixer_device::reset_audio_transform(unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::audio_transform>(mix_duration, tween);}
 void frame_mixer_device::reset_audio_transform(int index, unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::audio_transform>(index, mix_duration, tween);}
-
+safe_ptr<core::read_frame> frame_mixer_device::receive(){return impl_->receive();}
 }}
