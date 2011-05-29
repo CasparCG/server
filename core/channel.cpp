@@ -41,18 +41,19 @@ struct channel::implementation : boost::noncopyable
 {
 	channel_context							context_;
 
-	std::shared_ptr<frame_consumer_device>	consumer_;
-	std::shared_ptr<frame_mixer_device>		mixer_;
-	std::shared_ptr<frame_producer_device>	producer_;
+	safe_ptr<frame_consumer_device>	consumer_;
+	safe_ptr<frame_mixer_device>	mixer_;
+	safe_ptr<frame_producer_device>	producer_;
 	
 public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
 		: context_(index, ogl, format_desc)
 		, consumer_(new frame_consumer_device(context_))
-		, mixer_(new frame_mixer_device(context_, [=](const safe_ptr<read_frame>& frame){consumer_->send(frame);}))
-		, producer_(new frame_producer_device(context_, [=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);}))	
+		, mixer_(new frame_mixer_device(context_))
+		, producer_(new frame_producer_device(context_))	
 	{
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
+		context_.execution.begin_invoke([this]{tick();});
 	}
 
 	~implementation()
@@ -60,6 +61,18 @@ public:
 		// Stop context before destroying devices.
 		context_.execution.stop();
 		context_.execution.join();
+		context_.destruction.stop();
+		context_.destruction.join();
+	}
+
+	void tick()
+	{
+		auto simple_frames = producer_->receive();
+		mixer_->send(simple_frames);
+		auto finished_frame = mixer_->receive();
+		consumer_->send(finished_frame);
+
+		context_.execution.begin_invoke([this]{tick();});
 	}
 		
 	std::wstring print() const
@@ -78,9 +91,9 @@ public:
 
 channel::channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
-safe_ptr<frame_producer_device> channel::producer() { return make_safe(impl_->producer_);} 
-safe_ptr<frame_mixer_device> channel::mixer() { return make_safe(impl_->mixer_);} 
-safe_ptr<frame_consumer_device> channel::consumer() { return make_safe(impl_->consumer_);} 
+safe_ptr<frame_producer_device> channel::producer() { return impl_->producer_;} 
+safe_ptr<frame_mixer_device> channel::mixer() { return impl_->mixer_;} 
+safe_ptr<frame_consumer_device> channel::consumer() { return impl_->consumer_;} 
 const video_format_desc& channel::get_video_format_desc() const{return impl_->context_.format_desc;}
 void channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 std::wstring channel::print() const { return impl_->print();}

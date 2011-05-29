@@ -75,64 +75,65 @@ public:
 struct frame_producer_device::implementation : boost::noncopyable
 {		
 	std::map<int, layer>		 layers_;		
-	const output_t				 output_;
 	
 	safe_ptr<diagnostics::graph> diag_;
 	boost::timer				 frame_timer_;
 	boost::timer				 tick_timer_;
 	boost::timer				 output_timer_;
 	
-	channel_context&			channel_;
+	channel_context&			 channel_;
 public:
-	implementation(channel_context& channel, const output_t& output)  
+	implementation(channel_context& channel)  
 		: diag_(diagnostics::create_graph(std::string("frame_producer_device")))
 		, channel_(channel)
-		, output_(output)
 	{
 		diag_->add_guide("frame-time", 0.5f);	
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
-		diag_->set_color("output-time", diagnostics::color(0.5f, 1.0f, 0.2f));
+		//diag_->set_color("output-time", diagnostics::color(0.5f, 1.0f, 0.2f));
 
-		channel_.execution.begin_invoke([=]{tick();});		
+		//channel_.execution.begin_invoke([=]{tick();});		
 	}
 			
-	void tick()
-	{				
-		try
-		{
-			auto frame = render();
-			output_timer_.restart();
-			output_(frame);
-			diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()*channel_.format_desc.fps*0.5));
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
+	//void tick()
+	//{				
+	//	try
+	//	{
+	//		auto frame = render();
+	//		output_timer_.restart();
+	//		output_(frame);
+	//		diag_->update_value("output-time", static_cast<float>(output_timer_.elapsed()*channel_.format_desc.fps*0.5));
+	//	}
+	//	catch(...)
+	//	{
+	//		CASPAR_LOG_CURRENT_EXCEPTION();
+	//	}
 
-		channel_.execution.begin_invoke([=]{tick();});
-	}
+	//	channel_.execution.begin_invoke([=]{tick();});
+	//}
 			
-	std::map<int, safe_ptr<basic_frame>> render()
+	std::map<int, safe_ptr<basic_frame>> receive()
 	{	
-		frame_timer_.restart();
-
-		std::map<int, safe_ptr<basic_frame>> frames;
-		BOOST_FOREACH(auto& layer, layers_)
-			frames[layer.first] = basic_frame::empty();
-
-		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](decltype(*layers_.begin())& pair)
+		return channel_.execution.invoke([=]() -> std::map<int, safe_ptr<basic_frame>>
 		{
-			frames[pair.first] = pair.second.receive();
-		});
+			frame_timer_.restart();
+
+			std::map<int, safe_ptr<basic_frame>> frames;
+			BOOST_FOREACH(auto& layer, layers_)
+				frames[layer.first] = basic_frame::empty();
+
+			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](decltype(*layers_.begin())& pair)
+			{
+				frames[pair.first] = pair.second.receive();
+			});
 		
-		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.format_desc.fps*0.5);
+			diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.format_desc.fps*0.5);
 
-		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
-		tick_timer_.restart();
+			diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
+			tick_timer_.restart();
 
-		return frames;
+			return frames;
+		});
 	}
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview)
@@ -222,8 +223,7 @@ public:
 	}
 };
 
-frame_producer_device::frame_producer_device(channel_context& channel, const output_t& output)
-	: impl_(new implementation(channel, output)){}
+frame_producer_device::frame_producer_device(channel_context& channel) : impl_(new implementation(channel)){}
 void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
 void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool preview){impl_->load(index, producer, preview);}
 void frame_producer_device::pause(int index){impl_->pause(index);}
@@ -235,4 +235,5 @@ void frame_producer_device::swap_layer(int index, size_t other_index){impl_->swa
 void frame_producer_device::swap_layer(int index, size_t other_index, frame_producer_device& other){impl_->swap_layer(index, other_index, other);}
 boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) {return impl_->foreground(index);}
 boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::background(size_t index) {return impl_->background(index);}
+std::map<int, safe_ptr<basic_frame>> frame_producer_device::receive(){return impl_->receive();}
 }}

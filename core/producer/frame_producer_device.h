@@ -27,13 +27,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
 
-#include <functional>
-
-namespace caspar { 
-	
-class executor;
-
-namespace core {
+namespace caspar { namespace core {
 
 struct video_format_desc;
 struct channel_context;
@@ -41,11 +35,11 @@ struct channel_context;
 class frame_producer_device : boost::noncopyable
 {
 public:
-	typedef std::function<void(const std::map<int, safe_ptr<basic_frame>>&)> output_t;
-
-	explicit frame_producer_device(channel_context& channel, const output_t& output);
+	explicit frame_producer_device(channel_context& channel);
 
 	void swap(frame_producer_device& other);
+
+	std::map<int, safe_ptr<basic_frame>> receive();
 		
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false);
 	void pause(int index);
