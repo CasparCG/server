@@ -32,21 +32,31 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::implementation : boost::noncopyable
 {				
-	safe_ptr<ogl_device> ogl_;
-	std::vector<safe_ptr<host_buffer>> buffers_;
-	std::vector<safe_ptr<device_buffer>> textures_;
-	std::vector<int16_t> audio_data_;
-	const core::pixel_format_desc desc_;
-	int32_t tag_;
+	ogl_device&								ogl_;
+	std::vector<safe_ptr<host_buffer>>		buffers_;
+	std::vector<safe_ptr<device_buffer>>	textures_;
+	std::vector<int16_t>					audio_data_;
+	const core::pixel_format_desc			desc_;
+	int32_t									tag_;
 
 public:
-	implementation(int32_t tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures, const safe_ptr<ogl_device> ogl) 
+	implementation(ogl_device& ogl, int32_t tag, const core::pixel_format_desc& desc) 
 		: ogl_(ogl)
-		, buffers_(buffers)
-		, textures_(textures)
 		, desc_(desc)
 		, tag_(tag)
-	{}
+	{
+		ogl_.invoke([&]
+		{
+			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
+			{
+				return ogl_.create_host_buffer(plane.size, host_buffer::write_only);
+			});
+			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures_), [&](const core::pixel_format_desc::plane& plane)
+			{
+				return ogl_.create_device_buffer(plane.width, plane.height, plane.channels);
+			});
+		});
+	}
 	
 	void accept(write_frame& self, core::frame_visitor& visitor)
 	{
@@ -85,15 +95,15 @@ public:
 		auto texture = textures_[plane_index];
 		auto buffer = std::move(buffers_[plane_index]); // Release buffer once done.
 
-		ogl_->begin_invoke([=]
+		ogl_.begin_invoke([=]
 		{
 			texture->read(*buffer);
 		});
 	}
 };
 	
-write_frame::write_frame(int32_t tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures, const safe_ptr<ogl_device>& ogl) 
-	: impl_(new implementation(tag, desc, buffers, textures, ogl)){}
+write_frame::write_frame(ogl_device& ogl, int32_t tag, const core::pixel_format_desc& desc) 
+	: impl_(new implementation(ogl, tag, desc)){}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 boost::iterator_range<uint8_t*> write_frame::image_data(size_t index){return impl_->image_data(index);}

@@ -41,7 +41,7 @@ class ogl_device;
 class write_frame : public core::basic_frame, boost::noncopyable
 {
 public:	
-	explicit write_frame(int tag, const core::pixel_format_desc& desc, const std::vector<safe_ptr<host_buffer>>& buffers, const std::vector<safe_ptr<device_buffer>>& textures, const safe_ptr<ogl_device>& ogl);
+	explicit write_frame(ogl_device& ogl, int tag, const core::pixel_format_desc& desc);
 			
 	virtual boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
 	virtual std::vector<int16_t>& audio_data();

@@ -104,26 +104,21 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	
 	boost::fusion::map<boost::fusion::pair<core::image_transform, tweened_transform<core::image_transform>>,
 					boost::fusion::pair<core::audio_transform, tweened_transform<core::audio_transform>>> root_transforms_;
-
-	safe_ptr<ogl_device> ogl_;
-
-	executor executor_;
+	
+	executor& context_;
 public:
-	implementation(const core::video_format_desc& format_desc, const output_t& output, const safe_ptr<ogl_device>& ogl) 
+	implementation(executor& context, const core::video_format_desc& format_desc, const output_t& output, ogl_device& ogl) 
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(format_desc, ogl)
 		, output_(output)
-		, ogl_(ogl)
-		, executor_(L"frame_mixer_device")
+		, context_(context)
 	{
 		diag_->add_guide("frame-time", 0.5f);	
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
-		executor_.set_capacity(1);	
-		executor_.set_priority_class(above_normal_priority_class);
-
+	
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
 	
@@ -181,22 +176,22 @@ public:
 		
 	void send(const std::map<int, safe_ptr<core::basic_frame>>& frames)
 	{			
-		executor_.invoke([=]
+		context_.invoke([=]
 		{		
-			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));	
+			diag_->set_value("input-buffer", static_cast<float>(context_.size())/static_cast<float>(context_.capacity()));	
 			frame_timer_.restart();
 
 			auto image = mix_image(frames);
 			auto audio = mix_audio(frames);
 			
-			diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
+			diag_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 
 			output_(make_safe<read_frame>(std::move(image), std::move(audio)));
 
-			diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
+			diag_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 		});
-		diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
+		diag_->set_value("input-buffer", static_cast<float>(context_.size())/static_cast<float>(context_.capacity()));
 	}
 		
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
@@ -207,7 +202,7 @@ public:
 	template<typename T>	
 	void set_transform(const T& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		executor_.invoke([&]
+		context_.invoke([&]
 		{
 			auto& root = boost::fusion::at_key<T>(root_transforms_);
 
@@ -220,7 +215,7 @@ public:
 	template<typename T>
 	void set_transform(int index, const T& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		executor_.invoke([&]
+		context_.invoke([&]
 		{
 			auto& transforms = boost::fusion::at_key<T>(transforms_);
 
@@ -233,7 +228,7 @@ public:
 	template<typename T>
 	void apply_transform(const std::function<T(const T&)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		return executor_.invoke([&]
+		return context_.invoke([&]
 		{
 			auto& root = boost::fusion::at_key<T>(root_transforms_);
 
@@ -246,7 +241,7 @@ public:
 	template<typename T>
 	void apply_transform(int index, const std::function<T(T)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		executor_.invoke([&]
+		context_.invoke([&]
 		{
 			auto& transforms = boost::fusion::at_key<T>(transforms_);
 
@@ -259,7 +254,7 @@ public:
 	template<typename T>
 	void reset_transform(unsigned int mix_duration, const std::wstring& tween)
 	{
-		executor_.invoke([&]
+		context_.invoke([&]
 		{
 			auto& transforms = boost::fusion::at_key<T>(transforms_);
 
@@ -272,7 +267,7 @@ public:
 	template<typename T>
 	void reset_transform(int index, unsigned int mix_duration, const std::wstring& tween)
 	{
-		executor_.invoke([&]
+		context_.invoke([&]
 		{		
 			set_transform(T(), mix_duration, tween);
 		});
@@ -284,9 +279,8 @@ public:
 	}
 };
 	
-frame_mixer_device::frame_mixer_device(const core::video_format_desc& format_desc, const output_t& output, const safe_ptr<ogl_device>& ogl)
-	: impl_(new implementation(format_desc, output, ogl)){}
-frame_mixer_device::frame_mixer_device(frame_mixer_device&& other) : impl_(std::move(other.impl_)){}
+frame_mixer_device::frame_mixer_device(executor& context, const core::video_format_desc& format_desc, const output_t& output, ogl_device& ogl)
+	: impl_(new implementation(context, format_desc, output, ogl)){}
 void frame_mixer_device::send(const std::map<int, safe_ptr<core::basic_frame>>& frames){impl_->send(frames);}
 const core::video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->format_desc_; }
 safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		

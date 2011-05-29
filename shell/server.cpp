@@ -64,7 +64,7 @@ struct server::implementation : boost::noncopyable
 {
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
 	std::vector<safe_ptr<channel>>				channels_;
-	safe_ptr<ogl_device>						ogl_;
+	ogl_device									ogl_;
 
 	implementation()												
 	{			

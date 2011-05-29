@@ -227,7 +227,7 @@ int main(int argc, wchar_t* argv[])
 				wcmd = L"MIXER 1 VIDEO GRID " + boost::lexical_cast<std::wstring>(n);
 
 				for(int i = 1; i <= num; ++i)
-					wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" SLIDE 100 LOOP";
+					wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" LOOP";// + L" SLIDE 100 LOOP";
 			}
 
 			wcmd += L"\r\n";

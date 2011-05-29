@@ -28,6 +28,8 @@
 #include <map>
 
 namespace caspar { 
+
+class executor;
 	
 namespace core {
 
@@ -43,8 +45,7 @@ class frame_mixer_device : public core::frame_factory
 public:	
 	typedef std::function<void(const safe_ptr<core::read_frame>&)> output_t;
 
-	frame_mixer_device(const core::video_format_desc& format_desc, const output_t& output, const safe_ptr<ogl_device>& ogl);
-	frame_mixer_device(frame_mixer_device&& other); // nothrow
+	frame_mixer_device(executor& context, const core::video_format_desc& format_desc, const output_t& output, ogl_device& ogl);
 		
 	void send(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
 		
