@@ -94,7 +94,7 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
 
-	std::function<void(const safe_ptr<const core::read_frame>&)> output_;
+	output_t output_;
 	
 	typedef std::unordered_map<int, tweened_transform<core::image_transform>> image_transforms;
 	typedef std::unordered_map<int, tweened_transform<core::audio_transform>> audio_transforms;
@@ -105,13 +105,16 @@ struct frame_mixer_device::implementation : boost::noncopyable
 	boost::fusion::map<boost::fusion::pair<core::image_transform, tweened_transform<core::image_transform>>,
 					boost::fusion::pair<core::audio_transform, tweened_transform<core::audio_transform>>> root_transforms_;
 
+	safe_ptr<ogl_device> ogl_;
+
 	executor executor_;
 public:
-	implementation(const core::video_format_desc& format_desc, const std::function<void(const safe_ptr<const core::read_frame>&)>& output) 
+	implementation(const core::video_format_desc& format_desc, const output_t& output, const safe_ptr<ogl_device>& ogl) 
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(narrow(print())))
-		, image_mixer_(format_desc)
+		, image_mixer_(format_desc, ogl)
 		, output_(output)
+		, ogl_(ogl)
 		, executor_(L"frame_mixer_device")
 	{
 		diag_->add_guide("frame-time", 0.5f);	
@@ -188,10 +191,10 @@ public:
 
 			auto image = mix_image(frames);
 			auto audio = mix_audio(frames);
-
+			
 			diag_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 
-			output_(make_safe<const read_frame>(std::move(image), std::move(audio)));
+			output_(make_safe<read_frame>(std::move(image), std::move(audio)));
 
 			diag_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
 			tick_timer_.restart();
@@ -284,7 +287,8 @@ public:
 	}
 };
 	
-frame_mixer_device::frame_mixer_device(const core::video_format_desc& format_desc, const std::function<void(const safe_ptr<const core::read_frame>&)>& output) : impl_(new implementation(format_desc, output)){}
+frame_mixer_device::frame_mixer_device(const core::video_format_desc& format_desc, const output_t& output, const safe_ptr<ogl_device>& ogl)
+	: impl_(new implementation(format_desc, output, ogl)){}
 frame_mixer_device::frame_mixer_device(frame_mixer_device&& other) : impl_(std::move(other.impl_)){}
 void frame_mixer_device::send(const std::map<int, safe_ptr<core::basic_frame>>& frames){impl_->send(frames);}
 const core::video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->format_desc_; }

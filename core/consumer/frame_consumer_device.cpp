@@ -56,12 +56,15 @@ struct frame_consumer_device::implementation
 
 	boost::timer frame_timer_;
 	boost::timer tick_timer_;
+
+	safe_ptr<ogl_device> ogl_;
 	
 	executor executor_;	
 public:
-	implementation( const video_format_desc& format_desc) 
+	implementation( const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
 		: format_desc_(format_desc)
 		, diag_(diagnostics::create_graph(std::string("frame_consumer_device")))
+		, ogl_(ogl)
 		, executor_(L"frame_consumer_device")
 	{		
 		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
@@ -120,16 +123,16 @@ public:
 		if(has_key_only)
 		{
 			// Currently do key_only transform on cpu. Unsure if the extra 400MB/s (1080p50) overhead is worth it to do it on gpu.
-			auto key_data = ogl_device::create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
+			auto key_data = ogl_->create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
 			fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			std::vector<int16_t> audio_data(frame->audio_data().begin(), frame->audio_data().end());
-			return make_safe<const read_frame>(std::move(key_data), std::move(audio_data));
+			return make_safe<read_frame>(std::move(key_data), std::move(audio_data));
 		}
 		
 		return read_frame::empty();
 	}
 					
-	void send(const safe_ptr<const read_frame>& frame)
+	void send(const safe_ptr<read_frame>& frame)
 	{		
 		executor_.begin_invoke([=]
 		{
@@ -138,7 +141,7 @@ public:
 
 			diag_->set_value("input-buffer", static_cast<float>(executor_.size())/static_cast<float>(executor_.capacity()));
 			frame_timer_.restart();
-			
+						
 			buffer_.push_back(std::make_pair(frame, get_key_frame(frame)));
 
 			if(!buffer_.full())
@@ -198,9 +201,10 @@ public:
 	}
 };
 
-frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+frame_consumer_device::frame_consumer_device(const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
+	: impl_(new implementation(format_desc, ogl)){}
 void frame_consumer_device::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
-void frame_consumer_device::send(const safe_ptr<const read_frame>& future_frame) { impl_->send(future_frame); }
+void frame_consumer_device::send(const safe_ptr<read_frame>& future_frame) { impl_->send(future_frame); }
 void frame_consumer_device::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 }}

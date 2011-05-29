@@ -40,17 +40,21 @@ struct channel::implementation : boost::noncopyable
 	const int index_;
 	video_format_desc format_desc_;
 	
+	safe_ptr<ogl_device> ogl_;
+
 	std::shared_ptr<frame_consumer_device>	consumer_;
 	std::shared_ptr<frame_mixer_device>		mixer_;
 	std::shared_ptr<frame_producer_device>	producer_;
 	
 public:
-	implementation(int index, const video_format_desc& format_desc)  
+	implementation(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl)  
 		: index_(index)
 		, format_desc_(format_desc)
-		, consumer_(new frame_consumer_device(format_desc))
-		, mixer_(new frame_mixer_device(format_desc, [=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);}))
+		, ogl_(ogl)
+		, consumer_(new frame_consumer_device(format_desc, ogl))
+		, mixer_(new frame_mixer_device(format_desc, [=](const safe_ptr<read_frame>& frame){consumer_->send(frame);}, ogl))
 		, producer_(new frame_producer_device(format_desc_, [=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);}))	
+
 	{
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
@@ -67,12 +71,12 @@ public:
 		mixer_.reset();
 
 		consumer_->set_video_format_desc(format_desc_);
-		mixer_ = make_safe<frame_mixer_device>(format_desc_, [=](const safe_ptr<const read_frame>& frame){consumer_->send(frame);});
-		producer_ = make_safe<frame_producer_device>(format_desc_, [=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);});
+		mixer_ = std::make_shared<frame_mixer_device>(format_desc_, [=](const safe_ptr<read_frame>& frame){consumer_->send(frame);}, ogl_);
+		producer_ = std::make_shared<frame_producer_device>(format_desc_, [=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);});
 	}
 };
 
-channel::channel(int index, const video_format_desc& format_desc) : impl_(new implementation(index, format_desc)){}
+channel::channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) : impl_(new implementation(index, format_desc, ogl)){}
 channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<frame_producer_device> channel::producer() { return make_safe(impl_->producer_);} 
 safe_ptr<frame_mixer_device> channel::mixer() { return make_safe(impl_->mixer_);} 
