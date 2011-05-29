@@ -73,10 +73,7 @@ public:
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 
 		executor_.set_capacity(1);
-		executor_.begin_invoke([]
-		{
-			SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
-		});
+		executor_.set_priority_class(above_normal_priority_class);
 	}
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
