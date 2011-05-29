@@ -248,6 +248,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="channel.h" />
+    <ClInclude Include="channel_context.h" />
     <ClInclude Include="consumer\frame_consumer_device.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
     <ClInclude Include="mixer\audio\audio_mixer.h" />

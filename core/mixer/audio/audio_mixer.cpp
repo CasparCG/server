@@ -28,7 +28,7 @@ namespace caspar { namespace core {
 	
 struct audio_mixer::implementation
 {
-	std::vector<int16_t> audio_data_;
+	std::deque<std::vector<int16_t>> audio_data_;
 	std::stack<core::audio_transform> transform_stack_;
 
 	std::map<int, core::audio_transform> prev_audio_transforms_;
@@ -38,6 +38,7 @@ public:
 	implementation()
 	{
 		transform_stack_.push(core::audio_transform());
+		audio_data_.push_back(std::vector<int16_t>());
 	}
 	
 	void begin(const core::basic_frame& frame)
@@ -53,8 +54,8 @@ public:
 		auto& audio_data = frame.audio_data();
 		auto tag = frame.tag(); // Get the identifier for the audio-stream.
 
-		if(audio_data_.empty())
-			audio_data_.resize(audio_data.size(), 0);
+		if(audio_data_.back().empty())
+			audio_data_.back().resize(audio_data.size(), 0);
 		
 		auto next = transform_stack_.top();
 		auto prev = next;
@@ -73,7 +74,7 @@ public:
 		auto next_gain = static_cast<int>(next.get_gain()*BASE);
 		auto prev_gain = static_cast<int>(prev.get_gain()*BASE);
 		
-		int n_samples = audio_data_.size();
+		int n_samples = audio_data_.back().size();
 
 		tbb::parallel_for
 		(
@@ -86,12 +87,11 @@ public:
 					
 					int sample = (static_cast<int>(audio_data[n])*sample_gain)/BASE;
 					
-					audio_data_[n] = static_cast<int16_t>((static_cast<int>(audio_data_[n]) + sample) & 0xFFFF);
+					audio_data_.back()[n] = static_cast<int16_t>((static_cast<int>(audio_data_.back()[n]) + sample) & 0xFFFF);
 				}
 			}
 		);
 	}
-
 
 	void begin(const core::audio_transform& transform)
 	{
@@ -102,12 +102,14 @@ public:
 	{
 		transform_stack_.pop();
 	}
-
-
+	
 	std::vector<int16_t> mix()
 	{
 		prev_audio_transforms_ = std::move(next_audio_transforms_);	
-		return std::move(audio_data_);
+		auto result = std::move(audio_data_.front());
+		audio_data_.pop_front();
+		audio_data_.push_back(std::vector<int16_t>());
+		return std::move(result);
 	}
 };
 

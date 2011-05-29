@@ -187,6 +187,11 @@ public:
 		if (!(fmt_->flags & AVFMT_NOFILE)) 
 			url_fclose(oc_->pb); // Close the output ffmpeg.
 	}
+
+	const core::video_format_desc& get_video_format_desc() const
+	{
+		return format_desc_;
+	}
 		
 	std::wstring print() const
 	{
@@ -428,6 +433,11 @@ public:
 	virtual bool key_only() const
 	{
 		return key_only_;
+	}
+
+	virtual const core::video_format_desc& get_video_format_desc() const
+	{
+		return consumer_->get_video_format_desc();
 	}
 };	
 

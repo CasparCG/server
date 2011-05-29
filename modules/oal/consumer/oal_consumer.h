@@ -37,6 +37,7 @@ public:
 	virtual void send(const safe_ptr<const core::read_frame>&);
 	virtual size_t buffer_depth() const;
 	virtual std::wstring print() const;
+	virtual const core::video_format_desc& get_video_format_desc() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

@@ -232,7 +232,7 @@ public:
 
 		// DVVIDEO is in lower field. Make it upper field if needed.
 		if(codec_context_.codec_id == CODEC_ID_DVVIDEO && frame_factory_->get_video_format_desc().mode == core::video_mode::upper)
-			write->get_image_transform().set_fill_translation(0.0f, 1.0/static_cast<double>(height_));
+			write->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(height_));
 
 		return write;
 	}

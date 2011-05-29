@@ -105,6 +105,7 @@
     <ClInclude Include="mixer\frame_mixer_device.h">
       <Filter>mixer</Filter>
     </ClInclude>
+    <ClInclude Include="channel_context.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">

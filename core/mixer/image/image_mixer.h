@@ -26,18 +26,18 @@
 #include <core/producer/frame/pixel_format.h>
 
 #include <boost/noncopyable.hpp>
-#include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
 
 class write_frame;
 class host_buffer;
 class ogl_device;
+struct channel_context;
 
 class image_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	image_mixer(const core::video_format_desc& format_desc, ogl_device& ogl);
+	image_mixer(channel_context& context);
 	
 	virtual void begin(const core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);
@@ -46,7 +46,7 @@ public:
 	void begin_layer();
 	void end_layer();
 	
-	boost::unique_future<safe_ptr<host_buffer>> render();
+	safe_ptr<host_buffer> render();
 
 	safe_ptr<write_frame> create_frame(void* tag, const core::pixel_format_desc& format);
 

@@ -22,6 +22,8 @@
 
 #include "channel.h"
 
+#include "channel_context.h"
+
 #include "video_format.h"
 #include "producer/layer.h"
 
@@ -37,12 +39,7 @@ namespace caspar { namespace core {
 
 struct channel::implementation : boost::noncopyable
 {
-	const int								index_;
-	video_format_desc						format_desc_;
-	
-	ogl_device&								ogl_;
-	executor								context_;
-	executor								destroy_context_;
+	channel_context							context_;
 
 	std::shared_ptr<frame_consumer_device>	consumer_;
 	std::shared_ptr<frame_mixer_device>		mixer_;
@@ -50,41 +47,32 @@ struct channel::implementation : boost::noncopyable
 	
 public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
-		: index_(index)
-		, format_desc_(format_desc)
-		, ogl_(ogl)
-		, consumer_(new frame_consumer_device(context_, format_desc, ogl))
-		, mixer_(new frame_mixer_device(context_, format_desc, [=](const safe_ptr<read_frame>& frame){consumer_->send(frame);}, ogl))
-		, producer_(new frame_producer_device(context_, destroy_context_, format_desc_, [=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);}))	
-		, context_(print() + L"/render")
-		, destroy_context_(print() + L"/destroy")
+		: context_(index, ogl, format_desc)
+		, consumer_(new frame_consumer_device(context_))
+		, mixer_(new frame_mixer_device(context_, [=](const safe_ptr<read_frame>& frame){consumer_->send(frame);}))
+		, producer_(new frame_producer_device(context_, [=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);}))	
 	{
-		context_.set_priority_class(above_normal_priority_class);
-		destroy_context_.set_priority_class(below_normal_priority_class);
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
 
 	~implementation()
 	{
 		// Stop context before destroying devices.
-		context_.stop();
-		context_.join();
+		context_.execution.stop();
+		context_.execution.join();
 	}
 		
 	std::wstring print() const
 	{
-		return L"channel[" + boost::lexical_cast<std::wstring>(index_+1) + L"-" +  format_desc_.name + L"]";
+		return context_.print();
 	}
 
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
-		format_desc_ = format_desc;
-		producer_.reset();
-		mixer_.reset();
-
-		consumer_->set_video_format_desc(format_desc_);
-		mixer_ = std::make_shared<frame_mixer_device>(context_, format_desc_, [=](const safe_ptr<read_frame>& frame){consumer_->send(frame);}, ogl_);
-		producer_ = std::make_shared<frame_producer_device>(context_, destroy_context_, format_desc_, [=](const std::map<int, safe_ptr<basic_frame>>& frames){mixer_->send(frames);});
+		context_.execution.begin_invoke([=]
+		{
+			context_.format_desc = format_desc;
+		});
 	}
 };
 
@@ -93,7 +81,7 @@ channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<frame_producer_device> channel::producer() { return make_safe(impl_->producer_);} 
 safe_ptr<frame_mixer_device> channel::mixer() { return make_safe(impl_->mixer_);} 
 safe_ptr<frame_consumer_device> channel::consumer() { return make_safe(impl_->consumer_);} 
-const video_format_desc& channel::get_video_format_desc() const{return impl_->format_desc_;}
+const video_format_desc& channel::get_video_format_desc() const{return impl_->context_.format_desc;}
 void channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 std::wstring channel::print() const { return impl_->print();}
 

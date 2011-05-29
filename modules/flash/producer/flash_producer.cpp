@@ -86,7 +86,7 @@ private:
 class flash_renderer
 {	
 	const std::wstring filename_;
-	const core::video_format_desc format_desc_;
+	core::video_format_desc format_desc_;
 
 	const std::shared_ptr<core::frame_factory> frame_factory_;
 	
@@ -165,6 +165,12 @@ public:
 	
 	safe_ptr<core::basic_frame> render_frame(bool has_underflow)
 	{
+		if(format_desc_ != frame_factory_->get_video_format_desc())
+		{
+			format_desc_ = frame_factory_->get_video_format_desc();
+			ax_->SetFormat(format_desc_);
+		}
+
 		float frame_time = 1.0f/ax_->GetFPS();
 
 		graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
@@ -186,7 +192,7 @@ public:
 			fast_memclr(bmp_.data(),  format_desc_.size);
 			ax_->DrawControl(bmp_);
 		
-			auto frame = frame_factory_->create_frame(this);
+			auto frame = frame_factory_->create_frame(this, format_desc_.width, format_desc_.height);
 			fast_memcpy(frame->image_data().begin(), bmp_.data(), format_desc_.size);
 			frame->commit();
 			head_ = frame;
