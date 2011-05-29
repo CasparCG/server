@@ -25,7 +25,11 @@
 
 #include <boost/noncopyable.hpp>
 
-namespace caspar { namespace core {
+namespace caspar { 
+	
+class executor;
+	
+namespace core {
 	
 class basic_frame;
 struct video_format_desc;
@@ -34,7 +38,7 @@ class ogl_device;
 class frame_consumer_device : boost::noncopyable
 {
 public:
-	explicit frame_consumer_device(const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
+	explicit frame_consumer_device(executor& context, const video_format_desc& format_desc, ogl_device& ogl);
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);

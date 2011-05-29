@@ -35,7 +35,7 @@ class ogl_device;
 class channel : boost::noncopyable
 {
 public:
-	explicit channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
+	explicit channel(int index, const video_format_desc& format_desc, ogl_device& ogl);
 	channel(channel&& other);
 
 	safe_ptr<frame_producer_device> producer();

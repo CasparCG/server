@@ -105,9 +105,6 @@
     <ClInclude Include="mixer\frame_mixer_device.h">
       <Filter>mixer</Filter>
     </ClInclude>
-    <ClInclude Include="producer\destroy_producer_proxy.h">
-      <Filter>producer</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -172,9 +169,6 @@
     </ClCompile>
     <ClCompile Include="mixer\write_frame.cpp">
       <Filter>mixer</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\destroy_producer_proxy.cpp">
-      <Filter>producer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

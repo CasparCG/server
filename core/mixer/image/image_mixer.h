@@ -19,29 +19,25 @@
 */
 #pragma once
 
-#include "../write_frame.h"
-
 #include <common/memory/safe_ptr.h>
 
 #include <core/video_format.h>
 #include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
 
-#include "../gpu/host_buffer.h"
-
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
 
-#include <vector>
-
 namespace caspar { namespace core {
-	
+
+class write_frame;
+class host_buffer;
 class ogl_device;
 
 class image_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	image_mixer(const core::video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
+	image_mixer(const core::video_format_desc& format_desc, ogl_device& ogl);
 	
 	virtual void begin(const core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);
