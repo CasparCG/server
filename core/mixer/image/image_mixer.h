@@ -36,10 +36,12 @@
 
 namespace caspar { namespace core {
 	
+class ogl_device;
+
 class image_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	image_mixer(const core::video_format_desc& format_desc);
+	image_mixer(const core::video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
 	
 	virtual void begin(const core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);

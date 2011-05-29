@@ -50,39 +50,36 @@ void init_ffmpeg()
 	core::register_producer_factory(create_ffmpeg_producer);
 }
 
-std::wstring get_avcodec_version()
+std::wstring make_version(unsigned int ver)
 {
 	std::wstringstream str;
-	str << ((avcodec_version() >> 16) & 0xFF) << L"." << ((avcodec_version() >> 8) & 0xFF) << L"." << ((avcodec_version() >> 0) & 0xFF);
+	str << ((ver >> 16) & 0xFF) << L"." << ((ver >> 8) & 0xFF) << L"." << ((ver >> 0) & 0xFF);
 	return str.str();
+}
+
+std::wstring get_avcodec_version()
+{
+	return make_version(avcodec_version());
 }
 
 std::wstring get_avformat_version()
 {
-	std::wstringstream str;
-	str << ((avformat_version() >> 16) & 0xFF) << L"." << ((avformat_version() >> 8) & 0xFF) << L"." << ((avformat_version() >> 0) & 0xFF);
-	return str.str();
+	return make_version(avformat_version());
 }
 
 std::wstring get_avutil_version()
 {
-	std::wstringstream str;
-	str << ((avutil_version() >> 16) & 0xFF) << L"." << ((avutil_version() >> 8) & 0xFF) << L"." << ((avutil_version() >> 0) & 0xFF);
-	return str.str();
+	return make_version(avutil_version());
 }
 
 std::wstring get_avfilter_version()
 {
-	std::wstringstream str;
-	str << ((avfilter_version() >> 16) & 0xFF) << L"." << ((avfilter_version() >> 8) & 0xFF) << L"." << ((avfilter_version() >> 0) & 0xFF);
-	return str.str();
+	return make_version(avfilter_version());
 }
 
 std::wstring get_swscale_version()
 {
-	std::wstringstream str;
-	str << ((swscale_version() >> 16) & 0xFF) << L"." << ((swscale_version() >> 8) & 0xFF) << L"." << ((swscale_version() >> 0) & 0xFF);
-	return str.str();
+	return make_version(swscale_version());
 }
 
 }

@@ -46,58 +46,26 @@ class ogl_device
 	unsigned int fbo_;
 
 	executor executor_;
-
+				
+public:		
 	ogl_device();
 	~ogl_device();
-
-	static ogl_device& get_instance()
-	{
-		static ogl_device device;
-		return device;
-	}
 	
 	template<typename Func>
-	auto do_begin_invoke(Func&& func, priority priority) -> boost::unique_future<decltype(func())> // noexcept
+	auto begin_invoke(Func&& func, priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{			
 		return executor_.begin_invoke(std::forward<Func>(func), priority);
 	}
 	
 	template<typename Func>
-	auto do_invoke(Func&& func, priority priority) -> decltype(func())
+	auto invoke(Func&& func, priority priority = normal_priority) -> decltype(func())
 	{
 		return executor_.invoke(std::forward<Func>(func), priority);
 	}
 		
-	safe_ptr<device_buffer> do_create_device_buffer(size_t width, size_t height, size_t stride);
-	safe_ptr<host_buffer> do_create_host_buffer(size_t size, host_buffer::usage_t usage);
-public:		
-	
-	template<typename Func>
-	static auto begin_invoke(Func&& func, priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
-	{			
-		return get_instance().do_begin_invoke(std::forward<Func>(func), priority);
-	}
-	
-	template<typename Func>
-	static auto invoke(Func&& func, priority priority = normal_priority) -> decltype(func())
-	{
-		return get_instance().do_invoke(std::forward<Func>(func), priority);
-	}
-		
-	static safe_ptr<device_buffer> create_device_buffer(size_t width, size_t height, size_t stride)
-	{
-		return get_instance().do_create_device_buffer(width, height, stride);
-	}
-
-	static safe_ptr<host_buffer> create_host_buffer(size_t size, host_buffer::usage_t usage)
-	{
-		return get_instance().do_create_host_buffer(size, usage);
-	}
-
-	static void yield()
-	{
-		get_instance().executor_.yield();
-	}
+	safe_ptr<device_buffer> create_device_buffer(size_t width, size_t height, size_t stride);
+	safe_ptr<host_buffer> create_host_buffer(size_t size, host_buffer::usage_t usage);
+	void yield();
 
 	static std::wstring get_version();
 };
