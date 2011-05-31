@@ -63,8 +63,8 @@ struct transition_producer : public frame_producer
 		if(current_frame_++ >= info_.duration)
 			return basic_frame::eof();
 		
-		safe_ptr<core::basic_frame> dest;
-		safe_ptr<core::basic_frame> source;
+		auto dest	= core::basic_frame::empty();
+		auto source	= core::basic_frame::empty();
 
 		tbb::parallel_invoke
 		(

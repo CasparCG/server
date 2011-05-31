@@ -81,7 +81,7 @@ public:
 		if(!frame->audio_data().empty())
 			input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 	
 		else
-			input_.push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)); 
+			input_.push(std::vector<short>(3840, 0)); //static_cast<size_t>(48000.0f/format_desc_.fps)*2
 	}
 
 	size_t buffer_depth() const{return 3;}

@@ -30,16 +30,16 @@
 namespace caspar { namespace core {
 
 struct video_format_desc;
-struct channel_context;
+struct video_channel_context;
 
 class frame_producer_device : boost::noncopyable
 {
 public:
-	explicit frame_producer_device(channel_context& channel);
+	explicit frame_producer_device(video_channel_context& video_channel);
 
 	void swap(frame_producer_device& other);
 
-	std::map<int, safe_ptr<basic_frame>> receive();
+	std::map<int, safe_ptr<basic_frame>> operator()();
 		
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false);
 	void pause(int index);

@@ -25,7 +25,7 @@
 
 #include "frame_consumer_device.h"
 
-#include "../channel_context.h"
+#include "../video_channel_context.h"
 
 #include "../video_format.h"
 #include "../mixer/gpu/ogl_device.h"
@@ -46,11 +46,12 @@ struct frame_consumer_device::implementation
 {	
 	typedef std::pair<safe_ptr<const read_frame>, safe_ptr<const read_frame>> fill_and_key;
 	
-	channel_context& channel_;
+	video_channel_context& channel_;
 
 	boost::circular_buffer<fill_and_key> buffer_;
 
 	std::map<int, safe_ptr<frame_consumer>> consumers_;
+	typedef std::map<int, safe_ptr<frame_consumer>>::value_type layer_t;
 	
 	high_prec_timer timer_;
 	
@@ -60,14 +61,22 @@ struct frame_consumer_device::implementation
 	boost::timer tick_timer_;
 		
 public:
-	implementation(channel_context& channel) 
-		: channel_(channel)
+	implementation(video_channel_context& video_channel) 
+		: channel_(video_channel)
 		, diag_(diagnostics::create_graph(std::string("frame_consumer_device")))
 	{		
-		diag_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
 		diag_->add_guide("frame-time", 0.5f);	
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
+	}
+
+	std::pair<size_t, size_t> buffer_depth()
+	{		
+		auto depth_comp = [](const layer_t& lhs, const layer_t& rhs){ return lhs.second->buffer_depth() < rhs.second->buffer_depth(); };
+		auto min = std::min_element(consumers_.begin(), consumers_.end(), depth_comp)->second->buffer_depth();
+		auto max = std::max_element(consumers_.begin(), consumers_.end(), depth_comp)->second->buffer_depth();
+		CASPAR_ASSERT(max >= min);
+		return std::make_pair(min, max);
 	}
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
@@ -75,10 +84,18 @@ public:
 		consumer->initialize(channel_.format_desc);
 		channel_.execution.invoke([&]
 		{
-			buffer_.set_capacity(std::max(buffer_.capacity(), consumer->buffer_depth()));
-
 			this->remove(index);
 			consumers_.insert(std::make_pair(index, consumer));
+
+			auto depth = buffer_depth();
+			auto diff = depth.second-depth.first+1;
+			
+			if(diff != buffer_.capacity())
+			{
+				buffer_.set_capacity(diff);
+				CASPAR_LOG(info) << print() << L" Depth-diff: " << diff-1;
+			}
+
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
 		});
 	}
@@ -95,6 +112,39 @@ public:
 			}
 		});
 	}
+						
+	void operator()(const safe_ptr<read_frame>& frame)
+	{		
+		if(!has_synchronization_clock())
+			timer_.tick(1.0/channel_.format_desc.fps);
+
+		frame_timer_.restart();
+						
+		buffer_.push_back(std::make_pair(frame, get_key_frame(frame)));
+
+		if(!buffer_.full())
+			return;
+	
+		for_each_consumer([&](safe_ptr<frame_consumer>& consumer)
+		{
+			if(consumer->get_video_format_desc() != channel_.format_desc)
+				consumer->initialize(channel_.format_desc);
+
+			auto tmp = (consumer->buffer_depth()-buffer_depth().first);
+			auto pair = buffer_[tmp];
+			auto frame = consumer->key_only() ? pair.second : pair.first;
+
+			if(static_cast<size_t>(frame->image_data().size()) == consumer->get_video_format_desc().size)
+				consumer->send(frame);
+		});
+
+		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.format_desc.fps*0.5);
+			
+		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
+		tick_timer_.restart();
+	}
+
+private:
 
 	bool has_synchronization_clock()
 	{
@@ -117,45 +167,10 @@ public:
 			auto key_data = channel_.ogl.create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
 			fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			std::vector<int16_t> audio_data(frame->audio_data().begin(), frame->audio_data().end());
-			return make_safe<read_frame>(std::move(key_data), std::move(audio_data));
+			return make_safe<read_frame>(std::move(key_data), std::move(audio_data), frame->number());
 		}
 		
 		return read_frame::empty();
-	}
-					
-	void send(const safe_ptr<read_frame>& frame)
-	{		
-		channel_.execution.invoke([=]
-		{
-			if(!has_synchronization_clock())
-				timer_.tick(1.0/channel_.format_desc.fps);
-
-			diag_->set_value("input-buffer", static_cast<float>(channel_.execution.size())/static_cast<float>(channel_.execution.capacity()));
-			frame_timer_.restart();
-						
-			buffer_.push_back(std::make_pair(frame, get_key_frame(frame)));
-
-			if(!buffer_.full())
-				return;
-	
-			for_each_consumer([&](safe_ptr<frame_consumer>& consumer)
-			{
-				if(consumer->get_video_format_desc() != channel_.format_desc)
-					consumer->initialize(channel_.format_desc);
-
-				auto pair = buffer_[consumer->buffer_depth()-1];
-				auto frame = consumer->key_only() ? pair.second : pair.first;
-
-				if(static_cast<size_t>(frame->image_data().size()) == consumer->get_video_format_desc().size)
-					consumer->send(frame);
-			});
-
-			diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.format_desc.fps*0.5);
-			
-			diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
-			tick_timer_.restart();
-		});
-		diag_->set_value("input-buffer", static_cast<float>(channel_.execution.size())/static_cast<float>(channel_.execution.capacity()));
 	}
 		
 	void for_each_consumer(const std::function<void(safe_ptr<frame_consumer>& consumer)>& func)
@@ -183,9 +198,9 @@ public:
 	}
 };
 
-frame_consumer_device::frame_consumer_device(channel_context& channel) 
-	: impl_(new implementation(channel)){}
+frame_consumer_device::frame_consumer_device(video_channel_context& video_channel) 
+	: impl_(new implementation(video_channel)){}
 void frame_consumer_device::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
-void frame_consumer_device::send(const safe_ptr<read_frame>& frame) { impl_->send(frame); }
+void frame_consumer_device::operator()(const safe_ptr<read_frame>& frame) { (*impl_)(frame); }
 }}

@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include <core/channel.h>
+#include <core/video_channel.h>
 
 #include <common/exception/exceptions.h>
 
@@ -35,7 +35,7 @@ class server : boost::noncopyable
 public:
 	server();
 
-	const std::vector<safe_ptr<core::channel>> get_channels() const;
+	const std::vector<safe_ptr<core::video_channel>> get_channels() const;
 
 private:
 	struct implementation;

@@ -49,13 +49,15 @@ struct configuration
 	bool	external_key;
 	bool	low_latency;
 	bool	key_only;
+	size_t	buffer_depth;
 	
 	configuration()
 		: device_index(1)
 		, embedded_audio(false)
 		, external_key(false)
 		, low_latency(false)
-		, key_only(false){}
+		, key_only(false)
+		, buffer_depth(5){}
 };
 
 class decklink_frame_adapter : public IDeckLinkVideoFrame
@@ -109,6 +111,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 
 	unsigned long frames_scheduled_;
 	unsigned long audio_scheduled_;
+
+	size_t preroll_count_;
 		
 	std::list<std::shared_ptr<IDeckLinkVideoFrame>> frame_container_; // Must be std::list in order to guarantee that pointers are always valid.
 	boost::circular_buffer<std::vector<short>> audio_container_;
@@ -128,9 +132,10 @@ public:
 		, keyer_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
-		, buffer_size_(config.embedded_audio ? 5 : 4) // Minimum buffer-size (3 + 1 tolerance).
+		, buffer_size_(config.embedded_audio ? config.buffer_depth + 1 : config.buffer_depth) // Minimum buffer-size 3.
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
+		, preroll_count_(0)
 		, audio_container_(buffer_size_+1)
 	{
 		is_running_ = true;
@@ -152,15 +157,16 @@ public:
 
 		set_latency(config.low_latency);				
 		set_keyer(config.external_key);
-								
+				
+		if(config.embedded_audio)		
+			output_->BeginAudioPreroll();		
+		
 		for(size_t n = 0; n < buffer_size_; ++n)
 			schedule_next_video(core::read_frame::empty());
-		
-		if(config.embedded_audio)
-			output_->BeginAudioPreroll();
-		else
+
+		if(!config.embedded_audio)
 			start_playback();
-		
+				
 		CASPAR_LOG(info) << print() << L" Buffer depth: " << buffer_size_;		
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
@@ -296,13 +302,23 @@ public:
 			return E_FAIL;
 		
 		try
-		{
-			std::shared_ptr<const core::read_frame> frame;
-			audio_frame_buffer_.pop(frame);
-			schedule_next_audio(safe_ptr<const core::read_frame>(frame));		
-
+		{	
 			if(preroll)
-				start_playback();
+			{
+				if(++preroll_count_ >= buffer_size_)
+				{
+					output_->EndAudioPreroll();
+					start_playback();				
+				}
+				else
+					schedule_next_audio(core::read_frame::empty());	
+			}
+			else
+			{
+				std::shared_ptr<const core::read_frame> frame;
+				audio_frame_buffer_.pop(frame);
+				schedule_next_audio(safe_ptr<const core::read_frame>(frame));	
+			}
 		}
 		catch(...)
 		{
@@ -391,6 +407,11 @@ public:
 	{
 		return context_->get_video_format_desc();
 	}
+
+	virtual size_t buffer_depth() const
+	{
+		return context_->buffer_size_;
+	}
 };	
 
 safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params) 
@@ -415,11 +436,12 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tr
 {
 	configuration config;
 
-	config.external_key		= ptree.get("external-key",	  false);
-	config.low_latency		= ptree.get("low-latency",	  false);
-	config.key_only			= ptree.get("key-only",		  false);
-	config.device_index		= ptree.get("device",		  0);
-	config.embedded_audio	= ptree.get("embedded-audio", false);
+	config.external_key		= ptree.get("external-key",	  config.external_key);
+	config.low_latency		= ptree.get("low-latency",	  config.low_latency);
+	config.key_only			= ptree.get("key-only",		  config.key_only);
+	config.device_index		= ptree.get("device",		  config.device_index);
+	config.embedded_audio	= ptree.get("embedded-audio", config.embedded_audio);
+	config.buffer_depth		= ptree.get("buffer-depth",	  config.buffer_depth);
 
 	return make_safe<decklink_consumer_proxy>(config);
 }

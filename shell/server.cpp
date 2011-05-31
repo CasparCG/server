@@ -25,7 +25,7 @@
 #include <common/utility/string.h>
 
 #include <core/mixer/gpu/ogl_device.h>
-#include <core/channel.h>
+#include <core/video_channel.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -63,7 +63,7 @@ using namespace protocol;
 struct server::implementation : boost::noncopyable
 {
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
-	std::vector<safe_ptr<channel>>				channels_;
+	std::vector<safe_ptr<video_channel>>				channels_;
 	ogl_device									ogl_;
 
 	implementation()												
@@ -96,7 +96,7 @@ struct server::implementation : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(channel(channels_.size(), format_desc, ogl_));
+			channels_.push_back(video_channel(channels_.size(), format_desc, ogl_));
 			
 			int index = 0;
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))
@@ -113,7 +113,7 @@ struct server::implementation : boost::noncopyable
 					else if(name == "file")					
 						channels_.back()->consumer()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
 					else if(name == "audio")
-						channels_.back()->consumer()->add(index++, oal_consumer());		
+						channels_.back()->consumer()->add(index++, make_safe<oal_consumer>());		
 					else if(name != "<xmlcomment>")
 						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
 				}
@@ -167,7 +167,7 @@ struct server::implementation : boost::noncopyable
 
 server::server() : impl_(new implementation()){}
 
-const std::vector<safe_ptr<channel>> server::get_channels() const
+const std::vector<safe_ptr<video_channel>> server::get_channels() const
 {
 	return impl_->channels_;
 }
