@@ -27,7 +27,7 @@
 #include "../gpu/device_buffer.h"
 #include "../write_frame.h"
 
-#include "../../channel_context.h"
+#include "../../video_channel_context.h"
 
 #include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
@@ -56,7 +56,7 @@ struct image_mixer::implementation : boost::noncopyable
 		core::image_transform				 transform;
 	};
 
-	channel_context&						channel_;
+	video_channel_context&						channel_;
 	
 	std::stack<core::image_transform>		transform_stack_;
 	std::queue<std::queue<render_item>>		render_queue_;
@@ -74,13 +74,13 @@ struct image_mixer::implementation : boost::noncopyable
 	bool layer_key_;
 	
 public:
-	implementation(channel_context& channel) 
-		: channel_(channel)
-		, read_buffer_(channel.ogl.create_host_buffer(channel.format_desc.size, host_buffer::read_only))
-		, draw_buffer_(channel.ogl.create_device_buffer(channel.format_desc.width, channel_.format_desc.height, 4))
-		, write_buffer_	(channel.ogl.create_device_buffer(channel.format_desc.width, channel_.format_desc.height, 4))
-		, local_key_buffer_(channel.ogl.create_device_buffer(channel.format_desc.width, channel_.format_desc.height, 1))
-		, layer_key_buffer_(channel.ogl.create_device_buffer(channel.format_desc.width, channel_.format_desc.height, 1))
+	implementation(video_channel_context& video_channel) 
+		: channel_(video_channel)
+		, read_buffer_(video_channel.ogl.create_host_buffer(video_channel.format_desc.size, host_buffer::read_only))
+		, draw_buffer_(video_channel.ogl.create_device_buffer(video_channel.format_desc.width, channel_.format_desc.height, 4))
+		, write_buffer_	(video_channel.ogl.create_device_buffer(video_channel.format_desc.width, channel_.format_desc.height, 4))
+		, local_key_buffer_(video_channel.ogl.create_device_buffer(video_channel.format_desc.width, channel_.format_desc.height, 1))
+		, layer_key_buffer_(video_channel.ogl.create_device_buffer(video_channel.format_desc.width, channel_.format_desc.height, 1))
 		, local_key_(false)
 		, layer_key_(false)
 	{
@@ -226,7 +226,7 @@ public:
 	}
 };
 
-image_mixer::image_mixer(channel_context& channel) : impl_(new implementation(channel)){}
+image_mixer::image_mixer(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
 void image_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}

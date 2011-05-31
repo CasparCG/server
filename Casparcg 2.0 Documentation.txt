@@ -13,7 +13,7 @@ Version		Date			Description			Author
 1. CasparCG Server
 ==================================================================================
 The CasparCG 2.0 Server is based open tree components types; "producers", "mixers" and 
-"consumers" which in combined configurations make up a "channel". The server also
+"consumers" which in combined configurations make up a "video_channel". The server also
 has "protocols" for communication and controlling.
 
 	Producer - Renders and plays media such as video, animations, images and audio.
@@ -202,7 +202,7 @@ Examples:
 	>> CUT
 	<< CUT
 
-	[channel:int] - A required value for "channel" which must a signed
+	[video_channel:int] - A required value for "video_channel" which must a signed
 			integer.
 	>> 1
 	<< 1
@@ -247,7 +247,7 @@ Examples:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	LOADBG [channel:int]{-[layer:int]|-0} [clip:string] {[loop:LOOP]}
+	LOADBG [video_channel:int]{-[layer:int]|-0} [clip:string] {[loop:LOOP]}
 	 {[transition:CUT,MIX,PUSH,WIPE] [duration:uint] {[tween:string]|linear} 
 	 {[direction:LEFT,RIGHT]|RIGHT}|CUT 0} {([start:uint]{,[length:uint]})|(0)}
 
@@ -278,7 +278,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	LOAD [channel:int]{-[layer:int]|-0} [clip:string] {[loop:LOOP]} 
+	LOAD [video_channel:int]{-[layer:int]|-0} [clip:string] {[loop:LOOP]} 
 	 {([start_frame:uint]{,[end_frame:uint]})|(0)}
 
 Description: 
@@ -300,7 +300,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax:
 
-	PLAY [channel:int]{-[layer:int]|-0} {"additional parameters"}
+	PLAY [video_channel:int]{-[layer:int]|-0} {"additional parameters"}
 	 
 Description: 
 
@@ -325,7 +325,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax:
 
-	PAUSE [channel:int]{-[layer:int]|-0}
+	PAUSE [video_channel:int]{-[layer:int]|-0}
 
 Description: 
 
@@ -341,7 +341,7 @@ Examples:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	PAUSE [channel:int]{-[layer:int]|-0}
+	PAUSE [video_channel:int]{-[layer:int]|-0}
 
 Description: 
 
@@ -357,12 +357,12 @@ Examples:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CLEAR [channel:int]{-[layer:int]}
+	CLEAR [video_channel:int]{-[layer:int]}
 
 Description: 
 
 	Removes all clips (both foreground and background). If no layer is specified 
-	then all layers in the specified channel are cleared.
+	then all layers in the specified video_channel are cleared.
 	
 Examples: 	
 
@@ -379,7 +379,7 @@ Syntax:
 Description: 
 
 	Swaps layers between channels (both foreground and background will be swapped). 
-	If layers are not specified then all layers in respective channel will be swapped.
+	If layers are not specified then all layers in respective video_channel will be swapped.
 	
 Examples: 	
 
@@ -391,12 +391,12 @@ Examples:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	ADD [channel:int]{-[layer:int]|-0} [parameters:string]
+	ADD [video_channel:int]{-[layer:int]|-0} [parameters:string]
 
 Description: 
 
 	The string "clip" will be parsed by available registered consumer factories. If
-	a successfull match is found a consumer will be created and added to the channel.
+	a successfull match is found a consumer will be created and added to the video_channel.
 
 Examples: 	
 
@@ -408,11 +408,11 @@ Examples:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	REMOVE [channel:int]{-[layer:int]|-0}
+	REMOVE [video_channel:int]{-[layer:int]|-0}
 
 Description: 
 
-	Removes an existing consumer from channel.
+	Removes an existing consumer from video_channel.
 	
 Examples: 	
 
@@ -424,7 +424,7 @@ Examples:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	PARAM [channel:int]{-[layer:int]|-0} [param:string]
+	PARAM [video_channel:int]{-[layer:int]|-0} [param:string]
 
 Description: 
 
@@ -519,7 +519,7 @@ id=\"text\" value=\"Providing an example\"></data> </componentData></templateDat
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CG [channel:int]{-[layer:int]|-0} ADD [flash_layer:uint] [template:string]
+	CG [video_channel:int]{-[layer:int]|-0} ADD [flash_layer:uint] [template:string]
 	 [play-on-load:0,1] [data]
 
 Description: 
@@ -538,7 +538,7 @@ Examples:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CG [channel:int]{-[layer:int]|-0} REMOVE [flash_layer:uint]
+	CG [video_channel:int]{-[layer:int]|-0} REMOVE [flash_layer:uint]
 
 Description: 
 
@@ -549,7 +549,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CG [channel:int]{-[layer:int]|-0} CLEAR [flash_layer:uint]
+	CG [video_channel:int]{-[layer:int]|-0} CLEAR [flash_layer:uint]
 
 Description: 
 
@@ -562,7 +562,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CG [channel:int]{-[layer:int]|-0} PLAY [flash_layer:uint]
+	CG [video_channel:int]{-[layer:int]|-0} PLAY [flash_layer:uint]
 
 Description: 
 
@@ -573,7 +573,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CG [channel:int]{-[layer:int]|-0} STOP [flash_layer:uint]
+	CG [video_channel:int]{-[layer:int]|-0} STOP [flash_layer:uint]
 
 Description: 
 
@@ -585,7 +585,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CG [channel:int]{-[layer:int]|-0} NEXT [flash_layer:uint]
+	CG [video_channel:int]{-[layer:int]|-0} NEXT [flash_layer:uint]
 
 Description: 
 
@@ -597,7 +597,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CG [channel:int]{-[layer:int]|-0} GOTO [flash_layer:uint] [label:string]
+	CG [video_channel:int]{-[layer:int]|-0} GOTO [flash_layer:uint] [label:string]
 
 Description: 
 
@@ -608,7 +608,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CG [channel:int]{-[layer:int]|-0} GOTO [flash_layer:uint] [data:string]
+	CG [video_channel:int]{-[layer:int]|-0} GOTO [flash_layer:uint] [data:string]
 
 Description: 
 
@@ -620,7 +620,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	CG [channel:int]{-[layer:int]|-0} GOTO [flash_layer:uint] [method:string]
+	CG [video_channel:int]{-[layer:int]|-0} GOTO [flash_layer:uint] [method:string]
 
 Description: 
 
@@ -636,7 +636,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} VIDEO IS_KEY {is_key:0,1|0}
+	MIXER [video_channel:int]{-[layer:int]|-0} VIDEO IS_KEY {is_key:0,1|0}
 
 Description: 
 
@@ -656,7 +656,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} VIDEO OPACITY {opacity:float} 
+	MIXER [video_channel:int]{-[layer:int]|-0} VIDEO OPACITY {opacity:float} 
 	 {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -676,7 +676,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} VIDEO GAIN {opacity:float} 
+	MIXER [video_channel:int]{-[layer:int]|-0} VIDEO GAIN {opacity:float} 
 	 {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -696,7 +696,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} VIDEO FILL_RECT [x:float] [y:float]
+	MIXER [video_channel:int]{-[layer:int]|-0} VIDEO FILL_RECT [x:float] [y:float]
 	 [x-scale:float] [y-slace:float] {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -719,7 +719,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} VIDEO KEY_RECT [x:float] [y:float]
+	MIXER [video_channel:int]{-[layer:int]|-0} VIDEO KEY_RECT [x:float] [y:float]
 	 [x-scale:float] [y-slace:float] {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -739,7 +739,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int] GRID [resolution:uint] VIDEO {[duration:uint] 
+	MIXER [video_channel:int] GRID [resolution:uint] VIDEO {[duration:uint] 
 	 {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -762,7 +762,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} VIDEO RESET {[duration:uint] 
+	MIXER [video_channel:int]{-[layer:int]|-0} VIDEO RESET {[duration:uint] 
 	 {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -783,7 +783,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} AUDIO GAIN {opacity:float} 
+	MIXER [video_channel:int]{-[layer:int]|-0} AUDIO GAIN {opacity:float} 
 	 {[duration:uint] {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -803,7 +803,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} AUDIO RESET {[duration:uint] 
+	MIXER [video_channel:int]{-[layer:int]|-0} AUDIO RESET {[duration:uint] 
 	 {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -824,7 +824,7 @@ Note:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	MIXER [channel:int]{-[layer:int]|-0} RESET {[duration:uint] 
+	MIXER [video_channel:int]{-[layer:int]|-0} RESET {[duration:uint] 
 	 {[tween:string]|linear}|0 linear}
 
 Description: 
@@ -894,7 +894,7 @@ Description:
 ----------------------------------------------------------------------------------
 Syntax: 
 
-	INFO [channel:int]
+	INFO [video_channel:int]
 
 Description: 
 
@@ -942,7 +942,7 @@ Description:
 ----------------------------------------------------------------------------------
 
 	400 ERROR				- Command not understood
-	401 [command] ERROR		- Illegal channel
+	401 [command] ERROR		- Illegal video_channel
 	402 [command] ERROR		- Parameter missing
 	403 [command] ERROR		- Illegal parameter
 	404 [command] ERROR		- Media file not found

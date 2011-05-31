@@ -37,15 +37,14 @@ class write_frame;
 class basic_frame;
 class audio_transform;
 class image_transform;
-struct channel_context;
+struct video_channel_context;
 
 class frame_mixer_device : public core::frame_factory
 {
 public:	
-	explicit frame_mixer_device(channel_context& channel);
+	explicit frame_mixer_device(video_channel_context& video_channel);
 		
-	void send(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
-	safe_ptr<core::read_frame> receive();
+	safe_ptr<core::read_frame> operator()(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
 		
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc);		
 	safe_ptr<core::write_frame> create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt = core::pixel_format::bgra);		

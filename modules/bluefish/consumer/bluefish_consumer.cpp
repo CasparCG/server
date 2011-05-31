@@ -29,6 +29,7 @@
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/memcpy.h>
+#include <common/memory/memclr.h>
 #include <common/utility/timer.h>
 
 #include <tbb/concurrent_queue.h>
@@ -92,8 +93,6 @@ struct bluefish_consumer : boost::noncopyable
 	boost::timer tick_timer_;
 	boost::timer sync_timer_;
 
-	boost::unique_future<void> active_;
-			
 	std::shared_ptr<CBlueVelvet4> blue_;
 	
 	const core::video_format_desc	format_desc_;
@@ -104,13 +103,14 @@ struct bluefish_consumer : boost::noncopyable
 	unsigned long engine_mode_;
 	EVideoMode	vid_fmt_; 
 	
-	std::array<blue_dma_buffer_ptr, 3> reserved_frames_;	
+	std::array<blue_dma_buffer_ptr, 4> reserved_frames_;	
+	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> frame_buffer_;
 
 	const bool embedded_audio_;
-
+	
 	executor executor_;
 public:
-	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio) 
+	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, size_t buffer_depth) 
 		: model_name_(L"BLUEFISH")
 		, device_index_(device_index) 
 		, format_desc_(format_desc)
@@ -122,6 +122,8 @@ public:
 		, embedded_audio_(embedded_audio)
 		, executor_(print())
 	{
+		executor_.set_capacity(buffer_depth);
+
 		if(!BlueVelvetFactory4 || (embedded_audio_ && (!encode_hanc_frame || !encode_hanc_frame)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
 		
@@ -143,10 +145,10 @@ public:
 			
 		//void* pBlueDevice = blue_attach_to_device(1);
 		//EBlueConnectorPropertySetting video_routing[1];
-		//auto channel = BLUE_VIDEO_OUTPUT_CHANNEL_A;
-		//video_routing[0].channel = channel;	
+		//auto video_channel = BLUE_VIDEO_OUTPUT_CHANNEL_A;
+		//video_routing[0].video_channel = video_channel;	
 		//video_routing[0].propType = BLUE_CONNECTOR_PROP_SINGLE_LINK;
-		//video_routing[0].connector = channel == BLUE_VIDEO_OUTPUT_CHANNEL_A ? BLUE_CONNECTOR_SDI_OUTPUT_A : BLUE_CONNECTOR_SDI_OUTPUT_B;
+		//video_routing[0].connector = video_channel == BLUE_VIDEO_OUTPUT_CHANNEL_A ? BLUE_CONNECTOR_SDI_OUTPUT_A : BLUE_CONNECTOR_SDI_OUTPUT_B;
 		//blue_set_connector_property(pBlueDevice, 1, video_routing);
 		//blue_detach_from_device(&pBlueDevice);
 		
@@ -161,9 +163,9 @@ public:
 		if(vid_fmt_ == VID_FMT_INVALID)
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
 		
-		// Set default video output channel
-		//if(BLUE_FAIL(set_card_property(blue_, DEFAULT_VIDEO_OUTPUT_CHANNEL, channel)))
-		//	CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set default channel. (device ") << device_index_ << TEXT(")");
+		// Set default video output video_channel
+		//if(BLUE_FAIL(set_card_property(blue_, DEFAULT_VIDEO_OUTPUT_CHANNEL, video_channel)))
+		//	CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set default video_channel. (device ") << device_index_ << TEXT(")");
 
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
@@ -225,10 +227,11 @@ public:
 		enable_video_output();
 						
 		for(size_t n = 0; n < reserved_frames_.size(); ++n)
-			reserved_frames_[n] = std::make_shared<blue_dma_buffer>(format_desc_.size, n);		
+			reserved_frames_[n] = std::make_shared<blue_dma_buffer>(format_desc_.size, n);	
 
-		active_ = executor_.begin_invoke([]{});
-				
+		for(int n = 0; n < executor_.capacity(); ++n)
+			schedule_next_video(core::read_frame::empty());
+						
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
@@ -261,13 +264,17 @@ public:
 		if(!BLUE_PASS(set_card_property(blue_, VIDEO_BLACKGENERATOR, 1)))
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");		
 	}
-
+	
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{			
+		schedule_next_video(frame);			
+	}
+	
+	void schedule_next_video(const safe_ptr<const core::read_frame>& frame)
+	{
 		static std::vector<short> silence(MAX_HANC_BUFFER_SIZE, 0);
-				
-		active_.get();
-		active_ = executor_.begin_invoke([=]
+		
+		executor_.begin_invoke([=]
 		{
 			try
 			{
@@ -276,8 +283,11 @@ public:
 				const size_t audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps);
 				const size_t audio_nchannels = 2;
 				
-				fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
-				
+				if(!frame->image_data().empty())
+					fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
+				else
+					fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
+
 				sync_timer_.restart();
 				unsigned long n_field = 0;
 				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
@@ -358,20 +368,22 @@ public:
 
 struct bluefish_consumer_proxy : public core::frame_consumer
 {
-	std::unique_ptr<bluefish_consumer> consumer_;
-	const size_t device_index_;
-	const bool embedded_audio_;
-	bool key_only_;
+	std::unique_ptr<bluefish_consumer>	consumer_;
+	const size_t						device_index_;
+	const bool							embedded_audio_;
+	bool								key_only_;
+	size_t								buffer_depth_;
 public:
 
-	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
+	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only, size_t buffer_depth)
 		: device_index_(device_index)
 		, embedded_audio_(embedded_audio)
-		, key_only_(key_only){}
+		, key_only_(key_only)
+		, buffer_depth_(buffer_depth){}
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_));
+		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, buffer_depth_));
 	}
 	
 	virtual void send(const safe_ptr<const core::read_frame>& frame)
@@ -392,6 +404,11 @@ public:
 	virtual bool key_only() const
 	{
 		return key_only_;
+	}
+
+	virtual size_t buffer_depth() const
+	{
+		return consumer_->executor_.capacity();
 	}
 };	
 
@@ -445,16 +462,17 @@ safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::w
 	bool embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	bool key_only		= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
+	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, 3);
 }
 
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree) 
 {	
-	auto device_index	 = ptree.get("device",		   0);
+	auto device_index	 = ptree.get("device",		   1);
 	auto embedded_audio  = ptree.get("embedded-audio", false);
 	bool key_only		 = ptree.get("key-only",	   false);
+	size_t buffer_depth  = ptree.get("buffer-depth",   3);
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
+	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, buffer_depth);
 }
 
 }

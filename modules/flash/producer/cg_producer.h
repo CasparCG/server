@@ -22,7 +22,7 @@
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame_producer_device.h>
 #include <core/video_format.h>
-#include <core/channel.h>
+#include <core/video_channel.h>
 
 #include <string>
 
@@ -53,7 +53,7 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::channel>& channel, int layer_index = cg_producer::DEFAULT_LAYER);
+safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
 safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
 

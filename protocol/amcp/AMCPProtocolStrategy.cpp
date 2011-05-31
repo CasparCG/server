@@ -45,12 +45,12 @@ using IO::ClientInfoPtr;
 
 const std::wstring AMCPProtocolStrategy::MessageDelimiter = TEXT("\r\n");
 
-inline std::shared_ptr<core::channel> GetChannelSafe(unsigned int index, const std::vector<safe_ptr<core::channel>>& channels)
+inline std::shared_ptr<core::video_channel> GetChannelSafe(unsigned int index, const std::vector<safe_ptr<core::video_channel>>& channels)
 {
-	return index < channels.size() ? std::shared_ptr<core::channel>(channels[index]) : nullptr;
+	return index < channels.size() ? std::shared_ptr<core::video_channel>(channels[index]) : nullptr;
 }
 
-AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<core::channel>>& channels) : channels_(channels) {
+AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels) : channels_(channels) {
 	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue());
 	if(!pGeneralCommandQueue->Start()) {
 		CASPAR_LOG(error) << "Failed to start the general command-queue";
@@ -61,12 +61,12 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<core::chan
 		commandQueues_.push_back(pGeneralCommandQueue);
 
 
-	std::shared_ptr<core::channel> pChannel;
+	std::shared_ptr<core::video_channel> pChannel;
 	unsigned int index = -1;
-	//Create a commandpump for each channel
+	//Create a commandpump for each video_channel
 	while((pChannel = GetChannelSafe(++index, channels_)) != 0) {
 		AMCPCommandQueuePtr pChannelCommandQueue(new AMCPCommandQueue());
-		std::wstring title = TEXT("CHANNEL ");
+		std::wstring title = TEXT("video_channel ");
 
 		//HACK: Perform real conversion from int to string
 		TCHAR num = TEXT('1')+static_cast<TCHAR>(index);
@@ -255,7 +255,7 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 					goto ParseFinnished;
 				}
 
-				std::shared_ptr<core::channel> pChannel = GetChannelSafe(channelIndex, channels_);
+				std::shared_ptr<core::video_channel> pChannel = GetChannelSafe(channelIndex, channels_);
 				if(pChannel == 0) {
 					goto ParseFinnished;
 				}

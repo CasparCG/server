@@ -144,10 +144,10 @@ class InfoCommand : public AMCPCommandBase<false, AddToQueue, 0>
 {
 public:
 	std::wstring print() const { return L"InfoCommand";}
-	InfoCommand(const std::vector<safe_ptr<core::channel>>& channels) : channels_(channels){}
+	InfoCommand(const std::vector<safe_ptr<core::video_channel>>& channels) : channels_(channels){}
 	bool DoExecute();
 private:
-	const std::vector<safe_ptr<core::channel>>& channels_;
+	const std::vector<safe_ptr<core::video_channel>>& channels_;
 };
 
 class VersionCommand : public AMCPCommandBase<false, AddToQueue, 0>

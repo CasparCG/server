@@ -20,9 +20,9 @@
 
 #include "StdAfx.h"
 
-#include "channel.h"
+#include "video_channel.h"
 
-#include "channel_context.h"
+#include "video_channel_context.h"
 
 #include "video_format.h"
 #include "producer/layer.h"
@@ -37,9 +37,9 @@
 
 namespace caspar { namespace core {
 
-struct channel::implementation : boost::noncopyable
+struct video_channel::implementation : boost::noncopyable
 {
-	channel_context							context_;
+	video_channel_context					context_;
 
 	safe_ptr<frame_consumer_device>	consumer_;
 	safe_ptr<frame_mixer_device>	mixer_;
@@ -67,10 +67,9 @@ public:
 
 	void tick()
 	{
-		auto simple_frames = producer_->receive();
-		mixer_->send(simple_frames);
-		auto finished_frame = mixer_->receive();
-		consumer_->send(finished_frame);
+		auto simple_frames = (*producer_)();
+		auto finished_frame = (*mixer_)(simple_frames);
+		(*consumer_)(finished_frame);
 
 		context_.execution.begin_invoke([this]{tick();});
 	}
@@ -89,13 +88,13 @@ public:
 	}
 };
 
-channel::channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
-channel::channel(channel&& other) : impl_(std::move(other.impl_)){}
-safe_ptr<frame_producer_device> channel::producer() { return impl_->producer_;} 
-safe_ptr<frame_mixer_device> channel::mixer() { return impl_->mixer_;} 
-safe_ptr<frame_consumer_device> channel::consumer() { return impl_->consumer_;} 
-const video_format_desc& channel::get_video_format_desc() const{return impl_->context_.format_desc;}
-void channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
-std::wstring channel::print() const { return impl_->print();}
+video_channel::video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
+video_channel::video_channel(video_channel&& other) : impl_(std::move(other.impl_)){}
+safe_ptr<frame_producer_device> video_channel::producer() { return impl_->producer_;} 
+safe_ptr<frame_mixer_device> video_channel::mixer() { return impl_->mixer_;} 
+safe_ptr<frame_consumer_device> video_channel::consumer() { return impl_->consumer_;} 
+const video_format_desc& video_channel::get_video_format_desc() const{return impl_->context_.format_desc;}
+void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
+std::wstring video_channel::print() const { return impl_->print();}
 
 }}

@@ -22,7 +22,7 @@
 #include "../util/clientinfo.h"
 
 #include <core/consumer/frame_consumer.h>
-#include <core/channel.h>
+#include <core/video_channel.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -56,11 +56,11 @@ namespace amcp {
 		void SetClientInfo(IO::ClientInfoPtr& s){pClientInfo_ = s;}
 		IO::ClientInfoPtr GetClientInfo(){return pClientInfo_;}
 
-		void SetChannel(const std::shared_ptr<core::channel>& pChannel){pChannel_ = pChannel;}
-		std::shared_ptr<core::channel> GetChannel(){return pChannel_;}
+		void SetChannel(const std::shared_ptr<core::video_channel>& pChannel){pChannel_ = pChannel;}
+		std::shared_ptr<core::video_channel> GetChannel(){return pChannel_;}
 
-		void SetChannels(const std::vector<safe_ptr<core::channel>>& channels){channels_ = channels;}
-		const std::vector<safe_ptr<core::channel>>& GetChannels() { return channels_; }
+		void SetChannels(const std::vector<safe_ptr<core::video_channel>>& channels){channels_ = channels;}
+		const std::vector<safe_ptr<core::video_channel>>& GetChannels() { return channels_; }
 
 		void SetChannelIndex(unsigned int channelIndex){channelIndex_ = channelIndex;}
 		unsigned int GetChannelIndex(){return channelIndex_;}
@@ -87,8 +87,8 @@ namespace amcp {
 		unsigned int channelIndex_;
 		int layerIndex_;
 		IO::ClientInfoPtr pClientInfo_;
-		std::shared_ptr<core::channel> pChannel_;
-		std::vector<safe_ptr<core::channel>> channels_;
+		std::shared_ptr<core::video_channel> pChannel_;
+		std::vector<safe_ptr<core::video_channel>> channels_;
 		AMCPCommandScheduling scheduling_;
 		std::wstring replyString_;
 	};

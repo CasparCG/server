@@ -31,17 +31,17 @@ class executor;
 	
 namespace core {
 	
-struct channel_context;
+struct video_channel_context;
 
 class frame_consumer_device : boost::noncopyable
 {
 public:
-	explicit frame_consumer_device(channel_context& channel);
+	explicit frame_consumer_device(video_channel_context& video_channel);
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);
 
-	void send(const safe_ptr<read_frame>& frame); // nothrow
+	void operator()(const safe_ptr<read_frame>& frame); // nothrow
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
