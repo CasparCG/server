@@ -91,15 +91,15 @@ public:
 	}
 };
 	
-safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::channel>& channel, int render_layer)
+safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int render_layer)
 {	
-	auto flash_producer = channel->producer()->foreground(render_layer).get();
+	auto flash_producer = video_channel->producer()->foreground(render_layer).get();
 
 	if(flash_producer->print().find(L"flash") == std::string::npos)
 	{
-		flash_producer = create_flash_producer(channel->mixer(), boost::assign::list_of(env::template_host()));	
-		channel->producer()->load(render_layer, flash_producer, true); 
-		channel->producer()->play(render_layer);
+		flash_producer = create_flash_producer(video_channel->mixer(), boost::assign::list_of(env::template_host()));	
+		video_channel->producer()->load(render_layer, flash_producer, true); 
+		video_channel->producer()->play(render_layer);
 	}
 
 	return make_safe<cg_producer>(flash_producer);

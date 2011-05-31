@@ -12,28 +12,27 @@
 
 namespace caspar { namespace core {
 
-struct channel_context
+struct video_channel_context
 {
-	channel_context(int index,  ogl_device& ogl, const video_format_desc& format_desc) 
+	video_channel_context(int index,  ogl_device& ogl, const video_format_desc& format_desc) 
 		: index(index)
+		, format_desc(format_desc)
 		, execution(print() + L"/execution")
 		, destruction(print() + L"/destruction")
 		, ogl(ogl)
-		, format_desc(format_desc)
 	{
 		execution.set_priority_class(above_normal_priority_class);
-		destruction.set_priority_class(below_normal_priority_class);
 	}
 
 	const int			index;
+	video_format_desc	format_desc;
 	executor			execution;
 	executor			destruction;
 	ogl_device&			ogl;
-	video_format_desc	format_desc;
 
 	std::wstring print() const
 	{
-		return L"channel[" + boost::lexical_cast<std::wstring>(index+1) + L"-" +  format_desc.name + L"]";
+		return L"video_channel[" + boost::lexical_cast<std::wstring>(index+1) + L"-" +  format_desc.name + L"]";
 	}
 };
 	

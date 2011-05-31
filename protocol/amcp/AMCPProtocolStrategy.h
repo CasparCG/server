@@ -20,7 +20,7 @@
 #pragma once
 
 #include "../util/protocolstrategy.h"
-#include <core/channel.h>
+#include <core/video_channel.h>
 
 #include "AMCPCommand.h"
 #include "AMCPCommandQueue.h"
@@ -44,7 +44,7 @@ class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 	AMCPProtocolStrategy& operator=(const AMCPProtocolStrategy&);
 
 public:
-	AMCPProtocolStrategy(const std::vector<safe_ptr<core::channel>>& channels);
+	AMCPProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels);
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
@@ -63,7 +63,7 @@ private:
 
 	bool QueueCommand(AMCPCommandPtr);
 
-	std::vector<safe_ptr<core::channel>> channels_;
+	std::vector<safe_ptr<core::video_channel>> channels_;
 	std::vector<AMCPCommandQueuePtr> commandQueues_;
 	static const std::wstring MessageDelimiter;
 };

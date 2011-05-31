@@ -32,11 +32,11 @@ namespace caspar { namespace core {
 	
 class ogl_device;
 
-class channel : boost::noncopyable
+class video_channel : boost::noncopyable
 {
 public:
-	explicit channel(int index, const video_format_desc& format_desc, ogl_device& ogl);
-	channel(channel&& other);
+	explicit video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl);
+	video_channel(video_channel&& other);
 
 	safe_ptr<frame_producer_device> producer();
 	safe_ptr<frame_mixer_device>	mixer();
