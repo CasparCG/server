@@ -62,7 +62,7 @@ namespace caspar {
 
 		ChannelPtr GetChannel(unsigned int deviceIndex);
 
-		bool FindTemplate(const tstring& templateName);
+		bool FindTemplate(const tstring& templateName, tstring* pExtension = NULL);
 		MediaManagerPtr FindMediaFile(const tstring& filename, FileInfo* pFileInfo=0);
 		MediaManagerPtr GetColorMediaManager() {
 			if(colorManagerIndex_ != -1)

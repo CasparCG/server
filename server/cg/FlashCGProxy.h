@@ -33,7 +33,7 @@ public:
 	void Stop();
 
 	//ICGControl
-	virtual void Add(int layer, const tstring& templateName, bool playOnLoad, const tstring& startFromLabel, const tstring& data);
+	virtual void Add(int layer, const tstring& templateName, bool playOnLoad, const tstring& startFromLabel = TEXT(""), const tstring& data = TEXT(""));
 	virtual void Remove(int layer);
 	virtual void Clear();
 	virtual void Play(int layer);
@@ -42,6 +42,9 @@ public:
 	virtual void Update(int layer, const tstring& data);
 	virtual void Invoke(int layer, const tstring& label);
 	
+	FlashProducerPtr GetFlashProducer() {
+		return pFlashProducer_;
+	}
 private:
 	FlashProducerPtr pFlashProducer_;
 };

@@ -36,7 +36,8 @@ enum FrameFormat {
 	FFormat1080p2500,
 	FFormat1080p2997,
 	FFormat1080p3000,
-	FrameFormatCount
+	FrameFormatCount,
+	FFormatInvalid
 };
 
 struct FrameFormatDescription
@@ -174,5 +175,7 @@ private:
 	std::list<FramePtr> frameQueue_;
 	utils::Event writeWaitEvent_; 
 };
+
+FrameFormat GetVideoFormat(const tstring& strVideoMode);
 
 }	//namespace caspar

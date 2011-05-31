@@ -82,12 +82,19 @@ void AMCPCommandQueue::Run(HANDLE stopEvent)
 				continue;
 			}
 			else if(condition == ConditionGood) {
-				if(pCurrentCommand->Execute()) {
-					LOG << LogLevel::Verbose << TEXT("Executed command");
+				try
+				{
+					if(pCurrentCommand->Execute()) {
+						LOG << LogLevel::Verbose << TEXT("Executed command");
+					}
+					else {
+						LOG << LogLevel::Verbose << TEXT("Failed to executed command");
+					}		
 				}
-				else {
-					LOG << LogLevel::Verbose << TEXT("Failed to executed command");
-				}		
+				catch(...)
+				{
+					LOG << LogLevel::Verbose << TEXT("UNEXPECTED EXCEPTION: Failed to executed command");
+				}
 			}
 			else {	//condition == ConditionPermanentlyBad
 				LOG << TEXT("Invalid commandobject");

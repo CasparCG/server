@@ -477,9 +477,13 @@ bool CGCommand::ExecuteAdd() {
 	}
 
 	tstring fullFilename = GetApplication()->GetTemplateFolder() + _parameters[2];
-	if(GetApplication()->FindTemplate(fullFilename))
+	tstring extension;
+	if(GetApplication()->FindTemplate(fullFilename, &extension))
 	{
-		GetChannel()->GetCGControl()->Add(layer, _parameters[2], bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
+		tstring filename = _parameters[2];
+		filename.append(extension);
+
+		GetChannel()->GetCGControl()->Add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
 		SetReplyString(TEXT("202 CG OK\r\n"));
 	}
 	else

@@ -81,6 +81,7 @@ void MiscellaneousCommand::Setup(const std::vector<tstring>& parameters) {
 	{
 		layer_ = _ttoi(parameters[4].c_str());
 		filename_ = parameters[5];
+		filename_.append(TEXT(".ft"));
 		state_ = 1;
 		if(parameters.size() > 7) {
 			tstringstream dataStream;

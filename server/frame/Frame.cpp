@@ -5,6 +5,7 @@
 #include "..\utils\image\Image.hpp"
 #include "FrameManager.h"
 
+#include <algorithm>
 #include <intrin.h>
 #pragma intrinsic(__movsd, __stosd)
 
@@ -138,6 +139,25 @@ HANDLE MotionFrameBuffer::GetWaitHandle() const {
 
 HANDLE MotionFrameBuffer::GetWriteWaitHandle() {
 	return writeWaitEvent_;
+}
+
+FrameFormat GetVideoFormat(const tstring& strVideoMode)
+{
+	for(int index = 0; index < FrameFormatCount; ++index)
+	{
+		const FrameFormatDescription& fmtDesc = FrameFormatDescription::FormatDescriptions[index];
+
+		tstring strVideoModeUpper = strVideoMode;
+		tstring strFmtDescUpper = fmtDesc.name;
+
+		std::transform(strVideoModeUpper.begin(), strVideoModeUpper.end(), strVideoModeUpper.begin(), toupper);
+		std::transform(strFmtDescUpper.begin(), strFmtDescUpper.end(), strFmtDescUpper.begin(), toupper);
+
+		if(strVideoModeUpper == strFmtDescUpper) {
+			return (FrameFormat)index;			
+		}
+	}
+	return FFormatInvalid;
 }
 
 }	//namespace caspar

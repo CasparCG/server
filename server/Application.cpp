@@ -19,6 +19,7 @@
 
 #include "amcp\AMCPProtocolStrategy.h"
 #include "cii\CIIProtocolStrategy.h"
+#include "CLK\CLKProtocolStrategy.h"
 #include "io\AsyncEventServer.h"
 #include "io\SerialPort.h"
 
@@ -30,6 +31,7 @@
 #include "FileInfo.h"
 #include "consumers\OGL\OGLVideoConsumer.h"
 #include "consumers\GDI\GDIVideoConsumer.h"
+#include "consumers\decklink\DecklinkVideoConsumer.h"
 #include "consumers\audio\AudioConsumer.h"
 
 #ifndef DISABLE_BLUEFISH
@@ -40,7 +42,8 @@
 
 #include "producers\flash\FlashManager.h"
 #include "producers\targa\TargaManager.h"
-//#include "producers\targascroll\TargaScrollManager.h"
+#include "producers\flash\CTManager.h"
+#include "producers\targascroll\TargaScrollManager.h"
 #include "producers\ffmpeg\FFmpegManager.h"
 #include "producers\color\ColorManager.h"
 
@@ -63,9 +66,9 @@ namespace caspar {
 using namespace utils;
 
 enum ControllerTransports { TCP, Serial, TransportsCount };
-enum ControllerProtocols { AMCP, CII, ProtocolsCount };
+enum ControllerProtocols { AMCP, CII, CLOCK, ProtocolsCount };
 
-const TCHAR* Application::versionString_(TEXT("CG 1.7.1"));
+const TCHAR* Application::versionString_(TEXT("CG 1.7.1.1"));
 const TCHAR* Application::serviceName_(TEXT("Caspar service"));
 
 Application::Application(const tstring& cmdline, HINSTANCE hInstance) :	   hInstance_(hInstance), logLevel_(2), logDir_(TEXT("_log")), 
@@ -381,7 +384,8 @@ bool Application::Initialize()
 
 		sourceMediaManagers_.push_back(MediaManagerPtr(new FlashManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaManager()));
-//		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaScrollMediaManager()));
+		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaScrollMediaManager()));
+		sourceMediaManagers_.push_back(MediaManagerPtr(new CTManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new ffmpeg::FFMPEGManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new ColorManager()));
 
@@ -398,6 +402,14 @@ bool Application::Initialize()
 			CreateVideoChannel(videoChannelIndex, caspar::bluefish::BlueFishVideoConsumer::Create(bluefishIndex));
 		}
 #endif
+				
+		//Decklink
+		if(GetSetting(TEXT("nodecklink")) != TEXT("true")) {
+			VideoConsumerPtr pDecklinkConsumer(caspar::decklink::DecklinkVideoConsumer::Create());
+			if(pDecklinkConsumer)
+				CreateVideoChannel(videoChannelIndex++, pDecklinkConsumer);
+		}
+
 		if(GetSetting(TEXT("gdichannel")) == TEXT("true") && pWindow_ != 0) {
 			CreateVideoChannel(videoChannelIndex++, VideoConsumerPtr(new gdi::GDIVideoConsumer(pWindow_->getHwnd(), FrameFormatDescription::FormatDescriptions[FFormat576p2500])));
 		}
@@ -528,8 +540,18 @@ MediaManagerPtr Application::FindMediaFile(const tstring& filename, FileInfo* pF
 	return MediaManagerPtr();
 }
 
-bool Application::FindTemplate(const tstring& templateName) {
-	return exists(templateName + TEXT(".ft"));
+bool Application::FindTemplate(const tstring& templateName, tstring* pExtension) {
+	bool bResult = exists(templateName + TEXT(".ft"));
+	if(bResult) {
+		if(pExtension != NULL)
+			*pExtension = TEXT(".ft");
+	}
+	else {
+		bResult = exists(templateName + TEXT(".ct"));
+		if(bResult && pExtension != NULL)
+			*pExtension = TEXT(".ct");
+	}
+	return bResult;
 }
 
 void Application::SetupControllers()
@@ -580,7 +602,11 @@ void Application::SetupControllers()
 									break;
 								case CII:
 									pProtocol = caspar::IO::ProtocolStrategyPtr(new caspar::cii::CIIProtocolStrategy());
+									break;			
+								case CLOCK:
+									pProtocol = caspar::IO::ProtocolStrategyPtr(new caspar::CLK::CLKProtocolStrategy());
 									break;
+						
 							}
 
 							if(pProtocol != 0) {
