@@ -24,8 +24,19 @@
 
 #pragma once
 
+#include "../exception/exceptions.h"
+
 namespace caspar { namespace gl {
-			
+
+struct ogl_exception							: virtual caspar_exception{};
+struct ogl_invalid_enum							: virtual ogl_exception{};
+struct ogl_invalid_value						: virtual ogl_exception{};
+struct ogl_invalid_operation					: virtual ogl_exception{};
+struct ogl_stack_overflow						: virtual ogl_exception{};
+struct ogl_stack_underflow						: virtual ogl_exception{};			
+struct ogl_out_of_memory						: virtual ogl_exception{};
+struct ogl_invalid_framebuffer_operation_ext	: virtual ogl_exception{};
+
 void SMFL_GLCheckError(const std::string& expr, const std::string& File, unsigned int Line);
 
 #ifdef _DEBUG
