@@ -285,6 +285,7 @@ public:
 
 			std::shared_ptr<const core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);		
+			
 			schedule_next_video(safe_ptr<const core::read_frame>(frame));			
 		}
 		catch(...)
