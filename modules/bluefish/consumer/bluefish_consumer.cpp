@@ -82,26 +82,55 @@ void blue_initialize()
 	blue_velvet_initialize();
 	blue_hanc_initialize();
 }
+
+safe_ptr<CBlueVelvet4> create_blue(size_t device_index)
+{
+	if(!BlueVelvetFactory4 || !encode_hanc_frame || !encode_hanc_frame)
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
+
+	auto blue = safe_ptr<CBlueVelvet4>(BlueVelvetFactory4());
+	
+	if(BLUE_FAIL(blue->device_attach(device_index, FALSE))) 
+		BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed to attach device."));
+
+	return blue;
+}
+
+EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& format_desc)
+{
+	EVideoMode vid_fmt = VID_FMT_INVALID;
+	auto desiredVideoFormat = vid_fmt_from_video_format(format_desc.format);
+	int videoModeCount = blue.count_video_mode();
+	for(int videoModeIndex = 1; videoModeIndex <= videoModeCount; ++videoModeIndex) 
+	{
+		EVideoMode videoMode = blue.enum_video_mode(videoModeIndex);
+		if(videoMode == desiredVideoFormat) 
+			vid_fmt = videoMode;			
+	}
+	if(vid_fmt == VID_FMT_INVALID)
+		BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed get videomode.") << arg_value_info(narrow(format_desc.name)));
+
+	return vid_fmt;
+}
 		
 struct bluefish_consumer : boost::noncopyable
 {
-	std::wstring		model_name_;
-	const unsigned int	device_index_;
+	safe_ptr<CBlueVelvet4>				blue_;
+	const unsigned int					device_index_;
+	const core::video_format_desc		format_desc_;
+
+	const std::wstring					model_name_;
 
 	std::shared_ptr<diagnostics::graph> graph_;
-	boost::timer frame_timer_;
-	boost::timer tick_timer_;
-	boost::timer sync_timer_;
-
-	std::shared_ptr<CBlueVelvet4> blue_;
-	
-	const core::video_format_desc	format_desc_;
+	boost::timer						frame_timer_;
+	boost::timer						tick_timer_;
+	boost::timer						sync_timer_;	
 		
-	const unsigned long	mem_fmt_;
-	const unsigned long	upd_fmt_;
-	const unsigned long	res_fmt_; 
-	unsigned long engine_mode_;
-	EVideoMode	vid_fmt_; 
+	const EVideoMode					vid_fmt_; 
+	const EMemoryFormat					mem_fmt_;
+	const EUpdateMethod					upd_fmt_;
+	const EResoFormat					res_fmt_; 
+	EEngineMode							engine_mode_;
 	
 	std::array<blue_dma_buffer_ptr, 4> reserved_frames_;	
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> frame_buffer_;
@@ -111,62 +140,27 @@ struct bluefish_consumer : boost::noncopyable
 	executor executor_;
 public:
 	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, size_t buffer_depth) 
-		: model_name_(L"BLUEFISH")
-		, device_index_(device_index) 
-		, format_desc_(format_desc)
+		: blue_(create_blue(device_index))
+		, device_index_(device_index)
+		, format_desc_(format_desc) 
+		, model_name_(get_card_desc(blue_->has_video_cardtype()))
+		, vid_fmt_(get_video_mode(*blue_, format_desc)) 
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)
 		, res_fmt_(RES_FMT_NORMAL) 
 		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
-		, vid_fmt_(VID_FMT_INVALID) 
 		, embedded_audio_(embedded_audio)
 		, executor_(print())
 	{
 		executor_.set_capacity(buffer_depth);
-
-		if(!BlueVelvetFactory4 || (embedded_audio_ && (!encode_hanc_frame || !encode_hanc_frame)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
-		
-		blue_.reset(BlueVelvetFactory4());
-
-		if(BLUE_FAIL(blue_->device_attach(device_index_, FALSE))) 
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to attach device."));
-	
-		int videoCardType = blue_->has_video_cardtype();
-		model_name_ = get_card_desc(videoCardType);
 
 		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		graph_->add_guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->add_guide("frame-time", 0.5f);	
 		graph_->set_color("sync-time", diagnostics::color(0.5f, 1.0f, 0.2f));
 			
-		//void* pBlueDevice = blue_attach_to_device(1);
-		//EBlueConnectorPropertySetting video_routing[1];
-		//auto video_channel = BLUE_VIDEO_OUTPUT_CHANNEL_A;
-		//video_routing[0].video_channel = video_channel;	
-		//video_routing[0].propType = BLUE_CONNECTOR_PROP_SINGLE_LINK;
-		//video_routing[0].connector = video_channel == BLUE_VIDEO_OUTPUT_CHANNEL_A ? BLUE_CONNECTOR_SDI_OUTPUT_A : BLUE_CONNECTOR_SDI_OUTPUT_B;
-		//blue_set_connector_property(pBlueDevice, 1, video_routing);
-		//blue_detach_from_device(&pBlueDevice);
-		
-		auto desiredVideoFormat = vid_fmt_from_video_format(format_desc_.format);
-		int videoModeCount = blue_->count_video_mode();
-		for(int videoModeIndex = 1; videoModeIndex <= videoModeCount; ++videoModeIndex) 
-		{
-			EVideoMode videoMode = blue_->enum_video_mode(videoModeIndex);
-			if(videoMode == desiredVideoFormat) 
-				vid_fmt_ = videoMode;			
-		}
-		if(vid_fmt_ == VID_FMT_INVALID)
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
-		
-		// Set default video output video_channel
-		//if(BLUE_FAIL(set_card_property(blue_, DEFAULT_VIDEO_OUTPUT_CHANNEL, video_channel)))
-		//	CASPAR_LOG(error) << TEXT("BLUECARD ERROR: Failed to set default video_channel. (device ") << device_index_ << TEXT(")");
-
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
@@ -221,7 +215,7 @@ public:
 		if(blue_->GetHDCardType(device_index_) != CRD_HD_INVALID) 
 			blue_->Set_DownConverterSignalType(vid_fmt_ == VID_FMT_PAL ? SD_SDI : HD_SDI);	
 	
-		if(BLUE_FAIL(blue_->set_video_engine(engine_mode_)))
+		if(BLUE_FAIL(blue_->set_video_engine(*reinterpret_cast<unsigned long*>(&engine_mode_))))
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set video engine."));
 
 		enable_video_output();
@@ -240,9 +234,7 @@ public:
 		executor_.invoke([&]
 		{
 			disable_video_output();
-
-			if(blue_)
-				blue_->device_detach();		
+			blue_->device_detach();		
 		});
 		
 		CASPAR_LOG(info) << print() << L" Shutting down.";	

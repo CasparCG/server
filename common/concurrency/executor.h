@@ -185,7 +185,11 @@ public:
 		{
 			try{task_adaptor.value();}
 			catch(boost::task_already_started&){}
-			catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				throw;
+			}
 		});
 
 		if(priority != normal_priority)
@@ -208,7 +212,11 @@ public:
 			{
 				try{task_adaptor.value();}
 				catch(boost::task_already_started&){}
-				catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					throw;
+				}
 			});
 		}
 		
