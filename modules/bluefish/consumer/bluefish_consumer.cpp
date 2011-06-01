@@ -135,6 +135,8 @@ struct bluefish_consumer : boost::noncopyable
 	std::array<blue_dma_buffer_ptr, 4> reserved_frames_;	
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> frame_buffer_;
 
+	int preroll_count_;
+
 	const bool embedded_audio_;
 	
 	executor executor_;
@@ -148,7 +150,8 @@ public:
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)
 		, res_fmt_(RES_FMT_NORMAL) 
-		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)		
+		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)	
+		, preroll_count_(0)
 		, embedded_audio_(embedded_audio)
 		, executor_(print())
 	{
@@ -160,6 +163,7 @@ public:
 		graph_->add_guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("sync-time", diagnostics::color(0.5f, 1.0f, 0.2f));
+		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
 			
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
@@ -222,10 +226,7 @@ public:
 						
 		for(size_t n = 0; n < reserved_frames_.size(); ++n)
 			reserved_frames_[n] = std::make_shared<blue_dma_buffer>(format_desc_.size, n);	
-
-		for(int n = 0; n < executor_.capacity(); ++n)
-			schedule_next_video(core::read_frame::empty());
-						
+								
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
@@ -258,7 +259,13 @@ public:
 	}
 	
 	void send(const safe_ptr<const core::read_frame>& frame)
-	{			
+	{	
+		if(preroll_count_ < executor_.capacity())
+		{
+			while(preroll_count_++ < executor_.capacity())
+				schedule_next_video(core::read_frame::empty());
+		}
+		
 		schedule_next_video(frame);			
 	}
 	
@@ -270,10 +277,10 @@ public:
 		{
 			try
 			{
-				frame_timer_.restart();
+				const size_t audio_samples	 = format_desc_.audio_samples_per_frame;
+				const size_t audio_nchannels = format_desc_.audio_channels;
 
-				const size_t audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps);
-				const size_t audio_nchannels = 2;
+				frame_timer_.restart();
 				
 				if(!frame->image_data().empty())
 					fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
@@ -326,7 +333,9 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
+			graph_->set_value("input-buffer", static_cast<double>(executor_.size())/static_cast<double>(executor_.capacity()));
 		});
+		graph_->set_value("input-buffer", static_cast<double>(executor_.size())/static_cast<double>(executor_.capacity()));
 	}
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)

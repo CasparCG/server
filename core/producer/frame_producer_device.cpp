@@ -82,7 +82,7 @@ struct frame_producer_device::implementation : boost::noncopyable
 	boost::timer								tick_timer_;
 	boost::timer								output_timer_;
 	
-	video_channel_context&							channel_;
+	video_channel_context&						channel_;
 public:
 	implementation(video_channel_context& video_channel)  
 		: diag_(diagnostics::create_graph(std::string("frame_producer_device")))
@@ -161,7 +161,7 @@ public:
 		else
 		{
 			if(channel_.format_desc != other.impl_->channel_.format_desc)
-				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot swap between channels with different formats."));
+				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between channels with different formats."));
 
 			auto func = [&]{layers_[index].swap(other.impl_->layers_[other_index]);};
 		
@@ -175,7 +175,7 @@ public:
 			return;
 
 		if(channel_.format_desc != other.impl_->channel_.format_desc)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot swap between channels with different formats."));
+			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between channels with different formats."));
 
 		auto func = [&]
 		{
