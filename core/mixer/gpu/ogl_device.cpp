@@ -66,16 +66,15 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 	{
 		executor_.invoke([&]
 		{
-			buffer = std::make_shared<device_buffer>(width, height, stride);
-
-			if(glGetError() != GL_NO_ERROR)
-				BOOST_THROW_EXCEPTION(std::bad_alloc());
-
-		}, high_priority);	
-		executor_.begin_invoke([=]
-		{
-			auto buffer = std::make_shared<device_buffer>(width, height, stride);
-			pool->try_push(buffer);
+			try
+			{
+				buffer = std::make_shared<device_buffer>(width, height, stride);
+			}
+			catch(...)
+			{
+				BOOST_THROW_EXCEPTION(bad_alloc()
+					<< errinfo_nested_exception(std::current_exception()));
+			}
 		}, high_priority);	
 	}
 			
@@ -92,24 +91,20 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 	{
 		executor_.invoke([&]
 		{
-			buffer = std::make_shared<host_buffer>(size, usage);
-			if(usage == host_buffer::write_only)
-				buffer->map();
-			else
-				buffer->unmap();
+			try
+			{
+				buffer = std::make_shared<host_buffer>(size, usage);
+				if(usage == host_buffer::write_only)
+					buffer->map();
+				else
+					buffer->unmap();			
+			}
+			catch(...)
+			{
+				BOOST_THROW_EXCEPTION(bad_alloc()
+					<< errinfo_nested_exception(std::current_exception()));
+			}
 
-			if(glGetError() != GL_NO_ERROR)
-				BOOST_THROW_EXCEPTION(std::bad_alloc());
-
-		}, high_priority);	
-		executor_.begin_invoke([=]
-		{
-			auto buffer = std::make_shared<host_buffer>(size, usage);
-			if(usage == host_buffer::write_only)
-				buffer->map();
-			else
-				buffer->unmap();
-			pool->try_push(buffer);
 		}, high_priority);	
 	}
 	
@@ -122,8 +117,8 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 			else
 				buffer->unmap();
 			
-			if(glGetError() == GL_NO_ERROR)
-				pool->push(buffer);
+			pool->push(buffer);
+
 		}, high_priority);
 	});
 }
