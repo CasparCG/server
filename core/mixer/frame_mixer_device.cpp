@@ -95,9 +95,7 @@ struct frame_mixer_device::implementation : boost::noncopyable
 
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
-
-	int frame_number_;
-		
+	
 	typedef std::unordered_map<int, tweened_transform<core::image_transform>> image_transforms;
 	typedef std::unordered_map<int, tweened_transform<core::audio_transform>> audio_transforms;
 
@@ -111,7 +109,6 @@ public:
 		: channel_(video_channel)
 		, diag_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(channel_)
-		, frame_number_(0)
 	{
 		diag_->add_guide("frame-time", 0.5f);	
 		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -132,7 +129,7 @@ public:
 		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
 		tick_timer_.restart();
 
-		return make_safe<read_frame>(std::move(image), std::move(audio), frame_number_++);
+		return make_safe<read_frame>(std::move(image), std::move(audio));
 	}
 			
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
