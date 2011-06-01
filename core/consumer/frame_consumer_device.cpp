@@ -121,7 +121,6 @@ public:
 		frame_timer_.restart();
 						
 		buffer_.push_back(std::make_pair(frame, get_key_frame(frame)));
-
 		if(!buffer_.full())
 			return;
 	
@@ -130,8 +129,7 @@ public:
 			if(consumer->get_video_format_desc() != channel_.format_desc)
 				consumer->initialize(channel_.format_desc);
 
-			auto tmp = (consumer->buffer_depth()-buffer_depth().first);
-			auto pair = buffer_[tmp];
+			auto pair = buffer_[consumer->buffer_depth()-buffer_depth().first];
 			auto frame = consumer->key_only() ? pair.second : pair.first;
 
 			if(static_cast<size_t>(frame->image_data().size()) == consumer->get_video_format_desc().size)
@@ -167,7 +165,7 @@ private:
 			auto key_data = channel_.ogl.create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
 			fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			std::vector<int16_t> audio_data(frame->audio_data().begin(), frame->audio_data().end());
-			return make_safe<read_frame>(std::move(key_data), std::move(audio_data), frame->number());
+			return make_safe<read_frame>(std::move(key_data), std::move(audio_data));
 		}
 		
 		return read_frame::empty();

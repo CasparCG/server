@@ -29,13 +29,11 @@ struct read_frame::implementation : boost::noncopyable
 {
 	safe_ptr<host_buffer> image_data_;
 	std::vector<int16_t> audio_data_;
-	int number_;
 
 public:
-	implementation(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data, int number) 
+	implementation(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
 		: image_data_(std::move(image_data))
-		, audio_data_(std::move(audio_data))
-		, number_(number){}	
+		, audio_data_(std::move(audio_data)){}	
 
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
@@ -48,11 +46,10 @@ public:
 	}
 };
 
-read_frame::read_frame(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data, int number) 
-	: impl_(new implementation(std::move(image_data), std::move(audio_data), number)){}
+read_frame::read_frame(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
+	: impl_(new implementation(std::move(image_data), std::move(audio_data))){}
 
 const boost::iterator_range<const uint8_t*> read_frame::image_data() const{return impl_->image_data();}
 const boost::iterator_range<const int16_t*> read_frame::audio_data() const{return impl_->audio_data();}
-int read_frame::number() const{return impl_->number_;}
 
 }}

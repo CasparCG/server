@@ -22,6 +22,7 @@ struct video_channel_context
 		, ogl(ogl)
 	{
 		execution.set_priority_class(above_normal_priority_class);
+		destruction.set_priority_class(below_normal_priority_class);
 	}
 
 	const int			index;
