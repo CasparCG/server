@@ -232,6 +232,7 @@ public:
 
 	~bluefish_consumer()
 	{
+		executor_.clear();
 		executor_.invoke([&]
 		{
 			disable_video_output();
