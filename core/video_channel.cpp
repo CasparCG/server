@@ -53,16 +53,16 @@ public:
 		, producer_(new frame_producer_device(context_))	
 	{
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
-		context_.execution.begin_invoke([this]{tick();});
+		context_.execution().begin_invoke([this]{tick();});
 	}
 
 	~implementation()
 	{
 		// Stop context before destroying devices.
-		context_.execution.stop();
-		context_.execution.join();
-		context_.destruction.stop();
-		context_.destruction.join();
+		context_.execution().stop();
+		context_.execution().join();
+		context_.destruction().stop();
+		context_.destruction().join();
 	}
 
 	void tick()
@@ -71,7 +71,7 @@ public:
 		auto finished_frame = (*mixer_)(simple_frames);
 		(*consumer_)(finished_frame);
 
-		context_.execution.begin_invoke([this]{tick();});
+		context_.execution().begin_invoke([this]{tick();});
 	}
 		
 	std::wstring print() const
@@ -81,9 +81,9 @@ public:
 
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
-		context_.execution.begin_invoke([=]
+		context_.execution().begin_invoke([=]
 		{
-			context_.format_desc = format_desc;
+			context_.set_format_desc(format_desc);
 		});
 	}
 };
@@ -93,7 +93,7 @@ video_channel::video_channel(video_channel&& other) : impl_(std::move(other.impl
 safe_ptr<frame_producer_device> video_channel::producer() { return impl_->producer_;} 
 safe_ptr<frame_mixer_device> video_channel::mixer() { return impl_->mixer_;} 
 safe_ptr<frame_consumer_device> video_channel::consumer() { return impl_->consumer_;} 
-const video_format_desc& video_channel::get_video_format_desc() const{return impl_->context_.format_desc;}
+video_format_desc video_channel::get_video_format_desc() const{return impl_->context_.get_format_desc();}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 std::wstring video_channel::print() const { return impl_->print();}
 
