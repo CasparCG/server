@@ -53,13 +53,13 @@ public:
 	~ogl_device();
 	
 	template<typename Func>
-	auto begin_invoke(Func&& func, priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
+	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{			
 		return executor_.begin_invoke(std::forward<Func>(func), priority);
 	}
 	
 	template<typename Func>
-	auto invoke(Func&& func, priority priority = normal_priority) -> decltype(func())
+	auto invoke(Func&& func, task_priority priority = normal_priority) -> decltype(func())
 	{
 		return executor_.invoke(std::forward<Func>(func), priority);
 	}

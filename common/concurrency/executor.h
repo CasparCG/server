@@ -61,14 +61,14 @@ inline void SetThreadName(DWORD dwThreadID, LPCSTR szThreadName)
 
 }
 
-enum priority
+enum task_priority
 {
 	high_priority,
 	normal_priority,
 	priority_count
 };
 
-enum priority_class
+enum thread_priority
 {
 	high_priority_class,
 	above_normal_priority_class,
@@ -141,7 +141,7 @@ public:
 		execution_queue_[normal_priority].set_capacity(capacity);
 	}
 
-	void set_priority_class(priority_class p)
+	void set_priority_class(thread_priority p)
 	{
 		begin_invoke([=]
 		{
@@ -174,7 +174,7 @@ public:
 	}
 				
 	template<typename Func>
-	auto begin_invoke(Func&& func, priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
+	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
 		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
 		auto task_adaptor = internal::make_move_on_copy(create_task(func));
@@ -195,7 +195,7 @@ public:
 	}
 
 	template<typename Func>
-	auto try_begin_invoke(Func&& func, priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
+	auto try_begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{
 		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
 		auto task_adaptor = internal::make_move_on_copy(create_task(func));
@@ -220,7 +220,7 @@ public:
 	}
 
 	template<typename Func>
-	auto invoke(Func&& func, priority prioriy = normal_priority) -> decltype(func()) // noexcept
+	auto invoke(Func&& func, task_priority prioriy = normal_priority) -> decltype(func()) // noexcept
 	{
 		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
 			return func();
@@ -229,7 +229,7 @@ public:
 	}
 
 	template<typename Func>
-	auto try_invoke(Func&& func, priority prioriy = normal_priority) -> decltype(func()) // noexcept
+	auto try_invoke(Func&& func, task_priority prioriy = normal_priority) -> decltype(func()) // noexcept
 	{
 		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
 			return func();

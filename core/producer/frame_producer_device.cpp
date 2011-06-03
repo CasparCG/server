@@ -94,7 +94,7 @@ public:
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));	
 	}
 						
-	std::map<int, safe_ptr<basic_frame>> operator()()
+	std::map<int, safe_ptr<basic_frame>> execute()
 	{	
 		frame_timer_.restart();
 		
@@ -216,5 +216,5 @@ void frame_producer_device::swap_layer(int index, size_t other_index){impl_->swa
 void frame_producer_device::swap_layer(int index, size_t other_index, frame_producer_device& other){impl_->swap_layer(index, other_index, other);}
 boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) {return impl_->foreground(index);}
 boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::background(size_t index) {return impl_->background(index);}
-std::map<int, safe_ptr<basic_frame>> frame_producer_device::operator()(){return (*impl_)();}
+std::map<int, safe_ptr<basic_frame>> frame_producer_device::execute(){return impl_->execute();}
 }}

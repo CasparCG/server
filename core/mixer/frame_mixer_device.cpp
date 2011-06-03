@@ -117,7 +117,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
 			
-	safe_ptr<read_frame> operator()(const std::map<int, safe_ptr<core::basic_frame>>& frames)
+	safe_ptr<read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames)
 	{				
 		frame_timer_.restart();
 
@@ -272,7 +272,7 @@ private:
 };
 	
 frame_mixer_device::frame_mixer_device(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
-safe_ptr<core::read_frame> frame_mixer_device::operator()(const std::map<int, safe_ptr<core::basic_frame>>& frames){ return (*impl_)(frames);}
+safe_ptr<core::read_frame> frame_mixer_device::execute(const std::map<int, safe_ptr<core::basic_frame>>& frames){ return impl_->execute(frames);}
 core::video_format_desc frame_mixer_device::get_video_format_desc() const { return impl_->channel_.get_format_desc(); }
 safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
 safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)

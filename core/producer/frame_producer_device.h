@@ -39,7 +39,7 @@ public:
 
 	void swap(frame_producer_device& other);
 
-	std::map<int, safe_ptr<basic_frame>> operator()();
+	std::map<int, safe_ptr<basic_frame>> execute();
 		
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false);
 	void pause(int index);

@@ -39,7 +39,7 @@ namespace caspar { namespace core {
 
 struct video_channel::implementation : boost::noncopyable
 {
-	video_channel_context					context_;
+	video_channel_context			context_;
 
 	safe_ptr<frame_consumer_device>	consumer_;
 	safe_ptr<frame_mixer_device>	mixer_;
@@ -67,9 +67,9 @@ public:
 
 	void tick()
 	{
-		auto simple_frames = (*producer_)();
-		auto finished_frame = (*mixer_)(simple_frames);
-		(*consumer_)(finished_frame);
+		auto simple_frames = producer_->execute();
+		auto finished_frame = mixer_->execute(simple_frames);
+		consumer_->execute(finished_frame);
 
 		context_.execution().begin_invoke([this]{tick();});
 	}

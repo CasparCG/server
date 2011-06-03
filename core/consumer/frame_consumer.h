@@ -29,6 +29,8 @@
 #include <string>
 #include <vector>
 
+static const size_t CONSUMER_BUFFER_DEPTH = 7;
+
 namespace caspar { namespace core {
 	
 class read_frame;
