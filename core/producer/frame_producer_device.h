@@ -30,7 +30,7 @@
 namespace caspar { namespace core {
 
 struct video_format_desc;
-struct video_channel_context;
+class video_channel_context;;
 
 class frame_producer_device : boost::noncopyable
 {

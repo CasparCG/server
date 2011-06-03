@@ -76,11 +76,11 @@ struct image_mixer::implementation : boost::noncopyable
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
-		, read_buffer_(video_channel.ogl.create_host_buffer(video_channel.format_desc.size, host_buffer::read_only))
-		, draw_buffer_(video_channel.ogl.create_device_buffer(video_channel.format_desc.width, channel_.format_desc.height, 4))
-		, write_buffer_	(video_channel.ogl.create_device_buffer(video_channel.format_desc.width, channel_.format_desc.height, 4))
-		, local_key_buffer_(video_channel.ogl.create_device_buffer(video_channel.format_desc.width, channel_.format_desc.height, 1))
-		, layer_key_buffer_(video_channel.ogl.create_device_buffer(video_channel.format_desc.width, channel_.format_desc.height, 1))
+		, read_buffer_(video_channel.ogl().create_host_buffer(video_channel.get_format_desc().size, host_buffer::read_only))
+		, draw_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4))
+		, write_buffer_	(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4))
+		, local_key_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1))
+		, layer_key_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1))
 		, local_key_(false)
 		, layer_key_(false)
 	{
@@ -114,18 +114,18 @@ public:
 
 	void reinitialize_buffers()
 	{
-		read_buffer_	  = channel_.ogl.create_host_buffer(channel_.format_desc.size, host_buffer::read_only);
-		draw_buffer_	  = channel_.ogl.create_device_buffer(channel_.format_desc.width, channel_.format_desc.height, 4);
-		write_buffer_	  = channel_.ogl.create_device_buffer(channel_.format_desc.width, channel_.format_desc.height, 4);
-		local_key_buffer_ = channel_.ogl.create_device_buffer(channel_.format_desc.width, channel_.format_desc.height, 1);
-		layer_key_buffer_ = channel_.ogl.create_device_buffer(channel_.format_desc.width, channel_.format_desc.height, 1);
-		channel_.ogl.gc();
+		read_buffer_	  = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
+		draw_buffer_	  = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		write_buffer_	  = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		local_key_buffer_ = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		layer_key_buffer_ = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		channel_.ogl().gc();
 	}
 
 	safe_ptr<host_buffer> render()
 	{		
 		auto read_buffer = read_buffer_;
-		auto result = channel_.ogl.begin_invoke([=]()  -> safe_ptr<host_buffer>
+		auto result = channel_.ogl().begin_invoke([=]()  -> safe_ptr<host_buffer>
 		{
 			read_buffer->map();
 			return read_buffer;
@@ -133,9 +133,9 @@ public:
 
 		auto render_queue = std::move(render_queue_);
 
-		channel_.ogl.begin_invoke([=]() mutable
+		channel_.ogl().begin_invoke([=]() mutable
 		{
-			if(draw_buffer_->width() != channel_.format_desc.width || draw_buffer_->height() != channel_.format_desc.height)
+			if(draw_buffer_->width() != channel_.get_format_desc().width || draw_buffer_->height() != channel_.get_format_desc().height)
 				reinitialize_buffers();
 
 			local_key_ = false;
@@ -159,7 +159,7 @@ public:
 				{
 					draw(layer.front());
 					layer.pop();
-					channel_.ogl.yield(); // Allow quick buffer allocation to execute.
+					channel_.ogl().yield(); // Allow quick buffer allocation to execute.
 				}
 
 				layer_key_ = local_key_; // If there was only key in last layer then use it as key for the entire next layer.
@@ -171,7 +171,7 @@ public:
 			std::swap(draw_buffer_, write_buffer_);
 
 			// Start transfer from device to host.	
-			read_buffer_ = channel_.ogl.create_host_buffer(channel_.format_desc.size, host_buffer::read_only);					
+			read_buffer_ = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);					
 			write_buffer_->write(*read_buffer_);
 		});
 
@@ -217,12 +217,12 @@ public:
 
 		// Draw
 
-		kernel_.draw(channel_.format_desc.width, channel_.format_desc.height, item.desc, item.transform, local_key, layer_key);	
+		kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item.desc, item.transform, local_key, layer_key);	
 	}
 			
 	safe_ptr<write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
 	{
-		return make_safe<write_frame>(channel_.ogl, reinterpret_cast<int>(tag), desc);
+		return make_safe<write_frame>(channel_.ogl(), reinterpret_cast<int>(tag), desc);
 	}
 };
 

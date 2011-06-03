@@ -168,6 +168,7 @@ public:
 		if(format_desc_ != frame_factory_->get_video_format_desc())
 		{
 			format_desc_ = frame_factory_->get_video_format_desc();
+			bmp_ = bitmap(format_desc_.width, format_desc_.height);
 			ax_->SetFormat(format_desc_);
 		}
 

@@ -37,7 +37,7 @@ class write_frame;
 class basic_frame;
 class audio_transform;
 class image_transform;
-struct video_channel_context;
+class video_channel_context;;
 
 class frame_mixer_device : public core::frame_factory
 {
@@ -49,7 +49,7 @@ public:
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc);		
 	safe_ptr<core::write_frame> create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt = core::pixel_format::bgra);		
 	
-	const core::video_format_desc& get_video_format_desc() const; // nothrow
+	core::video_format_desc get_video_format_desc() const; // nothrow
 
 	void set_image_transform(const core::image_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void set_image_transform(int index, const core::image_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");

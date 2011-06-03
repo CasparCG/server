@@ -32,7 +32,7 @@ namespace caspar { namespace core {
 class write_frame;
 class host_buffer;
 class ogl_device;
-struct video_channel_context;
+class video_channel_context;;
 
 class image_mixer : public core::frame_visitor, boost::noncopyable
 {

@@ -81,8 +81,8 @@ public:
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
-		consumer->initialize(channel_.format_desc);
-		channel_.execution.invoke([&]
+		consumer->initialize(channel_.get_format_desc());
+		channel_.execution().invoke([&]
 		{
 			this->remove(index);
 			consumers_.insert(std::make_pair(index, consumer));
@@ -102,7 +102,7 @@ public:
 
 	void remove(int index)
 	{
-		channel_.execution.invoke([&]
+		channel_.execution().invoke([&]
 		{
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
@@ -116,7 +116,7 @@ public:
 	void operator()(const safe_ptr<read_frame>& frame)
 	{		
 		if(!has_synchronization_clock())
-			timer_.tick(1.0/channel_.format_desc.fps);
+			timer_.tick(1.0/channel_.get_format_desc().fps);
 
 		frame_timer_.restart();
 						
@@ -126,8 +126,8 @@ public:
 	
 		for_each_consumer([&](safe_ptr<frame_consumer>& consumer)
 		{
-			if(consumer->get_video_format_desc() != channel_.format_desc)
-				consumer->initialize(channel_.format_desc);
+			if(consumer->get_video_format_desc() != channel_.get_format_desc())
+				consumer->initialize(channel_.get_format_desc());
 
 			auto pair = buffer_[consumer->buffer_depth()-buffer_depth().first];
 			auto frame = consumer->key_only() ? pair.second : pair.first;
@@ -136,9 +136,9 @@ public:
 				consumer->send(frame);
 		});
 
-		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.format_desc.fps*0.5);
+		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
 			
-		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
+		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
 		tick_timer_.restart();
 	}
 
@@ -162,7 +162,7 @@ private:
 		if(has_key_only)
 		{
 			// Currently do key_only transform on cpu. Unsure if the extra 400MB/s (1080p50) overhead is worth it to do it on gpu.
-			auto key_data = channel_.ogl.create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
+			auto key_data = channel_.ogl().create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
 			fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			std::vector<int16_t> audio_data(frame->audio_data().begin(), frame->audio_data().end());
 			return make_safe<read_frame>(std::move(key_data), std::move(audio_data));
