@@ -42,7 +42,7 @@ public:
 	safe_ptr<frame_mixer_device>	mixer();
 	safe_ptr<frame_consumer_device> consumer();
 
-	const video_format_desc& get_video_format_desc() const;
+	video_format_desc get_video_format_desc() const;
 	void set_video_format_desc(const video_format_desc& format_desc);
 
 	std::wstring print() const;

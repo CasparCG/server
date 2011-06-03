@@ -110,9 +110,9 @@ public:
 			frames[layer.first] = layer.second.receive();
 		});
 		
-		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.format_desc.fps*0.5);
+		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
 
-		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
+		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
 		tick_timer_.restart();
 
 		return frames;
@@ -120,37 +120,37 @@ public:
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview)
 	{
-		channel_.execution.invoke([&]{layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction, producer), preview);});
+		channel_.execution().invoke([&]{layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction(), producer), preview);});
 	}
 
 	void pause(int index)
 	{		
-		channel_.execution.invoke([&]{layers_[index].pause();});
+		channel_.execution().invoke([&]{layers_[index].pause();});
 	}
 
 	void play(int index)
 	{		
-		channel_.execution.invoke([&]{layers_[index].play();});
+		channel_.execution().invoke([&]{layers_[index].play();});
 	}
 
 	void stop(int index)
 	{		
-		channel_.execution.invoke([&]{layers_[index].stop();});
+		channel_.execution().invoke([&]{layers_[index].stop();});
 	}
 
 	void clear(int index)
 	{
-		channel_.execution.invoke([&]{layers_.erase(index);});
+		channel_.execution().invoke([&]{layers_.erase(index);});
 	}
 		
 	void clear()
 	{
-		channel_.execution.invoke([&]{layers_.clear();});
+		channel_.execution().invoke([&]{layers_.clear();});
 	}	
 	
 	void swap_layer(int index, size_t other_index)
 	{
-		channel_.execution.invoke([&]{layers_[index].swap(layers_[other_index]);});
+		channel_.execution().invoke([&]{layers_[index].swap(layers_[other_index]);});
 	}
 
 	void swap_layer(int index, size_t other_index, frame_producer_device& other)
@@ -159,12 +159,12 @@ public:
 			swap_layer(index, other_index);
 		else
 		{
-			if(channel_.format_desc != other.impl_->channel_.format_desc)
+			if(channel_.get_format_desc() != other.impl_->channel_.get_format_desc())
 				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between channels with different formats."));
 
 			auto func = [&]{layers_[index].swap(other.impl_->layers_[other_index]);};
 		
-			channel_.execution.invoke([&]{other.impl_->channel_.execution.invoke(func);});
+			channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func);});
 		}
 	}
 
@@ -173,7 +173,7 @@ public:
 		if(other.impl_.get() == this)
 			return;
 
-		if(channel_.format_desc != other.impl_->channel_.format_desc)
+		if(channel_.get_format_desc() != other.impl_->channel_.get_format_desc())
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between channels with different formats."));
 
 		auto func = [&]
@@ -190,17 +190,17 @@ public:
 				layers_[index].swap(other.impl_->layers_[index]);
 		};
 		
-		channel_.execution.invoke([&]{other.impl_->channel_.execution.invoke(func);});
+		channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func);});
 	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
 	{
-		return channel_.execution.begin_invoke([=]{return layers_[index].foreground();});
+		return channel_.execution().begin_invoke([=]{return layers_[index].foreground();});
 	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> background(int index)
 	{
-		return channel_.execution.begin_invoke([=]{return layers_[index].background();});
+		return channel_.execution().begin_invoke([=]{return layers_[index].background();});
 	}
 };
 

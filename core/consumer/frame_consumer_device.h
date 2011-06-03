@@ -31,7 +31,7 @@ class executor;
 	
 namespace core {
 	
-struct video_channel_context;
+class video_channel_context;;
 
 class frame_consumer_device : boost::noncopyable
 {

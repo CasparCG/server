@@ -124,9 +124,9 @@ public:
 		auto image = mix_image(frames);
 		auto audio = mix_audio(frames);
 			
-		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.format_desc.fps*0.5);
+		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
 		
-		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.format_desc.fps*0.5);
+		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
 		tick_timer_.restart();
 
 		return make_safe<read_frame>(std::move(image), std::move(audio));
@@ -140,7 +140,7 @@ public:
 	template<typename T>	
 	void set_transform(const T& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		channel_.execution.invoke([&]
+		channel_.execution().invoke([&]
 		{
 			auto& root = boost::fusion::at_key<T>(root_transforms_);
 
@@ -153,7 +153,7 @@ public:
 	template<typename T>
 	void set_transform(int index, const T& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		channel_.execution.invoke([&]
+		channel_.execution().invoke([&]
 		{
 			auto& transforms = boost::fusion::at_key<T>(transforms_);
 
@@ -166,7 +166,7 @@ public:
 	template<typename T>
 	void apply_transform(const std::function<T(const T&)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		return channel_.execution.invoke([&]
+		return channel_.execution().invoke([&]
 		{
 			auto& root = boost::fusion::at_key<T>(root_transforms_);
 
@@ -179,7 +179,7 @@ public:
 	template<typename T>
 	void apply_transform(int index, const std::function<T(T)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		channel_.execution.invoke([&]
+		channel_.execution().invoke([&]
 		{
 			auto& transforms = boost::fusion::at_key<T>(transforms_);
 
@@ -192,7 +192,7 @@ public:
 	template<typename T>
 	void reset_transform(unsigned int mix_duration, const std::wstring& tween)
 	{
-		channel_.execution.invoke([&]
+		channel_.execution().invoke([&]
 		{
 			auto& transforms = boost::fusion::at_key<T>(transforms_);
 
@@ -205,7 +205,7 @@ public:
 	template<typename T>
 	void reset_transform(int index, unsigned int mix_duration, const std::wstring& tween)
 	{
-		channel_.execution.invoke([&]
+		channel_.execution().invoke([&]
 		{		
 			set_transform(T(), mix_duration, tween);
 		});
@@ -227,7 +227,7 @@ private:
 		{
 			image_mixer_.begin_layer();
 			
-			if(channel_.format_desc.mode != core::video_mode::progressive)
+			if(channel_.get_format_desc().mode != core::video_mode::progressive)
 			{
 				auto frame1 = make_safe<core::basic_frame>(frame.second);
 				auto frame2 = make_safe<core::basic_frame>(frame.second);
@@ -236,7 +236,7 @@ private:
 				frame2->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame.first].fetch_and_tick(1);
 
 				if(frame1->get_image_transform() != frame2->get_image_transform())
-					core::basic_frame::interlace(frame1, frame2, channel_.format_desc.mode)->accept(image_mixer_);
+					core::basic_frame::interlace(frame1, frame2, channel_.get_format_desc().mode)->accept(image_mixer_);
 				else
 					frame2->accept(image_mixer_);
 			}
@@ -260,7 +260,7 @@ private:
 
 		BOOST_FOREACH(auto& frame, frames)
 		{
-			const unsigned int num = channel_.format_desc.mode == core::video_mode::progressive ? 1 : 2;
+			const unsigned int num = channel_.get_format_desc().mode == core::video_mode::progressive ? 1 : 2;
 
 			auto frame1 = make_safe<core::basic_frame>(frame.second);
 			frame1->get_audio_transform() = root_audio_transform.fetch_and_tick(num)*audio_transforms[frame.first].fetch_and_tick(num);
@@ -273,7 +273,7 @@ private:
 	
 frame_mixer_device::frame_mixer_device(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
 safe_ptr<core::read_frame> frame_mixer_device::operator()(const std::map<int, safe_ptr<core::basic_frame>>& frames){ return (*impl_)(frames);}
-const core::video_format_desc& frame_mixer_device::get_video_format_desc() const { return impl_->channel_.format_desc; }
+core::video_format_desc frame_mixer_device::get_video_format_desc() const { return impl_->channel_.get_format_desc(); }
 safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
 safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
 {
