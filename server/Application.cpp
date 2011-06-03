@@ -43,6 +43,8 @@
 #include "producers\flash\FlashManager.h"
 #include "producers\targa\TargaManager.h"
 #include "producers\flash\CTManager.h"
+#include "producers\flash\FlashAxContainer.h"
+#include "cg\FlashCGProxy.h"
 #include "producers\targascroll\TargaScrollManager.h"
 #include "producers\ffmpeg\FFmpegManager.h"
 #include "producers\color\ColorManager.h"
@@ -68,7 +70,7 @@ using namespace utils;
 enum ControllerTransports { TCP, Serial, TransportsCount };
 enum ControllerProtocols { AMCP, CII, CLOCK, ProtocolsCount };
 
-const TCHAR* Application::versionString_(TEXT("CG 1.7.1.1"));
+const TCHAR* Application::versionString_(TEXT("CG 1.7.1.2"));
 const TCHAR* Application::serviceName_(TEXT("Caspar service"));
 
 Application::Application(const tstring& cmdline, HINSTANCE hInstance) :	   hInstance_(hInstance), logLevel_(2), logDir_(TEXT("_log")), 
@@ -378,6 +380,12 @@ bool Application::Initialize()
 
 		pWindow_ = WindowPtr(new Window());
 		pWindow_->Initialize(hInstance_, TEXT("Caspar"), TEXT("SVT_CASPAR"));
+				
+		if(caspar::flash::FlashAxContainer::CheckForFlashSupport())
+			caspar::CG::FlashCGProxy::SetCGVersion();
+		else {
+			LOG << LogLevel::Critical << TEXT("No flashplayer activex-control installed. Flash support will be disabled");
+		}
 
 		caspar::directsound::DirectSoundManager::GetInstance()->Initialize(pWindow_->getHwnd(), 2, 48000, 16);
 		pAudioManager_ = caspar::directsound::DirectSoundManager::GetInstance();

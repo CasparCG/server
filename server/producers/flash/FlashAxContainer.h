@@ -230,9 +230,9 @@ public:
 	bool IsReadyToRender() const;
 	void EnterFullscreen();
 
-	bool CheckForFlashSupport();
+	static bool CheckForFlashSupport();
 private:
-	CComBSTR flashGUID_;
+	static CComBSTR flashGUID_;
 
 //	state
 	bool		bUIActive_;

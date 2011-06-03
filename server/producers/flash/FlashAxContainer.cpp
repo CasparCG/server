@@ -14,7 +14,9 @@ namespace flash {
 _ATL_FUNC_INFO fnInfoFlashCallEvent = { CC_STDCALL, VT_EMPTY, 1, { VT_BSTR } };
 _ATL_FUNC_INFO fnInfoReadyStateChangeEvent = { CC_STDCALL, VT_EMPTY, 1, { VT_I4 } };
 
-FlashAxContainer::FlashAxContainer() : pFlashProducer_(0), flashGUID_(_T("{D27CDB6E-AE6D-11CF-96B8-444553540000}")), bInPlaceActive_(FALSE), pTimerHelper(0), bInvalidRect_(false), bReadyToRender_(false), bHasNewTiming_(false)
+CComBSTR FlashAxContainer::flashGUID_(_T("{D27CDB6E-AE6D-11CF-96B8-444553540000}"));
+
+FlashAxContainer::FlashAxContainer() : pFlashProducer_(0), bInPlaceActive_(FALSE), pTimerHelper(0), bInvalidRect_(false), bReadyToRender_(false), bHasNewTiming_(false)
 {
 }
 FlashAxContainer::~FlashAxContainer()
