@@ -33,6 +33,7 @@
 #include <common/concurrency/executor.h>
 
 #include <boost/timer.hpp>
+#include <boost/range/algorithm.hpp>
 
 #include <tbb/parallel_for.h>
 
@@ -100,10 +101,8 @@ public:
 		std::map<int, safe_ptr<basic_frame>> frames;
 
 		// Allocate placeholders.
-		std::for_each(layers_.begin(), layers_.end(), [&](layer_t& layer)
-		{
+		BOOST_FOREACH(auto layer, layers_)
 			frames[layer.first] = basic_frame::empty();
-		});
 
 		// Render layers
 		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](layer_t& layer)
@@ -187,10 +186,8 @@ public:
 			std::transform(layers_.begin(), layers_.end(), inserter, sel_first);
 			std::transform(other.impl_->layers_.begin(), other.impl_->layers_.end(), inserter, sel_first);
 
-			std::for_each(indices.begin(), indices.end(), [&](int index)
-			{
+			BOOST_FOREACH(auto index, indices)
 				layers_[index].swap(other.impl_->layers_[index]);
-			});					
 		};
 		
 		channel_.execution.invoke([&]{other.impl_->channel_.execution.invoke(func);});
