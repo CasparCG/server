@@ -119,10 +119,11 @@ public:
 			}
 		);
 		
+		// If video is on first frame, sync with audio
 		if(audio_decoder_ && video_decoder_ && !video_frames_.empty() && !audio_chunks_.empty() &&
 		   video_frames_.front().first == 0 && audio_chunks_.front().first != 0)
 		{
-			audio_decoder_->restart();
+			audio_decoder_->restart(); // Notify decoder to wait for eof which was sent with video eof.
 			audio_chunks_ = audio_decoder_->receive();		
 		}
 		
