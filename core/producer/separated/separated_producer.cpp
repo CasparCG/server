@@ -74,7 +74,7 @@ struct separated_producer : public frame_producer
 
 	virtual std::wstring print() const
 	{
-		return L"separed";
+		return L"separated";
 	}	
 };
 

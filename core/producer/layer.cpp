@@ -46,9 +46,8 @@ public:
 	{		
 		background_ = producer;
 
-		if(preview) 
-		{
-			// Play the first frame and pause.
+		if(preview) // Play the first frame and pause.
+		{			
 			play();
 			receive();
 			pause();
@@ -68,7 +67,6 @@ public:
 	
 	void stop()
 	{
-		pause();
 		foreground_ = frame_producer::empty();
 	}
 		
