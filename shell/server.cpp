@@ -110,8 +110,8 @@ struct server::implementation : boost::noncopyable
 						channels_.back()->consumer()->add(index++, create_bluefish_consumer(xml_consumer.second));					
 					else if(name == "decklink")					
 						channels_.back()->consumer()->add(index++, create_decklink_consumer(xml_consumer.second));				
-					else if(name == "file")					
-						channels_.back()->consumer()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
+					//else if(name == "file")					
+					//	channels_.back()->consumer()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
 					else if(name == "audio")
 						channels_.back()->consumer()->add(index++, make_safe<oal_consumer>());		
 					else if(name != "<xmlcomment>")

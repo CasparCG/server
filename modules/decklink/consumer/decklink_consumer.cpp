@@ -57,7 +57,7 @@ struct configuration
 		, external_key(false)
 		, low_latency(false)
 		, key_only(false)
-		, buffer_depth(5){}
+		, buffer_depth(CONSUMER_BUFFER_DEPTH){}
 };
 
 class decklink_frame_adapter : public IDeckLinkVideoFrame
@@ -442,7 +442,6 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tr
 	config.key_only			= ptree.get("key-only",		  config.key_only);
 	config.device_index		= ptree.get("device",		  config.device_index);
 	config.embedded_audio	= ptree.get("embedded-audio", config.embedded_audio);
-	config.buffer_depth		= ptree.get("buffer-depth",	  config.buffer_depth);
 
 	return make_safe<decklink_consumer_proxy>(config);
 }

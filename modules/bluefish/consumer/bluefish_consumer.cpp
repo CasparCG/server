@@ -141,7 +141,7 @@ struct bluefish_consumer : boost::noncopyable
 	
 	executor executor_;
 public:
-	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, size_t buffer_depth) 
+	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio) 
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
 		, format_desc_(format_desc) 
@@ -155,7 +155,7 @@ public:
 		, embedded_audio_(embedded_audio)
 		, executor_(print())
 	{
-		executor_.set_capacity(buffer_depth);
+		executor_.set_capacity(CONSUMER_BUFFER_DEPTH);
 
 		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->add_guide("tick-time", 0.5);
@@ -232,7 +232,6 @@ public:
 
 	~bluefish_consumer()
 	{
-		executor_.clear();
 		executor_.invoke([&]
 		{
 			disable_video_output();
@@ -374,18 +373,16 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	const size_t						device_index_;
 	const bool							embedded_audio_;
 	bool								key_only_;
-	size_t								buffer_depth_;
 public:
 
-	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only, size_t buffer_depth)
+	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
 		: device_index_(device_index)
 		, embedded_audio_(embedded_audio)
-		, key_only_(key_only)
-		, buffer_depth_(buffer_depth){}
+		, key_only_(key_only){}
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, buffer_depth_));
+		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_));
 	}
 	
 	virtual void send(const safe_ptr<const core::read_frame>& frame)
@@ -406,11 +403,6 @@ public:
 	virtual bool key_only() const
 	{
 		return key_only_;
-	}
-
-	virtual size_t buffer_depth() const
-	{
-		return consumer_->executor_.capacity();
 	}
 };	
 
@@ -464,7 +456,7 @@ safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::w
 	bool embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	bool key_only		= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, 3);
+	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree) 
@@ -472,9 +464,8 @@ safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tr
 	auto device_index	 = ptree.get("device",		   1);
 	auto embedded_audio  = ptree.get("embedded-audio", false);
 	bool key_only		 = ptree.get("key-only",	   false);
-	size_t buffer_depth  = ptree.get("buffer-depth",   3);
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, buffer_depth);
+	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
 }

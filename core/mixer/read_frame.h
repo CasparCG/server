@@ -42,17 +42,7 @@ public:
 	virtual const boost::iterator_range<const uint8_t*> image_data() const;
 	virtual const boost::iterator_range<const int16_t*> audio_data() const;
 		
-	static safe_ptr<const read_frame> empty()
-	{
-		struct empty : public read_frame
-		{			
-			virtual const boost::iterator_range<const uint8_t*> image_data() const {return boost::iterator_range<const uint8_t*>();}
-			virtual const boost::iterator_range<const int16_t*> audio_data() const {return boost::iterator_range<const int16_t*>();}
-			virtual int number() const{return -1;}
-		};
-		static safe_ptr<const empty> frame;
-		return frame;
-	}
+	static safe_ptr<const read_frame> empty();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

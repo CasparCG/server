@@ -24,7 +24,7 @@ class video_channel_context
 	ogl_device&					ogl_;
 
 public:
-	video_channel_context(int index,  ogl_device& ogl, const video_format_desc& format_desc) 
+	video_channel_context(int index, ogl_device& ogl, const video_format_desc& format_desc) 
 		: index_(index)
 		, format_desc_(format_desc)
 		, execution_(print() + L"/execution")

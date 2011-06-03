@@ -46,7 +46,7 @@ void init_ffmpeg()
 	av_register_all();
 	avcodec_init();
 	
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ffmpeg_consumer(params);});
+	//core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ffmpeg_consumer(params);});
 	core::register_producer_factory(create_ffmpeg_producer);
 }
 

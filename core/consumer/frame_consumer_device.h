@@ -41,7 +41,7 @@ public:
 	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);
 
-	void operator()(const safe_ptr<read_frame>& frame); // nothrow
+	void execute(const safe_ptr<read_frame>& frame); // nothrow
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
