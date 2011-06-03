@@ -169,7 +169,7 @@ public:
 	{			
 		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
 
-		if(!video_packet)
+		if(!video_packet) // eof
 		{	
 			avcodec_flush_buffers(&codec_context_);
 			frame_number_ = 0;

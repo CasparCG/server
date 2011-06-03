@@ -45,14 +45,14 @@ struct audio_decoder::implementation : boost::noncopyable
 	const core::video_format_desc	format_desc_;
 	std::vector<int16_t>			current_chunk_;	
 	size_t							frame_number_;
-	bool							restarting_;
+	bool							wait_for_eof_;
 public:
 	explicit implementation(input& input, const core::video_format_desc& format_desc) 
 		: input_(input)
 		, codec_context_(*input_.get_audio_codec_context())
 		, format_desc_(format_desc)	
 		, frame_number_(0)
-		, restarting_(false)
+		, wait_for_eof_(false)
 	{
 		if(codec_context_.sample_rate != static_cast<int>(format_desc_.audio_sample_rate) || 
 		   codec_context_.channels != static_cast<int>(format_desc_.audio_channels))
@@ -80,16 +80,16 @@ public:
 	{			
 		std::deque<std::pair<int, std::vector<int16_t>>> result;
 
-		if(!audio_packet)
+		if(!audio_packet) // eof
 		{	
 			avcodec_flush_buffers(&codec_context_);
 			current_chunk_.clear();
 			frame_number_ = 0;
-			restarting_ = false;
+			wait_for_eof_ = false;
 			return result;
 		}
 
-		if(restarting_)
+		if(wait_for_eof_)
 			return result;
 				
 		auto s = current_chunk_.size();
@@ -119,7 +119,7 @@ public:
 
 	void restart()
 	{
-		restarting_ = true;
+		wait_for_eof_ = true;
 	}
 };
 
