@@ -52,4 +52,16 @@ read_frame::read_frame(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&
 const boost::iterator_range<const uint8_t*> read_frame::image_data() const{return impl_->image_data();}
 const boost::iterator_range<const int16_t*> read_frame::audio_data() const{return impl_->audio_data();}
 
+safe_ptr<const read_frame> read_frame::empty()
+{
+	struct empty : public read_frame
+	{			
+		virtual const boost::iterator_range<const uint8_t*> image_data() const {return boost::iterator_range<const uint8_t*>();}
+		virtual const boost::iterator_range<const int16_t*> audio_data() const {return boost::iterator_range<const int16_t*>();}
+		virtual int number() const{return -1;}
+	};
+	static safe_ptr<const empty> frame;
+	return frame;
+}
+
 }}

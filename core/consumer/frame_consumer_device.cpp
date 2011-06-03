@@ -48,8 +48,6 @@ struct frame_consumer_device::implementation
 	
 	video_channel_context& channel_;
 
-	boost::circular_buffer<fill_and_key> buffer_;
-
 	std::map<int, safe_ptr<frame_consumer>> consumers_;
 	typedef std::map<int, safe_ptr<frame_consumer>>::value_type layer_t;
 	
@@ -87,15 +85,6 @@ public:
 			this->remove(index);
 			consumers_.insert(std::make_pair(index, consumer));
 
-			auto depth = buffer_depth();
-			auto diff = depth.second-depth.first+1;
-			
-			if(diff != buffer_.capacity())
-			{
-				buffer_.set_capacity(diff);
-				CASPAR_LOG(info) << print() << L" Depth-diff: " << diff-1;
-			}
-
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
 		});
 	}
@@ -113,24 +102,22 @@ public:
 		});
 	}
 						
-	void operator()(const safe_ptr<read_frame>& frame)
+	void execute(const safe_ptr<read_frame>& frame)
 	{		
 		if(!has_synchronization_clock())
 			timer_.tick(1.0/channel_.get_format_desc().fps);
 
 		frame_timer_.restart();
-						
-		buffer_.push_back(std::make_pair(frame, get_key_frame(frame)));
-		if(!buffer_.full())
-			return;
-	
+				
+		auto fill = frame;
+		auto key = get_key_frame(frame);
+
 		for_each_consumer([&](safe_ptr<frame_consumer>& consumer)
 		{
 			if(consumer->get_video_format_desc() != channel_.get_format_desc())
 				consumer->initialize(channel_.get_format_desc());
 
-			auto pair = buffer_[consumer->buffer_depth()-buffer_depth().first];
-			auto frame = consumer->key_only() ? pair.second : pair.first;
+			auto frame = consumer->key_only() ? key : fill;
 
 			if(static_cast<size_t>(frame->image_data().size()) == consumer->get_video_format_desc().size)
 				consumer->send(frame);
@@ -200,5 +187,5 @@ frame_consumer_device::frame_consumer_device(video_channel_context& video_channe
 	: impl_(new implementation(video_channel)){}
 void frame_consumer_device::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void frame_consumer_device::remove(int index){impl_->remove(index);}
-void frame_consumer_device::operator()(const safe_ptr<read_frame>& frame) { (*impl_)(frame); }
+void frame_consumer_device::execute(const safe_ptr<read_frame>& frame) {impl_->execute(frame); }
 }}

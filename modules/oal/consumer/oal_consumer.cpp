@@ -47,21 +47,19 @@ struct oal_consumer::implementation : public sf::SoundStream, boost::noncopyable
 	tbb::atomic<bool> is_running_;
 
 	core::video_format_desc format_desc_;
+	int preroll_count_;
 public:
 	implementation(const core::video_format_desc& format_desc) 
 		: graph_(diagnostics::create_graph(narrow(print())))
 		, container_(5)
 		, format_desc_(format_desc)
+		, preroll_count_(0)
 	{
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		is_running_ = true;
-		input_.set_capacity(4);
-
-		// Fill input buffer with silence.
-		for(size_t n = 0; n < buffer_depth(); ++n)
-			input_.push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)); 
-
+		input_.set_capacity(CONSUMER_BUFFER_DEPTH-2);
+		
 		sf::SoundStream::Initialize(2, 48000);
 		Play();		
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
@@ -77,7 +75,13 @@ public:
 	}
 	
 	void send(const safe_ptr<const core::read_frame>& frame)
-	{				
+	{			
+		if(preroll_count_ < input_.capacity())
+		{
+			while(input_.try_push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)))
+				++preroll_count_;
+		}
+
 		if(!frame->audio_data().empty())
 			input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 	
 		else
