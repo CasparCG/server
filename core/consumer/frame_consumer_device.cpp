@@ -32,13 +32,11 @@
 #include "../mixer/read_frame.h"
 
 #include <common/concurrency/executor.h>
-#include <common/diagnostics/graph.h>
 #include <common/utility/assert.h>
 #include <common/utility/timer.h>
 #include <common/memory/memshfl.h>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/timer.hpp>
 
 namespace caspar { namespace core {
 	
@@ -52,20 +50,11 @@ struct frame_consumer_device::implementation
 	typedef std::map<int, safe_ptr<frame_consumer>>::value_type layer_t;
 	
 	high_prec_timer timer_;
-	
-	safe_ptr<diagnostics::graph> diag_;
-
-	boost::timer frame_timer_;
-	boost::timer tick_timer_;
 		
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
-		, diag_(diagnostics::create_graph(std::string("frame_consumer_device")))
 	{		
-		diag_->add_guide("frame-time", 0.5f);	
-		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 	}
 
 	std::pair<size_t, size_t> buffer_depth()
@@ -106,9 +95,7 @@ public:
 	{		
 		if(!has_synchronization_clock())
 			timer_.tick(1.0/channel_.get_format_desc().fps);
-
-		frame_timer_.restart();
-				
+						
 		auto fill = frame;
 		auto key = get_key_frame(frame);
 
@@ -122,11 +109,6 @@ public:
 			if(static_cast<size_t>(frame->image_data().size()) == consumer->get_video_format_desc().size)
 				consumer->send(frame);
 		});
-
-		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
-			
-		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
-		tick_timer_.restart();
 	}
 
 private:

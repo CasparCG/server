@@ -104,7 +104,7 @@ struct server::implementation : boost::noncopyable
 				try
 				{
 					const std::string name = xml_consumer.first;
-					if(name == "ogl")
+					if(name == "screen")
 						channels_.back()->consumer()->add(index++, create_ogl_consumer(xml_consumer.second));					
 					else if(name == "bluefish")					
 						channels_.back()->consumer()->add(index++, create_bluefish_consumer(xml_consumer.second));					
