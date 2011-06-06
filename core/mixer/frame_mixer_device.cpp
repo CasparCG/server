@@ -31,7 +31,6 @@
 
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
-#include <common/diagnostics/graph.h>
 #include <common/utility/tweener.h>
 
 
@@ -47,7 +46,6 @@
 
 #include <boost/fusion/container/map.hpp>
 #include <boost/fusion/include/at_key.hpp>
-#include <boost/timer.hpp>
 
 #include <unordered_map>
 
@@ -88,11 +86,7 @@ public:
 struct frame_mixer_device::implementation : boost::noncopyable
 {		
 	video_channel_context& channel_;
-
-	safe_ptr<diagnostics::graph> diag_;
-	boost::timer frame_timer_;
-	boost::timer tick_timer_;
-
+	
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
 	
@@ -107,28 +101,16 @@ struct frame_mixer_device::implementation : boost::noncopyable
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
-		, diag_(diagnostics::create_graph(narrow(print())))
 		, image_mixer_(channel_)
-	{
-		diag_->add_guide("frame-time", 0.5f);	
-		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
-	
+	{	
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
 			
 	safe_ptr<read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames)
 	{				
-		frame_timer_.restart();
-
 		auto image = mix_image(frames);
 		auto audio = mix_audio(frames);
 			
-		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
-		
-		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
-		tick_timer_.restart();
-
 		return make_safe<read_frame>(std::move(image), std::move(audio));
 	}
 			
