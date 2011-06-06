@@ -349,7 +349,7 @@ public:
 
 safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 1 || params[0] != L"OGL")
+	if(params.size() < 1 || params[0] != L"SCREEN")
 		return core::frame_consumer::empty();
 	
 	size_t screen_index = 0;

@@ -29,10 +29,8 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 
-#include <common/diagnostics/graph.h>
 #include <common/concurrency/executor.h>
 
-#include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
 
 #include <tbb/parallel_for.h>
@@ -77,27 +75,16 @@ struct frame_producer_device::implementation : boost::noncopyable
 {		
 	std::map<int, layer>						layers_;		
 	typedef std::map<int, layer>::value_type	layer_t;
-	
-	safe_ptr<diagnostics::graph>				diag_;
-	boost::timer								frame_timer_;
-	boost::timer								tick_timer_;
-	boost::timer								output_timer_;
-	
+		
 	video_channel_context&						channel_;
 public:
 	implementation(video_channel_context& video_channel)  
-		: diag_(diagnostics::create_graph(std::string("frame_producer_device")))
-		, channel_(video_channel)
+		: channel_(video_channel)
 	{
-		diag_->add_guide("frame-time", 0.5f);	
-		diag_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));	
 	}
 						
 	std::map<int, safe_ptr<basic_frame>> execute()
-	{	
-		frame_timer_.restart();
-		
+	{			
 		std::map<int, safe_ptr<basic_frame>> frames;
 
 		// Allocate placeholders.
@@ -110,11 +97,6 @@ public:
 			frames[layer.first] = layer.second.receive();
 		});
 		
-		diag_->update_value("frame-time", frame_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
-
-		diag_->update_value("tick-time", tick_timer_.elapsed()*channel_.get_format_desc().fps*0.5);
-		tick_timer_.restart();
-
 		return frames;
 	}
 
