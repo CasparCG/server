@@ -171,5 +171,6 @@
     </ClCompile>
     <ClCompile Include="video_channel.cpp" />
     <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="video_channel_context.cpp" />
   </ItemGroup>
 </Project>
