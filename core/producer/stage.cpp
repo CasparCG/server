@@ -109,37 +109,58 @@ public:
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview)
 	{
-		channel_.execution().invoke([&]{layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction(), producer), preview);});
+		channel_.execution().invoke([&]
+		{
+			layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction(), producer), preview);
+		});
 	}
 
 	void pause(int index)
 	{		
-		channel_.execution().invoke([&]{layers_[index].pause();});
+		channel_.execution().invoke([&]
+		{
+			layers_[index].pause();
+		});
 	}
 
 	void play(int index)
 	{		
-		channel_.execution().invoke([&]{layers_[index].play();});
+		channel_.execution().invoke([&]
+		{
+			layers_[index].play();
+		});
 	}
 
 	void stop(int index)
 	{		
-		channel_.execution().invoke([&]{layers_[index].stop();});
+		channel_.execution().invoke([&]
+		{
+			layers_[index].stop();
+		});
 	}
 
 	void clear(int index)
 	{
-		channel_.execution().invoke([&]{layers_.erase(index);});
+		channel_.execution().invoke([&]
+		{
+			layers_.erase(index);
+		});
 	}
 		
 	void clear()
 	{
-		channel_.execution().invoke([&]{layers_.clear();});
+		channel_.execution().invoke([&]
+		{
+			layers_.clear();
+		});
 	}	
 	
 	void swap_layer(int index, size_t other_index)
 	{
-		channel_.execution().invoke([&]{layers_[index].swap(layers_[other_index]);});
+		channel_.execution().invoke([&]
+		{
+			layers_[index].swap(layers_[other_index]);
+		});
 	}
 
 	void swap_layer(int index, size_t other_index, stage& other)
