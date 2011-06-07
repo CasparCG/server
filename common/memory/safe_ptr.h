@@ -23,6 +23,8 @@
 #include <type_traits>
 #include <exception>
 
+#include "../utility/assert.h"
+
 namespace caspar {
 	
 template<typename T>
@@ -103,11 +105,23 @@ public:
 		return *this;
 	}
 
-	T& operator*() const { return *impl_.get();}  // noexcept
+	T& operator*() const // noexcept
+	{
+		CASPAR_ASSERT(impl_);
+		return *impl_.get();
+	} 
 
-	T* operator->() const { return impl_.get();}  // noexcept
+	T* operator->() const // noexcept
+	{
+		CASPAR_ASSERT(impl_);
+		return impl_.get();
+	} 
 
-	T* get() const { return impl_.get();}  // noexcept
+	T* get() const // noexcept
+	{
+		CASPAR_ASSERT(impl_);
+		return impl_.get();
+	}  
 
 	bool unique() const { return impl_.unique();}  // noexcept
 

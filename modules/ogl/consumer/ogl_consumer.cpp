@@ -36,8 +36,8 @@
 #include <common/diagnostics/graph.h>
 #include <common/utility/timer.h>
 
-#include <boost/thread.hpp>
 #include <boost/timer.hpp>
+#include <boost/circular_buffer.hpp>
 
 #include <algorithm>
 #include <array>
@@ -54,31 +54,31 @@ enum stretch
 
 struct ogl_consumer : boost::noncopyable
 {		
-	boost::unique_future<void> active_;
-		
-	float width_;
-	float height_;
+	float					width_;
+	float					height_;
 
-	GLuint				  texture_;
-	std::array<GLuint, 2> pbos_;
+	GLuint					texture_;
+	std::array<GLuint, 2>	pbos_;
 
-	const bool windowed_;
-	unsigned int screen_width_;
-	unsigned int screen_height_;
-	const unsigned int screen_index_;
+	const bool				windowed_;
+	unsigned int			screen_width_;
+	unsigned int			screen_height_;
+	const unsigned int		screen_index_;
 				
-	const stretch stretch_;
+	const stretch			stretch_;
 	core::video_format_desc format_desc_;
 	
-	sf::Window window_;
+	sf::Window				window_;
 	
 	safe_ptr<diagnostics::graph> graph_;
-	boost::timer perf_timer_;
+	boost::timer			perf_timer_;
 
-	size_t square_width_;
-	size_t square_height_;
+	size_t					square_width_;
+	size_t					square_height_;
 
-	executor executor_;
+	boost::circular_buffer<safe_ptr<const core::read_frame>> frame_buffer_;
+
+	executor				executor_;
 public:
 	ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed, const core::video_format_desc& format_desc) 
 		: stretch_(stretch)
@@ -87,13 +87,11 @@ public:
 		, screen_index_(screen_index)
 		, format_desc_(format_desc_)
 		, graph_(diagnostics::create_graph(narrow(print())))
+		, frame_buffer_(CONSUMER_BUFFER_DEPTH)
 		, executor_(print())
 	{		
-		executor_.set_capacity(3);
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		if(!GLEE_VERSION_2_1)
-			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 		
 		format_desc_ = format_desc;
 
@@ -146,6 +144,9 @@ public:
 #endif		
 		executor_.invoke([=]
 		{
+			if(!GLEE_VERSION_2_1)
+				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
+
 			window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), windowed_ ? sf::Style::Resize : sf::Style::Fullscreen);
 			window_.ShowMouseCursor(false);
 			window_.SetPosition(devmode.dmPosition.x, devmode.dmPosition.y);
@@ -243,12 +244,11 @@ public:
 	void render(const safe_ptr<const core::read_frame>& frame)
 	{			
 		glBindTexture(GL_TEXTURE_2D, texture_);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]);
 
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
 
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]);
-
 		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW);
 
 		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
@@ -272,9 +272,17 @@ public:
 
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
-		
+
 	void send(const safe_ptr<const core::read_frame>& frame)
 	{
+		frame_buffer_.push_back(frame);
+
+		if(frame_buffer_.full())
+			do_send(frame_buffer_.front());
+	}
+		
+	void do_send(const safe_ptr<const core::read_frame>& frame)
+	{		
 		executor_.try_begin_invoke([=]
 		{
 			perf_timer_.restart();
