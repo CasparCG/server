@@ -20,17 +20,17 @@
 
 #pragma once
 
-#include "consumer/frame_consumer_device.h"
-#include "mixer/frame_mixer_device.h"
-#include "producer/frame_producer_device.h"
-
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
 	
+class stage;
+class mixer;
+class output;
 class ogl_device;
+struct video_format_desc;
 
 class video_channel : boost::noncopyable
 {
@@ -38,9 +38,9 @@ public:
 	explicit video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl);
 	video_channel(video_channel&& other);
 
-	safe_ptr<frame_producer_device> producer();
-	safe_ptr<frame_mixer_device>	mixer();
-	safe_ptr<frame_consumer_device> consumer();
+	safe_ptr<stage> stage();
+	safe_ptr<mixer>	mixer();
+	safe_ptr<output> output();
 
 	video_format_desc get_video_format_desc() const;
 	void set_video_format_desc(const video_format_desc& format_desc);

@@ -25,6 +25,8 @@
 
 #include <common/env.h>
 
+#include <core/mixer/mixer.h>
+
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 		
@@ -93,13 +95,13 @@ public:
 	
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int render_layer)
 {	
-	auto flash_producer = video_channel->producer()->foreground(render_layer).get();
+	auto flash_producer = video_channel->stage()->foreground(render_layer).get();
 
 	if(flash_producer->print().find(L"flash") == std::string::npos)
 	{
 		flash_producer = create_flash_producer(video_channel->mixer(), boost::assign::list_of(env::template_host()));	
-		video_channel->producer()->load(render_layer, flash_producer, true); 
-		video_channel->producer()->play(render_layer);
+		video_channel->stage()->load(render_layer, flash_producer, true); 
+		video_channel->stage()->play(render_layer);
 	}
 
 	return make_safe<cg_producer>(flash_producer);

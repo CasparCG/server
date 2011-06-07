@@ -249,10 +249,10 @@
   <ItemGroup>
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="video_channel_context.h" />
-    <ClInclude Include="consumer\frame_consumer_device.h" />
+    <ClInclude Include="consumer\output.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
     <ClInclude Include="mixer\audio\audio_mixer.h" />
-    <ClInclude Include="mixer\frame_mixer_device.h" />
+    <ClInclude Include="mixer\mixer.h" />
     <ClInclude Include="mixer\gpu\device_buffer.h" />
     <ClInclude Include="mixer\gpu\host_buffer.h" />
     <ClInclude Include="mixer\gpu\ogl_device.h" />
@@ -268,7 +268,7 @@
     <ClInclude Include="producer\frame\image_transform.h" />
     <ClInclude Include="producer\frame\pixel_format.h" />
     <ClInclude Include="producer\frame_producer.h" />
-    <ClInclude Include="producer\frame_producer_device.h" />
+    <ClInclude Include="producer\stage.h" />
     <ClInclude Include="producer\layer.h" />
     <ClInclude Include="producer\separated\separated_producer.h" />
     <ClInclude Include="producer\transition\transition_producer.h" />
@@ -288,7 +288,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="consumer\frame_consumer_device.cpp">
+    <ClCompile Include="consumer\output.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
@@ -300,7 +300,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="mixer\frame_mixer_device.cpp">
+    <ClCompile Include="mixer\mixer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
@@ -378,7 +378,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="producer\frame_producer_device.cpp">
+    <ClCompile Include="producer\stage.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>

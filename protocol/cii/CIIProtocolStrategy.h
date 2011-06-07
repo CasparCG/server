@@ -25,7 +25,7 @@
 #include "../util/ProtocolStrategy.h"
 #include "CIICommand.h"
 
-#include <core/consumer/frame_consumer.h>
+#include <core/producer/stage.h>
 
 #include <common/concurrency/executor.h>
 

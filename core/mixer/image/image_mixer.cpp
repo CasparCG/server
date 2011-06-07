@@ -234,5 +234,10 @@ safe_ptr<host_buffer> image_mixer::render(){return impl_->render();}
 safe_ptr<write_frame> image_mixer::create_frame(void* tag, const core::pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
 void image_mixer::begin_layer(){impl_->begin_layer();}
 void image_mixer::end_layer(){impl_->end_layer();}
+image_mixer& image_mixer::operator=(image_mixer&& other)
+{
+	impl_ = std::move(other.impl_);
+	return *this;
+}
 
 }}

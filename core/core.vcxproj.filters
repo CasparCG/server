@@ -36,14 +36,8 @@
     <ClInclude Include="producer\transition\transition_producer.h">
       <Filter>producer\transition</Filter>
     </ClInclude>
-    <ClInclude Include="consumer\frame_consumer_device.h">
-      <Filter>consumer</Filter>
-    </ClInclude>
     <ClInclude Include="consumer\frame_consumer.h">
       <Filter>consumer</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame_producer_device.h">
-      <Filter>producer</Filter>
     </ClInclude>
     <ClInclude Include="producer\frame_producer.h">
       <Filter>producer</Filter>
@@ -100,12 +94,18 @@
     <ClInclude Include="mixer\write_frame.h">
       <Filter>mixer</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\frame_mixer_device.h">
-      <Filter>mixer</Filter>
-    </ClInclude>
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="video_channel_context.h" />
     <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="mixer\mixer.h">
+      <Filter>mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\stage.h">
+      <Filter>producer</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\output.h">
+      <Filter>consumer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -114,13 +114,7 @@
     <ClCompile Include="consumer\frame_consumer.cpp">
       <Filter>consumer</Filter>
     </ClCompile>
-    <ClCompile Include="consumer\frame_consumer_device.cpp">
-      <Filter>consumer</Filter>
-    </ClCompile>
     <ClCompile Include="producer\frame_producer.cpp">
-      <Filter>producer</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\frame_producer_device.cpp">
       <Filter>producer</Filter>
     </ClCompile>
     <ClCompile Include="producer\color\color_producer.cpp">
@@ -139,9 +133,6 @@
       <Filter>producer\frame</Filter>
     </ClCompile>
     <ClCompile Include="video_format.cpp" />
-    <ClCompile Include="mixer\frame_mixer_device.cpp">
-      <Filter>mixer</Filter>
-    </ClCompile>
     <ClCompile Include="mixer\image\image_mixer.cpp">
       <Filter>mixer\image</Filter>
     </ClCompile>
@@ -172,5 +163,14 @@
     <ClCompile Include="video_channel.cpp" />
     <ClCompile Include="StdAfx.cpp" />
     <ClCompile Include="video_channel_context.cpp" />
+    <ClCompile Include="mixer\mixer.cpp">
+      <Filter>mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\stage.cpp">
+      <Filter>producer</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\output.cpp">
+      <Filter>consumer</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

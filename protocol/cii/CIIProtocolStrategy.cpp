@@ -27,7 +27,7 @@
 #include "CIICommandsimpl.h"
 #include <modules/flash/producer/flash_producer.h>
 #include <core/producer/transition/transition_producer.h>
-#include <core/producer/frame_producer.h>
+#include <core/mixer/mixer.h>
 #include <common/env.h>
 
 #if defined(_MSC_VER)
@@ -196,8 +196,8 @@ void CIIProtocolStrategy::DisplayTemplate(const std::wstring& titleName)
 {
 	try
 	{
-		pChannel_->producer()->load(0, GetPreparedTemplate(titleName));
-		pChannel_->producer()->play(0);
+		pChannel_->stage()->load(0, GetPreparedTemplate(titleName));
+		pChannel_->stage()->play(0);
 
 		CASPAR_LOG(info) << L"Displayed title " << titleName ;
 	}
@@ -218,7 +218,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 
 	try
 	{
-		pChannel_->producer()->load(0, pTransition);
+		pChannel_->stage()->load(0, pTransition);
 	}
 	catch(...)
 	{
@@ -227,7 +227,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 		return;
 	}
 
-	pChannel_->producer()->play(0);
+	pChannel_->stage()->play(0);
 
 	CASPAR_LOG(info) << L"Displayed " << filename;
 }

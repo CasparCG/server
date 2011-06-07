@@ -32,12 +32,12 @@ namespace caspar { namespace core {
 struct video_format_desc;
 class video_channel_context;;
 
-class frame_producer_device : boost::noncopyable
+class stage : boost::noncopyable
 {
 public:
-	explicit frame_producer_device(video_channel_context& video_channel);
+	explicit stage(video_channel_context& video_channel);
 
-	void swap(frame_producer_device& other);
+	void swap(stage& other);
 
 	std::map<int, safe_ptr<basic_frame>> execute();
 		
@@ -48,7 +48,7 @@ public:
 	void clear(int index);
 	void clear();	
 	void swap_layer(int index, size_t other_index);
-	void swap_layer(int index, size_t other_index, frame_producer_device& other);
+	void swap_layer(int index, size_t other_index, stage& other);
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index);
 	boost::unique_future<safe_ptr<frame_producer>> background(size_t index);
 

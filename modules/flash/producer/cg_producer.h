@@ -20,7 +20,7 @@
 #pragma once
 
 #include <core/producer/frame_producer.h>
-#include <core/producer/frame_producer_device.h>
+#include <core/producer/stage.h>
 #include <core/video_format.h>
 #include <core/video_channel.h>
 

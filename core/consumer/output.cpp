@@ -23,7 +23,7 @@
 #pragma warning (disable : 4244)
 #endif
 
-#include "frame_consumer_device.h"
+#include "output.h"
 
 #include "../video_channel_context.h"
 
@@ -40,7 +40,7 @@
 
 namespace caspar { namespace core {
 	
-struct frame_consumer_device::implementation
+struct output::implementation
 {	
 	typedef std::pair<safe_ptr<const read_frame>, safe_ptr<const read_frame>> fill_and_key;
 	
@@ -93,26 +93,47 @@ public:
 						
 	void execute(const safe_ptr<read_frame>& frame)
 	{		
-		if(!has_synchronization_clock())
-			timer_.tick(1.0/channel_.get_format_desc().fps);
+		try
+		{		
+			if(!has_synchronization_clock())
+				timer_.tick(1.0/channel_.get_format_desc().fps);
 						
-		auto fill = frame;
-		auto key = get_key_frame(frame);
+			auto fill = frame;
+			auto key = get_key_frame(frame);
 
-		for_each_consumer([&](safe_ptr<frame_consumer>& consumer)
+			auto it = consumers_.begin();
+			while(it != consumers_.end())
+			{
+				try
+				{
+					auto consumer = it->second;
+
+					if(consumer->get_video_format_desc() != channel_.get_format_desc())
+						consumer->initialize(channel_.get_format_desc());
+
+					auto frame = consumer->key_only() ? key : fill;
+
+					if(static_cast<size_t>(frame->image_data().size()) == consumer->get_video_format_desc().size)
+						consumer->send(frame);
+
+					++it;
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					consumers_.erase(it++);
+					CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
+				}
+			}
+		}
+		catch(...)
 		{
-			if(consumer->get_video_format_desc() != channel_.get_format_desc())
-				consumer->initialize(channel_.get_format_desc());
-
-			auto frame = consumer->key_only() ? key : fill;
-
-			if(static_cast<size_t>(frame->image_data().size()) == consumer->get_video_format_desc().size)
-				consumer->send(frame);
-		});
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 	}
 
 private:
-
+	
 	bool has_synchronization_clock()
 	{
 		return std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p)
@@ -139,35 +160,17 @@ private:
 		
 		return make_safe<read_frame>();
 	}
-		
-	void for_each_consumer(const std::function<void(safe_ptr<frame_consumer>& consumer)>& func)
-	{
-		auto it = consumers_.begin();
-		while(it != consumers_.end())
-		{
-			try
-			{
-				func(it->second);
-				++it;
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				consumers_.erase(it++);
-				CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
-			}
-		}
-	}
+	
 
 	std::wstring print() const
 	{
-		return L"frame_consumer_device";
+		return L"output";
 	}
 };
 
-frame_consumer_device::frame_consumer_device(video_channel_context& video_channel) 
+output::output(video_channel_context& video_channel) 
 	: impl_(new implementation(video_channel)){}
-void frame_consumer_device::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
-void frame_consumer_device::remove(int index){impl_->remove(index);}
-void frame_consumer_device::execute(const safe_ptr<read_frame>& frame) {impl_->execute(frame); }
+void output::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
+void output::remove(int index){impl_->remove(index);}
+void output::execute(const safe_ptr<read_frame>& frame) {impl_->execute(frame); }
 }}

@@ -20,7 +20,7 @@
 
 #include "../StdAfx.h"
 
-#include "frame_producer_device.h"
+#include "stage.h"
 
 #include "../video_channel_context.h"
 
@@ -71,7 +71,7 @@ public:
 	virtual void						set_leading_producer(const safe_ptr<frame_producer>& producer)	{producer_->set_leading_producer(producer);}
 };
 
-struct frame_producer_device::implementation : boost::noncopyable
+struct stage::implementation : boost::noncopyable
 {		
 	std::map<int, layer>						layers_;		
 	typedef std::map<int, layer>::value_type	layer_t;
@@ -87,15 +87,22 @@ public:
 	{			
 		std::map<int, safe_ptr<basic_frame>> frames;
 
-		// Allocate placeholders.
-		BOOST_FOREACH(auto layer, layers_)
-			frames[layer.first] = basic_frame::empty();
-
-		// Render layers
-		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](layer_t& layer)
+		try
 		{
-			frames[layer.first] = layer.second.receive();
-		});
+			// Allocate placeholders.
+			BOOST_FOREACH(auto layer, layers_)
+				frames[layer.first] = basic_frame::empty();
+
+			// Render layers
+			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](layer_t& layer)
+			{
+				frames[layer.first] = layer.second.receive();
+			});
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 		
 		return frames;
 	}
@@ -135,7 +142,7 @@ public:
 		channel_.execution().invoke([&]{layers_[index].swap(layers_[other_index]);});
 	}
 
-	void swap_layer(int index, size_t other_index, frame_producer_device& other)
+	void swap_layer(int index, size_t other_index, stage& other)
 	{
 		if(other.impl_.get() == this)
 			swap_layer(index, other_index);
@@ -150,7 +157,7 @@ public:
 		}
 	}
 
-	void swap(frame_producer_device& other)
+	void swap(stage& other)
 	{
 		if(other.impl_.get() == this)
 			return;
@@ -186,17 +193,17 @@ public:
 	}
 };
 
-frame_producer_device::frame_producer_device(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
-void frame_producer_device::swap(frame_producer_device& other){impl_->swap(other);}
-void frame_producer_device::load(int index, const safe_ptr<frame_producer>& producer, bool preview){impl_->load(index, producer, preview);}
-void frame_producer_device::pause(int index){impl_->pause(index);}
-void frame_producer_device::play(int index){impl_->play(index);}
-void frame_producer_device::stop(int index){impl_->stop(index);}
-void frame_producer_device::clear(int index){impl_->clear(index);}
-void frame_producer_device::clear(){impl_->clear();}
-void frame_producer_device::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
-void frame_producer_device::swap_layer(int index, size_t other_index, frame_producer_device& other){impl_->swap_layer(index, other_index, other);}
-boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::foreground(size_t index) {return impl_->foreground(index);}
-boost::unique_future<safe_ptr<frame_producer>> frame_producer_device::background(size_t index) {return impl_->background(index);}
-std::map<int, safe_ptr<basic_frame>> frame_producer_device::execute(){return impl_->execute();}
+stage::stage(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
+void stage::swap(stage& other){impl_->swap(other);}
+void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview){impl_->load(index, producer, preview);}
+void stage::pause(int index){impl_->pause(index);}
+void stage::play(int index){impl_->play(index);}
+void stage::stop(int index){impl_->stop(index);}
+void stage::clear(int index){impl_->clear(index);}
+void stage::clear(){impl_->clear();}
+void stage::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
+void stage::swap_layer(int index, size_t other_index, stage& other){impl_->swap_layer(index, other_index, other);}
+boost::unique_future<safe_ptr<frame_producer>> stage::foreground(size_t index) {return impl_->foreground(index);}
+boost::unique_future<safe_ptr<frame_producer>> stage::background(size_t index) {return impl_->background(index);}
+std::map<int, safe_ptr<basic_frame>> stage::execute(){return impl_->execute();}
 }}
