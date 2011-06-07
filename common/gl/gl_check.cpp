@@ -88,18 +88,4 @@ void SMFL_GLCheckError(const std::string& expr, const std::string& File, unsigne
 	}
 }
 
-#ifdef _DEBUG
-	
-#define CASPAR_GL_EXPR_STR(expr) #expr
-
-#define GL(expr) \
-	do \
-	{ \
-		(expr);  \
-		caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__);\
-	}while(0);
-#else
-#define GL(expr) expr
-#endif
-
 }}
