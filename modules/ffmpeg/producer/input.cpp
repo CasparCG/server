@@ -262,6 +262,7 @@ private:
 				av_free_packet(p);
 				delete p;
 			});
+			av_init_packet(read_packet.get());
 
 			const int errn = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame.
 			if(is_eof(errn))														  // Use av_dup_packet to extend its life.
