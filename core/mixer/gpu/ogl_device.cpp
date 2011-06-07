@@ -65,26 +65,15 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 	if(!pool->try_pop(buffer))		
 	{
 		executor_.invoke([&]
-		{
+		{	
 			try
 			{
 				buffer = std::make_shared<device_buffer>(width, height, stride);
 			}
 			catch(...)
 			{
-				CASPAR_LOG(info) << "ogl: bad_alloc, retrying.";
-				gc().wait();
-							
-				try
-				{
-					buffer = std::make_shared<device_buffer>(width, height, stride);
-				}
-				catch(...)
-				{
-					BOOST_THROW_EXCEPTION(bad_alloc()
-						<< errinfo_nested_exception(std::current_exception()));
-				}
-
+				CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
+				throw;
 			}
 		}, high_priority);	
 	}
@@ -112,22 +101,8 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 			}
 			catch(...)
 			{
-				CASPAR_LOG(info) << "ogl: bad_alloc, retrying.";
-				gc().wait();
-
-				try
-				{
-					buffer = std::make_shared<host_buffer>(size, usage);
-					if(usage == host_buffer::write_only)
-						buffer->map();
-					else
-						buffer->unmap();	
-				}
-				catch(...)
-				{
-					BOOST_THROW_EXCEPTION(bad_alloc()
-						<< errinfo_nested_exception(std::current_exception()));
-				}
+				CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
+				throw;				
 			}
 
 		}, high_priority);	
@@ -163,7 +138,7 @@ boost::unique_future<void> ogl_device::gc()
 			pool.clear();
 		BOOST_FOREACH(auto& pool, host_pools_)
 			pool.clear();
-	});
+	}, high_priority);
 }
 
 std::wstring ogl_device::get_version()
