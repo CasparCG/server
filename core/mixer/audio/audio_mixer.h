@@ -36,7 +36,8 @@ public:
 	virtual void end();
 
 	std::vector<int16_t> mix();
-
+	
+	audio_mixer& operator=(audio_mixer&& other);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

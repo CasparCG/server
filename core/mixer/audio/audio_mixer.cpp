@@ -118,5 +118,10 @@ void audio_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
 std::vector<int16_t> audio_mixer::mix(){return impl_->mix();}
+audio_mixer& audio_mixer::operator=(audio_mixer&& other)
+{
+	impl_ = std::move(other.impl_);
+	return *this;
+}
 
 }}

@@ -34,6 +34,8 @@
 
 #include <core/producer/frame/image_transform.h>
 #include <core/producer/frame/audio_transform.h>
+#include <core/mixer/mixer.h>
+#include <core/consumer/output.h>
 
 #include <algorithm>
 #include <locale>
@@ -164,7 +166,7 @@ void AMCPCommand::SendReply()
 
 void AMCPCommand::Clear() 
 {
-	pChannel_->producer()->clear();
+	pChannel_->stage()->clear();
 	pClientInfo_.reset();
 	channelIndex_ = 0;
 	_parameters.clear();
@@ -177,9 +179,9 @@ bool ParamCommand::DoExecute()
 	{
 		auto what = _parameters.at(2);
 		if(what == L"B")
-			GetChannel()->producer()->background(GetLayerIndex()).get()->param(_parameters.at(3));
+			GetChannel()->stage()->background(GetLayerIndex()).get()->param(_parameters.at(3));
 		else if(what == L"F")
-			GetChannel()->producer()->foreground(GetLayerIndex()).get()->param(_parameters.at(3));
+			GetChannel()->stage()->foreground(GetLayerIndex()).get()->param(_parameters.at(3));
 	
 		CASPAR_LOG(info) << "Executed param: " <<  _parameters[0] << TEXT(" successfully");
 
@@ -404,13 +406,13 @@ bool SwapCommand::DoExecute()
 			int l1 = GetLayerIndex();
 			int l2 = boost::lexical_cast<int>(strs.at(1));
 
-			ch1->producer()->swap_layer(l1, l2, *ch2->producer());
+			ch1->stage()->swap_layer(l1, l2, *ch2->stage());
 		}
 		else
 		{
 			auto ch1 = GetChannel();
 			auto ch2 = GetChannels().at(boost::lexical_cast<int>(_parameters[0])-1);
-			ch1->producer()->swap(*ch2->producer());
+			ch1->stage()->swap(*ch2->stage());
 		}
 
 		CASPAR_LOG(info) << "Swapped successfully";
@@ -438,7 +440,7 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->consumer()->add(GetLayerIndex(), create_consumer(_parameters));
+		GetChannel()->output()->add(GetLayerIndex(), create_consumer(_parameters));
 	
 		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
 
@@ -465,7 +467,7 @@ bool RemoveCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->consumer()->remove(GetLayerIndex());
+		GetChannel()->output()->remove(GetLayerIndex());
 
 		SetReplyString(TEXT("202 REMOVE OK\r\n"));
 
@@ -492,7 +494,7 @@ bool LoadCommand::DoExecute()
 	{
 		_parameters[0] = _parameters[0];
 		auto pFP = create_producer(GetChannel()->mixer(), _parameters);		
-		GetChannel()->producer()->load(GetLayerIndex(), pFP, true);
+		GetChannel()->stage()->load(GetLayerIndex(), pFP, true);
 	
 		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
 
@@ -604,7 +606,7 @@ bool LoadbgCommand::DoExecute()
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
 		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc().mode, pFP, transitionInfo);
-		GetChannel()->producer()->load(GetLayerIndex(), pFP2); // TODO: LOOP
+		GetChannel()->stage()->load(GetLayerIndex(), pFP2); // TODO: LOOP
 	
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
@@ -629,7 +631,7 @@ bool PauseCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->producer()->pause(GetLayerIndex());
+		GetChannel()->stage()->pause(GetLayerIndex());
 		SetReplyString(TEXT("202 PAUSE OK\r\n"));
 		return true;
 	}
@@ -660,7 +662,7 @@ bool PlayCommand::DoExecute()
 			CASPAR_LOG(info) << "Playing " << _parameters[0];
 		}
 
-		GetChannel()->producer()->play(GetLayerIndex());
+		GetChannel()->stage()->play(GetLayerIndex());
 		
 		SetReplyString(TEXT("202 PLAY OK\r\n"));
 		return true;
@@ -677,7 +679,7 @@ bool StopCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->producer()->stop(GetLayerIndex());
+		GetChannel()->stage()->stop(GetLayerIndex());
 		SetReplyString(TEXT("202 STOP OK\r\n"));
 		return true;
 	}
@@ -693,9 +695,9 @@ bool ClearCommand::DoExecute()
 {
 	int index = GetLayerIndex(std::numeric_limits<int>::min());
 	if(index != std::numeric_limits<int>::min())
-		GetChannel()->producer()->clear(index);
+		GetChannel()->stage()->clear(index);
 	else
-		GetChannel()->producer()->clear();
+		GetChannel()->stage()->clear();
 		
 	SetReplyString(TEXT("202 CLEAR OK\r\n"));
 
@@ -924,7 +926,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	GetChannel()->producer()->clear(GetLayerIndex(cg_producer::DEFAULT_LAYER));
+	GetChannel()->stage()->clear(GetLayerIndex(cg_producer::DEFAULT_LAYER));
 	SetReplyString(TEXT("202 CG OK\r\n"));
 	return true;
 }

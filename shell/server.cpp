@@ -26,6 +26,8 @@
 
 #include <core/mixer/gpu/ogl_device.h>
 #include <core/video_channel.h>
+#include <core/producer/stage.h>
+#include <core/consumer/output.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -105,15 +107,15 @@ struct server::implementation : boost::noncopyable
 				{
 					const std::string name = xml_consumer.first;
 					if(name == "screen")
-						channels_.back()->consumer()->add(index++, create_ogl_consumer(xml_consumer.second));					
+						channels_.back()->output()->add(index++, create_ogl_consumer(xml_consumer.second));					
 					else if(name == "bluefish")					
-						channels_.back()->consumer()->add(index++, create_bluefish_consumer(xml_consumer.second));					
+						channels_.back()->output()->add(index++, create_bluefish_consumer(xml_consumer.second));					
 					else if(name == "decklink")					
-						channels_.back()->consumer()->add(index++, create_decklink_consumer(xml_consumer.second));				
+						channels_.back()->output()->add(index++, create_decklink_consumer(xml_consumer.second));				
 					//else if(name == "file")					
-					//	channels_.back()->consumer()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
+					//	channels_.back()->output()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
 					else if(name == "audio")
-						channels_.back()->consumer()->add(index++, make_safe<oal_consumer>());		
+						channels_.back()->output()->add(index++, make_safe<oal_consumer>());		
 					else if(name != "<xmlcomment>")
 						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
 				}

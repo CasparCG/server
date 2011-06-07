@@ -19,7 +19,7 @@
 */
 #include "../StdAfx.h"
 
-#include "frame_mixer_device.h"
+#include "mixer.h"
 
 #include "read_frame.h"
 #include "write_frame.h"
@@ -83,7 +83,7 @@ public:
 	}
 };
 
-struct frame_mixer_device::implementation : boost::noncopyable
+struct mixer::implementation : boost::noncopyable
 {		
 	video_channel_context& channel_;
 	
@@ -107,11 +107,24 @@ public:
 	}
 			
 	safe_ptr<read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames)
-	{				
-		auto image = mix_image(frames);
-		auto audio = mix_audio(frames);
+	{			
+		try
+		{
+			auto image = mix_image(frames);
+			auto audio = mix_audio(frames);
 			
-		return make_safe<read_frame>(std::move(image), std::move(audio));
+			return make_safe<read_frame>(std::move(image), std::move(audio));
+		}
+		catch(...)
+		{
+			channel_.ogl().gc();
+			image_mixer_ = image_mixer(channel_);
+			audio_mixer_ = audio_mixer();
+			channel_.ogl().gc();
+
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			return make_safe<read_frame>();
+		}
 	}
 			
 	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
@@ -195,7 +208,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return L"frame_mixer_device";
+		return L"mixer";
 	}
 
 private:
@@ -253,11 +266,11 @@ private:
 	}
 };
 	
-frame_mixer_device::frame_mixer_device(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
-safe_ptr<core::read_frame> frame_mixer_device::execute(const std::map<int, safe_ptr<core::basic_frame>>& frames){ return impl_->execute(frames);}
-core::video_format_desc frame_mixer_device::get_video_format_desc() const { return impl_->channel_.get_format_desc(); }
-safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
-safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
+mixer::mixer(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
+safe_ptr<core::read_frame> mixer::execute(const std::map<int, safe_ptr<core::basic_frame>>& frames){ return impl_->execute(frames);}
+core::video_format_desc mixer::get_video_format_desc() const { return impl_->channel_.get_format_desc(); }
+safe_ptr<core::write_frame> mixer::create_frame(void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
+safe_ptr<core::write_frame> mixer::create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
 {
 	// Create bgra frame
 	core::pixel_format_desc desc;
@@ -265,16 +278,16 @@ safe_ptr<core::write_frame> frame_mixer_device::create_frame(void* tag, size_t w
 	desc.planes.push_back( core::pixel_format_desc::plane(width, height, 4));
 	return create_frame(tag, desc);
 }
-void frame_mixer_device::set_image_transform(const core::image_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::image_transform>(transform, mix_duration, tween);}
-void frame_mixer_device::set_image_transform(int index, const core::image_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::image_transform>(index, transform, mix_duration, tween);}
-void frame_mixer_device::set_audio_transform(const core::audio_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::audio_transform>(transform, mix_duration, tween);}
-void frame_mixer_device::set_audio_transform(int index, const core::audio_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::audio_transform>(index, transform, mix_duration, tween);}
-void frame_mixer_device::apply_image_transform(const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::image_transform>(transform, mix_duration, tween);}
-void frame_mixer_device::apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::image_transform>(index, transform, mix_duration, tween);}
-void frame_mixer_device::apply_audio_transform(const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(transform, mix_duration, tween);}
-void frame_mixer_device::apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(index, transform, mix_duration, tween);}
-void frame_mixer_device::reset_image_transform(unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::image_transform>(mix_duration, tween);}
-void frame_mixer_device::reset_image_transform(int index, unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::image_transform>(index, mix_duration, tween);}
-void frame_mixer_device::reset_audio_transform(unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::audio_transform>(mix_duration, tween);}
-void frame_mixer_device::reset_audio_transform(int index, unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::audio_transform>(index, mix_duration, tween);}
+void mixer::set_image_transform(const core::image_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::image_transform>(transform, mix_duration, tween);}
+void mixer::set_image_transform(int index, const core::image_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::image_transform>(index, transform, mix_duration, tween);}
+void mixer::set_audio_transform(const core::audio_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::audio_transform>(transform, mix_duration, tween);}
+void mixer::set_audio_transform(int index, const core::audio_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::audio_transform>(index, transform, mix_duration, tween);}
+void mixer::apply_image_transform(const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::image_transform>(transform, mix_duration, tween);}
+void mixer::apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::image_transform>(index, transform, mix_duration, tween);}
+void mixer::apply_audio_transform(const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(transform, mix_duration, tween);}
+void mixer::apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(index, transform, mix_duration, tween);}
+void mixer::reset_image_transform(unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::image_transform>(mix_duration, tween);}
+void mixer::reset_image_transform(int index, unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::image_transform>(index, mix_duration, tween);}
+void mixer::reset_audio_transform(unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::audio_transform>(mix_duration, tween);}
+void mixer::reset_audio_transform(int index, unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::audio_transform>(index, mix_duration, tween);}
 }}
