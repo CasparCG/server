@@ -36,8 +36,6 @@
 #include <common/utility/timer.h>
 #include <common/memory/memshfl.h>
 
-#include <boost/circular_buffer.hpp>
-
 namespace caspar { namespace core {
 	
 struct output::implementation
@@ -53,19 +51,8 @@ struct output::implementation
 		
 public:
 	implementation(video_channel_context& video_channel) 
-		: channel_(video_channel)
-	{		
-	}
-
-	std::pair<size_t, size_t> buffer_depth()
-	{		
-		auto depth_comp = [](const layer_t& lhs, const layer_t& rhs){ return lhs.second->buffer_depth() < rhs.second->buffer_depth(); };
-		auto min = std::min_element(consumers_.begin(), consumers_.end(), depth_comp)->second->buffer_depth();
-		auto max = std::max_element(consumers_.begin(), consumers_.end(), depth_comp)->second->buffer_depth();
-		CASPAR_ASSERT(max >= min);
-		return std::make_pair(min, max);
-	}
-
+		: channel_(video_channel){}	
+	
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
 		consumer->initialize(channel_.get_format_desc());
@@ -161,15 +148,13 @@ private:
 		return make_safe<read_frame>();
 	}
 	
-
 	std::wstring print() const
 	{
 		return L"output";
 	}
 };
 
-output::output(video_channel_context& video_channel) 
-	: impl_(new implementation(video_channel)){}
+output::output(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
 void output::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void output::remove(int index){impl_->remove(index);}
 void output::execute(const safe_ptr<read_frame>& frame) {impl_->execute(frame); }
