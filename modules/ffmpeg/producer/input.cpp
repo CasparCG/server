@@ -196,7 +196,7 @@ public:
 		if(start_ != 0)			
 			seek_frame(start_);
 
-		for(size_t n = 0; n < 16; ++n) // Read some packets for pre-rolling.
+		for(size_t n = 0; n < 32; ++n) // Read some packets for pre-rolling.
 			read_next_packet();
 							
 		executor_.begin_invoke([this]{read_file();});
