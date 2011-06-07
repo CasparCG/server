@@ -61,23 +61,9 @@
 #include <boost/log/utility/empty_deleter.hpp>
 #include <boost/lambda/lambda.hpp>
 
-namespace caspar{ namespace log{
+namespace caspar { namespace log {
 
 using namespace boost;
-
-
-class system_uptime : public boost::log::attribute
-{
-    typedef boost::log::attributes::basic_attribute_value<unsigned int> attribute_value_type;
-
-public:
-    boost::shared_ptr<boost::log::attribute_value> get_value()
-    {
-        unsigned int up;
-        up = GetTickCount() / 1000;
-        return boost::shared_ptr<boost::log::attribute_value>(new attribute_value_type(up));
-    }
-};
 
 void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& rec)
 {
@@ -107,8 +93,6 @@ namespace internal{
 	
 void init()
 {	
-	boost::log::wcore::get()->add_global_attribute(L"ASD", boost::make_shared<system_uptime>());
-
 	boost::log::add_common_attributes<wchar_t>();
 	typedef boost::log::aux::add_common_attributes_constants<wchar_t> traits_t;
 
@@ -126,6 +110,7 @@ void init()
 
 	boost::log::wcore::get()->add_sink(stream_sink);
 }
+
 }
 
 void add_file_sink(const std::wstring& folder)
@@ -145,14 +130,8 @@ void add_file_sink(const std::wstring& folder)
 			boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
 			boost::log::keywords::auto_flush = true
 		);
-
-		//file_sink->locked_backend()->set_formatter(
-		//	boost::log::formatters::wstream
-		//		//<< L"[" << boost::log::formatters::date_time(L"TimeStamp") << L"] "
-		//		<< L"[" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(L"ThreadID") << L"] "
-		//		<< L"[" << boost::log::formatters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) << L"] "
-		//		<< boost::log::formatters::message<wchar_t>()
-		//);
+		
+		file_sink->locked_backend()->set_formatter(&my_formatter);
 
 		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
 		
