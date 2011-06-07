@@ -137,7 +137,7 @@ private:
 			return make_safe<read_frame>(std::move(key_data), std::move(audio_data));
 		}
 		
-		return read_frame::empty();
+		return make_safe<read_frame>();
 	}
 		
 	void for_each_consumer(const std::function<void(safe_ptr<frame_consumer>& consumer)>& func)
