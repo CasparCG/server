@@ -35,14 +35,13 @@ class ogl_device;
 
 class read_frame : boost::noncopyable
 {
-	read_frame(){}
 public:
+	read_frame();
 	read_frame(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data);
 
 	virtual const boost::iterator_range<const uint8_t*> image_data() const;
 	virtual const boost::iterator_range<const int16_t*> audio_data() const;
 		
-	static safe_ptr<const read_frame> empty();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

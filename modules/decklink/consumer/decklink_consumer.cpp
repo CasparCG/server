@@ -162,7 +162,7 @@ public:
 			output_->BeginAudioPreroll();		
 		
 		for(size_t n = 0; n < buffer_size_; ++n)
-			schedule_next_video(core::read_frame::empty());
+			schedule_next_video(make_safe<core::read_frame>());
 
 		if(!config.embedded_audio)
 			start_playback();
@@ -174,8 +174,8 @@ public:
 	~decklink_consumer()
 	{		
 		is_running_ = false;
-		video_frame_buffer_.try_push(core::read_frame::empty());
-		audio_frame_buffer_.try_push(core::read_frame::empty());
+		video_frame_buffer_.try_push(std::make_shared<core::read_frame>());
+		audio_frame_buffer_.try_push(std::make_shared<core::read_frame>());
 
 		if(output_ != nullptr) 
 		{
@@ -312,7 +312,7 @@ public:
 					start_playback();				
 				}
 				else
-					schedule_next_audio(core::read_frame::empty());	
+					schedule_next_audio(make_safe<core::read_frame>());	
 			}
 			else
 			{

@@ -263,7 +263,7 @@ public:
 		if(preroll_count_ < executor_.capacity())
 		{
 			while(preroll_count_++ < executor_.capacity())
-				schedule_next_video(core::read_frame::empty());
+				schedule_next_video(make_safe<core::read_frame>());
 		}
 		
 		schedule_next_video(frame);			
