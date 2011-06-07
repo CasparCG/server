@@ -84,7 +84,8 @@ public:
 			new audio_decoder(input_, frame_factory->get_video_format_desc()) : nullptr);		
 					
 		// Fill buffers.
-		decode_packets();
+		for(size_t n = 0; n < 2; ++n)
+			decode_packets();
 	}
 
 	virtual safe_ptr<core::basic_frame> receive()
