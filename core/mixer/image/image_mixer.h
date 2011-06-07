@@ -45,6 +45,8 @@ public:
 
 	void begin_layer();
 	void end_layer();
+
+	image_mixer& operator=(image_mixer&& other);
 	
 	safe_ptr<host_buffer> render();
 

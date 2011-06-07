@@ -39,10 +39,10 @@ class audio_transform;
 class image_transform;
 class video_channel_context;;
 
-class frame_mixer_device : public core::frame_factory
+class mixer : public core::frame_factory
 {
 public:	
-	explicit frame_mixer_device(video_channel_context& video_channel);
+	explicit mixer(video_channel_context& video_channel);
 		
 	safe_ptr<core::read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
 		

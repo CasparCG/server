@@ -33,10 +33,10 @@ namespace core {
 	
 class video_channel_context;;
 
-class frame_consumer_device : boost::noncopyable
+class output : boost::noncopyable
 {
 public:
-	explicit frame_consumer_device(video_channel_context& video_channel);
+	explicit output(video_channel_context& video_channel);
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);

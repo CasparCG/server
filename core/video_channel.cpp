@@ -21,10 +21,12 @@
 #include "StdAfx.h"
 
 #include "video_channel.h"
-
 #include "video_channel_context.h"
-
 #include "video_format.h"
+
+#include "consumer/output.h"
+#include "mixer/mixer.h"
+#include "producer/stage.h"
 #include "producer/layer.h"
 
 #include <common/concurrency/executor.h>
@@ -43,9 +45,9 @@ struct video_channel::implementation : boost::noncopyable
 {
 	video_channel_context			context_;
 
-	safe_ptr<frame_consumer_device>	consumer_;
-	safe_ptr<frame_mixer_device>	mixer_;
-	safe_ptr<frame_producer_device>	producer_;
+	safe_ptr<caspar::core::output>	output_;
+	safe_ptr<caspar::core::mixer>	mixer_;
+	safe_ptr<caspar::core::stage>	stage_;
 
 	safe_ptr<diagnostics::graph>	diag_;
 	boost::timer					frame_timer_;
@@ -55,9 +57,9 @@ public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
 		: context_(index, ogl, format_desc)
 		, diag_(diagnostics::create_graph(narrow(print())))
-		, consumer_(new frame_consumer_device(context_))
-		, mixer_(new frame_mixer_device(context_))
-		, producer_(new frame_producer_device(context_))	
+		, output_(new caspar::core::output(context_))
+		, mixer_(new caspar::core::mixer(context_))
+		, stage_(new caspar::core::stage(context_))	
 	{
 		diag_->add_guide("produce-time", 0.5f);	
 		diag_->set_color("produce-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -84,7 +86,7 @@ public:
 
 		frame_timer_.restart();
 
-		auto simple_frames = producer_->execute();
+		auto simple_frames = stage_->execute();
 
 		diag_->update_value("produce-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
 		
@@ -98,7 +100,7 @@ public:
 		
 		// Consume
 
-		consumer_->execute(finished_frame);
+		output_->execute(finished_frame);
 		
 		diag_->update_value("tick-time", tick_timer_.elapsed()*context_.get_format_desc().fps*0.5);
 		tick_timer_.restart();
@@ -122,9 +124,9 @@ public:
 
 video_channel::video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
 video_channel::video_channel(video_channel&& other) : impl_(std::move(other.impl_)){}
-safe_ptr<frame_producer_device> video_channel::producer() { return impl_->producer_;} 
-safe_ptr<frame_mixer_device> video_channel::mixer() { return impl_->mixer_;} 
-safe_ptr<frame_consumer_device> video_channel::consumer() { return impl_->consumer_;} 
+safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
+safe_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
+safe_ptr<output> video_channel::output() { return impl_->output_;} 
 video_format_desc video_channel::get_video_format_desc() const{return impl_->context_.get_format_desc();}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 std::wstring video_channel::print() const { return impl_->print();}
