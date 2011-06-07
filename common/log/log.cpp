@@ -54,19 +54,61 @@
 #include <boost/log/sinks/text_ostream_backend.hpp>
 #include <boost/log/sinks/sync_frontend.hpp>
 #include <boost/log/sinks/async_frontend.hpp>
+#include <boost/log/core/record.hpp>
+#include <boost/log/utility/attribute_value_extractor.hpp>
 
 #include <boost/log/utility/init/common_attributes.hpp>
 #include <boost/log/utility/empty_deleter.hpp>
-
+#include <boost/lambda/lambda.hpp>
 
 namespace caspar{ namespace log{
 
 using namespace boost;
 
-namespace internal{
 
+class system_uptime : public boost::log::attribute
+{
+    typedef boost::log::attributes::basic_attribute_value<unsigned int> attribute_value_type;
+
+public:
+    boost::shared_ptr<boost::log::attribute_value> get_value()
+    {
+        unsigned int up;
+        up = GetTickCount() / 1000;
+        return boost::shared_ptr<boost::log::attribute_value>(new attribute_value_type(up));
+    }
+};
+
+void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& rec)
+{
+    namespace lambda = boost::lambda;
+	
+	#pragma warning(disable : 4996)
+	time_t rawtime;
+	struct tm* timeinfo;
+	time(&rawtime );
+	timeinfo = localtime ( &rawtime );
+	char buffer [80];
+	strftime (buffer,80, "%c", timeinfo);
+	strm << L"[" << buffer << L"] ";
+		
+    boost::log::attributes::current_thread_id::held_type thread_id;
+    if(boost::log::extract<boost::log::attributes::current_thread_id::held_type>(L"ThreadID", rec.attribute_values(), lambda::var(thread_id) = lambda::_1))
+        strm << L"[" << thread_id << L"] ";
+
+    severity_level severity;
+    if(boost::log::extract<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get(), rec.attribute_values(), lambda::var(severity) = lambda::_1))
+        strm << L"[" << severity << L"] ";
+
+    strm << rec.message();
+}
+
+namespace internal{
+	
 void init()
 {	
+	boost::log::wcore::get()->add_global_attribute(L"ASD", boost::make_shared<system_uptime>());
+
 	boost::log::add_common_attributes<wchar_t>();
 	typedef boost::log::aux::add_common_attributes_constants<wchar_t> traits_t;
 
@@ -79,18 +121,11 @@ void init()
 	stream_backend->auto_flush(true);
 
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
-
-	stream_sink->locked_backend()->set_formatter(
-		boost::log::formatters::wstream
-			//<< L"[" << boost::log::formatters::date_time<std::tm>(L"TimeStamp") << L"] "
-			<< L"[" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(L"ThreadID") << L"] "
-			<< L"[" << boost::log::formatters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) << L"] "
-			<< boost::log::formatters::message<wchar_t>()
-	);
+	
+	stream_sink->locked_backend()->set_formatter(&my_formatter);
 
 	boost::log::wcore::get()->add_sink(stream_sink);
 }
-
 }
 
 void add_file_sink(const std::wstring& folder)
@@ -111,13 +146,13 @@ void add_file_sink(const std::wstring& folder)
 			boost::log::keywords::auto_flush = true
 		);
 
-		file_sink->locked_backend()->set_formatter(
-			boost::log::formatters::wstream
-				//<< L"[" << boost::log::formatters::date_time<std::tm>(L"TimeStamp") << L"] "
-				<< L"[" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(L"ThreadID") << L"] "
-				<< L"[" << boost::log::formatters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) << L"] "
-				<< boost::log::formatters::message<wchar_t>()
-		);
+		//file_sink->locked_backend()->set_formatter(
+		//	boost::log::formatters::wstream
+		//		//<< L"[" << boost::log::formatters::date_time(L"TimeStamp") << L"] "
+		//		<< L"[" << boost::log::formatters::attr<boost::log::attributes::current_thread_id::held_type >(L"ThreadID") << L"] "
+		//		<< L"[" << boost::log::formatters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) << L"] "
+		//		<< boost::log::formatters::message<wchar_t>()
+		//);
 
 		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
 		
