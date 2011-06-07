@@ -111,7 +111,7 @@ public:
 		, bmp_(format_desc_.width, format_desc_.height)
 	{
 		graph_->add_guide("frame-time", 0.5f);
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));	
+		graph_->set_color("frame-time", diagnostics::color(0.8f, 0.3f, 0.4f));	
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
