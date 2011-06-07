@@ -63,8 +63,6 @@ public:
 		diag_->set_color("produce-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		diag_->add_guide("mix-time", 0.5f);	
 		diag_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 1.0f));
-		diag_->add_guide("consume-time", 0.5f);	
-		diag_->set_color("consume-time", diagnostics::color(1.0f, 1.0f, 0.0f));
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));	
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
@@ -100,14 +98,8 @@ public:
 		
 		// Consume
 
-		frame_timer_.restart();
-
 		consumer_->execute(finished_frame);
 		
-		diag_->update_value("consume-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
-		
-		// Next
-
 		diag_->update_value("tick-time", tick_timer_.elapsed()*context_.get_format_desc().fps*0.5);
 		tick_timer_.restart();
 
