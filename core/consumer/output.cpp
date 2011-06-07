@@ -58,7 +58,7 @@ public:
 		consumer->initialize(channel_.get_format_desc());
 		channel_.execution().invoke([&]
 		{
-			this->remove(index);
+			consumers_.erase(index);
 			consumers_.insert(std::make_pair(index, consumer));
 
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
