@@ -117,10 +117,10 @@ public:
 		}
 		catch(...)
 		{
-			channel_.ogl().gc();
+			channel_.ogl().gc().wait();
 			image_mixer_ = image_mixer(channel_);
 			audio_mixer_ = audio_mixer();
-			channel_.ogl().gc();
+			channel_.ogl().gc().wait();
 
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			return make_safe<read_frame>();
