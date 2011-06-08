@@ -81,8 +81,8 @@ public:
         
     STDMETHOD(GetBytes(void** buffer))
 	{
-		static std::vector<unsigned char> zeros(1920*1080*4, 0);
-		*buffer = const_cast<unsigned char*>(frame_->image_data().begin());
+		static std::vector<uint8_t> zeros(1920*1080*4, 0);
+		*buffer = const_cast<uint8_t*>(frame_->image_data().begin());
 		if(static_cast<size_t>(frame_->image_data().size()) != format_desc_.size)
 			*buffer = zeros.data();
 		return S_OK;
