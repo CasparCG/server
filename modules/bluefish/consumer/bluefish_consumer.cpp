@@ -76,7 +76,7 @@ public:
 		, executor_(print())
 	{
 		if(BLUE_FAIL(blue_->device_attach(device_index, FALSE))) 
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed to attach device."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to attach device."));
 
 		executor_.set_capacity(CONSUMER_BUFFER_DEPTH);
 
@@ -90,24 +90,24 @@ public:
 			
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
 
 		//Select Update Mode for output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_UPDATE_TYPE, UPD_FMT_FRAME))) 
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set update type."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set update type."));
 	
 		disable_video_output();
 
 		//Enable dual link output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT, 1)))
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to enable dual link."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to enable dual link."));
 
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_4224)))
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set dual link format type to 4:2:2:4."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set dual link format type to 4:2:2:4."));
 			
 		//Select output memory format
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MEMORY_FORMAT, MEM_FMT_ARGB_PC))) 
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set memory format."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set memory format."));
 		
 		//Select image orientation
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
@@ -144,7 +144,7 @@ public:
 	
 		unsigned long engine_mode = VIDEO_ENGINE_FRAMESTORE;
 		if(BLUE_FAIL(blue_->set_video_engine(engine_mode)))
-			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set video engine."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set video engine."));
 
 		enable_video_output();
 						

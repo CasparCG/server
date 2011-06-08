@@ -19,14 +19,13 @@
 */
 #pragma once
 
-#include "../bluefish_error.h"
-
 #include <Windows.h>
 
 #include <BlueVelvet4.h>
 #include <BlueHancUtils.h>
 
 #include <common/memory/safe_ptr.h>
+#include <common/exception/exceptions.h>
 
 namespace caspar { 
 
