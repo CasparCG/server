@@ -80,14 +80,15 @@ public:
 		index_ = (*it)->index;
 
 		int errn = tbb_avcodec_open((*it)->codec, codec);
-		if(errn >= 0)
-		{
-			ctx_.reset((*it)->codec, tbb_avcodec_close);
+		if(errn < 0)
+			return errn;
+				
+		ctx_.reset((*it)->codec, tbb_avcodec_close);
 
-			// Some files give an invalid time_base numerator, try to fix it.
-			if(ctx_ && ctx_->time_base.num == 1)
-				ctx_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(ctx_->time_base.den)))-1));
-		}
+		// Some files give an invalid time_base numerator, try to fix it.
+		if(ctx_ && ctx_->time_base.num == 1)
+			ctx_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(ctx_->time_base.den)))-1));
+		
 		return errn;	
 	}
 
@@ -257,7 +258,7 @@ private:
 	{		
 		try
 		{
-			std::shared_ptr<AVPacket> read_packet(new AVPacket(), [](AVPacket* p)
+			std::shared_ptr<AVPacket> read_packet(new AVPacket, [](AVPacket* p)
 			{
 				av_free_packet(p);
 				delete p;

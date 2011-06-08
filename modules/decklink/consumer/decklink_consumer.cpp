@@ -277,7 +277,10 @@ public:
 			else if(result == bmdOutputFrameFlushed)
 				graph_->add_tag("flushed-frame");
 
-			frame_container_.erase(std::find_if(frame_container_.begin(), frame_container_.end(), completed_frame));
+			frame_container_.erase(std::find_if(frame_container_.begin(), frame_container_.end(), [&](const std::shared_ptr<IDeckLinkVideoFrame>& frame)
+			{
+				return frame.get() == completed_frame;
+			}));
 
 			std::shared_ptr<const core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);					
