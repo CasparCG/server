@@ -35,7 +35,7 @@ ogl_device& video_channel_context::ogl() { return ogl_;}
 
 std::wstring video_channel_context::print() const
 {
-	return L"video_channel[" + boost::lexical_cast<std::wstring>(index_+1) + L"-" +  format_desc_.name + L"]";
+	return L"video_channel[" + boost::lexical_cast<std::wstring>(index_+1) + L"|" +  format_desc_.name + L"]";
 }
 
 }}

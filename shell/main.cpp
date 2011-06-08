@@ -36,7 +36,6 @@
 
 #include <windows.h>
 #include <atlbase.h>
-#include <conio.h>
 
 #include <core/mixer/gpu/ogl_device.h>
 
@@ -242,7 +241,6 @@ int main(int argc, wchar_t* argv[])
 	
 	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 	Sleep(100); // CAPSAR_LOG is asynchronous. Try to get text in correct order.
-	std::wcout << L"Press Any Key To Exit.\n";
-	_getwch();
+	system("pause");
 	return 0;
 }
