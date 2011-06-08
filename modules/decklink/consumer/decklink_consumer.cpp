@@ -243,7 +243,9 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video output."));
 		
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set playback completion callback."));
+			BOOST_THROW_EXCEPTION(caspar_exception() 
+									<< msg_info(narrow(print()) + " Failed to set playback completion callback.")
+									<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
 	}
 
 	void start_playback()
