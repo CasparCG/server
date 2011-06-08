@@ -53,32 +53,24 @@ struct bluefish_consumer : boost::noncopyable
 	boost::timer						frame_timer_;
 	boost::timer						tick_timer_;
 	boost::timer						sync_timer_;	
-		
-	const EVideoMode					vid_fmt_; 
-	const EMemoryFormat					mem_fmt_;
-	const EUpdateMethod					upd_fmt_;
-	const EResoFormat					res_fmt_; 
-	EEngineMode							engine_mode_;
-	
-	std::array<blue_dma_buffer_ptr, 4> reserved_frames_;	
+			
+	unsigned int						vid_fmt_;
+
+	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> frame_buffer_;
 
-	int preroll_count_;
+	int									preroll_count_;
 
-	const bool embedded_audio_;
+	const bool							embedded_audio_;
 	
-	executor executor_;
+	executor							executor_;
 public:
 	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio) 
 		: blue_(create_blue())
 		, device_index_(device_index)
 		, format_desc_(format_desc) 
 		, model_name_(get_card_desc(*blue_))
-		, vid_fmt_(get_video_mode(*blue_, format_desc)) 
-		, mem_fmt_(MEM_FMT_ARGB_PC)
-		, upd_fmt_(UPD_FMT_FRAME)
-		, res_fmt_(RES_FMT_NORMAL) 
-		, engine_mode_(VIDEO_ENGINE_FRAMESTORE)	
+		, vid_fmt_(get_video_mode(*blue_, format_desc))
 		, preroll_count_(0)
 		, embedded_audio_(embedded_audio)
 		, executor_(print())
@@ -101,7 +93,7 @@ public:
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
 
 		//Select Update Mode for output
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_UPDATE_TYPE, upd_fmt_))) 
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_UPDATE_TYPE, UPD_FMT_FRAME))) 
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set update type."));
 	
 		disable_video_output();
@@ -114,7 +106,7 @@ public:
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set dual link format type to 4:2:2:4."));
 			
 		//Select output memory format
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MEMORY_FORMAT, mem_fmt_))) 
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MEMORY_FORMAT, MEM_FMT_ARGB_PC))) 
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set memory format."));
 		
 		//Select image orientation
@@ -150,7 +142,8 @@ public:
 		if(blue_->GetHDCardType(device_index_) != CRD_HD_INVALID) 
 			blue_->Set_DownConverterSignalType(vid_fmt_ == VID_FMT_PAL ? SD_SDI : HD_SDI);	
 	
-		if(BLUE_FAIL(blue_->set_video_engine(*reinterpret_cast<unsigned long*>(&engine_mode_))))
+		unsigned long engine_mode = VIDEO_ENGINE_FRAMESTORE;
+		if(BLUE_FAIL(blue_->set_video_engine(engine_mode)))
 			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info(narrow(print()) + " Failed to set video engine."));
 
 		enable_video_output();
