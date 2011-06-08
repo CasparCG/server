@@ -19,7 +19,7 @@
 */
 #pragma once
 
-#include <common/exception/exceptions.h>
+#include "../bluefish_error.h"
 
 #include <core/video_format.h>
 #include <core/consumer/frame_consumer.h>
@@ -29,13 +29,7 @@
 #include <string>
 
 namespace caspar { 
-
-struct bluefish_exception : virtual caspar_exception{};
-		
-void blue_initialize();
-std::wstring get_bluefish_version();
-std::vector<std::wstring> get_bluefish_device_list();
-
+			
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params);
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree);
 
