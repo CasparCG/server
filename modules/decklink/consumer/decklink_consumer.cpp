@@ -167,7 +167,6 @@ public:
 		if(!config.embedded_audio)
 			start_playback();
 				
-		CASPAR_LOG(info) << print() << L" Buffer depth: " << buffer_size_;		
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 
@@ -278,15 +277,11 @@ public:
 			else if(result == bmdOutputFrameFlushed)
 				graph_->add_tag("flushed-frame");
 
-			frame_container_.erase(std::find_if(frame_container_.begin(), frame_container_.end(), [&](const std::shared_ptr<IDeckLinkVideoFrame> frame)
-			{
-				return frame.get() == completed_frame;
-			}));
+			frame_container_.erase(std::find_if(frame_container_.begin(), frame_container_.end(), completed_frame));
 
 			std::shared_ptr<const core::read_frame> frame;	
-			video_frame_buffer_.pop(frame);		
-			
-			schedule_next_video(safe_ptr<const core::read_frame>(frame));			
+			video_frame_buffer_.pop(frame);					
+			schedule_next_video(make_safe(frame));			
 		}
 		catch(...)
 		{
@@ -318,7 +313,7 @@ public:
 			{
 				std::shared_ptr<const core::read_frame> frame;
 				audio_frame_buffer_.pop(frame);
-				schedule_next_audio(safe_ptr<const core::read_frame>(frame));	
+				schedule_next_audio(make_safe(frame));	
 			}
 		}
 		catch(...)
@@ -337,8 +332,8 @@ public:
 		const int sample_count = format_desc_.audio_samples_per_frame;
 		const int sample_frame_count = sample_count/2;
 
-		const short* frame_audio_data = frame->audio_data().size() == sample_count ? frame->audio_data().begin() : silence.data();
-		audio_container_.push_back(std::vector<short>(frame_audio_data, frame_audio_data+sample_count));
+		const int16_t* frame_audio_data = frame->audio_data().size() == sample_count ? frame->audio_data().begin() : silence.data();
+		audio_container_.push_back(std::vector<int16_t>(frame_audio_data, frame_audio_data+sample_count));
 
 		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), sample_frame_count, (audio_scheduled_++) * sample_frame_count, format_desc_.audio_sample_rate, nullptr)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
