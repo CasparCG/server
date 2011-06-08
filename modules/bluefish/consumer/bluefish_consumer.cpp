@@ -273,8 +273,8 @@ public:
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
-		static const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN;
-		static const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
+		const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN;
+		const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
 		
 		hanc_stream_info_struct hanc_stream_info;
 		memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));

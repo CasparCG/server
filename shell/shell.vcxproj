@@ -55,9 +55,6 @@
     <ProjectReference Include="..\modules\ogl\ogl.vcxproj">
       <Project>{88f974f0-d09f-4788-8cf8-f563209e60c1}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\modules\silverlight\silverlight.vcxproj">
-      <Project>{b964d953-8882-454c-a935-db711d697e39}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\protocol\protocol.vcxproj">
       <Project>{2040b361-1fb6-488e-84a5-38a580da90de}</Project>
     </ProjectReference>
