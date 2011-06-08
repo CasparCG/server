@@ -17,7 +17,6 @@
     <ClInclude Include="util\memory.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="bluefish_error.h" />
     <ClInclude Include="util\blue_velvet.h">
       <Filter>util</Filter>
     </ClInclude>
