@@ -28,11 +28,11 @@
 #if !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
 #define AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_
 
-#define BOOST_PARAMETER_MAX_ARITY 7
-
 #ifdef _DEBUG
 #include <crtdbg.h>
 #endif
+
+#include <Windows.h>
 
 #include <memory>
 #include <array>
@@ -44,20 +44,12 @@
 #include <string>
 #include <math.h>
 
-#include <tbb/atomic.h>
-#include <tbb/concurrent_queue.h>
-
-#include <boost/assign.hpp>
-#include <boost/foreach.hpp>
-#include <boost/range/algorithm.hpp>
-
-#include "../common/utility/string.h"
-#include "../common/memory/safe_ptr.h"
+#include <common/utility/string.h>
+#include <common/memory/safe_ptr.h>
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
-#include "../common/log/Log.h"
-#include "../common/exception/exceptions.h"
-#include "../common/exception/win32_exception.h"
+#include <common/log/Log.h>
+#include <common/exception/exceptions.h>
 
 #include <assert.h>
 

@@ -17,7 +17,8 @@
     <ClInclude Include="util\memory.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="util\util.h">
+    <ClInclude Include="bluefish_error.h" />
+    <ClInclude Include="util\blue_velvet.h">
       <Filter>util</Filter>
     </ClInclude>
   </ItemGroup>
@@ -27,5 +28,8 @@
     </ClCompile>
     <ClCompile Include="bluefish.cpp" />
     <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="util\blue_velvet.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
