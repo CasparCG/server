@@ -108,7 +108,7 @@ public:
 		if(FAILED(input_->StartStreams()))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to start input stream."));
 
-		CASPAR_LOG(info) << print() << " successfully initialized decklink for " << format_desc_.name;
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
 	~decklink_producer()
