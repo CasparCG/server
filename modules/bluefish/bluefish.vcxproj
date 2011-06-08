@@ -239,7 +239,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="bluefish.h" />
-    <ClInclude Include="bluefish_error.h" />
     <ClInclude Include="consumer\bluefish_consumer.h" />
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="util\memory.h" />

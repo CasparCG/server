@@ -19,10 +19,8 @@
 */
 #pragma once
 
-#include "../bluefish_error.h"
-
-#include <core/video_format.h>
 #include <core/consumer/frame_consumer.h>
+#include <common/memory/safe_ptr.h>
 
 #include <boost/property_tree/ptree.hpp>
 
