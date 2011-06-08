@@ -21,7 +21,7 @@
 #include "../StdAfx.h"
 
 #include "bluefish_consumer.h"
-#include "../util/util.h"
+#include "../util/blue_velvet.h"
 #include "../util/memory.h"
 
 #include <core/mixer/read_frame.h>
@@ -36,83 +36,11 @@
 
 #include <boost/timer.hpp>
 
-#include <BlueVelvet4.h>
-#include <BlueHancUtils.h>
-
 #include <memory>
 #include <array>
 
 namespace caspar { 
-	
-CBlueVelvet4* (*BlueVelvetFactory4)() = nullptr;
-const char*	(*BlueVelvetVersion)() = nullptr;
-BLUE_UINT32 (*encode_hanc_frame)(struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr,BLUE_UINT32 no_audio_ch,BLUE_UINT32 no_audio_samples,BLUE_UINT32 nTypeOfSample,BLUE_UINT32 emb_audio_flag) = nullptr;
-BLUE_UINT32 (*encode_hanc_frame_ex)(BLUE_UINT32 card_type, struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr, BLUE_UINT32 no_audio_ch,	BLUE_UINT32 no_audio_samples, BLUE_UINT32 nTypeOfSample, BLUE_UINT32 emb_audio_flag) = nullptr;
-
-void blue_velvet_initialize()
-{
-#ifdef _DEBUG
-	auto module = LoadLibrary(L"BlueVelvet3_d.dll");
-#else
-	auto module = LoadLibrary(L"BlueVelvet3.dll");
-#endif
-	if(!module)
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll"));
-	static std::shared_ptr<void> lib(module, FreeLibrary);
-	BlueVelvetFactory4 = reinterpret_cast<decltype(BlueVelvetFactory4)>(GetProcAddress(module, "BlueVelvetFactory4"));
-	BlueVelvetVersion = reinterpret_cast<decltype(BlueVelvetVersion)>(GetProcAddress(module, "BlueVelvetVersion"));
-}
-
-void blue_hanc_initialize()
-{
-#ifdef _DEBUG
-	auto module = LoadLibrary(L"BlueHancUtils_d.dll");
-#else
-	auto module = LoadLibrary(L"BlueHancUtils.dll");
-#endif
-	if(!module)
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll"));
-	static std::shared_ptr<void> lib(module, FreeLibrary);
-	encode_hanc_frame = reinterpret_cast<decltype(encode_hanc_frame)>(GetProcAddress(module, "encode_hanc_frame"));
-	encode_hanc_frame_ex = reinterpret_cast<decltype(encode_hanc_frame_ex)>(GetProcAddress(module, "encode_hanc_frame_ex"));
-}
-
-void blue_initialize()
-{
-	blue_velvet_initialize();
-	blue_hanc_initialize();
-}
-
-safe_ptr<CBlueVelvet4> create_blue(size_t device_index)
-{
-	if(!BlueVelvetFactory4 || !encode_hanc_frame || !encode_hanc_frame)
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
-
-	auto blue = safe_ptr<CBlueVelvet4>(BlueVelvetFactory4());
-	
-	if(BLUE_FAIL(blue->device_attach(device_index, FALSE))) 
-		BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed to attach device."));
-
-	return blue;
-}
-
-EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& format_desc)
-{
-	EVideoMode vid_fmt = VID_FMT_INVALID;
-	auto desiredVideoFormat = vid_fmt_from_video_format(format_desc.format);
-	int videoModeCount = blue.count_video_mode();
-	for(int videoModeIndex = 1; videoModeIndex <= videoModeCount; ++videoModeIndex) 
-	{
-		EVideoMode videoMode = blue.enum_video_mode(videoModeIndex);
-		if(videoMode == desiredVideoFormat) 
-			vid_fmt = videoMode;			
-	}
-	if(vid_fmt == VID_FMT_INVALID)
-		BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed get videomode.") << arg_value_info(narrow(format_desc.name)));
-
-	return vid_fmt;
-}
-		
+			
 struct bluefish_consumer : boost::noncopyable
 {
 	safe_ptr<CBlueVelvet4>				blue_;
@@ -142,10 +70,10 @@ struct bluefish_consumer : boost::noncopyable
 	executor executor_;
 public:
 	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio) 
-		: blue_(create_blue(device_index))
+		: blue_(create_blue())
 		, device_index_(device_index)
 		, format_desc_(format_desc) 
-		, model_name_(get_card_desc(blue_->has_video_cardtype()))
+		, model_name_(get_card_desc(*blue_))
 		, vid_fmt_(get_video_mode(*blue_, format_desc)) 
 		, mem_fmt_(MEM_FMT_ARGB_PC)
 		, upd_fmt_(UPD_FMT_FRAME)
@@ -155,6 +83,9 @@ public:
 		, embedded_audio_(embedded_audio)
 		, executor_(print())
 	{
+		if(BLUE_FAIL(blue_->device_attach(device_index, FALSE))) 
+			BOOST_THROW_EXCEPTION(bluefish_exception() << msg_info("Failed to attach device."));
+
 		executor_.set_capacity(CONSUMER_BUFFER_DEPTH);
 
 		graph_ = diagnostics::create_graph(narrow(print()));
@@ -224,8 +155,11 @@ public:
 
 		enable_video_output();
 						
-		for(size_t n = 0; n < reserved_frames_.size(); ++n)
-			reserved_frames_[n] = std::make_shared<blue_dma_buffer>(format_desc_.size, n);	
+		int n = 0;
+		std::generate(reserved_frames_.begin(), reserved_frames_.end(), [&]
+		{
+			return std::make_shared<blue_dma_buffer>(format_desc_.size, n++);
+		});
 								
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
@@ -271,7 +205,7 @@ public:
 	
 	void schedule_next_video(const safe_ptr<const core::read_frame>& frame)
 	{
-		static std::vector<short> silence(MAX_HANC_BUFFER_SIZE, 0);
+		static std::vector<int16_t> silence(MAX_HANC_BUFFER_SIZE, 0);
 		
 		executor_.begin_invoke([=]
 		{
@@ -282,23 +216,29 @@ public:
 
 				frame_timer_.restart();
 				
+				// Copy to local buffers
+
 				if(!frame->image_data().empty())
 					fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
 				else
 					fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
+
+				// Sync
 
 				sync_timer_.restart();
 				unsigned long n_field = 0;
 				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
 				graph_->update_value("sync-time", static_cast<float>(sync_timer_.elapsed()*format_desc_.fps*0.5));
 
+				// Send and display
+
 				if(embedded_audio_)
 				{		
-					auto frame_audio_data = frame->audio_data().empty() ? silence.data() : const_cast<short*>(frame->audio_data().begin());
+					auto frame_audio_data = frame->audio_data().empty() ? silence.data() : const_cast<int16_t*>(frame->audio_data().begin());
 
 					encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio_data, audio_samples, audio_nchannels);
 								
-					blue_->system_buffer_write_async(const_cast<unsigned char*>(reserved_frames_.front()->image_data()), 
+					blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 													reserved_frames_.front()->image_size(), 
 													nullptr, 
 													BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
@@ -313,7 +253,7 @@ public:
 				}
 				else
 				{
-					blue_->system_buffer_write_async(const_cast<unsigned char*>(reserved_frames_.front()->image_data()),
+					blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
 													reserved_frames_.front()->image_size(), 
 													nullptr,                 
 													BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
@@ -340,8 +280,8 @@ public:
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
-		auto card_type = blue_->has_video_cardtype();
-		auto sample_type = (AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN);
+		static const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN;
+		static const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
 		
 		hanc_stream_info_struct hanc_stream_info;
 		memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));
@@ -350,15 +290,13 @@ public:
 		hanc_stream_info.AudioDBNArray[1] = -1;
 		hanc_stream_info.AudioDBNArray[2] = -1;
 		hanc_stream_info.AudioDBNArray[3] = -1;
-		hanc_stream_info.hanc_data_ptr = hanc_data;
-		hanc_stream_info.video_mode = vid_fmt_;
+		hanc_stream_info.hanc_data_ptr	  = hanc_data;
+		hanc_stream_info.video_mode		  = vid_fmt_;		
 		
-		auto emb_audio_flag = (blue_emb_audio_enable | blue_emb_audio_group1_enable);
-
-		if (!is_epoch_card(card_type))
+		if (!is_epoch_card(*blue_))
 			encode_hanc_frame(&hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);	
 		else
-			encode_hanc_frame_ex(card_type, &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
+			encode_hanc_frame_ex(blue_->has_video_cardtype(), &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
 	}
 	
 	std::wstring print() const
@@ -372,7 +310,7 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	std::unique_ptr<bluefish_consumer>	consumer_;
 	const size_t						device_index_;
 	const bool							embedded_audio_;
-	bool								key_only_;
+	const bool							key_only_;
 public:
 
 	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
@@ -406,64 +344,24 @@ public:
 	}
 };	
 
-std::wstring get_bluefish_version()
-{
-	try
-	{
-		blue_initialize();
-	}
-	catch(...)
-	{
-		return L"Not found";
-	}
-	if(!BlueVelvetVersion)
-		return L"Unknown";
-
-	return widen(std::string(BlueVelvetVersion()));
-}
-
-std::vector<std::wstring> get_bluefish_device_list()
-{
-	std::vector<std::wstring> devices;
-
-	try
-	{		
-		if(!BlueVelvetFactory4)
-			return devices;
-
-		std::shared_ptr<CBlueVelvet4> blue(BlueVelvetFactory4());
-
-		for(int n = 1; BLUE_PASS(blue->device_attach(n, FALSE)); ++n)
-		{				
-			devices.push_back(std::wstring(get_card_desc(blue->has_video_cardtype())) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");
-			blue->device_detach();		
-		}
-	}
-	catch(...){}
-
-	return devices;
-}
-
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"BLUEFISH")
 		return core::frame_consumer::empty();
 		
-	int device_index = 1;
-	if(params.size() > 1)
-		device_index = lexical_cast_or_default<int>(params[1], 1);
+	const auto device_index = params.size() > 1 ? lexical_cast_or_default<int>(params[1], 1) : 1;
 
-	bool embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
-	bool key_only		= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
+	const auto embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
+	const auto key_only		  = std::find(params.begin(), params.end(), L"KEY_ONLY")	   != params.end();
 
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree) 
 {	
-	auto device_index	 = ptree.get("device",		   1);
-	auto embedded_audio  = ptree.get("embedded-audio", false);
-	bool key_only		 = ptree.get("key-only",	   false);
+	const auto device_index		= ptree.get("device",		  1);
+	const auto embedded_audio	= ptree.get("embedded-audio", false);
+	const auto key_only			= ptree.get("key-only",		  false);
 
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }

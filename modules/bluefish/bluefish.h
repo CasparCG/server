@@ -19,10 +19,14 @@
 */
 #pragma once
 
-#include "consumer/bluefish_consumer.h"
+#include <string>
+#include <vector>
 
 namespace caspar {
 
 void init_bluefish();
+
+std::wstring get_bluefish_version();
+std::vector<std::wstring> get_bluefish_device_list();
 
 }
