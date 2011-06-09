@@ -233,7 +233,7 @@ int main(int argc, wchar_t* argv[])
 			amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
 		}
 	}
-	catch(const std::exception&)
+	catch(...)
 	{
 		CASPAR_LOG(fatal) << "UNHANDLED EXCEPTION in main thread.";
 		CASPAR_LOG_CURRENT_EXCEPTION();
