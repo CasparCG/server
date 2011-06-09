@@ -162,7 +162,7 @@ int main(int argc, wchar_t* argv[])
 	try 
 	{
 		// Configure environment properties from configuration.
-		caspar::env::configure("caspar.config");
+		caspar::env::configure("casparcg.config");
 
 	#ifdef _DEBUG
 		if(caspar::env::properties().get("configuration.debugging.remote", false))

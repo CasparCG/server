@@ -35,9 +35,6 @@ ogl_device::ogl_device() : executor_(L"ogl_device")
 		context_.reset(new sf::Context());
 		context_->SetActive(true);
 						
-		if(!GLEE_VERSION_3_0)
-			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
-
 		GL(glGenFramebuffers(1, &fbo_));		
 		GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
 		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
