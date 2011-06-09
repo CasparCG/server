@@ -5,8 +5,8 @@
     <ClCompile Include="server.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="caspar.config" />
     <None Include="CasparCG.ico" />
+    <None Include="casparcg.config" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />

@@ -85,6 +85,12 @@ public:
 		, layer_key_(false)
 	{
 		transform_stack_.push(core::image_transform());
+
+		channel_.ogl().invoke([=]
+		{
+			if(!GLEE_VERSION_3_0)
+				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
+		});
 	}
 	
 	void begin(const core::basic_frame& frame)

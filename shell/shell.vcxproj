@@ -60,7 +60,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="caspar.config">
+    <None Include="casparcg.config">
       <SubType>Designer</SubType>
     </None>
     <None Include="CasparCG.ico" />
@@ -198,7 +198,7 @@
     </Link>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
-copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -253,7 +253,7 @@ copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
-copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">
@@ -308,7 +308,7 @@ copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
-copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
@@ -363,7 +363,7 @@ copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
-copy "$(ProjectDir)caspar.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
