@@ -1,3 +1,23 @@
+/*
+* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+*
+*  This file is part of CasparCG.
+*
+*    CasparCG is free software: you can redistribute it and/or modify
+*    it under the terms of the GNU General Public License as published by
+*    the Free Software Foundation, either version 3 of the License, or
+*    (at your option) any later version.
+*
+*    CasparCG is distributed in the hope that it will be useful,
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*    GNU General Public License for more details.
+
+*    You should have received a copy of the GNU General Public License
+*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+*
+*/
+ 
 #ifndef _CASPAR_BLUEFISHVIDEOCONSUMER_H__
 #define _CASPAR_BLUEFISHVIDEOCONSUMER_H__
 
@@ -5,12 +25,11 @@
 
 #include "..\..\utils\thread.h"
 #include "BluefishException.h"
-#include "BluefishFrameManager.h"
 #include "..\..\VideoConsumer.h"
 
 #define TIMEOUT			1000
 
-class CBlueVelvet;
+class CBlueVelvet4;
 
 namespace caspar {
 
@@ -19,7 +38,7 @@ typedef std::tr1::shared_ptr<FramePlaybackControl> FramePlaybackControlPtr;
 
 namespace bluefish {
 
-typedef std::tr1::shared_ptr<CBlueVelvet> BlueVelvetPtr;
+typedef std::tr1::shared_ptr<CBlueVelvet4> BlueVelvetPtr;
 
 class BlueFishVideoConsumer : public IVideoConsumer
 {
@@ -44,17 +63,19 @@ public:
 	const TCHAR* GetFormatDescription() const {
 		return FrameFormatDescription::FormatDescriptions[currentFormat_].name;
 	}
+	bool SetVideoFormat(const tstring& strDesiredFrameFormat);
 
 private:
+
+	bool DoSetupDevice(unsigned int deviceIndex, tstring strDesiredFrameFormat);
+
 	BlueVelvetPtr pSDK_;
 	FramePlaybackControlPtr pPlaybackControl_;
-	BluefishFrameManagerPtr pFrameManager_;
 	unsigned long m_bufferCount;
 	unsigned long m_length;
 	unsigned long m_actual;
 	unsigned long m_golden;
 
-	unsigned long GetVideoFormat(const tstring& strVideoMode);
 	unsigned long VidFmtFromFrameFormat(FrameFormat fmt);
 
 	FrameFormat currentFormat_;

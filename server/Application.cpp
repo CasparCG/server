@@ -70,7 +70,7 @@ using namespace utils;
 enum ControllerTransports { TCP, Serial, TransportsCount };
 enum ControllerProtocols { AMCP, CII, CLOCK, ProtocolsCount };
 
-const TCHAR* Application::versionString_(TEXT("CG 1.7.1.2"));
+const TCHAR* Application::versionString_(TEXT("CG 1.7.1.3"));
 const TCHAR* Application::serviceName_(TEXT("Caspar service"));
 
 Application::Application(const tstring& cmdline, HINSTANCE hInstance) :	   hInstance_(hInstance), logLevel_(2), logDir_(TEXT("_log")), 
@@ -391,11 +391,11 @@ bool Application::Initialize()
 		pAudioManager_ = caspar::directsound::DirectSoundManager::GetInstance();
 
 		sourceMediaManagers_.push_back(MediaManagerPtr(new FlashManager()));
-		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaManager()));
-		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaScrollMediaManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new CTManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new ffmpeg::FFMPEGManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new ColorManager()));
+		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaManager()));
+		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaScrollMediaManager()));
 
 		colorManagerIndex_ = static_cast<int>(sourceMediaManagers_.size()-1);
 
