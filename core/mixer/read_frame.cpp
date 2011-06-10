@@ -22,6 +22,7 @@
 #include "read_frame.h"
 
 #include "gpu/host_buffer.h"	
+#include "gpu/ogl_device.h"
 
 namespace caspar { namespace core {
 																																							
@@ -29,13 +30,21 @@ struct read_frame::implementation : boost::noncopyable
 {
 	std::shared_ptr<host_buffer> image_data_;
 	std::vector<int16_t> audio_data_;
+	ogl_device& ogl_;
 
 public:
-	implementation(){}
-
-	implementation(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
+	implementation(ogl_device& ogl, safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
 		: image_data_(std::move(image_data))
-		, audio_data_(std::move(audio_data)){}	
+		, audio_data_(std::move(audio_data))
+		, ogl_(ogl){}	
+
+	~implementation()
+	{
+		ogl_.invoke([this]
+		{
+			image_data_.reset();
+		});
+	}
 
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
@@ -51,11 +60,17 @@ public:
 	}
 };
 
-read_frame::read_frame(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
-	: impl_(new implementation(std::move(image_data), std::move(audio_data))){}
-read_frame::read_frame()
-	: impl_(new implementation()){}
-const boost::iterator_range<const uint8_t*> read_frame::image_data() const{return impl_->image_data();}
-const boost::iterator_range<const int16_t*> read_frame::audio_data() const{return impl_->audio_data();}
+read_frame::read_frame(ogl_device& ogl, safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
+	: impl_(new implementation(ogl, std::move(image_data), std::move(audio_data))){}
+read_frame::read_frame(){}
+const boost::iterator_range<const uint8_t*> read_frame::image_data() const
+{
+	return impl_ ? impl_->image_data() : boost::iterator_range<const uint8_t*>();
+}
+
+const boost::iterator_range<const int16_t*> read_frame::audio_data() const
+{
+	return impl_ ? impl_->audio_data() : boost::iterator_range<const int16_t*>();
+}
 
 }}
