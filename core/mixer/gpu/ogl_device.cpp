@@ -57,7 +57,7 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 {
 	CASPAR_VERIFY(stride > 0 && stride < 5);
 	CASPAR_VERIFY(width > 0 && height > 0);
-	auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
+	auto pool = device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->try_pop(buffer))		
 	{
@@ -72,17 +72,25 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 				CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
 				throw;
 			}
+
 		}, high_priority);	
 	}
 			
-	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*){pool->push(buffer);});
+	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*)
+	{
+		executor_.begin_invoke([=]
+		{
+			pool->push(buffer);
+
+		}, high_priority);
+	});
 }
 	
 safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::usage_t usage)
 {
 	CASPAR_VERIFY(usage == host_buffer::write_only || usage == host_buffer::read_only);
 	CASPAR_VERIFY(size > 0);
-	auto pool = &host_pools_[usage][size];
+	auto pool = host_pools_[usage][size];
 	std::shared_ptr<host_buffer> buffer;
 	if(!pool->try_pop(buffer))
 	{
@@ -127,16 +135,22 @@ void ogl_device::yield()
 
 boost::unique_future<void> ogl_device::gc()
 {
-	//CASPAR_LOG(info) << " ogl: Running GC.";
+	CASPAR_LOG(info) << " ogl: Running GC.";
 
-	//return begin_invoke([=]
-	//{		
-	//	BOOST_FOREACH(auto& pool, device_pools_)
-	//		pool.clear();
-	//	BOOST_FOREACH(auto& pool, host_pools_)
-	//		pool.clear();
-	//}, high_priority);
-	return begin_invoke([=]{});
+	return begin_invoke([=]
+	{		
+		try
+		{
+			BOOST_FOREACH(auto& pool, device_pools_)
+				pool.clear();
+			BOOST_FOREACH(auto& pool, host_pools_)
+				pool.clear();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+	}, high_priority);
 }
 
 std::wstring ogl_device::get_version()

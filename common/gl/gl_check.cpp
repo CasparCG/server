@@ -37,53 +37,64 @@
 
 namespace caspar { namespace gl {	
 
-void SMFL_GLCheckError(const std::string& expr, const std::string& File, unsigned int Line)
+void SMFL_GLCheckError(const std::string& expr, const std::string& file, unsigned int line)
 {
 	// Get the last error
 	GLenum ErrorCode = glGetError();
 
 	if (ErrorCode != GL_NO_ERROR)
 	{
-		std::string Error = "unknown error";
-		std::string Desc  = "no description";
-
 		// Decode the error code
 		switch (ErrorCode)
 		{
 			case GL_INVALID_ENUM :
 				BOOST_THROW_EXCEPTION(ogl_invalid_enum()
 					<< msg_info("an unacceptable value has been specified for an enumerated argument")
-					<< errorstr("GL_INVALID_ENUM"));
+					<< errorstr("GL_INVALID_ENUM")
+					<< line_info(line)
+					<< source_info(file));
 
 			case GL_INVALID_VALUE :
 				BOOST_THROW_EXCEPTION(ogl_invalid_value()
 					<< msg_info("a numeric argument is out of range")
-					<< errorstr("GL_INVALID_VALUE"));
+					<< errorstr("GL_INVALID_VALUE")
+					<< line_info(line)
+					<< source_info(file));
 
 			case GL_INVALID_OPERATION :
 				BOOST_THROW_EXCEPTION(ogl_invalid_operation()
 					<< msg_info("the specified operation is not allowed in the current state")
-					<< errorstr("GL_INVALID_OPERATION"));
+					<< errorstr("GL_INVALID_OPERATION")
+					<< line_info(line)
+					<< source_info(file));
 
 			case GL_STACK_OVERFLOW :
 				BOOST_THROW_EXCEPTION(ogl_stack_overflow()
 					<< msg_info("this command would cause a stack overflow")
-					<< errorstr("GL_STACK_OVERFLOW"));
+					<< errorstr("GL_STACK_OVERFLOW")
+					<< line_info(line)
+					<< source_info(file));
 
 			case GL_STACK_UNDERFLOW :
 				BOOST_THROW_EXCEPTION(ogl_stack_underflow()
 					<< msg_info("this command would cause a stack underflow")
-					<< errorstr("GL_STACK_UNDERFLOW"));
+					<< errorstr("GL_STACK_UNDERFLOW")
+					<< line_info(line)
+					<< source_info(file));
 
 			case GL_OUT_OF_MEMORY :
 				BOOST_THROW_EXCEPTION(ogl_stack_underflow()
 					<< msg_info("there is not enough memory left to execute the command")
-					<< errorstr("GL_OUT_OF_MEMORY"));
+					<< errorstr("GL_OUT_OF_MEMORY")
+					<< line_info(line)
+					<< source_info(file));
 
 			case GL_INVALID_FRAMEBUFFER_OPERATION_EXT :
 				BOOST_THROW_EXCEPTION(ogl_stack_underflow()
 					<< msg_info("the object bound to FRAMEBUFFER_BINDING_EXT is not \"framebuffer complete\"")
-					<< errorstr("GL_INVALID_FRAMEBUFFER_OPERATION_EXT"));
+					<< errorstr("GL_INVALID_FRAMEBUFFER_OPERATION_EXT")
+					<< line_info(line)
+					<< source_info(file));
 		}
 	}
 }

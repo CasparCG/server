@@ -41,8 +41,8 @@ class ogl_device : boost::noncopyable
 {	
 	std::unique_ptr<sf::Context> context_;
 	
-	std::array<tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<std::shared_ptr<device_buffer>>>, 4> device_pools_;
-	std::array<tbb::concurrent_unordered_map<size_t, tbb::concurrent_bounded_queue<std::shared_ptr<host_buffer>>>, 2> host_pools_;
+	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<tbb::concurrent_bounded_queue<std::shared_ptr<device_buffer>>>>, 4> device_pools_;
+	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<tbb::concurrent_bounded_queue<std::shared_ptr<host_buffer>>>>, 2> host_pools_;
 	
 	unsigned int fbo_;
 

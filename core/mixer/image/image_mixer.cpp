@@ -92,7 +92,7 @@ public:
 				CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";//BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
 		});
 	}
-	
+
 	void begin(const core::basic_frame& frame)
 	{
 		transform_stack_.push(transform_stack_.top()*frame.get_image_transform());

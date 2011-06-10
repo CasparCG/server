@@ -142,7 +142,7 @@ private:
 			auto key_data = channel_.ogl().create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
 			fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			std::vector<int16_t> audio_data(frame->audio_data().begin(), frame->audio_data().end());
-			return make_safe<read_frame>(std::move(key_data), std::move(audio_data));
+			return make_safe<read_frame>(channel_.ogl(), std::move(key_data), std::move(audio_data));
 		}
 		
 		return make_safe<read_frame>();

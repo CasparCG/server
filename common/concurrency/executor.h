@@ -208,11 +208,7 @@ public:
 			{
 				try{task_adaptor.value();}
 				catch(boost::task_already_started&){}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					throw;
-				}
+				catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
 			});
 		}
 		
@@ -273,7 +269,16 @@ private:
 		win32_exception::install_handler();		
 		detail::SetThreadName(GetCurrentThreadId(), name_.c_str());
 		while(is_running_)
-			execute();
+		{
+			try
+			{
+				execute();
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
+		}
 	}	
 };
 
