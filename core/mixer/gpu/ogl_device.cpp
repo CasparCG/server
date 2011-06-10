@@ -127,15 +127,16 @@ void ogl_device::yield()
 
 boost::unique_future<void> ogl_device::gc()
 {
-	CASPAR_LOG(info) << " ogl: Running GC.";
+	//CASPAR_LOG(info) << " ogl: Running GC.";
 
-	return begin_invoke([=]
-	{		
-		BOOST_FOREACH(auto& pool, device_pools_)
-			pool.clear();
-		BOOST_FOREACH(auto& pool, host_pools_)
-			pool.clear();
-	}, high_priority);
+	//return begin_invoke([=]
+	//{		
+	//	BOOST_FOREACH(auto& pool, device_pools_)
+	//		pool.clear();
+	//	BOOST_FOREACH(auto& pool, host_pools_)
+	//		pool.clear();
+	//}, high_priority);
+	return begin_invoke([=]{});
 }
 
 std::wstring ogl_device::get_version()
