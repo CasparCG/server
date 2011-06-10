@@ -272,12 +272,12 @@ private:
 				{
 					seek_frame(start_, AVSEEK_FLAG_BACKWARD);
 					graph_->add_tag("seek");		
-					CASPAR_LOG(info) << print() << " Received EOF. Looping.";			
+					//CASPAR_LOG(info) << print() << " Received EOF. Looping.";			
 				}	
 				else
 				{
 					stop();
-					CASPAR_LOG(info) << print() << " Received EOF. Stopping.";
+					//CASPAR_LOG(info) << print() << " Received EOF. Stopping.";
 				}
 			}
 			else if(errn < 0)
@@ -335,8 +335,8 @@ private:
 
 	bool is_eof(int errn)
 	{
-		if(errn == AVERROR(EIO))
-			CASPAR_LOG(warning) << print() << " Received EIO, assuming EOF";
+		//if(errn == AVERROR(EIO))
+		//	CASPAR_LOG(warning) << print() << " Received EIO, assuming EOF";
 
 		return errn == AVERROR_EOF || errn == AVERROR(EIO); // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}

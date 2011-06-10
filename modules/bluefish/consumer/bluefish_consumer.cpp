@@ -66,7 +66,7 @@ struct bluefish_consumer : boost::noncopyable
 	executor							executor_;
 public:
 	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio) 
-		: blue_(create_blue())
+		: blue_(create_blue(device_index))
 		, device_index_(device_index)
 		, format_desc_(format_desc) 
 		, model_name_(get_card_desc(*blue_))
@@ -75,9 +75,6 @@ public:
 		, embedded_audio_(embedded_audio)
 		, executor_(print())
 	{
-		if(BLUE_FAIL(blue_->device_attach(device_index, FALSE))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to attach device."));
-
 		executor_.set_capacity(CONSUMER_BUFFER_DEPTH);
 
 		graph_ = diagnostics::create_graph(narrow(print()));

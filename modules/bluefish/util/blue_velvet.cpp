@@ -154,4 +154,14 @@ safe_ptr<CBlueVelvet4> create_blue()
 	return safe_ptr<CBlueVelvet4>(BlueVelvetFactory4(), BlueVelvetDestroy);
 }
 
+safe_ptr<CBlueVelvet4> create_blue(size_t device_index)
+{
+	auto blue = create_blue();
+	
+	if(BLUE_FAIL(blue->device_attach(device_index, FALSE))) 
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to attach device."));
+
+	return blue;
+}
+
 }

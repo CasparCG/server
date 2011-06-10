@@ -40,8 +40,11 @@ public:
 		: flash_producer_(frame_producer)
 	{}
 	
-	void add(int layer, const std::wstring& filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
+	void add(int layer, std::wstring filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
 	{
+		if(filename.size() > 0 && filename[0] == L'/')
+			filename = filename.substr(1, filename.size()-1);
+
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command";
 		flash_producer_->param((boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?TEXT("<true/>"):TEXT("<false/>")) % label % data).str());
 	}

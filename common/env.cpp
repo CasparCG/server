@@ -35,6 +35,8 @@
 
 namespace caspar { namespace env {
 
+using namespace boost::filesystem2;
+
 std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
@@ -57,8 +59,10 @@ void configure(const std::string& filename)
 	auto paths = pt.get_child("configuration.paths");
 	media = widen(paths.get("media-path", initialPath + "\\media\\"));
 	log = widen(paths.get("log-path", initialPath + "\\log\\"));
-	ftemplate = widen(paths.get("template-path", initialPath + "\\template\\"));
+	ftemplate = complete(wpath(widen(paths.get("template-path", initialPath + "\\template\\")))).string();
+
 	ftemplate_host = widen(paths.get("template-host", "cg.fth"));
+
 	data = widen(paths.get("data-path", initialPath + "\\data\\"));
 }
 	
