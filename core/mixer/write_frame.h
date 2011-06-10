@@ -61,7 +61,6 @@ private:
 
 	const core::pixel_format_desc& get_pixel_format_desc() const;
 	const std::vector<safe_ptr<device_buffer>>& get_textures() const;
-	const std::vector<safe_ptr<host_buffer>>& get_buffers() const;
 
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
