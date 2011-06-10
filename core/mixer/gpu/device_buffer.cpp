@@ -55,7 +55,14 @@ public:
 
 	~implementation()
 	{
-		GL(glDeleteTextures(1, &id_));
+		try
+		{
+			GL(glDeleteTextures(1, &id_));
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 	}
 	
 	void bind()

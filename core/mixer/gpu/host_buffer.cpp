@@ -57,7 +57,14 @@ public:
 
 	~implementation()
 	{
-		GL(glDeleteBuffers(1, &pbo_));
+		try
+		{
+			GL(glDeleteBuffers(1, &pbo_));
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 	}
 
 	void map()

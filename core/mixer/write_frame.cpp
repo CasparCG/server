@@ -55,7 +55,16 @@ public:
 			{
 				return ogl_.create_device_buffer(plane.width, plane.height, plane.channels);
 			});
-		});
+		}, high_priority);
+	}
+
+	~implementation()
+	{
+		ogl_.invoke([=]
+		{
+			buffers_.clear();
+			textures_.clear();
+		}, high_priority);
 	}
 	
 	void accept(write_frame& self, core::frame_visitor& visitor)
