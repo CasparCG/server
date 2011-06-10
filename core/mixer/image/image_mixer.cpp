@@ -56,22 +56,22 @@ struct image_mixer::implementation : boost::noncopyable
 		core::image_transform				 transform;
 	};
 
-	video_channel_context&						channel_;
+	video_channel_context&					channel_;
 	
 	std::stack<core::image_transform>		transform_stack_;
 	std::queue<std::queue<render_item>>		render_queue_;
 	
-	image_kernel kernel_;
+	image_kernel							kernel_;
 		
-	safe_ptr<host_buffer>	read_buffer_;
-	safe_ptr<device_buffer>	draw_buffer_;
-	safe_ptr<device_buffer>	write_buffer_;
+	safe_ptr<host_buffer>					read_buffer_;
+	safe_ptr<device_buffer>					draw_buffer_;
+	safe_ptr<device_buffer>					write_buffer_;
 
-	safe_ptr<device_buffer>	local_key_buffer_;
-	safe_ptr<device_buffer>	layer_key_buffer_;
+	safe_ptr<device_buffer>					local_key_buffer_;
+	safe_ptr<device_buffer>					layer_key_buffer_;
 
-	bool local_key_;
-	bool layer_key_;
+	bool									local_key_;
+	bool									layer_key_;
 	
 public:
 	implementation(video_channel_context& video_channel) 
@@ -89,7 +89,7 @@ public:
 		channel_.ogl().invoke([=]
 		{
 			if(!GLEE_VERSION_3_0)
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
+				CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";//BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
 		});
 	}
 	
