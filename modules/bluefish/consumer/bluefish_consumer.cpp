@@ -156,11 +156,18 @@ public:
 
 	~bluefish_consumer()
 	{
-		executor_.invoke([&]
-		{
-			disable_video_output();
-			blue_->device_detach();		
-		});
+		//try
+		//{
+		//	executor_.invoke([&]
+		//	{
+		//		disable_video_output();
+		//		blue_->device_detach();		
+		//	});
+		//}
+		//catch(...)
+		//{
+		//	CASPAR_LOG_CURRENT_EXCEPTION();
+		//}
 		
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
@@ -310,6 +317,7 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
+		consumer_.reset();
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_));
 	}
 	
@@ -325,7 +333,10 @@ public:
 	
 	virtual std::wstring print() const
 	{
-		return consumer_->print();
+		if(consumer_)
+			consumer_->print();
+
+		return L"bluefish [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 
 	virtual bool key_only() const
