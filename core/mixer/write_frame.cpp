@@ -37,10 +37,10 @@ struct write_frame::implementation : boost::noncopyable
 	std::vector<safe_ptr<device_buffer>>	textures_;
 	std::vector<int16_t>					audio_data_;
 	const core::pixel_format_desc			desc_;
-	int32_t									tag_;
+	int										tag_;
 
 public:
-	implementation(ogl_device& ogl, int32_t tag, const core::pixel_format_desc& desc) 
+	implementation(ogl_device& ogl, int tag, const core::pixel_format_desc& desc) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
@@ -125,10 +125,9 @@ const boost::iterator_range<const int16_t*> write_frame::audio_data() const
 {
 	return boost::iterator_range<const int16_t*>(impl_->audio_data_.data(), impl_->audio_data_.data() + impl_->audio_data_.size());
 }
-int32_t write_frame::tag() const {return impl_->tag_;}
+int write_frame::tag() const {return impl_->tag_;}
 const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
 const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
-const std::vector<safe_ptr<host_buffer>>& write_frame::get_buffers() const{return impl_->buffers_;}
 void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
 }}
