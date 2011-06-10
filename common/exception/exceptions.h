@@ -31,7 +31,7 @@ typedef boost::error_info<struct tag_arg_value_info, std::string>		arg_value_inf
 typedef boost::error_info<struct tag_msg_info, std::string>				msg_info;
 typedef boost::error_info<struct tag_errorstr, std::string>				errorstr;
 typedef boost::error_info<struct tag_source_info, std::string>			source_info;
-typedef boost::error_info<struct tag_line_info, size_t>				line_info;
+typedef boost::error_info<struct tag_line_info, size_t>					line_info;
 typedef boost::error_info<struct errinfo_nested_exception_, std::exception_ptr> errinfo_nested_exception;
 
 struct caspar_exception			: virtual boost::exception, virtual std::exception 
