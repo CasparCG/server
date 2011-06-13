@@ -112,7 +112,6 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction(), producer), preview);
-			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Loaded: " << producer << ".";
 		});
 	}
 
@@ -121,7 +120,6 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].pause();
-			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Paused.";
 		});
 	}
 
@@ -130,7 +128,6 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].play();
-			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Playing.";
 		});
 	}
 
@@ -139,7 +136,6 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].stop();
-			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Stopped.";
 		});
 	}
 
@@ -148,7 +144,6 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_.erase(index);
-			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Cleared.";
 		});
 	}
 		
