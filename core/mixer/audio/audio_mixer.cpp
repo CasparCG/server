@@ -38,7 +38,7 @@ public:
 	implementation()
 	{
 		transform_stack_.push(core::audio_transform());
-		audio_data_.push_back(std::vector<int16_t>());
+		audio_data_.push_back(std::vector<int16_t>()); // One frame delay
 	}
 	
 	void begin(const core::basic_frame& frame)
