@@ -131,7 +131,7 @@ private:
 
 	safe_ptr<const read_frame> get_key_frame(const safe_ptr<const read_frame>& frame)
 	{
-		bool has_key_only = std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p)
+		const bool has_key_only = std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p)
 		{
 			return p.second->key_only();
 		});
