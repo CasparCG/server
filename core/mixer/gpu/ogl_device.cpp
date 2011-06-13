@@ -134,17 +134,23 @@ void ogl_device::yield()
 }
 
 boost::unique_future<void> ogl_device::gc()
-{
-	CASPAR_LOG(info) << " ogl: Running GC.";
-
+{	
 	return begin_invoke([=]
-	{		
+	{
+		CASPAR_LOG(info) << " ogl: Running GC.";		
+	
 		try
 		{
-			BOOST_FOREACH(auto& pool, device_pools_)
-				pool.clear();
-			BOOST_FOREACH(auto& pool, host_pools_)
-				pool.clear();
+			BOOST_FOREACH(auto& pools, device_pools_)
+			{
+				BOOST_FOREACH(auto& pool, pools)
+					pool.second->clear();
+			}
+			BOOST_FOREACH(auto& pools, host_pools_)
+			{
+				BOOST_FOREACH(auto& pool, pools)
+					pool.second->clear();
+			}
 		}
 		catch(...)
 		{
