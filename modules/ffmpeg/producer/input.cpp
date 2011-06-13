@@ -298,13 +298,16 @@ private:
 			}
 			else
 			{
-				video_stream_.push(read_packet);
-				audio_stream_.push(read_packet);
-
 				if(video_stream_)
+				{	
+					video_stream_.push(read_packet);
 					graph_->update_value("video-input-buffer", static_cast<float>(video_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
+				}
 				if(audio_stream_)
+				{	
+					audio_stream_.push(read_packet);
 					graph_->update_value("audio-input-buffer", static_cast<float>(audio_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));	
+				}
 			}							
 		}
 		catch(...)
