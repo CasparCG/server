@@ -51,16 +51,16 @@ public:
 		if(!transform_stack_.top().get_has_audio())
 			return;
 
-		auto& audio_data = frame.audio_data();
-		auto tag = frame.tag(); // Get the identifier for the audio-stream.
+		const auto& audio_data = frame.audio_data();
+		const auto tag = frame.tag(); // Get the identifier for the audio-stream.
 
 		if(audio_data_.back().empty())
 			audio_data_.back().resize(audio_data.size(), 0);
 		
-		auto next = transform_stack_.top();
+		const auto next = transform_stack_.top();
 		auto prev = next;
 
-		auto it = prev_audio_transforms_.find(tag);
+		const auto it = prev_audio_transforms_.find(tag);
 		if(it != prev_audio_transforms_.end())
 			prev = it->second;
 				
@@ -71,10 +71,10 @@ public:
 		
 		static const int BASE = 1<<15;
 
-		auto next_gain = static_cast<int>(next.get_gain()*BASE);
-		auto prev_gain = static_cast<int>(prev.get_gain()*BASE);
+		const auto next_gain = static_cast<int>(next.get_gain()*BASE);
+		const auto prev_gain = static_cast<int>(prev.get_gain()*BASE);
 		
-		int n_samples = audio_data_.back().size();
+		const int n_samples = audio_data_.back().size();
 
 		tbb::parallel_for
 		(
@@ -83,10 +83,8 @@ public:
 			{
 				for(size_t n = r.begin(); n < r.end(); ++n)
 				{
-					int sample_gain = (prev_gain - (prev_gain * n)/n_samples) + (next_gain * n)/n_samples;
-					
-					int sample = (static_cast<int>(audio_data[n])*sample_gain)/BASE;
-					
+					const int sample_gain = (prev_gain - (prev_gain * n)/n_samples) + (next_gain * n)/n_samples;
+					const int sample = (static_cast<int>(audio_data[n])*sample_gain)/BASE;
 					audio_data_.back()[n] = static_cast<int16_t>((static_cast<int>(audio_data_.back()[n]) + sample) & 0xFFFF);
 				}
 			}
