@@ -57,18 +57,7 @@ public:
 			});
 		}, high_priority);
 	}
-
-	~implementation()
-	{
-		auto buffers = buffers_;
-		auto textures = textures_;
-		ogl_.begin_invoke([=]() mutable
-		{
-			buffers.clear();
-			textures.clear();
-		}, high_priority);
-	}
-	
+		
 	void accept(write_frame& self, core::frame_visitor& visitor)
 	{
 		visitor.begin(self);
