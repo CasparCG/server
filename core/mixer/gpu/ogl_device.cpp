@@ -65,7 +65,7 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 		{	
 			try
 			{
-				buffer = std::make_shared<device_buffer>(width, height, stride);
+				buffer.reset(new device_buffer(width, height, stride));
 			}
 			catch(...)
 			{
@@ -98,7 +98,7 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 		{
 			try
 			{
-				buffer = std::make_shared<host_buffer>(size, usage);
+				buffer.reset(new host_buffer(size, usage));
 				if(usage == host_buffer::write_only)
 					buffer->map();
 				else
