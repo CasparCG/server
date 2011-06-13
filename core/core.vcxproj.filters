@@ -1,176 +1,191 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="consumer">
-      <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
+    <Filter Include="source">
+      <UniqueIdentifier>{cc341f3a-7ea0-424a-bacd-c40aa8e7822b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="producer">
+    <Filter Include="source\producer">
       <UniqueIdentifier>{71accefc-1437-4e1d-9ff7-9de654a32df9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="producer\transition">
+    <Filter Include="source\producer\transition">
       <UniqueIdentifier>{26bf9811-1954-46f5-86ce-ecdc26e6db16}</UniqueIdentifier>
     </Filter>
-    <Filter Include="producer\color">
+    <Filter Include="source\producer\color">
       <UniqueIdentifier>{78b16c14-bf29-4511-9122-684ff513dbf5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="producer\frame">
+    <Filter Include="source\producer\frame">
       <UniqueIdentifier>{b19721c1-8dd1-45fb-b9e3-212b548ebbb6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="mixer">
+    <Filter Include="source\producer\separated">
+      <UniqueIdentifier>{cf834e89-32d6-47bc-8d5a-10e032f88e15}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\mixer">
       <UniqueIdentifier>{e480e128-a351-4dc6-a7ab-f58b480f6afd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="mixer\audio">
+    <Filter Include="source\mixer\audio">
       <UniqueIdentifier>{0951ac32-6cd0-4a9f-865d-6f86600f12f8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="mixer\image">
+    <Filter Include="source\mixer\image">
       <UniqueIdentifier>{1cca1d41-f9b1-4b7b-b34f-8a88dcb5b904}</UniqueIdentifier>
     </Filter>
-    <Filter Include="mixer\gpu">
+    <Filter Include="source\mixer\gpu">
       <UniqueIdentifier>{2d2ae7ff-03d7-4e8c-a298-fb41ee42a885}</UniqueIdentifier>
     </Filter>
-    <Filter Include="producer\separated">
-      <UniqueIdentifier>{cf834e89-32d6-47bc-8d5a-10e032f88e15}</UniqueIdentifier>
+    <Filter Include="source\consumer">
+      <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
-      <Filter>producer\transition</Filter>
+      <Filter>source\producer\transition</Filter>
     </ClInclude>
     <ClInclude Include="consumer\frame_consumer.h">
-      <Filter>consumer</Filter>
+      <Filter>source\consumer</Filter>
     </ClInclude>
     <ClInclude Include="producer\frame_producer.h">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClInclude>
     <ClInclude Include="producer\color\color_producer.h">
-      <Filter>producer\color</Filter>
+      <Filter>source\producer\color</Filter>
     </ClInclude>
     <ClInclude Include="producer\layer.h">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClInclude>
     <ClInclude Include="producer\frame\audio_transform.h">
-      <Filter>producer\frame</Filter>
+      <Filter>source\producer\frame</Filter>
     </ClInclude>
     <ClInclude Include="producer\frame\basic_frame.h">
-      <Filter>producer\frame</Filter>
+      <Filter>source\producer\frame</Filter>
     </ClInclude>
     <ClInclude Include="producer\frame\image_transform.h">
-      <Filter>producer\frame</Filter>
+      <Filter>source\producer\frame</Filter>
     </ClInclude>
     <ClInclude Include="producer\frame\pixel_format.h">
-      <Filter>producer\frame</Filter>
+      <Filter>source\producer\frame</Filter>
     </ClInclude>
-    <ClInclude Include="video_format.h" />
     <ClInclude Include="producer\frame\frame_visitor.h">
-      <Filter>producer\frame</Filter>
+      <Filter>source\producer\frame</Filter>
     </ClInclude>
     <ClInclude Include="producer\frame\frame_factory.h">
-      <Filter>producer\frame</Filter>
+      <Filter>source\producer\frame</Filter>
     </ClInclude>
     <ClInclude Include="mixer\image\image_kernel.h">
-      <Filter>mixer\image</Filter>
+      <Filter>source\mixer\image</Filter>
     </ClInclude>
     <ClInclude Include="mixer\image\image_mixer.h">
-      <Filter>mixer\image</Filter>
+      <Filter>source\mixer\image</Filter>
     </ClInclude>
     <ClInclude Include="mixer\gpu\host_buffer.h">
-      <Filter>mixer\gpu</Filter>
+      <Filter>source\mixer\gpu</Filter>
     </ClInclude>
     <ClInclude Include="mixer\gpu\ogl_device.h">
-      <Filter>mixer\gpu</Filter>
+      <Filter>source\mixer\gpu</Filter>
     </ClInclude>
     <ClInclude Include="mixer\gpu\device_buffer.h">
-      <Filter>mixer\gpu</Filter>
+      <Filter>source\mixer\gpu</Filter>
     </ClInclude>
     <ClInclude Include="mixer\audio\audio_mixer.h">
-      <Filter>mixer\audio</Filter>
+      <Filter>source\mixer\audio</Filter>
     </ClInclude>
     <ClInclude Include="producer\separated\separated_producer.h">
-      <Filter>producer\separated</Filter>
+      <Filter>source\producer\separated</Filter>
     </ClInclude>
     <ClInclude Include="mixer\read_frame.h">
-      <Filter>mixer</Filter>
+      <Filter>source\mixer</Filter>
     </ClInclude>
     <ClInclude Include="mixer\write_frame.h">
-      <Filter>mixer</Filter>
+      <Filter>source\mixer</Filter>
     </ClInclude>
-    <ClInclude Include="video_channel.h" />
-    <ClInclude Include="video_channel_context.h" />
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="mixer\mixer.h">
-      <Filter>mixer</Filter>
+      <Filter>source\mixer</Filter>
     </ClInclude>
     <ClInclude Include="producer\stage.h">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClInclude>
     <ClInclude Include="consumer\output.h">
-      <Filter>consumer</Filter>
+      <Filter>source\consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="video_format.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="video_channel.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="video_channel_context.h">
+      <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
-      <Filter>producer\transition</Filter>
+      <Filter>source\producer\transition</Filter>
     </ClCompile>
     <ClCompile Include="consumer\frame_consumer.cpp">
-      <Filter>consumer</Filter>
+      <Filter>source\consumer</Filter>
     </ClCompile>
     <ClCompile Include="producer\frame_producer.cpp">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClCompile>
     <ClCompile Include="producer\color\color_producer.cpp">
-      <Filter>producer\color</Filter>
+      <Filter>source\producer\color</Filter>
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClCompile>
     <ClCompile Include="producer\frame\basic_frame.cpp">
-      <Filter>producer\frame</Filter>
+      <Filter>source\producer\frame</Filter>
     </ClCompile>
     <ClCompile Include="producer\frame\image_transform.cpp">
-      <Filter>producer\frame</Filter>
+      <Filter>source\producer\frame</Filter>
     </ClCompile>
     <ClCompile Include="producer\frame\audio_transform.cpp">
-      <Filter>producer\frame</Filter>
+      <Filter>source\producer\frame</Filter>
     </ClCompile>
-    <ClCompile Include="video_format.cpp" />
     <ClCompile Include="mixer\image\image_mixer.cpp">
-      <Filter>mixer\image</Filter>
+      <Filter>source\mixer\image</Filter>
     </ClCompile>
     <ClCompile Include="mixer\image\image_kernel.cpp">
-      <Filter>mixer\image</Filter>
+      <Filter>source\mixer\image</Filter>
     </ClCompile>
     <ClCompile Include="mixer\gpu\host_buffer.cpp">
-      <Filter>mixer\gpu</Filter>
+      <Filter>source\mixer\gpu</Filter>
     </ClCompile>
     <ClCompile Include="mixer\gpu\ogl_device.cpp">
-      <Filter>mixer\gpu</Filter>
+      <Filter>source\mixer\gpu</Filter>
     </ClCompile>
     <ClCompile Include="mixer\gpu\device_buffer.cpp">
-      <Filter>mixer\gpu</Filter>
+      <Filter>source\mixer\gpu</Filter>
     </ClCompile>
     <ClCompile Include="mixer\audio\audio_mixer.cpp">
-      <Filter>mixer\audio</Filter>
+      <Filter>source\mixer\audio</Filter>
     </ClCompile>
     <ClCompile Include="producer\separated\separated_producer.cpp">
-      <Filter>producer\separated</Filter>
+      <Filter>source\producer\separated</Filter>
     </ClCompile>
     <ClCompile Include="mixer\read_frame.cpp">
-      <Filter>mixer</Filter>
+      <Filter>source\mixer</Filter>
     </ClCompile>
     <ClCompile Include="mixer\write_frame.cpp">
-      <Filter>mixer</Filter>
+      <Filter>source\mixer</Filter>
     </ClCompile>
-    <ClCompile Include="video_channel.cpp" />
     <ClCompile Include="StdAfx.cpp" />
-    <ClCompile Include="video_channel_context.cpp" />
     <ClCompile Include="mixer\mixer.cpp">
-      <Filter>mixer</Filter>
+      <Filter>source\mixer</Filter>
     </ClCompile>
     <ClCompile Include="producer\stage.cpp">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClCompile>
     <ClCompile Include="consumer\output.cpp">
-      <Filter>consumer</Filter>
+      <Filter>source\consumer</Filter>
+    </ClCompile>
+    <ClCompile Include="video_channel.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="video_channel_context.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="video_format.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
