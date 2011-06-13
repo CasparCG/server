@@ -21,6 +21,8 @@
 
 #include "device_buffer.h"
 
+#include "host_buffer.h"
+
 #include <common/gl/gl_check.h>
 
 namespace caspar { namespace core {

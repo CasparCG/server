@@ -21,7 +21,7 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <memory>
+#include <common/memory/safe_ptr.h>
 
 namespace caspar { namespace core {
 		
@@ -40,14 +40,15 @@ public:
 	
 	void bind();
 	void unbind();
-	void unmap();
+
 	void map();
+	void unmap();
 private:
 	friend class ogl_device;
 	host_buffer(size_t size, usage_t usage);
 
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }}

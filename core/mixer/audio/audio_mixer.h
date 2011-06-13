@@ -19,8 +19,9 @@
 */
 #pragma once
 
+#include <common/memory/safe_ptr.h>
+
 #include <core/producer/frame/frame_visitor.h>
-#include <core/producer/frame/audio_transform.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -40,7 +41,7 @@ public:
 	audio_mixer& operator=(audio_mixer&& other);
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }}

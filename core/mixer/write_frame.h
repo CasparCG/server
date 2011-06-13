@@ -26,9 +26,8 @@
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 
-#include <memory>
-#include <vector>
 #include <cstdint>
+#include <vector>
 
 namespace caspar { namespace core {
 
@@ -63,9 +62,8 @@ private:
 	const std::vector<safe_ptr<device_buffer>>& get_textures() const;
 
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
-typedef std::shared_ptr<write_frame> write_frame_impl_ptr;
 
 
 }}

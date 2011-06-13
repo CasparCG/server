@@ -21,9 +21,7 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include <core/video_format.h>
 #include <core/producer/frame/frame_visitor.h>
-#include <core/producer/frame/pixel_format.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -31,8 +29,8 @@ namespace caspar { namespace core {
 
 class write_frame;
 class host_buffer;
-class ogl_device;
-class video_channel_context;;
+class video_channel_context;
+struct pixel_format_desc;
 
 class image_mixer : public core::frame_visitor, boost::noncopyable
 {
