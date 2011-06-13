@@ -566,7 +566,7 @@ bool LoadbgCommand::DoExecute()
 	for(size_t n = 0; n < _parameters.size(); ++n)
 		message += _parameters[n] + L" ";
 		
-	static const boost::wregex expr(L".*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE)\\s*(?<DURATION>\\d+)\\s*(?<TWEEN>(LINEAR)|(EASE[^\\s]*))?\\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*");
+	static const boost::wregex expr(L".*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE|MIX)\\s*(?<DURATION>\\d+)\\s*(?<TWEEN>(LINEAR)|(EASE[^\\s]*))?\\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*");
 	boost::wsmatch what;
 	if(boost::regex_match(message, what, expr))
 	{
