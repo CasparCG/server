@@ -102,6 +102,9 @@ public:
 		if(pkt && pkt->stream_index != index_)
 			return;
 
+		if(!ctx_)
+			return;
+
 		if(pkt)
 			av_dup_packet(pkt.get());
 
@@ -143,11 +146,7 @@ public:
 		, filename_(filename)
 		, executor_(print())
 		, start_(std::max(start, 0))
-	{		
-		graph_->set_color("audio-input-buffer", diagnostics::color(0.5f, 1.0f, 0.2f));
-		graph_->set_color("video-input-buffer", diagnostics::color(0.2f, 0.5f, 1.0f));
-		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
-		
+	{				
 		int errn;
 
 		AVFormatContext* weak_format_context_ = nullptr;
@@ -199,7 +198,15 @@ public:
 
 		for(size_t n = 0; n < 32; ++n) // Read some packets for pre-rolling.
 			read_next_packet();
-							
+						
+		if(audio_stream_)
+			graph_->set_color("audio-input-buffer", diagnostics::color(0.5f, 1.0f, 0.2f));
+		
+		if(video_stream_)
+			graph_->set_color("video-input-buffer", diagnostics::color(0.2f, 0.5f, 1.0f));
+		
+		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
+
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
 	}
@@ -293,10 +300,12 @@ private:
 			{
 				video_stream_.push(read_packet);
 				audio_stream_.push(read_packet);
-			}
-						
-			graph_->update_value("video-input-buffer", static_cast<float>(video_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
-			graph_->update_value("audio-input-buffer", static_cast<float>(audio_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
+
+				if(video_stream_)
+					graph_->update_value("video-input-buffer", static_cast<float>(video_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
+				if(audio_stream_)
+					graph_->update_value("audio-input-buffer", static_cast<float>(audio_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));	
+			}							
 		}
 		catch(...)
 		{
