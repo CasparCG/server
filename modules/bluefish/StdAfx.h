@@ -25,9 +25,6 @@
 
 #pragma once
 
-#if !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
-#define AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_
-
 #ifdef _DEBUG
 #include <crtdbg.h>
 #endif
@@ -52,5 +49,3 @@
 #include <common/exception/exceptions.h>
 
 #include <assert.h>
-
-#endif
