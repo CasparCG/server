@@ -23,7 +23,7 @@ namespace caspar
 		virtual bool LoadBackground(MediaProducerPtr pFP, const TransitionInfo& transitionInfo, bool loop) = 0;
 		virtual bool Play() = 0;
 		//virtual bool Pause() = 0;
-		virtual bool StopPlayback() = 0;
+		virtual bool StopPlayback(bool block = false) = 0;
 		virtual bool IsRunning() = 0;
 		virtual bool Param(const tstring& param) = 0;
 

@@ -1,3 +1,23 @@
+/*
+* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+*
+*  This file is part of CasparCG.
+*
+*    CasparCG is free software: you can redistribute it and/or modify
+*    it under the terms of the GNU General Public License as published by
+*    the Free Software Foundation, either version 3 of the License, or
+*    (at your option) any later version.
+*
+*    CasparCG is distributed in the hope that it will be useful,
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*    GNU General Public License for more details.
+
+*    You should have received a copy of the GNU General Public License
+*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+*
+*/
+ 
 #include "..\stdafx.h"
 
 #include "AMCPCommandQueue.h"
@@ -35,11 +55,11 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pNewCommand)
 			commands_.clear();
 
 			commands_.push_back(pNewCommand);
-			LOG << LogLevel::Verbose << TEXT("Cleared queue and added command");
+			LOG << LogLevel::Verbose << TEXT("Cleared queue and added command: ") << pNewCommand->print();
 		}
 		else {
 			commands_.push_back(pNewCommand);
-			LOG << LogLevel::Verbose << TEXT("Added command to end of queue");
+			LOG << LogLevel::Verbose << TEXT("Added command to end of queue: ") << pNewCommand->print();
 		}
 	}
 
@@ -81,20 +101,26 @@ void AMCPCommandQueue::Run(HANDLE stopEvent)
 				//don't fail, just wait for a while and then try again
 				continue;
 			}
-			else if(condition == ConditionGood) {
+			else if(condition == ConditionGood) 
+			{
+				bool success = false;
 				try
 				{
-					if(pCurrentCommand->Execute()) {
-						LOG << LogLevel::Verbose << TEXT("Executed command");
-					}
-					else {
-						LOG << LogLevel::Verbose << TEXT("Failed to executed command");
-					}		
+					success = pCurrentCommand->Execute();					
+				}
+				catch(std::exception& ex)
+				{
+					LOG << LogLevel::Critical << TEXT("UNEXPECTED EXCEPTION: In command execution. Message: ") << ex.what();
 				}
 				catch(...)
 				{
-					LOG << LogLevel::Verbose << TEXT("UNEXPECTED EXCEPTION: Failed to executed command");
+					LOG << LogLevel::Critical << TEXT("UNEXPECTED EXCEPTION: In command execution. Message: Unknown");					
 				}
+
+				if(success)
+					LOG << LogLevel::Verbose << TEXT("Executed command: ") << pCurrentCommand->print();
+				else
+					LOG << LogLevel::Verbose << TEXT("Failed to execute command: ") << pCurrentCommand->print();
 			}
 			else {	//condition == ConditionPermanentlyBad
 				LOG << TEXT("Invalid commandobject");

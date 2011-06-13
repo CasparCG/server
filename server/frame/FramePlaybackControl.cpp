@@ -17,7 +17,7 @@ using std::tr1::cref;
 using std::tr1::bind;
 
 FramePlaybackControl::FramePlaybackControl(FramePlaybackStrategyPtr pStrategy) :	pStrategy_(pStrategy), bPlaybackRunning_(false), isCGEmpty_(TRUE),
-																					eventLoad_(FALSE, FALSE), eventRender_(FALSE, FALSE), eventStartPlayback_(FALSE, FALSE), eventPausePlayback_(FALSE, FALSE), eventStopPlayback_(FALSE, FALSE)
+																					eventLoad_(FALSE, FALSE), eventRender_(FALSE, FALSE), eventStoppedPlayback_(FALSE, FALSE), eventStartPlayback_(FALSE, FALSE), eventPausePlayback_(FALSE, FALSE), eventStopPlayback_(FALSE, FALSE)
 {
 	if(pStrategy_ == 0)
 		throw std::exception("No valid FramePlaybackStrategy provided");
@@ -134,9 +134,16 @@ bool FramePlaybackControl::Play()
 //	return true;
 //}
 
-bool FramePlaybackControl::StopPlayback()
+bool FramePlaybackControl::StopPlayback(bool block)
 {
 	eventStopPlayback_.Set();
+	
+	if(block)
+	{
+		if(::WaitForSingleObject(this->eventStoppedPlayback_, 1000) != WAIT_OBJECT_0)
+			return false;
+	}
+
 	return true;
 }
 
@@ -315,6 +322,7 @@ void FramePlaybackControl::DoStopPlayback(HANDLE& handle)
 		frameQueue_.pop();
 
 	bPlaybackRunning_ = false;
+	this->eventStoppedPlayback_.Set();
 }
 
 bool FramePlaybackControl::DoLoad(HANDLE& handle)
@@ -510,6 +518,8 @@ void FramePlaybackControl::DoRender(HANDLE& handle, bool bPureCG)
 			pResultFrame = pStrategy_->GetReservedFrame();
 			if(pResultFrame) {
 				utils::image::PreOver(pResultFrame->GetDataPtr(), pVideoFrame->GetDataPtr(), pCGFrame->GetDataPtr(), pResultFrame->GetDataSize());
+				pResultFrame->GetAudioData().insert(pResultFrame->GetAudioData().end(), pVideoFrame->GetAudioData().begin(), pVideoFrame->GetAudioData().end());
+				pResultFrame->GetAudioData().insert(pResultFrame->GetAudioData().end(), pCGFrame->GetAudioData().begin(), pCGFrame->GetAudioData().end());
 			}
 		}
 		else

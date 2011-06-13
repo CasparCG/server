@@ -1,3 +1,23 @@
+/*
+* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+*
+*  This file is part of CasparCG.
+*
+*    CasparCG is free software: you can redistribute it and/or modify
+*    it under the terms of the GNU General Public License as published by
+*    the Free Software Foundation, either version 3 of the License, or
+*    (at your option) any later version.
+*
+*    CasparCG is distributed in the hope that it will be useful,
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*    GNU General Public License for more details.
+
+*    You should have received a copy of the GNU General Public License
+*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+*
+*/
+ 
 #include "..\..\StdAfx.h"
 #include "OGLVideoConsumer.h"
 #include "..\..\frame\FramePlaybackControl.h"
@@ -12,13 +32,23 @@ struct OGLVideoConsumer::Implementation
 {
 	struct OGLDevice
 	{
-		OGLDevice(HWND hWnd, bool fullscreen, bool aspect, int screenWidth, int screenHeight) : hDC(NULL), hRC(NULL), width_(0), height_(0), texture_(0), temp_(NULL), fullscreen_(fullscreen), aspect_(aspect), screenWidth_(screenWidth), screenHeight_(screenHeight)//, pboIndex_(0)
+		OGLDevice(HWND hWnd, Stretch stretch, int screenWidth, int screenHeight) 
+			: hDC(NULL), 
+			  hRC(NULL),
+			  width_(0), 
+			  height_(0),
+			  size_(0),
+			  texture_(0),
+			  stretch_(stretch),
+			  screenWidth_(screenWidth),
+			  screenHeight_(screenHeight), 
+			  pboIndex_(0),
+			  firstFrame_(true)
 		{						
-			static PIXELFORMATDESCRIPTOR pfd =				// pfd Tells Windows How We Want Things To Be
+			static PIXELFORMATDESCRIPTOR pfd =				
 			{
 				sizeof(PIXELFORMATDESCRIPTOR),				// Size Of This Pixel Format Descriptor
 				1,											// Version Number
-				PFD_DRAW_TO_WINDOW |						// Format Must Support Window
 				PFD_SUPPORT_OPENGL |						// Format Must Support OpenGL
 				PFD_DOUBLEBUFFER,							// Must Support Double Buffering
 				PFD_TYPE_RGBA,								// Request An RGBA Format
@@ -72,52 +102,33 @@ struct OGLVideoConsumer::Implementation
 				glDeleteTextures( 1, &texture_);
 				texture_ = 0;
 			}
-			if(temp_ != NULL)			
-			{
-				delete[] temp_;	
-				temp_ = NULL;
-			}
-			//glDeleteBuffers(2, pbos_);
-		}
-
-		// clamp to nearest power of 2
-		int clp2(int x)
-		{
-			x = x - 1;
-			x = x | (x >> 1);
-			x = x | (x >> 2);
-			x = x | (x >> 4);
-			x = x | (x >> 8);
-			x = x | (x >> 16);
-			return x+1;
+			glDeleteBuffers(2, pbos_);
 		}
 
 		GLvoid ReSizeGLScene(GLsizei width, GLsizei height)	
 		{
 			width_ = width;
 			height_ = height;
+			size_ = width_*height_*4;
 			
 			glViewport(0, 0, screenWidth_, screenHeight_);
 
 			if(glGetError() != GL_NO_ERROR)
 				throw std::exception("Failed To Update Viewport");
 
-			width2_ = clp2(width);
-			height2_ = clp2(height);
-			
-			float wratio = (float)width_/(float)width2_;
-			float hratio = (float)height_/(float)height2_;
+			float wratio = (float)width_/(float)width_;
+			float hratio = (float)height_/(float)height_;
 
-			float hSize = 1.0f;
-			float wSize = 1.0f;
+			std::pair<float, float> targetRatio = None();
+			if(stretch_ == ogl::Fill)
+				targetRatio = Fill();
+			else if(stretch_ == ogl::Uniform)
+				targetRatio = Uniform();
+			else if(stretch_ == ogl::UniformToFill)
+				targetRatio = UniformToFill();
 
-			if(aspect_)
-			{
-				std::pair<float, float> p = FitScreenAspect((float)width/(float)height);		
-
-				wSize = 1.0f-((float)screenWidth_-p.first)/(float)screenWidth_;
-				hSize = 1.0f-((float)screenHeight_-p.second)/(float)screenHeight_;
-			}
+			float wSize = targetRatio.first;
+			float hSize = targetRatio.second;
 
 			glNewList(dlist_, GL_COMPILE);
 				glBegin(GL_QUADS);
@@ -128,20 +139,13 @@ struct OGLVideoConsumer::Implementation
 				glEnd();	
 			glEndList();
 
-			if(temp_ != NULL)			
-			{
-				delete[] temp_;	
-				temp_ = NULL;
-			}
-
-			temp_ = new unsigned char[width2_*height2_*4];
-			memset(temp_, 0, width2_*height2_*4);
-
 			if(texture_ != 0)			
 			{
 				glDeleteTextures( 1, &texture_);
 				texture_ = 0;
 			}
+			
+			glDeleteBuffers(2, pbos_);
 
 			glGenTextures(1, &texture_);	
 			glBindTexture( GL_TEXTURE_2D, texture_);
@@ -149,101 +153,130 @@ struct OGLVideoConsumer::Implementation
 			glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 			glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
-			glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, width2_, height2_, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 
 			if(glGetError() != GL_NO_ERROR)
 				throw std::exception("Failed To Create Texture");
 
-			// TODO: Add PBO support
-			//GLuint pbo;
-			//glGenBuffersARB(2, &pbosIds_);
-			//error = glGetError();
-			//glBindBuffer(GL_PIXEL_PACK_BUFFER, pbosIds_[0]);
-			//error = glGetError();
-			//glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, width2_*height2_*4, 0, GL_STREAM_DRAW);
-			//error = glGetError();
-			//glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbosIds_[1]);
-			//glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, width2_*height2_*4, 0, GL_STREAM_DRAW);
+			glGenBuffersARB(2, pbos_);
+			GLenum error = glGetError();
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbos_[0]);
+			error = glGetError();
+			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, size_, 0, GL_STREAM_DRAW);
+			error = glGetError();
+			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]);
+			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, size_, 0, GL_STREAM_DRAW);
 
-			//error = glGetError();
-			//if(error != GL_NO_ERROR)
-			//	throw std::exception("Failed To Create PBOs");
+			error = glGetError();
+			if(error != GL_NO_ERROR)
+				throw std::exception("Failed To Create PBOs");
 
-			//pboIndex_ = 0;
+			pboIndex_ = 0;
 		}
 
-		std::pair<float, float> FitScreenAspect(float frameAspect)
+		std::pair<float, float> None()
 		{
-			float height = (float)screenWidth_/frameAspect;
-			float width = (float)screenHeight_;
+			float width = (float)width_/(float)screenWidth_;
+			float height = (float)height_/(float)screenHeight_;
 
-			height = min(height, screenHeight_);
-			width = height*frameAspect;
-			width = min(width, screenWidth_);
-			height = width/frameAspect;
+			return std::make_pair(width, height);
+		}
+
+		std::pair<float, float> Uniform()
+		{
+			float aspect = (float)width_/(float)height_;
+			float width = min(1.0f, (float)screenHeight_*aspect/(float)screenWidth_);
+			float height = (float)(screenWidth_*width)/(float)(screenHeight_*aspect);
+
+			return std::make_pair(width, height);
+		}
+
+		std::pair<float, float> Fill()
+		{
+			return std::make_pair(1.0f, 1.0f);
+		}
+
+		std::pair<float, float> UniformToFill()
+		{
+			float aspect = (float)width_/(float)height_;
+
+			float wr = (float)width_/(float)screenWidth_;
+			float hr = (float)height_/(float)screenHeight_;
+			float r_inv = 1.0f/min(wr, hr);
+
+			float width = wr*r_inv;
+			float height = hr*r_inv;
 
 			return std::make_pair(width, height);
 		}
 
 		void Render(unsigned char* data)
 		{					
+			// RENDER
+
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 			glLoadIdentity();
 	
 			glBindTexture(GL_TEXTURE_2D, texture_);
-			//glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[pboIndex_]);
-
-			for(int row = 0; row < height_; ++row)				
-				memcpy(temp_+row*width2_*4, data+row*width_*4, width_*4);			
+			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[pboIndex_]);
 	
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width2_, height2_, GL_BGRA, GL_UNSIGNED_BYTE, temp_);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, GL_BGRA, GL_UNSIGNED_BYTE, 0);
 
-			glCallList(dlist_);
-			
-			//int nextPboIndex = (pboIndex_ + 1) & ~1;
+			if(!firstFrame_)
+				glCallList(dlist_);		
 
-			//glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbosIds_[nextPboIndex]);
-			//glBufferData(GL_PIXEL_UNPACK_BUFFER, width2_*height2_*4, 0, GL_STREAM_DRAW);
-			//GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-			//if(ptr)
-			//{
-			//	for(int row = 0; row < height_; ++row)				
-			//		memcpy(ptr+row*width2_, data+row*width_, width_);			
-			//	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-			//}
+			// UPDATE
 
-			//pboIndex_ = nextPboIndex;
+			int nextPboIndex = pboIndex_ ^ 1;
 
+			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[nextPboIndex]);
+			glBufferData(GL_PIXEL_UNPACK_BUFFER, size_, NULL, GL_STREAM_DRAW);
+			GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+
+			if(ptr != NULL)			
+			{
+				memcpy(ptr, data, size_);				
+				glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+			}
+
+			// SWAP
+
+			pboIndex_ = nextPboIndex;
 			SwapBuffers(hDC);
+
+			if(firstFrame_)
+			{
+				firstFrame_ = false;
+				Render(data);
+			}
 		}
 	
 		int screenWidth_;
 		int screenHeight_;
 
+		bool firstFrame_;
+
 		GLuint dlist_;
 		GLuint texture_;
 
-		int width2_;
-		int height2_;
-
 		int width_;
 		int height_;
+		int size_;
+
 		HDC	  hDC;
 		HGLRC hRC;
-
-		unsigned char* temp_;
 		
-		bool fullscreen_;
-		bool aspect_;
-		//GLuint pbos_[2];
-		//int pboIndex_;
+		Stretch stretch_;
+		GLuint pbos_[2];
+		int pboIndex_;
 	};
 
 	typedef std::tr1::shared_ptr<OGLDevice> OGLDevicePtr;
 
 	struct OGLPlaybackStrategy: public IFramePlaybackStrategy
 	{
-		OGLPlaybackStrategy(Implementation* pConsumerImpl) : pConsumerImpl_(pConsumerImpl), lastTime_(timeGetTime())
+		OGLPlaybackStrategy(Implementation* pConsumerImpl) : pConsumerImpl_(pConsumerImpl), lastTime_(timeGetTime()), lastFrameCount_(0)
 		{}
 
 		FrameManagerPtr GetFrameManager()
@@ -263,12 +296,14 @@ struct OGLVideoConsumer::Implementation
 			lastTime_ = timeGetTime();
 
 			// Check if frame is valid and if it has already been rendered
-			if(pFrame == NULL || pFrame->ID() == lastFrameID_)
+			if(pFrame == NULL || (pFrame->ID() == lastFrameID_ && lastFrameCount_ > 1)) // Potential problem is that if the HDC is invalidated by external application it will stay that way, (R.N), keep or remove?
 				return;		
+
+			lastFrameCount_ = pFrame->ID() == lastFrameID_ ? ++lastFrameCount_ : 0; // Cant stop rendering until 2 frames are pushed due to doublebuffering
 
 			if(!pOGLDevice_)
 			{
-				pOGLDevice_.reset(new OGLDevice(pConsumerImpl_->hWnd_, pConsumerImpl_->fullscreen_, pConsumerImpl_->aspect, pConsumerImpl_->screenWidth_, pConsumerImpl_->screenHeight_));
+				pOGLDevice_.reset(new OGLDevice(pConsumerImpl_->hWnd_, pConsumerImpl_->stretch_, pConsumerImpl_->screenWidth_, pConsumerImpl_->screenHeight_));
 				pOGLDevice_->ReSizeGLScene(pConsumerImpl_->fmtDesc_.width, pConsumerImpl_->fmtDesc_.height);
 			}
 
@@ -277,13 +312,15 @@ struct OGLVideoConsumer::Implementation
 			lastFrameID_ = pFrame->ID();
 		}
 
+		int lastFrameCount_;
 		utils::ID lastFrameID_;
 		OGLDevicePtr pOGLDevice_;
 		Implementation* pConsumerImpl_;
 		DWORD lastTime_;	
 	};
 	
-	Implementation(HWND hWnd, const FrameFormatDescription& fmtDesc, unsigned int screenIndex, bool fullscreen, bool aspect) : hWnd_(hWnd), fmtDesc_(fmtDesc), pFrameManager_(new BitmapFrameManager(fmtDesc_, hWnd)), fullscreen_(fullscreen), aspect(aspect), screenIndex_(screenIndex)
+	Implementation(HWND hWnd, const FrameFormatDescription& fmtDesc, unsigned int screenIndex, Stretch stretch) 
+		: hWnd_(hWnd), fmtDesc_(fmtDesc), pFrameManager_(new SystemFrameManager(fmtDesc_)), stretch_(stretch), screenIndex_(screenIndex)
 	{
 		bool succeeded = SetupDevice();
 		assert(succeeded);
@@ -297,54 +334,56 @@ struct OGLVideoConsumer::Implementation
 
 	bool SetupDevice()
 	{
-		if(fullscreen_)
+		DISPLAY_DEVICE dDevice;			
+		memset(&dDevice,0,sizeof(dDevice));
+		dDevice.cb = sizeof(dDevice);
+
+		std::vector<DISPLAY_DEVICE> displayDevices;
+		for(int n = 0; EnumDisplayDevices(NULL, n, &dDevice, NULL); ++n)
 		{
-			DISPLAY_DEVICE dDevice;			
+			displayDevices.push_back(dDevice);
 			memset(&dDevice,0,sizeof(dDevice));
 			dDevice.cb = sizeof(dDevice);
-
-			std::vector<DISPLAY_DEVICE> displayDevices;
-			for(int n = 0; EnumDisplayDevices(NULL, n, &dDevice, NULL); ++n)
-			{
-				displayDevices.push_back(dDevice);
-				memset(&dDevice,0,sizeof(dDevice));
-				dDevice.cb = sizeof(dDevice);
-			}
-
-			if(screenIndex_ >= displayDevices.size())
-				return false;
-			
-			if(!GetWindowRect(hWnd_, &prevRect_))
-				throw std::exception("Failed to get Window Rectangle.");
-
-			DEVMODE devmode;
-			memset(&devmode,0,sizeof(devmode));
-			
-			if(!EnumDisplaySettings(displayDevices[screenIndex_].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
-				throw std::exception("Failed to get Display Settings for DisplayDevice.");
-
-			prevMode_ = devmode;
-
-			screenWidth_ = devmode.dmPelsWidth;
-			screenHeight_ = devmode.dmPelsHeight;
-
-			ChangeDisplaySettings(&devmode, CDS_FULLSCREEN);
-
-			//if(result != DISP_CHANGE_SUCCESSFUL)
-			//	throw std::exception("Failed to change Display Settings.");
-
-			prevStyle_   = GetWindowLong(hWnd_, GWL_STYLE);
-			prevExStyle_ = GetWindowLong(hWnd_, GWL_EXSTYLE);
-		
-			if(!(SetWindowLong(hWnd_, GWL_STYLE, WS_POPUP) && SetWindowLong(hWnd_, GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_TOPMOST)))
-				throw std::exception("Failed to change window style.");
-
-			if(!MoveWindow(hWnd_, devmode.dmPosition.x, devmode.dmPosition.y, screenWidth_, screenHeight_, TRUE))
-				throw std::exception("Failed to move window to display device.");
-
-			ShowWindow(hWnd_,SW_SHOW);						// Show The Window
-			SetForegroundWindow(hWnd_);						// Slightly Higher Priority
 		}
+
+		if(screenIndex_ >= displayDevices.size())
+			return false;
+		
+		if(!GetWindowRect(hWnd_, &prevRect_))
+			throw std::exception("Failed to get Window Rectangle.");
+
+		DEVMODE devmode;
+		memset(&devmode,0,sizeof(devmode));
+		
+		if(!EnumDisplaySettings(displayDevices[screenIndex_].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
+		{
+			std::stringstream msg;
+			msg << "Failed to enumerate Display Settings for DisplayDevice " << screenIndex_ << ".";
+			throw std::exception(msg.str().c_str());
+		}
+
+		prevMode_ = devmode;
+
+		screenWidth_ = devmode.dmPelsWidth;
+		screenHeight_ = devmode.dmPelsHeight;
+
+		ChangeDisplaySettings(&devmode, CDS_FULLSCREEN);
+
+		//if(result != DISP_CHANGE_SUCCESSFUL)
+		//	throw std::exception("Failed to change Display Settings.");
+
+		prevStyle_   = GetWindowLong(hWnd_, GWL_STYLE);
+		prevExStyle_ = GetWindowLong(hWnd_, GWL_EXSTYLE);
+	
+		if(!(SetWindowLong(hWnd_, GWL_STYLE, WS_POPUP) && SetWindowLong(hWnd_, GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_TOPMOST)))
+			throw std::exception("Failed to change window style.");
+
+		if(!MoveWindow(hWnd_, devmode.dmPosition.x, devmode.dmPosition.y, screenWidth_, screenHeight_, TRUE))
+			throw std::exception("Failed to move window to display device.");
+
+		ShowWindow(hWnd_,SW_SHOW);						// Show The Window
+		SetForegroundWindow(hWnd_);						// Slightly Higher Priority
+		
 
 		pPlaybackControl_.reset(new FramePlaybackControl(FramePlaybackStrategyPtr(new OGLPlaybackStrategy(this))));
 		pPlaybackControl_->Start();
@@ -378,16 +417,15 @@ struct OGLVideoConsumer::Implementation
 	DWORD prevExStyle_;
 	DWORD prevStyle_;
 
-	bool aspect;
+	Stretch stretch_;
 	FrameFormatDescription fmtDesc_;
 	HWND hWnd_;
-	BitmapFrameManagerPtr pFrameManager_;
-	FramePlaybackControlPtr pPlaybackControl_;
-	bool fullscreen_;
-	
+	SystemFrameManagerPtr pFrameManager_;
+	FramePlaybackControlPtr pPlaybackControl_;	
 };
 
-OGLVideoConsumer::OGLVideoConsumer(HWND hWnd, const FrameFormatDescription& fmtDesc, unsigned int screenIndex, bool fullscreen, bool aspect) : pImpl_(new Implementation(hWnd, fmtDesc, screenIndex, fullscreen, aspect))
+OGLVideoConsumer::OGLVideoConsumer(HWND hWnd, const FrameFormatDescription& fmtDesc, unsigned int screenIndex, Stretch stretch)
+: pImpl_(new Implementation(hWnd, fmtDesc, screenIndex, stretch))
 {
 }
 

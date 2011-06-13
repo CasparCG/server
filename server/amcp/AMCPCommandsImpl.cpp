@@ -1,3 +1,23 @@
+/*
+* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+*
+*  This file is part of CasparCG.
+*
+*    CasparCG is free software: you can redistribute it and/or modify
+*    it under the terms of the GNU General Public License as published by
+*    the Free Software Foundation, either version 3 of the License, or
+*    (at your option) any later version.
+*
+*    CasparCG is distributed in the hope that it will be useful,
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*    GNU General Public License for more details.
+
+*    You should have received a copy of the GNU General Public License
+*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+*
+*/
+ 
 #include "..\StdAfx.h"
 #include "AMCPCommandsImpl.h"
 #include "AMCPProtocolStrategy.h"
@@ -14,7 +34,6 @@
 #include <fstream>
 #include <cctype>
 #include <io.h>
-
 
 /* Return codes
 
@@ -115,6 +134,7 @@ bool LoadCommand::Execute()
 			LOG << LogLevel::Verbose << TEXT("Loaded ") <<  fullFilename << TEXT(" successfully");
 
 			SetReplyString(TEXT("202 LOAD OK\r\n"));
+
 			return true;
 		}
 		else
@@ -248,6 +268,7 @@ bool LoadbgCommand::Execute()
 		{
 			LOG << LogLevel::Verbose << TEXT("Loaded ") << fullFilename << TEXT(" successfully to background");
 			SetReplyString(TEXT("202 LOADBG OK\r\n"));
+
 			return true;
 		}
 		else
@@ -323,6 +344,7 @@ bool ClearCommand::Execute()
 	if(GetChannel()->Clear())
 	{
 		SetReplyString(TEXT("202 CLEAR OK\r\n"));
+
 		return true;
 	}
 
@@ -579,6 +601,7 @@ bool CGCommand::ExecuteUpdate() {
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
+		//TODO: Implement indirect data loading from file. Same as in Add
 		GetChannel()->GetCGControl()->Update(layer, _parameters[2]);
 	}
 	else {
@@ -870,7 +893,7 @@ bool ClsCommand::Execute()
 					cliptypeindex = 3;
 					bGood = true;
 				}
-				else if(extension == TEXT("SWF") || extension == TEXT("DV") || extension == TEXT("MOV") || extension == TEXT("MPG") || extension == TEXT("AVI"))
+				else if(extension == TEXT("SWF") || extension == TEXT("CT") || extension == TEXT("DV") || extension == TEXT("MOV") || extension == TEXT("MPG") || extension == TEXT("AVI"))
 				{
 					cliptypeindex = 2;
 					bGood = true;
@@ -1009,6 +1032,38 @@ AMCPCommandCondition ByeCommand::CheckConditions()
 bool ByeCommand::Execute()
 {
 	GetClientInfo()->Disconnect();
+	return true;
+}
+
+
+//////////
+// SET
+
+AMCPCommandCondition SetCommand::CheckConditions()
+{
+	return ConditionGood;
+}
+
+bool SetCommand::Execute()
+{
+	tstring name = _parameters[0];
+	std::transform(name.begin(), name.end(), name.begin(), toupper);
+
+	tstring value = _parameters[1];
+	std::transform(value.begin(), value.end(), value.begin(), toupper);
+
+	if(name == TEXT("MODE"))
+	{
+		if(this->GetChannel()->SetVideoFormat(value))
+			this->SetReplyString(TEXT("202 SET MODE OK\r\n"));
+		else
+			this->SetReplyString(TEXT("501 SET MODE FAILED\r\n"));
+	}
+	else
+	{
+		this->SetReplyString(TEXT("403 SET ERROR\r\n"));
+	}
+
 	return true;
 }
 

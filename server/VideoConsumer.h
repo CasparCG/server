@@ -16,6 +16,11 @@ public:
 	virtual bool SetupDevice(unsigned int deviceIndex) = 0;
 	virtual bool ReleaseDevice() = 0;
 	virtual const TCHAR* GetFormatDescription() const = 0;
+	virtual bool SetVideoFormat(const tstring& strDesiredFrameFormat)
+	{
+		LOG << TEXT("SetVideoFormat is no supported");
+		return false; 
+	}
 };
 typedef std::tr1::shared_ptr<IVideoConsumer> VideoConsumerPtr;
 

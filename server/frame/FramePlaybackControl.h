@@ -36,7 +36,7 @@ public:
 	virtual bool LoadBackground(MediaProducerPtr pFP, const TransitionInfo& transitionInfo, bool loop);
 	virtual bool Play();
 	//virtual bool Pause();
-	virtual bool StopPlayback();
+	virtual bool StopPlayback(bool block = false);
 	virtual bool IsRunning();
 	virtual bool Param(const tstring& param);
 	virtual CG::ICGControl* GetCGControl() {
@@ -66,7 +66,8 @@ private:
 
 	volatile bool bPlaybackRunning_;
 	volatile LONG isCGEmpty_;
-
+	
+	utils::Event eventStoppedPlayback_;
 	utils::Thread worker_;
 	ClipInfo activeClip_;
 	ClipInfo backgroundClip_;

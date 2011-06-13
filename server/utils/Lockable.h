@@ -12,14 +12,13 @@ class LockableObject
 
 	LockableObject(const LockableObject&);
 	LockableObject& operator=(const LockableObject&);
-
-protected:
+	
+public:
 	LockableObject(unsigned int spincount = 4000)
 	{
 		::InitializeCriticalSectionAndSpinCount(&mtx_, spincount);
 	}
 
-public:
 	~LockableObject()
 	{
 		::DeleteCriticalSection(&mtx_);

@@ -70,7 +70,7 @@ using namespace utils;
 enum ControllerTransports { TCP, Serial, TransportsCount };
 enum ControllerProtocols { AMCP, CII, CLOCK, ProtocolsCount };
 
-const TCHAR* Application::versionString_(TEXT("CG 1.7.1.3"));
+const TCHAR* Application::versionString_(TEXT("CG 1.7.1.4"));
 const TCHAR* Application::serviceName_(TEXT("Caspar service"));
 
 Application::Application(const tstring& cmdline, HINSTANCE hInstance) :	   hInstance_(hInstance), logLevel_(2), logDir_(TEXT("_log")), 
@@ -304,14 +304,21 @@ LRESULT Application::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
 				if(timeStruct.tm_yday != oldyday)
 				{
+					LOG << "new day";
+
 					TCHAR logFile[512];
 
 					oldyday = timeStruct.tm_yday;
 					_stprintf_s<>(logFile, TEXT("%slog %04d-%02d-%02d.log"), logDir_.c_str(), timeStruct.tm_year + 1900, timeStruct.tm_mon + 1, timeStruct.tm_mday);
 					Logger::GetInstance().SetOutputStream(OutputStreamPtr(new FileOutputStream(logFile, true)));
 				}
-
-				_stprintf_s<>(timeString, TEXT("Caspar %s - %02d:%02d:%02d"), GetVersionString(), timeStruct.tm_hour, timeStruct.tm_min, timeStruct.tm_sec);
+				
+#ifdef DISABLE_BLUEFISH
+				const TCHAR* strCompability = TEXT(" (No bluefish)");
+#else
+				const TCHAR* strCompability = TEXT("");
+#endif
+				_stprintf_s<>(timeString, TEXT("Caspar %s%s - %02d:%02d:%02d"), GetVersionString(), strCompability, timeStruct.tm_hour, timeStruct.tm_min, timeStruct.tm_sec);
 				SetWindowText(pWindow_->getHwnd(), timeString);
 			}
 			break;
@@ -393,9 +400,9 @@ bool Application::Initialize()
 		sourceMediaManagers_.push_back(MediaManagerPtr(new FlashManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new CTManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new ffmpeg::FFMPEGManager()));
-		sourceMediaManagers_.push_back(MediaManagerPtr(new ColorManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaManager()));
 		sourceMediaManagers_.push_back(MediaManagerPtr(new TargaScrollMediaManager()));
+		sourceMediaManagers_.push_back(MediaManagerPtr(new ColorManager()));
 
 		colorManagerIndex_ = static_cast<int>(sourceMediaManagers_.size()-1);
 
@@ -421,10 +428,34 @@ bool Application::Initialize()
 		if(GetSetting(TEXT("gdichannel")) == TEXT("true") && pWindow_ != 0) {
 			CreateVideoChannel(videoChannelIndex++, VideoConsumerPtr(new gdi::GDIVideoConsumer(pWindow_->getHwnd(), FrameFormatDescription::FormatDescriptions[FFormat576p2500])));
 		}
-		else if(GetSetting(TEXT("oglchannel")) == TEXT("true") && pWindow_ != 0) {
-			CreateVideoChannel(videoChannelIndex++, VideoConsumerPtr(new ogl::OGLVideoConsumer(pWindow_->getHwnd(), FrameFormatDescription::FormatDescriptions[FFormat576p2500], 1, true, true)));
+		else if(GetSetting(TEXT("oglchannel")) == TEXT("true") && pWindow_ != 0)
+		{
+			ogl::Stretch stretch = ogl::Fill;
+			tstring stretchStr = GetSetting(TEXT("stretch"));
+			if(stretchStr == TEXT("none"))
+				stretch = ogl::None;
+			else if(stretchStr == TEXT("uniform"))
+				stretch = ogl::Uniform;
+			else if(stretchStr == TEXT("uniformtofill"))
+				stretch = ogl::UniformToFill;
+
+			tstring screenStr = GetSetting(TEXT("displaydevice")).c_str();
+			int screen = 0;
+			if(screenStr != TEXT(""))
+				screen = _wtoi(screenStr.c_str());
+
+			tstring strVideoMode = GetSetting(TEXT("oglvideomode"));
+			if(strVideoMode == TEXT(""))
+				strVideoMode = GetSetting(TEXT("videomode"));
+			
+			FrameFormat casparVideoFormat = FFormat576p2500;
+			if(strVideoMode != TEXT(""))
+				casparVideoFormat = caspar::GetVideoFormat(strVideoMode);
+
+			CreateVideoChannel(videoChannelIndex++, VideoConsumerPtr(new ogl::OGLVideoConsumer(pWindow_->getHwnd(), FrameFormatDescription::FormatDescriptions[casparVideoFormat], screen, stretch)));
 		}
 
+		CreateVideoChannel(videoChannelIndex++, VideoConsumerPtr(new audio::AudioConsumer(FrameFormatDescription::FormatDescriptions[FFormat576p2500])));
 		CreateVideoChannel(videoChannelIndex++, VideoConsumerPtr(new audio::AudioConsumer(FrameFormatDescription::FormatDescriptions[FFormat576p2500])));
 
 		if(videoChannels_.size() < 1)

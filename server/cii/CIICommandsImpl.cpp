@@ -1,3 +1,23 @@
+/*
+* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+*
+*  This file is part of CasparCG.
+*
+*    CasparCG is free software: you can redistribute it and/or modify
+*    it under the terms of the GNU General Public License as published by
+*    the Free Software Foundation, either version 3 of the License, or
+*    (at your option) any later version.
+*
+*    CasparCG is distributed in the hope that it will be useful,
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*    GNU General Public License for more details.
+
+*    You should have received a copy of the GNU General Public License
+*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+*
+*/
+ 
 #include "..\StdAfx.h"
 
 #include "CIIProtocolStrategy.h"
@@ -5,6 +25,7 @@
 #include "..\cg\cgcontrol.h"
 #include "CIICommandsImpl.h"
 #include <sstream>
+#include <algorithm>
 
 namespace caspar {
 namespace cii {
@@ -96,6 +117,15 @@ void MiscellaneousCommand::Setup(const std::vector<tstring>& parameters) {
 			xmlData_ = dataStream.str();
 		}
 	}
+
+	// VIDEO MODE V\5\14\MODE
+	if((parameters.size() > 3) && parameters[1] == TEXT("5") && parameters[2] == TEXT("14"))
+	{
+		tstring value = parameters[3];
+		std::transform(value.begin(), value.end(), value.begin(), toupper);
+
+		this->pCIIStrategy_->GetChannel()->SetVideoFormat(value);
+	}
 }
 
 void MiscellaneousCommand::Execute() {
@@ -149,9 +179,11 @@ void KeydataCommand::Setup(const std::vector<tstring>& parameters) {
 
 	if(parameters[1].at(0) == 27)	//NEPTUNE:	Y\<27>\X			Stop layer X.
 		state_ = 1;
-	else if(static_cast<unsigned char>(parameters[1].at(0)) == 254)	//NEPTUNE:	Y\<254>			Clear Canvas. 
+	else if(static_cast<unsigned char>(parameters[1].at(1)) == 190)	//NEPTUNE:	Y\<254>			Clear Canvas. 
 		state_ = 2;
-	else if(static_cast<unsigned char>(parameters[1].at(0)) == 213)	//NEPTUNE:	Y\<213><243>\X	Play layer X. 
+	else if(static_cast<unsigned char>(parameters[1].at(1)) == 149)	//NEPTUNE:	Y\<213><243>\X	Play layer X. 
+																	//UPDATE 2011-05-09: These char-codes are aparently not valid after converting to wide-chars
+																	//the correct sequence is <195><149><195><179> 
 		state_ = 3;
 }
 

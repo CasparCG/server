@@ -30,9 +30,10 @@ public:
 	bool Load(MediaProducerPtr, bool loop=false);			//call from misc IO threads
 	bool LoadBackground(MediaProducerPtr, const TransitionInfo& transitionInfo, bool loop=false);	//call from misc IO threads
 	bool Play();	//call from misc IO threads
-	bool Stop();	//call from misc IO threads
+	bool Stop(bool block = false);	//call from misc IO threads
 	bool Param(const tstring& str);	//call from misc IO threads
 	bool Clear();
+	bool SetVideoFormat(const tstring& strDesiredFrameFormat);
 
 private:
 	int index_;

@@ -115,7 +115,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>BlueHancUtils.lib;Dxguid.lib;Dsound.lib;Winmm.lib;Ws2_32.lib;Bluevelvet3.lib;avformat-51.lib;avcodec-51.lib;avutil-49.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Glee.lib;BlueHancUtils.lib;Dxguid.lib;Dsound.lib;Winmm.lib;Ws2_32.lib;Bluevelvet3.lib;avformat-51.lib;avcodec-51.lib;avutil-49.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <Version>
       </Version>
@@ -133,6 +133,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
+      <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>

@@ -4,6 +4,8 @@
 #include "utils\critsectlock.h"
 #include "Channel.h"
 
+#include <algorithm>
+
 using namespace std;
 
 namespace caspar {
@@ -63,9 +65,9 @@ bool Channel::Play()
 
 ////////////////
 // STOP
-bool Channel::Stop()
+bool Channel::Stop(bool block)
 {
-	return pConsumer_->GetPlaybackControl()->StopPlayback();
+	return pConsumer_->GetPlaybackControl()->StopPlayback(block);
 }
 
 bool Channel::Clear() 
@@ -76,6 +78,24 @@ bool Channel::Clear()
 
 bool Channel::Param(const tstring& str) {
 	return pConsumer_->GetPlaybackControl()->Param(str);
+}
+
+bool Channel::SetVideoFormat(const tstring& strDesiredFrameFormat)
+{
+	tstring strDesiredFrameFormatUpper = strDesiredFrameFormat;
+	tstring strFmtDescUpper = this->pConsumer_->GetFormatDescription();
+
+	std::transform(strDesiredFrameFormatUpper.begin(), strDesiredFrameFormatUpper.end(), strDesiredFrameFormatUpper.begin(), toupper);
+	std::transform(strFmtDescUpper.begin(), strFmtDescUpper.end(), strFmtDescUpper.begin(), toupper);
+
+	if(strDesiredFrameFormatUpper == strFmtDescUpper)
+		return true;
+
+	bool stopped = this->Stop(true); 	
+	bool formatSet = stopped && this->pConsumer_->SetVideoFormat(strDesiredFrameFormat);	
+	bool cleared = formatSet && this->Clear();
+
+	return stopped && formatSet && cleared;
 }
 
 }

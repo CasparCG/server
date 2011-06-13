@@ -8,6 +8,8 @@
 #include "../../utils/Process.h"
 #include <unordered_map>
 
+#include "../../utils/Lockable.h"
+
 namespace caspar { namespace bluefish {
 	
 static const size_t MAX_HANC_BUFFER_SIZE = 256*1024;
@@ -15,8 +17,6 @@ static const size_t MAX_VBI_BUFFER_SIZE = 36*1920*4;
 
 class page_locked_allocator
 {
-public:
-
 	static void reserve(size_t size)
 	{
 		if(free_ < size)
@@ -36,9 +36,12 @@ public:
 			free_ += required;
 		}
 	}
+public:
 
 	static void* allocate(size_t size)
 	{
+		utils::LockableObject::Lock lock(mutex_);
+
 		reserve(size);
 		auto ptr = ::VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		
@@ -58,6 +61,8 @@ public:
 
 	static void deallocate(void* ptr)
 	{
+		utils::LockableObject::Lock lock(mutex_);
+
 		if(ptr == nullptr)	
 			return;
 
@@ -80,6 +85,7 @@ public:
 	};
 
 private:
+	static utils::LockableObject mutex_;
 	static std::unordered_map<void*, size_t> size_map_;
 	static size_t free_;
 };
