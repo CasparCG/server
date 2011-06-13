@@ -33,7 +33,6 @@ public:
 		write_only,
 		read_only
 	};
-	host_buffer(size_t size, usage_t usage);
 	
 	const void* data() const;
 	void* data();
@@ -44,6 +43,9 @@ public:
 	void unmap();
 	void map();
 private:
+	friend class ogl_device;
+	host_buffer(size_t size, usage_t usage);
+
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };

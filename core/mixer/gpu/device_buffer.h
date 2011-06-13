@@ -30,7 +30,6 @@ namespace caspar { namespace core {
 class device_buffer : boost::noncopyable
 {
 public:
-	device_buffer(size_t width, size_t height, size_t stride);
 	
 	size_t stride() const;	
 	size_t width() const;
@@ -47,6 +46,9 @@ public:
 	void write(host_buffer& target);
 	
 private:
+	friend class ogl_device;
+	device_buffer(size_t width, size_t height, size_t stride);
+
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
