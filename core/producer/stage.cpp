@@ -112,6 +112,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction(), producer), preview);
+			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Loaded: " << producer << ".";
 		});
 	}
 
@@ -120,6 +121,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].pause();
+			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Paused.";
 		});
 	}
 
@@ -128,6 +130,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].play();
+			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Playing.";
 		});
 	}
 
@@ -136,6 +139,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].stop();
+			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Stopped.";
 		});
 	}
 
@@ -144,6 +148,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_.erase(index);
+			CASPAR_LOG(info) << print() << " layer [ " << index <<  "] Cleared.";
 		});
 	}
 		
@@ -152,6 +157,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_.clear();
+			CASPAR_LOG(info) << print() << " Cleared.";
 		});
 	}	
 	
@@ -212,6 +218,12 @@ public:
 	{
 		return channel_.execution().begin_invoke([=]{return layers_[index].background();});
 	}
+
+	std::wstring print() const
+	{
+		return L"stage [" + boost::lexical_cast<std::wstring>(channel_.index()) + L"]";
+	}
+
 };
 
 stage::stage(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
