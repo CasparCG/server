@@ -23,8 +23,8 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
-#include <boost/thread/future.hpp>
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
