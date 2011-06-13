@@ -27,26 +27,11 @@
 
 #include "../common/compiler/vs/disable_silly_warnings.h"
 
-#define NOMINMAX
-
-#if defined(_MSC_VER)
-#	ifndef _SCL_SECURE_NO_WARNINGS
-#		define _SCL_SECURE_NO_WARNINGS
-#	endif
-#	ifndef _CRT_SECURE_NO_WARNINGS
-#		define _CRT_SECURE_NO_WARNINGS
-#	endif
-#endif
-
-#if !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
-#define AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_
-
-#define BOOST_PARAMETER_MAX_ARITY 7
-
 #ifdef _DEBUG
 #include <crtdbg.h>
 #endif
 
+#include <assert.h>
 #include <memory>
 #include <array>
 #include <functional>
@@ -59,16 +44,11 @@
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
-#include <tbb/concurrent_unordered_map.h>
-#include <tbb/parallel_invoke.h>
-#include <tbb/parallel_for.h>
-#include <tbb/parallel_for_each.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
-#include <boost/signals2.hpp>
 
 #include "../common/utility/string.h"
 #include "../common/memory/safe_ptr.h"
@@ -77,7 +57,3 @@
 #include "../common/log/Log.h"
 #include "../common/exception/exceptions.h"
 #include "../common/exception/win32_exception.h"
-
-#include <assert.h>
-
-#endif

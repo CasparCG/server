@@ -1,51 +1,58 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="interop">
-      <UniqueIdentifier>{bd73f842-a8f5-4d98-92cf-81c623283dde}</UniqueIdentifier>
+    <Filter Include="source">
+      <UniqueIdentifier>{38d97478-b199-48b5-a3ad-b930146d752f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="producer">
+    <Filter Include="source\producer">
       <UniqueIdentifier>{448da3f4-8d88-4c18-856b-8f8ecc190d1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\interop">
+      <UniqueIdentifier>{bd73f842-a8f5-4d98-92cf-81c623283dde}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="interop\Flash9e.IDL">
-      <Filter>interop</Filter>
+      <Filter>source\interop</Filter>
     </Midl>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="interop\Flash9e_i.c">
-      <Filter>interop</Filter>
+      <Filter>source\interop</Filter>
     </ClCompile>
     <ClCompile Include="producer\flash_producer.cpp">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClCompile>
     <ClCompile Include="producer\FlashAxContainer.cpp">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClCompile>
     <ClCompile Include="producer\cg_producer.cpp">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClCompile>
-    <ClCompile Include="flash.cpp" />
     <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="flash.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="interop\TimerHelper.h">
-      <Filter>interop</Filter>
+      <Filter>source\interop</Filter>
     </ClInclude>
     <ClInclude Include="interop\axflash.h">
-      <Filter>interop</Filter>
+      <Filter>source\interop</Filter>
     </ClInclude>
     <ClInclude Include="producer\cg_producer.h">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClInclude>
     <ClInclude Include="producer\flash_producer.h">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClInclude>
     <ClInclude Include="producer\FlashAxContainer.h">
-      <Filter>producer</Filter>
+      <Filter>source\producer</Filter>
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="flash.h" />
+    <ClInclude Include="flash.h">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
