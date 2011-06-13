@@ -40,10 +40,11 @@ public:
 
 	~implementation()
 	{
-		ogl_.invoke([this]
+		auto image_data = image_data_;
+		ogl_.begin_invoke([=]() mutable
 		{
-			image_data_.reset();
-		});
+			image_data.reset();
+		}, high_priority);
 	}
 
 	const boost::iterator_range<const uint8_t*> image_data()

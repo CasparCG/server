@@ -60,10 +60,12 @@ public:
 
 	~implementation()
 	{
-		ogl_.invoke([=]
+		auto buffers = buffers_;
+		auto textures = textures_;
+		ogl_.begin_invoke([=]() mutable
 		{
-			buffers_.clear();
-			textures_.clear();
+			buffers.clear();
+			textures.clear();
 		}, high_priority);
 	}
 	
