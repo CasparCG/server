@@ -19,7 +19,6 @@
 */
 #pragma once
 
-#include "../producer/frame/pixel_format.h"
 #include "../producer/frame/frame_factory.h"
 
 #include <common/memory/safe_ptr.h>
@@ -38,6 +37,7 @@ class basic_frame;
 class audio_transform;
 class image_transform;
 class video_channel_context;;
+struct pixel_format;
 
 class mixer : public core::frame_factory
 {

@@ -19,14 +19,16 @@
 */
 #pragma once
 
-#include "../gpu/host_buffer.h"
+#include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 
 #include <memory>
 
 namespace caspar { namespace core {
-	
+
+class host_buffer;
+
 class device_buffer : boost::noncopyable
 {
 public:
@@ -50,7 +52,7 @@ private:
 	device_buffer(size_t width, size_t height, size_t stride);
 
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }}
