@@ -37,16 +37,7 @@ public:
 		: image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data))
 		, ogl_(ogl){}	
-
-	~implementation()
-	{
-		auto image_data = image_data_;
-		ogl_.begin_invoke([=]() mutable
-		{
-			image_data.reset();
-		}, high_priority);
-	}
-
+	
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
 		if(!image_data_)
