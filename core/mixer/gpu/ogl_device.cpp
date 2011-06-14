@@ -78,11 +78,7 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 			
 	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*)
 	{
-		executor_.begin_invoke([=] // Execute in ogl context in order to guarantee destruction of buffer in ogl context.
-		{
-			pool->push(buffer);
-
-		}, high_priority);
+		pool->push(buffer);
 	});
 }
 	
