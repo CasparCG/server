@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include "../common/compiler/vs/disable_silly_warnings.h"
-
 #define NOMINMAX
 
 #if defined(_MSC_VER)
