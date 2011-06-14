@@ -100,7 +100,7 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 {	
 	auto flash_producer = video_channel->stage()->foreground(render_layer).get();
 
-	if(flash_producer->print().find(L"flash") == std::string::npos)
+	if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
 	{
 		flash_producer = create_flash_producer(video_channel->mixer(), boost::assign::list_of(env::template_host()));	
 		video_channel->stage()->load(render_layer, flash_producer); 
