@@ -88,10 +88,13 @@ std::wstring ListMedia()
 		{
 			std::wstring clipttype = TEXT(" N/A ");
 			std::wstring extension = boost::to_upper_copy(itr->path().extension());
-			if(extension == TEXT(".TGA") || extension == TEXT(".COL"))
+			if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
+				extension == L"GIF" || extension == L"BMP")
 				clipttype = TEXT(" STILL ");
 			else if(extension == TEXT(".SWF") || extension == TEXT(".DV") || extension == TEXT(".MOV") || extension == TEXT(".MPG") || 
-					extension == TEXT(".AVI") || extension == TEXT(".FLV") || extension == TEXT(".F4V") || extension == TEXT(".MP4"))
+					extension == TEXT(".AVI") || extension == TEXT(".FLV") || extension == TEXT(".F4V") || extension == TEXT(".MP4") ||
+					extension == L".M2V" || extension == L".H264" || extension == L".MKV" || extension == L".WMV" || extension == L".DIVX" || 
+					extension == L".XVID" || extension == L".OGG")
 				clipttype = TEXT(" MOVIE ");
 			else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
 				clipttype = TEXT(" STILL ");
