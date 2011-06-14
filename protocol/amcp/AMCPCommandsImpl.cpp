@@ -335,9 +335,9 @@ bool MixerCommand::DoExecute()
 
 				int layer = GetLayerIndex(std::numeric_limits<int>::min());
 				if(layer != std::numeric_limits<int>::min())
-					GetChannel()->mixer()->reset_image_transform(GetLayerIndex(), duration, tween);
+					GetChannel()->mixer()->set_image_transform(GetLayerIndex(), image_transform(), duration, tween);
 				else
-					GetChannel()->mixer()->reset_image_transform(duration, tween);
+					GetChannel()->mixer()->set_image_transform(image_transform(), duration, tween);
 			}
 		}
 		else if(_parameters[0] == L"AUDIO")
@@ -364,15 +364,19 @@ bool MixerCommand::DoExecute()
 			{
 				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
 				std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-				GetChannel()->mixer()->reset_audio_transform(duration, tween);
+				int layer = GetLayerIndex(std::numeric_limits<int>::min());
+				if(layer != std::numeric_limits<int>::min())
+					GetChannel()->mixer()->set_audio_transform(GetLayerIndex(), audio_transform(), duration, tween);
+				else						   
+					GetChannel()->mixer()->set_audio_transform(audio_transform(), duration, tween);
 			}
 		}
 		else if(_parameters[0] == L"RESET")
 		{
 			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			GetChannel()->mixer()->reset_image_transform(duration, tween);
-			GetChannel()->mixer()->reset_audio_transform(duration, tween);
+			GetChannel()->mixer()->set_image_transform(image_transform(), duration, tween);
+			GetChannel()->mixer()->set_audio_transform(audio_transform(), duration, tween);
 		}
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));

@@ -183,29 +183,7 @@ public:
 			transforms[index] = tweened_transform<T>(src, dst, mix_duration, tween);
 		});
 	}
-
-	template<typename T>
-	void reset_transform(unsigned int mix_duration, const std::wstring& tween)
-	{
-		channel_.execution().invoke([&]
-		{
-			auto& transforms = boost::fusion::at_key<T>(transforms_);
-
-			BOOST_FOREACH(auto& t, transforms)			
-				 t.second = tweened_transform<T>(t.second.fetch(), T(), mix_duration, tween);			
-			set_transform(T(), mix_duration, tween);
-		});
-	}
-
-	template<typename T>
-	void reset_transform(int index, unsigned int mix_duration, const std::wstring& tween)
-	{
-		channel_.execution().invoke([&]
-		{		
-			set_transform(T(), mix_duration, tween);
-		});
-	}
-	
+		
 	std::wstring print() const
 	{
 		return L"mixer";
@@ -286,8 +264,5 @@ void mixer::apply_image_transform(const std::function<core::image_transform(core
 void mixer::apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::image_transform>(index, transform, mix_duration, tween);}
 void mixer::apply_audio_transform(const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(transform, mix_duration, tween);}
 void mixer::apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(index, transform, mix_duration, tween);}
-void mixer::reset_image_transform(unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::image_transform>(mix_duration, tween);}
-void mixer::reset_image_transform(int index, unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::image_transform>(index, mix_duration, tween);}
-void mixer::reset_audio_transform(unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::audio_transform>(mix_duration, tween);}
-void mixer::reset_audio_transform(int index, unsigned int mix_duration, const std::wstring& tween){impl_->reset_transform<core::audio_transform>(index, mix_duration, tween);}
+
 }}
