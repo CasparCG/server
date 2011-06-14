@@ -184,7 +184,7 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 	
 	auto ext = boost::find_if(extensions, [&](const std::wstring& ex)
 	{					
-		return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+		return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename + L"." + ex));
 	});
 
 	if(ext == extensions.end())

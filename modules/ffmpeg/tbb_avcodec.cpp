@@ -86,7 +86,8 @@ int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 {
 	avctx->thread_count = 1;
 	// Some codecs don't like to have multiple multithreaded decoding instances. Only enable for those we know work.
-	if(codec->id == CODEC_ID_MPEG2VIDEO && 
+	if((codec->id == CODEC_ID_MPEG2VIDEO ||
+		codec->id == CODEC_ID_H264) && 
 	  (codec->capabilities & CODEC_CAP_SLICE_THREADS) && 
 	  (avctx->thread_type & FF_THREAD_SLICE))
 	{
