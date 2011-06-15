@@ -358,7 +358,7 @@ private:
 		const auto video = widen(video_stream_.ctx() ? video_stream_.ctx()->codec->name : "no-video");
 		const auto audio = widen(audio_stream_.ctx() ? audio_stream_.ctx()->codec->name : "no-audio");
 
-		return L"ffmpeg_input[" + filename_ + L" (" + video + L"|" + audio + L")]";
+		return L"ffmpeg_input[" + filename_ + L"(" + boost::lexical_cast<std::wstring>(static_cast<int>(100*fps_)) + L"|" + video + L"|" + audio + L")]";
 	}
 };
 
