@@ -113,7 +113,7 @@ public:
 
 	int index() const {return index_;}
 	
-	const std::shared_ptr<AVCodecContext>& ctx() { return ctx_; }
+	const std::shared_ptr<AVCodecContext>& ctx() const { return ctx_; }
 
 	operator bool(){return ctx_ != nullptr;}
 
@@ -355,7 +355,10 @@ private:
 	
 	std::wstring print() const
 	{
-		return L"ffmpeg_input[" + filename_ + L"]";
+		const auto video = widen(video_stream_.ctx() ? video_stream_.ctx()->codec->name : "no-video");
+		const auto audio = widen(audio_stream_.ctx() ? audio_stream_.ctx()->codec->name : "no-audio");
+
+		return L"ffmpeg_input[" + filename_ + L" (" + video + L"|" + audio + L")]";
 	}
 };
 
