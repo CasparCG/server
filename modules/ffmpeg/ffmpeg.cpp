@@ -25,6 +25,8 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
+#include <tbb/mutex.h>
+
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
 #endif
@@ -40,14 +42,64 @@ extern "C"
 }
 
 namespace caspar {
+	
+int ffmpeg_lock_callback(void **mutex, enum AVLockOp op) 
+{ 
+	static tbb::mutex				container_mutex;
+	static std::vector<tbb::mutex>	container; 
+
+	if(!mutex)
+		return 0;
+
+	auto my_mutex = reinterpret_cast<tbb::mutex*>(*mutex);
+	
+	switch(op) 
+	{ 
+		case AV_LOCK_CREATE: 
+		{ 
+			tbb::mutex::scoped_lock lock(container_mutex);
+			container.push_back(tbb::mutex());
+			*mutex = &container.back(); 
+			break; 
+		} 
+		case AV_LOCK_OBTAIN: 
+		{ 
+			if(my_mutex)
+				my_mutex->lock(); 
+			break; 
+		} 
+		case AV_LOCK_RELEASE: 
+		{ 
+			if(my_mutex)
+				my_mutex->unlock(); 
+			break; 
+		} 
+		case AV_LOCK_DESTROY: 
+		{ 
+			tbb::mutex::scoped_lock lock(container_mutex);
+			container.erase(std::remove_if(container.begin(), container.end(), [&](const tbb::mutex& m)
+			{
+				return &m == my_mutex;
+			}), container.end());
+			break; 
+		} 
+	} 
+	return 0; 
+} 
 
 void init_ffmpeg()
 {
 	av_register_all();
 	avcodec_init();
+	av_lockmgr_register(ffmpeg_lock_callback);
 	
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ffmpeg_consumer(params);});
 	core::register_producer_factory(create_ffmpeg_producer);
+}
+
+void uninit_ffmpeg()
+{
+	av_lockmgr_register(nullptr);
 }
 
 std::wstring make_version(unsigned int ver)

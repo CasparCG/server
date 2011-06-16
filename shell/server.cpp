@@ -84,7 +84,9 @@ struct server::implementation : boost::noncopyable
 	}
 
 	~implementation()
-	{				
+	{		
+		uninit_ffmpeg();
+
 		async_servers_.clear();
 		channels_.clear();
 	}
