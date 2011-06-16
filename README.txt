@@ -36,9 +36,9 @@ AUTHORS - People who have developed the CasparCG Server Software (sorted alphabe
 CREDITS - People who have contributed to the CasparCG Project (sorted alphabetically by last name).
 ================================================
 
-	Niklas	Andersson		(niklas.p.andersson@svt.se)
+	Niklas	Andersson	 		
 	Jonas 	Hummelstrand	(jonas.hummelstrand@svt.se)
 	Andreas Jeansson		(andreas.jeansson@svt.se)
 	Peter 	Karlsson		(peter.p.karlsson@svt.se)
 	Robert 	Nagy			(robert.nagy@svt.se)
-	Olle 	Soprani			(olle.soprani@svt.se)
+	Olle 	Soprani			
