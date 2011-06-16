@@ -22,6 +22,7 @@
 namespace caspar {
 
 void init_ffmpeg();
+void uninit_ffmpeg();
 
 std::wstring get_avcodec_version();
 std::wstring get_avformat_version();
