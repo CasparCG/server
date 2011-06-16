@@ -45,9 +45,6 @@ namespace caspar {
 	
 int ffmpeg_lock_callback(void **mutex, enum AVLockOp op) 
 { 
-	static tbb::mutex				container_mutex;
-	static std::vector<tbb::mutex>	container; 
-
 	if(!mutex)
 		return 0;
 
@@ -57,9 +54,7 @@ int ffmpeg_lock_callback(void **mutex, enum AVLockOp op)
 	{ 
 		case AV_LOCK_CREATE: 
 		{ 
-			tbb::mutex::scoped_lock lock(container_mutex);
-			container.push_back(tbb::mutex());
-			*mutex = &container.back(); 
+			*mutex = new tbb::mutex(); 
 			break; 
 		} 
 		case AV_LOCK_OBTAIN: 
@@ -76,11 +71,8 @@ int ffmpeg_lock_callback(void **mutex, enum AVLockOp op)
 		} 
 		case AV_LOCK_DESTROY: 
 		{ 
-			tbb::mutex::scoped_lock lock(container_mutex);
-			container.erase(std::remove_if(container.begin(), container.end(), [&](const tbb::mutex& m)
-			{
-				return &m == my_mutex;
-			}), container.end());
+			delete my_mutex;
+			*mutex = nullptr;
 			break; 
 		} 
 	} 
