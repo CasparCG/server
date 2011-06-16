@@ -26,20 +26,19 @@ CasparCG uses Glee(http://elf-stone.com/) under the modified BSD license.
 
 CasparCG uses boost(http://www.boost.org/) under the Boost Software License, Version 1.0.
 
-AUTHORS - People who have written the CasparCG Server Software (sorted alphabetically by last name).
+AUTHORS - People who have developed the CasparCG Server Software (sorted alphabetically by last name).
 ================================================
 
-	Niklas Andersson (1.0-1.8)
-	Robert Nagy		 (1.7-2.0+)
-	Peter Karlsson	 (2.0+)
-
+	Niklas 	Andersson 	(Server 1.0-1.8)
+	Andreas	Jeansson	(Template-Host)
+	Robert 	Nagy	 	(Server 1.7-2.x)
+	
 CREDITS - People who have contributed to the CasparCG Project (sorted alphabetically by last name).
 ================================================
 
-	Niklas	Andersson		
-	Jonas Gustafsson		
-	Jonas Hummelstrand	
-	Andreas Jeansson		
-	Peter Karlsson		
-	Robert Nagy			
-	Olle Soprani
+	Niklas	Andersson		(niklas.p.andersson@svt.se)
+	Jonas 	Hummelstrand	(jonas.hummelstrand@svt.se)
+	Andreas Jeansson		(andreas.jeansson@svt.se)
+	Peter 	Karlsson		(peter.p.karlsson@svt.se)
+	Robert 	Nagy			(robert.nagy@svt.se)
+	Olle 	Soprani			(olle.soprani@svt.se)
