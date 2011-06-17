@@ -111,12 +111,12 @@ public:
 			[&]
 			{
 				if(video_decoder_ && video_frames_.size() < 2)
-					video_frames_ = video_decoder_->receive();		
+					boost::range::push_back(video_frames_, video_decoder_->receive());		
 			}, 
 			[&]
 			{
 				if(audio_decoder_ && audio_chunks_.size() < 2)
-					audio_chunks_ = audio_decoder_->receive();			
+					boost::range::push_back(audio_chunks_, audio_decoder_->receive());				
 			}
 		);
 		
