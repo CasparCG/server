@@ -273,7 +273,11 @@ public:
 		try
 		{
 			if(result == bmdOutputFrameDisplayedLate)
+			{
 				graph_->add_tag("late-frame");
+				++frames_scheduled_;
+				++audio_scheduled_;
+			}
 			else if(result == bmdOutputFrameDropped)
 				graph_->add_tag("dropped-frame");
 			else if(result == bmdOutputFrameFlushed)
