@@ -174,6 +174,8 @@ public:
 
 			frame->commit();
 
+			frame->set_is_interlaced(format_desc_.mode != core::video_mode::progressive);
+
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{

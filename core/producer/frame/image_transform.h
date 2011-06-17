@@ -46,11 +46,11 @@ public:
 	void set_fill_scale(double x, double y);
 	std::array<double, 2> get_fill_scale() const;
 	
-	void set_key_translation(double x, double y);
-	std::array<double, 2> get_key_translation() const;
+	void set_clip_translation(double x, double y);
+	std::array<double, 2> get_clip_translation() const;
 
-	void set_key_scale(double x, double y);
-	std::array<double, 2> get_key_scale() const;
+	void set_clip_scale(double x, double y);
+	std::array<double, 2> get_clip_scale() const;
 
 	void set_mode(video_mode::type mode);
 	video_mode::type get_mode() const;
@@ -60,15 +60,20 @@ public:
 
 	void set_is_key(bool value);
 	bool get_is_key() const;
+
+	void set_deinterlace(bool value);
+	bool get_deinterlace() const;
+
 private:
 	double opacity_;
 	double gain_;
 	std::array<double, 2> fill_translation_; 
 	std::array<double, 2> fill_scale_; 
-	std::array<double, 2> key_translation_; 
-	std::array<double, 2> key_scale_; 
+	std::array<double, 2> clip_translation_; 
+	std::array<double, 2> clip_scale_; 
 	video_mode::type mode_;
 	bool is_key_;
+	bool deinterlace_;
 };
 
 image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener);
