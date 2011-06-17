@@ -50,6 +50,9 @@ public:
 
 	void commit(uint32_t plane_index);
 	void commit();
+	
+	void set_is_interlaced(bool value);
+	bool get_is_interlaced() const;
 
 	virtual void accept(core::frame_visitor& visitor);
 

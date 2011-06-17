@@ -272,8 +272,8 @@ bool MixerCommand::DoExecute()
 				{
 					transform.set_fill_translation(x, y);
 					transform.set_fill_scale(x_s, y_s);
-					transform.set_key_translation(x, y);
-					transform.set_key_scale(x_s, y_s);
+					transform.set_clip_translation(x, y);
+					transform.set_clip_scale(x_s, y_s);
 					return transform;
 				};
 
@@ -283,7 +283,7 @@ bool MixerCommand::DoExecute()
 				else
 					GetChannel()->mixer()->apply_image_transform(transform, duration, tween);
 			}
-			else if(_parameters[1] == L"KEY_RECT")
+			else if(_parameters[1] == L"CLIP_RECT")
 			{
 				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
 				std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
@@ -294,8 +294,8 @@ bool MixerCommand::DoExecute()
 
 				auto transform = [=](image_transform transform) -> image_transform
 				{
-					transform.set_key_translation(x, y);
-					transform.set_key_scale(x_s, y_s);
+					transform.set_clip_translation(x, y);
+					transform.set_clip_scale(x_s, y_s);
 					return transform;
 				};
 
@@ -320,8 +320,8 @@ bool MixerCommand::DoExecute()
 						{				
 							transform.set_fill_translation(x*delta, y*delta);
 							transform.set_fill_scale(delta, delta);			
-							transform.set_key_translation(x*delta, y*delta);
-							transform.set_key_scale(delta, delta);
+							transform.set_clip_translation(x*delta, y*delta);
+							transform.set_clip_scale(delta, delta);
 							return transform;
 						};
 						GetChannel()->mixer()->apply_image_transform(index, transform, duration, tween);

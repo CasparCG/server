@@ -38,12 +38,13 @@ struct write_frame::implementation : boost::noncopyable
 	std::vector<int16_t>					audio_data_;
 	const core::pixel_format_desc			desc_;
 	int										tag_;
+	bool									is_interlaced_;
 
-public:
 	implementation(ogl_device& ogl, int tag, const core::pixel_format_desc& desc) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
+		, is_interlaced_(false)
 	{
 		ogl_.invoke([&]
 		{
@@ -121,4 +122,7 @@ const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return
 const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
 void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
+void write_frame::set_is_interlaced(bool value){impl_->is_interlaced_ = true;}
+bool write_frame::get_is_interlaced() const{return impl_->is_interlaced_;}
+
 }}

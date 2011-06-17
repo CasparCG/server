@@ -340,8 +340,8 @@ void image_kernel::draw(size_t width, size_t height, const core::pixel_format_de
 	GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
 	GL(glViewport(0, 0, width, height));
 						
-	auto m_p = transform.get_key_translation();
-	auto m_s = transform.get_key_scale();
+	auto m_p = transform.get_clip_translation();
+	auto m_s = transform.get_clip_scale();
 	double w = static_cast<double>(width);
 	double h = static_cast<double>(height);
 
