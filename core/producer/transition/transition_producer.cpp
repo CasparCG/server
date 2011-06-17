@@ -32,7 +32,7 @@ namespace caspar { namespace core {
 struct transition_producer : public frame_producer
 {	
 	const video_mode::type		mode_;
-	uint32_t					current_frame_;
+	unsigned int				current_frame_;
 	
 	const transition_info		info_;
 	
@@ -87,10 +87,10 @@ struct transition_producer : public frame_producer
 		if(info_.type == transition::cut)		
 			return src_frame;
 										
-		double delta1 = info_.tweener(current_frame_*2-1, 0.0, 1.0, info_.duration*2);
-		double delta2 = info_.tweener(current_frame_*2, 0.0, 1.0, info_.duration*2);  
+		const double delta1 = info_.tweener(current_frame_*2-1, 0.0, 1.0, info_.duration*2);
+		const double delta2 = info_.tweener(current_frame_*2, 0.0, 1.0, info_.duration*2);  
 
-		double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
+		const double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		
 		// For interlaced transitions. Seperate fields into seperate frames which are transitioned accordingly.
 		
@@ -130,8 +130,8 @@ struct transition_producer : public frame_producer
 			d_frame2->get_image_transform().set_clip_scale(delta2, 1.0);			
 		}
 				
-		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);
-		auto d_frame = d_frame1->get_image_transform() == d_frame2->get_image_transform() ? d_frame2 : basic_frame::interlace(d_frame1, d_frame2, mode_);
+		const auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);
+		const auto d_frame = d_frame1->get_image_transform() == d_frame2->get_image_transform() ? d_frame2 : basic_frame::interlace(d_frame1, d_frame2, mode_);
 		
 		return basic_frame::combine(s_frame, d_frame);
 	}

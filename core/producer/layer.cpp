@@ -21,10 +21,8 @@
 #include "../stdafx.h"
 
 #include "layer.h"
-#include "frame_producer.h"
 
-#include "../producer/frame/basic_frame.h"
-#include "../producer/frame/audio_transform.h"
+#include "frame_producer.h"
 
 namespace caspar { namespace core {
 	
