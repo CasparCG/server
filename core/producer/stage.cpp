@@ -152,7 +152,6 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_.clear();
-			CASPAR_LOG(info) << print() << " Cleared.";
 		});
 	}	
 	
