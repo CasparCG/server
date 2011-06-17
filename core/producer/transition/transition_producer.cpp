@@ -126,8 +126,8 @@ struct transition_producer : public frame_producer
 		}
 		else if(info_.type == transition::wipe)		
 		{
-			d_frame1->get_image_transform().set_key_scale(delta1, 1.0);	
-			d_frame2->get_image_transform().set_key_scale(delta2, 1.0);			
+			d_frame1->get_image_transform().set_clip_scale(delta1, 1.0);	
+			d_frame2->get_image_transform().set_clip_scale(delta2, 1.0);			
 		}
 				
 		auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);

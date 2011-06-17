@@ -163,8 +163,10 @@ public:
 
 				while(!layer.empty())
 				{
-					draw(layer.front());
+					auto frame = layer.front();
 					layer.pop();
+
+					draw(frame);
 					channel_.ogl().yield(); // Allow quick buffer allocation to execute.
 				}
 
