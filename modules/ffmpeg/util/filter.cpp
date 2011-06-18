@@ -1,6 +1,6 @@
 #include "../stdafx.h"
 
-#include "deinterlacer.h"
+#include "filter.h"
 
 #include "../ffmpeg_error.h"
 #include "util.h"
@@ -27,29 +27,26 @@ extern "C"
 
 namespace caspar {
 	
-struct deinterlacer::implementation
+struct filter::implementation
 {
-	std::shared_ptr<AVFilterGraph> graph_;
-	safe_ptr<core::frame_factory> frame_factory_;
-	AVFilterContext* video_in_filter_;
-	AVFilterContext* video_out_filter_;
+	const std::string						filters_;
+	std::shared_ptr<AVFilterGraph>			graph_;
+	AVFilterContext*						video_in_filter_;
+	AVFilterContext*						video_out_filter_;
+	std::deque<std::shared_ptr<AVFrame>>	buffer_;
 		
-	implementation(const safe_ptr<core::frame_factory>& frame_factory)
-		: frame_factory_(frame_factory)
-	{			
-	}
+	implementation(const std::string& filters) 
+		: filters_(filters)
+	{}
 
-	std::vector<safe_ptr<core::write_frame>> execute(const safe_ptr<AVFrame>& frame)
-	{
-		std::vector<safe_ptr<core::write_frame>> result;
-		
+	void push(const safe_ptr<AVFrame>& frame)
+	{		
 		int errn = 0;	
 
 		if(!graph_)
 		{
 			graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p){avfilter_graph_free(&p);});
 			
-
 			// Input
 			std::stringstream buffer_ss;
 			buffer_ss << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
@@ -81,10 +78,7 @@ struct deinterlacer::implementation
 			inputs->pad_idx			= 0;
 			inputs->next			= NULL;
 			
-			std::stringstream yadif_ss;
-			yadif_ss << "yadif=" << "1:" << frame->top_field_first;
-
-			errn = avfilter_graph_parse(graph_.get(), yadif_ss.str().c_str(), inputs, outputs, NULL);
+			errn = avfilter_graph_parse(graph_.get(), filters_.c_str(), inputs, outputs, NULL);
 			if(errn < 0)
 			{
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
@@ -116,13 +110,13 @@ struct deinterlacer::implementation
 				boost::errinfo_api_function("avfilter_poll_frame") << boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		std::generate_n(std::back_inserter(result), errn, [&]{return get_frame(video_out_filter_->inputs[0]);});
-
-		return result;
+		std::generate_n(std::back_inserter(buffer_), errn, [&]{return get_frame();});
 	}
 		
-	safe_ptr<core::write_frame> get_frame(AVFilterLink* link)
+	std::shared_ptr<AVFrame> get_frame()
 	{		
+		auto link = video_out_filter_->inputs[0];
+
 		int errn = avfilter_request_frame(link); 			
 		if(errn < 0)
 		{
@@ -130,33 +124,39 @@ struct deinterlacer::implementation
 				boost::errinfo_api_function("avfilter_request_frame") << boost::errinfo_errno(AVUNERROR(errn)));
 		}
 		
-		auto buf   = link->cur_buf->buf;
 		auto pic   = reinterpret_cast<AVPicture*>(link->cur_buf->buf);
-		auto desc  = get_pixel_format_desc(static_cast<PixelFormat>(buf->format), link->w, link->h);
-		auto write = frame_factory_->create_frame(this, desc);
+		
+		std::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
+		avcodec_get_frame_defaults(frame.get());	
 
-		tbb::parallel_for(0, static_cast<int>(desc.planes.size()), 1, [&](int n)
+		for(size_t n = 0; n < 4; ++n)
 		{
-			auto plane            = desc.planes[n];
-			auto result           = write->image_data(n).begin();
-			auto decoded          = pic->data[n];
-			auto decoded_linesize = pic->linesize[n];
-				
-			// Copy line by line since ffmpeg sometimes pads each line.
-			tbb::parallel_for(tbb::blocked_range<size_t>(0, static_cast<int>(desc.planes[n].height)), [&](const tbb::blocked_range<size_t>& r)
-			{
-				for(size_t y = r.begin(); y != r.end(); ++y)
-					memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-			});
+			frame->data[n]		= pic->data[n];
+			frame->linesize[n]	= pic->linesize[n];
+		}
 
-			write->commit(n);
-		});
-			
-		return write;
+		frame->width	= link->w;
+		frame->height	= link->h;
+		frame->format	= link->format;
+
+		return frame;
+	}
+	
+	bool try_pop(std::shared_ptr<AVFrame>& frame)
+	{
+		if(buffer_.empty())
+			return false;
+
+		frame = buffer_.front();
+		buffer_.pop_front();
+
+		return true;
 	}
 };
 
-deinterlacer::deinterlacer(const safe_ptr<core::frame_factory>& factory) : impl_(implementation(factory)) {}
-std::vector<safe_ptr<core::write_frame>> deinterlacer::execute(const safe_ptr<AVFrame>& frame) {return impl_->execute(frame);}
+filter::filter(const std::string& filters) : impl_(new implementation(filters)){}
+void filter::push(const safe_ptr<AVFrame>& frame) {return impl_->push(frame);}
+bool filter::try_pop(std::shared_ptr<AVFrame>& frame){return impl_->try_pop(frame);}
+size_t filter::size() const {return impl_->buffer_.size();}
 
 }

@@ -32,7 +32,7 @@ namespace core {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(input& input, const safe_ptr<core::frame_factory>& frame_factory);
+	explicit video_decoder(input& input, const safe_ptr<core::frame_factory>& frame_factory, const std::string& filter);
 	std::deque<std::pair<int, safe_ptr<core::write_frame>>> receive();	
 
 private:
