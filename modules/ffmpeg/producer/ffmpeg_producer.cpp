@@ -62,7 +62,7 @@ struct ffmpeg_producer : public core::frame_producer
 	std::deque<std::pair<int, std::vector<short>>> audio_chunks_;
 	std::deque<std::pair<int, safe_ptr<core::write_frame>>> video_frames_;
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop, int start, int length) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::string& filter, bool loop, int start, int length) 
 		: filename_(filename)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
@@ -78,7 +78,7 @@ public:
 			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback. frame-time: " << frame_time;
 		
 		video_decoder_.reset(input_.get_video_codec_context() ? 
-			new video_decoder(input_, frame_factory) : nullptr);
+			new video_decoder(input_, frame_factory, filter) : nullptr);
 			
 		audio_decoder_.reset(input_.get_audio_codec_context() ? 
 			new audio_decoder(input_, frame_factory->get_video_format_desc()) : nullptr);		
@@ -110,12 +110,12 @@ public:
 		(
 			[&]
 			{
-				if(video_decoder_ && video_frames_.size() < 2)
+				if(video_decoder_ && video_frames_.size() < 3)
 					boost::range::push_back(video_frames_, video_decoder_->receive());		
 			}, 
 			[&]
 			{
-				if(audio_decoder_ && audio_chunks_.size() < 2)
+				if(audio_decoder_ && audio_chunks_.size() < 3)
 					boost::range::push_back(audio_chunks_, audio_decoder_->receive());				
 			}
 		);
@@ -131,27 +131,52 @@ public:
 		CASPAR_ASSERT(!(video_decoder_ && audio_decoder_ && !video_frames_.empty() && !audio_chunks_.empty()) ||
 				      video_frames_.front().first == audio_chunks_.front().first);
 	}
-
+	
 	safe_ptr<core::basic_frame> decode_frame()
 	{
 		decode_packets();
 
 		if(video_decoder_ && audio_decoder_ && !video_frames_.empty() && !audio_chunks_.empty())
 		{
-			auto frame = std::move(video_frames_.front().second);				
+			auto frame		  = std::move(video_frames_.front().second);		
+			auto frame_number = video_frames_.front().first;
 			video_frames_.pop_front();
 				
 			frame->audio_data() = std::move(audio_chunks_.front().second);
 			audio_chunks_.pop_front();
 			
+			if(!video_frames_.empty())
+			{
+				if(video_frames_.front().first == frame_number)
+				{
+					auto frame2 = video_frames_.front().second;
+					video_frames_.pop_front();
+
+					return core::basic_frame::interlace(frame, frame2, frame_factory_->get_video_format_desc().mode);
+				}
+			}
+
 			return frame;
 		}
 		else if(video_decoder_ && !audio_decoder_ && !video_frames_.empty())
 		{
-			auto frame = std::move(video_frames_.front().second);				
+			auto frame		  = std::move(video_frames_.front().second);		
+			auto frame_number = video_frames_.front().first;
 			video_frames_.pop_front();
+
 			frame->get_audio_transform().set_has_audio(false);	
 			
+			if(!video_frames_.empty())
+			{
+				if(video_frames_.front().first == frame_number)
+				{
+					auto frame2 = video_frames_.front().second;
+					video_frames_.pop_front();
+
+					return core::basic_frame::interlace(frame, frame2, frame_factory_->get_video_format_desc().mode);
+				}
+			}
+
 			return frame;
 		}
 		else if(audio_decoder_ && !video_decoder_ && !audio_chunks_.empty())
@@ -193,24 +218,27 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 	std::wstring path = filename + L"." + *ext;
 	bool loop = boost::find(params, L"LOOP") != params.end();
 
-	static const boost::wregex expr(L"\\((?<START>\\d+)(,(?<LENGTH>\\d+)?)?\\)");//(,(?<END>\\d+))?\\]"); // boost::regex has no repeated captures?
-	boost::wsmatch what;
-	auto it = std::find_if(params.begin(), params.end(), [&](const std::wstring& str)
-	{
-		return boost::regex_match(str, what, expr);
-	});
-
 	int start = -1;
 	int length = -1;
-
-	if(it != params.end())
+	
+	auto seek_it = std::find(params.begin(), params.end(), L"SEEK");
+	if(seek_it != params.end())
 	{
-		start = lexical_cast_or_default(what["START"].str(), -1);
-		if(what["LENGTH"].matched)
-			length = lexical_cast_or_default(what["LENGTH"].str(), -1);
+		if(++seek_it != params.end())
+			start = boost::lexical_cast<int>(*seek_it);
 	}
 	
-	return make_safe<ffmpeg_producer>(frame_factory, path, loop, start, length);
+	std::string filter;
+
+	auto filter_it = std::find(params.begin(), params.end(), L"FILTER");
+	if(filter_it != params.end())
+	{
+		if(++filter_it != params.end())
+			filter = narrow(*filter_it);
+		std::transform(filter.begin(), filter.end(), filter.begin(), ::tolower);
+	}
+
+	return make_safe<ffmpeg_producer>(frame_factory, path, filter, loop, start, length);
 }
 
 }

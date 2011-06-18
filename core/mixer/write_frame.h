@@ -53,7 +53,7 @@ public:
 	
 	void set_is_interlaced(bool value);
 	bool get_is_interlaced() const;
-
+	
 	virtual void accept(core::frame_visitor& visitor);
 
 	virtual int tag() const;
