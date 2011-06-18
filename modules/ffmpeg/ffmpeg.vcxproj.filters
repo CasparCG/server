@@ -76,5 +76,8 @@
     <ClInclude Include="util\deinterlacer.h">
       <Filter>source\util</Filter>
     </ClInclude>
+    <ClInclude Include="util\util.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
