@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html401/loose.dtd">
 <html>
-<!-- Created on May 18, 2011 by texi2html 1.82
+<!-- Created on June 10, 2011 by texi2html 1.82
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -51,7 +51,7 @@ ul.toc {list-style: none}
 <ul class="toc">
   <li><a name="toc-Synopsis" href="#Synopsis">1. Synopsis</a></li>
   <li><a name="toc-Description" href="#Description">2. Description</a></li>
-  <li><a name="toc-Options" href="#Options">3. Options</a>
+  <li><a name="toc-Options-4" href="#Options-4">3. Options</a>
   <ul class="toc">
     <li><a name="toc-Generic-options" href="#Generic-options">3.1 Generic options</a></li>
     <li><a name="toc-Main-options" href="#Main-options">3.2 Main options</a></li>
@@ -72,154 +72,197 @@ ul.toc {list-style: none}
     <li><a name="toc-Video-and-Audio-file-format-conversion" href="#Video-and-Audio-file-format-conversion">5.3 Video and Audio file format conversion</a></li>
   </ul></li>
   <li><a name="toc-Expression-Evaluation" href="#Expression-Evaluation">6. Expression Evaluation</a></li>
-  <li><a name="toc-Encoders" href="#Encoders">7. Encoders</a>
+  <li><a name="toc-Decoders" href="#Decoders">7. Decoders</a></li>
+  <li><a name="toc-Video-Decoders" href="#Video-Decoders">8. Video Decoders</a>
   <ul class="toc">
-    <li><a name="toc-Audio-Encoders" href="#Audio-Encoders">7.1 Audio Encoders</a>
+    <li><a name="toc-rawvideo" href="#rawvideo">8.1 rawvideo</a>
     <ul class="toc">
-      <li><a name="toc-ac3-and-ac3_005ffixed" href="#ac3-and-ac3_005ffixed">7.1.1 ac3 and ac3_fixed</a></li>
+      <li><a name="toc-Options" href="#Options">8.1.1 Options</a></li>
     </ul>
 </li>
   </ul></li>
-  <li><a name="toc-Demuxers" href="#Demuxers">8. Demuxers</a>
+  <li><a name="toc-Encoders" href="#Encoders">9. Encoders</a></li>
+  <li><a name="toc-Audio-Encoders" href="#Audio-Encoders">10. Audio Encoders</a>
   <ul class="toc">
-    <li><a name="toc-image2-1" href="#image2-1">8.1 image2</a></li>
-    <li><a name="toc-applehttp-1" href="#applehttp-1">8.2 applehttp</a></li>
-  </ul></li>
-  <li><a name="toc-Muxers" href="#Muxers">9. Muxers</a>
-  <ul class="toc">
-    <li><a name="toc-crc-1" href="#crc-1">9.1 crc</a></li>
-    <li><a name="toc-framecrc-1" href="#framecrc-1">9.2 framecrc</a></li>
-    <li><a name="toc-image2" href="#image2">9.3 image2</a></li>
-    <li><a name="toc-mpegts" href="#mpegts">9.4 mpegts</a></li>
-    <li><a name="toc-null" href="#null">9.5 null</a></li>
-  </ul></li>
-  <li><a name="toc-Input-Devices" href="#Input-Devices">10. Input Devices</a>
-  <ul class="toc">
-    <li><a name="toc-alsa" href="#alsa">10.1 alsa</a></li>
-    <li><a name="toc-bktr" href="#bktr">10.2 bktr</a></li>
-    <li><a name="toc-dv1394" href="#dv1394">10.3 dv1394</a></li>
-    <li><a name="toc-fbdev" href="#fbdev">10.4 fbdev</a></li>
-    <li><a name="toc-jack" href="#jack">10.5 jack</a></li>
-    <li><a name="toc-libdc1394" href="#libdc1394">10.6 libdc1394</a></li>
-    <li><a name="toc-oss" href="#oss">10.7 oss</a></li>
-    <li><a name="toc-sndio-1" href="#sndio-1">10.8 sndio</a></li>
-    <li><a name="toc-video4linux-and-video4linux2" href="#video4linux-and-video4linux2">10.9 video4linux and video4linux2</a></li>
-    <li><a name="toc-vfwcap" href="#vfwcap">10.10 vfwcap</a></li>
-    <li><a name="toc-x11grab" href="#x11grab">10.11 x11grab</a></li>
-  </ul></li>
-  <li><a name="toc-Output-Devices" href="#Output-Devices">11. Output Devices</a>
-  <ul class="toc">
-    <li><a name="toc-alsa-1" href="#alsa-1">11.1 alsa</a></li>
-    <li><a name="toc-oss-1" href="#oss-1">11.2 oss</a></li>
-    <li><a name="toc-sndio" href="#sndio">11.3 sndio</a></li>
-  </ul></li>
-  <li><a name="toc-Protocols" href="#Protocols">12. Protocols</a>
-  <ul class="toc">
-    <li><a name="toc-applehttp" href="#applehttp">12.1 applehttp</a></li>
-    <li><a name="toc-concat" href="#concat">12.2 concat</a></li>
-    <li><a name="toc-file" href="#file">12.3 file</a></li>
-    <li><a name="toc-gopher" href="#gopher">12.4 gopher</a></li>
-    <li><a name="toc-http" href="#http">12.5 http</a></li>
-    <li><a name="toc-mmst" href="#mmst">12.6 mmst</a></li>
-    <li><a name="toc-mmsh" href="#mmsh">12.7 mmsh</a></li>
-    <li><a name="toc-md5" href="#md5">12.8 md5</a></li>
-    <li><a name="toc-pipe" href="#pipe">12.9 pipe</a></li>
-    <li><a name="toc-rtmp" href="#rtmp">12.10 rtmp</a></li>
-    <li><a name="toc-rtmp_002c-rtmpe_002c-rtmps_002c-rtmpt_002c-rtmpte" href="#rtmp_002c-rtmpe_002c-rtmps_002c-rtmpt_002c-rtmpte">12.11 rtmp, rtmpe, rtmps, rtmpt, rtmpte</a></li>
-    <li><a name="toc-rtp" href="#rtp">12.12 rtp</a></li>
-    <li><a name="toc-rtsp" href="#rtsp">12.13 rtsp</a></li>
-    <li><a name="toc-sap" href="#sap">12.14 sap</a>
+    <li><a name="toc-ac3-and-ac3_005ffixed" href="#ac3-and-ac3_005ffixed">10.1 ac3 and ac3_fixed</a>
     <ul class="toc">
-      <li><a name="toc-Muxer" href="#Muxer">12.14.1 Muxer</a></li>
-      <li><a name="toc-Demuxer" href="#Demuxer">12.14.2 Demuxer</a></li>
-    </ul></li>
-    <li><a name="toc-tcp" href="#tcp">12.15 tcp</a></li>
-    <li><a name="toc-udp" href="#udp">12.16 udp</a></li>
+      <li><a name="toc-AC_002d3-Metadata" href="#AC_002d3-Metadata">10.1.1 AC-3 Metadata</a>
+      <ul class="toc">
+        <li><a name="toc-Metadata-Control-Options" href="#Metadata-Control-Options">10.1.1.1 Metadata Control Options</a></li>
+        <li><a name="toc-Downmix-Levels" href="#Downmix-Levels">10.1.1.2 Downmix Levels</a></li>
+        <li><a name="toc-Audio-Production-Information" href="#Audio-Production-Information">10.1.1.3 Audio Production Information</a></li>
+        <li><a name="toc-Other-Metadata-Options" href="#Other-Metadata-Options">10.1.1.4 Other Metadata Options</a></li>
+      </ul></li>
+      <li><a name="toc-Extended-Bitstream-Information" href="#Extended-Bitstream-Information">10.1.2 Extended Bitstream Information</a>
+      <ul class="toc">
+        <li><a name="toc-Extended-Bitstream-Information-_002d-Part-1" href="#Extended-Bitstream-Information-_002d-Part-1">10.1.2.1 Extended Bitstream Information - Part 1</a></li>
+        <li><a name="toc-Extended-Bitstream-Information-_002d-Part-2" href="#Extended-Bitstream-Information-_002d-Part-2">10.1.2.2 Extended Bitstream Information - Part 2</a></li>
+      </ul></li>
+      <li><a name="toc-Other-AC_002d3-Encoding-Options" href="#Other-AC_002d3-Encoding-Options">10.1.3 Other AC-3 Encoding Options</a></li>
+      <li><a name="toc-Floating_002dPoint_002dOnly-AC_002d3-Encoding-Options" href="#Floating_002dPoint_002dOnly-AC_002d3-Encoding-Options">10.1.4 Floating-Point-Only AC-3 Encoding Options</a></li>
+    </ul>
+</li>
   </ul></li>
-  <li><a name="toc-Bitstream-Filters" href="#Bitstream-Filters">13. Bitstream Filters</a>
+  <li><a name="toc-Video-Encoders" href="#Video-Encoders">11. Video Encoders</a>
   <ul class="toc">
-    <li><a name="toc-aac_005fadtstoasc" href="#aac_005fadtstoasc">13.1 aac_adtstoasc</a></li>
-    <li><a name="toc-chomp" href="#chomp">13.2 chomp</a></li>
-    <li><a name="toc-dump_005fextradata" href="#dump_005fextradata">13.3 dump_extradata</a></li>
-    <li><a name="toc-h264_005fmp4toannexb" href="#h264_005fmp4toannexb">13.4 h264_mp4toannexb</a></li>
-    <li><a name="toc-imx_005fdump_005fheader" href="#imx_005fdump_005fheader">13.5 imx_dump_header</a></li>
-    <li><a name="toc-mjpeg2jpeg" href="#mjpeg2jpeg">13.6 mjpeg2jpeg</a></li>
-    <li><a name="toc-mjpega_005fdump_005fheader" href="#mjpega_005fdump_005fheader">13.7 mjpega_dump_header</a></li>
-    <li><a name="toc-movsub" href="#movsub">13.8 movsub</a></li>
-    <li><a name="toc-mp3_005fheader_005fcompress" href="#mp3_005fheader_005fcompress">13.9 mp3_header_compress</a></li>
-    <li><a name="toc-mp3_005fheader_005fdecompress" href="#mp3_005fheader_005fdecompress">13.10 mp3_header_decompress</a></li>
-    <li><a name="toc-noise" href="#noise">13.11 noise</a></li>
-    <li><a name="toc-remove_005fextradata" href="#remove_005fextradata">13.12 remove_extradata</a></li>
-  </ul></li>
-  <li><a name="toc-Filtergraph-description" href="#Filtergraph-description">14. Filtergraph description</a>
-  <ul class="toc">
-    <li><a name="toc-Filtergraph-syntax" href="#Filtergraph-syntax">14.1 Filtergraph syntax</a></li>
-  </ul></li>
-  <li><a name="toc-Audio-Filters" href="#Audio-Filters">15. Audio Filters</a>
-  <ul class="toc">
-    <li><a name="toc-anull" href="#anull">15.1 anull</a></li>
-  </ul></li>
-  <li><a name="toc-Audio-Sources" href="#Audio-Sources">16. Audio Sources</a>
-  <ul class="toc">
-    <li><a name="toc-anullsrc" href="#anullsrc">16.1 anullsrc</a></li>
-  </ul></li>
-  <li><a name="toc-Audio-Sinks" href="#Audio-Sinks">17. Audio Sinks</a>
-  <ul class="toc">
-    <li><a name="toc-anullsink" href="#anullsink">17.1 anullsink</a></li>
-  </ul></li>
-  <li><a name="toc-Video-Filters" href="#Video-Filters">18. Video Filters</a>
-  <ul class="toc">
-    <li><a name="toc-blackframe" href="#blackframe">18.1 blackframe</a></li>
-    <li><a name="toc-copy" href="#copy">18.2 copy</a></li>
-    <li><a name="toc-crop" href="#crop">18.3 crop</a></li>
-    <li><a name="toc-cropdetect" href="#cropdetect">18.4 cropdetect</a></li>
-    <li><a name="toc-drawbox" href="#drawbox">18.5 drawbox</a></li>
-    <li><a name="toc-drawtext" href="#drawtext">18.6 drawtext</a></li>
-    <li><a name="toc-fade" href="#fade">18.7 fade</a></li>
-    <li><a name="toc-fieldorder" href="#fieldorder">18.8 fieldorder</a></li>
-    <li><a name="toc-fifo" href="#fifo">18.9 fifo</a></li>
-    <li><a name="toc-format" href="#format">18.10 format</a></li>
-    <li><a name="toc-frei0r-1" href="#frei0r-1">18.11 frei0r</a></li>
-    <li><a name="toc-gradfun" href="#gradfun">18.12 gradfun</a></li>
-    <li><a name="toc-hflip" href="#hflip">18.13 hflip</a></li>
-    <li><a name="toc-hqdn3d" href="#hqdn3d">18.14 hqdn3d</a></li>
-    <li><a name="toc-mp" href="#mp">18.15 mp</a></li>
-    <li><a name="toc-noformat" href="#noformat">18.16 noformat</a></li>
-    <li><a name="toc-null-1" href="#null-1">18.17 null</a></li>
-    <li><a name="toc-ocv" href="#ocv">18.18 ocv</a>
+    <li><a name="toc-libvpx" href="#libvpx">11.1 libvpx</a>
     <ul class="toc">
-      <li><a name="toc-dilate-1" href="#dilate-1">18.18.1 dilate</a></li>
-      <li><a name="toc-erode" href="#erode">18.18.2 erode</a></li>
-      <li><a name="toc-smooth" href="#smooth">18.18.3 smooth</a></li>
+      <li><a name="toc-Options-1" href="#Options-1">11.1.1 Options</a></li>
     </ul></li>
-    <li><a name="toc-overlay" href="#overlay">18.19 overlay</a></li>
-    <li><a name="toc-pad" href="#pad">18.20 pad</a></li>
-    <li><a name="toc-pixdesctest" href="#pixdesctest">18.21 pixdesctest</a></li>
-    <li><a name="toc-scale" href="#scale">18.22 scale</a></li>
-    <li><a name="toc-setdar-1" href="#setdar-1">18.23 setdar</a></li>
-    <li><a name="toc-setpts" href="#setpts">18.24 setpts</a></li>
-    <li><a name="toc-setsar-1" href="#setsar-1">18.25 setsar</a></li>
-    <li><a name="toc-settb" href="#settb">18.26 settb</a></li>
-    <li><a name="toc-showinfo" href="#showinfo">18.27 showinfo</a></li>
-    <li><a name="toc-slicify" href="#slicify">18.28 slicify</a></li>
-    <li><a name="toc-transpose" href="#transpose">18.29 transpose</a></li>
-    <li><a name="toc-unsharp" href="#unsharp">18.30 unsharp</a></li>
-    <li><a name="toc-vflip" href="#vflip">18.31 vflip</a></li>
-    <li><a name="toc-yadif" href="#yadif">18.32 yadif</a></li>
+    <li><a name="toc-libx264" href="#libx264">11.2 libx264</a>
+    <ul class="toc">
+      <li><a name="toc-Options-2" href="#Options-2">11.2.1 Options</a></li>
+    </ul>
+</li>
   </ul></li>
-  <li><a name="toc-Video-Sources" href="#Video-Sources">19. Video Sources</a>
+  <li><a name="toc-Demuxers" href="#Demuxers">12. Demuxers</a>
   <ul class="toc">
-    <li><a name="toc-buffer" href="#buffer">19.1 buffer</a></li>
-    <li><a name="toc-color" href="#color">19.2 color</a></li>
-    <li><a name="toc-movie" href="#movie">19.3 movie</a></li>
-    <li><a name="toc-nullsrc" href="#nullsrc">19.4 nullsrc</a></li>
-    <li><a name="toc-frei0r_005fsrc" href="#frei0r_005fsrc">19.5 frei0r_src</a></li>
+    <li><a name="toc-image2" href="#image2">12.1 image2</a></li>
+    <li><a name="toc-applehttp" href="#applehttp">12.2 applehttp</a></li>
   </ul></li>
-  <li><a name="toc-Video-Sinks" href="#Video-Sinks">20. Video Sinks</a>
+  <li><a name="toc-Muxers" href="#Muxers">13. Muxers</a>
   <ul class="toc">
-    <li><a name="toc-nullsink" href="#nullsink">20.1 nullsink</a></li>
+    <li><a name="toc-crc-1" href="#crc-1">13.1 crc</a></li>
+    <li><a name="toc-framecrc-1" href="#framecrc-1">13.2 framecrc</a></li>
+    <li><a name="toc-image2-1" href="#image2-1">13.3 image2</a></li>
+    <li><a name="toc-mpegts" href="#mpegts">13.4 mpegts</a></li>
+    <li><a name="toc-null" href="#null">13.5 null</a></li>
+    <li><a name="toc-matroska" href="#matroska">13.6 matroska</a></li>
   </ul></li>
-  <li><a name="toc-Metadata" href="#Metadata">21. Metadata</a></li>
+  <li><a name="toc-Input-Devices" href="#Input-Devices">14. Input Devices</a>
+  <ul class="toc">
+    <li><a name="toc-alsa-1" href="#alsa-1">14.1 alsa</a></li>
+    <li><a name="toc-bktr" href="#bktr">14.2 bktr</a></li>
+    <li><a name="toc-dv1394" href="#dv1394">14.3 dv1394</a></li>
+    <li><a name="toc-fbdev" href="#fbdev">14.4 fbdev</a></li>
+    <li><a name="toc-jack" href="#jack">14.5 jack</a></li>
+    <li><a name="toc-libdc1394" href="#libdc1394">14.6 libdc1394</a></li>
+    <li><a name="toc-oss-1" href="#oss-1">14.7 oss</a></li>
+    <li><a name="toc-sndio" href="#sndio">14.8 sndio</a></li>
+    <li><a name="toc-video4linux-and-video4linux2" href="#video4linux-and-video4linux2">14.9 video4linux and video4linux2</a></li>
+    <li><a name="toc-vfwcap" href="#vfwcap">14.10 vfwcap</a></li>
+    <li><a name="toc-x11grab" href="#x11grab">14.11 x11grab</a></li>
+  </ul></li>
+  <li><a name="toc-Output-Devices" href="#Output-Devices">15. Output Devices</a>
+  <ul class="toc">
+    <li><a name="toc-alsa" href="#alsa">15.1 alsa</a></li>
+    <li><a name="toc-oss" href="#oss">15.2 oss</a></li>
+    <li><a name="toc-sdl" href="#sdl">15.3 sdl</a>
+    <ul class="toc">
+      <li><a name="toc-Options-3" href="#Options-3">15.3.1 Options</a></li>
+      <li><a name="toc-Examples-1" href="#Examples-1">15.3.2 Examples</a></li>
+    </ul></li>
+    <li><a name="toc-sndio-1" href="#sndio-1">15.4 sndio</a></li>
+  </ul></li>
+  <li><a name="toc-Protocols" href="#Protocols">16. Protocols</a>
+  <ul class="toc">
+    <li><a name="toc-applehttp-1" href="#applehttp-1">16.1 applehttp</a></li>
+    <li><a name="toc-concat" href="#concat">16.2 concat</a></li>
+    <li><a name="toc-file" href="#file">16.3 file</a></li>
+    <li><a name="toc-gopher" href="#gopher">16.4 gopher</a></li>
+    <li><a name="toc-http" href="#http">16.5 http</a></li>
+    <li><a name="toc-mmst" href="#mmst">16.6 mmst</a></li>
+    <li><a name="toc-mmsh" href="#mmsh">16.7 mmsh</a></li>
+    <li><a name="toc-md5" href="#md5">16.8 md5</a></li>
+    <li><a name="toc-pipe" href="#pipe">16.9 pipe</a></li>
+    <li><a name="toc-rtmp" href="#rtmp">16.10 rtmp</a></li>
+    <li><a name="toc-rtmp_002c-rtmpe_002c-rtmps_002c-rtmpt_002c-rtmpte" href="#rtmp_002c-rtmpe_002c-rtmps_002c-rtmpt_002c-rtmpte">16.11 rtmp, rtmpe, rtmps, rtmpt, rtmpte</a></li>
+    <li><a name="toc-rtp" href="#rtp">16.12 rtp</a></li>
+    <li><a name="toc-rtsp" href="#rtsp">16.13 rtsp</a></li>
+    <li><a name="toc-sap" href="#sap">16.14 sap</a>
+    <ul class="toc">
+      <li><a name="toc-Muxer" href="#Muxer">16.14.1 Muxer</a></li>
+      <li><a name="toc-Demuxer" href="#Demuxer">16.14.2 Demuxer</a></li>
+    </ul></li>
+    <li><a name="toc-tcp" href="#tcp">16.15 tcp</a></li>
+    <li><a name="toc-udp" href="#udp">16.16 udp</a></li>
+  </ul></li>
+  <li><a name="toc-Bitstream-Filters" href="#Bitstream-Filters">17. Bitstream Filters</a>
+  <ul class="toc">
+    <li><a name="toc-aac_005fadtstoasc" href="#aac_005fadtstoasc">17.1 aac_adtstoasc</a></li>
+    <li><a name="toc-chomp" href="#chomp">17.2 chomp</a></li>
+    <li><a name="toc-dump_005fextradata" href="#dump_005fextradata">17.3 dump_extradata</a></li>
+    <li><a name="toc-h264_005fmp4toannexb" href="#h264_005fmp4toannexb">17.4 h264_mp4toannexb</a></li>
+    <li><a name="toc-imx_005fdump_005fheader" href="#imx_005fdump_005fheader">17.5 imx_dump_header</a></li>
+    <li><a name="toc-mjpeg2jpeg" href="#mjpeg2jpeg">17.6 mjpeg2jpeg</a></li>
+    <li><a name="toc-mjpega_005fdump_005fheader" href="#mjpega_005fdump_005fheader">17.7 mjpega_dump_header</a></li>
+    <li><a name="toc-movsub" href="#movsub">17.8 movsub</a></li>
+    <li><a name="toc-mp3_005fheader_005fcompress" href="#mp3_005fheader_005fcompress">17.9 mp3_header_compress</a></li>
+    <li><a name="toc-mp3_005fheader_005fdecompress" href="#mp3_005fheader_005fdecompress">17.10 mp3_header_decompress</a></li>
+    <li><a name="toc-noise" href="#noise">17.11 noise</a></li>
+    <li><a name="toc-remove_005fextradata" href="#remove_005fextradata">17.12 remove_extradata</a></li>
+  </ul></li>
+  <li><a name="toc-Filtergraph-description" href="#Filtergraph-description">18. Filtergraph description</a>
+  <ul class="toc">
+    <li><a name="toc-Filtergraph-syntax" href="#Filtergraph-syntax">18.1 Filtergraph syntax</a></li>
+  </ul></li>
+  <li><a name="toc-Audio-Filters" href="#Audio-Filters">19. Audio Filters</a>
+  <ul class="toc">
+    <li><a name="toc-anull" href="#anull">19.1 anull</a></li>
+  </ul></li>
+  <li><a name="toc-Audio-Sources" href="#Audio-Sources">20. Audio Sources</a>
+  <ul class="toc">
+    <li><a name="toc-anullsrc" href="#anullsrc">20.1 anullsrc</a></li>
+  </ul></li>
+  <li><a name="toc-Audio-Sinks" href="#Audio-Sinks">21. Audio Sinks</a>
+  <ul class="toc">
+    <li><a name="toc-anullsink" href="#anullsink">21.1 anullsink</a></li>
+  </ul></li>
+  <li><a name="toc-Video-Filters" href="#Video-Filters">22. Video Filters</a>
+  <ul class="toc">
+    <li><a name="toc-blackframe" href="#blackframe">22.1 blackframe</a></li>
+    <li><a name="toc-copy" href="#copy">22.2 copy</a></li>
+    <li><a name="toc-crop" href="#crop">22.3 crop</a></li>
+    <li><a name="toc-cropdetect" href="#cropdetect">22.4 cropdetect</a></li>
+    <li><a name="toc-drawbox" href="#drawbox">22.5 drawbox</a></li>
+    <li><a name="toc-drawtext" href="#drawtext">22.6 drawtext</a></li>
+    <li><a name="toc-fade" href="#fade">22.7 fade</a></li>
+    <li><a name="toc-fieldorder" href="#fieldorder">22.8 fieldorder</a></li>
+    <li><a name="toc-fifo" href="#fifo">22.9 fifo</a></li>
+    <li><a name="toc-format" href="#format">22.10 format</a></li>
+    <li><a name="toc-frei0r-1" href="#frei0r-1">22.11 frei0r</a></li>
+    <li><a name="toc-gradfun" href="#gradfun">22.12 gradfun</a></li>
+    <li><a name="toc-hflip" href="#hflip">22.13 hflip</a></li>
+    <li><a name="toc-hqdn3d" href="#hqdn3d">22.14 hqdn3d</a></li>
+    <li><a name="toc-mp" href="#mp">22.15 mp</a></li>
+    <li><a name="toc-noformat" href="#noformat">22.16 noformat</a></li>
+    <li><a name="toc-null-1" href="#null-1">22.17 null</a></li>
+    <li><a name="toc-ocv" href="#ocv">22.18 ocv</a>
+    <ul class="toc">
+      <li><a name="toc-dilate-1" href="#dilate-1">22.18.1 dilate</a></li>
+      <li><a name="toc-erode" href="#erode">22.18.2 erode</a></li>
+      <li><a name="toc-smooth" href="#smooth">22.18.3 smooth</a></li>
+    </ul></li>
+    <li><a name="toc-overlay" href="#overlay">22.19 overlay</a></li>
+    <li><a name="toc-pad" href="#pad">22.20 pad</a></li>
+    <li><a name="toc-pixdesctest" href="#pixdesctest">22.21 pixdesctest</a></li>
+    <li><a name="toc-scale" href="#scale">22.22 scale</a></li>
+    <li><a name="toc-select" href="#select">22.23 select</a></li>
+    <li><a name="toc-setdar-1" href="#setdar-1">22.24 setdar</a></li>
+    <li><a name="toc-setpts" href="#setpts">22.25 setpts</a></li>
+    <li><a name="toc-setsar-1" href="#setsar-1">22.26 setsar</a></li>
+    <li><a name="toc-settb" href="#settb">22.27 settb</a></li>
+    <li><a name="toc-showinfo" href="#showinfo">22.28 showinfo</a></li>
+    <li><a name="toc-slicify" href="#slicify">22.29 slicify</a></li>
+    <li><a name="toc-split" href="#split">22.30 split</a></li>
+    <li><a name="toc-transpose" href="#transpose">22.31 transpose</a></li>
+    <li><a name="toc-unsharp" href="#unsharp">22.32 unsharp</a></li>
+    <li><a name="toc-vflip" href="#vflip">22.33 vflip</a></li>
+    <li><a name="toc-yadif" href="#yadif">22.34 yadif</a></li>
+  </ul></li>
+  <li><a name="toc-Video-Sources" href="#Video-Sources">23. Video Sources</a>
+  <ul class="toc">
+    <li><a name="toc-buffer" href="#buffer">23.1 buffer</a></li>
+    <li><a name="toc-color" href="#color">23.2 color</a></li>
+    <li><a name="toc-movie" href="#movie">23.3 movie</a></li>
+    <li><a name="toc-nullsrc" href="#nullsrc">23.4 nullsrc</a></li>
+    <li><a name="toc-frei0r_005fsrc" href="#frei0r_005fsrc">23.5 frei0r_src</a></li>
+  </ul></li>
+  <li><a name="toc-Video-Sinks" href="#Video-Sinks">24. Video Sinks</a>
+  <ul class="toc">
+    <li><a name="toc-nullsink" href="#nullsink">24.1 nullsink</a></li>
+  </ul></li>
+  <li><a name="toc-Metadata" href="#Metadata">25. Metadata</a></li>
 </ul>
 </div>
 
@@ -274,8 +317,8 @@ uses the same audio and video parameters for the outputs as the one
 specified for the inputs.
 </p>
 
-<a name="Options"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Options">3. Options</a></h1>
+<a name="Options-4"></a>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Options-4">3. Options</a></h1>
 
 <p>All the numerical options, if not specified otherwise, accept in input
 a string representing a number, which may contain one of the
@@ -800,7 +843,10 @@ following functions are available:
 
 </dd>
 <dt> &lsquo;<samp>-rc_override <var>override</var></samp>&rsquo;</dt>
-<dd><p>rate control override for specific intervals
+<dd><p>Rate control override for specific intervals, formated as &quot;int,int,int&quot;
+list separated with slashes. Two first values are the beginning and
+end frame numbers, last one is quantizer to use if positive, or quality
+factor if negative.
 </p></dd>
 <dt> &lsquo;<samp>-me_method <var>method</var></samp>&rsquo;</dt>
 <dd><p>Set motion estimation method to <var>method</var>.
@@ -1320,6 +1366,7 @@ following rules:
 <p>First ffmpeg searches for a file named <var>arg</var>.ffpreset in the
 directories &lsquo;<tt>$FFMPEG_DATADIR</tt>&rsquo; (if set), and &lsquo;<tt>$HOME/.ffmpeg</tt>&rsquo;, and in
 the datadir defined at configuration time (usually &lsquo;<tt>PREFIX/share/ffmpeg</tt>&rsquo;)
+or in a &lsquo;<tt>ffpresets</tt>&rsquo; folder along the executable on win32,
 in that order. For example, if the argument is <code>libx264-max</code>, it will
 search for the file &lsquo;<tt>libx264-max.ffpreset</tt>&rsquo;.
 </p>
@@ -1618,6 +1665,15 @@ integer. For example, &quot;trunc(-1.5)&quot; is &quot;-1.0&quot;.
 <dt> &lsquo;<samp>sqrt(expr)</samp>&rsquo;</dt>
 <dd><p>Compute the square root of <var>expr</var>. This is equivalent to
 &quot;(<var>expr</var>)^.5&quot;.
+</p>
+</dd>
+<dt> &lsquo;<samp>not(expr)</samp>&rsquo;</dt>
+<dd><p>Return 1.0 if <var>expr</var> is zero, 0.0 otherwise.
+</p>
+</dd>
+<dt> &lsquo;<samp>pow(x, y)</samp>&rsquo;</dt>
+<dd><p>Compute the power of <var>x</var> elevated <var>y</var>, it is equivalent to
+&quot;(<var>x</var>)^(<var>y</var>)&quot;.
 </p></dd>
 </dl>
 
@@ -1632,10 +1688,6 @@ integer. For example, &quot;trunc(-1.5)&quot; is &quot;-1.0&quot;.
 </pre></td></tr></table>
 <p>is equivalent to
 </p><table><tr><td>&nbsp;</td><td><pre class="example">A*B + not(A)*C
-</pre></td></tr></table>
-
-<p>When A evaluates to either 1 or 0, that is the same as
-</p><table><tr><td>&nbsp;</td><td><pre class="example">A*B + eq(A,0)*C
 </pre></td></tr></table>
 
 <p>In your C code, you can extend the list of unary and binary functions,
@@ -1713,8 +1765,62 @@ indication of the corresponding powers of 10 and of 2.
 </p></dd>
 </dl>
 
+<a name="Decoders"></a>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Decoders">7. Decoders</a></h1>
+
+<p>Decoders are configured elements in FFmpeg which allow the decoding of
+multimedia streams.
+</p>
+<p>When you configure your FFmpeg build, all the supported native decoders
+are enabled by default. Decoders requiring an external library must be enabled
+manually via the corresponding <code>--enable-lib</code> option. You can list all
+available decoders using the configure option <code>--list-decoders</code>.
+</p>
+<p>You can disable all the decoders with the configure option
+<code>--disable-decoders</code> and selectively enable / disable single decoders
+with the options <code>--enable-decoder=<var>DECODER</var></code> /
+<code>--disable-decoder=<var>DECODER</var></code>.
+</p>
+<p>The option <code>-codecs</code> of the ff* tools will display the list of
+enabled decoders.
+</p>
+
+<a name="Video-Decoders"></a>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Video-Decoders">8. Video Decoders</a></h1>
+
+<p>A description of some of the currently available video decoders
+follows.
+</p>
+<a name="rawvideo"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-rawvideo">8.1 rawvideo</a></h2>
+
+<p>Rawvideo decoder.
+</p>
+<p>This decoder decodes rawvideo streams.
+</p>
+<a name="Options"></a>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Options">8.1.1 Options</a></h3>
+
+<dl compact="compact">
+<dt> &lsquo;<samp>top <var>top_field_first</var></samp>&rsquo;</dt>
+<dd><p>Specify the assumed field type of the input video.
+</p><dl compact="compact">
+<dt> &lsquo;<samp>-1</samp>&rsquo;</dt>
+<dd><p>the video is assumed to be progressive (default)
+</p></dd>
+<dt> &lsquo;<samp>0</samp>&rsquo;</dt>
+<dd><p>bottom-field-first is assumed
+</p></dd>
+<dt> &lsquo;<samp>1</samp>&rsquo;</dt>
+<dd><p>top-field-first is assumed
+</p></dd>
+</dl>
+
+</dd>
+</dl>
+
 <a name="Encoders"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Encoders">7. Encoders</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Encoders">9. Encoders</a></h1>
 
 <p>Encoders are configured elements in FFmpeg which allow the encoding of
 multimedia streams.
@@ -1732,13 +1838,15 @@ with the options <code>--enable-encoder=<var>ENCODER</var></code> /
 <p>The option <code>-codecs</code> of the ff* tools will display the list of
 enabled encoders.
 </p>
-<p>A description of some of the currently available encoders follows.
-</p>
-<a name="Audio-Encoders"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-Audio-Encoders">7.1 Audio Encoders</a></h2>
 
+<a name="Audio-Encoders"></a>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Audio-Encoders">10. Audio Encoders</a></h1>
+
+<p>A description of some of the currently available audio encoders
+follows.
+</p>
 <a name="ac3-and-ac3_005ffixed"></a>
-<h3 class="subsection"><a href="ffmpeg.html#toc-ac3-and-ac3_005ffixed">7.1.1 ac3 and ac3_fixed</a></h3>
+<h2 class="section"><a href="ffmpeg.html#toc-ac3-and-ac3_005ffixed">10.1 ac3 and ac3_fixed</a></h2>
 
 <p>AC-3 audio encoders.
 </p>
@@ -1754,7 +1862,7 @@ default codec for any of the output formats, so it must be specified explicitly
 using the option <code>-acodec ac3_fixed</code> in order to use it.
 </p>
 <a name="AC_002d3-Metadata"></a>
-<h3 class="subheading">AC-3 Metadata</h3>
+<h3 class="subsection"><a href="ffmpeg.html#toc-AC_002d3-Metadata">10.1.1 AC-3 Metadata</a></h3>
 
 <p>The AC-3 metadata options are used to set parameters that describe the audio,
 but in most cases do not affect the audio encoding itself. Some of the options
@@ -1774,7 +1882,7 @@ documents.
 </li></ul>
 
 <a name="Metadata-Control-Options"></a>
-<h4 class="subsubheading">Metadata Control Options</h4>
+<h4 class="subsubsection"><a href="ffmpeg.html#toc-Metadata-Control-Options">10.1.1.1 Metadata Control Options</a></h4>
 
 <dl compact="compact">
 <dt> &lsquo;<samp>-per_frame_metadata <var>boolean</var></samp>&rsquo;</dt>
@@ -1794,7 +1902,7 @@ stream. (default)
 </dl>
 
 <a name="Downmix-Levels"></a>
-<h4 class="subsubheading">Downmix Levels</h4>
+<h4 class="subsubsection"><a href="ffmpeg.html#toc-Downmix-Levels">10.1.1.2 Downmix Levels</a></h4>
 
 <dl compact="compact">
 <dt> &lsquo;<samp>-center_mixlev <var>level</var></samp>&rsquo;</dt>
@@ -1836,7 +1944,7 @@ as a scale factor.  There are 3 valid values:
 </dl>
 
 <a name="Audio-Production-Information"></a>
-<h4 class="subsubheading">Audio Production Information</h4>
+<h4 class="subsubsection"><a href="ffmpeg.html#toc-Audio-Production-Information">10.1.1.3 Audio Production Information</a></h4>
 <p>Audio Production Information is optional information describing the mixing
 environment.  Either none or both of the fields are written to the bitstream.
 </p>
@@ -1875,7 +1983,7 @@ option and the <code>room_type</code> option have the default values.
 </dl>
 
 <a name="Other-Metadata-Options"></a>
-<h4 class="subsubheading">Other Metadata Options</h4>
+<h4 class="subsubsection"><a href="ffmpeg.html#toc-Other-Metadata-Options">10.1.1.4 Other Metadata Options</a></h4>
 
 <dl compact="compact">
 <dt> &lsquo;<samp>-copyright <var>boolean</var></samp>&rsquo;</dt>
@@ -1941,7 +2049,7 @@ original source and not a copy.
 </dl>
 
 <a name="Extended-Bitstream-Information"></a>
-<h4 class="subsubheading">Extended Bitstream Information</h4>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Extended-Bitstream-Information">10.1.2 Extended Bitstream Information</a></h3>
 <p>The extended bitstream options are part of the Alternate Bit Stream Syntax as
 specified in Annex D of the A/52:2010 standard. It is grouped into 2 parts.
 If any one parameter in a group is specified, all values in that group will be
@@ -1952,7 +2060,7 @@ and <code>surround_mixlev</code> options if it supports the Alternate Bit Stream
 Syntax.
 </p>
 <a name="Extended-Bitstream-Information-_002d-Part-1"></a>
-<h4 class="subsubheading">Extended Bitstream Information - Part 1</h4>
+<h4 class="subsubsection"><a href="ffmpeg.html#toc-Extended-Bitstream-Information-_002d-Part-1">10.1.2.1 Extended Bitstream Information - Part 1</a></h4>
 
 <dl compact="compact">
 <dt> &lsquo;<samp>-dmix_mode <var>mode</var></samp>&rsquo;</dt>
@@ -2083,7 +2191,7 @@ surround channel(s) when downmixing to stereo in Lo/Ro mode.
 </dl>
 
 <a name="Extended-Bitstream-Information-_002d-Part-2"></a>
-<h4 class="subsubheading">Extended Bitstream Information - Part 2</h4>
+<h4 class="subsubsection"><a href="ffmpeg.html#toc-Extended-Bitstream-Information-_002d-Part-2">10.1.2.2 Extended Bitstream Information - Part 2</a></h4>
 
 <dl compact="compact">
 <dt> &lsquo;<samp>-dsurex_mode <var>mode</var></samp>&rsquo;</dt>
@@ -2145,7 +2253,7 @@ conversion.
 </dl>
 
 <a name="Other-AC_002d3-Encoding-Options"></a>
-<h3 class="subheading">Other AC-3 Encoding Options</h3>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Other-AC_002d3-Encoding-Options">10.1.3 Other AC-3 Encoding Options</a></h3>
 
 <dl compact="compact">
 <dt> &lsquo;<samp>-stereo_rematrixing <var>boolean</var></samp>&rsquo;</dt>
@@ -2157,8 +2265,272 @@ is highly recommended that it be left as enabled except for testing purposes.
 </dd>
 </dl>
 
+<a name="Floating_002dPoint_002dOnly-AC_002d3-Encoding-Options"></a>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Floating_002dPoint_002dOnly-AC_002d3-Encoding-Options">10.1.4 Floating-Point-Only AC-3 Encoding Options</a></h3>
+
+<p>These options are only valid for the floating-point encoder and do not exist
+for the fixed-point encoder due to the corresponding features not being
+implemented in fixed-point.
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>-channel_coupling <var>boolean</var></samp>&rsquo;</dt>
+<dd><p>Enables/Disables use of channel coupling, which is an optional AC-3 feature
+that increases quality by combining high frequency information from multiple
+channels into a single channel. The per-channel high frequency information is
+sent with less accuracy in both the frequency and time domains. This allows
+more bits to be used for lower frequencies while preserving enough information
+to reconstruct the high frequencies. This option is enabled by default for the
+floating-point encoder and should generally be left as enabled except for
+testing purposes or to increase encoding speed.
+</p><dl compact="compact">
+<dt> &lsquo;<samp>-1</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>auto</samp>&rsquo;</dt>
+<dd><p>Selected by Encoder (default)
+</p></dd>
+<dt> &lsquo;<samp>0</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>off</samp>&rsquo;</dt>
+<dd><p>Disable Channel Coupling
+</p></dd>
+<dt> &lsquo;<samp>1</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>on</samp>&rsquo;</dt>
+<dd><p>Enable Channel Coupling
+</p></dd>
+</dl>
+
+</dd>
+<dt> &lsquo;<samp>-cpl_start_band <var>number</var></samp>&rsquo;</dt>
+<dd><p>Coupling Start Band. Sets the channel coupling start band, from 1 to 15. If a
+value higher than the bandwidth is used, it will be reduced to 1 less than the
+coupling end band. If <var>auto</var> is used, the start band will be determined by
+the encoder based on the bit rate, sample rate, and channel layout. This option
+has no effect if channel coupling is disabled.
+</p><dl compact="compact">
+<dt> &lsquo;<samp>-1</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>auto</samp>&rsquo;</dt>
+<dd><p>Selected by Encoder (default)
+</p></dd>
+</dl>
+
+</dd>
+</dl>
+
+
+<a name="Video-Encoders"></a>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Video-Encoders">11. Video Encoders</a></h1>
+
+<p>A description of some of the currently available video encoders
+follows.
+</p>
+<a name="libvpx"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-libvpx">11.1 libvpx</a></h2>
+
+<p>VP8 format supported through libvpx.
+</p>
+<p>Requires the presence of the libvpx headers and library during configuration.
+You need to explicitly configure the build with <code>--enable-libvpx</code>.
+</p>
+<a name="Options-1"></a>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Options-1">11.1.1 Options</a></h3>
+
+<p>Mapping from FFmpeg to libvpx options with conversion notes in parentheses.
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>threads</samp>&rsquo;</dt>
+<dd><p>g_threads
+</p>
+</dd>
+<dt> &lsquo;<samp>profile</samp>&rsquo;</dt>
+<dd><p>g_profile
+</p>
+</dd>
+<dt> &lsquo;<samp>vb</samp>&rsquo;</dt>
+<dd><p>rc_target_bitrate
+</p>
+</dd>
+<dt> &lsquo;<samp>g</samp>&rsquo;</dt>
+<dd><p>kf_max_dist
+</p>
+</dd>
+<dt> &lsquo;<samp>keyint_min</samp>&rsquo;</dt>
+<dd><p>kf_min_dist
+</p>
+</dd>
+<dt> &lsquo;<samp>qmin</samp>&rsquo;</dt>
+<dd><p>rc_min_quantizer
+</p>
+</dd>
+<dt> &lsquo;<samp>qmax</samp>&rsquo;</dt>
+<dd><p>rc_max_quantizer
+</p>
+</dd>
+<dt> &lsquo;<samp>bufsize, vb</samp>&rsquo;</dt>
+<dd><p>rc_buf_sz
+<code>(bufsize * 1000 / vb)</code>
+</p>
+<p>rc_buf_optimal_sz
+<code>(bufsize * 1000 / vb * 5 / 6)</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>rc_init_occupancy, vb</samp>&rsquo;</dt>
+<dd><p>rc_buf_initial_sz
+<code>(rc_init_occupancy * 1000 / vb)</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>rc_buffer_aggressivity</samp>&rsquo;</dt>
+<dd><p>rc_undershoot_pct
+</p>
+</dd>
+<dt> &lsquo;<samp>skip_threshold</samp>&rsquo;</dt>
+<dd><p>rc_dropframe_thresh
+</p>
+</dd>
+<dt> &lsquo;<samp>qcomp</samp>&rsquo;</dt>
+<dd><p>rc_2pass_vbr_bias_pct
+</p>
+</dd>
+<dt> &lsquo;<samp>maxrate, vb</samp>&rsquo;</dt>
+<dd><p>rc_2pass_vbr_maxsection_pct
+<code>(maxrate * 100 / vb)</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>minrate, vb</samp>&rsquo;</dt>
+<dd><p>rc_2pass_vbr_minsection_pct
+<code>(minrate * 100 / vb)</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>minrate, maxrate, vb</samp>&rsquo;</dt>
+<dd><p><code>VPX_CBR</code>
+<code>(minrate == maxrate == vb)</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>crf</samp>&rsquo;</dt>
+<dd><p><code>VPX_CQ</code>, <code>VP8E_SET_CQ_LEVEL</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>quality</samp>&rsquo;</dt>
+<dd><dl compact="compact">
+<dt> &lsquo;<samp><var>best</var></samp>&rsquo;</dt>
+<dd><p><code>VPX_DL_BEST_QUALITY</code>
+</p></dd>
+<dt> &lsquo;<samp><var>good</var></samp>&rsquo;</dt>
+<dd><p><code>VPX_DL_GOOD_QUALITY</code>
+</p></dd>
+<dt> &lsquo;<samp><var>realtime</var></samp>&rsquo;</dt>
+<dd><p><code>VPX_DL_REALTIME</code>
+</p></dd>
+</dl>
+
+</dd>
+<dt> &lsquo;<samp>speed</samp>&rsquo;</dt>
+<dd><p><code>VP8E_SET_CPUUSED</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>nr</samp>&rsquo;</dt>
+<dd><p><code>VP8E_SET_NOISE_SENSITIVITY</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>mb_threshold</samp>&rsquo;</dt>
+<dd><p><code>VP8E_SET_STATIC_THRESHOLD</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>slices</samp>&rsquo;</dt>
+<dd><p><code>VP8E_SET_TOKEN_PARTITIONS</code>
+</p>
+</dd>
+<dt> &lsquo;<samp>Alternate reference frame related</samp>&rsquo;</dt>
+<dd><dl compact="compact">
+<dt> &lsquo;<samp>vp8flags altref</samp>&rsquo;</dt>
+<dd><p><code>VP8E_SET_ENABLEAUTOALTREF</code>
+</p></dd>
+<dt> &lsquo;<samp><var>arnr_max_frames</var></samp>&rsquo;</dt>
+<dd><p><code>VP8E_SET_ARNR_MAXFRAMES</code>
+</p></dd>
+<dt> &lsquo;<samp><var>arnr_type</var></samp>&rsquo;</dt>
+<dd><p><code>VP8E_SET_ARNR_TYPE</code>
+</p></dd>
+<dt> &lsquo;<samp><var>arnr_strength</var></samp>&rsquo;</dt>
+<dd><p><code>VP8E_SET_ARNR_STRENGTH</code>
+</p></dd>
+<dt> &lsquo;<samp><var>rc_lookahead</var></samp>&rsquo;</dt>
+<dd><p>g_lag_in_frames
+</p></dd>
+</dl>
+
+</dd>
+<dt> &lsquo;<samp>vp8flags error_resilient</samp>&rsquo;</dt>
+<dd><p>g_error_resilient
+</p>
+</dd>
+</dl>
+
+<p>For more information about libvpx see:
+<a href="http://www.webmproject.org/">http://www.webmproject.org/</a>
+</p>
+<a name="libx264"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-libx264">11.2 libx264</a></h2>
+
+<p>H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 format supported through
+libx264.
+</p>
+<p>Requires the presence of the libx264 headers and library during
+configuration. You need to explicitly configure the build with
+<code>--enable-libx264</code>.
+</p>
+<a name="Options-2"></a>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Options-2">11.2.1 Options</a></h3>
+
+<dl compact="compact">
+<dt> &lsquo;<samp>preset <var>preset_name</var></samp>&rsquo;</dt>
+<dd><p>Set the encoding preset.
+</p>
+</dd>
+<dt> &lsquo;<samp>tune <var>tune_name</var></samp>&rsquo;</dt>
+<dd><p>Tune the encoding params.
+Deprecated in favor of <var>x264_opts</var>
+</p>
+</dd>
+<dt> &lsquo;<samp>fastfirstpass <var>bool</var></samp>&rsquo;</dt>
+<dd><p>Use fast settings when encoding first pass, default value is 1.
+Deprecated in favor of <var>x264_opts</var>.
+</p>
+</dd>
+<dt> &lsquo;<samp>profile <var>profile_name</var></samp>&rsquo;</dt>
+<dd><p>Set profile restrictions.
+Deprecated in favor of <var>x264_opts</var>.
+</p>
+</dd>
+<dt> &lsquo;<samp>level <var>level</var></samp>&rsquo;</dt>
+<dd><p>Specify level (as defined by Annex A).
+Deprecated in favor of <var>x264_opts</var>.
+</p>
+</dd>
+<dt> &lsquo;<samp>passlogfile <var>filename</var></samp>&rsquo;</dt>
+<dd><p>Specify filename for 2 pass stats.
+Deprecated in favor of <var>x264_opts</var>.
+</p>
+</dd>
+<dt> &lsquo;<samp>wpredp <var>wpred_type</var></samp>&rsquo;</dt>
+<dd><p>Specify Weighted prediction for P-frames.
+Deprecated in favor of <var>x264_opts</var>.
+</p>
+</dd>
+<dt> &lsquo;<samp>x264opts <var>options</var></samp>&rsquo;</dt>
+<dd><p>Allow to set any x264 option, see x264 manual for a list.
+</p>
+<p><var>options</var> is a list of <var>key</var>=<var>value</var> couples separated by
+&quot;:&quot;.
+</p></dd>
+</dl>
+
+<p>For example to specify libx264 encoding options with &lsquo;<tt>ffmpeg</tt>&rsquo;:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i foo.mpg -vcodec libx264 -x264opts keyint=123:min-keyint=20 -an out.mkv
+</pre></td></tr></table>
+
+<p>For more information about libx264 and the supported options see:
+<a href="http://www.videolan.org/developers/x264.html">http://www.videolan.org/developers/x264.html</a>
+</p>
 <a name="Demuxers"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Demuxers">8. Demuxers</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Demuxers">12. Demuxers</a></h1>
 
 <p>Demuxers are configured elements in FFmpeg which allow to read the
 multimedia streams from a particular type of file.
@@ -2177,8 +2549,8 @@ enabled demuxers.
 </p>
 <p>The description of some of the currently available demuxers follows.
 </p>
-<a name="image2-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-image2-1">8.1 image2</a></h2>
+<a name="image2"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-image2">12.1 image2</a></h2>
 
 <p>Image file demuxer.
 </p>
@@ -2222,8 +2594,8 @@ second:
 </p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -f image2 -i img.jpeg img.png
 </pre></td></tr></table>
 
-<a name="applehttp-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-applehttp-1">8.2 applehttp</a></h2>
+<a name="applehttp"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-applehttp">12.2 applehttp</a></h2>
 
 <p>Apple HTTP Live Streaming demuxer.
 </p>
@@ -2235,7 +2607,7 @@ The total bitrate of the variant that the stream belongs to is
 available in a metadata key named &quot;variant_bitrate&quot;.
 </p>
 <a name="Muxers"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Muxers">9. Muxers</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Muxers">13. Muxers</a></h1>
 
 <p>Muxers are configured elements in FFmpeg which allow writing
 multimedia streams to a particular type of file.
@@ -2256,7 +2628,7 @@ enabled muxers.
 </p>
 <p><a name="crc"></a>
 </p><a name="crc-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-crc-1">9.1 crc</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-crc-1">13.1 crc</a></h2>
 
 <p>CRC (Cyclic Redundancy Check) testing format.
 </p>
@@ -2289,7 +2661,7 @@ and the input video converted to MPEG-2 video, use the command:
 </p>
 <p><a name="framecrc"></a>
 </p><a name="framecrc-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-framecrc-1">9.2 framecrc</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-framecrc-1">13.2 framecrc</a></h2>
 
 <p>Per-frame CRC (Cyclic Redundancy Check) testing format.
 </p>
@@ -2322,8 +2694,8 @@ MPEG-2 video, use the command:
 
 <p>See also the <code>crc</code> muxer (see <a href="#crc">crc</a>).
 </p>
-<a name="image2"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-image2">9.3 image2</a></h2>
+<a name="image2-1"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-image2-1">13.3 image2</a></h2>
 
 <p>Image file muxer.
 </p>
@@ -2378,7 +2750,7 @@ specify the name of the &rsquo;.Y&rsquo; file. The muxer will automatically open
 &rsquo;.U&rsquo; and &rsquo;.V&rsquo; files as required.
 </p>
 <a name="mpegts"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-mpegts">9.4 mpegts</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-mpegts">13.4 mpegts</a></h2>
 
 <p>MPEG transport stream muxer.
 </p>
@@ -2424,7 +2796,7 @@ and <code>service_name</code>. If they are not set the default for
 </pre></td></tr></table>
 
 <a name="null"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-null">9.5 null</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-null">13.5 null</a></h2>
 
 <p>Null muxer.
 </p>
@@ -2444,8 +2816,86 @@ syntax.
 </p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -benchmark -i INPUT -f null -
 </pre></td></tr></table>
 
+<a name="matroska"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-matroska">13.6 matroska</a></h2>
+
+<p>Matroska container muxer.
+</p>
+<p>This muxer implements the matroska and webm container specs.
+</p>
+<p>The recognized metadata settings in this muxer are:
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>title=<var>title name</var></samp>&rsquo;</dt>
+<dd><p>Name provided to a single track
+</p></dd>
+</dl>
+
+<dl compact="compact">
+<dt> &lsquo;<samp>language=<var>language name</var></samp>&rsquo;</dt>
+<dd><p>Specifies the language of the track in the Matroska languages form
+</p></dd>
+</dl>
+
+<dl compact="compact">
+<dt> &lsquo;<samp>stereo_mode=<var>mode</var></samp>&rsquo;</dt>
+<dd><p>Stereo 3D video layout of two views in a single video track
+</p><dl compact="compact">
+<dt> &lsquo;<samp>mono</samp>&rsquo;</dt>
+<dd><p>video is not stereo
+</p></dd>
+<dt> &lsquo;<samp>left_right</samp>&rsquo;</dt>
+<dd><p>Both views are arranged side by side, Left-eye view is on the left
+</p></dd>
+<dt> &lsquo;<samp>bottom_top</samp>&rsquo;</dt>
+<dd><p>Both views are arranged in top-bottom orientation, Left-eye view is at bottom
+</p></dd>
+<dt> &lsquo;<samp>top_bottom</samp>&rsquo;</dt>
+<dd><p>Both views are arranged in top-bottom orientation, Left-eye view is on top
+</p></dd>
+<dt> &lsquo;<samp>checkerboard_rl</samp>&rsquo;</dt>
+<dd><p>Each view is arranged in a checkerboard interleaved pattern, Left-eye view being first
+</p></dd>
+<dt> &lsquo;<samp>checkerboard_lr</samp>&rsquo;</dt>
+<dd><p>Each view is arranged in a checkerboard interleaved pattern, Right-eye view being first
+</p></dd>
+<dt> &lsquo;<samp>row_interleaved_rl</samp>&rsquo;</dt>
+<dd><p>Each view is constituted by a row based interleaving, Right-eye view is first row
+</p></dd>
+<dt> &lsquo;<samp>row_interleaved_lr</samp>&rsquo;</dt>
+<dd><p>Each view is constituted by a row based interleaving, Left-eye view is first row
+</p></dd>
+<dt> &lsquo;<samp>col_interleaved_rl</samp>&rsquo;</dt>
+<dd><p>Both views are arranged in a column based interleaving manner, Right-eye view is first column
+</p></dd>
+<dt> &lsquo;<samp>col_interleaved_lr</samp>&rsquo;</dt>
+<dd><p>Both views are arranged in a column based interleaving manner, Left-eye view is first column
+</p></dd>
+<dt> &lsquo;<samp>anaglyph_cyan_red</samp>&rsquo;</dt>
+<dd><p>All frames are in anaglyph format viewable through red-cyan filters
+</p></dd>
+<dt> &lsquo;<samp>right_left</samp>&rsquo;</dt>
+<dd><p>Both views are arranged side by side, Right-eye view is on the left
+</p></dd>
+<dt> &lsquo;<samp>anaglyph_green_magenta</samp>&rsquo;</dt>
+<dd><p>All frames are in anaglyph format viewable through green-magenta filters
+</p></dd>
+<dt> &lsquo;<samp>block_lr</samp>&rsquo;</dt>
+<dd><p>Both eyes laced in one Block, Left-eye view is first
+</p></dd>
+<dt> &lsquo;<samp>block_rl</samp>&rsquo;</dt>
+<dd><p>Both eyes laced in one Block, Right-eye view is first
+</p></dd>
+</dl>
+</dd>
+</dl>
+
+<p>For example a 3D WebM clip can be created using the following command line:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i sample_left_right_clip.mpg -an -vcodec libvpx -metadata stereo_mode=left_right -y stereo_clip.webm
+</pre></td></tr></table>
+
 <a name="Input-Devices"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Input-Devices">10. Input Devices</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Input-Devices">14. Input Devices</a></h1>
 
 <p>Input devices are configured elements in FFmpeg which allow to access
 the data coming from a multimedia device attached to your system.
@@ -2464,8 +2914,8 @@ supported input devices (amongst the demuxers).
 </p>
 <p>A description of the currently available input devices follows.
 </p>
-<a name="alsa"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-alsa">10.1 alsa</a></h2>
+<a name="alsa-1"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-alsa-1">14.1 alsa</a></h2>
 
 <p>ALSA (Advanced Linux Sound Architecture) input device.
 </p>
@@ -2497,17 +2947,17 @@ card id 0, you may run the command:
 <a href="http://www.alsa-project.org/alsa-doc/alsa-lib/pcm.html">http://www.alsa-project.org/alsa-doc/alsa-lib/pcm.html</a>
 </p>
 <a name="bktr"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-bktr">10.2 bktr</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-bktr">14.2 bktr</a></h2>
 
 <p>BSD video input device.
 </p>
 <a name="dv1394"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-dv1394">10.3 dv1394</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-dv1394">14.3 dv1394</a></h2>
 
 <p>Linux DV 1394 input device.
 </p>
 <a name="fbdev"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-fbdev">10.4 fbdev</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-fbdev">14.4 fbdev</a></h2>
 
 <p>Linux framebuffer input device.
 </p>
@@ -2531,7 +2981,7 @@ Documentation/fb/framebuffer.txt included in the Linux source tree.
 <p>See also <a href="http://linux-fbdev.sourceforge.net/">http://linux-fbdev.sourceforge.net/</a>, and fbset(1).
 </p>
 <a name="jack"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-jack">10.5 jack</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-jack">14.5 jack</a></h2>
 
 <p>JACK input device.
 </p>
@@ -2580,12 +3030,12 @@ $ jack_connect metro:120_bpm ffmpeg:input_1
 <a href="http://jackaudio.org/">http://jackaudio.org/</a>
 </p>
 <a name="libdc1394"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-libdc1394">10.6 libdc1394</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-libdc1394">14.6 libdc1394</a></h2>
 
 <p>IIDC1394 input device, based on libdc1394 and libraw1394.
 </p>
-<a name="oss"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-oss">10.7 oss</a></h2>
+<a name="oss-1"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-oss-1">14.7 oss</a></h2>
 
 <p>Open Sound System input device.
 </p>
@@ -2601,8 +3051,8 @@ command:
 <p>For more information about OSS see:
 <a href="http://manuals.opensound.com/usersguide/dsp.html">http://manuals.opensound.com/usersguide/dsp.html</a>
 </p>
-<a name="sndio-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-sndio-1">10.8 sndio</a></h2>
+<a name="sndio"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-sndio">14.8 sndio</a></h2>
 
 <p>sndio input device.
 </p>
@@ -2619,7 +3069,7 @@ command:
 </pre></td></tr></table>
 
 <a name="video4linux-and-video4linux2"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-video4linux-and-video4linux2">10.9 video4linux and video4linux2</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-video4linux-and-video4linux2">14.9 video4linux and video4linux2</a></h2>
 
 <p>Video4Linux and Video4Linux2 input video devices.
 </p>
@@ -2658,7 +3108,7 @@ ffmpeg -f video4linux2 -i /dev/video0 out.mpeg
 </pre></td></tr></table>
 
 <a name="vfwcap"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-vfwcap">10.10 vfwcap</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-vfwcap">14.10 vfwcap</a></h2>
 
 <p>VfW (Video for Windows) capture input device.
 </p>
@@ -2667,7 +3117,7 @@ ffmpeg -f video4linux2 -i /dev/video0 out.mpeg
 other filename will be interpreted as device number 0.
 </p>
 <a name="x11grab"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-x11grab">10.11 x11grab</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-x11grab">14.11 x11grab</a></h2>
 
 <p>X11 video input device.
 </p>
@@ -2699,7 +3149,7 @@ ffmpeg -f x11grab -25 -s cif -i :0.0+10,20 out.mpg
 </pre></td></tr></table>
 
 <a name="Output-Devices"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Output-Devices">11. Output Devices</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Output-Devices">15. Output Devices</a></h1>
 
 <p>Output devices are configured elements in FFmpeg which allow to write
 multimedia data to an output device attached to your system.
@@ -2718,23 +3168,67 @@ enabled output devices (amongst the muxers).
 </p>
 <p>A description of the currently available output devices follows.
 </p>
-<a name="alsa-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-alsa-1">11.1 alsa</a></h2>
+<a name="alsa"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-alsa">15.1 alsa</a></h2>
 
 <p>ALSA (Advanced Linux Sound Architecture) output device.
 </p>
-<a name="oss-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-oss-1">11.2 oss</a></h2>
+<a name="oss"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-oss">15.2 oss</a></h2>
 
 <p>OSS (Open Sound System) output device.
 </p>
-<a name="sndio"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-sndio">11.3 sndio</a></h2>
+<a name="sdl"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-sdl">15.3 sdl</a></h2>
+
+<p>SDL (Simple Directmedia Layer) output device.
+</p>
+<p>This output devices allows to show a video stream in an SDL
+window. Only one SDL window is allowed per application, so you can
+have only one instance of this output device in an application.
+</p>
+<p>To enable this output device you need libsdl installed on your system
+when configuring your build.
+</p>
+<p>For more information about SDL, check:
+<a href="http://www.libsdl.org/">http://www.libsdl.org/</a>
+</p>
+<a name="Options-3"></a>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Options-3">15.3.1 Options</a></h3>
+
+<dl compact="compact">
+<dt> &lsquo;<samp>window_title</samp>&rsquo;</dt>
+<dd><p>Set the SDL window title, if not specified default to the filename
+specified for the output device.
+</p>
+</dd>
+<dt> &lsquo;<samp>icon_title</samp>&rsquo;</dt>
+<dd><p>Set the name of the iconified SDL window, if not specified it is set
+to the same value of <var>window_title</var>.
+</p>
+</dd>
+<dt> &lsquo;<samp>window_size</samp>&rsquo;</dt>
+<dd><p>Set the SDL window size, can be a string of the form
+<var>width</var>x<var>height</var> or a video size abbreviation.
+If not specified it defaults to the size of the input video.
+</p></dd>
+</dl>
+
+<a name="Examples-1"></a>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Examples-1">15.3.2 Examples</a></h3>
+
+<p>The following command shows the &lsquo;<tt>ffmpeg</tt>&rsquo; output is an
+SDL window, forcing its size to the qcif format:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i INPUT -vcodec rawvideo -pix_fmt yuv420p -window_size qcif -f sdl &quot;SDL output&quot;
+</pre></td></tr></table>
+
+<a name="sndio-1"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-sndio-1">15.4 sndio</a></h2>
 
 <p>sndio audio output device.
 </p>
 <a name="Protocols"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Protocols">12. Protocols</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Protocols">16. Protocols</a></h1>
 
 <p>Protocols are configured elements in FFmpeg which allow to access
 resources which require the use of a particular protocol.
@@ -2754,8 +3248,8 @@ supported protocols.
 </p>
 <p>A description of the currently available protocols follows.
 </p>
-<a name="applehttp"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-applehttp">12.1 applehttp</a></h2>
+<a name="applehttp-1"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-applehttp-1">16.1 applehttp</a></h2>
 
 <p>Read Apple HTTP Live Streaming compliant segmented stream as
 a uniform one. The M3U8 playlists describing the segments can be
@@ -2771,7 +3265,7 @@ applehttp+file://path/to/local/resource.m3u8
 </pre></td></tr></table>
 
 <a name="concat"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-concat">12.2 concat</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-concat">16.2 concat</a></h2>
 
 <p>Physical concatenation protocol.
 </p>
@@ -2796,7 +3290,7 @@ command:
 many shells.
 </p>
 <a name="file"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-file">12.3 file</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-file">16.3 file</a></h2>
 
 <p>File access protocol.
 </p>
@@ -2812,22 +3306,22 @@ specified with the name &quot;FILE.mpeg&quot; is interpreted as the URL
 &quot;file:FILE.mpeg&quot;.
 </p>
 <a name="gopher"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-gopher">12.4 gopher</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-gopher">16.4 gopher</a></h2>
 
 <p>Gopher protocol.
 </p>
 <a name="http"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-http">12.5 http</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-http">16.5 http</a></h2>
 
 <p>HTTP (Hyper Text Transfer Protocol).
 </p>
 <a name="mmst"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-mmst">12.6 mmst</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-mmst">16.6 mmst</a></h2>
 
 <p>MMS (Microsoft Media Server) protocol over TCP.
 </p>
 <a name="mmsh"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-mmsh">12.7 mmsh</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-mmsh">16.7 mmsh</a></h2>
 
 <p>MMS (Microsoft Media Server) protocol over HTTP.
 </p>
@@ -2836,7 +3330,7 @@ specified with the name &quot;FILE.mpeg&quot; is interpreted as the URL
 </pre></td></tr></table>
 
 <a name="md5"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-md5">12.8 md5</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-md5">16.8 md5</a></h2>
 
 <p>MD5 output protocol.
 </p>
@@ -2856,7 +3350,7 @@ ffmpeg -i input.flv -f avi -y md5:
 be seekable, so they will fail with the MD5 output protocol.
 </p>
 <a name="pipe"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-pipe">12.9 pipe</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-pipe">16.9 pipe</a></h2>
 
 <p>UNIX pipe access protocol.
 </p>
@@ -2887,7 +3381,7 @@ ffmpeg -i test.wav -f avi pipe: | cat &gt; test.avi
 be seekable, so they will fail with the pipe output protocol.
 </p>
 <a name="rtmp"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-rtmp">12.10 rtmp</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-rtmp">16.10 rtmp</a></h2>
 
 <p>Real-Time Messaging Protocol.
 </p>
@@ -2927,7 +3421,7 @@ application specified in <var>app</var>, may be prefixed by &quot;mp4:&quot;.
 </pre></td></tr></table>
 
 <a name="rtmp_002c-rtmpe_002c-rtmps_002c-rtmpt_002c-rtmpte"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-rtmp_002c-rtmpe_002c-rtmps_002c-rtmpt_002c-rtmpte">12.11 rtmp, rtmpe, rtmps, rtmpt, rtmpte</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-rtmp_002c-rtmpe_002c-rtmps_002c-rtmpt_002c-rtmpte">16.11 rtmp, rtmpe, rtmps, rtmpt, rtmpte</a></h2>
 
 <p>Real-Time Messaging Protocol and its variants supported through
 librtmp.
@@ -2965,12 +3459,12 @@ meaning as specified for the RTMP native protocol.
 </pre></td></tr></table>
 
 <a name="rtp"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-rtp">12.12 rtp</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-rtp">16.12 rtp</a></h2>
 
 <p>Real-Time Protocol.
 </p>
 <a name="rtsp"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-rtsp">12.13 rtsp</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-rtsp">16.13 rtsp</a></h2>
 
 <p>RTSP is not technically a protocol handler in libavformat, it is a demuxer
 and muxer. The demuxer supports both normal RTSP (with data transferred
@@ -3044,7 +3538,7 @@ on the fly by pressing <code>v</code> and <code>a</code>.
 </pre></td></tr></table>
 
 <a name="sap"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-sap">12.14 sap</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-sap">16.14 sap</a></h2>
 
 <p>Session Announcement Protocol (RFC 2974). This is not technically a
 protocol handler in libavformat, it is a muxer and demuxer.
@@ -3052,7 +3546,7 @@ It is used for signalling of RTP streams, by announcing the SDP for the
 streams regularly on a separate port.
 </p>
 <a name="Muxer"></a>
-<h3 class="subsection"><a href="ffmpeg.html#toc-Muxer">12.14.1 Muxer</a></h3>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Muxer">16.14.1 Muxer</a></h3>
 
 <p>The syntax for a SAP url given to the muxer is:
 </p><table><tr><td>&nbsp;</td><td><pre class="example">sap://<var>destination</var>[:<var>port</var>][?<var>options</var>]
@@ -3109,7 +3603,7 @@ on unique ports.
 </pre></td></tr></table>
 
 <a name="Demuxer"></a>
-<h3 class="subsection"><a href="ffmpeg.html#toc-Demuxer">12.14.2 Demuxer</a></h3>
+<h3 class="subsection"><a href="ffmpeg.html#toc-Demuxer">16.14.2 Demuxer</a></h3>
 
 <p>The syntax for a SAP url given to the demuxer is:
 </p><table><tr><td>&nbsp;</td><td><pre class="example">sap://[<var>address</var>][:<var>port</var>]
@@ -3135,7 +3629,7 @@ Once an announcement is received, it tries to receive that particular stream.
 </pre></td></tr></table>
 
 <a name="tcp"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-tcp">12.15 tcp</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-tcp">16.15 tcp</a></h2>
 
 <p>Trasmission Control Protocol.
 </p>
@@ -3155,7 +3649,7 @@ ffplay tcp://<var>hostname</var>:<var>port</var>
 </dl>
 
 <a name="udp"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-udp">12.16 udp</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-udp">16.16 udp</a></h2>
 
 <p>User Datagram Protocol.
 </p>
@@ -3215,7 +3709,7 @@ the specified peer address/port.
 </pre></td></tr></table>
 
 <a name="Bitstream-Filters"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Bitstream-Filters">13. Bitstream Filters</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Bitstream-Filters">17. Bitstream Filters</a></h1>
 
 <p>When you configure your FFmpeg build, all the supported bitstream
 filters are enabled by default. You can list all available ones using
@@ -3232,22 +3726,22 @@ all the supported bitstream filters included in your build.
 <p>Below is a description of the currently available bitstream filters.
 </p>
 <a name="aac_005fadtstoasc"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-aac_005fadtstoasc">13.1 aac_adtstoasc</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-aac_005fadtstoasc">17.1 aac_adtstoasc</a></h2>
 
 <a name="chomp"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-chomp">13.2 chomp</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-chomp">17.2 chomp</a></h2>
 
 <a name="dump_005fextradata"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-dump_005fextradata">13.3 dump_extradata</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-dump_005fextradata">17.3 dump_extradata</a></h2>
 
 <a name="h264_005fmp4toannexb"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-h264_005fmp4toannexb">13.4 h264_mp4toannexb</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-h264_005fmp4toannexb">17.4 h264_mp4toannexb</a></h2>
 
 <a name="imx_005fdump_005fheader"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-imx_005fdump_005fheader">13.5 imx_dump_header</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-imx_005fdump_005fheader">17.5 imx_dump_header</a></h2>
 
 <a name="mjpeg2jpeg"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-mjpeg2jpeg">13.6 mjpeg2jpeg</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-mjpeg2jpeg">17.6 mjpeg2jpeg</a></h2>
 
 <p>Convert MJPEG/AVI1 packets to full JPEG/JFIF packets.
 </p>
@@ -3283,25 +3777,25 @@ ffmpeg -i frame_%d.jpg -vcodec copy rotated.avi
 </pre></td></tr></table>
 
 <a name="mjpega_005fdump_005fheader"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-mjpega_005fdump_005fheader">13.7 mjpega_dump_header</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-mjpega_005fdump_005fheader">17.7 mjpega_dump_header</a></h2>
 
 <a name="movsub"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-movsub">13.8 movsub</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-movsub">17.8 movsub</a></h2>
 
 <a name="mp3_005fheader_005fcompress"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-mp3_005fheader_005fcompress">13.9 mp3_header_compress</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-mp3_005fheader_005fcompress">17.9 mp3_header_compress</a></h2>
 
 <a name="mp3_005fheader_005fdecompress"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-mp3_005fheader_005fdecompress">13.10 mp3_header_decompress</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-mp3_005fheader_005fdecompress">17.10 mp3_header_decompress</a></h2>
 
 <a name="noise"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-noise">13.11 noise</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-noise">17.11 noise</a></h2>
 
 <a name="remove_005fextradata"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-remove_005fextradata">13.12 remove_extradata</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-remove_005fextradata">17.12 remove_extradata</a></h2>
 
 <a name="Filtergraph-description"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Filtergraph-description">14. Filtergraph description</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Filtergraph-description">18. Filtergraph description</a></h1>
 
 <p>A filtergraph is a directed graph of connected filters. It can contain
 cycles, and there can be multiple links between a pair of
@@ -3317,7 +3811,7 @@ number of input and output pads of the filter.
 output pads is called a &quot;sink&quot;.
 </p>
 <a name="Filtergraph-syntax"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-Filtergraph-syntax">14.1 Filtergraph syntax</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-Filtergraph-syntax">18.1 Filtergraph syntax</a></h2>
 
 <p>A filtergraph can be represented using a textual representation, which
 is recognized by the <code>-vf</code> and <code>-af</code> options of the ff*
@@ -3390,7 +3884,7 @@ filter input and output pads of all the filterchains are connected.
 
 
 <a name="Audio-Filters"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Audio-Filters">15. Audio Filters</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Audio-Filters">19. Audio Filters</a></h1>
 
 <p>When you configure your FFmpeg build, you can disable any of the
 existing filters using &ndash;disable-filters.
@@ -3400,18 +3894,18 @@ build.
 <p>Below is a description of the currently available audio filters.
 </p>
 <a name="anull"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-anull">15.1 anull</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-anull">19.1 anull</a></h2>
 
 <p>Pass the audio source unchanged to the output.
 </p>
 
 <a name="Audio-Sources"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Audio-Sources">16. Audio Sources</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Audio-Sources">20. Audio Sources</a></h1>
 
 <p>Below is a description of the currently available audio sources.
 </p>
 <a name="anullsrc"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-anullsrc">16.1 anullsrc</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-anullsrc">20.1 anullsrc</a></h2>
 
 <p>Null audio source, never return audio frames. It is mainly useful as a
 template and to be employed in analysis / debugging tools.
@@ -3439,12 +3933,12 @@ anullsrc=48000:mono
 
 
 <a name="Audio-Sinks"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Audio-Sinks">17. Audio Sinks</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Audio-Sinks">21. Audio Sinks</a></h1>
 
 <p>Below is a description of the currently available audio sinks.
 </p>
 <a name="anullsink"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-anullsink">17.1 anullsink</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-anullsink">21.1 anullsink</a></h2>
 
 <p>Null audio sink, do absolutely nothing with the input audio. It is
 mainly useful as a template and to be employed in analysis / debugging
@@ -3452,7 +3946,7 @@ tools.
 </p>
 
 <a name="Video-Filters"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Video-Filters">18. Video Filters</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Video-Filters">22. Video Filters</a></h1>
 
 <p>When you configure your FFmpeg build, you can disable any of the
 existing filters using &ndash;disable-filters.
@@ -3462,7 +3956,7 @@ build.
 <p>Below is a description of the currently available video filters.
 </p>
 <a name="blackframe"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-blackframe">18.1 blackframe</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-blackframe">22.1 blackframe</a></h2>
 
 <p>Detect frames that are (almost) completely black. Can be useful to
 detect chapter transitions or commercials. Output lines consist of
@@ -3483,13 +3977,13 @@ threshold, and defaults to 98.
 considered black, and defaults to 32.
 </p>
 <a name="copy"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-copy">18.2 copy</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-copy">22.2 copy</a></h2>
 
 <p>Copy the input source unchanged to the output. Mainly useful for
 testing purposes.
 </p>
 <a name="crop"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-crop">18.3 crop</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-crop">22.3 crop</a></h2>
 
 <p>Crop the input video to <var>out_w</var>:<var>out_h</var>:<var>x</var>:<var>y</var>.
 </p>
@@ -3596,7 +4090,7 @@ crop=in_w-100:in_h-100:100:100
 </pre></td></tr></table>
 
 <a name="cropdetect"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-cropdetect">18.4 cropdetect</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-cropdetect">22.4 cropdetect</a></h2>
 
 <p>Auto-detect crop size.
 </p>
@@ -3633,7 +4127,7 @@ playback.
 </dl>
 
 <a name="drawbox"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-drawbox">18.5 drawbox</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-drawbox">22.5 drawbox</a></h2>
 
 <p>Draw a colored box on the input image.
 </p>
@@ -3666,7 +4160,7 @@ drawbox=10:20:200:60:red@0.5&quot;
 </pre></td></tr></table>
 
 <a name="drawtext"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-drawtext">18.6 drawtext</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-drawtext">22.6 drawtext</a></h2>
 
 <p>Draw text string or text from specified file on top of video using the
 libfreetype library.
@@ -3810,7 +4304,7 @@ within the parameter list.
 <a href="http://www.freetype.org/">http://www.freetype.org/</a>.
 </p>
 <a name="fade"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-fade">18.7 fade</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-fade">22.7 fade</a></h2>
 
 <p>Apply fade-in/out effect to input video.
 </p>
@@ -3843,7 +4337,7 @@ fade=in:5:20
 </pre></td></tr></table>
 
 <a name="fieldorder"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-fieldorder">18.8 fieldorder</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-fieldorder">22.8 fieldorder</a></h2>
 
 <p>Transform the field order of the input video.
 </p>
@@ -3878,7 +4372,7 @@ which is bottom field first.
 </pre></td></tr></table>
 
 <a name="fifo"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-fifo">18.9 fifo</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-fifo">22.9 fifo</a></h2>
 
 <p>Buffer input images and send them when they are requested.
 </p>
@@ -3888,7 +4382,7 @@ framework.
 <p>The filter does not take parameters.
 </p>
 <a name="format"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-format">18.10 format</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-format">22.10 format</a></h2>
 
 <p>Convert the input video to one of the specified pixel formats.
 Libavfilter will try to pick one that is supported for the input to
@@ -3907,7 +4401,7 @@ format=yuv420p:yuv444p:yuv410p
 
 <p><a name="frei0r"></a>
 </p><a name="frei0r-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-frei0r-1">18.11 frei0r</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-frei0r-1">22.11 frei0r</a></h2>
 
 <p>Apply a frei0r effect to the input video.
 </p>
@@ -3956,7 +4450,7 @@ frei0r=perspective:0.2/0.2:0.8/0.2
 <a href="http://piksel.org/frei0r">http://piksel.org/frei0r</a>
 </p>
 <a name="gradfun"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-gradfun">18.12 gradfun</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-gradfun">22.12 gradfun</a></h2>
 
 <p>Fix the banding artifacts that are sometimes introduced into nearly flat
 regions by truncation to 8bit colordepth.
@@ -3989,7 +4483,7 @@ gradfun=1.2
 </pre></td></tr></table>
 
 <a name="hflip"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-hflip">18.13 hflip</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-hflip">22.13 hflip</a></h2>
 
 <p>Flip the input video horizontally.
 </p>
@@ -3999,7 +4493,7 @@ gradfun=1.2
 </pre></td></tr></table>
 
 <a name="hqdn3d"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-hqdn3d">18.14 hqdn3d</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-hqdn3d">22.14 hqdn3d</a></h2>
 
 <p>High precision/quality 3d denoise filter. This filter aims to reduce
 image noise producing smooth images and making still images really
@@ -4031,7 +4525,7 @@ defaults to 3.0*<var>luma_spatial</var>/4.0
 </dl>
 
 <a name="mp"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-mp">18.15 mp</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-mp">22.15 mp</a></h2>
 
 <p>Apply an MPlayer filter to the input video.
 </p>
@@ -4091,7 +4585,7 @@ the named filter.
 <dt> <var>pullup</var></dt>
 <dt> <var>qp</var></dt>
 <dt> <var>rectangle</var></dt>
-<dt> <var>remove_logo</var></dt>
+<dt> <var>remove-logo</var></dt>
 <dt> <var>rgbtest</var></dt>
 <dt> <var>rotate</var></dt>
 <dt> <var>sab</var></dt>
@@ -4129,7 +4623,7 @@ mp=hue=100:-10
 <p>See also mplayer(1), <a href="http://www.mplayerhq.hu/">http://www.mplayerhq.hu/</a>.
 </p>
 <a name="noformat"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-noformat">18.16 noformat</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-noformat">22.16 noformat</a></h2>
 
 <p>Force libavfilter not to use any of the specified pixel formats for the
 input to the next filter.
@@ -4147,12 +4641,12 @@ noformat=yuv420p:yuv444p:yuv410p
 </pre></td></tr></table>
 
 <a name="null-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-null-1">18.17 null</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-null-1">22.17 null</a></h2>
 
 <p>Pass the video source unchanged to the output.
 </p>
 <a name="ocv"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-ocv">18.18 ocv</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-ocv">22.18 ocv</a></h2>
 
 <p>Apply video transform using libopencv.
 </p>
@@ -4174,7 +4668,7 @@ informations:
 </p>
 <p><a name="dilate"></a>
 </p><a name="dilate-1"></a>
-<h3 class="subsection"><a href="ffmpeg.html#toc-dilate-1">18.18.1 dilate</a></h3>
+<h3 class="subsection"><a href="ffmpeg.html#toc-dilate-1">22.18.1 dilate</a></h3>
 
 <p>Dilate an image by using a specific structuring element.
 This filter corresponds to the libopencv function <code>cvDilate</code>.
@@ -4220,7 +4714,7 @@ ocv=0x0+2x2/custom=diamond.shape:2
 </pre></td></tr></table>
 
 <a name="erode"></a>
-<h3 class="subsection"><a href="ffmpeg.html#toc-erode">18.18.2 erode</a></h3>
+<h3 class="subsection"><a href="ffmpeg.html#toc-erode">22.18.2 erode</a></h3>
 
 <p>Erode an image by using a specific structuring element.
 This filter corresponds to the libopencv function <code>cvErode</code>.
@@ -4230,7 +4724,7 @@ with the same meaning and use of those of the dilate filter
 (see <a href="#dilate">dilate</a>).
 </p>
 <a name="smooth"></a>
-<h3 class="subsection"><a href="ffmpeg.html#toc-smooth">18.18.3 smooth</a></h3>
+<h3 class="subsection"><a href="ffmpeg.html#toc-smooth">22.18.3 smooth</a></h3>
 
 <p>Smooth the input video.
 </p>
@@ -4253,7 +4747,7 @@ other parameters is 0.
 libopencv function <code>cvSmooth</code>.
 </p>
 <a name="overlay"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-overlay">18.19 overlay</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-overlay">22.19 overlay</a></h2>
 
 <p>Overlay one video on top of another.
 </p>
@@ -4315,7 +4809,7 @@ color=red.3:WxH [over]; [in][over] overlay [out]
 approach is yet to be tested.
 </p>
 <a name="pad"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-pad">18.20 pad</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-pad">22.20 pad</a></h2>
 
 <p>Add paddings to the input image, and places the original input at the
 given coordinates <var>x</var>, <var>y</var>.
@@ -4425,7 +4919,7 @@ pad=&quot;2*iw:2*ih:ow-iw:oh-ih&quot;
 </pre></td></tr></table>
 
 <a name="pixdesctest"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-pixdesctest">18.21 pixdesctest</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-pixdesctest">22.21 pixdesctest</a></h2>
 
 <p>Pixel format descriptor test filter, mainly useful for internal
 testing. The output video should be equal to the input video.
@@ -4437,7 +4931,7 @@ testing. The output video should be equal to the input video.
 <p>can be used to test the monowhite pixel format descriptor definition.
 </p>
 <a name="scale"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-scale">18.22 scale</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-scale">22.22 scale</a></h2>
 
 <p>Scale the input video to <var>width</var>:<var>height</var> and/or convert the image format.
 </p>
@@ -4518,9 +5012,146 @@ scale=&quot;trunc(3/2*iw/hsub)*hsub:trunc(3/2*ih/vsub)*vsub&quot;
 scale='min(500\, iw*3/2):-1'
 </pre></td></tr></table>
 
+<a name="select"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-select">22.23 select</a></h2>
+<p>Select frames to pass in output.
+</p>
+<p>It accepts in input an expression, which is evaluated for each input
+frame. If the expression is evaluated to a non-zero value, the frame
+is selected and passed to the output, otherwise it is discarded.
+</p>
+<p>The expression can contain the following constants:
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>PI</samp>&rsquo;</dt>
+<dd><p>Greek PI
+</p>
+</dd>
+<dt> &lsquo;<samp>PHI</samp>&rsquo;</dt>
+<dd><p>golden ratio
+</p>
+</dd>
+<dt> &lsquo;<samp>E</samp>&rsquo;</dt>
+<dd><p>Euler number
+</p>
+</dd>
+<dt> &lsquo;<samp>n</samp>&rsquo;</dt>
+<dd><p>the sequential number of the filtered frame, starting from 0
+</p>
+</dd>
+<dt> &lsquo;<samp>selected_n</samp>&rsquo;</dt>
+<dd><p>the sequential number of the selected frame, starting from 0
+</p>
+</dd>
+<dt> &lsquo;<samp>prev_selected_n</samp>&rsquo;</dt>
+<dd><p>the sequential number of the last selected frame, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>TB</samp>&rsquo;</dt>
+<dd><p>timebase of the input timestamps
+</p>
+</dd>
+<dt> &lsquo;<samp>pts</samp>&rsquo;</dt>
+<dd><p>the PTS (Presentation TimeStamp) of the filtered video frame,
+expressed in <var>TB</var> units, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>t</samp>&rsquo;</dt>
+<dd><p>the PTS (Presentation TimeStamp) of the filtered video frame,
+expressed in seconds, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>prev_pts</samp>&rsquo;</dt>
+<dd><p>the PTS of the previously filtered video frame, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>prev_selected_pts</samp>&rsquo;</dt>
+<dd><p>the PTS of the last previously filtered video frame, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>prev_selected_t</samp>&rsquo;</dt>
+<dd><p>the PTS of the last previously selected video frame, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>start_pts</samp>&rsquo;</dt>
+<dd><p>the PTS of the first video frame in the video, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>start_t</samp>&rsquo;</dt>
+<dd><p>the time of the first video frame in the video, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>pict_type</samp>&rsquo;</dt>
+<dd><p>the picture type of the filtered frame, can assume one of the following
+values:
+</p><dl compact="compact">
+<dt> &lsquo;<samp>PICT_TYPE_I</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_P</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_B</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_S</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_SI</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_SP</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_BI</samp>&rsquo;</dt>
+</dl>
+
+</dd>
+<dt> &lsquo;<samp>interlace_type</samp>&rsquo;</dt>
+<dd><p>the frame interlace type, can assume one of the following values:
+</p><dl compact="compact">
+<dt> &lsquo;<samp>INTERLACE_TYPE_P</samp>&rsquo;</dt>
+<dd><p>the frame is progressive (not interlaced)
+</p></dd>
+<dt> &lsquo;<samp>INTERLACE_TYPE_T</samp>&rsquo;</dt>
+<dd><p>the frame is top-field-first
+</p></dd>
+<dt> &lsquo;<samp>INTERLACE_TYPE_B</samp>&rsquo;</dt>
+<dd><p>the frame is bottom-field-first
+</p></dd>
+</dl>
+
+</dd>
+<dt> &lsquo;<samp>key</samp>&rsquo;</dt>
+<dd><p>1 if the filtered frame is a key-frame, 0 otherwise
+</p>
+</dd>
+<dt> &lsquo;<samp>pos</samp>&rsquo;</dt>
+<dd><p>the position in the file of the filtered frame, -1 if the information
+is not available (e.g. for synthetic video)
+</p></dd>
+</dl>
+
+<p>The default value of the select expression is &quot;1&quot;.
+</p>
+<p>Some examples follow:
+</p>
+<table><tr><td>&nbsp;</td><td><pre class="example"># select all frames in input
+select
+
+# the above is the same as:
+select=1
+
+# skip all frames:
+select=0
+
+# select only I-frames
+select='eq(pict_type\,PICT_TYPE_I)'
+
+# select one frame every 100
+select='not(mod(n\,100))'
+
+# select only frames contained in the 10-20 time interval
+select='gte(t\,10)*lte(t\,20)'
+
+# select only I frames contained in the 10-20 time interval
+select='gte(t\,10)*lte(t\,20)*eq(pict_type\,PICT_TYPE_I)'
+
+# select frames with a minimum distance of 10 seconds
+select='isnan(prev_selected_t)+gte(t-prev_selected_t\,10)'
+</pre></td></tr></table>
+
 <p><a name="setdar"></a>
 </p><a name="setdar-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-setdar-1">18.23 setdar</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-setdar-1">22.24 setdar</a></h2>
 
 <p>Set the Display Aspect Ratio for the filter output video.
 </p>
@@ -4549,7 +5180,7 @@ setdar=1.77777
 <p>See also the &quot;setsar&quot; filter documentation (see <a href="#setsar">setsar</a>).
 </p>
 <a name="setpts"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-setpts">18.24 setpts</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-setpts">22.25 setpts</a></h2>
 
 <p>Change the PTS (presentation timestamp) of the input video frames.
 </p>
@@ -4620,7 +5251,7 @@ setpts='1/(25*TB) * (N + 0.05 * sin(N*2*PI/25))'
 
 <p><a name="setsar"></a>
 </p><a name="setsar-1"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-setsar-1">18.25 setsar</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-setsar-1">22.26 setsar</a></h2>
 
 <p>Set the Sample (aka Pixel) Aspect Ratio for the filter output video.
 </p>
@@ -4645,7 +5276,7 @@ If the parameter is not specified, it is assumed the value &quot;0:1&quot;.
 </pre></td></tr></table>
 
 <a name="settb"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-settb">18.26 settb</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-settb">22.27 settb</a></h2>
 
 <p>Set the timebase to use for the output frames timestamps.
 It is mainly useful for testing timebase configuration.
@@ -4675,7 +5306,7 @@ settb=AVTB
 </pre></td></tr></table>
 
 <a name="showinfo"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-showinfo">18.27 showinfo</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-showinfo">22.28 showinfo</a></h2>
 
 <p>Show a line containing various information for each input video frame.
 The input video is not modified.
@@ -4747,7 +5378,7 @@ the <code>av_get_picture_type_char</code> function defined in
 </dl>
 
 <a name="slicify"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-slicify">18.28 slicify</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-slicify">22.29 slicify</a></h2>
 
 <p>Pass the images of input video on to next video filter as multiple
 slices.
@@ -4761,8 +5392,23 @@ not specified it will use the default value of 16.
 <p>Adding this in the beginning of filter chains should make filtering
 faster due to better use of the memory cache.
 </p>
+<a name="split"></a>
+<h2 class="section"><a href="ffmpeg.html#toc-split">22.30 split</a></h2>
+
+<p>Pass on the input video to two outputs. Both outputs are identical to
+the input video.
+</p>
+<p>For example:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">[in] split [splitout1][splitout2];
+[splitout1] crop=100:100:0:0    [cropout];
+[splitout2] pad=200:200:100:100 [padout];
+</pre></td></tr></table>
+
+<p>will create two separate outputs from the same input, one cropped and
+one padded.
+</p>
 <a name="transpose"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-transpose">18.29 transpose</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-transpose">22.31 transpose</a></h2>
 
 <p>Transpose rows with columns in the input video and optionally flip it.
 </p>
@@ -4804,7 +5450,7 @@ l.r     l.L
 </dl>
 
 <a name="unsharp"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-unsharp">18.30 unsharp</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-unsharp">22.32 unsharp</a></h2>
 
 <p>Sharpen or blur the input video.
 </p>
@@ -4859,7 +5505,7 @@ unsharp=7:7:-2:7:7:-2
 </pre></td></tr></table>
 
 <a name="vflip"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-vflip">18.31 vflip</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-vflip">22.33 vflip</a></h2>
 
 <p>Flip the input video vertically.
 </p>
@@ -4867,7 +5513,7 @@ unsharp=7:7:-2:7:7:-2
 </pre></td></tr></table>
 
 <a name="yadif"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-yadif">18.32 yadif</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-yadif">22.34 yadif</a></h2>
 
 <p>Deinterlace the input video (&quot;yadif&quot; means &quot;yet another deinterlacing
 filter&quot;).
@@ -4915,12 +5561,12 @@ top field first will be assumed.
 </p>
 
 <a name="Video-Sources"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Video-Sources">19. Video Sources</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Video-Sources">23. Video Sources</a></h1>
 
 <p>Below is a description of the currently available video sources.
 </p>
 <a name="buffer"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-buffer">19.1 buffer</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-buffer">23.1 buffer</a></h2>
 
 <p>Buffer video frames, and make them available to the filter chain.
 </p>
@@ -4928,9 +5574,10 @@ top field first will be assumed.
 through the interface defined in &lsquo;<tt>libavfilter/vsrc_buffer.h</tt>&rsquo;.
 </p>
 <p>It accepts the following parameters:
-<var>width</var>:<var>height</var>:<var>pix_fmt_string</var>:<var>timebase_num</var>:<var>timebase_den</var>:<var>sample_aspect_ratio_num</var>:<var>sample_aspect_ratio.den</var>
+<var>width</var>:<var>height</var>:<var>pix_fmt_string</var>:<var>timebase_num</var>:<var>timebase_den</var>:<var>sample_aspect_ratio_num</var>:<var>sample_aspect_ratio.den</var>:<var>scale_params</var>
 </p>
-<p>All the parameters need to be explicitely defined.
+<p>All the parameters but <var>scale_params</var> need to be explicitely
+defined.
 </p>
 <p>Follows the list of the accepted parameters.
 </p>
@@ -4953,6 +5600,12 @@ timestamps of the buffered frames.
 <dt> &lsquo;<samp>sample_aspect_ratio.num, sample_aspect_ratio.den</samp>&rsquo;</dt>
 <dd><p>Specify numerator and denominator of the sample aspect ratio assumed
 by the video frames.
+</p>
+</dd>
+<dt> &lsquo;<samp>scale_params</samp>&rsquo;</dt>
+<dd><p>Specify the optional parameters to be used for the scale filter which
+is automatically inserted when an input change is detected in the
+input size or format.
 </p></dd>
 </dl>
 
@@ -4966,11 +5619,11 @@ square pixels (1:1 sample aspect ratio).
 Since the pixel format with name &quot;yuv410p&quot; corresponds to the number 6
 (check the enum PixelFormat definition in &lsquo;<tt>libavutil/pixfmt.h</tt>&rsquo;),
 this example corresponds to:
-</p><table><tr><td>&nbsp;</td><td><pre class="example">buffer=320:240:6:1:24
+</p><table><tr><td>&nbsp;</td><td><pre class="example">buffer=320:240:6:1:24:1:1
 </pre></td></tr></table>
 
 <a name="color"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-color">19.2 color</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-color">23.2 color</a></h2>
 
 <p>Provide an uniformly colored input.
 </p>
@@ -5011,7 +5664,7 @@ to the pad with identifier &quot;in&quot;.
 </pre></td></tr></table>
 
 <a name="movie"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-movie">19.3 movie</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-movie">23.3 movie</a></h2>
 
 <p>Read a video stream from a movie container.
 </p>
@@ -5067,7 +5720,7 @@ movie=/dev/video0:f=video4linux2, scale=180:-1, setpts=PTS-STARTPTS [movie];
 </pre></td></tr></table>
 
 <a name="nullsrc"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-nullsrc">19.4 nullsrc</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-nullsrc">23.4 nullsrc</a></h2>
 
 <p>Null video source, never return images. It is mainly useful as a
 template and to be employed in analysis / debugging tools.
@@ -5084,7 +5737,7 @@ timebase. The expression can contain the constants &quot;PI&quot;, &quot;E&quot;
 &quot;AVTB&quot; (the default timebase), and defaults to the value &quot;AVTB&quot;.
 </p>
 <a name="frei0r_005fsrc"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-frei0r_005fsrc">19.5 frei0r_src</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-frei0r_005fsrc">23.5 frei0r_src</a></h2>
 
 <p>Provide a frei0r source.
 </p>
@@ -5112,12 +5765,12 @@ frei0r_src=200x200:10:partik0l=1234 [overlay]; [in][overlay] overlay
 
 
 <a name="Video-Sinks"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Video-Sinks">20. Video Sinks</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Video-Sinks">24. Video Sinks</a></h1>
 
 <p>Below is a description of the currently available video sinks.
 </p>
 <a name="nullsink"></a>
-<h2 class="section"><a href="ffmpeg.html#toc-nullsink">20.1 nullsink</a></h2>
+<h2 class="section"><a href="ffmpeg.html#toc-nullsink">24.1 nullsink</a></h2>
 
 <p>Null video sink, do absolutely nothing with the input video. It is
 mainly useful as a template and to be employed in analysis / debugging
@@ -5125,7 +5778,7 @@ tools.
 </p>
 
 <a name="Metadata"></a>
-<h1 class="chapter"><a href="ffmpeg.html#toc-Metadata">21. Metadata</a></h1>
+<h1 class="chapter"><a href="ffmpeg.html#toc-Metadata">25. Metadata</a></h1>
 
 <p>FFmpeg is able to dump metadata from media files into a simple UTF-8-encoded
 INI-like text file and then load it back using the metadata muxer/demuxer.
@@ -5194,7 +5847,7 @@ line
 <hr size="1">
 <p>
  <font size="-1">
-  This document was generated by <em>Kyle Schwarz</em> on <em>May 18, 2011</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.
+  This document was generated by <em>Kyle Schwarz</em> on <em>June 10, 2011</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.
  </font>
  <br>
 

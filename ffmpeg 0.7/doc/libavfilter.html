@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html401/loose.dtd">
 <html>
-<!-- Created on May 18, 2011 by texi2html 1.82
+<!-- Created on June 10, 2011 by texi2html 1.82
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -97,16 +97,18 @@ ul.toc {list-style: none}
     <li><a name="toc-pad" href="#pad">8.20 pad</a></li>
     <li><a name="toc-pixdesctest" href="#pixdesctest">8.21 pixdesctest</a></li>
     <li><a name="toc-scale" href="#scale">8.22 scale</a></li>
-    <li><a name="toc-setdar-1" href="#setdar-1">8.23 setdar</a></li>
-    <li><a name="toc-setpts" href="#setpts">8.24 setpts</a></li>
-    <li><a name="toc-setsar-1" href="#setsar-1">8.25 setsar</a></li>
-    <li><a name="toc-settb" href="#settb">8.26 settb</a></li>
-    <li><a name="toc-showinfo" href="#showinfo">8.27 showinfo</a></li>
-    <li><a name="toc-slicify" href="#slicify">8.28 slicify</a></li>
-    <li><a name="toc-transpose" href="#transpose">8.29 transpose</a></li>
-    <li><a name="toc-unsharp" href="#unsharp">8.30 unsharp</a></li>
-    <li><a name="toc-vflip" href="#vflip">8.31 vflip</a></li>
-    <li><a name="toc-yadif" href="#yadif">8.32 yadif</a></li>
+    <li><a name="toc-select" href="#select">8.23 select</a></li>
+    <li><a name="toc-setdar-1" href="#setdar-1">8.24 setdar</a></li>
+    <li><a name="toc-setpts" href="#setpts">8.25 setpts</a></li>
+    <li><a name="toc-setsar-1" href="#setsar-1">8.26 setsar</a></li>
+    <li><a name="toc-settb" href="#settb">8.27 settb</a></li>
+    <li><a name="toc-showinfo" href="#showinfo">8.28 showinfo</a></li>
+    <li><a name="toc-slicify" href="#slicify">8.29 slicify</a></li>
+    <li><a name="toc-split" href="#split">8.30 split</a></li>
+    <li><a name="toc-transpose" href="#transpose">8.31 transpose</a></li>
+    <li><a name="toc-unsharp" href="#unsharp">8.32 unsharp</a></li>
+    <li><a name="toc-vflip" href="#vflip">8.33 vflip</a></li>
+    <li><a name="toc-yadif" href="#yadif">8.34 yadif</a></li>
   </ul></li>
   <li><a name="toc-Video-Sources" href="#Video-Sources">9. Video Sources</a>
   <ul class="toc">
@@ -1005,7 +1007,7 @@ the named filter.
 <dt> <var>pullup</var></dt>
 <dt> <var>qp</var></dt>
 <dt> <var>rectangle</var></dt>
-<dt> <var>remove_logo</var></dt>
+<dt> <var>remove-logo</var></dt>
 <dt> <var>rgbtest</var></dt>
 <dt> <var>rotate</var></dt>
 <dt> <var>sab</var></dt>
@@ -1432,9 +1434,146 @@ scale=&quot;trunc(3/2*iw/hsub)*hsub:trunc(3/2*ih/vsub)*vsub&quot;
 scale='min(500\, iw*3/2):-1'
 </pre></td></tr></table>
 
+<a name="select"></a>
+<h2 class="section"><a href="libavfilter.html#toc-select">8.23 select</a></h2>
+<p>Select frames to pass in output.
+</p>
+<p>It accepts in input an expression, which is evaluated for each input
+frame. If the expression is evaluated to a non-zero value, the frame
+is selected and passed to the output, otherwise it is discarded.
+</p>
+<p>The expression can contain the following constants:
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>PI</samp>&rsquo;</dt>
+<dd><p>Greek PI
+</p>
+</dd>
+<dt> &lsquo;<samp>PHI</samp>&rsquo;</dt>
+<dd><p>golden ratio
+</p>
+</dd>
+<dt> &lsquo;<samp>E</samp>&rsquo;</dt>
+<dd><p>Euler number
+</p>
+</dd>
+<dt> &lsquo;<samp>n</samp>&rsquo;</dt>
+<dd><p>the sequential number of the filtered frame, starting from 0
+</p>
+</dd>
+<dt> &lsquo;<samp>selected_n</samp>&rsquo;</dt>
+<dd><p>the sequential number of the selected frame, starting from 0
+</p>
+</dd>
+<dt> &lsquo;<samp>prev_selected_n</samp>&rsquo;</dt>
+<dd><p>the sequential number of the last selected frame, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>TB</samp>&rsquo;</dt>
+<dd><p>timebase of the input timestamps
+</p>
+</dd>
+<dt> &lsquo;<samp>pts</samp>&rsquo;</dt>
+<dd><p>the PTS (Presentation TimeStamp) of the filtered video frame,
+expressed in <var>TB</var> units, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>t</samp>&rsquo;</dt>
+<dd><p>the PTS (Presentation TimeStamp) of the filtered video frame,
+expressed in seconds, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>prev_pts</samp>&rsquo;</dt>
+<dd><p>the PTS of the previously filtered video frame, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>prev_selected_pts</samp>&rsquo;</dt>
+<dd><p>the PTS of the last previously filtered video frame, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>prev_selected_t</samp>&rsquo;</dt>
+<dd><p>the PTS of the last previously selected video frame, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>start_pts</samp>&rsquo;</dt>
+<dd><p>the PTS of the first video frame in the video, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>start_t</samp>&rsquo;</dt>
+<dd><p>the time of the first video frame in the video, NAN if undefined
+</p>
+</dd>
+<dt> &lsquo;<samp>pict_type</samp>&rsquo;</dt>
+<dd><p>the picture type of the filtered frame, can assume one of the following
+values:
+</p><dl compact="compact">
+<dt> &lsquo;<samp>PICT_TYPE_I</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_P</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_B</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_S</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_SI</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_SP</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>PICT_TYPE_BI</samp>&rsquo;</dt>
+</dl>
+
+</dd>
+<dt> &lsquo;<samp>interlace_type</samp>&rsquo;</dt>
+<dd><p>the frame interlace type, can assume one of the following values:
+</p><dl compact="compact">
+<dt> &lsquo;<samp>INTERLACE_TYPE_P</samp>&rsquo;</dt>
+<dd><p>the frame is progressive (not interlaced)
+</p></dd>
+<dt> &lsquo;<samp>INTERLACE_TYPE_T</samp>&rsquo;</dt>
+<dd><p>the frame is top-field-first
+</p></dd>
+<dt> &lsquo;<samp>INTERLACE_TYPE_B</samp>&rsquo;</dt>
+<dd><p>the frame is bottom-field-first
+</p></dd>
+</dl>
+
+</dd>
+<dt> &lsquo;<samp>key</samp>&rsquo;</dt>
+<dd><p>1 if the filtered frame is a key-frame, 0 otherwise
+</p>
+</dd>
+<dt> &lsquo;<samp>pos</samp>&rsquo;</dt>
+<dd><p>the position in the file of the filtered frame, -1 if the information
+is not available (e.g. for synthetic video)
+</p></dd>
+</dl>
+
+<p>The default value of the select expression is &quot;1&quot;.
+</p>
+<p>Some examples follow:
+</p>
+<table><tr><td>&nbsp;</td><td><pre class="example"># select all frames in input
+select
+
+# the above is the same as:
+select=1
+
+# skip all frames:
+select=0
+
+# select only I-frames
+select='eq(pict_type\,PICT_TYPE_I)'
+
+# select one frame every 100
+select='not(mod(n\,100))'
+
+# select only frames contained in the 10-20 time interval
+select='gte(t\,10)*lte(t\,20)'
+
+# select only I frames contained in the 10-20 time interval
+select='gte(t\,10)*lte(t\,20)*eq(pict_type\,PICT_TYPE_I)'
+
+# select frames with a minimum distance of 10 seconds
+select='isnan(prev_selected_t)+gte(t-prev_selected_t\,10)'
+</pre></td></tr></table>
+
 <p><a name="setdar"></a>
 </p><a name="setdar-1"></a>
-<h2 class="section"><a href="libavfilter.html#toc-setdar-1">8.23 setdar</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-setdar-1">8.24 setdar</a></h2>
 
 <p>Set the Display Aspect Ratio for the filter output video.
 </p>
@@ -1463,7 +1602,7 @@ setdar=1.77777
 <p>See also the &quot;setsar&quot; filter documentation (see <a href="#setsar">setsar</a>).
 </p>
 <a name="setpts"></a>
-<h2 class="section"><a href="libavfilter.html#toc-setpts">8.24 setpts</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-setpts">8.25 setpts</a></h2>
 
 <p>Change the PTS (presentation timestamp) of the input video frames.
 </p>
@@ -1534,7 +1673,7 @@ setpts='1/(25*TB) * (N + 0.05 * sin(N*2*PI/25))'
 
 <p><a name="setsar"></a>
 </p><a name="setsar-1"></a>
-<h2 class="section"><a href="libavfilter.html#toc-setsar-1">8.25 setsar</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-setsar-1">8.26 setsar</a></h2>
 
 <p>Set the Sample (aka Pixel) Aspect Ratio for the filter output video.
 </p>
@@ -1559,7 +1698,7 @@ If the parameter is not specified, it is assumed the value &quot;0:1&quot;.
 </pre></td></tr></table>
 
 <a name="settb"></a>
-<h2 class="section"><a href="libavfilter.html#toc-settb">8.26 settb</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-settb">8.27 settb</a></h2>
 
 <p>Set the timebase to use for the output frames timestamps.
 It is mainly useful for testing timebase configuration.
@@ -1589,7 +1728,7 @@ settb=AVTB
 </pre></td></tr></table>
 
 <a name="showinfo"></a>
-<h2 class="section"><a href="libavfilter.html#toc-showinfo">8.27 showinfo</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-showinfo">8.28 showinfo</a></h2>
 
 <p>Show a line containing various information for each input video frame.
 The input video is not modified.
@@ -1661,7 +1800,7 @@ the <code>av_get_picture_type_char</code> function defined in
 </dl>
 
 <a name="slicify"></a>
-<h2 class="section"><a href="libavfilter.html#toc-slicify">8.28 slicify</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-slicify">8.29 slicify</a></h2>
 
 <p>Pass the images of input video on to next video filter as multiple
 slices.
@@ -1675,8 +1814,23 @@ not specified it will use the default value of 16.
 <p>Adding this in the beginning of filter chains should make filtering
 faster due to better use of the memory cache.
 </p>
+<a name="split"></a>
+<h2 class="section"><a href="libavfilter.html#toc-split">8.30 split</a></h2>
+
+<p>Pass on the input video to two outputs. Both outputs are identical to
+the input video.
+</p>
+<p>For example:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">[in] split [splitout1][splitout2];
+[splitout1] crop=100:100:0:0    [cropout];
+[splitout2] pad=200:200:100:100 [padout];
+</pre></td></tr></table>
+
+<p>will create two separate outputs from the same input, one cropped and
+one padded.
+</p>
 <a name="transpose"></a>
-<h2 class="section"><a href="libavfilter.html#toc-transpose">8.29 transpose</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-transpose">8.31 transpose</a></h2>
 
 <p>Transpose rows with columns in the input video and optionally flip it.
 </p>
@@ -1718,7 +1872,7 @@ l.r     l.L
 </dl>
 
 <a name="unsharp"></a>
-<h2 class="section"><a href="libavfilter.html#toc-unsharp">8.30 unsharp</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-unsharp">8.32 unsharp</a></h2>
 
 <p>Sharpen or blur the input video.
 </p>
@@ -1773,7 +1927,7 @@ unsharp=7:7:-2:7:7:-2
 </pre></td></tr></table>
 
 <a name="vflip"></a>
-<h2 class="section"><a href="libavfilter.html#toc-vflip">8.31 vflip</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-vflip">8.33 vflip</a></h2>
 
 <p>Flip the input video vertically.
 </p>
@@ -1781,7 +1935,7 @@ unsharp=7:7:-2:7:7:-2
 </pre></td></tr></table>
 
 <a name="yadif"></a>
-<h2 class="section"><a href="libavfilter.html#toc-yadif">8.32 yadif</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-yadif">8.34 yadif</a></h2>
 
 <p>Deinterlace the input video (&quot;yadif&quot; means &quot;yet another deinterlacing
 filter&quot;).
@@ -1842,9 +1996,10 @@ top field first will be assumed.
 through the interface defined in &lsquo;<tt>libavfilter/vsrc_buffer.h</tt>&rsquo;.
 </p>
 <p>It accepts the following parameters:
-<var>width</var>:<var>height</var>:<var>pix_fmt_string</var>:<var>timebase_num</var>:<var>timebase_den</var>:<var>sample_aspect_ratio_num</var>:<var>sample_aspect_ratio.den</var>
+<var>width</var>:<var>height</var>:<var>pix_fmt_string</var>:<var>timebase_num</var>:<var>timebase_den</var>:<var>sample_aspect_ratio_num</var>:<var>sample_aspect_ratio.den</var>:<var>scale_params</var>
 </p>
-<p>All the parameters need to be explicitely defined.
+<p>All the parameters but <var>scale_params</var> need to be explicitely
+defined.
 </p>
 <p>Follows the list of the accepted parameters.
 </p>
@@ -1867,6 +2022,12 @@ timestamps of the buffered frames.
 <dt> &lsquo;<samp>sample_aspect_ratio.num, sample_aspect_ratio.den</samp>&rsquo;</dt>
 <dd><p>Specify numerator and denominator of the sample aspect ratio assumed
 by the video frames.
+</p>
+</dd>
+<dt> &lsquo;<samp>scale_params</samp>&rsquo;</dt>
+<dd><p>Specify the optional parameters to be used for the scale filter which
+is automatically inserted when an input change is detected in the
+input size or format.
 </p></dd>
 </dl>
 
@@ -1880,7 +2041,7 @@ square pixels (1:1 sample aspect ratio).
 Since the pixel format with name &quot;yuv410p&quot; corresponds to the number 6
 (check the enum PixelFormat definition in &lsquo;<tt>libavutil/pixfmt.h</tt>&rsquo;),
 this example corresponds to:
-</p><table><tr><td>&nbsp;</td><td><pre class="example">buffer=320:240:6:1:24
+</p><table><tr><td>&nbsp;</td><td><pre class="example">buffer=320:240:6:1:24:1:1
 </pre></td></tr></table>
 
 <a name="color"></a>
@@ -2042,7 +2203,7 @@ tools.
 <hr size="1">
 <p>
  <font size="-1">
-  This document was generated by <em>Kyle Schwarz</em> on <em>May 18, 2011</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.
+  This document was generated by <em>Kyle Schwarz</em> on <em>June 10, 2011</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.
  </font>
  <br>
 

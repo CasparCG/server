@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2008 Vitor Sessak
+ *
  * This file is part of FFmpeg.
  *
  * FFmpeg is free software; you can redistribute it and/or
@@ -16,45 +18,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVFILTER_AVCODEC_H
-#define AVFILTER_AVCODEC_H
+#ifndef AVFILTER_VSRC_BUFFER_H
+#define AVFILTER_VSRC_BUFFER_H
 
 /**
  * @file
- * libavcodec/libavfilter gluing utilities
- *
- * This should be included in an application ONLY if the installed
- * libavfilter has been compiled with libavcodec support, otherwise
- * symbols defined below will not be available.
+ * memory buffer source API for video
  */
 
-#include "libavcodec/avcodec.h" // AVFrame
 #include "avfilter.h"
-#include "vsrc_buffer.h"
 
 /**
- * Copy the frame properties of src to dst, without copying the actual
- * image data.
+ * Tell av_vsrc_buffer_add_video_buffer_ref() to overwrite the already
+ * cached video buffer with the new added one, otherwise the function
+ * will complain and exit.
  */
-void avfilter_copy_frame_props(AVFilterBufferRef *dst, const AVFrame *src);
+#define AV_VSRC_BUF_FLAG_OVERWRITE 1
 
 /**
- * Create and return a picref reference from the data and properties
- * contained in frame.
- *
- * @param perms permissions to assign to the new buffer reference
- */
-AVFilterBufferRef *avfilter_get_video_buffer_ref_from_frame(const AVFrame *frame, int perms);
-
-/**
- * Add frame data to buffer_src.
+ * Add video buffer data in picref to buffer_src.
  *
  * @param buffer_src pointer to a buffer source context
  * @param flags a combination of AV_VSRC_BUF_FLAG_* flags
  * @return >= 0 in case of success, a negative AVERROR code in case of
  * failure
  */
-int av_vsrc_buffer_add_frame(AVFilterContext *buffer_src,
-                             const AVFrame *frame, int flags);
+int av_vsrc_buffer_add_video_buffer_ref(AVFilterContext *buffer_src,
+                                        AVFilterBufferRef *picref, int flags);
 
-#endif /* AVFILTER_AVCODEC_H */
+#endif /* AVFILTER_VSRC_BUFFER_H */
