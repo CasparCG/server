@@ -16,6 +16,9 @@
     <Filter Include="source\producer\audio">
       <UniqueIdentifier>{6937307b-550f-48f8-9cc0-509de0e18ddc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\util">
+      <UniqueIdentifier>{dbf0125b-6087-4b63-94b0-8d652b12a2ca}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\ffmpeg_producer.cpp">
@@ -39,6 +42,9 @@
     </ClCompile>
     <ClCompile Include="ffmpeg.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="util\deinterlacer.cpp">
+      <Filter>source\util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -66,6 +72,9 @@
     </ClInclude>
     <ClInclude Include="ffmpeg.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="util\deinterlacer.h">
+      <Filter>source\util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
