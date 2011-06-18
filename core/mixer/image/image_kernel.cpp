@@ -320,6 +320,9 @@ image_kernel::image_kernel() : impl_(new implementation()){}
 
 void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, bool local_key, bool layer_key)
 {
+	if(transform.get_opacity() < 0.001)
+		return;
+
 	GL(glEnable(GL_TEXTURE_2D));
 	GL(glDisable(GL_DEPTH_TEST));	
 

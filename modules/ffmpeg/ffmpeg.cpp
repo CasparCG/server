@@ -81,8 +81,10 @@ int ffmpeg_lock_callback(void **mutex, enum AVLockOp op)
 
 void init_ffmpeg()
 {
+    avfilter_register_all();
 	av_register_all();
 	avcodec_init();
+    avcodec_register_all();
 	av_lockmgr_register(ffmpeg_lock_callback);
 	
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ffmpeg_consumer(params);});
@@ -91,6 +93,7 @@ void init_ffmpeg()
 
 void uninit_ffmpeg()
 {
+	avfilter_uninit();
 	av_lockmgr_register(nullptr);
 }
 
