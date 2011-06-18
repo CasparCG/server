@@ -2,15 +2,15 @@ This is a FFmpeg Win32 shared build by Kyle Schwarz.
 
 Zeranoe's FFmpeg Builds Home Page: http://ffmpeg.zeranoe.com/builds/
 
-Built on May 18 2011 04:43:18
+Built on Jun 10 2011 22:11:19
 
-FFmpeg version git-b4bcd1e
-	libavutil    51.  2. 1 / 51.  2. 1
-	libavcodec   53.  6. 0 / 53.  6. 0
-	libavformat  53.  1. 0 / 53.  1. 0
-	libavdevice  53.  0. 0 / 53.  0. 0
-	libavfilter   2.  5. 0 /  2.  5. 0
-	libswscale    0. 14. 0 /  0. 14. 0
+FFmpeg version git-39dbe9b
+	libavutil    51.  8. 0 / 51.  8. 0
+	libavcodec   53.  7. 0 / 53.  7. 0
+	libavformat  53.  3. 0 / 53.  3. 0
+	libavdevice  53.  1. 1 / 53.  1. 1
+	libavfilter   2. 15. 0 /  2. 15. 0
+	libswscale    0. 14. 1 /  0. 14. 1
 	libpostproc  51.  2. 0 / 51.  2. 0
 
 FFmpeg configured with:
@@ -48,7 +48,8 @@ This version of FFmpeg was built on:
 	Ubuntu Desktop 11.04: http://www.ubuntu.com/desktop
 	
 The cross-compile toolchain used to compile this FFmpeg was:
-	MinGW-w64 r4161: http://mingw-w64.sourceforge.net/
+	MinGW-w64 r4186: http://mingw-w64.sourceforge.net/
+	winpthreads (part of MinGW-w64)
 
 The GCC version used to compile this FFmpeg was:
 	GCC 4.5.3: http://gcc.gnu.org/
@@ -67,9 +68,9 @@ The external libaries compiled into this FFmpeg are:
 	Theora 1.1.1 http://www.theora.org/
 	Vorbis 1.3.2 http://www.vorbis.com/
 	libvpx 0.9.6 http://www.webmproject.org/code/
-	x264 git-b5a8ad7e http://www.videolan.org/developers/x264.html
+	x264 git-c1e60b90 http://www.videolan.org/developers/x264.html
 	XAVS r51 http://xavs.sourceforge.net/
-	Xvid 1.3.1 http://www.xvid.org/
+	Xvid 1.3.2 http://www.xvid.org/
 	zlib 1.2.5 http://zlib.net/
 
 License for each library can be found in the licenses folder.
