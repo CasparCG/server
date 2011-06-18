@@ -43,7 +43,7 @@
     <ClCompile Include="ffmpeg.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="util\deinterlacer.cpp">
+    <ClCompile Include="util\filter.cpp">
       <Filter>source\util</Filter>
     </ClCompile>
   </ItemGroup>
@@ -73,10 +73,10 @@
     <ClInclude Include="ffmpeg.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="util\deinterlacer.h">
+    <ClInclude Include="util\util.h">
       <Filter>source\util</Filter>
     </ClInclude>
-    <ClInclude Include="util\util.h">
+    <ClInclude Include="util\filter.h">
       <Filter>source\util</Filter>
     </ClInclude>
   </ItemGroup>
