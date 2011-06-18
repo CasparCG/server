@@ -323,6 +323,7 @@
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="tbb_avcodec.h" />
     <ClInclude Include="util\deinterlacer.h" />
+    <ClInclude Include="util\util.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\common\common.vcxproj">
