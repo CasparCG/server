@@ -21,6 +21,8 @@
 
 #include "video_decoder.h"
 #include "../../ffmpeg_error.h"
+#include "../../util/util.h"
+#include "../../util/filter.h"
 
 #include <common/memory/memcpy.h>
 
@@ -53,105 +55,29 @@ extern "C"
 
 namespace caspar {
 	
-core::pixel_format::type get_pixel_format(PixelFormat pix_fmt)
-{
-	switch(pix_fmt)
-	{
-	case PIX_FMT_GRAY8:		return core::pixel_format::gray;
-	case PIX_FMT_BGRA:		return core::pixel_format::bgra;
-	case PIX_FMT_ARGB:		return core::pixel_format::argb;
-	case PIX_FMT_RGBA:		return core::pixel_format::rgba;
-	case PIX_FMT_ABGR:		return core::pixel_format::abgr;
-	case PIX_FMT_YUV444P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV422P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV420P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV411P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV410P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUVA420P:	return core::pixel_format::ycbcra;
-	default:				return core::pixel_format::invalid;
-	}
-}
-
-core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_t height)
-{
-	// Get linesizes
-	AVPicture dummy_pict;	
-	avpicture_fill(&dummy_pict, nullptr, pix_fmt, width, height);
-
-	core::pixel_format_desc desc;
-	desc.pix_fmt = get_pixel_format(pix_fmt);
-		
-	switch(desc.pix_fmt)
-	{
-	case core::pixel_format::gray:
-		{
-			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0]/4, height, 1));						
-			return desc;
-		}
-	case core::pixel_format::bgra:
-	case core::pixel_format::argb:
-	case core::pixel_format::rgba:
-	case core::pixel_format::abgr:
-		{
-			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0]/4, height, 4));						
-			return desc;
-		}
-	case core::pixel_format::ycbcr:
-	case core::pixel_format::ycbcra:
-		{		
-			// Find chroma height
-			size_t size2 = dummy_pict.data[2] - dummy_pict.data[1];
-			size_t h2 = size2/dummy_pict.linesize[1];			
-
-			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
-			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1));
-			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1));
-
-			if(desc.pix_fmt == core::pixel_format::ycbcra)						
-				desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[3], height, 1));	
-			return desc;
-		}		
-	default:		
-		desc.pix_fmt = core::pixel_format::invalid;
-		return desc;
-	}
-}
-
 struct video_decoder::implementation : boost::noncopyable
 {
 	input& input_;
 	std::shared_ptr<SwsContext>					sws_context_;
 	const std::shared_ptr<core::frame_factory>	frame_factory_;
 	AVCodecContext&								codec_context_;
-	const int									width_;
-	const int									height_;
-	const PixelFormat							pix_fmt_;
-	core::pixel_format_desc						desc_;
 	size_t										frame_number_;
 
+	std::shared_ptr<filter>						filter_;
+	size_t										filter_delay_;
+
+	safe_ptr<AVFrame>							last_frame_;
+
 public:
-	explicit implementation(input& input, const safe_ptr<core::frame_factory>& frame_factory) 
+	explicit implementation(input& input, const safe_ptr<core::frame_factory>& frame_factory, const std::string& filter_str) 
 		: input_(input)
 		, frame_factory_(frame_factory)
 		, codec_context_(*input_.get_video_codec_context())
-		, width_(codec_context_.width)
-		, height_(codec_context_.height)
-		, pix_fmt_(codec_context_.pix_fmt)
-		, desc_(get_pixel_format_desc(pix_fmt_, width_, height_))
 		, frame_number_(0)
+		, filter_(filter_str.empty() ? nullptr : new filter(filter_str))
+		, filter_delay_(0)
+		, last_frame_(avcodec_alloc_frame(), av_free)
 	{
-		if(desc_.pix_fmt == core::pixel_format::invalid)
-		{
-			CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
-
-			desc_ = get_pixel_format_desc(PIX_FMT_BGRA, width_, height_);
-			double param;
-			sws_context_.reset(sws_getContext(width_, height_, pix_fmt_, width_, height_, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
-			if(!sws_context_)
-				BOOST_THROW_EXCEPTION(operation_failed() <<
-									  msg_info("Could not create software scaling context.") << 
-									  boost::errinfo_api_function("sws_getContext"));
-		}
 	}
 
 	std::deque<std::pair<int, safe_ptr<core::write_frame>>> receive()
@@ -171,15 +97,18 @@ public:
 
 		if(!video_packet) // eof
 		{	
-			avcodec_flush_buffers(&codec_context_);
+			for(size_t n = 0; n < filter_delay_; ++n)
+				boost::range::push_back(result, get_frames(last_frame_));
+			
 			frame_number_ = 0;
+			filter_delay_ = 0;
+			avcodec_flush_buffers(&codec_context_);
+
 			return result;
 		}
 
-		safe_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
-
 		int frame_finished = 0;
-		const int errn = avcodec_decode_video2(&codec_context_, decoded_frame.get(), &frame_finished, video_packet.get());
+		const int errn = avcodec_decode_video2(&codec_context_, last_frame_.get(), &frame_finished, video_packet.get());
 		
 		if(errn < 0)
 		{
@@ -191,27 +120,71 @@ public:
 		}
 		
 		if(frame_finished != 0)		
-			result.push_back(std::make_pair(frame_number_++, make_write_frame(decoded_frame)));
+			result = get_frames(last_frame_);
+
+		return result;
+	}
+
+	std::deque<std::pair<int, safe_ptr<core::write_frame>>> get_frames(const safe_ptr<AVFrame>& frame)
+	{
+		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
+			
+		if(filter_)
+		{
+			auto frames = filter_->execute(frame);
+
+			boost::range::transform(frames, std::back_inserter(result), [this](const safe_ptr<AVFrame>& frame)
+			{
+				return std::make_pair(frame_number_, make_write_frame(frame));
+			});
+
+			if(!frames.empty())
+				++frame_number_;
+			else
+				++filter_delay_;
+		}
+		else
+			result.push_back(std::make_pair(frame_number_++, make_write_frame(frame)));
 
 		return result;
 	}
 
 	safe_ptr<core::write_frame> make_write_frame(safe_ptr<AVFrame> decoded_frame)
-	{		
-		auto write = frame_factory_->create_frame(this, desc_);
+	{			
+		// We don't know what the filter output might give until we received the first frame. Initialize everything on first frame.
+		auto width   = decoded_frame->width;
+		auto height  = decoded_frame->height;
+		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
+		auto desc	 = get_pixel_format_desc(pix_fmt, width, height);
+			
+		if(desc.pix_fmt == core::pixel_format::invalid)
+		{
+			CASPAR_VERIFY(!sws_context_); // Initialize only once. Nothing should change while running;
+			CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
+
+			desc = get_pixel_format_desc(PIX_FMT_BGRA, width, height);
+			double param;
+			sws_context_.reset(sws_getContext(width, height, pix_fmt, width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+			if(!sws_context_)
+				BOOST_THROW_EXCEPTION(operation_failed() <<
+									  msg_info("Could not create software scaling context.") << 
+									  boost::errinfo_api_function("sws_getContext"));
+		}
+
+		auto write = frame_factory_->create_frame(this, desc);
 		write->set_is_interlaced(decoded_frame->interlaced_frame != 0);
 
 		if(sws_context_ == nullptr)
 		{
-			tbb::parallel_for(0, static_cast<int>(desc_.planes.size()), 1, [&](int n)
+			tbb::parallel_for(0, static_cast<int>(desc.planes.size()), 1, [&](int n)
 			{
-				auto plane            = desc_.planes[n];
+				auto plane            = desc.planes[n];
 				auto result           = write->image_data(n).begin();
 				auto decoded          = decoded_frame->data[n];
 				auto decoded_linesize = decoded_frame->linesize[n];
 				
 				// Copy line by line since ffmpeg sometimes pads each line.
-				tbb::parallel_for(tbb::blocked_range<size_t>(0, static_cast<int>(desc_.planes[n].height)), [&](const tbb::blocked_range<size_t>& r)
+				tbb::parallel_for(tbb::blocked_range<size_t>(0, static_cast<int>(desc.planes[n].height)), [&](const tbb::blocked_range<size_t>& r)
 				{
 					for(size_t y = r.begin(); y != r.end(); ++y)
 						memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
@@ -225,22 +198,34 @@ public:
 			// Use sws_scale when provided colorspace has no hw-accel.
 			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 			avcodec_get_frame_defaults(av_frame.get());			
-			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width_, height_);
+			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
 		 
-			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height_, av_frame->data, av_frame->linesize);	
+			sws_scale(sws_context_.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
 
 			write->commit();
 		}	
 
-		// DVVIDEO is in lower field. Make it upper field if needed.
-		if(codec_context_.codec_id == CODEC_ID_DVVIDEO && frame_factory_->get_video_format_desc().mode == core::video_mode::upper)
-			write->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(height_));
+		// Fix field-order if needed. DVVIDEO is in lower field. Make it upper field if needed.
+		if(decoded_frame->interlaced_frame)
+		{
+			switch(frame_factory_->get_video_format_desc().mode)
+			{
+			case core::video_mode::upper:
+				if(!decoded_frame->top_field_first)
+					write->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(height));
+				break;
+			case core::video_mode::lower:
+				if(decoded_frame->top_field_first)
+					write->get_image_transform().set_fill_translation(0.0f, -0.5/static_cast<double>(height));
+				break;
+			}
+		}
 
 		return write;
 	}
 };
 
-video_decoder::video_decoder(input& input, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(input, frame_factory)){}
+video_decoder::video_decoder(input& input, const safe_ptr<core::frame_factory>& frame_factory, const std::string& filter_str) : impl_(new implementation(input, frame_factory, filter_str)){}
 std::deque<std::pair<int, safe_ptr<core::write_frame>>> video_decoder::receive(){return impl_->receive();}
 
 }

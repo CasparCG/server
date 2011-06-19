@@ -59,10 +59,10 @@ struct ffmpeg_producer : public core::frame_producer
 	std::unique_ptr<video_decoder>			video_decoder_;
 	std::unique_ptr<audio_decoder>			audio_decoder_;
 
-	std::deque<std::pair<int, std::vector<short>>> audio_chunks_;
+	std::deque<std::pair<int, std::vector<int16_t>>> audio_chunks_;
 	std::deque<std::pair<int, safe_ptr<core::write_frame>>> video_frames_;
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, bool loop, int start, int length) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter_str, bool loop, int start, int length) 
 		: filename_(filename)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
@@ -78,7 +78,7 @@ public:
 			CASPAR_LOG(warning) << print() << L" Invalid framerate detected. This may cause distorted audio during playback. frame-time: " << frame_time;
 		
 		video_decoder_.reset(input_.get_video_codec_context() ? 
-			new video_decoder(input_, frame_factory) : nullptr);
+			new video_decoder(input_, frame_factory, narrow(filter_str)) : nullptr);
 			
 		audio_decoder_.reset(input_.get_audio_codec_context() ? 
 			new audio_decoder(input_, frame_factory->get_video_format_desc()) : nullptr);		
@@ -110,12 +110,12 @@ public:
 		(
 			[&]
 			{
-				if(video_decoder_ && video_frames_.size() < 2)
+				if(video_decoder_ && video_frames_.size() < 3)
 					boost::range::push_back(video_frames_, video_decoder_->receive());		
 			}, 
 			[&]
 			{
-				if(audio_decoder_ && audio_chunks_.size() < 2)
+				if(audio_decoder_ && audio_chunks_.size() < 3)
 					boost::range::push_back(audio_chunks_, audio_decoder_->receive());				
 			}
 		);
@@ -132,27 +132,44 @@ public:
 				      video_frames_.front().first == audio_chunks_.front().first);
 	}
 
+	safe_ptr<core::basic_frame> get_video_frame(std::vector<int16_t>&& audio_chunk)
+	{
+		auto frame = std::move(video_frames_.front().second);	
+		auto frame_number = video_frames_.front().first;
+		video_frames_.pop_front();
+				
+		frame->audio_data() = std::move(audio_chunk);
+		if(frame->audio_data().empty())
+			frame->get_audio_transform().set_has_audio(false);	
+
+		if(!video_frames_.empty()) // interlace if we have double frames
+		{
+			if(video_frames_.front().first == frame_number)
+			{
+				auto frame2 = std::move(video_frames_.front().second);	
+				video_frames_.pop_front();
+
+				return core::basic_frame::interlace(frame, frame2, frame_factory_->get_video_format_desc().mode);
+			}
+		}
+
+		return frame;
+	}
+
 	safe_ptr<core::basic_frame> decode_frame()
 	{
 		decode_packets();
 
 		if(video_decoder_ && audio_decoder_ && !video_frames_.empty() && !audio_chunks_.empty())
 		{
-			auto frame = std::move(video_frames_.front().second);				
-			video_frames_.pop_front();
-				
-			frame->audio_data() = std::move(audio_chunks_.front().second);
+			auto audio_chunk = std::move(audio_chunks_.front().second);
 			audio_chunks_.pop_front();
-			
-			return frame;
+						
+			return get_video_frame(std::move(audio_chunk));
 		}
 		else if(video_decoder_ && !audio_decoder_ && !video_frames_.empty())
-		{
-			auto frame = std::move(video_frames_.front().second);				
-			video_frames_.pop_front();
-			frame->get_audio_transform().set_has_audio(false);	
-			
-			return frame;
+		{						
+			return get_video_frame(std::vector<int16_t>());
 		}
 		else if(audio_decoder_ && !video_decoder_ && !audio_chunks_.empty())
 		{
@@ -203,7 +220,16 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 			start = boost::lexical_cast<int>(*seek_it);
 	}
 	
-	return make_safe<ffmpeg_producer>(frame_factory, path, loop, start, length);
+	std::wstring filter_str = L"";
+
+	auto filter_it = std::find(params.begin(), params.end(), L"FILTER");
+	if(filter_it != params.end())
+	{
+		if(++filter_it != params.end())
+			filter_str = *filter_it;
+	}
+
+	return make_safe<ffmpeg_producer>(frame_factory, path, filter_str, loop, start, length);
 }
 
 }

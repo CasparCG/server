@@ -200,6 +200,8 @@ int main(int argc, wchar_t* argv[])
 				wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
 			else if(wcmd.substr(0, 1) == L"3")
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
+			else if(wcmd.substr(0, 1) == L"4")
+				wcmd = L"PLAY 1-1 DV SEEK 350 FILTER yadif=1:-1 LOOP";
 			else if(wcmd.substr(0, 1) == L"X")
 			{
 				int num = 0;
