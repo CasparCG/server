@@ -29,17 +29,18 @@ namespace caspar {
 	
 struct filter::implementation
 {
-	const std::string						filters_;
+	std::string								filters_;
 	std::shared_ptr<AVFilterGraph>			graph_;
 	AVFilterContext*						video_in_filter_;
 	AVFilterContext*						video_out_filter_;
-	std::deque<std::shared_ptr<AVFrame>>	buffer_;
 		
 	implementation(const std::string& filters) 
 		: filters_(filters)
-	{}
+	{
+		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
+	}
 
-	void push(const safe_ptr<AVFrame>& frame)
+	std::vector<safe_ptr<AVFrame>> execute(const safe_ptr<AVFrame>& frame)
 	{		
 		int errn = 0;	
 
@@ -110,10 +111,14 @@ struct filter::implementation
 				boost::errinfo_api_function("avfilter_poll_frame") << boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		std::generate_n(std::back_inserter(buffer_), errn, [&]{return get_frame();});
+		std::vector<safe_ptr<AVFrame>> result;
+
+		std::generate_n(std::back_inserter(result), errn, [&]{return get_frame();});
+
+		return result;
 	}
 		
-	std::shared_ptr<AVFrame> get_frame()
+	safe_ptr<AVFrame> get_frame()
 	{		
 		auto link = video_out_filter_->inputs[0];
 
@@ -124,9 +129,9 @@ struct filter::implementation
 				boost::errinfo_api_function("avfilter_request_frame") << boost::errinfo_errno(AVUNERROR(errn)));
 		}
 		
-		auto pic   = reinterpret_cast<AVPicture*>(link->cur_buf->buf);
+		auto pic = reinterpret_cast<AVPicture*>(link->cur_buf->buf);
 		
-		std::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
+		safe_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
 		avcodec_get_frame_defaults(frame.get());	
 
 		for(size_t n = 0; n < 4; ++n)
@@ -135,28 +140,19 @@ struct filter::implementation
 			frame->linesize[n]	= pic->linesize[n];
 		}
 
-		frame->width	= link->w;
-		frame->height	= link->h;
-		frame->format	= link->format;
+		// FIXME
+		frame->width			= link->cur_buf->video->w;
+		frame->height			= link->cur_buf->video->h;
+		frame->format			= link->cur_buf->format;
+		frame->interlaced_frame = link->cur_buf->video->interlaced;
+		frame->top_field_first	= link->cur_buf->video->top_field_first;
+		frame->key_frame		= link->cur_buf->video->key_frame;
 
 		return frame;
-	}
-	
-	bool try_pop(std::shared_ptr<AVFrame>& frame)
-	{
-		if(buffer_.empty())
-			return false;
-
-		frame = buffer_.front();
-		buffer_.pop_front();
-
-		return true;
 	}
 };
 
 filter::filter(const std::string& filters) : impl_(new implementation(filters)){}
-void filter::push(const safe_ptr<AVFrame>& frame) {return impl_->push(frame);}
-bool filter::try_pop(std::shared_ptr<AVFrame>& frame){return impl_->try_pop(frame);}
-size_t filter::size() const {return impl_->buffer_.size();}
+std::vector<safe_ptr<AVFrame>> filter::execute(const safe_ptr<AVFrame>& frame) {return impl_->execute(frame);}
 
 }
