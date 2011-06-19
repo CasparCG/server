@@ -132,6 +132,7 @@ public:
 				      video_frames_.front().first == audio_chunks_.front().first);
 	}
 
+	// FIXME: Don't re-interlace when going from 50i to 50p, maybe do this inside decoder?
 	safe_ptr<core::basic_frame> get_video_frame(std::vector<int16_t>&& audio_chunk)
 	{
 		auto frame = std::move(video_frames_.front().second);	
