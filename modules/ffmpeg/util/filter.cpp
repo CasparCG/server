@@ -10,6 +10,8 @@
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
 
+#include <boost/circular_buffer.hpp>
+
 #include <cstdio>
 #include <sstream>
 
@@ -33,11 +35,15 @@ struct filter::implementation
 	std::shared_ptr<AVFilterGraph>			graph_;
 	AVFilterContext*						video_in_filter_;
 	AVFilterContext*						video_out_filter_;
+
+	boost::circular_buffer<std::shared_ptr<AVFilterBufferRef>> buffers_;
 		
 	implementation(const std::string& filters) 
 		: filters_(filters)
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
+
+		buffers_.set_capacity(3);
 	}
 
 	std::vector<safe_ptr<AVFrame>> execute(const safe_ptr<AVFrame>& frame)
@@ -152,7 +158,7 @@ struct filter::implementation
 		frame->top_field_first	= link->cur_buf->video->top_field_first;
 		frame->key_frame		= link->cur_buf->video->key_frame;
 
-		avfilter_unref_buffer(link->cur_buf);
+		buffers_.push_back(std::shared_ptr<AVFilterBufferRef>(link->cur_buf, avfilter_unref_buffer));
 
 		return frame;
 	}
