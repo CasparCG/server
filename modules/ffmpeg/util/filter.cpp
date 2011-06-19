@@ -101,8 +101,6 @@ struct filter::implementation
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) 
 					<<	boost::errinfo_api_function("avfilter_graph_config") <<	boost::errinfo_errno(AVUNERROR(errn)));
 			}
-
-			CASPAR_LOG(info) << "Successfully initialized filter.";
 		}
 	
 		errn = av_vsrc_buffer_add_frame(video_in_filter_, frame.get(), AV_VSRC_BUF_FLAG_OVERWRITE);
