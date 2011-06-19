@@ -99,7 +99,7 @@ struct filter::implementation
 			CASPAR_LOG(info) << "Successfully initialized filter.";
 		}
 	
-		errn = av_vsrc_buffer_add_frame(video_in_filter_, frame.get(), 0);
+		errn = av_vsrc_buffer_add_frame(video_in_filter_, frame.get(), AV_VSRC_BUF_FLAG_OVERWRITE);
 		if(errn < 0)
 		{
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(av_error_str(errn)) <<
@@ -151,6 +151,8 @@ struct filter::implementation
 		frame->interlaced_frame = link->cur_buf->video->interlaced;
 		frame->top_field_first	= link->cur_buf->video->top_field_first;
 		frame->key_frame		= link->cur_buf->video->key_frame;
+
+		avfilter_unref_buffer(link->cur_buf);
 
 		return frame;
 	}
