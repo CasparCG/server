@@ -52,7 +52,7 @@ struct filter::implementation
 			std::stringstream buffer_ss;
 			buffer_ss << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
 			errn = avfilter_graph_create_filter(&video_in_filter_, avfilter_get_by_name("buffer"), "src", buffer_ss.str().c_str(), NULL, graph_.get());
-			if(errn < 0)
+			if(errn < 0 || !video_in_filter_)
 			{
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
 					boost::errinfo_api_function("avfilter_graph_create_filter") <<	boost::errinfo_errno(AVUNERROR(errn)));
@@ -60,7 +60,7 @@ struct filter::implementation
 
 			// Output
 			errn = avfilter_graph_create_filter(&video_out_filter_, avfilter_get_by_name("nullsink"), "out", NULL, NULL, graph_.get());
-			if(errn < 0)
+			if(errn < 0 || !video_out_filter_)
 			{
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
 					boost::errinfo_api_function("avfilter_graph_create_filter") << boost::errinfo_errno(AVUNERROR(errn)));
@@ -95,6 +95,8 @@ struct filter::implementation
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) 
 					<<	boost::errinfo_api_function("avfilter_graph_config") <<	boost::errinfo_errno(AVUNERROR(errn)));
 			}
+
+			CASPAR_LOG(info) << "Successfully initialized filter.";
 		}
 	
 		errn = av_vsrc_buffer_add_frame(video_in_filter_, frame.get(), 0);
@@ -121,6 +123,8 @@ struct filter::implementation
 	safe_ptr<AVFrame> get_frame()
 	{		
 		auto link = video_out_filter_->inputs[0];
+
+		CASPAR_ASSERT(link);
 
 		int errn = avfilter_request_frame(link); 			
 		if(errn < 0)

@@ -67,6 +67,7 @@ struct video_decoder::implementation : boost::noncopyable
 	size_t										filter_delay_;
 
 	safe_ptr<AVFrame>							last_frame_;
+	std::string filter_str_;
 
 public:
 	explicit implementation(input& input, const safe_ptr<core::frame_factory>& frame_factory, const std::string& filter_str) 
@@ -77,6 +78,7 @@ public:
 		, filter_(filter_str.empty() ? nullptr : new filter(filter_str))
 		, filter_delay_(0)
 		, last_frame_(avcodec_alloc_frame(), av_free)
+		, filter_str_(filter_str)
 	{
 	}
 
@@ -100,6 +102,9 @@ public:
 			for(size_t n = 0; n < filter_delay_; ++n)
 				boost::range::push_back(result, get_frames(last_frame_));
 			
+			// FIXME: Unnecessary reinitialization
+			filter_.reset(filter_str_.empty() ? nullptr : new filter(filter_str_));
+
 			frame_number_ = 0;
 			filter_delay_ = 0;
 			avcodec_flush_buffers(&codec_context_);
