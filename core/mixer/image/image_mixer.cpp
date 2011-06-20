@@ -243,7 +243,7 @@ public:
 		local_key_ = stream.back().transform.get_is_key(); // Keep for next layer if last frame is key
 	}
 			
-	safe_ptr<write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
+	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
 		return make_safe<write_frame>(channel_.ogl(), reinterpret_cast<int>(tag), desc);
 	}
@@ -254,7 +254,7 @@ void image_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 safe_ptr<host_buffer> image_mixer::render(){return impl_->render();}
-safe_ptr<write_frame> image_mixer::create_frame(void* tag, const core::pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
+safe_ptr<write_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
 void image_mixer::begin_layer(){impl_->begin_layer();}
 void image_mixer::end_layer(){impl_->end_layer();}
 image_mixer& image_mixer::operator=(image_mixer&& other)

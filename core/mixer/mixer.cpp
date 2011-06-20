@@ -127,7 +127,7 @@ public:
 		}
 	}
 			
-	safe_ptr<core::write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
+	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{		
 		return image_mixer_.create_frame(tag, desc);
 	}
@@ -259,8 +259,8 @@ private:
 mixer::mixer(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
 safe_ptr<core::read_frame> mixer::execute(const std::map<int, safe_ptr<core::basic_frame>>& frames){ return impl_->execute(frames);}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->channel_.get_format_desc(); }
-safe_ptr<core::write_frame> mixer::create_frame(void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
-safe_ptr<core::write_frame> mixer::create_frame(void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
+safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
+safe_ptr<core::write_frame> mixer::create_frame(const void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
 {
 	// Create bgra frame
 	core::pixel_format_desc desc;
