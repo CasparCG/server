@@ -53,6 +53,7 @@ struct image_mixer::implementation : boost::noncopyable
 	{
 		pixel_format_desc					 desc;
 		std::vector<safe_ptr<device_buffer>> textures;
+		int									 tag;
 		core::image_transform				 transform;
 	};
 
@@ -100,7 +101,7 @@ public:
 		
 	void visit(core::write_frame& frame)
 	{			
-		render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.top()*frame.get_image_transform()};	
+		render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), frame.tag(), transform_stack_.top()*frame.get_image_transform()};	
 		render_queue_.back().push(item);
 	}
 
@@ -160,13 +161,20 @@ public:
 				render_queue.pop();
 				
 				draw_buffer_->attach();	
-
+				
 				while(!layer.empty())
 				{
-					auto frame = layer.front();
-					layer.pop();
+					// Split layer into streams
+					std::vector<render_item> stream;
+					do
+					{
+						stream.push_back(layer.front());
+						layer.pop();
+					}
+					while(!layer.empty() && layer.front().tag == stream.front().tag);
 
-					draw(frame);
+					draw(stream);
+
 					channel_.ogl().yield(); // Allow quick buffer allocation to execute.
 				}
 
@@ -186,46 +194,53 @@ public:
 		return std::move(result.get());
 	}
 	
-	void draw(const render_item& item)
-	{		
-		// Bind textures
-
-		for(size_t n = 0; n < item.textures.size(); ++n)
-			item.textures[n]->bind(n);		
-
-		// Setup key and kernel
-
-		bool local_key = false;
-		bool layer_key = false;
+	void draw(const std::vector<render_item>& stream)
+	{	
+		if(stream.empty())
+			return;				
 		
-		if(item.transform.get_is_key()) // This is a key frame, render it to the local_key buffer for later use.
+		BOOST_FOREACH(auto item, stream)
 		{
-			if(!local_key_) // Initialize local-key if it is not active.
-			{
-				local_key_buffer_->clear();
-				local_key_buffer_->attach();
-				local_key_ = true;
-			}
-		}		
-		else // This is a normal frame. Use key buffers if they are active.
-		{		
-			local_key = local_key_;
-			layer_key = layer_key_;
+			bool local_key = false;
+			bool layer_key = false;
 
-			if(local_key_) // Use local key if we have it.
+			// Setup key and kernel
+					
+			if(item.transform.get_is_key()) // This is a key frame, render it to the local_key buffer for later use.
 			{
-				local_key_buffer_->bind(LOCAL_KEY_INDEX);
-				draw_buffer_->attach();	
-				local_key_ = false; // Use it only one time.
+				if(!local_key_) // Initialize local-key if it is not active.
+				{
+					local_key_buffer_->clear();
+					local_key_buffer_->attach();
+					local_key_ = true;
+				}
 			}		
+			else // This is a normal frame. Use key buffers if they are active.
+			{		
+				local_key = local_key_;
+				layer_key = layer_key_;
 
-			if(layer_key_) // Use layer key if we have it.
-				layer_key_buffer_->bind(LAYER_KEY_INDEX);
-		}	
+				if(local_key_) // Use local key if we have it.
+				{
+					local_key_buffer_->bind(LOCAL_KEY_INDEX);
+					draw_buffer_->attach();	
+				}		
 
-		// Draw
+				if(layer_key_) // Use layer key if we have it.
+					layer_key_buffer_->bind(LAYER_KEY_INDEX);
+			}	
 
-		kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item.desc, item.transform, local_key, layer_key);	
+			// Bind textures
+
+			for(size_t n = 0; n < item.textures.size(); ++n)
+				item.textures[n]->bind(n);		
+			
+			// Draw
+
+			kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item.desc, item.transform, local_key, layer_key);	
+		}
+
+		local_key_ = stream.back().transform.get_is_key(); // Keep for next layer if last frame is key
 	}
 			
 	safe_ptr<write_frame> create_frame(void* tag, const core::pixel_format_desc& desc)
