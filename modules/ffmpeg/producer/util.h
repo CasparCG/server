@@ -88,11 +88,10 @@ static core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t
 	}
 }
 
-safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory)
+static safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory)
 {			
 	static tbb::concurrent_unordered_map<size_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 
-	// We don't know what the filter output might give until we received the first frame. Initialize everything on first frame.
 	auto width   = decoded_frame->width;
 	auto height  = decoded_frame->height;
 	auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
@@ -153,7 +152,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		});
 	}
 		
-	// Fix field-order if needed. DVVIDEO is in lower field. Make it upper field if needed.
+	// Fix field-order if needed
 	if(decoded_frame->interlaced_frame)
 	{
 		switch(frame_factory->get_video_format_desc().mode)
