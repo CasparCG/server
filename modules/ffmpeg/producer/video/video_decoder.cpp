@@ -142,6 +142,8 @@ public:
 		if(filter_)
 		{
 			// Get all buffered frames
+			if(decoded_frame_)
+				push_filter_frames(make_safe(decoded_frame_));	
 			boost::range::push_back(result, poll_filter_frames());
 
 			for(size_t n = 0; n < filter_delay_; ++n)
@@ -153,6 +155,7 @@ public:
 			// FIXME: Unnecessary reinitialization
 			filter_.reset(filter_str_.empty() ? nullptr : new filter(filter_str_));
 			filter_delay_ = 0;
+			decoded_frame_ = nullptr;
 		}
 
 		frame_number_ = 0;
