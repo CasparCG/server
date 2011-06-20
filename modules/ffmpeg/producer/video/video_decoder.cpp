@@ -66,10 +66,8 @@ struct video_decoder::implementation : boost::noncopyable
 
 	std::shared_ptr<filter>						filter_;
 	size_t										filter_delay_;
-	size_t										filter_skip_;
+	int											eof_count_;
 
-	std::shared_ptr<AVFrame>					last_frame_;
-	std::shared_ptr<AVFrame>					decoded_frame_;
 	std::string									filter_str_;
 
 public:
@@ -79,10 +77,9 @@ public:
 		, codec_context_(*input_.get_video_codec_context())
 		, frame_number_(0)
 		, filter_(filter_str.empty() ? nullptr : new filter(filter_str))
-		, filter_delay_(0)
-		, filter_skip_(0)
-		, last_frame_(avcodec_alloc_frame(), av_free)
+		, filter_delay_(1)
 		, filter_str_(filter_str)
+		, eof_count_(std::numeric_limits<int>::max())
 	{
 	}
 
@@ -99,16 +96,15 @@ public:
 
 	std::deque<std::pair<int, safe_ptr<core::write_frame>>> decode(const std::shared_ptr<AVPacket>& video_packet)
 	{			
-		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
-		
 		if(!video_packet) // eof
 			return flush();
-
+		
+		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
+		
+		frame_number_ = frame_number_ % eof_count_;
+		
 		if(filter_)
-		{
-			if(decoded_frame_)
-				push_filter_frames(make_safe(decoded_frame_));	
-			
+		{							
 			std::shared_ptr<AVFrame> frame;
 
 			tbb::parallel_invoke(
@@ -118,13 +114,10 @@ public:
 			},
 			[&]
 			{
-				if(decoded_frame_)
-					result = poll_filter_frames();
+				result = poll_filter_frames();
 			});		
 
-			decoded_frame_ = frame;
-			if(frame)
-				last_frame_ = frame;			
+			push_filter_frames(make_safe(frame));	
 		}
 		else
 		{
@@ -141,27 +134,11 @@ public:
 	{
 		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
 
+		eof_count_ = frame_number_;
+
 		if(filter_)
-		{
-			// Get all buffered frames
-			if(decoded_frame_)
-			{	
-				push_filter_frames(make_safe(decoded_frame_));	
-				boost::range::push_back(result, poll_filter_frames());
-			}
+			eof_count_ += filter_delay_;		
 
-			for(size_t n = 0; n < filter_delay_; ++n)
-			{					
-				push_filter_frames(make_safe(last_frame_));	
-				boost::range::push_back(result, poll_filter_frames());
-			}
-
-			// FIXME: Unnecessary reinitialization
-			filter_skip_ = filter_delay_;
-			decoded_frame_ = nullptr;
-		}
-
-		frame_number_ = 0;
 		avcodec_flush_buffers(&codec_context_);
 
 		return result;
@@ -175,14 +152,10 @@ public:
 	std::deque<std::pair<int, safe_ptr<core::write_frame>>> poll_filter_frames()
 	{
 		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
-				
-		if(filter_skip_ > 0)
-		{
-			--filter_skip_;
-			filter_->skip();
+		
+		if(!filter_->is_ready())
 			return result;
-		}
-
+				
 		auto frames = filter_->poll(); 
 
 		boost::range::transform(frames, std::back_inserter(result), [&](const safe_ptr<AVFrame>& frame)

@@ -15,7 +15,7 @@ public:
 
 	void push(const safe_ptr<AVFrame>& frame);
 	std::vector<safe_ptr<AVFrame>> poll();
-	void skip();
+	bool is_ready() const;
 
 private:
 	struct implementation;
