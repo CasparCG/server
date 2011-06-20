@@ -106,8 +106,6 @@ CasparCG 2.0 currently (fully or partially) supports the following producers:
 
 	decklink	Plays video and/or audio  to a decklink-device.
 		
-	ffmpeg		Plays video and/or audio to a file.				
-						
 	oal		Plays audio to the default system audio-device.		
 	
 	ogl		Plays video to a windowed or fullscreen window.		
