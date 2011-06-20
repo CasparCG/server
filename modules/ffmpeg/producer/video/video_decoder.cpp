@@ -114,10 +114,22 @@ public:
 			},
 			[&]
 			{
-				result = poll_filter_frames();
+				if(filter_->is_ready())
+				{				
+					boost::range::transform(filter_->poll(), std::back_inserter(result), [&](const safe_ptr<AVFrame>& frame)
+					{
+						return std::make_pair(frame_number_, make_write_frame(frame));
+					});
+		
+					if(!result.empty())
+						++frame_number_;
+					else		
+						++filter_delay_;
+				}
 			});		
 
-			push_filter_frames(make_safe(frame));	
+			if(frame)
+				filter_->push(make_safe(frame));
 		}
 		else
 		{
@@ -143,34 +155,7 @@ public:
 
 		return result;
 	}
-
-	void push_filter_frames(const safe_ptr<AVFrame>& frame)
-	{		
-		filter_->push(frame);		
-	}
-
-	std::deque<std::pair<int, safe_ptr<core::write_frame>>> poll_filter_frames()
-	{
-		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
 		
-		if(!filter_->is_ready())
-			return result;
-				
-		auto frames = filter_->poll(); 
-
-		boost::range::transform(frames, std::back_inserter(result), [&](const safe_ptr<AVFrame>& frame)
-		{
-			return std::make_pair(frame_number_, make_write_frame(frame));
-		});
-		
-		if(!frames.empty())
-			++frame_number_;
-		else		
-			++filter_delay_;		
-
-		return result;
-	}
-	
 	std::shared_ptr<AVFrame> decode_frame(const std::shared_ptr<AVPacket>& video_packet)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
@@ -193,7 +178,7 @@ public:
 		return decoded_frame;
 	}
 
-	safe_ptr<core::write_frame> make_write_frame(safe_ptr<AVFrame> decoded_frame)
+	safe_ptr<core::write_frame> make_write_frame(const safe_ptr<AVFrame>& decoded_frame)
 	{			
 		// We don't know what the filter output might give until we received the first frame. Initialize everything on first frame.
 		auto width   = decoded_frame->width;

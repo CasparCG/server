@@ -35,14 +35,10 @@ struct filter::implementation
 	AVFilterContext*						video_in_filter_;
 	AVFilterContext*						video_out_filter_;
 
-	boost::circular_buffer<std::shared_ptr<AVFilterBufferRef>> buffers_;
-		
 	implementation(const std::string& filters) 
 		: filters_(filters)
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
-
-		buffers_.set_capacity(3);
 	}
 
 	void push(const safe_ptr<AVFrame>& frame)
@@ -102,7 +98,7 @@ struct filter::implementation
 			}
 		}
 	
-		errn = av_vsrc_buffer_add_frame(video_in_filter_, frame.get(), AV_VSRC_BUF_FLAG_OVERWRITE);
+		errn = av_vsrc_buffer_add_frame(video_in_filter_, frame.get(), 0);
 		if(errn < 0)
 		{
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(av_error_str(errn)) <<
@@ -137,9 +133,15 @@ struct filter::implementation
 				boost::errinfo_api_function("avfilter_request_frame") << boost::errinfo_errno(AVUNERROR(errn)));
 		}
 		
+		auto cur_buf = link->cur_buf;
 		auto pic = reinterpret_cast<AVPicture*>(link->cur_buf->buf);
 		
-		safe_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
+		safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
+		{
+			av_free(p);
+			avfilter_unref_buffer(cur_buf);
+		});
+
 		avcodec_get_frame_defaults(frame.get());	
 
 		for(size_t n = 0; n < 4; ++n)
@@ -148,7 +150,6 @@ struct filter::implementation
 			frame->linesize[n]	= pic->linesize[n];
 		}
 
-		// FIXME
 		frame->width			= link->cur_buf->video->w;
 		frame->height			= link->cur_buf->video->h;
 		frame->format			= link->cur_buf->format;
@@ -156,19 +157,7 @@ struct filter::implementation
 		frame->top_field_first	= link->cur_buf->video->top_field_first;
 		frame->key_frame		= link->cur_buf->video->key_frame;
 
-		buffers_.push_back(std::shared_ptr<AVFilterBufferRef>(link->cur_buf, avfilter_unref_buffer));
-
 		return frame;
-	}
-
-	void skip()
-	{
-		int errn = avfilter_poll_frame(video_out_filter_->inputs[0]);
-		if(errn < 0)
-		{
-			BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
-				boost::errinfo_api_function("avfilter_poll_frame") << boost::errinfo_errno(AVUNERROR(errn)));
-		}
 	}
 };
 
