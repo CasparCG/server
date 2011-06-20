@@ -16,8 +16,8 @@
     <Filter Include="source\producer\audio">
       <UniqueIdentifier>{6937307b-550f-48f8-9cc0-509de0e18ddc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\util">
-      <UniqueIdentifier>{dbf0125b-6087-4b63-94b0-8d652b12a2ca}</UniqueIdentifier>
+    <Filter Include="source\producer\filter">
+      <UniqueIdentifier>{0d46b4fa-2b19-44b7-82ea-52cbd9ad24a4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -43,8 +43,8 @@
     <ClCompile Include="ffmpeg.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="util\filter.cpp">
-      <Filter>source\util</Filter>
+    <ClCompile Include="producer\filter\filter.cpp">
+      <Filter>source\producer\filter</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -73,11 +73,11 @@
     <ClInclude Include="ffmpeg.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="util\util.h">
-      <Filter>source\util</Filter>
+    <ClInclude Include="producer\filter\filter.h">
+      <Filter>source\producer\filter</Filter>
     </ClInclude>
-    <ClInclude Include="util\filter.h">
-      <Filter>source\util</Filter>
+    <ClInclude Include="producer\video\pix_fmt.h">
+      <Filter>source\producer\video</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -149,6 +149,7 @@ public:
 			{
 				auto frame2 = std::move(video_frames_.front().second);	
 				video_frames_.pop_front();
+				frame2->get_audio_transform().set_has_audio(false);	
 
 				return core::basic_frame::interlace(frame, frame2, frame_factory_->get_video_format_desc().mode);
 			}
