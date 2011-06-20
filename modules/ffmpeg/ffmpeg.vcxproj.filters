@@ -76,8 +76,8 @@
     <ClInclude Include="producer\filter\filter.h">
       <Filter>source\producer\filter</Filter>
     </ClInclude>
-    <ClInclude Include="producer\video\pix_fmt.h">
-      <Filter>source\producer\video</Filter>
+    <ClInclude Include="producer\util.h">
+      <Filter>source\producer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
