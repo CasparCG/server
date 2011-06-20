@@ -175,6 +175,6 @@ struct filter::implementation
 filter::filter(const std::string& filters) : impl_(new implementation(filters)){}
 void filter::push(const safe_ptr<AVFrame>& frame) {impl_->push(frame);}
 std::vector<safe_ptr<AVFrame>> filter::poll() {return impl_->poll();}
-void filter::skip() {impl_->skip();}
+bool filter::is_ready() const{return impl_->graph_ != nullptr;}
 
 }
