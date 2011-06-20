@@ -39,7 +39,7 @@ void init_bluefish()
 	}
 	catch(...)
 	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
+		//CASPAR_LOG_CURRENT_EXCEPTION();
 		CASPAR_LOG(info) << L"Bluefish not supported.";
 	}
 }

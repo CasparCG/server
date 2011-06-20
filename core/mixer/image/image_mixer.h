@@ -48,7 +48,7 @@ public:
 	
 	safe_ptr<host_buffer> render();
 
-	safe_ptr<write_frame> create_frame(void* tag, const core::pixel_format_desc& format);
+	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& format);
 
 private:
 	struct implementation;
