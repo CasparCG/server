@@ -9,8 +9,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="CasparCG.ico" />
     <None Include="casparcg.config" />
+    <None Include="CasparCG.ico" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="server.h">
