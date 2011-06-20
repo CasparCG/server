@@ -129,7 +129,7 @@ int main(int argc, wchar_t* argv[])
 {	
 	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
 	
-	CASPAR_LOG(info) << L"THIS IS AN UNSTABLE BUILD";
+	CASPAR_LOG(info) << L"THIS IS AN ALPHA BUILD";
 
 	// Set debug mode.
 	#ifdef _DEBUG

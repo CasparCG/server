@@ -20,9 +20,10 @@
 #include "../../stdafx.h"
 
 #include "video_decoder.h"
+#include "pix_fmt.h"
+
 #include "../../ffmpeg_error.h"
-#include "../../util/util.h"
-#include "../../util/filter.h"
+#include "../filter/filter.h"
 
 #include <common/memory/memcpy.h>
 
@@ -66,8 +67,9 @@ struct video_decoder::implementation : boost::noncopyable
 	std::shared_ptr<filter>						filter_;
 	size_t										filter_delay_;
 
-	safe_ptr<AVFrame>							last_frame_;
-	std::string filter_str_;
+	std::shared_ptr<AVFrame>					last_frame_;
+	std::shared_ptr<AVFrame>					decoded_frame_;
+	std::string									filter_str_;
 
 public:
 	explicit implementation(input& input, const safe_ptr<core::frame_factory>& frame_factory, const std::string& filter_str) 
@@ -96,24 +98,99 @@ public:
 	std::deque<std::pair<int, safe_ptr<core::write_frame>>> decode(const std::shared_ptr<AVPacket>& video_packet)
 	{			
 		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
-
+		
 		if(!video_packet) // eof
-		{	
-			for(size_t n = 0; n < filter_delay_; ++n)
-				boost::range::push_back(result, get_frames(last_frame_));
+			return flush();
+
+		if(filter_)
+		{
+			if(decoded_frame_)
+				push_filter_frames(make_safe(decoded_frame_));	
 			
-			// FIXME: Unnecessary reinitialization
-			filter_.reset(filter_str_.empty() ? nullptr : new filter(filter_str_));
+			std::shared_ptr<AVFrame> frame;
 
-			frame_number_ = 0;
-			filter_delay_ = 0;
-			avcodec_flush_buffers(&codec_context_);
+			tbb::parallel_invoke(
+			[&]
+			{
+				frame = decode_frame(video_packet);
+			},
+			[&]
+			{
+				if(decoded_frame_)
+					result = poll_filter_frames();
+			});		
 
-			return result;
+			decoded_frame_ = frame;
+			if(frame)
+				last_frame_ = frame;			
+		}
+		else
+		{
+			auto frame = decode_frame(video_packet);
+			
+			if(frame)
+				result.push_back(std::make_pair(frame_number_++, make_write_frame(make_safe(frame))));
 		}
 
+		return result;
+	}
+
+	std::deque<std::pair<int, safe_ptr<core::write_frame>>> flush()
+	{
+		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
+
+		if(filter_)
+		{
+			// Get all buffered frames
+			boost::range::push_back(result, poll_filter_frames());
+
+			for(size_t n = 0; n < filter_delay_; ++n)
+			{					
+				push_filter_frames(make_safe(last_frame_));	
+				boost::range::push_back(result, poll_filter_frames());
+			}
+
+			// FIXME: Unnecessary reinitialization
+			filter_.reset(filter_str_.empty() ? nullptr : new filter(filter_str_));
+			filter_delay_ = 0;
+		}
+
+		frame_number_ = 0;
+		avcodec_flush_buffers(&codec_context_);
+
+		return result;
+	}
+
+	void push_filter_frames(const safe_ptr<AVFrame>& frame)
+	{		
+		filter_->push(frame);		
+	}
+
+	std::deque<std::pair<int, safe_ptr<core::write_frame>>> poll_filter_frames()
+	{
+		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
+
+		auto frames = filter_->poll(); 
+
+		boost::range::transform(frames, std::back_inserter(result), [&](const safe_ptr<AVFrame>& frame)
+		{
+			return std::make_pair(frame_number_, make_write_frame(frame));
+		});
+
+		if(!frames.empty())
+			++frame_number_;
+		else		
+			++filter_delay_;
+		
+		return result;
+	}
+	
+	std::shared_ptr<AVFrame> decode_frame(const std::shared_ptr<AVPacket>& video_packet)
+	{
+		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
+
 		int frame_finished = 0;
-		const int errn = avcodec_decode_video2(&codec_context_, last_frame_.get(), &frame_finished, video_packet.get());
+		const int errn = avcodec_decode_video2(&codec_context_, decoded_frame.get(), &frame_finished, video_packet.get());
 		
 		if(errn < 0)
 		{
@@ -123,35 +200,11 @@ public:
 				boost::errinfo_api_function("avcodec_decode_video") <<
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
-		
-		if(frame_finished != 0)		
-			result = get_frames(last_frame_);
 
-		return result;
-	}
+		if(frame_finished == 0)		
+			decoded_frame = nullptr;
 
-	std::deque<std::pair<int, safe_ptr<core::write_frame>>> get_frames(const safe_ptr<AVFrame>& frame)
-	{
-		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
-			
-		if(filter_)
-		{
-			auto frames = filter_->execute(frame);
-
-			boost::range::transform(frames, std::back_inserter(result), [this](const safe_ptr<AVFrame>& frame)
-			{
-				return std::make_pair(frame_number_, make_write_frame(frame));
-			});
-
-			if(!frames.empty())
-				++frame_number_;
-			else
-				++filter_delay_;
-		}
-		else
-			result.push_back(std::make_pair(frame_number_++, make_write_frame(frame)));
-
-		return result;
+		return decoded_frame;
 	}
 
 	safe_ptr<core::write_frame> make_write_frame(safe_ptr<AVFrame> decoded_frame)
