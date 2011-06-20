@@ -378,6 +378,10 @@ bool MixerCommand::DoExecute()
 			GetChannel()->mixer()->set_image_transform(image_transform(), duration, tween);
 			GetChannel()->mixer()->set_audio_transform(audio_transform(), duration, tween);
 		}
+		else if(_parameters[0] == L"CLEAR")
+		{
+			GetChannel()->mixer()->reset_transforms();
+		}
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));
 

@@ -36,7 +36,7 @@ class ParamCommand : public AMCPCommandBase<true, AddToQueue, 2>
 	bool DoExecute();
 };
 
-class MixerCommand : public AMCPCommandBase<true, AddToQueue, 2>
+class MixerCommand : public AMCPCommandBase<true, AddToQueue, 1>
 {
 	std::wstring print() const { return L"MixerCommand";}
 	bool DoExecute();

@@ -131,6 +131,18 @@ public:
 	{		
 		return image_mixer_.create_frame(tag, desc);
 	}
+
+	void reset_transforms()
+	{
+		channel_.execution().invoke([&]
+		{
+			set_transform(image_transform(), 0, L"none");
+			set_transform(audio_transform(), 0, L"none");
+
+			boost::fusion::at_key<image_transform>(transforms_).clear();
+			boost::fusion::at_key<audio_transform>(transforms_).clear();
+		});
+	}
 			
 	template<typename T>	
 	void set_transform(const T& transform, unsigned int mix_duration, const std::wstring& tween)
@@ -256,6 +268,7 @@ safe_ptr<core::write_frame> mixer::create_frame(void* tag, size_t width, size_t 
 	desc.planes.push_back( core::pixel_format_desc::plane(width, height, 4));
 	return create_frame(tag, desc);
 }
+void mixer::reset_transforms(){impl_->reset_transforms();}
 void mixer::set_image_transform(const core::image_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::image_transform>(transform, mix_duration, tween);}
 void mixer::set_image_transform(int index, const core::image_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::image_transform>(index, transform, mix_duration, tween);}
 void mixer::set_audio_transform(const core::audio_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::audio_transform>(transform, mix_duration, tween);}
