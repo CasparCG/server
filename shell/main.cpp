@@ -64,6 +64,15 @@
 CComModule _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
 
+void change_icon( const HICON hNewIcon )
+{
+   auto hMod = ::LoadLibrary(L"Kernel32.dll"); 
+   typedef DWORD(__stdcall *SCI)(HICON);
+   auto pfnSetConsoleIcon = reinterpret_cast<SCI>(::GetProcAddress(hMod, "SetConsoleIcon")); 
+   pfnSetConsoleIcon(hNewIcon); 
+   ::FreeLibrary(hMod);
+}
+
 void setup_console_window()
 {	 
 	auto hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -82,7 +91,9 @@ void setup_console_window()
 	DisplayArea.Right = coord.X-1;
 	DisplayArea.Bottom = (coord.Y-1)/2;
 	SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
-		
+		 
+	change_icon(::LoadIcon(GetModuleHandle(0), MAKEINTRESOURCE(101)));
+
 	// Set console title.
 	std::wstringstream str;
 	str << "CasparCG Server " << caspar::env::version();

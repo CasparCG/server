@@ -51,6 +51,8 @@ public:
 	
 	core::video_format_desc get_video_format_desc() const; // nothrow
 
+	void reset_transforms();
+
 	void set_image_transform(const core::image_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void set_image_transform(int index, const core::image_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 
