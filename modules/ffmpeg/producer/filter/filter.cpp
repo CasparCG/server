@@ -160,10 +160,21 @@ struct filter::implementation
 
 		return frame;
 	}
+
+	void skip()
+	{
+		int errn = avfilter_poll_frame(video_out_filter_->inputs[0]);
+		if(errn < 0)
+		{
+			BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
+				boost::errinfo_api_function("avfilter_poll_frame") << boost::errinfo_errno(AVUNERROR(errn)));
+		}
+	}
 };
 
 filter::filter(const std::string& filters) : impl_(new implementation(filters)){}
 void filter::push(const safe_ptr<AVFrame>& frame) {impl_->push(frame);}
 std::vector<safe_ptr<AVFrame>> filter::poll() {return impl_->poll();}
+void filter::skip() {impl_->skip();}
 
 }
