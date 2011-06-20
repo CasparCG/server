@@ -140,6 +140,8 @@ int main(int argc, wchar_t* argv[])
 {	
 	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
 	
+	CASPAR_LOG(info) << L"Type \"q\" to close application";
+
 	CASPAR_LOG(info) << L"THIS IS AN ALPHA BUILD";
 
 	// Set debug mode.
