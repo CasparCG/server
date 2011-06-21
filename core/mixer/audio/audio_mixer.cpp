@@ -48,7 +48,7 @@ public:
 
 	void visit(const core::write_frame& frame)
 	{
-		if(!transform_stack_.top().get_has_audio())
+		if(!transform_stack_.top().get_has_audio() || frame.audio_data().empty())
 			return;
 
 		const auto& audio_data = frame.audio_data();
