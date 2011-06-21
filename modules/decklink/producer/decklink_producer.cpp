@@ -25,6 +25,9 @@
 #include "../interop/DeckLinkAPI_h.h"
 #include "../util/util.h"
 
+#include "../../ffmpeg/producer/filter/filter.h"
+#include "../../ffmpeg/producer/util.h"
+
 #include <common/diagnostics/graph.h>
 #include <common/concurrency/com_context.h>
 #include <common/exception/exceptions.h>
@@ -39,6 +42,20 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
 
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavcodec/avcodec.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 
@@ -52,30 +69,31 @@
 #include <functional>
 
 namespace caspar { 
-
+	
 class decklink_producer : public IDeckLinkInputCallback
 {	
-	CComPtr<IDeckLink>				decklink_;
-	CComQIPtr<IDeckLinkInput>		input_;
+	CComPtr<IDeckLink>											decklink_;
+	CComQIPtr<IDeckLinkInput>									input_;
 	
-	const std::wstring model_name_;
-	const core::video_format_desc format_desc_;
-	const size_t device_index_;
+	const std::wstring											model_name_;
+	const core::video_format_desc								format_desc_;
+	const size_t												device_index_;
 
-	std::shared_ptr<diagnostics::graph> graph_;
-	boost::timer perf_timer_;
+	std::shared_ptr<diagnostics::graph>							graph_;
+	boost::timer												perf_timer_;
 	
-	std::vector<short>			audio_data_;
+	std::vector<short>											audio_data_;
 
-	std::shared_ptr<core::frame_factory> frame_factory_;
+	std::shared_ptr<core::frame_factory>						frame_factory_;
 
-	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
-	safe_ptr<core::basic_frame> tail_;
+	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
+	safe_ptr<core::basic_frame>									tail_;
 
-	std::exception_ptr exception_;
+	std::exception_ptr											exception_;
+	std::shared_ptr<filter>										filter_;
 
 public:
-	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory)
+	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
 		: decklink_(get_device(device_index))
 		, input_(decklink_)
 		, model_name_(get_model_name(decklink_))
@@ -83,6 +101,7 @@ public:
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
+		, filter_(filter_str.empty() ? nullptr : new filter(narrow(filter_str)))
 	{
 		frame_buffer_.set_capacity(2);
 		
@@ -139,8 +158,13 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
 	{	
+		if(!video)
+			return S_OK;
+
 		try
 		{
+			auto result = core::basic_frame::empty();
+
 			graph_->update_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);
 			perf_timer_.restart();
 						
@@ -152,7 +176,9 @@ public:
 			auto frame = frame_factory_->create_frame(this, desc);
 						
 			void* bytes = nullptr;
-			video->GetBytes(&bytes);
+			if(FAILED(video->GetBytes(&bytes)) || !bytes)
+				return S_OK;
+
 			unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
 			const size_t frame_size = (format_desc_.width * 16 / 8) * format_desc_.height;
 
@@ -171,11 +197,7 @@ public:
 					y [n*2+1] = data[n*4+3];
 				}
 			});
-
-			frame->commit();
-
-			frame->set_is_interlaced(format_desc_.mode != core::video_mode::progressive);
-
+			
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{
@@ -193,8 +215,56 @@ public:
 				}
 			}
 
-			if(!frame_buffer_.try_push(frame))
+			if(filter_)
+			{
+				auto desc = frame->get_pixel_format_desc();
+
+				safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+				avcodec_get_frame_defaults(av_frame.get());
+
+				for(size_t n = 0; n < desc.planes.size(); ++n)
+				{	
+					av_frame->data[n]		= frame->image_data(n).begin();
+					av_frame->linesize[n]	= desc.planes[n].width;
+				}
+
+				av_frame->format		= get_ffmpeg_pixel_format(desc);
+				av_frame->width			= desc.planes[0].width;
+				av_frame->height		= desc.planes[0].height;
+
+				if(format_desc_.mode != core::video_mode::progressive)
+				{
+					av_frame->interlaced_frame = 1;
+					av_frame->top_field_first = format_desc_.mode == core::video_mode::upper ? 1 : 0;
+				}
+
+				filter_->push(av_frame);
+				auto frames = filter_->poll();
+
+				if(frames.size() == 2)
+				{
+					auto frame1 = make_write_frame(this, frames[0], make_safe(frame_factory_));
+					auto frame2 = make_write_frame(this, frames[1], make_safe(frame_factory_));
+					frame1->audio_data() = std::move(frame->audio_data());
+					result = core::basic_frame::interlace(frame1, frame2, frame_factory_->get_video_format_desc().mode);
+				}
+				else if(frames.size() > 0)
+				{
+					auto frame1 = make_write_frame(this, frames[0], make_safe(frame_factory_));
+					frame1->audio_data() = std::move(frame->audio_data());
+					result = frame1;
+				}
+			}
+			else
+			{
+				frame->commit();
+				frame->set_is_interlaced(format_desc_.mode != core::video_mode::progressive);
+				result = frame;
+			}
+
+			if(!frame_buffer_.try_push(result))
 				graph_->add_tag("dropped-frame");
+
 			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 		}
 		catch(...)
@@ -228,10 +298,10 @@ class decklink_producer_proxy : public core::frame_producer
 	com_context<decklink_producer> context_;
 public:
 
-	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index)
+	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str = L"")
 		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 	{
-		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory);}); 
+		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str);}); 
 	}
 				
 	virtual safe_ptr<core::basic_frame> receive()
@@ -261,8 +331,17 @@ safe_ptr<core::frame_producer> create_decklink_producer(const safe_ptr<core::fra
 		if(desc.format != core::video_format::invalid)
 			format_desc = desc;
 	}
+	
+	std::wstring filter_str = L"";
 
-	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index);
+	auto filter_it = std::find(params.begin(), params.end(), L"FILTER");
+	if(filter_it != params.end())
+	{
+		if(++filter_it != params.end())
+			filter_str = *filter_it;
+	}
+
+	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str);
 }
 
 }
