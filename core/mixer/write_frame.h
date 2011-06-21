@@ -22,6 +22,7 @@
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/basic_frame.h>
+#include <core/video_format.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -51,8 +52,8 @@ public:
 	void commit(uint32_t plane_index);
 	void commit();
 	
-	void set_is_interlaced(bool value);
-	bool get_is_interlaced() const;
+	void set_type(const core::video_mode::type& mode);
+	core::video_mode::type get_type() const;
 	
 	virtual void accept(core::frame_visitor& visitor);
 

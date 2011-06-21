@@ -32,19 +32,19 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::implementation : boost::noncopyable
 {				
-	ogl_device&								ogl_;
-	std::vector<safe_ptr<host_buffer>>		buffers_;
-	std::vector<safe_ptr<device_buffer>>	textures_;
-	std::vector<int16_t>					audio_data_;
-	const core::pixel_format_desc			desc_;
-	int										tag_;
-	bool									is_interlaced_;
+	ogl_device&									ogl_;
+	std::vector<std::shared_ptr<host_buffer>>	buffers_;
+	std::vector<safe_ptr<device_buffer>>		textures_;
+	std::vector<int16_t>						audio_data_;
+	const core::pixel_format_desc				desc_;
+	int											tag_;
+	core::video_mode::type						mode_;
 
 	implementation(ogl_device& ogl, int tag, const core::pixel_format_desc& desc) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
-		, is_interlaced_(false)
+		, mode_(core::video_mode::progressive)
 	{
 		ogl_.invoke([&]
 		{
@@ -93,8 +93,12 @@ struct write_frame::implementation : boost::noncopyable
 		if(plane_index >= buffers_.size())
 			return;
 				
-		auto texture = textures_[plane_index];
 		auto buffer = std::move(buffers_[plane_index]); // Release buffer once done.
+
+		if(!buffer)
+			return;
+
+		auto texture = textures_[plane_index];
 
 		ogl_.begin_invoke([=]
 		{
@@ -122,7 +126,7 @@ const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return
 const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
 void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
-void write_frame::set_is_interlaced(bool value){impl_->is_interlaced_ = true;}
-bool write_frame::get_is_interlaced() const{return impl_->is_interlaced_;}
+void write_frame::set_type(const video_mode::type& mode){impl_->mode_ = mode;}
+core::video_mode::type write_frame::get_type() const{return impl_->mode_;}
 
 }}

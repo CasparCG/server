@@ -32,7 +32,7 @@ class audio_mixer : public core::frame_visitor, boost::noncopyable
 public:
 	audio_mixer();
 
-	virtual void begin(const core::basic_frame& frame);
+	virtual void begin(core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 

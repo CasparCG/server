@@ -28,8 +28,6 @@
 
 namespace caspar { 
 	
-namespace internal {
-
 static BMDDisplayMode get_decklink_video_format(core::video_format::type fmt) 
 {
 	switch(fmt)
@@ -50,6 +48,27 @@ static BMDDisplayMode get_decklink_video_format(core::video_format::type fmt)
 	case core::video_format::x1080p2997:	return bmdModeHD1080p2997;
 	case core::video_format::x1080p3000:	return bmdModeHD1080p30;
 	default:								return (BMDDisplayMode)ULONG_MAX;
+	}
+}
+
+static core::video_format::type get_caspar_video_format(BMDDisplayMode fmt) 
+{
+	switch(fmt)
+	{
+	case bmdModePAL:						return core::video_format::pal;		
+	case bmdModeNTSC:						return core::video_format::ntsc;		
+	case bmdModeHD720p50:					return core::video_format::x720p5000;	
+	case bmdModeHD720p5994:					return core::video_format::x720p5994;	
+	case bmdModeHD720p60:					return core::video_format::x720p6000;	
+	case bmdModeHD1080p2398:				return core::video_format::x1080p2397;	
+	case bmdModeHD1080p24:					return core::video_format::x1080p2400;	
+	case bmdModeHD1080i50:					return core::video_format::x1080i5000;	
+	case bmdModeHD1080i5994:				return core::video_format::x1080i5994;	
+	case bmdModeHD1080i6000:				return core::video_format::x1080i6000;	
+	case bmdModeHD1080p25:					return core::video_format::x1080p2500;	
+	case bmdModeHD1080p2997:				return core::video_format::x1080p2997;	
+	case bmdModeHD1080p30:					return core::video_format::x1080p3000;	
+	default:								return core::video_format::invalid;	
 	}
 }
 
@@ -78,12 +97,10 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 	return mode->GetDisplayMode();
 }
 
-}	
-
 template<typename T, typename F>
 static BMDDisplayMode get_display_mode(const T& device, core::video_format::type fmt, BMDPixelFormat pix_fmt, F flag)
 {	
-	return internal::get_display_mode(device, internal::get_decklink_video_format(fmt), pix_fmt, flag);
+	return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag);
 }
 
 template<typename T>
