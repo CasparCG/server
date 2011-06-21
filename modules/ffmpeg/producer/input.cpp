@@ -214,6 +214,10 @@ public:
 	~implementation()
 	{
 		stop();
+		// Unblock thread.
+		std::shared_ptr<AVPacket> packet;
+		try_pop_video_packet(packet);
+		try_pop_audio_packet(packet);
 	}
 		
 	bool try_pop_video_packet(std::shared_ptr<AVPacket>& packet)
@@ -242,12 +246,7 @@ private:
 	void stop()
 	{
 		executor_.stop();
-
-		// Unblock thread.
-		std::shared_ptr<AVPacket> packet;
-		try_pop_video_packet(packet);
-		try_pop_audio_packet(packet);
-
+		
 		CASPAR_LOG(info) << print() << " Stopping.";
 	}
 
