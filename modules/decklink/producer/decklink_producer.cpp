@@ -157,7 +157,8 @@ class decklink_producer : public IDeckLinkInputCallback
 	const size_t												device_index_;
 
 	std::shared_ptr<diagnostics::graph>							graph_;
-	boost::timer												perf_timer_;
+	boost::timer												tick_timer_;
+	boost::timer												frame_timer_;
 	
 	std::vector<short>											audio_data_;
 
@@ -186,6 +187,7 @@ public:
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
+		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
@@ -242,8 +244,10 @@ public:
 		{
 			auto result = core::basic_frame::empty();
 
-			graph_->update_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);
-			perf_timer_.restart();
+			graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
+			tick_timer_.restart();
+
+			frame_timer_.restart();
 						
 			core::pixel_format_desc desc;
 			desc.pix_fmt = core::pixel_format::ycbcr;
@@ -297,6 +301,8 @@ public:
 			
 			if(!frame_buffer_.try_push(result))
 				graph_->add_tag("dropped-frame");
+			
+			graph_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 
 			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 		}
