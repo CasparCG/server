@@ -14,9 +14,9 @@
 #endif
 extern "C" 
 {
-	#define __STDC_CONSTANT_MACROS
-	#define __STDC_LIMIT_MACROS
 	#include <libswscale/swscale.h>
+	#include <libavcodec/avcodec.h>
+	#include <libavfilter/avfilter.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)
@@ -41,6 +41,41 @@ static core::pixel_format::type get_pixel_format(PixelFormat pix_fmt)
 	case PIX_FMT_YUVA420P:	return core::pixel_format::ycbcra;
 	default:				return core::pixel_format::invalid;
 	}
+}
+
+static PixelFormat get_ffmpeg_pixel_format(const core::pixel_format_desc& format_desc)
+{
+	switch(format_desc.pix_fmt)
+	{
+	case core::pixel_format::gray: return PIX_FMT_GRAY8;
+	case core::pixel_format::bgra: return PIX_FMT_BGRA;
+	case core::pixel_format::argb: return PIX_FMT_ARGB;
+	case core::pixel_format::rgba: return PIX_FMT_RGBA;
+	case core::pixel_format::abgr: return PIX_FMT_ABGR;
+	case core::pixel_format::ycbcra: return PIX_FMT_YUVA420P;
+	case core::pixel_format::ycbcr:
+		auto planes = format_desc.planes;
+		if(planes[0].height == planes[1].height)
+		{
+			if(planes[0].width == planes[1].width)
+				return PIX_FMT_YUV444P;
+			else if(planes[0].width/2 == planes[1].width)
+				return PIX_FMT_YUV422P;
+			else if(planes[0].width/4 == planes[1].width)
+				return PIX_FMT_YUV411P;
+		}
+		if(planes[0].height/2 == planes[1].height)
+		{
+			if(planes[0].width/2 == planes[1].width)
+				return PIX_FMT_YUV420P;
+		}
+		if(planes[0].height/4 == planes[1].height)
+		{
+			if(planes[0].width/4 == planes[1].width)
+				return PIX_FMT_YUV410P;
+		}
+	}
+	return PIX_FMT_NONE;
 }
 
 static core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_t height)

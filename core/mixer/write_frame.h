@@ -57,11 +57,12 @@ public:
 	virtual void accept(core::frame_visitor& visitor);
 
 	virtual int tag() const;
+
+	const core::pixel_format_desc& get_pixel_format_desc() const;
 	
 private:
 	friend class image_mixer;
 
-	const core::pixel_format_desc& get_pixel_format_desc() const;
 	const std::vector<safe_ptr<device_buffer>>& get_textures() const;
 
 	struct implementation;
