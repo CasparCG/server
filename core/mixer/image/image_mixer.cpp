@@ -94,7 +94,7 @@ public:
 		});
 	}
 
-	void begin(const core::basic_frame& frame)
+	void begin(core::basic_frame& frame)
 	{
 		transform_stack_.push(transform_stack_.top()*frame.get_image_transform());
 	}
@@ -250,7 +250,7 @@ public:
 };
 
 image_mixer::image_mixer(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
-void image_mixer::begin(const core::basic_frame& frame){impl_->begin(frame);}
+void image_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 safe_ptr<host_buffer> image_mixer::render(){return impl_->render();}

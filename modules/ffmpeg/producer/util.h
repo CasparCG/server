@@ -78,6 +78,31 @@ static PixelFormat get_ffmpeg_pixel_format(const core::pixel_format_desc& format
 	return PIX_FMT_NONE;
 }
 
+static safe_ptr<AVFrame> as_av_frame(const safe_ptr<core::write_frame>& frame)
+{
+	auto desc = frame->get_pixel_format_desc();
+	safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+	avcodec_get_frame_defaults(av_frame.get());
+
+	for(size_t n = 0; n < desc.planes.size(); ++n)
+	{	
+		av_frame->data[n]		= frame->image_data(n).begin();
+		av_frame->linesize[n]	= desc.planes[n].width;
+	}
+
+	av_frame->format	= get_ffmpeg_pixel_format(desc);
+	av_frame->width		= desc.planes[0].width;
+	av_frame->height	= desc.planes[0].height;
+
+	if(frame->get_type() != core::video_mode::progressive)
+	{
+		av_frame->interlaced_frame = 1;
+		av_frame->top_field_first = frame->get_type() == core::video_mode::upper ? 1 : 0;
+	}
+
+	return av_frame;
+}
+
 static core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_t height)
 {
 	// Get linesizes
@@ -133,7 +158,10 @@ static safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_
 	auto desc	 = get_pixel_format_desc(pix_fmt, width, height);
 				
 	auto write = frame_factory->create_frame(tag, desc.pix_fmt != core::pixel_format::invalid ? desc : get_pixel_format_desc(PIX_FMT_BGRA, width, height));
-	write->set_is_interlaced(decoded_frame->interlaced_frame != 0);
+	if(decoded_frame->interlaced_frame)
+		write->set_type(decoded_frame->top_field_first ? core::video_mode::upper : core::video_mode::lower);
+	else
+		write->set_type(core::video_mode::progressive);
 
 	if(desc.pix_fmt == core::pixel_format::invalid)
 	{

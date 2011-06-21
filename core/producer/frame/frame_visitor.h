@@ -26,7 +26,7 @@ class write_frame;
 
 struct frame_visitor
 {
-	virtual void begin(const basic_frame& frame) = 0;
+	virtual void begin(basic_frame& frame) = 0;
 	virtual void end() = 0;
 	virtual void visit(write_frame& frame) = 0;
 };
