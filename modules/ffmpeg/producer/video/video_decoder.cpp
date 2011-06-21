@@ -62,7 +62,6 @@ struct video_decoder::implementation : boost::noncopyable
 	size_t									frame_number_;
 
 	std::shared_ptr<filter>					filter_;
-	size_t									filter_delay_;
 	int										eof_count_;
 
 	std::string								filter_str_;
@@ -74,7 +73,6 @@ public:
 		, codec_context_(*input_.get_video_codec_context())
 		, frame_number_(0)
 		, filter_(filter_str.empty() ? nullptr : new filter(filter_str))
-		, filter_delay_(1)
 		, filter_str_(filter_str)
 		, eof_count_(std::numeric_limits<int>::max())
 	{
@@ -97,7 +95,7 @@ public:
 
 		if(!video_packet) // eof
 		{
-			eof_count_ = frame_number_ + (filter_ ? filter_delay_ : 0);
+			eof_count_ = frame_number_ + (filter_ ? filter_->delay()+1 : 0);
 			avcodec_flush_buffers(&codec_context_);
 			return result;
 		}		
@@ -116,19 +114,14 @@ public:
 				frame = decode_frame(video_packet);
 			},
 			[&]
-			{
-				if(filter_->is_ready())
-				{				
-					boost::range::transform(filter_->poll(), std::back_inserter(result), [&](const safe_ptr<AVFrame>& frame)
-					{
-						return std::make_pair(frame_number_, make_write_frame(tag, frame, frame_factory_));
-					});
+			{		
+				boost::range::transform(filter_->poll(), std::back_inserter(result), [&](const safe_ptr<AVFrame>& frame)
+				{
+					return std::make_pair(frame_number_, make_write_frame(tag, frame, frame_factory_));
+				});
 		
-					if(!result.empty())
-						++frame_number_;
-					else		
-						++filter_delay_;
-				}
+				if(!result.empty())
+					++frame_number_;
 			});		
 
 			if(frame)
@@ -163,7 +156,7 @@ public:
 
 		if(frame_finished == 0)		
 			decoded_frame = nullptr;
-
+		
 		return decoded_frame;
 	}
 };

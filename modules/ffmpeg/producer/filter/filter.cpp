@@ -34,9 +34,13 @@ struct filter::implementation
 	std::shared_ptr<AVFilterGraph>			graph_;
 	AVFilterContext*						video_in_filter_;
 	AVFilterContext*						video_out_filter_;
+	size_t									delay_;
+	size_t									count_;
 
 	implementation(const std::string& filters) 
 		: filters_(filters)
+		, delay_(0)
+		, count_(0)
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
@@ -104,10 +108,16 @@ struct filter::implementation
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(av_error_str(errn)) <<
 				boost::errinfo_api_function("av_vsrc_buffer_add_frame") << boost::errinfo_errno(AVUNERROR(errn)));
 		}
+		++count_;
 	}
 
 	std::vector<safe_ptr<AVFrame>> poll()
 	{
+		std::vector<safe_ptr<AVFrame>> result;
+
+		if(!graph_)
+			return result;
+
 		int errn = avfilter_poll_frame(video_out_filter_->inputs[0]);
 		if(errn < 0)
 		{
@@ -115,8 +125,13 @@ struct filter::implementation
 				boost::errinfo_api_function("avfilter_poll_frame") << boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		std::vector<safe_ptr<AVFrame>> result;
-
+		if(count_ > 0)
+		{
+			--count_;
+			if(errn == 0)
+				++delay_;
+		}
+		
 		std::generate_n(std::back_inserter(result), errn, [&]{return request_frame();});
 
 		return result;
@@ -164,6 +179,5 @@ struct filter::implementation
 filter::filter(const std::string& filters) : impl_(new implementation(filters)){}
 void filter::push(const safe_ptr<AVFrame>& frame) {impl_->push(frame);}
 std::vector<safe_ptr<AVFrame>> filter::poll() {return impl_->poll();}
-bool filter::is_ready() const{return impl_->graph_ != nullptr;}
-
+size_t filter::delay() const{return impl_->delay_;}
 }
