@@ -156,7 +156,7 @@ public:
 
 		if(frame_finished == 0)		
 			decoded_frame = nullptr;
-		
+
 		return decoded_frame;
 	}
 };
