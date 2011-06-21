@@ -37,7 +37,7 @@ class image_mixer : public core::frame_visitor, boost::noncopyable
 public:
 	image_mixer(video_channel_context& context);
 	
-	virtual void begin(const core::basic_frame& frame);
+	virtual void begin(core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 

@@ -35,9 +35,11 @@
 
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
+#include <core/producer/frame/audio_transform.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
+#include <tbb/task_group.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
@@ -69,6 +71,81 @@ extern "C"
 #include <functional>
 
 namespace caspar { 
+
+class frame_filter
+{
+	std::unique_ptr<filter>					filter_;
+	safe_ptr<core::frame_factory>			frame_factory_;
+	std::deque<std::vector<int16_t>>		audio_buffer_;
+	tbb::task_group							task_group_;
+
+	std::vector<safe_ptr<AVFrame>>			buffer_;
+
+public:
+	frame_filter(const std::string& filter_str, const safe_ptr<core::frame_factory>& frame_factory) 
+		: filter_(filter_str.empty() ? nullptr : new filter(filter_str))
+		, frame_factory_(frame_factory)
+	{
+	}
+
+	bool execute(const safe_ptr<core::write_frame>& input_frame, safe_ptr<core::basic_frame>& output_frame)
+	{		
+		if(!filter_)
+		{
+			input_frame->commit();
+			output_frame = input_frame;
+			return true;
+		}
+		
+		auto desc = input_frame->get_pixel_format_desc();
+
+		auto av_frame = as_av_frame(input_frame);
+
+		audio_buffer_.push_back(std::move(input_frame->audio_data()));
+		
+		task_group_.wait();
+
+		filter_->push(av_frame);		
+		
+		bool result = try_pop(output_frame);
+
+		task_group_.run([this]
+		{
+			buffer_ = filter_->poll();
+		});
+
+		return result;	
+	}
+
+private:		
+
+	bool try_pop(safe_ptr<core::basic_frame>& output)
+	{
+		if(buffer_.empty())
+			return false;
+
+		auto audio_data = std::move(audio_buffer_.front());
+		audio_buffer_.pop_back();
+
+		if(buffer_.size() == 2)
+		{
+			auto frame1 = make_write_frame(this, buffer_[0], frame_factory_);
+			auto frame2 = make_write_frame(this, buffer_[1], frame_factory_);
+			frame1->audio_data() = std::move(audio_data);
+			frame2->get_audio_transform().set_has_audio(false);
+			output = core::basic_frame::interlace(frame1, frame2, frame_factory_->get_video_format_desc().mode);
+		}
+		else if(buffer_.size() > 0)
+		{
+			auto frame1 = make_write_frame(this, buffer_[0], frame_factory_);
+			frame1->audio_data() = std::move(audio_data);
+			output = frame1;
+		}
+		buffer_.clear();
+
+		return true;
+	}
+};
 	
 class decklink_producer : public IDeckLinkInputCallback
 {	
@@ -84,16 +161,16 @@ class decklink_producer : public IDeckLinkInputCallback
 	
 	std::vector<short>											audio_data_;
 
-	std::shared_ptr<core::frame_factory>						frame_factory_;
+	safe_ptr<core::frame_factory>								frame_factory_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
 	safe_ptr<core::basic_frame>									tail_;
 
 	std::exception_ptr											exception_;
-	std::shared_ptr<filter>										filter_;
+	frame_filter												filter_;
 
 public:
-	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
+	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
 		: decklink_(get_device(device_index))
 		, input_(decklink_)
 		, model_name_(get_model_name(decklink_))
@@ -101,7 +178,7 @@ public:
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
-		, filter_(filter_str.empty() ? nullptr : new filter(narrow(filter_str)))
+		, filter_(narrow(filter_str), frame_factory_)
 	{
 		frame_buffer_.set_capacity(2);
 		
@@ -158,7 +235,7 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
 	{	
-		if(!video)
+		if(!video || video->GetWidth() != static_cast<int>(format_desc_.width) || video->GetHeight() != static_cast<int>(format_desc_.height))
 			return S_OK;
 
 		try
@@ -197,6 +274,7 @@ public:
 					y [n*2+1] = data[n*4+3];
 				}
 			});
+			frame->set_type(format_desc_.mode);
 			
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
@@ -214,54 +292,9 @@ public:
 					audio_data_.erase(audio_data_.begin(), audio_data_.begin() +  audio_samples*audio_nchannels);
 				}
 			}
-
-			if(filter_)
-			{
-				auto desc = frame->get_pixel_format_desc();
-
-				safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-				avcodec_get_frame_defaults(av_frame.get());
-
-				for(size_t n = 0; n < desc.planes.size(); ++n)
-				{	
-					av_frame->data[n]		= frame->image_data(n).begin();
-					av_frame->linesize[n]	= desc.planes[n].width;
-				}
-
-				av_frame->format		= get_ffmpeg_pixel_format(desc);
-				av_frame->width			= desc.planes[0].width;
-				av_frame->height		= desc.planes[0].height;
-
-				if(format_desc_.mode != core::video_mode::progressive)
-				{
-					av_frame->interlaced_frame = 1;
-					av_frame->top_field_first = format_desc_.mode == core::video_mode::upper ? 1 : 0;
-				}
-
-				filter_->push(av_frame);
-				auto frames = filter_->poll();
-
-				if(frames.size() == 2)
-				{
-					auto frame1 = make_write_frame(this, frames[0], make_safe(frame_factory_));
-					auto frame2 = make_write_frame(this, frames[1], make_safe(frame_factory_));
-					frame1->audio_data() = std::move(frame->audio_data());
-					result = core::basic_frame::interlace(frame1, frame2, frame_factory_->get_video_format_desc().mode);
-				}
-				else if(frames.size() > 0)
-				{
-					auto frame1 = make_write_frame(this, frames[0], make_safe(frame_factory_));
-					frame1->audio_data() = std::move(frame->audio_data());
-					result = frame1;
-				}
-			}
-			else
-			{
-				frame->commit();
-				frame->set_is_interlaced(format_desc_.mode != core::video_mode::progressive);
-				result = frame;
-			}
-
+		
+			filter_.execute(frame, result);		
+			
 			if(!frame_buffer_.try_push(result))
 				graph_->add_tag("dropped-frame");
 

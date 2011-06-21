@@ -47,7 +47,7 @@ public:
 	implementation(const safe_ptr<basic_frame>& frame) 
 		{ frames_.push_back(frame);}
 	
-	void accept(const basic_frame& self, frame_visitor& visitor)
+	void accept(basic_frame& self, frame_visitor& visitor)
 	{
 		visitor.begin(self);
 		BOOST_FOREACH(auto frame, frames_)
