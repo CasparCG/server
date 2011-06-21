@@ -115,8 +115,10 @@ struct filter::implementation
 	{
 		std::vector<safe_ptr<AVFrame>> result;
 
-		if(!graph_)
+		if(!graph_ || count_ == 0)
 			return result;
+		
+		--count_;
 
 		int errn = avfilter_poll_frame(video_out_filter_->inputs[0]);
 		if(errn < 0)
@@ -125,12 +127,8 @@ struct filter::implementation
 				boost::errinfo_api_function("avfilter_poll_frame") << boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		if(count_ > 0)
-		{
-			--count_;
-			if(errn == 0)
-				++delay_;
-		}
+		if(errn == 0)
+			++delay_;
 		
 		std::generate_n(std::back_inserter(result), errn, [&]{return request_frame();});
 
