@@ -247,6 +247,7 @@
     <Lib />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="mixer\image\photoshop_math.h" />
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="video_channel_context.h" />
     <ClInclude Include="consumer\output.h" />

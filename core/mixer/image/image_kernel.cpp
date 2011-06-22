@@ -160,7 +160,6 @@ public:
 	{
 		GL(glEnable(GL_POLYGON_STIPPLE));
 		GL(glEnable(GL_BLEND));
-		GL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE));
 
 		if(shaders_.empty())
 		{
@@ -320,6 +319,15 @@ void image_kernel::draw(size_t width, size_t height, const core::pixel_format_de
 {
 	if(transform.get_opacity() < 0.001)
 		return;
+
+	switch(transform.get_blend_mode())
+	{
+	case image_transform::screen:
+		GL(glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE));
+			break;
+	default:
+		GL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE));
+	}
 
 	GL(glEnable(GL_TEXTURE_2D));
 	GL(glDisable(GL_DEPTH_TEST));	
