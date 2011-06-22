@@ -37,10 +37,10 @@ class read_frame : boost::noncopyable
 {
 public:
 	read_frame();
-	read_frame(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data);
+	read_frame(ogl_device& ogl, safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data);
 
-	virtual const boost::iterator_range<const uint8_t*> image_data() const;
-	virtual const boost::iterator_range<const int16_t*> audio_data() const;
+	virtual const boost::iterator_range<const uint8_t*> image_data();
+	virtual const boost::iterator_range<const int16_t*> audio_data();
 		
 private:
 	struct implementation;

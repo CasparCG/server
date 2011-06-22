@@ -36,11 +36,45 @@
 #include <common/utility/timer.h>
 #include <common/memory/memshfl.h>
 
+#include <tbb/mutex.h>
+
 namespace caspar { namespace core {
+
+class key_read_frame_adapter : public core::read_frame
+{
+	ogl_device&						 ogl_;
+	safe_ptr<read_frame>			 fill_;
+	std::shared_ptr<host_buffer>	 key_;
+	tbb::mutex					     mutex_;
+public:
+	key_read_frame_adapter(ogl_device& ogl, const safe_ptr<read_frame>& fill)
+		: ogl_(ogl)
+		, fill_(fill)
+	{
+	}
+
+	virtual const boost::iterator_range<const uint8_t*> image_data()
+	{
+		tbb::mutex::scoped_lock lock(mutex_);
+		if(!key_)
+		{
+			key_ = ogl_.create_host_buffer(fill_->image_data().size(), host_buffer::write_only);				
+			fast_memsfhl(key_->data(), fill_->image_data().begin(), fill_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+		}
+
+		auto ptr = static_cast<const uint8_t*>(key_->data());
+		return boost::iterator_range<const uint8_t*>(ptr, ptr + key_->size());
+	}
+
+	virtual const boost::iterator_range<const int16_t*> audio_data()
+	{
+		return fill_->audio_data();
+	}	
+};
 	
 struct output::implementation
 {	
-	typedef std::pair<safe_ptr<const read_frame>, safe_ptr<const read_frame>> fill_and_key;
+	typedef std::pair<safe_ptr<read_frame>, safe_ptr<read_frame>> fill_and_key;
 	
 	video_channel_context& channel_;
 
@@ -86,7 +120,7 @@ public:
 				timer_.tick(1.0/channel_.get_format_desc().fps);
 						
 			auto fill = frame;
-			auto key = get_key_frame(frame);
+			auto key = make_safe<key_read_frame_adapter>(channel_.ogl(), frame);
 
 			auto it = consumers_.begin();
 			while(it != consumers_.end())
@@ -127,25 +161,6 @@ private:
 		{
 			return p.second->has_synchronization_clock();
 		});
-	}
-
-	safe_ptr<const read_frame> get_key_frame(const safe_ptr<const read_frame>& frame)
-	{
-		const bool has_key_only = std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p)
-		{
-			return p.second->key_only();
-		});
-
-		if(has_key_only)
-		{
-			// Currently do key_only transform on cpu. Unsure if the extra 400MB/s (1080p50) overhead is worth it to do it on gpu.
-			auto key_data = channel_.ogl().create_host_buffer(frame->image_data().size(), host_buffer::write_only);				
-			fast_memsfhl(key_data->data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-			std::vector<int16_t> audio_data(frame->audio_data().begin(), frame->audio_data().end());
-			return make_safe<read_frame>(std::move(key_data), std::move(audio_data));
-		}
-		
-		return make_safe<read_frame>();
 	}
 	
 	std::wstring print() const

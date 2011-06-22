@@ -113,7 +113,7 @@ public:
 			auto image = mix_image(frames);
 			auto audio = mix_audio(frames);
 			
-			return make_safe<read_frame>(std::move(image), std::move(audio));
+			return make_safe<read_frame>(channel_.ogl(), std::move(image), std::move(audio));
 		}
 		catch(...)
 		{

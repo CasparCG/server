@@ -28,37 +28,44 @@ namespace caspar { namespace core {
 																																							
 struct read_frame::implementation : boost::noncopyable
 {
-	std::shared_ptr<host_buffer> image_data_;
-	std::vector<int16_t> audio_data_;
+	ogl_device&						ogl_;
+	safe_ptr<host_buffer>			image_data_;
+	std::vector<int16_t>			audio_data_;
 
 public:
-	implementation(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
-		: image_data_(std::move(image_data))
+	implementation(ogl_device& ogl, safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
+		: ogl_(ogl)
+		, image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data)){}	
 	
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
-		if(!image_data_)
-			return boost::iterator_range<const uint8_t*>();
+		if(!image_data_->data())
+		{
+			ogl_.invoke([=]
+			{
+				image_data_->map();
+			}, high_priority);
+		}
 
 		auto ptr = static_cast<const uint8_t*>(image_data_->data());
 		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_->size());
 	}
-	const boost::iterator_range<const int16_t*> audio_data() const
+	const boost::iterator_range<const int16_t*> audio_data()
 	{
 		return boost::iterator_range<const int16_t*>(audio_data_.data(), audio_data_.data() + audio_data_.size());
 	}
 };
 
-read_frame::read_frame(safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
-	: impl_(new implementation(std::move(image_data), std::move(audio_data))){}
+read_frame::read_frame(ogl_device& ogl, safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
+	: impl_(new implementation(ogl, std::move(image_data), std::move(audio_data))){}
 read_frame::read_frame(){}
-const boost::iterator_range<const uint8_t*> read_frame::image_data() const
+const boost::iterator_range<const uint8_t*> read_frame::image_data()
 {
 	return impl_ ? impl_->image_data() : boost::iterator_range<const uint8_t*>();
 }
 
-const boost::iterator_range<const int16_t*> read_frame::audio_data() const
+const boost::iterator_range<const int16_t*> read_frame::audio_data()
 {
 	return impl_ ? impl_->audio_data() : boost::iterator_range<const int16_t*>();
 }
