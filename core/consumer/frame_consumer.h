@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 
-static const size_t CONSUMER_BUFFER_DEPTH = 7;
+static const size_t CONSUMER_BUFFER_DEPTH = 6;
 
 namespace caspar { namespace core {
 	
@@ -40,7 +40,7 @@ struct frame_consumer : boost::noncopyable
 {
 	virtual ~frame_consumer() {}
 	
-	virtual void send(const safe_ptr<const read_frame>& frame) = 0;
+	virtual void send(const safe_ptr<read_frame>& frame) = 0;
 	virtual size_t buffer_depth() const {return 1;}
 	virtual bool key_only() const{ return false;}
 	virtual void initialize(const video_format_desc& format_desc) = 0;
@@ -53,7 +53,7 @@ struct frame_consumer : boost::noncopyable
 		struct empty_frame_consumer : public frame_consumer
 		{
 			core::video_format_desc format_desc;
-			virtual void send(const safe_ptr<const read_frame>&){}
+			virtual void send(const safe_ptr<read_frame>&){}
 			virtual size_t buffer_depth() const{return 0;}
 			virtual void initialize(const video_format_desc&){}
 			virtual std::wstring print() const {return L"empty";}

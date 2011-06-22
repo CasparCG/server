@@ -64,7 +64,6 @@ struct image_mixer::implementation : boost::noncopyable
 	
 	image_kernel							kernel_;
 		
-	safe_ptr<host_buffer>					read_buffer_;
 	safe_ptr<device_buffer>					draw_buffer_;
 	safe_ptr<device_buffer>					write_buffer_;
 
@@ -77,7 +76,6 @@ struct image_mixer::implementation : boost::noncopyable
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
-		, read_buffer_(video_channel.ogl().create_host_buffer(video_channel.get_format_desc().size, host_buffer::read_only))
 		, draw_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4))
 		, write_buffer_	(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4))
 		, local_key_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1))
@@ -121,7 +119,6 @@ public:
 
 	void reinitialize_buffers()
 	{
-		read_buffer_	  = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
 		draw_buffer_	  = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
 		write_buffer_	  = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
 		local_key_buffer_ = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
@@ -131,16 +128,11 @@ public:
 
 	safe_ptr<host_buffer> render()
 	{		
-		auto read_buffer = read_buffer_;
-		auto result = channel_.ogl().begin_invoke([=]()  -> safe_ptr<host_buffer>
-		{
-			read_buffer->map();
-			return read_buffer;
-		});
+		auto read_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);		
 
 		auto render_queue = std::move(render_queue_);
 
-		channel_.ogl().begin_invoke([=]() mutable
+		channel_.ogl().invoke([=]() mutable
 		{
 			if(draw_buffer_->width() != channel_.get_format_desc().width || draw_buffer_->height() != channel_.get_format_desc().height)
 				reinitialize_buffers();
@@ -186,12 +178,11 @@ public:
 
 			std::swap(draw_buffer_, write_buffer_);
 
-			// Start transfer from device to host.	
-			read_buffer_ = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);					
-			write_buffer_->write(*read_buffer_);
+			// Start transfer from device to host.				
+			write_buffer_->write(*read_buffer);
 		});
 
-		return std::move(result.get());
+		return read_buffer;
 	}
 	
 	void draw(const std::vector<render_item>& stream)

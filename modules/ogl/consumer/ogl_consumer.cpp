@@ -76,7 +76,7 @@ struct ogl_consumer : boost::noncopyable
 	size_t					square_width_;
 	size_t					square_height_;
 
-	boost::circular_buffer<safe_ptr<const core::read_frame>> frame_buffer_;
+	boost::circular_buffer<safe_ptr<core::read_frame>> frame_buffer_;
 
 	executor				executor_;
 public:
@@ -241,7 +241,7 @@ public:
 		return std::make_pair(width, height);
 	}
 
-	void render(const safe_ptr<const core::read_frame>& frame)
+	void render(const safe_ptr<core::read_frame>& frame)
 	{			
 		glBindTexture(GL_TEXTURE_2D, texture_);
 
@@ -273,7 +273,7 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
-	void send(const safe_ptr<const core::read_frame>& frame)
+	void send(const safe_ptr<core::read_frame>& frame)
 	{
 		frame_buffer_.push_back(frame);
 
@@ -281,7 +281,7 @@ public:
 			do_send(frame_buffer_.front());
 	}
 		
-	void do_send(const safe_ptr<const core::read_frame>& frame)
+	void do_send(const safe_ptr<core::read_frame>& frame)
 	{		
 		executor_.try_begin_invoke([=]
 		{
@@ -329,7 +329,7 @@ public:
 		consumer_.reset(new ogl_consumer(screen_index_, stretch_, windowed_, format_desc));
 	}
 	
-	virtual void send(const safe_ptr<const core::read_frame>& frame)
+	virtual void send(const safe_ptr<core::read_frame>& frame)
 	{
 		consumer_->send(frame);
 	}

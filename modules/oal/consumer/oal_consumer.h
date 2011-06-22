@@ -34,7 +34,7 @@ public:
 
 	// frame_consumer
 	virtual void initialize(const core::video_format_desc& format_desc);	
-	virtual void send(const safe_ptr<const core::read_frame>&);
+	virtual void send(const safe_ptr<core::read_frame>&);
 	virtual size_t buffer_depth() const;
 	virtual std::wstring print() const;
 	virtual const core::video_format_desc& get_video_format_desc() const;

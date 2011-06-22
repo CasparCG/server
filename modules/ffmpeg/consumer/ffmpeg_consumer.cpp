@@ -266,7 +266,7 @@ public:
 		}
 	}
   
-	void encode_video_frame(const safe_ptr<const core::read_frame>& frame)
+	void encode_video_frame(const safe_ptr<core::read_frame>& frame)
 	{ 
 		if(!video_st_)
 			return;
@@ -321,7 +321,7 @@ public:
 		} 		
 	}
 		
-	void encode_audio_frame(const safe_ptr<const core::read_frame>& frame)
+	void encode_audio_frame(const safe_ptr<core::read_frame>& frame)
 	{	
 		if(!audio_st_)
 			return;
@@ -372,7 +372,7 @@ public:
 		return true;
 	}
 	 
-	void send(const safe_ptr<const core::read_frame>& frame)
+	void send(const safe_ptr<core::read_frame>& frame)
 	{
 		executor_.begin_invoke([=]
 		{				
@@ -404,7 +404,7 @@ public:
 		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, bitrate_));
 	}
 	
-	virtual void send(const safe_ptr<const core::read_frame>& frame)
+	virtual void send(const safe_ptr<core::read_frame>& frame)
 	{
 		consumer_->send(frame);
 	}
