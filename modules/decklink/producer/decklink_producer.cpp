@@ -39,7 +39,6 @@
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
-#include <tbb/task_group.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
@@ -77,7 +76,6 @@ class frame_filter
 	std::unique_ptr<filter>					filter_;
 	safe_ptr<core::frame_factory>			frame_factory_;
 	std::deque<std::vector<int16_t>>		audio_buffer_;
-	tbb::task_group							task_group_;
 
 	std::vector<safe_ptr<AVFrame>>			buffer_;
 
@@ -103,18 +101,10 @@ public:
 
 		audio_buffer_.push_back(std::move(input_frame->audio_data()));
 		
-		task_group_.wait();
-
-		filter_->push(av_frame);		
+		filter_->push(av_frame);	
+		buffer_ = filter_->poll();	
 		
-		bool result = try_pop(output_frame);
-
-		task_group_.run([this]
-		{
-			buffer_ = filter_->poll();
-		});
-
-		return result;	
+		return try_pop(output_frame);
 	}
 
 private:		
@@ -237,7 +227,7 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
 	{	
-		if(!video || video->GetWidth() != static_cast<int>(format_desc_.width) || video->GetHeight() != static_cast<int>(format_desc_.height))
+		if(!video)
 			return S_OK;
 
 		try
@@ -251,9 +241,9 @@ public:
 						
 			core::pixel_format_desc desc;
 			desc.pix_fmt = core::pixel_format::ycbcr;
-			desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width,   format_desc_.height, 1));
-			desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));
-			desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width/2, format_desc_.height, 1));			
+			desc.planes.push_back(core::pixel_format_desc::plane(video->GetWidth(),   video->GetHeight(), 1));
+			desc.planes.push_back(core::pixel_format_desc::plane(video->GetWidth()/2, video->GetHeight(), 1));
+			desc.planes.push_back(core::pixel_format_desc::plane(video->GetWidth()/2, video->GetHeight(), 1));			
 			auto frame = frame_factory_->create_frame(this, desc);
 						
 			void* bytes = nullptr;
