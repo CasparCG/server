@@ -74,7 +74,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 	
-	void send(const safe_ptr<const core::read_frame>& frame)
+	void send(const safe_ptr<core::read_frame>& frame)
 	{			
 		if(preroll_count_ < input_.capacity())
 		{
@@ -113,7 +113,7 @@ public:
 
 oal_consumer::oal_consumer(){}
 oal_consumer::oal_consumer(oal_consumer&& other) : impl_(std::move(other.impl_)){}
-void oal_consumer::send(const safe_ptr<const core::read_frame>& frame){impl_->send(frame);}
+void oal_consumer::send(const safe_ptr<core::read_frame>& frame){impl_->send(frame);}
 size_t oal_consumer::buffer_depth() const{return impl_->buffer_depth();}
 void oal_consumer::initialize(const core::video_format_desc& format_desc){impl_.reset(new implementation(format_desc));}
 std::wstring oal_consumer::print() const { return impl_->print(); }

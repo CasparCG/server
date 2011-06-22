@@ -62,10 +62,10 @@ struct configuration
 
 class decklink_frame_adapter : public IDeckLinkVideoFrame
 {
-	const safe_ptr<const core::read_frame>	frame_;
+	const safe_ptr<core::read_frame>	frame_;
 	const core::video_format_desc			format_desc_;
 public:
-	decklink_frame_adapter(const safe_ptr<const core::read_frame>& frame, const core::video_format_desc& format_desc)
+	decklink_frame_adapter(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc)
 		: frame_(frame)
 		, format_desc_(format_desc){}
 	
@@ -117,8 +117,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	std::list<std::shared_ptr<IDeckLinkVideoFrame>> frame_container_; // Must be std::list in order to guarantee that pointers are always valid.
 	boost::circular_buffer<std::vector<short>> audio_container_;
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> video_frame_buffer_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> audio_frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> video_frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> audio_frame_buffer_;
 	
 	std::shared_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
@@ -288,7 +288,7 @@ public:
 				return frame.get() == completed_frame;
 			}));
 
-			std::shared_ptr<const core::read_frame> frame;	
+			std::shared_ptr<core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);					
 			schedule_next_video(make_safe(frame));			
 		}
@@ -320,7 +320,7 @@ public:
 			}
 			else
 			{
-				std::shared_ptr<const core::read_frame> frame;
+				std::shared_ptr<core::read_frame> frame;
 				audio_frame_buffer_.pop(frame);
 				schedule_next_audio(make_safe(frame));	
 			}
@@ -334,7 +334,7 @@ public:
 		return S_OK;
 	}
 
-	void schedule_next_audio(const safe_ptr<const core::read_frame>& frame)
+	void schedule_next_audio(const safe_ptr<core::read_frame>& frame)
 	{
 		static std::vector<short> silence(48000, 0);
 		
@@ -348,7 +348,7 @@ public:
 			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
 	}
 			
-	void schedule_next_video(const safe_ptr<const core::read_frame>& frame)
+	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
 		frame_container_.push_back(std::make_shared<decklink_frame_adapter>(frame, format_desc_));
 		if(FAILED(output_->ScheduleVideoFrame(frame_container_.back().get(), (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
@@ -358,7 +358,7 @@ public:
 		tick_timer_.restart();
 	}
 
-	void send(const safe_ptr<const core::read_frame>& frame)
+	void send(const safe_ptr<core::read_frame>& frame)
 	{
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
@@ -393,7 +393,7 @@ public:
 		context_.reset([&]{return new decklink_consumer(config_, format_desc);});
 	}
 	
-	virtual void send(const safe_ptr<const core::read_frame>& frame)
+	virtual void send(const safe_ptr<core::read_frame>& frame)
 	{
 		context_->send(frame);
 	}

@@ -57,7 +57,7 @@ struct bluefish_consumer : boost::noncopyable
 	unsigned int						vid_fmt_;
 
 	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
-	tbb::concurrent_bounded_queue<std::shared_ptr<const core::read_frame>> frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> frame_buffer_;
 
 	int									preroll_count_;
 
@@ -189,7 +189,7 @@ public:
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");		
 	}
 	
-	void send(const safe_ptr<const core::read_frame>& frame)
+	void send(const safe_ptr<core::read_frame>& frame)
 	{	
 		if(preroll_count_ < executor_.capacity())
 		{
@@ -200,7 +200,7 @@ public:
 		schedule_next_video(frame);			
 	}
 	
-	void schedule_next_video(const safe_ptr<const core::read_frame>& frame)
+	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
 		static std::vector<int16_t> silence(MAX_HANC_BUFFER_SIZE, 0);
 		
@@ -321,7 +321,7 @@ public:
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_));
 	}
 	
-	virtual void send(const safe_ptr<const core::read_frame>& frame)
+	virtual void send(const safe_ptr<core::read_frame>& frame)
 	{
 		consumer_->send(frame);
 	}
