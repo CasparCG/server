@@ -31,6 +31,7 @@ image_transform::image_transform()
 	, mode_(video_mode::invalid)
 	, is_key_(false)
 	, deinterlace_(false)
+	, blend_mode_(image_transform::normal)
 {
 	std::fill(fill_translation_.begin(), fill_translation_.end(), 0.0);
 	std::fill(fill_scale_.begin(), fill_scale_.end(), 1.0);
@@ -122,6 +123,16 @@ bool image_transform::get_deinterlace() const
 	return deinterlace_;
 }
 
+void image_transform::set_blend_mode(image_transform::blend_mode value)
+{
+	blend_mode_ = value;
+}
+
+image_transform::blend_mode image_transform::get_blend_mode() const
+{
+	return blend_mode_;
+}
+
 image_transform& image_transform::operator*=(const image_transform &other)
 {
 	opacity_				*= other.opacity_;
@@ -129,6 +140,7 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	if(other.mode_ != video_mode::invalid)
 		mode_ = other.mode_;
 
+	blend_mode_				 = other.blend_mode_;
 	gain_					*= other.gain_;
 	deinterlace_			|= other.deinterlace_;
 	is_key_					|= other.is_key_;
@@ -162,6 +174,7 @@ image_transform tween(double time, const image_transform& source, const image_tr
 
 	image_transform result;	
 	result.set_mode				(dest.get_mode() != video_mode::invalid ? dest.get_mode() : source.get_mode());
+	result.set_blend_mode		(dest.get_blend_mode());
 	result.set_is_key			(source.get_is_key() | dest.get_is_key());
 	result.set_deinterlace		(source.get_deinterlace() | dest.get_deinterlace());
 	result.set_gain				(do_tween(time, source.get_gain(), dest.get_gain(), duration, tweener));

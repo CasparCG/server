@@ -328,6 +328,26 @@ bool MixerCommand::DoExecute()
 					}
 				}
 			}
+			else if(_parameters[1] == L"BLEND")
+			{
+				auto blend_str = _parameters.at(2);
+				auto transform = [=](image_transform transform) -> image_transform
+				{
+					if(blend_str == L"NORMAL")
+						transform.set_blend_mode(image_transform::normal);
+					else if(blend_str == L"SCREEN")
+						transform.set_blend_mode(image_transform::screen);
+				
+					return transform;
+				};
+				
+				int layer = GetLayerIndex(std::numeric_limits<int>::min());
+				if(layer != std::numeric_limits<int>::min())
+					GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, 0);
+				else
+					GetChannel()->mixer()->apply_image_transform(transform, 0);				
+
+			}
 			else if(_parameters[1] == L"RESET")
 			{
 				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;

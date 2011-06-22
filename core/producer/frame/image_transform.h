@@ -32,6 +32,13 @@ struct pixel_format_desc;
 class image_transform 
 {
 public:
+
+	enum blend_mode
+	{
+		normal,
+		screen
+	};
+
 	image_transform();
 
 	void set_opacity(double value);
@@ -64,6 +71,9 @@ public:
 	void set_deinterlace(bool value);
 	bool get_deinterlace() const;
 
+	void set_blend_mode(blend_mode value);
+	blend_mode get_blend_mode() const;
+
 private:
 	double opacity_;
 	double gain_;
@@ -74,6 +84,7 @@ private:
 	video_mode::type mode_;
 	bool is_key_;
 	bool deinterlace_;
+	blend_mode blend_mode_;
 };
 
 image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener);
