@@ -111,8 +111,6 @@ public:
 				{
 					frame2->audio_data().insert(frame2->audio_data().begin(), frame1->audio_data().begin() + frame1->audio_data().size()/2, frame1->audio_data().end());
 					frame1->audio_data().erase(frame1->audio_data().begin() + frame1->audio_data().size()/2, frame1->audio_data().end());
-					CASPAR_LOG(trace) << frame1->audio_data().size();
-					CASPAR_LOG(trace) << frame2->audio_data().size();
 					result.push_back(frame1);
 					result.push_back(frame2);
 				}
