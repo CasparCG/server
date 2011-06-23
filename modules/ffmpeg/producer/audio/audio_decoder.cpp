@@ -43,9 +43,13 @@ struct audio_decoder::implementation : boost::noncopyable
 	input&							input_;
 	AVCodecContext&					codec_context_;		
 	const core::video_format_desc	format_desc_;
-	std::vector<int16_t>			current_chunk_;	
+
+	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>			current_chunk_;	
+
 	size_t							frame_number_;
 	bool							wait_for_eof_;
+
+	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> buffer_;
 public:
 	explicit implementation(input& input, const core::video_format_desc& format_desc) 
 		: input_(input)
@@ -53,6 +57,7 @@ public:
 		, format_desc_(format_desc)	
 		, frame_number_(0)
 		, wait_for_eof_(false)
+		, buffer_(4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2, 0)
 	{
 		if(codec_context_.sample_rate != static_cast<int>(format_desc_.audio_sample_rate) || 
 		   codec_context_.channels != static_cast<int>(format_desc_.audio_channels))
@@ -91,12 +96,9 @@ public:
 
 		if(wait_for_eof_)
 			return result;
-				
-		auto s = current_chunk_.size();
-		current_chunk_.resize(s + 4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2, 0);
-		
-		int written_bytes = (current_chunk_.size() - s)*2 - FF_INPUT_BUFFER_PADDING_SIZE;
-		const int errn = avcodec_decode_audio3(&codec_context_, &current_chunk_[s], &written_bytes, audio_packet.get());
+						
+		int written_bytes = buffer_.size();
+		const int errn = avcodec_decode_audio3(&codec_context_, buffer_.data(), &written_bytes, audio_packet.get());
 		if(errn < 0)
 		{	
 			BOOST_THROW_EXCEPTION(
@@ -105,7 +107,7 @@ public:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		current_chunk_.resize(s + written_bytes/2);
+		current_chunk_.insert(current_chunk_.begin(), buffer_.begin(), buffer_.begin() + written_bytes/2);
 
 		const auto last = current_chunk_.end() - current_chunk_.size() % format_desc_.audio_samples_per_frame;
 		

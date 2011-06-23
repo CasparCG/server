@@ -41,7 +41,7 @@
 	(2),\
 	(48000),\
 	(2),\
-	(static_cast<size_t>(48000.0*2.0/((double)scale/(double)duration)))\
+	(static_cast<size_t>(48000.0*2.0/((double)scale/(double)duration)+0.99))\
 }
 
 namespace caspar { namespace core {
