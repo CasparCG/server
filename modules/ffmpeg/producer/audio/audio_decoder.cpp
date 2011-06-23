@@ -70,9 +70,9 @@ public:
 		}
 	}
 		
-	std::deque<std::pair<int, std::vector<short>>> receive()
+	std::deque<std::pair<int, std::vector<int16_t>>> receive()
 	{
-		std::deque<std::pair<int, std::vector<short>>> result;
+		std::deque<std::pair<int, std::vector<int16_t>>> result;
 		
 		std::shared_ptr<AVPacket> pkt;
 		for(int n = 0; n < 32 && result.empty() && input_.try_pop_audio_packet(pkt); ++n)	
@@ -107,7 +107,7 @@ public:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		current_chunk_.insert(current_chunk_.begin(), buffer_.begin(), buffer_.begin() + written_bytes/2);
+		current_chunk_.insert(current_chunk_.end(), buffer_.begin(), buffer_.begin() + written_bytes/2);
 
 		const auto last = current_chunk_.end() - current_chunk_.size() % format_desc_.audio_samples_per_frame;
 		
