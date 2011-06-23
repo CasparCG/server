@@ -110,13 +110,29 @@ public:
 		(
 			[&]
 			{
-				if(video_decoder_ && video_frames_.size() < 3)
-					boost::range::push_back(video_frames_, video_decoder_->receive());		
+				try
+				{
+					if(video_decoder_ && video_frames_.size() < 3)
+						boost::range::push_back(video_frames_, video_decoder_->receive());		
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					video_decoder_.reset();
+				}
 			}, 
 			[&]
 			{
-				if(audio_decoder_ && audio_chunks_.size() < 3)
-					boost::range::push_back(audio_chunks_, audio_decoder_->receive());				
+				try
+				{
+					if(audio_decoder_ && audio_chunks_.size() < 3)
+						boost::range::push_back(audio_chunks_, audio_decoder_->receive());		
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					audio_decoder_.reset();
+				}
 			}
 		);
 		
