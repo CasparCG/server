@@ -33,7 +33,6 @@
 #include <common/concurrency/executor.h>
 #include <common/utility/tweener.h>
 
-
 #include <core/mixer/read_frame.h>
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/basic_frame.h>
@@ -101,6 +100,7 @@ struct mixer::implementation : boost::noncopyable
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
+		, audio_mixer_(channel_.get_format_desc())
 		, image_mixer_(channel_)
 	{	
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
@@ -119,7 +119,7 @@ public:
 		{
 			channel_.ogl().gc().wait();
 			image_mixer_ = image_mixer(channel_);
-			audio_mixer_ = audio_mixer();
+			audio_mixer_ = audio_mixer(channel_.get_format_desc());
 			channel_.ogl().gc().wait();
 
 			CASPAR_LOG_CURRENT_EXCEPTION();
