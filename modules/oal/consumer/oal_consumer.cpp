@@ -78,14 +78,14 @@ public:
 	{			
 		if(preroll_count_ < input_.capacity())
 		{
-			while(input_.try_push(std::vector<short>(static_cast<size_t>(48000.0f/format_desc_.fps)*2, 0)))
+			while(input_.try_push(std::vector<short>(format_desc_.audio_samples_per_frame, 0)))
 				++preroll_count_;
 		}
 
 		if(!frame->audio_data().empty())
 			input_.push(std::vector<short>(frame->audio_data().begin(), frame->audio_data().end())); 	
 		else
-			input_.push(std::vector<short>(3840, 0)); //static_cast<size_t>(48000.0f/format_desc_.fps)*2
+			input_.push(std::vector<short>(format_desc_.audio_samples_per_frame, 0)); //static_cast<size_t>(48000.0f/format_desc_.fps)*2
 	}
 
 	size_t buffer_depth() const{return 3;}
