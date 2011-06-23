@@ -97,7 +97,7 @@ public:
 		if(wait_for_eof_)
 			return result;
 						
-		int written_bytes = buffer_.size();
+		int written_bytes = buffer_.size()-FF_INPUT_BUFFER_PADDING_SIZE/2;
 		const int errn = avcodec_decode_audio3(&codec_context_, buffer_.data(), &written_bytes, audio_packet.get());
 		if(errn < 0)
 		{	
