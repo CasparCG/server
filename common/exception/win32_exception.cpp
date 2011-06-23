@@ -28,9 +28,9 @@ namespace caspar {
 
 void win32_exception::install_handler() 
 {
-#ifndef _DEBUG
+//#ifndef _DEBUG
 	_set_se_translator(win32_exception::Handler);
-#endif
+//#endif
 }
 
 void win32_exception::Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo) {
