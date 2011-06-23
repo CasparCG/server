@@ -26,11 +26,13 @@
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
+
+struct video_format_desc;
 	
 class audio_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	audio_mixer();
+	audio_mixer(const core::video_format_desc& format_desc);
 
 	virtual void begin(core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);

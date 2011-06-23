@@ -34,8 +34,11 @@ struct audio_mixer::implementation
 	std::map<int, core::audio_transform> prev_audio_transforms_;
 	std::map<int, core::audio_transform> next_audio_transforms_;
 
+	const core::video_format_desc format_desc_;
+
 public:
-	implementation()
+	implementation(const core::video_format_desc& format_desc)
+		: format_desc_(format_desc)
 	{
 		transform_stack_.push(core::audio_transform());
 		audio_data_.push_back(std::vector<int16_t>()); // One frame delay
@@ -53,10 +56,7 @@ public:
 
 		const auto& audio_data = frame.audio_data();
 		const auto tag = frame.tag(); // Get the identifier for the audio-stream.
-
-		if(audio_data_.back().empty())
-			audio_data_.back().resize(audio_data.size(), 0);
-		
+				
 		const auto next = transform_stack_.top();
 		auto prev = next;
 
@@ -106,12 +106,12 @@ public:
 		prev_audio_transforms_ = std::move(next_audio_transforms_);	
 		auto result = std::move(audio_data_.front());
 		audio_data_.pop_front();
-		audio_data_.push_back(std::vector<int16_t>());
+		audio_data_.push_back(std::vector<int16_t>(format_desc_.audio_samples_per_frame));
 		return std::move(result);
 	}
 };
 
-audio_mixer::audio_mixer() : impl_(new implementation()){}
+audio_mixer::audio_mixer(const core::video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
 void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}

@@ -115,7 +115,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	size_t preroll_count_;
 		
 	std::list<std::shared_ptr<IDeckLinkVideoFrame>> frame_container_; // Must be std::list in order to guarantee that pointers are always valid.
-	boost::circular_buffer<std::vector<short>> audio_container_;
+	boost::circular_buffer<std::vector<int16_t>>	audio_container_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> video_frame_buffer_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> audio_frame_buffer_;
@@ -336,13 +336,9 @@ public:
 
 	void schedule_next_audio(const safe_ptr<core::read_frame>& frame)
 	{
-		static std::vector<short> silence(48000, 0);
-		
-		const int sample_count = format_desc_.audio_samples_per_frame;
-		const int sample_frame_count = sample_count/2;
+		const int sample_frame_count = frame->audio_data().size()/format_desc_.audio_channels;
 
-		const int16_t* frame_audio_data = frame->audio_data().size() == sample_count ? frame->audio_data().begin() : silence.data();
-		audio_container_.push_back(std::vector<int16_t>(frame_audio_data, frame_audio_data+sample_count));
+		audio_container_.push_back(std::vector<int16_t>(frame->audio_data().begin(), frame->audio_data().end()));
 
 		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), sample_frame_count, (audio_scheduled_++) * sample_frame_count, format_desc_.audio_sample_rate, nullptr)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
