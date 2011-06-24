@@ -82,6 +82,7 @@ namespace amcp {
 	protected:
 		void SetReplyString(const std::wstring& str){replyString_ = str;}
 		std::vector<std::wstring> _parameters;
+		std::vector<std::wstring> _parameters2;
 
 	private:
 		unsigned int channelIndex_;
@@ -101,6 +102,7 @@ namespace amcp {
 	public:
 		virtual bool Execute()
 		{
+			_parameters2 = _parameters;
 			for(size_t n = 0; n < _parameters.size(); ++n)
 				_parameters[n] = boost::to_upper_copy(_parameters[n]);
 			return (TNeedChannel && !GetChannel()) || _parameters.size() < TMinParameters ? false : DoExecute();
