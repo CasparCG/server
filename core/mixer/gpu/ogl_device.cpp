@@ -157,13 +157,18 @@ boost::unique_future<void> ogl_device::gc()
 
 std::wstring ogl_device::get_version()
 {	
-	static std::wstring ver;
-	if(ver.empty())
+	static std::wstring ver = L"Not found";
+	try
 	{
-		ogl_device tmp;
-		ver = widen(tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
-		+ " "	+ tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));	
+		if(ver.empty())
+		{
+			ogl_device tmp;
+			ver = widen(tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
+			+ " "	+ tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));	
+		}
 	}
+	catch(...){}
+
 	return ver;
 }
 
