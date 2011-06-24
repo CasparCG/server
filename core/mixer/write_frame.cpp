@@ -103,7 +103,7 @@ struct write_frame::implementation : boost::noncopyable
 		ogl_.begin_invoke([=]
 		{
 			texture->read(*buffer);
-		});
+		}, high_priority);
 	}
 };
 	
