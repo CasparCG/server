@@ -50,7 +50,7 @@ void init_decklink()
 
 std::wstring get_decklink_version() 
 {
-	std::wstring version = L"Unknown";
+	std::wstring version = L"Not found";
 
 	::CoInitialize(nullptr);
 	try
