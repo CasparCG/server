@@ -46,6 +46,9 @@
     <ClCompile Include="producer\filter\filter.cpp">
       <Filter>source\producer\filter</Filter>
     </ClCompile>
+    <ClCompile Include="producer\filter_producer.cpp">
+      <Filter>source\producer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\ffmpeg_producer.h">
@@ -77,6 +80,9 @@
       <Filter>source\producer\filter</Filter>
     </ClInclude>
     <ClInclude Include="producer\util.h">
+      <Filter>source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\filter_producer.h">
       <Filter>source\producer</Filter>
     </ClInclude>
   </ItemGroup>

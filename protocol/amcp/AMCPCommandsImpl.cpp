@@ -798,7 +798,7 @@ bool CGCommand::DoExecuteAdd() {
 
 	if(_parameters[3].length() > 1) 
 	{	//read label
-		label = _parameters[3];
+		label = _parameters2[3];
 		++dataIndex;
 
 		if(_parameters.size() > 4 && _parameters[4].length() > 0)	//read play-on-load-flag
@@ -823,7 +823,7 @@ bool CGCommand::DoExecuteAdd() {
 	std::wstring dataFromFile;
 	if(_parameters.size() > dataIndex) 
 	{	//read data
-		const std::wstring& dataString = _parameters[dataIndex];
+		const std::wstring& dataString = _parameters2[dataIndex];
 
 		if(dataString[0] == TEXT('<')) //the data is an XML-string
 			pDataString = dataString.c_str();
@@ -973,7 +973,7 @@ bool CGCommand::DoExecuteUpdate()
 		}
 		int layer = _ttoi(_parameters[1].c_str());
 		//TODO: Implement indirect data loading from file. Same as in Add
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->update(layer, _parameters[2]);
+		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->update(layer, _parameters2[2]);
 	}
 	else 
 	{
@@ -995,7 +995,7 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters[2]);
+		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
 	}
 	else 
 	{
