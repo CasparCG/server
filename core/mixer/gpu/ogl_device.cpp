@@ -160,12 +160,9 @@ std::wstring ogl_device::get_version()
 	static std::wstring ver = L"Not found";
 	try
 	{
-		if(ver.empty())
-		{
-			ogl_device tmp;
-			ver = widen(tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
-			+ " "	+ tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));	
-		}
+		ogl_device tmp;
+		ver = widen(tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
+		+ " "	+ tmp.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));			
 	}
 	catch(...){}
 
