@@ -333,11 +333,7 @@ bool MixerCommand::DoExecute()
 				auto blend_str = _parameters.at(2);
 				auto transform = [=](image_transform transform) -> image_transform
 				{
-					if(blend_str == L"NORMAL")
-						transform.set_blend_mode(image_transform::normal);
-					else if(blend_str == L"SCREEN")
-						transform.set_blend_mode(image_transform::screen);
-				
+					transform.set_blend_mode(get_blend_mode(blend_str));
 					return transform;
 				};
 				
