@@ -20,6 +20,7 @@
 #include "../../stdafx.h"
 
 #include "image_kernel.h"
+#include "blending_glsl.h"
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
@@ -107,6 +108,7 @@ public:
 		glUniform1i(glGetUniformLocation(program_, "plane[2]"), 2);
 		glUniform1i(glGetUniformLocation(program_, "plane[3]"), 3);
 		glUniform1i(glGetUniformLocation(program_, "plane[4]"), 4);
+		glUniform1i(glGetUniformLocation(program_, "plane[5]"), 5);
 	}
 
 	GLint get_location(const char* name)
@@ -159,7 +161,6 @@ public:
 	std::unordered_map<core::pixel_format::type, shader_program>& shaders()
 	{
 		GL(glEnable(GL_POLYGON_STIPPLE));
-		GL(glEnable(GL_BLEND));
 
 		if(shaders_.empty())
 		{
@@ -172,12 +173,64 @@ public:
 			"	gl_Position = ftransform();											"
 			"}																		";
 
-		std::string common_fragment = 
-			"uniform sampler2D	plane[5];											"
+		std::string common_fragment = std::string() +
+			"uniform sampler2D	plane[6];											"
 			"uniform float		gain;												"
 			"uniform bool		HD;													"
 			"uniform bool		local_key;											"
 			"uniform bool		layer_key;											"
+			"uniform int		blend_mode;											"
+
+			+
+
+			get_blend_glsl()
+
+			+
+
+			"\nvec3 get_blend_color(vec3 back, vec3 fore)								  "
+			"\n{																		  "
+			"\n	switch(blend_mode)														  "
+			"\n	{																		  "
+			"\n	case  0: return BlendNormal(back, fore);								  "
+			"\n	case  1: return BlendLighten(back, fore);								  "
+			"\n	case  2: return BlendDarken(back, fore);								  "
+			"\n	case  3: return BlendMultiply(back, fore);								  "
+			"\n	case  4: return BlendAverage(back, fore);								  "
+			"\n	case  5: return BlendAdd(back, fore);									  "
+			"\n	case  6: return BlendSubstract(back, fore);								  "
+			"\n	case  7: return BlendDifference(back, fore);							  "
+			"\n	case  8: return BlendNegation(back, fore);								  "
+			"\n	case  9: return BlendExclusion(back, fore);								  "
+			"\n	case 10: return BlendScreen(back, fore);								  "
+			"\n	case 11: return BlendOverlay(back, fore);								  "
+			//"\n	case 12: return BlendSoftLight(back, fore);								  "
+			//"\n	case 13: return BlendHardLight(back, fore);								  "
+			"\n	case 14: return BlendColorDodge(back, fore);							  "
+			"\n	case 15: return BlendColorBurn(back, fore);								  "
+			"\n	case 16: return BlendLinearDodge(back, fore);							  "
+			"\n	case 17: return BlendLinearBurn(back, fore);							  "
+			"\n	case 18: return BlendLinearLight(back, fore);							  "
+			"\n	case 19: return BlendVividLight(back, fore);							  "
+			"\n	case 20: return BlendPinLight(back, fore);								  "
+			"\n	case 21: return BlendHardMix(back, fore);								  "
+			"\n	case 22: return BlendReflect(back, fore);								  "
+			"\n	case 23: return BlendGlow(back, fore);									  "
+			"\n	case 24: return BlendPhoenix(back, fore);								  "
+			"\n case 25: return BlendHue(back, fore);									  "
+			"\n case 26: return BlendSaturation(back, fore);							  "
+			"\n case 27: return BlendColor(back, fore);								  "
+			"\n case 28: return BlendLuminosity(back, fore);							  "
+			"\n	}																		  "
+			"\n																			  "
+			"\n	return BlendNormal(back, fore);											  "
+			"\n}																			  "
+																						  
+			"vec4 get_color(vec4 fore)														  "
+			"{																				  "
+			"   vec4 back = texture2D(plane[5], gl_TexCoord[1].st);							  "
+			"   fore.rgb = get_blend_color(back.rgb, fore.rgb);"
+			"	return vec4(fore.rgb * fore.a + back.rgb * (1.0-fore.a), back.a + fore.a);"
+			"}																				  "
 																				
 			// NOTE: YCbCr, ITU-R, http://www.intersil.com/data/an/an9717.pdf		
 			// TODO: Support for more yuv formats might be needed.					
@@ -222,7 +275,7 @@ public:
 			"		rgba.a *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	if(layer_key)														"
 			"		rgba.a *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = rgba * gain;											"
+			"	gl_FragColor = get_color(rgba * gain);											"
 			"}																		");
 
 		shaders_[core::pixel_format::abgr] = shader_program(common_vertex, common_fragment +
@@ -234,7 +287,7 @@ public:
 			"		abgr.b *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	if(layer_key)														"
 			"		abgr.b *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = abgr.argb * gain;									"
+			"	gl_FragColor = get_color(abgr.argb * gain);									"
 			"}																		");
 		
 		shaders_[core::pixel_format::argb]= shader_program(common_vertex, common_fragment +
@@ -246,7 +299,7 @@ public:
 			"		argb.b *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	if(layer_key)														"
 			"		argb.b *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = argb.grab * gl_Color * gain;							"
+			"	gl_FragColor = get_color(argb.grab * gl_Color * gain);							"
 			"}																		");
 		
 		shaders_[core::pixel_format::bgra]= shader_program(common_vertex, common_fragment +
@@ -258,7 +311,7 @@ public:
 			"		bgra.a *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	if(layer_key)														"
 			"		bgra.a *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = bgra.rgba * gl_Color * gain;							"
+			"	gl_FragColor = get_color(bgra.rgba * gl_Color * gain);							"
 			"}																		");
 		
 		shaders_[core::pixel_format::rgba] = shader_program(common_vertex, common_fragment +
@@ -270,7 +323,7 @@ public:
 			"		rgba.a *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
 			"	if(layer_key)														"
 			"		rgba.a *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = rgba.bgra * gl_Color * gain;							"
+			"	gl_FragColor = get_color(rgba.bgra * gl_Color * gain);							"
 			"}																		");
 		
 		shaders_[core::pixel_format::ycbcr] = shader_program(common_vertex, common_fragment +
@@ -286,9 +339,9 @@ public:
 			"	if(layer_key)														"
 			"		a *= texture2D(plane[4], gl_TexCoord[1].st).r;					"
 			"	if(HD)																"
-			"		gl_FragColor = ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain;"
+			"		gl_FragColor = get_color(ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain);"
 			"	else																"
-			"		gl_FragColor = ycbcra_to_bgra_sd(y, cb, cr, a) * gl_Color * gain;"
+			"		gl_FragColor = get_color(ycbcra_to_bgra_sd(y, cb, cr, a) * gl_Color * gain);"
 			"}																		");
 		
 		shaders_[core::pixel_format::ycbcra] = shader_program(common_vertex, common_fragment +
@@ -304,9 +357,9 @@ public:
 			"	if(layer_key)														"
 			"		a *= texture2D(plane[4], gl_TexCoord[1].st).r;					"
 			"	if(HD)																"
-			"		gl_FragColor = ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain;"
+			"		gl_FragColor = get_color(ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain);"
 			"	else																"
-			"		gl_FragColor = ycbcra_to_bgra_sd(y, cb, cr, a) * gl_Color * gain;"
+			"		gl_FragColor = get_color(ycbcra_to_bgra_sd(y, cb, cr, a) * gl_Color * gain);"
 			"}																		");
 		}
 		return shaders_;
@@ -317,20 +370,15 @@ image_kernel::image_kernel() : impl_(new implementation()){}
 
 void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, bool local_key, bool layer_key)
 {
-	if(transform.get_opacity() < 0.001)
-		return;
-
-	switch(transform.get_blend_mode())
-	{
-	case image_transform::screen:
-		GL(glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE));
-			break;
-	default:
-		GL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE));
-	}
-
 	GL(glEnable(GL_TEXTURE_2D));
 	GL(glDisable(GL_DEPTH_TEST));	
+	
+	if(transform.get_mode() == core::video_mode::upper)
+		glPolygonStipple(upper_pattern);
+	else if(transform.get_mode() == core::video_mode::lower)
+		glPolygonStipple(lower_pattern);
+	else
+		glPolygonStipple(progressive_pattern);
 
 	impl_->shaders()[pix_desc.pix_fmt].use();
 
@@ -338,14 +386,8 @@ void image_kernel::draw(size_t width, size_t height, const core::pixel_format_de
 	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("HD"), pix_desc.planes.at(0).height > 700 ? 1 : 0));
 	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("local_key"), local_key ? 1 : 0));
 	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("layer_key"), layer_key ? 1 : 0));
+	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("blend_mode"), transform.get_blend_mode()));
 
-	if(transform.get_mode() == core::video_mode::upper)
-		glPolygonStipple(upper_pattern);
-	else if(transform.get_mode() == core::video_mode::lower)
-		glPolygonStipple(lower_pattern);
-	else
-		glPolygonStipple(progressive_pattern);
-			
 	GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
 	GL(glViewport(0, 0, width, height));
 						

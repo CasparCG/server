@@ -42,7 +42,6 @@ public:
 	void unbind();
 
 	void clear();
-	bool empty() const;
 
 	void attach(int index = 0);
 	void read(host_buffer& source);

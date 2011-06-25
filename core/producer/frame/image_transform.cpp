@@ -23,6 +23,8 @@
 
 #include <common/utility/assert.h>
 
+#include <boost/algorithm/string.hpp>
+
 namespace caspar { namespace core {
 		
 image_transform::image_transform() 
@@ -140,7 +142,7 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	if(other.mode_ != video_mode::invalid)
 		mode_ = other.mode_;
 
-	blend_mode_				 = other.blend_mode_;
+	blend_mode_				 = std::max(blend_mode_, other.blend_mode_);
 	gain_					*= other.gain_;
 	deinterlace_			|= other.deinterlace_;
 	is_key_					|= other.is_key_;
@@ -174,7 +176,7 @@ image_transform tween(double time, const image_transform& source, const image_tr
 
 	image_transform result;	
 	result.set_mode				(dest.get_mode() != video_mode::invalid ? dest.get_mode() : source.get_mode());
-	result.set_blend_mode		(dest.get_blend_mode());
+	result.set_blend_mode		(std::max(source.get_blend_mode(), dest.get_blend_mode()));
 	result.set_is_key			(source.get_is_key() | dest.get_is_key());
 	result.set_deinterlace		(source.get_deinterlace() | dest.get_deinterlace());
 	result.set_gain				(do_tween(time, source.get_gain(), dest.get_gain(), duration, tweener));
@@ -185,6 +187,70 @@ image_transform tween(double time, const image_transform& source, const image_tr
 	result.set_clip_scale		(do_tween(time, source.get_clip_scale()[0], dest.get_clip_scale()[0], duration, tweener), do_tween(time, source.get_clip_scale()[1], dest.get_clip_scale()[1], duration, tweener));
 	
 	return result;
+}
+
+image_transform::blend_mode get_blend_mode(const std::wstring& str)
+{
+	if(boost::iequals(str, L"normal"))
+		return image_transform::normal;
+	else if(boost::iequals(str, L"lighten"))
+		return image_transform::lighten;
+	else if(boost::iequals(str, L"darken"))
+		return image_transform::darken;
+	else if(boost::iequals(str, L"multiply"))
+		return image_transform::multiply;
+	else if(boost::iequals(str, L"average"))
+		return image_transform::average;
+	else if(boost::iequals(str, L"add"))
+		return image_transform::add;
+	else if(boost::iequals(str, L"subtract"))
+		return image_transform::subtract;
+	else if(boost::iequals(str, L"difference"))
+		return image_transform::difference;
+	else if(boost::iequals(str, L"negation"))
+		return image_transform::negation;
+	else if(boost::iequals(str, L"exclusion"))
+		return image_transform::exclusion;
+	else if(boost::iequals(str, L"screen"))
+		return image_transform::screen;
+	else if(boost::iequals(str, L"overlay"))
+		return image_transform::overlay;
+	else if(boost::iequals(str, L"soft_light"))
+		return image_transform::soft_light;
+	else if(boost::iequals(str, L"hard_light"))
+		return image_transform::hard_light;
+	else if(boost::iequals(str, L"color_dodge"))
+		return image_transform::color_dodge;
+	else if(boost::iequals(str, L"color_burn"))
+		return image_transform::color_burn;
+	else if(boost::iequals(str, L"linear_dodge"))
+		return image_transform::linear_dodge;
+	else if(boost::iequals(str, L"linear_burn"))
+		return image_transform::linear_burn;
+	else if(boost::iequals(str, L"linear_light"))
+		return image_transform::linear_light;
+	else if(boost::iequals(str, L"vivid_light"))
+		return image_transform::vivid_light;
+	else if(boost::iequals(str, L"pin_light"))
+		return image_transform::pin_light;
+	else if(boost::iequals(str, L"hard_mix"))
+		return image_transform::hard_mix;
+	else if(boost::iequals(str, L"reflect"))
+		return image_transform::reflect;
+	else if(boost::iequals(str, L"glow"))
+		return image_transform::glow;
+	else if(boost::iequals(str, L"phoenix"))
+		return image_transform::phoenix;
+	else if(boost::iequals(str, L"hue"))
+		return image_transform::hue;
+	else if(boost::iequals(str, L"saturation"))
+		return image_transform::saturation;
+	else if(boost::iequals(str, L"color"))
+		return image_transform::color;
+	else if(boost::iequals(str, L"luminosity"))
+		return image_transform::luminosity;
+		
+	return image_transform::normal;
 }
 
 }}

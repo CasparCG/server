@@ -55,7 +55,7 @@ struct video_mode
 { 
 	enum type
 	{
-		progressive,
+		progressive = 0,
 		lower,
 		upper,
 		count,
