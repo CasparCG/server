@@ -115,7 +115,7 @@
     <ClInclude Include="video_channel_context.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\image\photoshop_math.h">
+    <ClInclude Include="mixer\image\blending_glsl.h">
       <Filter>source\mixer\image</Filter>
     </ClInclude>
   </ItemGroup>

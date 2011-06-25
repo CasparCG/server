@@ -56,20 +56,21 @@ struct image_mixer::implementation : boost::noncopyable
 {	
 	static const size_t LOCAL_KEY_INDEX = 3;
 	static const size_t LAYER_KEY_INDEX = 4;
+	static const size_t BASE_INDEX = 5;
 	
 	video_channel_context&					channel_;
 	
 	std::stack<core::image_transform>		transform_stack_;
 
-	std::queue<std::queue<std::queue<render_item>>>	render_queue_; // layer/stream/items
+	std::queue<std::queue<std::deque<render_item>>>	render_queue_; // layer/stream/items
 	
 	image_kernel							kernel_;
 		
-	safe_ptr<device_buffer>					draw_buffer_;
-	safe_ptr<device_buffer>					write_buffer_;
+	std::shared_ptr<device_buffer>			draw_buffer_[2];
+	std::shared_ptr<device_buffer>			write_buffer_;
 
-	safe_ptr<device_buffer>					stream_key_buffer_;
-	safe_ptr<device_buffer>					layer_key_buffer_;
+	std::shared_ptr<device_buffer>			stream_key_buffer_[2];
+	std::shared_ptr<device_buffer>			layer_key_buffer_;
 
 	bool									local_key_;
 	bool									layer_key_;
@@ -77,13 +78,16 @@ struct image_mixer::implementation : boost::noncopyable
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
-		, draw_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4))
 		, write_buffer_	(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4))
-		, stream_key_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1))
 		, layer_key_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1))
 		, local_key_(false)
 		, layer_key_(false)
 	{
+		draw_buffer_[0] = channel_.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4);
+		draw_buffer_[1] = channel_.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4);
+		stream_key_buffer_[0] = video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1);
+		stream_key_buffer_[1] = video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1);
+
 		transform_stack_.push(core::image_transform());
 
 		channel_.ogl().invoke([=]
@@ -105,9 +109,9 @@ public:
 		auto& layer = render_queue_.back();
 
 		if(layer.empty() || (!layer.back().empty() && layer.back().back().tag != frame.tag()))
-			layer.push(std::queue<render_item>());
+			layer.push(std::deque<render_item>());
 		
-		layer.back().push(item);
+		layer.back().push_back(item);
 	}
 
 	void end()
@@ -117,7 +121,7 @@ public:
 
 	void begin_layer()
 	{
-		render_queue_.push(std::queue<std::queue<render_item>>());
+		render_queue_.push(std::queue<std::deque<render_item>>());
 	}
 
 	void end_layer()
@@ -126,10 +130,12 @@ public:
 
 	void reinitialize_buffers()
 	{
-		draw_buffer_	   = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		write_buffer_	   = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		stream_key_buffer_ = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-		layer_key_buffer_  = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		draw_buffer_[0]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		draw_buffer_[1]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		write_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		stream_key_buffer_[0]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		stream_key_buffer_[1]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		layer_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
 		channel_.ogl().gc();
 	}
 
@@ -139,52 +145,53 @@ public:
 
 		return channel_.ogl().invoke([=]() mutable -> safe_ptr<host_buffer>
 		{
-			if(draw_buffer_->width() != channel_.get_format_desc().width || draw_buffer_->height() != channel_.get_format_desc().height)
+			if(draw_buffer_[0]->width() != channel_.get_format_desc().width || draw_buffer_[0]->height() != channel_.get_format_desc().height)
 				reinitialize_buffers();
 			
 			return do_render(std::move(render_queue));
 		});
 	}
 	
-	safe_ptr<host_buffer> do_render(std::queue<std::queue<std::queue<render_item>>>&& render_queue)
+	safe_ptr<host_buffer> do_render(std::queue<std::queue<std::deque<render_item>>>&& render_queue)
 	{
 		auto read_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
 
 		layer_key_buffer_->clear();
-		draw_buffer_->clear();
+		draw_buffer_[0]->clear();
+		draw_buffer_[1]->clear();
+		stream_key_buffer_[0]->clear();
+		stream_key_buffer_[1]->clear();
+
+		bool local_key = false;
+		bool layer_key = false;
 
 		while(!render_queue.empty())
 		{			
-			stream_key_buffer_->clear();
+			stream_key_buffer_[0]->clear();
 
 			auto layer = std::move(render_queue.front());
 			render_queue.pop();
-											
+
 			while(!layer.empty())
 			{
 				auto stream = std::move(layer.front());
 				layer.pop();
+								
+				render(stream, local_key, layer_key);
+				
+				local_key = stream.front().transform.get_is_key();
+				if(!local_key)
+					stream_key_buffer_[0]->clear();
 
-				bool last_is_key = stream.empty() ? false : stream.back().transform.get_is_key();
-
-				while(!stream.empty())
-				{
-					auto item = std::move(stream.front());
-					stream.pop();
-
-					render(item);
-
-					channel_.ogl().yield(); // Allow quick buffer allocation to execute.
-				}		
-
-				if(!last_is_key)
-					stream_key_buffer_->clear();
+				channel_.ogl().yield();
 			}
 
-			std::swap(stream_key_buffer_, layer_key_buffer_);
+			layer_key = local_key;
+			local_key = false;
+			std::swap(stream_key_buffer_[0], layer_key_buffer_);
 		}
 
-		std::swap(draw_buffer_, write_buffer_);
+		std::swap(draw_buffer_[0], write_buffer_);
 
 		// Start transfer from device to host.				
 		write_buffer_->write(*read_buffer);
@@ -192,25 +199,45 @@ public:
 		return read_buffer;
 	}
 
-	void render(render_item& item)
+	void render(std::deque<render_item>& stream, bool local_key, bool layer_key)
 	{
-		for(size_t n = 0; n < item.textures.size(); ++n)
-			item.textures[n]->bind(n);	
-				
-		if(item.transform.get_is_key())
+		while(stream.size() > 2)
+			stream.pop_front();
+		
+		BOOST_FOREACH(auto item2, stream)
 		{
-			stream_key_buffer_->attach();
+			for(size_t n = 0; n < item2.textures.size(); ++n)
+				item2.textures[n]->bind(n);	
+		}
 
-			kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item.desc, item.transform, false, false);	
+		if(stream.front().transform.get_is_key())
+		{
+			stream_key_buffer_[0]->bind(BASE_INDEX);			
+			stream_key_buffer_[1]->attach();
+			
+			BOOST_FOREACH(auto item2, stream)
+				kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, false, false);
+			
+			std::swap(stream_key_buffer_[0], stream_key_buffer_[1]);
+
+			stream_key_buffer_[1]->bind();
+			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, channel_.get_format_desc().width, channel_.get_format_desc().height);	
 		}
 		else
 		{
-			stream_key_buffer_->bind(LOCAL_KEY_INDEX);	
+			stream_key_buffer_[0]->bind(LOCAL_KEY_INDEX);	
 			layer_key_buffer_->bind(LAYER_KEY_INDEX);
-				
-			draw_buffer_->attach();	
-
-			kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item.desc, item.transform, !stream_key_buffer_->empty(), !layer_key_buffer_->empty());	
+			
+			draw_buffer_[0]->bind(BASE_INDEX);			
+			draw_buffer_[1]->attach();	
+			
+			BOOST_FOREACH(auto item2, stream)
+				kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, local_key, layer_key);	
+			
+			std::swap(draw_buffer_[0], draw_buffer_[1]);
+			
+			draw_buffer_[1]->bind();
+			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, channel_.get_format_desc().width, channel_.get_format_desc().height);
 		}
 	}
 				

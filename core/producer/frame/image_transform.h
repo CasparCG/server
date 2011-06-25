@@ -35,8 +35,36 @@ public:
 
 	enum blend_mode
 	{
-		normal,
-		screen
+		normal = 0,
+		lighten,
+		darken,
+		multiply,
+		average,
+		add,
+		subtract,
+		difference,
+		negation,
+		exclusion,
+		screen,
+		overlay,
+		soft_light,
+		hard_light,
+		color_dodge,
+		color_burn,
+		linear_dodge,
+		linear_burn,
+		linear_light,
+		vivid_light,
+		pin_light,
+		hard_mix,
+		reflect,
+		glow,
+		phoenix,
+		hue,
+		saturation,
+		color,
+		luminosity,
+		blend_mode_count 
 	};
 
 	image_transform();
@@ -86,6 +114,8 @@ private:
 	bool deinterlace_;
 	blend_mode blend_mode_;
 };
+
+image_transform::blend_mode get_blend_mode(const std::wstring& str);
 
 image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener);
 
