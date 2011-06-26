@@ -21,6 +21,8 @@
 
 #include "image_kernel.h"
 #include "blending_glsl.h"
+#include "../gpu/shader.h"
+#include "../gpu/device_buffer.h"
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
@@ -34,381 +36,308 @@
 #include <unordered_map>
 
 namespace caspar { namespace core {
-
-class shader_program : boost::noncopyable
-{
-	GLuint program_;
-public:
-
-	shader_program() : program_(0) {}
-	shader_program(shader_program&& other) : program_(other.program_){other.program_ = 0;}
-	shader_program(const std::string& vertex_source_str, const std::string& fragment_source_str) : program_(0)
-	{
-		GLint success;
 	
-		const char* vertex_source = vertex_source_str.c_str();
-						
-		auto vertex_shader = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
-					
-		GL(glShaderSourceARB(vertex_shader, 1, &vertex_source, NULL));
-		GL(glCompileShaderARB(vertex_shader));
-
-		GL(glGetObjectParameterivARB(vertex_shader, GL_OBJECT_COMPILE_STATUS_ARB, &success));
-		if (success == GL_FALSE)
-		{
-			char info[2048];
-			GL(glGetInfoLogARB(vertex_shader, sizeof(info), 0, info));
-			GL(glDeleteObjectARB(vertex_shader));
-			std::stringstream str;
-			str << "Failed to compile vertex shader:" << std::endl << info << std::endl;
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
-		}
-			
-		const char* fragment_source = fragment_source_str.c_str();
-						
-		auto fragmemt_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
-					
-		GL(glShaderSourceARB(fragmemt_shader, 1, &fragment_source, NULL));
-		GL(glCompileShaderARB(fragmemt_shader));
-
-		GL(glGetObjectParameterivARB(fragmemt_shader, GL_OBJECT_COMPILE_STATUS_ARB, &success));
-		if (success == GL_FALSE)
-		{
-			char info[2048];
-			GL(glGetInfoLogARB(fragmemt_shader, sizeof(info), 0, info));
-			GL(glDeleteObjectARB(fragmemt_shader));
-			std::stringstream str;
-			str << "Failed to compile fragment shader:" << std::endl << info << std::endl;
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
-		}
-			
-		program_ = glCreateProgramObjectARB();
-			
-		GL(glAttachObjectARB(program_, vertex_shader));
-		GL(glAttachObjectARB(program_, fragmemt_shader));
-
-		GL(glLinkProgramARB(program_));
-			
-		GL(glDeleteObjectARB(vertex_shader));
-		GL(glDeleteObjectARB(fragmemt_shader));
-
-		GL(glGetObjectParameterivARB(program_, GL_OBJECT_LINK_STATUS_ARB, &success));
-		if (success == GL_FALSE)
-		{
-			char info[2048];
-			GL(glGetInfoLogARB(program_, sizeof(info), 0, info));
-			GL(glDeleteObjectARB(program_));
-			std::stringstream str;
-			str << "Failed to link shader program:" << std::endl << info << std::endl;
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
-		}
-		GL(glUseProgramObjectARB(program_));
-		glUniform1i(glGetUniformLocation(program_, "plane[0]"), 0);
-		glUniform1i(glGetUniformLocation(program_, "plane[1]"), 1);
-		glUniform1i(glGetUniformLocation(program_, "plane[2]"), 2);
-		glUniform1i(glGetUniformLocation(program_, "plane[3]"), 3);
-		glUniform1i(glGetUniformLocation(program_, "plane[4]"), 4);
-		glUniform1i(glGetUniformLocation(program_, "plane[5]"), 5);
-	}
-
-	GLint get_location(const char* name)
-	{
-		GLint loc = glGetUniformLocation(program_, name);
-		return loc;
-	}
-
-	shader_program& operator=(shader_program&& other) 
-	{
-		program_ = other.program_; 
-		other.program_ = 0; 
-		return *this;
-	}
-
-	~shader_program()
-	{
-		glDeleteProgram(program_);
-	}
-
-	void use()
-	{	
-		GL(glUseProgramObjectARB(program_));		
-	}
-};
-
-GLubyte progressive_pattern[] = {
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xFF, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-	
-GLubyte upper_pattern[] = {
-	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00};
-		
-GLubyte lower_pattern[] = {
-	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 
-	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
-	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
-	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff};
-
 struct image_kernel::implementation : boost::noncopyable
 {	
-	std::unordered_map<core::pixel_format::type, shader_program> shaders_;
-
-public:
-	std::unordered_map<core::pixel_format::type, shader_program>& shaders()
+	std::unique_ptr<shader> shader_;
+	
+	implementation()
 	{
-		GL(glEnable(GL_POLYGON_STIPPLE));
+		std::string vertex = 
+			"void main()																		\n"
+			"{																					\n"
+			"	gl_TexCoord[0] = gl_MultiTexCoord0;												\n"
+			"	gl_TexCoord[1] = gl_MultiTexCoord1;												\n"
+			"	gl_FrontColor  = gl_Color;														\n"
+			"	gl_Position    = ftransform();													\n"
+			"}																					\n";
 
-		if(shaders_.empty())
-		{
-		std::string common_vertex = 
-			"void main()															"
-			"{																		"
-			"	gl_TexCoord[0] = gl_MultiTexCoord0;									"
-			"	gl_TexCoord[1] = gl_MultiTexCoord1;									"
-			"	gl_FrontColor = gl_Color;											"
-			"	gl_Position = ftransform();											"
-			"}																		";
-
-		std::string common_fragment = std::string() +
-			"uniform sampler2D	plane[6];											"
-			"uniform float		gain;												"
-			"uniform bool		HD;													"
-			"uniform bool		local_key;											"
-			"uniform bool		layer_key;											"
-			"uniform int		blend_mode;											"
+		std::string fragment = std::string() +
+			"uniform sampler2D	background;														\n"
+			"uniform sampler2D	plane[4];														\n"
+			"uniform sampler2D	local_key;														\n"
+			"uniform sampler2D	layer_key;														\n"
+			"																					\n"
+			"uniform bool		is_hd;															\n"
+			"uniform bool		has_local_key;													\n"
+			"uniform bool		has_layer_key;													\n"
+			"uniform int		blend_mode;														\n"
+			"uniform int		interlace_mode;													\n"
+			"uniform int		pixel_format;													\n"
+			"																					\n"
+			"uniform float		gain;															\n"
+			"																					\n"
+			"uniform bool		levels;															\n"
+			"uniform float		min_input;														\n"
+			"uniform float		max_input;														\n"
+			"uniform float		gamma;															\n"
+			"uniform float		min_output;														\n"
+			"uniform float		max_output;														\n"
+			"																					\n"
+			"uniform bool		csb;															\n"
+			"uniform float		brt;															\n"
+			"uniform float		sat;															\n"
+			"uniform float		con;															\n"
+			"																					\n"
+			"uniform bool		desaturate;														\n"
+			"uniform float		desaturation;													\n"
 
 			+
 
 			get_blend_glsl()
-
+			
 			+
 
-			"\nvec3 get_blend_color(vec3 back, vec3 fore)								  "
-			"\n{																		  "
-			"\n	switch(blend_mode)														  "
-			"\n	{																		  "
-			"\n	case  0: return BlendNormal(back, fore);								  "
-			"\n	case  1: return BlendLighten(back, fore);								  "
-			"\n	case  2: return BlendDarken(back, fore);								  "
-			"\n	case  3: return BlendMultiply(back, fore);								  "
-			"\n	case  4: return BlendAverage(back, fore);								  "
-			"\n	case  5: return BlendAdd(back, fore);									  "
-			"\n	case  6: return BlendSubstract(back, fore);								  "
-			"\n	case  7: return BlendDifference(back, fore);							  "
-			"\n	case  8: return BlendNegation(back, fore);								  "
-			"\n	case  9: return BlendExclusion(back, fore);								  "
-			"\n	case 10: return BlendScreen(back, fore);								  "
-			"\n	case 11: return BlendOverlay(back, fore);								  "
-			//"\n	case 12: return BlendSoftLight(back, fore);								  "
-			//"\n	case 13: return BlendHardLight(back, fore);								  "
-			"\n	case 14: return BlendColorDodge(back, fore);							  "
-			"\n	case 15: return BlendColorBurn(back, fore);								  "
-			"\n	case 16: return BlendLinearDodge(back, fore);							  "
-			"\n	case 17: return BlendLinearBurn(back, fore);							  "
-			"\n	case 18: return BlendLinearLight(back, fore);							  "
-			"\n	case 19: return BlendVividLight(back, fore);							  "
-			"\n	case 20: return BlendPinLight(back, fore);								  "
-			"\n	case 21: return BlendHardMix(back, fore);								  "
-			"\n	case 22: return BlendReflect(back, fore);								  "
-			"\n	case 23: return BlendGlow(back, fore);									  "
-			"\n	case 24: return BlendPhoenix(back, fore);								  "
-			"\n case 25: return BlendHue(back, fore);									  "
-			"\n case 26: return BlendSaturation(back, fore);							  "
-			"\n case 27: return BlendColor(back, fore);								  "
-			"\n case 28: return BlendLuminosity(back, fore);							  "
-			"\n	}																		  "
-			"\n																			  "
-			"\n	return BlendNormal(back, fore);											  "
-			"\n}																			  "
-																						  
-			"vec4 get_color(vec4 fore)														  "
-			"{																				  "
-			"   vec4 back = texture2D(plane[5], gl_TexCoord[1].st);							  "
-			"   fore.rgb = get_blend_color(back.rgb, fore.rgb);"
-			"	return vec4(fore.rgb * fore.a + back.rgb * (1.0-fore.a), back.a + fore.a);"
-			"}																				  "
-																				
-			// NOTE: YCbCr, ITU-R, http://www.intersil.com/data/an/an9717.pdf		
-			// TODO: Support for more yuv formats might be needed.					
-			"vec4 ycbcra_to_bgra_sd(float y, float cb, float cr, float a)			"
-			"{																		"
-			"	cb -= 0.5;															"
-			"	cr -= 0.5;															"
-			"	y = 1.164*(y-0.0625);												"
-			"																		"
-			"	vec4 color;															"
-			"	color.r = y + 1.596 * cr;											"
-			"	color.g = y - 0.813 * cr - 0.391 * cb;								"
-			"	color.b = y + 2.018 * cb;											"
-			"	color.a = a;														"
-			"																		"
-			"	return color;														"
-			"}																		"			
-			"																		"
+			"vec3 get_blend_color(vec3 back, vec3 fore)											\n"
+			"{																					\n"
+			"	switch(blend_mode)																\n"
+			"	{																				\n"
+			"	case  0: return BlendNormal(back, fore);										\n"
+			"	case  1: return BlendLighten(back, fore);										\n"
+			"	case  2: return BlendDarken(back, fore);										\n"
+			"	case  3: return BlendMultiply(back, fore);										\n"
+			"	case  4: return BlendAverage(back, fore);										\n"
+			"	case  5: return BlendAdd(back, fore);											\n"
+			"	case  6: return BlendSubstract(back, fore);										\n"
+			"	case  7: return BlendDifference(back, fore);									\n"
+			"	case  8: return BlendNegation(back, fore);										\n"
+			"	case  9: return BlendExclusion(back, fore);										\n"
+			"	case 10: return BlendScreen(back, fore);										\n"
+			"	case 11: return BlendOverlay(back, fore);										\n"
+			//"	case 12: return BlendSoftLight(back, fore);										\n"
+			"	case 13: return BlendHardLight(back, fore);										\n"
+			"	case 14: return BlendColorDodge(back, fore);									\n"
+			"	case 15: return BlendColorBurn(back, fore);										\n"
+			"	case 16: return BlendLinearDodge(back, fore);									\n"
+			"	case 17: return BlendLinearBurn(back, fore);									\n"
+			"	case 18: return BlendLinearLight(back, fore);									\n"
+			"	case 19: return BlendVividLight(back, fore);									\n"
+			"	case 20: return BlendPinLight(back, fore);										\n"
+			"	case 21: return BlendHardMix(back, fore);										\n"
+			"	case 22: return BlendReflect(back, fore);										\n"
+			"	case 23: return BlendGlow(back, fore);											\n"
+			"	case 24: return BlendPhoenix(back, fore);										\n"
+			"	case 25: return BlendHue(back, fore);											\n"
+			"	case 26: return BlendSaturation(back, fore);									\n"
+			"	case 27: return BlendColor(back, fore);											\n"
+			"	case 28: return BlendLuminosity(back, fore);									\n"
+			"	}																				\n"
+			"																					\n"
+			"	return BlendNormal(back, fore);													\n"
+			"}																					\n"
+			"																					\n"																			  
+			"vec4 blend_color(vec4 fore)														\n"
+			"{																					\n"
+			"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
+			"   if(desaturate)																	\n"
+			"		fore.rgb = Desaturate(fore.rgb, desaturation);								\n"
+			"   if(levels)																		\n"
+			"		fore.rgb = LevelsControl(fore.rgb, min_input, max_input, gamma, min_output, max_output); \n"
+			"	if(csb)																			\n"
+			"		fore.rgb = ContrastSaturationBrightness(fore.rgb, brt, sat, con);			\n"
+			"   fore.rgb = get_blend_color(back.rgb, fore.rgb);									\n"
+			"	return vec4(fore.rgb * fore.a + back.rgb * (1.0-fore.a), back.a + fore.a);		\n"
+			"}																					\n"
+			"																					\n"
+			"// NOTE: YCbCr, ITU-R, http://www.intersil.com/data/an/an9717.pdf					\n"
+			"// TODO: Support for more yuv formats might be needed.								\n"
+			"vec4 ycbcra_to_bgra_sd(float y, float cb, float cr, float a)						\n"
+			"{																					\n"
+			"	cb -= 0.5;																		\n"
+			"	cr -= 0.5;																		\n"
+			"	y = 1.164*(y-0.0625);															\n"
+			"																					\n"
+			"	vec4 color;																		\n"
+			"	color.r = y + 1.596 * cr;														\n"
+			"	color.g = y - 0.813 * cr - 0.391 * cb;											\n"
+			"	color.b = y + 2.018 * cb;														\n"
+			"	color.a = a;																	\n"
+			"																					\n"
+			"	return color;																	\n"
+			"}																					\n"			
+			"																					\n"
+			"vec4 ycbcra_to_bgra_hd(float y, float cb, float cr, float a)						\n"
+			"{																					\n"
+			"	cb -= 0.5;																		\n"
+			"	cr -= 0.5;																		\n"
+			"	y = 1.164*(y-0.0625);															\n"
+			"																					\n"
+			"	vec4 color;																		\n"
+			"	color.r = y + 1.793 * cr;														\n"
+			"	color.g = y - 0.534 * cr - 0.213 * cb;											\n"
+			"	color.b = y + 2.115 * cb;														\n"
+			"	color.a = a;																	\n"
+			"																					\n"
+			"	return color;																	\n"
+			"}																					\n"			
+			"																					\n"			
+			"vec4 ycbcra_to_bgra(float y, float cb, float cr, float a)							\n"
+			"{																					\n"
+			"	if(is_hd)																		\n"
+			"		return ycbcra_to_bgra_hd(y, cb, cr, a);										\n"
+			"	else																			\n"
+			"		return ycbcra_to_bgra_sd(y, cb, cr, a);										\n"
+			"}																					\n"
+			"																					\n"
+			"vec4 get_bgra_color()																\n"
+			"{																					\n"
+			"	switch(pixel_format)															\n"
+			"	{																				\n"
+			"	case 0:		//gray																\n"
+			"		return vec4(texture2D(plane[0], gl_TexCoord[0].st).rrr, 1.0);				\n"
+			"	case 1:		//bgra,																\n"
+			"		return texture2D(plane[0], gl_TexCoord[0].st).rgba;							\n"
+			"	case 2:		//rgba,																\n"
+			"		return texture2D(plane[0], gl_TexCoord[0].st).bgra;							\n"
+			"	case 3:		//argb,																\n"
+			"		return texture2D(plane[0], gl_TexCoord[0].st).abgr;							\n"
+			"	case 4:		//abgr,																\n"
+			"		return texture2D(plane[0], gl_TexCoord[0].st).grab;							\n"
+			"	case 5:		//ycbcr,															\n"
+			"		{																			\n"
+			"			float y  = texture2D(plane[0], gl_TexCoord[0].st).r;					\n"
+			"			float cb = texture2D(plane[1], gl_TexCoord[0].st).r;					\n"
+			"			float cr = texture2D(plane[2], gl_TexCoord[0].st).r;					\n"
+			"			return ycbcra_to_bgra(y, cb, cr, 1.0);									\n"
+			"		}																			\n"
+			"	case 6:		//ycbcra															\n"
+			"		{																			\n"
+			"			float y  = texture2D(plane[0], gl_TexCoord[0].st).r;					\n"
+			"			float cb = texture2D(plane[1], gl_TexCoord[0].st).r;					\n"
+			"			float cr = texture2D(plane[2], gl_TexCoord[0].st).r;					\n"
+			"			float a  = texture2D(plane[3], gl_TexCoord[0].st).r;					\n"
+			"			return ycbcra_to_bgra(y, cb, cr, a);									\n"
+			"		}																			\n"
+			"	}																				\n"
+			"	return vec4(0.0, 0.0, 0.0, 0.0);												\n"
+			"}																					\n"
+			"																					\n"
+			"void main()																		\n"
+			"{																					\n"
+			"   switch(interlace_mode)															\n"
+			"	{																				\n"
+			"	case 1: // lower																\n"
+			"		{																			\n"
+			"			bool odd = mod(floor(gl_FragCoord.y), 2.0) > 0.5;						\n"
+			"			if(odd)																	\n"
+			"				discard;															\n"
+			"			break;																	\n"
+			"		}																			\n"
+			"	case 2: //upper																	\n"
+			"		{																			\n"
+			"			bool odd = mod(floor(gl_FragCoord.y), 2.0) > 0.5;						\n"
+			"			if(!odd)																\n"
+			"				discard;															\n"
+			"			break;																	\n"
+			"		}																			\n"
+			"	}																				\n"
+			"																					\n"
+			"	vec4 color = get_bgra_color();													\n"
+			"	if(has_local_key)																\n"
+			"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
+			"	if(has_layer_key)																\n"
+			"		color.a *= texture2D(layer_key, gl_TexCoord[1].st).r;						\n"
+			"	gl_FragColor = blend_color(color * gl_Color * gain);							\n"
+			"}																					\n"
+			;
 
-			"vec4 ycbcra_to_bgra_hd(float y, float cb, float cr, float a)			"
-			"{																		"
-			"	cb -= 0.5;															"
-			"	cr -= 0.5;															"
-			"	y = 1.164*(y-0.0625);												"
-			"																		"
-			"	vec4 color;															"
-			"	color.r = y + 1.793 * cr;											"
-			"	color.g = y - 0.534 * cr - 0.213 * cb;								"
-			"	color.b = y + 2.115 * cb;											"
-			"	color.a = a;														"
-			"																		"
-			"	return color;														"
-			"}																		"			
-			"																		";
+			shader_.reset(new shader(vertex, fragment));
+	}
+
+	
+	void draw(size_t										width, 
+			  size_t										height, 
+			  const core::pixel_format_desc&				pix_desc, 
+			  const core::image_transform&					transform, 
+			  const std::vector<safe_ptr<device_buffer>>&	planes, 
+			  const safe_ptr<device_buffer>&				background,
+			  const std::shared_ptr<device_buffer>&			local_key,			  
+			  const std::shared_ptr<device_buffer>&			layer_key)
+	{
+		GL(glEnable(GL_TEXTURE_2D));
 			
-		shaders_[core::pixel_format::gray] = shader_program(common_vertex, common_fragment +
-
-			"void main()															"
-			"{																		"
-			"	vec4 rgba = vec4(texture2D(plane[0], gl_TexCoord[0].st).rrr, 1.0);	"
-			"	if(local_key)														"
-			"		rgba.a *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
-			"	if(layer_key)														"
-			"		rgba.a *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = get_color(rgba * gain);											"
-			"}																		");
-
-		shaders_[core::pixel_format::abgr] = shader_program(common_vertex, common_fragment +
-
-			"void main()															"
-			"{																		"
-			"	vec4 abgr = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(local_key)														"
-			"		abgr.b *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
-			"	if(layer_key)														"
-			"		abgr.b *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = get_color(abgr.argb * gain);									"
-			"}																		");
-		
-		shaders_[core::pixel_format::argb]= shader_program(common_vertex, common_fragment +
-
-			"void main()															"	
-			"{																		"
-			"	vec4 argb = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(local_key)														"
-			"		argb.b *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
-			"	if(layer_key)														"
-			"		argb.b *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = get_color(argb.grab * gl_Color * gain);							"
-			"}																		");
-		
-		shaders_[core::pixel_format::bgra]= shader_program(common_vertex, common_fragment +
-
-			"void main()															"
-			"{																		"
-			"	vec4 bgra = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(local_key)														"
-			"		bgra.a *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
-			"	if(layer_key)														"
-			"		bgra.a *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = get_color(bgra.rgba * gl_Color * gain);							"
-			"}																		");
-		
-		shaders_[core::pixel_format::rgba] = shader_program(common_vertex, common_fragment +
-
-			"void main()															"
-			"{																		"
-			"	vec4 rgba = texture2D(plane[0], gl_TexCoord[0].st);					"
-			"	if(local_key)														"
-			"		rgba.a *= texture2D(plane[3], gl_TexCoord[1].st).r;				"
-			"	if(layer_key)														"
-			"		rgba.a *= texture2D(plane[4], gl_TexCoord[1].st).r;				"
-			"	gl_FragColor = get_color(rgba.bgra * gl_Color * gain);							"
-			"}																		");
-		
-		shaders_[core::pixel_format::ycbcr] = shader_program(common_vertex, common_fragment +
-
-			"void main()															"
-			"{																		"
-			"	float y  = texture2D(plane[0], gl_TexCoord[0].st).r;				"
-			"	float cb = texture2D(plane[1], gl_TexCoord[0].st).r;				"
-			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;				"
-			"	float a = 1.0;														"	
-			"	if(local_key)														"
-			"		a *= texture2D(plane[3], gl_TexCoord[1].st).r;					"
-			"	if(layer_key)														"
-			"		a *= texture2D(plane[4], gl_TexCoord[1].st).r;					"
-			"	if(HD)																"
-			"		gl_FragColor = get_color(ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain);"
-			"	else																"
-			"		gl_FragColor = get_color(ycbcra_to_bgra_sd(y, cb, cr, a) * gl_Color * gain);"
-			"}																		");
-		
-		shaders_[core::pixel_format::ycbcra] = shader_program(common_vertex, common_fragment +
-
-			"void main()															"
-			"{																		"
-			"	float y  = texture2D(plane[0], gl_TexCoord[0].st).r;				"
-			"	float cb = texture2D(plane[1], gl_TexCoord[0].st).r;				"
-			"	float cr = texture2D(plane[2], gl_TexCoord[0].st).r;				"
-			"	float a  = texture2D(plane[3], gl_TexCoord[0].st).r;				"
-			"	if(local_key)														"
-			"		a *= texture2D(plane[3], gl_TexCoord[1].st).r;					"
-			"	if(layer_key)														"
-			"		a *= texture2D(plane[4], gl_TexCoord[1].st).r;					"
-			"	if(HD)																"
-			"		gl_FragColor = get_color(ycbcra_to_bgra_hd(y, cb, cr, a) * gl_Color * gain);"
-			"	else																"
-			"		gl_FragColor = get_color(ycbcra_to_bgra_sd(y, cb, cr, a) * gl_Color * gain);"
-			"}																		");
+		// Setup depth for interlacing and explicit z-culling
+		double z = 0.0;
+		if(transform.get_mode() == core::video_mode::upper)
+		{	
+			GL(glEnable(GL_DEPTH_TEST));	
+			z = 1.0;
 		}
-		return shaders_;
+		else if(transform.get_mode() == core::video_mode::lower)
+			GL(glClear(GL_DEPTH_BUFFER_BIT));		
+
+		// Bind textures
+
+		for(size_t n = 0; n < planes.size(); ++n)
+			planes[n]->bind(n);
+
+		if(local_key)
+			local_key->bind(4);
+		
+		if(layer_key)
+			layer_key->bind(5);
+
+		background->bind(6);
+
+		// Setup shader
+
+		shader_->use();	
+
+		shader_->set("plane[0]",		0);
+		shader_->set("plane[1]",		1);
+		shader_->set("plane[2]",		2);
+		shader_->set("plane[3]",		3);
+		shader_->set("local_key",		4);
+		shader_->set("layer_key",		5);
+		shader_->set("background",		6);
+		shader_->set("gain",			static_cast<GLfloat>(transform.get_gain()));
+		shader_->set("is_hd",			pix_desc.planes.at(0).height > 700 ? 1 : 0);
+		shader_->set("has_local_key",	local_key ? 1 : 0);
+		shader_->set("has_layer_key",	layer_key ? 1 : 0);
+		shader_->set("blend_mode",		transform.get_blend_mode());
+		shader_->set("interlace_mode",	transform.get_mode());
+		shader_->set("pixel_format",	pix_desc.pix_fmt);	
+
+		shader_->set("levels",			false);	
+		shader_->set("csb",				false);	
+		shader_->set("desaturate",		false);	
+
+		// Setup drawing area
+
+		GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
+		GL(glViewport(0, 0, width, height));
+						
+		auto m_p = transform.get_clip_translation();
+		auto m_s = transform.get_clip_scale();
+		double w = static_cast<double>(width);
+		double h = static_cast<double>(height);
+
+		GL(glEnable(GL_SCISSOR_TEST));
+		GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
+			
+		auto f_p = transform.get_fill_translation();
+		auto f_s = transform.get_fill_scale();
+		
+		// Draw
+
+		glBegin(GL_QUADS);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex3d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0, z);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex3d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0, z);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex3d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0, z);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex3d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0, z);
+		glEnd();
+
+		GL(glDisable(GL_SCISSOR_TEST));	
+		GL(glDisable(GL_DEPTH_TEST));	
 	}
 };
 
 image_kernel::image_kernel() : impl_(new implementation()){}
 
-void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, bool local_key, bool layer_key)
+void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, const std::vector<safe_ptr<device_buffer>>& planes, 
+							  const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
 {
-	GL(glEnable(GL_TEXTURE_2D));
-	GL(glDisable(GL_DEPTH_TEST));	
-	
-	if(transform.get_mode() == core::video_mode::upper)
-		glPolygonStipple(upper_pattern);
-	else if(transform.get_mode() == core::video_mode::lower)
-		glPolygonStipple(lower_pattern);
-	else
-		glPolygonStipple(progressive_pattern);
-
-	impl_->shaders()[pix_desc.pix_fmt].use();
-
-	GL(glUniform1f(impl_->shaders()[pix_desc.pix_fmt].get_location("gain"), static_cast<GLfloat>(transform.get_gain())));
-	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("HD"), pix_desc.planes.at(0).height > 700 ? 1 : 0));
-	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("local_key"), local_key ? 1 : 0));
-	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("layer_key"), layer_key ? 1 : 0));
-	GL(glUniform1i(impl_->shaders()[pix_desc.pix_fmt].get_location("blend_mode"), transform.get_blend_mode()));
-
-	GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
-	GL(glViewport(0, 0, width, height));
-						
-	auto m_p = transform.get_clip_translation();
-	auto m_s = transform.get_clip_scale();
-	double w = static_cast<double>(width);
-	double h = static_cast<double>(height);
-
-	GL(glEnable(GL_SCISSOR_TEST));
-	GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
-			
-	auto f_p = transform.get_fill_translation();
-	auto f_s = transform.get_fill_scale();
-			
-	glBegin(GL_QUADS);
-		glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex2d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0);
-		glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
-		glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-		glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-	glEnd();
-	GL(glDisable(GL_SCISSOR_TEST));	
+	impl_->draw(width, height, pix_desc, transform, planes, background, local_key, layer_key);
 }
 
 }}
