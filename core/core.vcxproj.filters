@@ -118,6 +118,9 @@
     <ClInclude Include="mixer\image\blending_glsl.h">
       <Filter>source\mixer\image</Filter>
     </ClInclude>
+    <ClInclude Include="mixer\gpu\shader.h">
+      <Filter>source\mixer\gpu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -189,6 +192,9 @@
     </ClCompile>
     <ClCompile Include="video_format.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\shader.cpp">
+      <Filter>source\mixer\gpu</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

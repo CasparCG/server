@@ -53,48 +53,50 @@ struct render_item
 };
 
 struct image_mixer::implementation : boost::noncopyable
-{	
-	static const size_t LOCAL_KEY_INDEX = 3;
-	static const size_t LAYER_KEY_INDEX = 4;
-	static const size_t BASE_INDEX = 5;
-	
+{		
 	video_channel_context&					channel_;
 	
 	std::stack<core::image_transform>		transform_stack_;
 
 	std::queue<std::queue<std::deque<render_item>>>	render_queue_; // layer/stream/items
 	
-	image_kernel							kernel_;
+	std::unique_ptr<image_kernel>			kernel_;
 		
 	std::shared_ptr<device_buffer>			draw_buffer_[2];
 	std::shared_ptr<device_buffer>			write_buffer_;
 
 	std::shared_ptr<device_buffer>			stream_key_buffer_[2];
 	std::shared_ptr<device_buffer>			layer_key_buffer_;
-
-	bool									local_key_;
-	bool									layer_key_;
 	
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
-		, write_buffer_	(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4))
-		, layer_key_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1))
-		, local_key_(false)
-		, layer_key_(false)
 	{
-		draw_buffer_[0] = channel_.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4);
-		draw_buffer_[1] = channel_.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4);
-		stream_key_buffer_[0] = video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1);
-		stream_key_buffer_[1] = video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1);
-
+		initialize_buffers();
 		transform_stack_.push(core::image_transform());
 
 		channel_.ogl().invoke([=]
 		{
 			if(!GLEE_VERSION_3_0)
 				CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";//BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
+
+			kernel_.reset(new image_kernel());
 		});
+	}
+
+	~implementation()
+	{
+		channel_.ogl().gc();
+	}
+
+	void initialize_buffers()
+	{
+		write_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		layer_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		draw_buffer_[0]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		draw_buffer_[1]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		stream_key_buffer_[0]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		stream_key_buffer_[1]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
 	}
 
 	void begin(core::basic_frame& frame)
@@ -127,27 +129,16 @@ public:
 	void end_layer()
 	{
 	}
-
-	void reinitialize_buffers()
-	{
-		draw_buffer_[0]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		draw_buffer_[1]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		write_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		stream_key_buffer_[0]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-		stream_key_buffer_[1]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-		layer_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-		channel_.ogl().gc();
-	}
-
+	
 	safe_ptr<host_buffer> render()
 	{		
 		auto render_queue = std::move(render_queue_);
 
 		return channel_.ogl().invoke([=]() mutable -> safe_ptr<host_buffer>
-		{
-			if(draw_buffer_[0]->width() != channel_.get_format_desc().width || draw_buffer_[0]->height() != channel_.get_format_desc().height)
-				reinitialize_buffers();
-			
+		{			
+			if(channel_.get_format_desc().width != write_buffer_->width() || channel_.get_format_desc().height != write_buffer_->height())
+				initialize_buffers();
+
 			return do_render(std::move(render_queue));
 		});
 	}
@@ -201,23 +192,25 @@ public:
 
 	void render(std::deque<render_item>& stream, bool local_key, bool layer_key)
 	{
+		CASPAR_ASSERT(!stream.empty());
+
 		while(stream.size() > 2)
 			stream.pop_front();
-		
-		BOOST_FOREACH(auto item2, stream)
-		{
-			for(size_t n = 0; n < item2.textures.size(); ++n)
-				item2.textures[n]->bind(n);	
-		}
 
+		// Kernel expects lower field first for early explicit z-culling
+		if(stream[0].transform.get_mode() == core::video_mode::upper && stream.size() == 2)
+			std::swap(stream[0], stream[1]);		
+		
 		if(stream.front().transform.get_is_key())
 		{
-			stream_key_buffer_[0]->bind(BASE_INDEX);			
 			stream_key_buffer_[1]->attach();
 			
 			BOOST_FOREACH(auto item2, stream)
-				kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, false, false);
-			
+			{	
+				kernel_->draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, item2.textures, 
+								make_safe(stream_key_buffer_[0]), nullptr, nullptr);
+			}
+
 			std::swap(stream_key_buffer_[0], stream_key_buffer_[1]);
 
 			stream_key_buffer_[1]->bind();
@@ -225,15 +218,14 @@ public:
 		}
 		else
 		{
-			stream_key_buffer_[0]->bind(LOCAL_KEY_INDEX);	
-			layer_key_buffer_->bind(LAYER_KEY_INDEX);
-			
-			draw_buffer_[0]->bind(BASE_INDEX);			
 			draw_buffer_[1]->attach();	
 			
 			BOOST_FOREACH(auto item2, stream)
-				kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, local_key, layer_key);	
-			
+			{	
+				kernel_->draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, item2.textures, 
+								make_safe(draw_buffer_[0]), local_key ? stream_key_buffer_[0] : nullptr, layer_key ? layer_key_buffer_ : nullptr);	
+			}
+
 			std::swap(draw_buffer_[0], draw_buffer_[1]);
 			
 			draw_buffer_[1]->bind();
