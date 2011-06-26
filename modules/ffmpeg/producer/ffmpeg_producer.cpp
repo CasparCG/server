@@ -37,6 +37,7 @@
 #include <common/env.h>
 
 #include <tbb/parallel_invoke.h>
+#include <tbb/task_group.h>
 
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
@@ -61,6 +62,8 @@ struct ffmpeg_producer : public core::frame_producer
 
 	std::deque<std::pair<int, std::vector<int16_t>>> audio_chunks_;
 	std::deque<std::pair<int, safe_ptr<core::write_frame>>> video_frames_;
+	
+	tbb::task_group							task_group_;
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter_str, bool loop, int start, int length) 
 		: filename_(filename)
@@ -175,8 +178,13 @@ public:
 	}
 
 	safe_ptr<core::basic_frame> decode_frame()
-	{
-		decode_packets();
+	{		
+		// "receive" is called on the same thread as the gpu mixer runs. Minimize "receive" time in order to allow gpu and cpu to run in parallel. 
+		task_group_.wait();
+		task_group_.run([=]
+		{
+			decode_packets();
+		});
 
 		if(video_decoder_ && audio_decoder_ && !video_frames_.empty() && !audio_chunks_.empty())
 		{
