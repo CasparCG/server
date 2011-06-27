@@ -62,6 +62,7 @@ struct image_kernel::implementation : boost::noncopyable
 			"uniform bool		has_local_key;													\n"
 			"uniform bool		has_layer_key;													\n"
 			"uniform int		blend_mode;														\n"
+			"uniform int		alpha_mode;														\n"
 			"uniform int		interlace_mode;													\n"
 			"uniform int		pixel_format;													\n"
 			"																					\n"
@@ -119,6 +120,7 @@ struct image_kernel::implementation : boost::noncopyable
 			"	case 26: return BlendSaturation(back, fore);									\n"
 			"	case 27: return BlendColor(back, fore);											\n"
 			"	case 28: return BlendLuminosity(back, fore);									\n"
+			"	case 29: return BlendInvert(back, fore);										\n"
 			"	}																				\n"
 			"																					\n"
 			"	return BlendNormal(back, fore);													\n"
@@ -134,6 +136,7 @@ struct image_kernel::implementation : boost::noncopyable
 			"		fore.rgb = ContrastSaturationBrightness(fore.rgb, brt, sat, con);			\n"
 			"   fore.rgb = get_blend_color(back.bgr, fore.rgb);									\n"
 			"   fore.rgb = fore.bgr; // rgb to bgr												\n"
+			"																					\n"
 			"	return vec4(fore.rgb * fore.a + back.rgb * (1.0-fore.a), back.a + fore.a);		\n"
 			"}																					\n"
 			"																					\n"
@@ -293,6 +296,7 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("has_local_key",	local_key ? 1 : 0);
 		shader_->set("has_layer_key",	layer_key ? 1 : 0);
 		shader_->set("blend_mode",		transform.get_blend_mode());
+		shader_->set("alpha_mode",		transform.get_alpha_mode());
 		shader_->set("interlace_mode",	transform.get_mode());
 		shader_->set("pixel_format",	pix_desc.pix_fmt);	
 
