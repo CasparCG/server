@@ -48,6 +48,8 @@ public:
 		std::wstringstream str(color_str_.substr(1));
 		str >> std::hex >> value;
 
+		frame->commit();
+
 		frame_ = std::move(frame);
 	}
 
