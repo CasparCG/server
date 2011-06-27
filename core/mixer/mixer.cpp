@@ -95,8 +95,6 @@ struct mixer::implementation : boost::noncopyable
 	boost::fusion::map<boost::fusion::pair<core::image_transform, image_transforms>,
 					boost::fusion::pair<core::audio_transform, audio_transforms>> transforms_;
 	
-	boost::fusion::map<boost::fusion::pair<core::image_transform, tweened_transform<core::image_transform>>,
-					boost::fusion::pair<core::audio_transform, tweened_transform<core::audio_transform>>> root_transforms_;
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
@@ -136,24 +134,8 @@ public:
 	{
 		channel_.execution().invoke([&]
 		{
-			set_transform(image_transform(), 0, L"none");
-			set_transform(audio_transform(), 0, L"none");
-
 			boost::fusion::at_key<image_transform>(transforms_).clear();
 			boost::fusion::at_key<audio_transform>(transforms_).clear();
-		});
-	}
-			
-	template<typename T>	
-	void set_transform(const T& transform, unsigned int mix_duration, const std::wstring& tween)
-	{
-		channel_.execution().invoke([&]
-		{
-			auto& root = boost::fusion::at_key<T>(root_transforms_);
-
-			auto src = root.fetch();
-			auto dst = transform;
-			root = tweened_transform<T>(src, dst, mix_duration, tween);
 		});
 	}
 		
@@ -169,20 +151,7 @@ public:
 			transforms[index] = tweened_transform<T>(src, dst, mix_duration, tween);
 		});
 	}
-		
-	template<typename T>
-	void apply_transform(const std::function<T(const T&)>& transform, unsigned int mix_duration, const std::wstring& tween)
-	{
-		return channel_.execution().invoke([&]
-		{
-			auto& root = boost::fusion::at_key<T>(root_transforms_);
-
-			auto src = root.fetch();
-			auto dst = transform(src);
-			root = tweened_transform<T>(src, dst, mix_duration, tween);
-		});
-	}
-		
+				
 	template<typename T>
 	void apply_transform(int index, const std::function<T(T)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
@@ -205,7 +174,6 @@ private:
 		
 	safe_ptr<host_buffer> mix_image(std::map<int, safe_ptr<core::basic_frame>> frames)
 	{		
-		auto& root_image_transform = boost::fusion::at_key<core::image_transform>(root_transforms_);
 		auto& image_transforms = boost::fusion::at_key<core::image_transform>(transforms_);
 		
 		BOOST_FOREACH(auto& frame, frames)
@@ -217,8 +185,8 @@ private:
 				auto frame1 = make_safe<core::basic_frame>(frame.second);
 				auto frame2 = make_safe<core::basic_frame>(frame.second);
 				
-				frame1->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame.first].fetch_and_tick(1);
-				frame2->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame.first].fetch_and_tick(1);
+				frame1->get_image_transform() = image_transforms[frame.first].fetch_and_tick(1);
+				frame2->get_image_transform() = image_transforms[frame.first].fetch_and_tick(1);
 
 				if(frame1->get_image_transform() != frame2->get_image_transform())
 					core::basic_frame::interlace(frame1, frame2, channel_.get_format_desc().mode)->accept(image_mixer_);
@@ -228,7 +196,7 @@ private:
 			else
 			{
 				auto frame1 = make_safe<core::basic_frame>(frame.second);
-				frame1->get_image_transform() = root_image_transform.fetch_and_tick(1)*image_transforms[frame.first].fetch_and_tick(1);
+				frame1->get_image_transform() = image_transforms[frame.first].fetch_and_tick(1);
 				frame1->accept(image_mixer_);
 			}
 
@@ -240,7 +208,6 @@ private:
 
 	std::vector<int16_t> mix_audio(const std::map<int, safe_ptr<core::basic_frame>>& frames)
 	{
-		auto& root_audio_transform = boost::fusion::at_key<core::audio_transform>(root_transforms_);
 		auto& audio_transforms = boost::fusion::at_key<core::audio_transform>(transforms_);
 
 		BOOST_FOREACH(auto& frame, frames)
@@ -248,7 +215,7 @@ private:
 			const unsigned int num = channel_.get_format_desc().mode == core::video_mode::progressive ? 1 : 2;
 
 			auto frame1 = make_safe<core::basic_frame>(frame.second);
-			frame1->get_audio_transform() = root_audio_transform.fetch_and_tick(num)*audio_transforms[frame.first].fetch_and_tick(num);
+			frame1->get_audio_transform() = audio_transforms[frame.first].fetch_and_tick(num);
 			frame1->accept(audio_mixer_);
 		}
 
@@ -269,13 +236,9 @@ safe_ptr<core::write_frame> mixer::create_frame(const void* tag, size_t width, s
 	return create_frame(tag, desc);
 }
 void mixer::reset_transforms(){impl_->reset_transforms();}
-void mixer::set_image_transform(const core::image_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::image_transform>(transform, mix_duration, tween);}
 void mixer::set_image_transform(int index, const core::image_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::image_transform>(index, transform, mix_duration, tween);}
-void mixer::set_audio_transform(const core::audio_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::audio_transform>(transform, mix_duration, tween);}
 void mixer::set_audio_transform(int index, const core::audio_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::audio_transform>(index, transform, mix_duration, tween);}
-void mixer::apply_image_transform(const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::image_transform>(transform, mix_duration, tween);}
 void mixer::apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::image_transform>(index, transform, mix_duration, tween);}
-void mixer::apply_audio_transform(const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(transform, mix_duration, tween);}
 void mixer::apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(index, transform, mix_duration, tween);}
 
 }}
