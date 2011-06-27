@@ -79,8 +79,6 @@ struct image_kernel::implementation : boost::noncopyable
 			"uniform float		sat;															\n"
 			"uniform float		con;															\n"
 			"																					\n"
-			"uniform bool		desaturate;														\n"
-			"uniform float		desaturation;													\n"
 
 			+
 
@@ -128,14 +126,14 @@ struct image_kernel::implementation : boost::noncopyable
 			"																					\n"																			  
 			"vec4 blend_color(vec4 fore)														\n"
 			"{																					\n"
+			"   fore.rgb = fore.bgr; // bgr to rgb												\n"
 			"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
-			"   if(desaturate)																	\n"
-			"		fore.rgb = Desaturate(fore.rgb, desaturation);								\n"
 			"   if(levels)																		\n"
 			"		fore.rgb = LevelsControl(fore.rgb, min_input, max_input, gamma, min_output, max_output); \n"
 			"	if(csb)																			\n"
 			"		fore.rgb = ContrastSaturationBrightness(fore.rgb, brt, sat, con);			\n"
-			"   fore.rgb = get_blend_color(back.rgb, fore.rgb);									\n"
+			"   fore.rgb = get_blend_color(back.bgr, fore.rgb);									\n"
+			"   fore.rgb = fore.bgr; // rgb to bgr												\n"
 			"	return vec4(fore.rgb * fore.a + back.rgb * (1.0-fore.a), back.a + fore.a);		\n"
 			"}																					\n"
 			"																					\n"
@@ -290,7 +288,7 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("local_key",		4);
 		shader_->set("layer_key",		5);
 		shader_->set("background",		6);
-		shader_->set("gain",			static_cast<GLfloat>(transform.get_gain()));
+		shader_->set("gain",			transform.get_gain());
 		shader_->set("is_hd",			pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	local_key ? 1 : 0);
 		shader_->set("has_layer_key",	layer_key ? 1 : 0);
@@ -298,10 +296,37 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("interlace_mode",	transform.get_mode());
 		shader_->set("pixel_format",	pix_desc.pix_fmt);	
 
-		shader_->set("levels",			false);	
-		shader_->set("csb",				false);	
-		shader_->set("desaturate",		false);	
+		auto levels = transform.get_levels();
 
+		if(levels.min_input  > 0.001 ||
+		   levels.max_input  < 0.999 ||
+		   levels.min_output > 0.001 ||
+		   levels.max_output < 0.999 ||
+		   std::abs(levels.gamma - 1.0) > 0.001)
+		{
+			shader_->set("levels", true);	
+			shader_->set("min_input", levels.min_input);	
+			shader_->set("max_input", levels.max_input);
+			shader_->set("min_output", levels.min_output);
+			shader_->set("max_output", levels.max_output);
+			shader_->set("gamma", levels.gamma);
+		}
+		else
+			shader_->set("levels", false);	
+
+		if(std::abs(transform.get_brightness() - 1.0) > 0.001 ||
+		   std::abs(transform.get_saturation() - 1.0) > 0.001 ||
+		   std::abs(transform.get_contrast() - 1.0) > 0.001)
+		{
+			shader_->set("csb",	true);	
+			
+			shader_->set("brt", transform.get_brightness());	
+			shader_->set("sat", transform.get_saturation());
+			shader_->set("con", transform.get_contrast());
+		}
+		else
+			shader_->set("csb",	false);	
+		
 		// Setup drawing area
 
 		GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));

@@ -15,6 +15,7 @@ public:
 	void use();
 	void set(const std::string& name, int value);
 	void set(const std::string& name, float value);
+	void set(const std::string& name, double value);
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
