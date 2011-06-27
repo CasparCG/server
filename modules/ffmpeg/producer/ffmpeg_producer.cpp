@@ -92,12 +92,18 @@ public:
 	}
 
 	virtual safe_ptr<core::basic_frame> receive()
-	{
-		frame_timer_.restart();
+	{		
+		// "receive" is called on the same thread as the gpu mixer runs. Minimize "receive" time in order to allow gpu and cpu to run in parallel. 
+		task_group_.wait();
 
-		auto result = decode_frame();
-				
-		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
+		auto result = get_frame();
+
+		task_group_.run([=]
+		{
+			frame_timer_.restart();
+			decode_packets();
+			graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
+		});				
 					
 		return result;
 	}
@@ -177,15 +183,8 @@ public:
 		return frame;
 	}
 
-	safe_ptr<core::basic_frame> decode_frame()
+	safe_ptr<core::basic_frame> get_frame()
 	{		
-		// "receive" is called on the same thread as the gpu mixer runs. Minimize "receive" time in order to allow gpu and cpu to run in parallel. 
-		task_group_.wait();
-		task_group_.run([=]
-		{
-			decode_packets();
-		});
-
 		if(video_decoder_ && audio_decoder_ && !video_frames_.empty() && !audio_chunks_.empty())
 		{
 			auto audio_chunk = std::move(audio_chunks_.front().second);
