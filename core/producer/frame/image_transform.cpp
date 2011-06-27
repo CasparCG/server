@@ -30,6 +30,9 @@ namespace caspar { namespace core {
 image_transform::image_transform() 
 	: opacity_(1.0)
 	, gain_(1.0)
+	, brightness_(1.0)
+	, contrast_(1.0)
+	, saturation_(1.0)
 	, mode_(video_mode::invalid)
 	, is_key_(false)
 	, deinterlace_(false)
@@ -60,6 +63,47 @@ double image_transform::get_gain() const
 {
 	return gain_;
 }
+
+void image_transform::set_brightness(double value)
+{
+	brightness_ = std::max(0.0, value);
+}
+
+double image_transform::get_brightness() const
+{
+	return brightness_;
+}
+
+void image_transform::set_contrast(double value)
+{
+	contrast_ = std::max(0.0, value);
+}
+
+double image_transform::get_contrast() const
+{
+	return contrast_;
+}
+
+void image_transform::set_saturation(double value)
+{
+	saturation_ = std::max(0.0, value);
+}
+
+double image_transform::get_saturation() const
+{
+	return saturation_;
+}
+
+void image_transform::set_levels(const image_transform::levels& value)
+{
+	levels_ = value;
+}
+
+image_transform::levels image_transform::get_levels() const
+{
+	return levels_;
+}
+
 
 void image_transform::set_fill_translation(double x, double y)
 {
@@ -144,6 +188,18 @@ image_transform& image_transform::operator*=(const image_transform &other)
 
 	blend_mode_				 = std::max(blend_mode_, other.blend_mode_);
 	gain_					*= other.gain_;
+	brightness_				*= other.brightness_;
+	contrast_				*= other.contrast_;
+	saturation_				*= other.saturation_;
+
+	levels_.min_input		= std::max(levels_.min_input, other.levels_.min_input);
+	levels_.max_input		= std::min(levels_.max_input, other.levels_.max_input);
+	
+	levels_.min_output		= std::max(levels_.min_output, other.levels_.min_output);
+	levels_.max_output		= std::min(levels_.max_output, other.levels_.max_output);
+
+	levels_.gamma			*= other.levels_.gamma;
+
 	deinterlace_			|= other.deinterlace_;
 	is_key_					|= other.is_key_;
 	fill_translation_[0]	+= other.fill_translation_[0]*fill_scale_[0];
@@ -180,12 +236,28 @@ image_transform tween(double time, const image_transform& source, const image_tr
 	result.set_is_key			(source.get_is_key() | dest.get_is_key());
 	result.set_deinterlace		(source.get_deinterlace() | dest.get_deinterlace());
 	result.set_gain				(do_tween(time, source.get_gain(), dest.get_gain(), duration, tweener));
+	result.set_brightness		(do_tween(time, source.get_brightness(), dest.get_brightness(), duration, tweener));
+	result.set_contrast			(do_tween(time, source.get_contrast(), dest.get_contrast(), duration, tweener));
+	result.set_saturation		(do_tween(time, source.get_saturation(), dest.get_saturation(), duration, tweener));
 	result.set_opacity			(do_tween(time, source.get_opacity(), dest.get_opacity(), duration, tweener));
 	result.set_fill_translation	(do_tween(time, source.get_fill_translation()[0], dest.get_fill_translation()[0], duration, tweener), do_tween(time, source.get_fill_translation()[1], dest.get_fill_translation()[1], duration, tweener));
 	result.set_fill_scale		(do_tween(time, source.get_fill_scale()[0], dest.get_fill_scale()[0], duration, tweener), do_tween(time, source.get_fill_scale()[1], dest.get_fill_scale()[1], duration, tweener));
 	result.set_clip_translation	(do_tween(time, source.get_clip_translation()[0], dest.get_clip_translation()[0], duration, tweener), do_tween(time, source.get_clip_translation()[1], dest.get_clip_translation()[1], duration, tweener));
 	result.set_clip_scale		(do_tween(time, source.get_clip_scale()[0], dest.get_clip_scale()[0], duration, tweener), do_tween(time, source.get_clip_scale()[1], dest.get_clip_scale()[1], duration, tweener));
 	
+	auto s_levels = source.get_levels();
+	auto d_levels = dest.get_levels();
+
+	d_levels.max_input = do_tween(time, s_levels.max_input, d_levels.max_input, duration, tweener);
+	d_levels.min_input = do_tween(time, s_levels.min_input, d_levels.min_input, duration, tweener);
+	
+	d_levels.max_output = do_tween(time, s_levels.max_output, d_levels.max_output, duration, tweener);
+	d_levels.min_output = do_tween(time, s_levels.min_output, d_levels.min_output, duration, tweener);
+
+	d_levels.gamma = do_tween(time, s_levels.gamma, d_levels.gamma, duration, tweener);
+
+	result.set_levels(d_levels);
+
 	return result;
 }
 
@@ -241,8 +313,8 @@ image_transform::blend_mode get_blend_mode(const std::wstring& str)
 		return image_transform::glow;
 	else if(boost::iequals(str, L"phoenix"))
 		return image_transform::phoenix;
-	else if(boost::iequals(str, L"hue"))
-		return image_transform::hue;
+	else if(boost::iequals(str, L"contrast"))
+		return image_transform::contrast;
 	else if(boost::iequals(str, L"saturation"))
 		return image_transform::saturation;
 	else if(boost::iequals(str, L"color"))
