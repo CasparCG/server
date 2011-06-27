@@ -120,7 +120,6 @@ struct image_kernel::implementation : boost::noncopyable
 			"	case 26: return BlendSaturation(back, fore);									\n"
 			"	case 27: return BlendColor(back, fore);											\n"
 			"	case 28: return BlendLuminosity(back, fore);									\n"
-			"	case 29: return BlendInvert(back, fore);										\n"
 			"	}																				\n"
 			"																					\n"
 			"	return BlendNormal(back, fore);													\n"

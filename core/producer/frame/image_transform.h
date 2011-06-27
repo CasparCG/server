@@ -66,7 +66,6 @@ public:
 			saturation,
 			color,
 			luminosity,
-			invert,
 			blend_mode_count 
 		};
 	};
