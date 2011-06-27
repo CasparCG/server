@@ -104,6 +104,11 @@ public:
 	{
 		GL(glUniform1f(get_location(name.c_str()), value));
 	}
+
+	void set(const std::string& name, double value)
+	{
+		GL(glUniform1f(get_location(name.c_str()), static_cast<float>(value)));
+	}
 };
 
 
@@ -111,5 +116,6 @@ shader::shader(const std::string& vertex_source_str, const std::string& fragment
 void shader::use(){impl_->use();}
 void shader::set(const std::string& name, int value){impl_->set(name, value);}
 void shader::set(const std::string& name, float value){impl_->set(name, value);}
+void shader::set(const std::string& name, double value){impl_->set(name, value);}
 
 }}
