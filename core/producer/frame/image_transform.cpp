@@ -334,8 +334,6 @@ image_transform::blend_mode::type get_blend_mode(const std::wstring& str)
 		return image_transform::blend_mode::color;
 	else if(boost::iequals(str, L"luminosity"))
 		return image_transform::blend_mode::luminosity;
-	else if(boost::iequals(str, L"invert"))
-		return image_transform::blend_mode::invert;
 		
 	return image_transform::blend_mode::normal;
 }
