@@ -53,16 +53,9 @@ public:
 
 	void reset_transforms();
 
-	void set_image_transform(const core::image_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void set_image_transform(int index, const core::image_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-
-	void set_audio_transform(const core::audio_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void set_audio_transform(int index, const core::audio_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	
-	void apply_image_transform(const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-
-	void apply_audio_transform(const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 
 private:
