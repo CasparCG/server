@@ -134,7 +134,7 @@ struct image_kernel::implementation : boost::noncopyable
 			"		fore.rgb = ContrastSaturationBrightness(fore.rgb, brt, sat, con);			\n"
 			"   fore.rgb = get_blend_color(back.bgr, fore.rgb);									\n"
 			"																					\n"
-			"	return vec4(fore.rgb * fore.a + back.rgb * (1.0-fore.a), back.a + fore.a);		\n"
+			"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
 			"}																					\n"
 			"																					\n"
 			"// NOTE: YCbCr, ITU-R, http://www.intersil.com/data/an/an9717.pdf					\n"
