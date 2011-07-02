@@ -66,8 +66,6 @@ struct image_kernel::implementation : boost::noncopyable
 			"uniform int		interlace_mode;													\n"
 			"uniform int		pixel_format;													\n"
 			"																					\n"
-			"uniform float		gain;															\n"
-			"																					\n"
 			"uniform bool		levels;															\n"
 			"uniform float		min_input;														\n"
 			"uniform float		max_input;														\n"
@@ -235,7 +233,7 @@ struct image_kernel::implementation : boost::noncopyable
 			"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
 			"	if(has_layer_key)																\n"
 			"		color.a *= texture2D(layer_key, gl_TexCoord[1].st).r;						\n"
-			"	gl_FragColor = blend_color(color.bgra * gl_Color * gain);						\n"
+			"	gl_FragColor = blend_color(color.bgra * gl_Color);								\n"
 			"}																					\n"
 			;
 
@@ -288,7 +286,6 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("local_key",		4);
 		shader_->set("layer_key",		5);
 		shader_->set("background",		6);
-		shader_->set("gain",			transform.get_gain());
 		shader_->set("is_hd",			pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	local_key ? 1 : 0);
 		shader_->set("has_layer_key",	layer_key ? 1 : 0);
@@ -330,7 +327,7 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		// Setup drawing area
 
-		GL(glColor4d(1.0, 1.0, 1.0, transform.get_opacity()));
+		GL(glColor4d(transform.get_gain(), transform.get_gain(), transform.get_gain(), transform.get_opacity()));
 		GL(glViewport(0, 0, width, height));
 						
 		auto m_p = transform.get_clip_translation();
