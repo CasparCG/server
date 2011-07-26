@@ -64,7 +64,7 @@ public:
 private:
 	friend class image_mixer;
 
-	const std::vector<safe_ptr<device_buffer>>& get_textures() const;
+	const std::vector<safe_ptr<device_buffer>> get_textures() const;
 
 	struct implementation;
 	safe_ptr<implementation> impl_;

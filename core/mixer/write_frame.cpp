@@ -32,13 +32,13 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::implementation : boost::noncopyable
 {				
-	ogl_device&									ogl_;
-	std::vector<std::shared_ptr<host_buffer>>	buffers_;
-	std::vector<safe_ptr<device_buffer>>		textures_;
-	std::vector<int16_t>						audio_data_;
-	const core::pixel_format_desc				desc_;
-	int											tag_;
-	core::video_mode::type						mode_;
+	ogl_device&										ogl_;
+	std::vector<std::shared_ptr<host_buffer>>		buffers_;
+	std::array<std::shared_ptr<device_buffer>, 4>	textures_;
+	std::vector<int16_t>							audio_data_;
+	const core::pixel_format_desc					desc_;
+	int												tag_;
+	core::video_mode::type							mode_;
 
 	implementation(ogl_device& ogl, int tag, const core::pixel_format_desc& desc) 
 		: ogl_(ogl)
@@ -51,10 +51,6 @@ struct write_frame::implementation : boost::noncopyable
 			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
 			{
 				return ogl_.create_host_buffer(plane.size, host_buffer::write_only);
-			});
-			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures_), [&](const core::pixel_format_desc::plane& plane)
-			{
-				return ogl_.create_device_buffer(plane.width, plane.height, plane.channels);
 			});
 		}, high_priority);
 	}
@@ -98,11 +94,11 @@ struct write_frame::implementation : boost::noncopyable
 		if(!buffer)
 			return;
 
-		auto texture = textures_[plane_index];
-
 		ogl_.begin_invoke([=]
 		{
-			texture->read(*buffer);
+			auto plane = desc_.planes[plane_index];
+			textures_[plane_index] = ogl_.create_device_buffer(plane.width, plane.height, plane.channels);;
+			textures_[plane_index]->read(*buffer);
 		}, high_priority);
 	}
 };
@@ -123,7 +119,16 @@ const boost::iterator_range<const int16_t*> write_frame::audio_data() const
 }
 int write_frame::tag() const {return impl_->tag_;}
 const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
-const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
+const std::vector<safe_ptr<device_buffer>> write_frame::get_textures() const
+{
+	std::vector<safe_ptr<device_buffer>> textures;
+	BOOST_FOREACH(auto texture, impl_->textures_)
+	{
+		if(texture)
+			textures.push_back(make_safe(texture));
+	}
+	return textures;
+}
 void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
 void write_frame::set_type(const video_mode::type& mode){impl_->mode_ = mode;}

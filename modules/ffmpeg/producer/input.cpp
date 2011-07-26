@@ -47,7 +47,7 @@ extern "C"
 
 namespace caspar {
 	
-static const size_t PACKET_BUFFER_COUNT = 100; // Assume that av_read_frame distance between audio and video packets is less than PACKET_BUFFER_COUNT.
+static const size_t PACKET_BUFFER_COUNT = 4; // Assume that av_read_frame distance between audio and video packets is less than PACKET_BUFFER_COUNT.
 
 class stream
 {
@@ -59,7 +59,6 @@ public:
 
 	stream() : index_(-1)
 	{
-		buffer_.set_capacity(PACKET_BUFFER_COUNT);
 	}
 	
 	int open(std::shared_ptr<AVFormatContext>& fctx, AVMediaType media_type)
@@ -90,6 +89,11 @@ public:
 			ctx_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(ctx_->time_base.den)))-1));
 		
 		return errn;	
+	}
+
+	void set_capacity(size_t cap)
+	{
+		buffer_.set_capacity(cap);
 	}
 
 	bool try_pop(std::shared_ptr<AVPacket>& pkt)
@@ -206,6 +210,9 @@ public:
 			graph_->set_color("video-input-buffer", diagnostics::color(0.2f, 0.5f, 1.0f));
 		
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
+
+		video_stream_.set_capacity(PACKET_BUFFER_COUNT);
+		audio_stream_.set_capacity(PACKET_BUFFER_COUNT);
 
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
