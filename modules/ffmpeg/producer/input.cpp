@@ -47,8 +47,6 @@ extern "C"
 
 namespace caspar {
 	
-static const size_t PACKET_BUFFER_COUNT = 4; // Assume that av_read_frame distance between audio and video packets is less than PACKET_BUFFER_COUNT.
-
 class stream
 {
 	std::shared_ptr<AVCodecContext>	ctx_;
@@ -211,8 +209,8 @@ public:
 		
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
 
-		video_stream_.set_capacity(PACKET_BUFFER_COUNT);
-		audio_stream_.set_capacity(PACKET_BUFFER_COUNT);
+		video_stream_.set_capacity(4);
+		audio_stream_.set_capacity(64);
 
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
