@@ -35,7 +35,7 @@ namespace core {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(AVStream* stream, const safe_ptr<core::frame_factory>& frame_factory);
+	explicit video_decoder(const std::shared_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter);
 	
 	void push(const std::shared_ptr<AVPacket>& packet);
 	bool ready() const;

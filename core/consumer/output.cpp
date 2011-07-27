@@ -40,14 +40,14 @@
 
 namespace caspar { namespace core {
 
-class key_read_frame_adapter : public core::read_frame
+class key_read_frame_muxer : public core::read_frame
 {
 	ogl_device&						 ogl_;
 	safe_ptr<read_frame>			 fill_;
 	std::shared_ptr<host_buffer>	 key_;
 	tbb::mutex					     mutex_;
 public:
-	key_read_frame_adapter(ogl_device& ogl, const safe_ptr<read_frame>& fill)
+	key_read_frame_muxer(ogl_device& ogl, const safe_ptr<read_frame>& fill)
 		: ogl_(ogl)
 		, fill_(fill)
 	{
@@ -120,7 +120,7 @@ public:
 				timer_.tick(1.0/channel_.get_format_desc().fps);
 						
 			auto fill = frame;
-			auto key = make_safe<key_read_frame_adapter>(channel_.ogl(), frame);
+			auto key = make_safe<key_read_frame_muxer>(channel_.ogl(), frame);
 
 			auto it = consumers_.begin();
 			while(it != consumers_.end())

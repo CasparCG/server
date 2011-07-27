@@ -60,12 +60,12 @@ struct configuration
 		, buffer_depth(CONSUMER_BUFFER_DEPTH){}
 };
 
-class decklink_frame_adapter : public IDeckLinkVideoFrame
+class decklink_frame_muxer : public IDeckLinkVideoFrame
 {
 	const safe_ptr<core::read_frame>	frame_;
 	const core::video_format_desc			format_desc_;
 public:
-	decklink_frame_adapter(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc)
+	decklink_frame_muxer(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc)
 		: frame_(frame)
 		, format_desc_(format_desc){}
 	
@@ -346,7 +346,7 @@ public:
 			
 	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
-		frame_container_.push_back(std::make_shared<decklink_frame_adapter>(frame, format_desc_));
+		frame_container_.push_back(std::make_shared<decklink_frame_muxer>(frame, format_desc_));
 		if(FAILED(output_->ScheduleVideoFrame(frame_container_.back().get(), (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
