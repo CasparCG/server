@@ -73,7 +73,7 @@ public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) 
 		: frame_factory_(frame_factory)
 		, mode_(core::video_mode::invalid)
-		//, filter_(filter.empty() ? nullptr : new caspar::filter(filter))
+		, filter_(filter.empty() ? nullptr : new caspar::filter(filter))
 	{
 		AVCodec* dec;
 		index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
@@ -138,14 +138,15 @@ public:
 
 			if(filter_)
 			{
+				auto av_frames2 = std::move(av_frames);
+
 				filter_tasks_.wait();
-				
-				av_frames.clear();
+
 				boost::range::push_back(av_frames, filter_->poll());
 
 				filter_tasks_.run([=]
 				{
-					BOOST_FOREACH(auto& frame, av_frames)				
+					BOOST_FOREACH(auto& frame, av_frames2)				
 						filter_->push(frame);
 				});
 			}
