@@ -32,7 +32,7 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::implementation
 {				
-	ogl_device&										ogl_;
+	ogl_device*										ogl_;
 	std::vector<std::shared_ptr<host_buffer>>		buffers_;
 	std::array<std::shared_ptr<device_buffer>, 4>	textures_;
 	std::vector<int16_t>							audio_data_;
@@ -40,17 +40,25 @@ struct write_frame::implementation
 	int												tag_;
 	core::video_mode::type							mode_;
 
+	implementation()
+	{
+	}
+
 	implementation(ogl_device& ogl, int tag, const core::pixel_format_desc& desc) 
-		: ogl_(ogl)
+		: ogl_(&ogl)
 		, desc_(desc)
 		, tag_(tag)
 		, mode_(core::video_mode::progressive)
 	{
-		ogl_.invoke([&]
+		ogl_->invoke([&]
 		{
 			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
 			{
-				return ogl_.create_host_buffer(plane.size, host_buffer::write_only);
+				return ogl_->create_host_buffer(plane.size, host_buffer::write_only);
+			});
+			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures_), [&](const core::pixel_format_desc::plane& plane)
+			{
+				return ogl_->create_device_buffer(plane.width, plane.height, plane.channels);	
 			});
 		}, high_priority);
 	}
@@ -58,7 +66,8 @@ struct write_frame::implementation
 	void accept(write_frame& self, core::frame_visitor& visitor)
 	{
 		visitor.begin(self);
-		visitor.visit(self);
+		if(!desc_.planes().empty())
+			visitor.visit(self);
 		visitor.end();
 	}
 
@@ -93,16 +102,19 @@ struct write_frame::implementation
 
 		if(!buffer)
 			return;
+
+		auto texture
 		
-		ogl_.begin_invoke([=]
+		ogl_->begin_invoke([=]
 		{
 			auto plane = desc_.planes[plane_index];
-			textures_[plane_index] = ogl_.create_device_buffer(plane.width, plane.height, plane.channels);			
+			textures_[plane_index] = ogl_->create_device_buffer(plane.width, plane.height, plane.channels);			
 			textures_[plane_index]->read(*buffer);
 		}, high_priority);
 	}
 };
 	
+write_frame::write_frame() : impl_(new implementation()){}
 write_frame::write_frame(ogl_device& ogl, int32_t tag, const core::pixel_format_desc& desc) 
 	: impl_(new implementation(ogl, tag, desc)){}
 write_frame::write_frame(const write_frame& other) : impl_(new implementation(*other.impl_)){}
