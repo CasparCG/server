@@ -65,8 +65,8 @@ using namespace protocol;
 struct server::implementation : boost::noncopyable
 {
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
-	std::vector<safe_ptr<video_channel>>				channels_;
-	ogl_device									ogl_;
+	std::vector<safe_ptr<video_channel>>		channels_;
+	std::vector<std::unique_ptr<ogl_device>>	ogls_;
 
 	implementation()												
 	{			
@@ -100,7 +100,8 @@ struct server::implementation : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(video_channel(channels_.size(), format_desc, ogl_));
+			ogls_.push_back(std::unique_ptr<ogl_device>(new ogl_device()));
+			channels_.push_back(video_channel(channels_.size(), format_desc, *ogls_.back()));
 			
 			int index = 0;
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))
