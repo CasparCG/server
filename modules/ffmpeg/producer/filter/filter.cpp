@@ -42,7 +42,7 @@ struct filter::implementation
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
 
-	void push(const safe_ptr<AVFrame>& frame)
+	void push(const std::shared_ptr<AVFrame>& frame)
 	{		
 		int errn = 0;	
 
@@ -149,6 +149,6 @@ struct filter::implementation
 };
 
 filter::filter(const std::wstring& filters) : impl_(new implementation(filters)){}
-void filter::push(const safe_ptr<AVFrame>& frame) {impl_->push(frame);}
+void filter::push(const std::shared_ptr<AVFrame>& frame) {impl_->push(frame);}
 std::vector<safe_ptr<AVFrame>> filter::poll() {return impl_->poll();}
 }

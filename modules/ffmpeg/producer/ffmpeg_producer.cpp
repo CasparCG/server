@@ -197,7 +197,15 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 			start = boost::lexical_cast<int>(*seek_it);
 	}
 
-	return make_safe<ffmpeg_producer>(frame_factory, path, L"", loop, start, length);
+	std::wstring filter = L"";
+	auto filter_it = std::find(params.begin(), params.end(), L"FILTER");
+	if(filter_it != params.end())
+	{
+		if(++filter_it != params.end())
+			filter = *filter_it;
+	}
+
+	return make_safe<ffmpeg_producer>(frame_factory, path, filter, loop, start, length);
 }
 
 }
