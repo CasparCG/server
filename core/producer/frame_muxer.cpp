@@ -3,6 +3,8 @@
 #include "frame_muxer.h"
 
 #include "frame/basic_frame.h"
+#include "frame/image_transform.h"
+#include "frame/pixel_format.h"
 #include "../mixer/write_frame.h"
 
 namespace caspar { namespace core {
@@ -102,8 +104,15 @@ struct frame_muxer::implementation
 	}
 
 	void push(const safe_ptr<write_frame>& video_frame)
-	{
+	{		
+		// Fix field-order if needed
+		if(video_frame->get_type() == core::video_mode::lower && out_mode_ == core::video_mode::upper)
+			video_frame->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(video_frame->get_pixel_format_desc().planes[0].height));
+		else if(video_frame->get_type() == core::video_mode::upper && out_mode_ == core::video_mode::lower)
+			video_frame->get_image_transform().set_fill_translation(0.0f, -0.5/static_cast<double>(video_frame->get_pixel_format_desc().planes[0].height));
+
 		video_frames_.push(video_frame);
+
 		process();
 	}
 
