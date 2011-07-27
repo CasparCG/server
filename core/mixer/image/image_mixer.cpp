@@ -106,6 +106,9 @@ public:
 		
 	void visit(core::write_frame& frame)
 	{			
+		if(frame.get_textures().empty())
+			return;
+
 		render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.top()*frame.get_image_transform(), frame.tag()};	
 
 		auto& layer = render_queue_.back();

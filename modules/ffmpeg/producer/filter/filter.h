@@ -25,7 +25,7 @@ class filter
 public:
 	filter(const std::wstring& filters);
 
-	void push(const safe_ptr<AVFrame>& frame);
+	void push(const std::shared_ptr<AVFrame>& frame);
 	std::vector<safe_ptr<AVFrame>> poll();
 
 private:
