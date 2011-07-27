@@ -41,6 +41,7 @@ class ogl_device;
 class write_frame : public core::basic_frame, boost::noncopyable
 {
 public:	
+	write_frame();
 	explicit write_frame(ogl_device& ogl, int tag, const core::pixel_format_desc& desc);
 	write_frame(const write_frame& other);
 			
@@ -65,7 +66,7 @@ public:
 private:
 	friend class image_mixer;
 	
-	const std::vector<safe_ptr<device_buffer>> get_textures() const;
+	const std::vector<safe_ptr<device_buffer>>& get_textures() const;
 
 	struct implementation;
 	safe_ptr<implementation> impl_;

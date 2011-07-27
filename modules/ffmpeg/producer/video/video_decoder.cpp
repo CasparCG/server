@@ -111,7 +111,7 @@ public:
 		std::vector<safe_ptr<core::write_frame>> result;
 
 		if(!codec_context_)
-			result.push_back(core::create_color_frame(this, frame_factory_, L"#00000000"));
+			result.push_back(make_safe<core::write_frame>());
 		else if(!packet_buffer_.empty())
 		{
 			auto packet = std::move(packet_buffer_.front());
