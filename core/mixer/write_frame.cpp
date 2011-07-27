@@ -32,13 +32,13 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::implementation
 {				
-	ogl_device*										ogl_;
-	std::vector<std::shared_ptr<host_buffer>>		buffers_;
-	std::array<std::shared_ptr<device_buffer>, 4>	textures_;
-	std::vector<int16_t>							audio_data_;
-	const core::pixel_format_desc					desc_;
-	int												tag_;
-	core::video_mode::type							mode_;
+	ogl_device*									ogl_;
+	std::vector<std::shared_ptr<host_buffer>>	buffers_;
+	std::vector<safe_ptr<device_buffer>>		textures_;
+	std::vector<int16_t>						audio_data_;
+	const core::pixel_format_desc				desc_;
+	int											tag_;
+	core::video_mode::type						mode_;
 
 	implementation()
 	{
@@ -66,8 +66,7 @@ struct write_frame::implementation
 	void accept(write_frame& self, core::frame_visitor& visitor)
 	{
 		visitor.begin(self);
-		if(!desc_.planes().empty())
-			visitor.visit(self);
+		visitor.visit(self);
 		visitor.end();
 	}
 
@@ -103,13 +102,11 @@ struct write_frame::implementation
 		if(!buffer)
 			return;
 
-		auto texture
+		auto texture = textures_.at(plane_index);
 		
 		ogl_->begin_invoke([=]
-		{
-			auto plane = desc_.planes[plane_index];
-			textures_[plane_index] = ogl_->create_device_buffer(plane.width, plane.height, plane.channels);			
-			textures_[plane_index]->read(*buffer);
+		{			
+			texture->read(*buffer);
 		}, high_priority);
 	}
 };
@@ -132,17 +129,7 @@ const boost::iterator_range<const int16_t*> write_frame::audio_data() const
 }
 int write_frame::tag() const {return impl_->tag_;}
 const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
-const std::vector<safe_ptr<device_buffer>> write_frame::get_textures() const
-{
-	std::vector<safe_ptr<device_buffer>> textures;
-	BOOST_FOREACH(auto texture, impl_->textures_)
-	{
-		if(texture)
-			textures.push_back(make_safe(texture));
-	}
-
-	return textures;
-}
+const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
 void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
 void write_frame::set_type(const video_mode::type& mode){impl_->mode_ = mode;}

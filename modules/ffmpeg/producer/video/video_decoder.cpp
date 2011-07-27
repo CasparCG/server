@@ -66,6 +66,7 @@ struct video_decoder::implementation : boost::noncopyable
 	std::queue<std::shared_ptr<AVPacket>>	packet_buffer_;
 
 	std::unique_ptr<filter>					filter_;
+	tbb::task_group							filter_tasks_;
 
 	double									fps_;
 public:
@@ -91,8 +92,8 @@ public:
 			codec_context_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(codec_context_->time_base.den)))-1));	
 
 		fps_ = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
-		//if(double_rate(filter))
-		//	fps_ *= 2;
+		if(double_rate(filter))
+			fps_ *= 2;
 	}
 		
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -114,6 +115,8 @@ public:
 			result.push_back(make_safe<core::write_frame>());
 		else if(!packet_buffer_.empty())
 		{
+			std::vector<std::shared_ptr<AVFrame>> av_frames;
+
 			auto packet = std::move(packet_buffer_.front());
 			packet_buffer_.pop();
 		
@@ -123,23 +126,32 @@ public:
 				{
 					// FIXME: This might cause bad performance.
 					AVPacket pkt = {0};
-					auto frame = decode_frame(pkt);
-					if(frame)
-						result.push_back(make_write_frame(this, make_safe(frame), frame_factory_));
+					av_frames.push_back(decode_frame(pkt));
 				}
 
 				avcodec_flush_buffers(codec_context_.get());
 			}
 			else
 			{
-				auto frame = decode_frame(*packet);
-				if(frame)
-				{
-					auto frame2 = make_write_frame(this, make_safe(frame), frame_factory_);	
-					mode_ = frame2->get_type();
-					result.push_back(std::move(frame2));
-				}
+				av_frames.push_back(decode_frame(*packet));				
 			}
+
+			if(filter_)
+			{
+				filter_tasks_.wait();
+				
+				av_frames.clear();
+				boost::range::push_back(av_frames, filter_->poll());
+
+				filter_tasks_.run([=]
+				{
+					BOOST_FOREACH(auto& frame, av_frames)				
+						filter_->push(frame);
+				});
+			}
+						
+			BOOST_FOREACH(auto& frame, av_frames)
+				result.push_back(make_write_frame(this, make_safe(frame), frame_factory_));
 		}
 		
 		return result;
