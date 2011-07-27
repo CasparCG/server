@@ -45,13 +45,15 @@ struct audio_decoder::implementation : boost::noncopyable
 	std::shared_ptr<AVCodecContext>								codec_context_;		
 	const core::video_format_desc								format_desc_;
 	int															index_;
-	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>	buffer_;		// avcodec_decode_audio3 needs 4 byte alignment
+	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>	buffer1_;		// avcodec_decode_audio3 needs 4 byte alignment
+	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>	buffer2_;		// avcodec_decode_audio3 needs 4 byte alignment
 	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>	audio_samples_;		// avcodec_decode_audio3 needs 4 byte alignment
 	std::queue<std::shared_ptr<AVPacket>>						packets_;
+	std::shared_ptr<ReSampleContext>							resampler_;
 public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
-	{
+	{			   
 		AVCodec* dec;
 		index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0);
 
@@ -63,13 +65,20 @@ public:
 
 		if(codec_context_ &&
 		   (codec_context_->sample_rate != static_cast<int>(format_desc_.audio_sample_rate) || 
-		   codec_context_->channels != static_cast<int>(format_desc_.audio_channels)))
+		    codec_context_->channels	!= static_cast<int>(format_desc_.audio_channels)) ||
+			codec_context_->sample_fmt	!= AV_SAMPLE_FMT_S16)
 		{	
-			BOOST_THROW_EXCEPTION(
-				file_read_error()  <<
-				msg_info("Invalid sample-rate or number of channels.") <<
-				arg_value_info(boost::lexical_cast<std::string>(codec_context_->sample_rate)) << 
-				arg_name_info("codec_context"));
+			auto resampler = av_audio_resample_init(format_desc_.audio_channels,    codec_context_->channels,
+													format_desc_.audio_sample_rate, codec_context_->sample_rate,
+													AV_SAMPLE_FMT_S16,				codec_context_->sample_fmt,
+													16, 10, 0, 0.8);
+
+			CASPAR_LOG(warning) << L" Invalid audio format.";
+
+			if(resampler)
+				resampler_.reset(resampler, audio_resample_close);
+			else
+				codec_context_ = nullptr;
 		}		
 	}
 
@@ -122,10 +131,10 @@ public:
 		}
 		else
 		{
-			buffer_.resize(4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2, 0);
-
-			int written_bytes = buffer_.size() - FF_INPUT_BUFFER_PADDING_SIZE/2;
-			const int errn = avcodec_decode_audio3(codec_context_.get(), buffer_.data(), &written_bytes, packet.get());
+			buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
+			int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
+			// TODO: Packet might contain multiple frames
+			const int errn = avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packet.get());
 			if(errn < 0)
 			{	
 				BOOST_THROW_EXCEPTION(
@@ -134,9 +143,23 @@ public:
 					boost::errinfo_errno(AVUNERROR(errn)));
 			}
 
-			buffer_.resize(written_bytes/2);
-			audio_samples_.insert(audio_samples_.end(), buffer_.begin(), buffer_.end());
-			buffer_.clear();	
+			buffer1_.resize(written_bytes);
+
+			if(resampler_)
+			{
+				buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
+				auto ret = audio_resample(resampler_.get(),
+										  reinterpret_cast<short*>(buffer2_.data()), 
+										  reinterpret_cast<short*>(buffer1_.data()), 
+										  buffer1_.size() / av_get_bytes_per_sample(codec_context_->sample_fmt)); 
+				buffer2_.resize(ret);
+				std::swap(buffer1_, buffer2_);
+			}
+
+			const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+			const auto samples = reinterpret_cast<int16_t*>(buffer1_.data());
+
+			audio_samples_.insert(audio_samples_.end(), samples, samples + n_samples);	
 		}
 	}
 
