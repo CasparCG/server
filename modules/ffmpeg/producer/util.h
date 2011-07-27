@@ -214,22 +214,6 @@ static safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_
 			write->commit(n);
 		});
 	}
-		
-	// Fix field-order if needed
-	if(decoded_frame->interlaced_frame)
-	{
-		switch(frame_factory->get_video_format_desc().mode)
-		{
-		case core::video_mode::upper:
-			if(!decoded_frame->top_field_first)
-				write->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(height));
-			break;
-		case core::video_mode::lower:
-			if(decoded_frame->top_field_first)
-				write->get_image_transform().set_fill_translation(0.0f, -0.5/static_cast<double>(height));
-			break;
-		}
-	}
 
 	return write;
 }
