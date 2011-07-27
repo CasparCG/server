@@ -94,6 +94,11 @@ public:
 		buffer_.set_capacity(cap);
 	}
 
+	size_t capacity() const
+	{
+		return buffer_.capacity();
+	}
+
 	bool try_pop(std::shared_ptr<AVPacket>& pkt)
 	{
 		return buffer_.try_pop(pkt);
@@ -209,8 +214,8 @@ public:
 		
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
 
-		video_stream_.set_capacity(4);
-		audio_stream_.set_capacity(64);
+		video_stream_.set_capacity(16);
+		audio_stream_.set_capacity(256);
 
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
@@ -305,12 +310,12 @@ private:
 				if(video_stream_)
 				{	
 					video_stream_.push(read_packet);
-					graph_->update_value("video-input-buffer", static_cast<float>(video_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
+					graph_->update_value("video-input-buffer", static_cast<float>(video_stream_.size())/static_cast<float>(video_stream_.capacity()));		
 				}
 				if(audio_stream_)
 				{	
 					audio_stream_.push(read_packet);
-					graph_->update_value("audio-input-buffer", static_cast<float>(audio_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));	
+					graph_->update_value("audio-input-buffer", static_cast<float>(audio_stream_.size())/static_cast<float>(audio_stream_.capacity()));	
 				}
 			}							
 		}
