@@ -19,31 +19,32 @@
 */
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include "../input.h"
 
 #include <core/video_format.h>
 
+#include <tbb/cache_aligned_allocator.h>
+
 #include <boost/noncopyable.hpp>
 
-#include <deque>
+#include <memory>
+#include <vector>
 
-struct AVStream;
 struct AVCodecContext;
 
 namespace caspar {
-
+	
 class audio_decoder : boost::noncopyable
 {
 public:
-	explicit audio_decoder(AVStream* stream, const core::video_format_desc& format_desc);
-	
-	void push(const std::shared_ptr<AVPacket>& packet);
-	bool ready() const;
-	std::vector<std::vector<int16_t>> poll();
+	explicit audio_decoder(input& input, const core::video_format_desc& format_desc);
 
+	std::deque<std::pair<int, std::vector<int16_t>>> receive();
+
+	void restart();
 private:
 	struct implementation;
-	safe_ptr<implementation> impl_;
+	std::shared_ptr<implementation> impl_;
 };
 
 }

@@ -167,7 +167,7 @@ static safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_
 	{
 		std::shared_ptr<SwsContext> sws_context;
 
-		//CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
+		CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
 
 		size_t key = width << 20 | height << 8 | pix_fmt;
 			

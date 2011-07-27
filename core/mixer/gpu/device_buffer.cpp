@@ -37,12 +37,14 @@ struct device_buffer::implementation : boost::noncopyable
 	const size_t width_;
 	const size_t height_;
 	const size_t stride_;
+	bool  empty_;
 
 public:
 	implementation(size_t width, size_t height, size_t stride) 
 		: width_(width)
 		, height_(height)
 		, stride_(stride)
+		, empty_(true)
 	{	
 		GL(glGenTextures(1, &id_));
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
@@ -52,8 +54,7 @@ public:
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		CASPAR_LOG(trace) << "[device_buffer] allocated size:" << width*height*stride;	
-		clear();
+		//CASPAR_LOG(trace) << "[device_buffer] allocated size:" << width*height*stride;	
 	}	
 
 	~implementation()
@@ -108,12 +109,14 @@ public:
 	void attach(int index)
 	{
 		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, id_, 0));
+		empty_ = false;
 	}
 
 	void clear()
 	{
 		attach(0);
 		GL(glClear(GL_COLOR_BUFFER_BIT));
+		empty_ = true;
 	}
 };
 
@@ -128,5 +131,6 @@ void device_buffer::unbind(){impl_->unbind();}
 void device_buffer::read(host_buffer& source){impl_->read(source);}
 void device_buffer::write(host_buffer& target){impl_->write(target);}
 void device_buffer::clear(){impl_->clear();}
+bool device_buffer::empty() const { return impl_->empty_; }
 
 }}

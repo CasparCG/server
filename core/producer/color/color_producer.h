@@ -25,8 +25,7 @@
 #include <vector>
 
 namespace caspar { namespace core {
-
+	
 safe_ptr<frame_producer> create_color_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
-safe_ptr<core::write_frame> create_color_frame(void* tag, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& color);
 
 }}

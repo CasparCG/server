@@ -247,8 +247,7 @@
     <Lib />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="mixer\gpu\shader.h" />
-    <ClInclude Include="mixer\image\blending_glsl.h" />
+    <ClInclude Include="mixer\image\photoshop_math.h" />
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="video_channel_context.h" />
     <ClInclude Include="consumer\output.h" />
@@ -283,12 +282,6 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="mixer\gpu\shader.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="video_channel.cpp" />
     <ClCompile Include="consumer\frame_consumer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>

@@ -26,14 +26,12 @@
 
 namespace caspar { namespace core {
 	
-class device_buffer;
-
 class image_kernel
 {
 public:
 	image_kernel();
-	void draw(size_t width,  size_t height, const core::pixel_format_desc& pix_desc,  const core::image_transform& transform, const std::vector<safe_ptr<device_buffer>>& planes, 
-			  const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key = nullptr, const std::shared_ptr<device_buffer>& layer_key = nullptr);
+	void draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& mode, bool local_key, bool layer_key);
+
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

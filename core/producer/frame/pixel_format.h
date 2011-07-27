@@ -27,7 +27,7 @@ struct pixel_format
 {
 	enum type
 	{
-		gray = 0,
+		gray,
 		bgra,
 		rgba,
 		argb,

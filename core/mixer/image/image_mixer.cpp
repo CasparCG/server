@@ -44,59 +44,52 @@
 
 namespace caspar { namespace core {
 		
-struct render_item
-{
-	pixel_format_desc					 desc;
-	std::vector<safe_ptr<device_buffer>> textures;
-	core::image_transform				 transform;
-	int									 tag;
-};
-
 struct image_mixer::implementation : boost::noncopyable
-{		
+{	
+	static const size_t LOCAL_KEY_INDEX = 3;
+	static const size_t LAYER_KEY_INDEX = 4;
+
+	struct render_item
+	{
+		pixel_format_desc					 desc;
+		std::vector<safe_ptr<device_buffer>> textures;
+		int									 tag;
+		core::image_transform				 transform;
+	};
+
 	video_channel_context&					channel_;
 	
 	std::stack<core::image_transform>		transform_stack_;
-
-	std::queue<std::queue<std::deque<render_item>>>	render_queue_; // layer/stream/items
+	std::queue<std::queue<render_item>>		render_queue_;
 	
-	std::unique_ptr<image_kernel>			kernel_;
+	image_kernel							kernel_;
 		
-	std::shared_ptr<device_buffer>			draw_buffer_[2];
-	std::shared_ptr<device_buffer>			write_buffer_;
+	safe_ptr<device_buffer>					draw_buffer_;
+	safe_ptr<device_buffer>					write_buffer_;
 
-	std::shared_ptr<device_buffer>			stream_key_buffer_[2];
-	std::shared_ptr<device_buffer>			layer_key_buffer_;
+	safe_ptr<device_buffer>					local_key_buffer_;
+	safe_ptr<device_buffer>					layer_key_buffer_;
+
+	bool									local_key_;
+	bool									layer_key_;
 	
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
+		, draw_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4))
+		, write_buffer_	(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 4))
+		, local_key_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1))
+		, layer_key_buffer_(video_channel.ogl().create_device_buffer(video_channel.get_format_desc().width, channel_.get_format_desc().height, 1))
+		, local_key_(false)
+		, layer_key_(false)
 	{
-		initialize_buffers();
 		transform_stack_.push(core::image_transform());
 
 		channel_.ogl().invoke([=]
 		{
 			if(!GLEE_VERSION_3_0)
 				CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";//BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
-
-			kernel_.reset(new image_kernel());
 		});
-	}
-
-	~implementation()
-	{
-		channel_.ogl().gc();
-	}
-
-	void initialize_buffers()
-	{
-		write_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		layer_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-		draw_buffer_[0]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		draw_buffer_[1]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		stream_key_buffer_[0]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-		stream_key_buffer_[1]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
 	}
 
 	void begin(core::basic_frame& frame)
@@ -106,14 +99,8 @@ public:
 		
 	void visit(core::write_frame& frame)
 	{			
-		render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.top()*frame.get_image_transform(), frame.tag()};	
-
-		auto& layer = render_queue_.back();
-
-		if(layer.empty() || (!layer.back().empty() && layer.back().back().tag != frame.tag()))
-			layer.push(std::deque<render_item>());
-		
-		layer.back().push_back(item);
+		render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), frame.tag(), transform_stack_.top()*frame.get_image_transform()};	
+		render_queue_.back().push(item);
 	}
 
 	void end()
@@ -123,116 +110,130 @@ public:
 
 	void begin_layer()
 	{
-		render_queue_.push(std::queue<std::deque<render_item>>());
+		render_queue_.push(std::queue<render_item>());
 	}
 
 	void end_layer()
 	{
 	}
-	
+
+	void reinitialize_buffers()
+	{
+		draw_buffer_	  = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		write_buffer_	  = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		local_key_buffer_ = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		layer_key_buffer_ = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		channel_.ogl().gc();
+	}
+
 	safe_ptr<host_buffer> render()
 	{		
+		auto read_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);		
+
 		auto render_queue = std::move(render_queue_);
 
-		return channel_.ogl().invoke([=]() mutable -> safe_ptr<host_buffer>
-		{			
-			if(channel_.get_format_desc().width != write_buffer_->width() || channel_.get_format_desc().height != write_buffer_->height())
-				initialize_buffers();
+		channel_.ogl().invoke([=]() mutable
+		{
+			if(draw_buffer_->width() != channel_.get_format_desc().width || draw_buffer_->height() != channel_.get_format_desc().height)
+				reinitialize_buffers();
 
-			return do_render(std::move(render_queue));
-		});
-	}
-	
-	safe_ptr<host_buffer> do_render(std::queue<std::queue<std::deque<render_item>>>&& render_queue)
-	{
-		auto read_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
+			local_key_ = false;
+			layer_key_ = false;
 
-		layer_key_buffer_->clear();
-		draw_buffer_[0]->clear();
-		draw_buffer_[1]->clear();
-		stream_key_buffer_[0]->clear();
-		stream_key_buffer_[1]->clear();
+			// Clear buffers.
+			local_key_buffer_->clear();
+			layer_key_buffer_->clear();
+			draw_buffer_->clear();
 
-		bool local_key = false;
-		bool layer_key = false;
+			// Draw items in device.
 
-		while(!render_queue.empty())
-		{			
-			stream_key_buffer_[0]->clear();
-
-			auto layer = std::move(render_queue.front());
-			render_queue.pop();
-
-			while(!layer.empty())
+			while(!render_queue.empty())
 			{
-				auto stream = std::move(layer.front());
-				layer.pop();
-								
-				render(stream, local_key, layer_key);
+				auto layer = render_queue.front();
+				render_queue.pop();
 				
-				local_key = stream.front().transform.get_is_key();
-				if(!local_key)
-					stream_key_buffer_[0]->clear();
+				draw_buffer_->attach();	
+				
+				while(!layer.empty())
+				{
+					// Split layer into streams
+					std::vector<render_item> stream;
+					do
+					{
+						stream.push_back(layer.front());
+						layer.pop();
+					}
+					while(!layer.empty() && layer.front().tag == stream.front().tag);
 
-				channel_.ogl().yield();
+					draw(stream);
+
+					channel_.ogl().yield(); // Allow quick buffer allocation to execute.
+				}
+
+				layer_key_ = local_key_; // If there was only key in last layer then use it as key for the entire next layer.
+				local_key_ = false;
+
+				std::swap(local_key_buffer_, layer_key_buffer_);
 			}
 
-			layer_key = local_key;
-			local_key = false;
-			std::swap(stream_key_buffer_[0], layer_key_buffer_);
-		}
+			std::swap(draw_buffer_, write_buffer_);
 
-		std::swap(draw_buffer_[0], write_buffer_);
-
-		// Start transfer from device to host.				
-		write_buffer_->write(*read_buffer);
+			// Start transfer from device to host.				
+			write_buffer_->write(*read_buffer);
+		});
 
 		return read_buffer;
 	}
-
-	void render(std::deque<render_item>& stream, bool local_key, bool layer_key)
-	{
-		CASPAR_ASSERT(!stream.empty());
-
-		while(stream.size() > 2)
-			stream.pop_front();
-
-		// Kernel expects lower field first for early explicit z-culling
-		if(stream[0].transform.get_mode() == core::video_mode::upper && stream.size() == 2)
-			std::swap(stream[0], stream[1]);		
+	
+	void draw(const std::vector<render_item>& stream)
+	{	
+		if(stream.empty())
+			return;				
 		
-		if(stream.front().transform.get_is_key())
+		BOOST_FOREACH(auto item, stream)
 		{
-			stream_key_buffer_[1]->attach();
+			bool local_key = false;
+			bool layer_key = false;
+
+			// Setup key and kernel
+					
+			if(item.transform.get_is_key()) // This is a key frame, render it to the local_key buffer for later use.
+			{
+				if(!local_key_) // Initialize local-key if it is not active.
+				{
+					local_key_buffer_->clear();
+					local_key_buffer_->attach();
+					local_key_ = true;
+				}
+			}		
+			else // This is a normal frame. Use key buffers if they are active.
+			{		
+				local_key = local_key_;
+				layer_key = layer_key_;
+
+				if(local_key_) // Use local key if we have it.
+				{
+					local_key_buffer_->bind(LOCAL_KEY_INDEX);
+					draw_buffer_->attach();	
+				}		
+
+				if(layer_key_) // Use layer key if we have it.
+					layer_key_buffer_->bind(LAYER_KEY_INDEX);
+			}	
+
+			// Bind textures
+
+			for(size_t n = 0; n < item.textures.size(); ++n)
+				item.textures[n]->bind(n);		
 			
-			BOOST_FOREACH(auto item2, stream)
-			{	
-				kernel_->draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, item2.textures, 
-								make_safe(stream_key_buffer_[0]), nullptr, nullptr);
-			}
+			// Draw
 
-			std::swap(stream_key_buffer_[0], stream_key_buffer_[1]);
-
-			stream_key_buffer_[1]->bind();
-			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, channel_.get_format_desc().width, channel_.get_format_desc().height);	
+			kernel_.draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item.desc, item.transform, local_key, layer_key);	
 		}
-		else
-		{
-			draw_buffer_[1]->attach();	
-			
-			BOOST_FOREACH(auto item2, stream)
-			{	
-				kernel_->draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, item2.textures, 
-								make_safe(draw_buffer_[0]), local_key ? stream_key_buffer_[0] : nullptr, layer_key ? layer_key_buffer_ : nullptr);	
-			}
 
-			std::swap(draw_buffer_[0], draw_buffer_[1]);
-			
-			draw_buffer_[1]->bind();
-			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, channel_.get_format_desc().width, channel_.get_format_desc().height);
-		}
+		local_key_ = stream.back().transform.get_is_key(); // Keep for next layer if last frame is key
 	}
-				
+			
 	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
 		return make_safe<write_frame>(channel_.ogl(), reinterpret_cast<int>(tag), desc);

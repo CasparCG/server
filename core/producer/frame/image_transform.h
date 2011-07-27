@@ -32,67 +32,11 @@ struct pixel_format_desc;
 class image_transform 
 {
 public:
-	
-	struct blend_mode
-	{
-		enum type 
-		{
-			normal = 0,
-			lighten,
-			darken,
-			multiply,
-			average,
-			add,
-			subtract,
-			difference,
-			negation,
-			exclusion,
-			screen,
-			overlay,
-			soft_light,
-			hard_light,
-			color_dodge,
-			color_burn,
-			linear_dodge,
-			linear_burn,
-			linear_light,
-			vivid_light,
-			pin_light,
-			hard_mix,
-			reflect,
-			glow,
-			phoenix,
-			contrast,
-			saturation,
-			color,
-			luminosity,
-			blend_mode_count 
-		};
-	};
 
-	struct alpha_mode
+	enum blend_mode
 	{
-		enum type 
-		{
-			normal = 0,
-		};
-	};
-
-	struct levels
-	{
-		levels() 
-			: min_input(0.0)
-			, max_input(1.0)
-			, gamma(1.0)
-			, min_output(0.0)
-			, max_output(1.0)
-		{		
-		}
-		double min_input;
-		double max_input;
-		double gamma;
-		double min_output;
-		double max_output;
+		normal,
+		screen
 	};
 
 	image_transform();
@@ -102,18 +46,6 @@ public:
 
 	void set_gain(double value);
 	double get_gain() const;
-
-	void set_brightness(double value);
-	double get_brightness() const;
-
-	void set_contrast(double value);
-	double get_contrast() const;
-
-	void set_saturation(double value);
-	double get_saturation() const;
-	
-	void set_levels(const levels& value);
-	levels get_levels() const;
 	
 	void set_fill_translation(double x, double y);
 	std::array<double, 2> get_fill_translation() const;
@@ -139,20 +71,12 @@ public:
 	void set_deinterlace(bool value);
 	bool get_deinterlace() const;
 
-	void set_blend_mode(blend_mode::type value);
-	blend_mode::type get_blend_mode() const;
-	
-	void set_alpha_mode(alpha_mode::type value);
-	alpha_mode::type get_alpha_mode() const;
+	void set_blend_mode(blend_mode value);
+	blend_mode get_blend_mode() const;
 
 private:
 	double opacity_;
 	double gain_;
-	double contrast_;
-	double brightness_;
-	double saturation_;
-	double desaturation_;
-	levels levels_;
 	std::array<double, 2> fill_translation_; 
 	std::array<double, 2> fill_scale_; 
 	std::array<double, 2> clip_translation_; 
@@ -160,12 +84,8 @@ private:
 	video_mode::type mode_;
 	bool is_key_;
 	bool deinterlace_;
-	blend_mode::type blend_mode_;
-	alpha_mode::type alpha_mode_;
+	blend_mode blend_mode_;
 };
-
-image_transform::blend_mode::type get_blend_mode(const std::wstring& str);
-image_transform::alpha_mode::type get_alpha_mode(const std::wstring& str);
 
 image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener);
 

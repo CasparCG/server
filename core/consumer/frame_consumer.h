@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 
-static const size_t CONSUMER_BUFFER_DEPTH = 6;
+static const size_t CONSUMER_BUFFER_DEPTH = 3;
 
 namespace caspar { namespace core {
 	

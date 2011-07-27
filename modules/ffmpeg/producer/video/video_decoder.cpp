@@ -23,7 +23,7 @@
 #include "../util.h"
 
 #include "../../ffmpeg_error.h"
-#include "../../tbb_avcodec.h"
+#include "../filter/filter.h"
 
 #include <common/memory/memcpy.h>
 
@@ -32,9 +32,8 @@
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/image_transform.h>
 #include <core/producer/frame/frame_factory.h>
-#include <core/producer/color/color_producer.h>
 
-#include <tbb/task_group.h>
+#include <tbb/parallel_for.h>
 
 #include <boost/range/algorithm_ext.hpp>
 
@@ -57,92 +56,94 @@ namespace caspar {
 		
 struct video_decoder::implementation : boost::noncopyable
 {
+	input& input_;
 	const safe_ptr<core::frame_factory>		frame_factory_;
-	std::shared_ptr<AVCodecContext>			codec_context_;
-	int										index_;
-	core::video_mode::type					mode_;
+	AVCodecContext&							codec_context_;
+	size_t									frame_number_;
 
-	std::queue<std::shared_ptr<AVPacket>>	packet_buffer_;
+	std::shared_ptr<filter>					filter_;
+	int										eof_count_;
+
+	std::string								filter_str_;
+
 public:
-	explicit implementation(AVStream* stream, const safe_ptr<core::frame_factory>& frame_factory) 
-		: frame_factory_(frame_factory)
-		, mode_(core::video_mode::invalid)
+	explicit implementation(input& input, const safe_ptr<core::frame_factory>& frame_factory, const std::string& filter_str) 
+		: input_(input)
+		, frame_factory_(frame_factory)
+		, codec_context_(*input_.get_video_codec_context())
+		, frame_number_(0)
+		, filter_(filter_str.empty() ? nullptr : new filter(filter_str))
+		, filter_str_(filter_str)
+		, eof_count_(std::numeric_limits<int>::max())
 	{
-		if(!stream || !stream->codec)
-			return;
-
-		auto codec = avcodec_find_decoder(stream->codec->codec_id);			
-		if(!codec)
-			return;
-			
-		int errn = tbb_avcodec_open(stream->codec, codec);
-		if(errn < 0)
-			return;
-				
-		index_ = stream->index;
-		codec_context_.reset(stream->codec, tbb_avcodec_close);
-
-		// Some files give an invalid time_base numerator, try to fix it.
-		if(codec_context_ && codec_context_->time_base.num == 1)
-			codec_context_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(codec_context_->time_base.den)))-1));	
-	}
-		
-	void push(const std::shared_ptr<AVPacket>& packet)
-	{
-		if(!codec_context_)
-			return;
-
-		if(packet && packet->stream_index != index_)
-			return;
-
-		packet_buffer_.push(packet);
 	}
 
-	std::vector<safe_ptr<core::write_frame>> poll()
-	{		
-		std::vector<safe_ptr<core::write_frame>> result;
-
-		if(!codec_context_)
-			result.push_back(core::create_color_frame(this, frame_factory_, L"#00000000"));
-		else if(!packet_buffer_.empty())
-		{
-			auto packet = std::move(packet_buffer_.front());
-			packet_buffer_.pop();
+	std::deque<std::pair<int, safe_ptr<core::write_frame>>> receive()
+	{
+		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
 		
-			if(!packet) // eof
-			{				
-				if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
-				{
-					// FIXME: This might cause bad performance.
-					AVPacket pkt = {0};
-					auto frame = decode_frame(pkt);
-					if(frame)
-						result.push_back(make_write_frame(this, make_safe(frame), frame_factory_));
-				}
-
-				avcodec_flush_buffers(codec_context_.get());
-			}
-			else
-			{
-				auto frame = decode_frame(*packet);
-				if(frame)
-				{
-					auto frame2 = make_write_frame(this, make_safe(frame), frame_factory_);	
-					mode_ = frame2->get_type();
-					result.push_back(std::move(frame2));
-				}
-			}
-		}
+		std::shared_ptr<AVPacket> pkt;
+		for(int n = 0; n < 32 && result.empty() && input_.try_pop_video_packet(pkt); ++n)	
+			boost::range::push_back(result, decode(pkt));
 
 		return result;
 	}
 
-	std::shared_ptr<AVFrame> decode_frame(AVPacket& packet)
+	std::deque<std::pair<int, safe_ptr<core::write_frame>>> decode(const std::shared_ptr<AVPacket>& video_packet)
+	{			
+		std::deque<std::pair<int, safe_ptr<core::write_frame>>> result;
+
+		if(!video_packet) // eof
+		{
+			eof_count_ = frame_number_ + (filter_ ? filter_->delay()+1 : 0);
+			avcodec_flush_buffers(&codec_context_);
+			return result;
+		}		
+		
+		frame_number_ = frame_number_ % eof_count_;
+		
+		const void* tag = this;
+
+		if(filter_)
+		{							
+			std::shared_ptr<AVFrame> frame;
+		
+			tbb::parallel_invoke(
+			[&]
+			{
+				frame = decode_frame(video_packet);
+			},
+			[&]
+			{		
+				boost::range::transform(filter_->poll(), std::back_inserter(result), [&](const safe_ptr<AVFrame>& frame)
+				{
+					return std::make_pair(frame_number_, make_write_frame(tag, frame, frame_factory_));
+				});
+		
+				if(!result.empty())
+					++frame_number_;
+			});		
+
+			if(frame)
+				filter_->push(make_safe(frame));
+		}
+		else
+		{
+			auto frame = decode_frame(video_packet);
+			
+			if(frame)
+				result.push_back(std::make_pair(frame_number_++, make_write_frame(tag, make_safe(frame), frame_factory_)));
+		}
+
+		return result;
+	}
+			
+	std::shared_ptr<AVFrame> decode_frame(const std::shared_ptr<AVPacket>& video_packet)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 		int frame_finished = 0;
-		const int errn = avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &packet);
+		const int errn = avcodec_decode_video2(&codec_context_, decoded_frame.get(), &frame_finished, video_packet.get());
 		
 		if(errn < 0)
 		{
@@ -153,35 +154,14 @@ public:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		if(frame_finished == 0)	
-			decoded_frame.reset();
+		if(frame_finished == 0)		
+			decoded_frame = nullptr;
 
 		return decoded_frame;
 	}
-
-	bool ready() const
-	{
-		return !codec_context_ || !packet_buffer_.empty();
-	}
-	
-	core::video_mode::type mode()
-	{
-		if(!codec_context_)
-			return frame_factory_->get_video_format_desc().mode;
-
-		return mode_;
-	}
-
-	double fps() const
-	{
-		return static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
-	}
 };
 
-video_decoder::video_decoder(AVStream* stream, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(stream, frame_factory)){}
-void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
-std::vector<safe_ptr<core::write_frame>> video_decoder::poll(){return impl_->poll();}
-bool video_decoder::ready() const{return impl_->ready();}
-core::video_mode::type video_decoder::mode(){return impl_->mode();}
-double video_decoder::fps() const{return impl_->fps();}
+video_decoder::video_decoder(input& input, const safe_ptr<core::frame_factory>& frame_factory, const std::string& filter_str) : impl_(new implementation(input, frame_factory, filter_str)){}
+std::deque<std::pair<int, safe_ptr<core::write_frame>>> video_decoder::receive(){return impl_->receive();}
+
 }

@@ -10,14 +10,14 @@
     <Filter Include="source\producer">
       <UniqueIdentifier>{c5a94fd1-4552-4f6d-97cd-24e44e662e0f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\producer\video">
+      <UniqueIdentifier>{4b0f3949-6dc5-4895-837f-4c3ef1759a90}</UniqueIdentifier>
+    </Filter>
     <Filter Include="source\producer\audio">
       <UniqueIdentifier>{6937307b-550f-48f8-9cc0-509de0e18ddc}</UniqueIdentifier>
     </Filter>
     <Filter Include="source\producer\filter">
       <UniqueIdentifier>{0d46b4fa-2b19-44b7-82ea-52cbd9ad24a4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="source\producer\video">
-      <UniqueIdentifier>{4b0f3949-6dc5-4895-837f-4c3ef1759a90}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
