@@ -95,6 +95,12 @@ public:
 		if(double_rate(filter))
 			fps_ *= 2;
 	}
+
+	~implementation()
+	{
+		filter_tasks_.cancel();
+		filter_tasks_.wait();
+	}
 		
 	void push(const std::shared_ptr<AVPacket>& packet)
 	{
