@@ -60,9 +60,20 @@ struct filter::implementation
 					boost::errinfo_api_function("avfilter_graph_create_filter") <<	boost::errinfo_errno(AVUNERROR(errn)));
 			}
 
-			PixelFormat pix_fmts[] = { PIX_FMT_BGRA, PIX_FMT_NONE };
-
-			// Output
+			PixelFormat pix_fmts[] = 
+			{
+				PIX_FMT_YUV420P,
+				PIX_FMT_YUVA420P,
+				PIX_FMT_YUV422P,
+				PIX_FMT_YUV444P,
+				PIX_FMT_YUV411P,
+				PIX_FMT_ARGB, 
+				PIX_FMT_RGBA,
+				PIX_FMT_ABGR,
+				PIX_FMT_GRAY8,
+				PIX_FMT_NONE
+			};	
+			// OPIX_FMT_BGRAutput
 			errn = avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts, graph_.get());
 			if(errn < 0)
 			{
