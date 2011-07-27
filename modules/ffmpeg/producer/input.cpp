@@ -33,10 +33,12 @@
 #include <common/diagnostics/graph.h>
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/mutex.h>
+#include <tbb/atomic.h>
 
-#include <boost/range/iterator_range.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/range/iterator_range.hpp>
 
 extern "C" 
 {
@@ -46,98 +48,27 @@ extern "C"
 }
 
 namespace caspar {
+
+static const size_t MAX_BUFFER_COUNT = 128;
+static const size_t MAX_BUFFER_SIZE  = 64 * 1000000;
 	
-static const size_t PACKET_BUFFER_COUNT = 100; // Assume that av_read_frame distance between audio and video packets is less than PACKET_BUFFER_COUNT.
-
-class stream
-{
-	std::shared_ptr<AVCodecContext>	ctx_;
-	int index_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> buffer_;
-
-public:
-
-	stream() : index_(-1)
-	{
-		buffer_.set_capacity(PACKET_BUFFER_COUNT);
-	}
-	
-	int open(std::shared_ptr<AVFormatContext>& fctx, AVMediaType media_type)
-	{		
-		const auto streams = boost::iterator_range<AVStream**>(fctx->streams, fctx->streams+fctx->nb_streams);
-		const auto it = boost::find_if(streams, [&](AVStream* stream) 
-		{
-			return stream && stream->codec->codec_type == media_type;
-		});
-		
-		if(it == streams.end()) 
-			return AVERROR_STREAM_NOT_FOUND;
-		
-		auto codec = avcodec_find_decoder((*it)->codec->codec_id);			
-		if(!codec)
-			return AVERROR_DECODER_NOT_FOUND;
-			
-		index_ = (*it)->index;
-
-		int errn = tbb_avcodec_open((*it)->codec, codec);
-		if(errn < 0)
-			return errn;
-				
-		ctx_.reset((*it)->codec, tbb_avcodec_close);
-
-		// Some files give an invalid time_base numerator, try to fix it.
-		if(ctx_ && ctx_->time_base.num == 1)
-			ctx_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(ctx_->time_base.den)))-1));
-		
-		return errn;	
-	}
-
-	bool try_pop(std::shared_ptr<AVPacket>& pkt)
-	{
-		return buffer_.try_pop(pkt);
-	}
-
-	void push(const std::shared_ptr<AVPacket>& pkt)
-	{
-		if(pkt && pkt->stream_index != index_)
-			return;
-
-		if(!ctx_)
-			return;
-
-		if(pkt)
-			av_dup_packet(pkt.get());
-
-		buffer_.push(pkt);	
-	}
-
-	int index() const {return index_;}
-	
-	const std::shared_ptr<AVCodecContext>& ctx() const { return ctx_; }
-
-	operator bool(){return ctx_ != nullptr;}
-
-	double fps() const { return !ctx_ ? -1.0 : static_cast<double>(ctx_->time_base.den) / static_cast<double>(ctx_->time_base.num); }
-
-	bool empty() const { return buffer_.empty();}
-	int size() const { return buffer_.size();}
-};
-		
 struct input::implementation : boost::noncopyable
 {		
 	safe_ptr<diagnostics::graph> graph_;
 
 	std::shared_ptr<AVFormatContext> format_context_;	// Destroy this last
 		
-	const std::wstring	filename_;
-	const bool			loop_;
-	const int			start_;		
-	double				fps_;
+	const std::wstring			filename_;
+	const bool					loop_;
+	const int					start_;		
 
-	stream video_stream_;
-	stream audio_stream_;
+	size_t						buffer_size_limit_;
+	tbb::atomic<size_t>			buffer_size_;
+	boost::condition_variable	cond_;
+	boost::mutex				mutex_;
+
+	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> buffer_;
 		
-	std::exception_ptr exception_;
 	executor executor_;
 public:
 	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
@@ -146,8 +77,10 @@ public:
 		, filename_(filename)
 		, executor_(print())
 		, start_(std::max(start, 0))
-	{				
+	{			
 		int errn;
+
+		buffer_.set_capacity(MAX_BUFFER_COUNT);
 
 		AVFormatContext* weak_format_context_ = nullptr;
 		errn = av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr);
@@ -175,37 +108,12 @@ public:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 		
-		errn = video_stream_.open(format_context_, AVMEDIA_TYPE_VIDEO);
-		if(errn < 0)
-			CASPAR_LOG(warning) << print() << L" Could not open video stream: " << widen(av_error_str(errn));
-		
-		errn = audio_stream_.open(format_context_, AVMEDIA_TYPE_AUDIO);
-		if(errn < 0)
-			CASPAR_LOG(warning) << print() << L" Could not open audio stream: " << widen(av_error_str(errn));
-		
-		if(!video_stream_ && !audio_stream_)
-		{	
-			BOOST_THROW_EXCEPTION(
-				file_read_error() << 
-				source_info(narrow(print())) << 
-				msg_info("No video or audio codec context found."));	
-		}
-
-		fps_ = video_stream_ ? video_stream_.fps() : audio_stream_.fps();
-
 		if(start_ != 0)			
 			seek_frame(start_);
-
-		for(size_t n = 0; n < 32; ++n) // Read some packets for pre-rolling.
-			read_next_packet();
-						
-		if(audio_stream_)
-			graph_->set_color("audio-input-buffer", diagnostics::color(0.5f, 1.0f, 0.2f));
-		
-		if(video_stream_)
-			graph_->set_color("video-input-buffer", diagnostics::color(0.2f, 0.5f, 1.0f));
-		
+				
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
+		graph_->set_color("buffer-count", diagnostics::color(0.2f, 0.8f, 1.0f));
+		graph_->set_color("buffer-size", diagnostics::color(0.2f, 0.4f, 1.0f));	
 
 		executor_.begin_invoke([this]{read_file();});
 		CASPAR_LOG(info) << print() << " Started.";
@@ -216,29 +124,36 @@ public:
 		stop();
 		// Unblock thread.
 		std::shared_ptr<AVPacket> packet;
-		try_pop_video_packet(packet);
-		try_pop_audio_packet(packet);
+		buffer_.try_pop(packet);
+		buffer_size_ = 0;
+		cond_.notify_all();
 	}
 		
-	bool try_pop_video_packet(std::shared_ptr<AVPacket>& packet)
+	bool try_pop(std::shared_ptr<AVPacket>& packet)
 	{
-		bool result = video_stream_.try_pop(packet);
-		if(result && !packet)
-			graph_->add_tag("video-input-buffer");
+		bool result = buffer_.try_pop(packet);
+		graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
+		if(packet)
+		{
+			buffer_size_ -= packet->size;
+			graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));
+			cond_.notify_all();
+		}
 		return result;
 	}
-
-	bool try_pop_audio_packet(std::shared_ptr<AVPacket>& packet)
-	{	
-		bool result = audio_stream_.try_pop(packet);
-		if(result && !packet)
-			graph_->add_tag("audio-input-buffer");
-		return result;
-	}
-
-	double fps()
+		
+	AVStream* stream(AVMediaType media_type)
 	{
-		return fps_;
+		const auto streams = boost::iterator_range<AVStream**>(format_context_->streams, format_context_->streams + format_context_->nb_streams);
+		const auto it = boost::find_if(streams, [&](AVStream* stream) 
+		{
+			return stream && stream->codec->codec_type == media_type;
+		});
+		
+		if(it == streams.end()) 
+			return nullptr;
+
+		return *it;
 	}
 
 private:
@@ -252,11 +167,7 @@ private:
 
 	void read_file()
 	{		
-		if(video_stream_.size() > 4 || audio_stream_.size() > 4) // audio is always before video.
-			Sleep(5); // There are enough packets, no hurry.
-
 		read_next_packet();
-
 		executor_.begin_invoke([this]{read_file();});
 	}
 			
@@ -297,16 +208,18 @@ private:
 			}
 			else
 			{
-				if(video_stream_)
-				{	
-					video_stream_.push(read_packet);
-					graph_->update_value("video-input-buffer", static_cast<float>(video_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));		
-				}
-				if(audio_stream_)
-				{	
-					audio_stream_.push(read_packet);
-					graph_->update_value("audio-input-buffer", static_cast<float>(audio_stream_.size())/static_cast<float>(PACKET_BUFFER_COUNT));	
-				}
+				av_dup_packet(read_packet.get());
+				buffer_.push(read_packet);
+
+				graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
+				
+				boost::unique_lock<boost::mutex> lock(mutex_);
+				while(buffer_size_ > MAX_BUFFER_SIZE && buffer_.size() > 2)
+					cond_.wait(lock);
+
+				buffer_size_ += read_packet->size;
+
+				graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));
 			}							
 		}
 		catch(...)
@@ -322,12 +235,12 @@ private:
 		static const AVRational base_q = {1, AV_TIME_BASE};
 
 		// Convert from frames into seconds.
-		auto seek_target = frame*static_cast<int64_t>(AV_TIME_BASE/fps_);
+		auto seek_target = frame;//*static_cast<int64_t>(AV_TIME_BASE/fps_);
 
-		int stream_index = video_stream_.index() >= 0 ? video_stream_.index() : audio_stream_.index();
+		int stream_index = -1;//video_stream_.index() >= 0 ? video_stream_.index() : audio_stream_.index();
 
-		if(stream_index >= 0)		
-			seek_target = av_rescale_q(seek_target, base_q, format_context_->streams[stream_index]->time_base);
+		//if(stream_index >= 0)		
+		//	seek_target = av_rescale_q(seek_target, base_q, format_context_->streams[stream_index]->time_base);
 
 		const int errn = av_seek_frame(format_context_.get(), stream_index, seek_target, flags);
 		if(errn < 0)
@@ -340,8 +253,7 @@ private:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		video_stream_.push(nullptr);
-		audio_stream_.push(nullptr);
+		buffer_.push(nullptr);
 	}		
 
 	bool is_eof(int errn)
@@ -354,19 +266,13 @@ private:
 	
 	std::wstring print() const
 	{
-		const auto video = widen(video_stream_.ctx() ? video_stream_.ctx()->codec->name : "no-video");
-		const auto audio = widen(audio_stream_.ctx() ? audio_stream_.ctx()->codec->name : "no-audio");
-
-		return L"ffmpeg_input[" + filename_ + L"(" + boost::lexical_cast<std::wstring>(static_cast<int>(100*fps_)) + L"|" + video + L"|" + audio + L")]";
+		return L"ffmpeg_input[" + filename_ + L")]";
 	}
 };
 
 input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length) 
 	: impl_(new implementation(graph, filename, loop, start)){}
-const std::shared_ptr<AVCodecContext>& input::get_video_codec_context() const{return impl_->video_stream_.ctx();}
-const std::shared_ptr<AVCodecContext>& input::get_audio_codec_context() const{return impl_->audio_stream_.ctx();}
-bool input::is_running() const {return impl_->executor_.is_running();}
-bool input::try_pop_video_packet(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_video_packet(packet);}
-bool input::try_pop_audio_packet(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_audio_packet(packet);}
-double input::fps() const { return impl_->fps(); }
+AVStream* input::stream(AVMediaType media_type){return impl_->stream(media_type);}
+bool input::eof() const {return !impl_->executor_.is_running();}
+bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 }

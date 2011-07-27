@@ -21,9 +21,12 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include "../input.h"
+#include <core/video_format.h>
+
+struct AVStream;
+
 namespace caspar {
-	
+
 namespace core {
 	struct frame_factory;
 	class write_frame;
@@ -32,9 +35,15 @@ namespace core {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(input& input, const safe_ptr<core::frame_factory>& frame_factory, const std::string& filter_str);
-	std::deque<std::pair<int, safe_ptr<core::write_frame>>> receive();	
+	explicit video_decoder(AVStream* stream, const safe_ptr<core::frame_factory>& frame_factory);
+	
+	void push(const std::shared_ptr<AVPacket>& packet);
+	bool ready() const;
+	std::vector<safe_ptr<core::write_frame>> poll();
 
+	core::video_mode::type mode();
+
+	double fps() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

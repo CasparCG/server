@@ -87,7 +87,7 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 	if(frame1 == basic_frame::empty() && frame2 == basic_frame::empty())
 		return basic_frame::empty();
 	
-	if(frame1 == basic_frame::eof() && frame2 == basic_frame::eof())
+	if(frame1 == basic_frame::eof() || frame2 == basic_frame::eof())
 		return basic_frame::eof();
 	
 	if(frame1 == frame2 || mode == video_mode::progressive)

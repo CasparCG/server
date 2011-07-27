@@ -42,6 +42,7 @@ class write_frame : public core::basic_frame, boost::noncopyable
 {
 public:	
 	explicit write_frame(ogl_device& ogl, int tag, const core::pixel_format_desc& desc);
+	write_frame(const write_frame& other);
 			
 	virtual boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
 	virtual std::vector<int16_t>& audio_data();
@@ -63,8 +64,8 @@ public:
 	
 private:
 	friend class image_mixer;
-
-	const std::vector<safe_ptr<device_buffer>>& get_textures() const;
+	
+	const std::vector<safe_ptr<device_buffer>> get_textures() const;
 
 	struct implementation;
 	safe_ptr<implementation> impl_;
