@@ -21,6 +21,8 @@
 
 #include "audio_decoder.h"
 
+#include <tbb/task_group.h>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -37,95 +39,120 @@ extern "C"
 #endif
 
 namespace caspar {
-
+	
 struct audio_decoder::implementation : boost::noncopyable
 {	
-	input&							input_;
-	AVCodecContext&					codec_context_;		
-	const core::video_format_desc	format_desc_;
-
-	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>			current_chunk_;	
-
-	size_t							frame_number_;
-	bool							wait_for_eof_;
-
-	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> buffer_;
+	std::shared_ptr<AVCodecContext>								codec_context_;		
+	const core::video_format_desc								format_desc_;
+	int															index_;
+	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>	buffer_;		// avcodec_decode_audio3 needs 4 byte alignment
+	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>	audio_samples_;		// avcodec_decode_audio3 needs 4 byte alignment
+	std::queue<std::shared_ptr<AVPacket>>						packets_;
 public:
-	explicit implementation(input& input, const core::video_format_desc& format_desc) 
-		: input_(input)
-		, codec_context_(*input_.get_audio_codec_context())
-		, format_desc_(format_desc)	
-		, frame_number_(0)
-		, wait_for_eof_(false)
-		, buffer_(4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2, 0)
+	explicit implementation(AVStream* stream, const core::video_format_desc& format_desc) 
+		: format_desc_(format_desc)	
 	{
-		if(codec_context_.sample_rate != static_cast<int>(format_desc_.audio_sample_rate) || 
-		   codec_context_.channels != static_cast<int>(format_desc_.audio_channels))
+		if(!stream || !stream->codec)
+			return;
+
+		auto codec = avcodec_find_decoder(stream->codec->codec_id);			
+		if(!codec)
+			return;
+			
+		int errn = avcodec_open(stream->codec, codec);
+		if(errn < 0)
+			return;
+				
+		index_ = stream->index;
+		codec_context_.reset(stream->codec, avcodec_close);
+
+		if(codec_context_ &&
+		   (codec_context_->sample_rate != static_cast<int>(format_desc_.audio_sample_rate) || 
+		   codec_context_->channels != static_cast<int>(format_desc_.audio_channels)))
 		{	
 			BOOST_THROW_EXCEPTION(
 				file_read_error()  <<
 				msg_info("Invalid sample-rate or number of channels.") <<
-				arg_value_info(boost::lexical_cast<std::string>(codec_context_.sample_rate)) << 
+				arg_value_info(boost::lexical_cast<std::string>(codec_context_->sample_rate)) << 
 				arg_name_info("codec_context"));
-		}
-	}
-		
-	std::deque<std::pair<int, std::vector<int16_t>>> receive()
-	{
-		std::deque<std::pair<int, std::vector<int16_t>>> result;
-		
-		std::shared_ptr<AVPacket> pkt;
-		for(int n = 0; n < 32 && result.empty() && input_.try_pop_audio_packet(pkt); ++n)	
-			result = decode(pkt);
-
-		return result;
+		}		
 	}
 
-	std::deque<std::pair<int, std::vector<int16_t>>> decode(const std::shared_ptr<AVPacket>& audio_packet)
+	void push(const std::shared_ptr<AVPacket>& packet)
 	{			
-		std::deque<std::pair<int, std::vector<int16_t>>> result;
+		if(!codec_context_)
+			return;
 
-		if(!audio_packet) // eof
-		{	
-			avcodec_flush_buffers(&codec_context_);
-			current_chunk_.clear();
-			frame_number_ = 0;
-			wait_for_eof_ = false;
-			return result;
+		if(packet && packet->stream_index != index_)
+			return;
+
+		packets_.push(packet);
+	}	
+	
+	std::vector<std::vector<int16_t>> poll()
+	{
+		std::vector<std::vector<int16_t>> result;
+
+		if(!codec_context_)
+			result.push_back(std::vector<int16_t>(format_desc_.audio_samples_per_frame, 0));
+		else if(!packets_.empty())
+		{
+			decode(packets_.front());
+			packets_.pop();
+
+			while(audio_samples_.size() > format_desc_.audio_samples_per_frame)
+			{
+				const auto begin = audio_samples_.begin();
+				const auto end   = audio_samples_.begin() + format_desc_.audio_samples_per_frame;
+
+				result.push_back(std::vector<int16_t>(begin, end));
+				audio_samples_.erase(begin, end);
+			}
 		}
-
-		if(wait_for_eof_)
-			return result;
-						
-		int written_bytes = buffer_.size()-FF_INPUT_BUFFER_PADDING_SIZE/2;
-		const int errn = avcodec_decode_audio3(&codec_context_, buffer_.data(), &written_bytes, audio_packet.get());
-		if(errn < 0)
-		{	
-			BOOST_THROW_EXCEPTION(
-				invalid_operation() <<
-				boost::errinfo_api_function("avcodec_decode_audio2") <<
-				boost::errinfo_errno(AVUNERROR(errn)));
-		}
-
-		current_chunk_.insert(current_chunk_.end(), buffer_.begin(), buffer_.begin() + written_bytes/2);
-
-		const auto last = current_chunk_.end() - current_chunk_.size() % format_desc_.audio_samples_per_frame;
-		
-		for(auto it = current_chunk_.begin(); it != last; it += format_desc_.audio_samples_per_frame)		
-			result.push_back(std::make_pair(frame_number_++, std::vector<int16_t>(it, it + format_desc_.audio_samples_per_frame)));		
-
-		current_chunk_.erase(current_chunk_.begin(), last);
 
 		return result;
 	}
 
-	void restart()
+	void decode(const std::shared_ptr<AVPacket>& packet)
+	{											
+		if(!packet) // eof
+		{
+			auto truncate = audio_samples_.size() % format_desc_.audio_samples_per_frame;
+			if(truncate > 0)
+			{
+				audio_samples_.resize(audio_samples_.size() - truncate); 
+				CASPAR_LOG(info) << L"Truncating " << truncate << L" audio-samples."; 
+			}
+			avcodec_flush_buffers(codec_context_.get());
+		}
+		else
+		{
+			buffer_.resize(4*format_desc_.audio_sample_rate*2+FF_INPUT_BUFFER_PADDING_SIZE/2, 0);
+
+			int written_bytes = buffer_.size() - FF_INPUT_BUFFER_PADDING_SIZE/2;
+			const int errn = avcodec_decode_audio3(codec_context_.get(), buffer_.data(), &written_bytes, packet.get());
+			if(errn < 0)
+			{	
+				BOOST_THROW_EXCEPTION(
+					invalid_operation() <<
+					boost::errinfo_api_function("avcodec_decode_audio2") <<
+					boost::errinfo_errno(AVUNERROR(errn)));
+			}
+
+			buffer_.resize(written_bytes/2);
+			audio_samples_.insert(audio_samples_.end(), buffer_.begin(), buffer_.end());
+			buffer_.clear();	
+		}
+	}
+
+	bool ready() const
 	{
-		wait_for_eof_ = true;
+		return !codec_context_ || !packets_.empty();
 	}
 };
 
-audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc) : impl_(new implementation(input, format_desc)){}
-std::deque<std::pair<int, std::vector<int16_t>>> audio_decoder::receive(){return impl_->receive();}
-void audio_decoder::restart(){impl_->restart();}
+audio_decoder::audio_decoder(AVStream* stream, const core::video_format_desc& format_desc) : impl_(new implementation(stream, format_desc)){}
+void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
+bool audio_decoder::ready() const{return impl_->ready();}
+std::vector<std::vector<int16_t>> audio_decoder::poll(){return impl_->poll();}
 }
