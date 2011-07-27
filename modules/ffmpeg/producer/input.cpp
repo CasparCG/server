@@ -80,10 +80,8 @@ public:
 	{			
 		int errn;
 
-		buffer_.set_capacity(MAX_BUFFER_COUNT);
-
 		AVFormatContext* weak_format_context_ = nullptr;
-		errn = av_open_input_file(&weak_format_context_, narrow(filename).c_str(), nullptr, 0, nullptr);
+		errn = avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr);
 		if(errn < 0 || weak_format_context_ == nullptr)
 		{	
 			BOOST_THROW_EXCEPTION(
@@ -110,6 +108,11 @@ public:
 		
 		if(start_ != 0)			
 			seek_frame(start_);
+		
+		for(int n = 0; n < 16 && buffer_size_ < MAX_BUFFER_SIZE && buffer_.size() < MAX_BUFFER_COUNT; ++n)
+			read_next_packet();
+
+		buffer_.set_capacity(MAX_BUFFER_COUNT);
 				
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
 		graph_->set_color("buffer-count", diagnostics::color(0.2f, 0.8f, 1.0f));
@@ -133,9 +136,10 @@ public:
 	{
 		bool result = buffer_.try_pop(packet);
 		graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
-		if(packet)
+		if(result)
 		{
-			buffer_size_ -= packet->size;
+			if(packet)
+				buffer_size_ -= packet->size;
 			graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));
 			cond_.notify_all();
 		}
@@ -195,14 +199,14 @@ private:
 			else
 			{
 				av_dup_packet(read_packet.get());
-				buffer_.push(read_packet);
 
 				graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
 				
 				boost::unique_lock<boost::mutex> lock(mutex_);
-				while(buffer_size_ > MAX_BUFFER_SIZE && buffer_.size() > 2)
+				while(buffer_size_ > MAX_BUFFER_SIZE && buffer_.size() > MAX_BUFFER_COUNT)
 					cond_.wait(lock);
-
+				
+				buffer_.push(read_packet);
 				buffer_size_ += read_packet->size;
 
 				graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));

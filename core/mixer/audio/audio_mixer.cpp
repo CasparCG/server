@@ -76,9 +76,10 @@ public:
 		
 		const int n_samples = audio_data_.back().size();
 		
-		CASPAR_VERIFY(audio_data.empty() || static_cast<size_t>(audio_data.size()) ==  audio_data_.size());
+		const auto in_size = static_cast<size_t>(audio_data.size());
+		CASPAR_VERIFY(in_size == 0 || in_size == audio_data_.back().size());
 
-		if(static_cast<size_t>(audio_data.size()) > audio_data_.size())
+		if(in_size > audio_data_.size())
 			return;
 
 		tbb::parallel_for
