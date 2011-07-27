@@ -121,6 +121,9 @@
     <ClInclude Include="mixer\gpu\shader.h">
       <Filter>source\mixer\gpu</Filter>
     </ClInclude>
+    <ClInclude Include="producer\frame_muxer.h">
+      <Filter>source\producer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -195,6 +198,9 @@
     </ClCompile>
     <ClCompile Include="mixer\gpu\shader.cpp">
       <Filter>source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\frame_muxer.cpp">
+      <Filter>source\producer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

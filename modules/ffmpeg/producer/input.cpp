@@ -50,7 +50,7 @@ extern "C"
 namespace caspar {
 
 static const size_t MAX_BUFFER_COUNT = 128;
-static const size_t MAX_BUFFER_SIZE  = 64 * 1000000;
+static const size_t MAX_BUFFER_SIZE  = 32 * 1000000;
 	
 struct input::implementation : boost::noncopyable
 {		
@@ -140,20 +140,6 @@ public:
 			cond_.notify_all();
 		}
 		return result;
-	}
-		
-	AVStream* stream(AVMediaType media_type)
-	{
-		const auto streams = boost::iterator_range<AVStream**>(format_context_->streams, format_context_->streams + format_context_->nb_streams);
-		const auto it = boost::find_if(streams, [&](AVStream* stream) 
-		{
-			return stream && stream->codec->codec_type == media_type;
-		});
-		
-		if(it == streams.end()) 
-			return nullptr;
-
-		return *it;
 	}
 
 private:
@@ -272,7 +258,7 @@ private:
 
 input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length) 
 	: impl_(new implementation(graph, filename, loop, start)){}
-AVStream* input::stream(AVMediaType media_type){return impl_->stream(media_type);}
 bool input::eof() const {return !impl_->executor_.is_running();}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
+std::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 }

@@ -29,11 +29,12 @@
 #include <common/utility/timer.h>
 #include <common/diagnostics/graph.h>
 
-#include <core/producer/frame/basic_frame.h>
 #include <core/mixer/write_frame.h>
-#include <core/producer/frame/audio_transform.h>
 #include <core/video_format.h>
+#include <core/producer/frame/audio_transform.h>
+#include <core/producer/frame/basic_frame.h>
 #include <core/producer/color/color_producer.h>
+#include <core/producer/frame_muxer.h>
 
 #include <common/env.h>
 
@@ -47,83 +48,7 @@
 #include <vector>
 
 namespace caspar {
-
-struct display_mode
-{
-	enum type
-	{
-		simple,
-		duplicate,
-		half,
-		interlace,
-		deinterlace,
-		deinterlace_half,
-		count,
-		invalid
-	};
-
-	static std::wstring print(display_mode::type value)
-	{
-		switch(value)
-		{
-			case simple:
-				return L"simple";
-			case duplicate:
-				return L"duplicate";
-			case half:
-				return L"half";
-			case interlace:
-				return L"interlace";
-			case deinterlace:
-				return L"deinterlace";
-			case deinterlace_half:
-				return L"deinterlace_half";
-			default:
-				return L"invalid";
-		}
-	}
-};
-
-display_mode::type get_display_mode(const core::video_mode::type in_mode, double in_fps, const core::video_mode::type out_mode, double out_fps)
-{		
-	if(in_mode == core::video_mode::invalid || out_mode == core::video_mode::invalid)
-		return display_mode::invalid;
-
-	static const auto epsilon = 2.0;
-
-	if(std::abs(in_fps - out_fps) < epsilon)
-	{
-		if(in_mode != core::video_mode::progressive && out_mode == core::video_mode::progressive)
-			return display_mode::deinterlace_half;
-		//else if(in_mode == core::video_mode::progressive && out_mode != core::video_mode::progressive)
-		//	simple(); // interlace_duplicate();
-		else
-			return display_mode::simple;
-	}
-	else if(std::abs(in_fps/2.0 - out_fps) < epsilon)
-	{
-		if(in_mode != core::video_mode::progressive)
-			return display_mode::invalid;
-
-		if(out_mode != core::video_mode::progressive)
-			return display_mode::interlace;
-		else
-			return display_mode::half;
-	}
-	else if(std::abs(in_fps - out_fps/2.0) < epsilon)
-	{
-		if(out_mode != core::video_mode::progressive)
-			return display_mode::invalid;
-
-		if(in_mode != core::video_mode::progressive)
-			return display_mode::deinterlace;
-		else
-			return display_mode::duplicate;
-	}
-
-	return display_mode::invalid;
-}
-		
+			
 struct ffmpeg_producer : public core::frame_producer
 {
 	const std::wstring								filename_;
@@ -138,34 +63,29 @@ struct ffmpeg_producer : public core::frame_producer
 	video_decoder									video_decoder_;
 	audio_decoder									audio_decoder_;
 
-	std::queue<safe_ptr<core::basic_frame>>			frame_buffer_;
 	std::queue<safe_ptr<core::basic_frame>>			output_buffer_;
 
-	const bool										auto_convert_;
-	display_mode::type								display_mode_;
-
-	std::deque<safe_ptr<core::write_frame>>			video_frames_;
-	std::deque<std::vector<int16_t>>				audio_chunks_;
-
+	core::frame_muxer								muxer_;
+	
 	tbb::task_group									tasks_;
 
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter_str, bool loop, int start, int length) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
 		: filename_(filename)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
 		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop, start, length)
-		, video_decoder_(input_.stream(AVMEDIA_TYPE_VIDEO), frame_factory)
-		, audio_decoder_(input_.stream(AVMEDIA_TYPE_AUDIO), frame_factory->get_video_format_desc())
-		, auto_convert_(env::properties().get("configuration.ffmpeg.auto-mode", false))
-		, display_mode_(display_mode::invalid)
+		, video_decoder_(input_.context(), frame_factory, filter)
+		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
+		, muxer_(video_decoder_.fps(), format_desc_.mode, format_desc_.fps)
+		//, adapt_(env::properties().get("configuration.ffmpeg.auto-mode", false))
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));		
 		
-		for(int n = 0; n < 128 && frame_buffer_.size() < 4; ++n)
+		for(int n = 0; n < 128 && muxer_.size() < 4; ++n)
 			decode_frame();
 	}
 
@@ -181,13 +101,14 @@ public:
 		{	
 			tasks_.wait();
 
-			output_buffer_ = std::move(frame_buffer_);
+			while(muxer_.size() > 0)
+				output_buffer_.push(muxer_.pop());
 
 			tasks_.run([=]
 			{
 				frame_timer_.restart();
 
-				for(int n = 0; n < 64 && frame_buffer_.empty(); ++n)
+				for(int n = 0; n < 64 && muxer_.empty(); ++n)
 					decode_frame();
 
 				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
@@ -214,7 +135,7 @@ public:
 
 	void decode_frame()
 	{
-		for(int n = 0; n < 32 && ((video_frames_.size() < 2 && !video_decoder_.ready()) ||	(audio_chunks_.size() < 2 && !audio_decoder_.ready())); ++n) 
+		for(int n = 0; n < 32 && ((muxer_.video_frames() < 2 && !video_decoder_.ready()) ||	(muxer_.audio_chunks() < 2 && !audio_decoder_.ready())); ++n) 
 		{
 			std::shared_ptr<AVPacket> pkt;
 			if(input_.try_pop(pkt))
@@ -227,144 +148,20 @@ public:
 		tbb::parallel_invoke(
 		[=]
 		{
-			if(video_frames_.size() < 2)
-				boost::range::push_back(video_frames_, video_decoder_.poll());
+			if(muxer_.video_frames() < 2)
+			{
+				BOOST_FOREACH(auto& video_frame, video_decoder_.poll())
+					muxer_.push(video_frame);
+			}
 		},
 		[=]
 		{
-			if(audio_chunks_.size() < 2)
-				boost::range::push_back(audio_chunks_, audio_decoder_.poll());
+			if(muxer_.audio_chunks() < 2)
+			{
+				BOOST_FOREACH(auto& audio_chunk, audio_decoder_.poll())
+					muxer_.push(audio_chunk);
+			}
 		});
-
-		if(video_frames_.empty() || audio_chunks_.empty())
-			return;
-
-		if(auto_convert_)
-			auto_convert();
-		else
-			simple();
-	}
-
-	void auto_convert()
-	{
-		auto current_display_mode = get_display_mode(video_decoder_.mode(), video_decoder_.fps(),  format_desc_.mode,  format_desc_.fps);		
-		if(current_display_mode != display_mode_)
-		{
-			display_mode_ = current_display_mode;
-			CASPAR_LOG(info) << print() << " display_mode: " << display_mode::print(display_mode_) << 
-				L" in: " << core::video_mode::print(video_decoder_.mode()) << L" " << video_decoder_.fps() << " fps" <<
-				L" out: " << core::video_mode::print(format_desc_.mode) << L" " << format_desc_.fps << " fps";
-		}
-
-		switch(display_mode_)
-		{
-		case display_mode::simple:
-			return simple();
-		case display_mode::duplicate:
-			return duplicate();
-		case display_mode::half:
-			return half();
-		case display_mode::interlace:
-			return interlace();
-		case display_mode::deinterlace:
-			return deinterlace();
-		case display_mode::deinterlace_half:
-			return deinterlace_half();
-		default:
-			BOOST_THROW_EXCEPTION(invalid_operation());
-		}
-	}
-
-	void simple()
-	{
-		CASPAR_ASSERT(!video_frames_.empty());
-		CASPAR_ASSERT(!audio_chunks_.empty());
-
-		auto frame1 = video_frames_.front();
-		video_frames_.pop_front();
-
-		frame1->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop_front();
-
-		frame_buffer_.push(frame1);
-	}
-
-	void duplicate()
-	{		
-		CASPAR_ASSERT(!video_frames_.empty());
-		CASPAR_ASSERT(!audio_chunks_.empty());
-
-		auto frame = video_frames_.front();
-		video_frames_.pop_front();
-
-		auto frame1 = make_safe<core::write_frame>(*frame); // make a copy
-		frame1->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop_front();
-
-		auto frame2 = frame;
-		frame2->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop_front();
-
-		frame_buffer_.push(frame1);
-		frame_buffer_.push(frame2);
-	}
-
-	void half()
-	{	
-		CASPAR_ASSERT(!video_frames_.empty());
-		CASPAR_ASSERT(!audio_chunks_.empty());
-
-		if(video_frames_.size() < 2 && !input_.eof())
-			return;
-		
-		if(video_frames_.size() < 2)
-			video_frames_.push_back(create_color_frame(this, frame_factory_, L"#00000000"));
-
-		CASPAR_ASSERT(video_frames_.size() == 2);
-				
-		auto frame1 =video_frames_.front();
-		video_frames_.pop_front();
-		frame1->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop_front();
-				
-		video_frames_.pop_front(); // Throw away
-
-		frame_buffer_.push(frame1);
-	}
-	
-	void interlace()
-	{		
-		CASPAR_ASSERT(!video_frames_.empty());
-		CASPAR_ASSERT(!audio_chunks_.empty());
-
-		if(video_frames_.size() < 2 && !input_.eof())
-			return;
-
-		if(video_frames_.size() < 2)
-			video_frames_.push_back(create_color_frame(this, frame_factory_, L"#00000000"));
-		
-		CASPAR_ASSERT(video_frames_.size() == 2);
-
-		auto frame1 = video_frames_.front();
-		video_frames_.pop_front();
-
-		frame1->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop_front();
-				
-		auto frame2 = video_frames_.front();
-		video_frames_.pop_front();
-
-		frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));		
-	}
-	
-	void deinterlace()
-	{
-		BOOST_THROW_EXCEPTION(not_implemented() << msg_info("deinterlace"));
-	}
-
-	void deinterlace_half()
-	{
-		BOOST_THROW_EXCEPTION(not_implemented() << msg_info("deinterlace_half"));
 	}
 				
 	virtual std::wstring print() const

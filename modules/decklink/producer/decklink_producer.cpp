@@ -33,9 +33,10 @@
 #include <common/exception/exceptions.h>
 #include <common/memory/memclr.h>
 
-#include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/audio_transform.h>
+#include <core/producer/frame/frame_factory.h>
+#include <core/producer/frame_muxer.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
@@ -70,69 +71,7 @@ extern "C"
 #include <functional>
 
 namespace caspar { 
-
-class frame_filter
-{
-	std::unique_ptr<filter>					filter_;
-	safe_ptr<core::frame_factory>			frame_factory_;
-
-public:
-	frame_filter(const std::string& filter_str, const safe_ptr<core::frame_factory>& frame_factory) 
-		: filter_(filter_str.empty() ? nullptr : new filter(filter_str))
-		, frame_factory_(frame_factory)
-	{
-	}
-
-	std::vector<safe_ptr<core::basic_frame>> execute(const safe_ptr<core::write_frame>& input_frame)
-	{		
-		std::vector<safe_ptr<core::basic_frame>> result;
-
-		if(!filter_)
-		{
-			input_frame->commit();
-			result.push_back(input_frame);
-		}
-		else
-		{
-			auto desc = input_frame->get_pixel_format_desc();
-
-			auto av_frame = as_av_frame(input_frame);
-					
-			filter_->push(av_frame);	
-			auto buffer = filter_->poll();	
-						
-			if(buffer.size() == 2)
-			{
-				auto frame1 = make_write_frame(this, buffer[0], frame_factory_);
-				auto frame2 = make_write_frame(this, buffer[1], frame_factory_);
-				frame1->audio_data() = std::move(input_frame->audio_data());
-				
-				if(frame_factory_->get_video_format_desc().mode == core::video_mode::progressive)
-				{
-					frame2->audio_data().insert(frame2->audio_data().begin(), frame1->audio_data().begin() + frame1->audio_data().size()/2, frame1->audio_data().end());
-					frame1->audio_data().erase(frame1->audio_data().begin() + frame1->audio_data().size()/2, frame1->audio_data().end());
-					result.push_back(frame1);
-					result.push_back(frame2);
-				}
-				else
-				{
-					frame2->get_audio_transform().set_has_audio(false);
-					result.push_back(core::basic_frame::interlace(frame1, frame2, frame_factory_->get_video_format_desc().mode));
-				}
-			}
-			else if(buffer.size() > 0)
-			{
-				auto frame1 = make_write_frame(this, buffer[0], frame_factory_);
-				frame1->audio_data() = std::move(input_frame->audio_data());
-				result.push_back(frame1);
-			}
-
-		}
 		
-		return result;
-	}
-};
-	
 class decklink_producer : public IDeckLinkInputCallback
 {	
 	CComPtr<IDeckLink>											decklink_;
@@ -145,19 +84,21 @@ class decklink_producer : public IDeckLinkInputCallback
 	std::shared_ptr<diagnostics::graph>							graph_;
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
-	
-	std::vector<short>											audio_data_;
 
+	std::vector<int16_t>										audio_samples_;
+	
 	safe_ptr<core::frame_factory>								frame_factory_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
 	safe_ptr<core::basic_frame>									tail_;
 
 	std::exception_ptr											exception_;
-	frame_filter												filter_;
+	std::unique_ptr<filter>										filter_;
+		
+	core::frame_muxer											muxer_;
 
 public:
-	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
+	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
 		: decklink_(get_device(device_index))
 		, input_(decklink_)
 		, model_name_(get_model_name(decklink_))
@@ -165,7 +106,8 @@ public:
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
-		, filter_(narrow(filter_str), frame_factory_)
+		, filter_(filter.empty() ? nullptr : new caspar::filter(filter))
+		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory->get_video_format_desc().mode, frame_factory->get_video_format_desc().fps)
 	{
 		frame_buffer_.set_capacity(2);
 		
@@ -266,28 +208,45 @@ public:
 			});
 			frame->set_type(format_desc_.mode);
 			
+			std::vector<safe_ptr<core::write_frame>> frames;
+
+			if(filter_)
+			{
+				filter_->push(as_av_frame(frame));
+				auto av_frames = filter_->poll();
+				BOOST_FOREACH(auto& av_frame, av_frames)
+					frames.push_back(make_write_frame(this, av_frame, frame_factory_));
+			}
+			else
+			{
+				frame->commit();
+				frames.push_back(frame);
+			}
+
+			BOOST_FOREACH(auto frame, frames)
+				muxer_.push(frame);
+						
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{
-				const size_t audio_samples = static_cast<size_t>(48000.0 / format_desc_.fps);
-				const size_t audio_nchannels = 2;
-
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<short*>(bytes);
-				audio_data_.insert(audio_data_.end(), audio_data, audio_data + sample_frame_count*2);
+				audio_samples_.insert(audio_samples_.end(), audio_data, audio_data + sample_frame_count*2);
 
-				if(audio_data_.size() > audio_samples*audio_nchannels)
+				if(audio_samples_.size() > frame_factory_->get_video_format_desc().audio_samples_per_frame)
 				{
-					frame->audio_data() = std::vector<short>(audio_data_.begin(), audio_data_.begin() +  audio_samples*audio_nchannels);
-					audio_data_.erase(audio_data_.begin(), audio_data_.begin() +  audio_samples*audio_nchannels);
+					const auto begin = audio_samples_.begin();
+					const auto end   = begin +  frame_factory_->get_video_format_desc().audio_samples_per_frame;
+					muxer_.push(std::vector<int16_t>(begin, end));
+					audio_samples_.erase(begin, end);
 				}
 			}
-		
-			auto frames = filter_.execute(frame);		
-			
-			for(size_t n = 0; n < frames.size(); ++n)
+			else
+				muxer_.push(std::vector<int16_t>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
+					
+			while(!muxer_.empty())
 			{
-				if(!frame_buffer_.try_push(frames[n]))
+				if(!frame_buffer_.try_push(muxer_.pop()))
 					graph_->add_tag("dropped-frame");
 			}
 

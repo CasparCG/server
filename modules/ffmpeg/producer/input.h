@@ -38,7 +38,7 @@ public:
 	bool try_pop(std::shared_ptr<AVPacket>& packet);
 	bool eof() const;
 
-	AVStream* stream(AVMediaType media_type);
+	std::shared_ptr<AVFormatContext> context();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
