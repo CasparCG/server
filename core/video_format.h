@@ -61,6 +61,21 @@ struct video_mode
 		count,
 		invalid
 	};
+
+	static std::wstring print(video_mode::type value)
+	{
+		switch(value)
+		{
+			case progressive:
+				return L"progressive"; 
+			case lower:
+				return L"lower";
+			case upper:
+				return L"upper";
+			default:
+				return L"invalid";
+		}
+	}
 };
 
 struct video_format_desc
