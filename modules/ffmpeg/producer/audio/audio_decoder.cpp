@@ -49,22 +49,17 @@ struct audio_decoder::implementation : boost::noncopyable
 	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>	audio_samples_;		// avcodec_decode_audio3 needs 4 byte alignment
 	std::queue<std::shared_ptr<AVPacket>>						packets_;
 public:
-	explicit implementation(AVStream* stream, const core::video_format_desc& format_desc) 
+	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
 	{
-		if(!stream || !stream->codec)
-			return;
+		AVCodec* dec;
+		index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0);
 
-		auto codec = avcodec_find_decoder(stream->codec->codec_id);			
-		if(!codec)
-			return;
-			
-		int errn = avcodec_open(stream->codec, codec);
+		int errn = avcodec_open(context->streams[index_]->codec, dec);
 		if(errn < 0)
 			return;
 				
-		index_ = stream->index;
-		codec_context_.reset(stream->codec, avcodec_close);
+		codec_context_.reset(context->streams[index_]->codec, avcodec_close);
 
 		if(codec_context_ &&
 		   (codec_context_->sample_rate != static_cast<int>(format_desc_.audio_sample_rate) || 
@@ -151,7 +146,7 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(AVStream* stream, const core::video_format_desc& format_desc) : impl_(new implementation(stream, format_desc)){}
+audio_decoder::audio_decoder(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::vector<std::vector<int16_t>> audio_decoder::poll(){return impl_->poll();}

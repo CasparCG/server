@@ -75,6 +75,11 @@ public:
 		const auto prev_gain = static_cast<int>(prev.get_gain()*BASE);
 		
 		const int n_samples = audio_data_.back().size();
+		
+		CASPAR_VERIFY(audio_data.empty() || static_cast<size_t>(audio_data.size()) ==  audio_data_.size());
+
+		if(static_cast<size_t>(audio_data.size()) > audio_data_.size())
+			return;
 
 		tbb::parallel_for
 		(

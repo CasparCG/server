@@ -22,25 +22,22 @@ extern "C"
 	#include <libavutil/imgutils.h>
 	#include <libavfilter/avfilter.h>
 	#include <libavfilter/avcodec.h>
-	#include <libavfilter/vsrc_buffer.h>
 	#include <libavfilter/avfiltergraph.h>
+	#include <libavfilter/vsink_buffer.h>
+	#include <libavfilter/vsrc_buffer.h>
 }
 
 namespace caspar {
 	
 struct filter::implementation
 {
-	std::string								filters_;
-	std::shared_ptr<AVFilterGraph>			graph_;
-	AVFilterContext*						video_in_filter_;
-	AVFilterContext*						video_out_filter_;
-	size_t									delay_;
-	size_t									count_;
-
-	implementation(const std::string& filters) 
-		: filters_(filters)
-		, delay_(0)
-		, count_(0)
+	std::string						filters_;
+	std::shared_ptr<AVFilterGraph>	graph_;	
+	AVFilterContext*				buffersink_ctx_;
+	AVFilterContext*				buffersrc_ctx_;
+	
+	implementation(const std::wstring& filters) 
+		: filters_(narrow(filters))
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
@@ -52,48 +49,47 @@ struct filter::implementation
 		if(!graph_)
 		{
 			graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p){avfilter_graph_free(&p);});
-			
+								
 			// Input
-			std::stringstream buffer_ss;
-			buffer_ss << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
-			errn = avfilter_graph_create_filter(&video_in_filter_, avfilter_get_by_name("buffer"), "src", buffer_ss.str().c_str(), NULL, graph_.get());
-			if(errn < 0 || !video_in_filter_)
+			std::stringstream args;
+			args << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
+			errn = avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get());
+			if(errn < 0)
 			{
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
 					boost::errinfo_api_function("avfilter_graph_create_filter") <<	boost::errinfo_errno(AVUNERROR(errn)));
 			}
 
+			PixelFormat pix_fmts[] = { PIX_FMT_BGRA, PIX_FMT_NONE };
+
 			// Output
-			errn = avfilter_graph_create_filter(&video_out_filter_, avfilter_get_by_name("nullsink"), "out", NULL, NULL, graph_.get());
-			if(errn < 0 || !video_out_filter_)
+			errn = avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts, graph_.get());
+			if(errn < 0)
 			{
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
 					boost::errinfo_api_function("avfilter_graph_create_filter") << boost::errinfo_errno(AVUNERROR(errn)));
 			}
 			
-			AVFilterInOut* outputs = reinterpret_cast<AVFilterInOut*>(av_malloc(sizeof(AVFilterInOut)));
-			AVFilterInOut* inputs  = reinterpret_cast<AVFilterInOut*>(av_malloc(sizeof(AVFilterInOut)));
+			AVFilterInOut* outputs = avfilter_inout_alloc();
+			AVFilterInOut* inputs  = avfilter_inout_alloc();
 
 			outputs->name			= av_strdup("in");
-			outputs->filter_ctx		= video_in_filter_;
+			outputs->filter_ctx		= buffersrc_ctx_;
 			outputs->pad_idx		= 0;
 			outputs->next			= NULL;
 
 			inputs->name			= av_strdup("out");
-			inputs->filter_ctx		= video_out_filter_;
+			inputs->filter_ctx		= buffersink_ctx_;
 			inputs->pad_idx			= 0;
 			inputs->next			= NULL;
 			
-			errn = avfilter_graph_parse(graph_.get(), filters_.c_str(), inputs, outputs, NULL);
+			errn = avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL);
 			if(errn < 0)
 			{
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
 					boost::errinfo_api_function("avfilter_graph_parse") << boost::errinfo_errno(AVUNERROR(errn)));
 			}
-
-//			av_free(outputs);
-//			av_free(inputs);
-
+			
 			errn = avfilter_graph_config(graph_.get(), NULL);
 			if(errn < 0)
 			{
@@ -102,80 +98,57 @@ struct filter::implementation
 			}
 		}
 	
-		errn = av_vsrc_buffer_add_frame(video_in_filter_, frame.get(), 0);
+		errn = av_vsrc_buffer_add_frame(buffersrc_ctx_, frame.get(), 0);
 		if(errn < 0)
 		{
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(av_error_str(errn)) <<
 				boost::errinfo_api_function("av_vsrc_buffer_add_frame") << boost::errinfo_errno(AVUNERROR(errn)));
 		}
-		++count_;
 	}
 
 	std::vector<safe_ptr<AVFrame>> poll()
 	{
 		std::vector<safe_ptr<AVFrame>> result;
 
-		if(!graph_ || count_ == 0)
+		if(!graph_)
 			return result;
 		
-		--count_;
-
-		int errn = avfilter_poll_frame(video_out_filter_->inputs[0]);
-		if(errn < 0)
+		while (avfilter_poll_frame(buffersink_ctx_->inputs[0])) 
 		{
-			BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
-				boost::errinfo_api_function("avfilter_poll_frame") << boost::errinfo_errno(AVUNERROR(errn)));
-		}
+			AVFilterBufferRef *picref;
+            av_vsink_buffer_get_video_buffer_ref(buffersink_ctx_, &picref, 0);
+            if (picref) 
+			{		
+				safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
+				{
+					av_free(p);
+				   avfilter_unref_buffer(picref);
+				});
 
-		if(errn == 0)
-			++delay_;
-		
-		std::generate_n(std::back_inserter(result), errn, [&]{return request_frame();});
+				avcodec_get_frame_defaults(frame.get());	
+
+				for(size_t n = 0; n < 4; ++n)
+				{
+					frame->data[n]		= picref->data[n];
+					frame->linesize[n]	= picref->linesize[n];
+				}
+				
+				frame->format			= picref->format;
+				frame->width			= picref->video->w;
+				frame->height			= picref->video->h;
+				frame->interlaced_frame = picref->video->interlaced;
+				frame->top_field_first	= picref->video->top_field_first;
+				frame->key_frame		= picref->video->key_frame;
+
+				result.push_back(frame);
+            }
+        }
 
 		return result;
 	}
-		
-	safe_ptr<AVFrame> request_frame()
-	{		
-		auto link = video_out_filter_->inputs[0];
-		
-		int errn = avfilter_request_frame(link); 			
-		if(errn < 0)
-		{
-			BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
-				boost::errinfo_api_function("avfilter_request_frame") << boost::errinfo_errno(AVUNERROR(errn)));
-		}
-		
-		auto cur_buf = link->cur_buf;
-		auto pic = reinterpret_cast<AVPicture*>(link->cur_buf->buf);
-		
-		safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
-		{
-			av_free(p);
-			avfilter_unref_buffer(cur_buf);
-		});
-
-		avcodec_get_frame_defaults(frame.get());	
-
-		for(size_t n = 0; n < 4; ++n)
-		{
-			frame->data[n]		= pic->data[n];
-			frame->linesize[n]	= pic->linesize[n];
-		}
-
-		frame->width			= link->cur_buf->video->w;
-		frame->height			= link->cur_buf->video->h;
-		frame->format			= link->cur_buf->format;
-		frame->interlaced_frame = link->cur_buf->video->interlaced;
-		frame->top_field_first	= link->cur_buf->video->top_field_first;
-		frame->key_frame		= link->cur_buf->video->key_frame;
-
-		return frame;
-	}
 };
 
-filter::filter(const std::string& filters) : impl_(new implementation(filters)){}
+filter::filter(const std::wstring& filters) : impl_(new implementation(filters)){}
 void filter::push(const safe_ptr<AVFrame>& frame) {impl_->push(frame);}
 std::vector<safe_ptr<AVFrame>> filter::poll() {return impl_->poll();}
-size_t filter::delay() const{return impl_->delay_;}
 }

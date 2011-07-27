@@ -21,6 +21,7 @@
 
 #include "video_decoder.h"
 #include "../util.h"
+#include "../filter/filter.h"
 
 #include "../../ffmpeg_error.h"
 #include "../../tbb_avcodec.h"
@@ -63,28 +64,35 @@ struct video_decoder::implementation : boost::noncopyable
 	core::video_mode::type					mode_;
 
 	std::queue<std::shared_ptr<AVPacket>>	packet_buffer_;
+
+	std::unique_ptr<filter>					filter_;
+
+	double									fps_;
 public:
-	explicit implementation(AVStream* stream, const safe_ptr<core::frame_factory>& frame_factory) 
+	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) 
 		: frame_factory_(frame_factory)
 		, mode_(core::video_mode::invalid)
+		//, filter_(filter.empty() ? nullptr : new caspar::filter(filter))
 	{
-		if(!stream || !stream->codec)
-			return;
+		AVCodec* dec;
+		index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
 
-		auto codec = avcodec_find_decoder(stream->codec->codec_id);			
-		if(!codec)
+		if(index_ < 0)
 			return;
 			
-		int errn = tbb_avcodec_open(stream->codec, codec);
+		int errn = tbb_avcodec_open(context->streams[index_]->codec, dec);
 		if(errn < 0)
 			return;
 				
-		index_ = stream->index;
-		codec_context_.reset(stream->codec, tbb_avcodec_close);
+		codec_context_.reset(context->streams[index_]->codec, tbb_avcodec_close);
 
 		// Some files give an invalid time_base numerator, try to fix it.
 		if(codec_context_ && codec_context_->time_base.num == 1)
 			codec_context_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(codec_context_->time_base.den)))-1));	
+
+		fps_ = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
+		//if(double_rate(filter))
+		//	fps_ *= 2;
 	}
 		
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -133,7 +141,7 @@ public:
 				}
 			}
 		}
-
+		
 		return result;
 	}
 
@@ -174,11 +182,11 @@ public:
 
 	double fps() const
 	{
-		return static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
+		return fps_;
 	}
 };
 
-video_decoder::video_decoder(AVStream* stream, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(stream, frame_factory)){}
+video_decoder::video_decoder(const std::shared_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) : impl_(new implementation(context, frame_factory, filter)){}
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 std::vector<safe_ptr<core::write_frame>> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}
