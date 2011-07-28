@@ -32,6 +32,7 @@
 #include <boost/thread/once.hpp>
 
 #include <functional>
+#include <iostream>
 
 namespace caspar { namespace env {
 
@@ -52,18 +53,26 @@ void check_is_configured()
 
 void configure(const std::string& filename)
 {
-	std::string initialPath = boost::filesystem::initial_path().file_string();
+	try
+	{
+		std::string initialPath = boost::filesystem::initial_path().file_string();
 	
-	boost::property_tree::read_xml(initialPath + "\\" + filename, pt);
+		boost::property_tree::read_xml(initialPath + "\\" + filename, pt);
 
-	auto paths = pt.get_child("configuration.paths");
-	media = widen(paths.get("media-path", initialPath + "\\media\\"));
-	log = widen(paths.get("log-path", initialPath + "\\log\\"));
-	ftemplate = complete(wpath(widen(paths.get("template-path", initialPath + "\\template\\")))).string();
+		auto paths = pt.get_child("configuration.paths");
+		media = widen(paths.get("media-path", initialPath + "\\media\\"));
+		log = widen(paths.get("log-path", initialPath + "\\log\\"));
+		ftemplate = complete(wpath(widen(paths.get("template-path", initialPath + "\\template\\")))).string();
 
-	ftemplate_host = widen(paths.get("template-host", "cg.fth"));
+		ftemplate_host = widen(paths.get("template-host", "cg.fth"));
 
-	data = widen(paths.get("data-path", initialPath + "\\data\\"));
+		data = widen(paths.get("data-path", initialPath + "\\data\\"));
+	}
+	catch(...)
+	{
+		std::wcout << L" ### Invalid configuration file. ###";
+		throw;
+	}
 }
 	
 const std::wstring& media_folder()
