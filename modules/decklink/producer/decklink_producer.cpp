@@ -93,7 +93,7 @@ class decklink_producer : public IDeckLinkInputCallback
 	safe_ptr<core::basic_frame>									tail_;
 
 	std::exception_ptr											exception_;
-	std::unique_ptr<filter>										filter_;
+	filter														filter_;
 		
 	core::frame_muxer											muxer_;
 
@@ -106,7 +106,7 @@ public:
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
-		, filter_(filter.empty() ? nullptr : new caspar::filter(filter))
+		, filter_(filter)
 		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory->get_video_format_desc().mode, frame_factory->get_video_format_desc().fps)
 	{
 		frame_buffer_.set_capacity(2);
@@ -189,15 +189,10 @@ public:
 			av_frame->height			= video->GetHeight();
 			av_frame->interlaced_frame	= format_desc_.mode != core::video_mode::progressive;
 			av_frame->top_field_first	= format_desc_.mode == core::video_mode::upper ? 1 : 0;
-						
-			if(filter_)
-			{
-				filter_->push(av_frame);
-				BOOST_FOREACH(auto& av_frame2, filter_->poll())
-					muxer_.push(make_write_frame(this, av_frame2, frame_factory_));
-			}
-			else			
-				muxer_.push(make_write_frame(this, av_frame, frame_factory_));			
+					
+			filter_.push(av_frame);
+			BOOST_FOREACH(auto& av_frame2, filter_.poll())
+				muxer_.push(make_write_frame(this, av_frame2, frame_factory_));		
 									
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
