@@ -79,7 +79,7 @@ public:
 		const auto in_size = static_cast<size_t>(audio_data.size());
 		CASPAR_VERIFY(in_size == 0 || in_size == audio_data_.back().size());
 
-		if(in_size > audio_data_.size())
+		if(in_size > audio_data_.back().size())
 			return;
 
 		tbb::parallel_for
