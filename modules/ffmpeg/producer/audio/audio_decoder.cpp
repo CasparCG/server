@@ -45,11 +45,12 @@ struct audio_decoder::implementation : boost::noncopyable
 	std::shared_ptr<AVCodecContext>								codec_context_;		
 	const core::video_format_desc								format_desc_;
 	int															index_;
-	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>	buffer1_;		// avcodec_decode_audio3 needs 4 byte alignment
-	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>	buffer2_;		// avcodec_decode_audio3 needs 4 byte alignment
-	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>	audio_samples_;		// avcodec_decode_audio3 needs 4 byte alignment
-	std::queue<std::shared_ptr<AVPacket>>						packets_;
 	std::shared_ptr<ReSampleContext>							resampler_;
+
+	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
+	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer2_;
+	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>	audio_samples_;	
+	std::queue<std::shared_ptr<AVPacket>>						packets_;
 public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
@@ -101,8 +102,7 @@ public:
 			result.push_back(std::vector<int16_t>(format_desc_.audio_samples_per_frame, 0));
 		else if(!packets_.empty())
 		{
-			decode(packets_.front());
-			packets_.pop();
+			decode();
 
 			while(audio_samples_.size() > format_desc_.audio_samples_per_frame)
 			{
@@ -117,10 +117,15 @@ public:
 		return result;
 	}
 
-	void decode(const std::shared_ptr<AVPacket>& packet)
-	{											
-		if(!packet) // eof
+	void decode()
+	{			
+		if(packets_.empty())
+			return;
+
+		if(!packets_.front()) // eof
 		{
+			packets_.pop();
+
 			auto truncate = audio_samples_.size() % format_desc_.audio_samples_per_frame;
 			if(truncate > 0)
 			{
@@ -133,15 +138,21 @@ public:
 		{
 			buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
 			int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
-			// TODO: Packet might contain multiple frames
-			const int errn = avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packet.get());
-			if(errn < 0)
+
+			const int ret = avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packets_.front().get());
+			if(ret < 0)
 			{	
 				BOOST_THROW_EXCEPTION(
 					invalid_operation() <<
 					boost::errinfo_api_function("avcodec_decode_audio2") <<
-					boost::errinfo_errno(AVUNERROR(errn)));
+					boost::errinfo_errno(AVUNERROR(ret)));
 			}
+
+			packets_.front()->size -= ret;
+			packets_.front()->data += ret;
+
+			if(packets_.front()->size <= 0)
+				packets_.pop();
 
 			buffer1_.resize(written_bytes);
 
@@ -151,8 +162,8 @@ public:
 				auto ret = audio_resample(resampler_.get(),
 										  reinterpret_cast<short*>(buffer2_.data()), 
 										  reinterpret_cast<short*>(buffer1_.data()), 
-										  buffer1_.size() / av_get_bytes_per_sample(codec_context_->sample_fmt)); 
-				buffer2_.resize(ret);
+										  buffer1_.size() / (av_get_bytes_per_sample(codec_context_->sample_fmt) * codec_context_->channels)); 
+				buffer2_.resize(ret * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * format_desc_.audio_channels);
 				std::swap(buffer1_, buffer2_);
 			}
 
