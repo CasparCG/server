@@ -41,7 +41,7 @@ class ogl_device;
 class write_frame : public core::basic_frame, boost::noncopyable
 {
 public:	
-	write_frame();
+	write_frame(int tag);
 	explicit write_frame(ogl_device& ogl, int tag, const core::pixel_format_desc& desc);
 	write_frame(const write_frame& other);
 			
