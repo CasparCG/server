@@ -52,7 +52,7 @@ public:
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		CASPAR_LOG(trace) << "[device_buffer] allocated size:" << width*height*stride;	
+		CASPAR_LOG(debug) << "[device_buffer] allocated size:" << width*height*stride;	
 		clear();
 	}	
 
