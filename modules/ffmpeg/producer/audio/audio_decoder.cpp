@@ -49,11 +49,12 @@ struct audio_decoder::implementation : boost::noncopyable
 
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer2_;
-	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>	audio_samples_;	
 	std::queue<std::shared_ptr<AVPacket>>						packets_;
+	size_t														sample_count_;
 public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
+		, sample_count_(0)
 	{			   
 		AVCodec* dec;
 		index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0);
@@ -110,27 +111,18 @@ public:
 				pkt.size = packets_.front()->size;
 
 				for(int n = 0; n < 64 && pkt.size > 0; ++n)
-					decode(pkt);
+					decode(pkt, result);
 			}
 			else
-				flush();
+				avcodec_flush_buffers(codec_context_.get());
 
 			packets_.pop();
-
-			while(audio_samples_.size() > format_desc_.audio_samples_per_frame)
-			{
-				const auto begin = audio_samples_.begin();
-				const auto end   = audio_samples_.begin() + format_desc_.audio_samples_per_frame;
-
-				result.push_back(std::vector<int16_t>(begin, end));
-				audio_samples_.erase(begin, end);
-			}
 		}
 
 		return result;
 	}
 
-	void decode(AVPacket& pkt)
+	void decode(AVPacket& pkt, std::vector<std::vector<int16_t>>& audio_chunks)
 	{		
 		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
 		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
@@ -164,18 +156,12 @@ public:
 		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 		const auto samples = reinterpret_cast<int16_t*>(buffer1_.data());
 
-		audio_samples_.insert(audio_samples_.end(), samples, samples + n_samples);
-	}
+		sample_count_ = std::max(sample_count_, n_samples);
 
-	void flush()
-	{
-		auto truncate = audio_samples_.size() % format_desc_.audio_samples_per_frame;
-		if(truncate > 0)
-		{
-			audio_samples_.resize(audio_samples_.size() - truncate); 
-			CASPAR_LOG(info) << L"Truncating " << truncate << L" audio-samples."; 
-		}
-		avcodec_flush_buffers(codec_context_.get());
+		if(sample_count_ == 0 || n_samples == sample_count_)
+			audio_chunks.push_back(std::vector<int16_t>(samples, samples + n_samples));
+		else
+			CASPAR_LOG(warning) << L" audio_decoder: Discarding " << n_samples << L" samples.";
 	}
 
 	bool ready() const
