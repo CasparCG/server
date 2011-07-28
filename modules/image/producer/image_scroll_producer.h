@@ -19,46 +19,13 @@
 */
 #pragma once
 
-#include <assert.h>
+#include <core/producer/frame_producer.h>
 
-#include <cstring>
+#include <string>
+#include <vector>
 
-namespace caspar {
+namespace caspar { 
 
-static void* fast_memclr(void* dest, size_t count)
-{
-	if(count < 2048)
-		return memset(dest, 0, count);
-
-	assert(dest != nullptr);
-	
-	size_t rest = count % 128;
-	count -= rest;
-
-	__asm   
-	{              
-		mov edi, dest;    
-		mov ebx, count;     
-		shr ebx, 7;
-		pxor xmm0, xmm0; 
-
-		clr:             
-			movntdq [edi+00h], xmm0;
-			movntdq [edi+10h], xmm0;
-			movntdq [edi+20h], xmm0;    
-			movntdq [edi+30h], xmm0;
-			
-			movntdq [edi+40h], xmm0; 
-			movntdq [edi+50h], xmm0;      
-			movntdq [edi+60h], xmm0;    
-			movntdq [edi+70h], xmm0;    
-
-			lea edi, [edi+80h];         
-
-			dec ebx;      
-		jnz clr;  
-	}   
-	return memset(reinterpret_cast<char*>(dest)+count, 0, rest);
-}
+safe_ptr<core::frame_producer> create_image_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
 
 }

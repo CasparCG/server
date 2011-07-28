@@ -41,6 +41,7 @@ public:
 	basic_frame();	
 	basic_frame(const safe_ptr<basic_frame>& frame);
 	basic_frame(safe_ptr<basic_frame>&& frame);
+	basic_frame(const std::vector<safe_ptr<basic_frame>>& frames);
 
 	void swap(basic_frame& other);
 	
