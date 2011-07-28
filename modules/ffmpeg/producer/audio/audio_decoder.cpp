@@ -101,8 +101,21 @@ public:
 		if(!codec_context_)
 			result.push_back(std::vector<int16_t>(format_desc_.audio_samples_per_frame, 0));
 		else if(!packets_.empty())
-		{
-			decode();
+		{			
+			if(packets_.front())		
+			{
+				AVPacket pkt;
+				av_init_packet(&pkt);
+				pkt.data = packets_.front()->data;
+				pkt.size = packets_.front()->size;
+
+				for(int n = 0; n < 64 && pkt.size > 0; ++n)
+					decode(pkt);
+			}
+			else
+				flush();
+
+			packets_.pop();
 
 			while(audio_samples_.size() > format_desc_.audio_samples_per_frame)
 			{
@@ -117,61 +130,51 @@ public:
 		return result;
 	}
 
-	void decode()
-	{			
-		if(packets_.empty())
-			return;
+	void decode(AVPacket& pkt)
+	{		
+		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
+		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
 
-		if(!packets_.front()) // eof
-		{
-			packets_.pop();
-
-			auto truncate = audio_samples_.size() % format_desc_.audio_samples_per_frame;
-			if(truncate > 0)
-			{
-				audio_samples_.resize(audio_samples_.size() - truncate); 
-				CASPAR_LOG(info) << L"Truncating " << truncate << L" audio-samples."; 
-			}
-			avcodec_flush_buffers(codec_context_.get());
+		const int ret = avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, &pkt);
+		if(ret < 0)
+		{	
+			BOOST_THROW_EXCEPTION(
+				invalid_operation() <<
+				boost::errinfo_api_function("avcodec_decode_audio2") <<
+				boost::errinfo_errno(AVUNERROR(ret)));
 		}
-		else
+
+		pkt.size -= ret;
+		pkt.data += ret;
+			
+		buffer1_.resize(written_bytes);
+
+		if(resampler_)
 		{
-			buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
-			int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
-
-			const int ret = avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packets_.front().get());
-			if(ret < 0)
-			{	
-				BOOST_THROW_EXCEPTION(
-					invalid_operation() <<
-					boost::errinfo_api_function("avcodec_decode_audio2") <<
-					boost::errinfo_errno(AVUNERROR(ret)));
-			}
-
-			packets_.front()->size -= ret;
-			packets_.front()->data += ret;
-
-			if(packets_.front()->size <= 0)
-				packets_.pop();
-
-			buffer1_.resize(written_bytes);
-
-			if(resampler_)
-			{
-				buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
-				auto ret = audio_resample(resampler_.get(),
-										  reinterpret_cast<short*>(buffer2_.data()), 
-										  reinterpret_cast<short*>(buffer1_.data()), 
-										  buffer1_.size() / (av_get_bytes_per_sample(codec_context_->sample_fmt) * codec_context_->channels)); 
-				buffer2_.resize(ret * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * format_desc_.audio_channels);
-				std::swap(buffer1_, buffer2_);
-			}
-
-			const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-			const auto samples = reinterpret_cast<int16_t*>(buffer1_.data());
-
-			audio_samples_.insert(audio_samples_.end(), samples, samples + n_samples);	
+			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
+			auto ret = audio_resample(resampler_.get(),
+										reinterpret_cast<short*>(buffer2_.data()), 
+										reinterpret_cast<short*>(buffer1_.data()), 
+										buffer1_.size() / (av_get_bytes_per_sample(codec_context_->sample_fmt) * codec_context_->channels)); 
+			buffer2_.resize(ret * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * format_desc_.audio_channels);
+			std::swap(buffer1_, buffer2_);
 		}
+
+		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+		const auto samples = reinterpret_cast<int16_t*>(buffer1_.data());
+
+		audio_samples_.insert(audio_samples_.end(), samples, samples + n_samples);
+	}
+
+	void flush()
+	{
+		auto truncate = audio_samples_.size() % format_desc_.audio_samples_per_frame;
+		if(truncate > 0)
+		{
+			audio_samples_.resize(audio_samples_.size() - truncate); 
+			CASPAR_LOG(info) << L"Truncating " << truncate << L" audio-samples."; 
+		}
+		avcodec_flush_buffers(codec_context_.get());
 	}
 
 	bool ready() const

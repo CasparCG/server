@@ -122,26 +122,15 @@ public:
 			result.push_back(make_safe<core::write_frame>(reinterpret_cast<int>(this)));
 		else if(!packet_buffer_.empty())
 		{
-			std::vector<std::shared_ptr<AVFrame>> av_frames;
+			std::vector<safe_ptr<AVFrame>> av_frames;
 
 			auto packet = std::move(packet_buffer_.front());
 			packet_buffer_.pop();
 		
-			if(!packet) // eof
-			{				
-				if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
-				{
-					// FIXME: This might cause bad performance.
-					AVPacket pkt = {0};
-					av_frames.push_back(decode_frame(pkt));
-				}
-
-				avcodec_flush_buffers(codec_context_.get());
-			}
+			if(packet) // eof
+				decode(*packet, av_frames);			
 			else
-			{
-				av_frames.push_back(decode_frame(*packet));				
-			}
+				flush(av_frames);
 
 			if(filter_)
 			{
@@ -149,7 +138,7 @@ public:
 
 				filter_tasks_.wait();
 
-				boost::range::push_back(av_frames, filter_->poll());
+				av_frames = filter_->poll();
 
 				filter_tasks_.run([=]
 				{
@@ -159,13 +148,13 @@ public:
 			}
 						
 			BOOST_FOREACH(auto& frame, av_frames)
-				result.push_back(make_write_frame(this, make_safe(frame), frame_factory_));
+				result.push_back(make_write_frame(this, frame, frame_factory_));
 		}
 		
 		return result;
 	}
 
-	std::shared_ptr<AVFrame> decode_frame(AVPacket& packet)
+	void decode(AVPacket& packet, std::vector<safe_ptr<AVFrame>>& av_frames)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
@@ -181,10 +170,20 @@ public:
 				boost::errinfo_errno(AVUNERROR(errn)));
 		}
 
-		if(frame_finished == 0)	
-			decoded_frame.reset();
+		if(frame_finished != 0)	
+			av_frames.push_back(make_safe(decoded_frame));
+	}
 
-		return decoded_frame;
+	void flush(std::vector<safe_ptr<AVFrame>>& av_frames)
+	{
+		if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
+		{
+			// FIXME: This might cause bad performance.
+			AVPacket pkt = {0};
+			decode(pkt, av_frames);
+		}
+
+		avcodec_flush_buffers(codec_context_.get());
 	}
 
 	bool ready() const
