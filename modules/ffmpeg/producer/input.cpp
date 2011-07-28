@@ -94,7 +94,7 @@ public:
 
 		format_context_.reset(weak_format_context_, av_close_input_file);
 			
-		errn = av_find_stream_info(format_context_.get());
+		errn = avformat_find_stream_info(format_context_.get(), nullptr);
 		if(errn < 0)
 		{	
 			BOOST_THROW_EXCEPTION(
