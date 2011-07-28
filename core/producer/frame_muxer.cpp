@@ -7,6 +7,8 @@
 #include "frame/pixel_format.h"
 #include "../mixer/write_frame.h"
 
+#include <common/env.h>
+
 namespace caspar { namespace core {
 	
 struct display_mode
@@ -94,12 +96,14 @@ struct frame_muxer::implementation
 	const double					  in_fps_;
 	const double					  out_fps_;
 	const video_mode::type			  out_mode_;
+	bool							  auto_mode_;
 
 	implementation(double in_fps, const core::video_mode::type out_mode, double out_fps)
 		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, out_fps_(out_fps)
 		, out_mode_(out_mode)
+		, auto_mode_(env::properties().get("configuration.auto-mode", false))
 	{
 	}
 
@@ -140,7 +144,7 @@ struct frame_muxer::implementation
 			return;
 
 		if(display_mode_ == display_mode::invalid)
-			display_mode_ = get_display_mode(video_frames_.front()->get_type(), in_fps_, out_mode_, out_fps_);
+			display_mode_ = auto_mode_ ? get_display_mode(video_frames_.front()->get_type(), in_fps_, out_mode_, out_fps_) : display_mode::simple;
 
 		switch(display_mode_)
 		{
