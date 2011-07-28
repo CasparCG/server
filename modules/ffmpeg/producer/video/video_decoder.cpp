@@ -74,6 +74,7 @@ public:
 		: frame_factory_(frame_factory)
 		, mode_(core::video_mode::invalid)
 		, filter_(filter.empty() ? nullptr : new caspar::filter(filter))
+		, fps_(frame_factory_->get_video_format_desc().fps)
 	{
 		AVCodec* dec;
 		index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
@@ -118,7 +119,7 @@ public:
 		std::vector<safe_ptr<core::write_frame>> result;
 
 		if(!codec_context_)
-			result.push_back(make_safe<core::write_frame>());
+			result.push_back(make_safe<core::write_frame>(reinterpret_cast<int>(this)));
 		else if(!packet_buffer_.empty())
 		{
 			std::vector<std::shared_ptr<AVFrame>> av_frames;

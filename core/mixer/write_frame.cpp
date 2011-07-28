@@ -40,7 +40,8 @@ struct write_frame::implementation
 	int											tag_;
 	core::video_mode::type						mode_;
 
-	implementation()
+	implementation(int tag)
+		: tag_(tag)
 	{
 	}
 
@@ -111,7 +112,7 @@ struct write_frame::implementation
 	}
 };
 	
-write_frame::write_frame() : impl_(new implementation()){}
+write_frame::write_frame(int tag) : impl_(new implementation(tag)){}
 write_frame::write_frame(ogl_device& ogl, int32_t tag, const core::pixel_format_desc& desc) 
 	: impl_(new implementation(ogl, tag, desc)){}
 write_frame::write_frame(const write_frame& other) : impl_(new implementation(*other.impl_)){}
