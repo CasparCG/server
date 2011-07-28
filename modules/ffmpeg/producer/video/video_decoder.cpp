@@ -130,7 +130,16 @@ public:
 			if(packet) // eof
 				decode(*packet, av_frames);			
 			else
-				flush(av_frames);
+			{
+				if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
+				{
+					// TODO: This might cause bad performance.
+					AVPacket pkt = {0};
+					for(int n = 0; n < 8 && decode(pkt, av_frames); ++n){}
+				}
+
+				avcodec_flush_buffers(codec_context_.get());
+			}
 
 			if(filter_)
 			{
@@ -154,7 +163,7 @@ public:
 		return result;
 	}
 
-	void decode(AVPacket& packet, std::vector<safe_ptr<AVFrame>>& av_frames)
+	bool decode(AVPacket& packet, std::vector<safe_ptr<AVFrame>>& av_frames)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
@@ -172,20 +181,10 @@ public:
 
 		if(frame_finished != 0)	
 			av_frames.push_back(make_safe(decoded_frame));
+
+		return frame_finished != 0;
 	}
-
-	void flush(std::vector<safe_ptr<AVFrame>>& av_frames)
-	{
-		if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
-		{
-			// FIXME: This might cause bad performance.
-			AVPacket pkt = {0};
-			decode(pkt, av_frames);
-		}
-
-		avcodec_flush_buffers(codec_context_.get());
-	}
-
+	
 	bool ready() const
 	{
 		return !codec_context_ || !packet_buffer_.empty();
