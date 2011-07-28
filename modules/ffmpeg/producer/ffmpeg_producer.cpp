@@ -79,7 +79,6 @@ public:
 		, video_decoder_(input_.context(), frame_factory, filter)
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
 		, muxer_(video_decoder_.fps(), format_desc_.mode, format_desc_.fps)
-		//, adapt_(env::properties().get("configuration.ffmpeg.auto-mode", false))
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
