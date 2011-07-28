@@ -62,7 +62,6 @@ struct input::implementation : boost::noncopyable
 	const bool					loop_;
 	const int					start_;		
 
-	size_t						buffer_size_limit_;
 	tbb::atomic<size_t>			buffer_size_;
 	boost::condition_variable	cond_;
 	boost::mutex				mutex_;
