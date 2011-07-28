@@ -48,7 +48,7 @@ struct image_producer : public core::frame_producer
 	{
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
-		auto frame = frame_factory->create_frame(this, FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
+		auto frame = frame_factory->create_frame(this, FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), core::pixel_format::bgra);
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
 		frame->commit();
 		frame_ = std::move(frame);
