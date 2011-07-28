@@ -170,62 +170,35 @@ public:
 
 		try
 		{
-			auto result = core::basic_frame::empty();
-
 			graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 
 			frame_timer_.restart();
-						
-			core::pixel_format_desc desc;
-			desc.pix_fmt = core::pixel_format::ycbcr;
-			desc.planes.push_back(core::pixel_format_desc::plane(video->GetWidth(),   video->GetHeight(), 1));
-			desc.planes.push_back(core::pixel_format_desc::plane(video->GetWidth()/2, video->GetHeight(), 1));
-			desc.planes.push_back(core::pixel_format_desc::plane(video->GetWidth()/2, video->GetHeight(), 1));			
-			auto frame = frame_factory_->create_frame(this, desc);
-						
+
 			void* bytes = nullptr;
 			if(FAILED(video->GetBytes(&bytes)) || !bytes)
 				return S_OK;
-
-			unsigned char* data = reinterpret_cast<unsigned char*>(bytes);
-			const size_t frame_size = (format_desc_.width * 16 / 8) * format_desc_.height;
-
-			// Convert to planar YUV422
-			unsigned char* y  = frame->image_data(0).begin();
-			unsigned char* cb = frame->image_data(1).begin();
-			unsigned char* cr = frame->image_data(2).begin();
-		
-			tbb::parallel_for(tbb::blocked_range<size_t>(0, frame_size/4), [&](const tbb::blocked_range<size_t>& r)
-			{
-				for(auto n = r.begin(); n != r.end(); ++n)
-				{
-					cb[n]	  = data[n*4+0];
-					y [n*2+0] = data[n*4+1];
-					cr[n]	  = data[n*4+2];
-					y [n*2+1] = data[n*4+3];
-				}
-			});
-			frame->set_type(format_desc_.mode);
 			
-			std::vector<safe_ptr<core::write_frame>> frames;
-
+			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+			avcodec_get_frame_defaults(av_frame.get());
+						
+			av_frame->data[0]			= reinterpret_cast<uint8_t*>(bytes);
+			av_frame->linesize[0]		= video->GetRowBytes();			
+			av_frame->format			= PIX_FMT_UYVY422;
+			av_frame->width				= video->GetWidth();
+			av_frame->height			= video->GetHeight();
+			av_frame->interlaced_frame	= format_desc_.mode != core::video_mode::progressive;
+			av_frame->top_field_first	= format_desc_.mode == core::video_mode::upper ? 1 : 0;
+						
 			if(filter_)
 			{
-				filter_->push(as_av_frame(frame));
-				auto av_frames = filter_->poll();
-				BOOST_FOREACH(auto& av_frame, av_frames)
-					frames.push_back(make_write_frame(this, av_frame, frame_factory_));
+				filter_->push(av_frame);
+				BOOST_FOREACH(auto& av_frame2, filter_->poll())
+					muxer_.push(make_write_frame(this, av_frame2, frame_factory_));
 			}
-			else
-			{
-				frame->commit();
-				frames.push_back(frame);
-			}
-
-			BOOST_FOREACH(auto frame, frames)
-				muxer_.push(frame);
-						
+			else			
+				muxer_.push(make_write_frame(this, av_frame, frame_factory_));			
+									
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{
