@@ -21,6 +21,9 @@
     <ClCompile Include="image.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="producer\image_scroll_producer.cpp">
+      <Filter>source\producer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\image_producer.h">
@@ -31,6 +34,9 @@
     </ClInclude>
     <ClInclude Include="image.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\image_scroll_producer.h">
+      <Filter>source\producer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

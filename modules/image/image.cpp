@@ -20,6 +20,7 @@
 #include "image.h"
 
 #include "producer/image_producer.h"
+#include "producer/image_scroll_producer.h"
 
 #include <core/producer/frame_producer.h>
 
@@ -31,6 +32,7 @@ namespace caspar {
 
 void init_image()
 {
+	core::register_producer_factory(create_image_scroll_producer);
 	core::register_producer_factory(create_image_producer);
 }
 

@@ -57,6 +57,7 @@ public:
 };
 	
 basic_frame::basic_frame() : impl_(new implementation(std::vector<safe_ptr<basic_frame>>())){}
+basic_frame::basic_frame(const std::vector<safe_ptr<basic_frame>>& frames) : impl_(new implementation(frames)){}
 basic_frame::basic_frame(const basic_frame& other) : impl_(new implementation(*other.impl_)){}
 basic_frame::basic_frame(std::vector<safe_ptr<basic_frame>>&& frames) : impl_(new implementation(frames)){}
 basic_frame::basic_frame(const safe_ptr<basic_frame>& frame) : impl_(new implementation(frame)){}
