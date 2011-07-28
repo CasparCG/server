@@ -37,7 +37,7 @@ struct filter::implementation
 	AVFilterContext*				buffersrc_ctx_;
 	
 	implementation(const std::wstring& filters) 
-		: filters_(narrow(filters))
+		: filters_(filters.empty() ? "null" : narrow(filters))
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
@@ -95,6 +95,10 @@ struct filter::implementation
 			inputs->next			= NULL;
 			
 			errn = avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL);
+
+			avfilter_inout_free(&inputs);
+			avfilter_inout_free(&outputs);
+
 			if(errn < 0)
 			{
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
@@ -133,23 +137,22 @@ struct filter::implementation
 				safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
 				{
 					av_free(p);
-				   avfilter_unref_buffer(picref);
+					avfilter_unref_buffer(picref);
 				});
 
 				avcodec_get_frame_defaults(frame.get());	
 
-				for(size_t n = 0; n < 4; ++n)
-				{
-					frame->data[n]		= picref->data[n];
-					frame->linesize[n]	= picref->linesize[n];
-				}
-				
-				frame->format			= picref->format;
-				frame->width			= picref->video->w;
-				frame->height			= picref->video->h;
-				frame->interlaced_frame = picref->video->interlaced;
-				frame->top_field_first	= picref->video->top_field_first;
-				frame->key_frame		= picref->video->key_frame;
+				memcpy(frame->data,     picref->data,     sizeof(frame->data));
+				memcpy(frame->linesize, picref->linesize, sizeof(frame->linesize));
+				frame->format				= picref->format;
+				frame->width				= picref->video->w;
+				frame->height				= picref->video->h;
+				frame->pkt_pos				= picref->pos;
+				frame->interlaced_frame		= picref->video->interlaced;
+				frame->top_field_first		= picref->video->top_field_first;
+				frame->key_frame			= picref->video->key_frame;
+				frame->pict_type			= picref->video->pict_type;
+				frame->sample_aspect_ratio	= picref->video->sample_aspect_ratio;
 
 				result.push_back(frame);
             }

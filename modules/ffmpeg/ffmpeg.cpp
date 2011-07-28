@@ -17,10 +17,13 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
+
 #include "StdAfx.h"
 
 #include "consumer/ffmpeg_consumer.h"
 #include "producer/ffmpeg_producer.h"
+
+#include <common/log/log.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
@@ -29,6 +32,8 @@
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
+#pragma warning (disable : 4603)
+#pragma warning (disable : 4996)
 #endif
 
 extern "C" 
@@ -79,6 +84,62 @@ int ffmpeg_lock_callback(void **mutex, enum AVLockOp op)
 	return 0; 
 } 
 
+static void sanitize(uint8_t *line)
+{
+    while(*line)
+	{
+        if(*line < 0x08 || (*line > 0x0D && *line < 0x20))
+            *line='?';
+        line++;
+    }
+}
+
+void log_callback(void* ptr, int level, const char* fmt, va_list vl)
+{
+    static int print_prefix=1;
+    static int count;
+    static char prev[1024];
+    char line[8192];
+    static int is_atty;
+    AVClass* avc= ptr ? *(AVClass**)ptr : NULL;
+    if(level > av_log_get_level())
+        return;
+    line[0]=0;
+	
+#undef fprintf
+    if(print_prefix && avc) 
+	{
+        if (avc->parent_log_context_offset) 
+		{
+            AVClass** parent= *(AVClass***)(((uint8_t*)ptr) + avc->parent_log_context_offset);
+            if(parent && *parent)
+                std::sprintf(line, "[%s @ %p] ", (*parent)->item_name(parent), parent);            
+        }
+        std::sprintf(line + strlen(line), "[%s @ %p] ", avc->item_name(ptr), ptr);
+    }
+
+    std::vsprintf(line + strlen(line), fmt, vl);
+
+    print_prefix = strlen(line) && line[strlen(line)-1] == '\n';
+	
+    //if(print_prefix && !strcmp(line, prev)){
+    //    count++;
+    //    if(is_atty==1)
+    //        fprintf(stderr, "    Last message repeated %d times\r", count);
+    //    return;
+    //}
+    //if(count>0){
+    //    fprintf(stderr, "    Last message repeated %d times\n", count);
+    //    count=0;
+    //}
+    strcpy(prev, line);
+    sanitize((uint8_t*)line);
+	
+	CASPAR_LOG(trace) << L"[FFMPEG] [" << av_clip(level>>3, 0, 6) << L"] " << line;
+
+    //colored_fputs(av_clip(level>>3, 0, 6), line);
+}
+
 void init_ffmpeg()
 {
     avfilter_register_all();
@@ -86,6 +147,7 @@ void init_ffmpeg()
 	avcodec_init();
     avcodec_register_all();
 	av_lockmgr_register(ffmpeg_lock_callback);
+	av_log_set_callback(log_callback);
 	
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ffmpeg_consumer(params);});
 	core::register_producer_factory(create_ffmpeg_producer);
