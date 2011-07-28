@@ -144,6 +144,7 @@ public:
 				boost::errinfo_errno(AVUNERROR(ret)));
 		}
 
+		// There might be several frames in one packet.
 		pkt.size -= ret;
 		pkt.data += ret;
 			
