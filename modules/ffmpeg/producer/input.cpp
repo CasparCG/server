@@ -223,15 +223,19 @@ private:
 	{  	
 		static const AVRational base_q = {1, AV_TIME_BASE};
 
-		// Convert from frames into seconds.
-		auto seek_target = frame;//*static_cast<int64_t>(AV_TIME_BASE/fps_);
-
-		int stream_index = -1;//video_stream_.index() >= 0 ? video_stream_.index() : audio_stream_.index();
-
-		//if(stream_index >= 0)		
-		//	seek_target = av_rescale_q(seek_target, base_q, format_context_->streams[stream_index]->time_base);
-
-		const int errn = av_seek_frame(format_context_.get(), stream_index, seek_target, flags);
+		int stream_index = av_find_default_stream_index(format_context_.get());
+		
+		if(stream_index < 0)
+		{	
+			BOOST_THROW_EXCEPTION(
+				invalid_operation() << 
+				source_info(narrow(print())) << 
+				msg_info(av_error_str(stream_index)) <<
+				boost::errinfo_api_function("av_find_default_stream_index") <<
+				boost::errinfo_errno(AVUNERROR(stream_index)));
+		}
+						
+		const int errn = av_seek_frame(format_context_.get(), stream_index, frame, flags);
 		if(errn < 0)
 		{	
 			BOOST_THROW_EXCEPTION(
