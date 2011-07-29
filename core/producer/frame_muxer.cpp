@@ -22,8 +22,8 @@ struct display_mode
 		duplicate,
 		half,
 		interlace,
+		deinterlace_bob,
 		deinterlace,
-		deinterlace_half,
 		count,
 		invalid
 	};
@@ -40,10 +40,10 @@ struct display_mode
 				return L"half";
 			case interlace:
 				return L"interlace";
+			case deinterlace_bob:
+				return L"deinterlace_bob";
 			case deinterlace:
 				return L"deinterlace";
-			case deinterlace_half:
-				return L"deinterlace_half";
 			default:
 				return L"invalid";
 		}
@@ -60,7 +60,7 @@ display_mode::type get_display_mode(const core::video_mode::type in_mode, double
 	if(std::abs(in_fps - out_fps) < epsilon)
 	{
 		if(in_mode != core::video_mode::progressive && out_mode == core::video_mode::progressive)
-			return display_mode::deinterlace_half;
+			return display_mode::deinterlace;
 		//else if(in_mode == core::video_mode::progressive && out_mode != core::video_mode::progressive)
 		//	simple(); // interlace_duplicate();
 		else
@@ -82,7 +82,7 @@ display_mode::type get_display_mode(const core::video_mode::type in_mode, double
 			return display_mode::invalid;
 
 		if(in_mode != core::video_mode::progressive)
-			return display_mode::deinterlace;
+			return display_mode::deinterlace_bob;
 		else
 			return display_mode::duplicate;
 	}
@@ -101,7 +101,6 @@ struct frame_muxer::implementation
 	bool								auto_mode_;
 
 	size_t								audio_sample_count_;
-
 	size_t								video_frame_count_;
 		
 	implementation(double in_fps, const video_format_desc& format_desc)
@@ -208,10 +207,10 @@ struct frame_muxer::implementation
 			return half();
 		case display_mode::interlace:
 			return interlace();
+		case display_mode::deinterlace_bob:
+			return deinterlace_bob();
 		case display_mode::deinterlace:
 			return deinterlace();
-		case display_mode::deinterlace_half:
-			return deinterlace_half();
 		default:
 			BOOST_THROW_EXCEPTION(invalid_operation());
 		}
@@ -272,14 +271,14 @@ struct frame_muxer::implementation
 		frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));		
 	}
 	
+	void deinterlace_bob()
+	{
+		BOOST_THROW_EXCEPTION(not_implemented() << msg_info("deinterlace_bob"));
+	}
+
 	void deinterlace()
 	{
 		BOOST_THROW_EXCEPTION(not_implemented() << msg_info("deinterlace"));
-	}
-
-	void deinterlace_half()
-	{
-		BOOST_THROW_EXCEPTION(not_implemented() << msg_info("deinterlace_half"));
 	}
 };
 
