@@ -78,7 +78,7 @@ public:
 		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop, start, length)
 		, video_decoder_(input_.context(), frame_factory, filter)
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
-		, muxer_(video_decoder_.fps(), format_desc_.mode, format_desc_.fps)
+		, muxer_(video_decoder_.fps(), format_desc_)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -98,20 +98,20 @@ public:
 	{
 		if(output_buffer_.empty())
 		{	
-			tasks_.wait();
+			//tasks_.wait();
 
 			while(muxer_.size() > 0)
 				output_buffer_.push(muxer_.pop());
 
-			tasks_.run([=]
-			{
+			//tasks_.run([=]
+			//{
 				frame_timer_.restart();
 
 				for(int n = 0; n < 64 && muxer_.empty(); ++n)
 					decode_frame();
 
 				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
-			});
+			//});
 		}
 		
 		auto frame = core::basic_frame::late();
@@ -143,24 +143,27 @@ public:
 				audio_decoder_.push(pkt);
 			}
 		}
+
+		decltype(video_decoder_.poll()) video_frames;
+		decltype(audio_decoder_.poll()) audio_samples;
 		
 		tbb::parallel_invoke(
-		[=]
+		[&]
 		{
 			if(muxer_.video_frames() < 2)
-			{
-				BOOST_FOREACH(auto& video_frame, video_decoder_.poll())
-					muxer_.push(video_frame);
-			}
+				video_frames = video_decoder_.poll();
 		},
-		[=]
+		[&]
 		{
 			if(muxer_.audio_chunks() < 2)
-			{
-				BOOST_FOREACH(auto& audio_chunk, audio_decoder_.poll())
-					muxer_.push(audio_chunk);
-			}
+				audio_samples = audio_decoder_.poll();
 		});
+
+		BOOST_FOREACH(auto& video, video_frames)
+			muxer_.push(video);	
+
+		BOOST_FOREACH(auto& audio, audio_samples)
+			muxer_.push(audio);
 	}
 				
 	virtual std::wstring print() const

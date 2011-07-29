@@ -14,10 +14,10 @@ class basic_frame;
 class frame_muxer
 {
 public:
-	frame_muxer(double in_fps, const video_mode::type out_mode, double out_fps);
-
-	void push(const safe_ptr<write_frame>& video_frame);
-	void push(const std::vector<int16_t>& audio_chunk);
+	frame_muxer(double in_fps, const video_format_desc& format_desc);
+	
+	void push(const std::shared_ptr<write_frame>& video_frame);
+	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples);
 	
 	size_t video_frames() const;
 	size_t audio_chunks() const;
