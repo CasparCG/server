@@ -53,6 +53,11 @@ struct render_item
 	int									 tag;
 };
 
+bool operator==(const render_item& lhs, const render_item& rhs)
+{
+	return lhs.textures == rhs.textures && lhs.transform == rhs.transform && lhs.tag == rhs.tag;
+}
+
 struct image_mixer::implementation : boost::noncopyable
 {		
 	video_channel_context&					channel_;
@@ -119,8 +124,8 @@ public:
 		
 		auto& stream = layer.back();
 		
-		//if(std::find(stream.begin(), stream.end(), item) == stream.end())
-		stream.push_back(item);
+		if(std::find(stream.begin(), stream.end(), item) == stream.end())
+			stream.push_back(item);
 	}
 
 	void end()
