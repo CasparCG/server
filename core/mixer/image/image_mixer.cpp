@@ -39,6 +39,7 @@
 
 #include <boost/foreach.hpp>
 
+#include <algorithm>
 #include <array>
 #include <unordered_map>
 
@@ -116,7 +117,10 @@ public:
 		if(layer.empty() || (!layer.back().empty() && layer.back().back().tag != frame.tag()))
 			layer.push(std::deque<render_item>());
 		
-		layer.back().push_back(item);
+		auto& stream = layer.back();
+		
+		//if(std::find(stream.begin(), stream.end(), item) == stream.end())
+		stream.push_back(item);
 	}
 
 	void end()
@@ -196,14 +200,7 @@ public:
 	void render(std::deque<render_item>& stream, bool local_key, bool layer_key)
 	{
 		CASPAR_ASSERT(!stream.empty());
-
-		while(stream.size() > 2)
-			stream.pop_front();
-
-		// Kernel expects lower field first for early explicit z-culling
-		if(stream[0].transform.get_mode() == core::video_mode::upper && stream.size() == 2)
-			std::swap(stream[0], stream[1]);		
-		
+				
 		if(stream.front().transform.get_is_key())
 		{
 			stream_key_buffer_[1]->attach();
