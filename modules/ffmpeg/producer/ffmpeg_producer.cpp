@@ -134,6 +134,8 @@ public:
 
 	void decode_frame()
 	{
+		bool flush = false;
+
 		for(int n = 0; n < 32 && ((muxer_.video_frames() < 2 && !video_decoder_.ready()) ||	(muxer_.audio_chunks() < 2 && !audio_decoder_.ready())); ++n) 
 		{
 			std::shared_ptr<AVPacket> pkt;
@@ -141,6 +143,8 @@ public:
 			{
 				video_decoder_.push(pkt);
 				audio_decoder_.push(pkt);
+
+				flush = !pkt;
 			}
 		}
 
@@ -158,12 +162,12 @@ public:
 			if(muxer_.audio_chunks() < 2)
 				audio_samples = audio_decoder_.poll();
 		});
-
-		BOOST_FOREACH(auto& video, video_frames)
-			muxer_.push(video);	
-
+		
 		BOOST_FOREACH(auto& audio, audio_samples)
 			muxer_.push(audio);
+
+		BOOST_FOREACH(auto& video, video_frames)
+			muxer_.push(video);		
 	}
 				
 	virtual std::wstring print() const
