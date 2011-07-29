@@ -183,7 +183,11 @@ public:
 		}
 
 		if(frame_finished != 0)	
+		{
 			av_frames.push_back(make_safe(decoded_frame));
+			if(decoded_frame->repeat_pict != 0)
+				CASPAR_LOG(warning) << "video_decoder: repeat_pict not implemented.";
+		}
 
 		return frame_finished != 0;
 	}
