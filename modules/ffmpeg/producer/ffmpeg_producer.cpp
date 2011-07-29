@@ -134,8 +134,6 @@ public:
 
 	void decode_frame()
 	{
-		bool flush = false;
-
 		for(int n = 0; n < 32 && ((muxer_.video_frames() < 2 && !video_decoder_.ready()) ||	(muxer_.audio_chunks() < 2 && !audio_decoder_.ready())); ++n) 
 		{
 			std::shared_ptr<AVPacket> pkt;
@@ -143,8 +141,6 @@ public:
 			{
 				video_decoder_.push(pkt);
 				audio_decoder_.push(pkt);
-
-				flush = !pkt;
 			}
 		}
 

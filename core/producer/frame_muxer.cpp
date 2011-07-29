@@ -147,7 +147,7 @@ struct frame_muxer::implementation
 				CASPAR_LOG(info) << L"frame_muxer: Truncating " << truncate << L" audio samples.";
 			}
 
-			CASPAR_LOG(debug) << L"audio-chunk-count: " << audio_sample_count_;
+			CASPAR_LOG(debug) << L"audio-chunk-count: " << audio_sample_count_/format_desc_.audio_samples_per_frame;
 			audio_sample_count_ = 0;
 			return;
 		}
