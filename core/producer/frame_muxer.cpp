@@ -7,8 +7,6 @@
 #include "frame/pixel_format.h"
 #include "../mixer/write_frame.h"
 
-#include <boost/range/algorithm_ext/push_back.hpp>
-
 #include <common/env.h>
 
 namespace caspar { namespace core {
@@ -172,10 +170,10 @@ struct frame_muxer::implementation
 		if(video_frames_.empty() || audio_chunks_.empty())
 			return;
 
-		auto frame1 = std::move(video_frames_.front());
+		auto frame1 = video_frames_.front();
 		video_frames_.pop();
 
-		frame1->audio_data() = std::move(audio_chunks_.front());
+		frame1->audio_data() = audio_chunks_.front();
 		audio_chunks_.pop();
 
 		frame_buffer_.push(frame1);
@@ -183,20 +181,19 @@ struct frame_muxer::implementation
 
 	void duplicate()
 	{		
-		if(video_frames_.empty() || audio_chunks_.empty())
+		if(video_frames_.empty() || audio_chunks_.size() < 2)
 			return;
 
-		auto frame = std::move(video_frames_.front());
+		auto frame = video_frames_.front();
 		video_frames_.pop();
 
-		auto audio_chunk = std::move(audio_chunks_.front());
+		auto frame1 = make_safe<core::write_frame>(*frame); // make a copy
+		frame1->audio_data() = audio_chunks_.front();
 		audio_chunks_.pop();
 
-		auto frame1 = make_safe<core::write_frame>(*frame); // make a copy
-		frame1->audio_data().insert(frame1->audio_data().end(), audio_chunk.begin(), audio_chunk.begin() + audio_chunk.size()/2);
-
 		auto frame2 = frame;
-		frame1->audio_data().insert(frame1->audio_data().end(), audio_chunk.begin() + audio_chunk.size()/2, audio_chunk.end());
+		frame2->audio_data() = audio_chunks_.front();
+		audio_chunks_.pop();
 
 		frame_buffer_.push(frame1);
 		frame_buffer_.push(frame2);
@@ -204,39 +201,32 @@ struct frame_muxer::implementation
 
 	void half()
 	{	
-		if(video_frames_.size() < 2 || audio_chunks_.size() < 2)
+		if(video_frames_.size() < 2 || audio_chunks_.empty())
 			return;
 						
-		auto frame1 = std::move(video_frames_.front());
+		auto frame1 = video_frames_.front();
 		video_frames_.pop();
-
-		video_frames_.pop(); // Throw away
-		
-		boost::range::push_back(frame1->audio_data(), std::move(audio_chunks_.front()));
+		frame1->audio_data() = audio_chunks_.front();
 		audio_chunks_.pop();
-
-		boost::range::push_back(frame1->audio_data(), std::move(audio_chunks_.front()));
-		audio_chunks_.pop();				
+				
+		video_frames_.pop(); // Throw away
 
 		frame_buffer_.push(frame1);
 	}
 	
 	void interlace()
 	{		
-		if(video_frames_.size() < 2 || audio_chunks_.size() < 2)
+		if(video_frames_.size() < 2 || audio_chunks_.empty())
 			return;
 		
 		auto frame1 = video_frames_.front();
 		video_frames_.pop();
+
+		frame1->audio_data() = audio_chunks_.front();
+		audio_chunks_.pop();
 				
 		auto frame2 = video_frames_.front();
 		video_frames_.pop();
-		
-		boost::range::push_back(frame2->audio_data(), std::move(audio_chunks_.front()));
-		audio_chunks_.pop();
-
-		boost::range::push_back(frame2->audio_data(), std::move(audio_chunks_.front()));
-		audio_chunks_.pop();
 
 		frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, out_mode_));		
 	}
