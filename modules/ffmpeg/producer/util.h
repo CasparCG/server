@@ -8,6 +8,8 @@
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
 
+#include <common/memory/memcpy.h>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -208,7 +210,7 @@ static safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, static_cast<int>(desc.planes[n].height)), [&](const tbb::blocked_range<size_t>& r)
 			{
 				for(size_t y = r.begin(); y != r.end(); ++y)
-					memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 			});
 
 			write->commit(n);

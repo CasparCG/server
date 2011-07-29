@@ -125,20 +125,27 @@ public:
 			std::vector<safe_ptr<AVFrame>> av_frames;
 
 			auto packet = std::move(packet_buffer_.front());
-			packet_buffer_.pop();
 		
 			if(packet)
-				decode(*packet, av_frames);			
+			{
+				decode(*packet, av_frames);					
+				packet_buffer_.pop();
+			}
 			else
 			{
+				bool flush = true;
+
 				if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
 				{
-					// FIXME: This might cause bad performance.
 					AVPacket pkt = {0};
-					for(int n = 0; n < 8 && decode(pkt, av_frames); ++n){}
+					flush = !decode(pkt, av_frames);
 				}
 
-				avcodec_flush_buffers(codec_context_.get());
+				if(flush)
+				{					
+					packet_buffer_.pop();
+					avcodec_flush_buffers(codec_context_.get());
+				}
 			}
 
 			if(filter_)
