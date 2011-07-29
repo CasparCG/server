@@ -28,7 +28,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
-#include <tbb/mutex.h>
+#include <tbb/recursive_mutex.h>
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
@@ -53,13 +53,13 @@ int ffmpeg_lock_callback(void **mutex, enum AVLockOp op)
 	if(!mutex)
 		return 0;
 
-	auto my_mutex = reinterpret_cast<tbb::mutex*>(*mutex);
+	auto my_mutex = reinterpret_cast<tbb::recursive_mutex*>(*mutex);
 	
 	switch(op) 
 	{ 
 		case AV_LOCK_CREATE: 
 		{ 
-			*mutex = new tbb::mutex(); 
+			*mutex = new tbb::recursive_mutex(); 
 			break; 
 		} 
 		case AV_LOCK_OBTAIN: 
