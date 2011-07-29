@@ -37,6 +37,18 @@
 
 namespace caspar { namespace core {
 	
+GLubyte upper_pattern[] = {
+	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00};
+		
+GLubyte lower_pattern[] = {
+	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 
+	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
+	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
+	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff};
+
 struct image_kernel::implementation : boost::noncopyable
 {	
 	std::unique_ptr<shader> shader_;
@@ -63,7 +75,6 @@ struct image_kernel::implementation : boost::noncopyable
 			"uniform bool		has_layer_key;													\n"
 			"uniform int		blend_mode;														\n"
 			"uniform int		alpha_mode;														\n"
-			"uniform int		interlace_mode;													\n"
 			"uniform int		pixel_format;													\n"
 			"																					\n"
 			"uniform bool		levels;															\n"
@@ -210,24 +221,6 @@ struct image_kernel::implementation : boost::noncopyable
 			"																					\n"
 			"void main()																		\n"
 			"{																					\n"
-			"   switch(interlace_mode)															\n"
-			"	{																				\n"
-			"	case 1: // lower																\n"
-			"		{																			\n"
-			"			bool odd = mod(floor(gl_FragCoord.y), 2.0) > 0.5;						\n"
-			"			if(!odd)																\n"
-			"				discard;															\n"
-			"			break;																	\n"
-			"		}																			\n"
-			"	case 2: //upper																	\n"
-			"		{																			\n"
-			"			bool odd = mod(floor(gl_FragCoord.y), 2.0) > 0.5;						\n"
-			"			if(odd)																	\n"
-			"				discard;															\n"
-			"			break;																	\n"
-			"		}																			\n"
-			"	}																				\n"
-			"																					\n"
 			"	vec4 color = get_rgba_color();													\n"
 			"	if(has_local_key)																\n"
 			"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
@@ -251,16 +244,14 @@ struct image_kernel::implementation : boost::noncopyable
 			  const std::shared_ptr<device_buffer>&			layer_key)
 	{
 		GL(glEnable(GL_TEXTURE_2D));
+		GL(glEnable(GL_POLYGON_STIPPLE));
 			
-		// Setup depth for interlacing and explicit z-culling
-		double z = 0.0;
 		if(transform.get_mode() == core::video_mode::upper)
-		{	
-			GL(glEnable(GL_DEPTH_TEST));	
-			z = 1.0;
-		}
+			glPolygonStipple(upper_pattern);
 		else if(transform.get_mode() == core::video_mode::lower)
-			GL(glClear(GL_DEPTH_BUFFER_BIT));		
+			glPolygonStipple(lower_pattern);
+		else
+			GL(glDisable(GL_POLYGON_STIPPLE));
 
 		// Bind textures
 
@@ -344,14 +335,14 @@ struct image_kernel::implementation : boost::noncopyable
 		// Draw
 
 		glBegin(GL_QUADS);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex3d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0, z);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex3d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0, z);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex3d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0, z);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex3d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0, z);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex2d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 		glEnd();
 
 		GL(glDisable(GL_SCISSOR_TEST));	
-		GL(glDisable(GL_DEPTH_TEST));	
+		GL(glDisable(GL_POLYGON_STIPPLE));
 	}
 };
 
