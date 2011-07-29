@@ -169,8 +169,8 @@ public:
 			swap_layer(index, other_index);
 		else
 		{
-			if(channel_.get_format_desc() != other.impl_->channel_.get_format_desc())
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between channels with different formats."));
+			if(channel_.get_format_desc() != other.impl_->channel_.get_format_desc() || &channel_.ogl() != &other.impl_->channel_.ogl())
+				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between incompatible channels."));
 
 			auto func = [&]{layers_[index].swap(other.impl_->layers_[other_index]);};
 		
@@ -182,9 +182,9 @@ public:
 	{
 		if(other.impl_.get() == this)
 			return;
-
-		if(channel_.get_format_desc() != other.impl_->channel_.get_format_desc())
-			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between channels with different formats."));
+		
+		if(channel_.get_format_desc() != other.impl_->channel_.get_format_desc() || &channel_.ogl() != &other.impl_->channel_.ogl())
+			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between incompatible channels."));
 
 		auto func = [&]
 		{
