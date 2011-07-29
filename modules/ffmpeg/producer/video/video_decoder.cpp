@@ -114,9 +114,9 @@ public:
 		packet_buffer_.push(packet);
 	}
 
-	std::vector<safe_ptr<core::write_frame>> poll()
+	std::vector<std::shared_ptr<core::write_frame>> poll()
 	{		
-		std::vector<safe_ptr<core::write_frame>> result;
+		std::vector<std::shared_ptr<core::write_frame>> result;
 
 		if(!codec_context_)
 			result.push_back(make_safe<core::write_frame>(reinterpret_cast<int>(this)));
@@ -130,7 +130,16 @@ public:
 			if(packet) // eof
 				decode(*packet, av_frames);			
 			else
-				flush(av_frames);
+			{
+				if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
+				{
+					// FIXME: This might cause bad performance.
+					AVPacket pkt = {0};
+					for(int n = 0; n < 8 && decode(pkt, av_frames); ++n){}
+				}
+
+				avcodec_flush_buffers(codec_context_.get());
+			}
 
 			if(filter_)
 			{
@@ -149,12 +158,15 @@ public:
 						
 			BOOST_FOREACH(auto& frame, av_frames)
 				result.push_back(make_write_frame(this, frame, frame_factory_));
+
+			if(!packet)
+				result.push_back(nullptr);
 		}
 		
 		return result;
 	}
 
-	void decode(AVPacket& packet, std::vector<safe_ptr<AVFrame>>& av_frames)
+	bool decode(AVPacket& packet, std::vector<safe_ptr<AVFrame>>& av_frames)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
@@ -172,20 +184,10 @@ public:
 
 		if(frame_finished != 0)	
 			av_frames.push_back(make_safe(decoded_frame));
+
+		return frame_finished != 0;
 	}
-
-	void flush(std::vector<safe_ptr<AVFrame>>& av_frames)
-	{
-		if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
-		{
-			// FIXME: This might cause bad performance.
-			AVPacket pkt = {0};
-			decode(pkt, av_frames);
-		}
-
-		avcodec_flush_buffers(codec_context_.get());
-	}
-
+	
 	bool ready() const
 	{
 		return !codec_context_ || !packet_buffer_.empty();
@@ -207,7 +209,7 @@ public:
 
 video_decoder::video_decoder(const std::shared_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) : impl_(new implementation(context, frame_factory, filter)){}
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
-std::vector<safe_ptr<core::write_frame>> video_decoder::poll(){return impl_->poll();}
+std::vector<std::shared_ptr<core::write_frame>> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}
 core::video_mode::type video_decoder::mode(){return impl_->mode();}
 double video_decoder::fps() const{return impl_->fps();}

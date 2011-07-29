@@ -97,12 +97,12 @@ public:
 		packets_.push(packet);
 	}	
 	
-	std::vector<std::vector<int16_t>> poll()
+	std::vector<std::shared_ptr<std::vector<int16_t>>> poll()
 	{
-		std::vector<std::vector<int16_t>> result;
+		std::vector<std::shared_ptr<std::vector<int16_t>>> result;
 
 		if(!codec_context_)
-			result.push_back(std::vector<int16_t>(format_desc_.audio_samples_per_frame, 0));
+			result.push_back(std::make_shared<std::vector<int16_t>>(format_desc_.audio_samples_per_frame, 0));
 		else if(!packets_.empty())
 		{			
 			if(packets_.front())		
@@ -113,27 +113,21 @@ public:
 				pkt.size = packets_.front()->size;
 
 				for(int n = 0; n < 64 && pkt.size > 0; ++n)
-					decode(pkt);
+					result.push_back(decode(pkt));
 			}
-			else
-				flush();
+			else			
+			{	
+				avcodec_flush_buffers(codec_context_.get());
+				result.push_back(nullptr);
+			}
 
 			packets_.pop();
-
-			while(audio_samples_.size() > format_desc_.audio_samples_per_frame)
-			{
-				const auto begin = audio_samples_.begin();
-				const auto end   = audio_samples_.begin() + format_desc_.audio_samples_per_frame;
-
-				result.push_back(std::vector<int16_t>(begin, end));
-				audio_samples_.erase(begin, end);
-			}
 		}
 
 		return result;
 	}
 
-	void decode(AVPacket& pkt)
+	std::shared_ptr<std::vector<int16_t>> decode(AVPacket& pkt)
 	{		
 		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
 		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
@@ -167,18 +161,7 @@ public:
 		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 		const auto samples = reinterpret_cast<int16_t*>(buffer1_.data());
 
-		audio_samples_.insert(audio_samples_.end(), samples, samples + n_samples);
-	}
-
-	void flush()
-	{
-		auto truncate = audio_samples_.size() % format_desc_.audio_samples_per_frame;
-		if(truncate > 0)
-		{
-			audio_samples_.resize(audio_samples_.size() - truncate); 
-			CASPAR_LOG(info) << L"Truncating " << truncate << L" audio-samples."; 
-		}
-		avcodec_flush_buffers(codec_context_.get());
+		return std::make_shared<std::vector<int16_t>>(samples, samples + n_samples);
 	}
 
 	bool ready() const
@@ -190,5 +173,5 @@ public:
 audio_decoder::audio_decoder(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
-std::vector<std::vector<int16_t>> audio_decoder::poll(){return impl_->poll();}
+std::vector<std::shared_ptr<std::vector<int16_t>>> audio_decoder::poll(){return impl_->poll();}
 }

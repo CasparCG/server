@@ -84,9 +84,7 @@ class decklink_producer : public IDeckLinkInputCallback
 	std::shared_ptr<diagnostics::graph>							graph_;
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
-
-	std::vector<int16_t>										audio_samples_;
-	
+		
 	safe_ptr<core::frame_factory>								frame_factory_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
@@ -107,7 +105,7 @@ public:
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
 		, filter_(filter)
-		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory->get_video_format_desc().mode, frame_factory->get_video_format_desc().fps)
+		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory->get_video_format_desc())
 	{
 		frame_buffer_.set_capacity(2);
 		
@@ -199,18 +197,10 @@ public:
 			{
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<short*>(bytes);
-				audio_samples_.insert(audio_samples_.end(), audio_data, audio_data + sample_frame_count*2);
-
-				if(audio_samples_.size() > frame_factory_->get_video_format_desc().audio_samples_per_frame)
-				{
-					const auto begin = audio_samples_.begin();
-					const auto end   = begin +  frame_factory_->get_video_format_desc().audio_samples_per_frame;
-					muxer_.push(std::vector<int16_t>(begin, end));
-					audio_samples_.erase(begin, end);
-				}
+				muxer_.push(std::make_shared<std::vector<int16_t>>(audio_data, audio_data + sample_frame_count*2));
 			}
 			else
-				muxer_.push(std::vector<int16_t>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
+				muxer_.push(std::make_shared<std::vector<int16_t>>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
 					
 			while(!muxer_.empty())
 			{
