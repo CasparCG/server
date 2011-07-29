@@ -169,7 +169,11 @@ int main(int argc, wchar_t* argv[])
 	struct tbb_thread_installer : public tbb::task_scheduler_observer
 	{
 		tbb_thread_installer(){observe(true);}
-		void on_scheduler_entry(bool is_worker){caspar::win32_exception::install_handler();}
+		void on_scheduler_entry(bool is_worker)
+		{
+			caspar::detail::SetThreadName(GetCurrentThreadId(), "tbb-worker-thread");
+			caspar::win32_exception::install_handler();
+		}
 	} tbb_thread_installer;
 	
 	try 

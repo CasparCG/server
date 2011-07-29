@@ -84,7 +84,7 @@ public:
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));		
 		
-		for(int n = 0; n < 128 && muxer_.size() < 4; ++n)
+		for(int n = 0; n < 128 && muxer_.size() < 2; ++n)
 			decode_frame();
 	}
 
