@@ -280,7 +280,7 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("is_hd",			pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	local_key ? 1 : 0);
 		shader_->set("has_layer_key",	layer_key ? 1 : 0);
-		shader_->set("blend_mode",		transform.get_blend_mode());
+		shader_->set("blend_mode",		transform.get_is_key() ? core::image_transform::blend_mode::normal : transform.get_blend_mode());
 		shader_->set("alpha_mode",		transform.get_alpha_mode());
 		shader_->set("interlace_mode",	transform.get_mode());
 		shader_->set("pixel_format",	pix_desc.pix_fmt);	
