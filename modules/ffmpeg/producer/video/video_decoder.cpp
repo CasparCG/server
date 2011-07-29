@@ -127,7 +127,7 @@ public:
 			auto packet = std::move(packet_buffer_.front());
 			packet_buffer_.pop();
 		
-			if(packet) // eof
+			if(packet)
 				decode(*packet, av_frames);			
 			else
 			{

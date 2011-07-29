@@ -8,6 +8,7 @@
 #include "../mixer/write_frame.h"
 
 #include <common/env.h>
+#include <common/log/log.h>
 
 #include <boost/range/algorithm_ext/push_back.hpp>
 
@@ -98,19 +99,31 @@ struct frame_muxer::implementation
 	const double						in_fps_;
 	const video_format_desc				format_desc_;
 	bool								auto_mode_;
-	
+
+	size_t								audio_sample_count_;
+
+	size_t								video_frame_count_;
+		
 	implementation(double in_fps, const video_format_desc& format_desc)
 		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(format_desc)
 		, auto_mode_(env::properties().get("configuration.auto-mode", false))
+		, audio_sample_count_(0)
+		, video_frame_count_(0)
 	{
 	}
 
 	void push(const std::shared_ptr<write_frame>& video_frame)
 	{		
 		if(!video_frame)
+		{	
+			CASPAR_LOG(debug) << L"video-frame-count: " << video_frame_count_;
+			video_frame_count_ = 0;
 			return;
+		}
+
+		++video_frame_count_;
 
 		// Fix field-order if needed
 		if(video_frame->get_type() == core::video_mode::lower && format_desc_.mode == core::video_mode::upper)
@@ -125,8 +138,21 @@ struct frame_muxer::implementation
 
 	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples)
 	{
-		if(!audio_samples)
+		if(!audio_samples)	
+		{
+			auto truncate = audio_sample_count_ % format_desc_.audio_samples_per_frame;
+			if(truncate > 0)
+			{
+				audio_samples_.erase(audio_samples_.end() - truncate, audio_samples_.end());
+				CASPAR_LOG(info) << L"frame_muxer: Truncating " << truncate << L" audio samples.";
+			}
+
+			CASPAR_LOG(debug) << L"audio-chunk-count: " << audio_sample_count_;
+			audio_sample_count_ = 0;
 			return;
+		}
+
+		audio_sample_count_ += audio_samples->size();
 
 		boost::range::push_back(audio_samples_, *audio_samples);
 		process();
@@ -159,7 +185,7 @@ struct frame_muxer::implementation
 		auto end   = begin + format_desc_.audio_samples_per_frame;
 
 		auto samples = std::vector<int16_t>(begin, end);
-		audio_samples_ = std::vector<int16_t>(end, audio_samples_.end());
+		audio_samples_.erase(begin, end);
 
 		return samples;
 	}
