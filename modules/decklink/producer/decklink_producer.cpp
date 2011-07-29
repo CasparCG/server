@@ -197,8 +197,17 @@ public:
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{
+				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<short*>(bytes);
-				muxer_.push(std::vector<int16_t>(audio_data, audio_data + audio->GetSampleFrameCount()*2));
+				audio_samples_.insert(audio_samples_.end(), audio_data, audio_data + sample_frame_count*2);
+
+				if(audio_samples_.size() > frame_factory_->get_video_format_desc().audio_samples_per_frame)
+				{
+					const auto begin = audio_samples_.begin();
+					const auto end   = begin +  frame_factory_->get_video_format_desc().audio_samples_per_frame;
+					muxer_.push(std::vector<int16_t>(begin, end));
+					audio_samples_.erase(begin, end);
+				}
 			}
 			else
 				muxer_.push(std::vector<int16_t>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));

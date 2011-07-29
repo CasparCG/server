@@ -77,12 +77,10 @@ public:
 		const int n_samples = audio_data_.back().size();
 		
 		const auto in_size = static_cast<size_t>(audio_data.size());
+		CASPAR_VERIFY(in_size == 0 || in_size == audio_data_.back().size());
 
-		if(in_size != 0 && in_size != audio_data_.back().size())
-		{	
-			CASPAR_LOG(warning) << L" audio_mixer[] : Invalid sample count detected. Discarding audio chunk.";
+		if(in_size > audio_data_.back().size())
 			return;
-		}
 
 		tbb::parallel_for
 		(
