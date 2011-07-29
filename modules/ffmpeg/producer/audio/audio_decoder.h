@@ -39,7 +39,7 @@ public:
 	
 	void push(const std::shared_ptr<AVPacket>& packet);
 	bool ready() const;
-	std::vector<std::vector<int16_t>> poll();
+	std::vector<std::shared_ptr<std::vector<int16_t>>> poll();
 
 private:
 	struct implementation;

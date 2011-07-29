@@ -9,6 +9,8 @@
 
 #include <common/env.h>
 
+#include <boost/range/algorithm_ext/push_back.hpp>
+
 namespace caspar { namespace core {
 	
 struct display_mode
@@ -89,40 +91,44 @@ display_mode::type get_display_mode(const core::video_mode::type in_mode, double
 
 struct frame_muxer::implementation
 {	
-	std::queue<safe_ptr<write_frame>> video_frames_;
-	std::queue<std::vector<int16_t>>  audio_chunks_;
-	std::queue<safe_ptr<basic_frame>> frame_buffer_;
-	display_mode::type				  display_mode_;
-	const double					  in_fps_;
-	const double					  out_fps_;
-	const video_mode::type			  out_mode_;
-	bool							  auto_mode_;
-
-	implementation(double in_fps, const core::video_mode::type out_mode, double out_fps)
+	std::queue<safe_ptr<write_frame>>	video_frames_;
+	std::vector<int16_t>				audio_samples_;
+	std::queue<safe_ptr<basic_frame>>	frame_buffer_;
+	display_mode::type					display_mode_;
+	const double						in_fps_;
+	const video_format_desc				format_desc_;
+	bool								auto_mode_;
+	
+	implementation(double in_fps, const video_format_desc& format_desc)
 		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
-		, out_fps_(out_fps)
-		, out_mode_(out_mode)
+		, format_desc_(format_desc)
 		, auto_mode_(env::properties().get("configuration.auto-mode", false))
 	{
 	}
 
-	void push(const safe_ptr<write_frame>& video_frame)
+	void push(const std::shared_ptr<write_frame>& video_frame)
 	{		
+		if(!video_frame)
+			return;
+
 		// Fix field-order if needed
-		if(video_frame->get_type() == core::video_mode::lower && out_mode_ == core::video_mode::upper)
+		if(video_frame->get_type() == core::video_mode::lower && format_desc_.mode == core::video_mode::upper)
 			video_frame->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(video_frame->get_pixel_format_desc().planes[0].height));
-		else if(video_frame->get_type() == core::video_mode::upper && out_mode_ == core::video_mode::lower)
+		else if(video_frame->get_type() == core::video_mode::upper && format_desc_.mode == core::video_mode::lower)
 			video_frame->get_image_transform().set_fill_translation(0.0f, -0.5/static_cast<double>(video_frame->get_pixel_format_desc().planes[0].height));
 
-		video_frames_.push(video_frame);
+		video_frames_.push(make_safe(video_frame));
 
 		process();
 	}
 
-	void push(const std::vector<int16_t>& audio_chunk)
+	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples)
 	{
-		audio_chunks_.push(audio_chunk);
+		if(!audio_samples)
+			return;
+
+		boost::range::push_back(audio_samples_, *audio_samples);
 		process();
 	}
 
@@ -138,13 +144,33 @@ struct frame_muxer::implementation
 		return frame_buffer_.size();
 	}
 
+	safe_ptr<core::write_frame> pop_video()
+	{
+		auto frame = video_frames_.front();
+		video_frames_.pop();
+		return frame;
+	}
+
+	std::vector<int16_t> pop_audio()
+	{
+		CASPAR_VERIFY(audio_samples_.size() >= format_desc_.audio_samples_per_frame);
+
+		auto begin = audio_samples_.begin();
+		auto end   = begin + format_desc_.audio_samples_per_frame;
+
+		auto samples = std::vector<int16_t>(begin, end);
+		audio_samples_ = std::vector<int16_t>(end, audio_samples_.end());
+
+		return samples;
+	}
+
 	void process()
 	{
-		if(video_frames_.empty() || audio_chunks_.empty())
+		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
 
 		if(display_mode_ == display_mode::invalid)
-			display_mode_ = auto_mode_ ? get_display_mode(video_frames_.front()->get_type(), in_fps_, out_mode_, out_fps_) : display_mode::simple;
+			display_mode_ = auto_mode_ ? get_display_mode(video_frames_.front()->get_type(), in_fps_, format_desc_.mode, format_desc_.fps) : display_mode::simple;
 
 		switch(display_mode_)
 		{
@@ -167,33 +193,27 @@ struct frame_muxer::implementation
 
 	void simple()
 	{
-		if(video_frames_.empty() || audio_chunks_.empty())
+		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
 
-		auto frame1 = video_frames_.front();
-		video_frames_.pop();
-
-		frame1->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop();
+		auto frame1 = pop_video();
+		frame1->audio_data() = pop_audio();
 
 		frame_buffer_.push(frame1);
 	}
 
 	void duplicate()
 	{		
-		if(video_frames_.empty() || audio_chunks_.size() < 2)
+		if(video_frames_.empty() || audio_samples_.size()/2 < format_desc_.audio_samples_per_frame)
 			return;
 
-		auto frame = video_frames_.front();
-		video_frames_.pop();
+		auto frame = pop_video();
 
 		auto frame1 = make_safe<core::write_frame>(*frame); // make a copy
-		frame1->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop();
+		frame1->audio_data() = pop_audio();
 
 		auto frame2 = frame;
-		frame2->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop();
+		frame2->audio_data() = pop_audio();
 
 		frame_buffer_.push(frame1);
 		frame_buffer_.push(frame2);
@@ -201,13 +221,11 @@ struct frame_muxer::implementation
 
 	void half()
 	{	
-		if(video_frames_.size() < 2 || audio_chunks_.empty())
+		if(video_frames_.size() < 2 || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
 						
-		auto frame1 = video_frames_.front();
-		video_frames_.pop();
-		frame1->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop();
+		auto frame1 = pop_video();
+		frame1->audio_data() = pop_audio();
 				
 		video_frames_.pop(); // Throw away
 
@@ -216,19 +234,16 @@ struct frame_muxer::implementation
 	
 	void interlace()
 	{		
-		if(video_frames_.size() < 2 || audio_chunks_.empty())
+		if(video_frames_.size() < 2 || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
 		
-		auto frame1 = video_frames_.front();
-		video_frames_.pop();
+		auto frame1 = pop_video();
 
-		frame1->audio_data() = audio_chunks_.front();
-		audio_chunks_.pop();
+		frame1->audio_data() = pop_audio();
 				
-		auto frame2 = video_frames_.front();
-		video_frames_.pop();
+		auto frame2 = pop_video();
 
-		frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, out_mode_));		
+		frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));		
 	}
 	
 	void deinterlace()
@@ -242,14 +257,14 @@ struct frame_muxer::implementation
 	}
 };
 
-frame_muxer::frame_muxer(double in_fps, const core::video_mode::type out_mode, double out_fps)
-	: impl_(implementation(in_fps, out_mode, out_fps)){}
-void frame_muxer::push(const safe_ptr<write_frame>& video_frame){impl_->push(video_frame);}
-void frame_muxer::push(const std::vector<int16_t>& audio_chunk){return impl_->push(audio_chunk);}
+frame_muxer::frame_muxer(double in_fps, const video_format_desc& format_desc)
+	: impl_(implementation(in_fps, format_desc)){}
+void frame_muxer::push(const std::shared_ptr<write_frame>& video_frame){impl_->push(video_frame);}
+void frame_muxer::push(const std::shared_ptr<std::vector<int16_t>>& audio_samples){return impl_->push(audio_samples);}
 safe_ptr<basic_frame> frame_muxer::pop(){return impl_->pop();}
 size_t frame_muxer::size() const {return impl_->size();}
 bool frame_muxer::empty() const {return impl_->size() == 0;}
 size_t frame_muxer::video_frames() const{return impl_->video_frames_.size();}
-size_t frame_muxer::audio_chunks() const{return impl_->audio_chunks_.size();}
+size_t frame_muxer::audio_chunks() const{return impl_->audio_samples_.size() / impl_->format_desc_.audio_samples_per_frame;}
 
 }}
