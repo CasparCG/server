@@ -104,7 +104,7 @@ public:
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
-		, filter_(filter, filter::low_latency)
+		, filter_(filter)
 		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory->get_video_format_desc(), frame_factory)
 	{
 		frame_buffer_.set_capacity(2);
