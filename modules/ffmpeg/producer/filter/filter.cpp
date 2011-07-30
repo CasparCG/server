@@ -2,6 +2,8 @@
 
 #include "filter.h"
 
+#include "scalable_yadif.h"
+
 #include "../../ffmpeg_error.h"
 
 #include <common/exception/exceptions.h>
@@ -37,38 +39,24 @@ struct filter::implementation
 	std::shared_ptr<AVFilterGraph>	graph_;	
 	AVFilterContext*				buffersink_ctx_;
 	AVFilterContext*				buffersrc_ctx_;
-
-	filter::flags					flags_;
-	std::vector<safe_ptr<AVFrame>>	frames_;
-	tbb::task_group					tasks_;
-	
-	implementation(const std::wstring& filters, filter::flags filter_flags) 
+	int								scalable_yadif_tag_;
+		
+	implementation(const std::wstring& filters) 
 		: filters_(filters.empty() ? "null" : narrow(filters))
-		, flags_(filter_flags)
+		, scalable_yadif_tag_(-1)
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
 
+	~implementation()
+	{
+		release_scalable_yadif(scalable_yadif_tag_);
+	}
+
 	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame)
 	{
-		if((flags_ | filter::low_latency) != 0)
-		{
-			push(frame);
-			return poll();
-		}
-
-		tasks_.wait();
-			
 		push(frame);
-
-		auto frames = std::move(frames_);
-
-		tasks_.run([=]
-		{
-			frames_ = poll();
-		});
-
-		return frames;
+		return poll();
 	}
 
 	void push(const std::shared_ptr<AVFrame>& frame)
@@ -143,6 +131,13 @@ struct filter::implementation
 				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) 
 					<<	boost::errinfo_api_function("avfilter_graph_config") <<	boost::errinfo_errno(AVUNERROR(errn)));
 			}
+
+			for(size_t n = 0; n < graph_->filter_count; ++n)
+			{
+				auto filter_name = graph_->filters[n]->name;
+				if(strstr(filter_name, "yadif") != 0)
+					scalable_yadif_tag_ = make_scalable_yadif(graph_->filters[n]);
+			}
 		}
 	
 		errn = av_vsrc_buffer_add_frame(buffersrc_ctx_, frame.get(), 0);
@@ -194,6 +189,6 @@ struct filter::implementation
 	}
 };
 
-filter::filter(const std::wstring& filters, flags filter_flags) : impl_(new implementation(filters, filter_flags)){}
+filter::filter(const std::wstring& filters) : impl_(new implementation(filters)){}
 std::vector<safe_ptr<AVFrame>> filter::execute(const std::shared_ptr<AVFrame>& frame) {return impl_->execute(frame);}
 }
