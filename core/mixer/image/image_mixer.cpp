@@ -50,7 +50,7 @@ struct render_item
 	pixel_format_desc					 desc;
 	std::vector<safe_ptr<device_buffer>> textures;
 	core::image_transform				 transform;
-	int									 tag;
+	const void*							 tag;
 };
 
 bool operator==(const render_item& lhs, const render_item& rhs)
@@ -240,7 +240,7 @@ public:
 				
 	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
-		return make_safe<write_frame>(channel_.ogl(), reinterpret_cast<int>(tag), desc);
+		return make_safe<write_frame>(channel_.ogl(), tag, desc);
 	}
 };
 

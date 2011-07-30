@@ -194,8 +194,6 @@ static safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_
 		 
 		sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
 		pool.push(sws_context);
-
-		write->commit();
 	}
 	else
 	{
@@ -212,8 +210,6 @@ static safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_
 				for(size_t y = r.begin(); y != r.end(); ++y)
 					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 			});
-
-			write->commit(n);
 		});
 	}
 

@@ -21,6 +21,7 @@
 
 #include "ffmpeg_producer.h"
 
+#include "frame_muxer.h"
 #include "input.h"
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
@@ -34,7 +35,6 @@
 #include <core/producer/frame/audio_transform.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/color/color_producer.h>
-#include <core/producer/frame_muxer.h>
 
 #include <common/env.h>
 
@@ -65,7 +65,7 @@ struct ffmpeg_producer : public core::frame_producer
 
 	std::queue<safe_ptr<core::basic_frame>>			output_buffer_;
 
-	core::frame_muxer								muxer_;
+	frame_muxer										muxer_;
 	
 	tbb::task_group									tasks_;
 
@@ -78,7 +78,7 @@ public:
 		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop, start, length)
 		, video_decoder_(input_.context(), frame_factory, filter)
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
-		, muxer_(video_decoder_.fps(), format_desc_)
+		, muxer_(video_decoder_.fps(), format_desc_, frame_factory)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));

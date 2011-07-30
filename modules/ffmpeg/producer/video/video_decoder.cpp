@@ -66,7 +66,6 @@ struct video_decoder::implementation : boost::noncopyable
 	std::queue<std::shared_ptr<AVPacket>>	packet_buffer_;
 
 	std::unique_ptr<filter>					filter_;
-	tbb::task_group							filter_tasks_;
 
 	double									fps_;
 public:
@@ -97,12 +96,6 @@ public:
 			fps_ *= 2;
 	}
 
-	~implementation()
-	{
-		filter_tasks_.cancel();
-		filter_tasks_.wait();
-	}
-		
 	void push(const std::shared_ptr<AVPacket>& packet)
 	{
 		if(!codec_context_)
@@ -119,7 +112,7 @@ public:
 		std::vector<std::shared_ptr<core::write_frame>> result;
 
 		if(!codec_context_)
-			result.push_back(make_safe<core::write_frame>(reinterpret_cast<int>(this)));
+			result.push_back(make_safe<core::write_frame>(this));
 		else if(!packet_buffer_.empty())
 		{
 			std::vector<safe_ptr<AVFrame>> av_frames;
@@ -150,17 +143,10 @@ public:
 
 			if(filter_)
 			{
-				auto av_frames2 = std::move(av_frames);
-
-				filter_tasks_.wait();
-
+				BOOST_FOREACH(auto& frame, av_frames)				
+					filter_->push(frame);
+				
 				av_frames = filter_->poll();
-
-				filter_tasks_.run([=]
-				{
-					BOOST_FOREACH(auto& frame, av_frames2)				
-						filter_->push(frame);
-				});
 			}
 						
 			BOOST_FOREACH(auto& frame, av_frames)

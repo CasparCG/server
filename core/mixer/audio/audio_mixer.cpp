@@ -31,8 +31,8 @@ struct audio_mixer::implementation
 	std::deque<std::vector<int16_t>> audio_data_;
 	std::stack<core::audio_transform> transform_stack_;
 
-	std::map<int, core::audio_transform> prev_audio_transforms_;
-	std::map<int, core::audio_transform> next_audio_transforms_;
+	std::map<const void*, core::audio_transform> prev_audio_transforms_;
+	std::map<const void*, core::audio_transform> next_audio_transforms_;
 
 	const core::video_format_desc format_desc_;
 

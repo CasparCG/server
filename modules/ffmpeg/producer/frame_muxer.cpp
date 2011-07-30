@@ -2,18 +2,25 @@
 
 #include "frame_muxer.h"
 
-#include "frame/basic_frame.h"
-#include "frame/image_transform.h"
-#include "frame/pixel_format.h"
-#include "../mixer/write_frame.h"
+#include "filter/filter.h"
+
+#include "util.h"
+
+#include <core/producer/frame/basic_frame.h>
+#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/pixel_format.h>
+#include <core/producer/frame/frame_factory.h>
+#include <core/mixer/write_frame.h>
 
 #include <common/env.h>
 #include <common/log/log.h>
 
 #include <boost/range/algorithm_ext/push_back.hpp>
 
-namespace caspar { namespace core {
-	
+using namespace caspar::core;
+
+namespace caspar {
+
 struct display_mode
 {
 	enum type
@@ -90,7 +97,7 @@ display_mode::type get_display_mode(const core::video_mode::type in_mode, double
 	return display_mode::invalid;
 }
 
-struct frame_muxer::implementation
+struct frame_muxer::implementation : boost::noncopyable
 {	
 	std::queue<safe_ptr<write_frame>>	video_frames_;
 	std::vector<int16_t>				audio_samples_;
@@ -102,14 +109,18 @@ struct frame_muxer::implementation
 
 	size_t								audio_sample_count_;
 	size_t								video_frame_count_;
+
+	std::unique_ptr<filter>				filter_;
+	safe_ptr<core::frame_factory>		frame_factory_;
 		
-	implementation(double in_fps, const video_format_desc& format_desc)
+	implementation(double in_fps, const video_format_desc& format_desc, const safe_ptr<core::frame_factory>& frame_factory)
 		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(format_desc)
 		, auto_mode_(env::properties().get("configuration.auto-mode", false))
 		, audio_sample_count_(0)
 		, video_frame_count_(0)
+		, frame_factory_(frame_factory)
 	{
 	}
 
@@ -121,6 +132,12 @@ struct frame_muxer::implementation
 			video_frame_count_ = 0;
 			return;
 		}
+		
+		if(display_mode_ == display_mode::invalid)
+			display_mode_ = auto_mode_ ? get_display_mode(video_frame->get_type(), in_fps_, format_desc_.mode, format_desc_.fps) : display_mode::simple;
+
+		if(display_mode_ != display_mode::deinterlace && display_mode_ != display_mode::deinterlace_bob) 
+			video_frame->commit();
 
 		++video_frame_count_;
 
@@ -188,15 +205,12 @@ struct frame_muxer::implementation
 
 		return samples;
 	}
-
+	
 	void process()
 	{
 		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
-
-		if(display_mode_ == display_mode::invalid)
-			display_mode_ = auto_mode_ ? get_display_mode(video_frames_.front()->get_type(), in_fps_, format_desc_.mode, format_desc_.fps) : display_mode::simple;
-
+		
 		switch(display_mode_)
 		{
 		case display_mode::simple:
@@ -273,17 +287,58 @@ struct frame_muxer::implementation
 	
 	void deinterlace_bob()
 	{
-		BOOST_THROW_EXCEPTION(not_implemented() << msg_info("deinterlace_bob"));
+		if(video_frames_.empty() || audio_samples_.size()/2 < format_desc_.audio_samples_per_frame)
+			return;
+
+		if(!filter_)
+			filter_.reset(new filter(L"YADIF=1:-1"));
+		
+		auto frame = pop_video();
+
+		filter_->push(as_av_frame(frame));
+		auto av_frames = filter_->poll();
+
+		if(av_frames.size() < 2)
+			return;
+
+		auto frame1 = make_write_frame(frame->tag(), av_frames.at(0), frame_factory_);
+		frame1->commit();
+		frame1->audio_data() = pop_audio();
+		
+		auto frame2 = make_write_frame(frame->tag(), av_frames.at(1), frame_factory_);
+		frame2->commit();
+		frame2->audio_data() = pop_audio();
+		
+		frame_buffer_.push(frame1);
+		frame_buffer_.push(frame2);
 	}
 
 	void deinterlace()
 	{
-		BOOST_THROW_EXCEPTION(not_implemented() << msg_info("deinterlace"));
+		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
+			return;
+
+		if(!filter_)
+			filter_.reset(new filter(L"YADIF=0:-1"));
+		
+		auto frame = pop_video();
+
+		filter_->push(as_av_frame(frame));
+		auto av_frames = filter_->poll();
+
+		if(av_frames.empty())
+			return;
+
+		auto frame1 = make_write_frame(frame->tag(), av_frames.at(0), frame_factory_);
+		frame1->commit();
+		frame1->audio_data() = pop_audio();
+				
+		frame_buffer_.push(frame1);
 	}
 };
 
-frame_muxer::frame_muxer(double in_fps, const video_format_desc& format_desc)
-	: impl_(implementation(in_fps, format_desc)){}
+frame_muxer::frame_muxer(double in_fps, const video_format_desc& format_desc, const safe_ptr<core::frame_factory>& frame_factory)
+	: impl_(new implementation(in_fps, format_desc, frame_factory)){}
 void frame_muxer::push(const std::shared_ptr<write_frame>& video_frame){impl_->push(video_frame);}
 void frame_muxer::push(const std::shared_ptr<std::vector<int16_t>>& audio_samples){return impl_->push(audio_samples);}
 safe_ptr<basic_frame> frame_muxer::pop(){return impl_->pop();}
@@ -292,4 +347,4 @@ bool frame_muxer::empty() const {return impl_->size() == 0;}
 size_t frame_muxer::video_frames() const{return impl_->video_frames_.size();}
 size_t frame_muxer::audio_chunks() const{return impl_->audio_samples_.size() / impl_->format_desc_.audio_samples_per_frame;}
 
-}}
+}
