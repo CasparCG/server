@@ -23,13 +23,7 @@ static bool double_rate(const std::wstring& filters)
 class filter
 {
 public:
-	enum flags
-	{
-		none = 0,
-		low_latency = 2
-	};
-
-	filter(const std::wstring& filters, flags filter_flags = none);
+	filter(const std::wstring& filters);
 
 	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame);
 
