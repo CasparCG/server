@@ -11,6 +11,8 @@
 
 #include <boost/circular_buffer.hpp>
 
+#include <tbb/task_group.h>
+
 #include <cstdio>
 #include <sstream>
 
@@ -35,15 +37,45 @@ struct filter::implementation
 	std::shared_ptr<AVFilterGraph>	graph_;	
 	AVFilterContext*				buffersink_ctx_;
 	AVFilterContext*				buffersrc_ctx_;
+
+	filter::flags					flags_;
+	std::vector<safe_ptr<AVFrame>>	frames_;
+	tbb::task_group					tasks_;
 	
-	implementation(const std::wstring& filters) 
+	implementation(const std::wstring& filters, filter::flags filter_flags) 
 		: filters_(filters.empty() ? "null" : narrow(filters))
+		, flags_(filter_flags)
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
 
+	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame)
+	{
+		if((flags_ | filter::low_latency) != 0)
+		{
+			push(frame);
+			return poll();
+		}
+
+		tasks_.wait();
+			
+		push(frame);
+
+		auto frames = std::move(frames_);
+
+		tasks_.run([=]
+		{
+			frames_ = poll();
+		});
+
+		return frames;
+	}
+
 	void push(const std::shared_ptr<AVFrame>& frame)
 	{		
+		if(!frame)
+			return;
+
 		int errn = 0;	
 
 		if(!graph_)
@@ -162,7 +194,6 @@ struct filter::implementation
 	}
 };
 
-filter::filter(const std::wstring& filters) : impl_(new implementation(filters)){}
-void filter::push(const std::shared_ptr<AVFrame>& frame) {impl_->push(frame);}
-std::vector<safe_ptr<AVFrame>> filter::poll() {return impl_->poll();}
+filter::filter(const std::wstring& filters, flags filter_flags) : impl_(new implementation(filters, filter_flags)){}
+std::vector<safe_ptr<AVFrame>> filter::execute(const std::shared_ptr<AVFrame>& frame) {return impl_->execute(frame);}
 }

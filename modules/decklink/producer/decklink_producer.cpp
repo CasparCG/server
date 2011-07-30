@@ -104,7 +104,7 @@ public:
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
-		, filter_(filter)
+		, filter_(filter, filter::low_latency)
 		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory->get_video_format_desc(), frame_factory)
 	{
 		frame_buffer_.set_capacity(2);
@@ -188,8 +188,7 @@ public:
 			av_frame->interlaced_frame	= format_desc_.mode != core::video_mode::progressive;
 			av_frame->top_field_first	= format_desc_.mode == core::video_mode::upper ? 1 : 0;
 					
-			filter_.push(av_frame);
-			BOOST_FOREACH(auto& av_frame2, filter_.poll())
+			BOOST_FOREACH(auto& av_frame2, filter_.execute(av_frame))
 				muxer_.push(make_write_frame(this, av_frame2, frame_factory_));		
 									
 			// It is assumed that audio is always equal or ahead of video.

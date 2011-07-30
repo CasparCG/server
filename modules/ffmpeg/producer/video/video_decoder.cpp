@@ -115,39 +115,36 @@ public:
 			result.push_back(make_safe<core::write_frame>(this));
 		else if(!packet_buffer_.empty())
 		{
-			std::vector<safe_ptr<AVFrame>> av_frames;
+			std::shared_ptr<AVFrame> frame;
 
 			auto packet = std::move(packet_buffer_.front());
 		
 			if(packet)
 			{
-				decode(*packet, av_frames);					
+				frame = decode(*packet);					
 				packet_buffer_.pop();
 			}
 			else
 			{
-				bool flush = true;
-
 				if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
 				{
 					AVPacket pkt = {0};
-					flush = !decode(pkt, av_frames);
+					frame = decode(pkt);
 				}
 
-				if(flush)
+				if(!frame)
 				{					
 					packet_buffer_.pop();
 					avcodec_flush_buffers(codec_context_.get());
 				}
 			}
 
-			if(filter_)
-			{
-				BOOST_FOREACH(auto& frame, av_frames)				
-					filter_->push(frame);
-				
-				av_frames = filter_->poll();
-			}
+			std::vector<safe_ptr<AVFrame>> av_frames;
+
+			if(filter_)			
+				av_frames = filter_->execute(frame);			
+			else if(frame)
+				av_frames.push_back(make_safe(frame));
 						
 			BOOST_FOREACH(auto& frame, av_frames)
 				result.push_back(make_write_frame(this, frame, frame_factory_));
@@ -159,7 +156,7 @@ public:
 		return result;
 	}
 
-	bool decode(AVPacket& packet, std::vector<safe_ptr<AVFrame>>& av_frames)
+	std::shared_ptr<AVFrame> decode(AVPacket& packet)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
@@ -177,12 +174,12 @@ public:
 
 		if(frame_finished != 0)	
 		{
-			av_frames.push_back(make_safe(decoded_frame));
+			return decoded_frame;
 			if(decoded_frame->repeat_pict != 0)
 				CASPAR_LOG(warning) << "video_decoder: repeat_pict not implemented.";
 		}
 
-		return frame_finished != 0;
+		return nullptr;
 	}
 	
 	bool ready() const
