@@ -295,8 +295,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		
 		auto frame = pop_video();
 
-		filter_->push(as_av_frame(frame));
-		auto av_frames = filter_->poll();
+		auto av_frames = filter_->execute(as_av_frame(frame));
 
 		if(av_frames.size() < 2)
 			return;
@@ -322,9 +321,8 @@ struct frame_muxer::implementation : boost::noncopyable
 			filter_.reset(new filter(L"YADIF=0:-1"));
 		
 		auto frame = pop_video();
-
-		filter_->push(as_av_frame(frame));
-		auto av_frames = filter_->poll();
+				
+		auto av_frames = filter_->execute(as_av_frame(frame));
 
 		if(av_frames.empty())
 			return;
