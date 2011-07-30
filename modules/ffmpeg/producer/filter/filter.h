@@ -23,10 +23,15 @@ static bool double_rate(const std::wstring& filters)
 class filter
 {
 public:
-	filter(const std::wstring& filters);
+	enum flags
+	{
+		none = 0,
+		low_latency = 2
+	};
 
-	void push(const std::shared_ptr<AVFrame>& frame);
-	std::vector<safe_ptr<AVFrame>> poll();
+	filter(const std::wstring& filters, flags filter_flags = none);
+
+	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame);
 
 private:
 	struct implementation;
