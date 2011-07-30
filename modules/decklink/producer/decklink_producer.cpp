@@ -27,6 +27,7 @@
 
 #include "../../ffmpeg/producer/filter/filter.h"
 #include "../../ffmpeg/producer/util.h"
+#include "../../ffmpeg/producer/frame_muxer.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/concurrency/com_context.h>
@@ -36,7 +37,6 @@
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/audio_transform.h>
 #include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame_muxer.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
@@ -72,7 +72,7 @@ extern "C"
 
 namespace caspar { 
 		
-class decklink_producer : public IDeckLinkInputCallback
+class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
 	CComPtr<IDeckLink>											decklink_;
 	CComQIPtr<IDeckLinkInput>									input_;
@@ -93,7 +93,7 @@ class decklink_producer : public IDeckLinkInputCallback
 	std::exception_ptr											exception_;
 	filter														filter_;
 		
-	core::frame_muxer											muxer_;
+	frame_muxer													muxer_;
 
 public:
 	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
@@ -105,7 +105,7 @@ public:
 		, frame_factory_(frame_factory)
 		, tail_(core::basic_frame::empty())
 		, filter_(filter)
-		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory->get_video_format_desc())
+		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory->get_video_format_desc(), frame_factory)
 	{
 		frame_buffer_.set_capacity(2);
 		
