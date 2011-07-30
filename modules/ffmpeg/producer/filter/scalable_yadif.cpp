@@ -104,7 +104,7 @@ int make_scalable_yadif(AVFilterContext* ctx)
 		return -1;
 	}
 
-	yadif->filter_line = fs[tag]; // hmm, will only work for one concurrent instance...
+	yadif->filter_line = fs[tag];
 	return tag;
 }
 
