@@ -69,8 +69,19 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 			}
 			catch(...)
 			{
-				CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
-				throw;
+				try
+				{
+					yield();
+					gc().get();
+					
+					// Try again
+					buffer.reset(new device_buffer(width, height, stride));
+				}
+				catch(...)
+				{
+					CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
+					throw;
+				}
 			}
 
 		}, high_priority);	
@@ -102,8 +113,23 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 			}
 			catch(...)
 			{
-				CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
-				throw;				
+				try
+				{
+					yield();
+					gc().get();
+
+					// Try again
+					buffer.reset(new host_buffer(size, usage));
+					if(usage == host_buffer::write_only)
+						buffer->map();
+					else
+						buffer->unmap();	
+				}
+				catch(...)
+				{
+					CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
+					throw;		
+				}
 			}
 
 		}, high_priority);	
