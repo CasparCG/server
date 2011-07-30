@@ -95,7 +95,7 @@ int make_scalable_yadif(AVFilterContext* ctx)
 	boost::call_once(&init, flag);
 
 	YADIFContext* yadif = (YADIFContext*)ctx->priv;
-	org_yadif_filter_line = yadif->filter_line;
+	org_yadif_filter_line = yadif->filter_line; // Data race is not a problem.
 
 	int tag;
 	if(!tags.try_pop(tag))
