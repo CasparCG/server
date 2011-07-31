@@ -111,7 +111,7 @@ public:
 			auto image = mix_image(frames);
 			auto audio = mix_audio(frames);
 			
-			return make_safe<read_frame>(channel_.ogl(), std::move(image), std::move(audio));
+			return make_safe<read_frame>(channel_.ogl(), std::move(image.get()), std::move(audio));
 		}
 		catch(...)
 		{
@@ -172,7 +172,7 @@ public:
 
 private:
 		
-	safe_ptr<host_buffer> mix_image(std::map<int, safe_ptr<core::basic_frame>> frames)
+	boost::unique_future<safe_ptr<host_buffer>> mix_image(std::map<int, safe_ptr<core::basic_frame>> frames)
 	{		
 		auto& image_transforms = boost::fusion::at_key<core::image_transform>(transforms_);
 		

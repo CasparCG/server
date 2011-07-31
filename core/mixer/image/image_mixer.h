@@ -25,6 +25,8 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <boost/thread/future.hpp>
+
 namespace caspar { namespace core {
 
 class write_frame;
@@ -46,7 +48,7 @@ public:
 
 	image_mixer& operator=(image_mixer&& other);
 	
-	safe_ptr<host_buffer> render();
+	boost::unique_future<safe_ptr<host_buffer>> render();
 
 	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& format);
 
