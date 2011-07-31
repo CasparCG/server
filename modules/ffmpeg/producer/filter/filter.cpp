@@ -39,20 +39,15 @@ struct filter::implementation
 	std::shared_ptr<AVFilterGraph>	graph_;	
 	AVFilterContext*				buffersink_ctx_;
 	AVFilterContext*				buffersrc_ctx_;
-	int								parallel_yadif_tag_;
+	std::shared_ptr<void>			parallel_yadif_ctx_;
 		
 	implementation(const std::wstring& filters) 
 		: filters_(filters.empty() ? "null" : narrow(filters))
-		, parallel_yadif_tag_(-1)
+		, parallel_yadif_ctx_(nullptr)
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
-
-	~implementation()
-	{
-		uninit_parallel_yadif(parallel_yadif_tag_);
-	}
-
+	
 	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame)
 	{
 		push(frame);
@@ -136,7 +131,7 @@ struct filter::implementation
 			{
 				auto filter_name = graph_->filters[n]->name;
 				if(strstr(filter_name, "yadif") != 0)
-					parallel_yadif_tag_ = init_parallel_yadif(graph_->filters[n]);
+					parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);
 			}
 		}
 	

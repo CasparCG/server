@@ -80,15 +80,21 @@ void (*fs[])(uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, in
 
 namespace caspar {
 	
-tbb::concurrent_bounded_queue<int> tags;
+tbb::concurrent_bounded_queue<decltype(org_yadif_filter_line)> parallel_line_func_pool;
 
 void init_pool()
 {
-	for(int n = 0; n < 18; ++n)
-		tags.push(n);
+	for(int n = 0; n < sizeof(fs)/sizeof(decltype(org_yadif_filter_line)); ++n)
+		parallel_line_func_pool.push(fs[n]);
 }
 
-int init(AVFilterContext* ctx)
+void return_parallel_yadif(void* func)
+{
+	if(func != nullptr)
+		parallel_line_func_pool.push(reinterpret_cast<decltype(org_yadif_filter_line)>(func));
+}
+
+std::shared_ptr<void> make_parallel_yadif(AVFilterContext* ctx)
 {
 	static boost::once_flag flag = BOOST_ONCE_INIT;
 	boost::call_once(&init_pool, flag);
@@ -96,21 +102,13 @@ int init(AVFilterContext* ctx)
 	YADIFContext* yadif = (YADIFContext*)ctx->priv;
 	org_yadif_filter_line = yadif->filter_line; // Data race is not a problem.
 
-	int tag;
-	if(!tags.try_pop(tag))
-	{
+	decltype(org_yadif_filter_line) func = nullptr;
+	if(!parallel_line_func_pool.try_pop(func))	
 		CASPAR_LOG(warning) << "Not enough scalable-yadif instances. Running non-scalable";
-		return -1;
-	}
-
-	yadif->filter_line = fs[tag];
-	return tag;
-}
-
-void uninit(int tag)
-{
-	if(tag != -1)
-		tags.push(tag);
+	else
+		yadif->filter_line = func;
+	
+	return std::shared_ptr<void>(func, return_parallel_yadif);
 }
 
 }
