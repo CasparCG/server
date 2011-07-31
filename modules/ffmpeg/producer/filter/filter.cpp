@@ -2,7 +2,7 @@
 
 #include "filter.h"
 
-#include "scalable_yadif.h"
+#include "parallel_yadif.h"
 
 #include "../../ffmpeg_error.h"
 
@@ -39,18 +39,18 @@ struct filter::implementation
 	std::shared_ptr<AVFilterGraph>	graph_;	
 	AVFilterContext*				buffersink_ctx_;
 	AVFilterContext*				buffersrc_ctx_;
-	int								scalable_yadif_tag_;
+	int								parallel_yadif_tag_;
 		
 	implementation(const std::wstring& filters) 
 		: filters_(filters.empty() ? "null" : narrow(filters))
-		, scalable_yadif_tag_(-1)
+		, parallel_yadif_tag_(-1)
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
 
 	~implementation()
 	{
-		release_scalable_yadif(scalable_yadif_tag_);
+		uninit_parallel_yadif(parallel_yadif_tag_);
 	}
 
 	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame)
@@ -136,7 +136,7 @@ struct filter::implementation
 			{
 				auto filter_name = graph_->filters[n]->name;
 				if(strstr(filter_name, "yadif") != 0)
-					scalable_yadif_tag_ = make_scalable_yadif(graph_->filters[n]);
+					parallel_yadif_tag_ = init_parallel_yadif(graph_->filters[n]);
 			}
 		}
 	

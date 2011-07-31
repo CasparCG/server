@@ -49,7 +49,7 @@
     <ClCompile Include="producer\frame_muxer.cpp">
       <Filter>source\producer</Filter>
     </ClCompile>
-    <ClCompile Include="producer\filter\scalable_yadif.cpp">
+    <ClCompile Include="producer\filter\parallel_yadif.cpp">
       <Filter>source\producer\filter</Filter>
     </ClCompile>
   </ItemGroup>
@@ -88,7 +88,7 @@
     <ClInclude Include="producer\frame_muxer.h">
       <Filter>source\producer</Filter>
     </ClInclude>
-    <ClInclude Include="producer\filter\scalable_yadif.h">
+    <ClInclude Include="producer\filter\parallel_yadif.h">
       <Filter>source\producer\filter</Filter>
     </ClInclude>
   </ItemGroup>
