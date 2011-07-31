@@ -4,15 +4,7 @@
 
 extern "C" 
 {
-	#define __STDC_CONSTANT_MACROS
-	#define __STDC_LIMIT_MACROS
-	#include <libavutil/avutil.h>
-	#include <libavutil/imgutils.h>
 	#include <libavfilter/avfilter.h>
-	#include <libavfilter/avcodec.h>
-	#include <libavfilter/avfiltergraph.h>
-	#include <libavfilter/vsink_buffer.h>
-	#include <libavfilter/vsrc_buffer.h>
 }
 
 #include <boost/thread/once.hpp>
@@ -29,38 +21,45 @@ typedef struct {
     void (*filter_line)(uint8_t *dst,
                         uint8_t *prev, uint8_t *cur, uint8_t *next,
                         int w, int prefs, int mrefs, int parity, int mode);
-    const AVPixFmtDescriptor *csp;
+    //const AVPixFmtDescriptor *csp;
 } YADIFContext;
 
 struct scalable_yadif_context
 {
-	std::vector<std::function<void()>> calls;
-	int end_prefs;
+	struct arg
+	{
+		uint8_t *dst;
+		uint8_t *prev;
+		uint8_t *cur; 
+		uint8_t *next; 
+		int w; 
+		int prefs; 
+		int mrefs;
+		int parity;
+		int mode;
+	};
 
-	scalable_yadif_context() : end_prefs(std::numeric_limits<int>::max()){}
+	arg	args[64];
+	int	index;
+
+	scalable_yadif_context() : index(0){}
 };
 
 void (*org_yadif_filter_line)(uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, int prefs, int mrefs, int parity, int mode) = 0;
 
 void scalable_yadif_filter_line(scalable_yadif_context& ctx, uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, int prefs, int mrefs, int parity, int mode)
 {
-	if(ctx.end_prefs == std::numeric_limits<int>::max())
-		ctx.end_prefs = -prefs;
-
-	ctx.calls.push_back([=]
-	{
-		org_yadif_filter_line(dst, prev, cur, next, w, prefs, mrefs, parity, mode);
-	});
-
-	if(prefs == ctx.end_prefs)
+	scalable_yadif_context::arg arg = {dst, prev, cur, next, w, prefs, mrefs, parity, mode};
+	ctx.args[ctx.index++] = arg;
+	
+	if(ctx.index == 64)
 	{		
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, ctx.calls.size()), [=](const tbb::blocked_range<size_t>& r)
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, ctx.index), [=](const tbb::blocked_range<size_t>& r)
 		{
 			for(auto n = r.begin(); n != r.end(); ++n)
-				ctx.calls[n]();
+				org_yadif_filter_line(ctx.args[n].dst, ctx.args[n].prev, ctx.args[n].cur, ctx.args[n].next, ctx.args[n].w, ctx.args[n].prefs, ctx.args[n].mrefs, ctx.args[n].parity, ctx.args[n].mode);
 		});
-		ctx.calls     = std::vector<std::function<void()>>();
-		ctx.end_prefs = std::numeric_limits<int>::max();
+		ctx.index = 0;
 	}
 }
 
