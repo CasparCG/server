@@ -88,6 +88,8 @@ public:
 	
 	virtual safe_ptr<core::basic_frame> receive()
 	{
+		// TODO: Do rendering asynchronously.
+
 		frame_timer_.restart();
 
 		for(int n = 0; n < 64 && muxer_.size() < 2; ++n)
