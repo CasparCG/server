@@ -1,6 +1,6 @@
 #include "../../StdAfx.h"
 
-#include "scalable_yadif.h"
+#include "parallel_yadif.h"
 
 extern "C" 
 {
@@ -24,7 +24,7 @@ typedef struct {
     //const AVPixFmtDescriptor *csp;
 } YADIFContext;
 
-struct scalable_yadif_context
+struct parallel_yadif_context
 {
 	struct arg
 	{
@@ -42,14 +42,14 @@ struct scalable_yadif_context
 	arg	args[64];
 	int	index;
 
-	scalable_yadif_context() : index(0){}
+	parallel_yadif_context() : index(0){}
 };
 
 void (*org_yadif_filter_line)(uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, int prefs, int mrefs, int parity, int mode) = 0;
 
-void scalable_yadif_filter_line(scalable_yadif_context& ctx, uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, int prefs, int mrefs, int parity, int mode)
+void parallel_yadif_filter_line(parallel_yadif_context& ctx, uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, int prefs, int mrefs, int parity, int mode)
 {
-	scalable_yadif_context::arg arg = {dst, prev, cur, next, w, prefs, mrefs, parity, mode};
+	parallel_yadif_context::arg arg = {dst, prev, cur, next, w, prefs, mrefs, parity, mode};
 	ctx.args[ctx.index++] = arg;
 	
 	if(ctx.index == 64)
@@ -68,8 +68,8 @@ void scalable_yadif_filter_line(scalable_yadif_context& ctx, uint8_t *dst, uint8
 #define ff(x) \
 void RENAME(x)(uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, int prefs, int mrefs, int parity, int mode) \
 {\
-	static scalable_yadif_context ctx;\
-	scalable_yadif_filter_line(ctx, dst, prev, cur, next, w, prefs, mrefs, parity, mode);\
+	static parallel_yadif_context ctx;\
+	parallel_yadif_filter_line(ctx, dst, prev, cur, next, w, prefs, mrefs, parity, mode);\
 }
 
 ff(0); ff(1); ff(2); ff(3); ff(4); ff(5); ff(6); ff(7); ff(8); ff(9); ff(10); ff(11); ff(12); ff(13); ff(14); ff(15); ff(16); ff(17);
@@ -82,16 +82,16 @@ namespace caspar {
 	
 tbb::concurrent_bounded_queue<int> tags;
 
-void init()
+void init_pool()
 {
 	for(int n = 0; n < 18; ++n)
 		tags.push(n);
 }
 
-int make_scalable_yadif(AVFilterContext* ctx)
+int init(AVFilterContext* ctx)
 {
 	static boost::once_flag flag = BOOST_ONCE_INIT;
-	boost::call_once(&init, flag);
+	boost::call_once(&init_pool, flag);
 
 	YADIFContext* yadif = (YADIFContext*)ctx->priv;
 	org_yadif_filter_line = yadif->filter_line; // Data race is not a problem.
@@ -107,7 +107,7 @@ int make_scalable_yadif(AVFilterContext* ctx)
 	return tag;
 }
 
-void release_scalable_yadif(int tag)
+void uninit(int tag)
 {
 	if(tag != -1)
 		tags.push(tag);
