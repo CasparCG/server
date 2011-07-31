@@ -77,7 +77,7 @@ public:
 													AV_SAMPLE_FMT_S16,				codec_context_->sample_fmt,
 													16, 10, 0, 0.8);
 
-			CASPAR_LOG(warning) << L" Invalid audio format.";
+			CASPAR_LOG(warning) << L" Invalid audio format. Resampling.";
 
 			if(resampler)
 				resampler_.reset(resampler, audio_resample_close);

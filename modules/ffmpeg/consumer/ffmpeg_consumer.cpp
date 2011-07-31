@@ -92,7 +92,7 @@ public:
 				<< boost::errinfo_api_function("avformat_alloc_context"));
 		}
 
-		executor_.set_capacity(CONSUMER_BUFFER_DEPTH);
+		executor_.set_capacity(core::consumer_buffer_depth());
 
 		oc_->oformat = av_guess_format(nullptr, filename_.c_str(), nullptr);
 		if (!oc_->oformat)

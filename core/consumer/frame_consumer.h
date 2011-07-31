@@ -29,12 +29,12 @@
 #include <string>
 #include <vector>
 
-static const size_t CONSUMER_BUFFER_DEPTH = 6;
-
 namespace caspar { namespace core {
 	
 class read_frame;
 struct video_format_desc;
+
+size_t consumer_buffer_depth();
 
 struct frame_consumer : boost::noncopyable
 {
