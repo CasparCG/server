@@ -75,7 +75,7 @@ public:
 		, embedded_audio_(embedded_audio)
 		, executor_(print())
 	{
-		executor_.set_capacity(CONSUMER_BUFFER_DEPTH);
+		executor_.set_capacity(core::consumer_buffer_depth());
 
 		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->add_guide("tick-time", 0.5);

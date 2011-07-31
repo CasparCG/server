@@ -57,7 +57,7 @@ struct configuration
 		, external_key(false)
 		, low_latency(false)
 		, key_only(false)
-		, buffer_depth(CONSUMER_BUFFER_DEPTH){}
+		, buffer_depth(core::consumer_buffer_depth()){}
 };
 
 class decklink_frame_muxer : public IDeckLinkVideoFrame
