@@ -62,9 +62,7 @@ struct ffmpeg_producer : public core::frame_producer
 	input											input_;	
 	video_decoder									video_decoder_;
 	audio_decoder									audio_decoder_;
-
-	std::queue<safe_ptr<core::basic_frame>>			output_buffer_;
-
+	
 	frame_muxer										muxer_;
 	
 	tbb::task_group									tasks_;
@@ -87,47 +85,27 @@ public:
 		for(int n = 0; n < 128 && muxer_.size() < 2; ++n)
 			decode_frame();
 	}
-
-	~ffmpeg_producer()
-	{
-		tasks_.cancel();
-		tasks_.wait();
-	}
-
+	
 	virtual safe_ptr<core::basic_frame> receive()
 	{
-		if(output_buffer_.empty())
-		{	
-			//tasks_.wait();
+		frame_timer_.restart();
 
-			while(muxer_.size() > 0)
-				output_buffer_.push(muxer_.pop());
+		for(int n = 0; n < 64 && muxer_.size() < 2; ++n)
+			decode_frame();
 
-			//tasks_.run([=]
-			//{
-				frame_timer_.restart();
-
-				for(int n = 0; n < 64 && muxer_.empty(); ++n)
-					decode_frame();
-
-				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
-			//});
-		}
+		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 		
 		auto frame = core::basic_frame::late();
 
-		if(output_buffer_.empty())
+		if(muxer_.empty())
 		{
 			if(input_.eof())
 				frame = core::basic_frame::eof();
 			else
 				graph_->add_tag("underflow");			
 		}
-		else
-		{
-			frame = output_buffer_.front();
-			output_buffer_.pop();
-		}
+		else		
+			frame = muxer_.pop();		
 		
 		return frame;
 	}
