@@ -142,11 +142,11 @@ public:
 	{
 	}
 	
-	safe_ptr<host_buffer> render()
+	boost::unique_future<safe_ptr<host_buffer>> render()
 	{		
 		auto render_queue = std::move(render_queue_);
 
-		return channel_.ogl().invoke([=]() mutable -> safe_ptr<host_buffer>
+		return channel_.ogl().begin_invoke([=]() mutable -> safe_ptr<host_buffer>
 		{			
 			if(channel_.get_format_desc().width != write_buffer_->width() || channel_.get_format_desc().height != write_buffer_->height())
 				initialize_buffers();
@@ -248,7 +248,7 @@ image_mixer::image_mixer(video_channel_context& video_channel) : impl_(new imple
 void image_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
-safe_ptr<host_buffer> image_mixer::render(){return impl_->render();}
+boost::unique_future<safe_ptr<host_buffer>> image_mixer::render(){return impl_->render();}
 safe_ptr<write_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
 void image_mixer::begin_layer(){impl_->begin_layer();}
 void image_mixer::end_layer(){impl_->end_layer();}
