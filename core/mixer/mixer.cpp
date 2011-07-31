@@ -46,6 +46,8 @@
 #include <boost/fusion/container/map.hpp>
 #include <boost/fusion/include/at_key.hpp>
 
+#include <tbb/parallel_invoke.h>
+
 #include <unordered_map>
 
 namespace caspar { namespace core {
@@ -108,8 +110,12 @@ public:
 	{			
 		try
 		{
-			auto image = mix_image(frames);
-			auto audio = mix_audio(frames);
+			decltype(mix_image(frames)) image;
+			decltype(mix_audio(frames)) audio;
+
+			tbb::parallel_invoke(
+					[&]{image = mix_image(frames);}, 
+					[&]{audio = mix_audio(frames);});
 			
 			return make_safe<read_frame>(channel_.ogl(), std::move(image.get()), std::move(audio));
 		}
