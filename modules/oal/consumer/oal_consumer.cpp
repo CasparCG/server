@@ -58,7 +58,7 @@ public:
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		is_running_ = true;
-		input_.set_capacity(CONSUMER_BUFFER_DEPTH-2);
+		input_.set_capacity(core::consumer_buffer_depth()-2);
 		
 		sf::SoundStream::Initialize(2, 48000);
 		Play();		

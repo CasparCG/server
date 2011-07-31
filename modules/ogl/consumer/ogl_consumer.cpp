@@ -87,7 +87,7 @@ public:
 		, screen_index_(screen_index)
 		, format_desc_(format_desc_)
 		, graph_(diagnostics::create_graph(narrow(print())))
-		, frame_buffer_(CONSUMER_BUFFER_DEPTH)
+		, frame_buffer_(core::consumer_buffer_depth())
 		, executor_(print())
 	{		
 		graph_->add_guide("frame-time", 0.5);
