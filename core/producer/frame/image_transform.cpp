@@ -346,4 +346,14 @@ image_transform::alpha_mode::type get_alpha_mode(const std::wstring& str)
 	return image_transform::alpha_mode::normal;
 }
 
+bool operator==(const image_transform& lhs, const image_transform& rhs)
+{
+	return memcmp(&lhs, &rhs, sizeof(image_transform)) == 0;
+}
+
+bool operator!=(const image_transform& lhs, const image_transform& rhs)
+{
+	return !(lhs == rhs);
+}
+
 }}

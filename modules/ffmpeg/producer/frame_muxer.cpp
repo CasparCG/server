@@ -101,7 +101,7 @@ struct frame_muxer::implementation : boost::noncopyable
 {	
 	std::queue<safe_ptr<write_frame>>	video_frames_;
 	std::vector<int16_t>				audio_samples_;
-	std::queue<safe_ptr<basic_frame>>	frame_buffer_;
+	std::deque<safe_ptr<basic_frame>>	frame_buffer_;
 	display_mode::type					display_mode_;
 	const double						in_fps_;
 	const video_format_desc				format_desc_;
@@ -135,10 +135,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		
 		if(display_mode_ == display_mode::invalid)
 			display_mode_ = auto_mode_ ? get_display_mode(video_frame->get_type(), in_fps_, format_desc_.mode, format_desc_.fps) : display_mode::simple;
-
-		if(display_mode_ != display_mode::deinterlace && display_mode_ != display_mode::deinterlace_bob) 
-			video_frame->commit();
-
+			
 		++video_frame_count_;
 
 		// Fix field-order if needed
@@ -149,7 +146,9 @@ struct frame_muxer::implementation : boost::noncopyable
 
 		video_frames_.push(make_safe(video_frame));
 
-		process();
+		process(frame_buffer_);
+
+		video_frame->commit();
 	}
 
 	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples)
@@ -171,13 +170,15 @@ struct frame_muxer::implementation : boost::noncopyable
 		audio_sample_count_ += audio_samples->size();
 
 		boost::range::push_back(audio_samples_, *audio_samples);
-		process();
+		std::deque<safe_ptr<basic_frame>> frames;
+		process(frames);
+		boost::range::push_back(frame_buffer_, frames);
 	}
 
 	safe_ptr<basic_frame> pop()
 	{		
 		auto frame = frame_buffer_.front();
-		frame_buffer_.pop();
+		frame_buffer_.pop_front();
 		return frame;
 	}
 
@@ -206,47 +207,66 @@ struct frame_muxer::implementation : boost::noncopyable
 		return samples;
 	}
 	
-	void process()
+	void process(std::deque<safe_ptr<basic_frame>>& dest)
 	{
 		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
 		
 		switch(display_mode_)
 		{
-		case display_mode::simple:
-			return simple();
-		case display_mode::duplicate:
-			return duplicate();
-		case display_mode::half:
-			return half();
-		case display_mode::interlace:
-			return interlace();
-		case display_mode::deinterlace_bob:
-			return deinterlace_bob();
-		case display_mode::deinterlace:
-			return deinterlace();
-		default:
-			BOOST_THROW_EXCEPTION(invalid_operation());
+		case display_mode::simple:						return simple(dest);
+		case display_mode::duplicate:					return duplicate(dest);
+		case display_mode::half:						return half(dest);
+		case display_mode::interlace:					return interlace(dest);
+		case display_mode::deinterlace_bob:				return deinterlace_bob(dest);
+		case display_mode::deinterlace:					return deinterlace(dest);
+		default:										BOOST_THROW_EXCEPTION(invalid_operation());
 		}
 	}
 
-	void simple()
+	void simple(std::deque<safe_ptr<basic_frame>>& dest)
 	{
 		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
+		
+		if(video_frames_.front()->get_type() != core::video_mode::progressive && format_desc_.mode != core::video_mode::progressive &&
+			video_frames_.front()->get_pixel_format_desc().planes.at(0).height != format_desc_.height )
+		{ // The frame will most likely be scaled, we need to deinterlace->reinterlace
+			if(!filter_)
+				filter_.reset(new filter(L"YADIF=1:-1"));
+		
+			auto frame = pop_video();
 
-		auto frame1 = pop_video();
-		frame1->audio_data() = pop_audio();
+			auto av_frames = filter_->execute(as_av_frame(frame));
 
-		frame_buffer_.push(frame1);
+			if(av_frames.size() < 2)
+				return;
+
+			auto frame1 = make_write_frame(frame->tag(), av_frames[0], frame_factory_);
+			frame1->commit();
+			auto frame2 = make_write_frame(frame->tag(), av_frames[1], frame_factory_);
+			frame2->commit();
+
+			frame1->audio_data() = pop_audio();
+			dest.push_back(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));		
+		}
+		else
+		{
+			auto frame1 = pop_video();
+			frame1->commit();
+			frame1->audio_data() = pop_audio();
+
+			dest.push_back(frame1);
+		}
 	}
 
-	void duplicate()
+	void duplicate(std::deque<safe_ptr<basic_frame>>& dest)
 	{		
 		if(video_frames_.empty() || audio_samples_.size()/2 < format_desc_.audio_samples_per_frame)
 			return;
 
 		auto frame = pop_video();
+		frame->commit();
 
 		auto frame1 = make_safe<core::write_frame>(*frame); // make a copy
 		frame1->audio_data() = pop_audio();
@@ -254,38 +274,40 @@ struct frame_muxer::implementation : boost::noncopyable
 		auto frame2 = frame;
 		frame2->audio_data() = pop_audio();
 
-		frame_buffer_.push(frame1);
-		frame_buffer_.push(frame2);
+		dest.push_back(frame1);
+		dest.push_back(frame2);
 	}
 
-	void half()
+	void half(std::deque<safe_ptr<basic_frame>>& dest)
 	{	
 		if(video_frames_.size() < 2 || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
 						
 		auto frame1 = pop_video();
+		frame1->commit();
 		frame1->audio_data() = pop_audio();
 				
 		video_frames_.pop(); // Throw away
 
-		frame_buffer_.push(frame1);
+		dest.push_back(frame1);
 	}
 	
-	void interlace()
+	void interlace(std::deque<safe_ptr<basic_frame>>& dest)
 	{		
 		if(video_frames_.size() < 2 || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
 		
 		auto frame1 = pop_video();
+		frame1->commit();
 
 		frame1->audio_data() = pop_audio();
 				
 		auto frame2 = pop_video();
 
-		frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));		
+		dest.push_back(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));		
 	}
-	
-	void deinterlace_bob()
+		
+	void deinterlace_bob(std::deque<safe_ptr<basic_frame>>& dest)
 	{
 		if(video_frames_.empty() || audio_samples_.size()/2 < format_desc_.audio_samples_per_frame)
 			return;
@@ -308,11 +330,11 @@ struct frame_muxer::implementation : boost::noncopyable
 		frame2->commit();
 		frame2->audio_data() = pop_audio();
 		
-		frame_buffer_.push(frame1);
-		frame_buffer_.push(frame2);
+		dest.push_back(frame1);
+		dest.push_back(frame2);
 	}
 
-	void deinterlace()
+	void deinterlace(std::deque<safe_ptr<basic_frame>>& dest)
 	{
 		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
 			return;
@@ -331,7 +353,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		frame1->commit();
 		frame1->audio_data() = pop_audio();
 				
-		frame_buffer_.push(frame1);
+		dest.push_back(frame1);
 	}
 };
 

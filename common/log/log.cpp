@@ -133,8 +133,11 @@ void add_file_sink(const std::wstring& folder)
 		
 		file_sink->locked_backend()->set_formatter(&my_formatter);
 
+#ifdef NDEBUG
 		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
-		
+#else
+		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
+#endif
 		boost::log::wcore::get()->add_sink(file_sink);
 
 		CASPAR_LOG(info) << L"Logging [info] or higher severity to " << folder << std::endl << std::endl;
