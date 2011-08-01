@@ -169,14 +169,7 @@ image_transform::alpha_mode::type get_alpha_mode(const std::wstring& str);
 
 image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener);
 
-inline bool operator==(const image_transform& lhs, const image_transform& rhs)
-{
-	return memcmp(&lhs, &rhs, sizeof(image_transform)) == 0;
-}
-
-inline bool operator!=(const image_transform& lhs, const image_transform& rhs)
-{
-	return !(lhs == rhs);
-}
+bool operator==(const image_transform& lhs, const image_transform& rhs);
+bool operator!=(const image_transform& lhs, const image_transform& rhs);
 
 }}
