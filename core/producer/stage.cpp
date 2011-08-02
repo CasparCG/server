@@ -107,11 +107,11 @@ public:
 		return frames;
 	}
 
-	void load(int index, const safe_ptr<frame_producer>& producer, bool preview)
+	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{
 		channel_.execution().invoke([&]
 		{
-			layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction(), producer), preview);
+			layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction(), producer), preview, auto_play_delta);
 		});
 	}
 
@@ -222,7 +222,7 @@ public:
 
 stage::stage(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
 void stage::swap(stage& other){impl_->swap(other);}
-void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview){impl_->load(index, producer, preview);}
+void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
 void stage::play(int index){impl_->play(index);}
 void stage::stop(int index){impl_->stop(index);}

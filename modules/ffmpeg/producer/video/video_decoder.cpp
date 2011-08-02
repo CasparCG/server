@@ -68,12 +68,14 @@ struct video_decoder::implementation : boost::noncopyable
 	std::unique_ptr<filter>					filter_;
 
 	double									fps_;
+	int64_t									nb_frames_;
 public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) 
 		: frame_factory_(frame_factory)
 		, mode_(core::video_mode::invalid)
 		, filter_(filter.empty() ? nullptr : new caspar::filter(filter))
 		, fps_(frame_factory_->get_video_format_desc().fps)
+		, nb_frames_(0)
 	{
 		AVCodec* dec;
 		index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
@@ -86,10 +88,14 @@ public:
 			return;
 				
 		codec_context_.reset(context->streams[index_]->codec, tbb_avcodec_close);
-
+		
 		// Some files give an invalid time_base numerator, try to fix it.
 		if(codec_context_ && codec_context_->time_base.num == 1)
 			codec_context_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(codec_context_->time_base.den)))-1));	
+		
+		nb_frames_ = context->streams[index_]->nb_frames;
+		if(nb_frames_ == 0)
+			nb_frames_ = context->streams[index_]->duration;// * context->streams[index_]->time_base.den;
 
 		fps_ = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
 		if(double_rate(filter))
@@ -207,4 +213,5 @@ std::vector<std::shared_ptr<core::write_frame>> video_decoder::poll(){return imp
 bool video_decoder::ready() const{return impl_->ready();}
 core::video_mode::type video_decoder::mode(){return impl_->mode();}
 double video_decoder::fps() const{return impl_->fps();}
+int64_t video_decoder::nb_frames() const{return impl_->nb_frames_;}
 }
