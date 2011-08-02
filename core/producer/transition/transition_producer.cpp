@@ -75,6 +75,11 @@ struct transition_producer : public frame_producer
 		return compose(dest, source);
 	}
 
+	virtual int64_t nb_frames() const 
+	{
+		return get_following_producer()->nb_frames();
+	}
+
 	virtual std::wstring print() const
 	{
 		return L"transition";
