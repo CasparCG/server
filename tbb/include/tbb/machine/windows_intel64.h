@@ -26,35 +26,42 @@
     the GNU General Public License.
 */
 
-#ifndef __TBB_machine_H
+#if !defined(__TBB_machine_H) || defined(__TBB_machine_windows_intel64_H)
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
 
-#include <intrin.h>
-#if !defined(__INTEL_COMPILER)
-#pragma intrinsic(_InterlockedOr64)
-#pragma intrinsic(_InterlockedAnd64)
-#pragma intrinsic(_InterlockedCompareExchange)
-#pragma intrinsic(_InterlockedCompareExchange64)
-#pragma intrinsic(_InterlockedExchangeAdd)
-#pragma intrinsic(_InterlockedExchangeAdd64)
-#pragma intrinsic(_InterlockedExchange)
-#pragma intrinsic(_InterlockedExchange64)
-#endif /* !defined(__INTEL_COMPILER) */
-
-#if defined(__INTEL_COMPILER)
-#define __TBB_release_consistency_helper() __asm { __asm nop }
-#define __TBB_full_memory_fence() __asm { __asm mfence }
-#elif _MSC_VER >= 1300
-extern "C" void _ReadWriteBarrier();
-#pragma intrinsic(_ReadWriteBarrier)
-#define __TBB_release_consistency_helper() _ReadWriteBarrier()
-#pragma intrinsic(_mm_mfence)
-#define __TBB_full_memory_fence() _mm_mfence()
-#endif
+#define __TBB_machine_windows_intel64_H
 
 #define __TBB_WORDSIZE 8
 #define __TBB_BIG_ENDIAN 0
+
+#include <intrin.h>
+
+#if !__INTEL_COMPILER
+    #pragma intrinsic(_InterlockedOr64)
+    #pragma intrinsic(_InterlockedAnd64)
+    #pragma intrinsic(_InterlockedCompareExchange)
+    #pragma intrinsic(_InterlockedCompareExchange64)
+    #pragma intrinsic(_InterlockedExchangeAdd)
+    #pragma intrinsic(_InterlockedExchangeAdd64)
+    #pragma intrinsic(_InterlockedExchange)
+    #pragma intrinsic(_InterlockedExchange64)
+#endif /* !defined(__INTEL_COMPILER) */
+
+#if __INTEL_COMPILER
+    #define __TBB_compiler_fence()    __asm { __asm nop }
+    #define __TBB_full_memory_fence() __asm { __asm mfence }
+#elif _MSC_VER >= 1300
+    extern "C" void _ReadWriteBarrier();
+    #pragma intrinsic(_ReadWriteBarrier)
+    #pragma intrinsic(_mm_mfence)
+    #define __TBB_compiler_fence()    _ReadWriteBarrier()
+    #define __TBB_full_memory_fence() _mm_mfence()
+#endif
+
+#define __TBB_control_consistency_helper() __TBB_compiler_fence()
+#define __TBB_acquire_consistency_helper() __TBB_compiler_fence()
+#define __TBB_release_consistency_helper() __TBB_compiler_fence()
 
 // ATTENTION: if you ever change argument types in machine-specific primitives,
 // please take care of atomic_word<> specializations in tbb/atomic.h
@@ -68,6 +75,29 @@ extern "C" {
     void __TBB_EXPORTED_FUNC __TBB_machine_pause (__int32 delay );
 }
 
+inline long __TBB_machine_cmpswp4 (volatile void *ptr, __int32 value, __int32 comparand ) {
+    return _InterlockedCompareExchange( (long*)ptr, value, comparand );
+}
+inline long __TBB_machine_fetchadd4 (volatile void *ptr, __int32 addend ) {
+    return _InterlockedExchangeAdd( (long*)ptr, addend );
+}
+inline long __TBB_machine_fetchstore4 (volatile void *ptr, __int32 value ) {
+    return _InterlockedExchange( (long*)ptr, value );
+}
+
+inline __int64 __TBB_machine_cmpswp8 (volatile void *ptr, __int64 value, __int64 comparand ) {
+    return _InterlockedCompareExchange64( (__int64*)ptr, value, comparand );
+}
+inline __int64 __TBB_machine_fetchadd8 (volatile void *ptr, __int64 addend ) {
+    return _InterlockedExchangeAdd64( (__int64*)ptr, addend );
+}
+inline __int64 __TBB_machine_fetchstore8 (volatile void *ptr, __int64 value ) {
+    return _InterlockedExchange64( (__int64*)ptr, value );
+}
+
+#define __TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE   1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE    1
+#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE        1
 
 #if !__INTEL_COMPILER
 extern "C" unsigned char _BitScanReverse64( unsigned long* i, unsigned __int64 w );
@@ -97,39 +127,13 @@ inline void __TBB_machine_AND( volatile void *operand, intptr_t addend ) {
     _InterlockedAnd64((__int64*)operand, addend); 
 }
 
-#define __TBB_CompareAndSwap1(P,V,C) __TBB_machine_cmpswp1(P,V,C)
-#define __TBB_CompareAndSwap2(P,V,C) __TBB_machine_cmpswp2(P,V,C)
-#define __TBB_CompareAndSwap4(P,V,C) _InterlockedCompareExchange( (long*) P , V , C ) 
-#define __TBB_CompareAndSwap8(P,V,C) _InterlockedCompareExchange64( (__int64*) P , V , C )
-#define __TBB_CompareAndSwapW(P,V,C) _InterlockedCompareExchange64( (__int64*) P , V , C )
-
-#define __TBB_FetchAndAdd1(P,V) __TBB_machine_fetchadd1(P,V)
-#define __TBB_FetchAndAdd2(P,V) __TBB_machine_fetchadd2(P,V)
-#define __TBB_FetchAndAdd4(P,V) _InterlockedExchangeAdd((long*) P , V )
-#define __TBB_FetchAndAdd8(P,V) _InterlockedExchangeAdd64((__int64*) P , V )
-#define __TBB_FetchAndAddW(P,V) _InterlockedExchangeAdd64((__int64*) P , V )
-
-#define __TBB_FetchAndStore1(P,V) __TBB_machine_fetchstore1(P,V)
-#define __TBB_FetchAndStore2(P,V) __TBB_machine_fetchstore2(P,V)
-#define __TBB_FetchAndStore4(P,V) _InterlockedExchange((long*) P , V )
-#define __TBB_FetchAndStore8(P,V) _InterlockedExchange64((__int64*) P , V )
-#define __TBB_FetchAndStoreW(P,V) _InterlockedExchange64((__int64*) P , V ) 
-
-// Not used if wordsize == 8
-#undef __TBB_Store8
-#undef __TBB_Load8
-
 #define __TBB_AtomicOR(P,V) __TBB_machine_OR(P,V)
 #define __TBB_AtomicAND(P,V) __TBB_machine_AND(P,V)
 
 extern "C" __declspec(dllimport) int __stdcall SwitchToThread( void );
 #define __TBB_Yield()  SwitchToThread()
 #define __TBB_Pause(V) __TBB_machine_pause(V)
-#define __TBB_Log2(V)    __TBB_machine_lg(V)
-
-// Use generic definitions from tbb_machine.h
-#undef __TBB_TryLockByte
-#undef __TBB_LockByte
+#define __TBB_Log2(V)  __TBB_machine_lg(V)
 
 // API to retrieve/update FPU control setting
 #define __TBB_CPU_CTL_ENV_PRESENT 1

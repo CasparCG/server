@@ -37,6 +37,7 @@
 #include "tbb_machine.h"
 #include "tbb_profiling.h"
 #include <new>
+#include <cstring>   // for memset()
 
 #if !TBB_USE_EXCEPTIONS && _MSC_VER
     // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers

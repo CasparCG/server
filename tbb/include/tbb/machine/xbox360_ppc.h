@@ -26,9 +26,13 @@
     the GNU General Public License.
 */
 
-#ifndef __TBB_machine_H
+// TODO: revise by comparing with mac_ppc.h
+
+#if !defined(__TBB_machine_H) || defined(__TBB_machine_xbox360_ppc_H)
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
+
+#define __TBB_machine_xbox360_ppc_H
 
 #define NONET
 #define NOD3D
@@ -38,6 +42,8 @@
 #if _MSC_VER >= 1300
 extern "C" void _MemoryBarrier();
 #pragma intrinsic(_MemoryBarrier)
+#define __TBB_control_consistency_helper() __isync()
+#define __TBB_acquire_consistency_helper() _MemoryBarrier()
 #define __TBB_release_consistency_helper() _MemoryBarrier()
 #endif
 
@@ -46,26 +52,29 @@ extern "C" void _MemoryBarrier();
 #define __TBB_WORDSIZE 4
 #define __TBB_BIG_ENDIAN 1
 
-//todo: define __TBB_DECL_FENCED_ATOMICS and define acquire/release primitives to maximize performance
+//todo: define __TBB_USE_FENCED_ATOMICS and define acquire/release primitives to maximize performance
 
-typedef __int64 int64_t;  //required for definition of Store8/Load8 in atomic.h
-typedef unsigned char uint8_t;  //same reason
-
-inline __int32 __TBB_machine_cmpswp4(volatile void *ptr, __int32 value, __int32 comparand )
-{                               
- __lwsync();
+inline __int32 __TBB_machine_cmpswp4(volatile void *ptr, __int32 value, __int32 comparand ) {                               
+ __sync();
  __int32 result = InterlockedCompareExchange((volatile LONG*)ptr, value, comparand);
- __lwsync();
+ __isync();
  return result;
 }
 
 inline __int64 __TBB_machine_cmpswp8(volatile void *ptr, __int64 value, __int64 comparand )
 {
- __lwsync();
+ __sync();
  __int64 result = InterlockedCompareExchange64((volatile LONG64*)ptr, value, comparand);
- __lwsync();
+ __isync();
  return result;
 }
+
+#define __TBB_USE_GENERIC_PART_WORD_CAS             1
+#define __TBB_USE_GENERIC_FETCH_ADD                 1
+#define __TBB_USE_GENERIC_FETCH_STORE               1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE    1
+#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE        1
+#define __TBB_USE_GENERIC_DWORD_LOAD_STORE          1
 
 #pragma optimize( "", off )
 inline void __TBB_machine_pause (__int32 delay ) 
@@ -74,10 +83,6 @@ inline void __TBB_machine_pause (__int32 delay )
 }
 #pragma optimize( "", on ) 
 
-
-#define __TBB_CompareAndSwap4(P,V,C) __TBB_machine_cmpswp4(P,V,C)
-#define __TBB_CompareAndSwap8(P,V,C) __TBB_machine_cmpswp8(P,V,C)
-#define __TBB_CompareAndSwapW(P,V,C) __TBB_machine_cmpswp4(P,V,C)
 #define __TBB_Yield()  Sleep(0)
 #define __TBB_Pause(V) __TBB_machine_pause(V)
 

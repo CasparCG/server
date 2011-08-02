@@ -29,7 +29,132 @@
 #ifndef __TBB_machine_H
 #define __TBB_machine_H
 
+/** This header provides basic platform abstraction layer by hooking up appropriate
+    architecture/OS/compiler specific headers from the /include/tbb/machine directory.
+    If a plug-in header does not implement all the required APIs, it must specify
+    the missing ones by setting one or more of the following macros:
+
+    __TBB_USE_GENERIC_PART_WORD_CAS
+    __TBB_USE_GENERIC_PART_WORD_FETCH_ADD
+    __TBB_USE_GENERIC_PART_WORD_FETCH_STORE
+    __TBB_USE_GENERIC_FETCH_ADD
+    __TBB_USE_GENERIC_FETCH_STORE
+    __TBB_USE_GENERIC_DWORD_FETCH_ADD
+    __TBB_USE_GENERIC_DWORD_FETCH_STORE
+    __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE
+    __TBB_USE_GENERIC_FULL_FENCED_LOAD_STORE
+    __TBB_USE_GENERIC_RELAXED_LOAD_STORE
+    __TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE
+
+    In this case tbb_machine.h will add missing functionality based on a minimal set 
+    of APIs that are required to be implemented by all plug-n headers as described
+    futher.
+    Note that these generic implementations may be sub-optimal for a particular
+    architecture, and thus should be relied upon only after careful evaluation
+    or as the last resort.
+
+    Additionally __TBB_64BIT_ATOMICS can be set to 0 on a 32-bit architecture to
+    indicate that the port is not going to support double word atomics. It may also
+    be set to 1 explicitly, though normally this is not necessary as tbb_machine.h
+    will set it automatically.
+
+    Prerequisites for each architecture port
+    ----------------------------------------
+    The following functions have no generic implementation. Therefore they must be 
+    implemented in each machine architecture specific header either as a conventional
+    function or as a functional macro.
+
+    __TBB_Yield()
+        Signals OS that the current thread is willing to relinquish the remainder
+        of its time quantum.
+
+    __TBB_full_memory_fence()
+        Must prevent all memory operations from being reordered across it (both
+        by hardware and compiler). All such fences must be totally ordered (or
+        sequentially consistent).
+
+    __TBB_machine_cmpswp4( volatile void *ptr, int32_t value, int32_t comparand )
+        Must be provided if __TBB_USE_FENCED_ATOMICS is not set.
+
+    __TBB_machine_cmpswp8( volatile void *ptr, int32_t value, int64_t comparand )
+        Must be provided for 64-bit architectures if __TBB_USE_FENCED_ATOMICS is not set,
+        and for 32-bit architectures if __TBB_64BIT_ATOMICS is set
+
+    __TBB_machine_<op><S><fence>(...), where
+        <op> = {cmpswp, fetchadd, fetchstore}
+        <S> = {1, 2, 4, 8}
+        <fence> = {full_fence, acquire, release, relaxed}
+        Must be provided if __TBB_USE_FENCED_ATOMICS is set.
+
+    __TBB_control_consistency_helper()
+        Bridges the memory-semantics gap between architectures providing only
+        implicit C++0x "consume" semantics (like Power Architecture) and those
+        also implicitly obeying control dependencies (like Itanium).
+        It must be used only in conditional code where the condition is itself
+        data-dependent, and will then make subsequent code behave as if the
+        original data dependency were acquired.
+        It needs only an empty definition where implied by the architecture
+        either specifically (Itanium) or because generally stronger C++0x "acquire"
+        semantics are enforced (like x86).
+    
+    __TBB_acquire_consistency_helper(), __TBB_release_consistency_helper()
+        Must be provided if __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE is set.
+        Enforce acquire and release semantics in generic implementations of fenced
+        store and load operations. Depending on the particular architecture/compiler
+        combination they may be a hardware fence, a compiler fence, both or nothing.
+ **/
+
 #include "tbb_stddef.h"
+
+namespace tbb {
+namespace internal {
+
+////////////////////////////////////////////////////////////////////////////////
+// Overridable helpers declarations
+//
+// A machine/*.h file may choose to define these templates, otherwise it must
+// request default implementation by setting appropriate __TBB_USE_GENERIC_XXX macro(s).
+//
+template <typename T, std::size_t S>
+struct machine_load_store;
+
+template <typename T, std::size_t S>
+struct machine_load_store_relaxed;
+
+template <typename T, std::size_t S>
+struct machine_load_store_seq_cst;
+//
+// End of overridable helpers declarations
+////////////////////////////////////////////////////////////////////////////////
+
+template<size_t S> struct atomic_selector;
+
+template<> struct atomic_selector<1> {
+    typedef int8_t word;
+    inline static word fetch_store ( volatile void* location, word value );
+};
+
+template<> struct atomic_selector<2> {
+    typedef int16_t word;
+    inline static word fetch_store ( volatile void* location, word value );
+};
+
+template<> struct atomic_selector<4> {
+#if _MSC_VER && !_WIN64
+    // Work-around that avoids spurious /Wp64 warnings
+    typedef intptr_t word;
+#else
+    typedef int32_t word;
+#endif
+    inline static word fetch_store ( volatile void* location, word value );
+};
+
+template<> struct atomic_selector<8> {
+    typedef int64_t word;
+    inline static word fetch_store ( volatile void* location, word value );
+};
+
+}} // namespaces internal, tbb
 
 #if _WIN32||_WIN64
 
@@ -49,9 +174,9 @@
         #endif
     #elif defined(_M_IX86)
         #include "machine/windows_ia32.h"
-    #elif defined(_M_AMD64) 
+    #elif defined(_M_X64) 
         #include "machine/windows_intel64.h"
-    #elif _XBOX 
+    #elif _XBOX
         #include "machine/xbox360_ppc.h"
     #endif
 
@@ -93,9 +218,9 @@
 
 #elif __sun || __SUNPRO_CC
 
-    #define __asm__ asm 
+    #define __asm__ asm
     #define __volatile__ volatile
-    
+
     #if __i386  || __i386__
         #include "machine/linux_ia32.h"
     #elif __x86_64__
@@ -110,29 +235,46 @@
 #endif /* OS selection */
 
 #ifndef __TBB_64BIT_ATOMICS
-#define __TBB_64BIT_ATOMICS 1
+    #define __TBB_64BIT_ATOMICS 1
 #endif
 
-//! Prerequisites for each architecture port
-/** There are no generic implementation for these macros so they have to be implemented
-    in each machine architecture specific header.
+// Special atomic functions
+#if __TBB_USE_FENCED_ATOMICS
+    #define __TBB_machine_cmpswp1   __TBB_machine_cmpswp1full_fence
+    #define __TBB_machine_cmpswp2   __TBB_machine_cmpswp2full_fence
+    #define __TBB_machine_cmpswp4   __TBB_machine_cmpswp4full_fence
+    #define __TBB_machine_cmpswp8   __TBB_machine_cmpswp8full_fence
 
-    __TBB_full_memory_fence must prevent all memory operations from being reordered 
-    across the fence. And all such fences must be totally ordered (or sequentially 
-    consistent). These fence must affect both compiler and hardware.
-    
-    __TBB_release_consistency_helper is used to enforce guarantees of acquire or 
-    release semantics in generic implementations of __TBB_load_with_acquire and 
-    __TBB_store_with_release below. Depending on the particular combination of
-    architecture+compiler it can be a hardware fence, a compiler fence, both or
-    nothing. **/
-#if    !defined(__TBB_CompareAndSwap4) \
-    || !defined(__TBB_CompareAndSwap8) && __TBB_64BIT_ATOMICS \
-    || !defined(__TBB_Yield)           \
-    || !defined(__TBB_full_memory_fence)    \
-    || !defined(__TBB_release_consistency_helper)
-#error Minimal requirements for tbb_machine.h not satisfied; platform is not supported.
-#endif
+    #if __TBB_WORDSIZE==8
+        #define __TBB_machine_fetchadd8             __TBB_machine_fetchadd8full_fence
+        #define __TBB_machine_fetchstore8           __TBB_machine_fetchstore8full_fence
+        #define __TBB_FetchAndAddWrelease(P,V)      __TBB_machine_fetchadd8release(P,V)
+        #define __TBB_FetchAndIncrementWacquire(P)  __TBB_machine_fetchadd8acquire(P,1)
+        #define __TBB_FetchAndDecrementWrelease(P)  __TBB_machine_fetchadd8release(P,(-1))
+    #else
+        #error Define macros for 4-byte word, similarly to the above __TBB_WORDSIZE==8 branch.
+    #endif /* __TBB_WORDSIZE==4 */
+#else /* !__TBB_USE_FENCED_ATOMICS */
+    #define __TBB_FetchAndAddWrelease(P,V)      __TBB_FetchAndAddW(P,V)
+    #define __TBB_FetchAndIncrementWacquire(P)  __TBB_FetchAndAddW(P,1)
+    #define __TBB_FetchAndDecrementWrelease(P)  __TBB_FetchAndAddW(P,(-1))
+#endif /* !__TBB_USE_FENCED_ATOMICS */
+
+#if __TBB_WORDSIZE==4
+    #define __TBB_CompareAndSwapW(P,V,C)    __TBB_machine_cmpswp4(P,V,C)
+    #define __TBB_FetchAndAddW(P,V)         __TBB_machine_fetchadd4(P,V)
+    #define __TBB_FetchAndStoreW(P,V)       __TBB_machine_fetchstore4(P,V)
+#elif  __TBB_WORDSIZE==8
+    #if __TBB_USE_GENERIC_DWORD_LOAD_STORE || __TBB_USE_GENERIC_DWORD_FETCH_ADD || __TBB_USE_GENERIC_DWORD_FETCH_STORE
+        #error These macros should only be used on 32-bit platforms.
+    #endif
+
+    #define __TBB_CompareAndSwapW(P,V,C)    __TBB_machine_cmpswp8(P,V,C)
+    #define __TBB_FetchAndAddW(P,V)         __TBB_machine_fetchadd8(P,V)
+    #define __TBB_FetchAndStoreW(P,V)       __TBB_machine_fetchstore8(P,V)
+#else /* __TBB_WORDSIZE != 8 */
+    #error Unsupported machine word size.
+#endif /* __TBB_WORDSIZE */
 
 #ifndef __TBB_Pause
     inline void __TBB_Pause(int32_t) {
@@ -150,7 +292,7 @@ namespace internal {
 //! Class that implements exponential backoff.
 /** See implementation of spin_wait_while_eq for an example. */
 class atomic_backoff : no_copy {
-    //! Time delay, in units of "pause" instructions. 
+    //! Time delay, in units of "pause" instructions.
     /** Should be equal to approximately the number of "pause" instructions
         that take the same time as an context switch. */
     static const int32_t LOOPS_BEFORE_YIELD = 16;
@@ -221,8 +363,9 @@ inline T __TBB_MaskedCompareAndSwap (volatile T *ptr, T value, T comparand ) {
         result = *base; // reload the base value which might change during the pause
         uint32_t old_value = ( result & ~mask ) | ( comparand << bitoffset );
         uint32_t new_value = ( result & ~mask ) | ( value << bitoffset );
-        // __TBB_CompareAndSwap4 presumed to have full fence. 
-        result = __TBB_CompareAndSwap4( base, new_value, old_value );
+        // __TBB_CompareAndSwap4 presumed to have full fence.
+        // Cast shuts up /Wp64 warning
+        result = (uint32_t)__TBB_machine_cmpswp4( base, new_value, old_value );
         if(  result==old_value               // CAS succeeded
           || ((result^old_value)&mask)!=0 )  // CAS failed and the bits of interest have changed
             break;
@@ -233,37 +376,36 @@ inline T __TBB_MaskedCompareAndSwap (volatile T *ptr, T value, T comparand ) {
 }
 
 template<size_t S, typename T>
-inline T __TBB_CompareAndSwapGeneric (volatile void *ptr, T value, T comparand ) { 
-    return __TBB_CompareAndSwapW((T *)ptr,value,comparand);
-}
+inline T __TBB_CompareAndSwapGeneric (volatile void *ptr, T value, T comparand );
 
 template<>
 inline uint8_t __TBB_CompareAndSwapGeneric <1,uint8_t> (volatile void *ptr, uint8_t value, uint8_t comparand ) {
-#ifdef __TBB_CompareAndSwap1
-    return __TBB_CompareAndSwap1(ptr,value,comparand);
-#else
+#if __TBB_USE_GENERIC_PART_WORD_CAS
     return __TBB_MaskedCompareAndSwap<1,uint8_t>((volatile uint8_t *)ptr,value,comparand);
+#else
+    return __TBB_machine_cmpswp1(ptr,value,comparand);
 #endif
 }
 
 template<>
 inline uint16_t __TBB_CompareAndSwapGeneric <2,uint16_t> (volatile void *ptr, uint16_t value, uint16_t comparand ) {
-#ifdef __TBB_CompareAndSwap2
-    return __TBB_CompareAndSwap2(ptr,value,comparand);
-#else
+#if __TBB_USE_GENERIC_PART_WORD_CAS
     return __TBB_MaskedCompareAndSwap<2,uint16_t>((volatile uint16_t *)ptr,value,comparand);
+#else
+    return __TBB_machine_cmpswp2(ptr,value,comparand);
 #endif
 }
 
 template<>
-inline uint32_t __TBB_CompareAndSwapGeneric <4,uint32_t> (volatile void *ptr, uint32_t value, uint32_t comparand ) { 
-    return __TBB_CompareAndSwap4(ptr,value,comparand);
+inline uint32_t __TBB_CompareAndSwapGeneric <4,uint32_t> (volatile void *ptr, uint32_t value, uint32_t comparand ) {
+    // Cast shuts up /Wp64 warning
+    return (uint32_t)__TBB_machine_cmpswp4(ptr,value,comparand);
 }
 
 #if __TBB_64BIT_ATOMICS
 template<>
-inline uint64_t __TBB_CompareAndSwapGeneric <8,uint64_t> (volatile void *ptr, uint64_t value, uint64_t comparand ) { 
-    return __TBB_CompareAndSwap8(ptr,value,comparand);
+inline uint64_t __TBB_CompareAndSwapGeneric <8,uint64_t> (volatile void *ptr, uint64_t value, uint64_t comparand ) {
+    return __TBB_machine_cmpswp8(ptr,value,comparand);
 }
 #endif
 
@@ -273,8 +415,8 @@ inline T __TBB_FetchAndAddGeneric (volatile void *ptr, T addend) {
     T result;
     for(;;) {
         result = *reinterpret_cast<volatile T *>(ptr);
-        // __TBB_CompareAndSwapGeneric presumed to have full fence. 
-        if( __TBB_CompareAndSwapGeneric<S,T> ( ptr, result+addend, result )==result ) 
+        // __TBB_CompareAndSwapGeneric presumed to have full fence.
+        if( __TBB_CompareAndSwapGeneric<S,T> ( ptr, result+addend, result )==result )
             break;
         b.pause();
     }
@@ -288,59 +430,275 @@ inline T __TBB_FetchAndStoreGeneric (volatile void *ptr, T value) {
     for(;;) {
         result = *reinterpret_cast<volatile T *>(ptr);
         // __TBB_CompareAndSwapGeneric presumed to have full fence.
-        if( __TBB_CompareAndSwapGeneric<S,T> ( ptr, value, result )==result ) 
+        if( __TBB_CompareAndSwapGeneric<S,T> ( ptr, value, result )==result )
             break;
         b.pause();
     }
     return result;
 }
 
+#if __TBB_USE_GENERIC_PART_WORD_CAS
+#define __TBB_machine_cmpswp1 tbb::internal::__TBB_CompareAndSwapGeneric<1,uint8_t>
+#define __TBB_machine_cmpswp2 tbb::internal::__TBB_CompareAndSwapGeneric<2,uint16_t>
+#endif
+
+#if __TBB_USE_GENERIC_FETCH_ADD || __TBB_USE_GENERIC_PART_WORD_FETCH_ADD
+#define __TBB_machine_fetchadd1 tbb::internal::__TBB_FetchAndAddGeneric<1,uint8_t>
+#define __TBB_machine_fetchadd2 tbb::internal::__TBB_FetchAndAddGeneric<2,uint16_t>
+#endif
+
+#if __TBB_USE_GENERIC_FETCH_ADD 
+#define __TBB_machine_fetchadd4 tbb::internal::__TBB_FetchAndAddGeneric<4,uint32_t>
+#endif
+
+#if __TBB_USE_GENERIC_FETCH_ADD || __TBB_USE_GENERIC_DWORD_FETCH_ADD
+#define __TBB_machine_fetchadd8 tbb::internal::__TBB_FetchAndAddGeneric<8,uint64_t>
+#endif
+
+#if __TBB_USE_GENERIC_FETCH_STORE || __TBB_USE_GENERIC_PART_WORD_FETCH_STORE
+#define __TBB_machine_fetchstore1 tbb::internal::__TBB_FetchAndStoreGeneric<1,uint8_t>
+#define __TBB_machine_fetchstore2 tbb::internal::__TBB_FetchAndStoreGeneric<2,uint16_t>
+#endif
+
+#if __TBB_USE_GENERIC_FETCH_STORE 
+#define __TBB_machine_fetchstore4 tbb::internal::__TBB_FetchAndStoreGeneric<4,uint32_t>
+#endif
+
+#if __TBB_USE_GENERIC_FETCH_STORE || __TBB_USE_GENERIC_DWORD_FETCH_STORE
+#define __TBB_machine_fetchstore8 tbb::internal::__TBB_FetchAndStoreGeneric<8,uint64_t>
+#endif
+
+#if __TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE
+#define __TBB_MACHINE_DEFINE_ATOMIC_SELECTOR_FETCH_STORE(S)                                             \
+    atomic_selector<S>::word atomic_selector<S>::fetch_store ( volatile void* location, word value ) {  \
+        return __TBB_machine_fetchstore##S( location, value );                                          \
+    }
+
+__TBB_MACHINE_DEFINE_ATOMIC_SELECTOR_FETCH_STORE(1)
+__TBB_MACHINE_DEFINE_ATOMIC_SELECTOR_FETCH_STORE(2)
+__TBB_MACHINE_DEFINE_ATOMIC_SELECTOR_FETCH_STORE(4)
+__TBB_MACHINE_DEFINE_ATOMIC_SELECTOR_FETCH_STORE(8)
+
+#undef __TBB_MACHINE_DEFINE_ATOMIC_SELECTOR_FETCH_STORE
+#endif /* __TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE */
+
+#if __TBB_USE_GENERIC_DWORD_LOAD_STORE
+inline void __TBB_machine_store8 (volatile void *ptr, int64_t value) {
+    for(;;) {
+        int64_t result = *(int64_t *)ptr;
+        if( __TBB_machine_cmpswp8(ptr,value,result)==result ) break;
+    }
+}
+
+inline int64_t __TBB_machine_load8 (const volatile void *ptr) {
+    // Comparand and new value may be anything, they only must be equal, and
+    // the value should have a low probability to be actually found in 'location'.
+    const int64_t anyvalue = 2305843009213693951;
+    return __TBB_machine_cmpswp8(const_cast<volatile void *>(ptr),anyvalue,anyvalue);
+}
+#endif /* __TBB_USE_GENERIC_DWORD_LOAD_STORE */
+
+#if __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE
+/** Fenced operations use volatile qualifier to prevent compiler from optimizing
+    them out, and on on architectures with weak memory ordering to induce compiler
+    to generate code with appropriate acquire/release semantics.
+    On architectures like IA32, Intel64 (and likely and Sparc TSO) volatile has
+    no effect on code gen, and consistency helpers serve as a compiler fence (the
+    latter being true for IA64/gcc as well to fix a bug in some gcc versions). **/
+template <typename T, size_t S>
+struct machine_load_store {
+    static T load_with_acquire ( const volatile T& location ) {
+        T to_return = location;
+        __TBB_acquire_consistency_helper();
+        return to_return;
+    }
+    static void store_with_release ( volatile T &location, T value ) {
+        __TBB_release_consistency_helper();
+        location = value;
+    }
+};
+
+#if __TBB_WORDSIZE==4 && __TBB_64BIT_ATOMICS
+template <typename T>
+struct machine_load_store<T,8> {
+    static T load_with_acquire ( const volatile T& location ) {
+        return (T)__TBB_machine_load8( (const volatile void*)&location );
+    }
+    static void store_with_release ( volatile T& location, T value ) {
+        __TBB_machine_store8( (volatile void*)&location, (int64_t)value );
+    }
+};
+#endif /* __TBB_WORDSIZE==4 && __TBB_64BIT_ATOMICS */
+#endif /* __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE */
+
+template <typename T, size_t S>
+struct machine_load_store_seq_cst {
+    static T load ( const volatile T& location ) {
+        __TBB_full_memory_fence();
+        return machine_load_store<T,S>::load_with_acquire( location );
+    }
+#if __TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE
+    static void store ( volatile T &location, T value ) {
+        atomic_selector<S>::fetch_store( (volatile void*)&location, (typename atomic_selector<S>::word)value );
+    }
+#else /* !__TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE */
+    static void store ( volatile T &location, T value ) {
+        machine_load_store<T,S>::store_with_release( location, value );
+        __TBB_full_memory_fence();
+    }
+#endif /* !__TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE */
+};
+
+#if __TBB_WORDSIZE==4 && __TBB_64BIT_ATOMICS
+/** The implementation does not use functions __TBB_machine_load8/store8 as they
+    are not required to be sequentially consistent. **/
+template <typename T>
+struct machine_load_store_seq_cst<T,8> {
+    static T load ( const volatile T& location ) {
+        // Comparand and new value may be anything, they only must be equal, and
+        // the value should have a low probability to be actually found in 'location'.
+        const int64_t anyvalue = 2305843009213693951ll;
+        return __TBB_machine_cmpswp8( (volatile void*)const_cast<volatile T*>(&location), anyvalue, anyvalue );
+    }
+    static void store ( volatile T &location, T value ) {
+        int64_t result = (volatile int64_t&)location;
+        while ( __TBB_machine_cmpswp8((volatile void*)&location, (int64_t)value, result) != result )
+            result = (volatile int64_t&)location;
+    }
+};
+#endif /* __TBB_WORDSIZE==4 && __TBB_64BIT_ATOMICS */
+
+#if __TBB_USE_GENERIC_RELAXED_LOAD_STORE
+// Relaxed operations add volatile qualifier to prevent compiler from optimizing them out.
+/** Volatile should not incur any additional cost on IA32, Intel64, and Sparc TSO
+    architectures. However on architectures with weak memory ordering compiler may 
+    generate code with acquire/release semantics for operations on volatile data. **/
+template <typename T, size_t S>
+struct machine_load_store_relaxed {
+    static inline T load ( const volatile T& location ) {
+        return location;
+    }
+    static inline void store ( volatile T& location, T value ) {
+        location = value;
+    }
+};
+
+#if __TBB_WORDSIZE==4 && __TBB_64BIT_ATOMICS
+template <typename T>
+struct machine_load_store_relaxed<T,8> {
+    static inline T load ( const volatile T& location ) {
+        return (T)__TBB_machine_load8( (const volatile void*)&location );
+    }
+    static inline void store ( volatile T& location, T value ) {
+        __TBB_machine_store8( (volatile void*)&location, (int64_t)value );
+    }
+};
+#endif /* __TBB_WORDSIZE==4 && __TBB_64BIT_ATOMICS */
+#endif /* __TBB_USE_GENERIC_RELAXED_LOAD_STORE */
+
+template<typename T>
+inline T __TBB_load_with_acquire(const volatile T &location) {
+    return machine_load_store<T,sizeof(T)>::load_with_acquire( location );
+}
+template<typename T, typename V>
+inline void __TBB_store_with_release(volatile T& location, V value) {
+    machine_load_store<T,sizeof(T)>::store_with_release( location, T(value) );
+}
+//! Overload that exists solely to avoid /Wp64 warnings.
+inline void __TBB_store_with_release(volatile size_t& location, size_t value) {
+    machine_load_store<size_t,sizeof(size_t)>::store_with_release( location, value );
+}
+
+template<typename T>
+inline T __TBB_load_full_fence(const volatile T &location) {
+    return machine_load_store_seq_cst<T,sizeof(T)>::load( location );
+}
+template<typename T, typename V>
+inline void __TBB_store_full_fence(volatile T& location, V value) {
+    machine_load_store_seq_cst<T,sizeof(T)>::store( location, T(value) );
+}
+//! Overload that exists solely to avoid /Wp64 warnings.
+inline void __TBB_store_full_fence(volatile size_t& location, size_t value) {
+    machine_load_store_seq_cst<size_t,sizeof(size_t)>::store( location, value );
+}
+
+template<typename T>
+inline T __TBB_load_relaxed (const volatile T& location) {
+    return machine_load_store_relaxed<T,sizeof(T)>::load( const_cast<T&>(location) );
+}
+template<typename T, typename V>
+inline void __TBB_store_relaxed ( volatile T& location, V value ) {
+    machine_load_store_relaxed<T,sizeof(T)>::store( const_cast<T&>(location), T(value) );
+}
+//! Overload that exists solely to avoid /Wp64 warnings.
+inline void __TBB_store_relaxed ( volatile size_t& location, size_t value ) {
+    machine_load_store_relaxed<size_t,sizeof(size_t)>::store( const_cast<size_t&>(location), value );
+}
+
 // Macro __TBB_TypeWithAlignmentAtLeastAsStrict(T) should be a type with alignment at least as 
-// strict as type T.  Type type should have a trivial default constructor and destructor, so that
-// arrays of that type can be declared without initializers.  
+// strict as type T.  The type should have a trivial default constructor and destructor, so that
+// arrays of that type can be declared without initializers.
 // It is correct (but perhaps a waste of space) if __TBB_TypeWithAlignmentAtLeastAsStrict(T) expands
 // to a type bigger than T.
 // The default definition here works on machines where integers are naturally aligned and the
-// strictest alignment is 16.
+// strictest alignment is 64.
 #ifndef __TBB_TypeWithAlignmentAtLeastAsStrict
 
-#if __GNUC__ || __SUNPRO_CC || __IBMCPP__
-struct __TBB_machine_type_with_strictest_alignment {
-    int member[4];
-} __attribute__((aligned(16)));
-#elif _MSC_VER
-__declspec(align(16)) struct __TBB_machine_type_with_strictest_alignment {
-    int member[4];
+#if __TBB_ATTRIBUTE_ALIGNED_PRESENT
+
+#define __TBB_DefineTypeWithAlignment(PowerOf2)       \
+struct __TBB_machine_type_with_alignment_##PowerOf2 { \
+    uint32_t member[PowerOf2/sizeof(uint32_t)];       \
+} __attribute__((aligned(PowerOf2)));
+#define __TBB_alignof(T) __alignof__(T)
+
+#elif __TBB_DECLSPEC_ALIGN_PRESENT
+
+#define __TBB_DefineTypeWithAlignment(PowerOf2)       \
+__declspec(align(PowerOf2))                           \
+struct __TBB_machine_type_with_alignment_##PowerOf2 { \
+    uint32_t member[PowerOf2/sizeof(uint32_t)];       \
 };
-#else
-#error Must define __TBB_TypeWithAlignmentAtLeastAsStrict(T) or __TBB_machine_type_with_strictest_alignment
+#define __TBB_alignof(T) __alignof(T)
+
+#else /* A compiler with unknown syntax for data alignment */
+#error Must define __TBB_TypeWithAlignmentAtLeastAsStrict(T)
 #endif
 
-template<size_t N> struct type_with_alignment {__TBB_machine_type_with_strictest_alignment member;};
+/* Now declare types aligned to useful powers of two */
+// TODO: Is __TBB_DefineTypeWithAlignment(8) needed on 32 bit platforms?
+__TBB_DefineTypeWithAlignment(16)
+__TBB_DefineTypeWithAlignment(32)
+__TBB_DefineTypeWithAlignment(64)
+
+typedef __TBB_machine_type_with_alignment_64 __TBB_machine_type_with_strictest_alignment;
+
+// Primary template is a declaration of incomplete type so that it fails with unknown alignments
+template<size_t N> struct type_with_alignment;
+
+// Specializations for allowed alignments
 template<> struct type_with_alignment<1> { char member; };
 template<> struct type_with_alignment<2> { uint16_t member; };
 template<> struct type_with_alignment<4> { uint32_t member; };
 template<> struct type_with_alignment<8> { uint64_t member; };
+template<> struct type_with_alignment<16> {__TBB_machine_type_with_alignment_16 member; };
+template<> struct type_with_alignment<32> {__TBB_machine_type_with_alignment_32 member; };
+template<> struct type_with_alignment<64> {__TBB_machine_type_with_alignment_64 member; };
 
-#if _MSC_VER||defined(__GNUC__)&&__GNUC__==3 && __GNUC_MINOR__<=2  
+#if __TBB_ALIGNOF_NOT_INSTANTIATED_TYPES_BROKEN  
 //! Work around for bug in GNU 3.2 and MSVC compilers.
 /** Bug is that compiler sometimes returns 0 for __alignof(T) when T has not yet been instantiated.
     The work-around forces instantiation by forcing computation of sizeof(T) before __alignof(T). */
-template<size_t Size, typename T> 
+template<size_t Size, typename T>
 struct work_around_alignment_bug {
-#if _MSC_VER
-    static const size_t alignment = __alignof(T);
-#else
-    static const size_t alignment = __alignof__(T);
-#endif
+    static const size_t alignment = __TBB_alignof(T);
 };
 #define __TBB_TypeWithAlignmentAtLeastAsStrict(T) tbb::internal::type_with_alignment<tbb::internal::work_around_alignment_bug<sizeof(T),T>::alignment>
-#elif __GNUC__ || __SUNPRO_CC || __IBMCPP__
-#define __TBB_TypeWithAlignmentAtLeastAsStrict(T) tbb::internal::type_with_alignment<__alignof__(T)>
 #else
-#define __TBB_TypeWithAlignmentAtLeastAsStrict(T) __TBB_machine_type_with_strictest_alignment
-#endif
-#endif  /* ____TBB_TypeWithAlignmentAtLeastAsStrict */
+#define __TBB_TypeWithAlignmentAtLeastAsStrict(T) tbb::internal::type_with_alignment<__TBB_alignof(T)>
+#endif  /* __TBB_ALIGNOF_NOT_INSTANTIATED_TYPES_BROKEN */
+
+#endif  /* __TBB_TypeWithAlignmentAtLeastAsStrict */
 
 // Template class here is to avoid instantiation of the static data for modules that don't use it
 template<typename T>
@@ -372,262 +730,13 @@ const T reverse<T>::byte_table[256] = {
 } // namespace internal
 } // namespace tbb
 
-#ifndef __TBB_CompareAndSwap1
-#define __TBB_CompareAndSwap1 tbb::internal::__TBB_CompareAndSwapGeneric<1,uint8_t>
-#endif
+// Preserving access to legacy APIs
+using tbb::internal::__TBB_load_with_acquire;
+using tbb::internal::__TBB_store_with_release;
 
-#ifndef __TBB_CompareAndSwap2 
-#define __TBB_CompareAndSwap2 tbb::internal::__TBB_CompareAndSwapGeneric<2,uint16_t>
-#endif
-
-#ifndef __TBB_CompareAndSwapW
-#define __TBB_CompareAndSwapW tbb::internal::__TBB_CompareAndSwapGeneric<sizeof(ptrdiff_t),ptrdiff_t>
-#endif
-
-#ifndef __TBB_FetchAndAdd1
-#define __TBB_FetchAndAdd1 tbb::internal::__TBB_FetchAndAddGeneric<1,uint8_t>
-#endif
-
-#ifndef __TBB_FetchAndAdd2
-#define __TBB_FetchAndAdd2 tbb::internal::__TBB_FetchAndAddGeneric<2,uint16_t>
-#endif
-
-#ifndef __TBB_FetchAndAdd4
-#define __TBB_FetchAndAdd4 tbb::internal::__TBB_FetchAndAddGeneric<4,uint32_t>
-#endif
-
-#ifndef __TBB_FetchAndAdd8
-#define __TBB_FetchAndAdd8 tbb::internal::__TBB_FetchAndAddGeneric<8,uint64_t>
-#endif
-
-#ifndef __TBB_FetchAndAddW
-#define __TBB_FetchAndAddW tbb::internal::__TBB_FetchAndAddGeneric<sizeof(ptrdiff_t),ptrdiff_t>
-#endif
-
-#ifndef __TBB_FetchAndStore1
-#define __TBB_FetchAndStore1 tbb::internal::__TBB_FetchAndStoreGeneric<1,uint8_t>
-#endif
-
-#ifndef __TBB_FetchAndStore2
-#define __TBB_FetchAndStore2 tbb::internal::__TBB_FetchAndStoreGeneric<2,uint16_t>
-#endif
-
-#ifndef __TBB_FetchAndStore4
-#define __TBB_FetchAndStore4 tbb::internal::__TBB_FetchAndStoreGeneric<4,uint32_t>
-#endif
-
-#ifndef __TBB_FetchAndStore8
-#define __TBB_FetchAndStore8 tbb::internal::__TBB_FetchAndStoreGeneric<8,uint64_t>
-#endif
-
-#ifndef __TBB_FetchAndStoreW
-#define __TBB_FetchAndStoreW tbb::internal::__TBB_FetchAndStoreGeneric<sizeof(ptrdiff_t),ptrdiff_t>
-#endif
-
-#if __TBB_DECL_FENCED_ATOMICS
-
-#ifndef __TBB_CompareAndSwap1__TBB_full_fence
-#define __TBB_CompareAndSwap1__TBB_full_fence __TBB_CompareAndSwap1
-#endif 
-#ifndef __TBB_CompareAndSwap1acquire
-#define __TBB_CompareAndSwap1acquire __TBB_CompareAndSwap1__TBB_full_fence
-#endif 
-#ifndef __TBB_CompareAndSwap1release
-#define __TBB_CompareAndSwap1release __TBB_CompareAndSwap1__TBB_full_fence
-#endif 
-
-#ifndef __TBB_CompareAndSwap2__TBB_full_fence
-#define __TBB_CompareAndSwap2__TBB_full_fence __TBB_CompareAndSwap2
-#endif
-#ifndef __TBB_CompareAndSwap2acquire
-#define __TBB_CompareAndSwap2acquire __TBB_CompareAndSwap2__TBB_full_fence
-#endif
-#ifndef __TBB_CompareAndSwap2release
-#define __TBB_CompareAndSwap2release __TBB_CompareAndSwap2__TBB_full_fence
-#endif
-
-#ifndef __TBB_CompareAndSwap4__TBB_full_fence
-#define __TBB_CompareAndSwap4__TBB_full_fence __TBB_CompareAndSwap4
-#endif 
-#ifndef __TBB_CompareAndSwap4acquire
-#define __TBB_CompareAndSwap4acquire __TBB_CompareAndSwap4__TBB_full_fence
-#endif 
-#ifndef __TBB_CompareAndSwap4release
-#define __TBB_CompareAndSwap4release __TBB_CompareAndSwap4__TBB_full_fence
-#endif 
-
-#ifndef __TBB_CompareAndSwap8__TBB_full_fence
-#define __TBB_CompareAndSwap8__TBB_full_fence __TBB_CompareAndSwap8
-#endif
-#ifndef __TBB_CompareAndSwap8acquire
-#define __TBB_CompareAndSwap8acquire __TBB_CompareAndSwap8__TBB_full_fence
-#endif
-#ifndef __TBB_CompareAndSwap8release
-#define __TBB_CompareAndSwap8release __TBB_CompareAndSwap8__TBB_full_fence
-#endif
-
-#ifndef __TBB_FetchAndAdd1__TBB_full_fence
-#define __TBB_FetchAndAdd1__TBB_full_fence __TBB_FetchAndAdd1
-#endif
-#ifndef __TBB_FetchAndAdd1acquire
-#define __TBB_FetchAndAdd1acquire __TBB_FetchAndAdd1__TBB_full_fence
-#endif
-#ifndef __TBB_FetchAndAdd1release
-#define __TBB_FetchAndAdd1release __TBB_FetchAndAdd1__TBB_full_fence
-#endif
-
-#ifndef __TBB_FetchAndAdd2__TBB_full_fence
-#define __TBB_FetchAndAdd2__TBB_full_fence __TBB_FetchAndAdd2
-#endif
-#ifndef __TBB_FetchAndAdd2acquire
-#define __TBB_FetchAndAdd2acquire __TBB_FetchAndAdd2__TBB_full_fence
-#endif
-#ifndef __TBB_FetchAndAdd2release
-#define __TBB_FetchAndAdd2release __TBB_FetchAndAdd2__TBB_full_fence
-#endif
-
-#ifndef __TBB_FetchAndAdd4__TBB_full_fence
-#define __TBB_FetchAndAdd4__TBB_full_fence __TBB_FetchAndAdd4
-#endif
-#ifndef __TBB_FetchAndAdd4acquire
-#define __TBB_FetchAndAdd4acquire __TBB_FetchAndAdd4__TBB_full_fence
-#endif
-#ifndef __TBB_FetchAndAdd4release
-#define __TBB_FetchAndAdd4release __TBB_FetchAndAdd4__TBB_full_fence
-#endif
-
-#ifndef __TBB_FetchAndAdd8__TBB_full_fence
-#define __TBB_FetchAndAdd8__TBB_full_fence __TBB_FetchAndAdd8
-#endif
-#ifndef __TBB_FetchAndAdd8acquire
-#define __TBB_FetchAndAdd8acquire __TBB_FetchAndAdd8__TBB_full_fence
-#endif
-#ifndef __TBB_FetchAndAdd8release
-#define __TBB_FetchAndAdd8release __TBB_FetchAndAdd8__TBB_full_fence
-#endif
-
-#ifndef __TBB_FetchAndStore1__TBB_full_fence
-#define __TBB_FetchAndStore1__TBB_full_fence __TBB_FetchAndStore1
-#endif
-#ifndef __TBB_FetchAndStore1acquire
-#define __TBB_FetchAndStore1acquire __TBB_FetchAndStore1__TBB_full_fence
-#endif
-#ifndef __TBB_FetchAndStore1release
-#define __TBB_FetchAndStore1release __TBB_FetchAndStore1__TBB_full_fence
-#endif
-
-#ifndef __TBB_FetchAndStore2__TBB_full_fence
-#define __TBB_FetchAndStore2__TBB_full_fence __TBB_FetchAndStore2
-#endif
-#ifndef __TBB_FetchAndStore2acquire
-#define __TBB_FetchAndStore2acquire __TBB_FetchAndStore2__TBB_full_fence
-#endif
-#ifndef __TBB_FetchAndStore2release
-#define __TBB_FetchAndStore2release __TBB_FetchAndStore2__TBB_full_fence
-#endif
-
-#ifndef __TBB_FetchAndStore4__TBB_full_fence
-#define __TBB_FetchAndStore4__TBB_full_fence __TBB_FetchAndStore4
-#endif
-#ifndef __TBB_FetchAndStore4acquire
-#define __TBB_FetchAndStore4acquire __TBB_FetchAndStore4__TBB_full_fence
-#endif
-#ifndef __TBB_FetchAndStore4release
-#define __TBB_FetchAndStore4release __TBB_FetchAndStore4__TBB_full_fence
-#endif
-
-#ifndef __TBB_FetchAndStore8__TBB_full_fence
-#define __TBB_FetchAndStore8__TBB_full_fence __TBB_FetchAndStore8
-#endif
-#ifndef __TBB_FetchAndStore8acquire
-#define __TBB_FetchAndStore8acquire __TBB_FetchAndStore8__TBB_full_fence
-#endif
-#ifndef __TBB_FetchAndStore8release
-#define __TBB_FetchAndStore8release __TBB_FetchAndStore8__TBB_full_fence
-#endif
-
-#endif // __TBB_DECL_FENCED_ATOMICS
-
-// Special atomic functions
-#ifndef __TBB_FetchAndAddWrelease
-#define __TBB_FetchAndAddWrelease __TBB_FetchAndAddW
-#endif
-
-#ifndef __TBB_FetchAndIncrementWacquire
-#define __TBB_FetchAndIncrementWacquire(P) __TBB_FetchAndAddW(P,1)
-#endif
-
-#ifndef __TBB_FetchAndDecrementWrelease
-#define __TBB_FetchAndDecrementWrelease(P) __TBB_FetchAndAddW(P,(-1))
-#endif
-
-template <typename T, size_t S>
-struct __TBB_machine_load_store {
-    static inline T load_with_acquire(const volatile T& location) {
-        T to_return = location;
-        __TBB_release_consistency_helper();
-        return to_return;
-    }
-
-    static inline void store_with_release(volatile T &location, T value) {
-        __TBB_release_consistency_helper();
-        location = value;
-    }
-};
-
-#if __TBB_WORDSIZE==4 && __TBB_64BIT_ATOMICS
-#if _MSC_VER
-using tbb::internal::int64_t;
-#endif
-// On 32-bit platforms, there should be definition of __TBB_Store8 and __TBB_Load8
-#ifndef __TBB_Store8
-inline void __TBB_Store8 (volatile void *ptr, int64_t value) {
-    for(;;) {
-        int64_t result = *(int64_t *)ptr;
-        if( __TBB_CompareAndSwap8(ptr,value,result)==result ) break;
-    }
-}
-#endif
-
-#ifndef __TBB_Load8
-inline int64_t __TBB_Load8 (const volatile void *ptr) {
-    const int64_t anyvalue = 3264; // Could be anything, just the same for comparand and new value
-    return __TBB_CompareAndSwap8(const_cast<volatile void *>(ptr),anyvalue,anyvalue);
-}
-#endif
-
-template <typename T>
-struct __TBB_machine_load_store<T,8> {
-    static inline T load_with_acquire(const volatile T& location) {
-        T to_return = (T)__TBB_Load8((const volatile void*)&location);
-        __TBB_release_consistency_helper();
-        return to_return;
-    }
-
-    static inline void store_with_release(volatile T& location, T value) {
-        __TBB_release_consistency_helper();
-        __TBB_Store8((volatile void *)&location,(int64_t)value);
-    }
-};
-#endif /* __TBB_WORDSIZE==4 */
-
-#ifndef __TBB_load_with_acquire
-template<typename T>
-inline T __TBB_load_with_acquire(const volatile T &location) {
-    return __TBB_machine_load_store<T,sizeof(T)>::load_with_acquire(location);
-}
-#endif
-
-#ifndef __TBB_store_with_release
-template<typename T, typename V>
-inline void __TBB_store_with_release(volatile T& location, V value) {
-    __TBB_machine_load_store<T,sizeof(T)>::store_with_release(location,T(value));
-}
-//! Overload that exists solely to avoid /Wp64 warnings.
-inline void __TBB_store_with_release(volatile size_t& location, size_t value) {
-    __TBB_machine_load_store<size_t,sizeof(size_t)>::store_with_release(location,value);
-}
-#endif
+// Mapping historically used names to the ones expected by atomic_load_store_traits
+#define __TBB_load_acquire  __TBB_load_with_acquire
+#define __TBB_store_release __TBB_store_with_release
 
 #ifndef __TBB_Log2
 inline intptr_t __TBB_Log2( uintptr_t x ) {
@@ -669,18 +778,19 @@ inline void __TBB_AtomicAND( volatile void *operand, uintptr_t addend ) {
 }
 #endif
 
-#ifndef __TBB_Byte
-typedef unsigned char __TBB_Byte;
+#ifndef __TBB_Flag
+typedef unsigned char __TBB_Flag;
 #endif
+typedef __TBB_atomic __TBB_Flag __TBB_atomic_flag;
 
 #ifndef __TBB_TryLockByte
-inline bool __TBB_TryLockByte( __TBB_Byte &flag ) {
-    return __TBB_CompareAndSwap1(&flag,1,0)==0;
+inline bool __TBB_TryLockByte( __TBB_atomic_flag &flag ) {
+    return __TBB_machine_cmpswp1(&flag,1,0)==0;
 }
 #endif
 
 #ifndef __TBB_LockByte
-inline uintptr_t __TBB_LockByte( __TBB_Byte& flag ) {
+inline __TBB_Flag __TBB_LockByte( __TBB_atomic_flag& flag ) {
     if ( !__TBB_TryLockByte(flag) ) {
         tbb::internal::atomic_backoff b;
         do {
@@ -700,8 +810,7 @@ inline unsigned char __TBB_ReverseByte(unsigned char src) {
 #endif
 
 template<typename T>
-T __TBB_ReverseBits(T src)
-{
+T __TBB_ReverseBits(T src) {
     T dst;
     unsigned char *original = (unsigned char *) &src;
     unsigned char *reversed = (unsigned char *) &dst;

@@ -29,7 +29,7 @@
 #ifndef __TBB_concurrent_queue_H
 #define __TBB_concurrent_queue_H
 
-#include "_concurrent_queue_internal.h"
+#include "internal/_concurrent_queue_impl.h"
 
 namespace tbb {
 
@@ -48,7 +48,7 @@ class concurrent_queue: public internal::concurrent_queue_base_v3<T> {
     page_allocator_type my_allocator;
 
     //! Allocates a block of size n (bytes)
-    /*overide*/ virtual void *allocate_block( size_t n ) {
+    /*override*/ virtual void *allocate_block( size_t n ) {
         void *b = reinterpret_cast<void*>(my_allocator.allocate( n ));
         if( !b )
             internal::throw_exception(internal::eid_bad_alloc); 
@@ -199,7 +199,7 @@ class concurrent_bounded_queue: public internal::concurrent_queue_base_v3 {
         *static_cast<T*>(dst) = from;
     }
 
-    /*overide*/ virtual page *allocate_page() {
+    /*override*/ virtual page *allocate_page() {
         size_t n = sizeof(padded_page) + (items_per_page-1)*sizeof(T);
         page *p = reinterpret_cast<page*>(my_allocator.allocate( n ));
         if( !p )
@@ -208,7 +208,7 @@ class concurrent_bounded_queue: public internal::concurrent_queue_base_v3 {
     }
 
     /*override*/ virtual void deallocate_page( page *p ) {
-        size_t n = sizeof(padded_page) + items_per_page*sizeof(T);
+        size_t n = sizeof(padded_page) + (items_per_page-1)*sizeof(T);
         my_allocator.deallocate( reinterpret_cast<char*>(p), n );
     }
 

@@ -78,11 +78,11 @@ public:
     class scoped_lock: internal::no_copy {
         //! Initialize fields
         void initialize() {
-            mutex = NULL;
+            my_mutex = NULL;
 #if TBB_USE_ASSERT
-            state = 0xFF; // Set to invalid state
-            internal::poison_pointer(next);
-            internal::poison_pointer(prev);
+            my_state = 0xFF; // Set to invalid state
+            internal::poison_pointer(my_next);
+            internal::poison_pointer(my_prev);
 #endif /* TBB_USE_ASSERT */
         }
     public:
@@ -98,7 +98,7 @@ public:
 
         //! Release lock (if lock is held).
         ~scoped_lock() {
-            if( mutex ) release();
+            if( my_mutex ) release();
         }
 
         //! Acquire lock on given mutex.
@@ -119,22 +119,22 @@ public:
 
     private:
         //! The pointer to the current mutex to work
-        queuing_rw_mutex* mutex;
+        queuing_rw_mutex* my_mutex;
 
         //! The pointer to the previous and next competitors for a mutex
-        scoped_lock * prev, * next;
+        scoped_lock *__TBB_atomic my_prev, *__TBB_atomic my_next;
 
         typedef unsigned char state_t;
 
         //! State of the request: reader, writer, active reader, other service states
-        atomic<state_t> state;
+        atomic<state_t> my_state;
 
         //! The local spin-wait variable
         /** Corresponds to "spin" in the pseudocode but inverted for the sake of zero-initialization */
-        unsigned char going;
+        unsigned char __TBB_atomic my_going;
 
         //! A tiny internal lock
-        unsigned char internal_lock;
+        unsigned char my_internal_lock;
 
         //! Acquire the internal lock
         void acquire_internal_lock();

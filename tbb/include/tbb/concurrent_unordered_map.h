@@ -32,23 +32,10 @@
 #ifndef __TBB_concurrent_unordered_map_H
 #define __TBB_concurrent_unordered_map_H
 
-#include "_concurrent_unordered_internal.h"
+#include "internal/_concurrent_unordered_impl.h"
 
 namespace tbb
 {
-
-// Template class for hash compare
-template<typename Key>
-class tbb_hash
-{
-public:
-    tbb_hash() {}
-
-    size_t operator()(const Key& key) const
-    {
-        return tbb_hasher(key);
-    }
-};
 
 namespace interface5 {
 
@@ -90,7 +77,7 @@ protected:
     hash_compare my_hash_compare; // the comparator predicate for keys
 };
 
-template <typename Key, typename T, typename Hasher = tbb_hash<Key>, typename Key_equality = std::equal_to<Key>, typename Allocator = tbb::tbb_allocator<std::pair<const Key, T> > >
+template <typename Key, typename T, typename Hasher = tbb::tbb_hash<Key>, typename Key_equality = std::equal_to<Key>, typename Allocator = tbb::tbb_allocator<std::pair<const Key, T> > >
 class concurrent_unordered_map : public internal::concurrent_unordered_base< concurrent_unordered_map_traits<Key, T, internal::hash_compare<Key, Hasher, Key_equality>, Allocator, false> >
 {
     // Base type definitions

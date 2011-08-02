@@ -50,24 +50,26 @@ namespace tbb {
 
 //! Specifies memory fencing.
 enum memory_semantics {
-    //! For internal use only.
-    __TBB_full_fence,
+    //! Sequentially consistent fence.
+    full_fence,
     //! Acquire fence
     acquire,
     //! Release fence
-    release
+    release,
+    //! No ordering
+    relaxed
 };
 
 //! @cond INTERNAL
 namespace internal {
 
-#if __GNUC__ || __SUNPRO_CC || __IBMCPP__
-#define __TBB_DECL_ATOMIC_FIELD(t,f,a) t f  __attribute__ ((aligned(a)));
-#elif defined(__INTEL_COMPILER)||_MSC_VER >= 1300
-#define __TBB_DECL_ATOMIC_FIELD(t,f,a) __declspec(align(a)) t f;
+#if __TBB_ATTRIBUTE_ALIGNED_PRESENT
+    #define __TBB_DECL_ATOMIC_FIELD(t,f,a) t f  __attribute__ ((aligned(a)));
+#elif __TBB_DECLSPEC_ALIGN_PRESENT
+    #define __TBB_DECL_ATOMIC_FIELD(t,f,a) __declspec(align(a)) t f;
 #else 
-#error Do not know syntax for forcing alignment.
-#endif /* __GNUC__ */
+    #error Do not know syntax for forcing alignment.
+#endif
 
 template<size_t S>
 struct atomic_rep;           // Primary template declared, but never defined.
@@ -103,58 +105,82 @@ struct atomic_rep<8> {       // Specialization
 template<size_t Size, memory_semantics M>
 struct atomic_traits;        // Primary template declared, but not defined.
 
-#define __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(S,M)                         \
-    template<> struct atomic_traits<S,M> {                               \
-        typedef atomic_rep<S>::word word;                               \
-        inline static word compare_and_swap( volatile void* location, word new_value, word comparand ) {\
-            return __TBB_CompareAndSwap##S##M(location,new_value,comparand);    \
-        }                                                                       \
-        inline static word fetch_and_add( volatile void* location, word addend ) { \
-            return __TBB_FetchAndAdd##S##M(location,addend);                    \
-        }                                                                       \
-        inline static word fetch_and_store( volatile void* location, word value ) {\
-            return __TBB_FetchAndStore##S##M(location,value);                   \
-        }                                                                       \
+#define __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(S,M)                                                         \
+    template<> struct atomic_traits<S,M> {                                                               \
+        typedef atomic_rep<S>::word word;                                                                \
+        inline static word compare_and_swap( volatile void* location, word new_value, word comparand ) { \
+            return __TBB_machine_cmpswp##S##M(location,new_value,comparand);                             \
+        }                                                                                                \
+        inline static word fetch_and_add( volatile void* location, word addend ) {                       \
+            return __TBB_machine_fetchadd##S##M(location,addend);                                        \
+        }                                                                                                \
+        inline static word fetch_and_store( volatile void* location, word value ) {                      \
+            return __TBB_machine_fetchstore##S##M(location,value);                                       \
+        }                                                                                                \
     };
 
-#define __TBB_DECL_ATOMIC_PRIMITIVES(S)                                  \
-    template<memory_semantics M>                                         \
-    struct atomic_traits<S,M> {                                          \
-        typedef atomic_rep<S>::word word;                               \
-        inline static word compare_and_swap( volatile void* location, word new_value, word comparand ) {\
-            return __TBB_CompareAndSwap##S(location,new_value,comparand);       \
-        }                                                                       \
-        inline static word fetch_and_add( volatile void* location, word addend ) { \
-            return __TBB_FetchAndAdd##S(location,addend);                       \
-        }                                                                       \
-        inline static word fetch_and_store( volatile void* location, word value ) {\
-            return __TBB_FetchAndStore##S(location,value);                      \
-        }                                                                       \
+#define __TBB_DECL_ATOMIC_PRIMITIVES(S)                                                                  \
+    template<memory_semantics M>                                                                         \
+    struct atomic_traits<S,M> {                                                                          \
+        typedef atomic_rep<S>::word word;                                                                \
+        inline static word compare_and_swap( volatile void* location, word new_value, word comparand ) { \
+            return __TBB_machine_cmpswp##S(location,new_value,comparand);                                \
+        }                                                                                                \
+        inline static word fetch_and_add( volatile void* location, word addend ) {                       \
+            return __TBB_machine_fetchadd##S(location,addend);                                           \
+        }                                                                                                \
+        inline static word fetch_and_store( volatile void* location, word value ) {                      \
+            return __TBB_machine_fetchstore##S(location,value);                                          \
+        }                                                                                                \
     };
 
-#if __TBB_DECL_FENCED_ATOMICS
-__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(1,__TBB_full_fence)
-__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(2,__TBB_full_fence)
-__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(4,__TBB_full_fence)
-__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(8,__TBB_full_fence)
+template<memory_semantics M>
+struct atomic_load_store_traits;    // Primary template declaration
+
+#define __TBB_DECL_ATOMIC_LOAD_STORE_PRIMITIVES(M)                      \
+    template<> struct atomic_load_store_traits<M> {                     \
+        template <typename T>                                           \
+        inline static T load( const volatile T& location ) {            \
+            return __TBB_load_##M( location );                          \
+        }                                                               \
+        template <typename T>                                           \
+        inline static void store( volatile T& location, T value ) {     \
+            __TBB_store_##M( location, value );                         \
+        }                                                               \
+    }
+
+#if __TBB_USE_FENCED_ATOMICS
+__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(1,full_fence)
+__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(2,full_fence)
+__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(4,full_fence)
 __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(1,acquire)
 __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(2,acquire)
 __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(4,acquire)
 __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(1,release)
 __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(2,release)
 __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(4,release)
+__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(1,relaxed)
+__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(2,relaxed)
+__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(4,relaxed)
 #if __TBB_64BIT_ATOMICS
+__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(8,full_fence)
 __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(8,acquire)
 __TBB_DECL_FENCED_ATOMIC_PRIMITIVES(8,release)
+__TBB_DECL_FENCED_ATOMIC_PRIMITIVES(8,relaxed)
 #endif
-#else
+#else /* !__TBB_USE_FENCED_ATOMICS */
 __TBB_DECL_ATOMIC_PRIMITIVES(1)
 __TBB_DECL_ATOMIC_PRIMITIVES(2)
 __TBB_DECL_ATOMIC_PRIMITIVES(4)
 #if __TBB_64BIT_ATOMICS
 __TBB_DECL_ATOMIC_PRIMITIVES(8)
 #endif
-#endif
+#endif /* !__TBB_USE_FENCED_ATOMICS */
+
+__TBB_DECL_ATOMIC_LOAD_STORE_PRIMITIVES(full_fence);
+__TBB_DECL_ATOMIC_LOAD_STORE_PRIMITIVES(acquire);
+__TBB_DECL_ATOMIC_LOAD_STORE_PRIMITIVES(release);
+__TBB_DECL_ATOMIC_LOAD_STORE_PRIMITIVES(relaxed);
 
 //! Additive inverse of 1 for type T.
 /** Various compilers issue various warnings if -1 is used with various integer types.
@@ -186,7 +212,7 @@ public:
     }
 
     value_type fetch_and_store( value_type value ) {
-        return fetch_and_store<__TBB_full_fence>(value);
+        return fetch_and_store<full_fence>(value);
     }
 
     template<memory_semantics M>
@@ -199,13 +225,35 @@ public:
     }
 
     value_type compare_and_swap( value_type value, value_type comparand ) {
-        return compare_and_swap<__TBB_full_fence>(value,comparand);
+        return compare_and_swap<full_fence>(value,comparand);
     }
 
     operator value_type() const volatile {                // volatile qualifier here for backwards compatibility 
         converter w;
         w.bits = __TBB_load_with_acquire( rep.value );
         return w.value;
+    }
+
+    template<memory_semantics M>
+    value_type load () const {
+        converter u;
+        u.bits = internal::atomic_load_store_traits<M>::load( rep.value );
+        return u.value;
+    }
+
+    value_type load () const {
+        return load<acquire>();
+    }
+
+    template<memory_semantics M>
+    void store ( value_type value ) {
+        converter u;
+        u.value = value;
+        internal::atomic_load_store_traits<M>::store( rep.value, u.bits );
+    }
+
+    void store ( value_type value ) {
+        store<release>( value );
     }
 
 protected:
@@ -232,7 +280,7 @@ public:
     }
 
     value_type fetch_and_add( D addend ) {
-        return fetch_and_add<__TBB_full_fence>(addend);
+        return fetch_and_add<full_fence>(addend);
     }
 
     template<memory_semantics M>
@@ -303,9 +351,10 @@ struct atomic: internal::atomic_impl<T> {
     };
 
 #if __TBB_64BIT_ATOMICS
-// otherwise size is verified by test_atomic
 __TBB_DECL_ATOMIC(__TBB_LONG_LONG)
 __TBB_DECL_ATOMIC(unsigned __TBB_LONG_LONG)
+#else
+// test_atomic will verify that sizeof(long long)==8
 #endif
 __TBB_DECL_ATOMIC(long)
 __TBB_DECL_ATOMIC(unsigned long)
@@ -362,6 +411,15 @@ template<> struct atomic<void*>: internal::atomic_impl<void*> {
         this->store_with_release(rhs); return *this;
     }
 };
+
+// Helpers to workaround ugly syntax of calling template member function of a
+// template class with template argument dependent on template parameters.
+
+template <memory_semantics M, typename T>
+T load ( const atomic<T>& a ) { return a.template load<M>(); }
+
+template <memory_semantics M, typename T>
+void store ( atomic<T>& a, T value ) { return a.template store<M>(value); }
 
 } // namespace tbb
 

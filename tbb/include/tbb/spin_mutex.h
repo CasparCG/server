@@ -46,7 +46,7 @@ namespace tbb {
     @ingroup synchronization */
 class spin_mutex {
     //! 0 if lock is released, 1 if lock is acquired.
-    __TBB_Byte flag;
+    __TBB_atomic_flag flag;
 
 public:
     //! Construct unacquired lock.
@@ -64,7 +64,7 @@ public:
         spin_mutex* my_mutex; 
 
         //! Value to store into spin_mutex::flag to unlock the mutex.
-        uintptr_t my_unlock_value;
+        __TBB_Flag my_unlock_value;
 
         //! Like acquire, but with ITT instrumentation.
         void __TBB_EXPORTED_METHOD internal_acquire( spin_mutex& m );
@@ -122,7 +122,7 @@ public:
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             internal_release();
 #else
-            __TBB_UnlockByte(my_mutex->flag, static_cast<__TBB_Byte>(my_unlock_value));
+            __TBB_UnlockByte(my_mutex->flag, my_unlock_value);
             my_mutex = NULL;
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
         }
@@ -133,7 +133,7 @@ public:
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
                 internal_release();
 #else
-                __TBB_UnlockByte(my_mutex->flag, static_cast<__TBB_Byte>(my_unlock_value));
+                __TBB_UnlockByte(my_mutex->flag, my_unlock_value);
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
             }
         }

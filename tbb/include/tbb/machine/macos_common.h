@@ -26,13 +26,14 @@
     the GNU General Public License.
 */
 
-#ifndef __TBB_machine_H
+#if !defined(__TBB_machine_H) || defined(__TBB_machine_macos_common_H)
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
 
+#define __TBB_machine_macos_common_H
+
 #include <sched.h>
 #define __TBB_Yield()  sched_yield()
-
 
 // __TBB_HardwareConcurrency
 
@@ -49,40 +50,21 @@ static inline int __TBB_macos_available_cpu() {
 
 #define __TBB_HardwareConcurrency() __TBB_macos_available_cpu()
 
-
-#ifndef __TBB_WORDSIZE
-#define __TBB_WORDSIZE 4
+#ifndef __TBB_full_memory_fence
+    // TBB has not recognized the architecture (none of the architecture abstraction
+    // headers was included).
+    #define __TBB_UnknownArchitecture 1
 #endif
 
-#ifndef __TBB_BIG_ENDIAN
-#if __BIG_ENDIAN__
-#define __TBB_BIG_ENDIAN 1
-#else
-#define __TBB_BIG_ENDIAN 0
-#endif
-#endif
-
-
-#if !defined(__TBB_CompareAndSwap4) || !defined(__TBB_CompareAndSwap8)
+#if __TBB_UnknownArchitecture || __TBB_WORDSIZE==4
+// In case of IA32 this is a workaround for compiler bugs triggered by inline
+// assembly implementation of __TBB_machine_cmpswp8 in linux_ia32.h, which may
+// lead to incorrect codegen (gcc) or compilation failures (any icc including 12.0.4).
 
 // Implementation of atomic operations based on OS provided primitives
 #include <libkern/OSAtomic.h>
 
-#define __TBB_release_consistency_helper() OSMemoryBarrier()
-#define __TBB_full_memory_fence()          OSMemoryBarrier()
-
-static inline int32_t __TBB_macos_cmpswp4(volatile void *ptr, int32_t value, int32_t comparand)
-{
-    __TBB_ASSERT( !((uintptr_t)ptr&0x3), "address not properly aligned for Mac OS atomics");
-    int32_t* address = (int32_t*)ptr;
-    while( !OSAtomicCompareAndSwap32Barrier(comparand, value, address) ){
-        int32_t snapshot = *address;
-        if( snapshot!=comparand ) return snapshot;
-    }
-    return comparand;
-}
-
-static inline int64_t __TBB_macos_cmpswp8(volatile void *ptr, int64_t value, int64_t comparand)
+static inline int64_t __TBB_machine_cmpswp8_OsX(volatile void *ptr, int64_t value, int64_t comparand)
 {
     __TBB_ASSERT( !((uintptr_t)ptr&0x7), "address not properly aligned for Mac OS atomics");
     int64_t* address = (int64_t*)ptr;
@@ -97,30 +79,58 @@ static inline int64_t __TBB_macos_cmpswp8(volatile void *ptr, int64_t value, int
     return comparand;
 }
 
-#define __TBB_CompareAndSwap4(P,V,C) __TBB_macos_cmpswp4(P,V,C)
-#define __TBB_CompareAndSwap8(P,V,C) __TBB_macos_cmpswp8(P,V,C)
+#define __TBB_machine_cmpswp8 __TBB_machine_cmpswp8_OsX
 
-static inline int32_t __TBB_macos_fetchadd4(volatile void *ptr, int32_t addend)
+#endif /* __TBB_UnknownArchitecture || __TBB_WORDSIZE==4 */
+
+#if __TBB_UnknownArchitecture
+
+#ifndef __TBB_WORDSIZE
+#define __TBB_WORDSIZE 4
+#endif
+
+#define __TBB_BIG_ENDIAN __BIG_ENDIAN__
+
+/** As this generic implementation has absolutely no information about underlying
+    hardware, its performance most likely will be sub-optimal because of full memory
+    fence usages where a more lightweight synchronization means (or none at all)
+    could suffice. Thus if you use this header to enable TBB on a new platform,
+    consider forking it and relaxing below helpers as appropriate. **/
+#define __TBB_control_consistency_helper() OSMemoryBarrier()
+#define __TBB_acquire_consistency_helper() OSMemoryBarrier()
+#define __TBB_release_consistency_helper() OSMemoryBarrier()
+#define __TBB_full_memory_fence()          OSMemoryBarrier()
+
+static inline int32_t __TBB_machine_cmpswp4(volatile void *ptr, int32_t value, int32_t comparand)
+{
+    __TBB_ASSERT( !((uintptr_t)ptr&0x3), "address not properly aligned for Mac OS atomics");
+    int32_t* address = (int32_t*)ptr;
+    while( !OSAtomicCompareAndSwap32Barrier(comparand, value, address) ){
+        int32_t snapshot = *address;
+        if( snapshot!=comparand ) return snapshot;
+    }
+    return comparand;
+}
+
+static inline int32_t __TBB_machine_fetchadd4(volatile void *ptr, int32_t addend)
 {
     __TBB_ASSERT( !((uintptr_t)ptr&0x3), "address not properly aligned for Mac OS atomics");
     return OSAtomicAdd32Barrier(addend, (int32_t*)ptr) - addend;
 }
 
-static inline int64_t __TBB_macos_fetchadd8(volatile void *ptr, int64_t addend)
+static inline int64_t __TBB_machine_fetchadd8(volatile void *ptr, int64_t addend)
 {
     __TBB_ASSERT( !((uintptr_t)ptr&0x7), "address not properly aligned for Mac OS atomics");
     return OSAtomicAdd64Barrier(addend, (int64_t*)ptr) - addend;
 }
 
-#define __TBB_FetchAndAdd4(P,V) __TBB_macos_fetchadd4(P,V)
-#define __TBB_FetchAndAdd8(P,V) __TBB_macos_fetchadd8(P,V)
-
-#if __TBB_WORDSIZE==4
-#define __TBB_CompareAndSwapW(P,V,C) __TBB_CompareAndSwap4(P,V,C)
-#define __TBB_FetchAndAddW(P,V) __TBB_FetchAndAdd4(P,V)
-#else
-#define __TBB_CompareAndSwapW(P,V,C) __TBB_CompareAndSwap8(P,V,C)
-#define __TBB_FetchAndAddW(P,V) __TBB_FetchAndAdd8(P,V)
+#define __TBB_USE_GENERIC_PART_WORD_CAS             1
+#define __TBB_USE_GENERIC_PART_WORD_FETCH_ADD       1
+#define __TBB_USE_GENERIC_FETCH_STORE               1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE    1
+#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE        1
+#if __TBB_WORDSIZE == 4
+    #define __TBB_USE_GENERIC_DWORD_LOAD_STORE      1
 #endif
 
-#endif /* !defined(__TBB_CompareAndSwap4) || !defined(__TBB_CompareAndSwap8) */
+#endif /* __TBB_UnknownArchitecture */

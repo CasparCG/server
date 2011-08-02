@@ -40,6 +40,7 @@
 
 namespace Concurrency {
 
+#if __TBB_TASK_GROUP_CONTEXT
     using tbb::task_handle;
     using tbb::task_group_status;
     using tbb::task_group;
@@ -53,6 +54,7 @@ namespace Concurrency {
     using tbb::canceled;
 
     using tbb::is_current_task_group_canceling;
+#endif /* __TBB_TASK_GROUP_CONTEXT */
 
     using tbb::parallel_invoke;
     using tbb::strict_ppl::parallel_for;

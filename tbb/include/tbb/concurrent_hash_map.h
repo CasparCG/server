@@ -52,7 +52,7 @@
 #include "aligned_space.h"
 #include "tbb_exception.h"
 #include "tbb_profiling.h"
-#include "_concurrent_unordered_internal.h" // Need tbb_hasher
+#include "internal/_concurrent_unordered_impl.h" // Need tbb_hasher
 #if TBB_USE_PERFORMANCE_WARNINGS || __TBB_STATISTICS
 #include <typeinfo>
 #endif

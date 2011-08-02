@@ -31,21 +31,49 @@
 
 /** This header is supposed to contain macro definitions and C style comments only.
     The macros defined here are intended to control such aspects of TBB build as 
+    - presence of compiler features
     - compilation modes
     - feature sets
-    - workarounds presence 
+    - known compiler/platform issues
 **/
 
-/** Compilation modes **/
+#define __TBB_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+
+/** Presence of compiler features **/
+
+#if (__TBB_GCC_VERSION >= 40400) && !defined(__INTEL_COMPILER)
+    /** warning suppression pragmas available in GCC since 4.4 **/
+    #define __TBB_GCC_WARNING_SUPPRESSION_PRESENT 1
+#endif
+
+/* TODO: The following condition should be extended when new compilers/runtimes 
+         with std::exception_ptr support appear. */
+#define __TBB_EXCEPTION_PTR_PRESENT  ((_MSC_VER >= 1600 || (__GXX_EXPERIMENTAL_CXX0X__ && __GNUC__==4 && __GNUC_MINOR__>=4)) && !__INTEL_COMPILER)
+
+#if __GNUC__ || __SUNPRO_CC || __IBMCPP__
+    /* ICC defines __GNUC__ and so is covered */
+    #define __TBB_ATTRIBUTE_ALIGNED_PRESENT 1
+#elif _MSC_VER && (_MSC_VER >= 1300 || __INTEL_COMPILER)
+    #define __TBB_DECLSPEC_ALIGN_PRESENT 1
+#endif
+
+#if (__TBB_GCC_VERSION >= 40102) && !defined(__INTEL_COMPILER)
+    /** built-in atomics available in GCC since 4.1.2 **/
+    #define __TBB_GCC_BUILTIN_ATOMICS_PRESENT 1
+#endif
+
+/** User controlled TBB features & modes **/
 
 #ifndef TBB_USE_DEBUG
 #ifdef TBB_DO_ASSERT
 #define TBB_USE_DEBUG TBB_DO_ASSERT
 #else
-#define TBB_USE_DEBUG 0
-#endif /* TBB_DO_ASSERT */
+#ifdef _DEBUG
+#define TBB_USE_DEBUG _DEBUG
 #else
-#define TBB_DO_ASSERT TBB_USE_DEBUG
+#define TBB_USE_DEBUG 0
+#endif
+#endif /* TBB_DO_ASSERT */
 #endif /* TBB_USE_DEBUG */
 
 #ifndef TBB_USE_ASSERT
@@ -91,64 +119,6 @@
     #endif
 #endif /* TBB_IMPLEMENT_CPP0X */
 
-#ifndef __TBB_DYNAMIC_LOAD_ENABLED
-    #define __TBB_DYNAMIC_LOAD_ENABLED !__TBB_TASK_CPP_DIRECTLY_INCLUDED
-#elif !__TBB_DYNAMIC_LOAD_ENABLED
-    #if _WIN32||_WIN64
-        #define __TBB_NO_IMPLICIT_LINKAGE 1
-        #define __TBBMALLOC_NO_IMPLICIT_LINKAGE 1
-    #else
-        #define __TBB_WEAK_SYMBOLS 1
-    #endif
-#endif
-
-/** Feature sets **/
-
-#ifndef __TBB_COUNT_TASK_NODES
-    #define __TBB_COUNT_TASK_NODES TBB_USE_ASSERT
-#endif
-
-#ifndef __TBB_TASK_GROUP_CONTEXT
-    #define __TBB_TASK_GROUP_CONTEXT 1
-#endif /* __TBB_TASK_GROUP_CONTEXT */
-
-#ifndef __TBB_SCHEDULER_OBSERVER
-    #define __TBB_SCHEDULER_OBSERVER 1
-#endif /* __TBB_SCHEDULER_OBSERVER */
-
-#ifndef __TBB_TASK_PRIORITY
-    #define __TBB_TASK_PRIORITY __TBB_CPF_BUILD
-#endif /* __TBB_TASK_PRIORITY */
-
-#if __TBB_TASK_PRIORITY && !__TBB_TASK_GROUP_CONTEXT
-    #error __TBB_TASK_PRIORITY requires __TBB_TASK_GROUP_CONTEXT to be enabled
-#endif
-
-#ifdef TBB_PREVIEW_TASK_PRIORITY
-    #if TBB_PREVIEW_TASK_PRIORITY
-        #define __TBB_NO_IMPLICIT_LINKAGE 1
-        #if __TBB_BUILD && !__TBB_TASK_PRIORITY
-            #error TBB_PREVIEW_TASK_PRIORITY requires __TBB_TASK_PRIORITY to be enabled during TBB build
-        #elif !__TBB_TASK_GROUP_CONTEXT
-            #error TBB_PREVIEW_TASK_PRIORITY requires __TBB_TASK_GROUP_CONTEXT to be enabled
-        #endif
-    #endif
-#else
-    #if __TBB_BUILD
-        #define TBB_PREVIEW_TASK_PRIORITY __TBB_TASK_PRIORITY
-    #endif
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
-
-#if !defined(__TBB_SURVIVE_THREAD_SWITCH) && (_WIN32 || _WIN64 || __linux__)
-    #define __TBB_SURVIVE_THREAD_SWITCH 1
-#endif /* __TBB_SURVIVE_THREAD_SWITCH */
-
-
-/* TODO: The following condition should be extended as soon as new compilers/runtimes 
-         with std::exception_ptr support appear. */
-#define __TBB_EXCEPTION_PTR_PRESENT  (_MSC_VER >= 1600 || __GXX_EXPERIMENTAL_CXX0X__ && (__GNUC__==4 && __GNUC_MINOR__>=4))
-
-
 #ifndef TBB_USE_CAPTURED_EXCEPTION
     #if __TBB_EXCEPTION_PTR_PRESENT
         #define TBB_USE_CAPTURED_EXCEPTION 0
@@ -161,28 +131,71 @@
     #endif
 #endif /* defined TBB_USE_CAPTURED_EXCEPTION */
 
+/** Check whether the request to use GCC atomics can be satisfied **/
+#if (TBB_USE_GCC_BUILTINS && !__TBB_GCC_BUILTIN_ATOMICS_PRESENT)
+    #error "GCC atomic built-ins are not supported."
+#endif
+
+/** Internal TBB features & modes **/
+
+#ifndef __TBB_DYNAMIC_LOAD_ENABLED
+    #define __TBB_DYNAMIC_LOAD_ENABLED !__TBB_TASK_CPP_DIRECTLY_INCLUDED
+#elif !__TBB_DYNAMIC_LOAD_ENABLED
+    #if _WIN32||_WIN64
+        #define __TBB_NO_IMPLICIT_LINKAGE 1
+        #define __TBBMALLOC_NO_IMPLICIT_LINKAGE 1
+    #else
+        #define __TBB_WEAK_SYMBOLS 1
+    #endif
+#endif
+
+#ifndef __TBB_COUNT_TASK_NODES
+    #define __TBB_COUNT_TASK_NODES TBB_USE_ASSERT
+#endif
+
+#ifndef __TBB_TASK_GROUP_CONTEXT
+    #define __TBB_TASK_GROUP_CONTEXT 1
+#endif /* __TBB_TASK_GROUP_CONTEXT */
+
+#if TBB_USE_EXCEPTIONS && !__TBB_TASK_GROUP_CONTEXT
+    #error TBB_USE_EXCEPTIONS requires __TBB_TASK_GROUP_CONTEXT to be enabled
+#endif
+
+#ifndef __TBB_SCHEDULER_OBSERVER
+    #define __TBB_SCHEDULER_OBSERVER 1
+#endif /* __TBB_SCHEDULER_OBSERVER */
+
+#ifndef __TBB_TASK_PRIORITY
+    #define __TBB_TASK_PRIORITY __TBB_TASK_GROUP_CONTEXT
+#endif /* __TBB_TASK_PRIORITY */
+
+#if __TBB_TASK_PRIORITY && !__TBB_TASK_GROUP_CONTEXT
+    #error __TBB_TASK_PRIORITY requires __TBB_TASK_GROUP_CONTEXT to be enabled
+#endif
+
+#if !defined(__TBB_SURVIVE_THREAD_SWITCH) && (_WIN32 || _WIN64 || __linux__)
+    #define __TBB_SURVIVE_THREAD_SWITCH 1
+#endif /* __TBB_SURVIVE_THREAD_SWITCH */
 
 #ifndef __TBB_DEFAULT_PARTITIONER
 #if TBB_DEPRECATED
 /** Default partitioner for parallel loop templates in TBB 1.0-2.1 */
 #define __TBB_DEFAULT_PARTITIONER tbb::simple_partitioner
 #else
-/** Default partitioner for parallel loop templates in TBB 2.2 */
+/** Default partitioner for parallel loop templates since TBB 2.2 */
 #define __TBB_DEFAULT_PARTITIONER tbb::auto_partitioner
-#endif /* TBB_DEFAULT_PARTITIONER */
+#endif /* TBB_DEPRECATED */
 #endif /* !defined(__TBB_DEFAULT_PARTITIONER */
-
-/** Workarounds presence **/
-
-#if __GNUC__==4 && __GNUC_MINOR__>=4 && !defined(__INTEL_COMPILER)
-    #define __TBB_GCC_WARNING_SUPPRESSION_ENABLED 1
-#endif
 
 /** Macros of the form __TBB_XXX_BROKEN denote known issues that are caused by
     the bugs in compilers, standard or OS specific libraries. They should be 
     removed as soon as the corresponding bugs are fixed or the buggy OS/compiler
     versions go out of the support list. 
 **/
+
+#if __GNUC__ && __TBB_x86_64 && __INTEL_COMPILER == 1200
+    #define __TBB_ICC_12_0_INL_ASM_FSTCW_BROKEN 1
+#endif
 
 #if _MSC_VER && __INTEL_COMPILER && (__INTEL_COMPILER<1110 || __INTEL_COMPILER==1110 && __INTEL_COMPILER_BUILD_DATE < 20091012)
     /** Necessary to avoid ICL error (or warning in non-strict mode): 
@@ -197,7 +210,7 @@
     #define __TBB_TEMPLATE_FRIENDS_BROKEN 1
 #endif
 
-#if __GLIBC__==2 && __GLIBC_MINOR__==3 || __MINGW32__
+#if __GLIBC__==2 && __GLIBC_MINOR__==3 || __MINGW32__ || (__APPLE__ && __INTEL_COMPILER==1200 && !TBB_USE_DEBUG)
     //! Macro controlling EH usages in TBB tests
     /** Some older versions of glibc crash when exception handling happens concurrently. **/
     #define __TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN 1
@@ -240,14 +253,10 @@
     #define __TBB_ICC_ASM_VOLATILE_BROKEN 1
 #endif
 
-#define __TBB_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-
-/* #if more recent gcc than 4.1.2 */
-#if (__TBB_GCC_VERSION > 40102 ) && !defined(__INTEL_COMPILER)
-    #define __TBB_GCC_BUILTIN_ATOMICS_PRESENT 1
+#if !__INTEL_COMPILER && (_MSC_VER || __GNUC__==3 && __GNUC_MINOR__<=2)
+    /** Bug in GCC 3.2 and MSVC compilers that sometimes return 0 for __alignof(T) 
+        when T has not yet been instantiated. **/
+    #define __TBB_ALIGNOF_NOT_INSTANTIATED_TYPES_BROKEN 1
 #endif
 
-#if (TBB_USE_GCC_BUILTINS && !__TBB_GCC_BUILTIN_ATOMICS_PRESENT)
-    #error "generic gcc port is not supported for this os/architecture."
-#endif
 #endif /* __TBB_tbb_config_H */

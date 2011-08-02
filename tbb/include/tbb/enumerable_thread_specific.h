@@ -31,6 +31,7 @@
 
 #include "concurrent_vector.h"
 #include "tbb_thread.h"
+#include "tbb_allocator.h"
 #include "cache_aligned_allocator.h"
 #include "aligned_space.h"
 #include <string.h>  // for memcpy

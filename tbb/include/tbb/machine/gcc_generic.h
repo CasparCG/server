@@ -26,52 +26,49 @@
     the GNU General Public License.
 */
 
-#ifndef __TBB_machine_H
+#if !defined(__TBB_machine_H) || defined(__TBB_machine_gcc_generic_H)
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
+
+#define __TBB_machine_gcc_generic_H
 
 #include <stdint.h>
 #include <unistd.h>
 
 #define __TBB_WORDSIZE      __SIZEOF_INT__
 
-//for some unknown reason straight mapping does not work. At least on mingw
+// For some reason straight mapping does not work on mingw
 #if __BYTE_ORDER__==__ORDER_BIG_ENDIAN__
     #define __TBB_BIG_ENDIAN    0
 #elif __BYTE_ORDER__==__ORDER_LITTLE_ENDIAN__
     #define __TBB_BIG_ENDIAN    1
 #else
-#error "This endiannes is not supported."
+#error Unsupported endianness
 #endif
 
-//As the port has absolutely no information about underlying hardware, the performance,
-//most likely, will be sub-optimal, due to usage of full memory fence where a lightweight
-//one would suffice..
+/** As this generic implementation has absolutely no information about underlying
+    hardware, its performance most likely will be sub-optimal because of full memory
+    fence usages where a more lightweight synchronization means (or none at all)
+    could suffice. Thus if you use this header to enable TBB on a new platform,
+    consider forking it and relaxing below helpers as appropriate. **/
 #define __TBB_acquire_consistency_helper()  __sync_synchronize()
 #define __TBB_release_consistency_helper()  __sync_synchronize()
 #define __TBB_full_memory_fence()           __sync_synchronize()
 #define __TBB_control_consistency_helper()  __sync_synchronize()
 
-
-#define __MACHINE_DECL_ATOMICS(S,T)                                                               \
-inline T __TBB_generic_gcc_cmpswp##S(volatile void *ptr, T value, T comparand ) {                 \
+#define __TBB_MACHINE_DEFINE_ATOMICS(S,T)                                                         \
+inline T __TBB_machine_cmpswp##S( volatile void *ptr, T value, T comparand ) {                    \
     return __sync_val_compare_and_swap(reinterpret_cast<volatile T *>(ptr),comparand,value);      \
 }                                                                                                 \
 
-__MACHINE_DECL_ATOMICS(1,int8_t)
-__MACHINE_DECL_ATOMICS(2,int16_t)
-__MACHINE_DECL_ATOMICS(4,int32_t)
-__MACHINE_DECL_ATOMICS(8,int64_t)
+__TBB_MACHINE_DEFINE_ATOMICS(1,int8_t)
+__TBB_MACHINE_DEFINE_ATOMICS(2,int16_t)
+__TBB_MACHINE_DEFINE_ATOMICS(4,int32_t)
+__TBB_MACHINE_DEFINE_ATOMICS(8,int64_t)
 
-#define __TBB_CompareAndSwap1(P,V,C) __TBB_generic_gcc_cmpswp1(P,V,C)
-#define __TBB_CompareAndSwap2(P,V,C) __TBB_generic_gcc_cmpswp2(P,V,C)
-#define __TBB_CompareAndSwap4(P,V,C) __TBB_generic_gcc_cmpswp4(P,V,C)
-#define __TBB_CompareAndSwap8(P,V,C) __TBB_generic_gcc_cmpswp8(P,V,C)
+#undef __TBB_MACHINE_DEFINE_ATOMICS
 
-#if (__TBB_WORDSIZE==4)
-    #define __TBB_CompareAndSwapW(P,V,C) __TBB_CompareAndSwap4(P,V,C)
-#elif  (__TBB_WORDSIZE==8)
-    #define __TBB_CompareAndSwapW(P,V,C) __TBB_CompareAndSwap8(P,V,C)
-#else
-    #error "Unsupported word size."
-#endif
+#define __TBB_USE_GENERIC_FETCH_ADD                 1
+#define __TBB_USE_GENERIC_FETCH_STORE               1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE    1
+#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE        1
