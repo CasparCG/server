@@ -674,8 +674,10 @@ bool LoadbgCommand::DoExecute()
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
+		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
+
 		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc().mode, pFP, transitionInfo);
-		GetChannel()->stage()->load(GetLayerIndex(), pFP2); // TODO: LOOP
+		GetChannel()->stage()->load(GetLayerIndex(), pFP2, false, auto_play ? transitionInfo.duration : -1); // TODO: LOOP
 	
 		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));

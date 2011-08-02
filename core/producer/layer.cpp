@@ -24,6 +24,9 @@
 
 #include "frame_producer.h"
 
+#include "frame/basic_frame.h"
+
+
 namespace caspar { namespace core {
 	
 struct layer::implementation
@@ -31,17 +34,22 @@ struct layer::implementation
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	bool						is_paused_;
+	int							auto_play_delta_;
+	int64_t						frame_number_;
 public:
 	implementation() 
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
-		, is_paused_(false){}
+		, is_paused_(false)
+		, auto_play_delta_(-1){}
 	
 	void pause(){is_paused_ = true;}
 	void resume(){is_paused_ = false;}
 
-	void load(const safe_ptr<frame_producer>& producer, bool preview)
+	void load(const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{		
+		auto_play_delta_ = auto_play_delta;
+
 		background_ = producer;
 
 		if(preview) // Play the first frame and pause.
@@ -58,6 +66,7 @@ public:
 		{
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
+			frame_number_ = 0;
 			background_ = frame_producer::empty();
 		}
 		resume();
@@ -73,7 +82,30 @@ public:
 		if(is_paused_)
 			return foreground_->last_frame();
 		
-		return receive_and_follow_w_last(foreground_);
+		auto frame = receive_and_follow(foreground_);
+		if(frame == core::basic_frame::late())
+			return foreground_->last_frame();
+			
+		++frame_number_;
+
+		if(auto_play_delta_ >= 0)
+		{
+			const auto frames_left = foreground_->nb_frames() - frame_number_ - auto_play_delta_;
+
+			if(frames_left <= 0 || frame == core::basic_frame::eof())
+			{
+				CASPAR_VERIFY(auto_play_delta_ != 0 || frame == core::basic_frame::eof())
+
+				CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset.";
+				
+				auto_play_delta_ = -1;
+				play();
+				frame = receive();
+			}
+
+		}
+				
+		return frame;
 	}
 };
 
@@ -95,7 +127,7 @@ void layer::swap(layer& other)
 {	
 	impl_.swap(other.impl_);
 }
-void layer::load(const safe_ptr<frame_producer>& frame_producer, bool preview){return impl_->load(frame_producer, preview);}	
+void layer::load(const safe_ptr<frame_producer>& frame_producer, bool preview, int auto_play_delta){return impl_->load(frame_producer, preview, auto_play_delta);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}

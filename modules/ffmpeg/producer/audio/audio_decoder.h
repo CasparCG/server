@@ -41,6 +41,8 @@ public:
 	bool ready() const;
 	std::vector<std::shared_ptr<std::vector<int16_t>>> poll();
 
+	int64_t nb_frames() const;
+
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
