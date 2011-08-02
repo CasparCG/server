@@ -40,13 +40,7 @@
 using namespace boost::assign;
 
 namespace caspar {
-
-enum direction
-{
-	down,
-	right
-};
-	
+		
 struct image_scroll_producer : public core::frame_producer
 {	
 	const std::wstring							filename_;
@@ -124,7 +118,7 @@ struct image_scroll_producer : public core::frame_producer
 					fast_memclr(frame->image_data().begin(), frame->image_data().size());	
 					int width2 = width_ % format_desc_.width;
 					for(size_t y = 0; y < height_; ++y)
-						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4,width2*4, frame->image_data().begin() + y * format_desc_.width*4);
+						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, frame->image_data().begin() + y * format_desc_.width*4);
 
 					count = 0;
 				}
@@ -150,19 +144,25 @@ struct image_scroll_producer : public core::frame_producer
 	// frame_producer
 
 	virtual safe_ptr<core::basic_frame> receive()
-	{
-		delta_ += speed_;
+	{		
+		delta_ = 1;//+= speed_;
 
 		if(frames_.empty())
 			return core::basic_frame::eof();
 		
 		if(height_ > format_desc_.height)
 		{
+			if(static_cast<size_t>(std::abs(delta_)) >= height_ - format_desc_.height)
+				return core::basic_frame::eof();
+
 			for(size_t n = 0; n < frames_.size(); ++n)
 				frames_[n]->get_image_transform().set_fill_translation(start_offset_[0], start_offset_[1] -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height));
 		}
 		else
 		{
+			if(static_cast<size_t>(std::abs(delta_)) >= width_ - format_desc_.width)
+				return core::basic_frame::eof();
+
 			for(size_t n = 0; n < frames_.size(); ++n)
 				frames_[n]->get_image_transform().set_fill_translation(start_offset_[0] -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height), start_offset_[1]);
 		}
@@ -173,6 +173,21 @@ struct image_scroll_producer : public core::frame_producer
 	virtual std::wstring print() const
 	{
 		return L"image_scroll_producer[" + filename_ + L"]";
+	}
+
+	virtual int64_t nb_frames() const 
+	{
+		if(height_ > format_desc_.height)
+		{
+			auto length = (height_ - format_desc_.height);
+			return (length/std::abs(speed_) + length % std::abs(delta_));
+		}
+		else
+		{
+			auto length = (width_ - format_desc_.width);
+			auto result = (length/std::abs(speed_) + length % std::abs(delta_));
+			return result;
+		}
 	}
 };
 
