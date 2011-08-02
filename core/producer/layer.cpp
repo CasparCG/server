@@ -48,9 +48,8 @@ public:
 
 	void load(const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{		
+		background_		 = producer;
 		auto_play_delta_ = auto_play_delta;
-
-		background_ = producer;
 
 		if(preview) // Play the first frame and pause.
 		{			
@@ -58,6 +57,9 @@ public:
 			receive();
 			pause();
 		}
+
+		if(auto_play_delta >= 0 && foreground_ == frame_producer::empty())
+			play();
 	}
 	
 	void play()
@@ -67,6 +69,7 @@ public:
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
 			frame_number_ = 0;
+			auto_play_delta_ = -1;
 			background_ = frame_producer::empty();
 		}
 		resume();
@@ -98,11 +101,9 @@ public:
 
 				CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset.";
 				
-				auto_play_delta_ = -1;
 				play();
 				frame = receive();
 			}
-
 		}
 				
 		return frame;
