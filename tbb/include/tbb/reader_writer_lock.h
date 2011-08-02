@@ -93,7 +93,7 @@ namespace interface5 {
 
     //! The scoped lock pattern for write locks
     /** Scoped locks help avoid the common problem of forgetting to release the lock.
-        This type is also serves as the node for queuing locks. */
+        This type also serves as the node for queuing locks. */
     class scoped_lock : tbb::internal::no_copy {
     public:
         friend class reader_writer_lock;

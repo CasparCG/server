@@ -33,6 +33,11 @@
 
 namespace tbb {
 
+#if !__TBB_TASK_GROUP_CONTEXT
+    /** Dummy to avoid cluttering the bulk of the header with enormous amount of ifdefs. **/
+    struct task_group_context {};
+#endif /* __TBB_TASK_GROUP_CONTEXT */
+
 //! @cond INTERNAL
 namespace internal {
     // Simple task object, executing user method
@@ -137,8 +142,15 @@ namespace internal {
     // The class destroys root if exception occured as well as in normal case
     class parallel_invoke_cleaner: internal::no_copy { 
     public:
-        parallel_invoke_cleaner(int number_of_children, tbb::task_group_context& context) : root(*new(task::allocate_root(context)) internal::parallel_invoke_helper(number_of_children))
+#if __TBB_TASK_GROUP_CONTEXT
+        parallel_invoke_cleaner(int number_of_children, tbb::task_group_context& context)
+            : root(*new(task::allocate_root(context)) internal::parallel_invoke_helper(number_of_children))
+#else
+        parallel_invoke_cleaner(int number_of_children, tbb::task_group_context&)
+            : root(*new(task::allocate_root()) internal::parallel_invoke_helper(number_of_children))
+#endif /* !__TBB_TASK_GROUP_CONTEXT */
         {}
+
         ~parallel_invoke_cleaner(){
             root.destroy(root);
         }

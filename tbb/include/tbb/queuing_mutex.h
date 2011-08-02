@@ -104,7 +104,7 @@ public:
         scoped_lock *next;
 
         //! The local spin-wait variable
-        /** Inverted (0 - blocked, 1 - acquired the mutex) for the sake of 
+        /** Inverted (0 - blocked, 1 - acquired the mutex) for the sake of
             zero-initialization.  Defining it as an entire word instead of
             a byte seems to help performance slightly. */
         uintptr_t going;
@@ -116,8 +116,6 @@ public:
     static const bool is_rw_mutex = false;
     static const bool is_recursive_mutex = false;
     static const bool is_fair_mutex = true;
-
-    friend class scoped_lock;
 private:
     //! The last competitor requesting the lock
     atomic<scoped_lock*> q_tail;

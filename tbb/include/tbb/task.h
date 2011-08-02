@@ -44,7 +44,7 @@ class task_list;
 class task_group_context;
 #endif /* __TBB_TASK_GROUP_CONTEXT */
 
-// MSVC does not allow taking the address of a member that was defined 
+// MSVC does not allow taking the address of a member that was defined
 // privately in task_base and made public in class task via a using declaration.
 #if _MSC_VER || (__GNUC__==3 && __GNUC_MINOR__<3)
 #define __TBB_TASK_BASE_ACCESS public
@@ -71,8 +71,8 @@ namespace interface5 {
         //! Base class for methods that became static in TBB 3.0.
         /** TBB's evolution caused the "this" argument for several methods to become obsolete.
             However, for backwards binary compatibility, the new methods need distinct names,
-            otherwise the One Definition Rule would be broken.  Hence the new methods are 
-            defined in this private base class, and then exposed in class task via 
+            otherwise the One Definition Rule would be broken.  Hence the new methods are
+            defined in this private base class, and then exposed in class task via
             using declarations. */
         class task_base: tbb::internal::no_copy {
         __TBB_TASK_BASE_ACCESS:
@@ -80,7 +80,7 @@ namespace interface5 {
 
             //! Schedule task for execution when a worker becomes available.
             static void spawn( task& t );
- 
+
             //! Spawn multiple tasks and clear list.
             static void spawn( task_list& list );
 
@@ -97,7 +97,7 @@ namespace interface5 {
                 sometimes a task needs to be explicitly deallocated, such as
                 when a root task is used as the parent in spawn_and_wait_for_all. */
             static void __TBB_EXPORTED_FUNC destroy( task& victim );
-        }; 
+        };
     } // internal
 } // interface5
 
@@ -168,8 +168,14 @@ namespace internal {
     //! Memory prefix to a task object.
     /** This class is internal to the library.
         Do not reference it directly, except within the library itself.
-        Fields are ordered in way that preserves backwards compatibility and yields 
+        Fields are ordered in way that preserves backwards compatibility and yields
         good packing on typical 32-bit and 64-bit platforms.
+
+        In case task prefix size exceeds 32 or 64 bytes on IA32 and Intel64
+        architectures correspondingly, consider dynamic setting of task_alignment
+        and task_prefix_reservation_size based on the maximal operand size supported
+        by the current CPU.
+
         @ingroup task_scheduling */
     class task_prefix {
     private:
@@ -184,34 +190,34 @@ namespace internal {
 
 #if __TBB_TASK_GROUP_CONTEXT
         //! Shared context that is used to communicate asynchronous state changes
-        /** Currently it is used to broadcast cancellation requests generated both 
+        /** Currently it is used to broadcast cancellation requests generated both
             by users and as the result of unhandled exceptions in the task::execute()
             methods. */
         task_group_context  *context;
 #endif /* __TBB_TASK_GROUP_CONTEXT */
-        
+
         //! The scheduler that allocated the task, or NULL if the task is big.
         /** Small tasks are pooled by the scheduler that allocated the task.
             If a scheduler needs to free a small task allocated by another scheduler,
             it returns the task to that other scheduler.  This policy avoids
-            memory space blowup issues for memory allocators that allocate from 
+            memory space blowup issues for memory allocators that allocate from
             thread-specific pools. */
         scheduler* origin;
 
-#if TBB_PREVIEW_TASK_PRIORITY
+#if __TBB_TASK_PRIORITY
         union {
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
+#endif /* __TBB_TASK_PRIORITY */
         //! Obsolete. The scheduler that owns the task.
-        /** Retained only for the sake of backward binary compatibility. 
+        /** Retained only for the sake of backward binary compatibility.
             Still used by inline methods in the task.h header. **/
         scheduler* owner;
 
-#if TBB_PREVIEW_TASK_PRIORITY
+#if __TBB_TASK_PRIORITY
         //! Pointer to the next offloaded lower priority task.
         /** Used to maintain a list of offloaded tasks inside the scheduler. **/
         task* next_offloaded;
         };
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
+#endif /* __TBB_TASK_PRIORITY */
 
         //! The task whose reference count includes me.
         /** In the "blocking style" of programming, this field points to the parent task.
@@ -224,7 +230,7 @@ namespace internal {
             the difference of the number of allocated children minus the
             number of children that have completed.
             In the "blocking style" of programming, this field is one more than the difference. */
-        reference_count ref_count;
+        __TBB_atomic reference_count ref_count;
 
         //! Obsolete. Used to be scheduling depth before TBB 2.2
         /** Retained only for the sake of backward binary compatibility.
@@ -257,7 +263,7 @@ namespace internal {
 
 #if __TBB_TASK_GROUP_CONTEXT
 
-#if TBB_PREVIEW_TASK_PRIORITY
+#if __TBB_TASK_PRIORITY
 namespace internal {
     static const int priority_stride_v4 = INT_MAX / 4;
 }
@@ -268,7 +274,7 @@ enum priority_t {
     priority_high = priority_normal + internal::priority_stride_v4
 };
 
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
+#endif /* __TBB_TASK_PRIORITY */
 
 #if TBB_USE_CAPTURED_EXCEPTION
     class tbb_exception;
@@ -280,25 +286,25 @@ enum priority_t {
 
 class task_scheduler_init;
 
-//! Used to form groups of tasks 
-/** @ingroup task_scheduling 
-    The context services explicit cancellation requests from user code, and unhandled 
-    exceptions intercepted during tasks execution. Intercepting an exception results 
-    in generating internal cancellation requests (which is processed in exactly the 
-    same way as external ones). 
+//! Used to form groups of tasks
+/** @ingroup task_scheduling
+    The context services explicit cancellation requests from user code, and unhandled
+    exceptions intercepted during tasks execution. Intercepting an exception results
+    in generating internal cancellation requests (which is processed in exactly the
+    same way as external ones).
 
-    The context is associated with one or more root tasks and defines the cancellation 
-    group that includes all the descendants of the corresponding root task(s). Association 
+    The context is associated with one or more root tasks and defines the cancellation
+    group that includes all the descendants of the corresponding root task(s). Association
     is established when a context object is passed as an argument to the task::allocate_root()
     method. See task_group_context::task_group_context for more details.
-    
+
     The context can be bound to another one, and other contexts can be bound to it,
     forming a tree-like structure: parent -> this -> children. Arrows here designate
     cancellation propagation direction. If a task in a cancellation group is canceled
     all the other tasks in this group and groups bound to it (as children) get canceled too.
 
-    IMPLEMENTATION NOTE: 
-    When adding new members to task_group_context or changing types of existing ones, 
+    IMPLEMENTATION NOTE:
+    When adding new members to task_group_context or changing types of existing ones,
     update the size of both padding buffers (_leading_padding and _trailing_padding)
     appropriately. See also VERSIONING NOTE at the constructor definition below. **/
 class task_group_context : internal::no_copy {
@@ -349,7 +355,7 @@ private:
     task_group_context *my_parent;
 
     //! Used to form the thread specific list of contexts without additional memory allocation.
-    /** A context is included into the list of the current thread when its binding to 
+    /** A context is included into the list of the current thread when its binding to
         its parent happens. Any context can be present in the list of one thread only. **/
     internal::context_list_node_t my_node;
 
@@ -358,15 +364,15 @@ private:
 
     //! Leading padding protecting accesses to frequently used members from false sharing.
     /** Read accesses to the field my_cancellation_requested are on the hot path inside
-        the scheduler. This padding ensures that this field never shares the same cache 
+        the scheduler. This padding ensures that this field never shares the same cache
         line with a local variable that is frequently written to. **/
     char _leading_padding[internal::NFS_MaxLineSize
                           - 2 * sizeof(uintptr_t)- sizeof(void*) - sizeof(internal::context_list_node_t)
                           - sizeof(__itt_caller)];
-    
+
     //! Specifies whether cancellation was request for this task group.
     uintptr_t my_cancellation_requested;
-    
+
     //! Version for run-time checks and behavioral traits of the context.
     /** Version occupies low 16 bits, and traits (zero or more ORed enumerators
         from the traits_type enumerations) take the next 16 bits.
@@ -382,48 +388,48 @@ private:
     //! Internal state (combination of state flags).
     uintptr_t my_state;
 
-#if TBB_PREVIEW_TASK_PRIORITY
+#if __TBB_TASK_PRIORITY
     //! Priority level of the task group (in normalized representation)
     intptr_t my_priority;
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
+#endif /* __TBB_TASK_PRIORITY */
 
     //! Trailing padding protecting accesses to frequently used members from false sharing
     /** \sa _leading_padding **/
     char _trailing_padding[internal::NFS_MaxLineSize - 2 * sizeof(uintptr_t) - 2 * sizeof(void*)
-#if TBB_PREVIEW_TASK_PRIORITY
+#if __TBB_TASK_PRIORITY
                             - sizeof(intptr_t)
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
+#endif /* __TBB_TASK_PRIORITY */
                           ];
 
 public:
     //! Default & binding constructor.
-    /** By default a bound context is created. That is this context will be bound 
-        (as child) to the context of the task calling task::allocate_root(this_context) 
+    /** By default a bound context is created. That is this context will be bound
+        (as child) to the context of the task calling task::allocate_root(this_context)
         method. Cancellation requests passed to the parent context are propagated
         to all the contexts bound to it. Similarly priority change is propagated
         from the parent context to its children.
 
         If task_group_context::isolated is used as the argument, then the tasks associated
         with this context will never be affected by events in any other context.
-        
+
         Creating isolated contexts involve much less overhead, but they have limited
         utility. Normally when an exception occurs in an algorithm that has nested
-        ones running, it is desirably to have all the nested algorithms canceled 
+        ones running, it is desirably to have all the nested algorithms canceled
         as well. Such a behavior requires nested algorithms to use bound contexts.
-        
+
         There is one good place where using isolated algorithms is beneficial. It is
         a master thread. That is if a particular algorithm is invoked directly from
-        the master thread (not from a TBB task), supplying it with explicitly 
+        the master thread (not from a TBB task), supplying it with explicitly
         created isolated context will result in a faster algorithm startup.
-        
-        VERSIONING NOTE: 
-        Implementation(s) of task_group_context constructor(s) cannot be made 
-        entirely out-of-line because the run-time version must be set by the user 
-        code. This will become critically important for binary compatibility, if 
+
+        VERSIONING NOTE:
+        Implementation(s) of task_group_context constructor(s) cannot be made
+        entirely out-of-line because the run-time version must be set by the user
+        code. This will become critically important for binary compatibility, if
         we ever have to change the size of the context object.
 
-        Boosting the runtime version will also be necessary if new data fields are 
-        introduced in the currently unused padding areas and these fields are updated 
+        Boosting the runtime version will also be necessary if new data fields are
+        introduced in the currently unused padding areas and these fields are updated
         by inline methods. **/
     task_group_context ( kind_type relation_with_parent = bound,
                          uintptr_t traits = default_traits )
@@ -436,22 +442,22 @@ public:
     __TBB_EXPORTED_METHOD ~task_group_context ();
 
     //! Forcefully reinitializes the context after the task tree it was associated with is completed.
-    /** Because the method assumes that all the tasks that used to be associated with 
-        this context have already finished, calling it while the context is still 
+    /** Because the method assumes that all the tasks that used to be associated with
+        this context have already finished, calling it while the context is still
         in use somewhere in the task hierarchy leads to undefined behavior.
-        
+
         IMPORTANT: This method is not thread safe!
 
-        The method does not change the context's parent if it is set. **/ 
+        The method does not change the context's parent if it is set. **/
     void __TBB_EXPORTED_METHOD reset ();
 
     //! Initiates cancellation of all tasks in this cancellation group and its subordinate groups.
-    /** \return false if cancellation has already been requested, true otherwise. 
+    /** \return false if cancellation has already been requested, true otherwise.
 
-        Note that canceling never fails. When false is returned, it just means that 
+        Note that canceling never fails. When false is returned, it just means that
         another thread (or this one) has already sent cancellation request to this
         context or to one of its ancestors (if this context is bound). It is guaranteed
-        that when this method is concurrently called on the same not yet cancelled 
+        that when this method is concurrently called on the same not yet cancelled
         context, true will be returned by one and only one invocation. **/
     bool __TBB_EXPORTED_METHOD cancel_group_execution ();
 
@@ -459,24 +465,24 @@ public:
     bool __TBB_EXPORTED_METHOD is_group_execution_cancelled () const;
 
     //! Records the pending exception, and cancels the task group.
-    /** May be called only from inside a catch-block. If the context is already 
-        canceled, does nothing. 
-        The method brings the task group associated with this context exactly into 
-        the state it would be in, if one of its tasks threw the currently pending 
-        exception during its execution. In other words, it emulates the actions 
+    /** May be called only from inside a catch-block. If the context is already
+        canceled, does nothing.
+        The method brings the task group associated with this context exactly into
+        the state it would be in, if one of its tasks threw the currently pending
+        exception during its execution. In other words, it emulates the actions
         of the scheduler's dispatch loop exception handler. **/
     void __TBB_EXPORTED_METHOD register_pending_exception ();
 
-#if TBB_PREVIEW_TASK_PRIORITY
-    //! Changes priority of the task grop 
+#if __TBB_TASK_PRIORITY
+    //! Changes priority of the task grop
     void set_priority ( priority_t );
 
     //! Retrieves current priority of the current task group
     priority_t priority () const;
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
+#endif /* __TBB_TASK_PRIORITY */
 
 protected:
-    //! Out-of-line part of the constructor. 
+    //! Out-of-line part of the constructor.
     /** Singled out to ensure backward binary compatibility of the future versions. **/
     void __TBB_EXPORTED_METHOD init ();
 
@@ -490,7 +496,7 @@ private:
     static const kind_type dying = kind_type(detached+1);
 
     //! Propagates state change (if any) from an ancestor
-    /** Checks if one of this object's ancestors is in a new state, and propagates 
+    /** Checks if one of this object's ancestors is in a new state, and propagates
         the new state to all its descendants in this object's heritage line. **/
     template <typename T>
     void propagate_state_from_ancestors ( T task_group_context::*mptr_state, T new_state );
@@ -542,7 +548,7 @@ public:
         //! task object is on free list, or is going to be put there, or was just taken off.
         freed,
         //! task to be recycled as continuation
-        recycle 
+        recycle
     };
 
     //------------------------------------------------------------------------
@@ -595,8 +601,8 @@ public:
     /** The caller must guarantee that the task's refcount does not become zero until
         after the method execute() returns.  Typically, this is done by having
         method execute() return a pointer to a child of the task.  If the guarantee
-        cannot be made, use method recycle_as_safe_continuation instead. 
-       
+        cannot be made, use method recycle_as_safe_continuation instead.
+
         Because of the hazard, this method may be deprecated in the future. */
     void recycle_as_continuation() {
         __TBB_ASSERT( prefix().state==executing, "execute not running?" );
@@ -605,7 +611,7 @@ public:
 
     //! Recommended to use, safe variant of recycle_as_continuation
     /** For safety, it requires additional increment of ref_count.
-        With no decendants and ref_count of 1, it has the semantics of recycle_to_reexecute. */
+        With no descendants and ref_count of 1, it has the semantics of recycle_to_reexecute. */
     void recycle_as_safe_continuation() {
         __TBB_ASSERT( prefix().state==executing, "execute not running?" );
         prefix().state = recycle;
@@ -634,7 +640,7 @@ public:
         prefix().state = reexecute;
     }
 
-    // All depth-related methods are obsolete, and are retained for the sake 
+    // All depth-related methods are obsolete, and are retained for the sake
     // of backward source compatibility only
     intptr_t depth() const {return 0;}
     void set_depth( intptr_t ) {}
@@ -655,13 +661,13 @@ public:
     }
 
     //! Atomically increment reference count and returns its old value.
-    /** Has acquire semantics */  
+    /** Has acquire semantics */
     void increment_ref_count() {
         __TBB_FetchAndIncrementWacquire( &prefix().ref_count );
     }
 
     //! Atomically decrement reference count and returns its new value.
-    /** Has release semantics. */  
+    /** Has release semantics. */
     int decrement_ref_count() {
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
         return int(internal_decrement_ref_count());
@@ -698,35 +704,43 @@ public:
     }
 
     //! Enqueue task for starvation-resistant execution.
-#if TBB_PREVIEW_TASK_PRIORITY
+#if __TBB_TASK_PRIORITY
     /** The task will be enqueued on the normal priority level disregarding the
         priority of its task group.
-        
+
         The rationale of such semantics is that priority of an enqueued task is
         statically fixed at the moment of its enqueuing, while task group priority
         is dynamic. Thus automatic priority inheritance would be generally a subject
-        to the race, which may result in unexpected behavior. 
-        
+        to the race, which may result in unexpected behavior.
+
         Use enqueue() overload with explicit priority value and task::group_priority()
         method to implement such priority inheritance when it is really necessary. **/
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
+#endif /* __TBB_TASK_PRIORITY */
     static void enqueue( task& t ) {
         t.prefix().owner->enqueue( t, NULL );
     }
 
-#if TBB_PREVIEW_TASK_PRIORITY
+#if __TBB_TASK_PRIORITY
     //! Enqueue task for starvation-resistant execution on the specified priority level.
     static void enqueue( task& t, priority_t p ) {
         __TBB_ASSERT( p == priority_low || p == priority_normal || p == priority_high, "Invalid priority level value" );
         t.prefix().owner->enqueue( t, (void*)p );
     }
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
+#endif /* __TBB_TASK_PRIORITY */
 
     //! The innermost task being executed or destroyed by the current thread at the moment.
     static task& __TBB_EXPORTED_FUNC self();
 
     //! task on whose behalf this task is working, or NULL if this is a root.
     task* parent() const {return prefix().parent;}
+
+    //! sets parent task pointer to specified value
+    void set_parent(task* p) {
+#if __TBB_TASK_GROUP_CONTEXT
+        __TBB_ASSERT(prefix().context == p->prefix().context, "The tasks must be in the same context");
+#endif
+        prefix().parent = p;
+    }
 
 #if __TBB_TASK_GROUP_CONTEXT
     //! This method is deprecated and will be removed in the future.
@@ -735,7 +749,7 @@ public:
 
     //! Pointer to the task group descriptor.
     task_group_context* group () { return prefix().context; }
-#endif /* __TBB_TASK_GROUP_CONTEXT */   
+#endif /* __TBB_TASK_GROUP_CONTEXT */
 
     //! True if task was stolen from the task pool of another thread.
     bool is_stolen_task() const {
@@ -764,7 +778,7 @@ public:
     //------------------------------------------------------------------------
     // Affinity
     //------------------------------------------------------------------------
- 
+
     //! An id as used for specifying affinity.
     /** Guaranteed to be integral type.  Value of 0 means no affinity. */
     typedef internal::affinity_id affinity_id;
@@ -776,8 +790,8 @@ public:
     affinity_id affinity() const {return prefix().affinity;}
 
     //! Invoked by scheduler to notify task that it ran on unexpected thread.
-    /** Invoked before method execute() runs, if task is stolen, or task has 
-        affinity but will be executed on another thread. 
+    /** Invoked before method execute() runs, if task is stolen, or task has
+        affinity but will be executed on another thread.
 
         The default action does nothing. */
     virtual void __TBB_EXPORTED_METHOD note_affinity( affinity_id id );
@@ -792,7 +806,7 @@ public:
         traditional usage model where task group context are allocated locally on
         the stack inapplicable. Dynamic allocation of context objects is performance
         inefficient. Method change_group() allows to make task group context object
-        a member of the task class, and then associate it with its containing task 
+        a member of the task class, and then associate it with its containing task
         object in the latter's constructor. **/
     void __TBB_EXPORTED_METHOD change_group ( task_group_context& ctx );
 
@@ -804,14 +818,14 @@ public:
     bool is_cancelled () const { return prefix().context->is_group_execution_cancelled(); }
 #endif /* __TBB_TASK_GROUP_CONTEXT */
 
-#if TBB_PREVIEW_TASK_PRIORITY
+#if __TBB_TASK_PRIORITY
     //! Changes priority of the task group this task belongs to.
     void set_group_priority ( priority_t p ) {  prefix().context->set_priority(p); }
 
     //! Retrieves current priority of the task group this task belongs to.
     priority_t group_priority () const { return prefix().context->priority(); }
 
-#endif /* TBB_PREVIEW_TASK_PRIORITY */
+#endif /* __TBB_TASK_PRIORITY */
 
 private:
     friend class interface5::internal::task_base;
@@ -824,7 +838,7 @@ private:
     friend class internal::allocate_continuation_proxy;
     friend class internal::allocate_child_proxy;
     friend class internal::allocate_additional_child_of_proxy;
-    
+
     //! Get reference to corresponding task_prefix.
     /** Version tag prevents loader on Linux from using the wrong symbol in debug builds. **/
     internal::task_prefix& prefix( internal::version_tag* = NULL ) const {

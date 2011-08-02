@@ -39,7 +39,7 @@ namespace tbb {
 template<typename PageValue, typename RowValue=PageValue, typename ColValue=RowValue>
 class blocked_range3d {
 public:
-    //! Type for size of an iteation range
+    //! Type for size of an iteration range
     typedef blocked_range<PageValue> page_range_type;
     typedef blocked_range<RowValue>  row_range_type;
     typedef blocked_range<ColValue>  col_range_type;

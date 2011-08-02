@@ -26,24 +26,29 @@
     the GNU General Public License.
 */
 
-#ifndef __TBB_machine_H
+#if !defined(__TBB_machine_H) || defined(__TBB_machine_windows_ia32_H)
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
 
-#if defined(__INTEL_COMPILER)
-#define __TBB_release_consistency_helper() __asm { __asm nop }
-#elif _MSC_VER >= 1300
-extern "C" void _ReadWriteBarrier();
-#pragma intrinsic(_ReadWriteBarrier)
-#define __TBB_release_consistency_helper() _ReadWriteBarrier()
-#else
-#error Unsupported compiler - need to define __TBB_release_consistency_helper to support it
-#endif
-
-#define __TBB_full_memory_fence() __asm { __asm mfence }
+#define __TBB_machine_windows_ia32_H
 
 #define __TBB_WORDSIZE 4
 #define __TBB_BIG_ENDIAN 0
+
+#if __INTEL_COMPILER
+    #define __TBB_compiler_fence() __asm { __asm nop }
+#elif _MSC_VER >= 1300
+    extern "C" void _ReadWriteBarrier();
+    #pragma intrinsic(_ReadWriteBarrier)
+    #define __TBB_compiler_fence() _ReadWriteBarrier()
+#else
+    #error Unsupported compiler - need to define __TBB_{control,acquire,release}_consistency_helper to support it
+#endif
+
+#define __TBB_control_consistency_helper() __TBB_compiler_fence()
+#define __TBB_acquire_consistency_helper() __TBB_compiler_fence()
+#define __TBB_release_consistency_helper() __TBB_compiler_fence()
+#define __TBB_full_memory_fence()          __asm { __asm mfence }
 
 #if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
     // Workaround for overzealous compiler warnings in /Wp64 mode
@@ -59,11 +64,10 @@ extern "C" {
     __int64 __TBB_EXPORTED_FUNC __TBB_machine_load8 (const volatile void *ptr);
 }
 
-#define __TBB_DEFINE_ATOMICS(S,T,U,A,C) \
+#define __TBB_MACHINE_DEFINE_ATOMICS(S,T,U,A,C) \
 static inline T __TBB_machine_cmpswp##S ( volatile void * ptr, U value, U comparand ) { \
     T result; \
     volatile T *p = (T *)ptr; \
-    __TBB_release_consistency_helper(); \
     __asm \
     { \
        __asm mov edx, p \
@@ -72,14 +76,12 @@ static inline T __TBB_machine_cmpswp##S ( volatile void * ptr, U value, U compar
        __asm lock cmpxchg [edx], C \
        __asm mov result, A \
     } \
-    __TBB_release_consistency_helper(); \
     return result; \
 } \
 \
 static inline T __TBB_machine_fetchadd##S ( volatile void * ptr, U addend ) { \
     T result; \
     volatile T *p = (T *)ptr; \
-    __TBB_release_consistency_helper(); \
     __asm \
     { \
         __asm mov edx, p \
@@ -87,14 +89,12 @@ static inline T __TBB_machine_fetchadd##S ( volatile void * ptr, U addend ) { \
         __asm lock xadd [edx], A \
         __asm mov result, A \
     } \
-    __TBB_release_consistency_helper(); \
     return result; \
 }\
 \
 static inline T __TBB_machine_fetchstore##S ( volatile void * ptr, U value ) { \
     T result; \
     volatile T *p = (T *)ptr; \
-    __TBB_release_consistency_helper(); \
     __asm \
     { \
         __asm mov edx, p \
@@ -102,14 +102,15 @@ static inline T __TBB_machine_fetchstore##S ( volatile void * ptr, U value ) { \
         __asm lock xchg [edx], A \
         __asm mov result, A \
     } \
-    __TBB_release_consistency_helper(); \
     return result; \
 }
 
-__TBB_DEFINE_ATOMICS(1, __int8, __int8, al, cl)
-__TBB_DEFINE_ATOMICS(2, __int16, __int16, ax, cx)
-__TBB_DEFINE_ATOMICS(4, __int32, __int32, eax, ecx)
-__TBB_DEFINE_ATOMICS(W, ptrdiff_t, ptrdiff_t, eax, ecx)
+
+__TBB_MACHINE_DEFINE_ATOMICS(1, __int8, __int8, al, cl)
+__TBB_MACHINE_DEFINE_ATOMICS(2, __int16, __int16, ax, cx)
+__TBB_MACHINE_DEFINE_ATOMICS(4, ptrdiff_t, ptrdiff_t, eax, ecx)
+
+#undef __TBB_MACHINE_DEFINE_ATOMICS
 
 static inline __int32 __TBB_machine_lg( unsigned __int64 i ) {
     unsigned __int32 j;
@@ -151,39 +152,18 @@ static inline void __TBB_machine_pause (__int32 delay ) {
     return;
 }
 
-#define __TBB_CompareAndSwap1(P,V,C) __TBB_machine_cmpswp1(P,V,C)
-#define __TBB_CompareAndSwap2(P,V,C) __TBB_machine_cmpswp2(P,V,C)
-#define __TBB_CompareAndSwap4(P,V,C) __TBB_machine_cmpswp4(P,V,C)
-#define __TBB_CompareAndSwap8(P,V,C) __TBB_machine_cmpswp8(P,V,C)
-#define __TBB_CompareAndSwapW(P,V,C) __TBB_machine_cmpswpW(P,V,C)
-
-#define __TBB_FetchAndAdd1(P,V) __TBB_machine_fetchadd1(P,V)
-#define __TBB_FetchAndAdd2(P,V) __TBB_machine_fetchadd2(P,V)
-#define __TBB_FetchAndAdd4(P,V) __TBB_machine_fetchadd4(P,V)
-#define __TBB_FetchAndAdd8(P,V) __TBB_machine_fetchadd8(P,V)
-#define __TBB_FetchAndAddW(P,V) __TBB_machine_fetchaddW(P,V)
-
-#define __TBB_FetchAndStore1(P,V) __TBB_machine_fetchstore1(P,V)
-#define __TBB_FetchAndStore2(P,V) __TBB_machine_fetchstore2(P,V)
-#define __TBB_FetchAndStore4(P,V) __TBB_machine_fetchstore4(P,V)
-#define __TBB_FetchAndStore8(P,V) __TBB_machine_fetchstore8(P,V)
-#define __TBB_FetchAndStoreW(P,V) __TBB_machine_fetchstoreW(P,V)
-
-// Should define this: 
-#define __TBB_Store8(P,V) __TBB_machine_store8(P,V)
-#define __TBB_Load8(P) __TBB_machine_load8(P)
 #define __TBB_AtomicOR(P,V) __TBB_machine_OR(P,V)
 #define __TBB_AtomicAND(P,V) __TBB_machine_AND(P,V)
+
+#define __TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE   1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE    1
+#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE        1
 
 // Definition of other functions
 extern "C" __declspec(dllimport) int __stdcall SwitchToThread( void );
 #define __TBB_Yield()  SwitchToThread()
 #define __TBB_Pause(V) __TBB_machine_pause(V)
-#define __TBB_Log2(V)    __TBB_machine_lg(V)
-
-// Use generic definitions from tbb_machine.h
-#undef __TBB_TryLockByte
-#undef __TBB_LockByte
+#define __TBB_Log2(V)  __TBB_machine_lg(V)
 
 #if defined(_MSC_VER)&&_MSC_VER<1400
     static inline void* __TBB_machine_get_current_teb () {

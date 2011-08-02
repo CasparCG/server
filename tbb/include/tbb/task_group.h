@@ -32,6 +32,8 @@
 #include "task.h"
 #include "tbb_exception.h"
 
+#if __TBB_TASK_GROUP_CONTEXT
+
 namespace tbb {
 
 namespace internal {
@@ -244,5 +246,7 @@ task_handle<F> make_task( const F& f ) {
 }
 
 } // namespace tbb
+
+#endif /* __TBB_TASK_GROUP_CONTEXT */
 
 #endif /* __TBB_task_group_H */

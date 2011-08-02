@@ -386,6 +386,11 @@ struct tuple_element {
 template<int N, class T>
 inline static typename tuple_element<N,T>::type& get(T &t) { return t.get<N>(); }
 
+template<int N, class T>
+inline static typename tuple_element<N,T>::type const& get(T const &t) { return 
+    const_cast<typename tuple_element<N,T>::type const &>
+        (const_cast<T &>(t).get<N>()); }
+
 }  // interface5
 } // tbb
 

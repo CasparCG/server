@@ -203,9 +203,24 @@ namespace strict_ppl {
 //! Parallel iteration over a range of integers with a step provided
 template <typename Index, typename Function>
 void parallel_for(Index first, Index last, Index step, const Function& f) {
-    tbb::task_group_context context;
-    parallel_for(first, last, step, f, context);
+    if (step <= 0 )
+        internal::throw_exception(internal::eid_nonpositive_step); // throws std::invalid_argument
+    else if (last > first) {
+        // Above "else" avoids "potential divide by zero" warning on some platforms
+        Index end = (last - first - Index(1)) / step + Index(1);
+        tbb::blocked_range<Index> range(static_cast<Index>(0), end);
+        internal::parallel_for_body<Function, Index> body(f, first, step);
+        tbb::parallel_for(range, body, tbb::auto_partitioner());
+    }
 }
+//! Parallel iteration over a range of integers with a default step value
+template <typename Index, typename Function>
+void parallel_for(Index first, Index last, const Function& f) {
+    parallel_for(first, last, static_cast<Index>(1), f);
+}
+
+#if __TBB_TASK_GROUP_CONTEXT
+//! Parallel iteration over a range of integers with explicit step and task group context
 template <typename Index, typename Function>
 void parallel_for(Index first, Index last, Index step, const Function& f, tbb::task_group_context &context) {
     if (step <= 0 )
@@ -218,17 +233,12 @@ void parallel_for(Index first, Index last, Index step, const Function& f, tbb::t
         tbb::parallel_for(range, body, tbb::auto_partitioner(), context);
     }
 }
-//! Parallel iteration over a range of integers with a default step value
-template <typename Index, typename Function>
-void parallel_for(Index first, Index last, const Function& f) {
-    tbb::task_group_context context;
-    parallel_for(first, last, static_cast<Index>(1), f, context);
-}
+//! Parallel iteration over a range of integers with a default step value and explicit task group context
 template <typename Index, typename Function>
 void parallel_for(Index first, Index last, const Function& f, tbb::task_group_context &context) {
     parallel_for(first, last, static_cast<Index>(1), f, context);
 }
-
+#endif /* __TBB_TASK_GROUP_CONTEXT */
 //@}
 
 } // namespace strict_ppl

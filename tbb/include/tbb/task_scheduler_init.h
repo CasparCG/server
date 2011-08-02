@@ -59,13 +59,11 @@ namespace internal {
     as described in task_scheduler_init::initialize().
     @ingroup task_scheduling */
 class task_scheduler_init: internal::no_copy {
-#if TBB_USE_EXCEPTIONS
     enum ExceptionPropagationMode {
         propagation_mode_exact = 1u,
         propagation_mode_captured = 2u,
         propagation_mode_mask = propagation_mode_exact | propagation_mode_captured
     };
-#endif /* TBB_USE_EXCEPTIONS */
 
     /** NULL if not currently initialized. */
     internal::scheduler* my_scheduler;
@@ -100,8 +98,7 @@ public:
 
     //! Shorthand for default constructor followed by call to initialize(number_of_threads).
     task_scheduler_init( int number_of_threads=automatic, stack_size_type thread_stack_size=0 ) : my_scheduler(NULL)  {
-#if TBB_USE_EXCEPTIONS
-        // Take two lowest order bits of the stack size argument to communicate
+        // Two lowest order bits of the stack size argument may be taken to communicate
         // default exception propagation mode of the client to be used when the
         // client manually creates tasks in the master thread and does not use
         // explicit task group context object. This is necessary because newer 
@@ -109,6 +106,7 @@ public:
         // by older clients that expect tbb::captured_exception wrapper.
         // All zeros mean old client - no preference. 
         __TBB_ASSERT( !(thread_stack_size & propagation_mode_mask), "Requested stack size is not aligned" );
+#if TBB_USE_EXCEPTIONS
         thread_stack_size |= TBB_USE_CAPTURED_EXCEPTION ? propagation_mode_captured : propagation_mode_exact;
 #endif /* TBB_USE_EXCEPTIONS */
         initialize( number_of_threads, thread_stack_size );

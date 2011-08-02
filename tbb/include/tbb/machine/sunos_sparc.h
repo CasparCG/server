@@ -27,9 +27,11 @@
 */
 
 
-#ifndef __TBB_machine_H
+#if !defined(__TBB_machine_H) || defined(__TBB_machine_sunos_sparc_H)
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
+
+#define __TBB_machine_sunos_sparc_H
 
 #include <stdint.h>
 #include <unistd.h>
@@ -37,8 +39,13 @@
 #define __TBB_WORDSIZE 8
 #define __TBB_BIG_ENDIAN 1
 
-#define __TBB_release_consistency_helper() __asm__ __volatile__ ("": : :"memory")
-#define __TBB_full_memory_fence() __asm__ __volatile__("membar #LoadLoad|#LoadStore|#StoreStore|#StoreLoad": : : "memory")
+/** To those working on SPARC hardware. Consider relaxing acquire and release
+    consistency helpers to no-op (as this port covers TSO mode only). **/
+#define __TBB_compiler_fence()             __asm__ __volatile__ ("": : :"memory")
+#define __TBB_control_consistency_helper() __TBB_compiler_fence()
+#define __TBB_acquire_consistency_helper() __TBB_compiler_fence()
+#define __TBB_release_consistency_helper() __TBB_compiler_fence()
+#define __TBB_full_memory_fence()          __asm__ __volatile__("membar #LoadLoad|#LoadStore|#StoreStore|#StoreLoad": : : "memory")
 
 //--------------------------------------------------
 // Compare and swap
@@ -184,45 +191,17 @@ static inline bool __TBB_machine_trylockbyte(unsigned char &flag){
     return result == 0;
 }
 
-
-// Machine specific atomic operations
-
-//#define __TBB_CompareAndSwap1(P,V,C) __TBB_machine_cmpswp1(P,V,C)  // use generic version in tbb_machine.h
-//#define __TBB_CompareAndSwap2(P,V,C) __TBB_machine_cmpswp2(P,V,C)  // use generic version in tbb_machine.h
-#define __TBB_CompareAndSwap4(P,V,C) __TBB_machine_cmpswp4(P,V,C)
-#define __TBB_CompareAndSwap8(P,V,C) __TBB_machine_cmpswp8(P,V,C)
-#define __TBB_CompareAndSwapW(P,V,C) __TBB_machine_cmpswp8(P,V,C)
-
-//#define __TBB_FetchAndAdd1(P,V) __TBB_machine_fetchadd1(P,V)       // use generic version in tbb_machine.h
-//#define __TBB_FetchAndAdd2(P,V) __TBB_machine_fetchadd2(P,V)       // use generic version in tbb_machine.h
-#define __TBB_FetchAndAdd4(P,V) __TBB_machine_fetchadd4(P,V)
-#define __TBB_FetchAndAdd8(P,V)  __TBB_machine_fetchadd8(P,V)
-#define __TBB_FetchAndAddW(P,V)  __TBB_machine_fetchadd8(P,V)
-
-// use generic version in tbb_machine.h
-//#define __TBB_FetchAndStore1(P,V) __TBB_machine_fetchstore1(P,V)  
-//#define __TBB_FetchAndStore2(P,V) __TBB_machine_fetchstore2(P,V)
-//#define __TBB_FetchAndStore4(P,V) __TBB_machine_fetchstore4(P,V)
-//#define __TBB_FetchAndStore8(P,V)  __TBB_machine_fetchstore8(P,V)
-//#define __TBB_FetchAndStoreW(P,V)  __TBB_machine_fetchstore8(P,V)
-
-#undef __TBB_Store8
-#undef __TBB_Load8
+#define __TBB_USE_GENERIC_PART_WORD_CAS             1
+#define __TBB_USE_GENERIC_PART_WORD_FETCH_ADD       1
+#define __TBB_USE_GENERIC_FETCH_STORE               1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE    1
+#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE        1
 
 #define __TBB_AtomicOR(P,V) __TBB_machine_or(P,V)
 #define __TBB_AtomicAND(P,V) __TBB_machine_and(P,V)
 
 // Definition of other functions
 #define __TBB_Pause(V) __TBB_machine_pause(V)
-#define __TBB_Log2(V)    __TBB_machine_lg(V)
-
-// Special atomic functions
-#define __TBB_FetchAndAddWrelease(P,V) __TBB_FetchAndAddW(P,V)
-#define __TBB_FetchAndIncrementWacquire(P) __TBB_FetchAndAddW(P,1)
-#define __TBB_FetchAndDecrementWrelease(P) __TBB_FetchAndAddW(P,-1)
-
-// Definition of Lock functions
-// Repeatedly runs TryLockByte, no need to implement
-#undef __TBB_LockByte
+#define __TBB_Log2(V)  __TBB_machine_lg(V)
 
 #define __TBB_TryLockByte(P) __TBB_machine_trylockbyte(P)
