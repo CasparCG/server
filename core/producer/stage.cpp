@@ -69,6 +69,7 @@ public:
 	virtual void						param(const std::wstring& str)									{producer_->param(str);}
 	virtual safe_ptr<frame_producer>	get_following_producer() const									{return producer_->get_following_producer();}
 	virtual void						set_leading_producer(const safe_ptr<frame_producer>& producer)	{producer_->set_leading_producer(producer);}
+	virtual int64_t						nb_frames() const												{return producer_->nb_frames();}
 };
 
 struct stage::implementation : boost::noncopyable
