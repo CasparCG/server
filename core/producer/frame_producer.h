@@ -46,9 +46,11 @@ public:
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
 		
-	static const safe_ptr<frame_producer>& empty(); // nothrow
+	virtual int64_t nb_frames() const {return 0;}
 
-	safe_ptr<core::basic_frame> last_frame() const {return last_frame_;}
+	virtual safe_ptr<core::basic_frame> last_frame() const {return last_frame_;}
+
+	static const safe_ptr<frame_producer>& empty(); // nothrow
 	
 private:
 	friend safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer);

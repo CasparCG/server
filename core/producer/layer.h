@@ -40,7 +40,7 @@ public:
 
 	void swap(layer& other); // nothrow 
 		
-	void load(const safe_ptr<frame_producer>& producer, bool preview); // nothrow
+	void load(const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow

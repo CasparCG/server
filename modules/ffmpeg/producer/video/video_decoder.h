@@ -43,6 +43,8 @@ public:
 
 	core::video_mode::type mode();
 
+	int64_t nb_frames() const;
+
 	double fps() const;
 private:
 	struct implementation;

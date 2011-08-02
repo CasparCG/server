@@ -67,6 +67,8 @@ struct ffmpeg_producer : public core::frame_producer
 	
 	tbb::task_group									tasks_;
 
+	int												start_;
+
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
 		: filename_(filename)
@@ -77,6 +79,7 @@ public:
 		, video_decoder_(input_.context(), frame_factory, filter)
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
 		, muxer_(video_decoder_.fps(), format_desc_, frame_factory)
+		, start_(start)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -144,6 +147,11 @@ public:
 
 		BOOST_FOREACH(auto& video, video_frames)
 			muxer_.push(video);		
+	}
+
+	virtual int64_t nb_frames() const
+	{
+		return std::max<int64_t>(0, video_decoder_.nb_frames()-start_);//std::max(video_decoder_.nb_frames(), audio_decoder_.nb_frames());
 	}
 				
 	virtual std::wstring print() const

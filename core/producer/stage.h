@@ -41,7 +41,7 @@ public:
 
 	std::map<int, safe_ptr<basic_frame>> execute();
 		
-	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false);
+	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false, int auto_play_delta = -1);
 	void pause(int index);
 	void play(int index);
 	void stop(int index);

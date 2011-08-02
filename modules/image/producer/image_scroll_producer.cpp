@@ -51,7 +51,7 @@ struct image_scroll_producer : public core::frame_producer
 {	
 	const std::wstring							filename_;
 	std::vector<safe_ptr<core::basic_frame>>	frames_;
-	size_t										pixel_offset_;
+	size_t										delta_;
 	core::video_format_desc						format_desc_;
 	size_t										width_;
 	size_t										height_;
@@ -59,7 +59,7 @@ struct image_scroll_producer : public core::frame_producer
 	
 	explicit image_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, size_t speed) 
 		: filename_(filename)
-		, pixel_offset_(0)
+		, delta_(0)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, speed_(speed)
 	{
@@ -93,39 +93,57 @@ struct image_scroll_producer : public core::frame_producer
 				frames_.push_back(frame);
 			}
 		}
-		//else
-		//{
-		//	while(count > 0)
-		//	{
-		//		auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), format_desc_.width, height_);
-		//		if(count >= frame->image_data().size())
-		//		{	
-		//			count -= frame->image_data().size();
-		//		}
-		//		else
-		//		{
-		//			fast_memclr(frame->image_data().begin(), frame->image_data().size());	
-		//			//std::copy_n(bytes, count, frame->image_data().begin() + format_desc_.size - count);
-		//			count = 0;
-		//		}
-		//	
-		//		frame->commit();
-		//		frames_.push_back(frame);
-		//	}
-		//}
+		else
+		{
+			int i = 0;
+			while(count > 0)
+			{
+				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), format_desc_.width, height_);
+				if(count >= frame->image_data().size())
+				{	
+					for(size_t y = 0; y < height_; ++y)
+						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, frame->image_data().begin() + y * format_desc_.width*4);
+					
+					++i;
+					count -= frame->image_data().size();
+				}
+				else
+				{
+					//fast_memclr(frame->image_data().begin(), frame->image_data().size());	
+					//int width2 = width_ % format_desc_.width;
+					//for(size_t y = 0; y < height_; ++y)
+					//	std::copy_n(bytes + i * format_desc_.size*4 + y * width2*4, format_desc_.width*4, frame->image_data().begin() + y *  format_desc_.width*4);
+
+					count = 0;
+				}
+			
+				frame->commit();
+				frames_.push_back(frame);
+			}
+		}
+
+		std::reverse(frames_.begin(), frames_.end());
 	}
 	
 	// frame_producer
 
 	virtual safe_ptr<core::basic_frame> receive()
 	{
-		pixel_offset_ += speed_;
+		delta_ += speed_;
 
 		if(frames_.empty())
 			return core::basic_frame::eof();
-
-		for(size_t n = 0; n < frames_.size(); ++n)
-			frames_[n]->get_image_transform().set_fill_translation(0.0, -0.5*(n+1) + pixel_offset_ * 0.5/static_cast<double>(format_desc_.height));
+		
+		if(height_ > format_desc_.height)
+		{
+			for(size_t n = 0; n < frames_.size(); ++n)
+				frames_[n]->get_image_transform().set_fill_translation(0.0, -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height));
+		}
+		else
+		{
+			for(size_t n = 0; n < frames_.size(); ++n)
+				frames_[n]->get_image_transform().set_fill_translation(-0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height), 0.0);
+		}
 
 		return core::basic_frame(frames_);
 	}
