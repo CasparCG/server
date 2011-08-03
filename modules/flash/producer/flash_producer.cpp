@@ -260,8 +260,10 @@ public:
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
 		auto frame = core::basic_frame::late();
-		frame_buffer_.try_pop(frame);		
-		return last_frame_ = frame;
+		if(frame_buffer_.try_pop(frame))
+			last_frame_ = frame;
+
+		return frame;
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const
