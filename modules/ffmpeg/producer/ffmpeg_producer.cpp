@@ -120,9 +120,9 @@ public:
 			}
 		}
 		else		
-			frame = muxer_.pop();		
+			frame = last_frame_ = muxer_.pop();		
 		
-		return last_frame_ = frame;
+		return frame;
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const
