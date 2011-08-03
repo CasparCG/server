@@ -112,23 +112,19 @@ public:
 			result.push_back(std::make_shared<std::vector<int16_t>>(format_desc_.audio_samples_per_frame, 0));
 		else if(!packets_.empty())
 		{		
-			auto packet = std::move(packets_.front());
-			packets_.pop();
+			auto packet = packets_.front();
 
 			if(packet)		
 			{
-				AVPacket pkt;
-				av_init_packet(&pkt);
-				pkt.data = packet->data;
-				pkt.size = packet->size;
-
-				for(int n = 0; n < 64 && pkt.size > 0; ++n)
-					result.push_back(decode(pkt));
+				result.push_back(decode(*packet));
+				if(packet->size == 0)					
+					packets_.pop();
 			}
 			else			
 			{	
 				avcodec_flush_buffers(codec_context_.get());
 				result.push_back(nullptr);
+				packets_.pop();
 			}
 		}
 

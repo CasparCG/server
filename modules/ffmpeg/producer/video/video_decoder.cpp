@@ -123,12 +123,13 @@ public:
 		{
 			std::shared_ptr<AVFrame> frame;
 
-			auto packet = std::move(packet_buffer_.front());
+			auto packet = packet_buffer_.front();
 		
 			if(packet)
 			{
-				frame = decode(*packet);					
-				packet_buffer_.pop();
+				frame = decode(*packet);	
+				if(packet->size == 0)
+					packet_buffer_.pop();
 			}
 			else
 			{
@@ -162,21 +163,24 @@ public:
 		return result;
 	}
 
-	std::shared_ptr<AVFrame> decode(AVPacket& packet)
+	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 		int frame_finished = 0;
-		const int errn = avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &packet);
+		const int ret = avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &pkt);
 		
-		if(errn < 0)
+		if(ret < 0)
 		{
 			BOOST_THROW_EXCEPTION(
 				invalid_operation() <<
-				msg_info(av_error_str(errn)) <<
+				msg_info(av_error_str(ret)) <<
 				boost::errinfo_api_function("avcodec_decode_video") <<
-				boost::errinfo_errno(AVUNERROR(errn)));
+				boost::errinfo_errno(AVUNERROR(ret)));
 		}
+
+		pkt.size -= ret;
+		pkt.data += ret;
 
 		if(frame_finished != 0)	
 		{
