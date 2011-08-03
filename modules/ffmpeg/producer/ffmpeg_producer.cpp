@@ -68,6 +68,8 @@ struct ffmpeg_producer : public core::frame_producer
 	tbb::task_group									tasks_;
 
 	int												start_;
+	int64_t											nb_frames_;
+	bool											loop_;
 
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
@@ -80,6 +82,8 @@ public:
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
 		, muxer_(video_decoder_.fps(), format_desc_, frame_factory)
 		, start_(start)
+		, nb_frames_(video_decoder_.nb_frames() - start)
+		, loop_(loop)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -107,7 +111,10 @@ public:
 			if(input_.eof())
 				frame = core::basic_frame::eof();
 			else
-				graph_->add_tag("underflow");			
+			{
+				graph_->add_tag("underflow");	
+				++nb_frames_;
+			}
 		}
 		else		
 			frame = muxer_.pop();		
@@ -151,7 +158,7 @@ public:
 
 	virtual int64_t nb_frames() const
 	{
-		return std::max<int64_t>(0, video_decoder_.nb_frames()-start_);//std::max(video_decoder_.nb_frames(), audio_decoder_.nb_frames());
+		return loop_ ? 0 : nb_frames_;
 	}
 				
 	virtual std::wstring print() const
