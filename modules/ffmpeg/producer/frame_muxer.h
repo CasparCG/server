@@ -26,8 +26,8 @@ public:
 	void push(const std::shared_ptr<core::write_frame>& video_frame);
 	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples);
 	
-	size_t video_frames() const;
-	size_t audio_chunks() const;
+	bool video_ready() const;
+	bool audio_ready() const;
 
 	size_t size() const;
 	bool empty() const;
