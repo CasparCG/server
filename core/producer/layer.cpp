@@ -48,8 +48,15 @@ public:
 
 	void load(const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{		
-		background_		 = producer;
-		auto_play_delta_ = auto_play_delta;
+		background_	= producer;
+
+		if(auto_play_delta > -1)
+		{
+			if(producer->nb_frames() > 0)
+				auto_play_delta_ = auto_play_delta;
+			else
+				CASPAR_LOG(warning) << producer->print() << L" Does not support auto-play.";
+		}
 
 		if(preview) // Play the first frame and pause.
 		{			
@@ -85,19 +92,29 @@ public:
 		if(is_paused_)
 			return foreground_->last_frame();
 		
+		const auto frames_left = foreground_->nb_frames() - (++frame_number_) - auto_play_delta_;
+
 		auto frame = receive_and_follow(foreground_);
 		if(frame == core::basic_frame::late())
 			return foreground_->last_frame();
-			
-		++frame_number_;
-
-		if(auto_play_delta_ >= 0)
+		
+		if(auto_play_delta_ == 0)
 		{
-			const auto frames_left = foreground_->nb_frames() - frame_number_ - auto_play_delta_;
+			if(frame == core::basic_frame::eof())
+			{
+				CASPAR_ASSERT(frames_left == 0);
 
+				CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset.";
+				
+				play();
+				frame = receive();
+			}
+		}
+		else if(auto_play_delta_ > 0)
+		{
 			if(frames_left <= 0 || frame == core::basic_frame::eof())
 			{
-				CASPAR_VERIFY(auto_play_delta_ != 0 || frame == core::basic_frame::eof())
+				CASPAR_VERIFY(frame != core::basic_frame::eof() && "Received early EOF. Media duration metadata incorrect.");
 
 				CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset.";
 				
