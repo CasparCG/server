@@ -96,14 +96,6 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 	return frame;
 }
 
-safe_ptr<basic_frame> receive_and_follow_w_last(safe_ptr<frame_producer>& producer)
-{
-	auto frame = receive_and_follow(producer);
-	if(frame == basic_frame::late())
-		frame = producer->last_frame();
-	return frame;
-}
-
 void register_producer_factory(const producer_factory_t& factory)
 {
 	g_factories.push_back(factory);
