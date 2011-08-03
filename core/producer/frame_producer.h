@@ -64,7 +64,6 @@ private:
 
 safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer);
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer);
-safe_ptr<basic_frame> receive_and_follow_w_last(safe_ptr<frame_producer>& producer);
 
 typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
