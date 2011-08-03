@@ -68,8 +68,18 @@ struct transition_producer : public frame_producer
 
 		tbb::parallel_invoke
 		(
-			[&]{dest   = receive_and_follow_w_last(dest_producer_);},
-			[&]{source = receive_and_follow_w_last(source_producer_);}
+			[&]
+			{
+				dest = receive_and_follow(dest_producer_);
+				if(dest == core::basic_frame::late())
+					dest = dest_producer_->last_frame();
+			},
+			[&]
+			{
+				source = receive_and_follow(source_producer_);
+				if(source == core::basic_frame::late())
+					source = source_producer_->last_frame();
+			}
 		);
 
 		return compose(dest, source);
