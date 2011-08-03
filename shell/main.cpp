@@ -51,6 +51,7 @@
 #include <common/exception/win32_exception.h>
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
+#include <common/gl/gl_check.h>
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
 #include <common/utility/assert.h>
@@ -59,6 +60,7 @@
 #include <tbb/task_scheduler_init.h>
 
 #include <boost/foreach.hpp>
+#include <boost/property_tree/detail/file_parser_error.hpp>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -252,10 +254,21 @@ int main(int argc, wchar_t* argv[])
 			amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
 		}
 	}
+	catch(boost::property_tree::file_parser_error&)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (casparcg.config) for errors.";
+	}
+	catch(caspar::gl::ogl_exception&)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+
+		CASPAR_LOG(fatal) << L"Unhandled OpenGL Error in main thread. Please try to update graphics drivers in order to receive full OpenGL 3.1+ Support.";
+	}
 	catch(...)
 	{
-		CASPAR_LOG(fatal) << "UNHANDLED EXCEPTION in main thread.";
 		CASPAR_LOG_CURRENT_EXCEPTION();
+		CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the CasparCG forums (www.casparcg.com/forum).";
 	}	
 	
 	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
