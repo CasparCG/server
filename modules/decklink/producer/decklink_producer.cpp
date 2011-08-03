@@ -88,7 +88,6 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	safe_ptr<core::frame_factory>								frame_factory_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
-	safe_ptr<core::basic_frame>									tail_;
 
 	std::exception_ptr											exception_;
 	filter														filter_;
@@ -103,7 +102,6 @@ public:
 		, format_desc_(format_desc)
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
-		, tail_(core::basic_frame::empty())
 		, filter_(filter)
 		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory->get_video_format_desc(), frame_factory)
 	{
@@ -225,10 +223,11 @@ public:
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
 
-		if(!frame_buffer_.try_pop(tail_))
+		safe_ptr<core::basic_frame> frame = core::basic_frame::late();
+		if(!frame_buffer_.try_pop(frame))
 			graph_->add_tag("late-frame");
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
-		return tail_;
+		return frame;
 	}
 	
 	std::wstring print() const
@@ -252,7 +251,10 @@ public:
 				
 	virtual safe_ptr<core::basic_frame> receive()
 	{
-		return last_frame_ = context_->get_frame();
+		auto frame = context_->get_frame();
+		if(frame != core::basic_frame::late())
+			last_frame_ = frame;
+		return frame;
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const
