@@ -53,12 +53,15 @@ struct image_scroll_producer : public core::frame_producer
 	int											speed_;
 
 	std::array<double, 2>						start_offset_;
+
+	safe_ptr<core::basic_frame>					last_frame_;
 	
 	explicit image_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
 		: filename_(filename)
 		, delta_(0)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, speed_(speed)
+		, last_frame_(core::basic_frame::empty())
 	{
 		start_offset_.assign(0.0);
 
@@ -145,7 +148,7 @@ struct image_scroll_producer : public core::frame_producer
 
 	virtual safe_ptr<core::basic_frame> receive()
 	{		
-		delta_ = 1;//+= speed_;
+		delta_ += speed_;
 
 		if(frames_.empty())
 			return core::basic_frame::eof();
@@ -167,7 +170,12 @@ struct image_scroll_producer : public core::frame_producer
 				frames_[n]->get_image_transform().set_fill_translation(start_offset_[0] -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height), start_offset_[1]);
 		}
 
-		return core::basic_frame(frames_);
+		return last_frame_ = core::basic_frame(frames_);
+	}
+
+	virtual safe_ptr<core::basic_frame> last_frame() const
+	{
+		return last_frame_;
 	}
 		
 	virtual std::wstring print() const

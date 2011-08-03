@@ -33,35 +33,18 @@ namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
 
-frame_producer::frame_producer() : last_frame_(core::basic_frame::empty()){}
-
 const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 {
 	struct empty_frame_producer : public frame_producer
 	{
 		virtual safe_ptr<basic_frame> receive(){return basic_frame::empty();}
+		virtual safe_ptr<basic_frame> last_frame() const{return basic_frame::empty();}
 		virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
 		virtual std::wstring print() const { return L"empty";}
 	};
 	static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();
 	return producer;
 }	
-
-safe_ptr<basic_frame> frame_producer::receive_save_last()
-{
-	auto frame = receive();
-	if(frame != core::basic_frame::late())
-	{
-		last_frame_ = make_safe<basic_frame>(frame);
-		last_frame_->get_audio_transform().set_has_audio(false);
-	}	
-	return frame;
-}
-
-safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer)
-{
-	return producer->receive_save_last();
-}
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 {	
@@ -71,7 +54,7 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 	auto frame = basic_frame::eof();
 	try
 	{
-		frame = receive(producer);
+		frame = producer->receive();
 	}
 	catch(...)
 	{

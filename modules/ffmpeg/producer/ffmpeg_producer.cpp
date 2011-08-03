@@ -71,6 +71,8 @@ struct ffmpeg_producer : public core::frame_producer
 	int64_t											nb_frames_;
 	bool											loop_;
 
+	safe_ptr<core::basic_frame>						last_frame_;
+
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
 		: filename_(filename)
@@ -84,6 +86,7 @@ public:
 		, start_(start)
 		, nb_frames_(video_decoder_.nb_frames() - start)
 		, loop_(loop)
+		, last_frame_(core::basic_frame::empty())
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -119,7 +122,12 @@ public:
 		else		
 			frame = muxer_.pop();		
 		
-		return frame;
+		return last_frame_ = frame;
+	}
+
+	virtual safe_ptr<core::basic_frame> last_frame() const
+	{
+		return disable_audio(last_frame_);
 	}
 
 	void decode_frame()

@@ -239,18 +239,25 @@ public:
 	
 class decklink_producer_proxy : public core::frame_producer
 {		
+	safe_ptr<core::basic_frame>	last_frame_;
 	com_context<decklink_producer> context_;
 public:
 
 	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str = L"")
 		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
+		, last_frame_(core::basic_frame::empty())
 	{
 		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str);}); 
 	}
 				
 	virtual safe_ptr<core::basic_frame> receive()
 	{
-		return context_->get_frame();
+		return last_frame_ = context_->get_frame();
+	}
+
+	virtual safe_ptr<core::basic_frame> last_frame() const
+	{
+		return disable_audio(last_frame_);
 	}
 	
 	std::wstring print() const

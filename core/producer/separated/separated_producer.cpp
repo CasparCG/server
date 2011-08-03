@@ -33,12 +33,14 @@ struct separated_producer : public frame_producer
 	safe_ptr<frame_producer>	key_producer_;
 	safe_ptr<basic_frame>		fill_;
 	safe_ptr<basic_frame>		key_;
+	safe_ptr<basic_frame>		last_frame_;
 		
 	explicit separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key) 
 		: fill_producer_(fill)
 		, key_producer_(key)
 		, fill_(core::basic_frame::late())
-		, key_(core::basic_frame::late()){}
+		, key_(core::basic_frame::late())
+		, last_frame_(core::basic_frame::empty()){}
 	
 	// frame_producer
 	
@@ -69,7 +71,12 @@ struct separated_producer : public frame_producer
 		fill_ = basic_frame::late();
 		key_ = basic_frame::late();
 
-		return frame;
+		return last_frame_ = frame;
+	}
+
+	virtual safe_ptr<core::basic_frame> last_frame() const
+	{
+		return last_frame_;
 	}
 
 	virtual std::wstring print() const
