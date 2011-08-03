@@ -42,6 +42,7 @@ public:
 	// frame_producer
 			
 	virtual safe_ptr<basic_frame> receive() { return frame_; }	
+	virtual safe_ptr<basic_frame> last_frame() const { return frame_; }	
 	virtual std::wstring print() const { return L"color[" + color_str_ + L"]"; }
 };
 

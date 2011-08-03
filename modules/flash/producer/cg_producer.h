@@ -38,6 +38,7 @@ public:
 	
 	// frame_producer
 	virtual safe_ptr<core::basic_frame> receive();
+	virtual safe_ptr<core::basic_frame> last_frame() const;
 	virtual std::wstring print() const;
 
 	//cg_producer

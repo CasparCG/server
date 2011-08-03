@@ -224,6 +224,8 @@ struct flash_producer : public core::frame_producer
 	std::shared_ptr<diagnostics::graph> graph_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
+
+	safe_ptr<core::basic_frame>	last_frame_;
 				
 	com_context<flash_renderer> context_;		
 public:
@@ -231,6 +233,7 @@ public:
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
 		, context_(L"flash_producer")
+		, last_frame_(core::basic_frame::empty())
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
@@ -258,8 +261,13 @@ public:
 
 		auto frame = core::basic_frame::late();
 		frame_buffer_.try_pop(frame);		
-		return frame;
+		return last_frame_ = frame;
 	}
+
+	virtual safe_ptr<core::basic_frame> last_frame() const
+	{
+		return last_frame_;
+	}		
 	
 	virtual void param(const std::wstring& param) 
 	{	

@@ -36,7 +36,6 @@ class basic_frame;
 class frame_producer : boost::noncopyable
 {
 public:
-	frame_producer();
 	virtual ~frame_producer(){}	
 
 	virtual std::wstring print() const = 0; // nothrow
@@ -47,22 +46,13 @@ public:
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
 		
 	virtual int64_t nb_frames() const {return 0;}
-
-	virtual safe_ptr<core::basic_frame> last_frame() const {return last_frame_;}
+	
+	virtual safe_ptr<basic_frame> receive() = 0;
+	virtual safe_ptr<core::basic_frame> last_frame() const = 0;
 
 	static const safe_ptr<frame_producer>& empty(); // nothrow
-	
-private:
-	friend safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer);
-
-	virtual safe_ptr<basic_frame> receive() = 0;
-
-	safe_ptr<basic_frame> receive_save_last();
-
-	safe_ptr<core::basic_frame> last_frame_;
 };
 
-safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer);
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer);
 
 typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
