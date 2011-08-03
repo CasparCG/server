@@ -198,6 +198,16 @@ private:
 			else
 			{
 				av_dup_packet(read_packet.get());
+				
+				// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
+				auto size = read_packet->size;
+				auto data = read_packet->data;
+
+				read_packet = std::shared_ptr<AVPacket>(read_packet.get(), [=](AVPacket* pkt)
+				{
+					read_packet->size = size;
+					read_packet->data = data;
+				});
 
 				graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
 				
