@@ -99,19 +99,22 @@ display_mode::type get_display_mode(const core::video_mode::type in_mode, double
 
 struct frame_muxer::implementation : boost::noncopyable
 {	
-	std::queue<safe_ptr<write_frame>>	video_frames_;
-	std::vector<int16_t>				audio_samples_;
-	std::deque<safe_ptr<basic_frame>>	frame_buffer_;
-	display_mode::type					display_mode_;
-	const double						in_fps_;
-	const video_format_desc				format_desc_;
-	bool								auto_mode_;
+	std::deque<std::queue<safe_ptr<write_frame>>>	video_streams_;
+	std::deque<std::vector<int16_t>>				audio_streams_;
+	std::deque<safe_ptr<basic_frame>>				frame_buffer_;
+	display_mode::type								display_mode_;
+	const double									in_fps_;
+	const video_format_desc							format_desc_;
+	bool											auto_mode_;
 
-	size_t								audio_sample_count_;
-	size_t								video_frame_count_;
+	size_t											audio_sample_count_;
+	size_t											video_frame_count_;
+		
+	size_t											processed_audio_sample_count_;
+	size_t											processed_video_frame_count_;
 
-	std::unique_ptr<filter>				filter_;
-	safe_ptr<core::frame_factory>		frame_factory_;
+	std::unique_ptr<filter>							filter_;
+	safe_ptr<core::frame_factory>					frame_factory_;
 		
 	implementation(double in_fps, const video_format_desc& format_desc, const safe_ptr<core::frame_factory>& frame_factory)
 		: display_mode_(display_mode::invalid)
@@ -120,7 +123,11 @@ struct frame_muxer::implementation : boost::noncopyable
 		, auto_mode_(env::properties().get("configuration.auto-mode", false))
 		, audio_sample_count_(0)
 		, video_frame_count_(0)
+		, processed_audio_sample_count_(0)
+		, processed_video_frame_count_(0)
 		, frame_factory_(frame_factory)
+		, video_streams_(1)
+		, audio_streams_(1)
 	{
 	}
 
@@ -128,14 +135,19 @@ struct frame_muxer::implementation : boost::noncopyable
 	{		
 		if(!video_frame)
 		{	
-			CASPAR_LOG(debug) << L"video-frame-count: " << video_frame_count_;
+			CASPAR_LOG(debug) << L"video-frame-count: " << static_cast<float>(video_frame_count_) << L":" << processed_video_frame_count_;
 			video_frame_count_ = 0;
+			processed_video_frame_count_ = 0;
+			video_streams_.push_back(std::queue<safe_ptr<write_frame>>());
 			return;
 		}
 		
 		if(display_mode_ == display_mode::invalid)
+		{
 			display_mode_ = auto_mode_ ? get_display_mode(video_frame->get_type(), in_fps_, format_desc_.mode, format_desc_.fps) : display_mode::simple;
-			
+			CASPAR_LOG(info) << L"display_mode: " << display_mode::print(display_mode_);
+		}		
+
 		++video_frame_count_;
 
 		// Fix field-order if needed
@@ -144,7 +156,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		else if(video_frame->get_type() == core::video_mode::upper && format_desc_.mode == core::video_mode::lower)
 			video_frame->get_image_transform().set_fill_translation(0.0f, -0.5/static_cast<double>(video_frame->get_pixel_format_desc().planes[0].height));
 
-		video_frames_.push(make_safe(video_frame));
+		video_streams_.back().push(make_safe(video_frame));
 
 		process(frame_buffer_);
 
@@ -155,30 +167,24 @@ struct frame_muxer::implementation : boost::noncopyable
 	{
 		if(!audio_samples)	
 		{
-			auto truncate = audio_sample_count_ % format_desc_.audio_samples_per_frame;
-			if(truncate > 0)
-			{
-				audio_samples_.erase(audio_samples_.end() - truncate, audio_samples_.end());
-				CASPAR_LOG(info) << L"frame_muxer: Truncating " << truncate << L" audio samples.";
-			}
-
-			CASPAR_LOG(debug) << L"audio-chunk-count: " << audio_sample_count_/format_desc_.audio_samples_per_frame;
+			CASPAR_LOG(debug) << L"audio-chunk-count: " << static_cast<float>(audio_sample_count_)/format_desc_.audio_samples_per_frame << L":" << processed_audio_sample_count_/format_desc_.audio_samples_per_frame;
+			CASPAR_LOG(debug) << L"audio-sample-count: " << audio_sample_count_ << L":" << processed_audio_sample_count_;
+			audio_streams_.push_back(std::vector<int16_t>());
+			processed_audio_sample_count_ = 0;
 			audio_sample_count_ = 0;
 			return;
 		}
 
 		audio_sample_count_ += audio_samples->size();
 
-		boost::range::push_back(audio_samples_, *audio_samples);
-		std::deque<safe_ptr<basic_frame>> frames;
-		process(frames);
-		boost::range::push_back(frame_buffer_, frames);
+		boost::range::push_back(audio_streams_.back(), *audio_samples);
+		process(frame_buffer_);
 	}
 
 	safe_ptr<basic_frame> pop()
 	{		
 		auto frame = frame_buffer_.front();
-		frame_buffer_.pop_front();
+		frame_buffer_.pop_front();		
 		return frame;
 	}
 
@@ -189,27 +195,62 @@ struct frame_muxer::implementation : boost::noncopyable
 
 	safe_ptr<core::write_frame> pop_video()
 	{
-		auto frame = video_frames_.front();
-		video_frames_.pop();
+		auto frame = video_streams_.front().front();
+		video_streams_.front().pop();
+
+		++processed_video_frame_count_;
+
 		return frame;
 	}
 
 	std::vector<int16_t> pop_audio()
 	{
-		CASPAR_VERIFY(audio_samples_.size() >= format_desc_.audio_samples_per_frame);
+		CASPAR_VERIFY(audio_streams_.front().size() >= format_desc_.audio_samples_per_frame);
 
-		auto begin = audio_samples_.begin();
+		auto begin = audio_streams_.front().begin();
 		auto end   = begin + format_desc_.audio_samples_per_frame;
 
 		auto samples = std::vector<int16_t>(begin, end);
-		audio_samples_.erase(begin, end);
+		audio_streams_.front().erase(begin, end);
+
+		processed_audio_sample_count_ += format_desc_.audio_samples_per_frame;
 
 		return samples;
+	}
+
+	bool video_ready() const
+	{
+		return video_frames() > 1 && video_streams_.size() >= audio_streams_.size();
+	}
+	
+	bool audio_ready() const
+	{
+		return audio_chunks() > 1 && audio_streams_.size() >= video_streams_.size();
+	}
+
+	size_t video_frames() const
+	{
+		return video_streams_.back().size();
+	}
+
+	size_t audio_chunks() const
+	{
+		return audio_streams_.back().size() / format_desc_.audio_samples_per_frame;
 	}
 	
 	void process(std::deque<safe_ptr<basic_frame>>& dest)
 	{
-		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
+		if(video_streams_.size() > 1 && audio_streams_.size() > 1 &&
+			(video_streams_.front().empty() || audio_streams_.front().empty()))
+		{
+			if(!video_streams_.front().empty() || !audio_streams_.front().empty())
+				CASPAR_LOG(debug) << " Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
+
+			video_streams_.pop_front();
+			audio_streams_.pop_front();
+		}
+
+		if(video_streams_.front().empty() || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
 			return;
 		
 		switch(display_mode_)
@@ -226,11 +267,11 @@ struct frame_muxer::implementation : boost::noncopyable
 
 	void simple(std::deque<safe_ptr<basic_frame>>& dest)
 	{
-		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
+		if(video_streams_.front().empty() || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
 			return;
 		
-		if(video_frames_.front()->get_type() != core::video_mode::progressive && format_desc_.mode != core::video_mode::progressive &&
-			video_frames_.front()->get_pixel_format_desc().planes.at(0).height != format_desc_.height )
+		if(video_streams_.front().front()->get_type() != core::video_mode::progressive && format_desc_.mode != core::video_mode::progressive &&
+			video_streams_.front().front()->get_pixel_format_desc().planes.at(0).height != format_desc_.height )
 		{ // The frame will most likely be scaled, we need to deinterlace->reinterlace
 			if(!filter_)
 				filter_.reset(new filter(L"YADIF=1:-1"));
@@ -262,7 +303,7 @@ struct frame_muxer::implementation : boost::noncopyable
 
 	void duplicate(std::deque<safe_ptr<basic_frame>>& dest)
 	{		
-		if(video_frames_.empty() || audio_samples_.size()/2 < format_desc_.audio_samples_per_frame)
+		if(video_streams_.front().empty() || audio_streams_.front().size()/2 < format_desc_.audio_samples_per_frame)
 			return;
 
 		auto frame = pop_video();
@@ -280,21 +321,21 @@ struct frame_muxer::implementation : boost::noncopyable
 
 	void half(std::deque<safe_ptr<basic_frame>>& dest)
 	{	
-		if(video_frames_.size() < 2 || audio_samples_.size() < format_desc_.audio_samples_per_frame)
+		if(video_streams_.front().size() < 2 || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
 			return;
 						
 		auto frame1 = pop_video();
 		frame1->commit();
 		frame1->audio_data() = pop_audio();
 				
-		video_frames_.pop(); // Throw away
+		video_streams_.front().pop(); // Throw away
 
 		dest.push_back(frame1);
 	}
 	
 	void interlace(std::deque<safe_ptr<basic_frame>>& dest)
 	{		
-		if(video_frames_.size() < 2 || audio_samples_.size() < format_desc_.audio_samples_per_frame)
+		if(video_streams_.front().size() < 2 || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
 			return;
 		
 		auto frame1 = pop_video();
@@ -309,7 +350,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		
 	void deinterlace_bob(std::deque<safe_ptr<basic_frame>>& dest)
 	{
-		if(video_frames_.empty() || audio_samples_.size()/2 < format_desc_.audio_samples_per_frame)
+		if(video_streams_.front().empty() || audio_streams_.front().size()/2 < format_desc_.audio_samples_per_frame)
 			return;
 
 		if(!filter_)
@@ -336,7 +377,7 @@ struct frame_muxer::implementation : boost::noncopyable
 
 	void deinterlace(std::deque<safe_ptr<basic_frame>>& dest)
 	{
-		if(video_frames_.empty() || audio_samples_.size() < format_desc_.audio_samples_per_frame)
+		if(video_streams_.front().empty() || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
 			return;
 
 		if(!filter_)
@@ -364,7 +405,7 @@ void frame_muxer::push(const std::shared_ptr<std::vector<int16_t>>& audio_sample
 safe_ptr<basic_frame> frame_muxer::pop(){return impl_->pop();}
 size_t frame_muxer::size() const {return impl_->size();}
 bool frame_muxer::empty() const {return impl_->size() == 0;}
-size_t frame_muxer::video_frames() const{return impl_->video_frames_.size();}
-size_t frame_muxer::audio_chunks() const{return impl_->audio_samples_.size() / impl_->format_desc_.audio_samples_per_frame;}
+bool frame_muxer::video_ready() const{return impl_->video_ready();}
+bool frame_muxer::audio_ready() const{return impl_->audio_ready();}
 
 }
