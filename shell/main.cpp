@@ -262,7 +262,6 @@ int main(int argc, wchar_t* argv[])
 	catch(caspar::gl::ogl_exception&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-
 		CASPAR_LOG(fatal) << L"Unhandled OpenGL Error in main thread. Please try to update graphics drivers in order to receive full OpenGL 3.1+ Support.";
 	}
 	catch(...)
