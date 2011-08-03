@@ -38,13 +38,20 @@ struct transition_producer : public frame_producer
 	
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
+	safe_ptr<frame_producer>	org_dest_producer_;
+	safe_ptr<frame_producer>	org_source_producer_;
+
+	safe_ptr<basic_frame>		last_frame_;
 		
 	explicit transition_producer(const video_mode::type& mode, const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
 		, current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
-		, source_producer_(frame_producer::empty()){}
+		, org_dest_producer_(dest)
+		, source_producer_(frame_producer::empty())
+		, org_source_producer_(frame_producer::empty())
+		, last_frame_(basic_frame::empty()){}
 	
 	// frame_producer
 
@@ -55,7 +62,8 @@ struct transition_producer : public frame_producer
 	
 	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer)
 	{
-		source_producer_ = producer;
+		source_producer_	 = producer;
+		org_source_producer_ = producer;
 	}
 
 	virtual safe_ptr<basic_frame> receive()
@@ -82,7 +90,12 @@ struct transition_producer : public frame_producer
 			}
 		);
 
-		return compose(dest, source);
+		return last_frame_ = compose(dest, source);
+	}
+
+	virtual safe_ptr<core::basic_frame> last_frame() const
+	{
+		return last_frame_;
 	}
 
 	virtual int64_t nb_frames() const 
@@ -92,7 +105,7 @@ struct transition_producer : public frame_producer
 
 	virtual std::wstring print() const
 	{
-		return L"transition";
+		return L"transition[" + org_source_producer_->print() + L"|" + org_dest_producer_->print() + L"]";
 	}
 	
 	// transition_producer

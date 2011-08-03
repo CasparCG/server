@@ -58,6 +58,11 @@ struct image_producer : public core::frame_producer
 
 	virtual safe_ptr<core::basic_frame> receive(){return frame_;}
 		
+	virtual safe_ptr<core::basic_frame> last_frame() const
+	{
+		return frame_;
+	}
+
 	virtual std::wstring print() const
 	{
 		return L"image_producer[" + filename_ + L"]";
