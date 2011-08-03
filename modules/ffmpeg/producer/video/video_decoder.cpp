@@ -124,6 +124,8 @@ public:
 			std::shared_ptr<AVFrame> frame;
 
 			auto packet = packet_buffer_.front();
+
+			bool eof = false;
 		
 			if(packet)
 			{
@@ -135,7 +137,10 @@ public:
 			{
 				if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
 				{
-					AVPacket pkt = {0};
+					AVPacket pkt;
+					av_init_packet(&pkt);
+					pkt.data = nullptr;
+					pkt.size = 0;
 					frame = decode(pkt);
 				}
 
@@ -143,8 +148,11 @@ public:
 				{					
 					packet_buffer_.pop();
 					avcodec_flush_buffers(codec_context_.get());
+					eof = true;
 				}
 			}
+
+			CASPAR_VERIFY(!frame || frame->repeat_pict == 0);
 
 			std::vector<safe_ptr<AVFrame>> av_frames;
 
@@ -156,7 +164,7 @@ public:
 			BOOST_FOREACH(auto& frame, av_frames)
 				result.push_back(make_write_frame(this, frame, frame_factory_));
 
-			if(!packet)
+			if(eof)
 				result.push_back(nullptr);
 		}
 		
@@ -178,9 +186,12 @@ public:
 				boost::errinfo_api_function("avcodec_decode_video") <<
 				boost::errinfo_errno(AVUNERROR(ret)));
 		}
-
-		pkt.size -= ret;
-		pkt.data += ret;
+		
+		// if a decoder consumes less then the whole packet then something is wrong
+		// that might be just harmless padding at the end or a problem with the
+		// AVParser or demuxer which puted more then one frame in a AVPacket
+		pkt.data = nullptr;
+		pkt.size = 0;
 
 		if(frame_finished != 0)	
 		{

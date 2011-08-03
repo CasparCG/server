@@ -132,7 +132,7 @@ public:
 
 	void decode_frame()
 	{
-		for(int n = 0; n < 32 && ((muxer_.video_frames() < 2 && !video_decoder_.ready()) ||	(muxer_.audio_chunks() < 2 && !audio_decoder_.ready())); ++n) 
+		for(int n = 0; n < 32 && ((!muxer_.video_ready() && !video_decoder_.ready()) ||	(!muxer_.audio_ready() && !audio_decoder_.ready())); ++n) 
 		{
 			std::shared_ptr<AVPacket> pkt;
 			if(input_.try_pop(pkt))
@@ -148,12 +148,12 @@ public:
 		tbb::parallel_invoke(
 		[&]
 		{
-			if(muxer_.video_frames() < 2)
+			if(!muxer_.video_ready())
 				video_frames = video_decoder_.poll();
 		},
 		[&]
 		{
-			if(muxer_.audio_chunks() < 2)
+			if(!muxer_.audio_ready())
 				audio_samples = audio_decoder_.poll();
 		});
 		
