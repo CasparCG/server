@@ -155,9 +155,7 @@ public:
 					eof = true;
 				}
 			}
-
-			CASPAR_VERIFY(!frame || frame->repeat_pict == 0);
-
+			
 			std::vector<safe_ptr<AVFrame>> av_frames;
 
 			if(filter_)			
