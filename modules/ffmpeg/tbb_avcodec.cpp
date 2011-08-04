@@ -9,6 +9,7 @@
 
 #include <tbb/task.h>
 #include <tbb/atomic.h>
+#include <tbb/tbb_thread.h>
 
 #include <regex>
 #include <boost/algorithm/string.hpp>
@@ -42,6 +43,7 @@ int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg
 	tbb::atomic<int> counter;   
     counter = 0;   
 
+	CASPAR_ASSERT(tbb::tbb_thread::hardware_concurrency() < 16);
 	// Note: this will probably only work when tbb::task_scheduler_init::num_threads() < 16.
     tbb::parallel_for(tbb::blocked_range<int>(0, count, 2), [&](const tbb::blocked_range<int> &r)    
     {   
