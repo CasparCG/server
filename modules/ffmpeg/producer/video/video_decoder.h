@@ -39,7 +39,7 @@ public:
 	
 	void push(const std::shared_ptr<AVPacket>& packet);
 	bool ready() const;
-	std::vector<std::shared_ptr<core::write_frame>> poll();
+	std::vector<std::shared_ptr<AVFrame>> poll();
 
 	core::video_mode::type mode();
 

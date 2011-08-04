@@ -26,6 +26,14 @@ extern "C"
 
 namespace caspar {
 
+static core::video_mode::type get_mode(AVFrame& frame)
+{
+	if(!frame.interlaced_frame)
+		return core::video_mode::progressive;
+
+	return frame.top_field_first ? core::video_mode::upper : core::video_mode::lower;
+}
+
 static core::pixel_format::type get_pixel_format(PixelFormat pix_fmt)
 {
 	switch(pix_fmt)
@@ -194,6 +202,8 @@ static safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_
 		 
 		sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
 		pool.push(sws_context);
+
+		write->commit();
 	}
 	else
 	{
@@ -210,6 +220,8 @@ static safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_
 				for(size_t y = r.begin(); y != r.end(); ++y)
 					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 			});
+
+			write->commit(n);
 		});
 	}
 

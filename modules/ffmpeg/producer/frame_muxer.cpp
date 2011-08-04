@@ -129,7 +129,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	{
 	}
 
-	void push(const std::shared_ptr<write_frame>& video_frame)
+	void push(const std::shared_ptr<AVFrame>& video_frame)
 	{		
 		if(!video_frame)
 		{	
@@ -138,26 +138,56 @@ struct frame_muxer::implementation : boost::noncopyable
 			video_streams_.push_back(std::queue<safe_ptr<write_frame>>());
 			return;
 		}
+
+		if(video_frame->data[0] == nullptr)
+		{
+			video_streams_.back().push(make_safe<core::write_frame>(this));
+			++video_frame_count_;
+			process(frame_buffer_);
+			return;
+		}
 		
 		if(display_mode_ == display_mode::invalid)
 		{
-			display_mode_ = auto_mode_ ? get_display_mode(video_frame->get_type(), in_fps_, format_desc_.mode, format_desc_.fps) : display_mode::simple;
+			display_mode_ = auto_mode_ ? get_display_mode(get_mode(*video_frame), in_fps_, format_desc_.mode, format_desc_.fps) : display_mode::simple;
 			CASPAR_LOG(info) << L"display_mode: " << display_mode::print(display_mode_);
 		}		
+		
+		std::vector<safe_ptr<core::write_frame>> frames;
 
-		++video_frame_count_;
+		if(display_mode_ == display_mode::deinterlace)
+		{
+			if(!filter_)
+				filter_.reset(new filter(L"YADIF=0:-1"));
 
-		// Fix field-order if needed
-		if(video_frame->get_type() == core::video_mode::lower && format_desc_.mode == core::video_mode::upper)
-			video_frame->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(video_frame->get_pixel_format_desc().planes[0].height));
-		else if(video_frame->get_type() == core::video_mode::upper && format_desc_.mode == core::video_mode::lower)
-			video_frame->get_image_transform().set_fill_translation(0.0f, -0.5/static_cast<double>(video_frame->get_pixel_format_desc().planes[0].height));
+			BOOST_FOREACH(auto& frame, filter_->execute(video_frame))
+				frames.push_back(make_write_frame(this, frame, frame_factory_));
 
-		video_streams_.back().push(make_safe(video_frame));
+		}
+		else if(display_mode_ == display_mode::deinterlace_bob)
+		{
+			if(!filter_)
+				filter_.reset(new filter(L"YADIF=1:-1"));
 
-		process(frame_buffer_);
+			BOOST_FOREACH(auto& frame, filter_->execute(video_frame))
+				frames.push_back(make_write_frame(this, frame, frame_factory_));
+		}
+		else
+			frames.push_back(make_write_frame(this, make_safe(video_frame), frame_factory_));
 
-		video_frame->commit();
+		BOOST_FOREACH(auto& frame, frames)
+		{
+			// Fix field-order if needed
+			if(frame->get_type() == core::video_mode::lower && format_desc_.mode == core::video_mode::upper)
+				frame->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(frame->get_pixel_format_desc().planes[0].height));
+			else if(frame->get_type() == core::video_mode::upper && format_desc_.mode == core::video_mode::lower)
+				frame->get_image_transform().set_fill_translation(0.0f, -0.5/static_cast<double>(frame->get_pixel_format_desc().planes[0].height));
+
+			video_streams_.back().push(frame);
+			++video_frame_count_;
+
+			process(frame_buffer_);
+		}
 	}
 
 	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples)
@@ -235,7 +265,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			(video_streams_.front().empty() || audio_streams_.front().empty()))
 		{
 			if(!video_streams_.front().empty() || !audio_streams_.front().empty())
-				CASPAR_LOG(debug) << " Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
+				CASPAR_LOG(debug) << "Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
 
 			video_streams_.pop_front();
 			audio_streams_.pop_front();
@@ -250,8 +280,8 @@ struct frame_muxer::implementation : boost::noncopyable
 		case display_mode::duplicate:					return duplicate(dest);
 		case display_mode::half:						return half(dest);
 		case display_mode::interlace:					return interlace(dest);
-		case display_mode::deinterlace_bob:				return deinterlace_bob(dest);
-		case display_mode::deinterlace:					return deinterlace(dest);
+		case display_mode::deinterlace_bob:				return simple(dest);
+		case display_mode::deinterlace:					return simple(dest);
 		default:										BOOST_THROW_EXCEPTION(invalid_operation());
 		}
 	}
@@ -338,60 +368,11 @@ struct frame_muxer::implementation : boost::noncopyable
 
 		dest.push_back(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));		
 	}
-		
-	void deinterlace_bob(std::deque<safe_ptr<basic_frame>>& dest)
-	{
-		if(video_streams_.front().empty() || audio_streams_.front().size()/2 < format_desc_.audio_samples_per_frame)
-			return;
-
-		if(!filter_)
-			filter_.reset(new filter(L"YADIF=1:-1"));
-		
-		auto frame = pop_video();
-
-		auto av_frames = filter_->execute(as_av_frame(frame));
-
-		if(av_frames.size() < 2)
-			return;
-
-		auto frame1 = make_write_frame(frame->tag(), av_frames.at(0), frame_factory_);
-		frame1->commit();
-		frame1->audio_data() = pop_audio();
-		
-		auto frame2 = make_write_frame(frame->tag(), av_frames.at(1), frame_factory_);
-		frame2->commit();
-		frame2->audio_data() = pop_audio();
-		
-		dest.push_back(frame1);
-		dest.push_back(frame2);
-	}
-
-	void deinterlace(std::deque<safe_ptr<basic_frame>>& dest)
-	{
-		if(video_streams_.front().empty() || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
-			return;
-
-		if(!filter_)
-			filter_.reset(new filter(L"YADIF=0:-1"));
-		
-		auto frame = pop_video();
-				
-		auto av_frames = filter_->execute(as_av_frame(frame));
-
-		if(av_frames.empty())
-			return;
-
-		auto frame1 = make_write_frame(frame->tag(), av_frames.at(0), frame_factory_);
-		frame1->commit();
-		frame1->audio_data() = pop_audio();
-				
-		dest.push_back(frame1);
-	}
 };
 
 frame_muxer::frame_muxer(double in_fps, const video_format_desc& format_desc, const safe_ptr<core::frame_factory>& frame_factory)
 	: impl_(new implementation(in_fps, format_desc, frame_factory)){}
-void frame_muxer::push(const std::shared_ptr<write_frame>& video_frame){impl_->push(video_frame);}
+void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame){impl_->push(video_frame);}
 void frame_muxer::push(const std::shared_ptr<std::vector<int16_t>>& audio_samples){return impl_->push(audio_samples);}
 safe_ptr<basic_frame> frame_muxer::pop(){return impl_->pop();}
 size_t frame_muxer::size() const {return impl_->size();}
