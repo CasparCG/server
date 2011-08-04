@@ -65,6 +65,7 @@ struct image_kernel::implementation : boost::noncopyable
 			"}																					\n";
 
 		std::string fragment = std::string() +
+			"#version 120																		\n"
 			"uniform sampler2D	background;														\n"
 			"uniform sampler2D	plane[4];														\n"
 			"uniform sampler2D	local_key;														\n"

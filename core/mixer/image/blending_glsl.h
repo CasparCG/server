@@ -226,7 +226,7 @@ static std::string get_blend_glsl()
 		"\n	** Details: http://blog.mouaif.org/2009/01/22/photoshop-gamma-correction-shader/																																   "
 		"\n	*/																																																				   "
 		"\n																																																					   "
-		"\n#define GammaCorrection(color, gamma)								pow(color, 1.0 / gamma)				\n																										   "
+		"\n#define GammaCorrection(color, gamma)								pow(color, vec3(1.0 / gamma))				\n																										   "
 		"\n																																																					   "
 		"\n	/*																																																				   "
 		"\n	** Levels control (input (+gamma), output)																																										   "
