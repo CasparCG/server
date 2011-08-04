@@ -123,8 +123,6 @@ struct frame_muxer::implementation : boost::noncopyable
 		, auto_mode_(env::properties().get("configuration.auto-mode", false))
 		, audio_sample_count_(0)
 		, video_frame_count_(0)
-		, processed_audio_sample_count_(0)
-		, processed_video_frame_count_(0)
 		, frame_factory_(frame_factory)
 		, video_streams_(1)
 		, audio_streams_(1)
@@ -135,9 +133,8 @@ struct frame_muxer::implementation : boost::noncopyable
 	{		
 		if(!video_frame)
 		{	
-			CASPAR_LOG(debug) << L"video-frame-count: " << static_cast<float>(video_frame_count_) << L":" << processed_video_frame_count_;
+			CASPAR_LOG(debug) << L"video-frame-count: " << static_cast<float>(video_frame_count_);
 			video_frame_count_ = 0;
-			processed_video_frame_count_ = 0;
 			video_streams_.push_back(std::queue<safe_ptr<write_frame>>());
 			return;
 		}
@@ -167,10 +164,8 @@ struct frame_muxer::implementation : boost::noncopyable
 	{
 		if(!audio_samples)	
 		{
-			CASPAR_LOG(debug) << L"audio-chunk-count: " << static_cast<float>(audio_sample_count_)/format_desc_.audio_samples_per_frame << L":" << processed_audio_sample_count_/format_desc_.audio_samples_per_frame;
-			CASPAR_LOG(debug) << L"audio-sample-count: " << audio_sample_count_ << L":" << processed_audio_sample_count_;
+			CASPAR_LOG(debug) << L"audio-chunk-count: " << audio_sample_count_/format_desc_.audio_samples_per_frame;
 			audio_streams_.push_back(std::vector<int16_t>());
-			processed_audio_sample_count_ = 0;
 			audio_sample_count_ = 0;
 			return;
 		}
@@ -197,9 +192,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	{
 		auto frame = video_streams_.front().front();
 		video_streams_.front().pop();
-
-		++processed_video_frame_count_;
-
+		
 		return frame;
 	}
 
@@ -212,8 +205,6 @@ struct frame_muxer::implementation : boost::noncopyable
 
 		auto samples = std::vector<int16_t>(begin, end);
 		audio_streams_.front().erase(begin, end);
-
-		processed_audio_sample_count_ += format_desc_.audio_samples_per_frame;
 
 		return samples;
 	}
