@@ -65,7 +65,7 @@ struct video_decoder::implementation : boost::noncopyable
 
 	std::queue<std::shared_ptr<AVPacket>>	packet_buffer_;
 
-	std::unique_ptr<filter>					filter_;
+	filter									filter_;
 
 	double									fps_;
 	int64_t									nb_frames_;
@@ -73,7 +73,7 @@ public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) 
 		: frame_factory_(frame_factory)
 		, mode_(core::video_mode::invalid)
-		, filter_(filter.empty() ? nullptr : new caspar::filter(filter))
+		, filter_(filter)
 		, fps_(frame_factory_->get_video_format_desc().fps)
 		, nb_frames_(0)
 	{
@@ -125,15 +125,12 @@ public:
 		}
 		else if(!packet_buffer_.empty())
 		{
-			std::shared_ptr<AVFrame> frame;
-
 			auto packet = packet_buffer_.front();
-
-			bool eof = false;
-		
+					
 			if(packet)
 			{
-				frame = decode(*packet);	
+				auto frame = decode(*packet);
+				boost::range::push_back(result, filter_.execute(frame));
 				if(packet->size == 0)
 					packet_buffer_.pop();
 			}
@@ -145,29 +142,17 @@ public:
 					av_init_packet(&pkt);
 					pkt.data = nullptr;
 					pkt.size = 0;
-					frame = decode(pkt);
+					auto frame = decode(pkt);
+					boost::range::push_back(result, filter_.execute(frame));	
 				}
 
-				if(!frame)
+				if(result.empty())
 				{					
 					packet_buffer_.pop();
 					avcodec_flush_buffers(codec_context_.get());
-					eof = true;
+					result.push_back(nullptr);
 				}
 			}
-			
-			std::vector<safe_ptr<AVFrame>> av_frames;
-
-			if(filter_)			
-				av_frames = filter_->execute(frame);			
-			else if(frame)
-				av_frames.push_back(make_safe(frame));
-						
-			BOOST_FOREACH(auto& frame, av_frames)
-				result.push_back(frame);
-
-			if(eof)
-				result.push_back(nullptr);
 		}
 		
 		return result;

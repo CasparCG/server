@@ -33,6 +33,20 @@ extern "C"
 
 namespace caspar {
 	
+PixelFormat pix_fmts[] = 
+{
+	PIX_FMT_YUV420P,
+	PIX_FMT_YUVA420P,
+	PIX_FMT_YUV422P,
+	PIX_FMT_YUV444P,
+	PIX_FMT_YUV411P,
+	PIX_FMT_ARGB, 
+	PIX_FMT_RGBA,
+	PIX_FMT_ABGR,
+	PIX_FMT_GRAY8,
+	PIX_FMT_NONE
+};	
+
 struct filter::implementation
 {
 	std::string						filters_;
@@ -42,7 +56,7 @@ struct filter::implementation
 	std::shared_ptr<void>			parallel_yadif_ctx_;
 		
 	implementation(const std::wstring& filters) 
-		: filters_(filters.empty() ? "null" : narrow(filters))
+		: filters_(narrow(filters))
 		, parallel_yadif_ctx_(nullptr)
 	{
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
@@ -50,15 +64,18 @@ struct filter::implementation
 	
 	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame)
 	{
+		if(!frame)
+			return std::vector<safe_ptr<AVFrame>>();
+
+		if(filters_.empty())
+			return boost::assign::list_of(frame);
+
 		push(frame);
 		return poll();
 	}
 
 	void push(const std::shared_ptr<AVFrame>& frame)
 	{		
-		if(!frame)
-			return;
-
 		int errn = 0;	
 
 		if(!graph_)
@@ -75,19 +92,6 @@ struct filter::implementation
 					boost::errinfo_api_function("avfilter_graph_create_filter") <<	boost::errinfo_errno(AVUNERROR(errn)));
 			}
 
-			PixelFormat pix_fmts[] = 
-			{
-				PIX_FMT_YUV420P,
-				PIX_FMT_YUVA420P,
-				PIX_FMT_YUV422P,
-				PIX_FMT_YUV444P,
-				PIX_FMT_YUV411P,
-				PIX_FMT_ARGB, 
-				PIX_FMT_RGBA,
-				PIX_FMT_ABGR,
-				PIX_FMT_GRAY8,
-				PIX_FMT_NONE
-			};	
 			// OPIX_FMT_BGRAutput
 			errn = avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts, graph_.get());
 			if(errn < 0)
