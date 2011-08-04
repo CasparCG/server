@@ -195,9 +195,9 @@ public:
 
 		if(frame_finished != 0)	
 		{
-			return decoded_frame;
 			if(decoded_frame->repeat_pict != 0)
 				CASPAR_LOG(warning) << "video_decoder: repeat_pict not implemented.";
+			return decoded_frame;
 		}
 
 		return nullptr;
