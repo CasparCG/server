@@ -135,7 +135,7 @@ public:
 			}
 			else
 			{
-				if(codec_context_->codec->capabilities | CODEC_CAP_DELAY)
+				if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 				{
 					AVPacket pkt;
 					av_init_packet(&pkt);
