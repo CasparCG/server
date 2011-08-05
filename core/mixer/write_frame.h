@@ -62,6 +62,8 @@ public:
 	virtual const void* tag() const;
 
 	const core::pixel_format_desc& get_pixel_format_desc() const;
+
+	virtual std::wstring print() const;
 	
 private:
 	friend class image_mixer;
