@@ -60,11 +60,14 @@ bool operator==(const render_item& lhs, const render_item& rhs)
 
 struct image_mixer::implementation : boost::noncopyable
 {		
+	typedef std::deque<render_item> stream;
+	typedef std::deque<stream>		layer;
+
 	video_channel_context&					channel_;
 	
 	std::stack<core::image_transform>		transform_stack_;
 
-	std::queue<std::queue<std::deque<render_item>>>	render_queue_; // layer/stream/items
+	std::queue<layer>						layers_; // layer/stream/items
 	
 	std::unique_ptr<image_kernel>			kernel_;
 		
@@ -117,15 +120,20 @@ public:
 
 		render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.top()*frame.get_image_transform(), frame.tag()};	
 
-		auto& layer = render_queue_.back();
+		auto& layer = layers_.back();
 
-		if(layer.empty() || (!layer.back().empty() && layer.back().back().tag != frame.tag()))
-			layer.push(std::deque<render_item>());
-		
-		auto& stream = layer.back();
-		
-		if(std::find(stream.begin(), stream.end(), item) == stream.end())
-			stream.push_back(item);
+		auto stream_it = std::find_if(layer.begin(), layer.end(), [&](stream& stream)
+		{
+			return stream.front().tag == item.tag;
+		});
+
+		if(stream_it == layer.end())
+			layer.push_back(stream(1, item));
+		else	
+		{
+			if(std::find(stream_it->begin(), stream_it->end(), item) == stream_it->end())
+				stream_it->push_back(item);		
+		}
 	}
 
 	void end()
@@ -135,7 +143,7 @@ public:
 
 	void begin_layer()
 	{
-		render_queue_.push(std::queue<std::deque<render_item>>());
+		layers_.push(layer());
 	}
 
 	void end_layer()
@@ -144,18 +152,18 @@ public:
 	
 	boost::unique_future<safe_ptr<host_buffer>> render()
 	{		
-		auto render_queue = std::move(render_queue_);
+		auto layers = std::move(layers_);
 
 		return channel_.ogl().begin_invoke([=]() mutable -> safe_ptr<host_buffer>
 		{			
 			if(channel_.get_format_desc().width != write_buffer_->width() || channel_.get_format_desc().height != write_buffer_->height())
 				initialize_buffers();
 
-			return do_render(std::move(render_queue));
+			return do_render(std::move(layers));
 		});
 	}
 	
-	safe_ptr<host_buffer> do_render(std::queue<std::queue<std::deque<render_item>>>&& render_queue)
+	safe_ptr<host_buffer> do_render(std::queue<layer>&& layers)
 	{
 		auto read_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
 
@@ -168,17 +176,17 @@ public:
 		bool local_key = false;
 		bool layer_key = false;
 
-		while(!render_queue.empty())
+		while(!layers.empty())
 		{			
 			stream_key_buffer_[0]->clear();
 
-			auto layer = std::move(render_queue.front());
-			render_queue.pop();
+			auto layer = std::move(layers.front());
+			layers.pop();
 
 			while(!layer.empty())
 			{
 				auto stream = std::move(layer.front());
-				layer.pop();
+				layer.pop_front();
 								
 				render(stream, local_key, layer_key);
 				
@@ -202,11 +210,11 @@ public:
 		return read_buffer;
 	}
 
-	void render(std::deque<render_item>& stream, bool local_key, bool layer_key)
+	void render(stream& stream, bool local_key, bool layer_key)
 	{
 		CASPAR_ASSERT(!stream.empty());
 				
-		if(stream.front().transform.get_is_key())
+ 		if(stream.front().transform.get_is_key())
 		{
 			stream_key_buffer_[1]->attach();
 			

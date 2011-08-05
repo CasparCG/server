@@ -54,6 +54,15 @@ public:
 			frame->accept(visitor);
 		visitor.end();
 	}	
+
+	std::wstring print() const
+	{
+		std::wstring str = L"\tbasic_frame[\n";
+		BOOST_FOREACH(auto& frame, frames_)
+			str += frame->print() + L"\n";
+		str += L"\n]";
+		return str;
+	}
 };
 	
 basic_frame::basic_frame() : impl_(new implementation(std::vector<safe_ptr<basic_frame>>())){}
@@ -82,6 +91,8 @@ const image_transform& basic_frame::get_image_transform() const { return impl_->
 image_transform& basic_frame::get_image_transform() { return impl_->image_transform_;}
 const audio_transform& basic_frame::get_audio_transform() const { return impl_->audio_transform_;}
 audio_transform& basic_frame::get_audio_transform() { return impl_->audio_transform_;}
+
+std::wstring basic_frame::print() const{return impl_->print();}
 
 safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, video_mode::type mode)
 {			
