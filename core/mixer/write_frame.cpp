@@ -28,6 +28,8 @@
 #include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
 
+#include <boost/lexical_cast.hpp>
+
 namespace caspar { namespace core {
 																																							
 struct write_frame::implementation
@@ -110,6 +112,11 @@ struct write_frame::implementation
 			texture->read(*buffer);
 		}, high_priority);
 	}
+
+	std::wstring print() const
+	{
+		return L"write_frame[" + boost::lexical_cast<std::wstring>(tag_) + L"]";
+	}
 };
 	
 write_frame::write_frame(const void* tag) : impl_(new implementation(tag)){}
@@ -135,5 +142,6 @@ void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
 void write_frame::set_type(const video_mode::type& mode){impl_->mode_ = mode;}
 core::video_mode::type write_frame::get_type() const{return impl_->mode_;}
+std::wstring write_frame::print() const{return impl_->print();}
 
 }}
