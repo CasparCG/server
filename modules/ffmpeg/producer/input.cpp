@@ -77,34 +77,13 @@ public:
 		, start_(std::max(start, 0))
 	{			
 		is_running_ = true;
-
-		int ret;
-
+		
 		AVFormatContext* weak_format_context_ = nullptr;
-		ret = avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr);
-		if(ret < 0 || weak_format_context_ == nullptr)
-		{	
-			BOOST_THROW_EXCEPTION(
-				file_read_error() << 
-				source_info(narrow(print())) << 
-				msg_info(av_error_str(ret)) <<
-				boost::errinfo_api_function("av_open_input_file") <<
-				boost::errinfo_errno(AVUNERROR(ret)) <<
-				boost::errinfo_file_name(narrow(filename)));
-		}
+		THROW_ON_ERROR2(avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr), print());
 
 		format_context_.reset(weak_format_context_, av_close_input_file);
 			
-		ret = avformat_find_stream_info(format_context_.get(), nullptr);
-		if(ret < 0)
-		{	
-			BOOST_THROW_EXCEPTION(
-				file_read_error() << 
-				source_info(narrow(print())) << 
-				msg_info(av_error_str(ret)) <<
-				boost::errinfo_api_function("av_find_stream_info") <<
-				boost::errinfo_errno(AVUNERROR(ret)));
-		}
+		THROW_ON_ERROR2(avformat_find_stream_info(format_context_.get(), nullptr), print());
 		
 		if(start_ != 0)			
 			seek_frame(start_);
@@ -172,7 +151,9 @@ private:
 	}
 			
 	void read_next_packet()
-	{			
+	{		
+		int ret = 0;
+
 		std::shared_ptr<AVPacket> read_packet(new AVPacket, [](AVPacket* p)
 		{
 			av_free_packet(p);
@@ -180,8 +161,9 @@ private:
 		});
 		av_init_packet(read_packet.get());
 
-		const int ret = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame.
-		if(is_eof(ret))														     // Use av_dup_packet to extend its life.
+		ret = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
+		
+		if(is_eof(ret))														     
 		{
 			if(loop_)
 			{
@@ -195,27 +177,11 @@ private:
 				CASPAR_LOG(trace) << print() << " Received EOF. Stopping.";
 			}
 		}
-		else if(ret < 0)
-		{
-			BOOST_THROW_EXCEPTION(
-				file_read_error() <<
-				msg_info(av_error_str(ret)) <<
-				source_info(narrow(print())) << 
-				boost::errinfo_api_function("av_read_frame") <<
-				boost::errinfo_errno(AVUNERROR(ret)));
-		}
 		else
 		{		
-			const int ret = av_dup_packet(read_packet.get());
-			if(ret < 0)
-			{
-				BOOST_THROW_EXCEPTION(
-					invalid_operation() <<
-					msg_info(av_error_str(ret)) <<
-					source_info(narrow(print())) << 
-					boost::errinfo_api_function("av_dup_packet") <<
-					boost::errinfo_errno(AVUNERROR(ret)));
-			}
+			THROW_ON_ERROR(ret, print(), "av_read_frame");
+
+			THROW_ON_ERROR2(av_dup_packet(read_packet.get()), print());
 				
 			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
 			auto size = read_packet->size;
@@ -245,28 +211,11 @@ private:
 		static const AVRational base_q = {1, AV_TIME_BASE};
 
 		int stream_index = av_find_default_stream_index(format_context_.get());
-		
-		if(stream_index < 0)
-		{	
-			BOOST_THROW_EXCEPTION(
-				invalid_operation() << 
-				source_info(narrow(print())) << 
-				msg_info(av_error_str(stream_index)) <<
-				boost::errinfo_api_function("av_find_default_stream_index") <<
-				boost::errinfo_errno(AVUNERROR(stream_index)));
-		}
+		THROW_ON_ERROR(stream_index, print(), "av_find_default_stream_index");
 						
 		const int ret = av_seek_frame(format_context_.get(), stream_index, frame, flags);
-		if(ret < 0)
-		{	
-			BOOST_THROW_EXCEPTION(
-				invalid_operation() << 
-				source_info(narrow(print())) << 
-				msg_info(av_error_str(ret)) <<
-				boost::errinfo_api_function("av_seek_frame") <<
-				boost::errinfo_errno(AVUNERROR(ret)));
-		}
-
+		THROW_ON_ERROR(ret, print(), "av_seek_frame");
+		
 		buffer_.push(nullptr);
 	}		
 

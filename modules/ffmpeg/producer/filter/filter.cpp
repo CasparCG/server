@@ -76,7 +76,6 @@ struct filter::implementation
 
 	void push(const std::shared_ptr<AVFrame>& frame)
 	{		
-		int errn = 0;	
 
 		if(!graph_)
 		{
@@ -85,20 +84,10 @@ struct filter::implementation
 			// Input
 			std::stringstream args;
 			args << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
-			errn = avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get());
-			if(errn < 0)
-			{
-				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
-					boost::errinfo_api_function("avfilter_graph_create_filter") <<	boost::errinfo_errno(AVUNERROR(errn)));
-			}
+			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get()), "[filter]");
 
 			// OPIX_FMT_BGRAutput
-			errn = avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts, graph_.get());
-			if(errn < 0)
-			{
-				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
-					boost::errinfo_api_function("avfilter_graph_create_filter") << boost::errinfo_errno(AVUNERROR(errn)));
-			}
+			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts, graph_.get()), "[filter]");
 			
 			AVFilterInOut* outputs = avfilter_inout_alloc();
 			AVFilterInOut* inputs  = avfilter_inout_alloc();
@@ -113,23 +102,14 @@ struct filter::implementation
 			inputs->pad_idx			= 0;
 			inputs->next			= NULL;
 			
-			errn = avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL);
+			int ret = avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL);
 
 			avfilter_inout_free(&inputs);
 			avfilter_inout_free(&outputs);
-
-			if(errn < 0)
-			{
-				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) <<
-					boost::errinfo_api_function("avfilter_graph_parse") << boost::errinfo_errno(AVUNERROR(errn)));
-			}
 			
-			errn = avfilter_graph_config(graph_.get(), NULL);
-			if(errn < 0)
-			{
-				BOOST_THROW_EXCEPTION(caspar_exception() <<	msg_info(av_error_str(errn)) 
-					<<	boost::errinfo_api_function("avfilter_graph_config") <<	boost::errinfo_errno(AVUNERROR(errn)));
-			}
+			THROW_ON_ERROR(ret, "[filter]", "avfilter_graph_parse");
+						
+			THROW_ON_ERROR2(avfilter_graph_config(graph_.get(), NULL), "[filter]");
 
 			for(size_t n = 0; n < graph_->filter_count; ++n)
 			{
@@ -139,12 +119,7 @@ struct filter::implementation
 			}
 		}
 	
-		errn = av_vsrc_buffer_add_frame(buffersrc_ctx_, frame.get(), 0);
-		if(errn < 0)
-		{
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(av_error_str(errn)) <<
-				boost::errinfo_api_function("av_vsrc_buffer_add_frame") << boost::errinfo_errno(AVUNERROR(errn)));
-		}
+		THROW_ON_ERROR2(av_vsrc_buffer_add_frame(buffersrc_ctx_, frame.get(), 0), "[filter]");
 	}
 
 	std::vector<safe_ptr<AVFrame>> poll()
@@ -157,7 +132,8 @@ struct filter::implementation
 		while (avfilter_poll_frame(buffersink_ctx_->inputs[0])) 
 		{
 			AVFilterBufferRef *picref;
-            av_vsink_buffer_get_video_buffer_ref(buffersink_ctx_, &picref, 0);
+			THROW_ON_ERROR2(av_vsink_buffer_get_video_buffer_ref(buffersink_ctx_, &picref, 0), "[filter]");
+
             if (picref) 
 			{		
 				safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
