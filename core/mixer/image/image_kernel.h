@@ -24,16 +24,28 @@
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/image_transform.h>
 
+#include <boost/noncopyable.hpp>
+
 namespace caspar { namespace core {
 	
 class device_buffer;
 
-class image_kernel
+struct render_item
+{
+	pixel_format_desc						pix_desc;
+	std::vector<safe_ptr<device_buffer>>	textures;
+	image_transform							transform;
+	video_mode::type						mode;
+	const void*								tag;
+};
+
+bool operator==(const render_item& lhs, const render_item& rhs);
+
+class image_kernel : boost::noncopyable
 {
 public:
 	image_kernel();
-	void draw(size_t width,  size_t height, const core::pixel_format_desc& pix_desc,  const core::image_transform& transform, core::video_mode::type mode, const std::vector<safe_ptr<device_buffer>>& planes, 
-			  const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key = nullptr, const std::shared_ptr<device_buffer>& layer_key = nullptr);
+	void draw(const render_item& item, const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key = nullptr, const std::shared_ptr<device_buffer>& layer_key = nullptr);
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

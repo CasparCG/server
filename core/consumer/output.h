@@ -25,13 +25,9 @@
 
 #include <boost/noncopyable.hpp>
 
-namespace caspar { 
+namespace caspar { namespace core {
 	
-class executor;
-	
-namespace core {
-	
-class video_channel_context;;
+class video_channel_context;
 
 class output : boost::noncopyable
 {

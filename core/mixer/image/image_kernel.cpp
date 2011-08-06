@@ -52,10 +52,13 @@ GLubyte lower_pattern[] = {
 struct image_kernel::implementation : boost::noncopyable
 {	
 	std::unique_ptr<shader> shader_;
+
+	std::string vertex_;
+	std::string fragment_;
 	
 	implementation()
 	{
-		std::string vertex = 
+		vertex_ = 
 			"void main()																		\n"
 			"{																					\n"
 			"	gl_TexCoord[0] = gl_MultiTexCoord0;												\n"
@@ -64,7 +67,7 @@ struct image_kernel::implementation : boost::noncopyable
 			"	gl_Position    = ftransform();													\n"
 			"}																					\n";
 
-		std::string fragment = std::string() +
+		fragment_ =
 			"#version 120																		\n"
 			"uniform sampler2D	background;														\n"
 			"uniform sampler2D	plane[4];														\n"
@@ -228,40 +231,42 @@ struct image_kernel::implementation : boost::noncopyable
 			"	if(has_layer_key)																\n"
 			"		color.a *= texture2D(layer_key, gl_TexCoord[1].st).r;						\n"
 			"	gl_FragColor = blend_color(color.bgra * gl_Color);								\n"
-			"}																					\n"
-			;
-
-			shader_.reset(new shader(vertex, fragment));
+			"}																					\n";
 	}
 
 	
-	void draw(size_t										width, 
-			  size_t										height, 
-			  const core::pixel_format_desc&				pix_desc, 
-			  const core::image_transform&					transform,
-			  core::video_mode::type						mode, 
-			  const std::vector<safe_ptr<device_buffer>>&	planes, 
+	void draw(const render_item&							item,
 			  const safe_ptr<device_buffer>&				background,
 			  const std::shared_ptr<device_buffer>&			local_key,			  
 			  const std::shared_ptr<device_buffer>&			layer_key)
 	{
-		if(planes.empty())
+		static const double epsilon = 0.001;
+
+		CASPAR_ASSERT(item.pix_desc.planes.size() == item.textures.size());
+
+		if(item.textures.empty())
 			return;
+
+		if(item.transform.get_opacity() < epsilon)
+			return;
+
+		if(!shader_)
+			shader_.reset(new shader(vertex_, fragment_));
 
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glEnable(GL_POLYGON_STIPPLE));
 			
-		if(mode == core::video_mode::upper)
+		if(item.mode == core::video_mode::upper)
 			glPolygonStipple(upper_pattern);
-		else if(mode == core::video_mode::lower)
+		else if(item.mode == core::video_mode::lower)
 			glPolygonStipple(lower_pattern);
 		else
 			GL(glDisable(GL_POLYGON_STIPPLE));
 
 		// Bind textures
 
-		for(size_t n = 0; n < planes.size(); ++n)
-			planes[n]->bind(n);
+		for(size_t n = 0; n < item.textures.size(); ++n)
+			item.textures[n]->bind(n);
 
 		if(local_key)
 			local_key->bind(4);
@@ -282,20 +287,20 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("local_key",		4);
 		shader_->set("layer_key",		5);
 		shader_->set("background",		6);
-		shader_->set("is_hd",			pix_desc.planes.at(0).height > 700 ? 1 : 0);
+		shader_->set("is_hd",			item.pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	local_key ? 1 : 0);
 		shader_->set("has_layer_key",	layer_key ? 1 : 0);
-		shader_->set("blend_mode",		transform.get_is_key() ? core::image_transform::blend_mode::normal : transform.get_blend_mode());
-		shader_->set("alpha_mode",		transform.get_alpha_mode());
-		shader_->set("pixel_format",	pix_desc.pix_fmt);	
+		shader_->set("blend_mode",		item.transform.get_is_key() ? core::image_transform::blend_mode::normal : item.transform.get_blend_mode());
+		shader_->set("alpha_mode",		item.transform.get_alpha_mode());
+		shader_->set("pixel_format",	item.pix_desc.pix_fmt);	
 
-		auto levels = transform.get_levels();
+		auto levels = item.transform.get_levels();
 
-		if(levels.min_input  > 0.001 ||
-		   levels.max_input  < 0.999 ||
-		   levels.min_output > 0.001 ||
-		   levels.max_output < 0.999 ||
-		   std::abs(levels.gamma - 1.0) > 0.001)
+		if(levels.min_input  > epsilon		||
+		   levels.max_input  < 1.0-epsilon	||
+		   levels.min_output > epsilon		||
+		   levels.max_output < 1.0-epsilon	||
+		   std::abs(levels.gamma - 1.0) > epsilon)
 		{
 			shader_->set("levels", true);	
 			shader_->set("min_input", levels.min_input);	
@@ -307,34 +312,34 @@ struct image_kernel::implementation : boost::noncopyable
 		else
 			shader_->set("levels", false);	
 
-		if(std::abs(transform.get_brightness() - 1.0) > 0.001 ||
-		   std::abs(transform.get_saturation() - 1.0) > 0.001 ||
-		   std::abs(transform.get_contrast() - 1.0) > 0.001)
+		if(std::abs(item.transform.get_brightness() - 1.0) > epsilon ||
+		   std::abs(item.transform.get_saturation() - 1.0) > epsilon ||
+		   std::abs(item.transform.get_contrast() - 1.0) > epsilon)
 		{
 			shader_->set("csb",	true);	
 			
-			shader_->set("brt", transform.get_brightness());	
-			shader_->set("sat", transform.get_saturation());
-			shader_->set("con", transform.get_contrast());
+			shader_->set("brt", item.transform.get_brightness());	
+			shader_->set("sat", item.transform.get_saturation());
+			shader_->set("con", item.transform.get_contrast());
 		}
 		else
 			shader_->set("csb",	false);	
 		
 		// Setup drawing area
 
-		GL(glColor4d(transform.get_gain(), transform.get_gain(), transform.get_gain(), transform.get_opacity()));
-		GL(glViewport(0, 0, width, height));
+		GL(glColor4d(item.transform.get_gain(), item.transform.get_gain(), item.transform.get_gain(), item.transform.get_opacity()));
+		GL(glViewport(0, 0, background->width(), background->height()));
 						
-		auto m_p = transform.get_clip_translation();
-		auto m_s = transform.get_clip_scale();
-		double w = static_cast<double>(width);
-		double h = static_cast<double>(height);
+		auto m_p = item.transform.get_clip_translation();
+		auto m_s = item.transform.get_clip_scale();
+		double w = static_cast<double>(background->width());
+		double h = static_cast<double>(background->height());
 
 		GL(glEnable(GL_SCISSOR_TEST));
 		GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
 			
-		auto f_p = transform.get_fill_translation();
-		auto f_s = transform.get_fill_scale();
+		auto f_p = item.transform.get_fill_translation();
+		auto f_s = item.transform.get_fill_scale();
 		
 		// Draw
 
@@ -351,11 +356,14 @@ struct image_kernel::implementation : boost::noncopyable
 };
 
 image_kernel::image_kernel() : impl_(new implementation()){}
-
-void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, core::video_mode::type mode, const std::vector<safe_ptr<device_buffer>>& planes, 
-							  const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
+void image_kernel::draw(const render_item& item, const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
 {
-	impl_->draw(width, height, pix_desc, transform, mode, planes, background, local_key, layer_key);
+	impl_->draw(item, background, local_key, layer_key);
+}
+
+bool operator==(const render_item& lhs, const render_item& rhs)
+{
+	return lhs.textures == rhs.textures && lhs.transform == rhs.transform && lhs.tag == rhs.tag && lhs.mode == rhs.mode;
 }
 
 }}

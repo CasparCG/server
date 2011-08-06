@@ -42,15 +42,14 @@ public:
 	basic_frame(const safe_ptr<basic_frame>& frame);
 	basic_frame(safe_ptr<basic_frame>&& frame);
 	basic_frame(const std::vector<safe_ptr<basic_frame>>& frames);
-
-	void swap(basic_frame& other);
-	
 	basic_frame(const basic_frame& other);
 	basic_frame(basic_frame&& other);
 
 	basic_frame& operator=(const basic_frame& other);
 	basic_frame& operator=(basic_frame&& other);
 	
+	void swap(basic_frame& other);
+
 	const image_transform& get_image_transform() const;
 	image_transform& get_image_transform();
 
