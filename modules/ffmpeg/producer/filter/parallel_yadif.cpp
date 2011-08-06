@@ -105,7 +105,7 @@ std::shared_ptr<void> make_parallel_yadif(AVFilterContext* ctx)
 
 	decltype(org_yadif_filter_line) func = nullptr;
 	if(!parallel_line_func_pool.try_pop(func))	
-		CASPAR_LOG(warning) << "Not enough scalable-yadif instances. Running non-scalable";
+		CASPAR_LOG(warning) << "Not enough scalable-yadif context instances. Running non-scalable";
 	else
 		yadif->filter_line = func;
 	
