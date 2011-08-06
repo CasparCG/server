@@ -64,14 +64,14 @@ struct ffmpeg_producer : public core::frame_producer
 	audio_decoder									audio_decoder_;
 	
 	frame_muxer										muxer_;
-	
-	tbb::task_group									tasks_;
 
-	int												start_;
+	const int										start_;
 	int64_t											nb_frames_;
-	bool											loop_;
+	const bool										loop_;
 
 	safe_ptr<core::basic_frame>						last_frame_;
+	
+	tbb::task_group									tasks_;
 
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
@@ -79,7 +79,7 @@ public:
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
-		, input_(safe_ptr<diagnostics::graph>(graph_), filename_, loop, start, length)
+		, input_(graph_, filename_, loop, start, length)
 		, video_decoder_(input_.context(), frame_factory, filter)
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
 		, muxer_(video_decoder_.fps(), format_desc_, frame_factory)
@@ -107,22 +107,16 @@ public:
 
 		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 		
-		auto frame = core::basic_frame::late();
+		if(!muxer_.empty())
+			return last_frame_ = muxer_.pop();	
 
-		if(muxer_.empty())
-		{
-			if(input_.eof())
-				frame = core::basic_frame::eof();
-			else
-			{
-				graph_->add_tag("underflow");	
-				++nb_frames_;
-			}
-		}
-		else		
-			frame = last_frame_ = muxer_.pop();		
-		
-		return frame;
+		if(input_.eof())
+			return core::basic_frame::eof();
+
+		graph_->add_tag("underflow");	
+		++nb_frames_;		
+
+		return core::basic_frame::late();
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const
