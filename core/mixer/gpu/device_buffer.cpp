@@ -103,6 +103,8 @@ public:
 		GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		target.unbind();
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
+		target.fence_set();
+		glFlush();
 	}
 
 	void attach(int index)

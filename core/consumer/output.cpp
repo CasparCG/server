@@ -134,7 +134,7 @@ public:
 
 					auto frame = consumer->key_only() ? key : fill;
 
-					if(static_cast<size_t>(frame->image_data().size()) == consumer->get_video_format_desc().size)
+					if(frame->image_size() == consumer->get_video_format_desc().size)
 						consumer->send(frame);
 
 					++it;

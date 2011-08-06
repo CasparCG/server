@@ -28,6 +28,7 @@ namespace caspar { namespace core {
 struct host_buffer::implementation : boost::noncopyable
 {	
 	GLuint pbo_;
+	GLuint fence_;
 
 	const size_t size_;
 
@@ -42,6 +43,7 @@ public:
 		, pbo_(0)
 		, target_(usage == write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
 		, usage_(usage == write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
+		, fence_(0)
 	{
 		GL(glGenBuffers(1, &pbo_));
 		GL(glBindBuffer(target_, pbo_));
@@ -59,6 +61,9 @@ public:
 	{
 		try
 		{
+			if(fence_)
+				glDeleteFencesNV(1, &fence_);
+
 			GL(glDeleteBuffers(1, &pbo_));
 		}
 		catch(...)
@@ -76,7 +81,7 @@ public:
 			GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
 		
 		GL(glBindBuffer(target_, pbo_));
-		data_ = glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY);  
+		data_ = GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
 		GL(glBindBuffer(target_, 0)); 
 		if(!data_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
@@ -102,6 +107,20 @@ public:
 	{
 		GL(glBindBuffer(target_, 0));
 	}
+	
+	void fence_set()
+	{
+		if(fence_)
+			glDeleteFencesNV(1, &fence_);
+			
+		GL(glGenFencesNV(1, &fence_));
+		GL(glSetFenceNV(fence_, GL_ALL_COMPLETED_NV));
+	}
+
+	bool fence_rdy() const
+	{
+		return GL2(glTestFenceNV(fence_)) != GL_FALSE;
+	}
 };
 
 host_buffer::host_buffer(size_t size, usage_t usage) : impl_(new implementation(size, usage)){}
@@ -111,6 +130,8 @@ void host_buffer::map(){impl_->map();}
 void host_buffer::unmap(){impl_->unmap();}
 void host_buffer::bind(){impl_->bind();}
 void host_buffer::unbind(){impl_->unbind();}
+void host_buffer::fence_set(){impl_->fence_set();}
+bool host_buffer::fence_rdy() const{return impl_->fence_rdy();}
 
 size_t host_buffer::size() const { return impl_->size_; }
 

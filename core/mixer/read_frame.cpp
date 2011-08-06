@@ -42,6 +42,21 @@ public:
 	{
 		if(!image_data_->data())
 		{
+			auto fence_check = [=]{return image_data_->fence_rdy();};
+
+			int delay = 0;
+			if(!ogl_.invoke(fence_check, high_priority))
+			{
+				while(!ogl_.invoke(fence_check, normal_priority))
+				{
+					delay += 3;
+					Sleep(3);
+				}
+			}
+
+			if(delay > 0)
+				CASPAR_LOG(warning) << L" Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms.";
+
 			ogl_.invoke([=]
 			{
 				image_data_->map();
@@ -69,6 +84,8 @@ const boost::iterator_range<const int16_t*> read_frame::audio_data()
 {
 	return impl_ ? impl_->audio_data() : boost::iterator_range<const int16_t*>();
 }
+
+size_t read_frame::image_size() const{return impl_->image_data_->size();}
 
 //#include <tbb/scalable_allocator.h>
 //#include <tbb/parallel_for.h>
