@@ -296,7 +296,6 @@ struct frame_muxer::implementation : boost::noncopyable
 			return;
 		
 		auto frame1 = pop_video();
-		frame1->commit();
 		frame1->audio_data() = pop_audio();
 
 		dest.push_back(frame1);		
@@ -308,7 +307,6 @@ struct frame_muxer::implementation : boost::noncopyable
 			return;
 
 		auto frame = pop_video();
-		frame->commit();
 
 		auto frame1 = make_safe<core::write_frame>(*frame); // make a copy
 		frame1->audio_data() = pop_audio();
@@ -326,7 +324,6 @@ struct frame_muxer::implementation : boost::noncopyable
 			return;
 						
 		auto frame1 = pop_video();
-		frame1->commit();
 		frame1->audio_data() = pop_audio();
 				
 		video_streams_.front().pop(); // Throw away
@@ -340,8 +337,6 @@ struct frame_muxer::implementation : boost::noncopyable
 			return;
 		
 		auto frame1 = pop_video();
-		frame1->commit();
-
 		frame1->audio_data() = pop_audio();
 				
 		auto frame2 = pop_video();
