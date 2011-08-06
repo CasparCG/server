@@ -7,6 +7,8 @@ extern "C"
 	#include <libavfilter/avfilter.h>
 }
 
+#include <tbb/parallel_for.h>
+
 #include <boost/thread/once.hpp>
 
 typedef struct {
@@ -75,7 +77,6 @@ void RENAME(x)(uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, 
 ff(0); ff(1); ff(2); ff(3); ff(4); ff(5); ff(6); ff(7); ff(8); ff(9); ff(10); ff(11); ff(12); ff(13); ff(14); ff(15); ff(16); ff(17);
 
 void (*fs[])(uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, int prefs, int mrefs, int parity, int mode) = 
-
 {f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17};
 
 namespace caspar {
@@ -84,14 +85,14 @@ tbb::concurrent_bounded_queue<decltype(org_yadif_filter_line)> parallel_line_fun
 
 void init_pool()
 {
-	for(int n = 0; n < sizeof(fs)/sizeof(decltype(org_yadif_filter_line)); ++n)
+	for(int n = 0; n < sizeof(fs)/sizeof(fs[0]); ++n)
 		parallel_line_func_pool.push(fs[n]);
 }
 
 void return_parallel_yadif(void* func)
 {
 	if(func != nullptr)
-		parallel_line_func_pool.push(reinterpret_cast<decltype(org_yadif_filter_line)>(func));
+		parallel_line_func_pool.push(reinterpret_cast<decltype(fs[0])>(func));
 }
 
 std::shared_ptr<void> make_parallel_yadif(AVFilterContext* ctx)
