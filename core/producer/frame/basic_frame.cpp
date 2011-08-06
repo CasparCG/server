@@ -36,15 +36,19 @@ struct basic_frame::implementation
 
 	image_transform image_transform_;	
 	audio_transform audio_transform_;
+
+	core::video_mode::type mode_;
 	
 public:
 	implementation(const std::vector<safe_ptr<basic_frame>>& frames) 
-		: frames_(frames) {}
+		: mode_(core::video_mode::progressive), frames_(frames) {}
 	implementation(std::vector<safe_ptr<basic_frame>>&& frames) 
-		: frames_(std::move(frames)){}
+		: mode_(core::video_mode::progressive), frames_(std::move(frames)){}
 	implementation(safe_ptr<basic_frame>&& frame) 
+		: mode_(core::video_mode::progressive)
 		{ frames_.push_back(std::move(frame));}
 	implementation(const safe_ptr<basic_frame>& frame) 
+		: mode_(core::video_mode::progressive)
 		{ frames_.push_back(frame);}
 	
 	void accept(basic_frame& self, frame_visitor& visitor)
@@ -71,6 +75,7 @@ basic_frame::basic_frame(const basic_frame& other) : impl_(new implementation(*o
 basic_frame::basic_frame(std::vector<safe_ptr<basic_frame>>&& frames) : impl_(new implementation(frames)){}
 basic_frame::basic_frame(const safe_ptr<basic_frame>& frame) : impl_(new implementation(frame)){}
 basic_frame::basic_frame(safe_ptr<basic_frame>&& frame)  : impl_(new implementation(std::move(frame))){}
+core::video_mode::type basic_frame::get_mode() const{return impl_->mode_;}
 void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
 basic_frame& basic_frame::operator=(const basic_frame& other)
 {
@@ -109,13 +114,13 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 	auto my_frame2 = make_safe<basic_frame>(frame2);
 	if(mode == video_mode::upper)
 	{
-		my_frame1->get_image_transform().set_mode(video_mode::upper);	
-		my_frame2->get_image_transform().set_mode(video_mode::lower);	
+		my_frame1->impl_->mode_ = video_mode::upper;	
+		my_frame2->impl_->mode_ = video_mode::lower;	
 	}											 
 	else										 
 	{											 
-		my_frame1->get_image_transform().set_mode(video_mode::lower);	
-		my_frame2->get_image_transform().set_mode(video_mode::upper);	
+		my_frame1->impl_->mode_ = video_mode::lower;	
+		my_frame2->impl_->mode_ = video_mode::upper;	
 	}
 
 	std::vector<safe_ptr<basic_frame>> frames;

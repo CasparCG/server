@@ -61,7 +61,6 @@ struct video_decoder::implementation : boost::noncopyable
 	const safe_ptr<core::frame_factory>		frame_factory_;
 	std::shared_ptr<AVCodecContext>			codec_context_;
 	int										index_;
-	core::video_mode::type					mode_;
 
 	std::queue<std::shared_ptr<AVPacket>>	packet_buffer_;
 
@@ -72,7 +71,6 @@ struct video_decoder::implementation : boost::noncopyable
 public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) 
 		: frame_factory_(frame_factory)
-		, mode_(core::video_mode::invalid)
 		, filter_(filter)
 		, fps_(frame_factory_->get_video_format_desc().fps)
 		, nb_frames_(0)
@@ -195,14 +193,6 @@ public:
 		return !codec_context_ || !packet_buffer_.empty();
 	}
 	
-	core::video_mode::type mode()
-	{
-		if(!codec_context_)
-			return frame_factory_->get_video_format_desc().mode;
-
-		return mode_;
-	}
-
 	double fps() const
 	{
 		return fps_;
@@ -213,7 +203,6 @@ video_decoder::video_decoder(const std::shared_ptr<AVFormatContext>& context, co
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 std::vector<std::shared_ptr<AVFrame>> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}
-core::video_mode::type video_decoder::mode(){return impl_->mode();}
 double video_decoder::fps() const{return impl_->fps();}
 int64_t video_decoder::nb_frames() const{return impl_->nb_frames_;}
 }

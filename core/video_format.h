@@ -58,8 +58,7 @@ struct video_mode
 		progressive = 0,
 		lower,
 		upper,
-		count,
-		invalid
+		count
 	};
 
 	static std::wstring print(video_mode::type value)

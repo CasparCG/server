@@ -38,6 +38,7 @@
 #include <core/video_format.h>
 
 #include <boost/foreach.hpp>
+#include <boost/range.hpp>
 
 #include <algorithm>
 #include <array>
@@ -47,34 +48,35 @@ namespace caspar { namespace core {
 		
 struct render_item
 {
-	pixel_format_desc					 desc;
-	std::vector<safe_ptr<device_buffer>> textures;
-	core::image_transform				 transform;
-	const void*							 tag;
+	pixel_format_desc						desc;
+	std::vector<safe_ptr<device_buffer>>	textures;
+	image_transform							transform;
+	video_mode::type						mode;
+	const void*								tag;
 };
 
 bool operator==(const render_item& lhs, const render_item& rhs)
 {
-	return lhs.textures == rhs.textures && lhs.transform == rhs.transform && lhs.tag == rhs.tag;
+	return lhs.textures == rhs.textures && lhs.transform == rhs.transform && lhs.tag == rhs.tag && lhs.mode == rhs.mode;
 }
 
 struct image_mixer::implementation : boost::noncopyable
 {		
-	typedef std::deque<render_item> stream;
-	typedef std::deque<stream>		layer;
+	typedef std::deque<render_item>			layer;
 
 	video_channel_context&					channel_;
-	
-	std::stack<core::image_transform>		transform_stack_;
+
+	std::stack<image_transform>				transform_stack_;
+	std::deque<video_mode::type>			mode_stack_;
 
 	std::queue<layer>						layers_; // layer/stream/items
 	
 	std::unique_ptr<image_kernel>			kernel_;
 		
-	std::shared_ptr<device_buffer>			draw_buffer_[2];
+	std::array<std::shared_ptr<device_buffer>, 2> draw_buffer_;
 	std::shared_ptr<device_buffer>			write_buffer_;
 
-	std::shared_ptr<device_buffer>			stream_key_buffer_[2];
+	std::array<std::shared_ptr<device_buffer>, 2> stream_key_buffer_;
 	std::shared_ptr<device_buffer>			layer_key_buffer_;
 	
 public:
@@ -82,7 +84,8 @@ public:
 		: channel_(video_channel)
 	{
 		initialize_buffers();
-		transform_stack_.push(core::image_transform());
+		transform_stack_.push(image_transform());
+		mode_stack_.push_back(video_mode::progressive);
 
 		channel_.ogl().invoke([=]
 		{
@@ -111,34 +114,28 @@ public:
 	void begin(core::basic_frame& frame)
 	{
 		transform_stack_.push(transform_stack_.top()*frame.get_image_transform());
+		mode_stack_.push_back(frame.get_mode() == video_mode::progressive ? mode_stack_.back() : frame.get_mode());
 	}
 		
 	void visit(core::write_frame& frame)
-	{			
-		if(frame.get_textures().empty())
+	{		
+		// Check if frame has been discarded by interlacing
+		if(boost::range::find(mode_stack_, video_mode::upper) != mode_stack_.end() && boost::range::find(mode_stack_, video_mode::lower) != mode_stack_.end())
 			return;
-
-		render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.top()*frame.get_image_transform(), frame.tag()};	
+		
+		core::render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.top(), mode_stack_.back(), frame.tag()};	
 
 		auto& layer = layers_.back();
 
-		auto stream_it = std::find_if(layer.begin(), layer.end(), [&](stream& stream)
-		{
-			return stream.front().tag == item.tag;
-		});
-
-		if(stream_it == layer.end())
-			layer.push_back(stream(1, item));
-		else	
-		{
-			if(std::find(stream_it->begin(), stream_it->end(), item) == stream_it->end())
-				stream_it->push_back(item);		
-		}
+		auto it = boost::range::find(layer, item);
+		if(it == layer.end())
+			layer.push_back(item);
 	}
 
 	void end()
 	{
 		transform_stack_.pop();
+		mode_stack_.pop_back();
 	}
 
 	void begin_layer()
@@ -182,17 +179,23 @@ public:
 
 			auto layer = std::move(layers.front());
 			layers.pop();
-
+			
 			while(!layer.empty())
 			{
-				auto stream = std::move(layer.front());
+				auto item = std::move(layer.front());
 				layer.pop_front();
-								
-				render(stream, local_key, layer_key);
-				
-				local_key = stream.front().transform.get_is_key();
-				if(!local_key)
+											
+				if(item.transform.get_is_key())
+				{
+					render_item(stream_key_buffer_, item, nullptr, nullptr);
+					local_key = true;
+				}
+				else
+				{
+					render_item(draw_buffer_, item, local_key ? stream_key_buffer_[0] : nullptr, layer_key ? layer_key_buffer_ : nullptr);	
 					stream_key_buffer_[0]->clear();
+					local_key = false;
+				}
 
 				channel_.ogl().yield();
 			}
@@ -209,41 +212,18 @@ public:
 
 		return read_buffer;
 	}
-
-	void render(stream& stream, bool local_key, bool layer_key)
+	
+	void render_item(std::array<std::shared_ptr<device_buffer>,2>& targets, render_item& item, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
 	{
-		CASPAR_ASSERT(!stream.empty());
-				
- 		if(stream.front().transform.get_is_key())
-		{
-			stream_key_buffer_[1]->attach();
+		targets[1]->attach();
 			
-			BOOST_FOREACH(auto item2, stream)
-			{	
-				kernel_->draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, item2.textures, 
-								make_safe(stream_key_buffer_[0]), nullptr, nullptr);
-			}
+		kernel_->draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item.desc, item.transform, item.mode, item.textures, make_safe(targets[0]), local_key, layer_key);
+		
+		targets[0]->bind();
 
-			std::swap(stream_key_buffer_[0], stream_key_buffer_[1]);
-
-			stream_key_buffer_[1]->bind();
-			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, channel_.get_format_desc().width, channel_.get_format_desc().height);	
-		}
-		else
-		{
-			draw_buffer_[1]->attach();	
-			
-			BOOST_FOREACH(auto item2, stream)
-			{	
-				kernel_->draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item2.desc, item2.transform, item2.textures, 
-								make_safe(draw_buffer_[0]), local_key ? stream_key_buffer_[0] : nullptr, layer_key ? layer_key_buffer_ : nullptr);	
-			}
-
-			std::swap(draw_buffer_[0], draw_buffer_[1]);
-			
-			draw_buffer_[1]->bind();
-			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, channel_.get_format_desc().width, channel_.get_format_desc().height);
-		}
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, channel_.get_format_desc().width, channel_.get_format_desc().height);
+		
+		std::swap(targets[0], targets[1]);
 	}
 				
 	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)

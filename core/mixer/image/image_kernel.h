@@ -32,7 +32,7 @@ class image_kernel
 {
 public:
 	image_kernel();
-	void draw(size_t width,  size_t height, const core::pixel_format_desc& pix_desc,  const core::image_transform& transform, const std::vector<safe_ptr<device_buffer>>& planes, 
+	void draw(size_t width,  size_t height, const core::pixel_format_desc& pix_desc,  const core::image_transform& transform, core::video_mode::type mode, const std::vector<safe_ptr<device_buffer>>& planes, 
 			  const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key = nullptr, const std::shared_ptr<device_buffer>& layer_key = nullptr);
 private:
 	struct implementation;

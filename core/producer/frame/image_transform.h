@@ -126,10 +126,7 @@ public:
 
 	void set_clip_scale(double x, double y);
 	std::array<double, 2> get_clip_scale() const;
-
-	void set_mode(video_mode::type mode);
-	video_mode::type get_mode() const;
-
+	
 	image_transform& operator*=(const image_transform &other);
 	const image_transform operator*(const image_transform &other) const;
 
@@ -169,6 +166,7 @@ image_transform::alpha_mode::type get_alpha_mode(const std::wstring& str);
 
 image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener);
 
+bool operator<(const image_transform& lhs, const image_transform& rhs);
 bool operator==(const image_transform& lhs, const image_transform& rhs);
 bool operator!=(const image_transform& lhs, const image_transform& rhs);
 
