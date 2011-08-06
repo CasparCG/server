@@ -156,18 +156,18 @@ public:
 
 	~bluefish_consumer()
 	{
-		//try
-		//{
-		//	executor_.invoke([&]
-		//	{
-		//		disable_video_output();
-		//		blue_->device_detach();		
-		//	});
-		//}
-		//catch(...)
-		//{
-		//	CASPAR_LOG_CURRENT_EXCEPTION();
-		//}
+		try
+		{
+			executor_.invoke([&]
+			{
+				disable_video_output();
+				blue_->device_detach();		
+			});
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 		
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
