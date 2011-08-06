@@ -123,7 +123,20 @@ write_frame::write_frame(const void* tag) : impl_(new implementation(tag)){}
 write_frame::write_frame(ogl_device& ogl, const void* tag, const core::pixel_format_desc& desc) 
 	: impl_(new implementation(ogl, tag, desc)){}
 write_frame::write_frame(const write_frame& other) : impl_(new implementation(*other.impl_)){}
-void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
+write_frame::write_frame(write_frame&& other) : impl_(std::move(*other.impl_)){}
+write_frame& write_frame::operator=(const write_frame& other)
+{
+	basic_frame temp(other);
+	temp.swap(*this);
+	return *this;
+}
+write_frame& write_frame::operator=(write_frame&& other)
+{
+	write_frame temp(std::move(other));
+	temp.swap(*this);
+	return *this;
+}
+void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 
 boost::iterator_range<uint8_t*> write_frame::image_data(size_t index){return impl_->image_data(index);}
 std::vector<int16_t>& write_frame::audio_data() { return impl_->audio_data_; }
@@ -142,6 +155,8 @@ void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
 void write_frame::set_type(const video_mode::type& mode){impl_->mode_ = mode;}
 core::video_mode::type write_frame::get_type() const{return impl_->mode_;}
+
 std::wstring write_frame::print() const{return impl_->print();}
+void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 }}
