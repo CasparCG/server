@@ -82,7 +82,7 @@ public:
 		, input_(graph_, filename_, loop, start, length)
 		, video_decoder_(input_.context(), frame_factory, filter)
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
-		, muxer_(video_decoder_.fps(), format_desc_, frame_factory)
+		, muxer_(video_decoder_.fps(), frame_factory)
 		, start_(start)
 		, nb_frames_(video_decoder_.nb_frames() - start)
 		, loop_(loop)

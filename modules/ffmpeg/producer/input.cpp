@@ -181,7 +181,7 @@ private:
 		av_init_packet(read_packet.get());
 
 		const int ret = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame.
-		if(is_eof(ret))														  // Use av_dup_packet to extend its life.
+		if(is_eof(ret))														     // Use av_dup_packet to extend its life.
 		{
 			if(loop_)
 			{
@@ -206,13 +206,22 @@ private:
 		}
 		else
 		{		
-			av_dup_packet(read_packet.get());
+			const int ret = av_dup_packet(read_packet.get());
+			if(ret < 0)
+			{
+				BOOST_THROW_EXCEPTION(
+					invalid_operation() <<
+					msg_info(av_error_str(ret)) <<
+					source_info(narrow(print())) << 
+					boost::errinfo_api_function("av_dup_packet") <<
+					boost::errinfo_errno(AVUNERROR(ret)));
+			}
 				
 			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
 			auto size = read_packet->size;
 			auto data = read_packet->data;
 
-			read_packet = std::shared_ptr<AVPacket>(read_packet.get(), [=](AVPacket* pkt)
+			read_packet = std::shared_ptr<AVPacket>(read_packet.get(), [=](AVPacket*)
 			{
 				read_packet->size = size;
 				read_packet->data = data;

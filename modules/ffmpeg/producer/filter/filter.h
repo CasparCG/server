@@ -23,7 +23,7 @@ static bool double_rate(const std::wstring& filters)
 class filter
 {
 public:
-	filter(const std::wstring& filters);
+	filter(const std::wstring& filters = L"");
 
 	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame);
 

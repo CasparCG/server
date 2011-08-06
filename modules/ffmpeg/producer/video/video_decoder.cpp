@@ -75,16 +75,37 @@ public:
 		, fps_(frame_factory_->get_video_format_desc().fps)
 		, nb_frames_(0)
 	{
-		AVCodec* dec;
-		index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
+		try
+		{
+			AVCodec* dec;
+			index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
 
-		if(index_ < 0)
+			if(index_ < 0)
+			{
+				BOOST_THROW_EXCEPTION(
+					file_read_error() <<
+					msg_info(av_error_str(index_)) <<
+					boost::errinfo_api_function("av_find_best_stream") <<
+					boost::errinfo_errno(AVUNERROR(index_)));
+			}
+
+			const int ret = tbb_avcodec_open(context->streams[index_]->codec, dec);
+			if(ret < 0)
+			{				
+				BOOST_THROW_EXCEPTION(
+					file_read_error() <<
+					msg_info(av_error_str(ret)) <<
+					boost::errinfo_api_function("tbb_avcodec_open") <<
+					boost::errinfo_errno(AVUNERROR(ret)));
+			}
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << "[video_decoder] Failed to open video. Running without audio.";
 			return;
-			
-		int errn = tbb_avcodec_open(context->streams[index_]->codec, dec);
-		if(errn < 0)
-			return;
-				
+		}
+								
 		codec_context_.reset(context->streams[index_]->codec, tbb_avcodec_close);
 		
 		// Some files give an invalid time_base numerator, try to fix it.
