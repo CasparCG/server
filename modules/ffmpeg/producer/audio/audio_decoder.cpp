@@ -63,26 +63,9 @@ public:
 		try
 		{
 			AVCodec* dec;
-			index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0);
+			index_ = THROW_ON_ERROR2(av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0), "[audio_decoder]");
 
-			if(index_ < 0)
-			{
-				BOOST_THROW_EXCEPTION(
-					file_read_error() <<
-					msg_info(av_error_str(index_)) <<
-					boost::errinfo_api_function("av_find_best_stream") <<
-					boost::errinfo_errno(AVUNERROR(index_)));
-			}
-
-			const int ret = avcodec_open(context->streams[index_]->codec, dec);
-			if(ret < 0)
-			{				
-				BOOST_THROW_EXCEPTION(
-					file_read_error() <<
-					msg_info(av_error_str(ret)) <<
-					boost::errinfo_api_function("avcodec_open") <<
-					boost::errinfo_errno(AVUNERROR(ret)));
-			}
+			THROW_ON_ERROR2(avcodec_open(context->streams[index_]->codec, dec), "[audio_decoder]");
 		}
 		catch(...)
 		{
@@ -159,15 +142,7 @@ public:
 		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
 		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
 
-		const int ret = avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, &pkt);
-		if(ret < 0)
-		{	
-			BOOST_THROW_EXCEPTION(
-				invalid_operation() <<
-				msg_info(av_error_str(ret)) <<
-				boost::errinfo_api_function("avcodec_decode_audio2") <<
-				boost::errinfo_errno(AVUNERROR(ret)));
-		}
+		int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, &pkt), "[audio_decoder]");
 
 		// There might be several frames in one packet.
 		pkt.size -= ret;

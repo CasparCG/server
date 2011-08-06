@@ -78,26 +78,9 @@ public:
 		try
 		{
 			AVCodec* dec;
-			index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
-
-			if(index_ < 0)
-			{
-				BOOST_THROW_EXCEPTION(
-					file_read_error() <<
-					msg_info(av_error_str(index_)) <<
-					boost::errinfo_api_function("av_find_best_stream") <<
-					boost::errinfo_errno(AVUNERROR(index_)));
-			}
-
-			const int ret = tbb_avcodec_open(context->streams[index_]->codec, dec);
-			if(ret < 0)
-			{				
-				BOOST_THROW_EXCEPTION(
-					file_read_error() <<
-					msg_info(av_error_str(ret)) <<
-					boost::errinfo_api_function("tbb_avcodec_open") <<
-					boost::errinfo_errno(AVUNERROR(ret)));
-			}
+			index_ = THROW_ON_ERROR2(av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0), "[video_decoder]");
+						
+			THROW_ON_ERROR2(tbb_avcodec_open(context->streams[index_]->codec, dec), "[video_decoder]");
 		}
 		catch(...)
 		{
@@ -182,20 +165,11 @@ public:
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 		int frame_finished = 0;
-		const int ret = avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &pkt);
+		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &pkt), "[video_decocer]");
 		
-		if(ret < 0)
-		{
-			BOOST_THROW_EXCEPTION(
-				invalid_operation() <<
-				msg_info(av_error_str(ret)) <<
-				boost::errinfo_api_function("avcodec_decode_video") <<
-				boost::errinfo_errno(AVUNERROR(ret)));
-		}
-		
-		// if a decoder consumes less then the whole packet then something is wrong
-		// that might be just harmless padding at the end or a problem with the
-		// AVParser or demuxer which puted more then one frame in a AVPacket
+		// If a decoder consumes less then the whole packet then something is wrong
+		// that might be just harmless padding at the end, or a problem with the
+		// AVParser or demuxer which puted more then one frame in a AVPacket.
 		pkt.data = nullptr;
 		pkt.size = 0;
 
