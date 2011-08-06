@@ -95,28 +95,43 @@ public:
 		for(int n = 0; n < 128 && muxer_.size() < 2; ++n)
 			decode_frame();
 	}
+
+	~ffmpeg_producer()
+	{
+		tasks_.cancel();
+		tasks_.wait();
+	}
 	
 	virtual safe_ptr<core::basic_frame> receive()
 	{
-		// TODO: Do rendering asynchronously.
+		tasks_.wait();
 
-		frame_timer_.restart();
-
-		for(int n = 0; n < 64 && muxer_.size() < 2; ++n)
-			decode_frame();
-
-		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
+		auto frame = core::basic_frame::late();
 		
 		if(!muxer_.empty())
-			return last_frame_ = muxer_.pop();	
+			frame = last_frame_ = muxer_.pop();	
+		else
+		{
+			if(input_.eof())
+				frame =  core::basic_frame::eof();
+			else
+			{
+				graph_->add_tag("underflow");	
+				++nb_frames_;		
+			}
+		}
 
-		if(input_.eof())
-			return core::basic_frame::eof();
+		tasks_.run([this]
+		{
+			frame_timer_.restart();
 
-		graph_->add_tag("underflow");	
-		++nb_frames_;		
+			for(int n = 0; n < 64 && muxer_.size() < 2; ++n)
+				decode_frame();
 
-		return core::basic_frame::late();
+			graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
+		});
+		
+		return frame;
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const
