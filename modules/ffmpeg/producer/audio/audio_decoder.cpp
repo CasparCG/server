@@ -21,6 +21,8 @@
 
 #include "audio_decoder.h"
 
+#include "../../ffmpeg_error.h"
+
 #include <tbb/task_group.h>
 
 #if defined(_MSC_VER)
@@ -57,17 +59,38 @@ public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
 		, nb_frames_(0)
-	{			   
-		AVCodec* dec;
-		index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0);
+	{			   		
+		try
+		{
+			AVCodec* dec;
+			index_ = av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0);
 
-		if(index_ < 0)
-			return;
+			if(index_ < 0)
+			{
+				BOOST_THROW_EXCEPTION(
+					file_read_error() <<
+					msg_info(av_error_str(index_)) <<
+					boost::errinfo_api_function("av_find_best_stream") <<
+					boost::errinfo_errno(AVUNERROR(index_)));
+			}
 
-		int errn = avcodec_open(context->streams[index_]->codec, dec);
-		if(errn < 0)
+			const int ret = avcodec_open(context->streams[index_]->codec, dec);
+			if(ret < 0)
+			{				
+				BOOST_THROW_EXCEPTION(
+					file_read_error() <<
+					msg_info(av_error_str(ret)) <<
+					boost::errinfo_api_function("avcodec_open") <<
+					boost::errinfo_errno(AVUNERROR(ret)));
+			}
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << "[audio_decoder] Failed to open audio. Running without audio.";
 			return;
-				
+		}
+
 		codec_context_.reset(context->streams[index_]->codec, avcodec_close);
 
 		//nb_frames_ = context->streams[index_]->nb_frames;
@@ -141,6 +164,7 @@ public:
 		{	
 			BOOST_THROW_EXCEPTION(
 				invalid_operation() <<
+				msg_info(av_error_str(ret)) <<
 				boost::errinfo_api_function("avcodec_decode_audio2") <<
 				boost::errinfo_errno(AVUNERROR(ret)));
 		}

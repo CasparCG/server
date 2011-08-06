@@ -113,19 +113,19 @@ struct frame_muxer::implementation : boost::noncopyable
 	size_t											processed_audio_sample_count_;
 	size_t											processed_video_frame_count_;
 
-	std::unique_ptr<filter>							filter_;
+	filter											filter_;
 	safe_ptr<core::frame_factory>					frame_factory_;
 		
-	implementation(double in_fps, const video_format_desc& format_desc, const safe_ptr<core::frame_factory>& frame_factory)
-		: display_mode_(display_mode::invalid)
+	implementation(double in_fps, const safe_ptr<core::frame_factory>& frame_factory)
+		: video_streams_(1)
+		, audio_streams_(1)
+		, display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
-		, format_desc_(format_desc)
+		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_mode_(env::properties().get("configuration.auto-mode", false))
 		, audio_sample_count_(0)
 		, video_frame_count_(0)
 		, frame_factory_(frame_factory)
-		, video_streams_(1)
-		, audio_streams_(1)
 	{
 	}
 
@@ -143,43 +143,35 @@ struct frame_muxer::implementation : boost::noncopyable
 		{
 			video_streams_.back().push(make_safe<core::write_frame>(this));
 			++video_frame_count_;
-			process(frame_buffer_);
+			put_frames(frame_buffer_);
 			return;
 		}
 		
 		if(display_mode_ == display_mode::invalid)
 		{
-			auto in_mode = get_mode(*video_frame);
-			display_mode_ = auto_mode_ ? get_display_mode(in_mode, in_fps_, format_desc_.mode, format_desc_.fps) : display_mode::simple;
+			if(auto_mode_)
+			{
+				auto in_mode = get_mode(*video_frame);
+				display_mode_ = get_display_mode(in_mode, in_fps_, format_desc_.mode, format_desc_.fps);
 			
-			if(display_mode_ == display_mode::simple && in_mode != core::video_mode::progressive && format_desc_.mode != core::video_mode::progressive && video_frame->height != static_cast<int>(format_desc_.height))
-				display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace		
+				if(display_mode_ == display_mode::simple && in_mode != core::video_mode::progressive && format_desc_.mode != core::video_mode::progressive && video_frame->height != static_cast<int>(format_desc_.height))
+					display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
+				
+				if(display_mode_ == display_mode::deinterlace)
+					filter_ = filter(L"YADIF=0:-1");
+				else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
+					filter_ = filter(L"YADIF=1:-1");
+			}
+			else
+				display_mode_ = display_mode::simple;
+
+			CASPAR_LOG(info) << "frame_muxer: " << display_mode::print(display_mode_);
 		}
-		
-		std::vector<safe_ptr<core::write_frame>> frames;
-
-		if(display_mode_ == display_mode::deinterlace)
+						
+		BOOST_FOREACH(auto& av_frame, filter_.execute(video_frame))
 		{
-			if(!filter_)
-				filter_.reset(new filter(L"YADIF=0:-1"));
+			auto frame = make_write_frame(this, av_frame, frame_factory_);
 
-			BOOST_FOREACH(auto& frame, filter_->execute(video_frame))
-				frames.push_back(make_write_frame(this, frame, frame_factory_));
-
-		}
-		else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
-		{
-			if(!filter_)
-				filter_.reset(new filter(L"YADIF=1:-1"));
-
-			BOOST_FOREACH(auto& frame, filter_->execute(video_frame))
-				frames.push_back(make_write_frame(this, frame, frame_factory_));
-		}
-		else
-			frames.push_back(make_write_frame(this, make_safe(video_frame), frame_factory_));
-
-		BOOST_FOREACH(auto& frame, frames)
-		{
 			// Fix field-order if needed
 			if(frame->get_type() == core::video_mode::lower && format_desc_.mode == core::video_mode::upper)
 				frame->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(frame->get_pixel_format_desc().planes[0].height));
@@ -189,7 +181,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			video_streams_.back().push(frame);
 			++video_frame_count_;
 
-			process(frame_buffer_);
+			put_frames(frame_buffer_);
 		}
 	}
 
@@ -206,7 +198,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		audio_sample_count_ += audio_samples->size();
 
 		boost::range::push_back(audio_streams_.back(), *audio_samples);
-		process(frame_buffer_);
+		put_frames(frame_buffer_);
 	}
 
 	safe_ptr<basic_frame> pop()
@@ -262,7 +254,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		return audio_streams_.back().size() / format_desc_.audio_samples_per_frame;
 	}
 	
-	void process(std::deque<safe_ptr<basic_frame>>& dest)
+	void put_frames(std::deque<safe_ptr<basic_frame>>& dest)
 	{
 		if(video_streams_.size() > 1 && audio_streams_.size() > 1 &&
 			(video_streams_.front().empty() || audio_streams_.front().empty()))
@@ -345,8 +337,8 @@ struct frame_muxer::implementation : boost::noncopyable
 	}
 };
 
-frame_muxer::frame_muxer(double in_fps, const video_format_desc& format_desc, const safe_ptr<core::frame_factory>& frame_factory)
-	: impl_(new implementation(in_fps, format_desc, frame_factory)){}
+frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory)
+	: impl_(new implementation(in_fps, frame_factory)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame){impl_->push(video_frame);}
 void frame_muxer::push(const std::shared_ptr<std::vector<int16_t>>& audio_samples){return impl_->push(audio_samples);}
 safe_ptr<basic_frame> frame_muxer::pop(){return impl_->pop();}
