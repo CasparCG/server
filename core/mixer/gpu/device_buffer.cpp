@@ -22,6 +22,7 @@
 #include "device_buffer.h"
 
 #include "host_buffer.h"
+#include "fence.h"
 
 #include <common/gl/gl_check.h>
 
@@ -103,8 +104,7 @@ public:
 		GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		target.unbind();
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		target.fence_set();
-		glFlush();
+		target.fence();
 	}
 
 	void attach(int index)

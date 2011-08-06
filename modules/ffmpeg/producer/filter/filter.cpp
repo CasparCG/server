@@ -91,7 +91,7 @@ struct filter::implementation
 			
 			AVFilterInOut* outputs = avfilter_inout_alloc();
 			AVFilterInOut* inputs  = avfilter_inout_alloc();
-
+			
 			outputs->name			= av_strdup("in");
 			outputs->filter_ctx		= buffersrc_ctx_;
 			outputs->pad_idx		= 0;
@@ -102,14 +102,12 @@ struct filter::implementation
 			inputs->pad_idx			= 0;
 			inputs->next			= NULL;
 			
-			int ret = avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL);
-
+			THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL), "[filter]");
+			
 			avfilter_inout_free(&inputs);
 			avfilter_inout_free(&outputs);
-			
-			THROW_ON_ERROR(ret, "[filter]", "avfilter_graph_parse");
-						
-			THROW_ON_ERROR2(avfilter_graph_config(graph_.get(), NULL), "[filter]");
+
+			THROW_ON_ERROR2(avfilter_graph_config(graph_.get(), NULL), "[filter]");			
 
 			for(size_t n = 0; n < graph_->filter_count; ++n)
 			{
