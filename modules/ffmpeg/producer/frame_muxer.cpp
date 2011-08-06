@@ -62,9 +62,6 @@ struct display_mode
 
 display_mode::type get_display_mode(const core::video_mode::type in_mode, double in_fps, const core::video_mode::type out_mode, double out_fps)
 {		
-	if(in_mode == core::video_mode::invalid || out_mode == core::video_mode::invalid)
-		return display_mode::invalid;
-
 	static const auto epsilon = 2.0;
 
 	if(std::abs(in_fps - out_fps) < epsilon)

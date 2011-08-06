@@ -238,18 +238,22 @@ struct image_kernel::implementation : boost::noncopyable
 	void draw(size_t										width, 
 			  size_t										height, 
 			  const core::pixel_format_desc&				pix_desc, 
-			  const core::image_transform&					transform, 
+			  const core::image_transform&					transform,
+			  core::video_mode::type						mode, 
 			  const std::vector<safe_ptr<device_buffer>>&	planes, 
 			  const safe_ptr<device_buffer>&				background,
 			  const std::shared_ptr<device_buffer>&			local_key,			  
 			  const std::shared_ptr<device_buffer>&			layer_key)
 	{
+		if(planes.empty())
+			return;
+
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glEnable(GL_POLYGON_STIPPLE));
 			
-		if(transform.get_mode() == core::video_mode::upper)
+		if(mode == core::video_mode::upper)
 			glPolygonStipple(upper_pattern);
-		else if(transform.get_mode() == core::video_mode::lower)
+		else if(mode == core::video_mode::lower)
 			glPolygonStipple(lower_pattern);
 		else
 			GL(glDisable(GL_POLYGON_STIPPLE));
@@ -283,7 +287,6 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("has_layer_key",	layer_key ? 1 : 0);
 		shader_->set("blend_mode",		transform.get_is_key() ? core::image_transform::blend_mode::normal : transform.get_blend_mode());
 		shader_->set("alpha_mode",		transform.get_alpha_mode());
-		shader_->set("interlace_mode",	transform.get_mode());
 		shader_->set("pixel_format",	pix_desc.pix_fmt);	
 
 		auto levels = transform.get_levels();
@@ -349,10 +352,10 @@ struct image_kernel::implementation : boost::noncopyable
 
 image_kernel::image_kernel() : impl_(new implementation()){}
 
-void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, const std::vector<safe_ptr<device_buffer>>& planes, 
+void image_kernel::draw(size_t width, size_t height, const core::pixel_format_desc& pix_desc, const core::image_transform& transform, core::video_mode::type mode, const std::vector<safe_ptr<device_buffer>>& planes, 
 							  const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
 {
-	impl_->draw(width, height, pix_desc, transform, planes, background, local_key, layer_key);
+	impl_->draw(width, height, pix_desc, transform, mode, planes, background, local_key, layer_key);
 }
 
 }}
