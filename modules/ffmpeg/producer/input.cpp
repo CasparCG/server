@@ -29,7 +29,6 @@
 
 #include <core/video_format.h>
 
-#include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 
 #include <tbb/concurrent_queue.h>
@@ -38,6 +37,7 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/thread.hpp>
 #include <boost/range/iterator_range.hpp>
 
 extern "C" 
@@ -54,179 +54,181 @@ static const size_t MAX_BUFFER_SIZE  = 32 * 1000000;
 	
 struct input::implementation : boost::noncopyable
 {		
-	safe_ptr<diagnostics::graph> graph_;
+	std::shared_ptr<AVFormatContext>							format_context_; // Destroy this last
 
-	std::shared_ptr<AVFormatContext> format_context_;	// Destroy this last
+	safe_ptr<diagnostics::graph>								graph_;
 		
-	const std::wstring			filename_;
-	const bool					loop_;
-	const int					start_;		
-
-	tbb::atomic<size_t>			buffer_size_;
-	boost::condition_variable	cond_;
-	boost::mutex				mutex_;
-
-	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> buffer_;
+	const std::wstring											filename_;
+	const bool													loop_;
+	const int													start_;		
+	
+	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
+	tbb::atomic<size_t>											buffer_size_;
+	boost::condition_variable									buffer_cond_;
+	boost::mutex												buffer_mutex_;
 		
-	executor executor_;
+	boost::thread												thread_;
+	tbb::atomic<bool>											is_running_;
 public:
 	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
 		: graph_(graph)
 		, loop_(loop)
 		, filename_(filename)
-		, executor_(print())
 		, start_(std::max(start, 0))
 	{			
-		int errn;
+		is_running_ = true;
+
+		int ret;
 
 		AVFormatContext* weak_format_context_ = nullptr;
-		errn = avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr);
-		if(errn < 0 || weak_format_context_ == nullptr)
+		ret = avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr);
+		if(ret < 0 || weak_format_context_ == nullptr)
 		{	
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
 				source_info(narrow(print())) << 
-				msg_info(av_error_str(errn)) <<
+				msg_info(av_error_str(ret)) <<
 				boost::errinfo_api_function("av_open_input_file") <<
-				boost::errinfo_errno(AVUNERROR(errn)) <<
+				boost::errinfo_errno(AVUNERROR(ret)) <<
 				boost::errinfo_file_name(narrow(filename)));
 		}
 
 		format_context_.reset(weak_format_context_, av_close_input_file);
 			
-		errn = avformat_find_stream_info(format_context_.get(), nullptr);
-		if(errn < 0)
+		ret = avformat_find_stream_info(format_context_.get(), nullptr);
+		if(ret < 0)
 		{	
 			BOOST_THROW_EXCEPTION(
 				file_read_error() << 
 				source_info(narrow(print())) << 
-				msg_info(av_error_str(errn)) <<
+				msg_info(av_error_str(ret)) <<
 				boost::errinfo_api_function("av_find_stream_info") <<
-				boost::errinfo_errno(AVUNERROR(errn)));
+				boost::errinfo_errno(AVUNERROR(ret)));
 		}
 		
 		if(start_ != 0)			
 			seek_frame(start_);
 		
-		for(int n = 0; n < 16 && buffer_size_ < MAX_BUFFER_SIZE && buffer_.size() < MAX_BUFFER_COUNT; ++n)
+		for(int n = 0; n < 16 && !full(); ++n)
 			read_next_packet();
-
-		buffer_.set_capacity(MAX_BUFFER_COUNT);
-				
+						
 		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
 		graph_->set_color("buffer-count", diagnostics::color(0.2f, 0.8f, 1.0f));
 		graph_->set_color("buffer-size", diagnostics::color(0.2f, 0.4f, 1.0f));	
 
-		executor_.begin_invoke([this]{read_file();});
-		CASPAR_LOG(info) << print() << " Started.";
+		thread_ = boost::thread([this]{run();});
 	}
 
 	~implementation()
 	{
-		stop();
-		// Unblock thread.
-		std::shared_ptr<AVPacket> packet;
-		buffer_.try_pop(packet);
-		buffer_size_ = 0;
-		cond_.notify_all();
+		is_running_ = false;
+		buffer_cond_.notify_all();
+		thread_.join();
 	}
 		
 	bool try_pop(std::shared_ptr<AVPacket>& packet)
 	{
-		bool result = buffer_.try_pop(packet);
-		graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
+		const bool result = buffer_.try_pop(packet);
+
 		if(result)
 		{
 			if(packet)
 				buffer_size_ -= packet->size;
-			graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));
-			cond_.notify_all();
+			buffer_cond_.notify_all();
 		}
+
+		graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));
+		graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
+
 		return result;
 	}
 
 private:
-
-	void stop()
-	{
-		executor_.stop();
-		
-		CASPAR_LOG(debug) << print() << " Stopping.";
-	}
-
-	void read_file()
+	
+	void run()
 	{		
-		read_next_packet();
-		executor_.begin_invoke([this]{read_file();});
-	}
-			
-	void read_next_packet()
-	{		
+		caspar::win32_exception::install_handler();
+
 		try
 		{
-			std::shared_ptr<AVPacket> read_packet(new AVPacket, [](AVPacket* p)
-			{
-				av_free_packet(p);
-				delete p;
-			});
-			av_init_packet(read_packet.get());
+			CASPAR_LOG(info) << print() << " Thread Started.";
 
-			const int errn = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame.
-			if(is_eof(errn))														  // Use av_dup_packet to extend its life.
+			while(is_running_)
 			{
-				if(loop_)
 				{
-					seek_frame(start_, AVSEEK_FLAG_BACKWARD);
-					graph_->add_tag("seek");		
-					CASPAR_LOG(trace) << print() << " Received EOF. Looping.";			
-				}	
-				else
-				{
-					stop();
-					CASPAR_LOG(trace) << print() << " Received EOF. Stopping.";
+					boost::unique_lock<boost::mutex> lock(buffer_mutex_);
+					buffer_cond_.wait(lock, [this]{return !full();});
 				}
+				read_next_packet();			
 			}
-			else if(errn < 0)
-			{
-				BOOST_THROW_EXCEPTION(
-					file_read_error() <<
-					msg_info(av_error_str(errn)) <<
-					source_info(narrow(print())) << 
-					boost::errinfo_api_function("av_read_frame") <<
-					boost::errinfo_errno(AVUNERROR(errn)));
-			}
-			else
-			{
-				av_dup_packet(read_packet.get());
-				
-				// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
-				auto size = read_packet->size;
-				auto data = read_packet->data;
 
-				read_packet = std::shared_ptr<AVPacket>(read_packet.get(), [=](AVPacket* pkt)
-				{
-					read_packet->size = size;
-					read_packet->data = data;
-				});
-
-				graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
-				
-				boost::unique_lock<boost::mutex> lock(mutex_);
-				while(buffer_size_ > MAX_BUFFER_SIZE && buffer_.size() > MAX_BUFFER_COUNT)
-					cond_.wait(lock);
-				
-				buffer_.push(read_packet);
-				buffer_size_ += read_packet->size;
-
-				graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));
-			}							
+			CASPAR_LOG(info) << print() << " Thread Stopped.";
 		}
 		catch(...)
 		{
-			stop();
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			return;
-		}	
+			is_running_ = false;
+		}
+	}
+			
+	void read_next_packet()
+	{			
+		std::shared_ptr<AVPacket> read_packet(new AVPacket, [](AVPacket* p)
+		{
+			av_free_packet(p);
+			delete p;
+		});
+		av_init_packet(read_packet.get());
+
+		const int ret = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame.
+		if(is_eof(ret))														  // Use av_dup_packet to extend its life.
+		{
+			if(loop_)
+			{
+				seek_frame(start_, AVSEEK_FLAG_BACKWARD);
+				graph_->add_tag("seek");		
+				CASPAR_LOG(trace) << print() << " Received EOF. Looping.";			
+			}	
+			else
+			{
+				is_running_ = false;
+				CASPAR_LOG(trace) << print() << " Received EOF. Stopping.";
+			}
+		}
+		else if(ret < 0)
+		{
+			BOOST_THROW_EXCEPTION(
+				file_read_error() <<
+				msg_info(av_error_str(ret)) <<
+				source_info(narrow(print())) << 
+				boost::errinfo_api_function("av_read_frame") <<
+				boost::errinfo_errno(AVUNERROR(ret)));
+		}
+		else
+		{		
+			av_dup_packet(read_packet.get());
+				
+			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
+			auto size = read_packet->size;
+			auto data = read_packet->data;
+
+			read_packet = std::shared_ptr<AVPacket>(read_packet.get(), [=](AVPacket* pkt)
+			{
+				read_packet->size = size;
+				read_packet->data = data;
+			});
+
+			buffer_.try_push(read_packet);
+			buffer_size_ += read_packet->size;
+				
+			graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
+			graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));
+		}			
+	}
+
+	bool full() const
+	{
+		return is_running_ && buffer_size_ > MAX_BUFFER_SIZE && buffer_.size() > MAX_BUFFER_COUNT;
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
@@ -245,28 +247,28 @@ private:
 				boost::errinfo_errno(AVUNERROR(stream_index)));
 		}
 						
-		const int errn = av_seek_frame(format_context_.get(), stream_index, frame, flags);
-		if(errn < 0)
+		const int ret = av_seek_frame(format_context_.get(), stream_index, frame, flags);
+		if(ret < 0)
 		{	
 			BOOST_THROW_EXCEPTION(
 				invalid_operation() << 
 				source_info(narrow(print())) << 
-				msg_info(av_error_str(errn)) <<
+				msg_info(av_error_str(ret)) <<
 				boost::errinfo_api_function("av_seek_frame") <<
-				boost::errinfo_errno(AVUNERROR(errn)));
+				boost::errinfo_errno(AVUNERROR(ret)));
 		}
 
 		buffer_.push(nullptr);
 	}		
 
-	bool is_eof(int errn)
+	bool is_eof(int ret)
 	{
-		//if(errn == AVERROR(EIO))
-		//	CASPAR_LOG(warning) << print() << " Received EIO, assuming EOF.";
-		//if(errn == AVERROR_EOF)
+		if(ret == AVERROR(EIO))
+			CASPAR_LOG(debug) << print() << " Received EIO, assuming EOF.";
+		//if(ret == AVERROR_EOF)
 		//	CASPAR_LOG(info) << print() << " Received EOF.";
 
-		return errn == AVERROR_EOF || errn == AVERROR(EIO); // av_read_frame doesn't always correctly return AVERROR_EOF;
+		return ret == AVERROR_EOF || ret == AVERROR(EIO); // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 	
 	std::wstring print() const
@@ -277,7 +279,7 @@ private:
 
 input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length) 
 	: impl_(new implementation(graph, filename, loop, start)){}
-bool input::eof() const {return !impl_->executor_.is_running();}
+bool input::eof() const {return !impl_->is_running_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 std::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 }
