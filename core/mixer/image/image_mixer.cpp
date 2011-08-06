@@ -68,10 +68,10 @@ struct image_mixer::implementation : boost::noncopyable
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
+		, transform_stack_(1)
+		, mode_stack_(1, video_mode::progressive)
 	{
 		initialize_buffers();
-		transform_stack_.push_back(image_transform());
-		mode_stack_.push_back(video_mode::progressive);
 
 		channel_.ogl().invoke([=]
 		{
@@ -103,7 +103,9 @@ public:
 	}
 		
 	void visit(core::write_frame& frame)
-	{		
+	{	
+		CASPAR_ASSERT(!layers_.empty());
+
 		// Check if frame has been discarded by interlacing
 		if(boost::range::find(mode_stack_, video_mode::upper) != mode_stack_.end() && boost::range::find(mode_stack_, video_mode::lower) != mode_stack_.end())
 			return;
