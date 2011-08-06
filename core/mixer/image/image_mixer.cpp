@@ -46,53 +46,37 @@
 
 namespace caspar { namespace core {
 		
-struct render_item
-{
-	pixel_format_desc						desc;
-	std::vector<safe_ptr<device_buffer>>	textures;
-	image_transform							transform;
-	video_mode::type						mode;
-	const void*								tag;
-};
-
-bool operator==(const render_item& lhs, const render_item& rhs)
-{
-	return lhs.textures == rhs.textures && lhs.transform == rhs.transform && lhs.tag == rhs.tag && lhs.mode == rhs.mode;
-}
-
 struct image_mixer::implementation : boost::noncopyable
 {		
-	typedef std::deque<render_item>			layer;
+	typedef std::deque<render_item>					layer;
 
-	video_channel_context&					channel_;
+	video_channel_context&							channel_;
 
-	std::stack<image_transform>				transform_stack_;
-	std::deque<video_mode::type>			mode_stack_;
+	std::vector<image_transform>					transform_stack_;
+	std::vector<video_mode::type>					mode_stack_;
 
-	std::queue<layer>						layers_; // layer/stream/items
+	std::queue<std::deque<render_item>>				layers_; // layer/stream/items
 	
-	std::unique_ptr<image_kernel>			kernel_;
+	image_kernel									kernel_;
 		
-	std::array<std::shared_ptr<device_buffer>, 2> draw_buffer_;
-	std::shared_ptr<device_buffer>			write_buffer_;
+	std::array<std::shared_ptr<device_buffer>,2>	draw_buffer_;
+	std::shared_ptr<device_buffer>					write_buffer_;
 
-	std::array<std::shared_ptr<device_buffer>, 2> stream_key_buffer_;
-	std::shared_ptr<device_buffer>			layer_key_buffer_;
+	std::array<std::shared_ptr<device_buffer>,2>	stream_key_buffer_;
+	std::shared_ptr<device_buffer>					layer_key_buffer_;
 	
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
 	{
 		initialize_buffers();
-		transform_stack_.push(image_transform());
+		transform_stack_.push_back(image_transform());
 		mode_stack_.push_back(video_mode::progressive);
 
 		channel_.ogl().invoke([=]
 		{
 			if(!GLEE_VERSION_3_0)
 				CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";//BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
-
-			kernel_.reset(new image_kernel());
 		});
 	}
 
@@ -109,11 +93,12 @@ public:
 		draw_buffer_[1]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
 		stream_key_buffer_[0]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
 		stream_key_buffer_[1]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		channel_.ogl().gc();
 	}
 
 	void begin(core::basic_frame& frame)
 	{
-		transform_stack_.push(transform_stack_.top()*frame.get_image_transform());
+		transform_stack_.push_back(transform_stack_.back()*frame.get_image_transform());
 		mode_stack_.push_back(frame.get_mode() == video_mode::progressive ? mode_stack_.back() : frame.get_mode());
 	}
 		
@@ -123,7 +108,7 @@ public:
 		if(boost::range::find(mode_stack_, video_mode::upper) != mode_stack_.end() && boost::range::find(mode_stack_, video_mode::lower) != mode_stack_.end())
 			return;
 		
-		core::render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.top(), mode_stack_.back(), frame.tag()};	
+		core::render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.back(), mode_stack_.back(), frame.tag()};	
 
 		auto& layer = layers_.back();
 
@@ -134,7 +119,7 @@ public:
 
 	void end()
 	{
-		transform_stack_.pop();
+		transform_stack_.pop_back();
 		mode_stack_.pop_back();
 	}
 
@@ -187,17 +172,16 @@ public:
 											
 				if(item.transform.get_is_key())
 				{
-					render_item(stream_key_buffer_, item, nullptr, nullptr);
+					render_item(stream_key_buffer_, std::move(item), nullptr, nullptr);
 					local_key = true;
 				}
 				else
 				{
-					render_item(draw_buffer_, item, local_key ? stream_key_buffer_[0] : nullptr, layer_key ? layer_key_buffer_ : nullptr);	
+					render_item(draw_buffer_, std::move(item), local_key ? stream_key_buffer_[0] : nullptr, layer_key ? layer_key_buffer_ : nullptr);	
 					stream_key_buffer_[0]->clear();
 					local_key = false;
 				}
-
-				channel_.ogl().yield();
+				channel_.ogl().yield(); // Return resources to pool as early as possible.
 			}
 
 			layer_key = local_key;
@@ -207,21 +191,21 @@ public:
 
 		std::swap(draw_buffer_[0], write_buffer_);
 
-		// Start transfer from device to host.				
+		// device -> host.				
 		write_buffer_->write(*read_buffer);
 
 		return read_buffer;
 	}
 	
-	void render_item(std::array<std::shared_ptr<device_buffer>,2>& targets, render_item& item, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
+	void render_item(std::array<std::shared_ptr<device_buffer>,2>& targets, render_item&& item, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
 	{
 		targets[1]->attach();
 			
-		kernel_->draw(channel_.get_format_desc().width, channel_.get_format_desc().height, item.desc, item.transform, item.mode, item.textures, make_safe(targets[0]), local_key, layer_key);
+		kernel_.draw(item, make_safe(targets[0]), local_key, layer_key);
 		
 		targets[0]->bind();
 
-		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, channel_.get_format_desc().width, channel_.get_format_desc().height);
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, targets[0]->width(), targets[0]->height());
 		
 		std::swap(targets[0], targets[1]);
 	}

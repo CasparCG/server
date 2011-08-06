@@ -75,29 +75,29 @@ basic_frame::basic_frame(const basic_frame& other) : impl_(new implementation(*o
 basic_frame::basic_frame(std::vector<safe_ptr<basic_frame>>&& frames) : impl_(new implementation(frames)){}
 basic_frame::basic_frame(const safe_ptr<basic_frame>& frame) : impl_(new implementation(frame)){}
 basic_frame::basic_frame(safe_ptr<basic_frame>&& frame)  : impl_(new implementation(std::move(frame))){}
-core::video_mode::type basic_frame::get_mode() const{return impl_->mode_;}
-void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
+basic_frame::basic_frame(basic_frame&& other) : impl_(std::move(other.impl_)){}
 basic_frame& basic_frame::operator=(const basic_frame& other)
 {
 	basic_frame temp(other);
 	temp.swap(*this);
 	return *this;
 }
-basic_frame::basic_frame(basic_frame&& other) : impl_(std::move(other.impl_)){}
 basic_frame& basic_frame::operator=(basic_frame&& other)
 {
 	basic_frame temp(std::move(other));
 	temp.swap(*this);
 	return *this;
 }
-void basic_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
+void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
 
+core::video_mode::type basic_frame::get_mode() const{return impl_->mode_;}
 const image_transform& basic_frame::get_image_transform() const { return impl_->image_transform_;}
 image_transform& basic_frame::get_image_transform() { return impl_->image_transform_;}
 const audio_transform& basic_frame::get_audio_transform() const { return impl_->audio_transform_;}
 audio_transform& basic_frame::get_audio_transform() { return impl_->audio_transform_;}
 
 std::wstring basic_frame::print() const{return impl_->print();}
+void basic_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, video_mode::type mode)
 {			
