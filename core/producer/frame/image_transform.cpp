@@ -33,7 +33,6 @@ image_transform::image_transform()
 	, brightness_(1.0)
 	, contrast_(1.0)
 	, saturation_(1.0)
-	, mode_(video_mode::invalid)
 	, is_key_(false)
 	, deinterlace_(false)
 	, blend_mode_(image_transform::blend_mode::normal)
@@ -150,16 +149,6 @@ std::array<double, 2> image_transform::get_clip_scale() const
 	return clip_scale_;
 }
 
-void image_transform::set_mode(video_mode::type mode)
-{
-	mode_ = mode;
-}
-
-video_mode::type image_transform::get_mode() const
-{
-	return mode_;
-}
-
 void image_transform::set_deinterlace(bool value)
 {
 	deinterlace_ = value;
@@ -192,11 +181,7 @@ image_transform::alpha_mode::type image_transform::get_alpha_mode() const
 
 image_transform& image_transform::operator*=(const image_transform &other)
 {
-	opacity_				*= other.opacity_;
-	
-	if(other.mode_ != video_mode::invalid)
-		mode_ = other.mode_;
-
+	opacity_				*= other.opacity_;	
 	blend_mode_				 = std::max(blend_mode_, other.blend_mode_);
 	alpha_mode_				 = std::max(alpha_mode_, other.alpha_mode_);
 	gain_					*= other.gain_;
@@ -239,11 +224,8 @@ image_transform tween(double time, const image_transform& source, const image_tr
 	{
 		return tweener(time, source, dest-source, duration);
 	};
-
-	CASPAR_ASSERT(source.get_mode() == dest.get_mode() || source.get_mode() == video_mode::invalid || dest.get_mode() == video_mode::invalid);
-
+	
 	image_transform result;	
-	result.set_mode				(dest.get_mode() != video_mode::invalid ? dest.get_mode() : source.get_mode());
 	result.set_blend_mode		(std::max(source.get_blend_mode(), dest.get_blend_mode()));
 	result.set_alpha_mode		(std::max(source.get_alpha_mode(), dest.get_alpha_mode()));
 	result.set_is_key			(source.get_is_key() | dest.get_is_key());
@@ -344,6 +326,11 @@ image_transform::alpha_mode::type get_alpha_mode(const std::wstring& str)
 		return image_transform::alpha_mode::normal;
 
 	return image_transform::alpha_mode::normal;
+}
+
+bool operator<(const image_transform& lhs, const image_transform& rhs)
+{
+	return memcmp(&lhs, &rhs, sizeof(image_transform)) < 0;
 }
 
 bool operator==(const image_transform& lhs, const image_transform& rhs)
