@@ -19,7 +19,10 @@
 */
 #include "../../stdafx.h"
 
-#include "../gpu/host_buffer.h"
+#include "host_buffer.h"
+
+#include "fence.h"
+#include "ogl_device.h"
 
 #include <common/gl/gl_check.h>
 
@@ -27,14 +30,12 @@ namespace caspar { namespace core {
 																																								
 struct host_buffer::implementation : boost::noncopyable
 {	
-	GLuint pbo_;
-	GLuint fence_;
-
-	const size_t size_;
-
-	void* data_;
-	GLenum usage_;
-	GLenum target_;
+	GLuint			pbo_;
+	const size_t	size_;
+	void*			data_;
+	GLenum			usage_;
+	GLenum			target_;
+	core::fence		fence_;
 
 public:
 	implementation(size_t size, usage_t usage) 
@@ -43,7 +44,6 @@ public:
 		, pbo_(0)
 		, target_(usage == write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
 		, usage_(usage == write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
-		, fence_(0)
 	{
 		GL(glGenBuffers(1, &pbo_));
 		GL(glBindBuffer(target_, pbo_));
@@ -61,9 +61,6 @@ public:
 	{
 		try
 		{
-			if(fence_)
-				glDeleteFencesNV(1, &fence_);
-
 			GL(glDeleteBuffers(1, &pbo_));
 		}
 		catch(...)
@@ -87,6 +84,12 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
 	}
 
+	void map2(ogl_device& ogl)
+	{
+		fence_.wait(ogl);
+		ogl.invoke(std::bind(&implementation::map, this), high_priority);
+	}
+
 	void unmap()
 	{
 		if(!data_)
@@ -107,19 +110,11 @@ public:
 	{
 		GL(glBindBuffer(target_, 0));
 	}
-	
-	void fence_set()
-	{
-		if(fence_)
-			glDeleteFencesNV(1, &fence_);
-			
-		GL(glGenFencesNV(1, &fence_));
-		GL(glSetFenceNV(fence_, GL_ALL_COMPLETED_NV));
-	}
 
-	bool fence_rdy() const
+	void fence()
 	{
-		return GL2(glTestFenceNV(fence_)) != GL_FALSE;
+		fence_.set();
+		GL(glFlush());
 	}
 };
 
@@ -127,12 +122,11 @@ host_buffer::host_buffer(size_t size, usage_t usage) : impl_(new implementation(
 const void* host_buffer::data() const {return impl_->data_;}
 void* host_buffer::data() {return impl_->data_;}
 void host_buffer::map(){impl_->map();}
+void host_buffer::map(ogl_device& ogl){impl_->map2(ogl);}
 void host_buffer::unmap(){impl_->unmap();}
 void host_buffer::bind(){impl_->bind();}
 void host_buffer::unbind(){impl_->unbind();}
-void host_buffer::fence_set(){impl_->fence_set();}
-bool host_buffer::fence_rdy() const{return impl_->fence_rdy();}
-
+void host_buffer::fence(){impl_->fence();}
 size_t host_buffer::size() const { return impl_->size_; }
 
 }}

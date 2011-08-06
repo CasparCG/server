@@ -24,6 +24,8 @@
 #include <common/memory/safe_ptr.h>
 
 namespace caspar { namespace core {
+
+class ogl_device;
 		
 class host_buffer : boost::noncopyable
 {
@@ -42,10 +44,10 @@ public:
 	void unbind();
 
 	void map();
+	void map(ogl_device& ogl);
 	void unmap();
 
-	void fence_set();
-	bool fence_rdy() const;
+	void fence();
 private:
 	friend class ogl_device;
 	host_buffer(size_t size, usage_t usage);

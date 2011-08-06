@@ -21,6 +21,7 @@
 
 #include "read_frame.h"
 
+#include "gpu/fence.h"
 #include "gpu/host_buffer.h"	
 #include "gpu/ogl_device.h"
 
@@ -41,27 +42,7 @@ public:
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
 		if(!image_data_->data())
-		{
-			auto fence_check = [=]{return image_data_->fence_rdy();};
-
-			int delay = 0;
-			if(!ogl_.invoke(fence_check, high_priority))
-			{
-				while(!ogl_.invoke(fence_check, normal_priority))
-				{
-					delay += 3;
-					Sleep(3);
-				}
-			}
-
-			if(delay > 0)
-				CASPAR_LOG(warning) << L" Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms.";
-
-			ogl_.invoke([=]
-			{
-				image_data_->map();
-			}, high_priority);
-		}
+			image_data_->map(ogl_);
 
 		auto ptr = static_cast<const uint8_t*>(image_data_->data());
 		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_->size());

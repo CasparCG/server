@@ -52,6 +52,7 @@ struct video_channel::implementation : boost::noncopyable
 	safe_ptr<diagnostics::graph>	diag_;
 	boost::timer					frame_timer_;
 	boost::timer					tick_timer_;
+	boost::timer					output_timer_;
 	
 public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
@@ -63,8 +64,8 @@ public:
 	{
 		diag_->add_guide("produce-time", 0.5f);	
 		diag_->set_color("produce-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		diag_->add_guide("mix-time", 0.5f);	
 		diag_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 1.0f));
+		diag_->set_color("output-time", diagnostics::color(1.0f, 1.0f, 0.0f));
 		diag_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));	
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
@@ -99,8 +100,13 @@ public:
 		diag_->update_value("mix-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
 		
 		// Consume
+		
+		output_timer_.restart();
 
 		output_->execute(finished_frame);
+		
+		diag_->update_value("output-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
+
 		
 		diag_->update_value("tick-time", tick_timer_.elapsed()*context_.get_format_desc().fps*0.5);
 		tick_timer_.restart();
