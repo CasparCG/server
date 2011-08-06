@@ -41,6 +41,8 @@ public:
 
 	virtual const boost::iterator_range<const uint8_t*> image_data();
 	virtual const boost::iterator_range<const int16_t*> audio_data();
+
+	virtual size_t image_size() const;
 		
 private:
 	struct implementation;

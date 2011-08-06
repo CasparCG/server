@@ -49,6 +49,14 @@ void SMFL_GLCheckError(const std::string& expr, const std::string& File, unsigne
 		(expr);  \
 		caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__);\
 	}while(0);
+
+#define GL2(expr) \
+	[&]() -> decltype(expr)\
+	{\
+		auto ret = (expr); \
+		caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__);\
+		return ret;\
+	}()
 //#else
 //#define GL(expr) expr
 //#endif

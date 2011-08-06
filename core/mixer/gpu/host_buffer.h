@@ -43,6 +43,9 @@ public:
 
 	void map();
 	void unmap();
+
+	void fence_set();
+	bool fence_rdy() const;
 private:
 	friend class ogl_device;
 	host_buffer(size_t size, usage_t usage);
