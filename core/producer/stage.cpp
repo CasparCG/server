@@ -64,7 +64,7 @@ public:
 		destroy_context_.begin_invoke(std::bind(&destroy_producer, std::move(producer_)));
 	}
 
-	virtual safe_ptr<basic_frame>		receive()														{return producer_->receive();}
+	virtual safe_ptr<basic_frame>		receive(int hints)												{return producer_->receive(hints);}
 	virtual safe_ptr<basic_frame>		last_frame() const												{return producer_->last_frame();}
 	virtual std::wstring				print() const													{return producer_->print();}
 	virtual void						param(const std::wstring& str)									{producer_->param(str);}

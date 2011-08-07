@@ -37,7 +37,7 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 {
 	struct empty_frame_producer : public frame_producer
 	{
-		virtual safe_ptr<basic_frame> receive(){return basic_frame::empty();}
+		virtual safe_ptr<basic_frame> receive(int){return basic_frame::empty();}
 		virtual safe_ptr<basic_frame> last_frame() const{return basic_frame::empty();}
 		virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
 		virtual std::wstring print() const { return L"empty";}
@@ -46,7 +46,7 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 	return producer;
 }	
 
-safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
+safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints)
 {	
 	if(producer == frame_producer::empty())
 		return basic_frame::eof();
@@ -54,7 +54,7 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 	auto frame = basic_frame::eof();
 	try
 	{
-		frame = producer->receive();
+		frame = producer->receive(hints);
 	}
 	catch(...)
 	{
@@ -74,7 +74,7 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 		following->set_leading_producer(producer);
 		producer = std::move(following);		
 		
-		return receive_and_follow(producer);
+		return receive_and_follow(producer, hints);
 	}
 	return frame;
 }

@@ -101,7 +101,7 @@ public:
 		source.unbind();
 		unbind();
 		fence_.set();
-		GL(glFlush());
+		//GL(glFlush());
 	}
 	
 	void attach(int index)

@@ -23,6 +23,7 @@
 
 #include "frame_muxer.h"
 #include "input.h"
+#include "util.h"
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 
@@ -93,7 +94,7 @@ public:
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));		
 		
 		for(int n = 0; n < 128 && muxer_.size() < 2; ++n)
-			decode_frame();
+			decode_frame(0);
 	}
 
 	~ffmpeg_producer()
@@ -102,7 +103,7 @@ public:
 		tasks_.wait();
 	}
 	
-	virtual safe_ptr<core::basic_frame> receive()
+	virtual safe_ptr<core::basic_frame> receive(int hints)
 	{
 		tasks_.wait();
 
@@ -121,12 +122,12 @@ public:
 			}
 		}
 
-		tasks_.run([this]
+		tasks_.run([=]
 		{
 			frame_timer_.restart();
 
 			for(int n = 0; n < 64 && muxer_.size() < 2; ++n)
-				decode_frame();
+				decode_frame(hints);
 
 			graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 		});
@@ -139,7 +140,7 @@ public:
 		return disable_audio(last_frame_);
 	}
 
-	void decode_frame()
+	void decode_frame(int hints)
 	{
 		for(int n = 0; n < 32 && ((!muxer_.video_ready() && !video_decoder_.ready()) ||	(!muxer_.audio_ready() && !audio_decoder_.ready())); ++n) 
 		{
@@ -169,8 +170,8 @@ public:
 		BOOST_FOREACH(auto& audio, audio_samples)
 			muxer_.push(audio);
 
-		BOOST_FOREACH(auto& video, video_frames)
-			muxer_.push(video);		
+		BOOST_FOREACH(auto& video, video_frames)		
+			muxer_.push(video, hints);		
 	}
 
 	virtual int64_t nb_frames() const

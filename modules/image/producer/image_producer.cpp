@@ -56,7 +56,7 @@ struct image_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<core::basic_frame> receive(){return frame_;}
+	virtual safe_ptr<core::basic_frame> receive(int){return frame_;}
 		
 	virtual safe_ptr<core::basic_frame> last_frame() const
 	{
