@@ -23,7 +23,7 @@ class frame_muxer : boost::noncopyable
 public:
 	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory);
 	
-	void push(const std::shared_ptr<AVFrame>& video_frame);
+	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
 	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples);
 	
 	bool video_ready() const;

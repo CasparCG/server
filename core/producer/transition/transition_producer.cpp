@@ -66,7 +66,7 @@ struct transition_producer : public frame_producer
 		org_source_producer_ = producer;
 	}
 
-	virtual safe_ptr<basic_frame> receive()
+	virtual safe_ptr<basic_frame> receive(int hints)
 	{
 		if(current_frame_++ >= info_.duration)
 			return basic_frame::eof();
@@ -78,13 +78,13 @@ struct transition_producer : public frame_producer
 		(
 			[&]
 			{
-				dest = receive_and_follow(dest_producer_);
+				dest = receive_and_follow(dest_producer_, hints);
 				if(dest == core::basic_frame::late())
 					dest = dest_producer_->last_frame();
 			},
 			[&]
 			{
-				source = receive_and_follow(source_producer_);
+				source = receive_and_follow(source_producer_, hints);
 				if(source == core::basic_frame::late())
 					source = source_producer_->last_frame();
 			}

@@ -52,6 +52,9 @@
     <ClCompile Include="producer\filter\parallel_yadif.cpp">
       <Filter>source\producer\filter</Filter>
     </ClCompile>
+    <ClCompile Include="producer\util.cpp">
+      <Filter>source\producer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\ffmpeg_producer.h">

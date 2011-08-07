@@ -94,7 +94,7 @@ public:
 		
 		const auto frames_left = foreground_->nb_frames() - (++frame_number_) - auto_play_delta_;
 
-		auto frame = receive_and_follow(foreground_);
+		auto frame = receive_and_follow(foreground_, frame_producer::NO_HINT);
 		if(frame == core::basic_frame::late())
 			return foreground_->last_frame();
 		
