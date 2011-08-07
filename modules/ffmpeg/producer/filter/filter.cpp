@@ -6,18 +6,15 @@
 
 #include "../../ffmpeg_error.h"
 
-#include <common/exception/exceptions.h>
-#include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_factory.h>
-#include <core/mixer/write_frame.h>
-
-#include <boost/circular_buffer.hpp>
-
-#include <tbb/task_group.h>
+#include <boost/assign.hpp>
 
 #include <cstdio>
 #include <sstream>
 
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
 extern "C" 
 {
 	#define __STDC_CONSTANT_MACROS
@@ -30,6 +27,9 @@ extern "C"
 	#include <libavfilter/vsink_buffer.h>
 	#include <libavfilter/vsrc_buffer.h>
 }
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
 
 namespace caspar {
 	
@@ -163,5 +163,7 @@ struct filter::implementation
 };
 
 filter::filter(const std::wstring& filters) : impl_(new implementation(filters)){}
+filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
+filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
 std::vector<safe_ptr<AVFrame>> filter::execute(const std::shared_ptr<AVFrame>& frame) {return impl_->execute(frame);}
 }

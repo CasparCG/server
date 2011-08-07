@@ -21,16 +21,20 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include <core/video_format.h>
-
 #include <boost/noncopyable.hpp>
 
-#include <deque>
+#include <vector>
 
-struct AVStream;
-struct AVCodecContext;
+struct AVPacket;
+struct AVFormatContext;
 
 namespace caspar {
+
+namespace core {
+
+struct video_format_desc;
+
+}
 
 class audio_decoder : boost::noncopyable
 {

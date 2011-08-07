@@ -26,7 +26,7 @@
 
 namespace caspar { namespace core {
 
-class frame_producer;
+struct frame_producer;
 class basic_frame;
 
 class layer : boost::noncopyable

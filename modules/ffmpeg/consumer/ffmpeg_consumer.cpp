@@ -23,6 +23,8 @@
 #include "ffmpeg_consumer.h"
 
 #include <core/mixer/read_frame.h>
+#include <core/consumer/frame_consumer.h>
+#include <core/video_format.h>
 
 #include <common/concurrency/executor.h>
 #include <common/utility/string.h>

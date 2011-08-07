@@ -5,12 +5,12 @@
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
 
-#include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/image_transform.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
 #include <core/mixer/write_frame.h>
 
+#include <common/exception/exceptions.h>
 #include <common/memory/memcpy.h>
 
 #if defined(_MSC_VER)
@@ -21,7 +21,6 @@ extern "C"
 {
 	#include <libswscale/swscale.h>
 	#include <libavcodec/avcodec.h>
-	#include <libavfilter/avfilter.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)

@@ -23,7 +23,11 @@
 
 #include "../../ffmpeg_error.h"
 
-#include <tbb/task_group.h>
+#include <core/video_format.h>
+
+#include <tbb/cache_aligned_allocator.h>
+
+#include <queue>
 
 #if defined(_MSC_VER)
 #pragma warning (push)

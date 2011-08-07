@@ -27,26 +27,24 @@
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 
+#include <common/env.h>
 #include <common/utility/assert.h>
-#include <common/utility/timer.h>
 #include <common/diagnostics/graph.h>
 
-#include <core/mixer/write_frame.h>
 #include <core/video_format.h>
-#include <core/producer/frame/audio_transform.h>
+#include <core/producer/frame_producer.h>
+#include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/basic_frame.h>
-#include <core/producer/color/color_producer.h>
 
-#include <common/env.h>
-
+#include <boost/assign.hpp>
 #include <boost/timer.hpp>
-#include <boost/range/algorithm.hpp>
-#include <boost/range/algorithm_ext.hpp>
+#include <boost/foreach.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/range/algorithm/find_if.hpp>
+#include <boost/range/algorithm/find.hpp>
 
 #include <tbb/task_group.h>
-
-#include <deque>
-#include <vector>
+#include <tbb/parallel_invoke.h>
 
 namespace caspar {
 			

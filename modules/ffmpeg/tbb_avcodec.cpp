@@ -6,20 +6,26 @@
 
 #include <common/log/log.h>
 #include <common/env.h>
+#include <common/utility/assert.h>
 
 #include <tbb/task.h>
 #include <tbb/atomic.h>
+#include <tbb/parallel_for.h>
 #include <tbb/tbb_thread.h>
 
-#include <regex>
-#include <boost/algorithm/string.hpp>
-
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
 extern "C" 
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
 	#include <libavformat/avformat.h>
 }
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
 
 namespace caspar {
 		

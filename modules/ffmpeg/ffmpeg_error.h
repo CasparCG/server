@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/exception/exceptions.h>
+
 #include <string>
 
 #pragma warning(push, 1)
