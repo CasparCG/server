@@ -47,7 +47,7 @@ public:
 	void map();
 	void unmap();
 	
-	void read(device_buffer& source);
+	void begin_read(device_buffer& source);
 	bool ready() const;
 	void wait(ogl_device& ogl);
 private:

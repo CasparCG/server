@@ -28,8 +28,8 @@
 
 namespace caspar { namespace core {
 	
-static GLenum FORMAT[] = {0, GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
-static GLenum INTERNAL_FORMAT[] = {0, GL_LUMINANCE8, GL_LUMINANCE8_ALPHA8, GL_RGB8, GL_RGBA8};	
+static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
+static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};	
 
 GLenum format(size_t stride)
 {
@@ -92,14 +92,14 @@ public:
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 	}
 
-	void read(host_buffer& source)
+	void begin_read(host_buffer& source)
 	{
-		GL(glBindTexture(GL_TEXTURE_2D, id_));
+		bind();
 		source.unmap();
 		source.bind();
 		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		source.unbind();
-		GL(glBindTexture(GL_TEXTURE_2D, 0));
+		unbind();
 		fence_.set();
 		GL(glFlush());
 	}
@@ -129,7 +129,7 @@ void device_buffer::attach(int index){impl_->attach(index);}
 void device_buffer::bind(){impl_->bind();}
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
-void device_buffer::read(host_buffer& source){impl_->read(source);}
+void device_buffer::begin_read(host_buffer& source){impl_->begin_read(source);}
 void device_buffer::clear(){impl_->clear();}
 bool device_buffer::ready() const{return impl_->ready();}
 

@@ -47,7 +47,7 @@ public:
 
 	void attach(int index = 0);
 
-	void read(host_buffer& source);
+	void begin_read(host_buffer& source);
 	bool ready() const;
 private:
 	friend class ogl_device;

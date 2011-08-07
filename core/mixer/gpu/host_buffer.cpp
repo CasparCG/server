@@ -111,7 +111,7 @@ public:
 		GL(glBindBuffer(target_, 0));
 	}
 
-	void read(device_buffer& source)
+	void begin_read(device_buffer& source)
 	{
 		source.attach(0);
 		source.bind();
@@ -137,7 +137,7 @@ void host_buffer::map(){impl_->map();}
 void host_buffer::unmap(){impl_->unmap();}
 void host_buffer::bind(){impl_->bind();}
 void host_buffer::unbind(){impl_->unbind();}
-void host_buffer::read(device_buffer& source){impl_->read(source);}
+void host_buffer::begin_read(device_buffer& source){impl_->begin_read(source);}
 size_t host_buffer::size() const { return impl_->size_; }
 bool host_buffer::ready() const{return impl_->ready();}
 void host_buffer::wait(ogl_device& ogl){impl_->wait(ogl);}
