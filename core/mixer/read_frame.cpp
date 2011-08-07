@@ -42,7 +42,10 @@ public:
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
 		if(!image_data_->data())
-			image_data_->map(ogl_);
+		{
+			image_data_->wait(ogl_);
+			ogl_.invoke([=]{image_data_->map();}, high_priority);
+		}
 
 		auto ptr = static_cast<const uint8_t*>(image_data_->data());
 		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_->size());
@@ -66,7 +69,7 @@ const boost::iterator_range<const int16_t*> read_frame::audio_data()
 	return impl_ ? impl_->audio_data() : boost::iterator_range<const int16_t*>();
 }
 
-size_t read_frame::image_size() const{return impl_->image_data_->size();}
+size_t read_frame::image_size() const{return impl_ ? impl_->image_data_->size() : 0;}
 
 //#include <tbb/scalable_allocator.h>
 //#include <tbb/parallel_for.h>

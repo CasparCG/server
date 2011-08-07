@@ -25,8 +25,10 @@
 
 #include <memory>
 
-namespace caspar { namespace core {
+#include "GL/glew.h"
 
+namespace caspar { namespace core {
+		
 class host_buffer;
 
 class device_buffer : boost::noncopyable
@@ -44,9 +46,9 @@ public:
 	void clear();
 
 	void attach(int index = 0);
+
 	void read(host_buffer& source);
-	void write(host_buffer& target);
-	
+	bool ready() const;
 private:
 	friend class ogl_device;
 	device_buffer(size_t width, size_t height, size_t stride);
@@ -54,5 +56,7 @@ private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
 };
+	
+GLenum format(size_t stride);
 
 }}

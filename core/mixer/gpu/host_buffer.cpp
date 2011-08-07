@@ -22,6 +22,7 @@
 #include "host_buffer.h"
 
 #include "fence.h"
+#include "device_buffer.h"
 #include "ogl_device.h"
 
 #include <common/gl/gl_check.h>
@@ -35,7 +36,7 @@ struct host_buffer::implementation : boost::noncopyable
 	void*			data_;
 	GLenum			usage_;
 	GLenum			target_;
-	core::fence		fence_;
+	fence			fence_;
 
 public:
 	implementation(size_t size, usage_t usage) 
@@ -84,10 +85,9 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
 	}
 
-	void map2(ogl_device& ogl)
+	void wait(ogl_device& ogl)
 	{
 		fence_.wait(ogl);
-		ogl.invoke(std::bind(&implementation::map, this), high_priority);
 	}
 
 	void unmap()
@@ -111,10 +111,22 @@ public:
 		GL(glBindBuffer(target_, 0));
 	}
 
-	void fence()
+	void read(device_buffer& source)
 	{
+		source.attach(0);
+		source.bind();
+		unmap();
+		bind();
+		GL(glReadPixels(0, 0, source.width(), source.height(), format(source.stride()), GL_UNSIGNED_BYTE, NULL));
+		unbind();
+		source.unbind();
 		fence_.set();
 		GL(glFlush());
+	}
+
+	bool ready() const
+	{
+		return fence_.ready();
 	}
 };
 
@@ -122,11 +134,12 @@ host_buffer::host_buffer(size_t size, usage_t usage) : impl_(new implementation(
 const void* host_buffer::data() const {return impl_->data_;}
 void* host_buffer::data() {return impl_->data_;}
 void host_buffer::map(){impl_->map();}
-void host_buffer::map(ogl_device& ogl){impl_->map2(ogl);}
 void host_buffer::unmap(){impl_->unmap();}
 void host_buffer::bind(){impl_->bind();}
 void host_buffer::unbind(){impl_->unbind();}
-void host_buffer::fence(){impl_->fence();}
+void host_buffer::read(device_buffer& source){impl_->read(source);}
 size_t host_buffer::size() const { return impl_->size_; }
+bool host_buffer::ready() const{return impl_->ready();}
+void host_buffer::wait(ogl_device& ogl){impl_->wait(ogl);}
 
 }}
