@@ -61,6 +61,9 @@
       <Filter>source\util</Filter>
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="amcp\FindWrapper.h">
+      <Filter>source\amcp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="amcp\AMCPCommandQueue.cpp">
@@ -94,5 +97,8 @@
       <Filter>source\util</Filter>
     </ClCompile>
     <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="amcp\FindWrapper.cpp">
+      <Filter>source\amcp</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

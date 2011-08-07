@@ -22,6 +22,7 @@
 
 #include "AMCPCommandsImpl.h"
 #include "AMCPProtocolStrategy.h"
+#include "FindWrapper.h"
 
 #include <common/env.h>
 
@@ -142,14 +143,24 @@ std::wstring ListTemplates()
 			sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), [](char c){ return std::isdigit(c) == 0;}), sizeStr.end());
 
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
+
+			std::wstringstream str;
+			str << relativePath.replace_extension(TEXT(""));
+			auto my_str = str.str();
+
+			for(size_t n = 0; n < my_str.size(); ++n)
+			{
+				if(my_str[n] == L'/')
+					my_str[n] = L'\\';
+			}
 			
-			replyString << TEXT("\"") << relativePath.replace_extension(TEXT(""))
+			replyString << TEXT("\"") << my_str
 						<< TEXT("\" ") << sizeWStr
 						<< TEXT(" ") << writeTimeWStr
 						<< TEXT("\r\n");		
 		}
 	}
-	return boost::to_upper_copy(replyString.str());
+	return replyString.str();//boost::to_upper_copy(replyString.str());
 }
 
 namespace amcp {
@@ -1188,12 +1199,63 @@ bool ClsCommand::DoExecute()
 	return true;
 }
 
+void FindInDirectory(const std::wstring& dir, std::wstringstream& replyString) {
+	{	//Find files in directory
+		WIN32_FIND_DATA fileInfo;
+		caspar::utils::FindWrapper findWrapper(env::template_folder() + dir + TEXT("*.ft"), &fileInfo);
+		if(findWrapper.Success())
+		{
+			do
+			{
+				if(((fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) && ((fileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != FILE_ATTRIBUTE_HIDDEN)) {
+					std::wstring filename = fileInfo.cFileName;
+
+					transform(filename.begin(), filename.end(), filename.begin(), toupper);
+					
+					TCHAR numBuffer[32];
+					TCHAR timeBuffer[32];
+					TCHAR dateBuffer[32];
+
+					unsigned __int64 fileSize = fileInfo.nFileSizeHigh;
+					fileSize *= 0x100000000;
+					fileSize += fileInfo.nFileSizeLow;
+
+					_ui64tot_s(fileSize, numBuffer, 32, 10);
+
+					SYSTEMTIME lastWriteTime;
+					FileTimeToSystemTime(&(fileInfo.ftLastWriteTime), &lastWriteTime);
+					GetDateFormat(LOCALE_USER_DEFAULT, 0, &lastWriteTime, _T("yyyyMMdd"), dateBuffer, sizeof(dateBuffer));
+					GetTimeFormat(LOCALE_USER_DEFAULT, 0, &lastWriteTime, _T("HHmmss"), timeBuffer, sizeof(timeBuffer));
+
+					replyString << TEXT("\"") << dir << filename.substr(0, filename.size()-3) << TEXT("\" ") << numBuffer << TEXT(" ") << dateBuffer << timeBuffer << TEXT("\r\n");
+				}
+			}
+			while(findWrapper.FindNext(&fileInfo));
+		}
+	}
+
+	{	//Find subdirectories in directory
+		WIN32_FIND_DATA fileInfo;
+		caspar::utils::FindWrapper findWrapper(env::template_folder() + dir + TEXT("*"), &fileInfo);
+		if(findWrapper.Success())
+		{
+			do
+			{
+				if((fileInfo.cFileName[0] != TEXT('.')) && ((fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) && ((fileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != FILE_ATTRIBUTE_HIDDEN)) {
+					FindInDirectory(dir + fileInfo.cFileName + TEXT('\\'), replyString);
+				}
+			}
+			while(findWrapper.FindNext(&fileInfo));
+		}
+	}
+}
+
 bool TlsCommand::DoExecute()
 {
 	std::wstringstream replyString;
 	replyString << TEXT("200 TLS OK\r\n");
 
-	replyString << ListTemplates();
+	FindInDirectory(TEXT(""), replyString);
 	replyString << TEXT("\r\n");
 
 	SetReplyString(replyString.str());

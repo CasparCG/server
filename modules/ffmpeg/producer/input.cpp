@@ -226,11 +226,13 @@ public:
 
 	~implementation()
 	{
+		std::shared_ptr<AVPacket> packet;
+		for(int n = 0; n < 32 && try_pop_video_packet(packet); ++n){}
+		for(int n = 0; n < 256 && try_pop_audio_packet(packet); ++n){}
 		stop();
 		// Unblock thread.
-		std::shared_ptr<AVPacket> packet;
-		try_pop_video_packet(packet);
-		try_pop_audio_packet(packet);
+		for(int n = 0; n < 32 && try_pop_video_packet(packet); ++n){}
+		for(int n = 0; n < 256 && try_pop_audio_packet(packet); ++n){}
 	}
 		
 	bool try_pop_video_packet(std::shared_ptr<AVPacket>& packet)
