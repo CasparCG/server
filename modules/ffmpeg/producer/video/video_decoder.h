@@ -23,7 +23,13 @@
 
 #include <core/video_format.h>
 
-struct AVStream;
+#include <boost/noncopyable.hpp>
+
+#include <vector>
+
+struct AVFormatContext;
+struct AVFrame;
+struct AVPacket;
 
 namespace caspar {
 

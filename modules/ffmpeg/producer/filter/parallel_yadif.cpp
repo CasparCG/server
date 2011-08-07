@@ -2,12 +2,22 @@
 
 #include "parallel_yadif.h"
 
+#include <common/log/log.h>
+
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
 extern "C" 
 {
 	#include <libavfilter/avfilter.h>
 }
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
 
 #include <tbb/parallel_for.h>
+#include <tbb/concurrent_queue.h>
 
 #include <boost/thread/once.hpp>
 

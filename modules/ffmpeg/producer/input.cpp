@@ -21,7 +21,7 @@
 #pragma warning (disable : 4244)
 #endif
 
-#include "..\stdafx.h"
+#include "../stdafx.h"
 
 #include "input.h"
 #include "../ffmpeg_error.h"
@@ -30,6 +30,8 @@
 #include <core/video_format.h>
 
 #include <common/diagnostics/graph.h>
+#include <common/exception/exceptions.h>
+#include <common/exception/win32_exception.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
@@ -38,14 +40,20 @@
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/range/iterator_range.hpp>
 
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
 extern "C" 
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
 	#include <libavformat/avformat.h>
 }
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
 
 namespace caspar {
 

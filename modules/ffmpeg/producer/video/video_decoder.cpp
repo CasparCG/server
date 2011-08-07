@@ -20,24 +20,21 @@
 #include "../../stdafx.h"
 
 #include "video_decoder.h"
+
 #include "../util.h"
 #include "../filter/filter.h"
 
 #include "../../ffmpeg_error.h"
 #include "../../tbb_avcodec.h"
 
-#include <common/memory/memcpy.h>
-
-#include <core/video_format.h>
-#include <core/producer/frame/basic_frame.h>
-#include <core/mixer/write_frame.h>
 #include <core/producer/frame/image_transform.h>
 #include <core/producer/frame/frame_factory.h>
-#include <core/producer/color/color_producer.h>
+
+#include <boost/range/algorithm_ext/push_back.hpp>
 
 #include <tbb/task_group.h>
 
-#include <boost/range/algorithm_ext.hpp>
+#include <queue>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -47,8 +44,8 @@ extern "C"
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
-	#include <libavformat/avformat.h>
 	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)

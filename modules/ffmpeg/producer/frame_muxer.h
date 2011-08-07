@@ -2,11 +2,11 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include <core/video_format.h>
-
 #include <boost/noncopyable.hpp>
 
 #include <vector>
+
+struct AVFrame;
 
 namespace caspar { 
 	

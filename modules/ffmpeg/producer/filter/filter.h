@@ -2,6 +2,8 @@
 
 #include <common/memory/safe_ptr.h>
 
+#include <boost/noncopyable.hpp>
+
 #include <string>
 #include <vector>
 
@@ -20,10 +22,12 @@ static bool double_rate(const std::wstring& filters)
 	return false;
 }
 
-class filter
+class filter : boost::noncopyable
 {
 public:
 	filter(const std::wstring& filters = L"");
+	filter(filter&& other);
+	filter& operator=(filter&& other);
 
 	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame);
 
