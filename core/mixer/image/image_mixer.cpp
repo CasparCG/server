@@ -72,12 +72,6 @@ public:
 		, mode_stack_(1, video_mode::progressive)
 	{
 		initialize_buffers();
-
-		channel_.ogl().invoke([=]
-		{
-			if(!GLEE_VERSION_3_0)
-				CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";//BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 3.0 support."));
-		});
 	}
 
 	~implementation()
