@@ -188,7 +188,7 @@ public:
 		std::swap(draw_buffer_[0], write_buffer_);
 
 		// device -> host.			
-		read_buffer->read(*write_buffer_);
+		read_buffer->begin_read(*write_buffer_);
 
 		return read_buffer;
 	}
