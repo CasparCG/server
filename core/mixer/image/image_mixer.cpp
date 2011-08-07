@@ -104,7 +104,7 @@ public:
 		if(boost::range::find(mode_stack_, video_mode::upper) != mode_stack_.end() && boost::range::find(mode_stack_, video_mode::lower) != mode_stack_.end())
 			return;
 		
-		core::render_item item = {frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.back(), mode_stack_.back(), frame.tag()};	
+		core::render_item item(frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.back(), mode_stack_.back(), frame.tag());	
 
 		auto& layer = layers_.back();
 
@@ -201,7 +201,6 @@ public:
 		targets[1]->attach();
 			
 		kernel_.draw(item, make_safe(targets[0]), local_key, layer_key);
-		item.textures.clear();
 		
 		targets[0]->bind();
 
