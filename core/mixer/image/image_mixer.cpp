@@ -138,38 +138,36 @@ public:
 	{
 		if(channel_.get_format_desc().width != write_buffer_->width() || channel_.get_format_desc().height != write_buffer_->height())
 			initialize_buffers();
-
-		auto read_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
-
+		
 		layer_key_buffer_->clear();
 		draw_buffer_[0]->clear();
 		draw_buffer_[1]->clear();
 		local_key_buffer_[0]->clear();
 		local_key_buffer_[1]->clear();
 
-		bool local_key = false;
 		bool layer_key = false;
 
 		BOOST_FOREACH(auto& layer, layers)
-			draw(std::move(layer), local_key, layer_key);
+			draw(std::move(layer), layer_key);
 
 		std::swap(draw_buffer_[0], write_buffer_);
-
-		// device -> host.			
-		read_buffer->begin_read(*write_buffer_);
-
-		return read_buffer;
+		
+		auto host_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
+		host_buffer->begin_read(*write_buffer_);
+		return host_buffer;
 	}
 
-	void draw(layer&& layer, bool& local_key, bool& layer_key)
+	void draw(layer&& layer, bool& layer_key)
 	{			
+		bool local_key = false;
+
 		local_key_buffer_[0]->clear();
 
 		BOOST_FOREACH(auto& item, layer)
 			draw(std::move(item), local_key, layer_key);
 		
 		layer_key = local_key;
-		local_key = false;
+
 		std::swap(local_key_buffer_[0], layer_key_buffer_);
 	}
 
