@@ -28,7 +28,7 @@
 
 #include "gl_check.h"
 
-#include <Glee.h>
+#include <GL/glew.h>
 
 #include "../exception/exceptions.h"
 #include "../log/log.h"
