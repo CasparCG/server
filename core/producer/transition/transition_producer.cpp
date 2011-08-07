@@ -38,8 +38,6 @@ struct transition_producer : public frame_producer
 	
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
-	safe_ptr<frame_producer>	org_dest_producer_;
-	safe_ptr<frame_producer>	org_source_producer_;
 
 	safe_ptr<basic_frame>		last_frame_;
 		
@@ -48,9 +46,7 @@ struct transition_producer : public frame_producer
 		, current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
-		, org_dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
-		, org_source_producer_(frame_producer::empty())
 		, last_frame_(basic_frame::empty()){}
 	
 	// frame_producer
@@ -62,8 +58,7 @@ struct transition_producer : public frame_producer
 	
 	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer)
 	{
-		source_producer_	 = producer;
-		org_source_producer_ = producer;
+		source_producer_ = producer;
 	}
 
 	virtual safe_ptr<basic_frame> receive(int hints)
@@ -105,7 +100,7 @@ struct transition_producer : public frame_producer
 
 	virtual std::wstring print() const
 	{
-		return L"transition[" + org_source_producer_->print() + L"|" + org_dest_producer_->print() + L"]";
+		return L"transition[" + source_producer_->print() + L"|" + dest_producer_->print() + L"]";
 	}
 	
 	// transition_producer
