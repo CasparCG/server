@@ -28,8 +28,13 @@
 
 namespace caspar { namespace core {
 	
-GLenum FORMAT[] = {0, GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
-GLenum INTERNAL_FORMAT[] = {0, GL_LUMINANCE8, GL_LUMINANCE8_ALPHA8, GL_RGB8, GL_RGBA8};	
+static GLenum FORMAT[] = {0, GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR, GL_BGRA};
+static GLenum INTERNAL_FORMAT[] = {0, GL_LUMINANCE8, GL_LUMINANCE8_ALPHA8, GL_RGB8, GL_RGBA8};	
+
+GLenum format(size_t stride)
+{
+	return FORMAT[stride];
+}
 
 struct device_buffer::implementation : boost::noncopyable
 {
@@ -38,6 +43,8 @@ struct device_buffer::implementation : boost::noncopyable
 	const size_t width_;
 	const size_t height_;
 	const size_t stride_;
+
+	fence		 fence_;
 
 public:
 	implementation(size_t width, size_t height, size_t stride) 
@@ -93,20 +100,10 @@ public:
 		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		source.unbind();
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
+		fence_.set();
+		GL(glFlush());
 	}
 	
-	void write(host_buffer& target)
-	{
-		attach(0);
-		GL(glBindTexture(GL_TEXTURE_2D, id_));
-		target.unmap();
-		target.bind();
-		GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
-		target.unbind();
-		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		target.fence();
-	}
-
 	void attach(int index)
 	{
 		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, id_, 0));
@@ -116,6 +113,11 @@ public:
 	{
 		attach(0);
 		GL(glClear(GL_COLOR_BUFFER_BIT));
+	}
+
+	bool ready() const
+	{
+		return fence_.ready();
 	}
 };
 
@@ -128,7 +130,8 @@ void device_buffer::bind(){impl_->bind();}
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
 void device_buffer::read(host_buffer& source){impl_->read(source);}
-void device_buffer::write(host_buffer& target){impl_->write(target);}
 void device_buffer::clear(){impl_->clear();}
+bool device_buffer::ready() const{return impl_->ready();}
+
 
 }}

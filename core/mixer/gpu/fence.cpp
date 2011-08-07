@@ -23,12 +23,15 @@ struct fence::implementation
 
 	bool ready() const
 	{
+		if(!sync_)
+			return true;
+
 		GLsizei length = 0;
 		int values[] = {0};
 
 		GL(glGetSynciv(sync_, GL_SYNC_STATUS, 1, &length, values));
 
-		return sync_ ? values[0] == GL_SIGNALED : true;
+		return values[0] == GL_SIGNALED;
 	}
 
 	void wait(ogl_device& ogl)
@@ -44,7 +47,7 @@ struct fence::implementation
 		}
 
 		if(delay > 0)
-			CASPAR_LOG(warning) << L"[ogl_device] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms.";
+			CASPAR_LOG(warning) << L"[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms.";
 	}
 };
 	
@@ -53,7 +56,7 @@ fence::fence()
 	if(GLEW_ARB_sync)
 		impl_.reset(new implementation());
 	else
-		CASPAR_LOG(warning) << "GL_SYNC not supported, running without fences. This might cause performance degradation when running multiple channels.";
+		CASPAR_LOG(warning) << "[fence] GL_SYNC not supported, running without fences. This might cause performance degradation when running multiple channels and short buffer depth.";
 
 }
 
