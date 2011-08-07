@@ -187,14 +187,23 @@ public:
 
 		std::swap(draw_buffer_[0], write_buffer_);
 
-		// device -> host.				
-		write_buffer_->write(*read_buffer);
+		// device -> host.			
+		read_buffer->read(*write_buffer_);
 
 		return read_buffer;
 	}
 	
 	void render_item(std::array<std::shared_ptr<device_buffer>,2>& targets, render_item&& item, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
 	{
+		BOOST_FOREACH(auto& texture, item.textures)
+		{
+			if(!texture->ready())
+			{
+				CASPAR_LOG(warning) << L"[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
+				channel_.ogl().yield(); // Try to give it some more time.
+			}
+		}
+
 		targets[1]->attach();
 			
 		kernel_.draw(item, make_safe(targets[0]), local_key, layer_key);
