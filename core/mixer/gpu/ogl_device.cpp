@@ -34,7 +34,13 @@ ogl_device::ogl_device() : executor_(L"ogl_device")
 	{
 		context_.reset(new sf::Context());
 		context_->SetActive(true);
-						
+		
+		if (glewInit() != GLEW_OK)
+			BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+				
+		if(!GLEW_VERSION_3_2)
+			CASPAR_LOG(warning) << "Missing OpenGL 3.2 support.";
+	
 		GL(glGenFramebuffers(1, &fbo_));		
 		GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
 		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));

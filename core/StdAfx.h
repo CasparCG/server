@@ -32,7 +32,7 @@
 #define NOMINMAX
 
 #include <Windows.h>
-#include <GLee.h>
+#include <GL/glew.h>
 #include <SFML/Window.hpp>
 
 #include <algorithm>

@@ -21,7 +21,7 @@
 #define NOMINMAX
 
 #include <windows.h>
-#include <Glee.h>
+#include <GL/glew.h>
 #include <SFML/Window.hpp>
 
 #include "ogl_consumer.h"
@@ -144,7 +144,7 @@ public:
 #endif		
 		executor_.invoke([=]
 		{
-			if(!GLEE_VERSION_2_1)
+			if(!GLEW_VERSION_2_1)
 				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
 			window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), windowed_ ? sf::Style::Resize : sf::Style::Fullscreen);

@@ -37,6 +37,8 @@
 #include <windows.h>
 #include <atlbase.h>
 
+#include <GL/glew.h>
+
 #include <core/mixer/gpu/ogl_device.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
