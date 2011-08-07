@@ -195,14 +195,11 @@ public:
 	
 	void render_item(std::array<std::shared_ptr<device_buffer>,2>& targets, render_item&& item, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
 	{
-		BOOST_FOREACH(auto& texture, item.textures)
+		if(!std::all_of(item.textures.begin(), item.textures.end(), std::mem_fn(&device_buffer::ready)))
 		{
-			if(!texture->ready())
-			{
-				CASPAR_LOG(warning) << L"[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
-				channel_.ogl().yield(); // Try to give it some more time.
-			}
-		}
+			CASPAR_LOG(warning) << L"[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
+			channel_.ogl().yield(); // Try to give it some more time.
+		}		
 
 		targets[1]->attach();
 			
