@@ -146,7 +146,7 @@ struct image_scroll_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<core::basic_frame> receive()
+	virtual safe_ptr<core::basic_frame> receive(int)
 	{		
 		delta_ += speed_;
 

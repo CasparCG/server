@@ -6,6 +6,7 @@
 
 #include "util.h"
 
+#include <core/producer/frame_producer.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/image_transform.h>
 #include <core/producer/frame/pixel_format.h>
@@ -129,7 +130,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	{
 	}
 
-	void push(const std::shared_ptr<AVFrame>& video_frame)
+	void push(const std::shared_ptr<AVFrame>& video_frame, int hints)
 	{		
 		if(!video_frame)
 		{	
@@ -146,7 +147,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			put_frames(frame_buffer_);
 			return;
 		}
-		
+
 		if(display_mode_ == display_mode::invalid)
 		{
 			if(auto_mode_)
@@ -167,10 +168,13 @@ struct frame_muxer::implementation : boost::noncopyable
 
 			CASPAR_LOG(info) << "frame_muxer: " << display_mode::print(display_mode_);
 		}
-						
+				
+		if(hints & core::frame_producer::ALPHA_HINT)
+			try_make_gray(make_safe(video_frame));
+
 		BOOST_FOREACH(auto& av_frame, filter_.execute(video_frame))
 		{
-			auto frame = make_write_frame(this, av_frame, frame_factory_);
+			auto frame = make_write_frame(this, av_frame, frame_factory_, hints);
 
 			// Fix field-order if needed
 			if(frame->get_type() == core::video_mode::lower && format_desc_.mode == core::video_mode::upper)
@@ -339,7 +343,7 @@ struct frame_muxer::implementation : boost::noncopyable
 
 frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory)
 	: impl_(new implementation(in_fps, frame_factory)){}
-void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame){impl_->push(video_frame);}
+void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
 void frame_muxer::push(const std::shared_ptr<std::vector<int16_t>>& audio_samples){return impl_->push(audio_samples);}
 safe_ptr<basic_frame> frame_muxer::pop(){return impl_->pop();}
 size_t frame_muxer::size() const {return impl_->size();}

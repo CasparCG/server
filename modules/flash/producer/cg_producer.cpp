@@ -93,9 +93,9 @@ public:
 		flash_producer_->param(str);
 	}
 
-	virtual safe_ptr<core::basic_frame> receive()
+	virtual safe_ptr<core::basic_frame> receive(int hints)
 	{
-		return flash_producer_->receive();
+		return flash_producer_->receive(hints);
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const
@@ -138,7 +138,7 @@ safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_fac
 
 cg_producer::cg_producer(const safe_ptr<core::frame_producer>& frame_producer) : impl_(new implementation(frame_producer)){}
 cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
-safe_ptr<core::basic_frame> cg_producer::receive(){return impl_->receive();}
+safe_ptr<core::basic_frame> cg_producer::receive(int hints){return impl_->receive(hints);}
 safe_ptr<core::basic_frame> cg_producer::last_frame() const{return impl_->last_frame();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}

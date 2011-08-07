@@ -249,7 +249,7 @@ public:
 		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str);}); 
 	}
 				
-	virtual safe_ptr<core::basic_frame> receive()
+	virtual safe_ptr<core::basic_frame> receive(int)
 	{
 		auto frame = context_->get_frame();
 		if(frame != core::basic_frame::late())

@@ -251,15 +251,22 @@ struct image_kernel::implementation : boost::noncopyable
 			return;
 
 		if(!shader_)
+		{
 			shader_.reset(new shader(vertex_, fragment_));
-
-		GL(glEnable(GL_TEXTURE_2D));
-		GL(glEnable(GL_POLYGON_STIPPLE));
-			
+			GL(glEnable(GL_TEXTURE_2D));
+			GL(glEnable(GL_SCISSOR_TEST));
+		}
+					
 		if(item.mode == core::video_mode::upper)
+		{
+			GL(glEnable(GL_POLYGON_STIPPLE));
 			glPolygonStipple(upper_pattern);
+		}
 		else if(item.mode == core::video_mode::lower)
+		{
+			GL(glEnable(GL_POLYGON_STIPPLE));
 			glPolygonStipple(lower_pattern);
+		}
 		else
 			GL(glDisable(GL_POLYGON_STIPPLE));
 
@@ -335,7 +342,6 @@ struct image_kernel::implementation : boost::noncopyable
 		double w = static_cast<double>(background->width());
 		double h = static_cast<double>(background->height());
 
-		GL(glEnable(GL_SCISSOR_TEST));
 		GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
 			
 		auto f_p = item.transform.get_fill_translation();
@@ -349,9 +355,6 @@ struct image_kernel::implementation : boost::noncopyable
 			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 		glEnd();
-
-		GL(glDisable(GL_SCISSOR_TEST));	
-		GL(glDisable(GL_POLYGON_STIPPLE));
 	}
 };
 

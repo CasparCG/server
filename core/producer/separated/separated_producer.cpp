@@ -44,19 +44,19 @@ struct separated_producer : public frame_producer
 	
 	// frame_producer
 	
-	virtual safe_ptr<basic_frame> receive()
+	virtual safe_ptr<basic_frame> receive(int hints)
 	{
 		tbb::parallel_invoke
 		(
 			[&]
 			{
 				if(fill_ == core::basic_frame::late())
-					fill_ = receive_and_follow(fill_producer_);
+					fill_ = receive_and_follow(fill_producer_, hints);
 			},
 			[&]
 			{
 				if(key_ == core::basic_frame::late())
-					key_ = receive_and_follow(key_producer_);
+					key_ = receive_and_follow(key_producer_, hints | ALPHA_HINT);
 			}
 		);
 

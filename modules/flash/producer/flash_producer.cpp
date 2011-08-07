@@ -255,7 +255,7 @@ public:
 
 	// frame_producer
 		
-	virtual safe_ptr<core::basic_frame> receive()
+	virtual safe_ptr<core::basic_frame> receive(int)
 	{				
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
