@@ -14,9 +14,30 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
+#include <common/exception/exceptions.h>
 #include <common/log/log.h>
 
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
+
+#include <boost/foreach.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
+
+#include <deque>
+#include <queue>
+#include <vector>
 
 using namespace caspar::core;
 

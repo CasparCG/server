@@ -19,16 +19,23 @@
 */
 #pragma once
 
-#include <common/diagnostics/graph.h>
+#include <common/memory/safe_ptr.h>
 
 #include <memory>
 #include <string>
 
-#include <boost/iterator/iterator_facade.hpp>
+#include <boost/noncopyable.hpp>
 
-struct AVCodecContext;
+struct AVFormatContext;
+struct AVPacket;
 
 namespace caspar {
+
+namespace diagnostics {
+
+class graph;
+
+}
 	
 class input : boost::noncopyable
 {

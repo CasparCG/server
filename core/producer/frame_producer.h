@@ -19,8 +19,6 @@
 */
 #pragma once
 
-#include "frame/frame_factory.h"
-
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
@@ -32,8 +30,9 @@
 namespace caspar { namespace core {
 
 class basic_frame;
+struct frame_factory;
 
-class frame_producer : boost::noncopyable
+struct frame_producer : boost::noncopyable
 {
 public:
 	enum hints

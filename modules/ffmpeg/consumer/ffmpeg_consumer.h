@@ -19,9 +19,6 @@
 */
 #pragma once
 
-#include <core/consumer/frame_consumer.h>
-#include <core/video_format.h>
-
 #include <boost/property_tree/ptree.hpp>
 
 #include <string>
@@ -29,7 +26,7 @@
 
 namespace caspar { 
 	
-safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params);
-safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree);
+//safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params);
+//safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree);
 
 }
