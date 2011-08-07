@@ -154,6 +154,9 @@ public:
 		
 		auto host_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
 		host_buffer->begin_read(*write_buffer_);
+		
+		GL(glFlush());
+
 		return host_buffer;
 	}
 

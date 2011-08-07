@@ -121,7 +121,7 @@ public:
 		unbind();
 		source.unbind();
 		fence_.set();
-		GL(glFlush());
+		//GL(glFlush());
 	}
 
 	bool ready() const
