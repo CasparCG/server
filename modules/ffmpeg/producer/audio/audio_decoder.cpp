@@ -59,6 +59,7 @@ public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
 		, nb_frames_(0)
+		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
 	{			   		
 		try
 		{
@@ -89,6 +90,8 @@ public:
 													format_desc_.audio_sample_rate, codec_context_->sample_rate,
 													AV_SAMPLE_FMT_S16,				codec_context_->sample_fmt,
 													16, 10, 0, 0.8);
+
+			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
 
 			CASPAR_LOG(warning) << L" Invalid audio format. Resampling.";
 
@@ -139,7 +142,6 @@ public:
 
 	std::shared_ptr<std::vector<int16_t>> decode(AVPacket& pkt)
 	{		
-		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
 		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
 
 		int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, &pkt), "[audio_decoder]");
@@ -148,20 +150,17 @@ public:
 		pkt.size -= ret;
 		pkt.data += ret;
 			
-		buffer1_.resize(written_bytes);
-
 		if(resampler_)
 		{
-			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2, 0);
 			auto ret = audio_resample(resampler_.get(),
 										reinterpret_cast<short*>(buffer2_.data()), 
 										reinterpret_cast<short*>(buffer1_.data()), 
-										buffer1_.size() / (av_get_bytes_per_sample(codec_context_->sample_fmt) * codec_context_->channels)); 
-			buffer2_.resize(ret * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * format_desc_.audio_channels);
+										written_bytes / (av_get_bytes_per_sample(codec_context_->sample_fmt) * codec_context_->channels)); 
+			written_bytes = ret * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * format_desc_.audio_channels;
 			std::swap(buffer1_, buffer2_);
 		}
 
-		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+		const auto n_samples = written_bytes / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 		const auto samples = reinterpret_cast<int16_t*>(buffer1_.data());
 
 		return std::make_shared<std::vector<int16_t>>(samples, samples + n_samples);
