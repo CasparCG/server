@@ -49,7 +49,7 @@ struct fence::implementation
 		}
 
 		if(delay > 0)
-			CASPAR_LOG(warning) << L"[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms.";
+			CASPAR_LOG(debug) << L"[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms.";
 	}
 };
 	
