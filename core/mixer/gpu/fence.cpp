@@ -6,6 +6,8 @@
 
 #include <common/gl/gl_check.h>
 
+#include <gl/glew.h>
+
 namespace caspar { namespace core {
 
 struct fence::implementation

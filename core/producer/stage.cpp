@@ -22,18 +22,19 @@
 
 #include "stage.h"
 
-#include "../video_channel_context.h"
-
 #include "layer.h"
+
+#include "../video_channel_context.h"
 
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 
 #include <common/concurrency/executor.h>
 
-#include <boost/range/algorithm.hpp>
+#include <boost/foreach.hpp>
 
 #include <map>
+#include <set>
 
 namespace caspar { namespace core {
 		

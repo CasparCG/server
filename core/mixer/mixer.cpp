@@ -45,6 +45,7 @@
 
 #include <boost/fusion/container/map.hpp>
 #include <boost/fusion/include/at_key.hpp>
+#include <boost/foreach.hpp>
 
 #include <tbb/parallel_invoke.h>
 

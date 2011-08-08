@@ -4,6 +4,8 @@
 
 #include <common/gl/gl_check.h>
 
+#include <gl/glew.h>
+
 #include <unordered_map>
 
 namespace caspar { namespace core {

@@ -37,11 +37,15 @@
 #include <core/producer/frame/pixel_format.h>
 #include <core/video_format.h>
 
+#include <gl/glew.h>
+
 #include <boost/foreach.hpp>
 #include <boost/range.hpp>
+#include <boost/range/algorithm/find.hpp>
 
 #include <algorithm>
 #include <array>
+#include <deque>
 #include <unordered_map>
 
 namespace caspar { namespace core {

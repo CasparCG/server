@@ -23,10 +23,9 @@
 
 #include "image_transform.h"
 #include "audio_transform.h"
-#include "pixel_format.h"
 #include "../../video_format.h"
 
-#include <boost/range/algorithm.hpp>
+#include <boost/foreach.hpp>
 
 namespace caspar { namespace core {
 																																						
@@ -41,15 +40,23 @@ struct basic_frame::implementation
 	
 public:
 	implementation(const std::vector<safe_ptr<basic_frame>>& frames) 
-		: mode_(core::video_mode::progressive), frames_(frames) {}
+		: mode_(core::video_mode::progressive), frames_(frames) 
+	{
+	}
 	implementation(std::vector<safe_ptr<basic_frame>>&& frames) 
-		: mode_(core::video_mode::progressive), frames_(std::move(frames)){}
+		: mode_(core::video_mode::progressive), frames_(std::move(frames))
+	{
+	}
 	implementation(safe_ptr<basic_frame>&& frame) 
 		: mode_(core::video_mode::progressive)
-		{ frames_.push_back(std::move(frame));}
+	{
+		frames_.push_back(std::move(frame));
+	}
 	implementation(const safe_ptr<basic_frame>& frame) 
-		: mode_(core::video_mode::progressive)
-		{ frames_.push_back(frame);}
+		: mode_(core::video_mode::progressive)		
+	{ 
+		frames_.push_back(frame);
+	}
 	
 	void accept(basic_frame& self, frame_visitor& visitor)
 	{

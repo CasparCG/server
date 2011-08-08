@@ -58,6 +58,9 @@
     <ClCompile Include="env.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="utility\tweener.cpp">
+      <Filter>source\utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exception\exceptions.h">
