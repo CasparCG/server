@@ -33,6 +33,8 @@
 
 #include <boost/foreach.hpp>
 
+#include <tbb/parallel_for_each.h>
+
 #include <map>
 #include <set>
 
@@ -74,7 +76,7 @@ public:
 
 struct stage::implementation : boost::noncopyable
 {		
-	std::map<int, layer>						layers_;		
+	std::map<int, layer>						layers_;	
 	video_channel_context&						channel_;
 public:
 	implementation(video_channel_context& video_channel)  
@@ -88,8 +90,15 @@ public:
 
 		try
 		{
-			BOOST_FOREACH(auto& layer, layers_)
+			// Allocate placeholders.
+			BOOST_FOREACH(auto layer, layers_)
+				frames[layer.first] = basic_frame::empty();
+
+			// Render layers
+			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer)
+			{
 				frames[layer.first] = layer.second.receive();
+			});
 		}
 		catch(...)
 		{
