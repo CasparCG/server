@@ -17,8 +17,6 @@
 #endif
 extern "C" 
 {
-	#define __STDC_CONSTANT_MACROS
-	#define __STDC_LIMIT_MACROS
 	#include <libavutil/avutil.h>
 	#include <libavutil/imgutils.h>
 	#include <libavfilter/avfilter.h>
