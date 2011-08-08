@@ -31,18 +31,17 @@ namespace caspar { namespace core {
 																																							
 struct read_frame::implementation : boost::noncopyable
 {
-	ogl_device&										ogl_;
-	size_t											size_;
-	boost::unique_future<safe_ptr<host_buffer>>		future_image_data_;
-	std::shared_ptr<host_buffer>					image_data_;
-	tbb::mutex										mutex_;
-	std::vector<int16_t>							audio_data_;
+	ogl_device&					ogl_;
+	size_t						size_;
+	safe_ptr<host_buffer>		image_data_;
+	tbb::mutex					mutex_;
+	std::vector<int16_t>		audio_data_;
 
 public:
-	implementation(ogl_device& ogl, size_t size, boost::unique_future<safe_ptr<host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
+	implementation(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
 		: ogl_(ogl)
 		, size_(size)
-		, future_image_data_(std::move(image_data))
+		, image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data)){}	
 	
 	const boost::iterator_range<const uint8_t*> image_data()
@@ -50,9 +49,8 @@ public:
 		{
 			tbb::mutex::scoped_lock lock(mutex_);
 
-			if(!image_data_)
+			if(!image_data_->data())
 			{
-				image_data_ = future_image_data_.get();
 				image_data_.get()->wait(ogl_);
 				ogl_.invoke([=]{image_data_.get()->map();}, high_priority);
 			}
@@ -67,7 +65,7 @@ public:
 	}
 };
 
-read_frame::read_frame(ogl_device& ogl, size_t size, boost::unique_future<safe_ptr<host_buffer>>&& image_data, std::vector<int16_t>&& audio_data) 
+read_frame::read_frame(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
 	: impl_(new implementation(ogl, size, std::move(image_data), std::move(audio_data))){}
 read_frame::read_frame(){}
 const boost::iterator_range<const uint8_t*> read_frame::image_data()
