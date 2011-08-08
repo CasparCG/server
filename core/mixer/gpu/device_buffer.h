@@ -25,8 +25,6 @@
 
 #include <memory>
 
-#include "GL/glew.h"
-
 namespace caspar { namespace core {
 		
 class host_buffer;
@@ -57,6 +55,6 @@ private:
 	safe_ptr<implementation> impl_;
 };
 	
-GLenum format(size_t stride);
+unsigned int format(size_t stride);
 
 }}

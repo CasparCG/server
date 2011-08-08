@@ -25,7 +25,10 @@
 #include "device_buffer.h"
 #include "ogl_device.h"
 
+#include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
+
+#include <gl/glew.h>
 
 namespace caspar { namespace core {
 																																								

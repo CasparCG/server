@@ -21,18 +21,17 @@
 #include "StdAfx.h"
 
 #include "video_channel.h"
+
 #include "video_channel_context.h"
 #include "video_format.h"
 
 #include "consumer/output.h"
 #include "mixer/mixer.h"
 #include "producer/stage.h"
-#include "producer/layer.h"
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 
-#include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/timer.hpp>
 
 #ifdef _MSC_VER

@@ -20,6 +20,7 @@
 #include "../../stdafx.h"
 
 #include "image_kernel.h"
+
 #include "blending_glsl.h"
 #include "../gpu/shader.h"
 #include "../gpu/device_buffer.h"
@@ -30,6 +31,8 @@
 #include <core/video_format.h>
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/image_transform.h>
+
+#include <GL/glew.h>
 
 #include <boost/noncopyable.hpp>
 

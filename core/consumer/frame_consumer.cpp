@@ -21,9 +21,9 @@
 
 #include "frame_consumer.h"
 
-#include <common/memory/safe_ptr.h>
-
 #include <common/env.h>
+#include <common/memory/safe_ptr.h>
+#include <common/exception/exceptions.h>
 
 namespace caspar { namespace core {
 
