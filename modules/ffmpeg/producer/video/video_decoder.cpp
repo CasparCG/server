@@ -32,8 +32,6 @@
 
 #include <boost/range/algorithm_ext/push_back.hpp>
 
-#include <tbb/task_group.h>
-
 #include <queue>
 
 #if defined(_MSC_VER)
