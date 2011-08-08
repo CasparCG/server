@@ -37,10 +37,6 @@
 #include <windows.h>
 #include <atlbase.h>
 
-#include <GL/glew.h>
-
-#include <core/mixer/gpu/ogl_device.h>
-
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 
 #include <modules/bluefish/bluefish.h>
@@ -56,13 +52,14 @@
 #include <common/gl/gl_check.h>
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
-#include <common/utility/assert.h>
+
+#include <core/mixer/gpu/ogl_device.h>
 
 #include <tbb/task_scheduler_observer.h>
-#include <tbb/task_scheduler_init.h>
 
-#include <boost/foreach.hpp>
 #include <boost/property_tree/detail/file_parser_error.hpp>
+
+#include <algorithm>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -125,13 +122,18 @@ void print_info()
 	CASPAR_LOG(info) << L"FreeImage " << caspar::get_image_version();
 	
 	CASPAR_LOG(info) << L"Decklink " << caspar::get_decklink_version();
-	BOOST_FOREACH(auto& device, caspar::get_decklink_device_list())
+	auto deck = caspar::get_decklink_device_list();
+	std::for_each(deck.begin(), deck.end(), [](const std::wstring& device)
+	{
 		CASPAR_LOG(info) << device;
+	});
 		
-	CASPAR_LOG(info) << L"Bluefish " << caspar::get_bluefish_version();
-	BOOST_FOREACH(auto& device, caspar::get_bluefish_device_list())
+	auto blue = caspar::get_bluefish_device_list();
+	std::for_each(blue.begin(), blue.end(), [](const std::wstring& device)
+	{
 		CASPAR_LOG(info) << device;
-
+	});
+	
 	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::get_avcodec_version();
 	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::get_avformat_version();
 	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::get_avfilter_version();

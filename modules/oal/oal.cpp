@@ -28,7 +28,7 @@ namespace caspar
 
 void init_oal()
 {
-	core::register_consumer_factory(create_oal_consumer);
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_oal_consumer(params);});
 }
 
 }

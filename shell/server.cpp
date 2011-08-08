@@ -51,7 +51,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -61,11 +60,10 @@ namespace caspar {
 using namespace core;
 using namespace protocol;
 
-
 struct server::implementation : boost::noncopyable
 {
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
-	std::vector<safe_ptr<video_channel>>				channels_;
+	std::vector<safe_ptr<video_channel>>		channels_;
 	ogl_device									ogl_;
 
 	implementation()												
@@ -117,7 +115,7 @@ struct server::implementation : boost::noncopyable
 					//else if(name == "file")					
 					//	channels_.back()->output()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
 					else if(name == "audio")
-						channels_.back()->output()->add(index++, make_safe<oal_consumer>());		
+						channels_.back()->output()->add(index++, create_oal_consumer());		
 					else if(name != "<xmlcomment>")
 						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
 				}

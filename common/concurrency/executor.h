@@ -20,7 +20,7 @@
 #pragma once
 
 #include "../exception/win32_exception.h"
-#include "../utility/assert.h"
+#include "../utility/string.h"
 #include "../log/log.h"
 
 #include <tbb/atomic.h>

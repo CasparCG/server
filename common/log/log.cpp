@@ -27,7 +27,7 @@
 #include "log.h"
 
 #include "../exception/exceptions.h"
-
+#include "../utility/string.h"
 #include <ios>
 #include <string>
 #include <ostream>

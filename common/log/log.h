@@ -34,8 +34,6 @@
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
 
-#include "../utility/string.h"
-
 namespace caspar { namespace log {
 	
 namespace internal{
@@ -90,7 +88,7 @@ BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 
 #define CASPAR_LOG_CURRENT_EXCEPTION() \
 	try\
-	{CASPAR_LOG(error) << caspar::widen(boost::current_exception_diagnostic_information());}\
+	{CASPAR_LOG(error) << boost::current_exception_diagnostic_information().c_str();}\
 	catch(...){}
 
 }}

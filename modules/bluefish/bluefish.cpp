@@ -19,11 +19,16 @@
 */
 #include "bluefish.h"
 
+#include "consumer/bluefish_consumer.h"
+
 #include "util/blue_velvet.h"
+
+#include <common/log/log.h>
+#include <common/utility/string.h>
 
 #include <core/consumer/frame_consumer.h>
 
-#include "consumer/bluefish_consumer.h"
+#include <boost/lexical_cast.hpp>
 
 namespace caspar {
 

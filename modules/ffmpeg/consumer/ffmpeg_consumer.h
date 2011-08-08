@@ -19,10 +19,10 @@
 */
 #pragma once
 
-#include <boost/property_tree/ptree.hpp>
-
-#include <string>
-#include <vector>
+//#include <boost/property_tree/ptree.hpp>
+//
+//#include <string>
+//#include <vector>
 
 namespace caspar { 
 	
