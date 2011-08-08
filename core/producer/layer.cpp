@@ -125,6 +125,11 @@ public:
 				
 		return frame;
 	}
+
+	bool empty() const
+	{
+		return background_ == core::frame_producer::empty() && foreground_ == core::frame_producer::empty();
+	}
 };
 
 layer::layer() : impl_(new implementation()){}
@@ -152,4 +157,5 @@ void layer::stop(){impl_->stop();}
 safe_ptr<basic_frame> layer::receive() {return impl_->receive();}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
+bool layer::empty() const {return impl_->empty();}
 }}

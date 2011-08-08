@@ -46,6 +46,8 @@ public:
 	void stop(); // nothrow
 	void param(const std::wstring& param);
 
+	bool empty() const;
+
 	safe_ptr<frame_producer> foreground() const; // nothrow
 	safe_ptr<frame_producer> background() const; // nothrow
 
