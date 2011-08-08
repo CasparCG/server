@@ -20,26 +20,26 @@
 
 #pragma once
 
-#include <core/video_channel.h>
-
-#include <common/exception/exceptions.h>
+#include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
 
 #include <vector>
 
 namespace caspar {
-		
+
+namespace core {
+	class video_channel;
+}
+
 class server : boost::noncopyable
 {
 public:
 	server();
-
 	const std::vector<safe_ptr<core::video_channel>> get_channels() const;
-
 private:
 	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	safe_ptr<implementation> impl_;
 };
 
 }

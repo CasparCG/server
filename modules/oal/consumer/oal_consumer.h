@@ -19,30 +19,19 @@
 */
 #pragma once
 
+#include <common/memory/safe_ptr.h>
+
 #include <core/video_format.h>
-#include <core/consumer/frame_consumer.h>
 
 #include <vector>
 
 namespace caspar {
-	
-class oal_consumer : public core::frame_consumer
-{
-public:	
-	explicit oal_consumer();
-	oal_consumer(oal_consumer&& other);
 
-	// frame_consumer
-	virtual void initialize(const core::video_format_desc& format_desc);	
-	virtual void send(const safe_ptr<core::read_frame>&);
-	virtual size_t buffer_depth() const;
-	virtual std::wstring print() const;
-	virtual const core::video_format_desc& get_video_format_desc() const;
-private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
-};
+namespace core {
+	struct frame_consumer;
+}	
 
 safe_ptr<core::frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_oal_consumer();
 
 }

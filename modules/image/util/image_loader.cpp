@@ -28,7 +28,6 @@
 
 #include <boost/exception/errinfo_file_name.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/thread/once.hpp>
 
 namespace caspar { 
 

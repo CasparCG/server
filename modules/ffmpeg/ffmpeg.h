@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include <string>
+
 namespace caspar {
 
 void init_ffmpeg();

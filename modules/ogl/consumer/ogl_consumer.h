@@ -19,13 +19,16 @@
 */
 #pragma once
 
-#include <core/consumer/frame_consumer.h>
-#include <core/video_format.h>
+#include <common/memory/safe_ptr.h>
 
 #include <vector>
 #include <boost/property_tree/ptree.hpp>
 
 namespace caspar {
+
+namespace core {
+	struct frame_consumer;
+}
 
 safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params);
 safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::ptree& ptree);

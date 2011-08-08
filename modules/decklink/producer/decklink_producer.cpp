@@ -39,7 +39,6 @@
 #include <core/producer/frame/frame_factory.h>
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/atomic.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>

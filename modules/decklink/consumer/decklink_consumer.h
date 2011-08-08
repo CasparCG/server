@@ -19,7 +19,8 @@
 */
 #pragma once
 
-#include <core/consumer/frame_consumer.h>
+#include <common/memory/safe_ptr.h>
+
 #include <core/video_format.h>
 
 #include <boost/property_tree/ptree.hpp>
@@ -28,6 +29,10 @@
 #include <vector>
 
 namespace caspar { 
+
+namespace core {
+	struct frame_consumer;
+}
 	
 safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params);
 safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tree::ptree& ptree);
