@@ -35,8 +35,6 @@
 #endif
 extern "C" 
 {
-	#define __STDC_CONSTANT_MACROS
-	#define __STDC_LIMIT_MACROS
 	#include <libavformat/avformat.h>
 	#include <libavcodec/avcodec.h>
 }
