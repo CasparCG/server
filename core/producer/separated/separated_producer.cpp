@@ -23,6 +23,8 @@
 
 #include <core/producer/frame/basic_frame.h>
 
+#include <tbb/parallel_invoke.h>
+
 namespace caspar { namespace core {	
 
 struct separated_producer : public frame_producer
@@ -44,11 +46,19 @@ struct separated_producer : public frame_producer
 	
 	virtual safe_ptr<basic_frame> receive(int hints)
 	{
-		if(fill_ == core::basic_frame::late())
-			fill_ = receive_and_follow(fill_producer_, hints);
-	
-		if(key_ == core::basic_frame::late())
-			key_ = receive_and_follow(key_producer_, hints | ALPHA_HINT);
+		tbb::parallel_invoke
+		(
+			[&]
+			{
+				if(fill_ == core::basic_frame::late())
+					fill_ = receive_and_follow(fill_producer_, hints);
+			},
+			[&]
+			{
+				if(key_ == core::basic_frame::late())
+					key_ = receive_and_follow(key_producer_, hints | ALPHA_HINT);
+			}
+		);
 
 		if(fill_ == basic_frame::eof())
 			return basic_frame::eof();

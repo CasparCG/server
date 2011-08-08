@@ -70,8 +70,6 @@ struct ffmpeg_producer : public core::frame_producer
 
 	safe_ptr<core::basic_frame>						last_frame_;
 	
-	tbb::task_group									tasks_;
-
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
 		: filename_(filename)
@@ -94,18 +92,15 @@ public:
 		for(int n = 0; n < 128 && muxer_.size() < 2; ++n)
 			decode_frame(0);
 	}
-
-	~ffmpeg_producer()
-	{
-		tasks_.cancel();
-		tasks_.wait();
-	}
-	
+		
 	virtual safe_ptr<core::basic_frame> receive(int hints)
 	{
-		tasks_.wait();
-
 		auto frame = core::basic_frame::late();
+		
+		frame_timer_.restart();
+
+		for(int n = 0; n < 64 && muxer_.size() < 2; ++n)
+			decode_frame(hints);
 		
 		if(!muxer_.empty())
 			frame = last_frame_ = muxer_.pop();	
@@ -119,16 +114,8 @@ public:
 				++nb_frames_;		
 			}
 		}
-
-		tasks_.run([=]
-		{
-			frame_timer_.restart();
-
-			for(int n = 0; n < 64 && muxer_.size() < 2; ++n)
-				decode_frame(hints);
-
-			graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
-		});
+		
+		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 		
 		return frame;
 	}
