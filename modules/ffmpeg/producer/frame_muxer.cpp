@@ -165,6 +165,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		{
 			video_streams_.back().push(make_safe<core::write_frame>(this));
 			++video_frame_count_;
+			display_mode_ = display_mode::simple;
 			put_frames(frame_buffer_);
 			return;
 		}
@@ -303,7 +304,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		case display_mode::deinterlace_bob:				return simple(dest);
 		case display_mode::deinterlace_bob_reinterlace:	return interlace(dest);
 		case display_mode::deinterlace:					return simple(dest);
-		default:										BOOST_THROW_EXCEPTION(invalid_operation());
+		default:										BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
 		}
 	}
 
