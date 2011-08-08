@@ -33,18 +33,21 @@
 
 #include <boost/range/algorithm.hpp>
 
-#include <tbb/parallel_for.h>
-
 #include <map>
 
 namespace caspar { namespace core {
 		
 void destroy_producer(safe_ptr<frame_producer>& producer)
 {
-	if(!producer.unique())
+	bool unique = producer.unique();
+
+	if(!unique)
 		CASPAR_LOG(warning) << producer->print() << L" Not destroyed on safe asynchronous destruction thread.";
-		
+	
 	producer = frame_producer::empty();
+		
+	if(unique)
+		CASPAR_LOG(debug) << producer->print() << L" Destroyed.";
 }
 
 class destroy_producer_proxy : public frame_producer
@@ -91,15 +94,11 @@ public:
 
 		try
 		{
-			// Allocate placeholders.
-			BOOST_FOREACH(auto layer, layers_)
-				frames[layer.first] = basic_frame::empty();
+			auto layers2 = std::move(layers_);
+			std::remove_copy_if(layers2.begin(), layers2.end(), std::inserter(layers_, layers_.begin()), [](layer_t& layer){return layer.second.empty();});
 
-			// Render layers
-			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](layer_t& layer)
-			{
+			BOOST_FOREACH(auto& layer, layers_)
 				frames[layer.first] = layer.second.receive();
-			});
 		}
 		catch(...)
 		{

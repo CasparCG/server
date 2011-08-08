@@ -55,8 +55,15 @@ struct image_kernel::implementation : boost::noncopyable
 
 	std::string vertex_;
 	std::string fragment_;
+
+	core::video_mode::type	last_mode_;
+	size_t					last_width_;
+	size_t					last_height_;
 	
-	implementation()
+	implementation() 
+		: last_mode_(core::video_mode::progressive)
+		, last_width_(0)
+		, last_height_(0)
 	{
 		vertex_ = 
 			"void main()																		\n"
@@ -254,21 +261,31 @@ struct image_kernel::implementation : boost::noncopyable
 		{
 			shader_.reset(new shader(vertex_, fragment_));
 			GL(glEnable(GL_TEXTURE_2D));
-			GL(glEnable(GL_SCISSOR_TEST));
 		}
-					
-		if(item.mode == core::video_mode::upper)
+
+		if(last_mode_ != item.mode)
 		{
-			GL(glEnable(GL_POLYGON_STIPPLE));
-			glPolygonStipple(upper_pattern);
+			last_mode_ = item.mode;
+			
+			if(item.mode == core::video_mode::progressive)			
+				GL(glDisable(GL_POLYGON_STIPPLE));			
+			else			
+			{
+				GL(glEnable(GL_POLYGON_STIPPLE));			
+
+				if(item.mode == core::video_mode::upper)
+					glPolygonStipple(upper_pattern);
+				else if(item.mode == core::video_mode::lower)
+					glPolygonStipple(lower_pattern);
+			}
 		}
-		else if(item.mode == core::video_mode::lower)
+
+		if(last_width_ != background->width() || last_height_ != background->height())
 		{
-			GL(glEnable(GL_POLYGON_STIPPLE));
-			glPolygonStipple(lower_pattern);
+			last_width_ = background->width();
+			last_height_ = background->height();
+			GL(glViewport(0, 0, background->width(), background->height()));
 		}
-		else
-			GL(glDisable(GL_POLYGON_STIPPLE));
 
 		// Bind textures
 
@@ -335,13 +352,13 @@ struct image_kernel::implementation : boost::noncopyable
 		// Setup drawing area
 
 		GL(glColor4d(item.transform.get_gain(), item.transform.get_gain(), item.transform.get_gain(), item.transform.get_opacity()));
-		GL(glViewport(0, 0, background->width(), background->height()));
 						
 		auto m_p = item.transform.get_clip_translation();
 		auto m_s = item.transform.get_clip_scale();
 		double w = static_cast<double>(background->width());
 		double h = static_cast<double>(background->height());
 
+		GL(glEnable(GL_SCISSOR_TEST));
 		GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
 			
 		auto f_p = item.transform.get_fill_translation();
@@ -355,6 +372,8 @@ struct image_kernel::implementation : boost::noncopyable
 			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 		glEnd();
+
+		GL(glDisable(GL_SCISSOR_TEST));	
 	}
 };
 
