@@ -193,7 +193,8 @@ private:
 			{
 				auto frame2 = make_safe<core::basic_frame>(frame.second);
 				frame2->get_image_transform() = image_transforms[frame.first].fetch_and_tick(1);
-				frame1 = core::basic_frame::interlace(frame1, frame2, channel_.get_format_desc().mode); // image_mixer optimizes away unecessary interlacing. No need to worry about it here.
+				if(frame1->get_image_transform() != frame2->get_image_transform())
+					frame1 = core::basic_frame::interlace(frame1, frame2, channel_.get_format_desc().mode);
 			}
 
 			frame1->accept(image_mixer_);
