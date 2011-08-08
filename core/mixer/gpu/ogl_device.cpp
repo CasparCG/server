@@ -81,7 +81,11 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 				try
 				{
 					yield();
-					gc().get();
+					BOOST_FOREACH(auto& pools, device_pools_)
+					{
+						BOOST_FOREACH(auto& pool, pools)
+							pool.second->clear();
+					}
 					
 					// Try again
 					buffer.reset(new device_buffer(width, height, stride));
@@ -125,7 +129,11 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 				try
 				{
 					yield();
-					gc().get();
+					BOOST_FOREACH(auto& pools, host_pools_)
+					{
+						BOOST_FOREACH(auto& pool, pools)
+							pool.second->clear();
+					}
 
 					// Try again
 					buffer.reset(new host_buffer(size, usage));
