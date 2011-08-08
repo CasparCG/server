@@ -118,7 +118,7 @@ public:
 					[&]{image = mix_image(frames);}, 
 					[&]{audio = mix_audio(frames);});
 			
-			return make_safe<read_frame>(channel_.ogl(), channel_.get_format_desc().size, std::move(image), std::move(audio));
+			return make_safe<read_frame>(channel_.ogl(), channel_.get_format_desc().size, std::move(image.get()), std::move(audio));
 		}
 		catch(...)
 		{
