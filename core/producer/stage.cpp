@@ -39,15 +39,10 @@ namespace caspar { namespace core {
 		
 void destroy_producer(safe_ptr<frame_producer>& producer)
 {
-	bool unique = producer.unique();
-
-	if(!unique)
-		CASPAR_LOG(warning) << producer->print() << L" Not destroyed on safe asynchronous destruction thread.";
+	if(!producer.unique())
+		CASPAR_LOG(debug) << producer->print() << L" Not destroyed on safe asynchronous destruction thread.";
 	
 	producer = frame_producer::empty();
-		
-	if(unique)
-		CASPAR_LOG(debug) << producer->print() << L" Destroyed.";
 }
 
 class destroy_producer_proxy : public frame_producer
@@ -79,8 +74,6 @@ public:
 struct stage::implementation : boost::noncopyable
 {		
 	std::map<int, layer>						layers_;		
-	typedef std::map<int, layer>::value_type	layer_t;
-		
 	video_channel_context&						channel_;
 public:
 	implementation(video_channel_context& video_channel)  
@@ -94,9 +87,6 @@ public:
 
 		try
 		{
-			auto layers2 = std::move(layers_);
-			std::remove_copy_if(layers2.begin(), layers2.end(), std::inserter(layers_, layers_.begin()), [](layer_t& layer){return layer.second.empty();});
-
 			BOOST_FOREACH(auto& layer, layers_)
 				frames[layer.first] = layer.second.receive();
 		}
