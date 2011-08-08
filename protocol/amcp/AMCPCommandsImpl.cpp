@@ -103,7 +103,7 @@ std::wstring ListMedia()
 			{		
 				auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-				auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::media_folder().size(), itr->path().file_string().size()));
+				auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::media_folder().size()-1, itr->path().file_string().size()));
 
 				auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 				writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
@@ -112,19 +112,16 @@ std::wstring ListMedia()
 				auto sizeStr = boost::lexical_cast<std::wstring>(boost::filesystem::file_size(itr->path()));
 				sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
 				auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
-
-				std::wstring dir = relativePath.parent_path().external_directory_string();
-				std::wstring file = boost::to_upper_copy(relativePath.filename());
-				relativePath = boost::filesystem::wpath(dir + L"/" + file);
-						
+				
 				auto str = relativePath.replace_extension(TEXT("")).external_file_string();
 				if(str[0] == '\\' || str[0] == '/')
 					str = std::wstring(str.begin() + 1, str.end());
 
 				replyString << TEXT("\"") << str
-							<< TEXT("\" ") << sizeWStr
+							<< TEXT("\" ") << clipttype 
+							<< TEXT(" ") << sizeStr
 							<< TEXT(" ") << writeTimeWStr
-							<< TEXT("\r\n");		
+							<< TEXT("\r\n"); 	
 			}	
 		}
 	}
