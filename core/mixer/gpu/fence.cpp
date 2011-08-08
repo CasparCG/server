@@ -53,11 +53,15 @@ struct fence::implementation
 	
 fence::fence() 
 {
+	static bool log_flag = false;
+
 	if(GLEW_ARB_sync)
 		impl_.reset(new implementation());
-	else
+	else if(!log_flag)
+	{
 		CASPAR_LOG(warning) << "[fence] GL_SYNC not supported, running without fences. This might cause performance degradation when running multiple channels and short buffer depth.";
-
+		log_flag = true;
+	}
 }
 
 void fence::set() 
