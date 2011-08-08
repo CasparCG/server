@@ -24,6 +24,11 @@
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/audio_transform.h>
 
+#include <tbb/parallel_for.h>
+
+#include <stack>
+#include <deque>
+
 namespace caspar { namespace core {
 	
 struct audio_mixer::implementation

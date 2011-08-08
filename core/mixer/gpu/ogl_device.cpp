@@ -21,10 +21,13 @@
 
 #include "ogl_device.h"
 
+#include <common/exception/exceptions.h>
 #include <common/utility/assert.h>
 #include <common/gl/gl_check.h>
 
 #include <boost/foreach.hpp>
+
+#include <gl/glew.h>
 
 namespace caspar { namespace core {
 

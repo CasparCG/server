@@ -25,6 +25,8 @@
 #include "../frame/frame_factory.h"
 #include "../../mixer/write_frame.h"
 
+#include <common/exception/exceptions.h>
+
 #include <sstream>
 
 namespace caspar { namespace core {

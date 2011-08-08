@@ -28,6 +28,7 @@
 #include "separated/separated_producer.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/exception/exceptions.h>
 
 namespace caspar { namespace core {
 	

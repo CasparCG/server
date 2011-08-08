@@ -25,6 +25,8 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <vector>
+
 namespace caspar { namespace core {
 
 struct video_format_desc;

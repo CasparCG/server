@@ -23,9 +23,7 @@
 #include "layer.h"
 
 #include "frame_producer.h"
-
 #include "frame/basic_frame.h"
-
 
 namespace caspar { namespace core {
 	
