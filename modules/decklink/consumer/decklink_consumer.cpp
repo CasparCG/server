@@ -35,6 +35,8 @@
 #include <common/memory/memclr.h>
 #include <common/memory/memshfl.h>
 
+#include <core/consumer/frame_consumer.h>
+
 #include <tbb/concurrent_queue.h>
 
 #include <boost/circular_buffer.hpp>

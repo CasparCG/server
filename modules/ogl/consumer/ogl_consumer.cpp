@@ -26,15 +26,16 @@
 
 #include "ogl_consumer.h"
 
-#include <core/video_format.h>
-#include <core/mixer/read_frame.h>
-
 #include <common/gl/gl_check.h>
 #include <common/concurrency/executor.h>
 #include <common/memory/safe_ptr.h>
 #include <common/memory/memcpy.h>
 #include <common/diagnostics/graph.h>
 #include <common/utility/timer.h>
+
+#include <core/video_format.h>
+#include <core/mixer/read_frame.h>
+#include <core/consumer/frame_consumer.h>
 
 #include <boost/timer.hpp>
 #include <boost/circular_buffer.hpp>

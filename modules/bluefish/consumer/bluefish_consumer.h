@@ -19,7 +19,6 @@
 */
 #pragma once
 
-#include <core/consumer/frame_consumer.h>
 #include <common/memory/safe_ptr.h>
 
 #include <boost/property_tree/ptree.hpp>
@@ -27,6 +26,10 @@
 #include <string>
 
 namespace caspar { 
+
+namespace core {
+	struct frame_consumer;
+}
 			
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params);
 safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree);
