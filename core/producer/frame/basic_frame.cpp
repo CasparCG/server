@@ -107,12 +107,12 @@ std::wstring basic_frame::print() const{return impl_->print();}
 void basic_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, video_mode::type mode)
-{			
-	if(frame1 == basic_frame::empty() && frame2 == basic_frame::empty())
-		return basic_frame::empty();
-	
+{				
 	if(frame1 == basic_frame::eof() || frame2 == basic_frame::eof())
 		return basic_frame::eof();
+
+	if(frame1 == basic_frame::empty() && frame2 == basic_frame::empty())
+		return basic_frame::empty();
 	
 	if(frame1 == frame2 || mode == video_mode::progressive)
 		return frame2;
@@ -137,13 +137,13 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 }
 
 safe_ptr<basic_frame> basic_frame::combine(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2)
-{
-	if(frame1 == basic_frame::empty() && frame2 == basic_frame::empty())
-		return basic_frame::empty();
-	
-	if(frame1 == basic_frame::eof() && frame2 == basic_frame::eof())
+{	
+	if(frame1 == basic_frame::eof() || frame2 == basic_frame::eof())
 		return basic_frame::eof();
 	
+	if(frame1 == basic_frame::empty() && frame2 == basic_frame::empty())
+		return basic_frame::empty();
+
 	std::vector<safe_ptr<basic_frame>> frames;
 	frames.push_back(frame1);
 	frames.push_back(frame2);
