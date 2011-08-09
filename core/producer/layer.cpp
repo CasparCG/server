@@ -112,9 +112,9 @@ public:
 		{
 			if(frames_left <= 0 || frame == core::basic_frame::eof())
 			{
-				CASPAR_VERIFY(frame != core::basic_frame::eof() && "Received early EOF. Media duration metadata incorrect.");
+				//CASPAR_ASSERT(frame != core::basic_frame::eof() && "Received early EOF. Media duration metadata incorrect.");
 
-				CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset.";
+				CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset. Frames left: " << frames_left;
 				
 				play();
 				frame = receive();
