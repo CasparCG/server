@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#define NOMINMAX
+
 #include <windows.h>
 
 namespace caspar {

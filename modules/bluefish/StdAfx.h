@@ -29,6 +29,8 @@
 #include <crtdbg.h>
 #endif
 
+#define NOMINMAX
+
 #include <Windows.h>
 
 #include <memory>

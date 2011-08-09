@@ -41,6 +41,7 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 		virtual safe_ptr<basic_frame> receive(int){return basic_frame::empty();}
 		virtual safe_ptr<basic_frame> last_frame() const{return basic_frame::empty();}
 		virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
+		virtual int64_t nb_frames() const {return 0;}
 		virtual std::wstring print() const { return L"empty";}
 	};
 	static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();
