@@ -259,6 +259,6 @@ input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& file
 	: impl_(new implementation(graph, filename, loop, start)){}
 bool input::eof() const {return !impl_->is_running_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
-std::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
+safe_ptr<AVFormatContext> input::context(){return make_safe(impl_->format_context_);}
 size_t input::nb_frames() const {return impl_->nb_frames();}
 }
