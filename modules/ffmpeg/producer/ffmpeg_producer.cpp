@@ -125,7 +125,7 @@ public:
 		else
 		{
 			if(input_.eof())
-				return frame = core::basic_frame::eof();
+				return last_frame();
 			else
 			{
 				graph_->add_tag("underflow");	
