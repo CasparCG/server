@@ -113,35 +113,35 @@ public:
 
 		std::vector<std::shared_ptr<AVFrame>> result;
 
-		if(packets_.empty())
-			return result;
-
-		auto packet = packets_.front();
+		while(!packets_.empty() && result.empty())
+		{
+			auto packet = packets_.front();
 					
-		if(packet)
-		{
-			auto frame = decode(*packet);
-			boost::range::push_back(result, filter_.execute(frame));
-			if(packet->size == 0)
-				packets_.pop();
-		}
-		else
-		{
-			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+			if(packet)
 			{
-				AVPacket pkt;
-				av_init_packet(&pkt);
-				pkt.data = nullptr;
-				pkt.size = 0;
-				auto frame = decode(pkt);
-				boost::range::push_back(result, filter_.execute(frame));	
+				auto frame = decode(*packet);
+				boost::range::push_back(result, filter_.execute(frame));
+				if(packet->size == 0)
+					packets_.pop();
 			}
+			else
+			{
+				if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+				{
+					AVPacket pkt;
+					av_init_packet(&pkt);
+					pkt.data = nullptr;
+					pkt.size = 0;
+					auto frame = decode(pkt);
+					boost::range::push_back(result, filter_.execute(frame));	
+				}
 
-			if(result.empty())
-			{					
-				packets_.pop();
-				avcodec_flush_buffers(codec_context_.get());
-				result.push_back(nullptr);
+				if(result.empty())
+				{					
+					packets_.pop();
+					avcodec_flush_buffers(codec_context_.get());
+					result.push_back(nullptr);
+				}
 			}
 		}
 		
@@ -190,7 +190,7 @@ public:
 	
 	bool ready() const
 	{
-		return !codec_context_ || !packets_.empty();
+		return !codec_context_ || packets_.size() > 2;
 	}
 	
 	double fps() const

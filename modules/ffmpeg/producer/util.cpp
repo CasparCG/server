@@ -11,7 +11,8 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/exception/exceptions.h>
-#include <common/memory/memcpy.h>
+
+#include <tbb/parallel_for.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -224,7 +225,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		auto write = frame_factory->create_frame(tag, desc.pix_fmt != core::pixel_format::invalid ? desc : get_pixel_format_desc(PIX_FMT_BGRA, width, height));
 		write->set_type(get_mode(*decoded_frame));
 
-		tbb::parallel_for(0, static_cast<int>(desc.planes.size()), 1, [&](int n)
+		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 		{
 			auto plane            = desc.planes[n];
 			auto result           = write->image_data(n).begin();
@@ -232,14 +233,28 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			auto decoded_linesize = decoded_frame->linesize[n];
 				
 			// Copy line by line since ffmpeg sometimes pads each line.
+			tbb::affinity_partitioner ap;
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, static_cast<int>(desc.planes[n].height)), [&](const tbb::blocked_range<size_t>& r)
 			{
 				for(size_t y = r.begin(); y != r.end(); ++y)
-					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-			});
+					memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+			}, ap);
 
 			write->commit(n);
-		});
+		}
+
+		//for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
+		//{
+		//	auto plane            = desc.planes[n];
+		//	auto result           = write->image_data(n).begin();
+		//	auto decoded          = decoded_frame->data[n];
+		//	auto decoded_linesize = decoded_frame->linesize[n];
+		//		
+		//	for(size_t y = 0; y < static_cast<int>(desc.planes[n].height); ++y)
+		//		fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+
+		//	write->commit(n);
+		//}
 
 		return write;
 	}
