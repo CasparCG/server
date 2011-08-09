@@ -33,8 +33,6 @@
 
 #include <boost/foreach.hpp>
 
-#include <tbb/parallel_for_each.h>
-
 #include <map>
 #include <set>
 
@@ -90,15 +88,8 @@ public:
 
 		try
 		{
-			// Allocate placeholders.
-			BOOST_FOREACH(auto layer, layers_)
-				frames[layer.first] = basic_frame::empty();
-
-			// Render layers
-			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer)
-			{
+			BOOST_FOREACH(auto& layer, layers_)
 				frames[layer.first] = layer.second.receive();
-			});
 		}
 		catch(...)
 		{

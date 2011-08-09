@@ -198,6 +198,8 @@ public:
 			else
 				muxer_.push(std::make_shared<std::vector<int16_t>>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
 					
+			muxer_.commit();
+
 			while(!muxer_.empty())
 			{
 				if(!frame_buffer_.try_push(muxer_.pop()))

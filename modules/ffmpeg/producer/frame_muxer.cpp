@@ -166,7 +166,6 @@ struct frame_muxer::implementation : boost::noncopyable
 			video_streams_.back().push(make_safe<core::write_frame>(this));
 			++video_frame_count_;
 			display_mode_ = display_mode::simple;
-			put_frames(frame_buffer_);
 			return;
 		}
 
@@ -206,8 +205,6 @@ struct frame_muxer::implementation : boost::noncopyable
 
 			video_streams_.back().push(frame);
 			++video_frame_count_;
-
-			put_frames(frame_buffer_);
 		}
 	}
 
@@ -224,7 +221,6 @@ struct frame_muxer::implementation : boost::noncopyable
 		audio_sample_count_ += audio_samples->size();
 
 		boost::range::push_back(audio_streams_.back(), *audio_samples);
-		put_frames(frame_buffer_);
 	}
 
 	safe_ptr<basic_frame> pop()
@@ -280,7 +276,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		return audio_streams_.back().size() / format_desc_.audio_samples_per_frame;
 	}
 	
-	void put_frames(std::deque<safe_ptr<basic_frame>>& dest)
+	void commit()
 	{
 		if(video_streams_.size() > 1 && audio_streams_.size() > 1 &&
 			(video_streams_.front().empty() || audio_streams_.front().empty()))
@@ -297,13 +293,13 @@ struct frame_muxer::implementation : boost::noncopyable
 		
 		switch(display_mode_)
 		{
-		case display_mode::simple:						return simple(dest);
-		case display_mode::duplicate:					return duplicate(dest);
-		case display_mode::half:						return half(dest);
-		case display_mode::interlace:					return interlace(dest);
-		case display_mode::deinterlace_bob:				return simple(dest);
-		case display_mode::deinterlace_bob_reinterlace:	return interlace(dest);
-		case display_mode::deinterlace:					return simple(dest);
+		case display_mode::simple:						return simple(frame_buffer_);
+		case display_mode::duplicate:					return duplicate(frame_buffer_);
+		case display_mode::half:						return half(frame_buffer_);
+		case display_mode::interlace:					return interlace(frame_buffer_);
+		case display_mode::deinterlace_bob:				return simple(frame_buffer_);
+		case display_mode::deinterlace_bob_reinterlace:	return interlace(frame_buffer_);
+		case display_mode::deinterlace:					return simple(frame_buffer_);
 		default:										BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
 		}
 	}
@@ -367,6 +363,7 @@ frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& fra
 	: impl_(new implementation(in_fps, frame_factory)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
 void frame_muxer::push(const std::shared_ptr<std::vector<int16_t>>& audio_samples){return impl_->push(audio_samples);}
+void frame_muxer::commit(){impl_->commit();}
 safe_ptr<basic_frame> frame_muxer::pop(){return impl_->pop();}
 size_t frame_muxer::size() const {return impl_->size();}
 bool frame_muxer::empty() const {return impl_->size() == 0;}
