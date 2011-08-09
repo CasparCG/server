@@ -61,54 +61,52 @@ public:
 	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
 		, nb_frames_(0)
-		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
-	{			   		
+	{			   	
 		try
 		{
 			AVCodec* dec;
 			index_ = THROW_ON_ERROR2(av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0), "[audio_decoder]");
 
 			THROW_ON_ERROR2(avcodec_open(context->streams[index_]->codec, dec), "[audio_decoder]");
+			
+			codec_context_.reset(context->streams[index_]->codec, avcodec_close);
+
+			buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
+
+			//nb_frames_ = context->streams[index_]->nb_frames;
+			//if(nb_frames_ == 0)
+			//	nb_frames_ = context->streams[index_]->duration * context->streams[index_]->time_base.den;
+
+			if(codec_context_->sample_rate	!= static_cast<int>(format_desc_.audio_sample_rate) || 
+			   codec_context_->channels		!= static_cast<int>(format_desc_.audio_channels) ||
+			   codec_context_->sample_fmt	!= AV_SAMPLE_FMT_S16)
+			{	
+				auto resampler = av_audio_resample_init(format_desc_.audio_channels,    codec_context_->channels,
+														format_desc_.audio_sample_rate, codec_context_->sample_rate,
+														AV_SAMPLE_FMT_S16,				codec_context_->sample_fmt,
+														16, 10, 0, 0.8);
+
+				buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
+
+				CASPAR_LOG(warning) << L" Invalid audio format. Resampling.";
+
+				if(resampler)
+					resampler_.reset(resampler, audio_resample_close);
+				else
+					codec_context_ = nullptr;
+			}		
 		}
 		catch(...)
 		{
+			index_ = THROW_ON_ERROR2(av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0), "[audio_decoder]");
+
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << "[audio_decoder] Failed to open audio. Running without audio.";
-			return;
+			CASPAR_LOG(warning) << "[audio_decoder] Failed to open audio-stream. Running without audio.";			
 		}
-
-		codec_context_.reset(context->streams[index_]->codec, avcodec_close);
-
-		//nb_frames_ = context->streams[index_]->nb_frames;
-		//if(nb_frames_ == 0)
-		//	nb_frames_ = context->streams[index_]->duration * context->streams[index_]->time_base.den;
-
-		if(codec_context_ &&
-		   (codec_context_->sample_rate != static_cast<int>(format_desc_.audio_sample_rate) || 
-		    codec_context_->channels	!= static_cast<int>(format_desc_.audio_channels)) ||
-			codec_context_->sample_fmt	!= AV_SAMPLE_FMT_S16)
-		{	
-			auto resampler = av_audio_resample_init(format_desc_.audio_channels,    codec_context_->channels,
-													format_desc_.audio_sample_rate, codec_context_->sample_rate,
-													AV_SAMPLE_FMT_S16,				codec_context_->sample_fmt,
-													16, 10, 0, 0.8);
-
-			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
-
-			CASPAR_LOG(warning) << L" Invalid audio format. Resampling.";
-
-			if(resampler)
-				resampler_.reset(resampler, audio_resample_close);
-			else
-				codec_context_ = nullptr;
-		}		
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
 	{			
-		if(!codec_context_)
-			return;
-
 		if(packet && packet->stream_index != index_)
 			return;
 
@@ -117,29 +115,44 @@ public:
 	
 	std::vector<std::shared_ptr<std::vector<int16_t>>> poll()
 	{
+		if(!codec_context_)
+			return empty_poll();
+
 		std::vector<std::shared_ptr<std::vector<int16_t>>> result;
 
-		if(!codec_context_)
-			result.push_back(std::make_shared<std::vector<int16_t>>(format_desc_.audio_samples_per_frame, 0));
-		else if(!packets_.empty())
-		{		
-			auto packet = packets_.front();
+		if(packets_.empty())
+			return result;
+						
+		auto packet = packets_.front();
 
-			if(packet)		
-			{
-				result.push_back(decode(*packet));
-				if(packet->size == 0)					
-					packets_.pop();
-			}
-			else			
-			{	
-				avcodec_flush_buffers(codec_context_.get());
-				result.push_back(nullptr);
+		if(packet)		
+		{
+			result.push_back(decode(*packet));
+			if(packet->size == 0)					
 				packets_.pop();
-			}
 		}
+		else			
+		{	
+			avcodec_flush_buffers(codec_context_.get());
+			result.push_back(nullptr);
+			packets_.pop();
+		}		
 
 		return result;
+	}
+
+	std::vector<std::shared_ptr<std::vector<int16_t>>> empty_poll()
+	{
+		if(packets_.empty())
+			return std::vector<std::shared_ptr<std::vector<int16_t>>>();
+		
+		auto packet = packets_.front();
+		packets_.pop();
+
+		if(!packet)			
+			return boost::assign::list_of(nullptr);
+		
+		return boost::assign::list_of(std::make_shared<std::vector<int16_t>>(format_desc_.audio_samples_per_frame, 0));	
 	}
 
 	std::shared_ptr<std::vector<int16_t>> decode(AVPacket& pkt)
