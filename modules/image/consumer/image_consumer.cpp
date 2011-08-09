@@ -54,35 +54,29 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{				
-		if(counter_ < core::consumer_buffer_depth())
-			++counter_;
-		else if(counter_ == core::consumer_buffer_depth())
+		if(counter_++ < core::consumer_buffer_depth())
+			return true;
+
+		boost::thread async([=]
 		{
-			boost::thread async([=]
+			try
 			{
-				try
-				{
-					auto filename = narrow(env::data_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
+				auto filename = narrow(env::data_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
 
-					auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(format_desc_.width, format_desc_.height, 32), FreeImage_Unload);
-					memcpy(FreeImage_GetBits(bitmap.get()), frame->image_data().begin(), frame->image_size());
-					FreeImage_FlipVertical(bitmap.get());
-					FreeImage_Save(FIF_PNG, bitmap.get(), filename.c_str(), 0);
-				}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-				}
-			});
-			async.detach();
+				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(format_desc_.width, format_desc_.height, 32), FreeImage_Unload);
+				memcpy(FreeImage_GetBits(bitmap.get()), frame->image_data().begin(), frame->image_size());
+				FreeImage_FlipVertical(bitmap.get());
+				FreeImage_Save(FIF_PNG, bitmap.get(), filename.c_str(), 0);
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
+		});
+		async.detach();
 
-			return false;
-		}
-
-		return true;
+		return false;
 	}
-
-	virtual size_t buffer_depth() const{return 3;}
 
 	virtual std::wstring print() const
 	{
