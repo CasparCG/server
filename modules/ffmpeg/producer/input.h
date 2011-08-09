@@ -46,6 +46,7 @@ public:
 	bool eof() const;
 
 	size_t nb_frames() const;
+	size_t nb_loops() const;
 
 	safe_ptr<AVFormatContext> context();
 private:

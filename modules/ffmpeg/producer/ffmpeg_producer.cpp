@@ -188,19 +188,24 @@ public:
 		}
 	}
 
-	virtual int64_t nb_frames() const
+	virtual int64_t nb_frames() const 
 	{
 		if(loop_)
 			return 0;
 
-		int64_t nb_frames = input_.nb_frames();
+		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
 
-		if(nb_frames == 0)
-			nb_frames = video_decoder_.nb_frames();
-		
-		if(nb_frames == 0)
-			nb_frames = audio_decoder_.nb_frames();
-		
+		int64_t nb_frames = input_.nb_frames();
+		if(input_.nb_loops() < 1) // input still hasn't counted all frames
+		{
+			int64_t video_nb_frames = video_decoder_.nb_frames();
+			int64_t audio_nb_frames = audio_decoder_.nb_frames();
+
+			nb_frames = std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames));
+		}
+
+		// TODO: Might need to scale nb_frames av frame_muxer transformations.
+
 		return nb_frames + late_frames_ - start_;
 	}
 				
