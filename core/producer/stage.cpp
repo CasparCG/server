@@ -89,7 +89,10 @@ public:
 		try
 		{
 			BOOST_FOREACH(auto& layer, layers_)
+			{
 				frames[layer.first] = layer.second.receive();
+				channel_.execution().yield();
+			}
 		}
 		catch(...)
 		{
@@ -104,7 +107,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction(), producer), preview, auto_play_delta);
-		});
+		}, high_priority);
 	}
 
 	void pause(int index)
@@ -112,7 +115,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].pause();
-		});
+		}, high_priority);
 	}
 
 	void play(int index)
@@ -120,7 +123,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].play();
-		});
+		}, high_priority);
 	}
 
 	void stop(int index)
@@ -128,7 +131,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].stop();
-		});
+		}, high_priority);
 	}
 
 	void clear(int index)
@@ -136,7 +139,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_.erase(index);
-		});
+		}, high_priority);
 	}
 		
 	void clear()
@@ -144,7 +147,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_.clear();
-		});
+		}, high_priority);
 	}	
 	
 	void swap_layer(int index, size_t other_index)
@@ -152,7 +155,7 @@ public:
 		channel_.execution().invoke([&]
 		{
 			layers_[index].swap(layers_[other_index]);
-		});
+		}, high_priority);
 	}
 
 	void swap_layer(int index, size_t other_index, stage& other)
@@ -166,7 +169,7 @@ public:
 
 			auto func = [&]{layers_[index].swap(other.impl_->layers_[other_index]);};
 		
-			channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func);});
+			channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);}, high_priority);
 		}
 	}
 
@@ -192,17 +195,17 @@ public:
 				layers_[index].swap(other.impl_->layers_[index]);
 		};
 		
-		channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func);});
+		channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);});
 	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
 	{
-		return channel_.execution().begin_invoke([=]{return layers_[index].foreground();});
+		return channel_.execution().begin_invoke([=]{return layers_[index].foreground();}, high_priority);
 	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> background(int index)
 	{
-		return channel_.execution().begin_invoke([=]{return layers_[index].background();});
+		return channel_.execution().begin_invoke([=]{return layers_[index].background();}, high_priority);
 	}
 
 	std::wstring print() const
