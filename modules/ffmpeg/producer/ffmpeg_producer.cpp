@@ -125,7 +125,7 @@ public:
 		else
 		{
 			if(input_.eof())
-				frame =  core::basic_frame::eof();
+				return frame = core::basic_frame::eof();
 			else
 			{
 				graph_->add_tag("underflow");	
@@ -190,8 +190,18 @@ public:
 
 	virtual int64_t nb_frames() const
 	{
-		auto nb_frames = input_.nb_frames() != 0 ? input_.nb_frames() : video_decoder_.nb_frames();
-		return loop_ ? 0 : (nb_frames + late_frames_ - start_);
+		if(loop_)
+			return 0;
+
+		int64_t nb_frames = input_.nb_frames();
+
+		if(nb_frames == 0)
+			nb_frames = video_decoder_.nb_frames();
+		
+		if(nb_frames == 0)
+			nb_frames = audio_decoder_.nb_frames();
+		
+		return nb_frames + late_frames_ - start_;
 	}
 				
 	virtual std::wstring print() const
