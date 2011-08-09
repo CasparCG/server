@@ -63,6 +63,7 @@ static const size_t MAX_BUFFER_SIZE  = 32 * 1000000;
 struct input::implementation : boost::noncopyable
 {		
 	std::shared_ptr<AVFormatContext>							format_context_; // Destroy this last
+	int															default_stream_index_;
 
 	safe_ptr<diagnostics::graph>								graph_;
 		
@@ -77,20 +78,20 @@ struct input::implementation : boost::noncopyable
 		
 	boost::thread												thread_;
 	tbb::atomic<bool>											is_running_;
-	tbb::atomic<size_t>											nb_frames_;
-	int64_t														frame_number_;
 
-	int															default_stream_index_;
+	tbb::atomic<size_t>											nb_frames_;
+	tbb::atomic<size_t>											nb_loops_;
+
 public:
 	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
 		: graph_(graph)
 		, loop_(loop)
 		, filename_(filename)
 		, start_(std::max(start, 0))
-		, frame_number_(0)
 	{			
 		is_running_ = true;
-		nb_frames_ = 0;
+		nb_frames_	= 0;
+		nb_loops_	= 0;
 		
 		AVFormatContext* weak_format_context_ = nullptr;
 		THROW_ON_ERROR2(avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr), print());
@@ -143,6 +144,11 @@ public:
 		return nb_frames_;
 	}
 
+	size_t nb_loops() const
+	{
+		return nb_loops_;
+	}
+
 private:
 	
 	void run()
@@ -186,8 +192,7 @@ private:
 		
 		if(is_eof(ret))														     
 		{
-			if(nb_frames_ == 0)
-				nb_frames_ = static_cast<size_t>(frame_number_);
+			++nb_loops_;
 
 			if(loop_)
 			{
@@ -205,8 +210,8 @@ private:
 		{		
 			THROW_ON_ERROR(ret, print(), "av_read_frame");
 
-			if(read_packet->stream_index == default_stream_index_)
-				++frame_number_;
+			if(read_packet->stream_index == default_stream_index_ && nb_loops_ == 0)
+				++nb_frames_;
 
 			THROW_ON_ERROR2(av_dup_packet(read_packet.get()), print());
 				
@@ -261,4 +266,5 @@ bool input::eof() const {return !impl_->is_running_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 safe_ptr<AVFormatContext> input::context(){return make_safe(impl_->format_context_);}
 size_t input::nb_frames() const {return impl_->nb_frames();}
+size_t input::nb_loops() const {return impl_->nb_loops();}
 }
