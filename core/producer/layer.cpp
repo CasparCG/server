@@ -50,10 +50,10 @@ public:
 
 		if(auto_play_delta > -1)
 		{
-			if(producer->nb_frames() > 0)
+			if(foreground_->nb_frames() > 0)
 				auto_play_delta_ = auto_play_delta;
 			else
-				CASPAR_LOG(warning) << producer->print() << L" Does not support auto-play.";
+				CASPAR_LOG(warning) << foreground_->print() << L" Producer in foreground does not support auto-play.";
 		}
 
 		if(preview) // Play the first frame and pause.
