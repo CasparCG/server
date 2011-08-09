@@ -60,7 +60,7 @@ struct separated_producer : public frame_producer
 		auto frame = basic_frame::fill_and_key(fill_, key_);
 
 		fill_ = basic_frame::late();
-		key_ = basic_frame::late();
+		key_  = basic_frame::late();
 
 		return last_frame_ = frame;
 	}
