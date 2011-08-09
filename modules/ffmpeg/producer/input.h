@@ -45,6 +45,8 @@ public:
 	bool try_pop(std::shared_ptr<AVPacket>& packet);
 	bool eof() const;
 
+	size_t nb_frames() const;
+
 	std::shared_ptr<AVFormatContext> context();
 private:
 	struct implementation;
