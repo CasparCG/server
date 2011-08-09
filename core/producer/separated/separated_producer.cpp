@@ -34,14 +34,16 @@ struct separated_producer : public frame_producer
 	safe_ptr<basic_frame>		fill_;
 	safe_ptr<basic_frame>		key_;
 	safe_ptr<basic_frame>		last_frame_;
+	int64_t						nb_frames_;
 		
 	explicit separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key) 
 		: fill_producer_(fill)
 		, key_producer_(key)
 		, fill_(core::basic_frame::late())
 		, key_(core::basic_frame::late())
-		, last_frame_(core::basic_frame::empty()){}
-	
+		, last_frame_(core::basic_frame::empty())
+	{
+	}
 	// frame_producer
 	
 	virtual safe_ptr<basic_frame> receive(int hints)
@@ -60,7 +62,7 @@ struct separated_producer : public frame_producer
 			}
 		);
 
-		if(fill_ == basic_frame::eof())
+		if(fill_ == basic_frame::eof() || key_ == basic_frame::eof())
 			return basic_frame::eof();
 
 		if(fill_ == core::basic_frame::late() || key_ == core::basic_frame::late()) // One of the producers is lagging, keep them in sync.
@@ -83,6 +85,12 @@ struct separated_producer : public frame_producer
 	{
 		return L"separated";
 	}	
+
+	virtual int64_t nb_frames() const 
+	{
+		return std::min(fill_producer_->nb_frames() > 0 ? fill_producer_->nb_frames() : std::numeric_limits<int64_t>::max(), 
+					    key_producer_->nb_frames() > 0 ? key_producer_->nb_frames() : std::numeric_limits<int64_t>::max());
+	}
 };
 
 safe_ptr<frame_producer> create_separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key)
