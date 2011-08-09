@@ -33,12 +33,6 @@ namespace caspar {
 
 std::shared_ptr<FIBITMAP> load_image(const std::string& filename)
 {
-	struct FreeImage_initializer
-	{
-		FreeImage_initializer(){FreeImage_Initialise(true);}
-		~FreeImage_initializer(){FreeImage_DeInitialise();}
-	} static init;
-
 	if(!boost::filesystem::exists(filename))
 		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(filename));
 

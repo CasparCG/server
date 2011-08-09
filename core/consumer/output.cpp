@@ -135,9 +135,12 @@ public:
 					auto frame = consumer->key_only() ? key : fill;
 
 					if(frame->image_size() == consumer->get_video_format_desc().size)
-						consumer->send(frame);
-
-					++it;
+					{	
+						if(!consumer->send(frame))
+							consumers_.erase(it++);
+						else
+							++it;
+					}
 				}
 				catch(...)
 				{

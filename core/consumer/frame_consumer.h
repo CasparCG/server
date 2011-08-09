@@ -40,8 +40,7 @@ struct frame_consumer : boost::noncopyable
 {
 	virtual ~frame_consumer() {}
 	
-	virtual void send(const safe_ptr<read_frame>& frame) = 0;
-	virtual size_t buffer_depth() const {return 1;}
+	virtual bool send(const safe_ptr<read_frame>& frame) = 0;
 	virtual bool key_only() const{ return false;}
 	virtual void initialize(const video_format_desc& format_desc) = 0;
 	virtual std::wstring print() const = 0;
@@ -53,8 +52,7 @@ struct frame_consumer : boost::noncopyable
 		struct empty_frame_consumer : public frame_consumer
 		{
 			core::video_format_desc format_desc;
-			virtual void send(const safe_ptr<read_frame>&){}
-			virtual size_t buffer_depth() const{return 0;}
+			virtual bool send(const safe_ptr<read_frame>&){return false;}
 			virtual void initialize(const video_format_desc&){}
 			virtual std::wstring print() const {return L"empty";}
 			virtual bool has_synchronization_clock() const {return false;}

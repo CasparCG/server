@@ -17,31 +17,23 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
-#include "image.h"
+#pragma once
 
-#include "producer/image_producer.h"
-#include "producer/image_scroll_producer.h"
-#include "consumer/image_consumer.h"
+#include <common/memory/safe_ptr.h>
 
-#include <core/producer/frame_producer.h>
-#include <core/consumer/frame_consumer.h>
+#include <core/video_format.h>
 
-#include <common/utility/string.h>
+#include <boost/property_tree/ptree.hpp>
 
-#include <FreeImage.h>
+#include <string>
+#include <vector>
 
-namespace caspar {
+namespace caspar { 
 
-void init_image()
-{
-	core::register_producer_factory(create_image_scroll_producer);
-	core::register_producer_factory(create_image_producer);
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_image_consumer(params);});
+namespace core {
+	struct frame_consumer;
 }
-
-std::wstring get_image_version()
-{
-	return widen(std::string(FreeImage_GetVersion()));
-}
+	
+safe_ptr<core::frame_consumer> create_image_consumer(const std::vector<std::wstring>& params);
 
 }
