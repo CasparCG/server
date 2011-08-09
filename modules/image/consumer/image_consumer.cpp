@@ -36,16 +36,15 @@
 
 #include <FreeImage.h>
 
+#include <vector>
+
 namespace caspar {
 	
 struct image_consumer : public core::frame_consumer
 {
-	core::video_format_desc	format_desc_;
-	size_t counter_;
+	core::video_format_desc					format_desc_;
+	std::vector<safe_ptr<core::read_frame>> frames_;
 public:
-	image_consumer() : counter_(0)
-	{
-	}
 
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
@@ -54,9 +53,12 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{				
-		if(counter_++ < core::consumer_buffer_depth())
+		frames_.push_back(frame);
+
+		if(frames_.size() < core::consumer_buffer_depth())
 			return true;
 
+		auto my_frame = frames_.front();
 		boost::thread async([=]
 		{
 			try
@@ -64,7 +66,7 @@ public:
 				auto filename = narrow(env::data_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
 
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(format_desc_.width, format_desc_.height, 32), FreeImage_Unload);
-				memcpy(FreeImage_GetBits(bitmap.get()), frame->image_data().begin(), frame->image_size());
+				memcpy(FreeImage_GetBits(bitmap.get()), my_frame->image_data().begin(), my_frame->image_size());
 				FreeImage_FlipVertical(bitmap.get());
 				FreeImage_Save(FIF_PNG, bitmap.get(), filename.c_str(), 0);
 			}
