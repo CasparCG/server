@@ -100,8 +100,15 @@ public:
 
 	~ffmpeg_producer()
 	{
-		tasks_.cancel();
-		tasks_.wait();
+		try
+		{
+			tasks_.cancel();
+			tasks_.wait();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 	}
 		
 	virtual safe_ptr<core::basic_frame> receive(int hints)
