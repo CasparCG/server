@@ -44,7 +44,6 @@
 #include <boost/range/algorithm/find.hpp>
 
 #include <tbb/task_group.h>
-#include <tbb/parallel_invoke.h>
 
 namespace caspar {
 			
@@ -54,6 +53,8 @@ struct ffmpeg_producer : public core::frame_producer
 	
 	const safe_ptr<diagnostics::graph>				graph_;
 	boost::timer									frame_timer_;
+	boost::timer									video_timer_;
+	boost::timer									audio_timer_;
 					
 	const safe_ptr<core::frame_factory>				frame_factory_;
 	const core::video_format_desc					format_desc_;
@@ -69,6 +70,8 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool										loop_;
 
 	safe_ptr<core::basic_frame>						last_frame_;
+
+	tbb::task_group									tasks_;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
@@ -87,10 +90,18 @@ public:
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->set_color("video-time", diagnostics::color(1.0f, 1.0f, 0.0f));
+		graph_->set_color("audio-time", diagnostics::color(0.2f, 1.0f, 0.2f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));		
 		
 		for(int n = 0; n < 128 && muxer_.size() < 2; ++n)
 			decode_frame(0);
+	}
+
+	~ffmpeg_producer()
+	{
+		tasks_.cancel();
+		tasks_.wait();
 	}
 		
 	virtual safe_ptr<core::basic_frame> receive(int hints)
@@ -98,10 +109,10 @@ public:
 		auto frame = core::basic_frame::late();
 		
 		frame_timer_.restart();
-
-		for(int n = 0; n < 64 && muxer_.size() < 2; ++n)
-			decode_frame(hints);
 		
+		for(int n = 0; n < 8 && muxer_.empty(); ++n)
+			decode_frame(hints);
+
 		if(!muxer_.empty())
 			frame = last_frame_ = muxer_.pop();	
 		else
@@ -127,7 +138,11 @@ public:
 
 	void decode_frame(int hints)
 	{
-		for(int n = 0; n < 32 && ((!muxer_.video_ready() && !video_decoder_.ready()) ||	(!muxer_.audio_ready() && !audio_decoder_.ready())); ++n) 
+		tasks_.wait();
+
+		muxer_.commit();
+
+		for(int n = 0; n < 16 && ((!muxer_.video_ready() && !video_decoder_.ready()) ||	(!muxer_.audio_ready() && !audio_decoder_.ready())); ++n) 
 		{
 			std::shared_ptr<AVPacket> pkt;
 			if(input_.try_pop(pkt))
@@ -136,27 +151,34 @@ public:
 				audio_decoder_.push(pkt);
 			}
 		}
-
-		decltype(video_decoder_.poll()) video_frames;
-		decltype(audio_decoder_.poll()) audio_samples;
 		
-		tbb::parallel_invoke(
-		[&]
+		if(!muxer_.video_ready())
 		{
-			if(!muxer_.video_ready())
-				video_frames = video_decoder_.poll();
-		},
-		[&]
-		{
-			if(!muxer_.audio_ready())
-				audio_samples = audio_decoder_.poll();
-		});
-		
-		BOOST_FOREACH(auto& audio, audio_samples)
-			muxer_.push(audio);
+			tasks_.run([=]
+			{
+				video_timer_.restart();
 
-		BOOST_FOREACH(auto& video, video_frames)		
-			muxer_.push(video, hints);		
+				auto video_frames = video_decoder_.poll();
+				BOOST_FOREACH(auto& video, video_frames)		
+					muxer_.push(video, hints);	
+
+				graph_->update_value("video-time", static_cast<float>(video_timer_.elapsed()*format_desc_.fps*0.5));
+			});
+		}		
+
+		if(!muxer_.audio_ready())
+		{
+			tasks_.run([=]
+			{
+				audio_timer_.restart();
+					
+				auto audio_samples = audio_decoder_.poll();
+				BOOST_FOREACH(auto& audio, audio_samples)
+					muxer_.push(audio);				
+
+				graph_->update_value("audio-time", static_cast<float>(audio_timer_.elapsed()*format_desc_.fps*0.5));
+			});	
+		}
 	}
 
 	virtual int64_t nb_frames() const

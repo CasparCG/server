@@ -120,23 +120,23 @@ public:
 
 		std::vector<std::shared_ptr<std::vector<int16_t>>> result;
 
-		if(packets_.empty())
-			return result;
-						
-		auto packet = packets_.front();
+		while(!packets_.empty() && result.empty())
+		{						
+			auto packet = packets_.front();
 
-		if(packet)		
-		{
-			result.push_back(decode(*packet));
-			if(packet->size == 0)					
+			if(packet)		
+			{
+				result.push_back(decode(*packet));
+				if(packet->size == 0)					
+					packets_.pop();
+			}
+			else			
+			{	
+				avcodec_flush_buffers(codec_context_.get());
+				result.push_back(nullptr);
 				packets_.pop();
+			}		
 		}
-		else			
-		{	
-			avcodec_flush_buffers(codec_context_.get());
-			result.push_back(nullptr);
-			packets_.pop();
-		}		
 
 		return result;
 	}
@@ -183,7 +183,7 @@ public:
 
 	bool ready() const
 	{
-		return !codec_context_ || !packets_.empty();
+		return !codec_context_ || packets_.size() > 2;
 	}
 };
 

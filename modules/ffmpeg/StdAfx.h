@@ -43,7 +43,6 @@
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
-#include <tbb/parallel_invoke.h>
 #include <tbb/parallel_for.h>
 
 #include <boost/assign.hpp>

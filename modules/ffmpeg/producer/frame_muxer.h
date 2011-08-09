@@ -26,6 +26,8 @@ public:
 	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
 	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples);
 	
+	void commit();
+
 	bool video_ready() const;
 	bool audio_ready() const;
 
