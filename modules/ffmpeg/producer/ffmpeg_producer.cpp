@@ -64,8 +64,8 @@ struct ffmpeg_producer : public core::frame_producer
 	
 	frame_muxer										muxer_;
 
+	int												late_frames_;
 	const int										start_;
-	int64_t											nb_frames_;
 	const bool										loop_;
 
 	safe_ptr<core::basic_frame>						last_frame_;
@@ -80,8 +80,8 @@ public:
 		, video_decoder_(input_.context(), frame_factory, filter)
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
 		, muxer_(video_decoder_.fps(), frame_factory)
+		, late_frames_(0)
 		, start_(start)
-		, nb_frames_(video_decoder_.nb_frames() - start)
 		, loop_(loop)
 		, last_frame_(core::basic_frame::empty())
 	{
@@ -111,7 +111,7 @@ public:
 			else
 			{
 				graph_->add_tag("underflow");	
-				++nb_frames_;		
+				++late_frames_;		
 			}
 		}
 		
@@ -161,7 +161,8 @@ public:
 
 	virtual int64_t nb_frames() const
 	{
-		return loop_ ? 0 : nb_frames_;
+		auto nb_frames = input_.nb_frames() != 0 ? input_.nb_frames() : video_decoder_.nb_frames();
+		return loop_ ? 0 : (nb_frames + late_frames_ - start_);
 	}
 				
 	virtual std::wstring print() const
