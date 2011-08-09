@@ -227,6 +227,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="consumer\image_consumer.cpp" />
     <ClCompile Include="image.cpp" />
     <ClCompile Include="producer\image_producer.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">NotUsing</PrecompiledHeader>
@@ -238,6 +239,7 @@
     <ClCompile Include="util\image_loader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="consumer\image_consumer.h" />
     <ClInclude Include="image.h" />
     <ClInclude Include="producer\image_producer.h" />
     <ClInclude Include="producer\image_scroll_producer.h" />

@@ -787,6 +787,15 @@ bool ClearCommand::DoExecute()
 	return true;
 }
 
+bool PrintCommand::DoExecute()
+{
+	GetChannel()->output()->add(99978, create_consumer(boost::assign::list_of(L"IMAGE")));
+		
+	SetReplyString(TEXT("202 PRINT OK\r\n"));
+
+	return true;
+}
+
 bool CGCommand::DoExecute()
 {
 	std::wstring command = _parameters[0];
