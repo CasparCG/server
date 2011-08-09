@@ -77,14 +77,20 @@ struct input::implementation : boost::noncopyable
 		
 	boost::thread												thread_;
 	tbb::atomic<bool>											is_running_;
+	tbb::atomic<size_t>											nb_frames_;
+	int64_t														frame_number_;
+
+	int															default_stream_index_;
 public:
 	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
 		: graph_(graph)
 		, loop_(loop)
 		, filename_(filename)
 		, start_(std::max(start, 0))
+		, frame_number_(0)
 	{			
 		is_running_ = true;
+		nb_frames_ = 0;
 		
 		AVFormatContext* weak_format_context_ = nullptr;
 		THROW_ON_ERROR2(avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr), print());
@@ -93,6 +99,8 @@ public:
 			
 		THROW_ON_ERROR2(avformat_find_stream_info(format_context_.get(), nullptr), print());
 		
+		default_stream_index_ = THROW_ON_ERROR2(av_find_default_stream_index(format_context_.get()), print());
+
 		if(start_ != 0)			
 			seek_frame(start_);
 		
@@ -128,6 +136,11 @@ public:
 		graph_->update_value("buffer-count", MAX_BUFFER_SIZE/static_cast<double>(buffer_.size()));
 
 		return result;
+	}
+
+	size_t nb_frames() const
+	{
+		return nb_frames_;
 	}
 
 private:
@@ -173,6 +186,9 @@ private:
 		
 		if(is_eof(ret))														     
 		{
+			if(nb_frames_ == 0)
+				nb_frames_ = static_cast<size_t>(frame_number_);
+
 			if(loop_)
 			{
 				seek_frame(start_, AVSEEK_FLAG_BACKWARD);
@@ -188,6 +204,9 @@ private:
 		else
 		{		
 			THROW_ON_ERROR(ret, print(), "av_read_frame");
+
+			if(read_packet->stream_index == default_stream_index_)
+				++frame_number_;
 
 			THROW_ON_ERROR2(av_dup_packet(read_packet.get()), print());
 				
@@ -215,15 +234,8 @@ private:
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
-	{  	
-		static const AVRational base_q = {1, AV_TIME_BASE};
-
-		int stream_index = av_find_default_stream_index(format_context_.get());
-		THROW_ON_ERROR(stream_index, print(), "av_find_default_stream_index");
-						
-		const int ret = av_seek_frame(format_context_.get(), stream_index, frame, flags);
-		THROW_ON_ERROR(ret, print(), "av_seek_frame");
-		
+	{  							
+		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());		
 		buffer_.push(nullptr);
 	}		
 
@@ -248,4 +260,5 @@ input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& file
 bool input::eof() const {return !impl_->is_running_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 std::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
+size_t input::nb_frames() const {return impl_->nb_frames();}
 }
