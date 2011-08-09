@@ -55,7 +55,7 @@ struct video_decoder::implementation : boost::noncopyable
 	std::shared_ptr<AVCodecContext>			codec_context_;
 	int										index_;
 
-	std::queue<std::shared_ptr<AVPacket>>	packet_buffer_;
+	std::queue<std::shared_ptr<AVPacket>>	packets_;
 
 	filter									filter_;
 
@@ -74,83 +74,95 @@ public:
 			index_ = THROW_ON_ERROR2(av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0), "[video_decoder]");
 						
 			THROW_ON_ERROR2(tbb_avcodec_open(context->streams[index_]->codec, dec), "[video_decoder]");
+								
+			codec_context_.reset(context->streams[index_]->codec, tbb_avcodec_close);
+		
+			// Some files give an invalid time_base numerator, try to fix it.
+			if(codec_context_ && codec_context_->time_base.num == 1)
+				codec_context_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(codec_context_->time_base.den)))-1));	
+		
+			nb_frames_ = context->streams[index_]->nb_frames;
+			if(nb_frames_ == 0)
+				nb_frames_ = context->streams[index_]->duration;// * context->streams[index_]->time_base.den;
+
+			fps_ = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
+			if(double_rate(filter))
+				fps_ *= 2;
 		}
 		catch(...)
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << "[video_decoder] Failed to open video. Running without audio.";
-			return;
-		}
-								
-		codec_context_.reset(context->streams[index_]->codec, tbb_avcodec_close);
-		
-		// Some files give an invalid time_base numerator, try to fix it.
-		if(codec_context_ && codec_context_->time_base.num == 1)
-			codec_context_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(codec_context_->time_base.den)))-1));	
-		
-		nb_frames_ = context->streams[index_]->nb_frames;
-		if(nb_frames_ == 0)
-			nb_frames_ = context->streams[index_]->duration;// * context->streams[index_]->time_base.den;
+			index_ = THROW_ON_ERROR2(av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0), "[video_decoder]");
 
-		fps_ = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
-		if(double_rate(filter))
-			fps_ *= 2;
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << "[video_decoder] Failed to open video-stream. Running without video.";	
+		}
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
 	{
-		if(!codec_context_)
-			return;
-
 		if(packet && packet->stream_index != index_)
 			return;
 
-		packet_buffer_.push(packet);
+		packets_.push(packet);
 	}
 
 	std::vector<std::shared_ptr<AVFrame>> poll()
 	{		
+		if(!codec_context_)
+			return empty_poll();
+
 		std::vector<std::shared_ptr<AVFrame>> result;
 
-		if(!codec_context_)
-		{
-			std::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
-			frame->data[0] = nullptr;
-			result.push_back(frame);
-		}
-		else if(!packet_buffer_.empty())
-		{
-			auto packet = packet_buffer_.front();
-					
-			if(packet)
-			{
-				auto frame = decode(*packet);
-				boost::range::push_back(result, filter_.execute(frame));
-				if(packet->size == 0)
-					packet_buffer_.pop();
-			}
-			else
-			{
-				if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
-				{
-					AVPacket pkt;
-					av_init_packet(&pkt);
-					pkt.data = nullptr;
-					pkt.size = 0;
-					auto frame = decode(pkt);
-					boost::range::push_back(result, filter_.execute(frame));	
-				}
+		if(packets_.empty())
+			return result;
 
-				if(result.empty())
-				{					
-					packet_buffer_.pop();
-					avcodec_flush_buffers(codec_context_.get());
-					result.push_back(nullptr);
-				}
+		auto packet = packets_.front();
+					
+		if(packet)
+		{
+			auto frame = decode(*packet);
+			boost::range::push_back(result, filter_.execute(frame));
+			if(packet->size == 0)
+				packets_.pop();
+		}
+		else
+		{
+			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+			{
+				AVPacket pkt;
+				av_init_packet(&pkt);
+				pkt.data = nullptr;
+				pkt.size = 0;
+				auto frame = decode(pkt);
+				boost::range::push_back(result, filter_.execute(frame));	
+			}
+
+			if(result.empty())
+			{					
+				packets_.pop();
+				avcodec_flush_buffers(codec_context_.get());
+				result.push_back(nullptr);
 			}
 		}
 		
 		return result;
+	}
+
+	std::vector<std::shared_ptr<AVFrame>> empty_poll()
+	{		
+		if(packets_.empty())
+			return std::vector<std::shared_ptr<AVFrame>>();
+		
+		auto packet = packets_.front();
+		packets_.pop();
+
+		if(!packet)			
+			return boost::assign::list_of(nullptr);
+
+		std::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
+		frame->data[0] = nullptr;
+
+		return boost::assign::list_of(frame);					
 	}
 
 	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
@@ -178,7 +190,7 @@ public:
 	
 	bool ready() const
 	{
-		return !codec_context_ || !packet_buffer_.empty();
+		return !codec_context_ || !packets_.empty();
 	}
 	
 	double fps() const
