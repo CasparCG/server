@@ -152,14 +152,11 @@ safe_ptr<basic_frame> basic_frame::combine(const safe_ptr<basic_frame>& frame1, 
 
 safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key)
 {
-	if(fill == basic_frame::empty() && key == basic_frame::empty())
+	if(fill == basic_frame::empty() || key == basic_frame::empty())
 		return basic_frame::empty();
 	
-	if(fill == basic_frame::eof() && key == basic_frame::eof())
+	if(fill == basic_frame::eof() || key == basic_frame::eof())
 		return basic_frame::eof();
-
-	if(key == basic_frame::empty() || key == basic_frame::eof())
-		return fill;
 
 	std::vector<safe_ptr<basic_frame>> frames;
 	key->get_image_transform().set_is_key(true);
