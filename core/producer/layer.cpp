@@ -39,22 +39,23 @@ public:
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, is_paused_(false)
-		, auto_play_delta_(-1){}
+		, auto_play_delta_(-1)
+		, frame_number_(0){}
 	
-	void pause(){is_paused_ = true;}
-	void resume(){is_paused_ = false;}
+	void pause()
+	{
+		is_paused_ = true;
+	}
+
+	void resume()
+	{
+		is_paused_ = false;
+	}
 
 	void load(const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{		
-		background_	= producer;
-
-		if(auto_play_delta > -1)
-		{
-			if(foreground_->nb_frames() > 0)
-				auto_play_delta_ = auto_play_delta;
-			else
-				CASPAR_LOG(warning) << foreground_->print() << L" Producer in foreground does not support auto-play.";
-		}
+		background_		 = producer;
+		auto_play_delta_ = auto_play_delta;
 
 		if(preview) // Play the first frame and pause.
 		{			
@@ -62,9 +63,6 @@ public:
 			receive();
 			pause();
 		}
-
-		if(auto_play_delta >= 0 && foreground_ == frame_producer::empty())
-			play();
 	}
 	
 	void play()
@@ -96,19 +94,7 @@ public:
 		if(frame == core::basic_frame::late())
 			return foreground_->last_frame();
 		
-		if(auto_play_delta_ == 0)
-		{
-			if(frame == core::basic_frame::eof())
-			{
-				CASPAR_ASSERT(frames_left == 0);
-
-				CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset.";
-				
-				play();
-				frame = receive();
-			}
-		}
-		else if(auto_play_delta_ > 0)
+		if(auto_play_delta_ >= 0)
 		{
 			if(frames_left <= 0 || frame == core::basic_frame::eof())
 			{
