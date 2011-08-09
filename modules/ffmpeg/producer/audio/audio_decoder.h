@@ -39,7 +39,7 @@ struct video_format_desc;
 class audio_decoder : boost::noncopyable
 {
 public:
-	explicit audio_decoder(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
+	explicit audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
 	
 	void push(const std::shared_ptr<AVPacket>& packet);
 	bool ready() const;
