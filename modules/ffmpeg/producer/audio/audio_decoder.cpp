@@ -58,7 +58,7 @@ struct audio_decoder::implementation : boost::noncopyable
 
 	int64_t														nb_frames_;
 public:
-	explicit implementation(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
+	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
 		, nb_frames_(0)
 	{			   	
@@ -187,7 +187,7 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
+audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::vector<std::shared_ptr<std::vector<int16_t>>> audio_decoder::poll(){return impl_->poll();}

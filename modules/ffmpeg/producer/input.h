@@ -47,7 +47,7 @@ public:
 
 	size_t nb_frames() const;
 
-	std::shared_ptr<AVFormatContext> context();
+	safe_ptr<AVFormatContext> context();
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
