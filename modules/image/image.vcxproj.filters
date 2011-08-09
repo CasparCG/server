@@ -10,6 +10,9 @@
     <Filter Include="source\util">
       <UniqueIdentifier>{6abd09ae-2ad7-41fa-bfa5-f4614a07be8c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\consumer">
+      <UniqueIdentifier>{15311b81-1e0d-4114-9bf8-b8f74b292a0f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\image_producer.cpp">
@@ -24,6 +27,9 @@
     <ClCompile Include="producer\image_scroll_producer.cpp">
       <Filter>source\producer</Filter>
     </ClCompile>
+    <ClCompile Include="consumer\image_consumer.cpp">
+      <Filter>source\consumer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\image_producer.h">
@@ -37,6 +43,9 @@
     </ClInclude>
     <ClInclude Include="producer\image_scroll_producer.h">
       <Filter>source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\image_consumer.h">
+      <Filter>source\consumer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -391,9 +391,10 @@ public:
 		context_.reset([&]{return new decklink_consumer(config_, format_desc);});
 	}
 	
-	virtual void send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
 		context_->send(frame);
+		return true;
 	}
 	
 	virtual std::wstring print() const
@@ -409,11 +410,6 @@ public:
 	virtual const core::video_format_desc& get_video_format_desc() const
 	{
 		return context_->get_video_format_desc();
-	}
-
-	virtual size_t buffer_depth() const
-	{
-		return context_->buffer_size_;
 	}
 };	
 

@@ -330,9 +330,10 @@ public:
 		consumer_.reset(new ogl_consumer(screen_index_, stretch_, windowed_, format_desc));
 	}
 	
-	virtual void send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
 		consumer_->send(frame);
+		return true;
 	}
 	
 	virtual std::wstring print() const

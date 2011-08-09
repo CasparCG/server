@@ -323,9 +323,10 @@ public:
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_));
 	}
 	
-	virtual void send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
 		consumer_->send(frame);
+		return true;
 	}
 
 	virtual const core::video_format_desc& get_video_format_desc() const

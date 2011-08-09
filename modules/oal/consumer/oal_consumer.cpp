@@ -79,7 +79,7 @@ public:
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 	
-	virtual void send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{			
 		if(preroll_count_ < input_.capacity())
 		{
@@ -88,10 +88,10 @@ public:
 		}
 
 		input_.push(std::vector<int16_t>(frame->audio_data().begin(), frame->audio_data().end())); 	
+
+		return true;
 	}
-
-	virtual size_t buffer_depth() const{return 3;}
-
+	
 	virtual bool OnGetData(sf::SoundStream::Chunk& data)
 	{		
 		std::vector<short> audio_data;		
