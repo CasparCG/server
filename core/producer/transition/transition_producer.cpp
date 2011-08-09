@@ -27,8 +27,6 @@
 #include <core/producer/frame/image_transform.h>
 #include <core/producer/frame/audio_transform.h>
 
-#include <tbb/parallel_invoke.h>
-
 namespace caspar { namespace core {	
 
 struct transition_producer : public frame_producer
@@ -68,24 +66,13 @@ struct transition_producer : public frame_producer
 		if(current_frame_++ >= info_.duration)
 			return basic_frame::eof();
 		
-		auto dest	= core::basic_frame::empty();
-		auto source	= core::basic_frame::empty();
+		auto dest = receive_and_follow(dest_producer_, hints);
+		if(dest == core::basic_frame::late())
+			dest = dest_producer_->last_frame();
 
-		tbb::parallel_invoke
-		(
-			[&]
-			{
-				dest = receive_and_follow(dest_producer_, hints);
-				if(dest == core::basic_frame::late())
-					dest = dest_producer_->last_frame();
-			},
-			[&]
-			{
-				source = receive_and_follow(source_producer_, hints);
-				if(source == core::basic_frame::late())
-					source = source_producer_->last_frame();
-			}
-		);
+		auto source = receive_and_follow(source_producer_, hints);
+		if(source == core::basic_frame::late())
+			source = source_producer_->last_frame();
 
 		return last_frame_ = compose(dest, source);
 	}
