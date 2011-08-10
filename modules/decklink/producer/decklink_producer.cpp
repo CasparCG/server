@@ -29,6 +29,7 @@
 #include "../../ffmpeg/producer/util.h"
 #include "../../ffmpeg/producer/frame_muxer.h"
 
+#include <common/log/log.h>
 #include <common/diagnostics/graph.h>
 #include <common/concurrency/com_context.h>
 #include <common/exception/exceptions.h>
@@ -41,6 +42,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 #include <boost/timer.hpp>
 
 #if defined(_MSC_VER)

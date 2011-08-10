@@ -17,11 +17,6 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
- 
-// stdafx.h : include file for standard system include files,
-//  or project specific include files that are used frequently, but
-//      are changed infrequently
-//
 
 #pragma once
 
@@ -33,33 +28,29 @@
 
 #include <Windows.h>
 
-#include <memory>
-#include <array>
-#include <functional>
 #include <algorithm>
-#include <vector>
+#include <array>
+#include <assert.h>
 #include <deque>
+#include <functional>
+#include <math.h>
+#include <memory>
 #include <queue>
 #include <string>
-#include <math.h>
+#include <vector>
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
-#include <tbb/parallel_invoke.h>
-#include <tbb/parallel_for.h>
-#include <tbb/parallel_for_each.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
 
-#include "../common/utility/string.h"
 #include "../common/memory/safe_ptr.h"
+#include "../common/utility/string.h"
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
-#include "../common/log/Log.h"
 #include "../common/exception/exceptions.h"
 #include "../common/exception/win32_exception.h"
-
-#include <assert.h>
+#include "../common/log/Log.h"
