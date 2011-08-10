@@ -79,7 +79,6 @@ public:
 	{
 		format_desc_ = format_desc;		
 		sf::SoundStream::Initialize(2, 48000);
-		Play();		
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 	
@@ -89,6 +88,7 @@ public:
 		{
 			while(input_.try_push(std::vector<int16_t>(format_desc_.audio_samples_per_frame, 0)))
 				++preroll_count_;
+			Play();		
 		}
 
 		input_.push(std::vector<int16_t>(frame->audio_data().begin(), frame->audio_data().end())); 	
