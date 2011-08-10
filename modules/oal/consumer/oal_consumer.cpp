@@ -53,7 +53,7 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 public:
 	oal_consumer() 
 		: graph_(diagnostics::create_graph(narrow(print())))
-		, container_(5)
+		, container_(16)
 		, preroll_count_(0)
 	{
 		graph_->add_guide("tick-time", 0.5);
