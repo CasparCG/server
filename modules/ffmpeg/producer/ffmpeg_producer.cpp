@@ -61,8 +61,7 @@ struct ffmpeg_producer : public core::frame_producer
 
 	input											input_;	
 	video_decoder									video_decoder_;
-	audio_decoder									audio_decoder_;
-	
+	audio_decoder									audio_decoder_;	
 	frame_muxer										muxer_;
 
 	int												late_frames_;
@@ -94,7 +93,7 @@ public:
 		graph_->set_color("audio-time", diagnostics::color(0.2f, 1.0f, 0.2f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));		
 		
-		for(int n = 0; n < 128 && muxer_.size() < 2; ++n)
+		for(int n = 0; n < 32 && muxer_.size() < 2; ++n)
 			decode_frame(0);
 	}
 
