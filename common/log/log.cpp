@@ -36,6 +36,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/filesystem/convenience.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <boost/log/core/core.hpp>
 
@@ -106,6 +107,12 @@ void init()
 
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
 	
+#ifdef NDEBUG
+	stream_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
+#else
+	stream_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= trace);
+#endif
+
 	stream_sink->locked_backend()->set_formatter(&my_formatter);
 
 	boost::log::wcore::get()->add_sink(stream_sink);
@@ -146,6 +153,22 @@ void add_file_sink(const std::wstring& folder)
 	{
 		std::wcerr << L"Failed to Setup File Logging Sink" << std::endl << std::endl;
 	}
+}
+
+void set_log_level(const std::wstring& lvl)
+{	
+	if(boost::iequals(lvl, L"trace"))
+		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= trace);
+	else if(boost::iequals(lvl, L"debug"))
+		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
+	else if(boost::iequals(lvl, L"info"))
+		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
+	else if(boost::iequals(lvl, L"warning"))
+		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= warning);
+	else if(boost::iequals(lvl, L"error"))
+		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= error);
+	else if(boost::iequals(lvl, L"fatal"))
+		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= fatal);
 }
 
 }}
