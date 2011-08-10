@@ -237,7 +237,7 @@ private:
 
 	bool full() const
 	{
-		return is_running_ && buffer_size_ > MAX_BUFFER_SIZE && buffer_.size() > MAX_BUFFER_COUNT;
+		return is_running_ && (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT);
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
@@ -249,11 +249,11 @@ private:
 	bool is_eof(int ret)
 	{
 		if(ret == AVERROR(EIO))
-			CASPAR_LOG(debug) << print() << " Received EIO, assuming EOF.";
-		//if(ret == AVERROR_EOF)
-		//	CASPAR_LOG(info) << print() << " Received EOF.";
+			CASPAR_LOG(debug) << print() << " Received EIO, assuming EOF. " << nb_frames_;
+		if(ret == AVERROR_EOF)
+			CASPAR_LOG(info) << print() << " Received EOF. " << nb_frames_;
 
-		return ret == AVERROR_EOF || ret == AVERROR(EIO); // av_read_frame doesn't always correctly return AVERROR_EOF;
+		return nb_frames_ > 0 && (ret == AVERROR_EOF || ret == AVERROR(EIO)); // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 	
 	std::wstring print() const
