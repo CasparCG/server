@@ -20,6 +20,7 @@
  
 #include "oal_consumer.h"
 
+#include <common/exception/exceptions.h>
 #include <common/diagnostics/graph.h>
 #include <common/log/log.h>
 #include <common/utility/timer.h>
@@ -56,6 +57,9 @@ public:
 		, container_(16)
 		, preroll_count_(0)
 	{
+		if(core::consumer_buffer_depth() < 3)
+			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("audio-consumer does not support buffer-depth lower than 3."));
+
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
 		is_running_ = true;
