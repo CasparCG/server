@@ -98,7 +98,7 @@ public:
 
 		format_context_.reset(weak_format_context_, av_close_input_file);
 
-		av_dump_format(weak_format_context_, 0, narrow(filename).c_str(), 0);
+		//av_dump_format(weak_format_context_, 0, narrow(filename).c_str(), 0);
 			
 		THROW_ON_ERROR2(avformat_find_stream_info(format_context_.get(), nullptr), print());
 		
