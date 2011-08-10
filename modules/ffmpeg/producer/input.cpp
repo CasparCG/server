@@ -249,11 +249,11 @@ private:
 	bool is_eof(int ret)
 	{
 		if(ret == AVERROR(EIO))
-			CASPAR_LOG(debug) << print() << " Received EIO, assuming EOF. " << nb_frames_;
+			CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. " << nb_frames_;
 		if(ret == AVERROR_EOF)
-			CASPAR_LOG(info) << print() << " Received EOF. " << nb_frames_;
+			CASPAR_LOG(trace) << print() << " Received EOF. " << nb_frames_;
 
-		return nb_frames_ > 0 && (ret == AVERROR_EOF || ret == AVERROR(EIO)); // av_read_frame doesn't always correctly return AVERROR_EOF;
+		return ret == AVERROR_EOF || ret == AVERROR(EIO); // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 	
 	std::wstring print() const
