@@ -62,12 +62,12 @@ struct configuration
 		, buffer_depth(core::consumer_buffer_depth()){}
 };
 
-class decklink_frame_muxer : public IDeckLinkVideoFrame
+class decklink_frame : public IDeckLinkVideoFrame
 {
 	const safe_ptr<core::read_frame>	frame_;
-	const core::video_format_desc			format_desc_;
+	const core::video_format_desc		format_desc_;
 public:
-	decklink_frame_muxer(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc)
+	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc)
 		: frame_(frame)
 		, format_desc_(format_desc){}
 	
@@ -103,18 +103,18 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	CComQIPtr<IDeckLinkConfiguration>	configuration_;
 	CComQIPtr<IDeckLinkKeyer>			keyer_;
 
-	std::exception_ptr exception_;
+	std::exception_ptr					exception_;
 
-	tbb::atomic<bool> is_running_;
+	tbb::atomic<bool>					is_running_;
 		
-	const std::wstring model_name_;
-	const core::video_format_desc format_desc_;
-	const size_t buffer_size_;
+	const std::wstring					model_name_;
+	const core::video_format_desc		format_desc_;
+	const size_t						buffer_size_;
 
-	unsigned long frames_scheduled_;
-	unsigned long audio_scheduled_;
+	long long							frames_scheduled_;
+	long long							audio_scheduled_;
 
-	size_t preroll_count_;
+	size_t								preroll_count_;
 		
 	std::list<std::shared_ptr<IDeckLinkVideoFrame>> frame_container_; // Must be std::list in order to guarantee that pointers are always valid.
 	boost::circular_buffer<std::vector<int16_t>>	audio_container_;
@@ -348,7 +348,7 @@ public:
 			
 	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
-		frame_container_.push_back(std::make_shared<decklink_frame_muxer>(frame, format_desc_));
+		frame_container_.push_back(std::make_shared<decklink_frame>(frame, format_desc_));
 		if(FAILED(output_->ScheduleVideoFrame(frame_container_.back().get(), (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
