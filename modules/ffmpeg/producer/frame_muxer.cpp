@@ -187,7 +187,13 @@ struct frame_muxer::implementation : boost::noncopyable
 			else
 				display_mode_ = display_mode::simple;
 
-			CASPAR_LOG(info) << "frame_muxer: " << display_mode::print(display_mode_);
+			if(display_mode_ == display_mode::invalid)
+			{
+				CASPAR_LOG(warning) << L"[frame_muxer] Failed to detect display-mode.";
+				display_mode_ = display_mode::simple;
+			}
+
+			CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_);
 		}
 				
 		if(hints & core::frame_producer::ALPHA_HINT)
