@@ -135,7 +135,18 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     strcpy(prev, line);
     sanitize((uint8_t*)line);
 	
-	CASPAR_LOG(trace) << L"[FFMPEG] [" << av_clip(level>>3, 0, 6) << L"] " << line;
+	if(level == AV_LOG_DEBUG)
+		CASPAR_LOG(debug) << L"[FFMPEG] " << line;
+	else if(level == AV_LOG_INFO)
+		CASPAR_LOG(info) << L"[FFMPEG] " << line;
+	else if(level == AV_LOG_WARNING)
+		CASPAR_LOG(warning) << L"[FFMPEG] " << line;
+	else if(level == AV_LOG_ERROR)
+		CASPAR_LOG(error) << L"[FFMPEG] " << line;
+	else if(level == AV_LOG_FATAL)
+		CASPAR_LOG(fatal) << L"[FFMPEG] " << line;
+	else
+		CASPAR_LOG(trace) << L"[FFMPEG] " << line;
 
     //colored_fputs(av_clip(level>>3, 0, 6), line);
 }

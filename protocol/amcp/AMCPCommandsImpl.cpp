@@ -25,17 +25,19 @@
 
 #include <common/env.h>
 
+#include <common/log/log.h>
+
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
-#include <modules/flash/flash.h>
-#include <modules/flash/producer/flash_producer.h>
-#include <modules/flash/producer/cg_producer.h>
 #include <core/producer/transition/transition_producer.h>
-
 #include <core/producer/frame/image_transform.h>
 #include <core/producer/frame/audio_transform.h>
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
+
+#include <modules/flash/flash.h>
+#include <modules/flash/producer/flash_producer.h>
+#include <modules/flash/producer/cg_producer.h>
 
 #include <algorithm>
 #include <locale>
@@ -792,6 +794,16 @@ bool PrintCommand::DoExecute()
 	GetChannel()->output()->add(99978, create_consumer(boost::assign::list_of(L"IMAGE")));
 		
 	SetReplyString(TEXT("202 PRINT OK\r\n"));
+
+	return true;
+}
+
+bool LogCommand::DoExecute()
+{
+	if(_parameters.at(0) == L"LEVEL")
+		log::set_log_level(_parameters.at(1));
+
+	SetReplyString(TEXT("202 LOG OK\r\n"));
 
 	return true;
 }

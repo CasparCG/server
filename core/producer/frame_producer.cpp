@@ -109,7 +109,12 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 		producer = create_color_producer(my_frame_factory, params);
 
 	if(producer == frame_producer::empty())
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(params.size() > 0 ? narrow(params[0]) : ""));
+	{
+		std::wstring str;
+		BOOST_FOREACH(auto& param, params)
+			str += param + L" ";
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(narrow(str)));
+	}
 
 	return producer;
 }
