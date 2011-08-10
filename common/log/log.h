@@ -91,6 +91,8 @@ BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	{CASPAR_LOG(error) << boost::current_exception_diagnostic_information().c_str();}\
 	catch(...){}
 
+void set_log_level(const std::wstring& lvl);
+
 }}
 
 #if defined(_MSC_VER)
