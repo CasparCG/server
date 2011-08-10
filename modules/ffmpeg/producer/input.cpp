@@ -200,12 +200,12 @@ private:
 			{
 				seek_frame(start_, AVSEEK_FLAG_BACKWARD);
 				graph_->add_tag("seek");		
-				CASPAR_LOG(trace) << print() << " Received EOF. Looping.";			
+				CASPAR_LOG(trace) << print() << " Looping.";			
 			}	
 			else
 			{
 				is_running_ = false;
-				CASPAR_LOG(trace) << print() << " Received EOF. Stopping.";
+				CASPAR_LOG(trace) << print() << " Stopping.";
 			}
 		}
 		else
