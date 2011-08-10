@@ -68,6 +68,7 @@ EVideoMode vid_fmt_from_video_format(const core::video_format::type& fmt)
 	case core::video_format::x1080p2500:	return VID_FMT_1080P_2500;
 	case core::video_format::x1080p2997:	return VID_FMT_1080P_2997;
 	case core::video_format::x1080p3000:	return VID_FMT_1080P_3000;
+	case core::video_format::x1080p5000:	return VID_FMT_1080P_5000;
 	default:								return VID_FMT_INVALID;
 	}
 }
