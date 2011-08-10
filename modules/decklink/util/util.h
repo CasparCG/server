@@ -20,11 +20,16 @@
 #pragma once
 
 #include <common/exception/exceptions.h>
+#include <common/log/log.h>
 #include <core/video_format.h>
 
 #include "../interop/DeckLinkAPI_h.h"
 
+#include <boost/lexical_cast.hpp>
+
 #include <atlbase.h>
+
+#include <string>
 
 namespace caspar { 
 	
