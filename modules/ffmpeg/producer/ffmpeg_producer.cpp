@@ -231,14 +231,21 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 	std::wstring path = filename + L"." + *ext;
 	bool loop = boost::find(params, L"LOOP") != params.end();
 
-	int start = -1;
-	int length = -1;
+	size_t start = 0;
+	size_t length = std::numeric_limits<size_t>::max();
 	
 	auto seek_it = std::find(params.begin(), params.end(), L"SEEK");
 	if(seek_it != params.end())
 	{
 		if(++seek_it != params.end())
-			start = boost::lexical_cast<int>(*seek_it);
+			start = boost::lexical_cast<size_t>(*seek_it);
+	}
+	
+	auto length_it = std::find(params.begin(), params.end(), L"LENGTH");
+	if(length_it != params.end())
+	{
+		if(++length_it != params.end())
+			length = boost::lexical_cast<size_t>(*length_it);
 	}
 
 	std::wstring filter = L"";
