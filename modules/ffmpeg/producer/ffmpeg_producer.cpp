@@ -203,6 +203,8 @@ public:
 			nb_frames = std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames));
 		}
 
+		nb_frames = muxer_.calc_nb_frames(nb_frames);
+
 		// TODO: Might need to scale nb_frames av frame_muxer transformations.
 
 		return nb_frames + late_frames_ - start_;

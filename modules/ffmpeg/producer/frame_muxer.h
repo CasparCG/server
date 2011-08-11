@@ -34,6 +34,8 @@ public:
 	size_t size() const;
 	bool empty() const;
 
+	int64_t calc_nb_frames(int64_t nb_frames) const;
+
 	safe_ptr<core::basic_frame> pop();
 private:
 	struct implementation;
