@@ -69,7 +69,9 @@ struct input::implementation : boost::noncopyable
 		
 	const std::wstring											filename_;
 	const bool													loop_;
-	const int													start_;		
+	const size_t												start_;		
+	const size_t												length_;
+	size_t														frame_number_;
 	
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
 	tbb::atomic<size_t>											buffer_size_;
@@ -83,11 +85,13 @@ struct input::implementation : boost::noncopyable
 	tbb::atomic<size_t>											nb_loops_;
 
 public:
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start) 
+	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
 		: graph_(graph)
 		, loop_(loop)
 		, filename_(filename)
-		, start_(std::max(start, 0))
+		, start_(start)
+		, length_(length)
+		, frame_number_(0)
 	{			
 		is_running_ = true;
 		nb_frames_	= 0;
@@ -104,7 +108,7 @@ public:
 		
 		default_stream_index_ = THROW_ON_ERROR2(av_find_default_stream_index(format_context_.get()), print());
 
-		if(start_ != 0)			
+		if(start_ > 0)			
 			seek_frame(start_);
 		
 		for(int n = 0; n < 16 && !full(); ++n)
@@ -195,6 +199,7 @@ private:
 		if(is_eof(ret))														     
 		{
 			++nb_loops_;
+			frame_number_ = 0;
 
 			if(loop_)
 			{
@@ -212,8 +217,12 @@ private:
 		{		
 			THROW_ON_ERROR(ret, print(), "av_read_frame");
 
-			if(read_packet->stream_index == default_stream_index_ && nb_loops_ == 0)
-				++nb_frames_;
+			if(read_packet->stream_index == default_stream_index_)
+			{
+				if(nb_loops_ == 0)
+					++nb_frames_;
+				++frame_number_;
+			}
 
 			THROW_ON_ERROR2(av_dup_packet(read_packet.get()), print());
 				
@@ -253,7 +262,7 @@ private:
 		if(ret == AVERROR_EOF)
 			CASPAR_LOG(trace) << print() << " Received EOF. " << nb_frames_;
 
-		return ret == AVERROR_EOF || ret == AVERROR(EIO); // av_read_frame doesn't always correctly return AVERROR_EOF;
+		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 	
 	std::wstring print() const
@@ -262,8 +271,8 @@ private:
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int start, int length) 
-	: impl_(new implementation(graph, filename, loop, start)){}
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
+	: impl_(new implementation(graph, filename, loop, start, length)){}
 bool input::eof() const {return !impl_->is_running_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 safe_ptr<AVFormatContext> input::context(){return make_safe(impl_->format_context_);}
