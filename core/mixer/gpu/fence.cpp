@@ -41,10 +41,10 @@ struct fence::implementation
 		int delay = 0;
 		if(!ogl.invoke([this]{return ready();}, high_priority))
 		{
-			while(!ogl.invoke([this]{return ready();}, normal_priority) && delay < 30)
+			while(!ogl.invoke([this]{return ready();}, normal_priority) && delay < 20)
 			{
-				delay += 3;
-				Sleep(3);
+				delay += 2;
+				Sleep(2);
 			}
 		}
 
