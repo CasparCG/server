@@ -256,7 +256,7 @@ public:
 	bool InvalidRect() const { return bInvalidRect_; } 
 	bool IsEmpty() const { return bIsEmpty_; }
 
-	void SetFormat(const core::video_format_desc&);
+	void SetSize(size_t width, size_t height);
 	bool IsReadyToRender() const;
 	void EnterFullscreen();
 
