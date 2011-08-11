@@ -363,6 +363,21 @@ struct frame_muxer::implementation : boost::noncopyable
 
 		dest.push_back(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));		
 	}
+	
+	int64_t calc_nb_frames(int64_t nb_frames) const
+	{
+		switch(display_mode_)
+		{
+		case display_mode::interlace:
+		case display_mode::half:
+			return nb_frames/2;
+		case display_mode::duplicate:
+		case display_mode::deinterlace_bob:
+			return nb_frames*2;
+		default:
+			return nb_frames;
+		}
+	}
 };
 
 frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory)
@@ -375,5 +390,6 @@ size_t frame_muxer::size() const {return impl_->size();}
 bool frame_muxer::empty() const {return impl_->size() == 0;}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}
 bool frame_muxer::audio_ready() const{return impl_->audio_ready();}
+int64_t frame_muxer::calc_nb_frames(int64_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 
 }
