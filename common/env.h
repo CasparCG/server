@@ -30,7 +30,6 @@ void configure(const std::string& filename);
 const std::wstring& media_folder();
 const std::wstring& log_folder();
 const std::wstring& template_folder();
-const std::wstring& template_host();
 const std::wstring& data_folder();
 const std::wstring& version();
 

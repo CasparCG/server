@@ -86,7 +86,6 @@ private:
 class flash_renderer
 {	
 	const std::wstring filename_;
-	core::video_format_desc format_desc_;
 
 	const std::shared_ptr<core::frame_factory> frame_factory_;
 	
@@ -99,16 +98,20 @@ class flash_renderer
 	boost::timer tick_timer_;
 
 	high_prec_timer timer_;
+
+	const size_t width_;
+	const size_t height_;
 	
 public:
-	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
+	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: graph_(graph)
 		, filename_(filename)
-		, format_desc_(frame_factory->get_video_format_desc())
 		, frame_factory_(frame_factory)
 		, ax_(nullptr)
 		, head_(core::basic_frame::empty())
-		, bmp_(format_desc_.width, format_desc_.height)
+		, bmp_(width, height)
+		, width_(width)
+		, height_(height)
 	{
 		graph_->add_guide("frame-time", 0.5f);
 		graph_->set_color("frame-time", diagnostics::color(0.8f, 0.3f, 0.4f));	
@@ -138,9 +141,10 @@ public:
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Set Scale Mode"));
 						
-		ax_->SetFormat(format_desc_);		
+		ax_->SetSize(width_, height_);		
 	
 		CASPAR_LOG(info) << print() << L" Thread started.";
+		CASPAR_LOG(info) << print() << L" Successfully initialized to, width: " << width_ << L" height: " << height_ << L".";
 	}
 
 	~flash_renderer()
@@ -158,19 +162,16 @@ public:
 		if(!ax_->FlashCall(param))
 			CASPAR_LOG(warning) << print() << " Flash function call failed. Param: " << param << ".";
 		graph_->add_tag("param");
-
-		if(abs(ax_->GetFPS() - format_desc_.fps) > 0.01 && abs(ax_->GetFPS()/2.0 - format_desc_.fps) > 0.01)
-			CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << ax_->GetFPS() << L". Should be either " << format_desc_.fps << L" or " << format_desc_.fps*2.0 << L".";
 	}
 	
 	safe_ptr<core::basic_frame> render_frame(bool has_underflow)
 	{
-		if(format_desc_ != frame_factory_->get_video_format_desc())
-		{
-			format_desc_ = frame_factory_->get_video_format_desc();
-			bmp_ = bitmap(format_desc_.width, format_desc_.height);
-			ax_->SetFormat(format_desc_);
-		}
+		//if(format_desc_ != frame_factory_->get_video_format_desc())
+		//{
+		//	format_desc_ = frame_factory_->get_video_format_desc();
+		//	bmp_ = bitmap(format_desc_.width, format_desc_.height);
+		//	ax_->SetFormat(format_desc_);
+		//}
 
 		float frame_time = 1.0f/ax_->GetFPS();
 
@@ -190,11 +191,11 @@ public:
 		ax_->Tick();
 		if(ax_->InvalidRect())
 		{			
-			fast_memclr(bmp_.data(),  format_desc_.size);
+			fast_memclr(bmp_.data(), width_*height_*4);
 			ax_->DrawControl(bmp_);
 		
-			auto frame = frame_factory_->create_frame(this, format_desc_.width, format_desc_.height);
-			fast_memcpy(frame->image_data().begin(), bmp_.data(), format_desc_.size);
+			auto frame = frame_factory_->create_frame(this, width_, height_);
+			fast_memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
 			frame->commit();
 			head_ = frame;
 		}		
@@ -227,13 +228,18 @@ struct flash_producer : public core::frame_producer
 
 	safe_ptr<core::basic_frame>	last_frame_;
 				
-	com_context<flash_renderer> context_;		
+	com_context<flash_renderer> context_;	
+
+	int width_;
+	int height_;
 public:
-	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
+	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, size_t width, size_t height) 
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
 		, context_(L"flash_producer")
 		, last_frame_(core::basic_frame::empty())
+		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
+		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
@@ -281,6 +287,10 @@ public:
 			try
 			{
 				context_->param(param);	
+
+				const auto& format_desc = frame_factory_->get_video_format_desc();
+				if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
+					CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
 			}
 			catch(...)
 			{
@@ -301,7 +311,7 @@ public:
 
 	void initialize()
 	{
-		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_);});
+		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);});
 		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
 		render(context_.get());
 	}
@@ -353,8 +363,17 @@ public:
 safe_ptr<core::frame_producer> create_flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	std::wstring filename = env::template_folder() + L"\\" + params[0];
+
+	size_t width = frame_factory->get_video_format_desc().width;
+	size_t height = frame_factory->get_video_format_desc().height;
+
+	if(params.size() >= 3)
+	{
+		width = boost::lexical_cast<size_t>(params[1]);
+		height = boost::lexical_cast<size_t>(params[2]);
+	}
 	
-	return make_safe<flash_producer>(frame_factory, filename);
+	return make_safe<flash_producer>(frame_factory, filename, width, height);
 }
 
 std::wstring find_flash_template(const std::wstring& template_name)
