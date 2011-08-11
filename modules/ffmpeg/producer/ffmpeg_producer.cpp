@@ -116,7 +116,7 @@ public:
 		
 		frame_timer_.restart();
 		
-		for(int n = 0; n < 4 && muxer_.empty(); ++n)
+		for(int n = 0; n < 64 && muxer_.empty(); ++n)
 			decode_frame(hints);
 
 		if(!muxer_.empty())
