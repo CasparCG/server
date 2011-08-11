@@ -127,7 +127,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	display_mode::type								display_mode_;
 	const double									in_fps_;
 	const video_format_desc							format_desc_;
-	bool											auto_mode_;
+	bool											auto_transcode_;
 
 	size_t											audio_sample_count_;
 	size_t											video_frame_count_;
@@ -144,7 +144,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		, display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
-		, auto_mode_(env::properties().get("configuration.producers.auto-transcode", false))
+		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
 		, audio_sample_count_(0)
 		, video_frame_count_(0)
 		, frame_factory_(frame_factory)
@@ -171,7 +171,7 @@ struct frame_muxer::implementation : boost::noncopyable
 
 		if(display_mode_ == display_mode::invalid)
 		{
-			if(auto_mode_)
+			if(auto_transcode_)
 			{
 				auto in_mode = get_mode(*video_frame);
 				display_mode_ = get_display_mode(in_mode, in_fps_, format_desc_.mode, format_desc_.fps);
