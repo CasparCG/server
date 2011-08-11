@@ -122,6 +122,7 @@ public:
 	{
 		context_.execution().begin_invoke([=]
 		{
+			stage_->clear();
 			context_.set_format_desc(format_desc);
 		});
 	}

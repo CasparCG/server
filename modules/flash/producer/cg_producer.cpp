@@ -108,24 +108,6 @@ public:
 		return flash_producer_->print();
 	}
 };
-
-std::vector<std::wstring> template_host_params()
-{
-	std::vector<std::wstring> params;
-	params.push_back(widen(env::properties().get("configuration.template-host.filename", "cg.fth")));
-	
-	try
-	{
-		params.push_back(widen(env::properties().get<std::string>("configuration.template-host.width")));
-		params.push_back(widen(env::properties().get<std::string>("configuration.template-host.height")));
-	}
-	catch(...)
-	{
-		params.clear();
-		params.push_back(widen(env::properties().get("configuration.template-host.filename", "cg.fth")));
-	}
-	return params;
-}
 	
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int render_layer)
 {	
@@ -133,7 +115,7 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 
 	if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
 	{
-		flash_producer = create_flash_producer(video_channel->mixer(), template_host_params());	
+		flash_producer = create_flash_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>());	
 		video_channel->stage()->load(render_layer, flash_producer); 
 		video_channel->stage()->play(render_layer);
 	}
@@ -147,7 +129,7 @@ safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_fac
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
 	
-	auto flash_producer = create_flash_producer(frame_factory, template_host_params());	
+	auto flash_producer = create_flash_producer(frame_factory, boost::assign::list_of<std::wstring>());	
 	auto producer = make_safe<cg_producer>(flash_producer);
 	producer->add(0, filename, 1);
 
