@@ -108,7 +108,7 @@ void init()
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
 	
 #ifdef NDEBUG
-	stream_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
+	stream_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= trace);
 #else
 	stream_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= trace);
 #endif
