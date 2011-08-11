@@ -83,6 +83,45 @@ private:
 	std::shared_ptr<void> bmp_;
 };
 
+struct template_host
+{
+	std::string  video_mode;
+	std::string  filename;
+	size_t		 width;
+	size_t		 height;
+};
+
+template_host get_template_host(const core::video_format_desc& desc)
+{
+	std::vector<template_host> template_hosts;
+	BOOST_FOREACH(auto& xml_mapping, env::properties().get_child("configuration.producers.template-hosts"))
+	{
+		try
+		{
+			template_host template_host;
+			template_host.video_mode		= xml_mapping.second.get("video-mode", narrow(desc.name));
+			template_host.filename			= xml_mapping.second.get("filename", "cg.fth");
+			template_host.width				= xml_mapping.second.get("width", desc.width);
+			template_host.height			= xml_mapping.second.get("height", desc.height);
+			template_hosts.push_back(template_host);
+		}
+		catch(...){}
+	}
+
+	auto template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.video_mode == narrow(desc.name);});
+	if(template_host_it == template_hosts.end())
+		template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.video_mode == "";});
+
+	if(template_host_it != template_hosts.end())
+		return *template_host_it;
+	
+	template_host template_host;
+	template_host.filename = "cg.fth";
+	template_host.width = desc.width;
+	template_host.height = desc.height;
+	return template_host;
+}
+
 class flash_renderer
 {	
 	const std::wstring filename_;
@@ -144,7 +183,7 @@ public:
 		ax_->SetSize(width_, height_);		
 	
 		CASPAR_LOG(info) << print() << L" Thread started.";
-		CASPAR_LOG(info) << print() << L" Successfully initialized to, width: " << width_ << L" height: " << height_ << L".";
+		CASPAR_LOG(info) << print() << L" Successfully initialized with template-host: " << filename << L" width: " << width_ << L" height: " << height_ << L".";
 	}
 
 	~flash_renderer()
@@ -166,13 +205,6 @@ public:
 	
 	safe_ptr<core::basic_frame> render_frame(bool has_underflow)
 	{
-		//if(format_desc_ != frame_factory_->get_video_format_desc())
-		//{
-		//	format_desc_ = frame_factory_->get_video_format_desc();
-		//	bmp_ = bitmap(format_desc_.width, format_desc_.height);
-		//	ax_->SetFormat(format_desc_);
-		//}
-
 		float frame_time = 1.0f/ax_->GetFPS();
 
 		graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
@@ -288,9 +320,9 @@ public:
 			{
 				context_->param(param);	
 
-				const auto& format_desc = frame_factory_->get_video_format_desc();
-				if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
-					CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
+				//const auto& format_desc = frame_factory_->get_video_format_desc();
+				//if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
+				//	CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
 			}
 			catch(...)
 			{
@@ -362,18 +394,9 @@ public:
 
 safe_ptr<core::frame_producer> create_flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
-	std::wstring filename = env::template_folder() + L"\\" + params[0];
-
-	size_t width = frame_factory->get_video_format_desc().width;
-	size_t height = frame_factory->get_video_format_desc().height;
-
-	if(params.size() >= 3)
-	{
-		width = boost::lexical_cast<size_t>(params[1]);
-		height = boost::lexical_cast<size_t>(params[2]);
-	}
+	auto template_host = get_template_host(frame_factory->get_video_format_desc());
 	
-	return make_safe<flash_producer>(frame_factory, filename, width, height);
+	return make_safe<flash_producer>(frame_factory, env::template_folder() + L"\\" + widen(template_host.filename), template_host.width, template_host.height);
 }
 
 std::wstring find_flash_template(const std::wstring& template_name)

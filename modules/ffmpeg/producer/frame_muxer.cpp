@@ -144,7 +144,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		, display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
-		, auto_mode_(env::properties().get("configuration.producers.auto-mode", false))
+		, auto_mode_(env::properties().get("configuration.producers.auto-transcode", false))
 		, audio_sample_count_(0)
 		, video_frame_count_(0)
 		, frame_factory_(frame_factory)
