@@ -116,7 +116,7 @@ public:
 		
 		frame_timer_.restart();
 		
-		for(int n = 0; n < 8 && muxer_.empty(); ++n)
+		for(int n = 0; n < 4 && muxer_.empty(); ++n)
 			decode_frame(hints);
 
 		if(!muxer_.empty())
@@ -236,14 +236,14 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 	size_t start = 0;
 	size_t length = std::numeric_limits<size_t>::max();
 	
-	auto seek_it = std::find(params.begin(), params.end(), L"SEEK");
+	auto seek_it = boost::find(params, L"SEEK");
 	if(seek_it != params.end())
 	{
 		if(++seek_it != params.end())
 			start = boost::lexical_cast<size_t>(*seek_it);
 	}
 	
-	auto length_it = std::find(params.begin(), params.end(), L"LENGTH");
+	auto length_it = boost::find(params, L"LENGTH");
 	if(length_it != params.end())
 	{
 		if(++length_it != params.end())
@@ -251,7 +251,7 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 	}
 
 	std::wstring filter = L"";
-	auto filter_it = std::find(params.begin(), params.end(), L"FILTER");
+	auto filter_it = boost::find(params, L"FILTER");
 	if(filter_it != params.end())
 	{
 		if(++filter_it != params.end())
