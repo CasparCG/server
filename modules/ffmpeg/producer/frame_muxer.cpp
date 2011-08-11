@@ -284,8 +284,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	
 	void commit()
 	{
-		if(video_streams_.size() > 1 && audio_streams_.size() > 1 &&
-			(video_streams_.front().empty() || audio_streams_.front().empty()))
+		if(video_streams_.size() > 1 && audio_streams_.size() > 1 && !ready())
 		{
 			if(!video_streams_.front().empty() || !audio_streams_.front().empty())
 				CASPAR_LOG(debug) << "Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
@@ -294,7 +293,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			audio_streams_.pop_front();
 		}
 
-		if(video_streams_.front().empty() || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
+		if(!ready())
 			return;
 		
 		switch(display_mode_)
@@ -310,11 +309,23 @@ struct frame_muxer::implementation : boost::noncopyable
 		}
 	}
 
-	void simple(std::deque<safe_ptr<basic_frame>>& dest)
+	bool ready()
 	{
-		if(video_streams_.front().empty() || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
-			return;
-		
+		switch(display_mode_)
+		{
+		case display_mode::deinterlace_bob:
+		case display_mode::deinterlace:
+		case display_mode::simple:						return !video_streams_.front().empty() && audio_streams_.front().size() >= format_desc_.audio_samples_per_frame;
+		case display_mode::duplicate:					return !video_streams_.front().empty() && audio_streams_.front().size()/2 >= format_desc_.audio_samples_per_frame;
+		case display_mode::half:	
+		case display_mode::deinterlace_bob_reinterlace:					
+		case display_mode::interlace:					return video_streams_.front().size() >= 2 && audio_streams_.front().size() >= format_desc_.audio_samples_per_frame;
+		default:										return false;
+		}
+	}
+
+	void simple(std::deque<safe_ptr<basic_frame>>& dest)
+	{		
 		auto frame1 = pop_video();
 		frame1->audio_data() = pop_audio();
 
@@ -323,9 +334,6 @@ struct frame_muxer::implementation : boost::noncopyable
 
 	void duplicate(std::deque<safe_ptr<basic_frame>>& dest)
 	{		
-		if(video_streams_.front().empty() || audio_streams_.front().size()/2 < format_desc_.audio_samples_per_frame)
-			return;
-
 		auto frame = pop_video();
 
 		auto frame1 = make_safe<core::write_frame>(*frame); // make a copy
@@ -339,10 +347,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	}
 
 	void half(std::deque<safe_ptr<basic_frame>>& dest)
-	{	
-		if(video_streams_.front().size() < 2 || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
-			return;
-						
+	{							
 		auto frame1 = pop_video();
 		frame1->audio_data() = pop_audio();
 				
@@ -352,10 +357,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	}
 	
 	void interlace(std::deque<safe_ptr<basic_frame>>& dest)
-	{		
-		if(video_streams_.front().size() < 2 || audio_streams_.front().size() < format_desc_.audio_samples_per_frame)
-			return;
-		
+	{				
 		auto frame1 = pop_video();
 		frame1->audio_data() = pop_audio();
 				
