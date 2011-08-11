@@ -55,193 +55,220 @@ GLubyte lower_pattern[] = {
 struct image_kernel::implementation : boost::noncopyable
 {	
 	std::unique_ptr<shader> shader_;
-
-	std::string vertex_;
-	std::string fragment_;
-
+	
 	core::video_mode::type	last_mode_;
 	size_t					last_width_;
 	size_t					last_height_;
 	
+	std::string get_blend_color_func()
+	{
+		return 
+			
+		get_blend_glsl()
+		
+		+
+			
+		"vec3 get_blend_color(vec3 back, vec3 fore)											\n"
+		"{																					\n"
+		"	switch(blend_mode)																\n"
+		"	{																				\n"
+		"	case  0: return BlendNormal(back, fore);										\n"
+		"	case  1: return BlendLighten(back, fore);										\n"
+		"	case  2: return BlendDarken(back, fore);										\n"
+		"	case  3: return BlendMultiply(back, fore);										\n"
+		"	case  4: return BlendAverage(back, fore);										\n"
+		"	case  5: return BlendAdd(back, fore);											\n"
+		"	case  6: return BlendSubstract(back, fore);										\n"
+		"	case  7: return BlendDifference(back, fore);									\n"
+		"	case  8: return BlendNegation(back, fore);										\n"
+		"	case  9: return BlendExclusion(back, fore);										\n"
+		"	case 10: return BlendScreen(back, fore);										\n"
+		"	case 11: return BlendOverlay(back, fore);										\n"
+		//"	case 12: return BlendSoftLight(back, fore);										\n"
+		"	case 13: return BlendHardLight(back, fore);										\n"
+		"	case 14: return BlendColorDodge(back, fore);									\n"
+		"	case 15: return BlendColorBurn(back, fore);										\n"
+		"	case 16: return BlendLinearDodge(back, fore);									\n"
+		"	case 17: return BlendLinearBurn(back, fore);									\n"
+		"	case 18: return BlendLinearLight(back, fore);									\n"
+		"	case 19: return BlendVividLight(back, fore);									\n"
+		"	case 20: return BlendPinLight(back, fore);										\n"
+		"	case 21: return BlendHardMix(back, fore);										\n"
+		"	case 22: return BlendReflect(back, fore);										\n"
+		"	case 23: return BlendGlow(back, fore);											\n"
+		"	case 24: return BlendPhoenix(back, fore);										\n"
+		"	case 25: return BlendHue(back, fore);											\n"
+		"	case 26: return BlendSaturation(back, fore);									\n"
+		"	case 27: return BlendColor(back, fore);											\n"
+		"	case 28: return BlendLuminosity(back, fore);									\n"
+		"	}																				\n"
+		"	return BlendNormal(back, fore);													\n"
+		"}																					\n"
+		"																					\n"																			  
+		"vec4 blend_color(vec4 fore)														\n"
+		"{																					\n"
+		"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
+		"   if(levels)																		\n"
+		"		fore.rgb = LevelsControl(fore.rgb, min_input, max_input, gamma, min_output, max_output); \n"
+		"	if(csb)																			\n"
+		"		fore.rgb = ContrastSaturationBrightness(fore.rgb, brt, sat, con);			\n"
+		"   fore.rgb = get_blend_color(back.bgr, fore.rgb);									\n"
+		"																					\n"
+		"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
+		"}																					\n";
+	}
+		
+	std::string get_simple_blend_color_func()
+	{
+		return 	
+
+		"vec4 blend_color(vec4 fore)														\n"
+		"{																					\n"
+		"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
+		"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
+		"}																					\n";
+	}
+
+	std::string get_vertex()
+	{
+		return 
+
+		"void main()																		\n"
+		"{																					\n"
+		"	gl_TexCoord[0] = gl_MultiTexCoord0;												\n"
+		"	gl_TexCoord[1] = gl_MultiTexCoord1;												\n"
+		"	gl_FrontColor  = gl_Color;														\n"
+		"	gl_Position    = ftransform();													\n"
+		"}																					\n";
+	}
+
+	std::string get_fragment(bool compability_mode)
+	{
+		return
+
+		"#version 120																		\n"
+		"uniform sampler2D	background;														\n"
+		"uniform sampler2D	plane[4];														\n"
+		"uniform sampler2D	local_key;														\n"
+		"uniform sampler2D	layer_key;														\n"
+		"																					\n"
+		"uniform bool		is_hd;															\n"
+		"uniform bool		has_local_key;													\n"
+		"uniform bool		has_layer_key;													\n"
+		"uniform int		blend_mode;														\n"
+		"uniform int		alpha_mode;														\n"
+		"uniform int		pixel_format;													\n"
+		"																					\n"
+		"uniform bool		levels;															\n"
+		"uniform float		min_input;														\n"
+		"uniform float		max_input;														\n"
+		"uniform float		gamma;															\n"
+		"uniform float		min_output;														\n"
+		"uniform float		max_output;														\n"
+		"																					\n"
+		"uniform bool		csb;															\n"
+		"uniform float		brt;															\n"
+		"uniform float		sat;															\n"
+		"uniform float		con;															\n"
+		"																					\n"
+
+		+
+
+		(compability_mode ? get_simple_blend_color_func() : get_blend_color_func())
+		
+		+
+
+		"																					\n"
+		"// NOTE: YCbCr, ITU-R, http://www.intersil.com/data/an/an9717.pdf					\n"
+		"// TODO: Support for more yuv formats might be needed.								\n"
+		"vec4 ycbcra_to_rgba_sd(float y, float cb, float cr, float a)						\n"
+		"{																					\n"
+		"	cb -= 0.5;																		\n"
+		"	cr -= 0.5;																		\n"
+		"	y = 1.164*(y-0.0625);															\n"
+		"																					\n"
+		"	vec4 color;																		\n"
+		"	color.r = y + 2.018 * cb;														\n"
+		"	color.b = y + 1.596 * cr;														\n"
+		"	color.g = y - 0.813 * cr - 0.391 * cb;											\n"
+		"	color.a = a;																	\n"
+		"																					\n"
+		"	return color;																	\n"
+		"}																					\n"			
+		"																					\n"
+		"vec4 ycbcra_to_rgba_hd(float y, float cb, float cr, float a)						\n"
+		"{																					\n"
+		"	cb -= 0.5;																		\n"
+		"	cr -= 0.5;																		\n"
+		"	y = 1.164*(y-0.0625);															\n"
+		"																					\n"
+		"	vec4 color;																		\n"
+		"	color.r = y + 2.115 * cb;														\n"
+		"	color.b = y + 1.793 * cr;														\n"
+		"	color.g = y - 0.534 * cr - 0.213 * cb;											\n"
+		"	color.a = a;																	\n"
+		"																					\n"
+		"	return color;																	\n"
+		"}																					\n"			
+		"																					\n"			
+		"vec4 ycbcra_to_rgba(float y, float cb, float cr, float a)							\n"
+		"{																					\n"
+		"	if(is_hd)																		\n"
+		"		return ycbcra_to_rgba_hd(y, cb, cr, a);										\n"
+		"	else																			\n"
+		"		return ycbcra_to_rgba_sd(y, cb, cr, a);										\n"
+		"}																					\n"
+		"																					\n"
+		"vec4 get_rgba_color()																\n"
+		"{																					\n"
+		"	switch(pixel_format)															\n"
+		"	{																				\n"
+		"	case 0:		//gray																\n"
+		"		return vec4(texture2D(plane[0], gl_TexCoord[0].st).rrr, 1.0);				\n"
+		"	case 1:		//bgra,																\n"
+		"		return texture2D(plane[0], gl_TexCoord[0].st).bgra;							\n"
+		"	case 2:		//rgba,																\n"
+		"		return texture2D(plane[0], gl_TexCoord[0].st).rgba;							\n"
+		"	case 3:		//argb,																\n"
+		"		return texture2D(plane[0], gl_TexCoord[0].st).argb;							\n"
+		"	case 4:		//abgr,																\n"
+		"		return texture2D(plane[0], gl_TexCoord[0].st).gbar;							\n"
+		"	case 5:		//ycbcr,															\n"
+		"		{																			\n"
+		"			float y  = texture2D(plane[0], gl_TexCoord[0].st).r;					\n"
+		"			float cb = texture2D(plane[1], gl_TexCoord[0].st).r;					\n"
+		"			float cr = texture2D(plane[2], gl_TexCoord[0].st).r;					\n"
+		"			return ycbcra_to_rgba(y, cb, cr, 1.0);									\n"
+		"		}																			\n"
+		"	case 6:		//ycbcra															\n"
+		"		{																			\n"
+		"			float y  = texture2D(plane[0], gl_TexCoord[0].st).r;					\n"
+		"			float cb = texture2D(plane[1], gl_TexCoord[0].st).r;					\n"
+		"			float cr = texture2D(plane[2], gl_TexCoord[0].st).r;					\n"
+		"			float a  = texture2D(plane[3], gl_TexCoord[0].st).r;					\n"
+		"			return ycbcra_to_rgba(y, cb, cr, a);									\n"
+		"		}																			\n"
+		"	}																				\n"
+		"	return vec4(0.0, 0.0, 0.0, 0.0);												\n"
+		"}																					\n"
+		"																					\n"
+		"void main()																		\n"
+		"{																					\n"
+		"	vec4 color = get_rgba_color();													\n"
+		"	if(has_local_key)																\n"
+		"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
+		"	if(has_layer_key)																\n"
+		"		color.a *= texture2D(layer_key, gl_TexCoord[1].st).r;						\n"
+		"	gl_FragColor = blend_color(color.bgra * gl_Color);								\n"
+		"}																					\n";
+	}
+
+
 	implementation() 
 		: last_mode_(core::video_mode::progressive)
 		, last_width_(0)
 		, last_height_(0)
-	{
-		vertex_ = 
-			"void main()																		\n"
-			"{																					\n"
-			"	gl_TexCoord[0] = gl_MultiTexCoord0;												\n"
-			"	gl_TexCoord[1] = gl_MultiTexCoord1;												\n"
-			"	gl_FrontColor  = gl_Color;														\n"
-			"	gl_Position    = ftransform();													\n"
-			"}																					\n";
-
-		fragment_ =
-			"#version 120																		\n"
-			"uniform sampler2D	background;														\n"
-			"uniform sampler2D	plane[4];														\n"
-			"uniform sampler2D	local_key;														\n"
-			"uniform sampler2D	layer_key;														\n"
-			"																					\n"
-			"uniform bool		is_hd;															\n"
-			"uniform bool		has_local_key;													\n"
-			"uniform bool		has_layer_key;													\n"
-			"uniform int		blend_mode;														\n"
-			"uniform int		alpha_mode;														\n"
-			"uniform int		pixel_format;													\n"
-			"																					\n"
-			"uniform bool		levels;															\n"
-			"uniform float		min_input;														\n"
-			"uniform float		max_input;														\n"
-			"uniform float		gamma;															\n"
-			"uniform float		min_output;														\n"
-			"uniform float		max_output;														\n"
-			"																					\n"
-			"uniform bool		csb;															\n"
-			"uniform float		brt;															\n"
-			"uniform float		sat;															\n"
-			"uniform float		con;															\n"
-			"																					\n"
-
-			+
-
-			get_blend_glsl()
-			
-			+
-
-			"vec3 get_blend_color(vec3 back, vec3 fore)											\n"
-			"{																					\n"
-			"	switch(blend_mode)																\n"
-			"	{																				\n"
-			"	case  0: return BlendNormal(back, fore);										\n"
-			"	case  1: return BlendLighten(back, fore);										\n"
-			"	case  2: return BlendDarken(back, fore);										\n"
-			"	case  3: return BlendMultiply(back, fore);										\n"
-			"	case  4: return BlendAverage(back, fore);										\n"
-			"	case  5: return BlendAdd(back, fore);											\n"
-			"	case  6: return BlendSubstract(back, fore);										\n"
-			"	case  7: return BlendDifference(back, fore);									\n"
-			"	case  8: return BlendNegation(back, fore);										\n"
-			"	case  9: return BlendExclusion(back, fore);										\n"
-			"	case 10: return BlendScreen(back, fore);										\n"
-			"	case 11: return BlendOverlay(back, fore);										\n"
-			//"	case 12: return BlendSoftLight(back, fore);										\n"
-			"	case 13: return BlendHardLight(back, fore);										\n"
-			"	case 14: return BlendColorDodge(back, fore);									\n"
-			"	case 15: return BlendColorBurn(back, fore);										\n"
-			"	case 16: return BlendLinearDodge(back, fore);									\n"
-			"	case 17: return BlendLinearBurn(back, fore);									\n"
-			"	case 18: return BlendLinearLight(back, fore);									\n"
-			"	case 19: return BlendVividLight(back, fore);									\n"
-			"	case 20: return BlendPinLight(back, fore);										\n"
-			"	case 21: return BlendHardMix(back, fore);										\n"
-			"	case 22: return BlendReflect(back, fore);										\n"
-			"	case 23: return BlendGlow(back, fore);											\n"
-			"	case 24: return BlendPhoenix(back, fore);										\n"
-			"	case 25: return BlendHue(back, fore);											\n"
-			"	case 26: return BlendSaturation(back, fore);									\n"
-			"	case 27: return BlendColor(back, fore);											\n"
-			"	case 28: return BlendLuminosity(back, fore);									\n"
-			"	}																				\n"
-			"																					\n"
-			"	return BlendNormal(back, fore);													\n"
-			"}																					\n"
-			"																					\n"																			  
-			"vec4 blend_color(vec4 fore)														\n"
-			"{																					\n"
-			"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
-			"   if(levels)																		\n"
-			"		fore.rgb = LevelsControl(fore.rgb, min_input, max_input, gamma, min_output, max_output); \n"
-			"	if(csb)																			\n"
-			"		fore.rgb = ContrastSaturationBrightness(fore.rgb, brt, sat, con);			\n"
-			"   fore.rgb = get_blend_color(back.bgr, fore.rgb);									\n"
-			"																					\n"
-			"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
-			"}																					\n"
-			"																					\n"
-			"// NOTE: YCbCr, ITU-R, http://www.intersil.com/data/an/an9717.pdf					\n"
-			"// TODO: Support for more yuv formats might be needed.								\n"
-			"vec4 ycbcra_to_rgba_sd(float y, float cb, float cr, float a)						\n"
-			"{																					\n"
-			"	cb -= 0.5;																		\n"
-			"	cr -= 0.5;																		\n"
-			"	y = 1.164*(y-0.0625);															\n"
-			"																					\n"
-			"	vec4 color;																		\n"
-			"	color.r = y + 2.018 * cb;														\n"
-			"	color.b = y + 1.596 * cr;														\n"
-			"	color.g = y - 0.813 * cr - 0.391 * cb;											\n"
-			"	color.a = a;																	\n"
-			"																					\n"
-			"	return color;																	\n"
-			"}																					\n"			
-			"																					\n"
-			"vec4 ycbcra_to_rgba_hd(float y, float cb, float cr, float a)						\n"
-			"{																					\n"
-			"	cb -= 0.5;																		\n"
-			"	cr -= 0.5;																		\n"
-			"	y = 1.164*(y-0.0625);															\n"
-			"																					\n"
-			"	vec4 color;																		\n"
-			"	color.r = y + 2.115 * cb;														\n"
-			"	color.b = y + 1.793 * cr;														\n"
-			"	color.g = y - 0.534 * cr - 0.213 * cb;											\n"
-			"	color.a = a;																	\n"
-			"																					\n"
-			"	return color;																	\n"
-			"}																					\n"			
-			"																					\n"			
-			"vec4 ycbcra_to_rgba(float y, float cb, float cr, float a)							\n"
-			"{																					\n"
-			"	if(is_hd)																		\n"
-			"		return ycbcra_to_rgba_hd(y, cb, cr, a);										\n"
-			"	else																			\n"
-			"		return ycbcra_to_rgba_sd(y, cb, cr, a);										\n"
-			"}																					\n"
-			"																					\n"
-			"vec4 get_rgba_color()																\n"
-			"{																					\n"
-			"	switch(pixel_format)															\n"
-			"	{																				\n"
-			"	case 0:		//gray																\n"
-			"		return vec4(texture2D(plane[0], gl_TexCoord[0].st).rrr, 1.0);				\n"
-			"	case 1:		//bgra,																\n"
-			"		return texture2D(plane[0], gl_TexCoord[0].st).bgra;							\n"
-			"	case 2:		//rgba,																\n"
-			"		return texture2D(plane[0], gl_TexCoord[0].st).rgba;							\n"
-			"	case 3:		//argb,																\n"
-			"		return texture2D(plane[0], gl_TexCoord[0].st).argb;							\n"
-			"	case 4:		//abgr,																\n"
-			"		return texture2D(plane[0], gl_TexCoord[0].st).gbar;							\n"
-			"	case 5:		//ycbcr,															\n"
-			"		{																			\n"
-			"			float y  = texture2D(plane[0], gl_TexCoord[0].st).r;					\n"
-			"			float cb = texture2D(plane[1], gl_TexCoord[0].st).r;					\n"
-			"			float cr = texture2D(plane[2], gl_TexCoord[0].st).r;					\n"
-			"			return ycbcra_to_rgba(y, cb, cr, 1.0);									\n"
-			"		}																			\n"
-			"	case 6:		//ycbcra															\n"
-			"		{																			\n"
-			"			float y  = texture2D(plane[0], gl_TexCoord[0].st).r;					\n"
-			"			float cb = texture2D(plane[1], gl_TexCoord[0].st).r;					\n"
-			"			float cr = texture2D(plane[2], gl_TexCoord[0].st).r;					\n"
-			"			float a  = texture2D(plane[3], gl_TexCoord[0].st).r;					\n"
-			"			return ycbcra_to_rgba(y, cb, cr, a);									\n"
-			"		}																			\n"
-			"	}																				\n"
-			"	return vec4(0.0, 0.0, 0.0, 0.0);												\n"
-			"}																					\n"
-			"																					\n"
-			"void main()																		\n"
-			"{																					\n"
-			"	vec4 color = get_rgba_color();													\n"
-			"	if(has_local_key)																\n"
-			"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
-			"	if(has_layer_key)																\n"
-			"		color.a *= texture2D(layer_key, gl_TexCoord[1].st).r;						\n"
-			"	gl_FragColor = blend_color(color.bgra * gl_Color);								\n"
-			"}																					\n";
+	{			
 	}
 
 	
@@ -262,7 +289,17 @@ struct image_kernel::implementation : boost::noncopyable
 
 		if(!shader_)
 		{
-			shader_.reset(new shader(vertex_, fragment_));
+			try
+			{
+				shader_.reset(new shader(get_vertex(), get_fragment(false)));
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
+				shader_.reset(new shader(get_vertex(), get_fragment(true)));
+			}
+
 			GL(glEnable(GL_TEXTURE_2D));
 		}
 
