@@ -810,13 +810,13 @@ HRESULT FlashAxContainer::CreateAxControl()
 	return S_OK;
 }
 
-void FlashAxContainer::SetFormat(const core::video_format_desc& fmtDesc) {
+void FlashAxContainer::SetSize(size_t width, size_t height) {
 	if(m_spInPlaceObjectWindowless != 0)
 	{
 		m_rcPos.top = 0;
 		m_rcPos.left = 0;
-		m_rcPos.right = fmtDesc.width;
-		m_rcPos.bottom = fmtDesc.height;
+		m_rcPos.right = width;
+		m_rcPos.bottom = height;
 
 		m_pxSize.cx = m_rcPos.right - m_rcPos.left;
 		m_pxSize.cy = m_rcPos.bottom - m_rcPos.top;

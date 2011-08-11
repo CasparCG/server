@@ -41,7 +41,6 @@ using namespace boost::filesystem2;
 std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
-std::wstring ftemplate_host;
 std::wstring data;
 boost::property_tree::ptree pt;
 
@@ -62,10 +61,7 @@ void configure(const std::string& filename)
 		auto paths = pt.get_child("configuration.paths");
 		media = widen(paths.get("media-path", initialPath + "\\media\\"));
 		log = widen(paths.get("log-path", initialPath + "\\log\\"));
-		ftemplate = complete(wpath(widen(paths.get("template-path", initialPath + "\\template\\")))).string();
-
-		ftemplate_host = widen(paths.get("template-host", "cg.fth"));
-
+		ftemplate = complete(wpath(widen(paths.get("template-path", initialPath + "\\template\\")))).string();		
 		data = widen(paths.get("data-path", initialPath + "\\data\\"));
 	}
 	catch(...)
@@ -91,12 +87,6 @@ const std::wstring& template_folder()
 {
 	check_is_configured();
 	return ftemplate;
-}
-
-const std::wstring& template_host()
-{
-	check_is_configured();
-	return ftemplate_host;
 }
 
 const std::wstring& data_folder()
