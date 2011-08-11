@@ -179,7 +179,7 @@ int main(int argc, wchar_t* argv[])
 		tbb_thread_installer(){observe(true);}
 		void on_scheduler_entry(bool is_worker)
 		{
-			caspar::detail::SetThreadName(GetCurrentThreadId(), "tbb-worker-thread");
+			//caspar::detail::SetThreadName(GetCurrentThreadId(), "tbb-worker-thread");
 			caspar::win32_exception::install_handler();
 		}
 	} tbb_thread_installer;
