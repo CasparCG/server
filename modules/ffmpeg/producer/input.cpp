@@ -57,7 +57,7 @@ extern "C"
 
 namespace caspar {
 
-static const size_t MAX_BUFFER_COUNT = 128;
+static const size_t MAX_BUFFER_COUNT = 64;
 static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
 	
 struct input::implementation : boost::noncopyable
@@ -139,8 +139,8 @@ public:
 			buffer_cond_.notify_all();
 		}
 
-		graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));
-		graph_->update_value("buffer-count", MAX_BUFFER_COUNT/static_cast<double>(buffer_.size()));
+		graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+		graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
 
 		return result;
 	}
@@ -249,8 +249,8 @@ private:
 			buffer_.try_push(read_packet);
 			buffer_size_ += read_packet->size;
 				
-			graph_->update_value("buffer-count", MAX_BUFFER_COUNT/static_cast<double>(buffer_.size()));
-			graph_->update_value("buffer-size", MAX_BUFFER_SIZE/static_cast<double>(buffer_size_));
+			graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+			graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
 		}			
 	}
 
