@@ -82,33 +82,42 @@ public:
 
 	void tick()
 	{
-		// Produce
+		try
+		{
+			// Produce
 
-		frame_timer_.restart();
+			frame_timer_.restart();
 
-		auto simple_frames = stage_->execute();
+			auto simple_frames = stage_->execute();
 
-		diag_->update_value("produce-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
+			diag_->update_value("produce-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
 		
-		// Mix
+			// Mix
 
-		frame_timer_.restart();
+			frame_timer_.restart();
 
-		auto finished_frame = mixer_->execute(simple_frames);
+			auto finished_frame = mixer_->execute(simple_frames);
 		
-		diag_->update_value("mix-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
+			diag_->update_value("mix-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
 		
-		// Consume
+			// Consume
 		
-		output_timer_.restart();
+			output_timer_.restart();
 
-		output_->execute(finished_frame);
+			output_->execute(finished_frame);
 		
-		diag_->update_value("output-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
+			diag_->update_value("output-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
 
 		
-		diag_->update_value("tick-time", tick_timer_.elapsed()*context_.get_format_desc().fps*0.5);
-		tick_timer_.restart();
+			diag_->update_value("tick-time", tick_timer_.elapsed()*context_.get_format_desc().fps*0.5);
+			tick_timer_.restart();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			stage_->clear();
+			context_.ogl().gc().wait();
+		}
 
 		context_.execution().begin_invoke([this]{tick();});
 	}
