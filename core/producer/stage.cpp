@@ -33,6 +33,8 @@
 
 #include <boost/foreach.hpp>
 
+#include <tbb/parallel_for_each.h>
+
 #include <map>
 #include <set>
 
@@ -87,12 +89,14 @@ public:
 		std::map<int, safe_ptr<basic_frame>> frames;
 
 		try
-		{
-			BOOST_FOREACH(auto& layer, layers_)
+		{			
+			BOOST_FOREACH(auto& layer, layers_)			
+				frames[layer.first] = basic_frame::empty();	
+
+			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
 			{
-				frames[layer.first] = layer.second.receive();
-				channel_.execution().yield();
-			}
+				frames[layer.first] = layer.second.receive();	
+			});
 		}
 		catch(...)
 		{

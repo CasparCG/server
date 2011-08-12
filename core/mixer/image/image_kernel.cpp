@@ -60,74 +60,74 @@ struct image_kernel::implementation : boost::noncopyable
 	size_t					last_width_;
 	size_t					last_height_;
 	
-	std::string get_blend_color_func()
-	{
-		return 
-			
-		get_blend_glsl()
-		
-		+
-			
-		"vec3 get_blend_color(vec3 back, vec3 fore)											\n"
-		"{																					\n"
-		"	switch(blend_mode)																\n"
-		"	{																				\n"
-		"	case  0: return BlendNormal(back, fore);										\n"
-		"	case  1: return BlendLighten(back, fore);										\n"
-		"	case  2: return BlendDarken(back, fore);										\n"
-		"	case  3: return BlendMultiply(back, fore);										\n"
-		"	case  4: return BlendAverage(back, fore);										\n"
-		"	case  5: return BlendAdd(back, fore);											\n"
-		"	case  6: return BlendSubstract(back, fore);										\n"
-		"	case  7: return BlendDifference(back, fore);									\n"
-		"	case  8: return BlendNegation(back, fore);										\n"
-		"	case  9: return BlendExclusion(back, fore);										\n"
-		"	case 10: return BlendScreen(back, fore);										\n"
-		"	case 11: return BlendOverlay(back, fore);										\n"
-		//"	case 12: return BlendSoftLight(back, fore);										\n"
-		"	case 13: return BlendHardLight(back, fore);										\n"
-		"	case 14: return BlendColorDodge(back, fore);									\n"
-		"	case 15: return BlendColorBurn(back, fore);										\n"
-		"	case 16: return BlendLinearDodge(back, fore);									\n"
-		"	case 17: return BlendLinearBurn(back, fore);									\n"
-		"	case 18: return BlendLinearLight(back, fore);									\n"
-		"	case 19: return BlendVividLight(back, fore);									\n"
-		"	case 20: return BlendPinLight(back, fore);										\n"
-		"	case 21: return BlendHardMix(back, fore);										\n"
-		"	case 22: return BlendReflect(back, fore);										\n"
-		"	case 23: return BlendGlow(back, fore);											\n"
-		"	case 24: return BlendPhoenix(back, fore);										\n"
-		"	case 25: return BlendHue(back, fore);											\n"
-		"	case 26: return BlendSaturation(back, fore);									\n"
-		"	case 27: return BlendColor(back, fore);											\n"
-		"	case 28: return BlendLuminosity(back, fore);									\n"
-		"	}																				\n"
-		"	return BlendNormal(back, fore);													\n"
-		"}																					\n"
-		"																					\n"																			  
-		"vec4 blend_color(vec4 fore)														\n"
-		"{																					\n"
-		"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
-		"   if(levels)																		\n"
-		"		fore.rgb = LevelsControl(fore.rgb, min_input, max_input, gamma, min_output, max_output); \n"
-		"	if(csb)																			\n"
-		"		fore.rgb = ContrastSaturationBrightness(fore.rgb, brt, sat, con);			\n"
-		"   fore.rgb = get_blend_color(back.bgr, fore.rgb);									\n"
-		"																					\n"
-		"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
-		"}																					\n";
-	}
-		
-	std::string get_simple_blend_color_func()
-	{
-		return 	
+	//std::string get_blend_color_func()
+	//{
+	//	return 
+	//		
+	//	get_blend_glsl()
+	//	
+	//	+
+	//		
+	//	"vec3 get_blend_color(vec3 back, vec3 fore)											\n"
+	//	"{																					\n"
+	//	"	switch(blend_mode)																\n"
+	//	"	{																				\n"
+	//	"	case  0: return BlendNormal(back, fore);										\n"
+	//	"	case  1: return BlendLighten(back, fore);										\n"
+	//	"	case  2: return BlendDarken(back, fore);										\n"
+	//	"	case  3: return BlendMultiply(back, fore);										\n"
+	//	"	case  4: return BlendAverage(back, fore);										\n"
+	//	"	case  5: return BlendAdd(back, fore);											\n"
+	//	"	case  6: return BlendSubstract(back, fore);										\n"
+	//	"	case  7: return BlendDifference(back, fore);									\n"
+	//	"	case  8: return BlendNegation(back, fore);										\n"
+	//	"	case  9: return BlendExclusion(back, fore);										\n"
+	//	"	case 10: return BlendScreen(back, fore);										\n"
+	//	"	case 11: return BlendOverlay(back, fore);										\n"
+	//	//"	case 12: return BlendSoftLight(back, fore);										\n"
+	//	"	case 13: return BlendHardLight(back, fore);										\n"
+	//	"	case 14: return BlendColorDodge(back, fore);									\n"
+	//	"	case 15: return BlendColorBurn(back, fore);										\n"
+	//	"	case 16: return BlendLinearDodge(back, fore);									\n"
+	//	"	case 17: return BlendLinearBurn(back, fore);									\n"
+	//	"	case 18: return BlendLinearLight(back, fore);									\n"
+	//	"	case 19: return BlendVividLight(back, fore);									\n"
+	//	"	case 20: return BlendPinLight(back, fore);										\n"
+	//	"	case 21: return BlendHardMix(back, fore);										\n"
+	//	"	case 22: return BlendReflect(back, fore);										\n"
+	//	"	case 23: return BlendGlow(back, fore);											\n"
+	//	"	case 24: return BlendPhoenix(back, fore);										\n"
+	//	"	case 25: return BlendHue(back, fore);											\n"
+	//	"	case 26: return BlendSaturation(back, fore);									\n"
+	//	"	case 27: return BlendColor(back, fore);											\n"
+	//	"	case 28: return BlendLuminosity(back, fore);									\n"
+	//	"	}																				\n"
+	//	"	return BlendNormal(back, fore);													\n"
+	//	"}																					\n"
+	//	"																					\n"																			  
+	//	"vec4 blend_color(vec4 fore)														\n"
+	//	"{																					\n"
+	//	"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
+	//	"   if(levels)																		\n"
+	//	"		fore.rgb = LevelsControl(fore.rgb, min_input, max_input, gamma, min_output, max_output); \n"
+	//	"	if(csb)																			\n"
+	//	"		fore.rgb = ContrastSaturationBrightness(fore.rgb, brt, sat, con);			\n"
+	//	"   fore.rgb = get_blend_color(back.bgr, fore.rgb);									\n"
+	//	"																					\n"
+	//	"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
+	//	"}																					\n";
+	//}
+	//	
+	//std::string get_simple_blend_color_func()
+	//{
+	//	return 	
 
-		"vec4 blend_color(vec4 fore)														\n"
-		"{																					\n"
-		"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
-		"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
-		"}																					\n";
-	}
+	//	"vec4 blend_color(vec4 fore)														\n"
+	//	"{																					\n"
+	//	"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
+	//	"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
+	//	"}																					\n";
+	//}
 
 	std::string get_vertex()
 	{
@@ -170,13 +170,7 @@ struct image_kernel::implementation : boost::noncopyable
 		"uniform float		brt;															\n"
 		"uniform float		sat;															\n"
 		"uniform float		con;															\n"
-		"																					\n"
-
-		+
-
-		(compability_mode ? get_simple_blend_color_func() : get_blend_color_func())
-		
-		+
+		"																					\n"				
 		"//http://slouken.blogspot.com/2011/02/mpeg-acceleration-with-glsl.html				\n"
 		"vec4 ycbcra_to_rgba_sd(float y, float cb, float cr, float a)						\n"
 		"{																					\n"
@@ -270,7 +264,7 @@ struct image_kernel::implementation : boost::noncopyable
 		"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
 		"	if(has_layer_key)																\n"
 		"		color.a *= texture2D(layer_key, gl_TexCoord[1].st).r;						\n"
-		"	gl_FragColor = blend_color(color.bgra * gl_Color);								\n"
+		"	gl_FragColor = color.bgra * gl_Color;											\n"
 		"}																					\n";
 	}
 
@@ -310,6 +304,9 @@ struct image_kernel::implementation : boost::noncopyable
 				CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
 				shader_.reset(new shader(get_vertex(), get_fragment(true)));
 			}
+			
+			GL(glEnable(GL_BLEND));
+			GL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE));
 
 			GL(glEnable(GL_TEXTURE_2D));
 		}
