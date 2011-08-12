@@ -88,9 +88,9 @@ public:
 		write_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
 		layer_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
 		draw_buffer_[0]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		draw_buffer_[1]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
+		//draw_buffer_[1]			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
 		local_key_buffer_[0]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-		local_key_buffer_[1]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+		//local_key_buffer_[1]	= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
 		channel_.ogl().gc();
 	}
 
@@ -145,9 +145,9 @@ public:
 		
 		layer_key_buffer_->clear();
 		draw_buffer_[0]->clear();
-		draw_buffer_[1]->clear();
+		//draw_buffer_[1]->clear();
 		local_key_buffer_[0]->clear();
-		local_key_buffer_[1]->clear();
+		//local_key_buffer_[1]->clear();
 
 		bool layer_key = false;
 
