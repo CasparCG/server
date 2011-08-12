@@ -202,15 +202,18 @@ public:
 			channel_.ogl().yield(); // Try to give it some more time.
 		}		
 
-		targets[1]->attach();
-			
+		targets[0]->attach();
 		kernel_.draw(item, make_safe(targets[0]), local_key, layer_key);
-		
-		targets[0]->bind();
 
-		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, targets[0]->width(), targets[0]->height());
+		//targets[1]->attach();
+			
+		//kernel_.draw(item, make_safe(targets[0]), local_key, layer_key);
 		
-		std::swap(targets[0], targets[1]);
+		//targets[0]->bind();
+
+		//glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, targets[0]->width(), targets[0]->height());
+		
+		//std::swap(targets[0], targets[1]);
 	}
 				
 	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
