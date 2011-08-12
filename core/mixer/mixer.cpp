@@ -110,7 +110,7 @@ public:
 		, image_mixer_(channel_)
 		, buffer_size_(env::properties().get("configuration.producers.buffer-depth", 1))
 	{	
-		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
+		CASPAR_LOG(info) << print() << L" Successfully initialized . Buffer-depth: " << buffer_size_;	
 	}
 			
 	safe_ptr<read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames)
