@@ -120,9 +120,11 @@ public:
 			decltype(mix_image(frames)) image;
 			decltype(mix_audio(frames)) audio;
 
-			tbb::parallel_invoke(
-					[&]{image = mix_image(frames);}, 
-					[&]{audio = mix_audio(frames);});
+			tbb::parallel_invoke
+			(
+				[&]{image = mix_image(frames);}, 
+				[&]{audio = mix_audio(frames);}
+			);
 			
 			buffer_.push(std::make_pair(std::move(image), audio));
 

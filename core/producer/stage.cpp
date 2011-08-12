@@ -87,21 +87,14 @@ public:
 	std::map<int, safe_ptr<basic_frame>> execute()
 	{			
 		std::map<int, safe_ptr<basic_frame>> frames;
+		
+		BOOST_FOREACH(auto& layer, layers_)			
+			frames[layer.first] = basic_frame::empty();	
 
-		try
-		{			
-			BOOST_FOREACH(auto& layer, layers_)			
-				frames[layer.first] = basic_frame::empty();	
-
-			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
-			{
-				frames[layer.first] = layer.second.receive();	
-			});
-		}
-		catch(...)
+		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
+			frames[layer.first] = layer.second.receive();	
+		});
 		
 		return frames;
 	}

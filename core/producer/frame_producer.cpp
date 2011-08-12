@@ -53,22 +53,7 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int
 	if(producer == frame_producer::empty())
 		return basic_frame::eof();
 
-	auto frame = basic_frame::eof();
-	try
-	{
-		frame = producer->receive(hints);
-	}
-	catch(...)
-	{
-		try
-		{
-			// Producer will be removed since frame == basic_frame::eof.
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << producer->print() << " Failed to receive frame. Removing producer.";
-		}
-		catch(...){}
-	}
-
+	auto frame = producer->receive(hints);
 	if(frame == basic_frame::eof())
 	{
 		CASPAR_LOG(info) << producer->print() << " End Of File.";

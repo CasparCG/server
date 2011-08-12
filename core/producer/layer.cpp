@@ -86,29 +86,38 @@ public:
 		
 	safe_ptr<basic_frame> receive()
 	{		
-		if(is_paused_)
-			return foreground_->last_frame();
-		
-		const auto frames_left = foreground_->nb_frames() - (++frame_number_) - auto_play_delta_;
-
-		auto frame = receive_and_follow(foreground_, frame_producer::NO_HINT);
-		if(frame == core::basic_frame::late())
-			return foreground_->last_frame();
-		
-		if(auto_play_delta_ >= 0)
+		try
 		{
-			if(frames_left <= 0 || frame == core::basic_frame::eof())
-			{
-				//CASPAR_ASSERT(frame != core::basic_frame::eof() && "Received early EOF. Media duration metadata incorrect.");
+			if(is_paused_)
+				return foreground_->last_frame();
+		
+			const auto frames_left = foreground_->nb_frames() - (++frame_number_) - auto_play_delta_;
 
-				CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset. Frames left: " << frames_left;
+			auto frame = receive_and_follow(foreground_, frame_producer::NO_HINT);
+			if(frame == core::basic_frame::late())
+				return foreground_->last_frame();
+		
+			if(auto_play_delta_ >= 0)
+			{
+				if(frames_left <= 0 || frame == core::basic_frame::eof())
+				{
+					//CASPAR_ASSERT(frame != core::basic_frame::eof() && "Received early EOF. Media duration metadata incorrect.");
+
+					CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset. Frames left: " << frames_left;
 				
-				play();
-				frame = receive();
+					play();
+					frame = receive();
+				}
 			}
-		}
 				
-		return frame;
+			return frame;
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			stop();
+			return core::basic_frame::empty();
+		}
 	}
 
 	bool empty() const
