@@ -81,6 +81,7 @@ public:
 	void stop()
 	{
 		foreground_ = frame_producer::empty();
+		frame_number_ = 0;
 	}
 		
 	safe_ptr<basic_frame> receive()
