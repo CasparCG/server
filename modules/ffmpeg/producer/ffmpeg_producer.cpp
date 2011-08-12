@@ -43,7 +43,7 @@
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/find.hpp>
 
-#include <tbb/task_group.h>
+#include <tbb/parallel_invoke.h>
 
 namespace caspar {
 			
@@ -69,8 +69,7 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool										loop_;
 
 	safe_ptr<core::basic_frame>						last_frame_;
-
-	tbb::task_group									tasks_;
+	bool											eof_;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
@@ -86,6 +85,7 @@ public:
 		, start_(start)
 		, loop_(loop)
 		, last_frame_(core::basic_frame::empty())
+		, eof_(false)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -96,22 +96,12 @@ public:
 		for(int n = 0; n < 32 && muxer_.size() < 2; ++n)
 			decode_frame(0);
 	}
-
-	~ffmpeg_producer()
-	{
-		try
-		{
-			tasks_.cancel();
-			tasks_.wait();
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-	}
-		
+			
 	virtual safe_ptr<core::basic_frame> receive(int hints)
 	{
+		if(eof_)
+			return last_frame();
+
 		auto frame = core::basic_frame::late();
 		
 		frame_timer_.restart();
@@ -124,7 +114,10 @@ public:
 		else
 		{
 			if(input_.eof())
+			{
+				eof_ = true;
 				return last_frame();
+			}
 			else
 			{
 				graph_->add_tag("underflow");	
@@ -144,10 +137,6 @@ public:
 
 	void decode_frame(int hints)
 	{
-		tasks_.wait();
-
-		muxer_.commit();
-
 		for(int n = 0; n < 16 && ((!muxer_.video_ready() && !video_decoder_.ready()) ||	(!muxer_.audio_ready() && !audio_decoder_.ready())); ++n) 
 		{
 			std::shared_ptr<AVPacket> pkt;
@@ -158,9 +147,10 @@ public:
 			}
 		}
 		
-		if(!muxer_.video_ready())
+		tbb::parallel_invoke(
+		[&]
 		{
-			tasks_.run([=]
+			if(!muxer_.video_ready())
 			{
 				video_timer_.restart();
 
@@ -169,12 +159,11 @@ public:
 					muxer_.push(video, hints);	
 
 				graph_->update_value("video-time", static_cast<float>(video_timer_.elapsed()*format_desc_.fps*0.5));
-			});
-		}		
-
-		if(!muxer_.audio_ready())
+			}
+		},
+		[&]
 		{
-			tasks_.run([=]
+			if(!muxer_.audio_ready())
 			{
 				audio_timer_.restart();
 					
@@ -183,8 +172,10 @@ public:
 					muxer_.push(audio);				
 
 				graph_->update_value("audio-time", static_cast<float>(audio_timer_.elapsed()*format_desc_.fps*0.5));
-			});	
-		}
+			}
+		});
+
+		muxer_.commit();
 	}
 
 	virtual int64_t nb_frames() const 

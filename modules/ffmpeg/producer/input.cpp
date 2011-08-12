@@ -58,7 +58,7 @@ extern "C"
 namespace caspar {
 
 static const size_t MAX_BUFFER_COUNT = 128;
-static const size_t MAX_BUFFER_SIZE  = 32 * 1000000;
+static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
 	
 struct input::implementation : boost::noncopyable
 {		
@@ -102,7 +102,7 @@ public:
 
 		format_context_.reset(weak_format_context_, av_close_input_file);
 
-		//av_dump_format(weak_format_context_, 0, narrow(filename).c_str(), 0);
+		av_dump_format(weak_format_context_, 0, narrow(filename).c_str(), 0);
 			
 		THROW_ON_ERROR2(avformat_find_stream_info(format_context_.get(), nullptr), print());
 		
@@ -203,7 +203,17 @@ private:
 
 			if(loop_)
 			{
-				seek_frame(start_, AVSEEK_FLAG_BACKWARD);
+				int flags = AVSEEK_FLAG_BACKWARD;
+
+				int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+				if(vid_stream_index >= 0)
+				{
+					auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
+					if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+						flags |= AVSEEK_FLAG_BYTE;
+				}
+
+				seek_frame(start_, flags);
 				graph_->add_tag("seek");		
 				CASPAR_LOG(trace) << print() << " Looping.";			
 			}	

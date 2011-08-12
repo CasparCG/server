@@ -77,6 +77,8 @@ public:
 								
 			codec_context_.reset(context->streams[index_]->codec, tbb_avcodec_close);
 		
+			CASPAR_LOG(debug) << "[video_decoder] " << context->streams[index_]->codec->codec->long_name;
+
 			// Some files give an invalid time_base numerator, try to fix it.
 			if(codec_context_ && codec_context_->time_base.num == 1)
 				codec_context_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(codec_context_->time_base.den)))-1));	

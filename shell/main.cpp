@@ -227,6 +227,16 @@ int main(int argc, wchar_t* argv[])
 				wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
 			else if(wcmd.substr(0, 1) == L"4")
 				wcmd = L"PLAY 1-1 DV FILTER yadif=1:-1 LOOP";
+			else if(wcmd.substr(0, 1) == L"5")
+			{
+				auto file = wcmd.substr(2, wcmd.length()-1);
+				wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n" 
+					   L"PLAY 1-2 " + file + L" LOOP\r\n" 
+					   L"PLAY 1-3 " + file + L" LOOP\r\n"
+					   L"PLAY 2-1 " + file + L" LOOP\r\n" 
+					   L"PLAY 2-2 " + file + L" LOOP\r\n" 
+					   L"PLAY 2-3 " + file + L" LOOP\r\n";
+			}
 			else if(wcmd.substr(0, 1) == L"X")
 			{
 				int num = 0;

@@ -32,6 +32,7 @@
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
 #include <common/utility/tweener.h>
+#include <common/env.h>
 
 #include <core/mixer/read_frame.h>
 #include <core/mixer/write_frame.h>
@@ -98,11 +99,16 @@ struct mixer::implementation : boost::noncopyable
 	boost::fusion::map<boost::fusion::pair<core::image_transform, image_transforms>,
 					boost::fusion::pair<core::audio_transform, audio_transforms>> transforms_;
 	
+	std::queue<std::pair<boost::unique_future<safe_ptr<host_buffer>>, std::vector<int16_t>>> buffer_;
+	
+	const size_t buffer_size_;
+
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
 		, audio_mixer_(channel_.get_format_desc())
 		, image_mixer_(channel_)
+		, buffer_size_(env::properties().get("configuration.producers.buffer-depth", 1))
 	{	
 		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
 	}
@@ -118,7 +124,7 @@ public:
 					[&]{image = mix_image(frames);}, 
 					[&]{audio = mix_audio(frames);});
 			
-			return make_safe<read_frame>(channel_.ogl(), channel_.get_format_desc().size, std::move(image.get()), std::move(audio));
+			buffer_.push(std::make_pair(std::move(image), audio));
 		}
 		catch(...)
 		{
@@ -128,8 +134,17 @@ public:
 			channel_.ogl().gc().wait();
 
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			return make_safe<read_frame>();
 		}
+
+		if(buffer_.size() > buffer_size_)
+		{
+			auto res = std::move(buffer_.front());
+			buffer_.pop();
+			
+			return make_safe<read_frame>(channel_.ogl(), channel_.get_format_desc().size, std::move(res.first.get()), std::move(res.second));
+		}
+		
+		return make_safe<read_frame>();
 	}
 			
 	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
