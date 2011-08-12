@@ -125,6 +125,14 @@ public:
 					[&]{audio = mix_audio(frames);});
 			
 			buffer_.push(std::make_pair(std::move(image), audio));
+
+			if(buffer_.size() > buffer_size_)
+			{
+				auto res = std::move(buffer_.front());
+				buffer_.pop();
+			
+				return make_safe<read_frame>(channel_.ogl(), channel_.get_format_desc().size, std::move(res.first.get()), std::move(res.second));
+			}
 		}
 		catch(...)
 		{
@@ -134,14 +142,6 @@ public:
 			channel_.ogl().gc().wait();
 
 			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-
-		if(buffer_.size() > buffer_size_)
-		{
-			auto res = std::move(buffer_.front());
-			buffer_.pop();
-			
-			return make_safe<read_frame>(channel_.ogl(), channel_.get_format_desc().size, std::move(res.first.get()), std::move(res.second));
 		}
 		
 		return make_safe<read_frame>();
