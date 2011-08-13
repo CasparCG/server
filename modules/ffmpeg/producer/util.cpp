@@ -164,7 +164,7 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width,
 bool try_make_gray(const safe_ptr<AVFrame>& frame)
 {
 	auto pix_fmt = get_pixel_format(static_cast<PixelFormat>(frame->format));
-	if(pix_fmt != core::pixel_format::invalid)
+	if(pix_fmt == PIX_FMT_RGBA || pix_fmt == PIX_FMT_BGRA)
 		frame->format = PIX_FMT_GRAY8;
 
 	return pix_fmt != core::pixel_format::invalid;
@@ -178,6 +178,10 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	const auto height = decoded_frame->height;
 	auto desc		  = get_pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
 	
+	// TODO: Can't handle YUV as alpha
+	if(hints & core::frame_producer::ALPHA_HINT && (desc.pix_fmt == core::pixel_format::ycbcr || desc.pix_fmt == core::pixel_format::ycbcra))
+		desc.pix_fmt = core::pixel_format::invalid;
+
 	if(desc.pix_fmt == core::pixel_format::invalid)
 	{
 		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
