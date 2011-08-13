@@ -46,6 +46,18 @@
 #include <tbb/parallel_invoke.h>
 
 namespace caspar {
+
+double validate_fps(double fps, int64_t nb_frames, double duration_sec)
+{
+	if(fps > 20.0 && fps < 80.0)
+		return fps;
+	
+	auto est_fps = nb_frames/duration_sec;
+
+	CASPAR_LOG(warning) << L"Invalid framerate detected, trying to estimate, fps: " << fps << L" nb_frames: " << nb_frames << L" duration_sec: " << duration_sec << L" => " << est_fps << L" fps.";
+
+	return est_fps;
+}
 			
 struct ffmpeg_producer : public core::frame_producer
 {
@@ -80,7 +92,7 @@ public:
 		, input_(graph_, filename_, loop, start, length)
 		, video_decoder_(input_.context(), frame_factory, filter)
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
-		, muxer_(video_decoder_.fps(), frame_factory)
+		, muxer_(validate_fps(video_decoder_.fps(), video_decoder_.nb_frames(), audio_decoder_.duration()), frame_factory)
 		, late_frames_(0)
 		, start_(start)
 		, loop_(loop)
