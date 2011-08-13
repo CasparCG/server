@@ -264,12 +264,12 @@ struct frame_muxer::implementation : boost::noncopyable
 	
 	bool video_ready() const
 	{		
-		return video_streams_.size() >= audio_streams_.size() && video_ready2();
+		return video_streams_.size() > 1 || (video_streams_.size() >= audio_streams_.size() && video_ready2());
 	}
 	
 	bool audio_ready() const
 	{
-		return audio_streams_.size() >= video_streams_.size() && audio_ready2();
+		return audio_streams_.size() > 1 || (audio_streams_.size() >= video_streams_.size() && audio_ready2());
 	}
 
 	bool video_ready2() const
