@@ -183,7 +183,7 @@ public:
 			return std::vector<std::shared_ptr<AVFrame>>();
 
 		if(decoded_frame->repeat_pict % 2 > 0)
-				CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
+			CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
 		
 		return std::vector<std::shared_ptr<AVFrame>>(1 + decoded_frame->repeat_pict/2, decoded_frame);
 	}
