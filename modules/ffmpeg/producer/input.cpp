@@ -57,8 +57,8 @@ extern "C"
 
 namespace caspar {
 
-static const size_t MAX_BUFFER_COUNT = 64;
-static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
+static const size_t MAX_BUFFER_COUNT = 32;
+static const size_t MAX_BUFFER_SIZE  = 32 * 1000000;
 	
 struct input::implementation : boost::noncopyable
 {		
