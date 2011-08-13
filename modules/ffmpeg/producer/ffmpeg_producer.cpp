@@ -89,11 +89,9 @@ public:
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("video-time", diagnostics::color(1.0f, 1.0f, 0.0f));
-		graph_->set_color("audio-time", diagnostics::color(0.2f, 1.0f, 0.2f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));		
 		
-		for(int n = 0; n < 32 && muxer_.size() < 2; ++n)
+		for(int n = 0; n < 32 && muxer_.empty(); ++n)
 			decode_frame(0);
 	}
 			
@@ -108,6 +106,8 @@ public:
 		
 		for(int n = 0; n < 64 && muxer_.empty(); ++n)
 			decode_frame(hints);
+		
+		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 
 		if(!muxer_.empty())
 			frame = last_frame_ = muxer_.pop();	
@@ -124,8 +124,6 @@ public:
 				++late_frames_;		
 			}
 		}
-		
-		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 		
 		return frame;
 	}
@@ -150,29 +148,21 @@ public:
 		tbb::parallel_invoke(
 		[&]
 		{
-			if(!muxer_.video_ready())
-			{
-				video_timer_.restart();
+			if(muxer_.video_ready())
+				return;
 
-				auto video_frames = video_decoder_.poll();
-				BOOST_FOREACH(auto& video, video_frames)		
-					muxer_.push(video, hints);	
-
-				graph_->update_value("video-time", static_cast<float>(video_timer_.elapsed()*format_desc_.fps*0.5));
-			}
+			auto video_frames = video_decoder_.poll();
+			BOOST_FOREACH(auto& video, video_frames)		
+				muxer_.push(video, hints);	
 		},
 		[&]
 		{
-			if(!muxer_.audio_ready())
-			{
-				audio_timer_.restart();
+			if(muxer_.audio_ready())
+				return;
 					
-				auto audio_samples = audio_decoder_.poll();
-				BOOST_FOREACH(auto& audio, audio_samples)
-					muxer_.push(audio);				
-
-				graph_->update_value("audio-time", static_cast<float>(audio_timer_.elapsed()*format_desc_.fps*0.5));
-			}
+			auto audio_samples = audio_decoder_.poll();
+			BOOST_FOREACH(auto& audio, audio_samples)
+				muxer_.push(audio);				
 		});
 
 		muxer_.commit();

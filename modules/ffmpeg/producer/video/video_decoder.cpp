@@ -110,40 +110,42 @@ public:
 
 	std::vector<std::shared_ptr<AVFrame>> poll()
 	{		
+		std::vector<std::shared_ptr<AVFrame>> result;
+
+		if(packets_.empty())
+			return result;
+
 		if(!codec_context_)
 			return empty_poll();
 
-		std::vector<std::shared_ptr<AVFrame>> result;
-
-		while(!packets_.empty() && result.empty())
-		{
-			auto packet = packets_.front();
+		auto packet = packets_.front();
 					
-			if(packet)
-			{
-				auto frame = decode(*packet);
+		if(packet)
+		{			
+			BOOST_FOREACH(auto& frame, decode(*packet))
 				boost::range::push_back(result, filter_.execute(frame));
-				if(packet->size == 0)
-					packets_.pop();
-			}
-			else
-			{
-				if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
-				{
-					AVPacket pkt;
-					av_init_packet(&pkt);
-					pkt.data = nullptr;
-					pkt.size = 0;
-					auto frame = decode(pkt);
-					boost::range::push_back(result, filter_.execute(frame));	
-				}
 
-				if(result.empty())
-				{					
-					packets_.pop();
-					avcodec_flush_buffers(codec_context_.get());
-					result.push_back(nullptr);
-				}
+			if(packet->size == 0)
+				packets_.pop();
+		}
+		else
+		{
+			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+			{
+				AVPacket pkt;
+				av_init_packet(&pkt);
+				pkt.data = nullptr;
+				pkt.size = 0;
+
+				BOOST_FOREACH(auto& frame, decode(pkt))
+					boost::range::push_back(result, filter_.execute(frame));	
+			}
+
+			if(result.empty())
+			{					
+				packets_.pop();
+				avcodec_flush_buffers(codec_context_.get());
+				result.push_back(nullptr);
 			}
 		}
 		
@@ -151,10 +153,7 @@ public:
 	}
 
 	std::vector<std::shared_ptr<AVFrame>> empty_poll()
-	{		
-		if(packets_.empty())
-			return std::vector<std::shared_ptr<AVFrame>>();
-		
+	{				
 		auto packet = packets_.front();
 		packets_.pop();
 
@@ -167,7 +166,7 @@ public:
 		return boost::assign::list_of(frame);					
 	}
 
-	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
+	std::vector<std::shared_ptr<AVFrame>> decode(AVPacket& pkt)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
@@ -180,19 +179,18 @@ public:
 		pkt.data = nullptr;
 		pkt.size = 0;
 
-		if(frame_finished != 0)	
-		{
-			if(decoded_frame->repeat_pict != 0)
-				CASPAR_LOG(warning) << "video_decoder: repeat_pict not implemented.";
-			return decoded_frame;
-		}
+		if(frame_finished == 0)	
+			return std::vector<std::shared_ptr<AVFrame>>();
 
-		return nullptr;
+		if(decoded_frame->repeat_pict % 2 > 0)
+				CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
+		
+		return std::vector<std::shared_ptr<AVFrame>>(1 + decoded_frame->repeat_pict/2, decoded_frame);
 	}
 	
 	bool ready() const
 	{
-		return !codec_context_ || packets_.size() > 2;
+		return !packets_.empty();
 	}
 	
 	double fps() const
