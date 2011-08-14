@@ -83,7 +83,7 @@ void SMFL_GLCheckError(const std::string& expr, const std::string& file, unsigne
 					<< source_info(file));
 
 			case GL_OUT_OF_MEMORY :
-				BOOST_THROW_EXCEPTION(ogl_stack_underflow()
+				BOOST_THROW_EXCEPTION(ogl_out_of_memory()
 					<< msg_info("there is not enough memory left to execute the command")
 					<< errorstr("GL_OUT_OF_MEMORY")
 					<< line_info(line)

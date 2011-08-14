@@ -33,6 +33,7 @@
 #include <common/concurrency/executor.h>
 #include <common/utility/tweener.h>
 #include <common/env.h>
+#include <common/gl/gl_check.h>
 
 #include <core/mixer/read_frame.h>
 #include <core/mixer/write_frame.h>
@@ -115,40 +116,26 @@ public:
 			
 	safe_ptr<read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames)
 	{			
-		try
-		{
-			decltype(mix_image(frames)) image;
-			decltype(mix_audio(frames)) audio;
+		decltype(mix_image(frames)) image;
+		decltype(mix_audio(frames)) audio;
 
-			tbb::parallel_invoke
-			(
-				[&]{image = mix_image(frames);}, 
-				[&]{audio = mix_audio(frames);}
-			);
+		tbb::parallel_invoke
+		(
+			[&]{image = mix_image(frames);}, 
+			[&]{audio = mix_audio(frames);}
+		);
 			
-			buffer_.push(std::make_pair(std::move(image), audio));
+		buffer_.push(std::make_pair(std::move(image), audio));
 
-			if(buffer_.size() > buffer_size_)
-			{
-				auto res = std::move(buffer_.front());
-				buffer_.pop();
-			
-				return make_safe<read_frame>(channel_.ogl(), channel_.get_format_desc().size, std::move(res.first.get()), std::move(res.second));
-			}
-		}
-		catch(...)
-		{
-			channel_.ogl().gc().wait();
-			image_mixer_ = image_mixer(channel_);
-			audio_mixer_ = audio_mixer(channel_.get_format_desc());
-			channel_.ogl().gc().wait();
-
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
+		if(buffer_.size()-1 < buffer_size_)			
+			return make_safe<read_frame>();
 		
-		return make_safe<read_frame>();
-	}
+		auto res = std::move(buffer_.front());
+		buffer_.pop();
 			
+		return make_safe<read_frame>(channel_.ogl(), channel_.get_format_desc().size, std::move(res.first.get()), std::move(res.second));		
+	}
+					
 	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{		
 		return image_mixer_.create_frame(tag, desc);
