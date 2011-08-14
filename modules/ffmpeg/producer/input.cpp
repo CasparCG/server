@@ -58,6 +58,7 @@ extern "C"
 namespace caspar {
 
 static const size_t MAX_BUFFER_COUNT = 32;
+static const size_t MIN_BUFFER_COUNT = 4;
 static const size_t MAX_BUFFER_SIZE  = 32 * 1000000;
 	
 struct input::implementation : boost::noncopyable
@@ -169,7 +170,8 @@ private:
 			{
 				{
 					boost::unique_lock<boost::mutex> lock(buffer_mutex_);
-					buffer_cond_.wait(lock, [this]{return !full();});
+					while(full())
+						buffer_cond_.timed_wait(lock, boost::posix_time::millisec(20));
 				}
 				read_next_packet();			
 			}
@@ -256,7 +258,7 @@ private:
 
 	bool full() const
 	{
-		return is_running_ && (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT);
+		return is_running_ && (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT;
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
