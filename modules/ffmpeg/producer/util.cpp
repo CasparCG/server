@@ -41,86 +41,27 @@ core::pixel_format::type get_pixel_format(PixelFormat pix_fmt)
 {
 	switch(pix_fmt)
 	{
-	case PIX_FMT_GRAY8:		return core::pixel_format::gray;
-	case PIX_FMT_BGRA:		return core::pixel_format::bgra;
-	case PIX_FMT_ARGB:		return core::pixel_format::argb;
-	case PIX_FMT_RGBA:		return core::pixel_format::rgba;
-	case PIX_FMT_ABGR:		return core::pixel_format::abgr;
-	case PIX_FMT_YUV444P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV422P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV420P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV411P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV410P:	return core::pixel_format::ycbcr;
-	case PIX_FMT_YUVA420P:	return core::pixel_format::ycbcra;
-	default:				return core::pixel_format::invalid;
+	case CASPAR_PIX_FMT_LUMA:	return core::pixel_format::luma;
+	case PIX_FMT_GRAY8:			return core::pixel_format::gray;
+	case PIX_FMT_BGRA:			return core::pixel_format::bgra;
+	case PIX_FMT_ARGB:			return core::pixel_format::argb;
+	case PIX_FMT_RGBA:			return core::pixel_format::rgba;
+	case PIX_FMT_ABGR:			return core::pixel_format::abgr;
+	case PIX_FMT_YUV444P:		return core::pixel_format::ycbcr;
+	case PIX_FMT_YUV422P:		return core::pixel_format::ycbcr;
+	case PIX_FMT_YUV420P:		return core::pixel_format::ycbcr;
+	case PIX_FMT_YUV411P:		return core::pixel_format::ycbcr;
+	case PIX_FMT_YUV410P:		return core::pixel_format::ycbcr;
+	case PIX_FMT_YUVA420P:		return core::pixel_format::ycbcra;
+	default:					return core::pixel_format::invalid;
 	}
-}
-
-PixelFormat get_ffmpeg_pixel_format(const core::pixel_format_desc& format_desc)
-{
-	switch(format_desc.pix_fmt)
-	{
-	case core::pixel_format::gray: return PIX_FMT_GRAY8;
-	case core::pixel_format::bgra: return PIX_FMT_BGRA;
-	case core::pixel_format::argb: return PIX_FMT_ARGB;
-	case core::pixel_format::rgba: return PIX_FMT_RGBA;
-	case core::pixel_format::abgr: return PIX_FMT_ABGR;
-	case core::pixel_format::ycbcra: return PIX_FMT_YUVA420P;
-	case core::pixel_format::ycbcr:
-		auto planes = format_desc.planes;
-		if(planes[0].height == planes[1].height)
-		{
-			if(planes[0].width == planes[1].width)
-				return PIX_FMT_YUV444P;
-			else if(planes[0].width/2 == planes[1].width)
-				return PIX_FMT_YUV422P;
-			else if(planes[0].width/4 == planes[1].width)
-				return PIX_FMT_YUV411P;
-		}
-		if(planes[0].height/2 == planes[1].height)
-		{
-			if(planes[0].width/2 == planes[1].width)
-				return PIX_FMT_YUV420P;
-		}
-		if(planes[0].height/4 == planes[1].height)
-		{
-			if(planes[0].width/4 == planes[1].width)
-				return PIX_FMT_YUV410P;
-		}
-	}
-	return PIX_FMT_NONE;
-}
-
-safe_ptr<AVFrame> as_av_frame(const safe_ptr<core::write_frame>& frame)
-{
-	auto desc = frame->get_pixel_format_desc();
-	safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-	avcodec_get_frame_defaults(av_frame.get());
-
-	for(size_t n = 0; n < desc.planes.size(); ++n)
-	{	
-		av_frame->data[n]		= frame->image_data(n).begin();
-		av_frame->linesize[n]	= desc.planes[n].width;
-	}
-
-	av_frame->format	= get_ffmpeg_pixel_format(desc);
-	av_frame->width		= desc.planes[0].width;
-	av_frame->height	= desc.planes[0].height;
-
-	if(frame->get_type() != core::video_mode::progressive)
-	{
-		av_frame->interlaced_frame = 1;
-		av_frame->top_field_first = frame->get_type() == core::video_mode::upper ? 1 : 0;
-	}
-
-	return av_frame;
 }
 
 core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_t height)
 {
 	// Get linesizes
 	AVPicture dummy_pict;	
-	avpicture_fill(&dummy_pict, nullptr, pix_fmt, width, height);
+	avpicture_fill(&dummy_pict, nullptr, pix_fmt == CASPAR_PIX_FMT_LUMA ? PIX_FMT_GRAY8 : pix_fmt, width, height);
 
 	core::pixel_format_desc desc;
 	desc.pix_fmt = get_pixel_format(pix_fmt);
@@ -128,6 +69,7 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width,
 	switch(desc.pix_fmt)
 	{
 	case core::pixel_format::gray:
+	case core::pixel_format::luma:
 		{
 			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));						
 			return desc;
@@ -161,13 +103,20 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width,
 	}
 }
 
-bool try_make_gray(const safe_ptr<AVFrame>& frame)
+int make_alpha_format(int format)
 {
-	auto pix_fmt = get_pixel_format(static_cast<PixelFormat>(frame->format));
-	if(pix_fmt == PIX_FMT_RGBA || pix_fmt == PIX_FMT_BGRA)
-		frame->format = PIX_FMT_GRAY8;
-
-	return pix_fmt != core::pixel_format::invalid;
+	switch(get_pixel_format(static_cast<PixelFormat>(format)))
+	{
+	case core::pixel_format::luma:
+	case core::pixel_format::gray:
+	case core::pixel_format::invalid:
+		return format;
+	case core::pixel_format::ycbcr:
+	case core::pixel_format::ycbcra:
+		return CASPAR_PIX_FMT_LUMA;
+	default:
+	return PIX_FMT_GRAY8;
+	}
 }
 
 safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints)
@@ -178,9 +127,8 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	const auto height = decoded_frame->height;
 	auto desc		  = get_pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
 	
-	// TODO: Can't handle YUV as alpha
-	if(hints & core::frame_producer::ALPHA_HINT && (desc.pix_fmt == core::pixel_format::ycbcr || desc.pix_fmt == core::pixel_format::ycbcra))
-		desc.pix_fmt = core::pixel_format::invalid;
+	if(hints & core::frame_producer::ALPHA_HINT)
+		desc = get_pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
 
 	if(desc.pix_fmt == core::pixel_format::invalid)
 	{
@@ -223,10 +171,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	}
 	else
 	{
-		if(hints & core::frame_producer::ALPHA_HINT)
-			desc = get_pixel_format_desc(PIX_FMT_GRAY8, width, height);
-		
-		auto write = frame_factory->create_frame(tag, desc.pix_fmt != core::pixel_format::invalid ? desc : get_pixel_format_desc(PIX_FMT_BGRA, width, height));
+		auto write = frame_factory->create_frame(tag, desc);
 		write->set_type(get_mode(*decoded_frame));
 
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
