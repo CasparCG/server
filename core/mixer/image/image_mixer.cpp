@@ -68,6 +68,8 @@ struct image_mixer::implementation : boost::noncopyable
 
 	std::shared_ptr<device_buffer>			local_key_buffer_;
 	std::shared_ptr<device_buffer>			layer_key_buffer_;
+
+	std::shared_ptr<host_buffer>			empty_buffer_;
 	
 public:
 	implementation(video_channel_context& video_channel) 
@@ -89,6 +91,10 @@ public:
 		layer_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
 		draw_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
 		local_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+
+		empty_buffer_			= channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::write_only);
+		memset(empty_buffer_->data(), 0, empty_buffer_->size());
+
 		channel_.ogl().gc();
 	}
 
@@ -110,8 +116,7 @@ public:
 
 		auto& layer = layers_.back();
 
-		auto it = boost::range::find(layer, item);
-		if(it == layer.end())
+		if(boost::range::find(layer, item) == layer.end())
 			layer.push_back(item);
 	}
 
@@ -138,6 +143,9 @@ public:
 	
 	safe_ptr<host_buffer> render(std::deque<layer>&& layers)
 	{
+		if(layers.empty())
+			return make_safe(empty_buffer_);
+
 		if(channel_.get_format_desc().width != write_buffer_->width() || channel_.get_format_desc().height != write_buffer_->height())
 			initialize_buffers();
 		
@@ -158,7 +166,7 @@ public:
 		host_buffer->begin_read(write_buffer_->width(), write_buffer_->height(), format(write_buffer_->stride()));
 		
 		GL(glFlush());
-
+		
 		return host_buffer;
 	}
 
@@ -199,7 +207,6 @@ public:
 			channel_.ogl().yield(); // Try to give it some more time.
 		}		
 
-		channel_.ogl().attach(*target);
 		kernel_.draw(channel_.ogl(), std::move(item), make_safe(target), local_key, layer_key);
 	}
 				
