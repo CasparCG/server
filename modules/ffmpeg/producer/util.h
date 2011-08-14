@@ -23,7 +23,7 @@ struct frame_factory;
 
 }
 
-static const PixelFormat	CASPAR_PIX_FMT_LUMA = PIX_FMT_MONOBLACK;
+static const PixelFormat	CASPAR_PIX_FMT_LUMA = PIX_FMT_MONOBLACK; // Just hijack some unual pixel format.
 
 core::video_mode::type		get_mode(AVFrame& frame);
 core::pixel_format::type	get_pixel_format(PixelFormat pix_fmt);
