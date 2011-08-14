@@ -32,13 +32,26 @@
 #include <boost/thread/future.hpp>
 
 #include <array>
+#include <unordered_map>
+
+#include <gl/glew.h>
 
 #include "../../dependencies\SFML-1.6\include\SFML/Window/Context.hpp"
 
 namespace caspar { namespace core {
 
+class shader;
+
 class ogl_device : boost::noncopyable
 {	
+	std::unordered_map<GLenum, bool> caps_;
+	std::array<size_t, 4>			 viewport_;
+	std::array<size_t, 4>			 scissor_;
+	const GLubyte*					 pattern_;
+	GLint							 attached_texture_;
+	GLint							 active_shader_;
+	std::array<GLint, 16>			 binded_textures_;
+
 	std::unique_ptr<sf::Context> context_;
 	
 	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<tbb::concurrent_bounded_queue<std::shared_ptr<device_buffer>>>>, 4> device_pools_;
@@ -51,7 +64,23 @@ class ogl_device : boost::noncopyable
 public:		
 	ogl_device();
 	~ogl_device();
+
+	// Not thread-safe, must be called inside of context
+	void enable(GLenum cap);
+	void disable(GLenum cap);
+	void viewport(size_t x, size_t y, size_t width, size_t height);
+	void scissor(size_t x, size_t y, size_t width, size_t height);
+	void stipple_pattern(const GLubyte* pattern);
+
+	void attach(device_buffer& texture);
+	void clear(device_buffer& texture);
+
+	void begin_read(host_buffer& dest, device_buffer& source);
+	void begin_read(device_buffer& dest, host_buffer& source);
 	
+	void use(shader& shader);
+
+	// thread-afe
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{			

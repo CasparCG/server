@@ -21,7 +21,6 @@
 
 #include "device_buffer.h"
 
-#include "host_buffer.h"
 #include "fence.h"
 
 #include <common/exception/exceptions.h>
@@ -64,7 +63,6 @@ public:
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 		CASPAR_LOG(debug) << "[device_buffer] allocated size:" << width*height*stride;	
-		clear();
 	}	
 
 	~implementation()
@@ -95,29 +93,14 @@ public:
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 	}
 
-	void begin_read(host_buffer& source)
+	void begin_read()
 	{
 		bind();
-		source.unmap();
-		source.bind();
 		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
-		source.unbind();
 		unbind();
 		fence_.set();
-		//GL(glFlush());
 	}
 	
-	void attach(int index)
-	{
-		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, id_, 0));
-	}
-
-	void clear()
-	{
-		attach(0);
-		GL(glClear(GL_COLOR_BUFFER_BIT));
-	}
-
 	bool ready() const
 	{
 		return fence_.ready();
@@ -128,13 +111,12 @@ device_buffer::device_buffer(size_t width, size_t height, size_t stride) : impl_
 size_t device_buffer::stride() const { return impl_->stride_; }
 size_t device_buffer::width() const { return impl_->width_; }
 size_t device_buffer::height() const { return impl_->height_; }
-void device_buffer::attach(int index){impl_->attach(index);}
 void device_buffer::bind(){impl_->bind();}
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
-void device_buffer::begin_read(host_buffer& source){impl_->begin_read(source);}
-void device_buffer::clear(){impl_->clear();}
+void device_buffer::begin_read(){impl_->begin_read();}
 bool device_buffer::ready() const{return impl_->ready();}
+int device_buffer::id() const{ return impl_->id_;}
 
 
 }}

@@ -21,6 +21,8 @@
 
 #include "ogl_device.h"
 
+#include "shader.h"
+
 #include <common/exception/exceptions.h>
 #include <common/utility/assert.h>
 #include <common/gl/gl_check.h>
@@ -31,8 +33,16 @@
 
 namespace caspar { namespace core {
 
-ogl_device::ogl_device() : executor_(L"ogl_device")
+ogl_device::ogl_device() 
+	: executor_(L"ogl_device")
+	, pattern_(nullptr)
+	, attached_texture_(0)
+	, active_shader_(0)
 {
+	std::fill(binded_textures_.begin(), binded_textures_.end(), 0);
+	std::fill(viewport_.begin(), viewport_.end(), 0);
+	std::fill(scissor_.begin(), scissor_.end(), 0);
+	
 	invoke([=]
 	{
 		context_.reset(new sf::Context());
@@ -204,4 +214,83 @@ std::wstring ogl_device::get_version()
 	return ver;
 }
 
+
+void ogl_device::enable(GLenum cap)
+{
+	auto& val = caps_[cap];
+	if(!val)
+	{
+		glEnable(cap);
+		val = true;
+	}
+}
+
+void ogl_device::disable(GLenum cap)
+{
+	auto& val = caps_[cap];
+	if(val)
+	{
+		glDisable(cap);
+		val = false;
+	}
+}
+
+void ogl_device::viewport(size_t x, size_t y, size_t width, size_t height)
+{
+	if(x != viewport_[0] || y != viewport_[1] || width != viewport_[2] || height != viewport_[3])
+	{		
+		glViewport(x, y, width, height);
+		viewport_[0] = x;
+		viewport_[1] = y;
+		viewport_[2] = width;
+		viewport_[3] = height;
+	}
+}
+
+void ogl_device::scissor(size_t x, size_t y, size_t width, size_t height)
+{
+	if(x != scissor_[0] || y != scissor_[1] || width != scissor_[2] || height != scissor_[3])
+	{		
+		glScissor(x, y, width, height);
+		scissor_[0] = x;
+		scissor_[1] = y;
+		scissor_[2] = width;
+		scissor_[3] = height;
+	}
+}
+
+void ogl_device::stipple_pattern(const GLubyte* pattern)
+{
+	if(pattern_ != pattern)
+	{		
+		glPolygonStipple(pattern);
+		pattern_ = pattern;
+	}
+}
+
+void ogl_device::attach(device_buffer& texture)
+{	
+	if(attached_texture_ != texture.id())
+	{
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, texture.id(), 0);
+		attached_texture_ = texture.id();
+	}
+}
+
+void ogl_device::clear(device_buffer& texture)
+{	
+	attach(texture);
+	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void ogl_device::use(shader& shader)
+{
+	if(active_shader_ != shader.id())
+	{		
+		glUseProgramObjectARB(shader.id());	
+		active_shader_ = shader.id();
+	}
+}
+
 }}
+

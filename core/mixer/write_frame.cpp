@@ -109,7 +109,10 @@ struct write_frame::implementation
 		
 		ogl_->begin_invoke([=]
 		{			
-			texture->begin_read(*buffer);
+			buffer->unmap();
+			buffer->bind();
+			texture->begin_read();
+			buffer->unbind();
 		}, high_priority);
 	}
 
