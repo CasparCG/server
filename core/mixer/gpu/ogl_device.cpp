@@ -57,6 +57,7 @@ ogl_device::ogl_device()
 		GL(glGenFramebuffers(1, &fbo_));		
 		GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
 		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
+        GL(glDisable(GL_MULTISAMPLE_ARB));
 	});
 }
 
