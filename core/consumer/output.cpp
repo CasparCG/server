@@ -113,46 +113,40 @@ public:
 	}
 						
 	void execute(const safe_ptr<read_frame>& frame)
-	{		
-		try
-		{		
-			if(!has_synchronization_clock())
-				timer_.tick(1.0/channel_.get_format_desc().fps);
-						
-			auto fill = frame;
-			auto key = make_safe<deferred_key_read_Frame>(channel_.ogl(), frame);
+	{			
+		if(!has_synchronization_clock())
+			timer_.tick(1.0/channel_.get_format_desc().fps);
 
-			auto it = consumers_.begin();
-			while(it != consumers_.end())
-			{
-				try
-				{
-					auto consumer = it->second;
-
-					if(consumer->get_video_format_desc() != channel_.get_format_desc())
-						consumer->initialize(channel_.get_format_desc());
-
-					auto frame = consumer->key_only() ? key : fill;
-
-					if(frame->image_size() == consumer->get_video_format_desc().size)
-					{	
-						if(!consumer->send(frame))
-							consumers_.erase(it++);
-						else
-							++it;
-					}
-				}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
-					consumers_.erase(it++);
-				}
-			}
-		}
-		catch(...)
+		if(frame->image_size() != channel_.get_format_desc().size)
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
+			timer_.tick(1.0/channel_.get_format_desc().fps);
+			return;
+		}
+
+		auto fill = frame;
+		auto key = make_safe<deferred_key_read_Frame>(channel_.ogl(), frame);
+
+		auto it = consumers_.begin();
+		while(it != consumers_.end())
+		{
+			try
+			{
+				auto consumer = it->second;
+
+				if(consumer->get_video_format_desc() != channel_.get_format_desc())
+					consumer->initialize(channel_.get_format_desc());
+
+				if(consumer->send(consumer->key_only() ? key : fill))
+					++it;
+				else
+					consumers_.erase(it++);
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
+				consumers_.erase(it++);
+			}
 		}
 	}
 
