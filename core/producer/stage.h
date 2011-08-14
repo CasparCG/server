@@ -25,7 +25,6 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
-#include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
 
@@ -52,8 +51,8 @@ public:
 	void swap_layer(int index, size_t other_index, stage& other);
 
 	layer_status get_status(int index);
-	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index);
-	boost::unique_future<safe_ptr<frame_producer>> background(size_t index);
+	safe_ptr<frame_producer> foreground(size_t index);
+	safe_ptr<frame_producer> background(size_t index);
 
 private:
 	struct implementation;

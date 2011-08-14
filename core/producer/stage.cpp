@@ -161,11 +161,7 @@ public:
 			swap_layer(index, other_index);
 		else
 		{
-			if(channel_.get_format_desc() != other.impl_->channel_.get_format_desc() || &channel_.ogl() != &other.impl_->channel_.ogl())
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between incompatible channels."));
-
-			auto func = [&]{layers_[index].swap(other.impl_->layers_[other_index]);};
-		
+			auto func = [&]{layers_[index].swap(other.impl_->layers_[other_index]);};		
 			channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);}, high_priority);
 		}
 	}
@@ -175,9 +171,6 @@ public:
 		if(other.impl_.get() == this)
 			return;
 		
-		if(channel_.get_format_desc() != other.impl_->channel_.get_format_desc() || &channel_.ogl() != &other.impl_->channel_.ogl())
-			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Cannot swap between incompatible channels."));
-
 		auto func = [&]
 		{
 			auto sel_first = [](const std::pair<int, layer>& pair){return pair.first;};
@@ -203,14 +196,14 @@ public:
 		}, high_priority );
 	}
 	
-	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
+	safe_ptr<frame_producer> foreground(int index)
 	{
-		return channel_.execution().begin_invoke([=]{return layers_[index].foreground();}, high_priority);
+		return channel_.execution().invoke([=]{return layers_[index].foreground();}, high_priority);
 	}
 	
-	boost::unique_future<safe_ptr<frame_producer>> background(int index)
+	safe_ptr<frame_producer> background(int index)
 	{
-		return channel_.execution().begin_invoke([=]{return layers_[index].background();}, high_priority);
+		return channel_.execution().invoke([=]{return layers_[index].background();}, high_priority);
 	}
 
 	std::wstring print() const
@@ -231,7 +224,7 @@ void stage::clear(){impl_->clear();}
 void stage::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
 void stage::swap_layer(int index, size_t other_index, stage& other){impl_->swap_layer(index, other_index, other);}
 layer_status stage::get_status(int index){return impl_->get_status(index);}
-boost::unique_future<safe_ptr<frame_producer>> stage::foreground(size_t index) {return impl_->foreground(index);}
-boost::unique_future<safe_ptr<frame_producer>> stage::background(size_t index) {return impl_->background(index);}
+safe_ptr<frame_producer> stage::foreground(size_t index) {return impl_->foreground(index);}
+safe_ptr<frame_producer> stage::background(size_t index) {return impl_->background(index);}
 std::map<int, safe_ptr<basic_frame>> stage::execute(){return impl_->execute();}
 }}
