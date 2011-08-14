@@ -75,7 +75,7 @@ struct separated_producer : public frame_producer
 
 	virtual safe_ptr<core::basic_frame> last_frame() const
 	{
-		return last_frame_;
+		return disable_audio(last_frame_);
 	}
 
 	virtual std::wstring print() const

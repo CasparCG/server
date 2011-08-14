@@ -34,13 +34,16 @@ struct layer::implementation
 	bool						is_paused_;
 	int							auto_play_delta_;
 	int64_t						frame_number_;
+	safe_ptr<core::basic_frame> last_frame_;
+
 public:
 	implementation() 
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, is_paused_(false)
 		, auto_play_delta_(-1)
-		, frame_number_(0){}
+		, frame_number_(0)
+		, last_frame_(core::basic_frame::empty()){}
 	
 	void pause()
 	{
@@ -82,6 +85,7 @@ public:
 	{
 		foreground_ = frame_producer::empty();
 		frame_number_ = 0;
+		last_frame_ = core::basic_frame::empty();
 	}
 		
 	safe_ptr<basic_frame> receive()
@@ -89,7 +93,7 @@ public:
 		try
 		{
 			if(is_paused_)
-				return foreground_->last_frame();
+				return disable_audio(last_frame_);
 		
 			const auto frames_left = foreground_->nb_frames() - (++frame_number_) - auto_play_delta_;
 
@@ -99,6 +103,7 @@ public:
 		
 			if(auto_play_delta_ >= 0)
 			{
+				CASPAR_ASSERT(background_ != core::frame_producer::empty());
 				if(frames_left <= 0 || frame == core::basic_frame::eof())
 				{
 					//CASPAR_ASSERT(frame != core::basic_frame::eof() && "Received early EOF. Media duration metadata incorrect.");
@@ -109,8 +114,14 @@ public:
 					frame = receive();
 				}
 			}
+
+			if(frame == core::basic_frame::eof())
+			{
+				pause();
+				return receive();
+			}
 				
-			return frame;
+			return last_frame_ = frame;
 		}
 		catch(...)
 		{

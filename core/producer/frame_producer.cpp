@@ -50,9 +50,6 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints)
 {	
-	if(producer == frame_producer::empty())
-		return basic_frame::eof();
-
 	auto frame = producer->receive(hints);
 	if(frame == basic_frame::eof())
 	{
@@ -60,7 +57,10 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int
 		auto following = producer->get_following_producer();
 		following->set_leading_producer(producer);
 		producer = std::move(following);		
-		
+				
+		if(producer == frame_producer::empty())
+			return basic_frame::eof();
+
 		return receive_and_follow(producer, hints);
 	}
 	return frame;

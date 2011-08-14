@@ -81,7 +81,6 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool										loop_;
 
 	safe_ptr<core::basic_frame>						last_frame_;
-	bool											eof_;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
@@ -97,7 +96,6 @@ public:
 		, start_(start)
 		, loop_(loop)
 		, last_frame_(core::basic_frame::empty())
-		, eof_(false)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -109,9 +107,6 @@ public:
 			
 	virtual safe_ptr<core::basic_frame> receive(int hints)
 	{
-		if(eof_)
-			return last_frame();
-
 		auto frame = core::basic_frame::late();
 		
 		frame_timer_.restart();
@@ -126,10 +121,7 @@ public:
 		else
 		{
 			if(input_.eof())
-			{
-				eof_ = true;
-				return last_frame();
-			}
+				return core::basic_frame::eof();
 			else
 			{
 				graph_->add_tag("underflow");	
