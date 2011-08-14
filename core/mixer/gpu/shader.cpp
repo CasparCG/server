@@ -91,12 +91,7 @@ public:
 			it = locations_.insert(std::make_pair(name, glGetUniformLocation(program_, name))).first;
 		return it->second;
 	}
-
-	void use()
-	{	
-		GL(glUseProgramObjectARB(program_));		
-	}
-
+	
 	void set(const std::string& name, int value)
 	{
 		GL(glUniform1i(get_location(name.c_str()), value));
@@ -115,9 +110,9 @@ public:
 
 
 shader::shader(const std::string& vertex_source_str, const std::string& fragment_source_str) : impl_(new implementation(vertex_source_str, fragment_source_str)){}
-void shader::use(){impl_->use();}
 void shader::set(const std::string& name, int value){impl_->set(name, value);}
 void shader::set(const std::string& name, float value){impl_->set(name, value);}
 void shader::set(const std::string& name, double value){impl_->set(name, value);}
+int shader::id() const{return impl_->program_;}
 
 }}

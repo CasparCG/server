@@ -29,6 +29,7 @@
 namespace caspar { namespace core {
 	
 class device_buffer;
+class ogl_device;
 
 struct render_item
 {
@@ -58,7 +59,7 @@ class image_kernel : boost::noncopyable
 {
 public:
 	image_kernel();
-	void draw(const render_item& item, const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key = nullptr, const std::shared_ptr<device_buffer>& layer_key = nullptr);
+	void draw(ogl_device& ogl, render_item&& item, const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key = nullptr, const std::shared_ptr<device_buffer>& layer_key = nullptr);
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

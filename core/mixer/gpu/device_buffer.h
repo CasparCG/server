@@ -27,8 +27,6 @@
 
 namespace caspar { namespace core {
 		
-class host_buffer;
-
 class device_buffer : boost::noncopyable
 {
 public:
@@ -40,16 +38,14 @@ public:
 	void bind();
 	void bind(int index);
 	void unbind();
-
-	void clear();
-
-	void attach(int index = 0);
-
-	void begin_read(host_buffer& source);
+		
+	void begin_read();
 	bool ready() const;
 private:
 	friend class ogl_device;
 	device_buffer(size_t width, size_t height, size_t stride);
+
+	int id() const;
 
 	struct implementation;
 	safe_ptr<implementation> impl_;
