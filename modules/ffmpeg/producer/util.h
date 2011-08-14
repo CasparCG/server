@@ -11,7 +11,6 @@ extern "C"
 }
 
 struct AVFrame;
-enum PixelFormat;
 
 namespace caspar {
 
