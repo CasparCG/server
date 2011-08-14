@@ -69,15 +69,7 @@ public:
 			blend_mode_count 
 		};
 	};
-
-	struct alpha_mode
-	{
-		enum type 
-		{
-			normal = 0,
-		};
-	};
-
+	
 	struct levels
 	{
 		levels() 
@@ -139,9 +131,6 @@ public:
 	void set_blend_mode(blend_mode::type value);
 	blend_mode::type get_blend_mode() const;
 	
-	void set_alpha_mode(alpha_mode::type value);
-	alpha_mode::type get_alpha_mode() const;
-
 private:
 	double opacity_;
 	double gain_;
@@ -158,11 +147,9 @@ private:
 	bool is_key_;
 	bool deinterlace_;
 	blend_mode::type blend_mode_;
-	alpha_mode::type alpha_mode_;
 };
 
 image_transform::blend_mode::type get_blend_mode(const std::wstring& str);
-image_transform::alpha_mode::type get_alpha_mode(const std::wstring& str);
 
 image_transform tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener_t& tweener);
 

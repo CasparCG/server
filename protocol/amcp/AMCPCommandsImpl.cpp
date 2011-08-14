@@ -342,19 +342,6 @@ bool MixerCommand::DoExecute()
 				int layer = GetLayerIndex();
 				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform);	
 			}
-			else if(_parameters[1] == L"ALPHA")
-			{
-				auto blend_str = _parameters.at(2);
-
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_alpha_mode(get_alpha_mode(blend_str));
-					return transform;
-				};
-				
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform);	
-			}
 			else if(_parameters[1] == L"BRIGHTNESS")
 			{
 				auto value = boost::lexical_cast<double>(_parameters.at(2));
