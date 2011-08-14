@@ -108,10 +108,6 @@ struct image_kernel::implementation : boost::noncopyable
 	//	"vec4 blend_color(vec4 fore)														\n"
 	//	"{																					\n"
 	//	"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
-	//	"   if(levels)																		\n"
-	//	"		fore.rgb = LevelsControl(fore.rgb, min_input, max_input, gamma, min_output, max_output); \n"
-	//	"	if(csb)																			\n"
-	//	"		fore.rgb = ContrastSaturationBrightness(fore.rgb, brt, sat, con);			\n"
 	//	"   fore.rgb = get_blend_color(back.bgr, fore.rgb);									\n"
 	//	"																					\n"
 	//	"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
@@ -147,7 +143,7 @@ struct image_kernel::implementation : boost::noncopyable
 		return
 
 		"#version 120																		\n"
-		"uniform sampler2D	background;														\n"
+		//"uniform sampler2D	background;													\n"
 		"uniform sampler2D	plane[4];														\n"
 		"uniform sampler2D	local_key;														\n"
 		"uniform sampler2D	layer_key;														\n"
@@ -155,8 +151,8 @@ struct image_kernel::implementation : boost::noncopyable
 		"uniform bool		is_hd;															\n"
 		"uniform bool		has_local_key;													\n"
 		"uniform bool		has_layer_key;													\n"
-		"uniform int		blend_mode;														\n"
-		"uniform int		alpha_mode;														\n"
+		//"uniform int		blend_mode;														\n"
+		//"uniform int		alpha_mode;														\n"
 		"uniform int		pixel_format;													\n"
 		"																					\n"
 		"uniform bool		levels;															\n"
@@ -170,7 +166,14 @@ struct image_kernel::implementation : boost::noncopyable
 		"uniform float		brt;															\n"
 		"uniform float		sat;															\n"
 		"uniform float		con;															\n"
-		"																					\n"				
+		"																					\n"	
+
+		+
+		
+		get_blend_glsl()
+
+		+
+
 		"//http://slouken.blogspot.com/2011/02/mpeg-acceleration-with-glsl.html				\n"
 		"vec4 ycbcra_to_rgba_sd(float y, float cb, float cr, float a)						\n"
 		"{																					\n"
@@ -265,6 +268,10 @@ struct image_kernel::implementation : boost::noncopyable
 		"void main()																		\n"
 		"{																					\n"
 		"	vec4 color = get_rgba_color();													\n"
+		"   if(levels)																		\n"
+		"		color.rgb = LevelsControl(color.rgb, min_input, max_input, gamma, min_output, max_output); \n"
+		"	if(csb)																			\n"
+		"		color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);			\n"
 		"	if(has_local_key)																\n"
 		"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
 		"	if(has_layer_key)																\n"
@@ -310,10 +317,9 @@ struct image_kernel::implementation : boost::noncopyable
 				shader_.reset(new shader(get_vertex(), get_fragment(true)));
 			}
 			
+			GL(glEnable(GL_TEXTURE_2D));
 			GL(glEnable(GL_BLEND));
 			GL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE));
-
-			GL(glEnable(GL_TEXTURE_2D));
 		}
 
 		if(last_mode_ != item.mode)
@@ -351,7 +357,7 @@ struct image_kernel::implementation : boost::noncopyable
 		if(layer_key)
 			layer_key->bind(5);
 
-		background->bind(6);
+		//background->bind(6);
 
 		// Setup shader
 
@@ -363,12 +369,12 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("plane[3]",		3);
 		shader_->set("local_key",		4);
 		shader_->set("layer_key",		5);
-		shader_->set("background",		6);
+		//shader_->set("background",		6);
 		shader_->set("is_hd",			item.pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	local_key ? 1 : 0);
 		shader_->set("has_layer_key",	layer_key ? 1 : 0);
-		shader_->set("blend_mode",		item.transform.get_is_key() ? core::image_transform::blend_mode::normal : item.transform.get_blend_mode());
-		shader_->set("alpha_mode",		item.transform.get_alpha_mode());
+		//shader_->set("blend_mode",		item.transform.get_is_key() ? core::image_transform::blend_mode::normal : item.transform.get_blend_mode());
+		//shader_->set("alpha_mode",		item.transform.get_alpha_mode());
 		shader_->set("pixel_format",	item.pix_desc.pix_fmt);	
 
 		auto levels = item.transform.get_levels();
@@ -408,12 +414,19 @@ struct image_kernel::implementation : boost::noncopyable
 						
 		auto m_p = item.transform.get_clip_translation();
 		auto m_s = item.transform.get_clip_scale();
-		double w = static_cast<double>(background->width());
-		double h = static_cast<double>(background->height());
 
-		GL(glEnable(GL_SCISSOR_TEST));
-		GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
-			
+		bool scissor = m_p[0] > std::numeric_limits<double>::epsilon()		 || m_p[1] > std::numeric_limits<double>::epsilon() &&
+					   m_s[0] < 1.0 - std::numeric_limits<double>::epsilon() || m_s[1] < 1.0 - std::numeric_limits<double>::epsilon();
+
+		if(scissor)
+		{
+			double w = static_cast<double>(background->width());
+			double h = static_cast<double>(background->height());
+		
+			GL(glEnable(GL_SCISSOR_TEST));
+			GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
+		}
+
 		auto f_p = item.transform.get_fill_translation();
 		auto f_s = item.transform.get_fill_scale();
 		
@@ -426,7 +439,8 @@ struct image_kernel::implementation : boost::noncopyable
 			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 		glEnd();
 
-		GL(glDisable(GL_SCISSOR_TEST));	
+		if(scissor)
+			GL(glDisable(GL_SCISSOR_TEST));	
 	}
 };
 
