@@ -30,7 +30,8 @@
 namespace caspar { namespace core {
 
 struct video_format_desc;
-class video_channel_context;;
+class video_channel_context;
+struct layer_status;
 
 class stage : boost::noncopyable
 {
@@ -49,6 +50,8 @@ public:
 	void clear();	
 	void swap_layer(int index, size_t other_index);
 	void swap_layer(int index, size_t other_index, stage& other);
+
+	layer_status get_status(int index);
 	boost::unique_future<safe_ptr<frame_producer>> foreground(size_t index);
 	boost::unique_future<safe_ptr<frame_producer>> background(size_t index);
 
