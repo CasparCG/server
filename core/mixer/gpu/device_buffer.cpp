@@ -111,7 +111,6 @@ device_buffer::device_buffer(size_t width, size_t height, size_t stride) : impl_
 size_t device_buffer::stride() const { return impl_->stride_; }
 size_t device_buffer::width() const { return impl_->width_; }
 size_t device_buffer::height() const { return impl_->height_; }
-void device_buffer::bind(){impl_->bind();}
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
 void device_buffer::begin_read(){impl_->begin_read();}
