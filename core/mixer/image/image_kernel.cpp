@@ -40,8 +40,6 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <tbb/mutex.h>
-
 #include <unordered_map>
 
 namespace caspar { namespace core {
