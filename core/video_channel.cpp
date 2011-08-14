@@ -44,9 +44,9 @@ struct video_channel::implementation : boost::noncopyable
 {
 	video_channel_context			context_;
 
-	safe_ptr<caspar::core::output>	output_;
-	safe_ptr<caspar::core::mixer>	mixer_;
-	safe_ptr<caspar::core::stage>	stage_;
+	safe_ptr<caspar::core::output>			output_;
+	std::shared_ptr<caspar::core::mixer>	mixer_;
+	safe_ptr<caspar::core::stage>			stage_;
 
 	safe_ptr<diagnostics::graph>	diag_;
 	boost::timer					frame_timer_;
@@ -116,9 +116,12 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(error) << context_.print() << L" Unexpected exception. Clearing stage and freeing memory";
+
 			stage_->clear();
 			context_.ogl().gc().wait();
-			mixer_ = make_safe<caspar::core::mixer>(context_);
+
+			mixer_ = nullptr;
+			mixer_.reset(new caspar::core::mixer(context_));
 		}
 
 		context_.execution().begin_invoke([this]{tick();});
@@ -142,7 +145,7 @@ public:
 video_channel::video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
 video_channel::video_channel(video_channel&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
-safe_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
+safe_ptr<mixer> video_channel::mixer() { return make_safe(impl_->mixer_);} 
 safe_ptr<output> video_channel::output() { return impl_->output_;} 
 video_format_desc video_channel::get_video_format_desc() const{return impl_->context_.get_format_desc();}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
