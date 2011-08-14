@@ -115,6 +115,7 @@ public:
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(error) << context_.print() << L" Unexpected exception. Clearing stage and freeing memory";
 			stage_->clear();
 			context_.ogl().gc().wait();
 		}
