@@ -36,7 +36,6 @@ image_transform::image_transform()
 	, is_key_(false)
 	, deinterlace_(false)
 	, blend_mode_(image_transform::blend_mode::normal)
-	, alpha_mode_(image_transform::alpha_mode::normal)
 {
 	std::fill(fill_translation_.begin(), fill_translation_.end(), 0.0);
 	std::fill(fill_scale_.begin(), fill_scale_.end(), 1.0);
@@ -169,21 +168,10 @@ image_transform::blend_mode::type image_transform::get_blend_mode() const
 	return blend_mode_;
 }
 
-void image_transform::set_alpha_mode(image_transform::alpha_mode::type value)
-{
-	alpha_mode_ = value;
-}
-
-image_transform::alpha_mode::type image_transform::get_alpha_mode() const
-{
-	return alpha_mode_;
-}
-
 image_transform& image_transform::operator*=(const image_transform &other)
 {
 	opacity_				*= other.opacity_;	
 	blend_mode_				 = std::max(blend_mode_, other.blend_mode_);
-	alpha_mode_				 = std::max(alpha_mode_, other.alpha_mode_);
 	gain_					*= other.gain_;
 	brightness_				*= other.brightness_;
 	contrast_				*= other.contrast_;
@@ -227,7 +215,6 @@ image_transform tween(double time, const image_transform& source, const image_tr
 	
 	image_transform result;	
 	result.set_blend_mode		(std::max(source.get_blend_mode(), dest.get_blend_mode()));
-	result.set_alpha_mode		(std::max(source.get_alpha_mode(), dest.get_alpha_mode()));
 	result.set_is_key			(source.get_is_key() | dest.get_is_key());
 	result.set_deinterlace		(source.get_deinterlace() | dest.get_deinterlace());
 	result.set_gain				(do_tween(time, source.get_gain(), dest.get_gain(), duration, tweener));
@@ -318,14 +305,6 @@ image_transform::blend_mode::type get_blend_mode(const std::wstring& str)
 		return image_transform::blend_mode::luminosity;
 		
 	return image_transform::blend_mode::normal;
-}
-
-image_transform::alpha_mode::type get_alpha_mode(const std::wstring& str)
-{
-	if(boost::iequals(str, L"normal"))
-		return image_transform::alpha_mode::normal;
-
-	return image_transform::alpha_mode::normal;
 }
 
 bool operator<(const image_transform& lhs, const image_transform& rhs)

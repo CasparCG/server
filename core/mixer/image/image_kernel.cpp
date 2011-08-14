@@ -21,6 +21,8 @@
 
 #include "image_kernel.h"
 
+#include "image_shader.h"
+
 #include "blending_glsl.h"
 #include "../gpu/shader.h"
 #include "../gpu/device_buffer.h"
@@ -58,268 +60,9 @@ GLubyte lower_pattern[] = {
 
 struct image_kernel::implementation : boost::noncopyable
 {	
-	std::unique_ptr<shader> shader_;
+	std::shared_ptr<shader>	shader_;
 	bool					blend_modes_;
-			
-	implementation() : blend_modes_(true)
-	{
-	}
-
-	std::string get_blend_color_func()
-	{
-		return 
-			
-		get_adjustement_glsl()
-		
-		+
-
-		get_blend_glsl()
-		
-		+
-			
-		"vec3 get_blend_color(vec3 back, vec3 fore)											\n"
-		"{																					\n"
-		"	switch(blend_mode)																\n"
-		"	{																				\n"
-		"	case  0: return BlendNormal(back, fore);										\n"
-		"	case  1: return BlendLighten(back, fore);										\n"
-		"	case  2: return BlendDarken(back, fore);										\n"
-		"	case  3: return BlendMultiply(back, fore);										\n"
-		"	case  4: return BlendAverage(back, fore);										\n"
-		"	case  5: return BlendAdd(back, fore);											\n"
-		"	case  6: return BlendSubstract(back, fore);										\n"
-		"	case  7: return BlendDifference(back, fore);									\n"
-		"	case  8: return BlendNegation(back, fore);										\n"
-		"	case  9: return BlendExclusion(back, fore);										\n"
-		"	case 10: return BlendScreen(back, fore);										\n"
-		"	case 11: return BlendOverlay(back, fore);										\n"
-		//"	case 12: return BlendSoftLight(back, fore);										\n"
-		"	case 13: return BlendHardLight(back, fore);										\n"
-		"	case 14: return BlendColorDodge(back, fore);									\n"
-		"	case 15: return BlendColorBurn(back, fore);										\n"
-		"	case 16: return BlendLinearDodge(back, fore);									\n"
-		"	case 17: return BlendLinearBurn(back, fore);									\n"
-		"	case 18: return BlendLinearLight(back, fore);									\n"
-		"	case 19: return BlendVividLight(back, fore);									\n"
-		"	case 20: return BlendPinLight(back, fore);										\n"
-		"	case 21: return BlendHardMix(back, fore);										\n"
-		"	case 22: return BlendReflect(back, fore);										\n"
-		"	case 23: return BlendGlow(back, fore);											\n"
-		"	case 24: return BlendPhoenix(back, fore);										\n"
-		"	case 25: return BlendHue(back, fore);											\n"
-		"	case 26: return BlendSaturation(back, fore);									\n"
-		"	case 27: return BlendColor(back, fore);											\n"
-		"	case 28: return BlendLuminosity(back, fore);									\n"
-		"	}																				\n"
-		"	return BlendNormal(back, fore);													\n"
-		"}																					\n"
-		"																					\n"																			  
-		"vec4 blend(vec4 fore)																\n"
-		"{																					\n"
-		"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
-		"	fore.rgb = get_blend_color(back.rgb, fore.rgb);									\n"
-		"	return vec4(mix(back.bgr, fore.rgb, fore.a), back.a + fore.a);					\n"
-		"}																					\n";
-	}
-		
-	std::string get_simple_blend_color_func()
-	{
-		return 	
-		
-		get_adjustement_glsl()
-			
-		+
-
-		"vec4 blend(vec4 fore)																\n"
-		"{																					\n"
-		"	return fore;																	\n"
-		"}																					\n";
-	}
-
-	std::string get_vertex()
-	{
-		return 
-
-		"void main()																		\n"
-		"{																					\n"
-		"	gl_TexCoord[0] = gl_MultiTexCoord0;												\n"
-		"	gl_TexCoord[1] = gl_MultiTexCoord1;												\n"
-		"	gl_FrontColor  = gl_Color;														\n"
-		"	gl_Position    = ftransform();													\n"
-		"}																					\n";
-	}
-
-	std::string get_fragment()
-	{
-		return
-
-		"#version 120																		\n"
-		"uniform sampler2D	background;														\n"
-		"uniform sampler2D	plane[4];														\n"
-		"uniform sampler2D	local_key;														\n"
-		"uniform sampler2D	layer_key;														\n"
-		"																					\n"
-		"uniform bool		is_hd;															\n"
-		"uniform bool		has_local_key;													\n"
-		"uniform bool		has_layer_key;													\n"
-		"uniform int		blend_mode;														\n"
-		"uniform int		alpha_mode;														\n"
-		"uniform int		pixel_format;													\n"
-		"																					\n"
-		"uniform bool		levels;															\n"
-		"uniform float		min_input;														\n"
-		"uniform float		max_input;														\n"
-		"uniform float		gamma;															\n"
-		"uniform float		min_output;														\n"
-		"uniform float		max_output;														\n"
-		"																					\n"
-		"uniform bool		csb;															\n"
-		"uniform float		brt;															\n"
-		"uniform float		sat;															\n"
-		"uniform float		con;															\n"
-		"																					\n"	
-
-		+
-		
-		(blend_modes_ ? get_blend_color_func() : get_simple_blend_color_func())
-
-		+
-	
-		"																					\n"
-		"//http://slouken.blogspot.com/2011/02/mpeg-acceleration-with-glsl.html				\n"
-		"vec4 ycbcra_to_rgba_sd(float y, float cb, float cr, float a)						\n"
-		"{																					\n"
-		"	// YUV offset 																	\n"
-		"	const vec3 offset = vec3(-0.0625, -0.5, -0.5);									\n"
-		"																					\n"
-		"	// RGB coefficients 															\n"
-		"	const vec3 Rcoeff = vec3(1.164,  0.000,  1.596);								\n"
-		"	const vec3 Gcoeff = vec3(1.164, -0.391, -0.813);								\n"
-		"	const vec3 Bcoeff = vec3(1.164,  2.018,  0.000);								\n"
-		"																					\n"
-		"	vec3 yuv = vec3(y, cr, cb);														\n"
-		"   vec4 rgba;																		\n"
-		"																					\n"
-		"	yuv += offset;																	\n"
-		"	rgba.r = dot(yuv, Rcoeff);														\n"
-		"	rgba.g = dot(yuv, Gcoeff);														\n"
-		"	rgba.b = dot(yuv, Bcoeff);														\n"
-		"	rgba.a = a;																		\n"
-		"																					\n"
-		"	return rgba;																	\n"
-		"}																					\n"			
-		"																					\n"
-		"vec4 ycbcra_to_rgba_hd(float y, float cb, float cr, float a)						\n"
-		"{																					\n"
-		"	// YUV offset 																	\n"
-		"	const vec3 offset = vec3(-0.0625, -0.5, -0.5);									\n"
-		"																					\n"
-		"	// RGB coefficients 															\n"
-		"	const vec3 Rcoeff = vec3(1.164,  0.000,  1.793);								\n"
-		"	const vec3 Gcoeff = vec3(1.164, -0.213, -0.534);								\n"
-		"	const vec3 Bcoeff = vec3(1.164,  2.115,  0.000);								\n"
-		"																					\n"
-		"	vec3 yuv = vec3(y, cr, cb);														\n"
-		"   vec4 rgba;																		\n"
-		"																					\n"
-		"	yuv += offset;																	\n"
-		"	rgba.r = dot(yuv, Rcoeff);														\n"
-		"	rgba.g = dot(yuv, Gcoeff);														\n"
-		"	rgba.b = dot(yuv, Bcoeff);														\n"
-		"	rgba.a = a;																		\n"
-		"																					\n"
-		"	return rgba;																	\n"
-		"}																					\n"			
-		"																					\n"		
-		"vec4 ycbcra_to_rgba(float y, float cb, float cr, float a)							\n"
-		"{																					\n"
-		"	if(is_hd)																		\n"
-		"		return ycbcra_to_rgba_hd(y, cb, cr, a);										\n"
-		"	else																			\n"
-		"		return ycbcra_to_rgba_sd(y, cb, cr, a);										\n"
-		"}																					\n"
-		"																					\n"
-		"vec4 get_rgba_color()																\n"
-		"{																					\n"
-		"	switch(pixel_format)															\n"
-		"	{																				\n"
-		"	case 0:		//gray																\n"
-		"		return vec4(texture2D(plane[0], gl_TexCoord[0].st).rrr, 1.0);				\n"
-		"	case 1:		//bgra,																\n"
-		"		return texture2D(plane[0], gl_TexCoord[0].st).bgra;							\n"
-		"	case 2:		//rgba,																\n"
-		"		return texture2D(plane[0], gl_TexCoord[0].st).rgba;							\n"
-		"	case 3:		//argb,																\n"
-		"		return texture2D(plane[0], gl_TexCoord[0].st).argb;							\n"
-		"	case 4:		//abgr,																\n"
-		"		return texture2D(plane[0], gl_TexCoord[0].st).gbar;							\n"
-		"	case 5:		//ycbcr,															\n"
-		"		{																			\n"
-		"			float y  = texture2D(plane[0], gl_TexCoord[0].st).r;					\n"
-		"			float cb = texture2D(plane[1], gl_TexCoord[0].st).r;					\n"
-		"			float cr = texture2D(plane[2], gl_TexCoord[0].st).r;					\n"
-		"			return ycbcra_to_rgba(y, cb, cr, 1.0);									\n"
-		"		}																			\n"
-		"	case 6:		//ycbcra															\n"
-		"		{																			\n"
-		"			float y  = texture2D(plane[0], gl_TexCoord[0].st).r;					\n"
-		"			float cb = texture2D(plane[1], gl_TexCoord[0].st).r;					\n"
-		"			float cr = texture2D(plane[2], gl_TexCoord[0].st).r;					\n"
-		"			float a  = texture2D(plane[3], gl_TexCoord[0].st).r;					\n"
-		"			return ycbcra_to_rgba(y, cb, cr, a);									\n"
-		"		}																			\n"
-		"	case 7:		//luma																\n"
-		"		{																			\n"
-		"			vec3 y3 = texture2D(plane[0], gl_TexCoord[0].st).rrr;					\n"
-		"			return vec4((y3-0.065)/0.859, 1.0);										\n"
-		"		}																			\n"
-		"	}																				\n"
-		"	return vec4(0.0, 0.0, 0.0, 0.0);												\n"
-		"}																					\n"
-		"																					\n"
-		"void main()																		\n"
-		"{																					\n"
-		"	vec4 color = get_rgba_color();													\n"
-		"   if(levels)																		\n"
-		"		color.rgb = LevelsControl(color.rgb, min_input, max_input, gamma, min_output, max_output); \n"
-		"	if(csb)																			\n"
-		"		color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);			\n"
-		"	if(has_local_key)																\n"
-		"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
-		"	if(has_layer_key)																\n"
-		"		color.a *= texture2D(layer_key, gl_TexCoord[1].st).r;						\n"
-		"   color *= gl_Color;																\n"
-		"	color = blend(color);															\n"
-		"	gl_FragColor = color.bgra;														\n"
-		"}																					\n";
-	}
-
-	void init_shader(ogl_device& ogl)
-	{
-		try
-		{				
-			blend_modes_  = glTextureBarrierNV ? env::properties().get("configuration.mixers.blend-modes", false) : false;
-			shader_.reset(new shader(get_vertex(), get_fragment()));
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
-				
-			blend_modes_ = false;
-			shader_.reset(new shader(get_vertex(), get_fragment()));
-		}
-						
-		ogl.enable(GL_TEXTURE_2D);
-
-		if(!blend_modes_)
-		{
-			ogl.enable(GL_BLEND);
-			GL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE));
-			CASPAR_LOG(info) << L"[shader] Blend-modes are disabled.";
-		}
-	}
-				
+							
 	void draw(ogl_device&									ogl,
 			  render_item&&									item,
 			  const safe_ptr<device_buffer>&				background,
@@ -335,46 +78,34 @@ struct image_kernel::implementation : boost::noncopyable
 
 		if(item.transform.get_opacity() < epsilon)
 			return;
-
-		if(!shader_)
-			init_shader(ogl);
-			
-		if(item.mode == core::video_mode::progressive)			
-			ogl.disable(GL_POLYGON_STIPPLE);			
-		else			
-		{
-			ogl.enable(GL_POLYGON_STIPPLE);
-
-			if(item.mode == core::video_mode::upper)
-				ogl.stipple_pattern(upper_pattern);
-			else if(item.mode == core::video_mode::lower)
-				ogl.stipple_pattern(lower_pattern);
-		}
-
+		
 		// Bind textures
 
 		for(size_t n = 0; n < item.textures.size(); ++n)
 			item.textures[n]->bind(n);
 
 		if(local_key)
-			local_key->bind(4);
+			local_key->bind(texture_id::local_key);
 		
 		if(layer_key)
-			layer_key->bind(5);
-				
+			layer_key->bind(texture_id::layer_key);
+			
 		// Setup shader
 
+		if(!shader_)
+			shader_ = get_image_shader(ogl, blend_modes_);
+						
 		ogl.use(*shader_);
 
-		shader_->set("plane[0]",		0);
-		shader_->set("plane[1]",		1);
-		shader_->set("plane[2]",		2);
-		shader_->set("plane[3]",		3);
-		shader_->set("local_key",		4);
-		shader_->set("layer_key",		5);
-		shader_->set("is_hd",			item.pix_desc.planes.at(0).height > 700 ? 1 : 0);
-		shader_->set("has_local_key",	local_key ? 1 : 0);
-		shader_->set("has_layer_key",	layer_key ? 1 : 0);
+		shader_->set("plane[0]",		texture_id::plane0);
+		shader_->set("plane[1]",		texture_id::plane1);
+		shader_->set("plane[2]",		texture_id::plane2);
+		shader_->set("plane[3]",		texture_id::plane3);
+		shader_->set("local_key",		texture_id::local_key);
+		shader_->set("layer_key",		texture_id::layer_key);
+		shader_->set("is_hd",		 	item.pix_desc.planes.at(0).height > 700 ? 1 : 0);
+		shader_->set("has_local_key",	local_key);
+		shader_->set("has_layer_key",	layer_key);
 		shader_->set("pixel_format",	item.pix_desc.pix_fmt);	
 		
 		// Setup blend_func
@@ -383,10 +114,11 @@ struct image_kernel::implementation : boost::noncopyable
 		{
 			background->bind(6);
 
-			shader_->set("background",		6);
-			shader_->set("blend_mode",		item.transform.get_is_key() ? core::image_transform::blend_mode::normal : item.transform.get_blend_mode());
-			shader_->set("alpha_mode",		item.transform.get_alpha_mode());
+			shader_->set("background",	texture_id::background);
+			shader_->set("blend_mode",	item.transform.get_is_key() ? core::image_transform::blend_mode::normal : item.transform.get_blend_mode());
 		}
+
+		// Setup image-adjustements
 
 		auto levels = item.transform.get_levels();
 
@@ -419,6 +151,20 @@ struct image_kernel::implementation : boost::noncopyable
 		else
 			shader_->set("csb",	false);	
 		
+		// Setup interlacing
+
+		if(item.mode == core::video_mode::progressive)			
+			ogl.disable(GL_POLYGON_STIPPLE);			
+		else			
+		{
+			ogl.enable(GL_POLYGON_STIPPLE);
+
+			if(item.mode == core::video_mode::upper)
+				ogl.stipple_pattern(upper_pattern);
+			else if(item.mode == core::video_mode::lower)
+				ogl.stipple_pattern(lower_pattern);
+		}
+
 		// Setup drawing area
 		
 		ogl.viewport(0, 0, background->width(), background->height());
@@ -443,6 +189,10 @@ struct image_kernel::implementation : boost::noncopyable
 		auto f_p = item.transform.get_fill_translation();
 		auto f_s = item.transform.get_fill_scale();
 		
+		// Set render target
+		
+		ogl.attach(*background);
+		
 		// Draw
 
 		glBegin(GL_QUADS);
@@ -452,13 +202,15 @@ struct image_kernel::implementation : boost::noncopyable
 			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 		glEnd();
 
+		// Cleanup
+
 		ogl.disable(GL_SCISSOR_TEST);	
 				
 		item.textures.clear();
 		ogl.yield(); // Return resources to pool as early as possible.
 
 		if(!blend_modes_)
-			glTextureBarrierNV(); // This allows us to use framebuffer both as source and target while blending.
+			glTextureBarrierNV(); // This allows us to use framebuffer (background) both as source and target while blending.
 	}
 };
 
