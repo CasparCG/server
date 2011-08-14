@@ -24,9 +24,11 @@
 #include "blending_glsl.h"
 #include "../gpu/shader.h"
 #include "../gpu/device_buffer.h"
+#include "../gpu/ogl_device.h"
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
+#include <common/env.h>
 
 #include <core/video_format.h>
 #include <core/producer/frame/pixel_format.h>
@@ -35,6 +37,8 @@
 #include <GL/glew.h>
 
 #include <boost/noncopyable.hpp>
+
+#include <tbb/mutex.h>
 
 #include <unordered_map>
 
@@ -55,75 +59,82 @@ GLubyte lower_pattern[] = {
 struct image_kernel::implementation : boost::noncopyable
 {	
 	std::unique_ptr<shader> shader_;
-	
-	core::video_mode::type	last_mode_;
-	size_t					last_width_;
-	size_t					last_height_;
-	
-	//std::string get_blend_color_func()
-	//{
-	//	return 
-	//		
-	//	get_blend_glsl()
-	//	
-	//	+
-	//		
-	//	"vec3 get_blend_color(vec3 back, vec3 fore)											\n"
-	//	"{																					\n"
-	//	"	switch(blend_mode)																\n"
-	//	"	{																				\n"
-	//	"	case  0: return BlendNormal(back, fore);										\n"
-	//	"	case  1: return BlendLighten(back, fore);										\n"
-	//	"	case  2: return BlendDarken(back, fore);										\n"
-	//	"	case  3: return BlendMultiply(back, fore);										\n"
-	//	"	case  4: return BlendAverage(back, fore);										\n"
-	//	"	case  5: return BlendAdd(back, fore);											\n"
-	//	"	case  6: return BlendSubstract(back, fore);										\n"
-	//	"	case  7: return BlendDifference(back, fore);									\n"
-	//	"	case  8: return BlendNegation(back, fore);										\n"
-	//	"	case  9: return BlendExclusion(back, fore);										\n"
-	//	"	case 10: return BlendScreen(back, fore);										\n"
-	//	"	case 11: return BlendOverlay(back, fore);										\n"
-	//	//"	case 12: return BlendSoftLight(back, fore);										\n"
-	//	"	case 13: return BlendHardLight(back, fore);										\n"
-	//	"	case 14: return BlendColorDodge(back, fore);									\n"
-	//	"	case 15: return BlendColorBurn(back, fore);										\n"
-	//	"	case 16: return BlendLinearDodge(back, fore);									\n"
-	//	"	case 17: return BlendLinearBurn(back, fore);									\n"
-	//	"	case 18: return BlendLinearLight(back, fore);									\n"
-	//	"	case 19: return BlendVividLight(back, fore);									\n"
-	//	"	case 20: return BlendPinLight(back, fore);										\n"
-	//	"	case 21: return BlendHardMix(back, fore);										\n"
-	//	"	case 22: return BlendReflect(back, fore);										\n"
-	//	"	case 23: return BlendGlow(back, fore);											\n"
-	//	"	case 24: return BlendPhoenix(back, fore);										\n"
-	//	"	case 25: return BlendHue(back, fore);											\n"
-	//	"	case 26: return BlendSaturation(back, fore);									\n"
-	//	"	case 27: return BlendColor(back, fore);											\n"
-	//	"	case 28: return BlendLuminosity(back, fore);									\n"
-	//	"	}																				\n"
-	//	"	return BlendNormal(back, fore);													\n"
-	//	"}																					\n"
-	//	"																					\n"																			  
-	//	"vec4 blend_color(vec4 fore)														\n"
-	//	"{																					\n"
-	//	"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
-	//	"   fore.rgb = get_blend_color(back.bgr, fore.rgb);									\n"
-	//	"																					\n"
-	//	"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
-	//	"}																					\n";
-	//}
-	//	
-	//std::string get_simple_blend_color_func()
-	//{
-	//	return 	
+	bool					blend_modes_;
+			
+	implementation() : blend_modes_(true)
+	{
+	}
 
-	//	"vec4 blend_color(vec4 fore)														\n"
-	//	"{																					\n"
-	//	"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
-	//	"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
-	//	"}																					\n";
-	//}
+	std::string get_blend_color_func()
+	{
+		return 
+			
+		get_adjustement_glsl()
+		
+		+
+
+		get_blend_glsl()
+		
+		+
+			
+		"vec3 get_blend_color(vec3 back, vec3 fore)											\n"
+		"{																					\n"
+		"	switch(blend_mode)																\n"
+		"	{																				\n"
+		"	case  0: return BlendNormal(back, fore);										\n"
+		"	case  1: return BlendLighten(back, fore);										\n"
+		"	case  2: return BlendDarken(back, fore);										\n"
+		"	case  3: return BlendMultiply(back, fore);										\n"
+		"	case  4: return BlendAverage(back, fore);										\n"
+		"	case  5: return BlendAdd(back, fore);											\n"
+		"	case  6: return BlendSubstract(back, fore);										\n"
+		"	case  7: return BlendDifference(back, fore);									\n"
+		"	case  8: return BlendNegation(back, fore);										\n"
+		"	case  9: return BlendExclusion(back, fore);										\n"
+		"	case 10: return BlendScreen(back, fore);										\n"
+		"	case 11: return BlendOverlay(back, fore);										\n"
+		//"	case 12: return BlendSoftLight(back, fore);										\n"
+		"	case 13: return BlendHardLight(back, fore);										\n"
+		"	case 14: return BlendColorDodge(back, fore);									\n"
+		"	case 15: return BlendColorBurn(back, fore);										\n"
+		"	case 16: return BlendLinearDodge(back, fore);									\n"
+		"	case 17: return BlendLinearBurn(back, fore);									\n"
+		"	case 18: return BlendLinearLight(back, fore);									\n"
+		"	case 19: return BlendVividLight(back, fore);									\n"
+		"	case 20: return BlendPinLight(back, fore);										\n"
+		"	case 21: return BlendHardMix(back, fore);										\n"
+		"	case 22: return BlendReflect(back, fore);										\n"
+		"	case 23: return BlendGlow(back, fore);											\n"
+		"	case 24: return BlendPhoenix(back, fore);										\n"
+		"	case 25: return BlendHue(back, fore);											\n"
+		"	case 26: return BlendSaturation(back, fore);									\n"
+		"	case 27: return BlendColor(back, fore);											\n"
+		"	case 28: return BlendLuminosity(back, fore);									\n"
+		"	}																				\n"
+		"	return BlendNormal(back, fore);													\n"
+		"}																					\n"
+		"																					\n"																			  
+		"vec4 blend(vec4 fore)																\n"
+		"{																					\n"
+		"   vec4 back = texture2D(background, gl_TexCoord[1].st);							\n"
+		"	fore.rgb = get_blend_color(back.rgb, fore.rgb);									\n"
+		"	return vec4(mix(back.bgr, fore.rgb, fore.a), back.a + fore.a);					\n"
+		"}																					\n";
+	}
+		
+	std::string get_simple_blend_color_func()
+	{
+		return 	
+		
+		get_adjustement_glsl()
+			
+		+
+
+		"vec4 blend(vec4 fore)																\n"
+		"{																					\n"
+		"	return fore;																	\n"
+		"}																					\n";
+	}
 
 	std::string get_vertex()
 	{
@@ -138,12 +149,12 @@ struct image_kernel::implementation : boost::noncopyable
 		"}																					\n";
 	}
 
-	std::string get_fragment(bool compability_mode)
+	std::string get_fragment()
 	{
 		return
 
 		"#version 120																		\n"
-		//"uniform sampler2D	background;													\n"
+		"uniform sampler2D	background;														\n"
 		"uniform sampler2D	plane[4];														\n"
 		"uniform sampler2D	local_key;														\n"
 		"uniform sampler2D	layer_key;														\n"
@@ -151,8 +162,8 @@ struct image_kernel::implementation : boost::noncopyable
 		"uniform bool		is_hd;															\n"
 		"uniform bool		has_local_key;													\n"
 		"uniform bool		has_layer_key;													\n"
-		//"uniform int		blend_mode;														\n"
-		//"uniform int		alpha_mode;														\n"
+		"uniform int		blend_mode;														\n"
+		"uniform int		alpha_mode;														\n"
 		"uniform int		pixel_format;													\n"
 		"																					\n"
 		"uniform bool		levels;															\n"
@@ -170,10 +181,11 @@ struct image_kernel::implementation : boost::noncopyable
 
 		+
 		
-		get_blend_glsl()
+		(blend_modes_ ? get_blend_color_func() : get_simple_blend_color_func())
 
 		+
-
+	
+		"																					\n"
 		"//http://slouken.blogspot.com/2011/02/mpeg-acceleration-with-glsl.html				\n"
 		"vec4 ycbcra_to_rgba_sd(float y, float cb, float cr, float a)						\n"
 		"{																					\n"
@@ -276,20 +288,40 @@ struct image_kernel::implementation : boost::noncopyable
 		"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
 		"	if(has_layer_key)																\n"
 		"		color.a *= texture2D(layer_key, gl_TexCoord[1].st).r;						\n"
-		"	gl_FragColor = color.bgra * gl_Color;											\n"
+		"   color *= gl_Color;																\n"
+		"	color = blend(color);															\n"
+		"	gl_FragColor = color.bgra;														\n"
 		"}																					\n";
 	}
 
+	void init_shader(ogl_device& ogl)
+	{
+		try
+		{				
+			blend_modes_  = glTextureBarrierNV ? env::properties().get("configuration.mixers.blend-modes", false) : false;
+			shader_.reset(new shader(get_vertex(), get_fragment()));
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
+				
+			blend_modes_ = false;
+			shader_.reset(new shader(get_vertex(), get_fragment()));
+		}
+						
+		ogl.enable(GL_TEXTURE_2D);
 
-	implementation() 
-		: last_mode_(core::video_mode::progressive)
-		, last_width_(0)
-		, last_height_(0)
-	{			
+		if(!blend_modes_)
+		{
+			ogl.enable(GL_BLEND);
+			GL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE));
+			CASPAR_LOG(info) << L"[shader] Blend-modes are disabled.";
+		}
 	}
-
-	
-	void draw(const render_item&							item,
+				
+	void draw(ogl_device&									ogl,
+			  render_item&&									item,
 			  const safe_ptr<device_buffer>&				background,
 			  const std::shared_ptr<device_buffer>&			local_key,			  
 			  const std::shared_ptr<device_buffer>&			layer_key)
@@ -305,45 +337,18 @@ struct image_kernel::implementation : boost::noncopyable
 			return;
 
 		if(!shader_)
-		{
-			try
-			{
-				shader_.reset(new shader(get_vertex(), get_fragment(false)));
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
-				shader_.reset(new shader(get_vertex(), get_fragment(true)));
-			}
+			init_shader(ogl);
 			
-			GL(glEnable(GL_TEXTURE_2D));
-			GL(glEnable(GL_BLEND));
-			GL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE));
-		}
-
-		if(last_mode_ != item.mode)
+		if(item.mode == core::video_mode::progressive)			
+			ogl.disable(GL_POLYGON_STIPPLE);			
+		else			
 		{
-			last_mode_ = item.mode;
-			
-			if(item.mode == core::video_mode::progressive)			
-				GL(glDisable(GL_POLYGON_STIPPLE));			
-			else			
-			{
-				GL(glEnable(GL_POLYGON_STIPPLE));			
+			ogl.enable(GL_POLYGON_STIPPLE);
 
-				if(item.mode == core::video_mode::upper)
-					glPolygonStipple(upper_pattern);
-				else if(item.mode == core::video_mode::lower)
-					glPolygonStipple(lower_pattern);
-			}
-		}
-
-		if(last_width_ != background->width() || last_height_ != background->height())
-		{
-			last_width_ = background->width();
-			last_height_ = background->height();
-			GL(glViewport(0, 0, background->width(), background->height()));
+			if(item.mode == core::video_mode::upper)
+				ogl.stipple_pattern(upper_pattern);
+			else if(item.mode == core::video_mode::lower)
+				ogl.stipple_pattern(lower_pattern);
 		}
 
 		// Bind textures
@@ -356,12 +361,10 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		if(layer_key)
 			layer_key->bind(5);
-
-		//background->bind(6);
-
+				
 		// Setup shader
 
-		shader_->use();	
+		ogl.use(*shader_);
 
 		shader_->set("plane[0]",		0);
 		shader_->set("plane[1]",		1);
@@ -369,13 +372,21 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("plane[3]",		3);
 		shader_->set("local_key",		4);
 		shader_->set("layer_key",		5);
-		//shader_->set("background",		6);
 		shader_->set("is_hd",			item.pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	local_key ? 1 : 0);
 		shader_->set("has_layer_key",	layer_key ? 1 : 0);
-		//shader_->set("blend_mode",		item.transform.get_is_key() ? core::image_transform::blend_mode::normal : item.transform.get_blend_mode());
-		//shader_->set("alpha_mode",		item.transform.get_alpha_mode());
 		shader_->set("pixel_format",	item.pix_desc.pix_fmt);	
+		
+		// Setup blend_func
+		
+		if(blend_modes_)
+		{
+			background->bind(6);
+
+			shader_->set("background",		6);
+			shader_->set("blend_mode",		item.transform.get_is_key() ? core::image_transform::blend_mode::normal : item.transform.get_blend_mode());
+			shader_->set("alpha_mode",		item.transform.get_alpha_mode());
+		}
 
 		auto levels = item.transform.get_levels();
 
@@ -409,6 +420,8 @@ struct image_kernel::implementation : boost::noncopyable
 			shader_->set("csb",	false);	
 		
 		// Setup drawing area
+		
+		ogl.viewport(0, 0, background->width(), background->height());
 
 		GL(glColor4d(item.transform.get_gain(), item.transform.get_gain(), item.transform.get_gain(), item.transform.get_opacity()));
 						
@@ -423,8 +436,8 @@ struct image_kernel::implementation : boost::noncopyable
 			double w = static_cast<double>(background->width());
 			double h = static_cast<double>(background->height());
 		
-			GL(glEnable(GL_SCISSOR_TEST));
-			GL(glScissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h)));
+			ogl.enable(GL_SCISSOR_TEST);
+			ogl.scissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h));
 		}
 
 		auto f_p = item.transform.get_fill_translation();
@@ -439,15 +452,20 @@ struct image_kernel::implementation : boost::noncopyable
 			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 		glEnd();
 
-		if(scissor)
-			GL(glDisable(GL_SCISSOR_TEST));	
+		ogl.disable(GL_SCISSOR_TEST);	
+				
+		item.textures.clear();
+		ogl.yield(); // Return resources to pool as early as possible.
+
+		if(!blend_modes_)
+			glTextureBarrierNV(); // This allows us to use framebuffer both as source and target while blending.
 	}
 };
 
 image_kernel::image_kernel() : impl_(new implementation()){}
-void image_kernel::draw(const render_item& item, const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
+void image_kernel::draw(ogl_device& ogl, render_item&& item, const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
 {
-	impl_->draw(item, background, local_key, layer_key);
+	impl_->draw(ogl, std::move(item), background, local_key, layer_key);
 }
 
 bool operator==(const render_item& lhs, const render_item& rhs)
