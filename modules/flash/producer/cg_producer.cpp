@@ -111,7 +111,7 @@ public:
 	
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int render_layer)
 {	
-	auto flash_producer = video_channel->stage()->foreground(render_layer).get();
+	auto flash_producer = video_channel->stage()->foreground(render_layer);
 
 	if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
 	{
