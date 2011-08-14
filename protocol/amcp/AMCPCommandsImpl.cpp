@@ -32,6 +32,8 @@
 #include <core/producer/transition/transition_producer.h>
 #include <core/producer/frame/image_transform.h>
 #include <core/producer/frame/audio_transform.h>
+#include <core/producer/stage.h>
+#include <core/producer/layer.h>
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
 
@@ -796,6 +798,32 @@ bool PrintCommand::DoExecute()
 	SetReplyString(TEXT("202 PRINT OK\r\n"));
 
 	return true;
+}
+
+bool StatusCommand::DoExecute()
+{				
+	if (GetLayerIndex() > -1)
+	{
+		auto status = GetChannel()->stage()->get_status(GetLayerIndex());
+		std::wstringstream status_text;
+		status_text
+			<< L"202 STATUS OK\r\n"
+			<< L"FOREGROUND:"		<< status.foreground << L"\r\n"
+			<< L"BACKGROUND:"		<< status.background << L"\r\n"
+			<< L"STATUS:"			<< (status.is_paused ? L"PAUSED" : L"PLAYING") << L"\r\n"
+			<< L"TOTAL FRAMES:"		<< (status.total_frames == std::numeric_limits<int64_t>::max() ? 0 : status.total_frames) << L"\r\n"
+			<< L"CURRENT FRAME:"	<< status.current_frame << L"\r\n";
+
+		SetReplyString(status_text.str());
+		return true;
+	}
+	else
+	{
+		//NOTE: Possible to extend soo that "channel" status is returned when no layer is specified.
+
+		SetReplyString(TEXT("403 LAYER MUST BE SPECIFIED\r\n"));
+		return false;
+	}
 }
 
 bool LogCommand::DoExecute()
