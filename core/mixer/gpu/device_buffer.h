@@ -35,7 +35,6 @@ public:
 	size_t width() const;
 	size_t height() const;
 		
-	void bind();
 	void bind(int index);
 	void unbind();
 		
