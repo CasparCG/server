@@ -29,6 +29,15 @@ namespace caspar { namespace core {
 struct frame_producer;
 class basic_frame;
 
+struct layer_status
+{
+	std::wstring	foreground;
+	std::wstring	background;
+	bool			is_paused;
+	int64_t			total_frames;
+	int64_t			current_frame;
+};
+
 class layer : boost::noncopyable
 {
 public:
@@ -45,6 +54,11 @@ public:
 	void pause(); // nothrow
 	void stop(); // nothrow
 	void param(const std::wstring& param);
+
+	bool is_paused() const;
+	int64_t frame_number() const;
+
+	layer_status status() const;
 
 	bool empty() const;
 

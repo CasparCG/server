@@ -39,7 +39,7 @@
 #include <set>
 
 namespace caspar { namespace core {
-		
+	
 void destroy_producer(safe_ptr<frame_producer>& producer)
 {
 	if(!producer.unique())
@@ -194,6 +194,14 @@ public:
 		
 		channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);});
 	}
+
+	layer_status get_status(int index)
+	{		
+		return channel_.execution().invoke([&]
+		{
+			return layers_[index].status();
+		}, high_priority );
+	}
 	
 	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
 	{
@@ -222,6 +230,7 @@ void stage::clear(int index){impl_->clear(index);}
 void stage::clear(){impl_->clear();}
 void stage::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
 void stage::swap_layer(int index, size_t other_index, stage& other){impl_->swap_layer(index, other_index, other);}
+layer_status stage::get_status(int index){return impl_->get_status(index);}
 boost::unique_future<safe_ptr<frame_producer>> stage::foreground(size_t index) {return impl_->foreground(index);}
 boost::unique_future<safe_ptr<frame_producer>> stage::background(size_t index) {return impl_->background(index);}
 std::map<int, safe_ptr<basic_frame>> stage::execute(){return impl_->execute();}

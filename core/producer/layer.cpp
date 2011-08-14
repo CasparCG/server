@@ -120,6 +120,18 @@ public:
 		}
 	}
 
+	layer_status status() const
+	{
+		layer_status status;
+		status.foreground	 = foreground_->print();
+		status.background	 = background_->print();
+		status.is_paused	 = is_paused_;
+		status.total_frames	 = foreground_->nb_frames();
+		status.current_frame = frame_number_;
+
+		return status;
+	}
+
 	bool empty() const
 	{
 		return background_ == core::frame_producer::empty() && foreground_ == core::frame_producer::empty();
@@ -148,6 +160,9 @@ void layer::load(const safe_ptr<frame_producer>& frame_producer, bool preview, i
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
+bool layer::is_paused() const{return impl_->is_paused_;}
+int64_t layer::frame_number() const{return impl_->frame_number_;}
+layer_status layer::status() const {return impl_->status();}
 safe_ptr<basic_frame> layer::receive() {return impl_->receive();}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
