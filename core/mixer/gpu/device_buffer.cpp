@@ -28,6 +28,8 @@
 
 #include <gl/glew.h>
 
+#include <tbb/atomic.h>
+
 namespace caspar { namespace core {
 	
 static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
@@ -37,6 +39,8 @@ unsigned int format(size_t stride)
 {
 	return FORMAT[stride];
 }
+
+static tbb::atomic<int> g_total_count;
 
 struct device_buffer::implementation : boost::noncopyable
 {
@@ -62,7 +66,7 @@ public:
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		CASPAR_LOG(debug) << "[device_buffer] allocated size:" << width*height*stride;	
+		CASPAR_LOG(debug) << "[device_buffer] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
 	}	
 
 	~implementation()
@@ -70,6 +74,7 @@ public:
 		try
 		{
 			GL(glDeleteTextures(1, &id_));
+			CASPAR_LOG(debug) << "[device_buffer] [" << --g_total_count << L"] deallocated size:" << width_*height_*stride_;
 		}
 		catch(...)
 		{
