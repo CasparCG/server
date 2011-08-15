@@ -85,7 +85,7 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 			}
 			catch(...)
 			{
-				//CASPAR_LOG_CURRENT_EXCEPTION();
+				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
 			return producer != frame_producer::empty();
 		});
