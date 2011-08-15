@@ -44,11 +44,11 @@ void SMFL_GLCheckError(const std::string& expr, const std::string& File, unsigne
 #define CASPAR_GL_EXPR_STR(expr) #expr
 
 #define GL(expr) \
-	[&] \
+	if(false){}else \
 	{ \
 		(expr);  \
 		caspar::gl::SMFL_GLCheckError(CASPAR_GL_EXPR_STR(expr), __FILE__, __LINE__);\
-	}()
+	}
 
 #define GL2(expr) \
 	[&]() -> decltype(expr)\
