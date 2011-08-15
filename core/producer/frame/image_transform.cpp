@@ -34,7 +34,6 @@ image_transform::image_transform()
 	, contrast_(1.0)
 	, saturation_(1.0)
 	, is_key_(false)
-	, is_atomic_(false)
 	, blend_mode_(image_transform::blend_mode::normal)
 {
 	std::fill(fill_translation_.begin(), fill_translation_.end(), 0.0);
@@ -148,16 +147,6 @@ std::array<double, 2> image_transform::get_clip_scale() const
 	return clip_scale_;
 }
 
-void image_transform::set_is_atomic(bool value)
-{
-	is_atomic_ = value;
-}
-
-bool image_transform::get_is_atomic() const
-{
-	return is_atomic_;
-}
-
 void image_transform::set_blend_mode(image_transform::blend_mode::type value)
 {
 	blend_mode_ = value;
@@ -185,7 +174,6 @@ image_transform& image_transform::operator*=(const image_transform &other)
 
 	levels_.gamma			*= other.levels_.gamma;
 
-	is_atomic_				|= other.is_atomic_;
 	is_key_					|= other.is_key_;
 	fill_translation_[0]	+= other.fill_translation_[0]*fill_scale_[0];
 	fill_translation_[1]	+= other.fill_translation_[1]*fill_scale_[1];
@@ -216,7 +204,6 @@ image_transform tween(double time, const image_transform& source, const image_tr
 	image_transform result;	
 	result.set_blend_mode		(std::max(source.get_blend_mode(), dest.get_blend_mode()));
 	result.set_is_key			(source.get_is_key() | dest.get_is_key());
-	result.set_is_atomic		(source.get_is_atomic() | dest.get_is_atomic());
 	result.set_gain				(do_tween(time, source.get_gain(), dest.get_gain(), duration, tweener));
 	result.set_brightness		(do_tween(time, source.get_brightness(), dest.get_brightness(), duration, tweener));
 	result.set_contrast			(do_tween(time, source.get_contrast(), dest.get_contrast(), duration, tweener));
