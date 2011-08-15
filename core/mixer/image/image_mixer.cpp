@@ -145,9 +145,45 @@ public:
 	void draw(layer&& layer, std::shared_ptr<device_buffer>& layer_key_buffer)
 	{					
 		std::shared_ptr<device_buffer> local_key_buffer;
+				
+		std::shared_ptr<device_buffer> atomic_draw_buffer;		
+		std::shared_ptr<device_buffer> atomic_local_key_buffer;
 
 		BOOST_FOREACH(auto& item, layer)
+		{
+			//if(item.transform.get_is_atomic()) // layers need to be atomic in-order to support blend-modes properly
+			//{
+			//	if(!atomic_draw_buffer)
+			//	{
+			//		atomic_draw_buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);	
+			//		channel_.ogl().clear(*atomic_draw_buffer);
+			//	}
+
+			//	draw(std::move(item), atomic_draw_buffer, atomic_local_key_buffer, nullptr);
+			//}
+			//else
+			//{
+			//	if(atomic_draw_buffer)
+			//	{
+			//		pixel_format_desc desc;
+			//		desc.pix_fmt = pixel_format::bgra;
+			//		desc.planes.push_back(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
+
+			//		std::vector<safe_ptr<device_buffer>> textures;
+			//		textures.push_back(make_safe(atomic_draw_buffer));
+			//		
+			//		atomic_draw_buffer.reset();
+			//		atomic_local_key_buffer.reset();
+			//		
+			//		render_item atomic_item(desc, std::move(textures), image_transform(), video_mode::progressive, nullptr);
+			//		draw(std::move(atomic_item), draw_buffer_, local_key_buffer, layer_key_buffer);
+			//	}
+
+			//	draw(std::move(item), draw_buffer_, local_key_buffer, layer_key_buffer);
+			//}
+
 			draw(std::move(item), local_key_buffer, layer_key_buffer);
+		}
 		
 		std::swap(local_key_buffer, layer_key_buffer);
 	}
