@@ -207,7 +207,7 @@ struct image_kernel::implementation : boost::noncopyable
 		item.textures.clear();
 		ogl.yield(); // Return resources to pool as early as possible.
 
-		if(!blend_modes_)
+		if(blend_modes_)
 		{
 			// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
 			// This allows us to use framebuffer (background) both as source and target while blending.
