@@ -159,12 +159,7 @@ struct transition_producer : public frame_producer
 		const auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);
 		const auto d_frame = d_frame1->get_image_transform() == d_frame2->get_image_transform() ? d_frame2 : basic_frame::interlace(d_frame1, d_frame2, mode_);
 		
-		auto frame = basic_frame::combine(s_frame, d_frame);
-
-		if(info_.type == transition::mix)
-			frame->get_image_transform().set_is_atomic(true);
-
-		return frame;
+		return basic_frame::combine(s_frame, d_frame);
 	}
 };
 
