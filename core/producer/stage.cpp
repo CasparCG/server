@@ -99,7 +99,6 @@ public:
 			});
 
 			return frames;
-
 		}
 		catch(...)
 		{
