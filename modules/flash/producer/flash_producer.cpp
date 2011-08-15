@@ -336,9 +336,9 @@ public:
 			{
 				context_->param(param);	
 
-				//const auto& format_desc = frame_factory_->get_video_format_desc();
-				//if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
-				//	CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
+				const auto& format_desc = frame_factory_->get_video_format_desc();
+				if(abs(context_->fps() - format_desc.fps) > 2.0 && abs(context_->fps()/2.0 - format_desc.fps) > 2.0)
+					CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
 			}
 			catch(...)
 			{
