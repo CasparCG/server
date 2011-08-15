@@ -125,8 +125,8 @@ public:
 	void set_is_key(bool value);
 	bool get_is_key() const;
 
-	void set_deinterlace(bool value);
-	bool get_deinterlace() const;
+	void set_is_atomic(bool value);
+	bool get_is_atomic() const;
 
 	void set_blend_mode(blend_mode::type value);
 	blend_mode::type get_blend_mode() const;
@@ -145,7 +145,7 @@ private:
 	std::array<double, 2> clip_scale_; 
 	video_mode::type mode_;
 	bool is_key_;
-	bool deinterlace_;
+	bool is_atomic_;
 	blend_mode::type blend_mode_;
 };
 
