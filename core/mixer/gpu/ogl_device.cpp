@@ -273,7 +273,7 @@ void ogl_device::attach(device_buffer& texture)
 {	
 	if(attached_texture_ != texture.id())
 	{
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, texture.id(), 0);
+		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, texture.id(), 0));
 		attached_texture_ = texture.id();
 	}
 }
@@ -281,14 +281,14 @@ void ogl_device::attach(device_buffer& texture)
 void ogl_device::clear(device_buffer& texture)
 {	
 	attach(texture);
-	glClear(GL_COLOR_BUFFER_BIT);
+	GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
 void ogl_device::use(shader& shader)
 {
 	if(active_shader_ != shader.id())
 	{		
-		glUseProgramObjectARB(shader.id());	
+		GL(glUseProgramObjectARB(shader.id()));	
 		active_shader_ = shader.id();
 	}
 }
