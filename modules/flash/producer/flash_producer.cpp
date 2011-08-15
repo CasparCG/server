@@ -45,6 +45,8 @@
 #include <boost/thread.hpp>
 #include <boost/timer.hpp>
 
+#include <tbb/spin_mutex.h>
+
 #include <functional>
 
 namespace caspar {
@@ -262,6 +264,9 @@ struct flash_producer : public core::frame_producer
 				
 	com_context<flash_renderer> context_;	
 
+	tbb::spin_mutex	   exception_mutex_;
+	std::exception_ptr exception_;
+
 	int width_;
 	int height_;
 public:
@@ -282,8 +287,10 @@ public:
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
 		frame_buffer_.set_capacity(1);
-
-		initialize();				
+		
+		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);});
+		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
+		render();			
 	}
 
 	~flash_producer()
@@ -294,7 +301,13 @@ public:
 	// frame_producer
 		
 	virtual safe_ptr<core::basic_frame> receive(int)
-	{				
+	{		
+		{			
+			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
+			if(exception_ != nullptr)
+				std::rethrow_exception(exception_);
+		}
+
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
 		auto frame = core::basic_frame::late();
@@ -311,11 +324,14 @@ public:
 	
 	virtual void param(const std::wstring& param) 
 	{	
+		{			
+			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
+			if(exception_ != nullptr)
+				std::rethrow_exception(exception_);
+		}
+
 		context_.begin_invoke([=]
 		{
-			if(!context_)
-				initialize();
-
 			try
 			{
 				context_->param(param);	
@@ -328,33 +344,24 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				context_.reset(nullptr);
-				frame_buffer_.push(core::basic_frame::empty());
+
+				tbb::spin_mutex::scoped_lock lock(exception_mutex_);
+				exception_ = std::current_exception();
 			}
 		});
 	}
 		
 	virtual std::wstring print() const
 	{ 
-		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
-					boost::lexical_cast<std::wstring>(fps_) + L"]";		
+		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
 
 	// flash_producer
 
-	void initialize()
-	{
-		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);});
-		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
-		render(context_.get());
-	}
-
-	void render(const flash_renderer* renderer)
-	{		
+	void render()
+	{	
 		context_.begin_invoke([=]
 		{
-			if(context_.get() != renderer) // Since initialize will start a new recursive call make sure the recursive calls are only for a specific instance.
-				return;
-
 			try
 			{		
 				const auto& format_desc = frame_factory_->get_video_format_desc();
@@ -380,13 +387,15 @@ public:
 				graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));
 
-				render(renderer);
+				render();
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				context_.reset(nullptr);
-				frame_buffer_.push(core::basic_frame::empty());
+				
+				tbb::spin_mutex::scoped_lock lock(exception_mutex_);
+				exception_ = std::current_exception();
 			}
 		});
 	}
