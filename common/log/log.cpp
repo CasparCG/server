@@ -17,6 +17,9 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
+// TODO: Colors in console.
+// TODO: Think through filters.
+
 #include "../stdafx.h"
 
 #if defined(_MSC_VER)

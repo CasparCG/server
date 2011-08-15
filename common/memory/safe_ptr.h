@@ -155,6 +155,18 @@ bool operator==(const safe_ptr<T>& a, const safe_ptr<U>& b)  // noexcept
 }
 
 template<class T, class U>
+bool operator!=(const std::shared_ptr<T>& a, const safe_ptr<U>& b)  // noexcept
+{
+	return a.get() != b.get();
+}
+
+template<class T, class U>
+bool operator!=(const safe_ptr<T>& a, const std::shared_ptr<U>& b)  // noexcept
+{
+	return a.get() != b.get();
+}
+
+template<class T, class U>
 bool operator!=(const safe_ptr<T>& a, const safe_ptr<U>& b) // noexcept
 {
 	return a.get() != b.get();
