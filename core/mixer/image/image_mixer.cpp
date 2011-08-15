@@ -68,16 +68,13 @@ struct image_mixer::implementation : boost::noncopyable
 
 	std::shared_ptr<device_buffer>			local_key_buffer_;
 	std::shared_ptr<device_buffer>			layer_key_buffer_;
-
-	std::shared_ptr<host_buffer>			empty_buffer_;
-	
+		
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
 		, transform_stack_(1)
 		, mode_stack_(1, video_mode::progressive)
 	{
-		initialize_buffers();
 	}
 
 	~implementation()
@@ -87,15 +84,17 @@ public:
 
 	void initialize_buffers()
 	{
+		write_buffer_.reset();	
+		layer_key_buffer_.reset();
+		draw_buffer_.reset();	
+		local_key_buffer_.reset();
+
+		channel_.ogl().gc();
+
 		write_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
 		layer_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
 		draw_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
 		local_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-
-		empty_buffer_			= channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::write_only);
-		memset(empty_buffer_->data(), 0, empty_buffer_->size());
-
-		channel_.ogl().gc();
 	}
 
 	void begin(core::basic_frame& frame)
@@ -138,17 +137,17 @@ public:
 	boost::unique_future<safe_ptr<host_buffer>> render()
 	{		
 		auto layers = std::move(layers_);
-		return channel_.ogl().begin_invoke([=]()mutable{return render(std::move(layers));});
+		return channel_.ogl().begin_invoke([=]()mutable
+		{
+			return render(std::move(layers));
+		});
 	}
 	
 	safe_ptr<host_buffer> render(std::deque<layer>&& layers)
 	{
-		if(layers.empty())
-			return make_safe(empty_buffer_);
-
-		if(channel_.get_format_desc().width != write_buffer_->width() || channel_.get_format_desc().height != write_buffer_->height())
+		if(!write_buffer_ || channel_.get_format_desc().width != write_buffer_->width() || channel_.get_format_desc().height != write_buffer_->height())
 			initialize_buffers();
-		
+				
 		channel_.ogl().clear(*layer_key_buffer_);
 		channel_.ogl().clear(*local_key_buffer_);
 		channel_.ogl().clear(*draw_buffer_);
