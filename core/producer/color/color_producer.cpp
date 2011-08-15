@@ -56,8 +56,11 @@ std::wstring get_hex_color(const std::wstring& str)
 	if(str.at(0) == '#')
 		return str.length() == 7 ? L"#FF" + str.substr(1) : str;
 	
+	if(boost::iequals(str, L"EMPTY"))
+		return L"#00000000";
+
 	if(boost::iequals(str, L"BLACK"))
-		return L"#000000FF";
+		return L"#FF000000";
 	
 	if(boost::iequals(str, L"WHITE"))
 		return L"#FFFFFFFF";
