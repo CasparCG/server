@@ -64,7 +64,6 @@ struct image_mixer::implementation : boost::noncopyable
 	image_kernel							kernel_;
 		
 	std::shared_ptr<device_buffer>			draw_buffer_;
-	std::shared_ptr<device_buffer>			write_buffer_;
 
 	std::shared_ptr<device_buffer>			local_key_buffer_;
 	std::shared_ptr<device_buffer>			layer_key_buffer_;
@@ -81,22 +80,7 @@ public:
 	{
 		channel_.ogl().gc();
 	}
-
-	void initialize_buffers()
-	{
-		write_buffer_.reset();	
-		layer_key_buffer_.reset();
-		draw_buffer_.reset();	
-		local_key_buffer_.reset();
-
-		channel_.ogl().gc();
-
-		write_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		layer_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-		draw_buffer_			= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);
-		local_key_buffer_		= channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-	}
-
+	
 	void begin(core::basic_frame& frame)
 	{
 		transform_stack_.push_back(transform_stack_.back()*frame.get_image_transform());
@@ -145,56 +129,45 @@ public:
 	
 	safe_ptr<host_buffer> render(std::deque<layer>&& layers)
 	{
-		if(!write_buffer_ || channel_.get_format_desc().width != write_buffer_->width() || channel_.get_format_desc().height != write_buffer_->height())
-			initialize_buffers();
-				
-		channel_.ogl().clear(*layer_key_buffer_);
-		channel_.ogl().clear(*local_key_buffer_);
+		draw_buffer_ = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);				
 		channel_.ogl().clear(*draw_buffer_);
-		
-		bool layer_key = false;
-		
+				
 		BOOST_FOREACH(auto& layer, layers)
-			draw(std::move(layer), layer_key);
-
-		std::swap(draw_buffer_, write_buffer_);
-		
+			draw(std::move(layer));
+				
 		auto host_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
-	
-		channel_.ogl().attach(*write_buffer_);
-		host_buffer->begin_read(write_buffer_->width(), write_buffer_->height(), format(write_buffer_->stride()));
+		channel_.ogl().attach(*draw_buffer_);
+		host_buffer->begin_read(draw_buffer_->width(), draw_buffer_->height(), format(draw_buffer_->stride()));
 		
 		GL(glFlush());
 		
 		return host_buffer;
 	}
 
-	void draw(layer&& layer, bool& layer_key)
-	{			
-		bool local_key = false;
-		
-		channel_.ogl().clear(*local_key_buffer_);
-
+	void draw(layer&& layer)
+	{					
 		BOOST_FOREACH(auto& item, layer)
-			draw(std::move(item), local_key, layer_key);
+			draw(std::move(item));
 		
-		layer_key = local_key;
-
 		std::swap(local_key_buffer_, layer_key_buffer_);
 	}
 
-	void draw(render_item&& item, bool& local_key, bool& layer_key)
+	void draw(render_item&& item)
 	{											
 		if(item.transform.get_is_key())
 		{
+			if(!local_key_buffer_)
+			{
+				local_key_buffer_ = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
+				channel_.ogl().clear(*local_key_buffer_);
+			}
+
 			draw(local_key_buffer_, std::move(item), nullptr, nullptr);
-			local_key = true;
 		}
 		else
 		{
-			draw(draw_buffer_, std::move(item), local_key ? local_key_buffer_ : nullptr, layer_key ? layer_key_buffer_ : nullptr);	
-			channel_.ogl().clear(*local_key_buffer_);
-			local_key = false;
+			draw(draw_buffer_, std::move(item), local_key_buffer_, layer_key_buffer_);	
+			local_key_buffer_.reset();
 		}
 	}
 	
