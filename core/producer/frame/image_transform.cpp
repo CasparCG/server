@@ -17,6 +17,7 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
+// TODO: Move layer specific stuff out of frame related classes.
 #include "../../stdafx.h"
 
 #include "image_transform.h"
