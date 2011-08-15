@@ -103,6 +103,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	CComQIPtr<IDeckLinkConfiguration>	configuration_;
 	CComQIPtr<IDeckLinkKeyer>			keyer_;
 
+	tbb::spin_mutex						exception_mutex_;
 	std::exception_ptr					exception_;
 
 	tbb::atomic<bool>					is_running_;
@@ -296,6 +297,7 @@ public:
 		}
 		catch(...)
 		{
+			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
 			exception_ = std::current_exception();
 			return E_FAIL;
 		}
@@ -329,6 +331,7 @@ public:
 		}
 		catch(...)
 		{
+			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
 			exception_ = std::current_exception();
 			return E_FAIL;
 		}
@@ -358,8 +361,11 @@ public:
 
 	void send(const safe_ptr<core::read_frame>& frame)
 	{
-		if(exception_ != nullptr)
-			std::rethrow_exception(exception_);
+		{
+			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
+			if(exception_ != nullptr)
+				std::rethrow_exception(exception_);
+		}
 
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Is not running."));
