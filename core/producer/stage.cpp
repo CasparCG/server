@@ -85,18 +85,27 @@ public:
 	}
 						
 	std::map<int, safe_ptr<basic_frame>> execute()
-	{			
-		std::map<int, safe_ptr<basic_frame>> frames;
-		
-		BOOST_FOREACH(auto& layer, layers_)			
-			frames[layer.first] = basic_frame::empty();	
-
-		tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
+	{		
+		try
 		{
-			frames[layer.first] = layer.second.receive();	
-		});
+			std::map<int, safe_ptr<basic_frame>> frames;
 		
-		return frames;
+			BOOST_FOREACH(auto& layer, layers_)			
+				frames[layer.first] = basic_frame::empty();	
+
+			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
+			{
+				frames[layer.first] = layer.second.receive();	
+			});
+
+			return frames;
+
+		}
+		catch(...)
+		{
+			CASPAR_LOG(error) << L"[stage] Error detected";
+			throw;
+		}		
 	}
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
