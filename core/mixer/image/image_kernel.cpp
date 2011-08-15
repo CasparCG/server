@@ -77,6 +77,12 @@ struct image_kernel::implementation : boost::noncopyable
 		if(item.transform.get_opacity() < epsilon)
 			return;
 		
+		if(!std::all_of(item.textures.begin(), item.textures.end(), std::mem_fn(&device_buffer::ready)))
+		{
+			CASPAR_LOG(warning) << L"[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
+			ogl.yield(); // Try to give it some more time.
+		}		
+		
 		// Bind textures
 
 		for(size_t n = 0; n < item.textures.size(); ++n)
@@ -167,7 +173,7 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		ogl.viewport(0, 0, background->width(), background->height());
 
-		GL(glColor4d(item.transform.get_gain(), item.transform.get_gain(), item.transform.get_gain(), item.transform.get_opacity()));
+		GL(glColor4d(item.transform.get_gain(), item.transform.get_gain(), item.transform.get_gain(), item.transform.get_is_key() ? 1.0 : item.transform.get_opacity()));
 						
 		auto m_p = item.transform.get_clip_translation();
 		auto m_s = item.transform.get_clip_scale();

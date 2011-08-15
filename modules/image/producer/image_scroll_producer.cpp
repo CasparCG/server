@@ -17,6 +17,9 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
+// TODO: Refactor.
+// TODO: Looping.
+
 #include "image_scroll_producer.h"
 
 #include "../util/image_loader.h"

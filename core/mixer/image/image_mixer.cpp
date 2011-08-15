@@ -142,53 +142,35 @@ public:
 		return host_buffer;
 	}
 
+	// TODO: We might have more overlaps for opacity transitions
+	// TODO: What about blending modes, are they ok? Maybe only overlap detection is required for opacity?
 	void draw(layer&& layer, std::shared_ptr<device_buffer>& layer_key_buffer)
-	{					
+	{				
+		if(layer.empty())
+			return;
+
 		std::shared_ptr<device_buffer> local_key_buffer;
-				
-		std::shared_ptr<device_buffer> atomic_draw_buffer;		
-		std::shared_ptr<device_buffer> atomic_local_key_buffer;
-
-		BOOST_FOREACH(auto& item, layer)
+					
+		if(has_overlapping_items(layer, layer.front().transform.get_blend_mode()))
 		{
-			//if(item.transform.get_is_atomic()) // layers need to be atomic in-order to support blend-modes properly
-			//{
-			//	if(!atomic_draw_buffer)
-			//	{
-			//		atomic_draw_buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);	
-			//		channel_.ogl().clear(*atomic_draw_buffer);
-			//	}
+			auto local_draw_buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);	
+			channel_.ogl().clear(*local_draw_buffer);
 
-			//	draw(std::move(item), atomic_draw_buffer, atomic_local_key_buffer, nullptr);
-			//}
-			//else
-			//{
-			//	if(atomic_draw_buffer)
-			//	{
-			//		pixel_format_desc desc;
-			//		desc.pix_fmt = pixel_format::bgra;
-			//		desc.planes.push_back(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
-
-			//		std::vector<safe_ptr<device_buffer>> textures;
-			//		textures.push_back(make_safe(atomic_draw_buffer));
-			//		
-			//		atomic_draw_buffer.reset();
-			//		atomic_local_key_buffer.reset();
-			//		
-			//		render_item atomic_item(desc, std::move(textures), image_transform(), video_mode::progressive, nullptr);
-			//		draw(std::move(atomic_item), draw_buffer_, local_key_buffer, layer_key_buffer);
-			//	}
-
-			//	draw(std::move(item), draw_buffer_, local_key_buffer, layer_key_buffer);
-			//}
-
-			draw(std::move(item), local_key_buffer, layer_key_buffer);
+			BOOST_FOREACH(auto& item, layer)		
+				draw_item(std::move(item), local_draw_buffer, local_key_buffer, layer_key_buffer);		
+							
+			kernel_.draw(channel_.ogl(), create_render_item(local_draw_buffer, layer.front().transform.get_blend_mode()), make_safe(draw_buffer_), nullptr, nullptr);
 		}
-		
+		else // fast path
+		{
+			BOOST_FOREACH(auto& item, layer)		
+				draw_item(std::move(item), make_safe(draw_buffer_), local_key_buffer, layer_key_buffer);		
+		}					
+
 		std::swap(local_key_buffer, layer_key_buffer);
 	}
 
-	void draw(render_item&& item, std::shared_ptr<device_buffer>& local_key_buffer, std::shared_ptr<device_buffer>& layer_key_buffer)
+	void draw_item(render_item&& item, const safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>& local_key_buffer, std::shared_ptr<device_buffer>& layer_key_buffer)
 	{											
 		if(item.transform.get_is_key())
 		{
@@ -198,26 +180,60 @@ public:
 				channel_.ogl().clear(*local_key_buffer);
 			}
 
-			draw(std::move(item), local_key_buffer, nullptr, nullptr);
+			kernel_.draw(channel_.ogl(), std::move(item), make_safe(local_key_buffer), nullptr, nullptr);
 		}
 		else
 		{
-			draw(std::move(item), draw_buffer_, local_key_buffer, layer_key_buffer);	
+			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);
 			local_key_buffer.reset();
 		}
 	}
-	
-	void draw(render_item&& item, std::shared_ptr<device_buffer>& draw_buffer, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
+			
+	render_item create_render_item(const safe_ptr<device_buffer>& buffer, image_transform::blend_mode::type blend_mode)
 	{
-		if(!std::all_of(item.textures.begin(), item.textures.end(), std::mem_fn(&device_buffer::ready)))
-		{
-			CASPAR_LOG(warning) << L"[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
-			channel_.ogl().yield(); // Try to give it some more time.
-		}		
+		CASPAR_ASSERT(buffer->stride() == 4 && "Only used for bgra textures");
 
-		kernel_.draw(channel_.ogl(), std::move(item), make_safe(draw_buffer), local_key, layer_key);
-	}
+		pixel_format_desc desc;
+		desc.pix_fmt = pixel_format::bgra;
+		desc.planes.push_back(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
+
+		std::vector<safe_ptr<device_buffer>> textures;
+		textures.push_back(buffer);
 				
+		image_transform transform;
+		transform.set_blend_mode(blend_mode);
+
+		return render_item(desc, std::move(textures), transform, video_mode::progressive, nullptr);		 
+	}
+
+	// TODO: Optimize
+	bool has_overlapping_items(const layer& layer, image_transform::blend_mode::type blend_mode)
+	{
+		if(layer.empty())
+			return false;	
+		
+		implementation::layer fill;
+
+		std::copy_if(layer.begin(), layer.end(), std::back_inserter(fill), [&](const render_item& item)
+		{
+			return !item.transform.get_is_key();
+		});
+			
+		if(blend_mode == image_transform::blend_mode::normal) // Only overlap if opacity
+		{
+			return std::any_of(fill.begin(), fill.end(), [&](const render_item& item)
+			{
+				return item.transform.get_opacity() < 1.0 - 0.001;
+			});
+		}
+
+		// Simple solution, just check if we have differnt video streams / tags.
+		return std::any_of(fill.begin(), fill.end(), [&](const render_item& item)
+		{
+			return item.tag != fill.front().tag;
+		});
+	}		
+
 	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
 		return make_safe<write_frame>(channel_.ogl(), tag, desc);

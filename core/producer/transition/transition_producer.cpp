@@ -134,8 +134,8 @@ struct transition_producer : public frame_producer
 			d_frame1->get_image_transform().set_opacity(delta1);	
 			d_frame2->get_image_transform().set_opacity(delta2);
 
-			//s_frame1->get_image_transform().set_opacity(1.0-delta1);	
-			//s_frame2->get_image_transform().set_opacity(1.0-delta2);		
+			s_frame1->get_image_transform().set_opacity(1.0-delta1);	
+			s_frame2->get_image_transform().set_opacity(1.0-delta2);		
 		}
 		else if(info_.type == transition::slide)
 		{
