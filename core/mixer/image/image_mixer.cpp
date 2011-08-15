@@ -146,6 +146,8 @@ public:
 
 	void draw(layer&& layer)
 	{					
+		local_key_buffer_.reset();
+
 		BOOST_FOREACH(auto& item, layer)
 			draw(std::move(item));
 		
