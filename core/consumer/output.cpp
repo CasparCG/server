@@ -17,6 +17,7 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
+// TODO: Try to recover consumer from bad_alloc...
 #include "../StdAfx.h"
 
 #ifdef _MSC_VER
