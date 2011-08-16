@@ -61,9 +61,7 @@ struct image_mixer::implementation : boost::noncopyable
 
 	std::deque<std::deque<render_item>>		layers_; // layer/stream/items
 	
-	image_kernel							kernel_;
-		
-	std::shared_ptr<device_buffer>			draw_buffer_;		
+	image_kernel							kernel_;		
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
@@ -117,7 +115,7 @@ public:
 	boost::unique_future<safe_ptr<host_buffer>> render()
 	{		
 		auto layers = std::move(layers_);
-		return channel_.ogl().begin_invoke([=]()mutable
+		return channel_.ogl().begin_invoke([=]() mutable
 		{
 			return render(std::move(layers));
 		});
@@ -127,15 +125,14 @@ public:
 	{
 		std::shared_ptr<device_buffer> layer_key_buffer;
 
-		draw_buffer_ = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);				
-		channel_.ogl().clear(*draw_buffer_);
+		auto draw_buffer = create_device_buffer(4);
 				
 		BOOST_FOREACH(auto& layer, layers)
-			draw(std::move(layer), layer_key_buffer);
+			draw(std::move(layer), draw_buffer, layer_key_buffer);
 				
 		auto host_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
-		channel_.ogl().attach(*draw_buffer_);
-		host_buffer->begin_read(draw_buffer_->width(), draw_buffer_->height(), format(draw_buffer_->stride()));
+		channel_.ogl().attach(*draw_buffer);
+		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
 		
 		GL(glFlush());
 		
@@ -144,7 +141,7 @@ public:
 
 	// TODO: We might have more overlaps for opacity transitions
 	// TODO: What about blending modes, are they ok? Maybe only overlap detection is required for opacity?
-	void draw(layer&& layer, std::shared_ptr<device_buffer>& layer_key_buffer)
+	void draw(layer&& layer, const safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>& layer_key_buffer)
 	{				
 		if(layer.empty())
 			return;
@@ -153,18 +150,20 @@ public:
 					
 		if(has_overlapping_items(layer, layer.front().transform.get_blend_mode()))
 		{
-			auto local_draw_buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 4);	
-			channel_.ogl().clear(*local_draw_buffer);
-
+			auto local_draw_buffer = create_device_buffer(4);	
+			
 			BOOST_FOREACH(auto& item, layer)		
+			{
+				item.transform.set_blend_mode(image_transform::blend_mode::normal);
 				draw_item(std::move(item), local_draw_buffer, local_key_buffer, layer_key_buffer);		
-							
-			kernel_.draw(channel_.ogl(), create_render_item(local_draw_buffer, layer.front().transform.get_blend_mode()), make_safe(draw_buffer_), nullptr, nullptr);
+			}
+
+			kernel_.draw(channel_.ogl(), create_render_item(local_draw_buffer, layer.front().transform.get_blend_mode()), draw_buffer, nullptr, nullptr);
 		}
 		else // fast path
 		{
 			BOOST_FOREACH(auto& item, layer)		
-				draw_item(std::move(item), make_safe(draw_buffer_), local_key_buffer, layer_key_buffer);		
+				draw_item(std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);		
 		}					
 
 		std::swap(local_key_buffer, layer_key_buffer);
@@ -175,11 +174,10 @@ public:
 		if(item.transform.get_is_key())
 		{
 			if(!local_key_buffer)
-			{
-				local_key_buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, 1);
-				channel_.ogl().clear(*local_key_buffer);
-			}
+				local_key_buffer = create_device_buffer(1);
 
+			item.transform.set_opacity(1.0);
+			item.transform.set_blend_mode(image_transform::blend_mode::normal);
 			kernel_.draw(channel_.ogl(), std::move(item), make_safe(local_key_buffer), nullptr, nullptr);
 		}
 		else
@@ -187,23 +185,6 @@ public:
 			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);
 			local_key_buffer.reset();
 		}
-	}
-			
-	render_item create_render_item(const safe_ptr<device_buffer>& buffer, image_transform::blend_mode::type blend_mode)
-	{
-		CASPAR_ASSERT(buffer->stride() == 4 && "Only used for bgra textures");
-
-		pixel_format_desc desc;
-		desc.pix_fmt = pixel_format::bgra;
-		desc.planes.push_back(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
-
-		std::vector<safe_ptr<device_buffer>> textures;
-		textures.push_back(buffer);
-				
-		image_transform transform;
-		transform.set_blend_mode(blend_mode);
-
-		return render_item(desc, std::move(textures), transform, video_mode::progressive, nullptr);		 
 	}
 
 	// TODO: Optimize
@@ -232,7 +213,31 @@ public:
 		{
 			return item.tag != fill.front().tag;
 		});
-	}		
+	}			
+			
+	render_item create_render_item(const safe_ptr<device_buffer>& buffer, image_transform::blend_mode::type blend_mode)
+	{
+		CASPAR_ASSERT(buffer->stride() == 4 && "Only used for bgra textures");
+
+		pixel_format_desc desc;
+		desc.pix_fmt = pixel_format::bgra;
+		desc.planes.push_back(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
+
+		std::vector<safe_ptr<device_buffer>> textures;
+		textures.push_back(buffer);
+				
+		image_transform transform;
+		transform.set_blend_mode(blend_mode);
+
+		return render_item(desc, std::move(textures), transform, video_mode::progressive, nullptr);		 
+	}
+
+	safe_ptr<device_buffer> create_device_buffer(size_t stride)
+	{
+		auto buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, stride);
+		channel_.ogl().clear(*buffer);
+		return buffer;
+	}
 
 	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
