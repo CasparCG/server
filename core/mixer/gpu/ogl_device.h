@@ -42,6 +42,22 @@ namespace caspar { namespace core {
 
 class shader;
 
+template<typename T>
+struct buffer_pool
+{
+	tbb::atomic<int> total_count;
+	tbb::atomic<int> usage_count;
+	tbb::atomic<int> flush_count;
+	tbb::concurrent_bounded_queue<std::shared_ptr<T>> items;
+
+	buffer_pool()
+	{
+		total_count = 0;
+		usage_count = 0;
+		flush_count = 0;
+	}
+};
+
 class ogl_device : boost::noncopyable
 {	
 	std::unordered_map<GLenum, bool> caps_;
@@ -54,8 +70,8 @@ class ogl_device : boost::noncopyable
 
 	std::unique_ptr<sf::Context> context_;
 	
-	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<tbb::concurrent_bounded_queue<std::shared_ptr<device_buffer>>>>, 4> device_pools_;
-	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<tbb::concurrent_bounded_queue<std::shared_ptr<host_buffer>>>>, 2> host_pools_;
+	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
+	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<buffer_pool<host_buffer>>>, 2> host_pools_;
 	
 	unsigned int fbo_;
 
@@ -79,6 +95,8 @@ public:
 	void begin_read(device_buffer& dest, host_buffer& source);
 	
 	void use(shader& shader);
+
+	void flush();
 
 	// thread-afe
 	template<typename Func>
