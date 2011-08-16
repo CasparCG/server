@@ -62,6 +62,8 @@ struct image_mixer::implementation : boost::noncopyable
 	std::deque<std::deque<render_item>>		layers_; // layer/stream/items
 	
 	image_kernel							kernel_;		
+
+	std::shared_ptr<device_buffer>			active_buffer_;
 public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
@@ -129,11 +131,13 @@ public:
 				
 		BOOST_FOREACH(auto& layer, layers)
 			draw(std::move(layer), draw_buffer, layer_key_buffer);
-				
+		
 		auto host_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
 		channel_.ogl().attach(*draw_buffer);
 		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
 		
+		active_buffer_ = draw_buffer;
+
 		GL(glFlush());
 		
 		return host_buffer;
