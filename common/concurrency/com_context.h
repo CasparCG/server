@@ -2,12 +2,15 @@
 
 #include "executor.h"
 
+#include "../log/log.h"
+
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
 #include <Windows.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/thread/future.hpp>
 
 #include <functional>
 
@@ -28,11 +31,14 @@ public:
 
 	~com_context()
 	{
-		executor::invoke([&]
+		if(!executor::begin_invoke([&]
 		{
 			instance_.reset(nullptr);
 			::CoUninitialize();
-		});
+		}).timed_wait(boost::posix_time::milliseconds(500)))
+		{
+			CASPAR_LOG(error) << L"[com_contex] Timer expired, deadlock detected and released, leaking resources";
+		}
 	}
 	
 	void reset(const std::function<T*()>& factory = nullptr)
