@@ -138,8 +138,8 @@ public:
 		
 		active_buffer_ = draw_buffer;
 
-		GL(glFlush());
-		
+		channel_.ogl().flush(); // NOTE: This is important, otherwise fences will deadlock.
+			
 		return host_buffer;
 	}
 
