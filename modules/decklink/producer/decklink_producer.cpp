@@ -110,7 +110,7 @@ public:
 		
 		graph_ = diagnostics::create_graph(boost::bind(&decklink_producer::print, this));
 		graph_->add_guide("tick-time", 0.5);
-		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
