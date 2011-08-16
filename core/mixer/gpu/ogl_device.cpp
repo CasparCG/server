@@ -83,7 +83,6 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->items.try_pop(buffer))		
 	{
-		++pool->total_count;
 		executor_.invoke([&]
 		{	
 			try
@@ -103,7 +102,6 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 				catch(...)
 				{
 					CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
-					--pool->total_count;
 					throw;
 				}
 			}
@@ -126,7 +124,6 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 	std::shared_ptr<host_buffer> buffer;
 	if(!pool->items.try_pop(buffer))
 	{
-		++pool->total_count;
 		executor_.invoke([&]
 		{
 			try
@@ -154,7 +151,6 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 				catch(...)
 				{
 					CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
-					--pool->total_count;
 					throw;		
 				}
 			}
@@ -180,14 +176,13 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 template<typename T>
 void flush_pool(buffer_pool<T>& pool)
 {	
-	if(pool.flush_count.fetch_and_increment() < 3)
+	if(pool.flush_count.fetch_and_increment() < 16)
 		return;
 
 	if(pool.usage_count.fetch_and_store(0) < pool.items.size())
 	{
 		std::shared_ptr<T> buffer;
-		if(pool.items.try_pop(buffer))
-			--pool.total_count;
+		pool.items.try_pop(buffer);
 	}
 
 	pool.flush_count = 0;
@@ -233,22 +228,12 @@ boost::unique_future<void> ogl_device::gc()
 			BOOST_FOREACH(auto& pools, device_pools_)
 			{
 				BOOST_FOREACH(auto& pool, pools)
-				{
-					auto size = pool.second->items.size();
-					std::shared_ptr<device_buffer> buffer;
-					for(int n = 0; n < size && pool.second->items.try_pop(buffer); ++n)
-						--pool.second->total_count;
-				}
+					pool.second->items.clear();
 			}
 			BOOST_FOREACH(auto& pools, host_pools_)
 			{
 				BOOST_FOREACH(auto& pool, pools)
-				{
-					auto size = pool.second->items.size();
-					std::shared_ptr<host_buffer> buffer;
-					for(int n = 0; n < size && pool.second->items.try_pop(buffer); ++n)
-						--pool.second->total_count;
-				}
+					pool.second->items.clear();
 			}
 		}
 		catch(...)

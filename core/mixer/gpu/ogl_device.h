@@ -45,14 +45,12 @@ class shader;
 template<typename T>
 struct buffer_pool
 {
-	tbb::atomic<int> total_count;
 	tbb::atomic<int> usage_count;
 	tbb::atomic<int> flush_count;
 	tbb::concurrent_bounded_queue<std::shared_ptr<T>> items;
 
 	buffer_pool()
 	{
-		total_count = 0;
 		usage_count = 0;
 		flush_count = 0;
 	}
