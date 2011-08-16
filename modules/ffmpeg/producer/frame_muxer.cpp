@@ -86,6 +86,20 @@ display_mode::type get_display_mode(const core::video_mode::type in_mode, double
 {		
 	static const auto epsilon = 2.0;
 
+	if(in_fps < 20.0 || in_fps > 80.0)
+	{
+		//if(out_mode != core::video_mode::progressive && in_mode == core::video_mode::progressive)
+		//	return display_mode::interlace;
+		
+		if(out_mode == core::video_mode::progressive && in_mode != core::video_mode::progressive)
+		{
+			if(in_fps < 35.0)
+				return display_mode::deinterlace;
+			else
+				return display_mode::deinterlace_bob;
+		}
+	}
+
 	if(std::abs(in_fps - out_fps) < epsilon)
 	{
 		if(in_mode != core::video_mode::progressive && out_mode == core::video_mode::progressive)
@@ -220,7 +234,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			++video_frame_count_;
 		}
 
-		if(video_streams_.back().size() > 32)
+		if(video_streams_.back().size() > 8)
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
@@ -238,7 +252,7 @@ struct frame_muxer::implementation : boost::noncopyable
 
 		boost::range::push_back(audio_streams_.back(), *audio_samples);
 
-		if(audio_streams_.back().size() > 32*format_desc_.audio_samples_per_frame)
+		if(audio_streams_.back().size() > 8*format_desc_.audio_samples_per_frame)
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
