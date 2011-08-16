@@ -115,9 +115,9 @@ public:
 		for(int n = 0; n < 16 && !full(); ++n)
 			read_next_packet();
 						
-		graph_->set_color("seek", diagnostics::color(0.5f, 1.0f, 0.5f));	
-		graph_->set_color("buffer-count", diagnostics::color(0.2f, 0.8f, 1.0f));
-		graph_->set_color("buffer-size", diagnostics::color(0.2f, 0.4f, 1.0f));	
+		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
+		graph_->set_color("buffer-count", diagnostics::color(0.4f, 0.8f, 0.8f));
+		graph_->set_color("buffer-size", diagnostics::color(0.2f, 0.4f, 0.8f));	
 
 		thread_ = boost::thread([this]{run();});
 	}
