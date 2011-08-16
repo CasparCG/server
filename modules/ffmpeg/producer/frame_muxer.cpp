@@ -219,6 +219,9 @@ struct frame_muxer::implementation : boost::noncopyable
 			video_streams_.back().push(frame);
 			++video_frame_count_;
 		}
+
+		if(video_streams_.back().size() > 32)
+			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
 	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples)
@@ -234,6 +237,9 @@ struct frame_muxer::implementation : boost::noncopyable
 		audio_sample_count_ += audio_samples->size();
 
 		boost::range::push_back(audio_streams_.back(), *audio_samples);
+
+		if(audio_streams_.back().size() > 32*format_desc_.audio_samples_per_frame)
+			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
 	safe_ptr<basic_frame> pop()
