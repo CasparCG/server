@@ -98,8 +98,8 @@ public:
 		, last_frame_(core::basic_frame::empty())
 	{
 		graph_->add_guide("frame-time", 0.5);
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));		
+		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
+		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		
 		for(int n = 0; n < 32 && muxer_.empty(); ++n)
 			decode_frame(0);

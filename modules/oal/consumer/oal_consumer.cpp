@@ -61,7 +61,7 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("audio-consumer does not support buffer-depth lower than 3."));
 
 		graph_->add_guide("tick-time", 0.5);
-		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		is_running_ = true;
 		input_.set_capacity(core::consumer_buffer_depth()-2);
 	}

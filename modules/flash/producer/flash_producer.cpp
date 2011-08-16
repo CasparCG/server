@@ -155,9 +155,9 @@ public:
 		, height_(height)
 	{
 		graph_->add_guide("frame-time", 0.5f);
-		graph_->set_color("frame-time", diagnostics::color(0.8f, 0.3f, 0.4f));	
+		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->add_guide("tick-time", 0.5);
-		graph_->set_color("tick-time", diagnostics::color(0.1f, 0.7f, 0.8f));
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));		
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));			
 		
@@ -284,8 +284,8 @@ public:
 		fps_ = 0;
 
 		graph_ = diagnostics::create_graph([this]{return print();});
-		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
-		
+		graph_->set_color("buffer-count", diagnostics::color(0.4f, 0.8f, 0.8f));
+				
 		frame_buffer_.set_capacity(1);
 		
 		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);});
@@ -308,7 +308,7 @@ public:
 				std::rethrow_exception(exception_);
 		}
 
-		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
+		graph_->set_value("buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
 		auto frame = core::basic_frame::late();
 		if(frame_buffer_.try_pop(frame))
@@ -384,7 +384,7 @@ public:
 					frame_buffer_.push(frame);
 				}
 
-				graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
+				graph_->set_value("buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));
 
 				render();
