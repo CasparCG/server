@@ -74,6 +74,7 @@ struct ffmpeg_producer : public core::frame_producer
 	input											input_;	
 	video_decoder									video_decoder_;
 	audio_decoder									audio_decoder_;	
+	double											fps_;
 	frame_muxer										muxer_;
 
 	int												late_frames_;
@@ -81,21 +82,29 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool										loop_;
 
 	safe_ptr<core::basic_frame>						last_frame_;
+
+	const size_t									width_;
+	const size_t									height_;
+	bool											progressive_;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
 		: filename_(filename)
-		, graph_(diagnostics::create_graph(narrow(print())))
+		, graph_(diagnostics::create_graph([this]{return print();}))
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
 		, input_(graph_, filename_, loop, start, length)
 		, video_decoder_(input_.context(), frame_factory, filter)
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
-		, muxer_(validate_fps(video_decoder_.fps(), video_decoder_.nb_frames(), audio_decoder_.duration()), frame_factory)
+		, fps_(validate_fps(video_decoder_.fps(), video_decoder_.nb_frames(), audio_decoder_.duration()))
+		, muxer_(fps_, frame_factory)
 		, late_frames_(0)
 		, start_(start)
 		, loop_(loop)
 		, last_frame_(core::basic_frame::empty())
+		, width_(video_decoder_.width())
+		, height_(video_decoder_.height())
+		, progressive_(true)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -156,8 +165,11 @@ public:
 				return;
 
 			auto video_frames = video_decoder_.poll();
-			BOOST_FOREACH(auto& video, video_frames)		
+			BOOST_FOREACH(auto& video, video_frames)	
+			{
+				progressive_ &= video->interlaced_frame != 0;
 				muxer_.push(video, hints);	
+			}
 		},
 		[&]
 		{
@@ -197,7 +209,9 @@ public:
 				
 	virtual std::wstring print() const
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
+						  + boost::lexical_cast<std::wstring>(fps_) + (progressive_ ? L"p" : L"i") +L"|"
+						  + boost::lexical_cast<std::wstring>(width_) + L"x" + boost::lexical_cast<std::wstring>(height_) + L"]";
 	}
 };
 

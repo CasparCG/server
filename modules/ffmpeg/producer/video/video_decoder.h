@@ -47,6 +47,9 @@ public:
 	bool ready() const;
 	std::vector<std::shared_ptr<AVFrame>> poll();
 	
+	size_t width() const;
+	size_t height() const;
+
 	int64_t nb_frames() const;
 
 	double fps() const;
