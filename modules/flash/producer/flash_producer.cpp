@@ -286,16 +286,21 @@ public:
 		graph_ = diagnostics::create_graph([this]{return print();});
 		graph_->set_color("buffer-count", diagnostics::color(0.4f, 0.8f, 0.8f));
 				
-		frame_buffer_.set_capacity(1);
-		
-		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);});
-		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
-		render();			
+		frame_buffer_.set_capacity(1);		
+		initialize();
 	}
 
 	~flash_producer()
 	{
 		frame_buffer_.clear();
+	}
+
+	void initialize()
+	{		
+		context_.reset(nullptr);
+		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);});
+		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
+		render();	
 	}
 
 	// frame_producer
@@ -335,19 +340,31 @@ public:
 			try
 			{
 				context_->param(param);	
-
-				const auto& format_desc = frame_factory_->get_video_format_desc();
-				if(abs(context_->fps() - format_desc.fps) > 2.0 && abs(context_->fps()/2.0 - format_desc.fps) > 2.0)
-					CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
 			}
 			catch(...)
 			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				context_.reset(nullptr);
+				try
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					CASPAR_LOG(error) << print() << L" param failed. Trying to re-initialize flash and re-execute param.";
 
-				tbb::spin_mutex::scoped_lock lock(exception_mutex_);
-				exception_ = std::current_exception();
+					initialize();				
+					context_->param(param);	
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+
+					context_.reset(nullptr);
+
+					tbb::spin_mutex::scoped_lock lock(exception_mutex_);
+					exception_ = std::current_exception();
+				}
 			}
+
+			const auto& format_desc = frame_factory_->get_video_format_desc();
+			if(abs(context_->fps() - format_desc.fps) > 2.0 && abs(context_->fps()/2.0 - format_desc.fps) > 2.0)
+				CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
 		});
 	}
 		
