@@ -36,6 +36,7 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
+#include <winnt.h>
 #include <mmsystem.h>
 #include <atlbase.h>
 
@@ -143,11 +144,25 @@ void print_info()
 	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::get_swscale_version();
 	CASPAR_LOG(info) << L"OpenGL " << caspar::core::ogl_device::get_version() << "\n\n";
 }
- 
+
+LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
+{
+	CASPAR_LOG(fatal) << L"#######################\n UNHANDLED EXCEPTION: \n" 
+		<< L"Adress:" << info->ExceptionRecord->ExceptionAddress << L"\n"
+		<< L"Code:" << info->ExceptionRecord->ExceptionCode << L"\n"
+		<< L"Flag:" << info->ExceptionRecord->ExceptionFlags << L"\n"
+		<< L"Info:" << info->ExceptionRecord->ExceptionInformation << L"\n"
+		<< L"Continuing execution. \n#######################";
+
+    return EXCEPTION_CONTINUE_EXECUTION;
+}
+
 int main(int argc, wchar_t* argv[])
 {	
 	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
 	
+	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
+
 	CASPAR_LOG(info) << L"Type \"q\" to close application";
 
 	CASPAR_LOG(info) << L"THIS IS AN ALPHA BUILD";
