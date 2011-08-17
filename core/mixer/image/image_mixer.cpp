@@ -150,7 +150,7 @@ public:
 		if(layer.empty())
 			return;
 
-		std::shared_ptr<device_buffer> local_key_buffer;
+		std::pair<int, std::shared_ptr<device_buffer>> local_key_buffer;
 					
 		if(has_overlapping_items(layer, layer.front().transform.get_blend_mode()))
 		{
@@ -170,24 +170,40 @@ public:
 				draw_item(std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);		
 		}					
 
-		std::swap(local_key_buffer, layer_key_buffer);
+		CASPAR_ASSERT(local_key_buffer.first == 0 || local_key_buffer.first == core::video_mode:progressive);
+
+		std::swap(local_key_buffer.second, layer_key_buffer);
 	}
 
-	void draw_item(render_item&& item, const safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>& local_key_buffer, std::shared_ptr<device_buffer>& layer_key_buffer)
+	void draw_item(render_item&&									item, 
+				   const safe_ptr<device_buffer>&					draw_buffer, 
+				   std::pair<int, std::shared_ptr<device_buffer>>&	local_key_buffer, 
+				   std::shared_ptr<device_buffer>&					layer_key_buffer)
 	{											
 		if(item.transform.get_is_key())
 		{
-			if(!local_key_buffer)
-				local_key_buffer = create_device_buffer(1);
+			if(!local_key_buffer.second)
+			{
+				local_key_buffer.first = 0;
+				local_key_buffer.second = create_device_buffer(1);
+			}
 
 			item.transform.set_opacity(1.0);
 			item.transform.set_blend_mode(image_transform::blend_mode::normal);
-			kernel_.draw(channel_.ogl(), std::move(item), make_safe(local_key_buffer), nullptr, nullptr);
+
+			local_key_buffer.first |= item.mode;
+			kernel_.draw(channel_.ogl(), std::move(item), make_safe(local_key_buffer.second), nullptr, nullptr);
 		}
 		else
 		{
-			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);
-			local_key_buffer.reset();
+			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer.second, layer_key_buffer);
+			local_key_buffer.first ^= item.mode;
+			
+			if(local_key_buffer.first == 0)
+			{
+				local_key_buffer.first = 0;
+				local_key_buffer.second.reset();
+			}
 		}
 	}
 
