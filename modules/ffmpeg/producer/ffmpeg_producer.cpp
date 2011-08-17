@@ -167,7 +167,8 @@ public:
 			auto video_frames = video_decoder_.poll();
 			BOOST_FOREACH(auto& video, video_frames)	
 			{
-				progressive_ &= video->interlaced_frame != 0;
+				if(video)
+					progressive_ &= video->interlaced_frame != 0;
 				muxer_.push(video, hints);	
 			}
 		},
