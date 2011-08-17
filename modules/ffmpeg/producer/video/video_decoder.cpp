@@ -61,12 +61,18 @@ struct video_decoder::implementation : boost::noncopyable
 
 	double									fps_;
 	int64_t									nb_frames_;
+
+	size_t									width_;
+	size_t									height_;
+
 public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) 
 		: frame_factory_(frame_factory)
 		, filter_(filter)
 		, fps_(frame_factory_->get_video_format_desc().fps)
 		, nb_frames_(0)
+		, width_(0)
+		, height_(0)
 	{
 		try
 		{
@@ -90,6 +96,9 @@ public:
 			fps_ = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
 			if(double_rate(filter))
 				fps_ *= 2;
+
+			width_  = codec_context_->width;
+			height_ = codec_context_->height;
 		}
 		catch(...)
 		{
@@ -205,4 +214,6 @@ std::vector<std::shared_ptr<AVFrame>> video_decoder::poll(){return impl_->poll()
 bool video_decoder::ready() const{return impl_->ready();}
 double video_decoder::fps() const{return impl_->fps();}
 int64_t video_decoder::nb_frames() const{return impl_->nb_frames_;}
+size_t video_decoder::width() const{return impl_->width_;}
+size_t video_decoder::height() const{return impl_->height_;}
 }
