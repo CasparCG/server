@@ -158,7 +158,7 @@ public:
 			
 			BOOST_FOREACH(auto& item, layer)		
 			{
-				item.transform.set_blend_mode(image_transform::blend_mode::normal);
+				item.transform.set_blend_mode(image_transform::blend_mode::normal); // Disable blending, it will be used when merging back into render stack.
 				draw_item(std::move(item), local_draw_buffer, local_key_buffer, layer_key_buffer);		
 			}
 
@@ -188,6 +188,7 @@ public:
 				local_key_buffer.second = create_device_buffer(1);
 			}
 
+			// No transparancy for key
 			item.transform.set_opacity(1.0);
 			item.transform.set_blend_mode(image_transform::blend_mode::normal);
 
