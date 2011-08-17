@@ -85,7 +85,7 @@ struct ffmpeg_producer : public core::frame_producer
 
 	const size_t									width_;
 	const size_t									height_;
-	bool											progressive_;
+	bool											is_progressive_;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
@@ -104,7 +104,7 @@ public:
 		, last_frame_(core::basic_frame::empty())
 		, width_(video_decoder_.width())
 		, height_(video_decoder_.height())
-		, progressive_(true)
+		, is_progressive_(true)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -167,8 +167,7 @@ public:
 			auto video_frames = video_decoder_.poll();
 			BOOST_FOREACH(auto& video, video_frames)	
 			{
-				if(video)
-					progressive_ &= video->interlaced_frame != 0;
+				is_progressive_ = video ? video->interlaced_frame == 0 : is_progressive_;
 				muxer_.push(video, hints);	
 			}
 		},
@@ -211,7 +210,7 @@ public:
 	virtual std::wstring print() const
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
-						  + boost::lexical_cast<std::wstring>(fps_) + (progressive_ ? L"p" : L"i") +L"|"
+						  + boost::lexical_cast<std::wstring>(fps_) + (is_progressive_ ? L"p" : L"i") +L"|"
 						  + boost::lexical_cast<std::wstring>(width_) + L"x" + boost::lexical_cast<std::wstring>(height_) + L"]";
 	}
 };
