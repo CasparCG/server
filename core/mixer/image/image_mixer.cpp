@@ -188,7 +188,7 @@ public:
 				local_key_buffer.second = create_device_buffer(1);
 			}
 
-			// No transparancy for key
+			// No transparency for key
 			item.transform.set_opacity(1.0);
 			item.transform.set_blend_mode(image_transform::blend_mode::normal);
 
