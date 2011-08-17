@@ -170,7 +170,7 @@ public:
 				draw_item(std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);		
 		}					
 
-		CASPAR_ASSERT(local_key_buffer.first == 0 || local_key_buffer.first == core::video_mode:progressive);
+		CASPAR_ASSERT(local_key_buffer.first == 0 || local_key_buffer.first == core::video_mode::progressive);
 
 		std::swap(local_key_buffer.second, layer_key_buffer);
 	}
