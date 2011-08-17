@@ -55,10 +55,9 @@ struct video_mode
 { 
 	enum type
 	{
-		progressive = 0,
-		lower,
-		upper,
-		count
+		lower		= 1,
+		upper		= 2,
+		progressive = 3 // NOTE: progressive == lower | upper;
 	};
 
 	static std::wstring print(video_mode::type value)
