@@ -12,28 +12,16 @@
 
 namespace caspar {
 	
-double to_double(std::vector<char> bytes, bool readInReverse)
-{
-    if(bytes.size() != 8)
-		BOOST_THROW_EXCEPTION(caspar_exception());
-
-    if (readInReverse)
-		std::reverse(bytes.begin(), bytes.end());
-	
-	static_assert(sizeof(double) == 8, "");
-
-	double* tmp = (double*)bytes.data();
-	
-	double val = *tmp;
-    return val;
-}
-
 double next_double(std::fstream& fileStream)
 {
 	std::vector<char> bytes(8);
     fileStream.read(bytes.data(), bytes.size());
 	fileStream.seekg(1, std::ios::cur);
-    return to_double(bytes, true);
+
+	std::reverse(bytes.begin(), bytes.end());
+	double* tmp = (double*)bytes.data();
+
+    return *tmp;
 } 
 
 bool next_bool(std::fstream& fileStream)
