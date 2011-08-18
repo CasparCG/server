@@ -91,7 +91,10 @@ public:
 
 				buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
 
-				CASPAR_LOG(warning) << L" Invalid audio format. Resampling.";
+				CASPAR_LOG(warning) << L"Invalid audio format. Resampling." <<
+									   L" sample_rate:" << static_cast<int>(codec_context_->sample_rate)  <<
+									   L" audio_channels:" << static_cast<int>(codec_context_->channels)  <<
+									   L" sample_fmt:" << static_cast<int>(codec_context_->sample_fmt);
 
 				if(resampler)
 					resampler_.reset(resampler, audio_resample_close);
