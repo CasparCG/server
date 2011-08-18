@@ -80,6 +80,7 @@ struct ffmpeg_producer : public core::frame_producer
 	int												late_frames_;
 	const int										start_;
 	const bool										loop_;
+	const int64_t									length_;
 
 	safe_ptr<core::basic_frame>						last_frame_;
 
@@ -101,6 +102,7 @@ public:
 		, late_frames_(0)
 		, start_(start)
 		, loop_(loop)
+		, length_(length)
 		, last_frame_(core::basic_frame::empty())
 		, width_(video_decoder_.width())
 		, height_(video_decoder_.height())
@@ -197,7 +199,7 @@ public:
 			int64_t video_nb_frames = video_decoder_.nb_frames();
 			int64_t audio_nb_frames = audio_decoder_.nb_frames();
 
-			nb_frames = std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames));
+			nb_frames = std::min(length_, std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames)));
 		}
 
 		nb_frames = muxer_.calc_nb_frames(nb_frames);
