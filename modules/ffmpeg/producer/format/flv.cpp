@@ -8,6 +8,8 @@
 
 #include <iostream>
 
+#include <unordered_map>
+
 namespace caspar {
 	
 double to_double(std::vector<char> bytes, bool readInReverse)
@@ -26,45 +28,73 @@ double to_double(std::vector<char> bytes, bool readInReverse)
     return val;
 }
 
-double next_double(std::fstream& fileStream, int offset, int length)
+double next_double(std::fstream& fileStream)
 {
-    fileStream.seekg(offset, std::ios::cur);
-	std::vector<char> bytes(length);
-    fileStream.read(bytes.data(), length);
+	std::vector<char> bytes(8);
+    fileStream.read(bytes.data(), bytes.size());
     return to_double(bytes, true);
+} 
+
+bool next_bool(std::fstream& fileStream)
+{
+	std::vector<char> bytes(1);
+    fileStream.read(bytes.data(), bytes.size());
+    return bytes[0] != 0;
 }
 
-flv_meta_info read_flv_meta_info(const std::wstring& filename)
+std::map<std::string, std::string> read_flv_meta_info(const std::string& filename)
 {
-	if(!boost::filesystem::exists(filename))
-		BOOST_THROW_EXCEPTION(caspar_exception());
+	std::map<std::string, std::string>  values;
 
-	flv_meta_info meta_info;
-
-    std::fstream fileStream = std::fstream(narrow(filename), std::fstream::in);
-	fileStream.seekg(27, std::ios::beg);
+	if(boost::filesystem2::path(filename).extension() != ".flv")
+		return values;
 	
-    std::array<char, 10> bytes;
-    fileStream.read(bytes.data(), bytes.size());
+	try
+	{
+		if(!boost::filesystem2::exists(filename))
+			BOOST_THROW_EXCEPTION(caspar_exception());
+	
+		std::fstream fileStream = std::fstream(filename, std::fstream::in);
+		fileStream.seekg(27, std::ios::beg);
+	
+		std::vector<char> bytes(10);
+		fileStream.read(bytes.data(), bytes.size());
+		
+		if (std::string(bytes.begin(), bytes.end()) == "onMetaData")
+		{
+			fileStream.seekg(6, std::ios::cur);
 
-	auto on_meta_data = std::string(bytes.begin(), bytes.end());   
-	if (on_meta_data == "onMetaData")
-    {
-        //// 16 bytes past "onMetaData" is the data for "duration" 
-        meta_info.duration = next_double(fileStream, 16, 8);
-        //// 8 bytes past "duration" is the data for "width"
-        meta_info.width = next_double(fileStream, 8, 8);
-        //// 9 bytes past "width" is the data for "height"
-        meta_info.height = next_double(fileStream, 9, 8);
-        //// 16 bytes past "height" is the data for "videoDataRate"
-        meta_info.video_data_rate = next_double(fileStream, 16, 8);
-        //// 16 bytes past "videoDataRate" is the data for "audioDataRate"
-        meta_info.audio_data_rate = next_double(fileStream, 16, 8);
-        //// 12 bytes past "audioDataRate" is the data for "frameRate"
-        meta_info.frame_rate = next_double(fileStream, 12, 8);
-    }
-    
-    return meta_info;
+			for(int n = 0; n < 9; ++n)
+			{
+				char name_size = 0;
+				fileStream.read(&name_size, 1);
+
+				std::vector<char> name(name_size);
+				fileStream.read(name.data(), name.size());
+				auto name_str = std::string(name.begin(), name.end());
+
+				char data_type = 0;
+				fileStream.read(&data_type, 1);
+
+				switch(data_type)
+				{
+				case 0:
+					values[name_str] = boost::lexical_cast<std::string>(next_double(fileStream));
+					break;
+				case 1:
+					values[name_str] = boost::lexical_cast<std::string>(next_bool(fileStream));
+					break;
+				}
+				fileStream.seekg(1, std::ios::cur);
+			}
+		}
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+	}
+
+    return values;
 }
 
 }
