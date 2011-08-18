@@ -57,7 +57,7 @@ extern "C"
 
 namespace caspar {
 
-static const size_t MAX_BUFFER_COUNT = 32;
+static const size_t MAX_BUFFER_COUNT = 50;
 static const size_t MIN_BUFFER_COUNT = 4;
 static const size_t MAX_BUFFER_SIZE  = 32 * 1000000;
 	
