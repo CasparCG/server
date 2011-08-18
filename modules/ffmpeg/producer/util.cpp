@@ -2,6 +2,8 @@
 
 #include "util.h"
 
+#include "format/flv.h"
+
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
 
@@ -14,6 +16,9 @@
 
 #include <tbb/parallel_for.h>
 
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -22,6 +27,7 @@ extern "C"
 {
 	#include <libswscale/swscale.h>
 	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)
@@ -206,6 +212,51 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		//}
 
 		return write;
+	}
+}
+
+bool is_sane_frame_rate(AVRational time_base)
+{
+	return true;
+}
+
+//TODO: Not finished
+void fix_meta_data(AVFormatContext& context)
+{
+	auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+	auto audio_index = av_find_best_stream(&context, AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0);
+
+	if(video_index > -1)
+	{
+		auto& video_stream  = *context.streams[video_index];
+
+		if(video_stream.time_base.num == 1)
+			video_stream.time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(video_stream.time_base.den)))-1));	
+					
+		if(boost::filesystem2::path(context.filename).extension() == ".flv")
+		{
+			try
+			{
+				//auto meta = read_flv_meta_info(context.filename);
+				//fps_ = boost::lexical_cast<double>(meta["framerate"]);
+				//video_stream.nb_frames = static_cast<int64_t>(boost::lexical_cast<double>(meta["duration"])*fps_);
+			}
+			catch(...){}
+		}
+		else
+		{
+			if(video_stream.nb_frames == 0)
+				video_stream.nb_frames = video_stream.duration;
+		}
+
+		if(!is_sane_frame_rate(video_stream.time_base))
+		{
+			if(audio_index > -1)
+			{
+				video_stream.time_base.num = video_stream.nb_frames;
+				video_stream.time_base.den = context.streams[audio_index]->duration / context.streams[audio_index]->codec->sample_rate;
+			}
+		}
 	}
 }
 
