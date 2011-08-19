@@ -21,9 +21,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="shell.rc" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="source">
       <UniqueIdentifier>{39e46848-dfec-441d-b0c0-f131380cdc6e}</UniqueIdentifier>
     </Filter>

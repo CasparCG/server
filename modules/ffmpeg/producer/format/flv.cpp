@@ -12,40 +12,6 @@
 
 namespace caspar {
 	
-double next_double(std::fstream& fileStream)
-{
-	std::vector<char> bytes(8);
-
-	auto tmp2 = fileStream.tellg();
-	tmp2;
-
-    fileStream.read(bytes.data(), 8);
-	
-	auto tmp3 = fileStream.gcount();
-	tmp3;
-
-	tmp2 = fileStream.tellg();
-	tmp2;
-
-	fileStream.seekg(1, std::ios::cur);
-	
-	tmp2 = fileStream.tellg();
-	tmp2;
-
-	std::reverse(bytes.begin(), bytes.end());
-	double* tmp = (double*)bytes.data();
-	
-    return *tmp;
-} 
-
-bool next_bool(std::fstream& fileStream)
-{
-	std::vector<char> bytes(1);
-    fileStream.read(bytes.data(), bytes.size());
-	fileStream.seekg(1, std::ios::cur);
-    return bytes[0] != 0;
-}
-
 std::map<std::string, std::string> read_flv_meta_info(const std::string& filename)
 {
 	std::map<std::string, std::string>  values;
@@ -84,7 +50,7 @@ std::map<std::string, std::string> read_flv_meta_info(const std::string& filenam
 				char data_type = *ptr++;
 				switch(data_type)
 				{
-				case 0:
+				case 0: // double
 					{
 						std::reverse(ptr, ptr+8);
 						values[name] = boost::lexical_cast<std::string>(*(double*)(ptr));
@@ -92,7 +58,7 @@ std::map<std::string, std::string> read_flv_meta_info(const std::string& filenam
 
 						break;
 					}
-				case 1:
+				case 1: // bool
 					{
 						values[name] = boost::lexical_cast<std::string>(*ptr != 0);
 						ptr += 2;

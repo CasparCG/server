@@ -279,7 +279,7 @@ public:
 		fps_ = 0;
 
 		graph_ = diagnostics::create_graph([this]{return print();});
-		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
+		graph_->set_color("output-buffer-count", diagnostics::color(1.0f, 1.0f, 0.0f));
 		
 		frame_buffer_.set_capacity(frame_factory_->get_video_format_desc().fps > 30.0 ? 2 : 1);
 
@@ -295,7 +295,7 @@ public:
 		
 	virtual safe_ptr<core::basic_frame> receive(int)
 	{				
-		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
+		graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
 		auto frame = core::basic_frame::late();
 		if(frame_buffer_.try_pop(frame))
@@ -376,7 +376,7 @@ public:
 					frame_buffer_.push(frame);
 				}
 
-				graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
+				graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));
 
 				render(renderer);
