@@ -155,16 +155,19 @@ public:
 		if(has_overlapping_items(layer, layer.front().transform.get_blend_mode()))
 		{
 			auto local_draw_buffer = create_device_buffer(4);	
-			
-			// First item should just be "copied" to empty framebuffer.
-			auto item = layer.begin();
-			item->transform.set_blend_mode(image_transform::blend_mode::replace);
-			draw_item(std::move(*item++), local_draw_buffer, local_key_buffer, layer_key_buffer);		
 
-			for(; item != layer.end(); ++item)
+			int mode = 0;
+			BOOST_FOREACH(auto& item, layer)
 			{
-				item->transform.set_blend_mode(image_transform::blend_mode::normal); // Disable blending, it will be used when merging back into render stack.
-				draw_item(std::move(*item), local_draw_buffer, local_key_buffer, layer_key_buffer);		
+				if(mode & item.mode)
+					item.transform.set_blend_mode(image_transform::blend_mode::normal); // Disable blending, it will be used when merging back into render stack.
+				else
+				{
+					item.transform.set_blend_mode(image_transform::blend_mode::replace); // Target field is empty, no blending
+					mode |= item.mode;
+				}
+
+				draw_item(std::move(item), local_draw_buffer, local_key_buffer, layer_key_buffer);		
 			}
 
 			kernel_.draw(channel_.ogl(), create_render_item(local_draw_buffer, layer.front().transform.get_blend_mode()), draw_buffer, nullptr, nullptr);
