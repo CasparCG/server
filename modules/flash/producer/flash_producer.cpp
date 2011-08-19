@@ -199,7 +199,7 @@ public:
 	void param(const std::wstring& param)
 	{		
 		if(!ax_->FlashCall(param))
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
+			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
 		graph_->add_tag("param");
 	}
 	
