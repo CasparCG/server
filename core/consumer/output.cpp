@@ -130,24 +130,15 @@ public:
 		auto it = consumers_.begin();
 		while(it != consumers_.end())
 		{
-			try
-			{
-				auto consumer = it->second;
+			auto consumer = it->second;
 
-				if(consumer->get_video_format_desc() != channel_.get_format_desc())
-					consumer->initialize(channel_.get_format_desc());
+			if(consumer->get_video_format_desc() != channel_.get_format_desc())
+				consumer->initialize(channel_.get_format_desc());
 
-				if(consumer->send(consumer->key_only() ? key : fill))
-					++it;
-				else
-					consumers_.erase(it++);
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(error) << print() << L" " << it->second->print() << L" Removed.";
+			if(consumer->send(consumer->key_only() ? key : fill))
+				++it;
+			else
 				consumers_.erase(it++);
-			}
 		}
 	}
 
