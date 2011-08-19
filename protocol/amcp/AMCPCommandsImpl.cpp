@@ -1186,7 +1186,24 @@ bool DataCommand::DoExecuteList()
 {
 	std::wstringstream replyString;
 	replyString << TEXT("200 DATA LIST OK\r\n");
-	replyString << ListMedia();
+
+	for (boost::filesystem::wrecursive_directory_iterator itr(env::data_folder()), end; itr != end; ++itr)
+	{			
+		if(boost::filesystem::is_regular_file(itr->path()))
+		{
+			if(!boost::iequals(itr->path().extension(), L".ftd"))
+				continue;
+			
+			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::data_folder().size()-1, itr->path().file_string().size()));
+			
+			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			if(str[0] == '\\' || str[0] == '/')
+				str = std::wstring(str.begin() + 1, str.end());
+
+			replyString << str << TEXT("\r\n"); 	
+		}
+	}
+	
 	replyString << TEXT("\r\n");
 
 	SetReplyString(boost::to_upper_copy(replyString.str()));
