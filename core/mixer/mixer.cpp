@@ -100,6 +100,8 @@ struct mixer::implementation : boost::noncopyable
 	boost::fusion::map<boost::fusion::pair<core::image_transform, image_transforms>,
 					boost::fusion::pair<core::audio_transform, audio_transforms>> transforms_;
 	
+	std::unordered_map<int, blend_mode::type> blend_modes_;
+
 	std::queue<std::pair<boost::unique_future<safe_ptr<host_buffer>>, std::vector<int16_t>>> buffer_;
 	
 	const size_t buffer_size_;
@@ -184,6 +186,11 @@ public:
 		});
 	}
 		
+	void set_blend_mode(int index, blend_mode::type value)
+	{
+		blend_modes_[index] = value;
+	}
+
 	std::wstring print() const
 	{
 		return L"mixer";
@@ -197,7 +204,8 @@ private:
 		
 		BOOST_FOREACH(auto& frame, frames)
 		{
-			image_mixer_.begin_layer();
+			auto blend_it = blend_modes_.find(frame.first);
+			image_mixer_.begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
 
 			auto frame1 = make_safe<core::basic_frame>(frame.second);
 			frame1->get_image_transform() = image_transforms[frame.first].fetch_and_tick(1);
@@ -252,5 +260,5 @@ void mixer::set_image_transform(int index, const core::image_transform& transfor
 void mixer::set_audio_transform(int index, const core::audio_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::audio_transform>(index, transform, mix_duration, tween);}
 void mixer::apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::image_transform>(index, transform, mix_duration, tween);}
 void mixer::apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(index, transform, mix_duration, tween);}
-
+void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
 }}

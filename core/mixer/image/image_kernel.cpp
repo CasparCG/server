@@ -59,7 +59,7 @@ GLubyte lower_pattern[] = {
 struct image_kernel::implementation : boost::noncopyable
 {	
 	std::shared_ptr<shader>	shader_;
-	bool					advanced_blend_modes_;
+	bool					blend_modes_;
 							
 	void draw(ogl_device&									ogl,
 			  render_item&&									item,
@@ -97,7 +97,7 @@ struct image_kernel::implementation : boost::noncopyable
 		// Setup shader
 
 		if(!shader_)
-			shader_ = get_image_shader(ogl, advanced_blend_modes_);
+			shader_ = get_image_shader(ogl, blend_modes_);
 						
 		ogl.use(*shader_);
 
@@ -111,30 +111,28 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("has_local_key",	local_key);
 		shader_->set("has_layer_key",	layer_key);
 		shader_->set("pixel_format",	item.pix_desc.pix_fmt);	
-		shader_->set("opacity",			item.transform.get_opacity());	
+		shader_->set("opacity",			item.transform.get_is_key() ? 1.0 : item.transform.get_opacity());	
 		
 		// Setup blend_func
 		
-		if(advanced_blend_modes_)
+		if(item.transform.get_is_key())
+			item.blend_mode = blend_mode::normal;
+
+		if(blend_modes_)
 		{
 			background->bind(6);
 
 			shader_->set("background",	texture_id::background);
-			shader_->set("blend_mode",	item.transform.get_is_key() ? core::image_transform::blend_mode::normal : item.transform.get_blend_mode());
+			shader_->set("blend_mode",	item.blend_mode);
 		}
 		else
 		{
-			switch(item.transform.get_blend_mode())
+			switch(item.blend_mode)
 			{
-			case image_transform::blend_mode::add:			
-				ogl.blend_func_separate(GL_ONE, GL_ONE, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-				break;
-			case image_transform::blend_mode::replace:			
+			case blend_mode::replace:			
 				ogl.blend_func_separate(GL_ONE, GL_ZERO, GL_ONE, GL_ONE);
 				break;
-			case image_transform::blend_mode::screen:
-				ogl.blend_func_separate(GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-			case image_transform::blend_mode::normal:
+			case blend_mode::normal:
 			default:
 				ogl.blend_func_separate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 				break;
@@ -230,7 +228,7 @@ struct image_kernel::implementation : boost::noncopyable
 		item.textures.clear();
 		ogl.yield(); // Return resources to pool as early as possible.
 
-		if(advanced_blend_modes_)
+		if(blend_modes_)
 		{
 			// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
 			// This allows us to use framebuffer (background) both as source and target while blending.
@@ -240,7 +238,11 @@ struct image_kernel::implementation : boost::noncopyable
 };
 
 image_kernel::image_kernel() : impl_(new implementation()){}
-void image_kernel::draw(ogl_device& ogl, render_item&& item, const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key, const std::shared_ptr<device_buffer>& layer_key)
+void image_kernel::draw(ogl_device& ogl, 
+						render_item&& item, 
+						const safe_ptr<device_buffer>& background,
+						const std::shared_ptr<device_buffer>& local_key, 
+						const std::shared_ptr<device_buffer>& layer_key)
 {
 	impl_->draw(ogl, std::move(item), background, local_key, layer_key);
 }
