@@ -197,66 +197,8 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 
 			write->commit(n);
 		}
-
-		//for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
-		//{
-		//	auto plane            = desc.planes[n];
-		//	auto result           = write->image_data(n).begin();
-		//	auto decoded          = decoded_frame->data[n];
-		//	auto decoded_linesize = decoded_frame->linesize[n];
-		//		
-		//	for(size_t y = 0; y < static_cast<int>(desc.planes[n].height); ++y)
-		//		fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-
-		//	write->commit(n);
-		//}
-
+		
 		return write;
-	}
-}
-
-bool is_sane_frame_rate(AVRational time_base)
-{
-	return true;
-}
-
-//TODO: Not finished
-void fix_meta_data(AVFormatContext& context)
-{
-	auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-	auto audio_index = av_find_best_stream(&context, AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0);
-
-	if(video_index > -1)
-	{
-		auto& video_stream  = *context.streams[video_index];
-
-		if(video_stream.time_base.num == 1)
-			video_stream.time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(video_stream.time_base.den)))-1));	
-					
-		if(boost::filesystem2::path(context.filename).extension() == ".flv")
-		{
-			try
-			{
-				//auto meta = read_flv_meta_info(context.filename);
-				//fps_ = boost::lexical_cast<double>(meta["framerate"]);
-				//video_stream.nb_frames = static_cast<int64_t>(boost::lexical_cast<double>(meta["duration"])*fps_);
-			}
-			catch(...){}
-		}
-		else
-		{
-			if(video_stream.nb_frames == 0)
-				video_stream.nb_frames = video_stream.duration;
-		}
-
-		if(!is_sane_frame_rate(video_stream.time_base))
-		{
-			if(audio_index > -1)
-			{
-				video_stream.time_base.num = video_stream.nb_frames;
-				video_stream.time_base.den = context.streams[audio_index]->duration / context.streams[audio_index]->codec->sample_rate;
-			}
-		}
 	}
 }
 
