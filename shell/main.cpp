@@ -147,12 +147,16 @@ void print_info()
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 {
-	CASPAR_LOG(fatal) << L"#######################\n UNHANDLED EXCEPTION: \n" 
-		<< L"Adress:" << info->ExceptionRecord->ExceptionAddress << L"\n"
-		<< L"Code:" << info->ExceptionRecord->ExceptionCode << L"\n"
-		<< L"Flag:" << info->ExceptionRecord->ExceptionFlags << L"\n"
-		<< L"Info:" << info->ExceptionRecord->ExceptionInformation << L"\n"
-		<< L"Continuing execution. \n#######################";
+	try
+	{
+		CASPAR_LOG(fatal) << L"#######################\n UNHANDLED EXCEPTION: \n" 
+			<< L"Adress:" << info->ExceptionRecord->ExceptionAddress << L"\n"
+			<< L"Code:" << info->ExceptionRecord->ExceptionCode << L"\n"
+			<< L"Flag:" << info->ExceptionRecord->ExceptionFlags << L"\n"
+			<< L"Info:" << info->ExceptionRecord->ExceptionInformation << L"\n"
+			<< L"Continuing execution. \n#######################";
+	}
+	catch(...){}
 
     return EXCEPTION_CONTINUE_EXECUTION;
 }
