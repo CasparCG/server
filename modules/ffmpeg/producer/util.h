@@ -31,4 +31,6 @@ core::pixel_format_desc		get_pixel_format_desc(PixelFormat pix_fmt, size_t width
 int							make_alpha_format(int format); // NOTE: Be careful about CASPAR_PIX_FMT_LUMA, change it to PIX_FMT_GRAY8 if you want to use the frame inside some ffmpeg function.
 safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints);
 
+void fix_meta_data(AVFormatContext& context);
+
 }
