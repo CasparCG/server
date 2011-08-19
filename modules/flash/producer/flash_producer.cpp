@@ -281,7 +281,7 @@ public:
 		graph_ = diagnostics::create_graph([this]{return print();});
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		
-		frame_buffer_.set_capacity(1);
+		frame_buffer_.set_capacity(frame_factory_->get_video_format_desc().fps > 30.0 ? 2 : 1);
 
 		initialize();				
 	}
