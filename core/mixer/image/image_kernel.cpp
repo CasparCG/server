@@ -121,6 +121,23 @@ struct image_kernel::implementation : boost::noncopyable
 			shader_->set("background",	texture_id::background);
 			shader_->set("blend_mode",	item.transform.get_is_key() ? core::image_transform::blend_mode::normal : item.transform.get_blend_mode());
 		}
+		else
+		{
+			switch(item.transform.get_blend_mode())
+			{
+			case image_transform::blend_mode::add:			
+				ogl.blend_func_separate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+				break;
+			case image_transform::blend_mode::replace:			
+				ogl.blend_func_separate(GL_ONE, GL_ZERO, GL_ONE, GL_ONE);
+				break;
+			case image_transform::blend_mode::screen:
+				ogl.blend_func_separate(GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE);
+			default:
+				ogl.blend_func_separate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
+				break;
+			}
+		}
 
 		// Setup image-adjustements
 
