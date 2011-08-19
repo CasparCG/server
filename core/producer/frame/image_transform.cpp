@@ -30,7 +30,6 @@ namespace caspar { namespace core {
 		
 image_transform::image_transform() 
 	: opacity_(1.0)
-	, gain_(1.0)
 	, brightness_(1.0)
 	, contrast_(1.0)
 	, saturation_(1.0)
@@ -51,16 +50,6 @@ void image_transform::set_opacity(double value)
 double image_transform::get_opacity() const
 {
 	return opacity_;
-}
-
-void image_transform::set_gain(double value)
-{
-	gain_ = std::max(0.0, value);
-}
-
-double image_transform::get_gain() const
-{
-	return gain_;
 }
 
 void image_transform::set_brightness(double value)
@@ -162,7 +151,6 @@ image_transform& image_transform::operator*=(const image_transform &other)
 {
 	opacity_				*= other.opacity_;	
 	blend_mode_				 = std::max(blend_mode_, other.blend_mode_);
-	gain_					*= other.gain_;
 	brightness_				*= other.brightness_;
 	contrast_				*= other.contrast_;
 	saturation_				*= other.saturation_;
@@ -205,7 +193,6 @@ image_transform tween(double time, const image_transform& source, const image_tr
 	image_transform result;	
 	result.set_blend_mode		(std::max(source.get_blend_mode(), dest.get_blend_mode()));
 	result.set_is_key			(source.get_is_key() | dest.get_is_key());
-	result.set_gain				(do_tween(time, source.get_gain(), dest.get_gain(), duration, tweener));
 	result.set_brightness		(do_tween(time, source.get_brightness(), dest.get_brightness(), duration, tweener));
 	result.set_contrast			(do_tween(time, source.get_contrast(), dest.get_contrast(), duration, tweener));
 	result.set_saturation		(do_tween(time, source.get_saturation(), dest.get_saturation(), duration, tweener));

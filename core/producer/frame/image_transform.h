@@ -92,10 +92,7 @@ public:
 
 	void set_opacity(double value);
 	double get_opacity() const;
-
-	void set_gain(double value);
-	double get_gain() const;
-
+	
 	void set_brightness(double value);
 	double get_brightness() const;
 
