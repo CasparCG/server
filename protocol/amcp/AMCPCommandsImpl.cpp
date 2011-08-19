@@ -1008,6 +1008,7 @@ bool CGCommand::DoExecuteNext()
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
+
 		int layer = _ttoi(_parameters[1].c_str());
 		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->next(layer);
 	}
@@ -1030,6 +1031,7 @@ bool CGCommand::DoExecuteRemove()
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
+
 		int layer = _ttoi(_parameters[1].c_str());
 		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->remove(layer);
 	}
@@ -1052,18 +1054,40 @@ bool CGCommand::DoExecuteClear()
 
 bool CGCommand::DoExecuteUpdate() 
 {
-	if(_parameters.size() > 2) 
+	try
 	{
-		if(!ValidateLayer(_parameters[1]))
+		if(!ValidateLayer(_parameters.at(1)))
 		{
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
-		int layer = _ttoi(_parameters[1].c_str());
-		//TODO: Implement indirect data loading from file. Same as in Add
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->update(layer, _parameters2[2]);
+						
+		std::wstring dataString = _parameters2.at(2);				
+		if(dataString.at(0) != TEXT('<'))
+		{
+			//The data is not an XML-string, it must be a filename
+			std::wstring filename = env::data_folder();
+			filename.append(dataString);
+			filename.append(TEXT(".ftd"));
+
+			//open file
+			std::wifstream datafile(filename.c_str());
+			if(datafile) 
+			{
+				std::wstringstream data;
+				//read all data
+				data << datafile.rdbuf();
+				datafile.close();
+
+				//extract data to _parameters
+				dataString = data.str();
+			}
+		}		
+
+		int layer = _ttoi(_parameters.at(1).c_str());
+		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->update(layer, dataString);
 	}
-	else 
+	catch(...)
 	{
 		SetReplyString(TEXT("402 CG ERROR\r\n"));
 		return true;
