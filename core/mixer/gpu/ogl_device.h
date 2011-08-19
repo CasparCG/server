@@ -65,6 +65,7 @@ class ogl_device : boost::noncopyable
 	GLint							 attached_texture_;
 	GLint							 active_shader_;
 	std::array<GLint, 16>			 binded_textures_;
+	std::array<GLint, 4>			 blend_func_;
 
 	std::unique_ptr<sf::Context> context_;
 	
@@ -91,6 +92,8 @@ public:
 
 	void begin_read(host_buffer& dest, device_buffer& source);
 	void begin_read(device_buffer& dest, host_buffer& source);
+
+	void blend_func_separate(int c1, int c2, int a1, int a2);
 	
 	void use(shader& shader);
 

@@ -44,6 +44,7 @@ ogl_device::ogl_device()
 	std::fill(binded_textures_.begin(), binded_textures_.end(), 0);
 	std::fill(viewport_.begin(), viewport_.end(), 0);
 	std::fill(scissor_.begin(), scissor_.end(), 0);
+	std::fill(blend_func_.begin(), blend_func_.end(), 0);
 	
 	invoke([=]
 	{
@@ -332,6 +333,17 @@ void ogl_device::use(shader& shader)
 	{		
 		GL(glUseProgramObjectARB(shader.id()));	
 		active_shader_ = shader.id();
+	}
+}
+
+void ogl_device::blend_func_separate(int c1, int c2, int a1, int a2)
+{
+	std::array<int, 4> func = {c1, c2, a1, a2};
+
+	if(blend_func_ != func)
+	{
+		blend_func_ = func;
+		glBlendFuncSeparate(c1, c2, a1, a2);
 	}
 }
 
