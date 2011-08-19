@@ -293,7 +293,7 @@ public:
 
 			std::shared_ptr<core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);					
-			schedule_next_video(make_safe(frame));			
+			schedule_next_video(make_safe(frame));	
 		}
 		catch(...)
 		{
@@ -383,23 +383,45 @@ public:
 
 struct decklink_consumer_proxy : public core::frame_consumer
 {
-	const configuration config_;
-
-	com_context<decklink_consumer> context_;
+	const configuration				config_;
+	com_context<decklink_consumer>	context_;
+	core::video_format_desc			format_desc_;
+	size_t							fail_count_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
 		: config_(config)
-		, context_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]"){}
+		, context_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
+		, fail_count_(0)
+	{
+	}
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		context_.reset([&]{return new decklink_consumer(config_, format_desc);});
+		format_desc_ = format_desc;
+		context_.reset([&]{return new decklink_consumer(config_, format_desc_);});
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
-		context_->send(frame);
+		if(!context_)
+			context_.reset([&]{return new decklink_consumer(config_, format_desc_);});
+
+		try
+		{
+			context_->send(frame);
+			fail_count_ = 0;
+		}
+		catch(...)
+		{
+			context_.reset();
+
+			if(fail_count_++ > 3)
+				return false;  // Outside didn't handle exception properly, just give up.
+			
+			throw;
+		}
+
 		return true;
 	}
 	
@@ -415,7 +437,7 @@ public:
 		
 	virtual const core::video_format_desc& get_video_format_desc() const
 	{
-		return context_->get_video_format_desc();
+		return format_desc_;
 	}
 };	
 
