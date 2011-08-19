@@ -65,7 +65,7 @@ public:
 		diag_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 		diag_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		diag_->set_color("output-time", diagnostics::color(1.0f, 0.5f, 0.0f));
-		diag_->set_color("mix-time", diagnostics::color(1.0f, 1.0f, 0.1f));
+		diag_->set_color("mix-time", diagnostics::color(1.0f, 1.0f, 0.9f));
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 		context_.execution().begin_invoke([this]{tick();});

@@ -310,22 +310,44 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	const size_t						device_index_;
 	const bool							embedded_audio_;
 	const bool							key_only_;
+	core::video_format_desc				format_desc_;
+	size_t								fail_count_;
 public:
 
 	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
 		: device_index_(device_index)
 		, embedded_audio_(embedded_audio)
-		, key_only_(key_only){}
+		, key_only_(key_only)
+		, fail_count_(0)
+	{
+	}
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		consumer_.reset();
+		format_desc_ = format_desc;
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
-		consumer_->send(frame);
+		if(!consumer_)
+			consumer_.reset(new bluefish_consumer(format_desc_, device_index_, embedded_audio_));
+
+		try
+		{
+			consumer_->send(frame);
+			fail_count_ = 0;
+		}
+		catch(...)
+		{
+			consumer_.reset();
+
+			if(fail_count_++ > 3)
+				return false;  // Outside didn't handle exception properly, just give up.
+
+			throw;
+		}
+
 		return true;
 	}
 
