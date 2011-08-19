@@ -25,4 +25,9 @@
       <UniqueIdentifier>{39e46848-dfec-441d-b0c0-f131380cdc6e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="shell.rc">
+      <Filter>source</Filter>
+    </ResourceCompile>
+  </ItemGroup>
 </Project>

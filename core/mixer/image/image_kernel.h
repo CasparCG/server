@@ -41,21 +41,6 @@ struct render_item
 	video_mode::type						mode;
 	const void*								tag;
 	blend_mode::type						blend_mode;
-	
-	render_item(const pixel_format_desc& pix_desc, const std::vector<safe_ptr<device_buffer>>& textures, const image_transform& transform, video_mode::type mode, const void* tag, blend_mode::type blend_mode)
-		: pix_desc(pix_desc)
-		, textures(textures)
-		, transform(transform)
-		, mode(mode)
-		, tag(tag)
-		, blend_mode(blend_mode){}
-	render_item(render_item&& other)
-		: pix_desc(other.pix_desc)
-		, textures(std::move(other.textures))
-		, transform(other.transform)
-		, mode(other.mode)
-		, tag(other.tag)
-		, blend_mode(blend_mode){}
 };
 
 bool operator==(const render_item& lhs, const render_item& rhs);

@@ -57,8 +57,8 @@ struct image_mixer::implementation : boost::noncopyable
 	video_channel_context&					channel_;
 
 	std::vector<image_transform>			transform_stack_;
-	std::vector<video_mode::type>			mode_stack_;
-	std::stack<blend_mode::type>			blend_stack_;
+	std::vector<video_mode::type>			video_mode_stack_;
+	std::stack<blend_mode::type>			blend_mode_stack_;
 
 	std::deque<std::deque<render_item>>		layers_; // layer/stream/items
 	
@@ -69,7 +69,7 @@ public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
 		, transform_stack_(1)
-		, mode_stack_(1, video_mode::progressive)
+		, video_mode_stack_(1, video_mode::progressive)
 	{
 	}
 
@@ -81,7 +81,7 @@ public:
 	void begin(core::basic_frame& frame)
 	{
 		transform_stack_.push_back(transform_stack_.back()*frame.get_image_transform());
-		mode_stack_.push_back(frame.get_mode() == video_mode::progressive ? mode_stack_.back() : frame.get_mode());
+		video_mode_stack_.push_back(frame.get_mode() == video_mode::progressive ? video_mode_stack_.back() : frame.get_mode());
 	}
 		
 	void visit(core::write_frame& frame)
@@ -89,13 +89,18 @@ public:
 		CASPAR_ASSERT(!layers_.empty());
 
 		// Check if frame has been discarded by interlacing
-		if(boost::range::find(mode_stack_, video_mode::upper) != mode_stack_.end() && boost::range::find(mode_stack_, video_mode::lower) != mode_stack_.end())
+		if(boost::range::find(video_mode_stack_, video_mode::upper) != video_mode_stack_.end() && boost::range::find(video_mode_stack_, video_mode::lower) != video_mode_stack_.end())
 			return;
 		
-		core::render_item item(frame.get_pixel_format_desc(), frame.get_textures(), transform_stack_.back(), mode_stack_.back(), frame.tag(), blend_stack_.top());	
+		core::render_item item;
+		item.pix_desc		= frame.get_pixel_format_desc();
+		item.textures		= frame.get_textures();
+		item.transform		= transform_stack_.back();
+		item.mode			= video_mode_stack_.back();
+		item.tag			= frame.tag();
+		item.blend_mode		= blend_mode_stack_.top();	
 
 		auto& layer = layers_.back();
-
 		if(boost::range::find(layer, item) == layer.end())
 			layer.push_back(item);
 	}
@@ -103,18 +108,18 @@ public:
 	void end()
 	{
 		transform_stack_.pop_back();
-		mode_stack_.pop_back();
+		video_mode_stack_.pop_back();
 	}
 
 	void begin_layer(blend_mode::type blend_mode)
 	{
-		blend_stack_.push(blend_mode);
+		blend_mode_stack_.push(blend_mode);
 		layers_.push_back(layer());
 	}
 
 	void end_layer()
 	{
-		blend_stack_.pop();
+		blend_mode_stack_.pop();
 	}
 	
 	boost::unique_future<safe_ptr<host_buffer>> render()
@@ -158,7 +163,6 @@ public:
 		if(has_overlapping_items(layer, layer.front().blend_mode))
 		{
 			auto local_draw_buffer = create_device_buffer(4);	
-
 			auto local_blend_mode = layer.front().blend_mode;
 
 			int fields = 0;
@@ -174,8 +178,14 @@ public:
 
 				draw_item(std::move(item), local_draw_buffer, local_key_buffer, layer_key_buffer);		
 			}
+			
+			render_item item;
+			item.pix_desc.pix_fmt = pixel_format::bgra;
+			item.pix_desc.planes.push_back(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
+			item.textures.push_back(local_draw_buffer);
+			item.blend_mode = local_blend_mode;
 
-			kernel_.draw(channel_.ogl(), create_render_item(local_draw_buffer, local_blend_mode), draw_buffer, nullptr, nullptr);
+			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, nullptr, nullptr);
 		}
 		else // fast path
 		{
@@ -201,15 +211,15 @@ public:
 				local_key_buffer.second = create_device_buffer(1);
 			}
 			
-			local_key_buffer.first |= item.mode;
+			local_key_buffer.first |= item.mode; // Add field to flag.
 			kernel_.draw(channel_.ogl(), std::move(item), make_safe(local_key_buffer.second), nullptr, nullptr);
 		}
 		else
 		{
 			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer.second, layer_key_buffer);
-			local_key_buffer.first ^= item.mode;
+			local_key_buffer.first ^= item.mode; // Remove field from flag.
 			
-			if(local_key_buffer.first == 0)
+			if(local_key_buffer.first == 0) // If all fields from key has been used, reset it
 			{
 				local_key_buffer.first = 0;
 				local_key_buffer.second.reset();
@@ -251,20 +261,6 @@ public:
 		//});
 	}			
 		
-	render_item create_render_item(const safe_ptr<device_buffer>& buffer, blend_mode::type blend_mode)
-	{
-		CASPAR_ASSERT(buffer->stride() == 4 && "Only used for bgra textures");
-
-		pixel_format_desc desc;
-		desc.pix_fmt = pixel_format::bgra;
-		desc.planes.push_back(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
-
-		std::vector<safe_ptr<device_buffer>> textures;
-		textures.push_back(buffer);
-				
-		return render_item(desc, std::move(textures), image_transform(), video_mode::progressive, nullptr, blend_mode);		 
-	}
-
 	safe_ptr<device_buffer> create_device_buffer(size_t stride)
 	{
 		auto buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, stride);
