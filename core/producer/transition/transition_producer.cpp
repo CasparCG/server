@@ -65,7 +65,7 @@ struct transition_producer : public frame_producer
 
 	virtual safe_ptr<basic_frame> receive(int hints)
 	{
-		if(current_frame_++ >= info_.duration)
+		if(++current_frame_ >= info_.duration)
 			return basic_frame::eof();
 		
 		auto dest = basic_frame::empty();
@@ -129,15 +129,15 @@ struct transition_producer : public frame_producer
 		d_frame1->get_audio_transform().set_has_audio(false);
 		d_frame2->get_audio_transform().set_gain(delta2);
 
-		if(info_.type == transition::mix)
-		{
-			d_frame1->get_image_transform().set_opacity(delta1);	
-			d_frame2->get_image_transform().set_opacity(delta2);
+		//if(info_.type == transition::mix)
+		//{
+		//	d_frame1->get_image_transform().set_opacity(delta1);	
+		//	d_frame2->get_image_transform().set_opacity(delta2);
 
-			s_frame1->get_image_transform().set_opacity(1.0-delta1);	
-			s_frame2->get_image_transform().set_opacity(1.0-delta2);		
-		}
-		else if(info_.type == transition::slide)
+		//	s_frame1->get_image_transform().set_opacity(1.0-delta1);	
+		//	s_frame2->get_image_transform().set_opacity(1.0-delta2);		
+		//}
+		if(info_.type == transition::slide)
 		{
 			d_frame1->get_image_transform().set_fill_translation((-1.0+delta1)*dir, 0.0);	
 			d_frame2->get_image_transform().set_fill_translation((-1.0+delta2)*dir, 0.0);		

@@ -73,8 +73,8 @@ std::string get_blend_color_func()
 	"         return fore;																\n"
 	"   vec4 back = texture2D(background, gl_TexCoord[1].st).bgra;						\n"
 	"	fore.rgb = get_blend_color(back.rgb, fore.rgb);									\n"
-	"	return vec4(mix(back.rgb, fore.rgb, fore.a), back.a + fore.a);					\n"
-	"}																					\n";
+	"	return fore + (1.0-fore.a)*back;												\n"
+	"}																					\n";			
 }
 		
 std::string get_simple_blend_color_func()
@@ -99,7 +99,6 @@ std::string get_vertex()
 	"{																					\n"
 	"	gl_TexCoord[0] = gl_MultiTexCoord0;												\n"
 	"	gl_TexCoord[1] = gl_MultiTexCoord1;												\n"
-	"	gl_FrontColor  = gl_Color;														\n"
 	"	gl_Position    = ftransform();													\n"
 	"}																					\n";
 }
@@ -120,6 +119,7 @@ std::string get_fragment(bool blend_modes)
 	"uniform int		blend_mode;														\n"
 	"uniform int		pixel_format;													\n"
 	"																					\n"
+	"uniform float		opacity;														\n"
 	"uniform bool		levels;															\n"
 	"uniform float		min_input;														\n"
 	"uniform float		max_input;														\n"
@@ -239,10 +239,10 @@ std::string get_fragment(bool blend_modes)
 	"	if(csb)																			\n"
 	"		color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);			\n"
 	"	if(has_local_key)																\n"
-	"		color.a *= texture2D(local_key, gl_TexCoord[1].st).r;						\n"
+	"		color *= texture2D(local_key, gl_TexCoord[1].st).r;							\n"
 	"	if(has_layer_key)																\n"
-	"		color.a *= texture2D(layer_key, gl_TexCoord[1].st).r;						\n"
-	"   color *= gl_Color;																\n"
+	"		color *= texture2D(layer_key, gl_TexCoord[1].st).r;							\n"
+	"	color *= opacity;																\n"
 	"	color = blend(color);															\n"
 	"	gl_FragColor = color.bgra;														\n"
 	"}																					\n";

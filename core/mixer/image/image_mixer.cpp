@@ -152,31 +152,33 @@ public:
 
 		std::pair<int, std::shared_ptr<device_buffer>> local_key_buffer;
 					
-		if(has_overlapping_items(layer, layer.front().transform.get_blend_mode()))
-		{
-			auto local_draw_buffer = create_device_buffer(4);	
+		//if(has_overlapping_items(layer, layer.front().transform.get_blend_mode()))
+		//{
+		//	auto local_draw_buffer = create_device_buffer(4);	
 
-			int mode = 0;
-			BOOST_FOREACH(auto& item, layer)
-			{
-				if(mode & item.mode)
-					item.transform.set_blend_mode(image_transform::blend_mode::normal); // Disable blending, it will be used when merging back into render stack.
-				else
-				{
-					item.transform.set_blend_mode(image_transform::blend_mode::replace); // Target field is empty, no blending
-					mode |= item.mode;
-				}
+		//	auto local_blend_mode = layer.front().transform.get_blend_mode();
 
-				draw_item(std::move(item), local_draw_buffer, local_key_buffer, layer_key_buffer);		
-			}
+		//	int fields = 0;
+		//	BOOST_FOREACH(auto& item, layer)
+		//	{
+		//		if(fields & item.mode)
+		//			item.transform.set_blend_mode(image_transform::blend_mode::normal); // Disable blending, it will be used when merging back into render stack.
+		//		else
+		//		{
+		//			item.transform.set_blend_mode(image_transform::blend_mode::replace); // Target field is empty, no blending, just copy
+		//			fields |= item.mode;
+		//		}
 
-			kernel_.draw(channel_.ogl(), create_render_item(local_draw_buffer, layer.front().transform.get_blend_mode()), draw_buffer, nullptr, nullptr);
-		}
-		else // fast path
-		{
+		//		draw_item(std::move(item), local_draw_buffer, local_key_buffer, layer_key_buffer);		
+		//	}
+
+		//	kernel_.draw(channel_.ogl(), create_render_item(local_draw_buffer, local_blend_mode), draw_buffer, nullptr, nullptr);
+		//}
+		//else // fast path
+		//{
 			BOOST_FOREACH(auto& item, layer)		
 				draw_item(std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);		
-		}					
+		//}					
 
 		CASPAR_ASSERT(local_key_buffer.first == 0 || local_key_buffer.first == core::video_mode::progressive);
 
