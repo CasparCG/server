@@ -70,9 +70,6 @@
     <ClInclude Include="server.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="shell.rc" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8C26C94F-8092-4769-8D84-DEA479721C5B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

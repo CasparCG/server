@@ -57,9 +57,9 @@ extern "C"
 
 namespace caspar {
 
-static const size_t MAX_BUFFER_COUNT = 50;
+static const size_t MAX_BUFFER_COUNT = 100;
 static const size_t MIN_BUFFER_COUNT = 4;
-static const size_t MAX_BUFFER_SIZE  = 32 * 1000000;
+static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
 	
 struct input::implementation : boost::noncopyable
 {		
@@ -116,8 +116,8 @@ public:
 			read_next_packet();
 						
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("buffer-count", diagnostics::color(0.4f, 0.8f, 0.8f));
-		graph_->set_color("buffer-size", diagnostics::color(0.2f, 0.4f, 0.8f));	
+		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
+		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
 
 		thread_ = boost::thread([this]{run();});
 	}
