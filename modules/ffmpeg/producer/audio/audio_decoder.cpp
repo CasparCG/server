@@ -53,7 +53,7 @@ struct audio_decoder::implementation : boost::noncopyable
 
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer2_;
-	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>	audio_samples_;	
+
 	std::queue<std::shared_ptr<AVPacket>>						packets_;
 
 	int64_t														nb_frames_;
