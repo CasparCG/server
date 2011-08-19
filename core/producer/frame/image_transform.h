@@ -66,6 +66,7 @@ public:
 			saturation,
 			color,
 			luminosity,
+			replace,
 			blend_mode_count 
 		};
 	};
