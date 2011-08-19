@@ -15,12 +15,26 @@ namespace caspar {
 double next_double(std::fstream& fileStream)
 {
 	std::vector<char> bytes(8);
-    fileStream.read(bytes.data(), bytes.size());
+
+	auto tmp2 = fileStream.tellg();
+	tmp2;
+
+    fileStream.read(bytes.data(), 8);
+	
+	auto tmp3 = fileStream.gcount();
+	tmp3;
+
+	tmp2 = fileStream.tellg();
+	tmp2;
+
 	fileStream.seekg(1, std::ios::cur);
+	
+	tmp2 = fileStream.tellg();
+	tmp2;
 
 	std::reverse(bytes.begin(), bytes.end());
 	double* tmp = (double*)bytes.data();
-
+	
     return *tmp;
 } 
 
@@ -45,38 +59,46 @@ std::map<std::string, std::string> read_flv_meta_info(const std::string& filenam
 			BOOST_THROW_EXCEPTION(caspar_exception());
 	
 		std::fstream fileStream = std::fstream(filename, std::fstream::in);
-		fileStream.seekg(27, std::ios::beg);
-	
-		std::vector<char> bytes(10);
-		fileStream.read(bytes.data(), bytes.size());
-				
-		if(std::string(bytes.begin(), bytes.end()) == "onMetaData")
+		
+		std::vector<char> bytes2(256);
+		fileStream.read(bytes2.data(), bytes2.size());
+
+		auto ptr = bytes2.data();
+		
+		ptr += 27;
+						
+		if(std::string(ptr, ptr+10) == "onMetaData")
 		{
-			fileStream.seekg(6, std::ios::cur);
+			ptr += 16;
 
 			for(int n = 0; n < 16; ++n)
 			{
-				char name_size = 0;
-				fileStream.read(&name_size, 1);
+				char name_size = *ptr++;
 
 				if(name_size == 0)
 					break;
 
-				std::vector<char> name(name_size);
-				fileStream.read(name.data(), name.size());
-				auto name_str = std::string(name.begin(), name.end());
+				auto name = std::string(ptr, ptr + name_size);
+				ptr += name_size;
 
-				char data_type = 0;
-				fileStream.read(&data_type, 1);
-
+				char data_type = *ptr++;
 				switch(data_type)
 				{
 				case 0:
-					values[name_str] = boost::lexical_cast<std::string>(next_double(fileStream));
-					break;
+					{
+						std::reverse(ptr, ptr+8);
+						values[name] = boost::lexical_cast<std::string>(*(double*)(ptr));
+						ptr += 9;
+
+						break;
+					}
 				case 1:
-					values[name_str] = boost::lexical_cast<std::string>(next_bool(fileStream));
-					break;
+					{
+						values[name] = boost::lexical_cast<std::string>(*ptr != 0);
+						ptr += 2;
+
+						break;
+					}
 				}
 			}
 		}
