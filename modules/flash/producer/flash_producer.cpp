@@ -335,8 +335,7 @@ public:
 		
 	virtual std::wstring print() const
 	{ 
-		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L", " + 
-					boost::lexical_cast<std::wstring>(fps_) + L"]";		
+		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
 
 	// flash_producer
