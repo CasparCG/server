@@ -32,14 +32,6 @@ bool next_bool(std::fstream& fileStream)
     return bytes[0] != 0;
 }
 
-std::string next_string(std::fstream& fileStream)
-{
-	std::vector<char> bytes(256, 0);
-	fileStream.seekg(2, std::ios::cur);
-    fileStream.getline(bytes.data(), bytes.size(), 0);
-    return std::string(bytes.begin(), bytes.end());
-}
-
 std::map<std::string, std::string> read_flv_meta_info(const std::string& filename)
 {
 	std::map<std::string, std::string>  values;
@@ -57,7 +49,7 @@ std::map<std::string, std::string> read_flv_meta_info(const std::string& filenam
 	
 		std::vector<char> bytes(10);
 		fileStream.read(bytes.data(), bytes.size());
-		
+				
 		if(std::string(bytes.begin(), bytes.end()) == "onMetaData")
 		{
 			fileStream.seekg(6, std::ios::cur);
@@ -84,9 +76,6 @@ std::map<std::string, std::string> read_flv_meta_info(const std::string& filenam
 					break;
 				case 1:
 					values[name_str] = boost::lexical_cast<std::string>(next_bool(fileStream));
-					break;
-				case 2:
-					values[name_str] = next_string(fileStream);
 					break;
 				}
 			}
