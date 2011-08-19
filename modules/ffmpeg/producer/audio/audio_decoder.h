@@ -46,7 +46,6 @@ public:
 	std::vector<std::shared_ptr<std::vector<int16_t>>> poll();
 
 	int64_t nb_frames() const;
-	double duration() const;
 
 private:
 	struct implementation;

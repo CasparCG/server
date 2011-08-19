@@ -21,7 +21,6 @@
 
 #include "video_decoder.h"
 
-#include "../format/flv.h"
 #include "../util.h"
 #include "../filter/filter.h"
 
@@ -50,7 +49,7 @@ extern "C"
 #endif
 
 namespace caspar {
-		
+	
 struct video_decoder::implementation : boost::noncopyable
 {
 	const safe_ptr<core::frame_factory>		frame_factory_;
@@ -88,26 +87,11 @@ public:
 			CASPAR_LOG(debug) << "[video_decoder] " << context->streams[index_]->codec->codec->long_name;
 
 			// Some files give an invalid time_base numerator, try to fix it.
-			if(codec_context_ && codec_context_->time_base.num == 1)
-				codec_context_->time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(codec_context_->time_base.den)))-1));	
-					
-			if(boost::filesystem2::path(context->filename).extension() == ".flv")
-			{
-				try
-				{
-					auto meta = read_flv_meta_info(context->filename);
-					fps_ = boost::lexical_cast<double>(meta["framerate"]);
-					nb_frames_ = static_cast<int64_t>(boost::lexical_cast<double>(meta["duration"])*fps_);
-				}
-				catch(...){}
-			}
-			else
-			{
-				fps_ = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
-				nb_frames_ = context->streams[index_]->nb_frames;
-				if(nb_frames_ == 0)
-					nb_frames_ = context->streams[index_]->duration;// * context->streams[index_]->time_base.den;
-			}
+
+			fix_meta_data(*context);
+			
+			fps_ = static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num);
+			nb_frames_ = context->streams[index_]->nb_frames;
 
 			if(double_rate(filter))
 				fps_ *= 2;
