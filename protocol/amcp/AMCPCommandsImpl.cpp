@@ -251,21 +251,6 @@ bool MixerCommand::DoExecute()
 				int layer = GetLayerIndex();
 				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
 			}
-			else if(_parameters[1] == L"GAIN")
-			{
-				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
-				double value = boost::lexical_cast<double>(_parameters.at(2));
-				
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_gain(value);
-					return transform;					
-				};
-
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
-			}
 			else if(_parameters[1] == L"FILL_RECT")
 			{
 				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
