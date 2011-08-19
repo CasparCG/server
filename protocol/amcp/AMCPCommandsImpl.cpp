@@ -316,16 +316,9 @@ bool MixerCommand::DoExecute()
 			}
 			else if(_parameters[1] == L"BLEND")
 			{
-				auto blend_str = _parameters.at(2);
-
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_blend_mode(get_blend_mode(blend_str));
-					return transform;
-				};
-				
+				auto blend_str = _parameters.at(2);								
 				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform);	
+				GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
 			}
 			else if(_parameters[1] == L"BRIGHTNESS")
 			{

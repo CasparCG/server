@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include "blend_modes.h"
+
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/frame_visitor.h>
@@ -43,7 +45,7 @@ public:
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
-	void begin_layer();
+	void begin_layer(blend_mode::type blend_mode);
 	void end_layer();
 
 	image_mixer& operator=(image_mixer&& other);

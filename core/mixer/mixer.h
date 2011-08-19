@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include "image/blend_modes.h"
+
 #include "../producer/frame/frame_factory.h"
 
 #include <common/memory/safe_ptr.h>
@@ -42,6 +44,7 @@ struct pixel_format;
 class mixer : public core::frame_factory
 {
 public:	
+
 	explicit mixer(video_channel_context& video_channel);
 		
 	safe_ptr<core::read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
@@ -57,6 +60,8 @@ public:
 	void set_audio_transform(int index, const core::audio_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+
+	void set_blend_mode(int index, blend_mode::type value);
 
 private:
 	struct implementation;
