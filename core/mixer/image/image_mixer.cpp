@@ -218,50 +218,50 @@ public:
 		}
 	}
 
-	// TODO: Optimize
-	bool has_overlapping_items(const layer& layer, image_transform::blend_mode::type blend_mode)
-	{
-		if(layer.size() < 2)
-			return false;	
-		
-		implementation::layer fill;
+	//// TODO: Optimize
+	//bool has_overlapping_items(const layer& layer, image_transform::blend_mode::type blend_mode)
+	//{
+	//	if(layer.size() < 2)
+	//		return false;	
+	//	
+	//	implementation::layer fill;
 
-		std::copy_if(layer.begin(), layer.end(), std::back_inserter(fill), [&](const render_item& item)
-		{
-			return !item.transform.get_is_key();
-		});
-			
-		if(blend_mode == image_transform::blend_mode::normal) // Only overlap if opacity
-		{
-			return std::any_of(fill.begin(), fill.end(), [&](const render_item& item)
-			{
-				return item.transform.get_opacity() < 1.0 - 0.001;
-			});
-		}
+	//	std::copy_if(layer.begin(), layer.end(), std::back_inserter(fill), [&](const render_item& item)
+	//	{
+	//		return !item.transform.get_is_key();
+	//	});
+	//		
+	//	if(blend_mode == image_transform::blend_mode::normal) // Only overlap if opacity
+	//	{
+	//		return std::any_of(fill.begin(), fill.end(), [&](const render_item& item)
+	//		{
+	//			return item.transform.get_opacity() < 1.0 - 0.001;
+	//		});
+	//	}
 
-		// Simple solution, just check if we have differnt video streams / tags.
-		return std::any_of(fill.begin(), fill.end(), [&](const render_item& item)
-		{
-			return item.tag != fill.front().tag;
-		});
-	}			
-			
-	render_item create_render_item(const safe_ptr<device_buffer>& buffer, image_transform::blend_mode::type blend_mode)
-	{
-		CASPAR_ASSERT(buffer->stride() == 4 && "Only used for bgra textures");
+	//	// Simple solution, just check if we have differnt video streams / tags.
+	//	return std::any_of(fill.begin(), fill.end(), [&](const render_item& item)
+	//	{
+	//		return item.tag != fill.front().tag;
+	//	});
+	//}			
+	//		
+	//render_item create_render_item(const safe_ptr<device_buffer>& buffer, image_transform::blend_mode::type blend_mode)
+	//{
+	//	CASPAR_ASSERT(buffer->stride() == 4 && "Only used for bgra textures");
 
-		pixel_format_desc desc;
-		desc.pix_fmt = pixel_format::bgra;
-		desc.planes.push_back(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
+	//	pixel_format_desc desc;
+	//	desc.pix_fmt = pixel_format::bgra;
+	//	desc.planes.push_back(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
 
-		std::vector<safe_ptr<device_buffer>> textures;
-		textures.push_back(buffer);
-				
-		image_transform transform;
-		transform.set_blend_mode(blend_mode);
+	//	std::vector<safe_ptr<device_buffer>> textures;
+	//	textures.push_back(buffer);
+	//			
+	//	image_transform transform;
+	//	transform.set_blend_mode(blend_mode);
 
-		return render_item(desc, std::move(textures), transform, video_mode::progressive, nullptr);		 
-	}
+	//	return render_item(desc, std::move(textures), transform, video_mode::progressive, nullptr);		 
+	//}
 
 	safe_ptr<device_buffer> create_device_buffer(size_t stride)
 	{

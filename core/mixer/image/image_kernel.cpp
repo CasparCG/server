@@ -191,9 +191,7 @@ struct image_kernel::implementation : boost::noncopyable
 		// Setup drawing area
 		
 		ogl.viewport(0, 0, background->width(), background->height());
-
-		GL(glColor4d(item.transform.get_gain(), item.transform.get_gain(), item.transform.get_gain(), item.transform.get_opacity()));
-						
+								
 		auto m_p = item.transform.get_clip_translation();
 		auto m_s = item.transform.get_clip_scale();
 
