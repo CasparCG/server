@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include "blend_modes.h"
+
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/pixel_format.h>
@@ -38,19 +40,22 @@ struct render_item
 	image_transform							transform;
 	video_mode::type						mode;
 	const void*								tag;
+	blend_mode::type						blend_mode;
 	
-	render_item(const pixel_format_desc& pix_desc, const std::vector<safe_ptr<device_buffer>>& textures, const image_transform& transform, video_mode::type mode, const void* tag)
+	render_item(const pixel_format_desc& pix_desc, const std::vector<safe_ptr<device_buffer>>& textures, const image_transform& transform, video_mode::type mode, const void* tag, blend_mode::type blend_mode)
 		: pix_desc(pix_desc)
 		, textures(textures)
 		, transform(transform)
 		, mode(mode)
-		, tag(tag){}
+		, tag(tag)
+		, blend_mode(blend_mode){}
 	render_item(render_item&& other)
 		: pix_desc(other.pix_desc)
 		, textures(std::move(other.textures))
 		, transform(other.transform)
 		, mode(other.mode)
-		, tag(other.tag){}
+		, tag(other.tag)
+		, blend_mode(blend_mode){}
 };
 
 bool operator==(const render_item& lhs, const render_item& rhs);
@@ -59,7 +64,11 @@ class image_kernel : boost::noncopyable
 {
 public:
 	image_kernel();
-	void draw(ogl_device& ogl, render_item&& item, const safe_ptr<device_buffer>& background, const std::shared_ptr<device_buffer>& local_key = nullptr, const std::shared_ptr<device_buffer>& layer_key = nullptr);
+	void draw(ogl_device& ogl, 
+			  render_item&& item, 
+			  const safe_ptr<device_buffer>& background, 
+			  const std::shared_ptr<device_buffer>& local_key = nullptr, 
+			  const std::shared_ptr<device_buffer>& layer_key = nullptr);
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
