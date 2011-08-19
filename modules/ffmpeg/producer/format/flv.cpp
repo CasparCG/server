@@ -52,6 +52,7 @@ std::map<std::string, std::string> read_flv_meta_info(const std::string& filenam
 				{
 				case 0: // double
 					{
+						static_assert(sizeof(double) == 8, "");
 						std::reverse(ptr, ptr+8);
 						values[name] = boost::lexical_cast<std::string>(*(double*)(ptr));
 						ptr += 9;
