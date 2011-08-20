@@ -60,8 +60,8 @@ public:
 	void commit(uint32_t plane_index);
 	void commit();
 	
-	void set_type(const core::video_mode::type& mode);
-	core::video_mode::type get_type() const;
+	void set_type(const core::field_mode::type& mode);
+	core::field_mode::type get_type() const;
 	
 	const void* tag() const;
 

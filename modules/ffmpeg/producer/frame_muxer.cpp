@@ -82,16 +82,16 @@ struct display_mode
 	}
 };
 
-display_mode::type get_display_mode(const core::video_mode::type in_mode, double in_fps, const core::video_mode::type out_mode, double out_fps)
+display_mode::type get_display_mode(const core::field_mode::type in_mode, double in_fps, const core::field_mode::type out_mode, double out_fps)
 {		
 	static const auto epsilon = 2.0;
 
 	if(in_fps < 20.0 || in_fps > 80.0)
 	{
-		//if(out_mode != core::video_mode::progressive && in_mode == core::video_mode::progressive)
+		//if(out_mode != core::field_mode::progressive && in_mode == core::field_mode::progressive)
 		//	return display_mode::interlace;
 		
-		if(out_mode == core::video_mode::progressive && in_mode != core::video_mode::progressive)
+		if(out_mode == core::field_mode::progressive && in_mode != core::field_mode::progressive)
 		{
 			if(in_fps < 35.0)
 				return display_mode::deinterlace;
@@ -102,29 +102,29 @@ display_mode::type get_display_mode(const core::video_mode::type in_mode, double
 
 	if(std::abs(in_fps - out_fps) < epsilon)
 	{
-		if(in_mode != core::video_mode::progressive && out_mode == core::video_mode::progressive)
+		if(in_mode != core::field_mode::progressive && out_mode == core::field_mode::progressive)
 			return display_mode::deinterlace;
-		//else if(in_mode == core::video_mode::progressive && out_mode != core::video_mode::progressive)
+		//else if(in_mode == core::field_mode::progressive && out_mode != core::field_mode::progressive)
 		//	simple(); // interlace_duplicate();
 		else
 			return display_mode::simple;
 	}
 	else if(std::abs(in_fps/2.0 - out_fps) < epsilon)
 	{
-		if(in_mode != core::video_mode::progressive)
+		if(in_mode != core::field_mode::progressive)
 			return display_mode::invalid;
 
-		if(out_mode != core::video_mode::progressive)
+		if(out_mode != core::field_mode::progressive)
 			return display_mode::interlace;
 		else
 			return display_mode::half;
 	}
 	else if(std::abs(in_fps - out_fps/2.0) < epsilon)
 	{
-		if(out_mode != core::video_mode::progressive)
+		if(out_mode != core::field_mode::progressive)
 			return display_mode::invalid;
 
-		if(in_mode != core::video_mode::progressive)
+		if(in_mode != core::field_mode::progressive)
 			return display_mode::deinterlace_bob;
 		else
 			return display_mode::duplicate;
@@ -190,7 +190,7 @@ struct frame_muxer::implementation : boost::noncopyable
 				auto in_mode = get_mode(*video_frame);
 				display_mode_ = get_display_mode(in_mode, in_fps_, format_desc_.mode, format_desc_.fps);
 			
-				if(display_mode_ == display_mode::simple && in_mode != core::video_mode::progressive && format_desc_.mode != core::video_mode::progressive && video_frame->height != static_cast<int>(format_desc_.height))
+				if(display_mode_ == display_mode::simple && in_mode != core::field_mode::progressive && format_desc_.mode != core::field_mode::progressive && video_frame->height != static_cast<int>(format_desc_.height))
 					display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
 				
 				if(display_mode_ == display_mode::deinterlace)
@@ -225,9 +225,9 @@ struct frame_muxer::implementation : boost::noncopyable
 			auto frame = make_write_frame(this, av_frame, frame_factory_, hints);
 
 			// Fix field-order if needed
-			if(frame->get_type() == core::video_mode::lower && format_desc_.mode == core::video_mode::upper)
+			if(frame->get_type() == core::field_mode::lower && format_desc_.mode == core::field_mode::upper)
 				frame->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(frame->get_pixel_format_desc().planes[0].height));
-			else if(frame->get_type() == core::video_mode::upper && format_desc_.mode == core::video_mode::lower)
+			else if(frame->get_type() == core::field_mode::upper && format_desc_.mode == core::field_mode::lower)
 				frame->get_image_transform().set_fill_translation(0.0f, -0.5/static_cast<double>(frame->get_pixel_format_desc().planes[0].height));
 
 			video_streams_.back().push(frame);

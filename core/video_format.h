@@ -51,16 +51,17 @@ struct video_format
 	};
 };
 
-struct video_mode 
+struct field_mode 
 { 
 	enum type
 	{
+		empty		= 0,
 		lower		= 1,
 		upper		= 2,
 		progressive = 3 // NOTE: progressive == lower | upper;
 	};
 
-	static std::wstring print(video_mode::type value)
+	static std::wstring print(field_mode::type value)
 	{
 		switch(value)
 		{
@@ -82,7 +83,7 @@ struct video_format_desc
 
 	size_t					width;		// output frame width
 	size_t					height;		// output frame height
-	video_mode::type		mode;		// progressive, interlaced upper field first, interlaced lower field first
+	field_mode::type		mode;		// progressive, interlaced upper field first, interlaced lower field first
 	double					fps;		// actual framerate, e.g. i50 = 25 fps, p50 = 50 fps
 	size_t					time_scale;
 	size_t					duration;

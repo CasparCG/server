@@ -35,12 +35,12 @@ extern "C"
 
 namespace caspar {
 
-core::video_mode::type get_mode(AVFrame& frame)
+core::field_mode::type get_mode(AVFrame& frame)
 {
 	if(!frame.interlaced_frame)
-		return core::video_mode::progressive;
+		return core::field_mode::progressive;
 
-	return frame.top_field_first ? core::video_mode::upper : core::video_mode::lower;
+	return frame.top_field_first ? core::field_mode::upper : core::field_mode::lower;
 }
 
 core::pixel_format::type get_pixel_format(PixelFormat pix_fmt)

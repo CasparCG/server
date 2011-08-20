@@ -40,7 +40,7 @@ struct write_frame::implementation
 	std::vector<int16_t>						audio_data_;
 	const core::pixel_format_desc				desc_;
 	const void*									tag_;
-	core::video_mode::type						mode_;
+	core::field_mode::type						mode_;
 
 	implementation(const void* tag)
 		: tag_(tag)
@@ -51,7 +51,7 @@ struct write_frame::implementation
 		: ogl_(&ogl)
 		, desc_(desc)
 		, tag_(tag)
-		, mode_(core::video_mode::progressive)
+		, mode_(core::field_mode::progressive)
 	{
 		ogl_->invoke([&]
 		{
@@ -156,8 +156,8 @@ const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return
 const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
 void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
-void write_frame::set_type(const video_mode::type& mode){impl_->mode_ = mode;}
-core::video_mode::type write_frame::get_type() const{return impl_->mode_;}
+void write_frame::set_type(const field_mode::type& mode){impl_->mode_ = mode;}
+core::field_mode::type write_frame::get_type() const{return impl_->mode_;}
 
 std::wstring write_frame::print() const{return impl_->print();}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}

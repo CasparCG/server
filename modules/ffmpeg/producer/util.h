@@ -25,7 +25,7 @@ struct frame_factory;
 
 static const PixelFormat	CASPAR_PIX_FMT_LUMA = PIX_FMT_MONOBLACK; // Just hijack some unual pixel format.
 
-core::video_mode::type		get_mode(AVFrame& frame);
+core::field_mode::type		get_mode(AVFrame& frame);
 core::pixel_format::type	get_pixel_format(PixelFormat pix_fmt);
 core::pixel_format_desc		get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_t height);
 int							make_alpha_format(int format); // NOTE: Be careful about CASPAR_PIX_FMT_LUMA, change it to PIX_FMT_GRAY8 if you want to use the frame inside some ffmpeg function.
