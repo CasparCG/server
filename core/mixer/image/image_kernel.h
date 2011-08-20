@@ -38,7 +38,6 @@ struct render_item
 	pixel_format_desc						pix_desc;
 	std::vector<safe_ptr<device_buffer>>	textures;
 	image_transform							transform;
-	video_mode::type						mode;
 	const void*								tag;
 	blend_mode::type						blend_mode;
 };
@@ -51,7 +50,7 @@ public:
 	image_kernel();
 	void draw(ogl_device& ogl, 
 			  render_item&& item, 
-			  const safe_ptr<device_buffer>& background, 
+			  device_buffer& background, 
 			  const std::shared_ptr<device_buffer>& local_key = nullptr, 
 			  const std::shared_ptr<device_buffer>& layer_key = nullptr);
 private:

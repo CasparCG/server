@@ -35,25 +35,19 @@ struct basic_frame::implementation
 
 	image_transform image_transform_;	
 	audio_transform audio_transform_;
-
-	core::video_mode::type mode_;
 	
 public:
-	implementation(const std::vector<safe_ptr<basic_frame>>& frames) 
-		: mode_(core::video_mode::progressive), frames_(frames) 
+	implementation(const std::vector<safe_ptr<basic_frame>>& frames) : frames_(frames) 
 	{
 	}
-	implementation(std::vector<safe_ptr<basic_frame>>&& frames) 
-		: mode_(core::video_mode::progressive), frames_(std::move(frames))
+	implementation(std::vector<safe_ptr<basic_frame>>&& frames) : frames_(std::move(frames))
 	{
 	}
 	implementation(safe_ptr<basic_frame>&& frame) 
-		: mode_(core::video_mode::progressive)
 	{
 		frames_.push_back(std::move(frame));
 	}
-	implementation(const safe_ptr<basic_frame>& frame) 
-		: mode_(core::video_mode::progressive)		
+	implementation(const safe_ptr<basic_frame>& frame) 		
 	{ 
 		frames_.push_back(frame);
 	}
@@ -97,7 +91,6 @@ basic_frame& basic_frame::operator=(basic_frame&& other)
 }
 void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
 
-core::video_mode::type basic_frame::get_mode() const{return impl_->mode_;}
 const image_transform& basic_frame::get_image_transform() const { return impl_->image_transform_;}
 image_transform& basic_frame::get_image_transform() { return impl_->image_transform_;}
 const audio_transform& basic_frame::get_audio_transform() const { return impl_->audio_transform_;}
@@ -106,7 +99,7 @@ audio_transform& basic_frame::get_audio_transform() { return impl_->audio_transf
 std::wstring basic_frame::print() const{return impl_->print();}
 void basic_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
 
-safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, video_mode::type mode)
+safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, field_mode::type mode)
 {				
 	if(frame1 == basic_frame::eof() || frame2 == basic_frame::eof())
 		return basic_frame::eof();
@@ -114,20 +107,20 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 	if(frame1 == basic_frame::empty() && frame2 == basic_frame::empty())
 		return basic_frame::empty();
 	
-	if(frame1 == frame2 || mode == video_mode::progressive)
+	if(frame1 == frame2 || mode == field_mode::progressive)
 		return frame2;
 
 	auto my_frame1 = make_safe<basic_frame>(frame1);
 	auto my_frame2 = make_safe<basic_frame>(frame2);
-	if(mode == video_mode::upper)
+	if(mode == field_mode::upper)
 	{
-		my_frame1->impl_->mode_ = video_mode::upper;	
-		my_frame2->impl_->mode_ = video_mode::lower;	
+		my_frame1->get_image_transform().set_field_mode(field_mode::upper);	
+		my_frame2->get_image_transform().set_field_mode(field_mode::lower);	
 	}											 
 	else										 
 	{											 
-		my_frame1->impl_->mode_ = video_mode::lower;	
-		my_frame2->impl_->mode_ = video_mode::upper;	
+		my_frame1->get_image_transform().set_field_mode(field_mode::lower);	
+		my_frame2->get_image_transform().set_field_mode(field_mode::upper);	
 	}
 
 	std::vector<safe_ptr<basic_frame>> frames;

@@ -57,7 +57,6 @@ struct image_mixer::implementation : boost::noncopyable
 	video_channel_context&					channel_;
 
 	std::vector<image_transform>			transform_stack_;
-	std::vector<video_mode::type>			video_mode_stack_;
 	std::stack<blend_mode::type>			blend_mode_stack_;
 
 	std::deque<std::deque<render_item>>		layers_; // layer/stream/items
@@ -69,7 +68,6 @@ public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
 		, transform_stack_(1)
-		, video_mode_stack_(1, video_mode::progressive)
 	{
 	}
 
@@ -81,22 +79,17 @@ public:
 	void begin(core::basic_frame& frame)
 	{
 		transform_stack_.push_back(transform_stack_.back()*frame.get_image_transform());
-		video_mode_stack_.push_back(frame.get_mode() == video_mode::progressive ? video_mode_stack_.back() : frame.get_mode());
 	}
 		
 	void visit(core::write_frame& frame)
 	{	
-		CASPAR_ASSERT(!layers_.empty());
-
-		// Check if frame has been discarded by interlacing
-		if(boost::range::find(video_mode_stack_, video_mode::upper) != video_mode_stack_.end() && boost::range::find(video_mode_stack_, video_mode::lower) != video_mode_stack_.end())
+		if(transform_stack_.back().get_field_mode() == field_mode::empty)
 			return;
 		
 		core::render_item item;
 		item.pix_desc		= frame.get_pixel_format_desc();
 		item.textures		= frame.get_textures();
 		item.transform		= transform_stack_.back();
-		item.mode			= video_mode_stack_.back();
 		item.tag			= frame.tag();
 		item.blend_mode		= blend_mode_stack_.top();	
 
@@ -108,7 +101,6 @@ public:
 	void end()
 	{
 		transform_stack_.pop_back();
-		video_mode_stack_.pop_back();
 	}
 
 	void begin_layer(blend_mode::type blend_mode)
@@ -168,15 +160,15 @@ public:
 			int fields = 0;
 			BOOST_FOREACH(auto& item, layer)
 			{
-				if(fields & item.mode)
+				if(fields & item.transform.get_field_mode())
 					item.blend_mode = blend_mode::normal; // Disable blending, it will be used when merging back into render stack.
 				else
 				{
 					item.blend_mode = blend_mode::replace; // Target field is empty, no blending, just copy
-					fields |= item.mode;
+					fields |= item.transform.get_field_mode();
 				}
 
-				draw_item(std::move(item), local_draw_buffer, local_key_buffer, layer_key_buffer);		
+				draw_item(std::move(item), *local_draw_buffer, local_key_buffer, layer_key_buffer);		
 			}
 			
 			render_item item;
@@ -185,21 +177,21 @@ public:
 			item.textures.push_back(local_draw_buffer);
 			item.blend_mode = local_blend_mode;
 
-			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, nullptr, nullptr);
+			kernel_.draw(channel_.ogl(), std::move(item), *draw_buffer, nullptr, nullptr);
 		}
 		else // fast path
 		{
 			BOOST_FOREACH(auto& item, layer)		
-				draw_item(std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);		
+				draw_item(std::move(item), *draw_buffer, local_key_buffer, layer_key_buffer);		
 		}					
 
-		CASPAR_ASSERT(local_key_buffer.first == 0 || local_key_buffer.first == core::video_mode::progressive);
+		CASPAR_ASSERT(local_key_buffer.first == 0 || local_key_buffer.first == core::field_mode::progressive);
 
 		std::swap(local_key_buffer.second, layer_key_buffer);
 	}
 
 	void draw_item(render_item&&									item, 
-				   const safe_ptr<device_buffer>&					draw_buffer, 
+				   device_buffer&									draw_buffer, 
 				   std::pair<int, std::shared_ptr<device_buffer>>&	local_key_buffer, 
 				   std::shared_ptr<device_buffer>&					layer_key_buffer)
 	{											
@@ -211,13 +203,13 @@ public:
 				local_key_buffer.second = create_device_buffer(1);
 			}
 			
-			local_key_buffer.first |= item.mode; // Add field to flag.
-			kernel_.draw(channel_.ogl(), std::move(item), make_safe(local_key_buffer.second), nullptr, nullptr);
+			local_key_buffer.first |= item.transform.get_field_mode(); // Add field to flag.
+			kernel_.draw(channel_.ogl(), std::move(item), *local_key_buffer.second, nullptr, nullptr);
 		}
 		else
 		{
 			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer.second, layer_key_buffer);
-			local_key_buffer.first ^= item.mode; // Remove field from flag.
+			local_key_buffer.first ^= item.transform.get_field_mode(); // Remove field from flag.
 			
 			if(local_key_buffer.first == 0) // If all fields from key has been used, reset it
 			{

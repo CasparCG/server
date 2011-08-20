@@ -63,7 +63,7 @@ struct image_kernel::implementation : boost::noncopyable
 							
 	void draw(ogl_device&									ogl,
 			  render_item&&									item,
-			  const safe_ptr<device_buffer>&				background,
+			  device_buffer&								background,
 			  const std::shared_ptr<device_buffer>&			local_key,			  
 			  const std::shared_ptr<device_buffer>&			layer_key)
 	{
@@ -120,7 +120,7 @@ struct image_kernel::implementation : boost::noncopyable
 
 		if(blend_modes_)
 		{
-			background->bind(6);
+			background.bind(6);
 
 			shader_->set("background",	texture_id::background);
 			shader_->set("blend_mode",	item.blend_mode);
@@ -174,21 +174,21 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		// Setup interlacing
 
-		if(item.mode == core::video_mode::progressive)			
+		if(item.transform.get_field_mode() == core::field_mode::progressive)			
 			ogl.disable(GL_POLYGON_STIPPLE);			
 		else			
 		{
 			ogl.enable(GL_POLYGON_STIPPLE);
 
-			if(item.mode == core::video_mode::upper)
+			if(item.transform.get_field_mode() == core::field_mode::upper)
 				ogl.stipple_pattern(upper_pattern);
-			else if(item.mode == core::video_mode::lower)
+			else if(item.transform.get_field_mode() == core::field_mode::lower)
 				ogl.stipple_pattern(lower_pattern);
 		}
 
 		// Setup drawing area
 		
-		ogl.viewport(0, 0, background->width(), background->height());
+		ogl.viewport(0, 0, background.width(), background.height());
 								
 		auto m_p = item.transform.get_clip_translation();
 		auto m_s = item.transform.get_clip_scale();
@@ -198,8 +198,8 @@ struct image_kernel::implementation : boost::noncopyable
 
 		if(scissor)
 		{
-			double w = static_cast<double>(background->width());
-			double h = static_cast<double>(background->height());
+			double w = static_cast<double>(background.width());
+			double h = static_cast<double>(background.height());
 		
 			ogl.enable(GL_SCISSOR_TEST);
 			ogl.scissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h));
@@ -210,7 +210,7 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		// Set render target
 		
-		ogl.attach(*background);
+		ogl.attach(background);
 		
 		// Draw
 
@@ -240,7 +240,7 @@ struct image_kernel::implementation : boost::noncopyable
 image_kernel::image_kernel() : impl_(new implementation()){}
 void image_kernel::draw(ogl_device& ogl, 
 						render_item&& item, 
-						const safe_ptr<device_buffer>& background,
+						device_buffer& background,
 						const std::shared_ptr<device_buffer>& local_key, 
 						const std::shared_ptr<device_buffer>& layer_key)
 {
@@ -249,7 +249,7 @@ void image_kernel::draw(ogl_device& ogl,
 
 bool operator==(const render_item& lhs, const render_item& rhs)
 {
-	return lhs.textures == rhs.textures && lhs.transform == rhs.transform && lhs.tag == rhs.tag && lhs.mode == rhs.mode;
+	return lhs.textures == rhs.textures && lhs.transform == rhs.transform && lhs.tag == rhs.tag;
 }
 
 }}
