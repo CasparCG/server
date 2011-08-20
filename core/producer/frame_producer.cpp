@@ -92,15 +92,7 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(my_frame_factory, params);
-
-	if(producer == frame_producer::empty())
-	{
-		std::wstring str;
-		BOOST_FOREACH(auto& param, params)
-			str += param + L" ";
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(narrow(str)));
-	}
-
+	
 	return producer;
 }
 
@@ -117,12 +109,25 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		{
 			params_copy[0] += L"_A";
 			key_producer = do_create_producer(my_frame_factory, params_copy);			
+			if(key_producer == frame_producer::empty())
+			{
+				params_copy[0] += L"LPHA";
+				key_producer = do_create_producer(my_frame_factory, params_copy);	
+			}
 		}
 	}
 	catch(...){}
 
-	if(key_producer != frame_producer::empty())
-		return create_separated_producer(producer, key_producer);
+	if(producer != frame_producer::empty() && key_producer != frame_producer::empty())
+		producer = create_separated_producer(producer, key_producer);
+	
+	if(producer == frame_producer::empty())
+	{
+		std::wstring str;
+		BOOST_FOREACH(auto& param, params)
+			str += param + L" ";
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(narrow(str)));
+	}
 
 	return producer;
 }
