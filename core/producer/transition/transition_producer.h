@@ -65,6 +65,6 @@ struct transition_info
 	tweener_t					tweener;
 };
 
-safe_ptr<frame_producer> create_transition_producer(const video_mode::type& mode, const safe_ptr<frame_producer>& destination, const transition_info& info);
+safe_ptr<frame_producer> create_transition_producer(const field_mode::type& mode, const safe_ptr<frame_producer>& destination, const transition_info& info);
 
 }}

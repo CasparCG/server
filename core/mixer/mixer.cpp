@@ -210,7 +210,7 @@ private:
 			auto frame1 = make_safe<core::basic_frame>(frame.second);
 			frame1->get_image_transform() = image_transforms[frame.first].fetch_and_tick(1);
 						
-			if(channel_.get_format_desc().mode != core::video_mode::progressive)
+			if(channel_.get_format_desc().mode != core::field_mode::progressive)
 			{
 				auto frame2 = make_safe<core::basic_frame>(frame.second);
 				frame2->get_image_transform() = image_transforms[frame.first].fetch_and_tick(1);
@@ -232,7 +232,7 @@ private:
 
 		BOOST_FOREACH(auto& frame, frames)
 		{
-			const unsigned int num = channel_.get_format_desc().mode == core::video_mode::progressive ? 1 : 2;
+			const unsigned int num = channel_.get_format_desc().mode == core::field_mode::progressive ? 1 : 2;
 
 			auto frame1 = make_safe<core::basic_frame>(frame.second);
 			frame1->get_audio_transform() = audio_transforms[frame.first].fetch_and_tick(num);

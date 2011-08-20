@@ -84,6 +84,9 @@ public:
 
 	void set_is_key(bool value);
 	bool get_is_key() const;
+
+	void set_field_mode(field_mode::type field_mode);
+	field_mode::type get_field_mode() const;
 		
 private:
 	double opacity_;
@@ -97,7 +100,7 @@ private:
 	std::array<double, 2> fill_scale_; 
 	std::array<double, 2> clip_translation_; 
 	std::array<double, 2> clip_scale_; 
-	video_mode::type mode_;
+	field_mode::type field_mode_;
 	bool is_key_;
 };
 
