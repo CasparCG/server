@@ -31,9 +31,8 @@
 
 namespace caspar { namespace core {
 
-class image_transform;
-class audio_transform;
-		
+struct frame_transform;
+
 class basic_frame
 {
 	basic_frame(std::vector<safe_ptr<basic_frame>>&& frames);
@@ -50,12 +49,9 @@ public:
 	
 	void swap(basic_frame& other);
 
-	const image_transform& get_image_transform() const;
-	image_transform& get_image_transform();
-
-	const audio_transform& get_audio_transform() const;
-	audio_transform& get_audio_transform();
-			
+	const frame_transform& get_frame_transform() const;
+	frame_transform& get_frame_transform();
+				
 	static safe_ptr<basic_frame> interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, field_mode::type mode);
 	static safe_ptr<basic_frame> combine(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2);
 	static safe_ptr<basic_frame> fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key);

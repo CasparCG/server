@@ -22,7 +22,7 @@
 #include "audio_mixer.h"
 
 #include <core/mixer/write_frame.h>
-#include <core/producer/frame/audio_transform.h>
+#include <core/producer/frame/frame_transform.h>
 
 #include <tbb/parallel_for.h>
 
@@ -30,79 +30,59 @@
 #include <deque>
 
 namespace caspar { namespace core {
+
+struct audio_item
+{
+	const void*				tag;
+	frame_transform			transform;
+	std::vector<int16_t>	audio_data;
+};
 	
 struct audio_mixer::implementation
 {
-	std::deque<std::vector<int16_t>> audio_data_;
-	std::stack<core::audio_transform> transform_stack_;
+	std::stack<core::frame_transform> transform_stack_;
 
-	std::map<const void*, core::audio_transform> prev_audio_transforms_;
-	std::map<const void*, core::audio_transform> next_audio_transforms_;
+	std::map<const void*, core::frame_transform> prev_frame_transforms_;
+	std::map<const void*, core::frame_transform> next_frame_transforms_;
 
 	const core::video_format_desc format_desc_;
+
+	std::vector<audio_item> items;
 
 public:
 	implementation(const core::video_format_desc& format_desc)
 		: format_desc_(format_desc)
 	{
-		transform_stack_.push(core::audio_transform());
-		audio_data_.push_back(std::vector<int16_t>()); // One frame delay
+		transform_stack_.push(core::frame_transform());
 	}
 	
 	void begin(core::basic_frame& frame)
 	{
-		transform_stack_.push(transform_stack_.top()*frame.get_audio_transform());
+		transform_stack_.push(transform_stack_.top()*frame.get_frame_transform());
 	}
 
 	void visit(const core::write_frame& frame)
 	{
-		if(!transform_stack_.top().get_has_audio() || frame.audio_data().empty())
+		// We only care about the last field.
+		if(format_desc_.field_mode == field_mode::upper && transform_stack_.top().field_mode == field_mode::upper)
 			return;
 
-		const auto& audio_data = frame.audio_data();
-		const auto tag = frame.tag(); // Get the identifier for the audio-stream.
-				
-		const auto next = transform_stack_.top();
-		auto prev = next;
-
-		const auto it = prev_audio_transforms_.find(tag);
-		if(it != prev_audio_transforms_.end())
-			prev = it->second;
-				
-		next_audio_transforms_[tag] = next; // Store all active tags, inactive tags will be removed in end_pass.
-				
-		if(next.get_volume() < 0.001 && prev.get_volume() < 0.001)
-			return;
-		
-		static const int BASE = 1<<15;
-
-		const auto next_volume = static_cast<int>(next.get_volume()*BASE);
-		const auto prev_volume = static_cast<int>(prev.get_volume()*BASE);
-		
-		const int n_samples = audio_data_.back().size();
-		
-		const auto in_size = static_cast<size_t>(audio_data.size());
-		CASPAR_VERIFY(in_size == 0 || in_size == audio_data_.back().size());
-
-		if(in_size > audio_data_.back().size())
+		if(format_desc_.field_mode == field_mode::lower && transform_stack_.top().field_mode == field_mode::lower)
 			return;
 
-		tbb::parallel_for
-		(
-			tbb::blocked_range<size_t>(0, audio_data.size()),
-			[&](const tbb::blocked_range<size_t>& r)
-			{
-				for(size_t n = r.begin(); n < r.end(); ++n)
-				{
-					const int sample_volume = (prev_volume - (prev_volume * n)/n_samples) + (next_volume * n)/n_samples;
-					const int sample = (static_cast<int>(audio_data[n])*sample_volume)/BASE;
-					audio_data_.back()[n] = static_cast<int16_t>((static_cast<int>(audio_data_.back()[n]) + sample) & 0xFFFF);
-				}
-			}
-		);
+		// Skip empty audio.
+		if(transform_stack_.top().volume < 0.002 || frame.audio_data().empty())
+			return;
+
+		audio_item item;
+		item.tag		= frame.tag();
+		item.transform	= transform_stack_.top();
+		item.audio_data = std::vector<int16_t>(frame.audio_data().begin(), frame.audio_data().end());
+
+		items.push_back(item);		
 	}
 
-	void begin(const core::audio_transform& transform)
+	void begin(const core::frame_transform& transform)
 	{
 		transform_stack_.push(transform_stack_.top()*transform);
 	}
@@ -114,10 +94,53 @@ public:
 	
 	std::vector<int16_t> mix()
 	{
-		prev_audio_transforms_ = std::move(next_audio_transforms_);	
-		auto result = std::move(audio_data_.front());
-		audio_data_.pop_front();
-		audio_data_.push_back(std::vector<int16_t>(format_desc_.audio_samples_per_frame));
+		auto result = std::vector<int16_t>(format_desc_.audio_samples_per_frame);
+
+		BOOST_FOREACH(auto& item, items)
+		{				
+			const auto next = item.transform;
+			auto prev = next;
+
+			const auto it = prev_frame_transforms_.find(item.tag);
+			if(it != prev_frame_transforms_.end())
+				prev = it->second;
+				
+			next_frame_transforms_[item.tag] = next; // Store all active tags, inactive tags will be removed at the end.
+				
+			if(next.volume < 0.001 && prev.volume < 0.001)
+				continue;
+		
+			static const int BASE = 1<<15;
+
+			const auto next_volume = static_cast<int>(next.volume*BASE);
+			const auto prev_volume = static_cast<int>(prev.volume*BASE);
+		
+			const int n_samples = result.size();
+		
+			const auto in_size = static_cast<size_t>(item.audio_data.size());
+			CASPAR_VERIFY(in_size == 0 || in_size == result.size());
+
+			if(in_size > result.size())
+				continue;
+
+			tbb::parallel_for
+			(
+				tbb::blocked_range<size_t>(0, item.audio_data.size()),
+				[&](const tbb::blocked_range<size_t>& r)
+				{
+					for(size_t n = r.begin(); n < r.end(); ++n)
+					{
+						const int sample_volume = (prev_volume - (prev_volume * n)/n_samples) + (next_volume * n)/n_samples;
+						const int sample = (static_cast<int>(item.audio_data[n])*sample_volume)/BASE;
+						result[n] = static_cast<int16_t>((static_cast<int>(result[n]) + sample) & 0xFFFF);
+					}
+				}
+			);
+		}
+
+		items.clear();
+		prev_frame_transforms_ = std::move(next_frame_transforms_);	
+
 		return std::move(result);
 	}
 };

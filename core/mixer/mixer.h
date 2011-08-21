@@ -36,8 +36,8 @@ namespace core {
 class read_frame;
 class write_frame;
 class basic_frame;
-class audio_transform;
-class image_transform;
+struct frame_transform;
+struct frame_transform;
 class video_channel_context;;
 struct pixel_format;
 
@@ -54,12 +54,10 @@ public:
 	
 	core::video_format_desc get_video_format_desc() const; // nothrow
 
-	void reset_transforms();
 
-	void set_image_transform(int index, const core::image_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void set_audio_transform(int index, const core::audio_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void clear_transforms();
 
 	void set_blend_mode(int index, blend_mode::type value);
 

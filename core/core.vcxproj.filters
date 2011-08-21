@@ -51,13 +51,7 @@
     <ClInclude Include="producer\layer.h">
       <Filter>source\producer</Filter>
     </ClInclude>
-    <ClInclude Include="producer\frame\audio_transform.h">
-      <Filter>source\producer\frame</Filter>
-    </ClInclude>
     <ClInclude Include="producer\frame\basic_frame.h">
-      <Filter>source\producer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame\image_transform.h">
       <Filter>source\producer\frame</Filter>
     </ClInclude>
     <ClInclude Include="producer\frame\pixel_format.h">
@@ -130,6 +124,9 @@
     <ClInclude Include="mixer\image\blend_modes.h">
       <Filter>source\mixer\image</Filter>
     </ClInclude>
+    <ClInclude Include="producer\frame\frame_transform.h">
+      <Filter>source\producer\frame</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -148,12 +145,6 @@
       <Filter>source\producer</Filter>
     </ClCompile>
     <ClCompile Include="producer\frame\basic_frame.cpp">
-      <Filter>source\producer\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\frame\image_transform.cpp">
-      <Filter>source\producer\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\frame\audio_transform.cpp">
       <Filter>source\producer\frame</Filter>
     </ClCompile>
     <ClCompile Include="mixer\image\image_mixer.cpp">
@@ -213,6 +204,9 @@
     </ClCompile>
     <ClCompile Include="mixer\image\blend_modes.cpp">
       <Filter>source\mixer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\frame\frame_transform.cpp">
+      <Filter>source\producer\frame</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

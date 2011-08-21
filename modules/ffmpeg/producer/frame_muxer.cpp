@@ -8,7 +8,7 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
@@ -188,9 +188,9 @@ struct frame_muxer::implementation : boost::noncopyable
 			if(auto_transcode_)
 			{
 				auto in_mode = get_mode(*video_frame);
-				display_mode_ = get_display_mode(in_mode, in_fps_, format_desc_.mode, format_desc_.fps);
+				display_mode_ = get_display_mode(in_mode, in_fps_, format_desc_.field_mode, format_desc_.fps);
 			
-				if(display_mode_ == display_mode::simple && in_mode != core::field_mode::progressive && format_desc_.mode != core::field_mode::progressive && video_frame->height != static_cast<int>(format_desc_.height))
+				if(display_mode_ == display_mode::simple && in_mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && video_frame->height != static_cast<int>(format_desc_.height))
 					display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
 				
 				if(display_mode_ == display_mode::deinterlace)
@@ -225,10 +225,10 @@ struct frame_muxer::implementation : boost::noncopyable
 			auto frame = make_write_frame(this, av_frame, frame_factory_, hints);
 
 			// Fix field-order if needed
-			if(frame->get_type() == core::field_mode::lower && format_desc_.mode == core::field_mode::upper)
-				frame->get_image_transform().set_fill_translation(0.0f, 0.5/static_cast<double>(frame->get_pixel_format_desc().planes[0].height));
-			else if(frame->get_type() == core::field_mode::upper && format_desc_.mode == core::field_mode::lower)
-				frame->get_image_transform().set_fill_translation(0.0f, -0.5/static_cast<double>(frame->get_pixel_format_desc().planes[0].height));
+			if(frame->get_type() == core::field_mode::lower && format_desc_.field_mode == core::field_mode::upper)
+				frame->get_frame_transform().fill_translation[1] += 0.5/static_cast<double>(frame->get_pixel_format_desc().planes[0].height);
+			else if(frame->get_type() == core::field_mode::upper && format_desc_.field_mode == core::field_mode::lower)
+				frame->get_frame_transform().fill_translation[1] -= 0.5/static_cast<double>(frame->get_pixel_format_desc().planes[0].height);
 
 			video_streams_.back().push(frame);
 			++video_frame_count_;
@@ -388,7 +388,7 @@ struct frame_muxer::implementation : boost::noncopyable
 				
 		auto frame2 = pop_video();
 
-		dest.push_back(core::basic_frame::interlace(frame1, frame2, format_desc_.mode));		
+		dest.push_back(core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode));		
 	}
 	
 	int64_t calc_nb_frames(int64_t nb_frames) const

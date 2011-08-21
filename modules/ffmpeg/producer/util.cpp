@@ -7,7 +7,7 @@
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
 
-#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
 #include <core/mixer/write_frame.h>

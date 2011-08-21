@@ -36,7 +36,7 @@
 #include <common/memory/memclr.h>
 
 #include <core/mixer/write_frame.h>
-#include <core/producer/frame/audio_transform.h>
+#include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
 
 #include <tbb/concurrent_queue.h>
@@ -184,8 +184,8 @@ public:
 			av_frame->format			= PIX_FMT_UYVY422;
 			av_frame->width				= video->GetWidth();
 			av_frame->height			= video->GetHeight();
-			av_frame->interlaced_frame	= format_desc_.mode != core::field_mode::progressive;
-			av_frame->top_field_first	= format_desc_.mode == core::field_mode::upper ? 1 : 0;
+			av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
+			av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
 					
 			BOOST_FOREACH(auto& av_frame2, filter_.execute(av_frame))
 				muxer_.push(av_frame2);		
