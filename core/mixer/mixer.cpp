@@ -169,7 +169,7 @@ public:
 			auto src = transforms_[index].fetch();
 			auto dst = transform;
 			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
-		});
+		}, high_priority);
 	}
 				
 	void apply_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween)
@@ -179,7 +179,7 @@ public:
 			auto src = transforms_[index].fetch();
 			auto dst = transform(src);
 			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
-		});
+		}, high_priority);
 	}
 
 	void clear_transforms()
@@ -188,12 +188,15 @@ public:
 		{
 			transforms_.clear();
 			blend_modes_.clear();
-		});
+		}, high_priority);
 	}
 		
 	void set_blend_mode(int index, blend_mode::type value)
 	{
-		blend_modes_[index] = value;
+		channel_.execution().invoke([&]
+		{
+			blend_modes_[index] = value;
+		}, high_priority);
 	}
 
 	std::wstring print() const
