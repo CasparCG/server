@@ -106,26 +106,19 @@ private:
 				
 		if(layer.front().blend_mode != blend_mode::normal && has_overlapping_items(layer))
 		{
-			auto layer_draw_buffer = std::make_pair(0, create_device_buffer(4)); // int is fields flag
+			auto layer_draw_buffer = create_device_buffer(4); // int is fields flag
 			auto layer_blend_mode = layer.front().blend_mode;
 
 			BOOST_FOREACH(auto& item, layer)
 			{
-				if(layer_draw_buffer.first & item.transform.field_mode)
-					item.blend_mode = blend_mode::normal; // Disable blending and just merge, it will be used when merging back into render stack.
-				else
-				{
-					item.blend_mode = blend_mode::replace; // Target field is empty, no blending, just copy
-					layer_draw_buffer.first |= item.transform.field_mode;
-				}
-
-				draw_item(std::move(item), *layer_draw_buffer.second, local_key_buffer, layer_key_buffer);		
+				item.blend_mode = blend_mode::normal; // Disable blending and just merge.
+				draw_item(std::move(item), *layer_draw_buffer, local_key_buffer, layer_key_buffer);		
 			}
 			
 			render_item item;
 			item.pix_desc.pix_fmt	= pixel_format::bgra;
 			item.pix_desc.planes	= list_of(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
-			item.textures			= list_of(layer_draw_buffer.second);
+			item.textures			= list_of(layer_draw_buffer);
 			item.transform			= frame_transform();
 			item.blend_mode			= layer_blend_mode;
 

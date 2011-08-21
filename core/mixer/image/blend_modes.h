@@ -35,7 +35,6 @@ struct blend_mode
 		saturation,
 		color,
 		luminosity,
-		replace,
 		blend_mode_count 
 	};
 };

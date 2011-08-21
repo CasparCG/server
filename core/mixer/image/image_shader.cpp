@@ -69,8 +69,6 @@ std::string get_blend_color_func()
 	"																					\n"																			  
 	"vec4 blend(vec4 fore)																\n"
 	"{																					\n"
-	"   if(blend_mode == 29) // replace													\n"
-	"         return fore;																\n"
 	"   vec4 back = texture2D(background, gl_TexCoord[1].st).bgra;						\n"
 	"	fore.rgb = get_blend_color(back.rgb, fore.rgb);									\n"
 	"	return fore + (1.0-fore.a)*back;												\n"
