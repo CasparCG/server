@@ -252,6 +252,21 @@ void fix_meta_data(AVFormatContext& context)
 				video_context.time_base.den = static_cast<int>(video_stream.nb_frames*100000);
 			}
 		}
+
+		if(audio_index > -1)
+		{
+			auto& audio_context = *context.streams[audio_index]->codec;
+			auto& audio_stream  = *context.streams[audio_index];
+
+			double duration_sec = audio_stream.duration / static_cast<double>(audio_context.sample_rate);
+			double fps = static_cast<double>(video_context.time_base.den) / static_cast<double>(video_context.time_base.num);
+
+			double fps_nb_frames	= static_cast<double>(duration_sec*fps);
+			double stream_nb_frames =  static_cast<double>(video_stream.nb_frames);
+			double diff = std::abs(fps_nb_frames - stream_nb_frames*2.0);
+			if(diff < fps_nb_frames*0.01)
+				video_context.time_base.num *= 2;
+		}
 	}
 
 	double fps = static_cast<double>(video_context.time_base.den) / static_cast<double>(video_context.time_base.num);
