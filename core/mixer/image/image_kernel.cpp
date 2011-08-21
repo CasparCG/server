@@ -249,7 +249,7 @@ void image_kernel::draw(ogl_device& ogl,
 
 bool operator==(const render_item& lhs, const render_item& rhs)
 {
-	return lhs.textures == rhs.textures && lhs.transform == rhs.transform && lhs.tag == rhs.tag;
+	return lhs.textures == rhs.textures && lhs.transform == rhs.transform;
 }
 
 }}

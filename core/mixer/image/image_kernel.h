@@ -38,7 +38,6 @@ struct render_item
 	pixel_format_desc						pix_desc;
 	std::vector<safe_ptr<device_buffer>>	textures;
 	image_transform							transform;
-	const void*								tag;
 	blend_mode::type						blend_mode;
 };
 
