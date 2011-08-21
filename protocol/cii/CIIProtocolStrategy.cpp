@@ -214,7 +214,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition.duration = 12;
 
 	auto pFP = create_producer(GetChannel()->mixer(), boost::assign::list_of(filename));
-	auto pTransition = create_transition_producer(GetChannel()->get_video_format_desc().mode, pFP, transition);
+	auto pTransition = create_transition_producer(GetChannel()->get_video_format_desc().field_mode, pFP, transition);
 
 	try
 	{

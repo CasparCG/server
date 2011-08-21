@@ -24,7 +24,7 @@
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/pixel_format.h>
-#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/frame_transform.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -37,7 +37,7 @@ struct render_item
 {
 	pixel_format_desc						pix_desc;
 	std::vector<safe_ptr<device_buffer>>	textures;
-	image_transform							transform;
+	frame_transform							transform;
 	blend_mode::type						blend_mode;
 };
 

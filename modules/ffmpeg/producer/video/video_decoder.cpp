@@ -27,7 +27,7 @@
 #include "../../ffmpeg_error.h"
 #include "../../tbb_avcodec.h"
 
-#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
 
 #include <boost/range/algorithm_ext/push_back.hpp>
