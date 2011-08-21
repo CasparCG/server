@@ -191,8 +191,8 @@ struct image_kernel::implementation : boost::noncopyable
 		auto m_p = item.transform.clip_translation;
 		auto m_s = item.transform.clip_scale;
 
-		bool scissor = m_p[0] > std::numeric_limits<double>::epsilon()		 || m_p[1] > std::numeric_limits<double>::epsilon() &&
-					   m_s[0] < 1.0 - std::numeric_limits<double>::epsilon() || m_s[1] < 1.0 - std::numeric_limits<double>::epsilon();
+		bool scissor = m_p[0] > std::numeric_limits<double>::epsilon()			|| m_p[1] > std::numeric_limits<double>::epsilon() ||
+					   m_s[0] < (1.0 - std::numeric_limits<double>::epsilon())	|| m_s[1] < (1.0 - std::numeric_limits<double>::epsilon());
 
 		if(scissor)
 		{
