@@ -24,17 +24,17 @@
 namespace caspar { namespace core {
 	
 audio_transform::audio_transform()
-	: gain_(1.0)
+	: volume_(1.0)
 	, has_audio_(true){}
 
-void audio_transform::set_gain(double value)
+void audio_transform::set_volume(double value)
 {
-	gain_ = std::max(0.0, value);
+	volume_ = std::max(0.0, value);
 }
 
-double audio_transform::get_gain() const
+double audio_transform::get_volume() const
 {
-	return gain_;
+	return volume_;
 }
 
 void audio_transform::set_has_audio(bool value)
@@ -49,7 +49,7 @@ bool audio_transform::get_has_audio() const
 
 audio_transform& audio_transform::operator*=(const audio_transform &other) 
 {
-	gain_ *= other.gain_;
+	volume_ *= other.volume_;
 	has_audio_ &= other.has_audio_;
 	return *this;
 }
@@ -67,7 +67,7 @@ audio_transform tween(double time, const audio_transform& source, const audio_tr
 	};
 
 	audio_transform result;
-	result.set_gain(do_tween(time, source.get_gain(), dest.get_gain(), duration, tweener));
+	result.set_volume(do_tween(time, source.get_volume(), dest.get_volume(), duration, tweener));
 	result.set_has_audio(source.get_has_audio() || dest.get_has_audio());
 	return result;
 }

@@ -221,205 +221,188 @@ bool MixerCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{	
-		if(_parameters[0] == L"VIDEO")
+		if(_parameters[0] == L"KEYER")
 		{
-			if(_parameters[1] == L"IS_KEY")
+			bool value = lexical_cast_or_default(_parameters.at(1), false);
+			auto transform = [=](image_transform transform) -> image_transform
 			{
-				bool value = lexical_cast_or_default(_parameters.at(2), false);
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_is_key(value);
-					return transform;					
-				};
+				transform.set_is_key(value);
+				return transform;					
+			};
 
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform);
-			}
-			else if(_parameters[1] == L"OPACITY")
-			{
-				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform);
+		}
+		else if(_parameters[0] == L"OPACITY")
+		{
+			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 
-				double value = boost::lexical_cast<double>(_parameters.at(2));
+			double value = boost::lexical_cast<double>(_parameters.at(1));
 			
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_opacity(value);
-					return transform;					
-				};
-
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
-			}
-			else if(_parameters[1] == L"FILL_RECT")
+			auto transform = [=](image_transform transform) -> image_transform
 			{
-				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
-				std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
-				double x	= boost::lexical_cast<double>(_parameters.at(2));
-				double y	= boost::lexical_cast<double>(_parameters.at(3));
-				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
-				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
+				transform.set_opacity(value);
+				return transform;					
+			};
 
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_fill_translation(x, y);
-					transform.set_fill_scale(x_s, y_s);
-					transform.set_clip_translation(x, y);
-					transform.set_clip_scale(x_s, y_s);
-					return transform;
-				};
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
+		}
+		else if(_parameters[0] == L"FILL")
+		{
+			int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[5], 0) : 0;
+			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
+			double x	= boost::lexical_cast<double>(_parameters.at(1));
+			double y	= boost::lexical_cast<double>(_parameters.at(2));
+			double x_s	= boost::lexical_cast<double>(_parameters.at(3));
+			double y_s	= boost::lexical_cast<double>(_parameters.at(4));
+
+			auto transform = [=](image_transform transform) -> image_transform
+			{
+				transform.set_fill_translation(x, y);
+				transform.set_fill_scale(x_s, y_s);
+				transform.set_clip_translation(x, y);
+				transform.set_clip_scale(x_s, y_s);
+				return transform;
+			};
 				
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
-			}
-			else if(_parameters[1] == L"CLIP_RECT")
-			{
-				int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
-				std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
-				double x	= boost::lexical_cast<double>(_parameters.at(2));
-				double y	= boost::lexical_cast<double>(_parameters.at(3));
-				double x_s	= boost::lexical_cast<double>(_parameters.at(4));
-				double y_s	= boost::lexical_cast<double>(_parameters.at(5));
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
+		}
+		else if(_parameters[0] == L"MASK")
+		{
+			int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[5], 0) : 0;
+			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
+			double x	= boost::lexical_cast<double>(_parameters.at(1));
+			double y	= boost::lexical_cast<double>(_parameters.at(2));
+			double x_s	= boost::lexical_cast<double>(_parameters.at(3));
+			double y_s	= boost::lexical_cast<double>(_parameters.at(4));
 
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_clip_translation(x, y);
-					transform.set_clip_scale(x_s, y_s);
-					return transform;
-				};
-				
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
-			}
-			else if(_parameters[1] == L"GRID")
+			auto transform = [=](image_transform transform) -> image_transform
 			{
-				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
-				int n = boost::lexical_cast<int>(_parameters.at(2));
-				double delta = 1.0/static_cast<double>(n);
-				for(int x = 0; x < n; ++x)
+				transform.set_clip_translation(x, y);
+				transform.set_clip_scale(x_s, y_s);
+				return transform;
+			};
+				
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);
+		}
+		else if(_parameters[0] == L"GRID")
+		{
+			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			int n = boost::lexical_cast<int>(_parameters.at(1));
+			double delta = 1.0/static_cast<double>(n);
+			for(int x = 0; x < n; ++x)
+			{
+				for(int y = 0; y < n; ++y)
 				{
-					for(int y = 0; y < n; ++y)
-					{
-						int index = x+y*n+1;
-						auto transform = [=](image_transform transform) -> image_transform
-						{				
-							transform.set_fill_translation(x*delta, y*delta);
-							transform.set_fill_scale(delta, delta);			
-							transform.set_clip_translation(x*delta, y*delta);
-							transform.set_clip_scale(delta, delta);
-							return transform;
-						};
-						GetChannel()->mixer()->apply_image_transform(index, transform, duration, tween);
-					}
+					int index = x+y*n+1;
+					auto transform = [=](image_transform transform) -> image_transform
+					{				
+						transform.set_fill_translation(x*delta, y*delta);
+						transform.set_fill_scale(delta, delta);			
+						transform.set_clip_translation(x*delta, y*delta);
+						transform.set_clip_scale(delta, delta);
+						return transform;
+					};
+					GetChannel()->mixer()->apply_image_transform(index, transform, duration, tween);
 				}
 			}
-			else if(_parameters[1] == L"BLEND")
-			{
-				auto blend_str = _parameters.at(2);								
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
-			}
-			else if(_parameters[1] == L"BRIGHTNESS")
-			{
-				auto value = boost::lexical_cast<double>(_parameters.at(2));
-				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_brightness(value);
-					return transform;
-				};
-				
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);	
-			}
-			else if(_parameters[1] == L"SATURATION")
-			{
-				auto value = boost::lexical_cast<double>(_parameters.at(2));
-				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_saturation(value);
-					return transform;
-				};
-				
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);	
-			}
-			else if(_parameters[1] == L"CONTRAST")
-			{
-				auto value = boost::lexical_cast<double>(_parameters.at(2));
-				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_contrast(value);
-					return transform;
-				};
-				
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);	
-			}
-			else if(_parameters[1] == L"LEVELS")
-			{
-				image_transform::levels value;
-				value.min_input  = boost::lexical_cast<double>(_parameters.at(2));
-				value.max_input  = boost::lexical_cast<double>(_parameters.at(3));
-				value.gamma		 = boost::lexical_cast<double>(_parameters.at(4));
-				value.min_output = boost::lexical_cast<double>(_parameters.at(5));
-				value.max_output = boost::lexical_cast<double>(_parameters.at(6));
-				int duration = _parameters.size() > 7 ? lexical_cast_or_default(_parameters[7], 0) : 0;
-				std::wstring tween = _parameters.size() > 8 ? _parameters[8] : L"linear";
-
-				auto transform = [=](image_transform transform) -> image_transform
-				{
-					transform.set_levels(value);
-					return transform;
-				};
-				
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);	
-			}
-			else if(_parameters[1] == L"RESET")
-			{
-				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
-				std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-				
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->set_image_transform(GetLayerIndex(), image_transform(), duration, tween);
-			}
 		}
-		else if(_parameters[0] == L"AUDIO")
+		else if(_parameters[0] == L"BLEND")
 		{
-			if(_parameters[1] == L"GAIN")
+			auto blend_str = _parameters.at(1);								
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
+		}
+		else if(_parameters[0] == L"BRIGHTNESS")
+		{
+			auto value = boost::lexical_cast<double>(_parameters.at(1));
+			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			auto transform = [=](image_transform transform) -> image_transform
 			{
-				int duration = _parameters.size() > 3 ? lexical_cast_or_default(_parameters[3], 0) : 0;
-				std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
-				double value = boost::lexical_cast<double>(_parameters[2]);
-
-				auto transform = [=](audio_transform transform) -> audio_transform
-				{
-					transform.set_gain(value);
-					return transform;
-				};
+				transform.set_brightness(value);
+				return transform;
+			};
 				
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->apply_audio_transform(GetLayerIndex(), transform, duration, tween);
-			}
-			else if(_parameters[1] == L"RESET")
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);	
+		}
+		else if(_parameters[0] == L"SATURATION")
+		{
+			auto value = boost::lexical_cast<double>(_parameters.at(1));
+			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			auto transform = [=](image_transform transform) -> image_transform
 			{
-				int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
-				std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+				transform.set_saturation(value);
+				return transform;
+			};
+				
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);	
+		}
+		else if(_parameters[0] == L"CONTRAST")
+		{
+			auto value = boost::lexical_cast<double>(_parameters.at(1));
+			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			auto transform = [=](image_transform transform) -> image_transform
+			{
+				transform.set_contrast(value);
+				return transform;
+			};
+				
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);	
+		}
+		else if(_parameters[0] == L"LEVELS")
+		{
+			image_transform::levels value;
+			value.min_input  = boost::lexical_cast<double>(_parameters.at(1));
+			value.max_input  = boost::lexical_cast<double>(_parameters.at(2));
+			value.gamma		 = boost::lexical_cast<double>(_parameters.at(3));
+			value.min_output = boost::lexical_cast<double>(_parameters.at(4));
+			value.max_output = boost::lexical_cast<double>(_parameters.at(5));
+			int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
+			std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
 
-				int layer = GetLayerIndex();
-				GetChannel()->mixer()->set_audio_transform(GetLayerIndex(), audio_transform(), duration, tween);
-			}
+			auto transform = [=](image_transform transform) -> image_transform
+			{
+				transform.set_levels(value);
+				return transform;
+			};
+				
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->apply_image_transform(GetLayerIndex(), transform, duration, tween);	
+		}
+		else if(_parameters[0] == L"VOLUME")
+		{
+			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			double value = boost::lexical_cast<double>(_parameters[1]);
+
+			auto transform = [=](audio_transform transform) -> audio_transform
+			{
+				transform.set_volume(value);
+				return transform;
+			};
+				
+			int layer = GetLayerIndex();
+			GetChannel()->mixer()->apply_audio_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"RESET")
 		{
 			GetChannel()->mixer()->reset_transforms();
+		}
+		else
+		{
+			SetReplyString(TEXT("404 MIXER ERROR\r\n"));
+			return false;
 		}
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));

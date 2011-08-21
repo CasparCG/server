@@ -121,13 +121,13 @@ struct transition_producer : public frame_producer
 		auto s_frame2 = make_safe<basic_frame>(src_frame);
 
 		s_frame1->get_audio_transform().set_has_audio(false);
-		s_frame2->get_audio_transform().set_gain(1.0-delta2);
+		s_frame2->get_audio_transform().set_volume(1.0-delta2);
 
 		auto d_frame1 = make_safe<basic_frame>(dest_frame);
 		auto d_frame2 = make_safe<basic_frame>(dest_frame);
 		
 		d_frame1->get_audio_transform().set_has_audio(false);
-		d_frame2->get_audio_transform().set_gain(delta2);
+		d_frame2->get_audio_transform().set_volume(delta2);
 
 		//if(info_.type == transition::mix)
 		//{
