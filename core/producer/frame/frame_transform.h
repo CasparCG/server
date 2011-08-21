@@ -54,15 +54,14 @@ public:
 
 	double					volume;
 	double					opacity;
-	double					gain;
 	double					contrast;
 	double					brightness;
 	double					saturation;
-	levels					levels;
 	boost::array<double, 2>	fill_translation; 
 	boost::array<double, 2>	fill_scale; 
 	boost::array<double, 2>	clip_translation;  
 	boost::array<double, 2>	clip_scale;  
+	levels					levels;
 
 	field_mode::type		field_mode;
 	bool					is_key;
