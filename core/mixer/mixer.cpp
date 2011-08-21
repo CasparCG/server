@@ -184,7 +184,11 @@ public:
 
 	void clear_transforms()
 	{
-		channel_.execution().invoke([&]{transforms_.clear();});
+		channel_.execution().invoke([&]
+		{
+			transforms_.clear();
+			blend_modes_.clear();
+		});
 	}
 		
 	void set_blend_mode(int index, blend_mode::type value)
