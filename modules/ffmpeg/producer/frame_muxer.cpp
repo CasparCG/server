@@ -235,7 +235,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		}
 
 		if(video_streams_.back().size() > 8)
-			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
+			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
 	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples)
