@@ -40,8 +40,7 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/pixel_format.h>
-#include <core/producer/frame/audio_transform.h>
-#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/frame_transform.h>
 
 #include <core/video_format.h>
 
@@ -94,12 +93,7 @@ struct mixer::implementation : boost::noncopyable
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
 	
-	typedef std::unordered_map<int, tweened_transform<core::image_transform>> image_transforms;
-	typedef std::unordered_map<int, tweened_transform<core::audio_transform>> audio_transforms;
-
-	boost::fusion::map<boost::fusion::pair<core::image_transform, image_transforms>,
-					boost::fusion::pair<core::audio_transform, audio_transforms>> transforms_;
-	
+	std::unordered_map<int, tweened_transform<core::frame_transform>> transforms_;	
 	std::unordered_map<int, blend_mode::type> blend_modes_;
 
 	std::queue<std::pair<boost::unique_future<safe_ptr<host_buffer>>, std::vector<int16_t>>> buffer_;
@@ -120,14 +114,45 @@ public:
 	{			
 		try
 		{
-			decltype(mix_image(frames)) image;
-			decltype(mix_audio(frames)) audio;
+			BOOST_FOREACH(auto& frame, frames)
+			{
+				auto blend_it = blend_modes_.find(frame.first);
+				image_mixer_.begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
 
-			tbb::parallel_invoke
-			(
-				[&]{image = mix_image(frames);}, 
-				[&]{audio = mix_audio(frames);}
-			);
+				if(channel_.get_format_desc().field_mode != core::field_mode::progressive)
+				{
+					auto frame1 = make_safe<core::basic_frame>(frame.second);
+					frame1->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
+				
+					auto frame2 = make_safe<core::basic_frame>(frame.second);
+					frame2->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
+						
+					if(frame1->get_frame_transform() != frame2->get_frame_transform())
+						frame2 = core::basic_frame::interlace(frame1, frame2, channel_.get_format_desc().field_mode);
+
+					frame2->accept(audio_mixer_);					
+					frame2->accept(image_mixer_);
+				}
+				else
+				{
+					auto frame2 = make_safe<core::basic_frame>(frame.second);
+					frame2->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
+					
+					// Audio
+					frame2->accept(audio_mixer_);
+
+					// Video
+					auto blend_it = blend_modes_.find(frame.first);
+					image_mixer_.begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
+					
+					frame2->accept(image_mixer_);
+				}
+
+				image_mixer_.end_layer();
+			}
+
+			auto image = image_mixer_.render();
+			auto audio = audio_mixer_.mix();
 			
 			buffer_.push(std::make_pair(std::move(image), audio));
 
@@ -150,40 +175,30 @@ public:
 	{		
 		return image_mixer_.create_frame(tag, desc);
 	}
-
-	void reset_transforms()
-	{
-		channel_.execution().invoke([&]
-		{
-			boost::fusion::at_key<image_transform>(transforms_).clear();
-			boost::fusion::at_key<audio_transform>(transforms_).clear();
-		});
-	}
 		
-	template<typename T>
-	void set_transform(int index, const T& transform, unsigned int mix_duration, const std::wstring& tween)
+	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
 		channel_.execution().invoke([&]
 		{
-			auto& transforms = boost::fusion::at_key<T>(transforms_);
-
-			auto src = transforms[index].fetch();
+			auto src = transforms_[index].fetch();
 			auto dst = transform;
-			transforms[index] = tweened_transform<T>(src, dst, mix_duration, tween);
+			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
 		});
 	}
 				
-	template<typename T>
-	void apply_transform(int index, const std::function<T(T)>& transform, unsigned int mix_duration, const std::wstring& tween)
+	void apply_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
 		channel_.execution().invoke([&]
 		{
-			auto& transforms = boost::fusion::at_key<T>(transforms_);
-
-			auto src = transforms[index].fetch();
+			auto src = transforms_[index].fetch();
 			auto dst = transform(src);
-			transforms[index] = tweened_transform<T>(src, dst, mix_duration, tween);
+			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
 		});
+	}
+
+	void clear_transforms()
+	{
+		channel_.execution().invoke([&]{transforms_.clear();});
 	}
 		
 	void set_blend_mode(int index, blend_mode::type value)
@@ -194,52 +209,6 @@ public:
 	std::wstring print() const
 	{
 		return L"mixer";
-	}
-
-private:
-		
-	boost::unique_future<safe_ptr<host_buffer>> mix_image(std::map<int, safe_ptr<core::basic_frame>> frames)
-	{		
-		auto& image_transforms = boost::fusion::at_key<core::image_transform>(transforms_);
-		
-		BOOST_FOREACH(auto& frame, frames)
-		{
-			auto blend_it = blend_modes_.find(frame.first);
-			image_mixer_.begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
-
-			auto frame1 = make_safe<core::basic_frame>(frame.second);
-			frame1->get_image_transform() = image_transforms[frame.first].fetch_and_tick(1);
-						
-			if(channel_.get_format_desc().mode != core::field_mode::progressive)
-			{
-				auto frame2 = make_safe<core::basic_frame>(frame.second);
-				frame2->get_image_transform() = image_transforms[frame.first].fetch_and_tick(1);
-				if(frame1->get_image_transform() != frame2->get_image_transform())
-					frame1 = core::basic_frame::interlace(frame1, frame2, channel_.get_format_desc().mode);
-			}
-
-			frame1->accept(image_mixer_);
-
-			image_mixer_.end_layer();
-		}
-
-		return image_mixer_.render();
-	}
-
-	std::vector<int16_t> mix_audio(const std::map<int, safe_ptr<core::basic_frame>>& frames)
-	{
-		auto& audio_transforms = boost::fusion::at_key<core::audio_transform>(transforms_);
-
-		BOOST_FOREACH(auto& frame, frames)
-		{
-			const unsigned int num = channel_.get_format_desc().mode == core::field_mode::progressive ? 1 : 2;
-
-			auto frame1 = make_safe<core::basic_frame>(frame.second);
-			frame1->get_audio_transform() = audio_transforms[frame.first].fetch_and_tick(num);
-			frame1->accept(audio_mixer_);
-		}
-
-		return audio_mixer_.mix();
 	}
 };
 	
@@ -255,10 +224,8 @@ safe_ptr<core::write_frame> mixer::create_frame(const void* tag, size_t width, s
 	desc.planes.push_back( core::pixel_format_desc::plane(width, height, 4));
 	return create_frame(tag, desc);
 }
-void mixer::reset_transforms(){impl_->reset_transforms();}
-void mixer::set_image_transform(int index, const core::image_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::image_transform>(index, transform, mix_duration, tween);}
-void mixer::set_audio_transform(int index, const core::audio_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform<core::audio_transform>(index, transform, mix_duration, tween);}
-void mixer::apply_image_transform(int index, const std::function<core::image_transform(core::image_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::image_transform>(index, transform, mix_duration, tween);}
-void mixer::apply_audio_transform(int index, const std::function<core::audio_transform(core::audio_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform<core::audio_transform>(index, transform, mix_duration, tween);}
+void mixer::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
+void mixer::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
+void mixer::clear_transforms(){impl_->clear_transforms();}
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
 }}

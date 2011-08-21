@@ -21,8 +21,7 @@
 
 #include "basic_frame.h"
 
-#include "image_transform.h"
-#include "audio_transform.h"
+#include "frame_transform.h"
 #include "../../video_format.h"
 
 #include <boost/foreach.hpp>
@@ -33,8 +32,7 @@ struct basic_frame::implementation
 {		
 	std::vector<safe_ptr<basic_frame>> frames_;
 
-	image_transform image_transform_;	
-	audio_transform audio_transform_;
+	frame_transform frame_transform_;	
 	
 public:
 	implementation(const std::vector<safe_ptr<basic_frame>>& frames) : frames_(frames) 
@@ -91,10 +89,8 @@ basic_frame& basic_frame::operator=(basic_frame&& other)
 }
 void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
 
-const image_transform& basic_frame::get_image_transform() const { return impl_->image_transform_;}
-image_transform& basic_frame::get_image_transform() { return impl_->image_transform_;}
-const audio_transform& basic_frame::get_audio_transform() const { return impl_->audio_transform_;}
-audio_transform& basic_frame::get_audio_transform() { return impl_->audio_transform_;}
+const frame_transform& basic_frame::get_frame_transform() const { return impl_->frame_transform_;}
+frame_transform& basic_frame::get_frame_transform() { return impl_->frame_transform_;}
 
 std::wstring basic_frame::print() const{return impl_->print();}
 void basic_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
@@ -114,13 +110,13 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 	auto my_frame2 = make_safe<basic_frame>(frame2);
 	if(mode == field_mode::upper)
 	{
-		my_frame1->get_image_transform().set_field_mode(field_mode::upper);	
-		my_frame2->get_image_transform().set_field_mode(field_mode::lower);	
-	}											 
-	else										 
-	{											 
-		my_frame1->get_image_transform().set_field_mode(field_mode::lower);	
-		my_frame2->get_image_transform().set_field_mode(field_mode::upper);	
+		my_frame1->get_frame_transform().field_mode = field_mode::upper;	
+		my_frame2->get_frame_transform().field_mode = field_mode::lower;	
+	}									 
+	else								 
+	{									 
+		my_frame1->get_frame_transform().field_mode = field_mode::lower;	
+		my_frame2->get_frame_transform().field_mode = field_mode::upper;	
 	}
 
 	std::vector<safe_ptr<basic_frame>> frames;
@@ -152,7 +148,7 @@ safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fil
 		return basic_frame::empty();
 
 	std::vector<safe_ptr<basic_frame>> frames;
-	key->get_image_transform().set_is_key(true);
+	key->get_frame_transform().is_key = true;
 	frames.push_back(key);
 	frames.push_back(fill);
 	return basic_frame(std::move(frames));
@@ -161,7 +157,7 @@ safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fil
 safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame)
 {
 	basic_frame frame2 = frame;
-	frame2.get_audio_transform().set_has_audio(false);
+	frame2.get_frame_transform().volume = 0.0;
 	return std::move(frame2);
 }
 	

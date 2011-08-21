@@ -24,10 +24,13 @@
 #include <core/video_format.h>
 
 #include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/image_transform.h>
-#include <core/producer/frame/audio_transform.h>
+#include <core/producer/frame/frame_transform.h>
 
 #include <tbb/parallel_invoke.h>
+
+#include <boost/assign.hpp>
+
+using namespace boost::assign;
 
 namespace caspar { namespace core {	
 
@@ -120,44 +123,44 @@ struct transition_producer : public frame_producer
 		auto s_frame1 = make_safe<basic_frame>(src_frame);
 		auto s_frame2 = make_safe<basic_frame>(src_frame);
 
-		s_frame1->get_audio_transform().set_has_audio(false);
-		s_frame2->get_audio_transform().set_volume(1.0-delta2);
+		s_frame1->get_frame_transform().volume = 0.0;
+		s_frame2->get_frame_transform().volume = 1.0-delta2;
 
 		auto d_frame1 = make_safe<basic_frame>(dest_frame);
 		auto d_frame2 = make_safe<basic_frame>(dest_frame);
 		
-		d_frame1->get_audio_transform().set_has_audio(false);
-		d_frame2->get_audio_transform().set_volume(delta2);
+		d_frame1->get_frame_transform().volume = 0.0;
+		d_frame2->get_frame_transform().volume = delta2;
 
 		//if(info_.type == transition::mix)
 		//{
-		//	d_frame1->get_image_transform().set_opacity(delta1);	
-		//	d_frame2->get_image_transform().set_opacity(delta2);
+		//	d_frame1->get_frame_transform().set_opacity(delta1);	
+		//	d_frame2->get_frame_transform().set_opacity(delta2);
 
-		//	s_frame1->get_image_transform().set_opacity(1.0-delta1);	
-		//	s_frame2->get_image_transform().set_opacity(1.0-delta2);		
+		//	s_frame1->get_frame_transform().set_opacity(1.0-delta1);	
+		//	s_frame2->get_frame_transform().set_opacity(1.0-delta2);		
 		//}
 		if(info_.type == transition::slide)
 		{
-			d_frame1->get_image_transform().set_fill_translation((-1.0+delta1)*dir, 0.0);	
-			d_frame2->get_image_transform().set_fill_translation((-1.0+delta2)*dir, 0.0);		
+			d_frame1->get_frame_transform().fill_translation[0] = (-1.0+delta1)*dir;	
+			d_frame2->get_frame_transform().fill_translation[0] = (-1.0+delta2)*dir;		
 		}
 		else if(info_.type == transition::push)
 		{
-			d_frame1->get_image_transform().set_fill_translation((-1.0+delta1)*dir, 0.0);
-			d_frame2->get_image_transform().set_fill_translation((-1.0+delta2)*dir, 0.0);
+			d_frame1->get_frame_transform().fill_translation[0] = (-1.0+delta1)*dir;
+			d_frame2->get_frame_transform().fill_translation[0] = (-1.0+delta2)*dir;
 
-			s_frame1->get_image_transform().set_fill_translation((0.0+delta1)*dir, 0.0);	
-			s_frame2->get_image_transform().set_fill_translation((0.0+delta2)*dir, 0.0);		
+			s_frame1->get_frame_transform().fill_translation[0] = (0.0+delta1)*dir;	
+			s_frame2->get_frame_transform().fill_translation[0] = (0.0+delta2)*dir;		
 		}
 		else if(info_.type == transition::wipe)		
 		{
-			d_frame1->get_image_transform().set_clip_scale(delta1, 1.0);	
-			d_frame2->get_image_transform().set_clip_scale(delta2, 1.0);			
+			d_frame1->get_frame_transform().clip_scale[0] = delta1;	
+			d_frame2->get_frame_transform().clip_scale[0] = delta2;			
 		}
 				
-		const auto s_frame = s_frame1->get_image_transform() == s_frame2->get_image_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);
-		const auto d_frame = d_frame1->get_image_transform() == d_frame2->get_image_transform() ? d_frame2 : basic_frame::interlace(d_frame1, d_frame2, mode_);
+		const auto s_frame = s_frame1->get_frame_transform() == s_frame2->get_frame_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);
+		const auto d_frame = d_frame1->get_frame_transform() == d_frame2->get_frame_transform() ? d_frame2 : basic_frame::interlace(d_frame1, d_frame2, mode_);
 		
 		last_frame_ = basic_frame::combine(s_frame2, d_frame2);
 

@@ -33,7 +33,7 @@
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
 
-#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/pixel_format.h>
 #include <core/video_format.h>
 
@@ -111,12 +111,12 @@ private:
 
 			BOOST_FOREACH(auto& item, layer)
 			{
-				if(layer_draw_buffer.first & item.transform.get_field_mode())
+				if(layer_draw_buffer.first & item.transform.field_mode)
 					item.blend_mode = blend_mode::normal; // Disable blending and just merge, it will be used when merging back into render stack.
 				else
 				{
 					item.blend_mode = blend_mode::replace; // Target field is empty, no blending, just copy
-					layer_draw_buffer.first |= item.transform.get_field_mode();
+					layer_draw_buffer.first |= item.transform.field_mode;
 				}
 
 				draw_item(std::move(item), *layer_draw_buffer.second, local_key_buffer, layer_key_buffer);		
@@ -126,7 +126,7 @@ private:
 			item.pix_desc.pix_fmt	= pixel_format::bgra;
 			item.pix_desc.planes	= list_of(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
 			item.textures			= list_of(layer_draw_buffer.second);
-			item.transform			= image_transform();
+			item.transform			= frame_transform();
 			item.blend_mode			= layer_blend_mode;
 
 			kernel_.draw(channel_.ogl(), std::move(item), *draw_buffer, nullptr, nullptr);
@@ -147,7 +147,7 @@ private:
 				   std::pair<int, std::shared_ptr<device_buffer>>&	local_key_buffer, 
 				   std::shared_ptr<device_buffer>&					layer_key_buffer)
 	{											
-		if(item.transform.get_is_key())
+		if(item.transform.is_key)
 		{
 			if(!local_key_buffer.second)
 			{
@@ -155,13 +155,13 @@ private:
 				local_key_buffer.second = create_device_buffer(1);
 			}
 			
-			local_key_buffer.first |= item.transform.get_field_mode(); // Add field to flag.
+			local_key_buffer.first |= item.transform.field_mode; // Add field to flag.
 			kernel_.draw(channel_.ogl(), std::move(item), *local_key_buffer.second, nullptr, nullptr);
 		}
 		else
 		{
 			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer.second, layer_key_buffer);
-			local_key_buffer.first ^= item.transform.get_field_mode(); // Remove field from flag.
+			local_key_buffer.first ^= item.transform.field_mode; // Remove field from flag.
 			
 			if(local_key_buffer.first == 0) // If all fields from key has been used, reset it
 			{
@@ -175,12 +175,12 @@ private:
 	{		
 		auto upper_count = boost::range::count_if(layer, [&](const render_item& item)
 		{
-			return item.transform.get_field_mode() | field_mode::upper;
+			return item.transform.field_mode | field_mode::upper;
 		});
 
 		auto lower_count = boost::range::count_if(layer, [&](const render_item& item)
 		{
-			return item.transform.get_field_mode() | field_mode::lower;
+			return item.transform.field_mode | field_mode::lower;
 		});
 
 		return upper_count > 1 || lower_count > 1;
@@ -199,7 +199,7 @@ struct image_mixer::implementation : boost::noncopyable
 {	
 	ogl_device&								ogl_;
 	image_renderer							renderer_;
-	std::vector<image_transform>			transform_stack_;
+	std::vector<frame_transform>			transform_stack_;
 	blend_mode::type						active_blend_mode_;
 	std::deque<std::deque<render_item>>		layers_; // layer/stream/items
 public:
@@ -219,12 +219,12 @@ public:
 		
 	void begin(core::basic_frame& frame)
 	{
-		transform_stack_.push_back(transform_stack_.back()*frame.get_image_transform());
+		transform_stack_.push_back(transform_stack_.back()*frame.get_frame_transform());
 	}
 		
 	void visit(core::write_frame& frame)
 	{	
-		if(transform_stack_.back().get_field_mode() == field_mode::empty)
+		if(transform_stack_.back().field_mode == field_mode::empty)
 			return;
 		
 		core::render_item item;

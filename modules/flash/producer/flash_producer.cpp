@@ -362,7 +362,7 @@ public:
 				{
 					auto frame1 = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
 					auto frame2 = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
-					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.mode));
+					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
 				}
 				else if(abs(context_->fps()- format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
 				{

@@ -28,7 +28,7 @@
 
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/frame_transform.h>
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
@@ -41,6 +41,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <algorithm>
+#include <array>
 
 using namespace boost::assign;
 
@@ -164,7 +165,10 @@ struct image_scroll_producer : public core::frame_producer
 				return core::basic_frame::eof();
 
 			for(size_t n = 0; n < frames_.size(); ++n)
-				frames_[n]->get_image_transform().set_fill_translation(start_offset_[0], start_offset_[1] -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height));
+			{
+				frames_[n]->get_frame_transform().fill_translation[0] = start_offset_[0];
+				frames_[n]->get_frame_transform().fill_translation[0] =	start_offset_[1] -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height);
+			}
 		}
 		else
 		{
@@ -172,7 +176,10 @@ struct image_scroll_producer : public core::frame_producer
 				return core::basic_frame::eof();
 
 			for(size_t n = 0; n < frames_.size(); ++n)
-				frames_[n]->get_image_transform().set_fill_translation(start_offset_[0] -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height), start_offset_[1]);
+			{
+				frames_[n]->get_frame_transform().fill_translation[0] = start_offset_[0] -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height);				
+				frames_[n]->get_frame_transform().fill_translation[1] = start_offset_[1];
+			}
 		}
 
 		return last_frame_ = core::basic_frame(frames_);

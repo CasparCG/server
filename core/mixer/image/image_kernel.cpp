@@ -34,7 +34,7 @@
 
 #include <core/video_format.h>
 #include <core/producer/frame/pixel_format.h>
-#include <core/producer/frame/image_transform.h>
+#include <core/producer/frame/frame_transform.h>
 
 #include <GL/glew.h>
 
@@ -74,7 +74,7 @@ struct image_kernel::implementation : boost::noncopyable
 		if(item.textures.empty())
 			return;
 
-		if(item.transform.get_opacity() < epsilon)
+		if(item.transform.opacity < epsilon)
 			return;
 		
 		if(!std::all_of(item.textures.begin(), item.textures.end(), std::mem_fn(&device_buffer::ready)))
@@ -111,11 +111,11 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("has_local_key",	local_key);
 		shader_->set("has_layer_key",	layer_key);
 		shader_->set("pixel_format",	item.pix_desc.pix_fmt);	
-		shader_->set("opacity",			item.transform.get_is_key() ? 1.0 : item.transform.get_opacity());	
+		shader_->set("opacity",			item.transform.is_key ? 1.0 : item.transform.opacity);	
 		
 		// Setup blend_func
 		
-		if(item.transform.get_is_key())
+		if(item.transform.is_key)
 			item.blend_mode = blend_mode::normal;
 
 		if(blend_modes_)
@@ -140,49 +140,47 @@ struct image_kernel::implementation : boost::noncopyable
 		}
 
 		// Setup image-adjustements
-
-		auto levels = item.transform.get_levels();
-
-		if(levels.min_input  > epsilon		||
-		   levels.max_input  < 1.0-epsilon	||
-		   levels.min_output > epsilon		||
-		   levels.max_output < 1.0-epsilon	||
-		   std::abs(levels.gamma - 1.0) > epsilon)
+		
+		if(item.transform.levels.min_input  > epsilon		||
+		   item.transform.levels.max_input  < 1.0-epsilon	||
+		   item.transform.levels.min_output > epsilon		||
+		   item.transform.levels.max_output < 1.0-epsilon	||
+		   std::abs(item.transform.levels.gamma - 1.0) > epsilon)
 		{
 			shader_->set("levels", true);	
-			shader_->set("min_input", levels.min_input);	
-			shader_->set("max_input", levels.max_input);
-			shader_->set("min_output", levels.min_output);
-			shader_->set("max_output", levels.max_output);
-			shader_->set("gamma", levels.gamma);
+			shader_->set("min_input",	item.transform.levels.min_input);	
+			shader_->set("max_input",	item.transform.levels.max_input);
+			shader_->set("min_output",	item.transform.levels.min_output);
+			shader_->set("max_output",	item.transform.levels.max_output);
+			shader_->set("gamma",		item.transform.levels.gamma);
 		}
 		else
 			shader_->set("levels", false);	
 
-		if(std::abs(item.transform.get_brightness() - 1.0) > epsilon ||
-		   std::abs(item.transform.get_saturation() - 1.0) > epsilon ||
-		   std::abs(item.transform.get_contrast() - 1.0) > epsilon)
+		if(std::abs(item.transform.brightness - 1.0) > epsilon ||
+		   std::abs(item.transform.saturation - 1.0) > epsilon ||
+		   std::abs(item.transform.contrast - 1.0)   > epsilon)
 		{
 			shader_->set("csb",	true);	
 			
-			shader_->set("brt", item.transform.get_brightness());	
-			shader_->set("sat", item.transform.get_saturation());
-			shader_->set("con", item.transform.get_contrast());
+			shader_->set("brt", item.transform.brightness);	
+			shader_->set("sat", item.transform.saturation);
+			shader_->set("con", item.transform.contrast);
 		}
 		else
 			shader_->set("csb",	false);	
 		
 		// Setup interlacing
 
-		if(item.transform.get_field_mode() == core::field_mode::progressive)			
+		if(item.transform.field_mode == core::field_mode::progressive)			
 			ogl.disable(GL_POLYGON_STIPPLE);			
 		else			
 		{
 			ogl.enable(GL_POLYGON_STIPPLE);
 
-			if(item.transform.get_field_mode() == core::field_mode::upper)
+			if(item.transform.field_mode == core::field_mode::upper)
 				ogl.stipple_pattern(upper_pattern);
-			else if(item.transform.get_field_mode() == core::field_mode::lower)
+			else if(item.transform.field_mode == core::field_mode::lower)
 				ogl.stipple_pattern(lower_pattern);
 		}
 
@@ -190,8 +188,8 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		ogl.viewport(0, 0, background.width(), background.height());
 								
-		auto m_p = item.transform.get_clip_translation();
-		auto m_s = item.transform.get_clip_scale();
+		auto m_p = item.transform.clip_translation;
+		auto m_s = item.transform.clip_scale;
 
 		bool scissor = m_p[0] > std::numeric_limits<double>::epsilon()		 || m_p[1] > std::numeric_limits<double>::epsilon() &&
 					   m_s[0] < 1.0 - std::numeric_limits<double>::epsilon() || m_s[1] < 1.0 - std::numeric_limits<double>::epsilon();
@@ -205,8 +203,8 @@ struct image_kernel::implementation : boost::noncopyable
 			ogl.scissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h));
 		}
 
-		auto f_p = item.transform.get_fill_translation();
-		auto f_s = item.transform.get_fill_scale();
+		auto f_p = item.transform.fill_translation;
+		auto f_s = item.transform.fill_scale;
 		
 		// Set render target
 		
