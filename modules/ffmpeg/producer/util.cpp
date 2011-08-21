@@ -253,7 +253,7 @@ void fix_meta_data(AVFormatContext& context)
 			}
 		}
 
-		if(audio_index > -1)
+		if(audio_index > -1) // Check for invalid double frame-rate
 		{
 			auto& audio_context = *context.streams[audio_index]->codec;
 			auto& audio_stream  = *context.streams[audio_index];
