@@ -102,31 +102,30 @@ private:
 		if(layer.empty())
 			return;
 
-		std::pair<int, std::shared_ptr<device_buffer>> local_key_buffer;
+		std::pair<int, std::shared_ptr<device_buffer>> local_key_buffer; // int is fields flag
 				
 		if(layer.front().blend_mode != blend_mode::normal && has_overlapping_items(layer))
 		{
-			auto layer_draw_buffer = create_device_buffer(4);	
+			auto layer_draw_buffer = std::make_pair(0, create_device_buffer(4)); // int is fields flag
 			auto layer_blend_mode = layer.front().blend_mode;
 
-			int fields = 0;
 			BOOST_FOREACH(auto& item, layer)
 			{
-				if(fields & item.transform.get_field_mode())
+				if(layer_draw_buffer.first & item.transform.get_field_mode())
 					item.blend_mode = blend_mode::normal; // Disable blending and just merge, it will be used when merging back into render stack.
 				else
 				{
 					item.blend_mode = blend_mode::replace; // Target field is empty, no blending, just copy
-					fields |= item.transform.get_field_mode();
+					layer_draw_buffer.first |= item.transform.get_field_mode();
 				}
 
-				draw_item(std::move(item), *layer_draw_buffer, local_key_buffer, layer_key_buffer);		
+				draw_item(std::move(item), *layer_draw_buffer.second, local_key_buffer, layer_key_buffer);		
 			}
 			
 			render_item item;
 			item.pix_desc.pix_fmt	= pixel_format::bgra;
 			item.pix_desc.planes	= list_of(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
-			item.textures			= list_of(layer_draw_buffer);
+			item.textures			= list_of(layer_draw_buffer.second);
 			item.transform			= image_transform();
 			item.blend_mode			= layer_blend_mode;
 
@@ -173,10 +172,7 @@ private:
 	}
 
 	bool has_overlapping_items(const layer& layer)
-	{
-		if(layer.size() < 2)
-			return false;	
-		
+	{		
 		auto upper_count = boost::range::count_if(layer, [&](const render_item& item)
 		{
 			return item.transform.get_field_mode() | field_mode::upper;
@@ -187,10 +183,7 @@ private:
 			return item.transform.get_field_mode() | field_mode::lower;
 		});
 
-		if(upper_count < 2 && lower_count < 2)
-			return false;
-
-		return true;
+		return upper_count > 1 || lower_count > 1;
 	}			
 		
 	safe_ptr<device_buffer> create_device_buffer(size_t stride)
