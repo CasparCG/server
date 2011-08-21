@@ -127,16 +127,7 @@ struct image_kernel::implementation : boost::noncopyable
 		}
 		else
 		{
-			switch(item.blend_mode)
-			{
-			case blend_mode::replace:			
-				ogl.blend_func_separate(GL_ONE, GL_ZERO, GL_ONE, GL_ONE);
-				break;
-			case blend_mode::normal:
-			default:
-				ogl.blend_func_separate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-				break;
-			}
+			ogl.blend_func_separate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);			
 		}
 
 		// Setup image-adjustements
