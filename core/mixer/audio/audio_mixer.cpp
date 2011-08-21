@@ -71,13 +71,13 @@ public:
 				
 		next_audio_transforms_[tag] = next; // Store all active tags, inactive tags will be removed in end_pass.
 				
-		if(next.get_gain() < 0.001 && prev.get_gain() < 0.001)
+		if(next.get_volume() < 0.001 && prev.get_volume() < 0.001)
 			return;
 		
 		static const int BASE = 1<<15;
 
-		const auto next_gain = static_cast<int>(next.get_gain()*BASE);
-		const auto prev_gain = static_cast<int>(prev.get_gain()*BASE);
+		const auto next_volume = static_cast<int>(next.get_volume()*BASE);
+		const auto prev_volume = static_cast<int>(prev.get_volume()*BASE);
 		
 		const int n_samples = audio_data_.back().size();
 		
@@ -94,8 +94,8 @@ public:
 			{
 				for(size_t n = r.begin(); n < r.end(); ++n)
 				{
-					const int sample_gain = (prev_gain - (prev_gain * n)/n_samples) + (next_gain * n)/n_samples;
-					const int sample = (static_cast<int>(audio_data[n])*sample_gain)/BASE;
+					const int sample_volume = (prev_volume - (prev_volume * n)/n_samples) + (next_volume * n)/n_samples;
+					const int sample = (static_cast<int>(audio_data[n])*sample_volume)/BASE;
 					audio_data_.back()[n] = static_cast<int16_t>((static_cast<int>(audio_data_.back()[n]) + sample) & 0xFFFF);
 				}
 			}
