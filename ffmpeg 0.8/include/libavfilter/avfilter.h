@@ -29,8 +29,8 @@
 #include "libavutil/rational.h"
 
 #define LIBAVFILTER_VERSION_MAJOR  2
-#define LIBAVFILTER_VERSION_MINOR 27
-#define LIBAVFILTER_VERSION_MICRO  3
+#define LIBAVFILTER_VERSION_MINOR 28
+#define LIBAVFILTER_VERSION_MICRO  1
 
 #define LIBAVFILTER_VERSION_INT AV_VERSION_INT(LIBAVFILTER_VERSION_MAJOR, \
                                                LIBAVFILTER_VERSION_MINOR, \
@@ -438,15 +438,18 @@ struct AVFilterPad {
     /**
      * Link configuration callback.
      *
-     * For output pads, this should set the link properties such as
-     * width/height. This should NOT set the format property - that is
-     * negotiated between filters by the filter system using the
+     * For output pads, this should set the following link properties:
+     * video: width, height, sample_aspect_ratio, time_base
+     * audio: sample_rate.
+     *
+     * This should NOT set properties such as format, channel_layout, etc which
+     * are negotiated between filters by the filter system using the
      * query_formats() callback before this function is called.
      *
      * For input pads, this should check the properties of the link, and update
      * the filter's internal state as necessary.
      *
-     * For both input and output filters, this should return zero on success,
+     * For both input and output pads, this should return zero on success,
      * and another value on error.
      */
     int (*config_props)(AVFilterLink *link);
@@ -463,12 +466,6 @@ void avfilter_default_end_frame(AVFilterLink *link);
 
 /** default handler for filter_samples() for audio inputs */
 void avfilter_default_filter_samples(AVFilterLink *link, AVFilterBufferRef *samplesref);
-
-/** default handler for config_props() for audio/video outputs */
-int avfilter_default_config_output_link(AVFilterLink *link);
-
-/** default handler for config_props() for audio/video inputs */
-int avfilter_default_config_input_link (AVFilterLink *link);
 
 /** default handler for get_video_buffer() for video inputs */
 AVFilterBufferRef *avfilter_default_get_video_buffer(AVFilterLink *link,
