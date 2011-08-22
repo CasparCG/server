@@ -95,8 +95,6 @@ private:
 		return host_buffer;
 	}
 
-	// TODO: We might have more overlaps for opacity transitions
-	// TODO: What about blending modes, are they ok? Maybe only overlap detection is required for opacity?
 	void draw(layer&& layer, const safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>& layer_key_buffer)
 	{				
 		if(layer.empty())
