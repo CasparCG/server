@@ -264,7 +264,7 @@ void fix_meta_data(AVFormatContext& context)
 			double fps_nb_frames	= static_cast<double>(duration_sec*fps);
 			double stream_nb_frames =  static_cast<double>(video_stream.nb_frames);
 			double diff = std::abs(fps_nb_frames - stream_nb_frames*2.0);
-			if(diff < fps_nb_frames*0.01)
+			if(diff < fps_nb_frames*0.05)
 				video_context.time_base.num *= 2;
 		}
 	}
