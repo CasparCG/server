@@ -68,7 +68,7 @@ struct ffmpeg_producer : public core::frame_producer
 	int												late_frames_;
 	const int										start_;
 	const bool										loop_;
-	const int64_t									length_;
+	const size_t									length_;
 
 	safe_ptr<core::basic_frame>						last_frame_;
 
@@ -77,7 +77,7 @@ struct ffmpeg_producer : public core::frame_producer
 	bool											is_progressive_;
 	
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, int length) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, size_t length) 
 		: filename_(filename)
 		, graph_(diagnostics::create_graph([this]{return print();}))
 		, frame_factory_(frame_factory)		
@@ -187,7 +187,7 @@ public:
 			int64_t video_nb_frames = video_decoder_.nb_frames();
 			int64_t audio_nb_frames = audio_decoder_.nb_frames();
 
-			nb_frames = std::min(length_, std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames)));
+			nb_frames = std::min(static_cast<int64_t>(length_), std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames)));
 		}
 
 		nb_frames = muxer_.calc_nb_frames(nb_frames);
