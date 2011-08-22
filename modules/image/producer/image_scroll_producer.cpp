@@ -167,7 +167,7 @@ struct image_scroll_producer : public core::frame_producer
 			for(size_t n = 0; n < frames_.size(); ++n)
 			{
 				frames_[n]->get_frame_transform().fill_translation[0] = start_offset_[0];
-				frames_[n]->get_frame_transform().fill_translation[0] =	start_offset_[1] -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height);
+				frames_[n]->get_frame_transform().fill_translation[1] =	start_offset_[1] - (n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height);
 			}
 		}
 		else
@@ -177,7 +177,7 @@ struct image_scroll_producer : public core::frame_producer
 
 			for(size_t n = 0; n < frames_.size(); ++n)
 			{
-				frames_[n]->get_frame_transform().fill_translation[0] = start_offset_[0] -0.5*(n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height);				
+				frames_[n]->get_frame_transform().fill_translation[0] = start_offset_[0] - (n+1) + delta_ * 0.5/static_cast<double>(format_desc_.width);				
 				frames_[n]->get_frame_transform().fill_translation[1] = start_offset_[1];
 			}
 		}
@@ -200,12 +200,12 @@ struct image_scroll_producer : public core::frame_producer
 		if(height_ > format_desc_.height)
 		{
 			auto length = (height_ - format_desc_.height);
-			return (length/std::abs(speed_) + length % std::abs(delta_));
+			return length/std::abs(speed_);// + length % std::abs(delta_));
 		}
 		else
 		{
 			auto length = (width_ - format_desc_.width);
-			auto result = (length/std::abs(speed_) + length % std::abs(delta_));
+			auto result = length/std::abs(speed_);// + length % std::abs(delta_));
 			return result;
 		}
 	}
