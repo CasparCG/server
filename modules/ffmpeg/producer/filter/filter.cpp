@@ -74,7 +74,6 @@ struct filter::implementation
 
 	void push(const std::shared_ptr<AVFrame>& frame)
 	{		
-
 		if(!graph_)
 		{
 			graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p){avfilter_graph_free(&p);});
@@ -111,7 +110,7 @@ struct filter::implementation
 			{
 				auto filter_name = graph_->filters[n]->name;
 				if(strstr(filter_name, "yadif") != 0)
-					parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);
+					parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n], frame->height);
 			}
 		}
 	
