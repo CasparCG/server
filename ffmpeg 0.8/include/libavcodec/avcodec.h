@@ -209,6 +209,7 @@ enum CodecID {
     CODEC_ID_JV,
     CODEC_ID_DFA,
     CODEC_ID_8SVX_RAW,
+    CODEC_ID_G2M,
 
     /* various PCM "codecs" */
     CODEC_ID_PCM_S16LE= 0x10000,
@@ -800,6 +801,9 @@ typedef struct AVPacket {
     uint8_t *data;
     int   size;
     int   stream_index;
+    /**
+     * A combination of AV_PKT_FLAG values
+     */
     int   flags;
     /**
      * Additional packet data that can be provided by the container.
@@ -840,7 +844,8 @@ typedef struct AVPacket {
      */
     int64_t convergence_duration;
 } AVPacket;
-#define AV_PKT_FLAG_KEY   0x0001
+#define AV_PKT_FLAG_KEY     0x0001 ///< The packet contains a keyframe
+#define AV_PKT_FLAG_CORRUPT 0x0002 ///< The packet content is corrupted
 
 /**
  * Audio Video Frame.
@@ -1483,7 +1488,7 @@ typedef struct AVCodecContext {
     float b_quant_offset;
 
     /**
-     * Error recognization; higher values will detect more errors but may
+     * Error recognition; higher values will detect more errors but may
      * misdetect some more or less valid parts as errors.
      * - encoding: unused
      * - decoding: Set by user.
@@ -1492,7 +1497,12 @@ typedef struct AVCodecContext {
 #define FF_ER_CAREFUL         1
 #define FF_ER_COMPLIANT       2
 #define FF_ER_AGGRESSIVE      3
+#if FF_API_VERY_AGGRESSIVE
 #define FF_ER_VERY_AGGRESSIVE 4
+#define FF_ER_EXPLODE         5
+#else
+#define FF_ER_EXPLODE         4
+#endif /* FF_API_VERY_AGGRESSIVE */
 
     /**
      * Called at the beginning of each frame to get a buffer for it.
@@ -3541,21 +3551,22 @@ const char *avcodec_configuration(void);
  */
 const char *avcodec_license(void);
 
+#if FF_API_AVCODEC_INIT
 /**
- * Initialize libavcodec.
- * If called more than once, does nothing.
- *
- * @warning This function must be called before any other libavcodec
- * function.
- *
- * @warning This function is not thread-safe.
+ * @deprecated this function is called automatically from avcodec_register()
+ * and avcodec_register_all(), there is no need to call it manually
  */
+attribute_deprecated
 void avcodec_init(void);
+#endif
 
 /**
  * Register the codec codec and initialize libavcodec.
  *
- * @see avcodec_init(), avcodec_register_all()
+ * @warning either this function or avcodec_register_all() must be called
+ * before any other libavcodec functions.
+ *
+ * @see avcodec_register_all()
  */
 void avcodec_register(AVCodec *codec);
 
