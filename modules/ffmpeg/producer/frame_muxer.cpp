@@ -226,9 +226,9 @@ struct frame_muxer::implementation : boost::noncopyable
 
 			// Fix field-order if needed
 			if(frame->get_type() == core::field_mode::lower && format_desc_.field_mode == core::field_mode::upper)
-				frame->get_frame_transform().fill_translation[1] += 1.0/static_cast<double>(frame->get_pixel_format_desc().planes[0].height);
+				frame->get_frame_transform().fill_translation[1] += 1.0/static_cast<double>(format_desc_.height);
 			else if(frame->get_type() == core::field_mode::upper && format_desc_.field_mode == core::field_mode::lower)
-				frame->get_frame_transform().fill_translation[1] -= 1.0/static_cast<double>(frame->get_pixel_format_desc().planes[0].height);
+				frame->get_frame_transform().fill_translation[1] -= 1.0/static_cast<double>(format_desc_.height);
 
 			video_streams_.back().push(frame);
 			++video_frame_count_;
