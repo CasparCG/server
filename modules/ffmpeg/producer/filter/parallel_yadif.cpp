@@ -105,14 +105,17 @@ void return_parallel_yadif(void* func)
 		parallel_line_func_pool.push(reinterpret_cast<decltype(fs[0])>(func));
 }
 
-std::shared_ptr<void> make_parallel_yadif(AVFilterContext* ctx)
+std::shared_ptr<void> make_parallel_yadif(AVFilterContext* ctx, size_t height)
 {
+	if(height % 64 != 0)
+		return std::shared_ptr<void>(nullptr, return_parallel_yadif);
+
 	static boost::once_flag flag = BOOST_ONCE_INIT;
 	boost::call_once(&init_pool, flag);
 
 	YADIFContext* yadif = (YADIFContext*)ctx->priv;
 	org_yadif_filter_line = yadif->filter_line; // Data race is not a problem.
-
+	
 	decltype(org_yadif_filter_line) func = nullptr;
 	if(!parallel_line_func_pool.try_pop(func))	
 		CASPAR_LOG(warning) << "Not enough scalable-yadif context instances. Running non-scalable";
