@@ -110,7 +110,7 @@ struct filter::implementation
 			{
 				auto filter_name = graph_->filters[n]->name;
 				if(strstr(filter_name, "yadif") != 0)
-					parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n], frame->height);
+					parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);
 			}
 		}
 	
