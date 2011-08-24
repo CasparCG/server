@@ -1059,7 +1059,7 @@ bool DataCommand::DoExecuteStore()
 		return false;
 	}
 
-	datafile << _parameters[2];
+	datafile << _parameters2[2];
 	datafile.close();
 
 	std::wstring replyString = TEXT("202 DATA STORE OK\r\n");
