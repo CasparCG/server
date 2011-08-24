@@ -48,7 +48,7 @@ struct configuration
 {
 	size_t	device_index;
 	bool	embedded_audio;
-	bool	external_key;
+	bool	internal_key;
 	bool	low_latency;
 	bool	key_only;
 	size_t	buffer_depth;
@@ -56,7 +56,7 @@ struct configuration
 	configuration()
 		: device_index(1)
 		, embedded_audio(false)
-		, external_key(false)
+		, internal_key(false)
 		, low_latency(false)
 		, key_only(false)
 		, buffer_depth(core::consumer_buffer_depth()){}
@@ -159,7 +159,7 @@ public:
 			enable_audio();
 
 		set_latency(config.low_latency);				
-		set_keyer(config.external_key);
+		set_keyer(config.internal_key);
 				
 		if(config.embedded_audio)		
 			output_->BeginAudioPreroll();		
@@ -207,9 +207,9 @@ public:
 		}
 	}
 
-	void set_keyer(bool external_key)
+	void set_keyer(bool internal_key)
 	{
-		if(!external_key) 
+		if(internal_key) 
 		{
 			if(FAILED(keyer_->Enable(FALSE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
@@ -451,7 +451,7 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::w
 	if(params.size() > 1)
 		config.device_index = lexical_cast_or_default<int>(params[1], config.device_index);
 	
-	config.external_key		= std::find(params.begin(), params.end(), L"EXTERNAL_KEY")	 != params.end();
+	config.internal_key		= std::find(params.begin(), params.end(), L"INTERNAL_KEY")	 != params.end();
 	config.low_latency		= std::find(params.begin(), params.end(), L"LOW_LATENCY")	 != params.end();
 	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
@@ -463,7 +463,7 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tr
 {
 	configuration config;
 
-	config.external_key		= ptree.get("external-key",	  config.external_key);
+	config.internal_key		= ptree.get("internal-key",	  config.internal_key);
 	config.low_latency		= ptree.get("low-latency",	  config.low_latency);
 	config.key_only			= ptree.get("key-only",		  config.key_only);
 	config.device_index		= ptree.get("device",		  config.device_index);
