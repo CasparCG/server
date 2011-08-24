@@ -31,6 +31,7 @@ class mixer;
 class output;
 class ogl_device;
 struct video_format_desc;
+class video_channel_context;
 
 class video_channel : boost::noncopyable
 {
@@ -41,6 +42,8 @@ public:
 	safe_ptr<stage> stage();
 	safe_ptr<mixer>	mixer();
 	safe_ptr<output> output();
+
+	video_channel_context& context();
 
 	video_format_desc get_video_format_desc() const;
 	void set_video_format_desc(const video_format_desc& format_desc);

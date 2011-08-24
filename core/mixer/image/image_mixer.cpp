@@ -30,6 +30,7 @@
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
+#include <common/utility/move_on_copy.h>
 
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/pixel_format.h>
@@ -46,7 +47,15 @@ using namespace boost::assign;
 
 namespace caspar { namespace core {
 	
-typedef std::deque<render_item>				layer;
+struct layer
+{
+	std::vector<render_item> items;
+	blend_mode::type		 blend_mode;
+
+	layer(blend_mode::type blend_mode) : blend_mode(blend_mode)
+	{
+	}
+};
 
 class image_renderer
 {
@@ -59,17 +68,17 @@ public:
 	{
 	}
 	
-	boost::unique_future<safe_ptr<host_buffer>> render(std::deque<layer>&& layers)
+	boost::unique_future<safe_ptr<host_buffer>> render(std::vector<layer>&& layers)
 	{		
-		auto layers2 = std::move(layers);
-		return channel_.ogl().begin_invoke([=]() mutable
+		auto layers2 = make_move_on_copy(std::move(layers));
+		return channel_.ogl().begin_invoke([=]
 		{
-			return do_render(std::move(layers2));
+			return do_render(std::move(layers2.value));
 		});
 	}
 	
 private:
-	safe_ptr<host_buffer> do_render(std::deque<layer>&& layers)
+	safe_ptr<host_buffer> do_render(std::vector<layer>&& layers)
 	{
 		std::shared_ptr<device_buffer> layer_key_buffer;
 
@@ -91,34 +100,30 @@ private:
 
 	void draw_layer(layer&& layer, const safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>& layer_key_buffer)
 	{				
-		if(layer.empty())
+		if(layer.items.empty())
 			return;
 
 		std::pair<int, std::shared_ptr<device_buffer>> local_key_buffer = std::make_pair(0, nullptr); // int is fields flag
 				
-		if(layer.front().blend_mode != blend_mode::normal && has_overlapping_items(layer))
+		if(layer.blend_mode != blend_mode::normal && has_overlapping_items(layer))
 		{
 			auto layer_draw_buffer = create_device_buffer(4); // int is fields flag
-			auto layer_blend_mode = layer.front().blend_mode;
 
-			BOOST_FOREACH(auto& item, layer)
-			{
-				item.blend_mode = blend_mode::normal; // Disable blending and just merge.
+			BOOST_FOREACH(auto& item, layer.items)
 				draw_item(std::move(item), *layer_draw_buffer, local_key_buffer, layer_key_buffer);		
-			}
-			
+						
 			render_item item;
 			item.pix_desc.pix_fmt	= pixel_format::bgra;
 			item.pix_desc.planes	= list_of(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
 			item.textures			= list_of(layer_draw_buffer);
 			item.transform			= frame_transform();
-			item.blend_mode			= layer_blend_mode;
+			item.blend_mode			= layer.blend_mode;
 
 			kernel_.draw(channel_.ogl(), std::move(item), *draw_buffer, nullptr, nullptr);
 		}
 		else // fast path
 		{
-			BOOST_FOREACH(auto& item, layer)		
+			BOOST_FOREACH(auto& item, layer.items)		
 				draw_item(std::move(item), *draw_buffer, local_key_buffer, layer_key_buffer);		
 		}					
 
@@ -158,12 +163,12 @@ private:
 
 	bool has_overlapping_items(const layer& layer)
 	{		
-		auto upper_count = boost::range::count_if(layer, [&](const render_item& item)
+		auto upper_count = boost::range::count_if(layer.items, [&](const render_item& item)
 		{
 			return !item.transform.is_key && (item.transform.field_mode & field_mode::upper);
 		});
 
-		auto lower_count = boost::range::count_if(layer, [&](const render_item& item)
+		auto lower_count = boost::range::count_if(layer.items, [&](const render_item& item)
 		{
 			return  !item.transform.is_key && (item.transform.field_mode & field_mode::lower);
 		});
@@ -182,24 +187,21 @@ private:
 		
 struct image_mixer::implementation : boost::noncopyable
 {	
-	ogl_device&								ogl_;
-	image_renderer							renderer_;
-	std::vector<frame_transform>			transform_stack_;
-	blend_mode::type						active_blend_mode_;
-	std::deque<std::deque<render_item>>		layers_; // layer/stream/items
+	ogl_device&						ogl_;
+	image_renderer					renderer_;
+	std::vector<frame_transform>	transform_stack_;
+	std::vector<layer>				layers_; // layer/stream/items
 public:
 	implementation(video_channel_context& video_channel) 
 		: ogl_(video_channel.ogl())
 		, renderer_(video_channel)
-		, transform_stack_(1)
-		, active_blend_mode_(blend_mode::normal)		
+		, transform_stack_(1)	
 	{
 	}
 
 	void begin_layer(blend_mode::type blend_mode)
 	{
-		active_blend_mode_ = blend_mode;
-		layers_ += layer();
+		layers_.push_back(layer(blend_mode));
 	}
 		
 	void begin(core::basic_frame& frame)
@@ -216,9 +218,8 @@ public:
 		item.pix_desc	= frame.get_pixel_format_desc();
 		item.textures	= frame.get_textures();
 		item.transform	= transform_stack_.back();
-		item.blend_mode	= active_blend_mode_;	
 
-		layers_.back() += item;
+		layers_.back().items.push_back(item);
 	}
 
 	void end()

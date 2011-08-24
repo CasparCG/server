@@ -2,7 +2,6 @@
 
 #include <common/concurrency/executor.h>
 
-#include <core/mixer/gpu/ogl_device.h>
 #include <core/video_format.h>
 
 #include <tbb/spin_rw_mutex.h>
@@ -12,16 +11,16 @@
 
 #include <string>
 
-namespace caspar { namespace core {
+namespace caspar { 
+
+class executor;
+
+namespace core {
+
+class ogl_device;
 
 class video_channel_context
 {
-	mutable tbb::spin_rw_mutex	mutex_;
-	const int					index_;
-	video_format_desc			format_desc_;
-	executor					execution_;
-	executor					destruction_;
-	ogl_device&					ogl_;
 
 public:
 	video_channel_context(int index, ogl_device& ogl, const video_format_desc& format_desc);
@@ -33,6 +32,9 @@ public:
 	executor&			destruction();
 	ogl_device&			ogl();
 	std::wstring		print() const;
+private:
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
 };
 	
 }}

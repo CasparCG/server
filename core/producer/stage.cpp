@@ -30,6 +30,7 @@
 #include <core/producer/frame/frame_factory.h>
 
 #include <common/concurrency/executor.h>
+#include <common/utility/move_on_copy.h>
 
 #include <boost/foreach.hpp>
 
@@ -39,40 +40,6 @@
 #include <set>
 
 namespace caspar { namespace core {
-	
-void destroy_producer(safe_ptr<frame_producer>& producer)
-{
-	if(!producer.unique())
-		CASPAR_LOG(debug) << producer->print() << L" Not destroyed on safe asynchronous destruction thread.";
-	
-	producer = frame_producer::empty();
-}
-
-class destroy_producer_proxy : public frame_producer
-{
-	safe_ptr<frame_producer> producer_;
-	executor& destroy_context_;
-public:
-	destroy_producer_proxy(executor& destroy_context, const safe_ptr<frame_producer>& producer) 
-		: producer_(producer)
-		, destroy_context_(destroy_context){}
-
-	~destroy_producer_proxy()
-	{		
-		if(destroy_context_.size() > 4)
-			CASPAR_LOG(error) << L" Potential destroyer deadlock.";
-
-		destroy_context_.begin_invoke(std::bind(&destroy_producer, std::move(producer_)));
-	}
-
-	virtual safe_ptr<basic_frame>		receive(int hints)												{return producer_->receive(hints);}
-	virtual safe_ptr<basic_frame>		last_frame() const												{return producer_->last_frame();}
-	virtual std::wstring				print() const													{return producer_->print();}
-	virtual void						param(const std::wstring& str)									{producer_->param(str);}
-	virtual safe_ptr<frame_producer>	get_following_producer() const									{return producer_->get_following_producer();}
-	virtual void						set_leading_producer(const safe_ptr<frame_producer>& producer)	{producer_->set_leading_producer(producer);}
-	virtual int64_t						nb_frames() const												{return producer_->nb_frames();}
-};
 
 struct stage::implementation : boost::noncopyable
 {		
@@ -111,7 +78,7 @@ public:
 	{
 		channel_.execution().invoke([&]
 		{
-			layers_[index].load(make_safe<destroy_producer_proxy>(channel_.destruction(), producer), preview, auto_play_delta);
+			layers_[index].load(create_destroy_producer_proxy(channel_.destruction(), producer), preview, auto_play_delta);
 		}, high_priority);
 	}
 
