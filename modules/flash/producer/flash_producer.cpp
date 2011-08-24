@@ -47,6 +47,8 @@
 
 #include <functional>
 
+#include <tbb/spin_mutex.h>
+
 namespace caspar {
 		
 class bitmap
@@ -157,7 +159,7 @@ public:
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));			
+		graph_->set_color("skip-sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
@@ -216,7 +218,7 @@ public:
 		if(!has_underflow)			
 			timer_.tick(frame_time); // This will block the thread.
 		else
-			graph_->add_tag("underflow");
+			graph_->add_tag("skip-sync");
 			
 		frame_timer_.restart();
 
@@ -258,6 +260,7 @@ struct flash_producer : public core::frame_producer
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
 
+	mutable tbb::spin_mutex		last_frame_mutex_;
 	safe_ptr<core::basic_frame>	last_frame_;
 				
 	com_context<flash_renderer> context_;	
@@ -275,11 +278,12 @@ public:
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
-		 
+
 		fps_ = 0;
 
 		graph_ = diagnostics::create_graph([this]{return print();});
-		graph_->set_color("output-buffer-count", diagnostics::color(1.0f, 1.0f, 0.0f));
+		graph_->set_color("output-buffer-count", diagnostics::color(1.0f, 1.0f, 0.0f));		 
+		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		
 		frame_buffer_.set_capacity(frame_factory_->get_video_format_desc().fps > 30.0 ? 2 : 1);
 
@@ -298,14 +302,15 @@ public:
 		graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
 		auto frame = core::basic_frame::late();
-		if(frame_buffer_.try_pop(frame))
-			last_frame_ = frame;
+		if(!frame_buffer_.try_pop(frame))
+			graph_->add_tag("underflow");
 
 		return frame;
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const
 	{
+		tbb::spin_mutex::scoped_lock lock(last_frame_mutex_);
 		return last_frame_;
 	}		
 	
@@ -347,6 +352,14 @@ public:
 		render(context_.get());
 	}
 
+	safe_ptr<core::basic_frame> render_frame()
+	{
+		auto frame = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());		
+		tbb::spin_mutex::scoped_lock lock(last_frame_mutex_);
+		last_frame_ = make_safe<core::basic_frame>(frame);
+		return frame;
+	}
+
 	void render(const flash_renderer* renderer)
 	{		
 		context_.begin_invoke([=]
@@ -360,19 +373,19 @@ public:
 
 				if(abs(context_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
 				{
-					auto frame1 = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
-					auto frame2 = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
+					auto frame1 = render_frame();
+					auto frame2 = render_frame();
 					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
 				}
 				else if(abs(context_->fps()- format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
 				{
-					auto frame = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
+					auto frame = render_frame();
 					frame_buffer_.push(frame);
 					frame_buffer_.push(frame);
 				}
 				else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
 				{
-					auto frame = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());
+					auto frame = render_frame();
 					frame_buffer_.push(frame);
 				}
 
