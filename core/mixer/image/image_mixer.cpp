@@ -100,7 +100,7 @@ private:
 		if(layer.empty())
 			return;
 
-		std::pair<int, std::shared_ptr<device_buffer>> local_key_buffer; // int is fields flag
+		std::pair<int, std::shared_ptr<device_buffer>> local_key_buffer = std::make_pair(0, nullptr); // int is fields flag
 				
 		if(layer.front().blend_mode != blend_mode::normal && has_overlapping_items(layer))
 		{
