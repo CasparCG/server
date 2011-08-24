@@ -32,6 +32,8 @@
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 
+#include "mixer/gpu/ogl_device.h"
+
 #include <boost/timer.hpp>
 
 #ifdef _MSC_VER
@@ -151,5 +153,6 @@ safe_ptr<output> video_channel::output() { return impl_->output_;}
 video_format_desc video_channel::get_video_format_desc() const{return impl_->context_.get_format_desc();}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 std::wstring video_channel::print() const { return impl_->print();}
+video_channel_context& video_channel::context(){return impl_->context_;}
 
 }}

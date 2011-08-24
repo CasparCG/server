@@ -39,6 +39,8 @@ struct render_item
 	std::vector<safe_ptr<device_buffer>>	textures;
 	frame_transform							transform;
 	blend_mode::type						blend_mode;
+
+	render_item() : blend_mode(blend_mode::normal){}
 };
 
 bool operator==(const render_item& lhs, const render_item& rhs);

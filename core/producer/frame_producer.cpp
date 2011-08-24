@@ -28,11 +28,55 @@
 #include "separated/separated_producer.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
+#include <common/utility/move_on_copy.h>
 
 namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
+	
+class destroy_producer_proxy : public frame_producer
+{
+	safe_ptr<frame_producer> producer_;
+	executor& destroy_context_;
+public:
+	destroy_producer_proxy(executor& destroy_context, const safe_ptr<frame_producer>& producer) 
+		: producer_(producer)
+		, destroy_context_(destroy_context){}
+
+	~destroy_producer_proxy()
+	{		
+		if(destroy_context_.size() > 4)
+			CASPAR_LOG(error) << L" Potential destroyer deadlock.";
+
+		// Hacks to bypass compiler bugs.
+		auto mov_producer = make_move_on_copy<safe_ptr<frame_producer>>(std::move(producer_));
+		auto empty_producer = frame_producer::empty();
+		destroy_context_.begin_invoke([=]
+		{			
+			if(!mov_producer.value.unique())
+				CASPAR_LOG(debug) << mov_producer.value->print() << L" Not destroyed on safe asynchronous destruction thread.";
+			else
+				CASPAR_LOG(debug) << mov_producer.value->print() << L" Destroying on safe asynchronous destruction thread.";
+	
+			mov_producer.value = empty_producer;
+		});
+	}
+
+	virtual safe_ptr<basic_frame>		receive(int hints)												{return producer_->receive(hints);}
+	virtual safe_ptr<basic_frame>		last_frame() const												{return producer_->last_frame();}
+	virtual std::wstring				print() const													{return producer_->print();}
+	virtual void						param(const std::wstring& str)									{producer_->param(str);}
+	virtual safe_ptr<frame_producer>	get_following_producer() const									{return producer_->get_following_producer();}
+	virtual void						set_leading_producer(const safe_ptr<frame_producer>& producer)	{producer_->set_leading_producer(producer);}
+	virtual int64_t						nb_frames() const												{return producer_->nb_frames();}
+};
+
+safe_ptr<core::frame_producer> create_destroy_producer_proxy(executor& destroy_context, const safe_ptr<frame_producer>& producer)
+{
+	return make_safe<destroy_producer_proxy>(destroy_context, producer);
+}
 
 class last_frame_producer : public frame_producer
 {
