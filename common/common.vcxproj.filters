@@ -124,5 +124,8 @@
     <ClInclude Include="env.h">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="utility\move_on_copy.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

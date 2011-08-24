@@ -21,6 +21,7 @@
 
 #include "../exception/win32_exception.h"
 #include "../utility/string.h"
+#include "../utility/move_on_copy.h"
 #include "../log/log.h"
 
 #include <tbb/atomic.h>
@@ -76,23 +77,6 @@ enum thread_priority
 	below_normal_priority_class
 };
 
-namespace internal
-{
-	template<typename T>
-	struct move_on_copy
-	{
-		move_on_copy(const move_on_copy<T>& other) : value(std::move(other.value)){}
-		move_on_copy(T&& value) : value(std::move(value)){}
-		mutable T value;
-	};
-
-	template<typename T>
-	move_on_copy<T> make_move_on_copy(T&& value)
-	{
-		return move_on_copy<T>(std::move(value));
-	}
-}
-
 class executor : boost::noncopyable
 {
 	const std::string name_;
@@ -133,6 +117,7 @@ public:
 	virtual ~executor() // noexcept
 	{
 		stop();
+		execution_queue_[normal_priority].try_push([]{}); // Wake the execution thread.
 		join();
 	}
 
@@ -159,7 +144,6 @@ public:
 	void stop() // noexcept
 	{
 		is_running_ = false;	
-		execution_queue_[normal_priority].try_push([]{}); // Wake the execution thread.
 	}
 
 	void wait() // noexcept
@@ -177,7 +161,7 @@ public:
 	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
 		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
-		auto task_adaptor = internal::make_move_on_copy(create_task(func));
+		auto task_adaptor = make_move_on_copy(create_task(func));
 
 		auto future = task_adaptor.value.get_future();
 
@@ -198,7 +182,7 @@ public:
 	auto try_begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{
 		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
-		auto task_adaptor = internal::make_move_on_copy(create_task(func));
+		auto task_adaptor = make_move_on_copy(create_task(func));
 		
 		auto future = task_adaptor.value.get_future();
 

@@ -29,7 +29,11 @@
 #include <stdint.h>
 #include <numeric>
 
-namespace caspar { namespace core {
+namespace caspar { 
+	
+class executor;
+	
+namespace core {
 
 class basic_frame;
 struct frame_factory;
@@ -66,5 +70,6 @@ typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factor
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& params);
 
+safe_ptr<core::frame_producer> create_destroy_producer_proxy(executor& destroy_context, const safe_ptr<frame_producer>& producer);
 
 }}
