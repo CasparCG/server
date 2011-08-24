@@ -20,16 +20,14 @@
 #include "../../stdafx.h"
 
 #include "image_mixer.h"
-#include "image_kernel.h"
 
+#include "image_kernel.h"
+#include "../write_frame.h"
 #include "../gpu/ogl_device.h"
 #include "../gpu/host_buffer.h"
 #include "../gpu/device_buffer.h"
-#include "../write_frame.h"
-
 #include "../../video_channel_context.h"
 
-#include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
 
@@ -40,13 +38,9 @@
 #include <gl/glew.h>
 
 #include <boost/foreach.hpp>
-#include <boost/range.hpp>
-#include <boost/range/algorithm/find.hpp>
 
 #include <algorithm>
-#include <array>
 #include <deque>
-#include <unordered_map>
 
 using namespace boost::assign;
 
@@ -82,7 +76,7 @@ private:
 		auto draw_buffer = create_device_buffer(4);
 				
 		BOOST_FOREACH(auto& layer, layers)
-			draw(std::move(layer), draw_buffer, layer_key_buffer);
+			draw_layer(std::move(layer), draw_buffer, layer_key_buffer);
 		
 		auto host_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
 		channel_.ogl().attach(*draw_buffer);
@@ -95,7 +89,7 @@ private:
 		return host_buffer;
 	}
 
-	void draw(layer&& layer, const safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>& layer_key_buffer)
+	void draw_layer(layer&& layer, const safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>& layer_key_buffer)
 	{				
 		if(layer.empty())
 			return;
@@ -166,12 +160,12 @@ private:
 	{		
 		auto upper_count = boost::range::count_if(layer, [&](const render_item& item)
 		{
-			return item.transform.field_mode | field_mode::upper;
+			return !item.transform.is_key && (item.transform.field_mode & field_mode::upper);
 		});
 
 		auto lower_count = boost::range::count_if(layer, [&](const render_item& item)
 		{
-			return item.transform.field_mode | field_mode::lower;
+			return  !item.transform.is_key && (item.transform.field_mode & field_mode::lower);
 		});
 
 		return upper_count > 1 || lower_count > 1;
