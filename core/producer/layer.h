@@ -24,6 +24,9 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <string>
+#include <utility>
+
 namespace caspar { namespace core {
 
 struct frame_producer;

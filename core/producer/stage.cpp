@@ -159,7 +159,7 @@ public:
 	{
 		channel_.execution().invoke([&]
 		{
-			layers_[index].swap(layers_[other_index]);
+			std::swap(layers_[index], layers_[other_index]);
 		}, high_priority);
 	}
 
@@ -169,7 +169,10 @@ public:
 			swap_layer(index, other_index);
 		else
 		{
-			auto func = [&]{layers_[index].swap(other.impl_->layers_[other_index]);};		
+			auto func = [&]
+			{
+				std::swap(layers_[index], other.impl_->layers_[other_index]);
+			};		
 			channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);}, high_priority);
 		}
 	}
@@ -181,19 +184,9 @@ public:
 		
 		auto func = [&]
 		{
-			auto sel_first = [](const std::pair<int, layer>& pair){return pair.first;};
-
-			std::set<int> indices;
-			auto inserter = std::inserter(indices, indices.begin());
-
-			std::transform(layers_.begin(), layers_.end(), inserter, sel_first);
-			std::transform(other.impl_->layers_.begin(), other.impl_->layers_.end(), inserter, sel_first);
-
-			BOOST_FOREACH(auto index, indices)
-				layers_[index].swap(other.impl_->layers_[index]);
-		};
-		
-		channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);});
+			std::swap(layers_, other.impl_->layers_);
+		};		
+		channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);}, high_priority);
 	}
 
 	layer_status get_status(int index)
