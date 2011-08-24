@@ -65,7 +65,6 @@ struct ffmpeg_producer : public core::frame_producer
 	double											fps_;
 	frame_muxer										muxer_;
 
-	int												late_frames_;
 	const int										start_;
 	const bool										loop_;
 	const size_t									length_;
@@ -87,7 +86,6 @@ public:
 		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
 		, fps_(video_decoder_.fps())
 		, muxer_(fps_, frame_factory)
-		, late_frames_(0)
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
@@ -121,11 +119,8 @@ public:
 		{
 			if(input_.eof())
 				return core::basic_frame::eof();
-			else
-			{
+			else			
 				graph_->add_tag("underflow");	
-				++late_frames_;		
-			}
 		}
 		
 		return frame;
@@ -194,7 +189,7 @@ public:
 
 		// TODO: Might need to scale nb_frames av frame_muxer transformations.
 
-		return nb_frames + late_frames_ - start_;
+		return nb_frames - start_;
 	}
 				
 	virtual std::wstring print() const

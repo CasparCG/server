@@ -34,16 +34,36 @@ namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
 
+class last_frame_producer : public frame_producer
+{
+	const std::wstring			print_;
+	const safe_ptr<basic_frame>	frame_;
+	const int64_t				nb_frames_;
+public:
+	last_frame_producer(const safe_ptr<frame_producer>& producer) 
+		: print_(producer->print())
+		, frame_(producer->last_frame() != basic_frame::eof() ? producer->last_frame() : basic_frame::empty())
+		, nb_frames_(producer->nb_frames())
+	{
+	}
+	
+	virtual safe_ptr<basic_frame> receive(int){return frame_;}
+	virtual safe_ptr<core::basic_frame> last_frame() const{return frame_;}
+	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
+	virtual int64_t nb_frames() const {return nb_frames_;}	
+};
+
+struct empty_frame_producer : public frame_producer
+{
+	virtual safe_ptr<basic_frame> receive(int){return basic_frame::empty();}
+	virtual safe_ptr<basic_frame> last_frame() const{return basic_frame::empty();}
+	virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
+	virtual int64_t nb_frames() const {return 0;}
+	virtual std::wstring print() const { return L"empty";}
+};
+
 const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 {
-	struct empty_frame_producer : public frame_producer
-	{
-		virtual safe_ptr<basic_frame> receive(int){return basic_frame::empty();}
-		virtual safe_ptr<basic_frame> last_frame() const{return basic_frame::empty();}
-		virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
-		virtual int64_t nb_frames() const {return 0;}
-		virtual std::wstring print() const { return L"empty";}
-	};
 	static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();
 	return producer;
 }	
@@ -55,11 +75,13 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int
 	{
 		CASPAR_LOG(info) << producer->print() << " End Of File.";
 		auto following = producer->get_following_producer();
-		following->set_leading_producer(producer);
-		producer = std::move(following);		
-				
-		if(producer == frame_producer::empty())
-			return basic_frame::eof();
+		if(following != frame_producer::empty())
+		{
+			following->set_leading_producer(producer);
+			producer = std::move(following);
+		}
+		else
+			producer = make_safe<last_frame_producer>(producer);
 
 		return receive_and_follow(producer, hints);
 	}

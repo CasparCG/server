@@ -31,19 +31,19 @@ struct layer::implementation
 {				
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
-	bool						is_paused_;
-	int							auto_play_delta_;
 	int64_t						frame_number_;
-	safe_ptr<core::basic_frame> last_frame_;
+	int							auto_play_delta_;
+	bool						is_paused_;
 
 public:
 	implementation() 
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
-		, is_paused_(false)
-		, auto_play_delta_(-1)
 		, frame_number_(0)
-		, last_frame_(core::basic_frame::empty()){}
+		, auto_play_delta_(std::numeric_limits<int>::min())
+		, is_paused_(false)
+	{
+	}
 	
 	void pause()
 	{
@@ -73,19 +73,24 @@ public:
 		if(background_ != frame_producer::empty())
 		{
 			background_->set_leading_producer(foreground_);
-			foreground_ = background_;
-			frame_number_ = 0;
-			auto_play_delta_ = -1;
-			background_ = frame_producer::empty();
+			
+			foreground_			= background_;
+			background_			= frame_producer::empty();
+			frame_number_		= 0;
+			auto_play_delta_	= std::numeric_limits<int>::min();	
 		}
-		resume();
+
+		is_paused_			= false;
 	}
 	
 	void stop()
 	{
-		foreground_ = frame_producer::empty();
-		frame_number_ = 0;
-		last_frame_ = core::basic_frame::empty();
+		foreground_			= frame_producer::empty();
+		background_			= background_;
+		frame_number_		= 0;
+		auto_play_delta_	= std::numeric_limits<int>::min();
+
+		is_paused_			= true;
 	}
 		
 	safe_ptr<basic_frame> receive()
@@ -93,35 +98,20 @@ public:
 		try
 		{
 			if(is_paused_)
-				return disable_audio(last_frame_);
+				return disable_audio(foreground_->last_frame());
 		
-			const auto frames_left = foreground_->nb_frames() - (++frame_number_) - auto_play_delta_;
-
 			auto frame = receive_and_follow(foreground_, frame_producer::NO_HINT);
 			if(frame == core::basic_frame::late())
 				return foreground_->last_frame();
-		
-			if(auto_play_delta_ >= 0)
-			{
-				CASPAR_ASSERT(background_ != core::frame_producer::empty());
-				if(frames_left <= 0 || frame == core::basic_frame::eof())
-				{
-					//CASPAR_ASSERT(frame != core::basic_frame::eof() && "Received early EOF. Media duration metadata incorrect.");
 
-					CASPAR_LOG(info) << L"Automatically playing next clip with " << auto_play_delta_ << " frames offset. Frames left: " << frames_left;
-				
-					play();
-					frame = receive();
-				}
-			}
-
-			if(frame == core::basic_frame::eof())
+			auto frames_left = foreground_->nb_frames() - (++frame_number_) - auto_play_delta_;
+			if(frames_left < 1)
 			{
-				pause();
+				play();
 				return receive();
 			}
 				
-			return last_frame_ = frame;
+			return frame;
 		}
 		catch(...)
 		{
