@@ -20,6 +20,8 @@
 #pragma once
 
 #include "frame/frame_factory.h"
+#include "frame/basic_frame.h"
+#include "frame/image_transform.h"
 
 #include <common/memory/safe_ptr.h>
 
@@ -30,6 +32,28 @@
 #include <vector>
 
 namespace caspar { namespace core {
+	
+
+// ugly quickfix
+struct last_visitor : public frame_visitor
+{	
+	virtual void begin(basic_frame& frame)
+	{
+		if(frame.get_image_transform().get_mode() == core::video_mode::upper)
+			frame.get_image_transform().set_opacity(0.0);
+		else if(frame.get_image_transform().get_mode() == core::video_mode::lower)
+			frame.get_image_transform().set_mode(core::video_mode::progressive);
+	}
+
+	virtual void end()
+	{
+	}
+
+	virtual void visit(write_frame& frame)
+	{
+	}
+};
+
 
 class basic_frame;
 
@@ -48,7 +72,12 @@ public:
 		
 	static const safe_ptr<frame_producer>& empty(); // nothrow
 
-	safe_ptr<core::basic_frame> last_frame() const {return last_frame_;}
+	safe_ptr<core::basic_frame> last_frame() const 
+	{
+		last_visitor visitor;
+		last_frame_->accept(visitor);
+		return last_frame_;
+	}
 	
 private:
 	friend safe_ptr<basic_frame> receive(const safe_ptr<frame_producer>& producer);

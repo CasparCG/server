@@ -75,15 +75,23 @@ public:
 		last_frame_ = basic_frame::empty();
 		foreground_ = frame_producer::empty();
 	}
+
+	safe_ptr<basic_frame> last_frame()
+	{
+		last_frame_->get_audio_transform().set_has_audio(false);
+		last_visitor visitor;
+		last_frame_->accept(visitor);
+		return last_frame_;		
+	}
 		
 	safe_ptr<basic_frame> receive()
 	{		
 		if(is_paused_)		
-			return last_frame_;		
+			return last_frame();
 
 		auto frame = receive_and_follow(foreground_);
 		if(frame == basic_frame::late())
-			return last_frame_;
+			return last_frame();
 
 		if(frame == basic_frame::eof())
 		{
@@ -92,7 +100,6 @@ public:
 		}
 
 		last_frame_ = make_safe<basic_frame>(frame);
-		last_frame_->get_audio_transform().set_has_audio(false);
 
 		return frame;
 	}
