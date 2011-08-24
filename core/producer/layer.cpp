@@ -24,6 +24,9 @@
 
 #include "frame_producer.h"
 
+#include "frame/basic_frame.h"
+#include "frame/audio_transform.h"
+
 namespace caspar { namespace core {
 	
 struct layer::implementation
@@ -31,11 +34,14 @@ struct layer::implementation
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	bool						is_paused_;
+	safe_ptr<basic_frame>		last_frame_;
 public:
 	implementation() 
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
-		, is_paused_(false){}
+		, is_paused_(false)
+		, last_frame_(basic_frame::empty())
+	{}
 	
 	void pause(){is_paused_ = true;}
 	void resume(){is_paused_ = false;}
@@ -59,21 +65,36 @@ public:
 			background_->set_leading_producer(foreground_);
 			foreground_ = background_;
 			background_ = frame_producer::empty();
+			last_frame_ = basic_frame::empty();
 		}
 		resume();
 	}
 	
 	void stop()
 	{
+		last_frame_ = basic_frame::empty();
 		foreground_ = frame_producer::empty();
 	}
 		
 	safe_ptr<basic_frame> receive()
 	{		
-		if(is_paused_)
-			return foreground_->last_frame();
-		
-		return receive_and_follow_w_last(foreground_);
+		if(is_paused_)		
+			return last_frame_;		
+
+		auto frame = receive_and_follow(foreground_);
+		if(frame == basic_frame::late())
+			return last_frame_;
+
+		if(frame == basic_frame::eof())
+		{
+			pause();
+			return receive();
+		}
+
+		last_frame_ = make_safe<basic_frame>(frame);
+		last_frame_->get_audio_transform().set_has_audio(false);
+
+		return frame;
 	}
 };
 

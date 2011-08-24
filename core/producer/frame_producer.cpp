@@ -90,6 +90,9 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer)
 		auto following = producer->get_following_producer();
 		following->set_leading_producer(producer);
 		producer = std::move(following);		
+
+		if(producer == frame_producer::empty())
+			return basic_frame::eof();
 		
 		return receive_and_follow(producer);
 	}
