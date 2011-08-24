@@ -117,7 +117,6 @@ public:
 	virtual ~executor() // noexcept
 	{
 		stop();
-		execution_queue_[normal_priority].try_push([]{}); // Wake the execution thread.
 		join();
 	}
 
@@ -144,6 +143,7 @@ public:
 	void stop() // noexcept
 	{
 		is_running_ = false;	
+		execution_queue_[normal_priority].try_push([]{}); // Wake the execution thread.
 	}
 
 	void wait() // noexcept
