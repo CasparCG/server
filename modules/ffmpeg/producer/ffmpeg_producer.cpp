@@ -46,6 +46,19 @@
 
 namespace caspar {
 	
+class last_frame_producer : public core::frame_producer
+{
+	const safe_ptr<core::basic_frame> frame_;
+public:
+	last_frame_producer(const safe_ptr<core::basic_frame>& frame) 
+		: frame_(frame)
+	{
+	}
+	
+	virtual std::wstring print() const {return L"";}
+	virtual safe_ptr<core::basic_frame> receive(){return frame_;}
+};
+
 struct ffmpeg_producer : public core::frame_producer
 {
 	const std::wstring						filename_;
@@ -61,6 +74,8 @@ struct ffmpeg_producer : public core::frame_producer
 
 	std::deque<std::pair<int, std::vector<int16_t>>> audio_chunks_;
 	std::deque<std::pair<int, safe_ptr<core::write_frame>>> video_frames_;
+
+	safe_ptr<core::basic_frame>				last_frame_;
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter_str, bool loop, int start, int length) 
 		: filename_(filename)
@@ -96,8 +111,19 @@ public:
 				
 		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*frame_factory_->get_video_format_desc().fps*0.5));
 					
+		if(result != core::basic_frame::eof() && result !=  core::basic_frame::late())
+		{
+			last_frame_ = result;
+			last_frame_->get_audio_transform().set_has_audio(false);
+		}
+
 		return result;
 	}
+
+	virtual safe_ptr<frame_producer> get_following_producer() const 
+	{
+		return make_safe<last_frame_producer>(last_frame_);
+	} 
 	
 	virtual std::wstring print() const
 	{
