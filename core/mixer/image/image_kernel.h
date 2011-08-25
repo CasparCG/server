@@ -33,27 +33,24 @@ namespace caspar { namespace core {
 class device_buffer;
 class ogl_device;
 
-struct render_item
+struct draw_params
 {
 	pixel_format_desc						pix_desc;
 	std::vector<safe_ptr<device_buffer>>	textures;
 	frame_transform							transform;
 	blend_mode::type						blend_mode;
+	std::shared_ptr<device_buffer>			background;
+	std::shared_ptr<device_buffer>			local_key;
+	std::shared_ptr<device_buffer>			layer_key;
 
-	render_item() : blend_mode(blend_mode::normal){}
+	draw_params() : blend_mode(blend_mode::normal){}
 };
-
-bool operator==(const render_item& lhs, const render_item& rhs);
 
 class image_kernel : boost::noncopyable
 {
 public:
 	image_kernel();
-	void draw(ogl_device& ogl, 
-			  render_item&& item, 
-			  device_buffer& background, 
-			  const std::shared_ptr<device_buffer>& local_key = nullptr, 
-			  const std::shared_ptr<device_buffer>& layer_key = nullptr);
+	void draw(ogl_device& ogl, draw_params&& params);
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
