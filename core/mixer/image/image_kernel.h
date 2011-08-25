@@ -43,7 +43,10 @@ struct draw_params
 	std::shared_ptr<device_buffer>			local_key;
 	std::shared_ptr<device_buffer>			layer_key;
 
-	draw_params() : blend_mode(blend_mode::normal){}
+	draw_params() 
+		: blend_mode(blend_mode::normal)
+	{
+	}
 };
 
 class image_kernel : boost::noncopyable
