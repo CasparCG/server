@@ -55,15 +55,7 @@ struct item
 	frame_transform							transform;
 };
 
-struct layer
-{
-	std::vector<item>						items;
-	blend_mode::type						blend_mode;
-
-	layer(blend_mode::type blend_mode) : blend_mode(blend_mode)
-	{
-	}
-};
+typedef std::pair<blend_mode::type, std::vector<item>> layer;
 
 class image_renderer
 {
@@ -97,15 +89,15 @@ private:
 
 			BOOST_FOREACH(auto& layer, upper)
 			{
-				boost::remove_erase_if(layer.items, [](const item& item){return !(item.transform.field_mode & field_mode::upper);});
-				BOOST_FOREACH(auto& item, layer.items)
+				boost::remove_erase_if(layer.second, [](const item& item){return !(item.transform.field_mode & field_mode::upper);});
+				BOOST_FOREACH(auto& item, layer.second)
 					item.transform.field_mode = field_mode::upper;
 			}
 
 			BOOST_FOREACH(auto& layer, lower)
 			{
-				boost::remove_erase_if(layer.items, [](const item& item){return !(item.transform.field_mode & field_mode::lower);});
-				BOOST_FOREACH(auto& item, layer.items)
+				boost::remove_erase_if(layer.second, [](const item& item){return !(item.transform.field_mode & field_mode::lower);});
+				BOOST_FOREACH(auto& item, layer.second)
 					item.transform.field_mode = field_mode::lower;
 			}
 
@@ -141,25 +133,25 @@ private:
 					safe_ptr<device_buffer>&		draw_buffer,
 					std::shared_ptr<device_buffer>& layer_key_buffer)
 	{				
-		if(layer.items.empty())
+		if(layer.second.empty())
 			return;
 
 		std::shared_ptr<device_buffer> local_key_buffer;
 		std::shared_ptr<device_buffer> local_mix_buffer;
 				
-		if(layer.blend_mode != blend_mode::normal && layer.items.size() > 1)
+		if(layer.first != blend_mode::normal && layer.second.size() > 1)
 		{
 			auto layer_draw_buffer = create_device_buffer(4);
 
-			BOOST_FOREACH(auto& item, layer.items)
+			BOOST_FOREACH(auto& item, layer.second)
 				draw_item(std::move(item), layer_draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer);	
 		
 			draw_device_buffer(layer_draw_buffer, std::move(local_mix_buffer), blend_mode::normal);							
-			draw_device_buffer(draw_buffer, std::move(layer_draw_buffer), layer.blend_mode);
+			draw_device_buffer(draw_buffer, std::move(layer_draw_buffer), layer.first);
 		}
 		else // fast path
 		{
-			BOOST_FOREACH(auto& item, layer.items)		
+			BOOST_FOREACH(auto& item, layer.second)		
 				draw_item(std::move(item), draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer);		
 					
 			draw_device_buffer(draw_buffer, std::move(local_mix_buffer), blend_mode::normal);
@@ -253,7 +245,7 @@ public:
 
 	void begin_layer(blend_mode::type blend_mode)
 	{
-		layers_.push_back(layer(blend_mode));
+		layers_.push_back(std::make_pair(blend_mode, std::vector<item>()));
 	}
 		
 	void begin(core::basic_frame& frame)
@@ -271,7 +263,7 @@ public:
 		item.textures	= frame.get_textures();
 		item.transform	= transform_stack_.back();
 
-		layers_.back().items.push_back(item);
+		layers_.back().second.push_back(item);
 	}
 
 	void end()
