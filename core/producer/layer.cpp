@@ -40,7 +40,7 @@ public:
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, frame_number_(0)
-		, auto_play_delta_(std::numeric_limits<int>::min())
+		, auto_play_delta_(-1)
 		, is_paused_(false)
 	{
 	}
@@ -77,7 +77,7 @@ public:
 			foreground_			= background_;
 			background_			= frame_producer::empty();
 			frame_number_		= 0;
-			auto_play_delta_	= std::numeric_limits<int>::min();	
+			auto_play_delta_	= -1;	
 		}
 
 		is_paused_			= false;
@@ -88,7 +88,7 @@ public:
 		foreground_			= frame_producer::empty();
 		background_			= background_;
 		frame_number_		= 0;
-		auto_play_delta_	= std::numeric_limits<int>::min();
+		auto_play_delta_	= -1;
 
 		is_paused_			= true;
 	}
@@ -105,7 +105,7 @@ public:
 				return foreground_->last_frame();
 
 			auto frames_left = foreground_->nb_frames() - (++frame_number_) - auto_play_delta_;
-			if(frames_left < 1)
+			if(auto_play_delta_ > -1 && frames_left < 1)
 			{
 				play();
 				return receive();
