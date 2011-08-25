@@ -336,15 +336,20 @@ void ogl_device::use(shader& shader)
 	}
 }
 
-void ogl_device::blend_func_separate(int c1, int c2, int a1, int a2)
+void ogl_device::blend_func(int c1, int c2, int a1, int a2)
 {
 	std::array<int, 4> func = {c1, c2, a1, a2};
 
 	if(blend_func_ != func)
 	{
 		blend_func_ = func;
-		glBlendFuncSeparate(c1, c2, a1, a2);
+		GL(glBlendFuncSeparate(c1, c2, a1, a2));
 	}
+}
+
+void ogl_device::blend_func(int c1, int c2)
+{
+	blend_func(c1, c2, c1, c2);
 }
 
 }}

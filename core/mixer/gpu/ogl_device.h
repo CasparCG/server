@@ -93,7 +93,8 @@ public:
 	void begin_read(host_buffer& dest, device_buffer& source);
 	void begin_read(device_buffer& dest, host_buffer& source);
 
-	void blend_func_separate(int c1, int c2, int a1, int a2);
+	void blend_func(int c1, int c2, int a1, int a2);
+	void blend_func(int c1, int c2);
 	
 	void use(shader& shader);
 
