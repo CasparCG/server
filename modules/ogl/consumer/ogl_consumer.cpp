@@ -78,7 +78,8 @@ struct ogl_consumer : boost::noncopyable
 	size_t					square_width_;
 	size_t					square_height_;
 
-	boost::circular_buffer<safe_ptr<core::read_frame>> frame_buffer_;
+	boost::circular_buffer<safe_ptr<core::read_frame>>			input_buffer_;
+	tbb::concurrent_bounded_queue<safe_ptr<core::read_frame>>	frame_buffer_;
 
 	executor				executor_;
 public:
@@ -89,11 +90,14 @@ public:
 		, screen_index_(screen_index)
 		, format_desc_(format_desc_)
 		, graph_(diagnostics::create_graph(narrow(print())))
-		, frame_buffer_(core::consumer_buffer_depth())
+		, input_buffer_(core::consumer_buffer_depth()-1)
 		, executor_(print())
 	{		
+		frame_buffer_.set_capacity(2);
+
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		
 		format_desc_ = format_desc;
 
@@ -180,6 +184,14 @@ public:
 			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		});
 		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
+
+		executor_.begin_invoke([this]{tick();});
+	}
+
+	~ogl_consumer()
+	{
+		executor_.stop();
+		frame_buffer_.push(make_safe<core::read_frame>());
 	}
 	
 	const core::video_format_desc& get_video_format_desc() const
@@ -277,35 +289,49 @@ public:
 
 	void send(const safe_ptr<core::read_frame>& frame)
 	{
-		frame_buffer_.push_back(frame);
+		input_buffer_.push_back(frame);
 
-		if(frame_buffer_.full())
-			do_send(frame_buffer_.front());
+		if(input_buffer_.full())
+		{
+			if(!frame_buffer_.try_push(input_buffer_.front()))
+				graph_->add_tag("dropped-frame");
+		}
 	}
 		
-	void do_send(const safe_ptr<core::read_frame>& frame)
-	{		
-		executor_.try_begin_invoke([=]
-		{
-			perf_timer_.restart();
-			sf::Event e;
-			while(window_.GetEvent(e))
-			{
-				if(e.Type == sf::Event::Resized)
-					 calculate_aspect();
-			}
-			render(frame);
-			window_.Display();
-			graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()*format_desc_.fps*0.5));
-		});
-	}
-
 	std::wstring print() const
 	{	
 		return  L"ogl[" + boost::lexical_cast<std::wstring>(screen_index_) + L"|" + format_desc_.name + L"]";
 	}
 
-	size_t buffer_depth() const{return 2;}
+	void tick()
+	{
+		try
+		{
+			perf_timer_.restart();
+			sf::Event e;
+		
+			safe_ptr<core::read_frame> frame;
+
+			while(window_.GetEvent(e))
+			{
+				if(e.Type == sf::Event::Resized)
+					calculate_aspect();
+			}
+
+			frame_buffer_.pop(frame);
+
+			if(!frame->image_data().empty())
+				render(frame);
+
+			window_.Display();
+			graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()*format_desc_.fps*0.5));	
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+		executor_.begin_invoke([=]{tick();});
+	}
 };
 
 

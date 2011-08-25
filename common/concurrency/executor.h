@@ -28,6 +28,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/thread.hpp>
+#include <boost/optional.hpp>
 #include <boost/noncopyable.hpp>
 
 #include <functional>
@@ -177,28 +178,7 @@ public:
 					
 		return std::move(future);		
 	}
-
-	template<typename Func>
-	auto try_begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
-	{
-		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
-		auto task_adaptor = make_move_on_copy(create_task(func));
-		
-		auto future = task_adaptor.value.get_future();
-
-		if(priority == normal_priority || execution_queue_[normal_priority].try_push(nullptr))
-		{			
-			execution_queue_[priority].try_push([=]
-			{
-				try{task_adaptor.value();}
-				catch(boost::task_already_started&){}
-				catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
-			});
-		}
-		
-		return std::move(future);			
-	}
-
+	
 	template<typename Func>
 	auto invoke(Func&& func, task_priority prioriy = normal_priority) -> decltype(func()) // noexcept
 	{
@@ -207,16 +187,7 @@ public:
 		
 		return begin_invoke(std::forward<Func>(func), prioriy).get();
 	}
-
-	template<typename Func>
-	auto try_invoke(Func&& func, task_priority prioriy = normal_priority) -> decltype(func()) // noexcept
-	{
-		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
-			return func();
-		
-		return try_begin_invoke(std::forward<Func>(func), prioriy).get();
-	}
-
+	
 	void yield() // noexcept
 	{
 		if(boost::this_thread::get_id() != thread_.get_id())  // Only yield when calling from execution thread.
