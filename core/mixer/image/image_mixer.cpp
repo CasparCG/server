@@ -178,7 +178,6 @@ private:
 		draw_params.pix_desc				= std::move(item.pix_desc);
 		draw_params.textures				= std::move(item.textures);
 		draw_params.transform				= std::move(item.transform);
-		draw_params.blend_mode				= blend_mode::normal;
 
 		if(item.transform.is_key)
 		{
@@ -198,7 +197,7 @@ private:
 			draw_params.local_key			= std::move(local_key_buffer);
 			draw_params.layer_key			= layer_key_buffer;
 
-			draw_params.blend_mode			= blend_mode::mix;
+			draw_params.keyer				= keyer::additive;
 
 			kernel_.draw(channel_.ogl(), std::move(draw_params));
 		}

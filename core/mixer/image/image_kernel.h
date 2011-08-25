@@ -33,18 +33,29 @@ namespace caspar { namespace core {
 class device_buffer;
 class ogl_device;
 
+struct keyer
+{
+	enum type
+	{
+		linear = 0,
+		additive
+	};
+};
+
 struct draw_params
 {
 	pixel_format_desc						pix_desc;
 	std::vector<safe_ptr<device_buffer>>	textures;
 	frame_transform							transform;
 	blend_mode::type						blend_mode;
+	keyer::type								keyer;
 	std::shared_ptr<device_buffer>			background;
 	std::shared_ptr<device_buffer>			local_key;
 	std::shared_ptr<device_buffer>			layer_key;
 
 	draw_params() 
 		: blend_mode(blend_mode::normal)
+		, keyer(keyer::linear)
 	{
 	}
 };

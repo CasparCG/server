@@ -120,14 +120,16 @@ struct image_kernel::implementation : boost::noncopyable
 
 			shader_->set("background",	texture_id::background);
 			shader_->set("blend_mode",	params.blend_mode);
+			shader_->set("keyer",		params.keyer);
 		}
 		else
 		{
-			switch(params.blend_mode)
+			switch(params.keyer)
 			{
-			case blend_mode::mix:
+			case keyer::additive:
 				ogl.blend_func(GL_ONE, GL_ONE);	
 				break;
+			case keyer::linear:
 			default:				
 				ogl.blend_func(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);	
 			}		
