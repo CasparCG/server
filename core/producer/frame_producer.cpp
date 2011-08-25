@@ -55,10 +55,10 @@ public:
 		auto empty_producer = frame_producer::empty();
 		destroy_context_.begin_invoke([=]
 		{			
-			if(!mov_producer.value.unique())
-				CASPAR_LOG(debug) << mov_producer.value->print() << L" Not destroyed on safe asynchronous destruction thread.";
-			else
-				CASPAR_LOG(debug) << mov_producer.value->print() << L" Destroying on safe asynchronous destruction thread.";
+			//if(!mov_producer.value.unique())
+			//	CASPAR_LOG(debug) << mov_producer.value->print() << L" Not destroyed on safe asynchronous destruction thread.";
+			//else
+			//	CASPAR_LOG(debug) << mov_producer.value->print() << L" Destroying on safe asynchronous destruction thread.";
 	
 			mov_producer.value = empty_producer;
 		});

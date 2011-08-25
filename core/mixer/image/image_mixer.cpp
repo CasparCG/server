@@ -39,6 +39,7 @@
 #include <gl/glew.h>
 
 #include <boost/foreach.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
 
 #include <algorithm>
 #include <deque>
@@ -80,13 +81,35 @@ public:
 private:
 	safe_ptr<host_buffer> do_render(std::vector<layer>&& layers)
 	{
-		std::shared_ptr<device_buffer> layer_key_buffer;
-
 		auto draw_buffer = create_device_buffer(4);
-				
-		BOOST_FOREACH(auto& layer, layers)
-			draw_layer(std::move(layer), draw_buffer, layer_key_buffer);
-		
+
+		if(channel_.get_format_desc().field_mode != field_mode::progressive)
+		{
+			auto upper = layers;
+			auto lower = std::move(layers);
+
+			BOOST_FOREACH(auto& layer, upper)
+			{
+				boost::remove_erase_if(layer.items, [](const render_item& item){return !(item.transform.field_mode & field_mode::upper);});
+				BOOST_FOREACH(auto& item, layer.items)
+					item.transform.field_mode = field_mode::upper;
+			}
+
+			BOOST_FOREACH(auto& layer, lower)
+			{
+				boost::remove_erase_if(layer.items, [](const render_item& item){return !(item.transform.field_mode & field_mode::lower);});
+				BOOST_FOREACH(auto& item, layer.items)
+					item.transform.field_mode = field_mode::lower;
+			}
+
+			draw(std::move(upper), *draw_buffer);
+			draw(std::move(lower), *draw_buffer);
+		}
+		else
+		{
+			draw(std::move(layers), *draw_buffer);
+		}
+
 		auto host_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
 		channel_.ogl().attach(*draw_buffer);
 		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
@@ -98,16 +121,27 @@ private:
 		return host_buffer;
 	}
 
-	void draw_layer(layer&& layer, const safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>& layer_key_buffer)
+	void draw(std::vector<layer>&&	layers, 
+			  device_buffer&		draw_buffer)
+	{
+		std::shared_ptr<device_buffer> layer_key_buffer;
+
+		BOOST_FOREACH(auto& layer, layers)
+			draw_layer(std::move(layer), draw_buffer, layer_key_buffer);
+	}
+
+	void draw_layer(layer&&							layer, 
+					device_buffer&					draw_buffer,
+					std::shared_ptr<device_buffer>& layer_key_buffer)
 	{				
 		if(layer.items.empty())
 			return;
 
-		std::pair<int, std::shared_ptr<device_buffer>> local_key_buffer = std::make_pair(0, nullptr); // int is fields flag
+		std::shared_ptr<device_buffer> local_key_buffer;
 				
-		if(layer.blend_mode != blend_mode::normal && has_overlapping_items(layer))
+		if(layer.blend_mode != blend_mode::normal && layer.items.size() > 1)
 		{
-			auto layer_draw_buffer = create_device_buffer(4); // int is fields flag
+			auto layer_draw_buffer = create_device_buffer(4);
 
 			BOOST_FOREACH(auto& item, layer.items)
 				draw_item(std::move(item), *layer_draw_buffer, local_key_buffer, layer_key_buffer);		
@@ -119,63 +153,34 @@ private:
 			item.transform			= frame_transform();
 			item.blend_mode			= layer.blend_mode;
 
-			kernel_.draw(channel_.ogl(), std::move(item), *draw_buffer, nullptr, nullptr);
+			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, nullptr, nullptr);
 		}
 		else // fast path
 		{
 			BOOST_FOREACH(auto& item, layer.items)		
-				draw_item(std::move(item), *draw_buffer, local_key_buffer, layer_key_buffer);		
+				draw_item(std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);		
 		}					
-
-		CASPAR_ASSERT(local_key_buffer.first == 0 || local_key_buffer.first == core::field_mode::progressive);
-
-		std::swap(local_key_buffer.second, layer_key_buffer);
+		
+		std::swap(local_key_buffer, layer_key_buffer);
 	}
 
-	void draw_item(render_item&&									item, 
-				   device_buffer&									draw_buffer, 
-				   std::pair<int, std::shared_ptr<device_buffer>>&	local_key_buffer, 
-				   std::shared_ptr<device_buffer>&					layer_key_buffer)
-	{											
+	void draw_item(render_item&&					item, 
+				   device_buffer&					draw_buffer, 
+				   std::shared_ptr<device_buffer>&	local_key_buffer, 
+				   std::shared_ptr<device_buffer>&	layer_key_buffer)
+	{					
 		if(item.transform.is_key)
 		{
-			if(!local_key_buffer.second)
-			{
-				local_key_buffer.first = 0;
-				local_key_buffer.second = create_device_buffer(1);
-			}
-			
-			local_key_buffer.first |= item.transform.field_mode; // Add field to flag.
-			kernel_.draw(channel_.ogl(), std::move(item), *local_key_buffer.second, nullptr, nullptr);
+			local_key_buffer = local_key_buffer ? local_key_buffer : create_device_buffer(1);
+			kernel_.draw(channel_.ogl(), std::move(item), *local_key_buffer, nullptr, nullptr);
 		}
 		else
 		{
-			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer.second, layer_key_buffer);
-			local_key_buffer.first ^= item.transform.field_mode; // Remove field from flag.
-			
-			if(local_key_buffer.first == 0) // If all fields from key has been used, reset it
-			{
-				local_key_buffer.first = 0;
-				local_key_buffer.second.reset();
-			}
-		}
+			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);
+			local_key_buffer = nullptr;
+		}	
 	}
-
-	bool has_overlapping_items(const layer& layer)
-	{		
-		auto upper_count = boost::range::count_if(layer.items, [&](const render_item& item)
-		{
-			return !item.transform.is_key && (item.transform.field_mode & field_mode::upper);
-		});
-
-		auto lower_count = boost::range::count_if(layer.items, [&](const render_item& item)
-		{
-			return  !item.transform.is_key && (item.transform.field_mode & field_mode::lower);
-		});
-
-		return upper_count > 1 || lower_count > 1;
-	}			
-		
+			
 	safe_ptr<device_buffer> create_device_buffer(size_t stride)
 	{
 		auto buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, stride);
@@ -183,7 +188,6 @@ private:
 		return buffer;
 	}
 };
-
 		
 struct image_mixer::implementation : boost::noncopyable
 {	
@@ -210,10 +214,10 @@ public:
 	}
 		
 	void visit(core::write_frame& frame)
-	{	
-		if(transform_stack_.back().field_mode == field_mode::empty)
+	{			
+		if(frame.get_frame_transform().field_mode == field_mode::empty)
 			return;
-		
+
 		core::render_item item;
 		item.pix_desc	= frame.get_pixel_format_desc();
 		item.textures	= frame.get_textures();

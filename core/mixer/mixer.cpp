@@ -126,9 +126,7 @@ public:
 				{				
 					auto frame2 = make_safe<core::basic_frame>(frame.second);
 					frame2->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
-						
-					if(frame1->get_frame_transform() != frame2->get_frame_transform())
-						frame1 = core::basic_frame::interlace(frame1, frame2, channel_.get_format_desc().field_mode);
+					frame1 = core::basic_frame::interlace(frame1, frame2, channel_.get_format_desc().field_mode);
 				}
 									
 				frame1->accept(audio_mixer_);					
