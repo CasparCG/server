@@ -132,14 +132,18 @@ struct transition_producer : public frame_producer
 		d_frame1->get_frame_transform().volume = 0.0;
 		d_frame2->get_frame_transform().volume = delta2;
 
-		//if(info_.type == transition::mix)
-		//{
-		//	d_frame1->get_frame_transform().set_opacity(delta1);	
-		//	d_frame2->get_frame_transform().set_opacity(delta2);
+		if(info_.type == transition::mix)
+		{
+			d_frame1->get_frame_transform().opacity = delta1;	
+			d_frame1->get_frame_transform().is_mix = true;
+			d_frame2->get_frame_transform().opacity = delta2;
+			d_frame2->get_frame_transform().is_mix = true;
 
-		//	s_frame1->get_frame_transform().set_opacity(1.0-delta1);	
-		//	s_frame2->get_frame_transform().set_opacity(1.0-delta2);		
-		//}
+			s_frame1->get_frame_transform().opacity = 1.0-delta1;	
+			s_frame1->get_frame_transform().is_mix = true;
+			s_frame2->get_frame_transform().opacity = 1.0-delta2;	
+			s_frame2->get_frame_transform().is_mix = true;
+		}
 		if(info_.type == transition::slide)
 		{
 			d_frame1->get_frame_transform().fill_translation[0] = (-1.0+delta1)*dir;	

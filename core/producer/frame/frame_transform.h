@@ -65,6 +65,7 @@ public:
 
 	field_mode::type		field_mode;
 	bool					is_key;
+	bool					is_mix;
 	
 	frame_transform& frame_transform::operator*=(const frame_transform &other);
 	frame_transform frame_transform::operator*(const frame_transform &other) const;
