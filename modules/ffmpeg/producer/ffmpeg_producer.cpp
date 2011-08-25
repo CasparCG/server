@@ -172,7 +172,7 @@ public:
 	virtual int64_t nb_frames() const 
 	{
 		if(loop_)
-			return std::numeric_limits<int64_t>::max();
+			return std::numeric_limits<int>::max();
 
 		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
 

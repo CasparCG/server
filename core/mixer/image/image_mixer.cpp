@@ -48,10 +48,17 @@ using namespace boost::assign;
 
 namespace caspar { namespace core {
 	
+struct item
+{
+	pixel_format_desc						pix_desc;
+	std::vector<safe_ptr<device_buffer>>	textures;
+	frame_transform							transform;
+};
+
 struct layer
 {
-	std::vector<render_item> items;
-	blend_mode::type		 blend_mode;
+	std::vector<item>						items;
+	blend_mode::type						blend_mode;
 
 	layer(blend_mode::type blend_mode) : blend_mode(blend_mode)
 	{
@@ -90,24 +97,24 @@ private:
 
 			BOOST_FOREACH(auto& layer, upper)
 			{
-				boost::remove_erase_if(layer.items, [](const render_item& item){return !(item.transform.field_mode & field_mode::upper);});
+				boost::remove_erase_if(layer.items, [](const item& item){return !(item.transform.field_mode & field_mode::upper);});
 				BOOST_FOREACH(auto& item, layer.items)
 					item.transform.field_mode = field_mode::upper;
 			}
 
 			BOOST_FOREACH(auto& layer, lower)
 			{
-				boost::remove_erase_if(layer.items, [](const render_item& item){return !(item.transform.field_mode & field_mode::lower);});
+				boost::remove_erase_if(layer.items, [](const item& item){return !(item.transform.field_mode & field_mode::lower);});
 				BOOST_FOREACH(auto& item, layer.items)
 					item.transform.field_mode = field_mode::lower;
 			}
 
-			draw(std::move(upper), *draw_buffer);
-			draw(std::move(lower), *draw_buffer);
+			draw(std::move(upper), draw_buffer);
+			draw(std::move(lower), draw_buffer);
 		}
 		else
 		{
-			draw(std::move(layers), *draw_buffer);
+			draw(std::move(layers), draw_buffer);
 		}
 
 		auto host_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
@@ -121,8 +128,8 @@ private:
 		return host_buffer;
 	}
 
-	void draw(std::vector<layer>&&	layers, 
-			  device_buffer&		draw_buffer)
+	void draw(std::vector<layer>&&		layers, 
+			  safe_ptr<device_buffer>&	draw_buffer)
 	{
 		std::shared_ptr<device_buffer> layer_key_buffer;
 
@@ -131,7 +138,7 @@ private:
 	}
 
 	void draw_layer(layer&&							layer, 
-					device_buffer&					draw_buffer,
+					safe_ptr<device_buffer>&		draw_buffer,
 					std::shared_ptr<device_buffer>& layer_key_buffer)
 	{				
 		if(layer.items.empty())
@@ -144,16 +151,17 @@ private:
 			auto layer_draw_buffer = create_device_buffer(4);
 
 			BOOST_FOREACH(auto& item, layer.items)
-				draw_item(std::move(item), *layer_draw_buffer, local_key_buffer, layer_key_buffer);		
+				draw_item(std::move(item), layer_draw_buffer, local_key_buffer, layer_key_buffer);		
 						
-			render_item item;
-			item.pix_desc.pix_fmt	= pixel_format::bgra;
-			item.pix_desc.planes	= list_of(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
-			item.textures			= list_of(layer_draw_buffer);
-			item.transform			= frame_transform();
-			item.blend_mode			= layer.blend_mode;
+			draw_params draw_params;
+			draw_params.pix_desc.pix_fmt	= pixel_format::bgra;
+			draw_params.pix_desc.planes		= list_of(pixel_format_desc::plane(channel_.get_format_desc().width, channel_.get_format_desc().height, 4));
+			draw_params.textures			= list_of(layer_draw_buffer);
+			draw_params.transform			= frame_transform();
+			draw_params.blend_mode			= layer.blend_mode;
+			draw_params.background			= draw_buffer;
 
-			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, nullptr, nullptr);
+			kernel_.draw(channel_.ogl(), std::move(draw_params));
 		}
 		else // fast path
 		{
@@ -164,20 +172,34 @@ private:
 		std::swap(local_key_buffer, layer_key_buffer);
 	}
 
-	void draw_item(render_item&&					item, 
-				   device_buffer&					draw_buffer, 
+	void draw_item(item&&							item, 
+				   safe_ptr<device_buffer>&			draw_buffer, 
 				   std::shared_ptr<device_buffer>&	local_key_buffer, 
 				   std::shared_ptr<device_buffer>&	layer_key_buffer)
-	{					
+	{			
+		draw_params draw_params;
+		draw_params.pix_desc				= std::move(item.pix_desc);
+		draw_params.textures				= std::move(item.textures);
+		draw_params.transform				= std::move(item.transform);
+		draw_params.blend_mode				= blend_mode::normal;
+
 		if(item.transform.is_key)
 		{
 			local_key_buffer = local_key_buffer ? local_key_buffer : create_device_buffer(1);
-			kernel_.draw(channel_.ogl(), std::move(item), *local_key_buffer, nullptr, nullptr);
+
+			draw_params.background			= local_key_buffer;
+			draw_params.local_key			= nullptr;
+			draw_params.layer_key			= nullptr;
+
+			kernel_.draw(channel_.ogl(), std::move(draw_params));
 		}
 		else
 		{
-			kernel_.draw(channel_.ogl(), std::move(item), draw_buffer, local_key_buffer, layer_key_buffer);
-			local_key_buffer = nullptr;
+			draw_params.background			= draw_buffer;
+			draw_params.local_key			= std::move(local_key_buffer);
+			draw_params.layer_key			= layer_key_buffer;
+
+			kernel_.draw(channel_.ogl(), std::move(draw_params));
 		}	
 	}
 			
@@ -218,7 +240,7 @@ public:
 		if(frame.get_frame_transform().field_mode == field_mode::empty)
 			return;
 
-		core::render_item item;
+		item item;
 		item.pix_desc	= frame.get_pixel_format_desc();
 		item.textures	= frame.get_textures();
 		item.transform	= transform_stack_.back();
