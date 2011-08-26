@@ -8,6 +8,7 @@
 #include <vector>
 
 struct AVFrame;
+enum PixelFormat;
 
 namespace caspar {
 		
@@ -25,7 +26,7 @@ static bool double_rate(const std::wstring& filters)
 class filter : boost::noncopyable
 {
 public:
-	filter(const std::wstring& filters = L"");
+	filter(const std::wstring& filters = L"", const std::vector<PixelFormat>& pix_fmts = std::vector<PixelFormat>());
 	filter(filter&& other);
 	filter& operator=(filter&& other);
 

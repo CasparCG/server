@@ -32,6 +32,8 @@
 #include <common/utility/timer.h>
 #include <common/utility/string.h>
 
+#include <ffmpeg/producer/filter/filter.h>
+
 #include <core/video_format.h>
 #include <core/mixer/read_frame.h>
 #include <core/consumer/frame_consumer.h>
@@ -44,8 +46,25 @@
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 
+#include <boost/assign.hpp>
+
 #include <algorithm>
 #include <vector>
+
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavcodec/avcodec.h>
+	#include <libavutil/imgutils.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
 
 namespace caspar {
 		
@@ -90,6 +109,9 @@ struct ogl_consumer : boost::noncopyable
 	boost::thread			thread_;
 	tbb::atomic<bool>		is_running_;
 
+	
+	filter					filter_;
+
 	const bool key_only_;
 public:
 	ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed, const core::video_format_desc& format_desc, bool key_only) 
@@ -106,7 +128,11 @@ public:
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, input_buffer_(core::consumer_buffer_depth()-1)
 		, key_only_(key_only)
+		, filter_(format_desc.field_mode == core::field_mode::progressive ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
+		if(format_desc.field_mode != core::field_mode::progressive)
+			CASPAR_LOG(info) << print() << L" Deinterlacer enabled.";
+
 		frame_buffer_.set_capacity(2);
 
 		graph_->add_guide("frame-time", 0.5);
@@ -260,10 +286,51 @@ public:
 		return format_desc_;
 	}
 
+	safe_ptr<AVFrame> get_av_frame()
+	{		
+		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+		avcodec_get_frame_defaults(av_frame.get());
+						
+		av_frame->linesize[0]		= format_desc_.width*4;			
+		av_frame->format			= PIX_FMT_BGRA;
+		av_frame->width				= format_desc_.width;
+		av_frame->height			= format_desc_.height;
+		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
+		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+
+		return av_frame;
+	}
+
 	void render(const safe_ptr<core::read_frame>& frame)
 	{			
 		if(frame->image_data().empty())
 			return;
+					
+		auto av_frame = get_av_frame();
+		av_frame->data[0]			= const_cast<uint8_t*>(frame->image_data().begin());
+
+		auto frames = filter_.execute(av_frame);
+
+		if(frames.empty())
+			return;
+
+		av_frame = frames[0];
+
+		if(av_frame->linesize[0] != static_cast<int>(format_desc_.width*4))
+		{
+			const uint8_t *src_data[4] = {0};
+			memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
+			const int src_linesizes[4] = {0};
+			memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
+
+			auto av_frame2 = get_av_frame();
+			av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
+			av_image_copy(av_frame2->data, av_frame2->linesize, src_data, src_linesizes, PIX_FMT_BGRA, av_frame2->width, av_frame2->height);
+			av_frame = safe_ptr<AVFrame>(av_frame2.get(), [=](AVFrame*)
+			{
+				av_freep(&av_frame2->data[0]);
+			});
+		}
 
 		glBindTexture(GL_TEXTURE_2D, texture_);
 
@@ -277,9 +344,9 @@ public:
 		if(ptr)
 		{
 			if(key_only_)
-				fast_memshfl(reinterpret_cast<char*>(ptr), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				fast_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
-				fast_memcpy(reinterpret_cast<char*>(ptr), frame->image_data().begin(), frame->image_data().size());
+				fast_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
 
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 		}
