@@ -41,38 +41,6 @@
 
 namespace caspar { namespace core {
 
-class deferred_key_read_Frame : public core::read_frame
-{
-	ogl_device&						 ogl_;
-	safe_ptr<read_frame>			 fill_;
-	std::shared_ptr<host_buffer>	 key_;
-	tbb::mutex					     mutex_;
-public:
-	deferred_key_read_Frame(ogl_device& ogl, const safe_ptr<read_frame>& fill)
-		: ogl_(ogl)
-		, fill_(fill)
-	{
-	}
-
-	virtual const boost::iterator_range<const uint8_t*> image_data()
-	{
-		tbb::mutex::scoped_lock lock(mutex_);
-		if(!key_)
-		{
-			key_ = ogl_.create_host_buffer(fill_->image_data().size(), host_buffer::write_only);				
-			fast_memsfhl(key_->data(), fill_->image_data().begin(), fill_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-		}
-
-		auto ptr = static_cast<const uint8_t*>(key_->data());
-		return boost::iterator_range<const uint8_t*>(ptr, ptr + key_->size());
-	}
-
-	virtual const boost::iterator_range<const int16_t*> audio_data()
-	{
-		return fill_->audio_data();
-	}	
-};
-	
 struct output::implementation
 {	
 	typedef std::pair<safe_ptr<read_frame>, safe_ptr<read_frame>> fill_and_key;
@@ -128,10 +96,7 @@ public:
 			timer_.tick(1.0/channel_.get_format_desc().fps);
 			return;
 		}
-
-		auto fill = frame;
-		auto key = make_safe<deferred_key_read_Frame>(channel_.ogl(), frame);
-
+		
 		auto it = consumers_.begin();
 		while(it != consumers_.end())
 		{
@@ -140,7 +105,7 @@ public:
 			if(consumer->get_video_format_desc() != channel_.get_format_desc())
 				consumer->initialize(channel_.get_format_desc());
 
-			if(consumer->send(consumer->key_only() ? key : fill))
+			if(consumer->send(frame))
 				++it;
 			else
 				consumers_.erase(it++);

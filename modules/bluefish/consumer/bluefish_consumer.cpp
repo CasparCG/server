@@ -28,8 +28,9 @@
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
+#include <common/memory/memcpy.h>
+#include <common/memory/memshfl.h>
 #include <common/utility/timer.h>
 
 #include <core/consumer/frame_consumer.h>
@@ -64,10 +65,11 @@ struct bluefish_consumer : boost::noncopyable
 	int									preroll_count_;
 
 	const bool							embedded_audio_;
+	const bool							key_only_;
 	
 	executor							executor_;
 public:
-	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio) 
+	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only) 
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
 		, format_desc_(format_desc) 
@@ -75,6 +77,7 @@ public:
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
 		, preroll_count_(0)
 		, embedded_audio_(embedded_audio)
+		, key_only_(key_only)
 		, executor_(print())
 	{
 		executor_.set_capacity(core::consumer_buffer_depth());
@@ -218,10 +221,15 @@ public:
 				// Copy to local buffers
 
 				if(!frame->image_data().empty())
-					fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
+				{
+					if(key_only_)						
+						fast_memshfl(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+					else
+						fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
+				}
 				else
 					fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
-
+								
 				// Sync
 
 				sync_timer_.restart();
@@ -325,13 +333,13 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
 		format_desc_ = format_desc;
-		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_));
+		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
 		if(!consumer_)
-			consumer_.reset(new bluefish_consumer(format_desc_, device_index_, embedded_audio_));
+			consumer_.reset(new bluefish_consumer(format_desc_, device_index_, embedded_audio_, key_only_));
 
 		try
 		{
@@ -362,11 +370,6 @@ public:
 			consumer_->print();
 
 		return L"bluefish [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
-	}
-
-	virtual bool key_only() const
-	{
-		return key_only_;
 	}
 };	
 
