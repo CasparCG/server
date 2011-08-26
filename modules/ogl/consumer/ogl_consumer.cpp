@@ -18,21 +18,18 @@
 *
 */
 
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
+#include "ogl_consumer.h"
 
-#include <windows.h>
 #include <GL/glew.h>
 #include <SFML/Window.hpp>
 
-#include "ogl_consumer.h"
-
+#include <common/diagnostics/graph.h>
 #include <common/gl/gl_check.h>
-#include <common/concurrency/executor.h>
+#include <common/log/log.h>
 #include <common/memory/safe_ptr.h>
 #include <common/memory/memcpy.h>
-#include <common/diagnostics/graph.h>
 #include <common/utility/timer.h>
+#include <common/utility/string.h>
 
 #include <core/video_format.h>
 #include <core/mixer/read_frame.h>
@@ -40,6 +37,11 @@
 
 #include <boost/timer.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/foreach.hpp>
+#include <boost/thread.hpp>
+
+#include <tbb/atomic.h>
+#include <tbb/concurrent_queue.h>
 
 #include <algorithm>
 #include <array>
@@ -56,68 +58,66 @@ enum stretch
 
 struct ogl_consumer : boost::noncopyable
 {		
+	core::video_format_desc format_desc_;
+	
+	GLuint					texture_;
+	
 	float					width_;
 	float					height_;
-
-	GLuint					texture_;
-	std::array<GLuint, 2>	pbos_;
+	
+	const stretch			stretch_;
 
 	const bool				windowed_;
+	unsigned int			screen_x_;
+	unsigned int			screen_y_;
 	unsigned int			screen_width_;
 	unsigned int			screen_height_;
 	const unsigned int		screen_index_;
-				
-	const stretch			stretch_;
-	core::video_format_desc format_desc_;
+
+	size_t					square_width_;
+	size_t					square_height_;				
 	
 	sf::Window				window_;
 	
 	safe_ptr<diagnostics::graph> graph_;
 	boost::timer			perf_timer_;
 
-	size_t					square_width_;
-	size_t					square_height_;
-
 	boost::circular_buffer<safe_ptr<core::read_frame>>			input_buffer_;
 	tbb::concurrent_bounded_queue<safe_ptr<core::read_frame>>	frame_buffer_;
 
-	executor				executor_;
+	boost::thread			thread_;
+	tbb::atomic<bool>		is_running_;
 public:
 	ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed, const core::video_format_desc& format_desc) 
-		: stretch_(stretch)
-		, windowed_(windowed)
+		: format_desc_(format_desc)
 		, texture_(0)
-		, screen_index_(screen_index)
-		, format_desc_(format_desc_)
+		, stretch_(stretch)
+		, windowed_(windowed)
+		, screen_index_(screen_index)		
+		, screen_width_(format_desc.width)
+		, screen_height_(format_desc.height)
+		, square_width_(format_desc.width)
+		, square_height_(format_desc.height)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, input_buffer_(core::consumer_buffer_depth()-1)
-		, executor_(print())
 	{		
 		frame_buffer_.set_capacity(2);
 
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
-		
-		format_desc_ = format_desc;
-
-		square_width_ = format_desc_.width;
-		square_height_ = format_desc_.height;
-						
+										
 		if(format_desc_.format == core::video_format::pal)
 		{
-			square_width_ = 768;
-			square_height_ = 576;
+			square_width_	= 768;
+			square_height_	= 576;
 		}
 		else if(format_desc_.format == core::video_format::ntsc)
 		{
-			square_width_ = 720;
-			square_height_ = 547;
+			square_width_	= 720;
+			square_height_	= 547;
 		}
-
-		screen_width_ = format_desc.width;
-		screen_height_ = format_desc.height;
-#ifdef _WIN32
+		
 		DISPLAY_DEVICE d_device;			
 		memset(&d_device, 0, sizeof(d_device));
 		d_device.cb = sizeof(d_device);
@@ -139,59 +139,100 @@ public:
 		if(!EnumDisplaySettings(displayDevices[screen_index_].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
 			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info(narrow(print()) + " EnumDisplaySettings"));
 		
-		screen_width_ = windowed_ ? square_width_ : devmode.dmPelsWidth;
-		screen_height_ = windowed_ ? square_height_ : devmode.dmPelsHeight;
-#else
-		if(!windowed)
-			BOOST_THROW_EXCEPTION(not_supported() << msg_info(narrow(print() + " doesn't support non-Win32 fullscreen"));
-
-		if(screen_index != 0)
-			CASPAR_LOG(warning) << print() << " only supports screen_index=0 for non-Win32";
-#endif		
-		executor_.invoke([=]
-		{
-			if(!GLEW_VERSION_2_1)
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
-
-			window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), windowed_ ? sf::Style::Resize : sf::Style::Fullscreen);
-			window_.ShowMouseCursor(false);
-			window_.SetPosition(devmode.dmPosition.x, devmode.dmPosition.y);
-			window_.SetSize(screen_width_, screen_height_);
-			window_.SetActive();
-			GL(glEnable(GL_TEXTURE_2D));
-			GL(glDisable(GL_DEPTH_TEST));		
-			GL(glClearColor(0.0, 0.0, 0.0, 0.0));
-			GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
-			glLoadIdentity();
-				
-			calculate_aspect();
-			
-			glGenTextures(1, &texture_);
-			glBindTexture(GL_TEXTURE_2D, texture_);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			
-			GL(glGenBuffers(2, pbos_.data()));
-			
-			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[0]);
-			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
-			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]);
-			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
-			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
-		});
-		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
-
-		executor_.begin_invoke([this]{tick();});
+		screen_x_		= devmode.dmPosition.x;
+		screen_y_		= devmode.dmPosition.y;
+		screen_width_	= windowed_ ? square_width_ : devmode.dmPelsWidth;
+		screen_height_	= windowed_ ? square_height_ : devmode.dmPelsHeight;
+		
+		is_running_ = true;
+		thread_ = boost::thread([this]{run();});
 	}
-
+	
 	~ogl_consumer()
 	{
-		executor_.stop();
-		frame_buffer_.push(make_safe<core::read_frame>());
+		is_running_ = false;
+		frame_buffer_.try_push(make_safe<core::read_frame>());
+		thread_.join();
+	}
+
+	void init()
+	{
+		if(!GLEW_VERSION_2_1)
+			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
+
+		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), windowed_ ? sf::Style::Resize : sf::Style::Fullscreen);
+		window_.ShowMouseCursor(false);
+		window_.SetPosition(screen_x_, screen_y_);
+		window_.SetSize(screen_width_, screen_height_);
+		window_.SetActive();
+		GL(glEnable(GL_TEXTURE_2D));
+		GL(glDisable(GL_DEPTH_TEST));		
+		GL(glClearColor(0.0, 0.0, 0.0, 0.0));
+		GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+		GL(glLoadIdentity());
+				
+		calculate_aspect();
+			
+		GL(glGenTextures(1, &texture_));
+		GL(glBindTexture(GL_TEXTURE_2D, texture_));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP));
+		GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0));
+		GL(glBindTexture(GL_TEXTURE_2D, 0));
+			
+		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
+	}
+
+	void uninit()
+	{		
+		if(texture_)
+			glDeleteTextures(1, &texture_);
+
+		CASPAR_LOG(info) << print() << " Sucessfully Uninitialized.";
+	}
+
+	void run()
+	{
+		try
+		{
+			init();
+
+			while(is_running_)
+			{			
+				try
+				{
+					perf_timer_.restart();
+
+					sf::Event e;		
+					while(window_.GetEvent(e))
+					{
+						if(e.Type == sf::Event::Resized)
+							calculate_aspect();
+					}
+			
+					safe_ptr<core::read_frame> frame;
+					frame_buffer_.pop(frame);
+					render(frame);
+
+					window_.Display();
+
+					graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()*format_desc_.fps*0.5));	
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					is_running_ = false;
+				}
+			}
+
+			uninit();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 	}
 	
 	const core::video_format_desc& get_video_format_desc() const
@@ -199,6 +240,42 @@ public:
 		return format_desc_;
 	}
 
+	void render(const safe_ptr<core::read_frame>& frame)
+	{			
+		if(frame->image_data().empty())
+			return;
+
+		GL(glBindTexture(GL_TEXTURE_2D, texture_));
+
+		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, frame->image_data().begin()));
+						
+		GL(glClear(GL_COLOR_BUFFER_BIT));			
+		glBegin(GL_QUADS);
+				glTexCoord2f(0.0f,	  1.0f);	glVertex2f(-width_, -height_);
+				glTexCoord2f(1.0f,	  1.0f);	glVertex2f( width_, -height_);
+				glTexCoord2f(1.0f,	  0.0f);	glVertex2f( width_,  height_);
+				glTexCoord2f(0.0f,	  0.0f);	glVertex2f(-width_,  height_);
+		glEnd();
+		
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	void send(const safe_ptr<core::read_frame>& frame)
+	{
+		input_buffer_.push_back(frame);
+
+		if(input_buffer_.full())
+		{
+			if(!frame_buffer_.try_push(input_buffer_.front()))
+				graph_->add_tag("dropped-frame");
+		}
+	}
+		
+	std::wstring print() const
+	{	
+		return  L"ogl[" + boost::lexical_cast<std::wstring>(screen_index_) + L"|" + format_desc_.name + L"]";
+	}
+	
 	void calculate_aspect()
 	{
 		if(windowed_)
@@ -253,84 +330,6 @@ public:
 		float height = hr*r_inv;
 
 		return std::make_pair(width, height);
-	}
-
-	void render(const safe_ptr<core::read_frame>& frame)
-	{			
-		glBindTexture(GL_TEXTURE_2D, texture_);
-
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
-
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]);
-		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW);
-
-		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-		if(ptr)
-		{
-			fast_memcpy(reinterpret_cast<char*>(ptr), frame->image_data().begin(), frame->image_data().size());
-			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
-		}
-
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-				
-		GL(glClear(GL_COLOR_BUFFER_BIT));			
-		glBegin(GL_QUADS);
-				glTexCoord2f(0.0f,	  1.0f);	glVertex2f(-width_, -height_);
-				glTexCoord2f(1.0f,	  1.0f);	glVertex2f( width_, -height_);
-				glTexCoord2f(1.0f,	  0.0f);	glVertex2f( width_,  height_);
-				glTexCoord2f(0.0f,	  0.0f);	glVertex2f(-width_,  height_);
-		glEnd();
-		
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
-	}
-
-	void send(const safe_ptr<core::read_frame>& frame)
-	{
-		input_buffer_.push_back(frame);
-
-		if(input_buffer_.full())
-		{
-			if(!frame_buffer_.try_push(input_buffer_.front()))
-				graph_->add_tag("dropped-frame");
-		}
-	}
-		
-	std::wstring print() const
-	{	
-		return  L"ogl[" + boost::lexical_cast<std::wstring>(screen_index_) + L"|" + format_desc_.name + L"]";
-	}
-
-	void tick()
-	{
-		try
-		{
-			perf_timer_.restart();
-			sf::Event e;
-		
-			safe_ptr<core::read_frame> frame;
-
-			while(window_.GetEvent(e))
-			{
-				if(e.Type == sf::Event::Resized)
-					calculate_aspect();
-			}
-
-			frame_buffer_.pop(frame);
-
-			if(!frame->image_data().empty())
-				render(frame);
-
-			window_.Display();
-			graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()*format_desc_.fps*0.5));	
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-		executor_.begin_invoke([=]{tick();});
 	}
 };
 

@@ -169,8 +169,6 @@ public:
 
 		if(!config.embedded_audio)
 			start_playback();
-				
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 
 	~decklink_consumer()
@@ -395,11 +393,20 @@ public:
 		, fail_count_(0)
 	{
 	}
+
+	~decklink_consumer_proxy()
+	{
+		auto str = print();
+		context_.reset();
+		CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
+	}
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
 		format_desc_ = format_desc;
-		context_.reset([&]{return new decklink_consumer(config_, format_desc_);});
+		context_.reset([&]{return new decklink_consumer(config_, format_desc_);});		
+				
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
@@ -427,7 +434,7 @@ public:
 	
 	virtual std::wstring print() const
 	{
-		return context_->print();
+		return context_ ? context_->print() : L"decklink_consumer";
 	}
 
 	virtual bool key_only() const
