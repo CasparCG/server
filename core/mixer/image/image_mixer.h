@@ -33,13 +33,14 @@ namespace caspar { namespace core {
 
 class write_frame;
 class host_buffer;
-class video_channel_context;
+class ogl_device;
+struct video_format_desc;
 struct pixel_format_desc;
 
 class image_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	image_mixer(video_channel_context& context);
+	image_mixer(ogl_device& ogl, const video_format_desc& format_desc);
 	
 	virtual void begin(core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);
@@ -52,7 +53,7 @@ public:
 	
 	boost::unique_future<safe_ptr<host_buffer>> render();
 
-	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& format);
+	safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& format);
 
 private:
 	struct implementation;
