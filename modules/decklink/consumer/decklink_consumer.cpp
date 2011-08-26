@@ -38,6 +38,7 @@
 #include <core/consumer/frame_consumer.h>
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/cache_aligned_allocator.h>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
@@ -64,29 +65,48 @@ struct configuration
 
 class decklink_frame : public IDeckLinkVideoFrame
 {
-	const safe_ptr<core::read_frame>	frame_;
-	const core::video_format_desc		format_desc_;
-public:
-	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc)
-		: frame_(frame)
-		, format_desc_(format_desc){}
-	
-	STDMETHOD (QueryInterface(REFIID, LPVOID*))	{return E_NOINTERFACE;}
-	STDMETHOD_(ULONG, AddRef())					{return 1;}
-	STDMETHOD_(ULONG, Release())				{return 1;}
+	const std::shared_ptr<core::read_frame>						frame_;
+	const core::video_format_desc								format_desc_;
 
-	STDMETHOD_(long, GetWidth())				{return format_desc_.width;}        
-    STDMETHOD_(long, GetHeight())				{return format_desc_.height;}        
-    STDMETHOD_(long, GetRowBytes())				{return format_desc_.width*4;}        
-	STDMETHOD_(BMDPixelFormat, GetPixelFormat()){return bmdFormat8BitBGRA;}        
-    STDMETHOD_(BMDFrameFlags, GetFlags())		{return bmdFrameFlagDefault;}
+	bool														key_only_;
+	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> key_data_;
+public:
+	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
+		: frame_(frame)
+		, format_desc_(format_desc)
+		, key_only_(key_only){}
+	
+	STDMETHOD (QueryInterface(REFIID, LPVOID*))		{return E_NOINTERFACE;}
+	STDMETHOD_(ULONG,			AddRef())			{return 1;}
+	STDMETHOD_(ULONG,			Release())			{return 1;}
+
+	STDMETHOD_(long,			GetWidth())			{return format_desc_.width;}        
+    STDMETHOD_(long,			GetHeight())		{return format_desc_.height;}        
+    STDMETHOD_(long,			GetRowBytes())		{return format_desc_.width*4;}        
+	STDMETHOD_(BMDPixelFormat,	GetPixelFormat())	{return bmdFormat8BitBGRA;}        
+    STDMETHOD_(BMDFrameFlags,	GetFlags())			{return bmdFrameFlagDefault;}
         
     STDMETHOD(GetBytes(void** buffer))
 	{
 		static std::vector<uint8_t> zeros(1920*1080*4, 0);
-		*buffer = const_cast<uint8_t*>(frame_->image_data().begin());
 		if(static_cast<size_t>(frame_->image_data().size()) != format_desc_.size)
+		{
 			*buffer = zeros.data();
+			return S_OK;
+		}
+
+		if(!key_only_)
+			*buffer = const_cast<uint8_t*>(frame_->image_data().begin());
+		else
+		{
+			if(key_data_.empty())
+			{
+				key_data_.resize(frame_->image_data().size());
+				fast_memshfl(key_data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			}
+			*buffer = key_data_.data();
+		}
+
 		return S_OK;
 	}
         
@@ -96,7 +116,7 @@ public:
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
-	const configuration config_;
+	const configuration					config_;
 
 	CComPtr<IDeckLink>					decklink_;
 	CComQIPtr<IDeckLinkOutput>			output_;
@@ -349,7 +369,7 @@ public:
 			
 	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
-		frame_container_.push_back(std::make_shared<decklink_frame>(frame, format_desc_));
+		frame_container_.push_back(std::make_shared<decklink_frame>(frame, format_desc_, config_.key_only));
 		if(FAILED(output_->ScheduleVideoFrame(frame_container_.back().get(), (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 

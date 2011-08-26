@@ -29,7 +29,7 @@ namespace caspar {
 
 namespace internal {
 
-static void* fast_memsfhl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
+static void* fast_memshfl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
 {
 	__m128i*	   dest128 = reinterpret_cast<__m128i*>(dest);	
 	const __m128i* source128 = reinterpret_cast<const __m128i*>(source);
@@ -56,12 +56,12 @@ static void* fast_memsfhl(void* dest, const void* source, size_t count, int m1, 
 
 }
 
-static void* fast_memsfhl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
+static void* fast_memshfl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
 {   
 	tbb::affinity_partitioner ap;
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, count/128), [&](const tbb::blocked_range<size_t>& r)
 	{       
-		internal::fast_memsfhl(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128, m1, m2, m3, m4);   
+		internal::fast_memshfl(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128, m1, m2, m3, m4);   
 	}, ap);
 
 	return dest;

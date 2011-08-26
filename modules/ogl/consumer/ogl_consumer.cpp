@@ -28,6 +28,7 @@
 #include <common/log/log.h>
 #include <common/memory/safe_ptr.h>
 #include <common/memory/memcpy.h>
+#include <common/memory/memshfl.h>
 #include <common/utility/timer.h>
 #include <common/utility/string.h>
 
@@ -44,7 +45,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <algorithm>
-#include <array>
+#include <vector>
 
 namespace caspar {
 		
@@ -61,6 +62,7 @@ struct ogl_consumer : boost::noncopyable
 	core::video_format_desc format_desc_;
 	
 	GLuint					texture_;
+	std::vector<GLuint>		pbos_;
 	
 	float					width_;
 	float					height_;
@@ -87,10 +89,13 @@ struct ogl_consumer : boost::noncopyable
 
 	boost::thread			thread_;
 	tbb::atomic<bool>		is_running_;
+
+	const bool key_only_;
 public:
-	ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed, const core::video_format_desc& format_desc) 
+	ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed, const core::video_format_desc& format_desc, bool key_only) 
 		: format_desc_(format_desc)
 		, texture_(0)
+		, pbos_(2, 0)
 		, stretch_(stretch)
 		, windowed_(windowed)
 		, screen_index_(screen_index)		
@@ -100,6 +105,7 @@ public:
 		, square_height_(format_desc.height)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, input_buffer_(core::consumer_buffer_depth()-1)
+		, key_only_(key_only)
 	{		
 		frame_buffer_.set_capacity(2);
 
@@ -181,7 +187,15 @@ public:
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
+					
+		GL(glGenBuffers(2, pbos_.data()));
 			
+		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[0]);
+		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
+		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]);
+		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
+		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+
 		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
 
@@ -189,6 +203,12 @@ public:
 	{		
 		if(texture_)
 			glDeleteTextures(1, &texture_);
+
+		BOOST_FOREACH(auto& pbo, pbos_)
+		{
+			if(pbo)
+				glDeleteBuffers(1, &pbo);
+		}
 
 		CASPAR_LOG(info) << print() << " Sucessfully Uninitialized.";
 	}
@@ -245,10 +265,27 @@ public:
 		if(frame->image_data().empty())
 			return;
 
-		GL(glBindTexture(GL_TEXTURE_2D, texture_));
+		glBindTexture(GL_TEXTURE_2D, texture_);
 
-		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, frame->image_data().begin()));
-						
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]);
+		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW);
+
+		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		if(ptr)
+		{
+			if(key_only_)
+				fast_memshfl(reinterpret_cast<char*>(ptr), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			else
+				fast_memcpy(reinterpret_cast<char*>(ptr), frame->image_data().begin(), frame->image_data().size());
+
+			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
+		}
+
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+				
 		GL(glClear(GL_COLOR_BUFFER_BIT));			
 		glBegin(GL_QUADS);
 				glTexCoord2f(0.0f,	  1.0f);	glVertex2f(-width_, -height_);
@@ -258,6 +295,8 @@ public:
 		glEnd();
 		
 		glBindTexture(GL_TEXTURE_2D, 0);
+
+		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
 	void send(const safe_ptr<core::read_frame>& frame)
@@ -353,7 +392,7 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		consumer_.reset(new ogl_consumer(screen_index_, stretch_, windowed_, format_desc));
+		consumer_.reset(new ogl_consumer(screen_index_, stretch_, windowed_, format_desc, key_only_));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
@@ -365,11 +404,6 @@ public:
 	virtual std::wstring print() const
 	{
 		return consumer_->print();
-	}
-
-	virtual bool key_only() const
-	{
-		return key_only_;
 	}
 
 	virtual bool has_synchronization_clock() const 
