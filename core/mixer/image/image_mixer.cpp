@@ -89,16 +89,14 @@ private:
 
 			BOOST_FOREACH(auto& layer, upper)
 			{
-				boost::remove_erase_if(layer.second, [](const item& item){return !(item.transform.field_mode & field_mode::upper);});
 				BOOST_FOREACH(auto& item, layer.second)
-					item.transform.field_mode = field_mode::upper;
+					item.transform.field_mode = static_cast<field_mode::type>(item.transform.field_mode & field_mode::upper);
 			}
 
 			BOOST_FOREACH(auto& layer, lower)
 			{
-				boost::remove_erase_if(layer.second, [](const item& item){return !(item.transform.field_mode & field_mode::lower);});
 				BOOST_FOREACH(auto& item, layer.second)
-					item.transform.field_mode = field_mode::lower;
+					item.transform.field_mode = static_cast<field_mode::type>(item.transform.field_mode & field_mode::lower);
 			}
 
 			draw(std::move(upper), draw_buffer);
@@ -113,7 +111,7 @@ private:
 		channel_.ogl().attach(*draw_buffer);
 		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
 		
-		active_buffer_ = draw_buffer;
+		active_buffer_ = std::move(draw_buffer);
 
 		channel_.ogl().flush(); // NOTE: This is important, otherwise fences will deadlock.
 			
@@ -133,6 +131,8 @@ private:
 					safe_ptr<device_buffer>&		draw_buffer,
 					std::shared_ptr<device_buffer>& layer_key_buffer)
 	{				
+		boost::remove_erase_if(layer.second, [](const item& item){return item.transform.field_mode == field_mode::empty;});
+
 		if(layer.second.empty())
 			return;
 
@@ -157,7 +157,7 @@ private:
 			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), blend_mode::normal);
 		}					
 
-		std::swap(local_key_buffer, layer_key_buffer);
+		layer_key_buffer = std::move(local_key_buffer);
 	}
 
 	void draw_item(item&&							item, 
@@ -205,7 +205,9 @@ private:
 		}	
 	}
 
-	void draw_mixer_buffer(safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>&& source_buffer, blend_mode::type blend_mode = blend_mode::normal)
+	void draw_mixer_buffer(safe_ptr<device_buffer>&			draw_buffer, 
+						   std::shared_ptr<device_buffer>&& source_buffer, 
+						   blend_mode::type					blend_mode = blend_mode::normal)
 	{
 		if(!source_buffer)
 			return;
@@ -255,9 +257,6 @@ public:
 		
 	void visit(core::write_frame& frame)
 	{			
-		if(frame.get_frame_transform().field_mode == field_mode::empty)
-			return;
-
 		item item;
 		item.pix_desc	= frame.get_pixel_format_desc();
 		item.textures	= frame.get_textures();
