@@ -90,10 +90,15 @@ public:
 	
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
-		consumer->initialize(channel_.get_format_desc());
 		channel_.execution().invoke([&]
 		{
 			consumers_.erase(index);
+		});
+
+		consumer->initialize(channel_.get_format_desc());
+
+		channel_.execution().invoke([&]
+		{
 			consumers_.insert(std::make_pair(index, consumer));
 
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
