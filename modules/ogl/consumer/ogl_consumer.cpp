@@ -307,7 +307,7 @@ public:
 			return;
 					
 		auto av_frame = get_av_frame();
-		av_frame->data[0]			= const_cast<uint8_t*>(frame->image_data().begin());
+		av_frame->data[0] = const_cast<uint8_t*>(frame->image_data().begin());
 
 		auto frames = filter_.execute(av_frame);
 
@@ -325,11 +325,12 @@ public:
 
 			auto av_frame2 = get_av_frame();
 			av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
-			av_image_copy(av_frame2->data, av_frame2->linesize, src_data, src_linesizes, PIX_FMT_BGRA, av_frame2->width, av_frame2->height);
 			av_frame = safe_ptr<AVFrame>(av_frame2.get(), [=](AVFrame*)
 			{
 				av_freep(&av_frame2->data[0]);
 			});
+
+			av_image_copy(av_frame2->data, av_frame2->linesize, src_data, src_linesizes, PIX_FMT_BGRA, av_frame2->width, av_frame2->height);
 		}
 
 		glBindTexture(GL_TEXTURE_2D, texture_);
