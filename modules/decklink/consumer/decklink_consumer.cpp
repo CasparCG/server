@@ -65,6 +65,7 @@ struct configuration
 
 class decklink_frame : public IDeckLinkVideoFrame
 {
+	tbb::atomic<int>											ref_count_;
 	std::shared_ptr<core::read_frame>							frame_;
 	const core::video_format_desc								format_desc_;
 
@@ -74,11 +75,23 @@ public:
 	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
 		: frame_(frame)
 		, format_desc_(format_desc)
-		, key_only_(key_only){}
+		, key_only_(key_only)
+	{
+		ref_count_ = 0;
+	}
 	
 	STDMETHOD (QueryInterface(REFIID, LPVOID*))		{return E_NOINTERFACE;}
-	STDMETHOD_(ULONG,			AddRef())			{return 1;}
-	STDMETHOD_(ULONG,			Release())			{return 1;}
+	STDMETHOD_(ULONG,			AddRef())			
+	{
+		return ++ref_count_;
+	}
+	STDMETHOD_(ULONG,			Release())			
+	{
+		--ref_count_;
+		if(ref_count_ == 0)
+			delete this;
+		return ref_count_;
+	}
 
 	STDMETHOD_(long,			GetWidth())			{return format_desc_.width;}        
     STDMETHOD_(long,			GetHeight())		{return format_desc_.height;}        
@@ -138,7 +151,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 
 	size_t								preroll_count_;
 		
-	std::list<std::shared_ptr<IDeckLinkVideoFrame>> frame_container_; // Must be std::list in order to guarantee that pointers are always valid.
 	boost::circular_buffer<std::vector<int16_t>>	audio_container_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> video_frame_buffer_;
@@ -305,11 +317,6 @@ public:
 			else if(result == bmdOutputFrameFlushed)
 				graph_->add_tag("flushed-frame");
 
-			frame_container_.erase(std::find_if(frame_container_.begin(), frame_container_.end(), [&](const std::shared_ptr<IDeckLinkVideoFrame>& frame)
-			{
-				return frame.get() == completed_frame;
-			}));
-
 			std::shared_ptr<core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);					
 			schedule_next_video(make_safe(frame));	
@@ -370,8 +377,8 @@ public:
 			
 	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
-		frame_container_.push_back(std::make_shared<decklink_frame>(frame, format_desc_, config_.key_only));
-		if(FAILED(output_->ScheduleVideoFrame(frame_container_.back().get(), (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
+		CComPtr<IDeckLinkVideoFrame> frame2(new decklink_frame(frame, format_desc_, config_.key_only));
+		if(FAILED(output_->ScheduleVideoFrame(frame2, (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
 		graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
