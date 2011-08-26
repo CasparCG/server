@@ -40,14 +40,10 @@ struct audio_item
 	
 struct audio_mixer::implementation
 {
-	std::stack<core::frame_transform> transform_stack_;
-
-	std::map<const void*, core::frame_transform> prev_frame_transforms_;
-	std::map<const void*, core::frame_transform> next_frame_transforms_;
-
-	const core::video_format_desc format_desc_;
-
-	std::vector<audio_item> items;
+	std::stack<core::frame_transform>				transform_stack_;
+	std::map<const void*, core::frame_transform>	prev_frame_transforms_;
+	const core::video_format_desc					format_desc_;
+	std::vector<audio_item>							items;
 
 public:
 	implementation(const core::video_format_desc& format_desc)
@@ -96,6 +92,8 @@ public:
 	{
 		auto result = std::vector<int16_t>(format_desc_.audio_samples_per_frame);
 
+		std::map<const void*, core::frame_transform> next_frame_transforms;
+
 		BOOST_FOREACH(auto& item, items)
 		{				
 			const auto next = item.transform;
@@ -105,7 +103,7 @@ public:
 			if(it != prev_frame_transforms_.end())
 				prev = it->second;
 				
-			next_frame_transforms_[item.tag] = next; // Store all active tags, inactive tags will be removed at the end.
+			next_frame_transforms[item.tag] = next; // Store all active tags, inactive tags will be removed at the end.
 				
 			if(next.volume < 0.001 && prev.volume < 0.001)
 				continue;
@@ -139,7 +137,7 @@ public:
 		}
 
 		items.clear();
-		prev_frame_transforms_ = std::move(next_frame_transforms_);	
+		prev_frame_transforms_ = std::move(next_frame_transforms);	
 
 		return std::move(result);
 	}
