@@ -60,9 +60,9 @@ typedef std::pair<blend_mode::type, std::vector<item>> layer;
 class image_renderer
 {
 	ogl_device&								ogl_;
-	video_format_desc						format_desc_;
+	const video_format_desc					format_desc_;
 	image_kernel							kernel_;	
-	std::shared_ptr<device_buffer>			active_buffer_;
+	std::shared_ptr<device_buffer>			transferring_buffer_;
 public:
 	image_renderer(ogl_device& ogl, const video_format_desc& format_desc)
 		: ogl_(ogl)
@@ -70,7 +70,7 @@ public:
 	{
 	}
 	
-	boost::unique_future<safe_ptr<host_buffer>> render(std::vector<layer>&& layers)
+	boost::unique_future<safe_ptr<host_buffer>> operator()(std::vector<layer>&& layers)
 	{		
 		auto layers2 = make_move_on_copy(std::move(layers));
 		return ogl_.begin_invoke([=]
@@ -113,7 +113,7 @@ private:
 		ogl_.attach(*draw_buffer);
 		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
 		
-		active_buffer_ = std::move(draw_buffer);
+		transferring_buffer_ = std::move(draw_buffer);
 
 		ogl_.flush(); // NOTE: This is important, otherwise fences will deadlock.
 			
@@ -278,7 +278,7 @@ public:
 	
 	boost::unique_future<safe_ptr<host_buffer>> render()
 	{
-		return renderer_.render(std::move(layers_));
+		return renderer_(std::move(layers_));
 	}
 
 	safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& desc)
