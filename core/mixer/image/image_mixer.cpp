@@ -80,7 +80,7 @@ public:
 private:
 	safe_ptr<host_buffer> do_render(std::vector<layer>&& layers)
 	{
-		auto draw_buffer = create_device_buffer(4);
+		auto draw_buffer = create_mixer_buffer(4);
 
 		if(channel_.get_format_desc().field_mode != field_mode::progressive)
 		{
@@ -141,20 +141,20 @@ private:
 				
 		if(layer.first != blend_mode::normal && layer.second.size() > 1)
 		{
-			auto layer_draw_buffer = create_device_buffer(4);
+			auto layer_draw_buffer = create_mixer_buffer(4);
 
 			BOOST_FOREACH(auto& item, layer.second)
 				draw_item(std::move(item), layer_draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer);	
 		
-			draw_device_buffer(layer_draw_buffer, std::move(local_mix_buffer), blend_mode::normal);							
-			draw_device_buffer(draw_buffer, std::move(layer_draw_buffer), layer.first);
+			draw_mixer_buffer(layer_draw_buffer, std::move(local_mix_buffer), blend_mode::normal);							
+			draw_mixer_buffer(draw_buffer, std::move(layer_draw_buffer), layer.first);
 		}
 		else // fast path
 		{
 			BOOST_FOREACH(auto& item, layer.second)		
 				draw_item(std::move(item), draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer);		
 					
-			draw_device_buffer(draw_buffer, std::move(local_mix_buffer), blend_mode::normal);
+			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), blend_mode::normal);
 		}					
 
 		std::swap(local_key_buffer, layer_key_buffer);
@@ -173,7 +173,7 @@ private:
 
 		if(item.transform.is_key)
 		{
-			local_key_buffer = local_key_buffer ? local_key_buffer : create_device_buffer(1);
+			local_key_buffer = local_key_buffer ? local_key_buffer : create_mixer_buffer(1);
 
 			draw_params.background			= local_key_buffer;
 			draw_params.local_key			= nullptr;
@@ -183,7 +183,7 @@ private:
 		}
 		else if(item.transform.is_mix)
 		{
-			local_mix_buffer = local_mix_buffer ? local_mix_buffer : create_device_buffer(4);
+			local_mix_buffer = local_mix_buffer ? local_mix_buffer : create_mixer_buffer(4);
 
 			draw_params.background			= local_mix_buffer;
 			draw_params.local_key			= std::move(local_key_buffer);
@@ -195,7 +195,7 @@ private:
 		}
 		else
 		{
-			draw_device_buffer(draw_buffer, std::move(local_mix_buffer), blend_mode::normal);
+			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), blend_mode::normal);
 			
 			draw_params.background			= draw_buffer;
 			draw_params.local_key			= std::move(local_key_buffer);
@@ -205,7 +205,7 @@ private:
 		}	
 	}
 
-	void draw_device_buffer(safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>&& source_buffer, blend_mode::type blend_mode = blend_mode::normal)
+	void draw_mixer_buffer(safe_ptr<device_buffer>& draw_buffer, std::shared_ptr<device_buffer>&& source_buffer, blend_mode::type blend_mode = blend_mode::normal)
 	{
 		if(!source_buffer)
 			return;
@@ -221,7 +221,7 @@ private:
 		kernel_.draw(channel_.ogl(), std::move(draw_params));
 	}
 			
-	safe_ptr<device_buffer> create_device_buffer(size_t stride)
+	safe_ptr<device_buffer> create_mixer_buffer(size_t stride)
 	{
 		auto buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, stride);
 		channel_.ogl().clear(*buffer);
