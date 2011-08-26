@@ -31,20 +31,6 @@ extern "C"
 
 namespace caspar {
 	
-PixelFormat pix_fmts[] = 
-{
-	PIX_FMT_YUV420P,
-	PIX_FMT_YUVA420P,
-	PIX_FMT_YUV422P,
-	PIX_FMT_YUV444P,
-	PIX_FMT_YUV411P,
-	PIX_FMT_ARGB, 
-	PIX_FMT_RGBA,
-	PIX_FMT_ABGR,
-	PIX_FMT_GRAY8,
-	PIX_FMT_NONE
-};	
-
 struct filter::implementation
 {
 	std::string						filters_;
@@ -52,11 +38,29 @@ struct filter::implementation
 	AVFilterContext*				buffersink_ctx_;
 	AVFilterContext*				buffersrc_ctx_;
 	std::shared_ptr<void>			parallel_yadif_ctx_;
+	std::vector<PixelFormat>		pix_fmts_;
 		
-	implementation(const std::wstring& filters) 
+	implementation(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) 
 		: filters_(narrow(filters))
 		, parallel_yadif_ctx_(nullptr)
+		, pix_fmts_(pix_fmts)
 	{
+		if(pix_fmts_.empty())
+		{
+			pix_fmts_.push_back(PIX_FMT_YUV420P);
+			pix_fmts_.push_back(PIX_FMT_YUVA420P);
+			pix_fmts_.push_back(PIX_FMT_YUV422P);
+			pix_fmts_.push_back(PIX_FMT_YUV444P);
+			pix_fmts_.push_back(PIX_FMT_YUV411P);
+			pix_fmts_.push_back(PIX_FMT_ARGB);
+			pix_fmts_.push_back(PIX_FMT_RGBA);
+			pix_fmts_.push_back(PIX_FMT_ABGR);
+			pix_fmts_.push_back(PIX_FMT_GRAY8);
+			pix_fmts_.push_back(PIX_FMT_NONE);
+		}
+		else
+			pix_fmts_.push_back(PIX_FMT_NONE);
+
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
 	
@@ -84,7 +88,7 @@ struct filter::implementation
 			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get()), "[filter]");
 
 			// OPIX_FMT_BGRAutput
-			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts, graph_.get()), "[filter]");
+			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts_.data(), graph_.get()), "[filter]");
 			
 			AVFilterInOut* outputs = avfilter_inout_alloc();
 			AVFilterInOut* inputs  = avfilter_inout_alloc();
@@ -159,7 +163,7 @@ struct filter::implementation
 	}
 };
 
-filter::filter(const std::wstring& filters) : impl_(new implementation(filters)){}
+filter::filter(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) : impl_(new implementation(filters, pix_fmts)){}
 filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
 filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
 std::vector<safe_ptr<AVFrame>> filter::execute(const std::shared_ptr<AVFrame>& frame) {return impl_->execute(frame);}

@@ -72,7 +72,7 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;..\..\dependencies\ffmpeg 0.8\include;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\;..\..\dependencies\boost_1_44_0\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;$(IncludePath)</IncludePath>
@@ -248,6 +248,9 @@
     </ProjectReference>
     <ProjectReference Include="..\..\core\core.vcxproj">
       <Project>{79388c20-6499-4bf6-b8b9-d8c33d7d4ddd}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\ffmpeg\ffmpeg.vcxproj">
+      <Project>{f6223af3-be0b-4b61-8406-98922ce521c2}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
