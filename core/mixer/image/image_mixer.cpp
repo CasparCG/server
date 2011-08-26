@@ -59,19 +59,21 @@ typedef std::pair<blend_mode::type, std::vector<item>> layer;
 
 class image_renderer
 {
-	video_channel_context&					channel_;	
+	ogl_device&								ogl_;
+	video_format_desc						format_desc_;
 	image_kernel							kernel_;	
 	std::shared_ptr<device_buffer>			active_buffer_;
 public:
-	image_renderer(video_channel_context& channel)
-		: channel_(channel)
+	image_renderer(ogl_device& ogl, const video_format_desc& format_desc)
+		: ogl_(ogl)
+		, format_desc_(format_desc)
 	{
 	}
 	
 	boost::unique_future<safe_ptr<host_buffer>> render(std::vector<layer>&& layers)
 	{		
 		auto layers2 = make_move_on_copy(std::move(layers));
-		return channel_.ogl().begin_invoke([=]
+		return ogl_.begin_invoke([=]
 		{
 			return do_render(std::move(layers2.value));
 		});
@@ -82,7 +84,7 @@ private:
 	{
 		auto draw_buffer = create_mixer_buffer(4);
 
-		if(channel_.get_format_desc().field_mode != field_mode::progressive)
+		if(format_desc_.field_mode != field_mode::progressive)
 		{
 			auto upper = layers;
 			auto lower = std::move(layers);
@@ -107,13 +109,13 @@ private:
 			draw(std::move(layers), draw_buffer);
 		}
 
-		auto host_buffer = channel_.ogl().create_host_buffer(channel_.get_format_desc().size, host_buffer::read_only);
-		channel_.ogl().attach(*draw_buffer);
+		auto host_buffer = ogl_.create_host_buffer(format_desc_.size, host_buffer::read_only);
+		ogl_.attach(*draw_buffer);
 		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
 		
 		active_buffer_ = std::move(draw_buffer);
 
-		channel_.ogl().flush(); // NOTE: This is important, otherwise fences will deadlock.
+		ogl_.flush(); // NOTE: This is important, otherwise fences will deadlock.
 			
 		return host_buffer;
 	}
@@ -179,7 +181,7 @@ private:
 			draw_params.local_key			= nullptr;
 			draw_params.layer_key			= nullptr;
 
-			kernel_.draw(channel_.ogl(), std::move(draw_params));
+			kernel_.draw(ogl_, std::move(draw_params));
 		}
 		else if(item.transform.is_mix)
 		{
@@ -191,7 +193,7 @@ private:
 
 			draw_params.keyer				= keyer::additive;
 
-			kernel_.draw(channel_.ogl(), std::move(draw_params));
+			kernel_.draw(ogl_, std::move(draw_params));
 		}
 		else
 		{
@@ -201,7 +203,7 @@ private:
 			draw_params.local_key			= std::move(local_key_buffer);
 			draw_params.layer_key			= layer_key_buffer;
 
-			kernel_.draw(channel_.ogl(), std::move(draw_params));
+			kernel_.draw(ogl_, std::move(draw_params));
 		}	
 	}
 
@@ -220,13 +222,13 @@ private:
 		draw_params.blend_mode			= blend_mode;
 		draw_params.background			= draw_buffer;
 
-		kernel_.draw(channel_.ogl(), std::move(draw_params));
+		kernel_.draw(ogl_, std::move(draw_params));
 	}
 			
 	safe_ptr<device_buffer> create_mixer_buffer(size_t stride)
 	{
-		auto buffer = channel_.ogl().create_device_buffer(channel_.get_format_desc().width, channel_.get_format_desc().height, stride);
-		channel_.ogl().clear(*buffer);
+		auto buffer = ogl_.create_device_buffer(format_desc_.width, format_desc_.height, stride);
+		ogl_.clear(*buffer);
 		return buffer;
 	}
 };
@@ -238,9 +240,9 @@ struct image_mixer::implementation : boost::noncopyable
 	std::vector<frame_transform>	transform_stack_;
 	std::vector<layer>				layers_; // layer/stream/items
 public:
-	implementation(video_channel_context& video_channel) 
-		: ogl_(video_channel.ogl())
-		, renderer_(video_channel)
+	implementation(ogl_device& ogl, const video_format_desc& format_desc) 
+		: ogl_(ogl)
+		, renderer_(ogl, format_desc)
 		, transform_stack_(1)	
 	{
 	}
@@ -250,12 +252,12 @@ public:
 		layers_.push_back(std::make_pair(blend_mode, std::vector<item>()));
 	}
 		
-	void begin(core::basic_frame& frame)
+	void begin(basic_frame& frame)
 	{
 		transform_stack_.push_back(transform_stack_.back()*frame.get_frame_transform());
 	}
 		
-	void visit(core::write_frame& frame)
+	void visit(write_frame& frame)
 	{			
 		item item;
 		item.pix_desc	= frame.get_pixel_format_desc();
@@ -279,18 +281,18 @@ public:
 		return renderer_.render(std::move(layers_));
 	}
 
-	safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
+	safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& desc)
 	{
 		return make_safe<write_frame>(ogl_, tag, desc);
 	}
 };
 
-image_mixer::image_mixer(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
-void image_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
-void image_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
+image_mixer::image_mixer(ogl_device& ogl, const video_format_desc& format_desc) : impl_(new implementation(ogl, format_desc)){}
+void image_mixer::begin(basic_frame& frame){impl_->begin(frame);}
+void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<host_buffer>> image_mixer::render(){return impl_->render();}
-safe_ptr<write_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
+safe_ptr<write_frame> image_mixer::create_frame(const void* tag, const pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
 void image_mixer::begin_layer(blend_mode::type blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 image_mixer& image_mixer::operator=(image_mixer&& other)

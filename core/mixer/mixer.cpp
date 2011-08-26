@@ -104,7 +104,7 @@ public:
 	implementation(video_channel_context& video_channel) 
 		: channel_(video_channel)
 		, audio_mixer_(channel_.get_format_desc())
-		, image_mixer_(channel_)
+		, image_mixer_(channel_.ogl(), channel_.get_format_desc())
 		, buffer_size_(env::properties().get("configuration.producers.buffer-depth", 1))
 	{	
 		CASPAR_LOG(info) << print() << L" Successfully initialized . Buffer-depth: " << buffer_size_;	
