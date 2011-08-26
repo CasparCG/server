@@ -65,7 +65,7 @@ struct configuration
 
 class decklink_frame : public IDeckLinkVideoFrame
 {
-	const std::shared_ptr<core::read_frame>						frame_;
+	std::shared_ptr<core::read_frame>							frame_;
 	const core::video_format_desc								format_desc_;
 
 	bool														key_only_;
@@ -103,6 +103,7 @@ public:
 			{
 				key_data_.resize(frame_->image_data().size());
 				fast_memshfl(key_data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				frame_.reset();
 			}
 			*buffer = key_data_.data();
 		}
