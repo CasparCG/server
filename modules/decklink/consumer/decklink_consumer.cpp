@@ -457,12 +457,7 @@ public:
 	{
 		return context_ ? context_->print() : L"decklink_consumer";
 	}
-
-	virtual bool key_only() const
-	{
-		return config_.key_only;
-	}
-		
+			
 	virtual const core::video_format_desc& get_video_format_desc() const
 	{
 		return format_desc_;
