@@ -124,7 +124,13 @@ std::shared_ptr<void> make_parallel_yadif(AVFilterContext* ctx)
 		while(index < sizeof(fs)/sizeof(fs[0]) && fs[index] != func)
 			++index;
 
-		ctxs[index].last_index = 32;//ctx->inputs[0]->h;
+		ctxs[index].last_index = 0;
+		for (int y = 0; y < ctx->inputs[0]->h; y++)
+		{
+            if ((y ^ yadif->parity) & 1)
+				++ctxs[index].last_index;
+		}
+
 		yadif->filter_line = func;
 	}
 
