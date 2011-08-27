@@ -441,16 +441,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
-		try
-		{
-			consumer_->send(frame);
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION()
-			return false;
-		}
-
+		consumer_->send(frame);
 		return true;
 	}
 	

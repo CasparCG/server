@@ -45,7 +45,8 @@ struct output::implementation
 {	
 	typedef std::pair<safe_ptr<read_frame>, safe_ptr<read_frame>> fill_and_key;
 	
-	video_channel_context& channel_;
+	video_channel_context&		channel_;
+	const std::function<void()> restart_channel_;
 
 	std::map<int, safe_ptr<frame_consumer>> consumers_;
 	typedef std::map<int, safe_ptr<frame_consumer>>::value_type layer_t;
@@ -53,8 +54,11 @@ struct output::implementation
 	high_prec_timer timer_;
 		
 public:
-	implementation(video_channel_context& video_channel) 
-		: channel_(video_channel){}	
+	implementation(video_channel_context& video_channel, const std::function<void()>& restart_channel) 
+		: channel_(video_channel)
+		, restart_channel_(restart_channel)
+	{
+	}	
 	
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
@@ -105,10 +109,41 @@ public:
 			if(consumer->get_video_format_desc() != channel_.get_format_desc())
 				consumer->initialize(channel_.get_format_desc());
 
-			if(consumer->send(frame))
-				++it;
-			else
-				consumers_.erase(it++);
+			try
+			{
+				if(consumer->send(frame))
+					++it;
+				else
+					consumers_.erase(it++);
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				CASPAR_LOG(warning) << "Trying to restart consumer: " << consumer->print() << L".";
+				try
+				{
+					consumer->initialize(channel_.get_format_desc());
+					consumer->send(frame);
+				}
+				catch(...)
+				{	
+					CASPAR_LOG_CURRENT_EXCEPTION();	
+					CASPAR_LOG(warning) << "Consumer restart failed, trying to restart channel: " << consumer->print() << L".";	
+
+					try
+					{
+						restart_channel_();
+						consumer->initialize(channel_.get_format_desc());
+						consumer->send(frame);
+					}
+					catch(...)
+					{
+						CASPAR_LOG_CURRENT_EXCEPTION();
+						CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << L". Removing it.";
+						consumers_.erase(it++);
+					}
+				}
+			}
 		}
 	}
 
@@ -128,7 +163,7 @@ private:
 	}
 };
 
-output::output(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
+output::output(video_channel_context& video_channel, const std::function<void()>& restart_channel) : impl_(new implementation(video_channel, restart_channel)){}
 void output::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void output::remove(int index){impl_->remove(index);}
 void output::execute(const safe_ptr<read_frame>& frame) {impl_->execute(frame); }
