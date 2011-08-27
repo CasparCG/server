@@ -82,12 +82,14 @@ struct configuration
 	stretch		stretch;
 	bool		windowed;
 	bool		key_only;
+	bool		auto_deinterlace;
 
 	configuration()
 		: screen_index(0)
 		, stretch(fill)
 		, windowed(true)
 		, key_only(false)
+		, auto_deinterlace(true)
 	{
 	}
 };
@@ -134,7 +136,7 @@ public:
 		, square_height_(format_desc.square_height)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, input_buffer_(core::consumer_buffer_depth()-1)
-		, filter_(format_desc.field_mode == core::field_mode::progressive ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
+		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
 		frame_buffer_.set_capacity(2);
 
@@ -482,9 +484,10 @@ safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstrin
 safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::ptree& ptree) 
 {
 	configuration config;
-	config.screen_index = ptree.get("device",   config.screen_index);
-	config.windowed		= ptree.get("windowed", config.windowed);
-	config.key_only		= ptree.get("key-only", config.key_only	);
+	config.screen_index		= ptree.get("device",   config.screen_index);
+	config.windowed			= ptree.get("windowed", config.windowed);
+	config.key_only			= ptree.get("key-only", config.key_only);
+	config.auto_deinterlace	= ptree.get("auto-deinterlace", config.auto_deinterlace);
 	
 	auto stretch_str = ptree.get("stretch", "default");
 	if(stretch_str == "uniform")
