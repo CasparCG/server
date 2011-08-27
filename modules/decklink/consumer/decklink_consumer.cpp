@@ -412,13 +412,11 @@ struct decklink_consumer_proxy : public core::frame_consumer
 	const configuration				config_;
 	com_context<decklink_consumer>	context_;
 	core::video_format_desc			format_desc_;
-	size_t							fail_count_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
 		: config_(config)
 		, context_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
-		, fail_count_(0)
 	{
 	}
 
@@ -439,24 +437,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
-		if(!context_)
-			context_.reset([&]{return new decklink_consumer(config_, format_desc_);});
-
-		try
-		{
-			context_->send(frame);
-			fail_count_ = 0;
-		}
-		catch(...)
-		{
-			context_.reset();
-
-			if(fail_count_++ > 3)
-				return false;  // Outside didn't handle exception properly, just give up.
-			
-			throw;
-		}
-
+		context_->send(frame);
 		return true;
 	}
 	

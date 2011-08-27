@@ -59,7 +59,7 @@ public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
 		: context_(index, ogl, format_desc)
 		, diag_(diagnostics::create_graph(narrow(print())))
-		, output_(new caspar::core::output(context_))
+		, output_(new caspar::core::output(context_, [this]{restart();}))
 		, mixer_(new caspar::core::mixer(context_))
 		, stage_(new caspar::core::stage(context_))	
 	{
@@ -118,15 +118,19 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(error) << context_.print() << L" Unexpected exception. Clearing stage and freeing memory";
-
-			stage_->clear();
-			context_.ogl().gc().wait();
-
-			mixer_ = nullptr;
-			mixer_.reset(new caspar::core::mixer(context_));
+			restart();
 		}
 
 		context_.execution().begin_invoke([this]{tick();});
+	}
+
+	void restart()
+	{
+		stage_->clear();
+		context_.ogl().gc().wait();
+
+		mixer_ = nullptr;
+		mixer_.reset(new caspar::core::mixer(context_));
 	}
 		
 	std::wstring print() const

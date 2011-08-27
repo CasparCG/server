@@ -3,6 +3,7 @@
 #include "executor.h"
 
 #include "../log/log.h"
+#include "../exception/exceptions.h"
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -37,7 +38,7 @@ public:
 			::CoUninitialize();
 		}).timed_wait(boost::posix_time::milliseconds(500)))
 		{
-			CASPAR_LOG(error) << L"[com_contex] Timer expired, deadlock detected and released, leaking resources";
+			CASPAR_LOG(error) << L"[com_contex] Timer expired, deadlock detected and released, leaking resources.";
 		}
 	}
 	
@@ -51,11 +52,25 @@ public:
 		});
 	}
 
-	T& operator*() const { return *instance_.get();}  // noexcept
+	T& operator*() const 
+	{
+		if(instance_ == nullptr)
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Tried to access null context."));
 
-	T* operator->() const { return instance_.get();}  // noexcept
+		return *instance_.get();
+	}  // noexcept
 
-	T* get() const { return instance_.get();}  // noexcept
+	T* operator->() const 
+	{
+		if(instance_ == nullptr)
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Tried to access null context."));
+		return instance_.get();
+	}  // noexcept
+
+	T* get() const
+	{
+		return instance_.get();
+	}  // noexcept
 
 	operator bool() const {return get() != nullptr;}
 };
