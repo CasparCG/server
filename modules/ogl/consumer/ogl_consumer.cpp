@@ -76,32 +76,43 @@ enum stretch
 	uniform_to_fill
 };
 
+struct configuration
+{
+	size_t		screen_index;
+	stretch		stretch;
+	bool		windowed;
+	bool		key_only;
+
+	configuration()
+		: screen_index(0)
+		, stretch(fill)
+		, windowed(true)
+		, key_only(false)
+	{
+	}
+};
+
 struct ogl_consumer : boost::noncopyable
 {		
+	const configuration		config_;
 	core::video_format_desc format_desc_;
 	
 	GLuint					texture_;
 	std::vector<GLuint>		pbos_;
 	
 	float					width_;
-	float					height_;
-	
-	const stretch			stretch_;
-
-	const bool				windowed_;
+	float					height_;	
 	unsigned int			screen_x_;
 	unsigned int			screen_y_;
 	unsigned int			screen_width_;
 	unsigned int			screen_height_;
-	const unsigned int		screen_index_;
-
 	size_t					square_width_;
 	size_t					square_height_;				
 	
 	sf::Window				window_;
 	
-	safe_ptr<diagnostics::graph> graph_;
-	boost::timer			perf_timer_;
+	safe_ptr<diagnostics::graph>	graph_;
+	boost::timer					perf_timer_;
 
 	boost::circular_buffer<safe_ptr<core::read_frame>>			input_buffer_;
 	tbb::concurrent_bounded_queue<safe_ptr<core::read_frame>>	frame_buffer_;
@@ -111,70 +122,42 @@ struct ogl_consumer : boost::noncopyable
 
 	
 	filter					filter_;
-
-	const bool key_only_;
 public:
-	ogl_consumer(unsigned int screen_index, stretch stretch, bool windowed, const core::video_format_desc& format_desc, bool key_only) 
-		: format_desc_(format_desc)
+	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc) 
+		: config_(config)
+		, format_desc_(format_desc)
 		, texture_(0)
-		, pbos_(2, 0)
-		, stretch_(stretch)
-		, windowed_(windowed)
-		, screen_index_(screen_index)		
+		, pbos_(2, 0)	
 		, screen_width_(format_desc.width)
 		, screen_height_(format_desc.height)
-		, square_width_(format_desc.width)
-		, square_height_(format_desc.height)
+		, square_width_(format_desc.square_width)
+		, square_height_(format_desc.square_height)
 		, graph_(diagnostics::create_graph(narrow(print())))
 		, input_buffer_(core::consumer_buffer_depth()-1)
-		, key_only_(key_only)
 		, filter_(format_desc.field_mode == core::field_mode::progressive ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
-		if(format_desc.field_mode != core::field_mode::progressive)
-			CASPAR_LOG(info) << print() << L" Deinterlacer enabled.";
-
 		frame_buffer_.set_capacity(2);
 
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
-										
-		if(format_desc_.format == core::video_format::pal)
-		{
-			square_width_	= 768;
-			square_height_	= 576;
-		}
-		else if(format_desc_.format == core::video_format::ntsc)
-		{
-			square_width_	= 720;
-			square_height_	= 547;
-		}
-		
-		DISPLAY_DEVICE d_device;			
-		memset(&d_device, 0, sizeof(d_device));
-		d_device.cb = sizeof(d_device);
-
+									
+		DISPLAY_DEVICE d_device = {sizeof(d_device), 0};			
 		std::vector<DISPLAY_DEVICE> displayDevices;
 		for(int n = 0; EnumDisplayDevices(NULL, n, &d_device, NULL); ++n)
-		{
 			displayDevices.push_back(d_device);
-			memset(&d_device, 0, sizeof(d_device));
-			d_device.cb = sizeof(d_device);
-		}
 
-		if(screen_index_ >= displayDevices.size())
+		if(config_.screen_index >= displayDevices.size())
 			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_") << msg_info(narrow(print())));
 		
-		DEVMODE devmode;
-		memset(&devmode, 0, sizeof(devmode));
-		
-		if(!EnumDisplaySettings(displayDevices[screen_index_].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
+		DEVMODE devmode = {};
+		if(!EnumDisplaySettings(displayDevices[config_.screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
 			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info(narrow(print()) + " EnumDisplaySettings"));
 		
 		screen_x_		= devmode.dmPosition.x;
 		screen_y_		= devmode.dmPosition.y;
-		screen_width_	= windowed_ ? square_width_ : devmode.dmPelsWidth;
-		screen_height_	= windowed_ ? square_height_ : devmode.dmPelsHeight;
+		screen_width_	= config_.windowed ? square_width_ : devmode.dmPelsWidth;
+		screen_height_	= config_.windowed ? square_height_ : devmode.dmPelsHeight;
 		
 		is_running_ = true;
 		thread_ = boost::thread([this]{run();});
@@ -192,7 +175,7 @@ public:
 		if(!GLEW_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
-		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), windowed_ ? sf::Style::Resize : sf::Style::Fullscreen);
+		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize : sf::Style::Fullscreen);
 		window_.ShowMouseCursor(false);
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
@@ -344,7 +327,7 @@ public:
 		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
 		if(ptr)
 		{
-			if(key_only_)
+			if(config_.key_only)
 				fast_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
 				fast_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
@@ -380,12 +363,12 @@ public:
 		
 	std::wstring print() const
 	{	
-		return  L"ogl[" + boost::lexical_cast<std::wstring>(screen_index_) + L"|" + format_desc_.name + L"]";
+		return  L"ogl[" + boost::lexical_cast<std::wstring>(config_.screen_index) + L"|" + format_desc_.name + L"]";
 	}
 	
 	void calculate_aspect()
 	{
-		if(windowed_)
+		if(config_.windowed)
 		{
 			screen_height_ = window_.GetHeight();
 			screen_width_ = window_.GetWidth();
@@ -394,11 +377,11 @@ public:
 		GL(glViewport(0, 0, screen_width_, screen_height_));
 
 		std::pair<float, float> target_ratio = None();
-		if(stretch_ == fill)
+		if(config_.stretch == fill)
 			target_ratio = Fill();
-		else if(stretch_ == uniform)
+		else if(config_.stretch == uniform)
 			target_ratio = Uniform();
-		else if(stretch_ == uniform_to_fill)
+		else if(config_.stretch == uniform_to_fill)
 			target_ratio = UniformToFill();
 
 		width_ = target_ratio.first;
@@ -443,29 +426,31 @@ public:
 
 struct ogl_consumer_proxy : public core::frame_consumer
 {
-	size_t screen_index_;
-	caspar::stretch stretch_;
-	bool windowed_;
-	bool key_only_;
-
+	const configuration config_;
 	std::unique_ptr<ogl_consumer> consumer_;
 
 public:
 
-	ogl_consumer_proxy(size_t screen_index, stretch stretch, bool windowed, bool key_only)
-		: screen_index_(screen_index)
-		, stretch_(stretch)
-		, windowed_(windowed)
-		, key_only_(key_only){}
+	ogl_consumer_proxy(const configuration& config)
+		: config_(config){}
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		consumer_.reset(new ogl_consumer(screen_index_, stretch_, windowed_, format_desc, key_only_));
+		consumer_.reset(new ogl_consumer(config_, format_desc));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
-		consumer_->send(frame);
+		try
+		{
+			consumer_->send(frame);
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION()
+			return false;
+		}
+
 		return true;
 	}
 	
@@ -490,36 +475,33 @@ safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstrin
 	if(params.size() < 1 || params[0] != L"SCREEN")
 		return core::frame_consumer::empty();
 	
-	size_t screen_index = 0;
-	stretch stretch = stretch::fill;
-	bool windowed = true;
-	
+	configuration config;
+		
 	if(params.size() > 1) 
-		screen_index = lexical_cast_or_default<int>(params[2], screen_index);
+		config.screen_index = lexical_cast_or_default<int>(params[2], config.screen_index);
 
 	if(params.size() > 2) 
-		windowed = lexical_cast_or_default<bool>(params[3], windowed);
+		config.windowed = lexical_cast_or_default<bool>(params[3], config.windowed);
 
-	bool key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
+	config.key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
 
-	return make_safe<ogl_consumer_proxy>(screen_index, stretch, windowed, key_only);
+	return make_safe<ogl_consumer_proxy>(config);
 }
 
 safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::ptree& ptree) 
 {
-	size_t screen_index = ptree.get("device", 0);
-	bool windowed =ptree.get("windowed", true);
+	configuration config;
+	config.screen_index = ptree.get("device",   config.screen_index);
+	config.windowed		= ptree.get("windowed", config.windowed);
+	config.key_only		= ptree.get("key-only", config.key_only	);
 	
-	stretch stretch = stretch::fill;
-	auto key_str = ptree.get("stretch", "default");
-	if(key_str == "uniform")
-		stretch = stretch::uniform;
-	else if(key_str == "uniform_to_fill")
-		stretch = stretch::uniform_to_fill;
-
-	bool key_only = ptree.get("key-only", false);
-
-	return make_safe<ogl_consumer_proxy>(screen_index, stretch, windowed, key_only);
+	auto stretch_str = ptree.get("stretch", "default");
+	if(stretch_str == "uniform")
+		config.stretch = stretch::uniform;
+	else if(stretch_str == "uniform_to_fill")
+		config.stretch = stretch::uniform_to_fill;
+	
+	return make_safe<ogl_consumer_proxy>(config);
 }
 
 }
