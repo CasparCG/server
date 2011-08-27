@@ -83,6 +83,8 @@ struct video_format_desc
 
 	size_t					width;		// output frame width
 	size_t					height;		// output frame height
+	size_t					square_width;
+	size_t					square_height;
 	field_mode::type		field_mode;	// progressive, interlaced upper field first, interlaced lower field first
 	double					fps;		// actual framerate, e.g. i50 = 25 fps, p50 = 50 fps
 	size_t					time_scale;
