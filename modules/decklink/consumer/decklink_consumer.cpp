@@ -101,7 +101,7 @@ public:
         
     STDMETHOD(GetBytes(void** buffer))
 	{
-		static std::vector<uint8_t> zeros(1920*1080*4, 0);
+		static std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> zeros(1920*1080*4, 0);
 		if(static_cast<size_t>(frame_->image_data().size()) != format_desc_.size)
 		{
 			*buffer = zeros.data();
