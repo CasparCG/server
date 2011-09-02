@@ -127,6 +127,9 @@
     <ClInclude Include="producer\frame\frame_transform.h">
       <Filter>source\producer\frame</Filter>
     </ClInclude>
+    <ClInclude Include="mixer\audio\audio_util.h">
+      <Filter>source\mixer\audio</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">

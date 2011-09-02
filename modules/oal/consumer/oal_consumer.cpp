@@ -27,6 +27,7 @@
 #include <common/utility/string.h>
 
 #include <core/consumer/frame_consumer.h>
+#include <core/mixer/audio/audio_util.h>
 #include <core/video_format.h>
 
 #include <core/mixer/read_frame.h>
@@ -91,11 +92,7 @@ public:
 			Play();		
 		}
 
-		std::vector<int16_t> audio16(frame->audio_data().size());
-		for(size_t n = 0; n < audio16.size(); ++n)		
-			audio16[n] = (frame->audio_data()[n] >> 16) & 0xffff;		
-
-		input_.push(std::make_shared<std::vector<int16_t>>(std::move(audio16)));
+		input_.push(std::make_shared<std::vector<int16_t>>(core::audio_32_to_16(frame->audio_data())));
 
 		return true;
 	}
