@@ -92,7 +92,7 @@ public:
 	
 	std::vector<int32_t> mix()
 	{
-		auto result = std::vector<int32_t>(format_desc_.audio_samples_per_frame);
+		auto result = std::vector<int32_t>(format_desc_.audio_samples_per_frame, 0);
 
 		std::map<const void*, core::frame_transform> next_frame_transforms;
 
