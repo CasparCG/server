@@ -207,7 +207,7 @@ public:
 	
 	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
-		static std::vector<int16_t> silence(MAX_HANC_BUFFER_SIZE, 0);
+		static std::vector<int32_t> silence(MAX_HANC_BUFFER_SIZE, 0);
 		
 		executor_.begin_invoke([=]
 		{
@@ -241,9 +241,13 @@ public:
 
 				if(embedded_audio_)
 				{		
-					auto frame_audio_data = frame->audio_data().empty() ? silence.data() : const_cast<int16_t*>(frame->audio_data().begin());
+					auto frame_audio_data = frame->audio_data().empty() ? silence.data() : const_cast<int32_t*>(frame->audio_data().begin());
+					
+					std::vector<int16_t> frame_audio_data16(audio_samples);
+					for(size_t n = 0; n < frame_audio_data16.size(); ++n)		
+						frame_audio_data16[n] = (frame_audio_data[n] >> 16) & 0xffff;	
 
-					encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio_data, audio_samples, audio_nchannels);
+					encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio_data16.data(), audio_samples, audio_nchannels);
 								
 					blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 													reserved_frames_.front()->image_size(), 

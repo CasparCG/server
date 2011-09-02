@@ -45,7 +45,7 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	safe_ptr<diagnostics::graph>						graph_;
 	boost::timer										perf_timer_;
 
-	tbb::concurrent_bounded_queue<std::vector<short>>	input_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<std::vector<short>>>	input_;
 	boost::circular_buffer<std::vector<short>>			container_;
 	tbb::atomic<bool>									is_running_;
 
@@ -69,8 +69,8 @@ public:
 	~oal_consumer()
 	{
 		is_running_ = false;
-		input_.try_push(std::vector<short>());
-		input_.try_push(std::vector<short>());
+		input_.try_push(std::make_shared<std::vector<short>>());
+		input_.try_push(std::make_shared<std::vector<short>>());
 		Stop();
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
@@ -86,22 +86,26 @@ public:
 	{			
 		if(preroll_count_ < input_.capacity())
 		{
-			while(input_.try_push(std::vector<int16_t>(format_desc_.audio_samples_per_frame, 0)))
+			while(input_.try_push(std::make_shared<std::vector<int16_t>>(format_desc_.audio_samples_per_frame, 0)))
 				++preroll_count_;
 			Play();		
 		}
 
-		input_.push(std::vector<int16_t>(frame->audio_data().begin(), frame->audio_data().end())); 	
+		std::vector<int16_t> audio16(frame->audio_data().size());
+		for(size_t n = 0; n < audio16.size(); ++n)		
+			audio16[n] = (frame->audio_data()[n] >> 16) & 0xffff;		
+
+		input_.push(std::make_shared<std::vector<int16_t>>(std::move(audio16)));
 
 		return true;
 	}
 	
 	virtual bool OnGetData(sf::SoundStream::Chunk& data)
 	{		
-		std::vector<short> audio_data;		
+		std::shared_ptr<std::vector<short>> audio_data;		
 		input_.pop(audio_data);
 				
-		container_.push_back(std::move(audio_data));
+		container_.push_back(std::move(*audio_data));
 		data.Samples = container_.back().data();
 		data.NbSamples = container_.back().size();	
 		

@@ -35,10 +35,10 @@ struct read_frame::implementation : boost::noncopyable
 	size_t						size_;
 	safe_ptr<host_buffer>		image_data_;
 	tbb::mutex					mutex_;
-	std::vector<int16_t>		audio_data_;
+	std::vector<int32_t>		audio_data_;
 
 public:
-	implementation(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
+	implementation(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, std::vector<int32_t>&& audio_data) 
 		: ogl_(ogl)
 		, size_(size)
 		, image_data_(std::move(image_data))
@@ -59,13 +59,13 @@ public:
 		auto ptr = static_cast<const uint8_t*>(image_data_->data());
 		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_->size());
 	}
-	const boost::iterator_range<const int16_t*> audio_data()
+	const boost::iterator_range<const int32_t*> audio_data()
 	{
-		return boost::iterator_range<const int16_t*>(audio_data_.data(), audio_data_.data() + audio_data_.size());
+		return boost::iterator_range<const int32_t*>(audio_data_.data(), audio_data_.data() + audio_data_.size());
 	}
 };
 
-read_frame::read_frame(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, std::vector<int16_t>&& audio_data) 
+read_frame::read_frame(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, std::vector<int32_t>&& audio_data) 
 	: impl_(new implementation(ogl, size, std::move(image_data), std::move(audio_data))){}
 read_frame::read_frame(){}
 const boost::iterator_range<const uint8_t*> read_frame::image_data()
@@ -73,9 +73,9 @@ const boost::iterator_range<const uint8_t*> read_frame::image_data()
 	return impl_ ? impl_->image_data() : boost::iterator_range<const uint8_t*>();
 }
 
-const boost::iterator_range<const int16_t*> read_frame::audio_data()
+const boost::iterator_range<const int32_t*> read_frame::audio_data()
 {
-	return impl_ ? impl_->audio_data() : boost::iterator_range<const int16_t*>();
+	return impl_ ? impl_->audio_data() : boost::iterator_range<const int32_t*>();
 }
 
 size_t read_frame::image_size() const{return impl_ ? impl_->size_ : 0;}

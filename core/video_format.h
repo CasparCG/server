@@ -93,7 +93,6 @@ struct video_format_desc
 	size_t					size;		// output frame size in bytes 
 	std::wstring			name;		// name of output format
 
-	size_t					audio_bytes_per_sample;
 	size_t					audio_sample_rate;
 	size_t					audio_channels;
 	size_t					audio_samples_per_frame;

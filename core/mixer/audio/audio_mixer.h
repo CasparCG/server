@@ -40,7 +40,7 @@ public:
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
-	std::vector<int16_t> mix();
+	std::vector<int32_t> mix();
 	
 	audio_mixer& operator=(audio_mixer&& other);
 private:

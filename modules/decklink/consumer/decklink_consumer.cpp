@@ -151,7 +151,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 
 	size_t								preroll_count_;
 		
-	boost::circular_buffer<std::vector<int16_t>>	audio_container_;
+	boost::circular_buffer<std::vector<int32_t>>	audio_container_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> video_frame_buffer_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> audio_frame_buffer_;
@@ -262,7 +262,7 @@ public:
 	
 	void enable_audio()
 	{
-		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2, bmdAudioOutputStreamTimestamped)))
+		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, 2, bmdAudioOutputStreamTimestamped)))
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable audio output."));
 				
 		if(FAILED(output_->SetAudioCallback(this)))
@@ -369,7 +369,7 @@ public:
 	{
 		const int sample_frame_count = frame->audio_data().size()/format_desc_.audio_channels;
 
-		audio_container_.push_back(std::vector<int16_t>(frame->audio_data().begin(), frame->audio_data().end()));
+		audio_container_.push_back(std::vector<int32_t>(frame->audio_data().begin(), frame->audio_data().end()));
 
 		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), sample_frame_count, (audio_scheduled_++) * sample_frame_count, format_desc_.audio_sample_rate, nullptr)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
