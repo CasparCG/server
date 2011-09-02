@@ -2,6 +2,8 @@
 
 #include <common/memory/safe_ptr.h>
 
+#include <core/mixer/audio/audio_mixer.h>
+
 #include <boost/noncopyable.hpp>
 
 #include <vector>
@@ -24,7 +26,7 @@ public:
 	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory);
 	
 	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
-	void push(const std::shared_ptr<std::vector<int32_t>>& audio_samples);
+	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);
 	
 	void commit();
 

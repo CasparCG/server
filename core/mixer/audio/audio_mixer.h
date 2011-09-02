@@ -25,12 +25,16 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <tbb/cache_aligned_allocator.h>
+
 #include <vector>
 
 namespace caspar { namespace core {
 
 struct video_format_desc;
 	
+typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
+
 class audio_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
@@ -40,7 +44,7 @@ public:
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
-	std::vector<int32_t> mix();
+	audio_buffer mix();
 	
 	audio_mixer& operator=(audio_mixer&& other);
 private:

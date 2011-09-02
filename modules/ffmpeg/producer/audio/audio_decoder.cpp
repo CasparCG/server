@@ -95,9 +95,9 @@ public:
 		packets_.push(packet);
 	}	
 	
-	std::vector<std::shared_ptr<std::vector<int32_t>>> poll()
+	std::vector<std::shared_ptr<core::audio_buffer>> poll()
 	{
-		std::vector<std::shared_ptr<std::vector<int32_t>>> result;
+		std::vector<std::shared_ptr<core::audio_buffer>> result;
 
 		if(packets_.empty())
 			return result;
@@ -123,7 +123,7 @@ public:
 		return result;
 	}
 
-	std::vector<std::shared_ptr<std::vector<int32_t>>> empty_poll()
+	std::vector<std::shared_ptr<core::audio_buffer>> empty_poll()
 	{
 		auto packet = packets_.front();
 		packets_.pop();
@@ -131,10 +131,10 @@ public:
 		if(!packet)			
 			return boost::assign::list_of(nullptr);
 		
-		return boost::assign::list_of(std::make_shared<std::vector<int32_t>>(format_desc_.audio_samples_per_frame, 0));	
+		return boost::assign::list_of(std::make_shared<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));	
 	}
 
-	std::shared_ptr<std::vector<int32_t>> decode(AVPacket& pkt)
+	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
 	{		
 		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
 		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
@@ -152,7 +152,7 @@ public:
 		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
 		const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
 
-		return std::make_shared<std::vector<int32_t>>(samples, samples + n_samples);
+		return std::make_shared<core::audio_buffer>(samples, samples + n_samples);
 	}
 
 	bool ready() const
@@ -164,6 +164,6 @@ public:
 audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
-std::vector<std::shared_ptr<std::vector<int32_t>>> audio_decoder::poll(){return impl_->poll();}
+std::vector<std::shared_ptr<core::audio_buffer>> audio_decoder::poll(){return impl_->poll();}
 int64_t audio_decoder::nb_frames() const{return impl_->nb_frames_;}
 }

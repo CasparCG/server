@@ -21,6 +21,8 @@
 
 #include <common/memory/safe_ptr.h>
 
+#include <core/mixer/audio/audio_mixer.h>
+
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 
@@ -37,7 +39,7 @@ class read_frame : boost::noncopyable
 {
 public:
 	read_frame();
-	read_frame(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, std::vector<int32_t>&& audio_data);
+	read_frame(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data);
 
 	virtual const boost::iterator_range<const uint8_t*> image_data();
 	virtual const boost::iterator_range<const int32_t*> audio_data();

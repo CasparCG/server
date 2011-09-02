@@ -35,10 +35,10 @@ struct read_frame::implementation : boost::noncopyable
 	size_t						size_;
 	safe_ptr<host_buffer>		image_data_;
 	tbb::mutex					mutex_;
-	std::vector<int32_t>		audio_data_;
+	audio_buffer				audio_data_;
 
 public:
-	implementation(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, std::vector<int32_t>&& audio_data) 
+	implementation(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
 		: ogl_(ogl)
 		, size_(size)
 		, image_data_(std::move(image_data))
@@ -65,7 +65,7 @@ public:
 	}
 };
 
-read_frame::read_frame(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, std::vector<int32_t>&& audio_data) 
+read_frame::read_frame(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
 	: impl_(new implementation(ogl, size, std::move(image_data), std::move(audio_data))){}
 read_frame::read_frame(){}
 const boost::iterator_range<const uint8_t*> read_frame::image_data()
