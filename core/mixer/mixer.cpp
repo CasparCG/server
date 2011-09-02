@@ -96,7 +96,7 @@ struct mixer::implementation : boost::noncopyable
 	std::unordered_map<int, tweened_transform<core::frame_transform>> transforms_;	
 	std::unordered_map<int, blend_mode::type> blend_modes_;
 
-	std::queue<std::pair<boost::unique_future<safe_ptr<host_buffer>>, std::vector<int16_t>>> buffer_;
+	std::queue<std::pair<boost::unique_future<safe_ptr<host_buffer>>, std::vector<int32_t>>> buffer_;
 	
 	const size_t buffer_size_;
 

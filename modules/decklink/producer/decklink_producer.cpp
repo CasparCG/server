@@ -195,10 +195,10 @@ public:
 			{
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<short*>(bytes);
-				muxer_.push(std::make_shared<std::vector<int16_t>>(audio_data, audio_data + sample_frame_count*2));
+				muxer_.push(std::make_shared<std::vector<int32_t>>(audio_data, audio_data + sample_frame_count*2));
 			}
 			else
-				muxer_.push(std::make_shared<std::vector<int16_t>>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
+				muxer_.push(std::make_shared<std::vector<int32_t>>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
 					
 			muxer_.commit();
 
