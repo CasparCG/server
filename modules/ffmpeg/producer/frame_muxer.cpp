@@ -136,7 +136,7 @@ display_mode::type get_display_mode(const core::field_mode::type in_mode, double
 struct frame_muxer::implementation : boost::noncopyable
 {	
 	std::deque<std::queue<safe_ptr<write_frame>>>	video_streams_;
-	std::deque<std::vector<int16_t>>				audio_streams_;
+	std::deque<std::vector<int32_t>>				audio_streams_;
 	std::deque<safe_ptr<basic_frame>>				frame_buffer_;
 	display_mode::type								display_mode_;
 	const double									in_fps_;
@@ -238,12 +238,12 @@ struct frame_muxer::implementation : boost::noncopyable
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
-	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples)
+	void push(const std::shared_ptr<std::vector<int32_t>>& audio_samples)
 	{
 		if(!audio_samples)	
 		{
 			CASPAR_LOG(debug) << L"audio-chunk-count: " << audio_sample_count_/format_desc_.audio_samples_per_frame;
-			audio_streams_.push_back(std::vector<int16_t>());
+			audio_streams_.push_back(std::vector<int32_t>());
 			audio_sample_count_ = 0;
 			return;
 		}
@@ -276,14 +276,14 @@ struct frame_muxer::implementation : boost::noncopyable
 		return frame;
 	}
 
-	std::vector<int16_t> pop_audio()
+	std::vector<int32_t> pop_audio()
 	{
 		CASPAR_VERIFY(audio_streams_.front().size() >= format_desc_.audio_samples_per_frame);
 
 		auto begin = audio_streams_.front().begin();
 		auto end   = begin + format_desc_.audio_samples_per_frame;
 
-		auto samples = std::vector<int16_t>(begin, end);
+		auto samples = std::vector<int32_t>(begin, end);
 		audio_streams_.front().erase(begin, end);
 
 		return samples;
@@ -410,7 +410,7 @@ struct frame_muxer::implementation : boost::noncopyable
 frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory)
 	: impl_(new implementation(in_fps, frame_factory)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
-void frame_muxer::push(const std::shared_ptr<std::vector<int16_t>>& audio_samples){return impl_->push(audio_samples);}
+void frame_muxer::push(const std::shared_ptr<std::vector<int32_t>>& audio_samples){return impl_->push(audio_samples);}
 void frame_muxer::commit(){impl_->commit();}
 safe_ptr<basic_frame> frame_muxer::pop(){return impl_->pop();}
 size_t frame_muxer::size() const {return impl_->size();}

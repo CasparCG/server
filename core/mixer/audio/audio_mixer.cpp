@@ -26,6 +26,8 @@
 
 #include <tbb/parallel_for.h>
 
+#include <safeint.h>
+
 #include <stack>
 #include <deque>
 
@@ -35,7 +37,7 @@ struct audio_item
 {
 	const void*				tag;
 	frame_transform			transform;
-	std::vector<int16_t>	audio_data;
+	std::vector<int32_t>	audio_data;
 };
 	
 struct audio_mixer::implementation
@@ -73,7 +75,7 @@ public:
 		audio_item item;
 		item.tag		= frame.tag();
 		item.transform	= transform_stack_.top();
-		item.audio_data = std::vector<int16_t>(frame.audio_data().begin(), frame.audio_data().end());
+		item.audio_data = std::vector<int32_t>(frame.audio_data().begin(), frame.audio_data().end());
 
 		items.push_back(item);		
 	}
@@ -88,9 +90,9 @@ public:
 		transform_stack_.pop();
 	}
 	
-	std::vector<int16_t> mix()
+	std::vector<int32_t> mix()
 	{
-		auto result = std::vector<int16_t>(format_desc_.audio_samples_per_frame);
+		auto result = std::vector<int32_t>(format_desc_.audio_samples_per_frame);
 
 		std::map<const void*, core::frame_transform> next_frame_transforms;
 
@@ -108,10 +110,10 @@ public:
 			if(next.volume < 0.001 && prev.volume < 0.001)
 				continue;
 		
-			static const int BASE = 1<<15;
+			static const int BASE = 1<<31;
 
-			const auto next_volume = static_cast<int>(next.volume*BASE);
-			const auto prev_volume = static_cast<int>(prev.volume*BASE);
+			const auto next_volume = static_cast<int64_t>(next.volume*BASE);
+			const auto prev_volume = static_cast<int64_t>(prev.volume*BASE);
 		
 			const int n_samples = result.size();
 		
@@ -128,9 +130,9 @@ public:
 				{
 					for(size_t n = r.begin(); n < r.end(); ++n)
 					{
-						const int sample_volume = (prev_volume - (prev_volume * n)/n_samples) + (next_volume * n)/n_samples;
-						const int sample = (static_cast<int>(item.audio_data[n])*sample_volume)/BASE;
-						result[n] = static_cast<int16_t>((static_cast<int>(result[n]) + sample) & 0xFFFF);
+						const auto sample_volume = (prev_volume - (prev_volume * n)/n_samples) + (next_volume * n)/n_samples;
+						const auto sample = static_cast<int32_t>((static_cast<int64_t>(item.audio_data[n])*sample_volume)/BASE);
+						result[n] = result[n] + sample;
 					}
 				}
 			);
@@ -147,7 +149,7 @@ audio_mixer::audio_mixer(const core::video_format_desc& format_desc) : impl_(new
 void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
-std::vector<int16_t> audio_mixer::mix(){return impl_->mix();}
+std::vector<int32_t> audio_mixer::mix(){return impl_->mix();}
 audio_mixer& audio_mixer::operator=(audio_mixer&& other)
 {
 	impl_ = std::move(other.impl_);

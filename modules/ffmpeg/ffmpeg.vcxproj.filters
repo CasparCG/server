@@ -61,6 +61,9 @@
     <ClCompile Include="producer\format\flv.cpp">
       <Filter>source\producer\format</Filter>
     </ClCompile>
+    <ClCompile Include="producer\audio\audio_resampler.cpp">
+      <Filter>source\producer\audio</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\ffmpeg_producer.h">
@@ -102,6 +105,9 @@
     </ClInclude>
     <ClInclude Include="producer\format\flv.h">
       <Filter>source\producer\format</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\audio\audio_resampler.h">
+      <Filter>source\producer\audio</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

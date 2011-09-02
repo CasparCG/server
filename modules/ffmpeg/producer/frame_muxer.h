@@ -24,7 +24,7 @@ public:
 	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory);
 	
 	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
-	void push(const std::shared_ptr<std::vector<int16_t>>& audio_samples);
+	void push(const std::shared_ptr<std::vector<int32_t>>& audio_samples);
 	
 	void commit();
 
