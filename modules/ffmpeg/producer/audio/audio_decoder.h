@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include <core/mixer/audio/audio_mixer.h>
+
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
@@ -43,7 +45,7 @@ public:
 	
 	void push(const std::shared_ptr<AVPacket>& packet);
 	bool ready() const;
-	std::vector<std::shared_ptr<std::vector<int32_t>>> poll();
+	std::vector<std::shared_ptr<core::audio_buffer>> poll();
 
 	int64_t nb_frames() const;
 

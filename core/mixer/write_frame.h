@@ -23,6 +23,7 @@
 
 #include <core/producer/frame/basic_frame.h>
 #include <core/video_format.h>
+#include <core/mixer/audio/audio_mixer.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -54,7 +55,7 @@ public:
 	boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
 	const boost::iterator_range<const uint8_t*> image_data(size_t plane_index = 0) const;
 
-	std::vector<int32_t>& audio_data();
+	audio_buffer& audio_data();
 	const boost::iterator_range<const int32_t*> audio_data() const;
 	
 	void commit(uint32_t plane_index);
