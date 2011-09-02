@@ -247,6 +247,7 @@
     <Lib />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="mixer\audio\audio_util.h" />
     <ClInclude Include="mixer\gpu\fence.h" />
     <ClInclude Include="mixer\gpu\shader.h" />
     <ClInclude Include="mixer\image\blending_glsl.h" />
