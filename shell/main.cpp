@@ -17,14 +17,15 @@
 *    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
-#include "resource.h"
-
-#include "server.h"
 
 // tbbmalloc_proxy: 
 // Replace the standard memory allocation routines in Microsoft* C/C++ RTL 
 // (malloc/free, global new/delete, etc.) with the TBB memory allocator. 
 #include <tbb/tbbmalloc_proxy.h>
+
+#include "resource.h"
+
+#include "server.h"
 
 #ifdef _DEBUG
 	#define _CRTDBG_MAP_ALLOC
