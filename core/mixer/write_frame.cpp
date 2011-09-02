@@ -37,7 +37,7 @@ struct write_frame::implementation
 	ogl_device*									ogl_;
 	std::vector<std::shared_ptr<host_buffer>>	buffers_;
 	std::vector<safe_ptr<device_buffer>>		textures_;
-	std::vector<int32_t>						audio_data_;
+	audio_buffer								audio_data_;
 	const core::pixel_format_desc				desc_;
 	const void*									tag_;
 	core::field_mode::type						mode_;
@@ -142,7 +142,7 @@ write_frame& write_frame::operator=(write_frame&& other)
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 
 boost::iterator_range<uint8_t*> write_frame::image_data(size_t index){return impl_->image_data(index);}
-std::vector<int32_t>& write_frame::audio_data() { return impl_->audio_data_; }
+audio_buffer& write_frame::audio_data() { return impl_->audio_data_; }
 const boost::iterator_range<const uint8_t*> write_frame::image_data(size_t index) const
 {
 	return boost::iterator_range<const uint8_t*>(impl_->image_data(index).begin(), impl_->image_data(index).end());

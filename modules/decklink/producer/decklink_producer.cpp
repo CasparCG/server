@@ -124,7 +124,7 @@ public:
 									<< msg_info(narrow(print()) + " Could not enable video input.")
 									<< boost::errinfo_api_function("EnableVideoInput"));
 
-		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 2))) 
+		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, 2))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
 									<< msg_info(narrow(print()) + " Could not enable audio input.")
 									<< boost::errinfo_api_function("EnableAudioInput"));
@@ -194,11 +194,11 @@ public:
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{
 				auto sample_frame_count = audio->GetSampleFrameCount();
-				auto audio_data = reinterpret_cast<short*>(bytes);
-				muxer_.push(std::make_shared<std::vector<int32_t>>(audio_data, audio_data + sample_frame_count*2));
+				auto audio_data = reinterpret_cast<int32_t*>(bytes);
+				muxer_.push(std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*sizeof(int32_t)));
 			}
 			else
-				muxer_.push(std::make_shared<std::vector<int32_t>>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
+				muxer_.push(std::make_shared<core::audio_buffer>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
 					
 			muxer_.commit();
 
