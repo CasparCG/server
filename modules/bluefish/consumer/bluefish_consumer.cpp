@@ -208,7 +208,7 @@ public:
 	
 	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
-		static std::vector<int16_t> silence(MAX_HANC_BUFFER_SIZE, 0);
+		static std::vector<int8_t> silence(MAX_HANC_BUFFER_SIZE, 0);
 		
 		executor_.begin_invoke([=]
 		{
@@ -242,7 +242,7 @@ public:
 
 				if(embedded_audio_)
 				{		
-					auto frame_audio	  = core::audio_32_to_16(frame->audio_data());
+					auto frame_audio	  = core::audio_32_to_24(frame->audio_data());
 					auto frame_audio_data = frame_audio.size() != audio_samples ? silence.data() : frame_audio.data();	
 
 					encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio_data, audio_samples, audio_nchannels);
@@ -289,7 +289,7 @@ public:
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
-		const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN;
+		const auto sample_type = AUDIO_CHANNEL_24BIT | AUDIO_CHANNEL_LITTLEENDIAN;
 		const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
 		
 		hanc_stream_info_struct hanc_stream_info;
