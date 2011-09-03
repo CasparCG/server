@@ -197,7 +197,7 @@ public:
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
 						  + boost::lexical_cast<std::wstring>(width_) + L"x" + boost::lexical_cast<std::wstring>(height_)
-						  + (is_progressive_ ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(fps_)
+						  + (is_progressive_ ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(is_progressive_ ? fps_ : 2.0 * fps_)
 						  + L"]";
 	}
 };
