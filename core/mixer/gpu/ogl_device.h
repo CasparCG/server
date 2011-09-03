@@ -115,10 +115,15 @@ public:
 		
 	safe_ptr<device_buffer> create_device_buffer(size_t width, size_t height, size_t stride);
 	safe_ptr<host_buffer> create_host_buffer(size_t size, host_buffer::usage_t usage);
+	
 	void yield();
 	boost::unique_future<void> gc();
 
 	static std::wstring get_version();
+
+private:
+	safe_ptr<device_buffer> allocate_device_buffer(size_t width, size_t height, size_t stride);
+	safe_ptr<host_buffer> allocate_host_buffer(size_t size, host_buffer::usage_t usage);
 };
 
 }}

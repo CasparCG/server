@@ -99,8 +99,22 @@ public:
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		
-		for(int n = 0; n < 32 && muxer_.empty(); ++n)
-			decode_frame(0);
+		// Do some pre-work in order to not block rendering thread for initialization and allocations.
+
+		push_packets();
+		auto video_frames = video_decoder_.poll();
+		if(!video_frames.empty())
+		{
+			auto& video_frame = video_frames.front();
+			auto  desc		  = get_pixel_format_desc(static_cast<PixelFormat>(video_frame->format), video_frame->width, video_frame->height);
+			if(desc.pix_fmt == core::pixel_format::invalid)
+				get_pixel_format_desc(PIX_FMT_BGRA, video_frame->width, video_frame->height);
+			
+			for(int n = 0; n < 3; ++n)
+				frame_factory->create_frame(this, desc);
+		}
+		BOOST_FOREACH(auto& video, video_frames)			
+			muxer_.push(video, 0);	
 	}
 			
 	virtual safe_ptr<core::basic_frame> receive(int hints)
@@ -132,7 +146,7 @@ public:
 		return disable_audio(last_frame_);
 	}
 
-	void decode_frame(int hints)
+	void push_packets()
 	{
 		for(int n = 0; n < 16 && ((!muxer_.video_ready() && !video_decoder_.ready()) ||	(!muxer_.audio_ready() && !audio_decoder_.ready())); ++n) 
 		{
@@ -143,6 +157,11 @@ public:
 				audio_decoder_.push(pkt);
 			}
 		}
+	}
+
+	void decode_frame(int hints)
+	{
+		push_packets();
 		
 		tbb::parallel_invoke(
 		[&]
