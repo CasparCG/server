@@ -127,9 +127,9 @@ public:
 				{
 					for(size_t n = r.begin(); n < r.end(); ++n)
 					{
-						const float alpha0		= (n*2) * delta;
-						const float volume0		= prev_volume * (1.0f - alpha0) + next_volume * alpha0;
-						const float volume1		= prev_volume * (1.0f - alpha0 + delta) + next_volume * (alpha0 + delta);
+						const float alpha0	= (n*2) * delta;
+						const float volume0	= prev_volume * (1.0f - alpha0) + next_volume * alpha0;
+						const float volume1	= prev_volume * (1.0f - alpha0 + delta) + next_volume * (alpha0 + delta);
 
 						auto sample_epi32	= _mm_load_si128(reinterpret_cast<__m128i*>(&item.audio_data[n*4]));
 						auto res_sample_ps	= _mm_load_ps(&intermediate[n*4]);
