@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html401/loose.dtd">
 <html>
-<!-- Created on July 23, 2011 by texi2html 1.82
+<!-- Created on September 2, 2011 by texi2html 1.82
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -58,15 +58,21 @@ ul.toc {list-style: none}
   </ul></li>
   <li><a name="toc-Audio-Filters" href="#Audio-Filters">5. Audio Filters</a>
   <ul class="toc">
-    <li><a name="toc-anull" href="#anull">5.1 anull</a></li>
+    <li><a name="toc-aformat" href="#aformat">5.1 aformat</a></li>
+    <li><a name="toc-anull" href="#anull">5.2 anull</a></li>
+    <li><a name="toc-aresample" href="#aresample">5.3 aresample</a></li>
+    <li><a name="toc-ashowinfo" href="#ashowinfo">5.4 ashowinfo</a></li>
   </ul></li>
   <li><a name="toc-Audio-Sources" href="#Audio-Sources">6. Audio Sources</a>
   <ul class="toc">
-    <li><a name="toc-anullsrc" href="#anullsrc">6.1 anullsrc</a></li>
+    <li><a name="toc-abuffer" href="#abuffer">6.1 abuffer</a></li>
+    <li><a name="toc-amovie" href="#amovie">6.2 amovie</a></li>
+    <li><a name="toc-anullsrc" href="#anullsrc">6.3 anullsrc</a></li>
   </ul></li>
   <li><a name="toc-Audio-Sinks" href="#Audio-Sinks">7. Audio Sinks</a>
   <ul class="toc">
-    <li><a name="toc-anullsink" href="#anullsink">7.1 anullsink</a></li>
+    <li><a name="toc-abuffersink" href="#abuffersink">7.1 abuffersink</a></li>
+    <li><a name="toc-anullsink" href="#anullsink">7.2 anullsink</a></li>
   </ul></li>
   <li><a name="toc-Video-Filters" href="#Video-Filters">8. Video Filters</a>
   <ul class="toc">
@@ -75,52 +81,54 @@ ul.toc {list-style: none}
     <li><a name="toc-copy" href="#copy">8.3 copy</a></li>
     <li><a name="toc-crop" href="#crop">8.4 crop</a></li>
     <li><a name="toc-cropdetect" href="#cropdetect">8.5 cropdetect</a></li>
-    <li><a name="toc-drawbox" href="#drawbox">8.6 drawbox</a></li>
-    <li><a name="toc-drawtext" href="#drawtext">8.7 drawtext</a></li>
-    <li><a name="toc-fade" href="#fade">8.8 fade</a></li>
-    <li><a name="toc-fieldorder" href="#fieldorder">8.9 fieldorder</a></li>
-    <li><a name="toc-fifo" href="#fifo">8.10 fifo</a></li>
-    <li><a name="toc-format" href="#format">8.11 format</a></li>
-    <li><a name="toc-frei0r-1" href="#frei0r-1">8.12 frei0r</a></li>
-    <li><a name="toc-gradfun" href="#gradfun">8.13 gradfun</a></li>
-    <li><a name="toc-hflip" href="#hflip">8.14 hflip</a></li>
-    <li><a name="toc-hqdn3d" href="#hqdn3d">8.15 hqdn3d</a></li>
-    <li><a name="toc-lut_002c-lutrgb_002c-lutyuv" href="#lut_002c-lutrgb_002c-lutyuv">8.16 lut, lutrgb, lutyuv</a></li>
-    <li><a name="toc-mp" href="#mp">8.17 mp</a></li>
-    <li><a name="toc-negate" href="#negate">8.18 negate</a></li>
-    <li><a name="toc-noformat" href="#noformat">8.19 noformat</a></li>
-    <li><a name="toc-null" href="#null">8.20 null</a></li>
-    <li><a name="toc-ocv" href="#ocv">8.21 ocv</a>
+    <li><a name="toc-delogo" href="#delogo">8.6 delogo</a></li>
+    <li><a name="toc-drawbox" href="#drawbox">8.7 drawbox</a></li>
+    <li><a name="toc-drawtext" href="#drawtext">8.8 drawtext</a></li>
+    <li><a name="toc-fade" href="#fade">8.9 fade</a></li>
+    <li><a name="toc-fieldorder" href="#fieldorder">8.10 fieldorder</a></li>
+    <li><a name="toc-fifo" href="#fifo">8.11 fifo</a></li>
+    <li><a name="toc-format" href="#format">8.12 format</a></li>
+    <li><a name="toc-frei0r-1" href="#frei0r-1">8.13 frei0r</a></li>
+    <li><a name="toc-gradfun" href="#gradfun">8.14 gradfun</a></li>
+    <li><a name="toc-hflip" href="#hflip">8.15 hflip</a></li>
+    <li><a name="toc-hqdn3d" href="#hqdn3d">8.16 hqdn3d</a></li>
+    <li><a name="toc-lut_002c-lutrgb_002c-lutyuv" href="#lut_002c-lutrgb_002c-lutyuv">8.17 lut, lutrgb, lutyuv</a></li>
+    <li><a name="toc-mp" href="#mp">8.18 mp</a></li>
+    <li><a name="toc-negate" href="#negate">8.19 negate</a></li>
+    <li><a name="toc-noformat" href="#noformat">8.20 noformat</a></li>
+    <li><a name="toc-null" href="#null">8.21 null</a></li>
+    <li><a name="toc-ocv" href="#ocv">8.22 ocv</a>
     <ul class="toc">
-      <li><a name="toc-dilate-1" href="#dilate-1">8.21.1 dilate</a></li>
-      <li><a name="toc-erode" href="#erode">8.21.2 erode</a></li>
-      <li><a name="toc-smooth" href="#smooth">8.21.3 smooth</a></li>
+      <li><a name="toc-dilate-1" href="#dilate-1">8.22.1 dilate</a></li>
+      <li><a name="toc-erode" href="#erode">8.22.2 erode</a></li>
+      <li><a name="toc-smooth" href="#smooth">8.22.3 smooth</a></li>
     </ul></li>
-    <li><a name="toc-overlay" href="#overlay">8.22 overlay</a></li>
-    <li><a name="toc-pad" href="#pad">8.23 pad</a></li>
-    <li><a name="toc-pixdesctest" href="#pixdesctest">8.24 pixdesctest</a></li>
-    <li><a name="toc-scale" href="#scale">8.25 scale</a></li>
-    <li><a name="toc-select" href="#select">8.26 select</a></li>
-    <li><a name="toc-setdar-1" href="#setdar-1">8.27 setdar</a></li>
-    <li><a name="toc-setpts" href="#setpts">8.28 setpts</a></li>
-    <li><a name="toc-setsar-1" href="#setsar-1">8.29 setsar</a></li>
-    <li><a name="toc-settb" href="#settb">8.30 settb</a></li>
-    <li><a name="toc-showinfo" href="#showinfo">8.31 showinfo</a></li>
-    <li><a name="toc-slicify" href="#slicify">8.32 slicify</a></li>
-    <li><a name="toc-split" href="#split">8.33 split</a></li>
-    <li><a name="toc-transpose" href="#transpose">8.34 transpose</a></li>
-    <li><a name="toc-unsharp" href="#unsharp">8.35 unsharp</a></li>
-    <li><a name="toc-vflip" href="#vflip">8.36 vflip</a></li>
-    <li><a name="toc-yadif" href="#yadif">8.37 yadif</a></li>
+    <li><a name="toc-overlay" href="#overlay">8.23 overlay</a></li>
+    <li><a name="toc-pad" href="#pad">8.24 pad</a></li>
+    <li><a name="toc-pixdesctest" href="#pixdesctest">8.25 pixdesctest</a></li>
+    <li><a name="toc-scale" href="#scale">8.26 scale</a></li>
+    <li><a name="toc-select" href="#select">8.27 select</a></li>
+    <li><a name="toc-setdar-1" href="#setdar-1">8.28 setdar</a></li>
+    <li><a name="toc-setpts" href="#setpts">8.29 setpts</a></li>
+    <li><a name="toc-setsar-1" href="#setsar-1">8.30 setsar</a></li>
+    <li><a name="toc-settb" href="#settb">8.31 settb</a></li>
+    <li><a name="toc-showinfo" href="#showinfo">8.32 showinfo</a></li>
+    <li><a name="toc-slicify" href="#slicify">8.33 slicify</a></li>
+    <li><a name="toc-split" href="#split">8.34 split</a></li>
+    <li><a name="toc-transpose" href="#transpose">8.35 transpose</a></li>
+    <li><a name="toc-unsharp" href="#unsharp">8.36 unsharp</a></li>
+    <li><a name="toc-vflip" href="#vflip">8.37 vflip</a></li>
+    <li><a name="toc-yadif" href="#yadif">8.38 yadif</a></li>
   </ul></li>
   <li><a name="toc-Video-Sources" href="#Video-Sources">9. Video Sources</a>
   <ul class="toc">
     <li><a name="toc-buffer" href="#buffer">9.1 buffer</a></li>
     <li><a name="toc-color" href="#color">9.2 color</a></li>
     <li><a name="toc-movie" href="#movie">9.3 movie</a></li>
-    <li><a name="toc-nullsrc" href="#nullsrc">9.4 nullsrc</a></li>
-    <li><a name="toc-frei0r_005fsrc" href="#frei0r_005fsrc">9.5 frei0r_src</a></li>
-    <li><a name="toc-rgbtestsrc_002c-testsrc" href="#rgbtestsrc_002c-testsrc">9.6 rgbtestsrc, testsrc</a></li>
+    <li><a name="toc-mptestsrc" href="#mptestsrc">9.4 mptestsrc</a></li>
+    <li><a name="toc-nullsrc" href="#nullsrc">9.5 nullsrc</a></li>
+    <li><a name="toc-frei0r_005fsrc" href="#frei0r_005fsrc">9.6 frei0r_src</a></li>
+    <li><a name="toc-rgbtestsrc_002c-testsrc" href="#rgbtestsrc_002c-testsrc">9.7 rgbtestsrc, testsrc</a></li>
   </ul></li>
   <li><a name="toc-Video-Sinks" href="#Video-Sinks">10. Video Sinks</a>
   <ul class="toc">
@@ -242,8 +250,8 @@ output pads is called a &quot;sink&quot;.
 
 <p>A filtergraph can be represented using a textual representation, which
 is recognized by the <code>-vf</code> and <code>-af</code> options of the ff*
-tools, and by the <code>av_parse_graph()</code> function defined in
-&lsquo;<tt>libavfilter/avfiltergraph</tt>&rsquo;.
+tools, and by the <code>avfilter_graph_parse()</code> function defined in
+&lsquo;<tt>libavfilter/avfiltergraph.h</tt>&rsquo;.
 </p>
 <p>A filterchain consists of a sequence of connected filters, each one
 connected to the previous one in the sequence. A filterchain is
@@ -320,19 +328,197 @@ build.
 </p>
 <p>Below is a description of the currently available audio filters.
 </p>
+<a name="aformat"></a>
+<h2 class="section"><a href="libavfilter.html#toc-aformat">5.1 aformat</a></h2>
+
+<p>Convert the input audio to one of the specified formats. The framework will
+negotiate the most appropriate format to minimize conversions.
+</p>
+<p>The filter accepts three lists of formats, separated by &quot;:&quot;, in the form:
+&quot;<var>sample_formats</var>:<var>channel_layouts</var>:<var>packing_formats</var>&quot;.
+</p>
+<p>Elements in each list are separated by &quot;,&quot; which has to be escaped in the
+filtergraph specification.
+</p>
+<p>The special parameter &quot;all&quot;, in place of a list of elements, signifies all
+supported formats.
+</p>
+<p>Some examples follow:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">aformat=u8\\,s16:mono:packed
+
+aformat=s16:mono\\,stereo:all
+</pre></td></tr></table>
+
 <a name="anull"></a>
-<h2 class="section"><a href="libavfilter.html#toc-anull">5.1 anull</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-anull">5.2 anull</a></h2>
 
 <p>Pass the audio source unchanged to the output.
 </p>
+<a name="aresample"></a>
+<h2 class="section"><a href="libavfilter.html#toc-aresample">5.3 aresample</a></h2>
+
+<p>Resample the input audio to the specified sample rate.
+</p>
+<p>The filter accepts exactly one parameter, the output sample rate. If not
+specified then the filter will automatically convert between its input
+and output sample rates.
+</p>
+<p>For example, to resample the input audio to 44100Hz:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">aresample=44100
+</pre></td></tr></table>
+
+<a name="ashowinfo"></a>
+<h2 class="section"><a href="libavfilter.html#toc-ashowinfo">5.4 ashowinfo</a></h2>
+
+<p>Show a line containing various information for each input audio frame.
+The input audio is not modified.
+</p>
+<p>The shown line contains a sequence of key/value pairs of the form
+<var>key</var>:<var>value</var>.
+</p>
+<p>A description of each shown parameter follows:
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>n</samp>&rsquo;</dt>
+<dd><p>sequential number of the input frame, starting from 0
+</p>
+</dd>
+<dt> &lsquo;<samp>pts</samp>&rsquo;</dt>
+<dd><p>presentation TimeStamp of the input frame, expressed as a number of
+time base units. The time base unit depends on the filter input pad, and
+is usually 1/<var>sample_rate</var>.
+</p>
+</dd>
+<dt> &lsquo;<samp>pts_time</samp>&rsquo;</dt>
+<dd><p>presentation TimeStamp of the input frame, expressed as a number of
+seconds
+</p>
+</dd>
+<dt> &lsquo;<samp>pos</samp>&rsquo;</dt>
+<dd><p>position of the frame in the input stream, -1 if this information in
+unavailable and/or meanigless (for example in case of synthetic audio)
+</p>
+</dd>
+<dt> &lsquo;<samp>fmt</samp>&rsquo;</dt>
+<dd><p>sample format name
+</p>
+</dd>
+<dt> &lsquo;<samp>chlayout</samp>&rsquo;</dt>
+<dd><p>channel layout description
+</p>
+</dd>
+<dt> &lsquo;<samp>nb_samples</samp>&rsquo;</dt>
+<dd><p>number of samples (per each channel) contained in the filtered frame
+</p>
+</dd>
+<dt> &lsquo;<samp>rate</samp>&rsquo;</dt>
+<dd><p>sample rate for the audio frame
+</p>
+</dd>
+<dt> &lsquo;<samp>planar</samp>&rsquo;</dt>
+<dd><p>if the packing format is planar, 0 if packed
+</p>
+</dd>
+<dt> &lsquo;<samp>checksum</samp>&rsquo;</dt>
+<dd><p>Adler-32 checksum of all the planes of the input frame
+</p>
+</dd>
+<dt> &lsquo;<samp>plane_checksum</samp>&rsquo;</dt>
+<dd><p>Adler-32 checksum for each input frame plane, expressed in the form
+&quot;[<var>c0</var> <var>c1</var> <var>c2</var> <var>c3</var> <var>c4</var> <var>c5</var> <var>c6</var> <var>c7</var>]&quot;
+</p></dd>
+</dl>
+
 
 <a name="Audio-Sources"></a>
 <h1 class="chapter"><a href="libavfilter.html#toc-Audio-Sources">6. Audio Sources</a></h1>
 
 <p>Below is a description of the currently available audio sources.
 </p>
+<a name="abuffer"></a>
+<h2 class="section"><a href="libavfilter.html#toc-abuffer">6.1 abuffer</a></h2>
+
+<p>Buffer audio frames, and make them available to the filter chain.
+</p>
+<p>This source is mainly intended for a programmatic use, in particular
+through the interface defined in &lsquo;<tt>libavfilter/asrc_abuffer.h</tt>&rsquo;.
+</p>
+<p>It accepts the following mandatory parameters:
+<var>sample_rate</var>:<var>sample_fmt</var>:<var>channel_layout</var>:<var>packing</var>
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>sample_rate</samp>&rsquo;</dt>
+<dd><p>The sample rate of the incoming audio buffers.
+</p>
+</dd>
+<dt> &lsquo;<samp>sample_fmt</samp>&rsquo;</dt>
+<dd><p>The sample format of the incoming audio buffers.
+Either a sample format name or its corresponging integer representation from
+the enum AVSampleFormat in &lsquo;<tt>libavutil/samplefmt.h</tt>&rsquo;
+</p>
+</dd>
+<dt> &lsquo;<samp>channel_layout</samp>&rsquo;</dt>
+<dd><p>The channel layout of the incoming audio buffers.
+Either a channel layout name from channel_layout_map in
+&lsquo;<tt>libavutil/audioconvert.c</tt>&rsquo; or its corresponding integer representation
+from the AV_CH_LAYOUT_* macros in &lsquo;<tt>libavutil/audioconvert.h</tt>&rsquo;
+</p>
+</dd>
+<dt> &lsquo;<samp>packing</samp>&rsquo;</dt>
+<dd><p>Either &quot;packed&quot; or &quot;planar&quot;, or their integer representation: 0 or 1
+respectively.
+</p>
+</dd>
+</dl>
+
+<p>For example:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">abuffer=44100:s16:stereo:planar
+</pre></td></tr></table>
+
+<p>will instruct the source to accept planar 16bit signed stereo at 44100Hz.
+Since the sample format with name &quot;s16&quot; corresponds to the number
+1 and the &quot;stereo&quot; channel layout corresponds to the value 3, this is
+equivalent to:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">abuffer=44100:1:3:1
+</pre></td></tr></table>
+
+<a name="amovie"></a>
+<h2 class="section"><a href="libavfilter.html#toc-amovie">6.2 amovie</a></h2>
+
+<p>Read an audio stream from a movie container.
+</p>
+<p>It accepts the syntax: <var>movie_name</var>[:<var>options</var>] where
+<var>movie_name</var> is the name of the resource to read (not necessarily
+a file but also a device or a stream accessed through some protocol),
+and <var>options</var> is an optional sequence of <var>key</var>=<var>value</var>
+pairs, separated by &quot;:&quot;.
+</p>
+<p>The description of the accepted options follows.
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>format_name, f</samp>&rsquo;</dt>
+<dd><p>Specify the format assumed for the movie to read, and can be either
+the name of a container or an input device. If not specified the
+format is guessed from <var>movie_name</var> or by probing.
+</p>
+</dd>
+<dt> &lsquo;<samp>seek_point, sp</samp>&rsquo;</dt>
+<dd><p>Specify the seek point in seconds, the frames will be output
+starting from this seek point, the parameter is evaluated with
+<code>av_strtod</code> so the numerical value may be suffixed by an IS
+postfix. Default value is &quot;0&quot;.
+</p>
+</dd>
+<dt> &lsquo;<samp>stream_index, si</samp>&rsquo;</dt>
+<dd><p>Specify the index of the audio stream to read. If the value is -1,
+the best suited audio stream will be automatically selected. Default
+value is &quot;-1&quot;.
+</p>
+</dd>
+</dl>
+
 <a name="anullsrc"></a>
-<h2 class="section"><a href="libavfilter.html#toc-anullsrc">6.1 anullsrc</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-anullsrc">6.3 anullsrc</a></h2>
 
 <p>Null audio source, never return audio frames. It is mainly useful as a
 template and to be employed in analysis / debugging tools.
@@ -364,8 +550,20 @@ anullsrc=48000:mono
 
 <p>Below is a description of the currently available audio sinks.
 </p>
+<a name="abuffersink"></a>
+<h2 class="section"><a href="libavfilter.html#toc-abuffersink">7.1 abuffersink</a></h2>
+
+<p>Buffer audio frames, and make them available to the end of filter chain.
+</p>
+<p>This sink is mainly intended for programmatic use, in particular
+through the interface defined in &lsquo;<tt>libavfilter/asink_abuffer.h</tt>&rsquo;.
+</p>
+<p>It requires a pointer to a ABufferSinkContext structure, which defines the
+incoming buffers&rsquo; format, to be passed as the opaque parameter to
+<code>avfilter_init_filter</code> for initialization.
+</p>
 <a name="anullsink"></a>
-<h2 class="section"><a href="libavfilter.html#toc-anullsink">7.1 anullsink</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-anullsink">7.2 anullsink</a></h2>
 
 <p>Null audio sink, do absolutely nothing with the input audio. It is
 mainly useful as a template and to be employed in analysis / debugging
@@ -503,6 +701,23 @@ each new frame.
 <dd><p>same as <var>out_w</var> and <var>out_h</var>
 </p>
 </dd>
+<dt> &lsquo;<samp>a</samp>&rsquo;</dt>
+<dd><p>same as <var>iw</var> / <var>ih</var>
+</p>
+</dd>
+<dt> &lsquo;<samp>sar</samp>&rsquo;</dt>
+<dd><p>input sample aspect ratio
+</p>
+</dd>
+<dt> &lsquo;<samp>dar</samp>&rsquo;</dt>
+<dd><p>input display aspect ratio, it is the same as (<var>iw</var> / <var>ih</var>) * <var>sar</var>
+</p>
+</dd>
+<dt> &lsquo;<samp>hsub, vsub</samp>&rsquo;</dt>
+<dd><p>horizontal and vertical chroma subsample values. For example for the
+pixel format &quot;yuv422p&quot; <var>hsub</var> is 2 and <var>vsub</var> is 1.
+</p>
+</dd>
 <dt> &lsquo;<samp>n</samp>&rsquo;</dt>
 <dd><p>the number of input frame, starting from 0
 </p>
@@ -613,8 +828,61 @@ playback.
 </p></dd>
 </dl>
 
+<a name="delogo"></a>
+<h2 class="section"><a href="libavfilter.html#toc-delogo">8.6 delogo</a></h2>
+
+<p>Suppress a TV station logo by a simple interpolation of the surrounding
+pixels. Just set a rectangle covering the logo and watch it disappear
+(and sometimes something even uglier appear - your mileage may vary).
+</p>
+<p>The filter accepts parameters as a string of the form
+&quot;<var>x</var>:<var>y</var>:<var>w</var>:<var>h</var>:<var>band</var>&quot;, or as a list of
+<var>key</var>=<var>value</var> pairs, separated by &quot;:&quot;.
+</p>
+<p>The description of the accepted parameters follows.
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>x, y</samp>&rsquo;</dt>
+<dd><p>Specify the top left corner coordinates of the logo. They must be
+specified.
+</p>
+</dd>
+<dt> &lsquo;<samp>w, h</samp>&rsquo;</dt>
+<dd><p>Specify the width and height of the logo to clear. They must be
+specified.
+</p>
+</dd>
+<dt> &lsquo;<samp>band, t</samp>&rsquo;</dt>
+<dd><p>Specify the thickness of the fuzzy edge of the rectangle (added to
+<var>w</var> and <var>h</var>). The default value is 4.
+</p>
+</dd>
+<dt> &lsquo;<samp>show</samp>&rsquo;</dt>
+<dd><p>When set to 1, a green rectangle is drawn on the screen to simplify
+finding the right <var>x</var>, <var>y</var>, <var>w</var>, <var>h</var> parameters, and
+<var>band</var> is set to 4. The default value is 0.
+</p>
+</dd>
+</dl>
+
+<p>Some examples follow.
+</p>
+<ul>
+<li>
+Set a rectangle covering the area with top left corner coordinates 0,0
+and size 100x77, setting a band of size 10:
+<table><tr><td>&nbsp;</td><td><pre class="example">delogo=0:0:100:77:10
+</pre></td></tr></table>
+
+</li><li>
+As the previous example, but use named options:
+<table><tr><td>&nbsp;</td><td><pre class="example">delogo=x=0:y=0:w=100:h=77:band=10
+</pre></td></tr></table>
+
+</li></ul>
+
 <a name="drawbox"></a>
-<h2 class="section"><a href="libavfilter.html#toc-drawbox">8.6 drawbox</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-drawbox">8.7 drawbox</a></h2>
 
 <p>Draw a colored box on the input image.
 </p>
@@ -647,7 +915,7 @@ drawbox=10:20:200:60:red@0.5&quot;
 </pre></td></tr></table>
 
 <a name="drawtext"></a>
-<h2 class="section"><a href="libavfilter.html#toc-drawtext">8.7 drawtext</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-drawtext">8.8 drawtext</a></h2>
 
 <p>Draw text string or text from specified file on top of video using the
 libfreetype library.
@@ -791,7 +1059,7 @@ within the parameter list.
 <a href="http://www.freetype.org/">http://www.freetype.org/</a>.
 </p>
 <a name="fade"></a>
-<h2 class="section"><a href="libavfilter.html#toc-fade">8.8 fade</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-fade">8.9 fade</a></h2>
 
 <p>Apply fade-in/out effect to input video.
 </p>
@@ -824,7 +1092,7 @@ fade=in:5:20
 </pre></td></tr></table>
 
 <a name="fieldorder"></a>
-<h2 class="section"><a href="libavfilter.html#toc-fieldorder">8.9 fieldorder</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-fieldorder">8.10 fieldorder</a></h2>
 
 <p>Transform the field order of the input video.
 </p>
@@ -859,7 +1127,7 @@ which is bottom field first.
 </pre></td></tr></table>
 
 <a name="fifo"></a>
-<h2 class="section"><a href="libavfilter.html#toc-fifo">8.10 fifo</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-fifo">8.11 fifo</a></h2>
 
 <p>Buffer input images and send them when they are requested.
 </p>
@@ -869,7 +1137,7 @@ framework.
 <p>The filter does not take parameters.
 </p>
 <a name="format"></a>
-<h2 class="section"><a href="libavfilter.html#toc-format">8.11 format</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-format">8.12 format</a></h2>
 
 <p>Convert the input video to one of the specified pixel formats.
 Libavfilter will try to pick one that is supported for the input to
@@ -888,7 +1156,7 @@ format=yuv420p:yuv444p:yuv410p
 
 <p><a name="frei0r"></a>
 </p><a name="frei0r-1"></a>
-<h2 class="section"><a href="libavfilter.html#toc-frei0r-1">8.12 frei0r</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-frei0r-1">8.13 frei0r</a></h2>
 
 <p>Apply a frei0r effect to the input video.
 </p>
@@ -937,7 +1205,7 @@ frei0r=perspective:0.2/0.2:0.8/0.2
 <a href="http://piksel.org/frei0r">http://piksel.org/frei0r</a>
 </p>
 <a name="gradfun"></a>
-<h2 class="section"><a href="libavfilter.html#toc-gradfun">8.13 gradfun</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-gradfun">8.14 gradfun</a></h2>
 
 <p>Fix the banding artifacts that are sometimes introduced into nearly flat
 regions by truncation to 8bit colordepth.
@@ -970,7 +1238,7 @@ gradfun=1.2
 </pre></td></tr></table>
 
 <a name="hflip"></a>
-<h2 class="section"><a href="libavfilter.html#toc-hflip">8.14 hflip</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-hflip">8.15 hflip</a></h2>
 
 <p>Flip the input video horizontally.
 </p>
@@ -980,7 +1248,7 @@ gradfun=1.2
 </pre></td></tr></table>
 
 <a name="hqdn3d"></a>
-<h2 class="section"><a href="libavfilter.html#toc-hqdn3d">8.15 hqdn3d</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-hqdn3d">8.16 hqdn3d</a></h2>
 
 <p>High precision/quality 3d denoise filter. This filter aims to reduce
 image noise producing smooth images and making still images really
@@ -1012,7 +1280,7 @@ defaults to 3.0*<var>luma_spatial</var>/4.0
 </dl>
 
 <a name="lut_002c-lutrgb_002c-lutyuv"></a>
-<h2 class="section"><a href="libavfilter.html#toc-lut_002c-lutrgb_002c-lutyuv">8.16 lut, lutrgb, lutyuv</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-lut_002c-lutrgb_002c-lutyuv">8.17 lut, lutrgb, lutyuv</a></h2>
 
 <p>Compute a look-up table for binding each pixel component input value
 to an output value, and apply it to input video.
@@ -1136,7 +1404,7 @@ lutyuv=y=gammaval(0.5)
 </pre></td></tr></table>
 
 <a name="mp"></a>
-<h2 class="section"><a href="libavfilter.html#toc-mp">8.17 mp</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-mp">8.18 mp</a></h2>
 
 <p>Apply an MPlayer filter to the input video.
 </p>
@@ -1159,7 +1427,6 @@ the named filter.
 </p><dl compact="compact">
 <dt> <var>2xsai</var></dt>
 <dt> <var>decimate</var></dt>
-<dt> <var>delogo</var></dt>
 <dt> <var>denoise3d</var></dt>
 <dt> <var>detc</var></dt>
 <dt> <var>dint</var></dt>
@@ -1174,7 +1441,6 @@ the named filter.
 <dt> <var>framestep</var></dt>
 <dt> <var>fspp</var></dt>
 <dt> <var>geq</var></dt>
-<dt> <var>gradfun</var></dt>
 <dt> <var>harddup</var></dt>
 <dt> <var>hqdn3d</var></dt>
 <dt> <var>hue</var></dt>
@@ -1203,7 +1469,6 @@ the named filter.
 <dt> <var>spp</var></dt>
 <dt> <var>swapuv</var></dt>
 <dt> <var>telecine</var></dt>
-<dt> <var>test</var></dt>
 <dt> <var>tile</var></dt>
 <dt> <var>tinterlace</var></dt>
 <dt> <var>unsharp</var></dt>
@@ -1230,7 +1495,7 @@ mp=hue=100:-10
 <p>See also mplayer(1), <a href="http://www.mplayerhq.hu/">http://www.mplayerhq.hu/</a>.
 </p>
 <a name="negate"></a>
-<h2 class="section"><a href="libavfilter.html#toc-negate">8.18 negate</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-negate">8.19 negate</a></h2>
 
 <p>Negate input video.
 </p>
@@ -1238,7 +1503,7 @@ mp=hue=100:-10
 alpha component (if available). The default value in input is 0.
 </p>
 <a name="noformat"></a>
-<h2 class="section"><a href="libavfilter.html#toc-noformat">8.19 noformat</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-noformat">8.20 noformat</a></h2>
 
 <p>Force libavfilter not to use any of the specified pixel formats for the
 input to the next filter.
@@ -1256,12 +1521,12 @@ noformat=yuv420p:yuv444p:yuv410p
 </pre></td></tr></table>
 
 <a name="null"></a>
-<h2 class="section"><a href="libavfilter.html#toc-null">8.20 null</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-null">8.21 null</a></h2>
 
 <p>Pass the video source unchanged to the output.
 </p>
 <a name="ocv"></a>
-<h2 class="section"><a href="libavfilter.html#toc-ocv">8.21 ocv</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-ocv">8.22 ocv</a></h2>
 
 <p>Apply video transform using libopencv.
 </p>
@@ -1283,7 +1548,7 @@ informations:
 </p>
 <p><a name="dilate"></a>
 </p><a name="dilate-1"></a>
-<h3 class="subsection"><a href="libavfilter.html#toc-dilate-1">8.21.1 dilate</a></h3>
+<h3 class="subsection"><a href="libavfilter.html#toc-dilate-1">8.22.1 dilate</a></h3>
 
 <p>Dilate an image by using a specific structuring element.
 This filter corresponds to the libopencv function <code>cvDilate</code>.
@@ -1329,7 +1594,7 @@ ocv=0x0+2x2/custom=diamond.shape:2
 </pre></td></tr></table>
 
 <a name="erode"></a>
-<h3 class="subsection"><a href="libavfilter.html#toc-erode">8.21.2 erode</a></h3>
+<h3 class="subsection"><a href="libavfilter.html#toc-erode">8.22.2 erode</a></h3>
 
 <p>Erode an image by using a specific structuring element.
 This filter corresponds to the libopencv function <code>cvErode</code>.
@@ -1338,7 +1603,7 @@ This filter corresponds to the libopencv function <code>cvErode</code>.
 with the same syntax and semantics as the <a href="#dilate">dilate</a> filter.
 </p>
 <a name="smooth"></a>
-<h3 class="subsection"><a href="libavfilter.html#toc-smooth">8.21.3 smooth</a></h3>
+<h3 class="subsection"><a href="libavfilter.html#toc-smooth">8.22.3 smooth</a></h3>
 
 <p>Smooth the input video.
 </p>
@@ -1361,7 +1626,7 @@ other parameters is 0.
 libopencv function <code>cvSmooth</code>.
 </p>
 <a name="overlay"></a>
-<h2 class="section"><a href="libavfilter.html#toc-overlay">8.22 overlay</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-overlay">8.23 overlay</a></h2>
 
 <p>Overlay one video on top of another.
 </p>
@@ -1423,7 +1688,7 @@ color=red.3:WxH [over]; [in][over] overlay [out]
 approach is yet to be tested.
 </p>
 <a name="pad"></a>
-<h2 class="section"><a href="libavfilter.html#toc-pad">8.23 pad</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-pad">8.24 pad</a></h2>
 
 <p>Add paddings to the input image, and places the original input at the
 given coordinates <var>x</var>, <var>y</var>.
@@ -1462,12 +1727,16 @@ specified by the <var>width</var> and <var>height</var> expressions
 expressions, or NAN if not yet specified
 </p>
 </dd>
-<dt> &lsquo;<samp>dar, a</samp>&rsquo;</dt>
-<dd><p>input display aspect ratio, same as <var>iw</var> / <var>ih</var>
+<dt> &lsquo;<samp>a</samp>&rsquo;</dt>
+<dd><p>same as <var>iw</var> / <var>ih</var>
 </p>
 </dd>
 <dt> &lsquo;<samp>sar</samp>&rsquo;</dt>
 <dd><p>input sample aspect ratio
+</p>
+</dd>
+<dt> &lsquo;<samp>dar</samp>&rsquo;</dt>
+<dd><p>input display aspect ratio, it is the same as (<var>iw</var> / <var>ih</var>) * <var>sar</var>
 </p>
 </dd>
 <dt> &lsquo;<samp>hsub, vsub</samp>&rsquo;</dt>
@@ -1531,13 +1800,19 @@ pad=&quot;max(iw\,ih):ow:(ow-iw)/2:(oh-ih)/2&quot;
 # pad the input to get a final w/h ratio of 16:9
 pad=&quot;ih*16/9:ih:(ow-iw)/2:(oh-ih)/2&quot;
 
+# for anamorphic video, in order to set the output display aspect ratio,
+# it is necessary to use sar in the expression, according to the relation:
+# (ih * X / ih) * sar = output_dar
+# X = output_dar / sar
+pad=&quot;ih*16/9/sar:ih:(ow-iw)/2:(oh-ih)/2&quot;
+
 # double output size and put the input video in the bottom-right
 # corner of the output padded area
 pad=&quot;2*iw:2*ih:ow-iw:oh-ih&quot;
 </pre></td></tr></table>
 
 <a name="pixdesctest"></a>
-<h2 class="section"><a href="libavfilter.html#toc-pixdesctest">8.24 pixdesctest</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-pixdesctest">8.25 pixdesctest</a></h2>
 
 <p>Pixel format descriptor test filter, mainly useful for internal
 testing. The output video should be equal to the input video.
@@ -1549,7 +1824,7 @@ testing. The output video should be equal to the input video.
 <p>can be used to test the monowhite pixel format descriptor definition.
 </p>
 <a name="scale"></a>
-<h2 class="section"><a href="libavfilter.html#toc-scale">8.25 scale</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-scale">8.26 scale</a></h2>
 
 <p>Scale the input video to <var>width</var>:<var>height</var> and/or convert the image format.
 </p>
@@ -1578,12 +1853,16 @@ the following constants:
 <dd><p>same as <var>out_w</var> and <var>out_h</var>
 </p>
 </dd>
-<dt> &lsquo;<samp>dar, a</samp>&rsquo;</dt>
-<dd><p>input display aspect ratio, same as <var>iw</var> / <var>ih</var>
+<dt> &lsquo;<samp>a</samp>&rsquo;</dt>
+<dd><p>same as <var>iw</var> / <var>ih</var>
 </p>
 </dd>
 <dt> &lsquo;<samp>sar</samp>&rsquo;</dt>
 <dd><p>input sample aspect ratio
+</p>
+</dd>
+<dt> &lsquo;<samp>dar</samp>&rsquo;</dt>
+<dd><p>input display aspect ratio, it is the same as (<var>iw</var> / <var>ih</var>) * <var>sar</var>
 </p>
 </dd>
 <dt> &lsquo;<samp>hsub, vsub</samp>&rsquo;</dt>
@@ -1635,7 +1914,7 @@ scale='min(500\, iw*3/2):-1'
 </pre></td></tr></table>
 
 <a name="select"></a>
-<h2 class="section"><a href="libavfilter.html#toc-select">8.26 select</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-select">8.27 select</a></h2>
 <p>Select frames to pass in output.
 </p>
 <p>It accepts in input an expression, which is evaluated for each input
@@ -1773,7 +2052,7 @@ select='isnan(prev_selected_t)+gte(t-prev_selected_t\,10)'
 
 <p><a name="setdar"></a>
 </p><a name="setdar-1"></a>
-<h2 class="section"><a href="libavfilter.html#toc-setdar-1">8.27 setdar</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-setdar-1">8.28 setdar</a></h2>
 
 <p>Set the Display Aspect Ratio for the filter output video.
 </p>
@@ -1802,7 +2081,7 @@ setdar=1.77777
 <p>See also the <a href="#setsar">setsar</a> filter documentation.
 </p>
 <a name="setpts"></a>
-<h2 class="section"><a href="libavfilter.html#toc-setpts">8.28 setpts</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-setpts">8.29 setpts</a></h2>
 
 <p>Change the PTS (presentation timestamp) of the input video frames.
 </p>
@@ -1873,7 +2152,7 @@ setpts='1/(25*TB) * (N + 0.05 * sin(N*2*PI/25))'
 
 <p><a name="setsar"></a>
 </p><a name="setsar-1"></a>
-<h2 class="section"><a href="libavfilter.html#toc-setsar-1">8.29 setsar</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-setsar-1">8.30 setsar</a></h2>
 
 <p>Set the Sample (aka Pixel) Aspect Ratio for the filter output video.
 </p>
@@ -1898,7 +2177,7 @@ If the parameter is not specified, it is assumed the value &quot;0:1&quot;.
 </pre></td></tr></table>
 
 <a name="settb"></a>
-<h2 class="section"><a href="libavfilter.html#toc-settb">8.30 settb</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-settb">8.31 settb</a></h2>
 
 <p>Set the timebase to use for the output frames timestamps.
 It is mainly useful for testing timebase configuration.
@@ -1928,7 +2207,7 @@ settb=AVTB
 </pre></td></tr></table>
 
 <a name="showinfo"></a>
-<h2 class="section"><a href="libavfilter.html#toc-showinfo">8.31 showinfo</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-showinfo">8.32 showinfo</a></h2>
 
 <p>Show a line containing various information for each input video frame.
 The input video is not modified.
@@ -2000,7 +2279,7 @@ the <code>av_get_picture_type_char</code> function defined in
 </dl>
 
 <a name="slicify"></a>
-<h2 class="section"><a href="libavfilter.html#toc-slicify">8.32 slicify</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-slicify">8.33 slicify</a></h2>
 
 <p>Pass the images of input video on to next video filter as multiple
 slices.
@@ -2015,7 +2294,7 @@ not specified it will use the default value of 16.
 faster due to better use of the memory cache.
 </p>
 <a name="split"></a>
-<h2 class="section"><a href="libavfilter.html#toc-split">8.33 split</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-split">8.34 split</a></h2>
 
 <p>Pass on the input video to two outputs. Both outputs are identical to
 the input video.
@@ -2030,7 +2309,7 @@ the input video.
 one padded.
 </p>
 <a name="transpose"></a>
-<h2 class="section"><a href="libavfilter.html#toc-transpose">8.34 transpose</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-transpose">8.35 transpose</a></h2>
 
 <p>Transpose rows with columns in the input video and optionally flip it.
 </p>
@@ -2072,7 +2351,7 @@ l.r     l.L
 </dl>
 
 <a name="unsharp"></a>
-<h2 class="section"><a href="libavfilter.html#toc-unsharp">8.35 unsharp</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-unsharp">8.36 unsharp</a></h2>
 
 <p>Sharpen or blur the input video.
 </p>
@@ -2081,7 +2360,7 @@ l.r     l.L
 </p>
 <p>Negative values for the amount will blur the input video, while positive
 values will sharpen. All parameters are optional and default to the
-equivalent of the string &rsquo;5:5:1.0:0:0:0.0&rsquo;.
+equivalent of the string &rsquo;5:5:1.0:5:5:0.0&rsquo;.
 </p>
 <dl compact="compact">
 <dt> &lsquo;<samp>luma_msize_x</samp>&rsquo;</dt>
@@ -2101,15 +2380,15 @@ and 5.0, default value is 1.0.
 </dd>
 <dt> &lsquo;<samp>chroma_msize_x</samp>&rsquo;</dt>
 <dd><p>Set the chroma matrix horizontal size. It can be an integer between 3
-and 13, default value is 0.
+and 13, default value is 5.
 </p>
 </dd>
 <dt> &lsquo;<samp>chroma_msize_y</samp>&rsquo;</dt>
 <dd><p>Set the chroma matrix vertical size. It can be an integer between 3
-and 13, default value is 0.
+and 13, default value is 5.
 </p>
 </dd>
-<dt> &lsquo;<samp>luma_amount</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>chroma_amount</samp>&rsquo;</dt>
 <dd><p>Set the chroma effect strength. It can be a float number between -2.0
 and 5.0, default value is 0.0.
 </p>
@@ -2127,7 +2406,7 @@ unsharp=7:7:-2:7:7:-2
 </pre></td></tr></table>
 
 <a name="vflip"></a>
-<h2 class="section"><a href="libavfilter.html#toc-vflip">8.36 vflip</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-vflip">8.37 vflip</a></h2>
 
 <p>Flip the input video vertically.
 </p>
@@ -2135,7 +2414,7 @@ unsharp=7:7:-2:7:7:-2
 </pre></td></tr></table>
 
 <a name="yadif"></a>
-<h2 class="section"><a href="libavfilter.html#toc-yadif">8.37 yadif</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-yadif">8.38 yadif</a></h2>
 
 <p>Deinterlace the input video (&quot;yadif&quot; means &quot;yet another deinterlacing
 filter&quot;).
@@ -2167,10 +2446,10 @@ interlaced video, accepts one of the following values:
 </p>
 <dl compact="compact">
 <dt> &lsquo;<samp>0</samp>&rsquo;</dt>
-<dd><p>assume bottom field first
+<dd><p>assume top field first
 </p></dd>
 <dt> &lsquo;<samp>1</samp>&rsquo;</dt>
-<dd><p>assume top field first
+<dd><p>assume bottom field first
 </p></dd>
 <dt> &lsquo;<samp>-1</samp>&rsquo;</dt>
 <dd><p>enable automatic detection
@@ -2355,8 +2634,66 @@ movie=/dev/video0:f=video4linux2, scale=180:-1, setpts=PTS-STARTPTS [movie];
 
 </pre></td></tr></table>
 
+<a name="mptestsrc"></a>
+<h2 class="section"><a href="libavfilter.html#toc-mptestsrc">9.4 mptestsrc</a></h2>
+
+<p>Generate various test patterns, as generated by the MPlayer test filter.
+</p>
+<p>The size of the generated video is fixed, and is 256x256.
+This source is useful in particular for testing encoding features.
+</p>
+<p>This source accepts an optional sequence of <var>key</var>=<var>value</var> pairs,
+separated by &quot;:&quot;. The description of the accepted options follows.
+</p>
+<dl compact="compact">
+<dt> &lsquo;<samp>rate, r</samp>&rsquo;</dt>
+<dd><p>Specify the frame rate of the sourced video, as the number of frames
+generated per second. It has to be a string in the format
+<var>frame_rate_num</var>/<var>frame_rate_den</var>, an integer number, a float
+number or a valid video frame rate abbreviation. The default value is
+&quot;25&quot;.
+</p>
+</dd>
+<dt> &lsquo;<samp>duration, d</samp>&rsquo;</dt>
+<dd><p>Set the video duration of the sourced video. The accepted syntax is:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">[-]HH[:MM[:SS[.m...]]]
+[-]S+[.m...]
+</pre></td></tr></table>
+<p>See also the function <code>av_parse_time()</code>.
+</p>
+<p>If not specified, or the expressed duration is negative, the video is
+supposed to be generated forever.
+</p>
+</dd>
+<dt> &lsquo;<samp>test, t</samp>&rsquo;</dt>
+<dd>
+<p>Set the number or the name of the test to perform. Supported tests are:
+</p><dl compact="compact">
+<dt> &lsquo;<samp>dc_luma</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>dc_chroma</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>freq_luma</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>freq_chroma</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>amp_luma</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>amp_chroma</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>cbp</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>mv</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>ring1</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>ring2</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>all</samp>&rsquo;</dt>
+</dl>
+
+<p>Default value is &quot;all&quot;, which will cycle through the list of all tests.
+</p></dd>
+</dl>
+
+<p>For example the following:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">testsrc=t=dc_luma
+</pre></td></tr></table>
+
+<p>will generate a &quot;dc_luma&quot; test pattern.
+</p>
 <a name="nullsrc"></a>
-<h2 class="section"><a href="libavfilter.html#toc-nullsrc">9.4 nullsrc</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-nullsrc">9.5 nullsrc</a></h2>
 
 <p>Null video source, never return images. It is mainly useful as a
 template and to be employed in analysis / debugging tools.
@@ -2373,7 +2710,7 @@ timebase. The expression can contain the constants &quot;PI&quot;, &quot;E&quot;
 &quot;AVTB&quot; (the default timebase), and defaults to the value &quot;AVTB&quot;.
 </p>
 <a name="frei0r_005fsrc"></a>
-<h2 class="section"><a href="libavfilter.html#toc-frei0r_005fsrc">9.5 frei0r_src</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-frei0r_005fsrc">9.6 frei0r_src</a></h2>
 
 <p>Provide a frei0r source.
 </p>
@@ -2399,7 +2736,7 @@ frei0r_src=200x200:10:partik0l=1234 [overlay]; [in][overlay] overlay
 </pre></td></tr></table>
 
 <a name="rgbtestsrc_002c-testsrc"></a>
-<h2 class="section"><a href="libavfilter.html#toc-rgbtestsrc_002c-testsrc">9.6 rgbtestsrc, testsrc</a></h2>
+<h2 class="section"><a href="libavfilter.html#toc-rgbtestsrc_002c-testsrc">9.7 rgbtestsrc, testsrc</a></h2>
 
 <p>The <code>rgbtestsrc</code> source generates an RGB test pattern useful for
 detecting RGB vs BGR issues. You should see a red, green and blue
@@ -2425,6 +2762,10 @@ generated per second. It has to be a string in the format
 <var>frame_rate_num</var>/<var>frame_rate_den</var>, an integer number, a float
 number or a valid video frame rate abbreviation. The default value is
 &quot;25&quot;.
+</p>
+</dd>
+<dt> &lsquo;<samp>sar</samp>&rsquo;</dt>
+<dd><p>Set the sample aspect ratio of the sourced video.
 </p>
 </dd>
 <dt> &lsquo;<samp>duration</samp>&rsquo;</dt>
@@ -2478,7 +2819,7 @@ tools.
 <hr size="1">
 <p>
  <font size="-1">
-  This document was generated by <em>Kyle Schwarz</em> on <em>July 23, 2011</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.
+  This document was generated by <em>Kyle Schwarz</em> on <em>September 2, 2011</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.
  </font>
  <br>
 

@@ -324,6 +324,14 @@ typedef struct AVOutputFormat {
 
     const AVClass *priv_class; ///< AVClass for the private context
 
+    /**
+     * Test if the given codec can be stored in this container.
+     *
+     * @return 1 if the codec is supported, 0 if it is not.
+     *         A negative number if unknown.
+     */
+    int (*query_codec)(enum CodecID id, int std_compliance);
+
     void (*get_output_timestamp)(struct AVFormatContext *s, int stream,
                                  int64_t *dts, int64_t *wall);
 
@@ -884,6 +892,14 @@ typedef struct AVFormatContext {
     int fps_probe_size;
 
     /**
+     * Error recognition; higher values will detect more errors but may
+     * misdetect some more or less valid parts as errors.
+     * - encoding: unused
+     * - decoding: Set by user.
+     */
+    int error_recognition;
+
+    /**
      * Transport stream id.
      * This will be moved into demuxer private options. Thus no API/ABI compatibility
      */
@@ -1215,6 +1231,18 @@ int av_find_stream_info(AVFormatContext *ic);
  *       we do not waste time getting stuff the user does not need.
  */
 int avformat_find_stream_info(AVFormatContext *ic, AVDictionary **options);
+
+/**
+ * Find the programs which belong to a given stream.
+ *
+ * @param ic    media file handle
+ * @param last  the last found program, the search will start after this
+ *              program, or from the beginning if it is NULL
+ * @param s     stream index
+ * @return the next program which belongs to s, NULL if no program is found or
+ *         the last program is not among the programs of ic.
+ */
+AVProgram *av_find_program_from_stream(AVFormatContext *ic, AVProgram *last, int s);
 
 /**
  * Find the "best" stream in the file.
@@ -1681,5 +1709,15 @@ attribute_deprecated int avf_sdp_create(AVFormatContext *ac[], int n_files, char
  * @param extensions a comma-separated list of filename extensions
  */
 int av_match_ext(const char *filename, const char *extensions);
+
+/**
+ * Test if the given container can store a codec.
+ *
+ * @param std_compliance standards compliance level, one of FF_COMPLIANCE_*
+ *
+ * @return 1 if codec with ID codec_id can be stored in ofmt, 0 if it cannot.
+ *         A negative number if this information is not available.
+ */
+int avformat_query_codec(AVOutputFormat *ofmt, enum CodecID codec_id, int std_compliance);
 
 #endif /* AVFORMAT_AVFORMAT_H */

@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html401/loose.dtd">
 <html>
-<!-- Created on July 23, 2011 by texi2html 1.82
+<!-- Created on September 2, 2011 by texi2html 1.82
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -51,10 +51,11 @@ ul.toc {list-style: none}
 <ul class="toc">
   <li><a name="toc-Synopsis" href="#Synopsis">1. Synopsis</a></li>
   <li><a name="toc-Description" href="#Description">2. Description</a></li>
-  <li><a name="toc-Options-1" href="#Options-1">3. Options</a>
+  <li><a name="toc-Options-3" href="#Options-3">3. Options</a>
   <ul class="toc">
     <li><a name="toc-Generic-options" href="#Generic-options">3.1 Generic options</a></li>
-    <li><a name="toc-Main-options" href="#Main-options">3.2 Main options</a></li>
+    <li><a name="toc-AVOptions" href="#AVOptions">3.2 AVOptions</a></li>
+    <li><a name="toc-Main-options" href="#Main-options">3.3 Main options</a></li>
   </ul></li>
   <li><a name="toc-Decoders" href="#Decoders">4. Decoders</a></li>
   <li><a name="toc-Video-Decoders" href="#Video-Decoders">5. Video Decoders</a>
@@ -68,11 +69,11 @@ ul.toc {list-style: none}
   <li><a name="toc-Demuxers" href="#Demuxers">6. Demuxers</a>
   <ul class="toc">
     <li><a name="toc-image2" href="#image2">6.1 image2</a></li>
-    <li><a name="toc-applehttp-1" href="#applehttp-1">6.2 applehttp</a></li>
+    <li><a name="toc-applehttp" href="#applehttp">6.2 applehttp</a></li>
   </ul></li>
   <li><a name="toc-Protocols" href="#Protocols">7. Protocols</a>
   <ul class="toc">
-    <li><a name="toc-applehttp" href="#applehttp">7.1 applehttp</a></li>
+    <li><a name="toc-applehttp-1" href="#applehttp-1">7.1 applehttp</a></li>
     <li><a name="toc-concat" href="#concat">7.2 concat</a></li>
     <li><a name="toc-file" href="#file">7.3 file</a></li>
     <li><a name="toc-gopher" href="#gopher">7.4 gopher</a></li>
@@ -100,17 +101,27 @@ ul.toc {list-style: none}
     <li><a name="toc-dv1394" href="#dv1394">8.3 dv1394</a></li>
     <li><a name="toc-fbdev" href="#fbdev">8.4 fbdev</a></li>
     <li><a name="toc-jack" href="#jack">8.5 jack</a></li>
-    <li><a name="toc-libdc1394" href="#libdc1394">8.6 libdc1394</a></li>
-    <li><a name="toc-openal" href="#openal">8.7 openal</a>
+    <li><a name="toc-lavfi" href="#lavfi">8.6 lavfi</a>
     <ul class="toc">
-      <li><a name="toc-Options" href="#Options">8.7.1 Options</a></li>
-      <li><a name="toc-Examples" href="#Examples">8.7.2 Examples</a></li>
+      <li><a name="toc-Options-1" href="#Options-1">8.6.1 Options</a></li>
+      <li><a name="toc-Examples" href="#Examples">8.6.2 Examples</a></li>
     </ul></li>
-    <li><a name="toc-oss" href="#oss">8.8 oss</a></li>
-    <li><a name="toc-sndio" href="#sndio">8.9 sndio</a></li>
-    <li><a name="toc-video4linux-and-video4linux2" href="#video4linux-and-video4linux2">8.10 video4linux and video4linux2</a></li>
-    <li><a name="toc-vfwcap" href="#vfwcap">8.11 vfwcap</a></li>
-    <li><a name="toc-x11grab" href="#x11grab">8.12 x11grab</a></li>
+    <li><a name="toc-libdc1394" href="#libdc1394">8.7 libdc1394</a></li>
+    <li><a name="toc-openal" href="#openal">8.8 openal</a>
+    <ul class="toc">
+      <li><a name="toc-Options" href="#Options">8.8.1 Options</a></li>
+      <li><a name="toc-Examples-1" href="#Examples-1">8.8.2 Examples</a></li>
+    </ul></li>
+    <li><a name="toc-oss" href="#oss">8.9 oss</a></li>
+    <li><a name="toc-sndio" href="#sndio">8.10 sndio</a></li>
+    <li><a name="toc-video4linux-and-video4linux2" href="#video4linux-and-video4linux2">8.11 video4linux and video4linux2</a></li>
+    <li><a name="toc-vfwcap" href="#vfwcap">8.12 vfwcap</a></li>
+    <li><a name="toc-x11grab" href="#x11grab">8.13 x11grab</a>
+    <ul class="toc">
+      <li><a name="toc-follow_005fmouse-AVOption" href="#follow_005fmouse-AVOption">8.13.1 <var>follow_mouse</var> AVOption</a></li>
+      <li><a name="toc-show_005fregion-AVOption" href="#show_005fregion-AVOption">8.13.2 <var>show_region</var> AVOption</a></li>
+    </ul>
+</li>
   </ul>
 </li>
 </ul>
@@ -161,8 +172,8 @@ and printed in the corresponding &quot;FORMAT&quot; or &quot;STREAM&quot; sectio
 are prefixed by the string &quot;TAG:&quot;.
 </p>
 
-<a name="Options-1"></a>
-<h1 class="chapter"><a href="ffprobe.html#toc-Options-1">3. Options</a></h1>
+<a name="Options-3"></a>
+<h1 class="chapter"><a href="ffprobe.html#toc-Options-3">3. Options</a></h1>
 
 <p>All the numerical options, if not specified otherwise, accept in input
 a string representing a number, which may contain one of the
@@ -276,8 +287,51 @@ will be dropped in a following FFmpeg version.
 </dd>
 </dl>
 
+<a name="AVOptions"></a>
+<h2 class="section"><a href="ffprobe.html#toc-AVOptions">3.2 AVOptions</a></h2>
+
+<p>These options are provided directly by the libavformat, libavdevice and
+libavcodec libraries. To see the list of available AVOptions, use the
+&lsquo;<samp>-help</samp>&rsquo; option. They are separated into two categories:
+</p><dl compact="compact">
+<dt> &lsquo;<samp>generic</samp>&rsquo;</dt>
+<dd><p>These options can be set for any container, codec or device. Generic options are
+listed under AVFormatContext options for containers/devices and under
+AVCodecContext options for codecs.
+</p></dd>
+<dt> &lsquo;<samp>private</samp>&rsquo;</dt>
+<dd><p>These options are specific to the given container, device or codec. Private
+options are listed under their corresponding containers/devices/codecs.
+</p></dd>
+</dl>
+
+<p>For example to write an ID3v2.3 header instead of a default ID3v2.4 to
+an MP3 file, use the &lsquo;<samp>id3v2_version</samp>&rsquo; private option of the MP3
+muxer:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i input.flac -id3v2_version 3 out.mp3
+</pre></td></tr></table>
+
+<p>You can precisely specify which stream(s) should the codec AVOption apply to by
+appending a stream specifier of the form
+&lsquo;<samp>[:<var>stream_type</var>][:<var>stream_index</var>]</samp>&rsquo; to the option name.
+<var>stream_type</var> is &rsquo;v&rsquo; for video, &rsquo;a&rsquo; for audio and &rsquo;s&rsquo; for subtitle streams.
+<var>stream_index</var> is a global stream index when <var>stream_type</var> isn&rsquo;t
+given, otherwise it counts streams of the given type only. As always, the index
+is zero-based. For example
+</p><table><tr><td>&nbsp;</td><td><pre class="example">-foo -- applies to all applicable streams
+-foo:v -- applies to all video streams
+-foo:a:2 -- applies to the third audio stream
+-foo:0 -- applies to the first stream
+</pre></td></tr></table>
+
+<p>Note -nooption syntax cannot be used for boolean AVOptions, use -option
+0/-option 1.
+</p>
+<p>Note2 old undocumented way of specifying per-stream AVOptions by prepending
+v/a/s to the options name is now obsolete and will be removed soon.
+</p>
 <a name="Main-options"></a>
-<h2 class="section"><a href="ffprobe.html#toc-Main-options">3.2 Main options</a></h2>
+<h2 class="section"><a href="ffprobe.html#toc-Main-options">3.3 Main options</a></h2>
 
 <dl compact="compact">
 <dt> &lsquo;<samp>-f <var>format</var></samp>&rsquo;</dt>
@@ -456,8 +510,8 @@ second:
 </p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -f image2 -i img.jpeg img.png
 </pre></td></tr></table>
 
-<a name="applehttp-1"></a>
-<h2 class="section"><a href="ffprobe.html#toc-applehttp-1">6.2 applehttp</a></h2>
+<a name="applehttp"></a>
+<h2 class="section"><a href="ffprobe.html#toc-applehttp">6.2 applehttp</a></h2>
 
 <p>Apple HTTP Live Streaming demuxer.
 </p>
@@ -489,8 +543,8 @@ supported protocols.
 </p>
 <p>A description of the currently available protocols follows.
 </p>
-<a name="applehttp"></a>
-<h2 class="section"><a href="ffprobe.html#toc-applehttp">7.1 applehttp</a></h2>
+<a name="applehttp-1"></a>
+<h2 class="section"><a href="ffprobe.html#toc-applehttp-1">7.1 applehttp</a></h2>
 
 <p>Read Apple HTTP Live Streaming compliant segmented stream as
 a uniform one. The M3U8 playlists describing the segments can be
@@ -1084,13 +1138,67 @@ $ jack_connect metro:120_bpm ffmpeg:input_1
 <p>For more information read:
 <a href="http://jackaudio.org/">http://jackaudio.org/</a>
 </p>
+<a name="lavfi"></a>
+<h2 class="section"><a href="ffprobe.html#toc-lavfi">8.6 lavfi</a></h2>
+
+<p>Libavfilter input virtual device.
+</p>
+<p>This input device reads data from the open output pads of a libavfilter
+filtergraph.
+</p>
+<p>For each filtergraph open output, the input device will create a
+corresponding stream which is mapped to the generated output. Currently
+only video data is supported. The filtergraph is specified through the
+option &lsquo;<samp>graph</samp>&rsquo;.
+</p>
+<p>To enable this input device, you need to configure your build with
+<code>--enable-libavfilter</code>.
+</p>
+<a name="Options-1"></a>
+<h3 class="subsection"><a href="ffprobe.html#toc-Options-1">8.6.1 Options</a></h3>
+
+<dl compact="compact">
+<dt> &lsquo;<samp>graph</samp>&rsquo;</dt>
+<dd><p>Specify the filtergraph to use as input. Each video open output must be
+labelled by a unique string of the form &quot;out<var>N</var>&quot;, where <var>N</var> is a
+number starting from 0 corresponding to the mapped input stream
+generated by the device.
+The first unlabelled output is automatically assigned to the &quot;out0&quot;
+label, but all the others need to be specified explicitely.
+</p>
+<p>If not specified defaults to the filename specified for the input
+device.
+</p></dd>
+</dl>
+
+<a name="Examples"></a>
+<h3 class="subsection"><a href="ffprobe.html#toc-Examples">8.6.2 Examples</a></h3>
+
+<ul>
+<li>
+Create a color video stream and play it back with &lsquo;<tt>ffplay</tt>&rsquo;:
+<table><tr><td>&nbsp;</td><td><pre class="example">ffplay -f lavfi -graph &quot;color=pink [out0]&quot; dummy
+</pre></td></tr></table>
+
+</li><li>
+As the previous example, but use filename for specifying the graph
+description, and omit the &quot;out0&quot; label:
+<table><tr><td>&nbsp;</td><td><pre class="example">ffplay -f lavfi color=pink
+</pre></td></tr></table>
+
+</li><li>
+Create three different video test filtered sources and play them:
+<table><tr><td>&nbsp;</td><td><pre class="example">ffplay -f lavfi -graph &quot;testsrc [out0]; testsrc,hflip [out1]; testsrc,negate [out2]&quot; test3
+</pre></td></tr></table>
+</li></ul>
+
 <a name="libdc1394"></a>
-<h2 class="section"><a href="ffprobe.html#toc-libdc1394">8.6 libdc1394</a></h2>
+<h2 class="section"><a href="ffprobe.html#toc-libdc1394">8.7 libdc1394</a></h2>
 
 <p>IIDC1394 input device, based on libdc1394 and libraw1394.
 </p>
 <a name="openal"></a>
-<h2 class="section"><a href="ffprobe.html#toc-openal">8.7 openal</a></h2>
+<h2 class="section"><a href="ffprobe.html#toc-openal">8.8 openal</a></h2>
 
 <p>The OpenAL input device provides audio capture on all systems with a
 working OpenAL 1.1 implementation.
@@ -1134,7 +1242,7 @@ automatically select the default device. You can get the list of the
 supported devices by using the option <var>list_devices</var>.
 </p>
 <a name="Options"></a>
-<h3 class="subsection"><a href="ffprobe.html#toc-Options">8.7.1 Options</a></h3>
+<h3 class="subsection"><a href="ffprobe.html#toc-Options">8.8.1 Options</a></h3>
 
 <dl compact="compact">
 <dt> &lsquo;<samp>channels</samp>&rsquo;</dt>
@@ -1161,8 +1269,8 @@ Defaults to &lsquo;<samp>false</samp>&rsquo;.
 </dd>
 </dl>
 
-<a name="Examples"></a>
-<h3 class="subsection"><a href="ffprobe.html#toc-Examples">8.7.2 Examples</a></h3>
+<a name="Examples-1"></a>
+<h3 class="subsection"><a href="ffprobe.html#toc-Examples-1">8.8.2 Examples</a></h3>
 
 <p>Print the list of OpenAL supported devices and exit:
 </p><table><tr><td>&nbsp;</td><td><pre class="example">$ ffmpeg -list_devices true -f openal -i dummy out.ogg
@@ -1184,7 +1292,7 @@ within the same &lsquo;<tt>ffmpeg</tt>&rsquo; command:
 try the latest OpenAL Soft if the above does not work.
 </p>
 <a name="oss"></a>
-<h2 class="section"><a href="ffprobe.html#toc-oss">8.8 oss</a></h2>
+<h2 class="section"><a href="ffprobe.html#toc-oss">8.9 oss</a></h2>
 
 <p>Open Sound System input device.
 </p>
@@ -1201,7 +1309,7 @@ command:
 <a href="http://manuals.opensound.com/usersguide/dsp.html">http://manuals.opensound.com/usersguide/dsp.html</a>
 </p>
 <a name="sndio"></a>
-<h2 class="section"><a href="ffprobe.html#toc-sndio">8.9 sndio</a></h2>
+<h2 class="section"><a href="ffprobe.html#toc-sndio">8.10 sndio</a></h2>
 
 <p>sndio input device.
 </p>
@@ -1218,7 +1326,7 @@ command:
 </pre></td></tr></table>
 
 <a name="video4linux-and-video4linux2"></a>
-<h2 class="section"><a href="ffprobe.html#toc-video4linux-and-video4linux2">8.10 video4linux and video4linux2</a></h2>
+<h2 class="section"><a href="ffprobe.html#toc-video4linux-and-video4linux2">8.11 video4linux and video4linux2</a></h2>
 
 <p>Video4Linux and Video4Linux2 input video devices.
 </p>
@@ -1257,7 +1365,7 @@ ffmpeg -f video4linux2 -i /dev/video0 out.mpeg
 </pre></td></tr></table>
 
 <a name="vfwcap"></a>
-<h2 class="section"><a href="ffprobe.html#toc-vfwcap">8.11 vfwcap</a></h2>
+<h2 class="section"><a href="ffprobe.html#toc-vfwcap">8.12 vfwcap</a></h2>
 
 <p>VfW (Video for Windows) capture input device.
 </p>
@@ -1266,7 +1374,7 @@ ffmpeg -f video4linux2 -i /dev/video0 out.mpeg
 other filename will be interpreted as device number 0.
 </p>
 <a name="x11grab"></a>
-<h2 class="section"><a href="ffprobe.html#toc-x11grab">8.12 x11grab</a></h2>
+<h2 class="section"><a href="ffprobe.html#toc-x11grab">8.13 x11grab</a></h2>
 
 <p>X11 video input device.
 </p>
@@ -1294,7 +1402,44 @@ properties of your X11 display (e.g. grep for &quot;name&quot; or &quot;dimensio
 </p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -f x11grab -r 25 -s cif -i :0.0 out.mpg
 
 # Grab at position 10,20.
-ffmpeg -f x11grab -25 -s cif -i :0.0+10,20 out.mpg
+ffmpeg -f x11grab -r 25 -s cif -i :0.0+10,20 out.mpg
+</pre></td></tr></table>
+
+<a name="follow_005fmouse-AVOption"></a>
+<h3 class="subsection"><a href="ffprobe.html#toc-follow_005fmouse-AVOption">8.13.1 <var>follow_mouse</var> AVOption</a></h3>
+
+<p>The syntax is:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">-follow_mouse centered|<var>PIXELS</var>
+</pre></td></tr></table>
+
+<p>When it is specified with &quot;centered&quot;, the grabbing region follows the mouse
+pointer and keeps the pointer at the center of region; otherwise, the region
+follows only when the mouse pointer reaches within <var>PIXELS</var> (greater than
+zero) to the edge of region.
+</p>
+<p>For example:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -f x11grab -follow_mouse centered -r 25 -s cif -i :0.0 out.mpg
+
+# Follows only when the mouse pointer reaches within 100 pixels to edge
+ffmpeg -f x11grab -follow_mouse 100 -r 25 -s cif -i :0.0 out.mpg
+</pre></td></tr></table>
+
+<a name="show_005fregion-AVOption"></a>
+<h3 class="subsection"><a href="ffprobe.html#toc-show_005fregion-AVOption">8.13.2 <var>show_region</var> AVOption</a></h3>
+
+<p>The syntax is:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">-show_region 1
+</pre></td></tr></table>
+
+<p>If <var>show_region</var> AVOption is specified with <var>1</var>, then the grabbing
+region will be indicated on screen. With this option, it&rsquo;s easy to know what is
+being grabbed if only a portion of the screen is grabbed.
+</p>
+<p>For example:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -f x11grab -show_region 1 -r 25 -s cif -i :0.0+10,20 out.mpg
+
+# With follow_mouse
+ffmpeg -f x11grab -follow_mouse centered -show_region 1  -r 25 -s cif -i :0.0 out.mpg
 </pre></td></tr></table>
 
 
@@ -1302,7 +1447,7 @@ ffmpeg -f x11grab -25 -s cif -i :0.0+10,20 out.mpg
 <hr size="1">
 <p>
  <font size="-1">
-  This document was generated by <em>Kyle Schwarz</em> on <em>July 23, 2011</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.
+  This document was generated by <em>Kyle Schwarz</em> on <em>September 2, 2011</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.
  </font>
  <br>
 
