@@ -132,11 +132,10 @@ public:
 						const float volume1		= prev_volume * (1.0f - alpha0 + delta) + next_volume * (alpha0 + delta);
 
 						auto sample_epi32	= _mm_load_si128(reinterpret_cast<__m128i*>(&item.audio_data[n*4]));
+						auto res_sample_ps	= _mm_load_ps(&intermediate[n*4]);
 
 						auto sample_ps		= _mm_cvtepi32_ps(sample_epi32);												
 						sample_ps			= _mm_mul_ps(sample_ps, _mm_setr_ps(volume1, volume1, volume0, volume0));	
-
-						auto res_sample_ps	= _mm_load_ps(&intermediate[n*4]);
 						res_sample_ps		= _mm_add_ps(sample_ps, res_sample_ps);	
 
 						_mm_store_ps(&intermediate[n*4], res_sample_ps);
