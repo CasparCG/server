@@ -75,6 +75,32 @@ ogl_device::~ogl_device()
 		glDeleteFramebuffersEXT(1, &fbo_);
 	});
 }
+
+safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t height, size_t stride)
+{
+	std::shared_ptr<device_buffer> buffer;
+	try
+	{
+		buffer.reset(new device_buffer(width, height, stride));
+	}
+	catch(...)
+	{
+		try
+		{
+			yield();
+			gc().wait();
+					
+			// Try again
+			buffer.reset(new device_buffer(width, height, stride));
+		}
+		catch(...)
+		{
+			CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
+			throw;
+		}
+	}
+	return make_safe(buffer);
+}
 				
 safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride)
 {
@@ -83,38 +109,50 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 	auto& pool = device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->items.try_pop(buffer))		
-	{
-		executor_.invoke([&]
-		{	
-			try
-			{
-				buffer.reset(new device_buffer(width, height, stride));
-			}
-			catch(...)
-			{
-				try
-				{
-					yield();
-					gc().wait();
-					
-					// Try again
-					buffer.reset(new device_buffer(width, height, stride));
-				}
-				catch(...)
-				{
-					CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
-					throw;
-				}
-			}
-		}, high_priority);	
-	}
+		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);}, high_priority);			
 	
-	++pool->usage_count;
+	//++pool->usage_count;
 
 	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*) mutable
 	{		
 		pool->items.push(buffer);	
 	});
+}
+
+safe_ptr<host_buffer> ogl_device::allocate_host_buffer(size_t size, host_buffer::usage_t usage)
+{
+	std::shared_ptr<host_buffer> buffer;
+
+	try
+	{
+		buffer.reset(new host_buffer(size, usage));
+		if(usage == host_buffer::write_only)
+			buffer->map();
+		else
+			buffer->unmap();			
+	}
+	catch(...)
+	{
+		try
+		{
+			yield();
+			gc().wait();
+
+			// Try again
+			buffer.reset(new host_buffer(size, usage));
+			if(usage == host_buffer::write_only)
+				buffer->map();
+			else
+				buffer->unmap();	
+		}
+		catch(...)
+		{
+			CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
+			throw;		
+		}
+	}
+
+	return make_safe(buffer);
 }
 	
 safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::usage_t usage)
@@ -123,42 +161,10 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 	CASPAR_VERIFY(size > 0);
 	auto& pool = host_pools_[usage][size];
 	std::shared_ptr<host_buffer> buffer;
-	if(!pool->items.try_pop(buffer))
-	{
-		executor_.invoke([&]
-		{
-			try
-			{
-				buffer.reset(new host_buffer(size, usage));
-				if(usage == host_buffer::write_only)
-					buffer->map();
-				else
-					buffer->unmap();			
-			}
-			catch(...)
-			{
-				try
-				{
-					yield();
-					gc().wait();
-
-					// Try again
-					buffer.reset(new host_buffer(size, usage));
-					if(usage == host_buffer::write_only)
-						buffer->map();
-					else
-						buffer->unmap();	
-				}
-				catch(...)
-				{
-					CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
-					throw;		
-				}
-			}
-		}, high_priority);	
-	}
+	if(!pool->items.try_pop(buffer))	
+		buffer = executor_.invoke([=]{return allocate_host_buffer(size, usage);}, high_priority);	
 	
-	++pool->usage_count;
+	//++pool->usage_count;
 
 	return safe_ptr<host_buffer>(buffer.get(), [=](host_buffer*) mutable
 	{
@@ -174,43 +180,43 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 	});
 }
 
-template<typename T>
-void flush_pool(buffer_pool<T>& pool)
-{	
-	if(pool.flush_count.fetch_and_increment() < 16)
-		return;
-
-	if(pool.usage_count.fetch_and_store(0) < pool.items.size())
-	{
-		std::shared_ptr<T> buffer;
-		pool.items.try_pop(buffer);
-	}
-
-	pool.flush_count = 0;
-	pool.usage_count = 0;
-}
+//template<typename T>
+//void flush_pool(buffer_pool<T>& pool)
+//{	
+//	if(pool.flush_count.fetch_and_increment() < 16)
+//		return;
+//
+//	if(pool.usage_count.fetch_and_store(0) < pool.items.size())
+//	{
+//		std::shared_ptr<T> buffer;
+//		pool.items.try_pop(buffer);
+//	}
+//
+//	pool.flush_count = 0;
+//	pool.usage_count = 0;
+//}
 
 void ogl_device::flush()
 {
 	GL(glFlush());	
 		
-	try
-	{
-		BOOST_FOREACH(auto& pools, device_pools_)
-		{
-			BOOST_FOREACH(auto& pool, pools)
-				flush_pool(*pool.second);
-		}
-		BOOST_FOREACH(auto& pools, host_pools_)
-		{
-			BOOST_FOREACH(auto& pool, pools)
-				flush_pool(*pool.second);
-		}
-	}
-	catch(...)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-	}
+	//try
+	//{
+	//	BOOST_FOREACH(auto& pools, device_pools_)
+	//	{
+	//		BOOST_FOREACH(auto& pool, pools)
+	//			flush_pool(*pool.second);
+	//	}
+	//	BOOST_FOREACH(auto& pools, host_pools_)
+	//	{
+	//		BOOST_FOREACH(auto& pool, pools)
+	//			flush_pool(*pool.second);
+	//	}
+	//}
+	//catch(...)
+	//{
+	//	CASPAR_LOG_CURRENT_EXCEPTION();
+	//}
 }
 
 void ogl_device::yield()
