@@ -124,7 +124,7 @@ public:
 									<< msg_info(narrow(print()) + " Could not enable video input.")
 									<< boost::errinfo_api_function("EnableVideoInput"));
 
-		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, 2))) 
+		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, format_desc_.audio_channels))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
 									<< msg_info(narrow(print()) + " Could not enable audio input.")
 									<< boost::errinfo_api_function("EnableAudioInput"));
@@ -195,7 +195,7 @@ public:
 			{
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<int32_t*>(bytes);
-				muxer_.push(std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*sizeof(int32_t)));
+				muxer_.push(std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
 			}
 			else
 				muxer_.push(std::make_shared<core::audio_buffer>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
@@ -241,15 +241,24 @@ public:
 	
 class decklink_producer_proxy : public core::frame_producer
 {		
-	safe_ptr<core::basic_frame>	last_frame_;
-	com_context<decklink_producer> context_;
+	safe_ptr<core::basic_frame>		last_frame_;
+	com_context<decklink_producer>	context_;
+	const int64_t					length_;
 public:
 
-	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str = L"")
+	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
 		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, last_frame_(core::basic_frame::empty())
+		, length_(length)
 	{
 		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str);}); 
+	}
+
+	~decklink_producer_proxy()
+	{
+		auto str = print();
+		context_.reset();
+		CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
 	}
 				
 	virtual safe_ptr<core::basic_frame> receive(int)
@@ -265,6 +274,11 @@ public:
 		return disable_audio(last_frame_);
 	}
 	
+	virtual int64_t nb_frames() const 
+	{
+		return length_;
+	}
+	
 	std::wstring print() const
 	{
 		return context_->print();
@@ -276,28 +290,19 @@ safe_ptr<core::frame_producer> create_decklink_producer(const safe_ptr<core::fra
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
 
-	size_t device_index = 1;
-	if(params.size() > 1)
-		device_index = lexical_cast_or_default(params[1], 1);
-
-	core::video_format_desc format_desc = core::video_format_desc::get(L"PAL");
-	if(params.size() > 2)
-	{
-		auto desc = core::video_format_desc::get(params[2]);
-		if(desc.format != core::video_format::invalid)
-			format_desc = desc;
-	}
+	auto device_index	= core::get_param(L"DEVICE", params, 1);
+	auto filter_str		= core::get_param<std::wstring>(L"FILTER", params, L""); 	
+	auto length			= core::get_param(L"LENGTH", params, std::numeric_limits<int64_t>::max()); 	
 	
-	std::wstring filter_str = L"";
+	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
+	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 
-	auto filter_it = std::find(params.begin(), params.end(), L"FILTER");
-	if(filter_it != params.end())
-	{
-		if(++filter_it != params.end())
-			filter_str = *filter_it;
-	}
+	auto format_desc	= core::video_format_desc::get(core::get_param<std::wstring>(L"FORMAT", params, L"INVALID"));
 
-	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str);
+	if(format_desc.format == core::video_format::invalid)
+		format_desc = frame_factory->get_video_format_desc();
+			
+	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length);
 }
 
 }
