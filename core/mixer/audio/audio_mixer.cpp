@@ -35,9 +35,9 @@ namespace caspar { namespace core {
 
 struct audio_item
 {
-	const void*				tag;
-	frame_transform			transform;
-	std::vector<int32_t>	audio_data;
+	const void*			tag;
+	frame_transform		transform;
+	audio_buffer		audio_data;
 };
 	
 struct audio_mixer::implementation
@@ -59,7 +59,7 @@ public:
 		transform_stack_.push(transform_stack_.top()*frame.get_frame_transform());
 	}
 
-	void visit(const core::write_frame& frame)
+	void visit(core::write_frame& frame)
 	{
 		// We only care about the last field.
 		if(format_desc_.field_mode == field_mode::upper && transform_stack_.top().field_mode == field_mode::upper)
@@ -75,7 +75,7 @@ public:
 		audio_item item;
 		item.tag		= frame.tag();
 		item.transform	= transform_stack_.top();
-		item.audio_data = std::vector<int32_t>(frame.audio_data().begin(), frame.audio_data().end());
+		item.audio_data = std::move(frame.audio_data());
 
 		items.push_back(item);		
 	}
@@ -114,6 +114,7 @@ public:
 				continue;
 
 			CASPAR_ASSERT(format_desc_.audio_channels == 2);
+			CASPAR_ASSERT(format_desc_.audio_samples_per_frame % 4 == 0);
 						
 			const float prev_volume = static_cast<float>(prev.volume);
 			const float next_volume = static_cast<float>(next.volume);
@@ -121,26 +122,27 @@ public:
 			
 			tbb::parallel_for
 			(
-				tbb::blocked_range<size_t>(0, format_desc_.audio_samples_per_frame/2),
+				tbb::blocked_range<size_t>(0, format_desc_.audio_samples_per_frame/4),
 				[&](const tbb::blocked_range<size_t>& r)
 				{
 					for(size_t n = r.begin(); n < r.end(); ++n)
 					{
-						const float alpha		= n * delta;
-						const float volume		= prev_volume * (1.0f - alpha) + next_volume * alpha;
+						const float alpha0		= (n*2) * delta;
+						const float volume0		= prev_volume * (1.0f - alpha0) + next_volume * alpha0;
+						const float volume1		= prev_volume * (1.0f - alpha0 + delta) + next_volume * (alpha0 + delta);
 
-						auto sample_epi32		= _mm_loadl_epi64(reinterpret_cast<__m128i*>(&item.audio_data[n*2]));
+						auto sample_epi32		= _mm_load_si128(reinterpret_cast<__m128i*>(&item.audio_data[n*4]));
 
 						auto sample_ps			= _mm_cvtepi32_ps(sample_epi32);												
-						sample_ps				= _mm_mul_ps(sample_ps, _mm_set1_ps(volume));	
+						sample_ps				= _mm_mul_ps(sample_ps, _mm_setr_ps(volume1, volume1, volume0, volume0));	
 
-						auto res_sample_epi32	= _mm_loadl_epi64(reinterpret_cast<__m128i*>(&result[n*2]));
+						auto res_sample_epi32	= _mm_load_si128(reinterpret_cast<__m128i*>(&result[n*4]));
 						auto res_sample_ps		= _mm_cvtepi32_ps(res_sample_epi32);	
 
 						res_sample_ps			= _mm_add_ps(sample_ps, res_sample_ps);
 						res_sample_epi32		= _mm_cvtps_epi32(res_sample_ps);
 						
-						_mm_storel_epi64(reinterpret_cast<__m128i*>(&result[n*2]), res_sample_epi32);
+						_mm_store_si128(reinterpret_cast<__m128i*>(&result[n*4]), res_sample_epi32);
 					}
 				}
 			);
@@ -149,7 +151,6 @@ public:
 		items.clear();
 		prev_frame_transforms_ = std::move(next_frame_transforms);	
 
-		result.resize(format_desc_.audio_samples_per_frame);
 		return std::move(result);
 	}
 };
