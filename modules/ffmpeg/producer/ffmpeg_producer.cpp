@@ -36,6 +36,7 @@
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/basic_frame.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/assign.hpp>
 #include <boost/timer.hpp>
 #include <boost/foreach.hpp>
@@ -204,7 +205,19 @@ public:
 safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {		
 	static const std::vector<std::wstring> extensions = boost::assign::list_of
-		(L"mpg")(L"mpeg")(L"avi")(L"mov")(L"qt")(L"webm")(L"dv")(L"mp4")(L"f4v")(L"flv")(L"mkv")(L"mka")(L"wmv")(L"wma")(L"ogg")(L"divx")(L"xvid")(L"wav")(L"mp3")(L"m2v");
+		(L"mpg")(L"mpeg")(L"m2v")(L"m4v")(L"mp3")(L"mp4")(L"mpga")
+		(L"avi")
+		(L"mov")
+		(L"qt")
+		(L"webm")
+		(L"dv")		
+		(L"f4v")(L"flv")
+		(L"mkv")(L"mka")
+		(L"wmv")(L"wma")(L"wav")
+		(L"rm")(L"ram")
+		(L"ogg")(L"ogv")(L"oga")(L"ogx")
+		(L"divx")(L"xvid");
+
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
 	
 	auto ext = boost::find_if(extensions, [&](const std::wstring& ex)
@@ -215,35 +228,16 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	std::wstring path = filename + L"." + *ext;
-	bool loop = boost::find(params, L"LOOP") != params.end();
-
-	size_t start = 0;
-	size_t length = std::numeric_limits<size_t>::max();
+	auto path		= filename + L"." + *ext;
+	auto loop		= boost::range::find(params, L"LOOP") != params.end();
+	auto start		= core::get_param(L"SEEK", params, 0);
+	auto length		= core::get_param(L"LENGTH", params, std::numeric_limits<size_t>::max());
+	auto filter_str = core::get_param<std::wstring>(L"FILTER", params, L""); 	
+		
+	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
+	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
-	auto seek_it = boost::find(params, L"SEEK");
-	if(seek_it != params.end())
-	{
-		if(++seek_it != params.end())
-			start = boost::lexical_cast<size_t>(*seek_it);
-	}
-	
-	auto length_it = boost::find(params, L"LENGTH");
-	if(length_it != params.end())
-	{
-		if(++length_it != params.end())
-			length = boost::lexical_cast<size_t>(*length_it);
-	}
-
-	std::wstring filter = L"";
-	auto filter_it = boost::find(params, L"FILTER");
-	if(filter_it != params.end())
-	{
-		if(++filter_it != params.end())
-			filter = *filter_it;
-	}
-
-	return make_safe<ffmpeg_producer>(frame_factory, path, filter, loop, start, length);
+	return make_safe<ffmpeg_producer>(frame_factory, path, filter_str, loop, start, length);
 }
 
 }

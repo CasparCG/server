@@ -125,7 +125,7 @@ public:
 
 safe_ptr<core::frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 1 || params[0] != L"OAL")
+	if(params.size() < 1 || params[0] != L"AUDIO")
 		return core::frame_consumer::empty();
 
 	return make_safe<oal_consumer>();

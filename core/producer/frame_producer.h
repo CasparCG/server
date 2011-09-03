@@ -23,6 +23,7 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <vector>
@@ -71,5 +72,22 @@ void register_producer_factory(const producer_factory_t& factory); // Not thread
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& params);
 
 safe_ptr<core::frame_producer> create_destroy_producer_proxy(executor& destroy_context, const safe_ptr<frame_producer>& producer);
+
+template<typename T>
+typename std::decay<T>::type get_param(const std::wstring& name, const std::vector<std::wstring>& params, T fail_value)
+{	
+	auto it = std::find(params.begin(), params.end(), name);
+	if(it == params.end() || ++it == params.end())	
+		return fail_value;
+	
+	T value = fail_value;
+	try
+	{
+		value = boost::lexical_cast<std::decay<T>::type>(*it);
+	}
+	catch(boost::bad_lexical_cast&){}
+
+	return value;
+}
 
 }}
