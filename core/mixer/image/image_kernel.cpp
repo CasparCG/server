@@ -65,8 +65,6 @@ struct image_kernel::implementation : boost::noncopyable
 	{
 		static const double epsilon = 0.001;
 
-		ogl.yield();
-
 		CASPAR_ASSERT(params.pix_desc.planes.size() == params.textures.size());
 
 		if(params.textures.empty() || !params.background)
@@ -206,7 +204,6 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		// Set render target
 		
-		ogl.yield();
 		ogl.attach(*params.background);
 		
 		// Draw
