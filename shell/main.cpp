@@ -59,6 +59,7 @@
 
 #include <core/mixer/gpu/ogl_device.h>
 
+#include <tbb/task_scheduler_init.h>
 #include <tbb/task_scheduler_observer.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
@@ -203,6 +204,8 @@ int main(int argc, wchar_t* argv[])
 			caspar::win32_exception::install_handler();
 		}
 	} tbb_thread_installer;
+
+	tbb::task_scheduler_init init;
 	
 	try 
 	{
