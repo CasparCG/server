@@ -35,7 +35,7 @@ static std::vector<int8_t> audio_32_to_24(const boost::iterator_range<int32_t*>&
 	auto size		 = input.size();
 	for(int n = 0; n < size; ++n)		
 		*reinterpret_cast<uint32_t*>(audio24_ptr + n*3) = *(audio32_ptr + n) >> 8;	
-	audio24.resize(input.size());
+	audio24.resize(input.size()*3);
 	return audio24;
 }
 
