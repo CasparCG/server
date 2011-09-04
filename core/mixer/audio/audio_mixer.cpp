@@ -92,6 +92,8 @@ public:
 	
 	audio_buffer mix()
 	{	
+		// NOTE: auto data should be larger than format_desc_.audio_samples_per_frame to allow sse to read/write beyond size.
+
 		auto intermediate = std::vector<float, tbb::cache_aligned_allocator<float>>(format_desc_.audio_samples_per_frame+128, 0.0f);
 
 		std::map<const void*, core::frame_transform> next_frame_transforms;
@@ -99,7 +101,7 @@ public:
 		tbb::affinity_partitioner ap;
 
 		BOOST_FOREACH(auto& item, items)
-		{				
+		{			
 			const auto next = item.transform;
 			auto prev = next;
 
