@@ -10,6 +10,7 @@
 
 namespace caspar { namespace core {
 
+// NOTE: Input data pointer should be larger than input.size() to allow sse to read beyond
 static std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_32_to_16_sse(const boost::iterator_range<int32_t*>& input)
 {	
 	std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio16(input.size());
