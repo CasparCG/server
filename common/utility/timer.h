@@ -22,6 +22,7 @@
 #define NOMINMAX
 
 #include <windows.h>
+#include <Mmsystem.h>
 
 namespace caspar {
 	
@@ -29,30 +30,26 @@ class high_prec_timer
 {
 public:
 	high_prec_timer()
+		: time_(0)
 	{
-		QueryPerformanceFrequency(&freq_);
-		QueryPerformanceCounter(&time_);
 	}
 
 	// Author: Ryan M. Geiss
 	// http://www.geisswerks.com/ryan/FAQS/timing.html
 	void tick(double interval)
 	{     	
-		LARGE_INTEGER t;
-		QueryPerformanceCounter(&t);
+		auto t = ::timeGetTime();
 
-		if (time_.QuadPart != 0)
+		if (time_ != 0)
 		{
-			__int64 ticks_to_wait = static_cast<int>(static_cast<double>(freq_.QuadPart) * interval);
-			__int64 done = 0;
+			auto ticks_to_wait = static_cast<DWORD>(interval*1000.0);
+			bool done = 0;
 			do
-			{
-				QueryPerformanceCounter(&t);
-				
-				__int64 ticks_passed = static_cast<__int64>(t.QuadPart) - static_cast<__int64>(time_.QuadPart);
-				__int64 ticks_left = ticks_to_wait - ticks_passed;
+			{				
+				auto ticks_passed = t - time_;
+				auto ticks_left	  = ticks_to_wait - ticks_passed;
 
-				if (t.QuadPart < time_.QuadPart)    // time wrap
+				if (t < time_)    // time wrap
 					done = 1;
 				if (ticks_passed >= ticks_to_wait)
 					done = 1;
@@ -65,12 +62,14 @@ public:
 					// otherwise, do a few Sleep(0)'s, which just give up the timeslice,
 					//   but don't really save cpu or battery, but do pass a tiny
 					//   amount of time.
-					if (ticks_left > static_cast<__int64>((freq_.QuadPart*2)/1000))
+					if (ticks_left > 2)
 						Sleep(1);
 					else                        
 						for (int i = 0; i < 10; ++i) 
 							Sleep(0);  // causes thread to give up its timeslice
 				}
+
+				t = ::timeGetTime();
 			}
 			while (!done);            
 		}
@@ -78,8 +77,7 @@ public:
 		time_ = t;
 	}		
 private:	
-	LARGE_INTEGER freq_;
-	LARGE_INTEGER time_;
+	DWORD time_;
 };
 
 
