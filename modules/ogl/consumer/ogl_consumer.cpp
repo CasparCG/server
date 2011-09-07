@@ -66,7 +66,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar {
+namespace caspar { namespace ogl {
 		
 enum stretch
 {
@@ -81,15 +81,15 @@ struct configuration
 	size_t		screen_index;
 	stretch		stretch;
 	bool		windowed;
-	bool		key_only;
 	bool		auto_deinterlace;
+	bool		key_only;
 
 	configuration()
 		: screen_index(0)
 		, stretch(fill)
 		, windowed(true)
-		, key_only(false)
 		, auto_deinterlace(true)
+		, key_only(false)
 	{
 	}
 };
@@ -123,7 +123,7 @@ struct ogl_consumer : boost::noncopyable
 	tbb::atomic<bool>		is_running_;
 
 	
-	filter					filter_;
+	ffmpeg::filter			filter_;
 public:
 	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc) 
 		: config_(config)
@@ -463,7 +463,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"SCREEN")
 		return core::frame_consumer::empty();
@@ -481,7 +481,7 @@ safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstrin
 	return make_safe<ogl_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::ptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
 {
 	configuration config;
 	config.screen_index		= ptree.get("device",   config.screen_index);
@@ -498,4 +498,4 @@ safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::p
 	return make_safe<ogl_consumer_proxy>(config);
 }
 
-}
+}}

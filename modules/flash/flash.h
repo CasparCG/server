@@ -21,11 +21,11 @@
 
 #include <string>
 
-namespace caspar{
+namespace caspar { namespace flash {
 
-void init_flash();
+void init();
 
 std::wstring get_cg_version();
-std::wstring get_flash_version();
+std::wstring get_version();
 
-}
+}}

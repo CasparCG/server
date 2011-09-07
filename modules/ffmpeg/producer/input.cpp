@@ -55,7 +55,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 
 static const size_t MAX_BUFFER_COUNT = 100;
 static const size_t MIN_BUFFER_COUNT = 4;
@@ -290,4 +290,4 @@ bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(pac
 safe_ptr<AVFormatContext> input::context(){return make_safe(impl_->format_context_);}
 size_t input::nb_frames() const {return impl_->nb_frames();}
 size_t input::nb_loops() const {return impl_->nb_loops();}
-}
+}}

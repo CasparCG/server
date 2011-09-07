@@ -30,16 +30,16 @@
 
 #include <boost/lexical_cast.hpp>
 
-namespace caspar {
+namespace caspar { namespace bluefish {
 
-void init_bluefish()
+void init()
 {
 	try
 	{
 		blue_initialize();
 		core::register_consumer_factory([](const std::vector<std::wstring>& params)
 		{
-			return create_bluefish_consumer(params);
+			return create_consumer(params);
 		});
 	}
 	catch(...)
@@ -49,7 +49,7 @@ void init_bluefish()
 	}
 }
 
-std::wstring get_bluefish_version()
+std::wstring get_version()
 {
 	try
 	{
@@ -66,7 +66,7 @@ std::wstring get_bluefish_version()
 	return widen(std::string(BlueVelvetVersion()));
 }
 
-std::vector<std::wstring> get_bluefish_device_list()
+std::vector<std::wstring> get_device_list()
 {
 	std::vector<std::wstring> devices;
 
@@ -86,4 +86,5 @@ std::vector<std::wstring> get_bluefish_device_list()
 
 	return devices;
 }
-}
+
+}}

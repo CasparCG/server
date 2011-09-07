@@ -25,13 +25,15 @@
 
 #include <vector>
 
-namespace caspar {
+namespace caspar { 
 
 namespace core {
 	struct frame_consumer;
 }	
 
-safe_ptr<core::frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params);
-safe_ptr<core::frame_consumer> create_oal_consumer();
+namespace oal {
+	
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_consumer();
 
-}
+}}

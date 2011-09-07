@@ -4,7 +4,7 @@
 
 #include <libavutil/samplefmt.h>
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 
 class audio_resampler
 {
@@ -19,4 +19,4 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-}
+}}

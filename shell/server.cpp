@@ -68,14 +68,14 @@ struct server::implementation : boost::noncopyable
 
 	implementation()												
 	{			
-		init_ffmpeg();
-		init_bluefish();
-		init_decklink();
-		init_flash();
-		init_oal();
-		init_ogl();
+		ffmpeg::init();
+		bluefish::init();
+		decklink::init();
+		flash::init();
+		oal::init();
+		ogl::init();
 		//init_silverlight();
-		init_image();
+		image::init();
 
 		setup_channels(env::properties());
 		setup_controllers(env::properties());
@@ -83,7 +83,7 @@ struct server::implementation : boost::noncopyable
 
 	~implementation()
 	{		
-		uninit_ffmpeg();
+		ffmpeg::uninit();
 
 		async_servers_.clear();
 		channels_.clear();
@@ -107,15 +107,15 @@ struct server::implementation : boost::noncopyable
 				{
 					const std::string name = xml_consumer.first;
 					if(name == "screen")
-						channels_.back()->output()->add(index++, create_ogl_consumer(xml_consumer.second));					
+						channels_.back()->output()->add(index++, ogl::create_consumer(xml_consumer.second));					
 					else if(name == "bluefish")					
-						channels_.back()->output()->add(index++, create_bluefish_consumer(xml_consumer.second));					
+						channels_.back()->output()->add(index++, bluefish::create_consumer(xml_consumer.second));					
 					else if(name == "decklink")					
-						channels_.back()->output()->add(index++, create_decklink_consumer(xml_consumer.second));				
+						channels_.back()->output()->add(index++, decklink::create_consumer(xml_consumer.second));				
 					//else if(name == "file")					
 					//	channels_.back()->output()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
 					else if(name == "audio")
-						channels_.back()->output()->add(index++, create_oal_consumer());		
+						channels_.back()->output()->add(index++, oal::create_consumer());		
 					else if(name != "<xmlcomment>")
 						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
 				}

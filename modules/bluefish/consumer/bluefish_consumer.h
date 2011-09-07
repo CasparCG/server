@@ -30,8 +30,10 @@ namespace caspar {
 namespace core {
 	struct frame_consumer;
 }
-			
-safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params);
-safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree);
+	 
+namespace bluefish {
 
-}
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree);
+
+}}

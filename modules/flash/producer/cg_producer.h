@@ -26,7 +26,7 @@
 
 #include <string>
 
-namespace caspar {
+namespace caspar { namespace flash {
 		
 class cg_producer : public core::frame_producer
 {
@@ -58,4 +58,4 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 
 safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
 
-}
+}}

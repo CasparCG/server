@@ -22,11 +22,11 @@
 #include <string>
 #include <vector>
 
-namespace caspar {
+namespace caspar { namespace bluefish {
 
-void init_bluefish();
+void init();
 
-std::wstring get_bluefish_version();
-std::vector<std::wstring> get_bluefish_device_list();
+std::wstring get_version();
+std::vector<std::wstring> get_device_list();
 
-}
+}}

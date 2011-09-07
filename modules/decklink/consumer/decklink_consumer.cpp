@@ -43,7 +43,7 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 
-namespace caspar { 
+namespace caspar { namespace decklink { 
 	
 struct configuration
 {
@@ -452,7 +452,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::wstring>& params) 
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params) 
 {
 	if(params.size() < 1 || params[0] != L"DECKLINK")
 		return core::frame_consumer::empty();
@@ -470,7 +470,7 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const std::vector<std::w
 	return make_safe<decklink_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tree::ptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
 {
 	configuration config;
 
@@ -483,7 +483,7 @@ safe_ptr<core::frame_consumer> create_decklink_consumer(const boost::property_tr
 	return make_safe<decklink_consumer_proxy>(config);
 }
 
-}
+}}
 
 /*
 ##############################################################################

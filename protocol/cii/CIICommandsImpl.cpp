@@ -141,7 +141,7 @@ void MiscellaneousCommand::Execute()
 
 	//TODO: Need to be checked for validity
 	else if(state_ == 1)
-		get_default_cg_producer(pCIIStrategy_->GetChannel())->add(layer_, filename_, false, TEXT(""), xmlData_);
+		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->add(layer_, filename_, false, TEXT(""), xmlData_);
 }
 
 
@@ -155,11 +155,11 @@ void KeydataCommand::Execute()
 
 	//TODO: Need to be checked for validity
 	else if(state_ == 1)
-		get_default_cg_producer(pCIIStrategy_->GetChannel())->stop(layer_, 0);
+		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->stop(layer_, 0);
 	else if(state_ == 2)
-		pCIIStrategy_->GetChannel()->stage()->clear(cg_producer::DEFAULT_LAYER);
+		pCIIStrategy_->GetChannel()->stage()->clear(flash::cg_producer::DEFAULT_LAYER);
 	else if(state_ == 3)
-		get_default_cg_producer(pCIIStrategy_->GetChannel())->play(layer_);
+		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->play(layer_);
 }
 
 void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {

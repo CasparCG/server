@@ -30,18 +30,18 @@
 
 #include <FreeImage.h>
 
-namespace caspar {
+namespace caspar { namespace image {
 
-void init_image()
+void init()
 {
-	core::register_producer_factory(create_image_scroll_producer);
-	core::register_producer_factory(create_image_producer);
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_image_consumer(params);});
+	core::register_producer_factory(create_scroll_producer);
+	core::register_producer_factory(create_producer);
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 }
 
-std::wstring get_image_version()
+std::wstring get_version()
 {
 	return widen(std::string(FreeImage_GetVersion()));
 }
 
-}
+}}

@@ -38,6 +38,8 @@ struct video_format_desc;
 
 }
 
+namespace ffmpeg {
+
 class audio_decoder : boost::noncopyable
 {
 public:
@@ -54,4 +56,4 @@ private:
 	safe_ptr<implementation> impl_;
 };
 
-}
+}}

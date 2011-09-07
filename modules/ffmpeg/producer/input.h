@@ -36,7 +36,9 @@ namespace diagnostics {
 class graph;
 
 }
-	
+	 
+namespace ffmpeg {
+
 class input : boost::noncopyable
 {
 public:
@@ -55,4 +57,4 @@ private:
 };
 
 	
-}
+}}

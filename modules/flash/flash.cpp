@@ -26,9 +26,9 @@
 
 #include <common/env.h>
 
-namespace caspar{
+namespace caspar { namespace flash {
 
-void init_flash()
+void init()
 {
 	core::register_producer_factory(create_ct_producer);
 }
@@ -38,7 +38,7 @@ std::wstring get_cg_version()
 	return L"Unknown";
 }
 
-std::wstring get_flash_version()
+std::wstring get_version()
 {		
 	std::wstring version = L"Not found";
 #ifdef WIN32
@@ -61,4 +61,4 @@ std::wstring get_flash_version()
 	return version;
 }
 
-}
+}}

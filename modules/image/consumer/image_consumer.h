@@ -33,7 +33,9 @@ namespace caspar {
 namespace core {
 	struct frame_consumer;
 }
-	
-safe_ptr<core::frame_consumer> create_image_consumer(const std::vector<std::wstring>& params);
 
-}
+namespace image {
+	
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+
+}}

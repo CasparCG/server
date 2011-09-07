@@ -21,10 +21,10 @@
 
 #include <string>
 
-namespace caspar{
+namespace caspar { namespace image {
 
-void init_image();
+void init();
 
-std::wstring get_image_version();
+std::wstring get_version();
 
-}
+}}

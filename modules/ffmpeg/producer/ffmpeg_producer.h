@@ -33,6 +33,8 @@ struct frame_factory;
 
 }
 	
-safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+namespace ffmpeg {
 
-}
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+
+}}

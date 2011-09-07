@@ -122,28 +122,28 @@ void print_info()
 	CASPAR_LOG(info) << L"on " << caspar::get_win_product_name() << L" " << caspar::get_win_sp_version();
 	CASPAR_LOG(info) << caspar::get_cpu_info();
 	CASPAR_LOG(info) << caspar::get_system_product_name();
-	CASPAR_LOG(info) << L"Flash " << caspar::get_flash_version();
-	CASPAR_LOG(info) << L"Flash-Template-Host " << caspar::get_cg_version();
-	CASPAR_LOG(info) << L"FreeImage " << caspar::get_image_version();
+	CASPAR_LOG(info) << L"Flash " << caspar::flash::get_version();
+	CASPAR_LOG(info) << L"Flash-Template-Host " << caspar::flash::get_cg_version();
+	CASPAR_LOG(info) << L"FreeImage " << caspar::image::get_version();
 	
-	CASPAR_LOG(info) << L"Decklink " << caspar::get_decklink_version();
-	auto deck = caspar::get_decklink_device_list();
+	CASPAR_LOG(info) << L"Decklink " << caspar::decklink::get_version();
+	auto deck = caspar::decklink::get_device_list();
 	std::for_each(deck.begin(), deck.end(), [](const std::wstring& device)
 	{
 		CASPAR_LOG(info) << device;
 	});
 		
-	auto blue = caspar::get_bluefish_device_list();
+	auto blue = caspar::bluefish::get_device_list();
 	std::for_each(blue.begin(), blue.end(), [](const std::wstring& device)
 	{
 		CASPAR_LOG(info) << device;
 	});
 	
-	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::get_avcodec_version();
-	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::get_avformat_version();
-	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::get_avfilter_version();
-	CASPAR_LOG(info) << L"FFMPEG-avutil " << caspar::get_avutil_version();
-	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::get_swscale_version();
+	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::ffmpeg::get_avformat_version();
+	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
+	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< caspar::ffmpeg::get_avutil_version();
+	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::ffmpeg::get_swscale_version();
 	CASPAR_LOG(info) << L"OpenGL " << caspar::core::ogl_device::get_version() << "\n\n";
 }
 

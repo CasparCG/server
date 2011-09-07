@@ -29,7 +29,7 @@
 #include <boost/exception/errinfo_file_name.hpp>
 #include <boost/filesystem.hpp>
 
-namespace caspar { 
+namespace caspar { namespace image {
 
 std::shared_ptr<FIBITMAP> load_image(const std::string& filename)
 {
@@ -61,4 +61,4 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 	return load_image(narrow(filename));
 }
 
-}
+}}
