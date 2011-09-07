@@ -170,9 +170,7 @@ int main(int argc, wchar_t* argv[])
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
 
 	CASPAR_LOG(info) << L"Type \"q\" to close application";
-
-	CASPAR_LOG(info) << L"THIS IS AN ALPHA BUILD";
-
+	
 	// Set debug mode.
 	#ifdef _DEBUG
 		_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
