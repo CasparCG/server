@@ -20,6 +20,8 @@ struct frame_factory;
 
 }
 
+namespace ffmpeg {
+
 class frame_muxer : boost::noncopyable
 {
 public:
@@ -44,4 +46,4 @@ private:
 	safe_ptr<implementation> impl_;
 };
 
-}
+}}

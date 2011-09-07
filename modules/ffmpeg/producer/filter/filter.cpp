@@ -29,7 +29,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 	
 struct filter::implementation
 {
@@ -167,4 +167,5 @@ filter::filter(const std::wstring& filters, const std::vector<PixelFormat>& pix_
 filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
 filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
 std::vector<safe_ptr<AVFrame>> filter::execute(const std::shared_ptr<AVFrame>& frame) {return impl_->execute(frame);}
-}
+
+}}

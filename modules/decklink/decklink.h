@@ -22,11 +22,11 @@
 #include <string>
 #include <vector>
 
-namespace caspar {
+namespace caspar { namespace decklink {
 
-void init_decklink();
+void init();
 
-std::wstring get_decklink_version();
-std::vector<std::wstring> get_decklink_device_list();
+std::wstring get_version();
+std::vector<std::wstring> get_device_list();
 
-}
+}}

@@ -590,7 +590,7 @@ bool LoadCommand::DoExecute()
 //		std::wstring filename = templatename;
 //		filename.append(extension);
 //
-//		flash::get_default_cg_producer(info.video_channel, std::max<int>(DEFAULT_CHANNEL_LAYER+1, info.layer_index))
+//		flash::flash::get_default_cg_producer(info.video_channel, std::max<int>(DEFAULT_CHANNEL_LAYER+1, info.layer_index))
 //			->add(flash_layer_index, filename, play_on_load, start_label, data);
 //
 //		CASPAR_LOG(info) << L"Executed [amcp_channel_cg_add]";
@@ -908,14 +908,14 @@ bool CGCommand::DoExecuteAdd() {
 		}
 	}
 
-	std::wstring fullFilename = find_flash_template(env::template_folder() + _parameters[2]);
+	std::wstring fullFilename = flash::find_template(env::template_folder() + _parameters[2]);
 	if(!fullFilename.empty())
 	{
 		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
 		std::wstring filename = _parameters[2];
 		filename.append(extension);
 
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
+		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
 		SetReplyString(TEXT("202 CG OK\r\n"));
 	}
 	else
@@ -936,7 +936,7 @@ bool CGCommand::DoExecutePlay()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->play(layer);
+		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->play(layer);
 	}
 	else
 	{
@@ -958,7 +958,7 @@ bool CGCommand::DoExecuteStop()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->stop(layer, 0);
+		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->stop(layer, 0);
 	}
 	else 
 	{
@@ -981,7 +981,7 @@ bool CGCommand::DoExecuteNext()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->next(layer);
+		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->next(layer);
 	}
 	else 
 	{
@@ -1004,7 +1004,7 @@ bool CGCommand::DoExecuteRemove()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->remove(layer);
+		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->remove(layer);
 	}
 	else 
 	{
@@ -1018,7 +1018,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	GetChannel()->stage()->clear(GetLayerIndex(cg_producer::DEFAULT_LAYER));
+	GetChannel()->stage()->clear(GetLayerIndex(flash::cg_producer::DEFAULT_LAYER));
 	SetReplyString(TEXT("202 CG OK\r\n"));
 	return true;
 }
@@ -1056,7 +1056,7 @@ bool CGCommand::DoExecuteUpdate()
 		}		
 
 		int layer = _ttoi(_parameters.at(1).c_str());
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->update(layer, dataString);
+		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->update(layer, dataString);
 	}
 	catch(...)
 	{
@@ -1078,7 +1078,7 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
+		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
 	}
 	else 
 	{
@@ -1093,7 +1093,7 @@ bool CGCommand::DoExecuteInvoke()
 bool CGCommand::DoExecuteInfo() 
 {
 	// TODO
-	//get_default_cg_producer(GetChannel())->Info();
+	//flash::get_default_cg_producer(GetChannel())->Info();
 	SetReplyString(TEXT("600 CG FAILED\r\n"));
 	return true;
 }
@@ -1307,9 +1307,9 @@ bool VersionCommand::DoExecute()
 	if(_parameters.size() > 0)
 	{
 		if(_parameters[0] == L"FLASH")
-			replyString = TEXT("201 VERSION OK\r\n FLASH: ") + get_flash_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n FLASH: ") + flash::get_version() + TEXT("\r\n");
 		else if(_parameters[0] == L"TEMPLATEHOST")
-			replyString = TEXT("201 VERSION OK\r\n TEMPLATEHOST: ") + get_cg_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n TEMPLATEHOST: ") + flash::get_cg_version() + TEXT("\r\n");
 		else if(_parameters[0] != L"SERVER")
 			replyString = TEXT("403 VERSION ERROR\r\n");
 	}

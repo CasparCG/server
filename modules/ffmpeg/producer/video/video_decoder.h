@@ -38,6 +38,8 @@ namespace core {
 	class write_frame;
 }
 
+namespace ffmpeg {
+
 class video_decoder : boost::noncopyable
 {
 public:
@@ -58,4 +60,4 @@ private:
 	safe_ptr<implementation> impl_;
 };
 
-}
+}}

@@ -48,7 +48,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 	
 struct video_decoder::implementation : boost::noncopyable
 {
@@ -215,4 +215,5 @@ double video_decoder::fps() const{return impl_->fps();}
 int64_t video_decoder::nb_frames() const{return impl_->nb_frames_;}
 size_t video_decoder::width() const{return impl_->width_;}
 size_t video_decoder::height() const{return impl_->height_;}
-}
+
+}}

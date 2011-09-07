@@ -76,7 +76,7 @@ void parallel_yadif_filter_line(parallel_yadif_context& ctx, uint8_t *dst, uint8
 	}
 }
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 	
 tbb::concurrent_bounded_queue<decltype(org_yadif_filter_line)> parallel_line_func_pool;
 std::array<parallel_yadif_context, 18> ctxs;
@@ -137,4 +137,4 @@ std::shared_ptr<void> make_parallel_yadif(AVFilterContext* ctx)
 	return std::shared_ptr<void>(func, return_parallel_yadif);
 }
 
-}
+}}

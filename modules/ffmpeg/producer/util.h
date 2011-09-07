@@ -23,6 +23,8 @@ struct frame_factory;
 
 }
 
+namespace ffmpeg {
+
 static const PixelFormat	CASPAR_PIX_FMT_LUMA = PIX_FMT_MONOBLACK; // Just hijack some unual pixel format.
 
 core::field_mode::type		get_mode(AVFrame& frame);
@@ -33,4 +35,4 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 
 void fix_meta_data(AVFormatContext& context);
 
-}
+}}

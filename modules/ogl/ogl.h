@@ -19,8 +19,8 @@
 */
 #pragma once
 
-namespace caspar{
+namespace caspar { namespace ogl {
 
-void init_ogl();
+void init();
 
-}
+}}

@@ -49,7 +49,7 @@
 
 #include <tbb/spin_mutex.h>
 
-namespace caspar {
+namespace caspar { namespace flash {
 		
 class bitmap
 {
@@ -404,14 +404,14 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	auto template_host = get_template_host(frame_factory->get_video_format_desc());
 	
 	return make_safe<flash_producer>(frame_factory, env::template_folder() + L"\\" + widen(template_host.filename), template_host.width, template_host.height);
 }
 
-std::wstring find_flash_template(const std::wstring& template_name)
+std::wstring find_template(const std::wstring& template_name)
 {
 	if(boost::filesystem::exists(template_name + L".ft")) 
 		return template_name + L".ft";
@@ -422,4 +422,4 @@ std::wstring find_flash_template(const std::wstring& template_name)
 	return L"";
 }
 
-}
+}}

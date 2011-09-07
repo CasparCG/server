@@ -24,13 +24,16 @@
 #include <vector>
 #include <boost/property_tree/ptree.hpp>
 
-namespace caspar {
-
+namespace caspar { 
+	
 namespace core {
 	struct frame_consumer;
 }
 
-safe_ptr<core::frame_consumer> create_ogl_consumer(const std::vector<std::wstring>& params);
-safe_ptr<core::frame_consumer> create_ogl_consumer(const boost::property_tree::ptree& ptree);
+namespace ogl {
 
-}
+
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree);
+
+}}

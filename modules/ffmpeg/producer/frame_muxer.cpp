@@ -41,7 +41,7 @@ extern "C"
 
 using namespace caspar::core;
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 
 struct display_mode
 {
@@ -419,4 +419,4 @@ bool frame_muxer::video_ready() const{return impl_->video_ready();}
 bool frame_muxer::audio_ready() const{return impl_->audio_ready();}
 int64_t frame_muxer::calc_nb_frames(int64_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 
-}
+}}

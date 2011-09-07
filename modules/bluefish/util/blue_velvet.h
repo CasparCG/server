@@ -35,6 +35,8 @@ struct video_format_desc;
 
 }
 
+namespace bluefish {
+
 extern const char* (*BlueVelvetVersion)();
 extern BLUE_UINT32 (*encode_hanc_frame)(struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr,BLUE_UINT32 no_audio_ch,BLUE_UINT32 no_audio_samples,BLUE_UINT32 nTypeOfSample,BLUE_UINT32 emb_audio_flag);
 extern BLUE_UINT32 (*encode_hanc_frame_ex)(BLUE_UINT32 card_type, struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr, BLUE_UINT32 no_audio_ch,	BLUE_UINT32 no_audio_samples, BLUE_UINT32 nTypeOfSample, BLUE_UINT32 emb_audio_flag);
@@ -56,4 +58,4 @@ int set_card_property(T& pSdk, ULONG prop, ULONG value)
 	return (pSdk->SetCardProperty(prop,variantValue));
 }
 
-}
+}}

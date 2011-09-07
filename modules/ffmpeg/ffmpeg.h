@@ -21,10 +21,10 @@
 
 #include <string>
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 
-void init_ffmpeg();
-void uninit_ffmpeg();
+void init();
+void uninit();
 
 std::wstring get_avcodec_version();
 std::wstring get_avformat_version();
@@ -32,4 +32,4 @@ std::wstring get_avutil_version();
 std::wstring get_avfilter_version();
 std::wstring get_swscale_version();
 
-}
+}}

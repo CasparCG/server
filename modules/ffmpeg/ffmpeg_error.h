@@ -13,7 +13,7 @@ extern "C"
 
 #pragma warning(pop)
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 
 struct ffmpeg_error : virtual caspar_exception{};
 
@@ -56,4 +56,4 @@ static std::string av_error_str(int errn)
 		return ret;															\
 	}();
 
-}
+}}

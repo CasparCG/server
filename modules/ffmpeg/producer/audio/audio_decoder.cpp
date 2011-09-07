@@ -44,7 +44,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 	
 struct audio_decoder::implementation : boost::noncopyable
 {	
@@ -166,4 +166,5 @@ void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(pa
 bool audio_decoder::ready() const{return impl_->ready();}
 std::vector<std::shared_ptr<core::audio_buffer>> audio_decoder::poll(){return impl_->poll();}
 int64_t audio_decoder::nb_frames() const{return impl_->nb_frames_;}
-}
+
+}}

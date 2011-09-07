@@ -10,7 +10,7 @@
 struct AVFrame;
 enum PixelFormat;
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 		
 static bool double_rate(const std::wstring& filters)
 {
@@ -37,4 +37,4 @@ private:
 	safe_ptr<implementation> impl_;
 };
 
-}
+}}

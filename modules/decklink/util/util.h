@@ -31,7 +31,7 @@
 
 #include <string>
 
-namespace caspar { 
+namespace caspar { namespace decklink {
 	
 static BMDDisplayMode get_decklink_video_format(core::video_format::type fmt) 
 {
@@ -152,4 +152,4 @@ static std::wstring get_model_name(const T& device)
 	return std::wstring(pModelName);
 }
 
-}
+}}
