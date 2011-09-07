@@ -23,12 +23,11 @@
 
 #include <core/consumer/frame_consumer.h>
 
-namespace caspar
-{
+namespace caspar { namespace ogl {
 
-void init_ogl()
+void init()
 {
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ogl_consumer(params);});
+	caspar::core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 }
 
-}
+}}

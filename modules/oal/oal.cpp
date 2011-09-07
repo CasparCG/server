@@ -23,12 +23,11 @@
 
 #include <core/consumer/frame_consumer.h>
 
-namespace caspar
-{
+namespace caspar { namespace oal {
 
-void init_oal()
+void init()
 {
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_oal_consumer(params);});
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 }
 
-}
+}}

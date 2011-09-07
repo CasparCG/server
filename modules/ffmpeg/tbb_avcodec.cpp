@@ -27,7 +27,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 		
 int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2), void* arg, int* ret, int count, int size)
 {
@@ -111,4 +111,4 @@ int tbb_avcodec_close(AVCodecContext* avctx)
 	return avcodec_close(avctx); 
 }
 
-}
+}}

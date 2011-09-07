@@ -30,7 +30,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 		
-namespace caspar {
+namespace caspar { namespace flash {
 	
 struct cg_producer::implementation : boost::noncopyable
 {
@@ -115,7 +115,7 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 
 	if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
 	{
-		flash_producer = create_flash_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>());	
+		flash_producer = flash::create_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>());	
 		video_channel->stage()->load(render_layer, flash_producer); 
 		video_channel->stage()->play(render_layer);
 	}
@@ -129,7 +129,7 @@ safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_fac
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
 	
-	auto flash_producer = create_flash_producer(frame_factory, boost::assign::list_of<std::wstring>());	
+	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
 	auto producer = make_safe<cg_producer>(flash_producer);
 	producer->add(0, filename, 1);
 
@@ -149,4 +149,4 @@ void cg_producer::update(int layer, const std::wstring& data){impl_->update(laye
 void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
 std::wstring cg_producer::print() const{return impl_->print();}
 
-}
+}}

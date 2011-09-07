@@ -27,7 +27,7 @@
 
 #include <vector>
 
-namespace caspar { 
+namespace caspar { namespace bluefish {
 	
 static const size_t MAX_HANC_BUFFER_SIZE = 256*1024;
 static const size_t MAX_VBI_BUFFER_SIZE = 36*1920*4;
@@ -59,4 +59,4 @@ private:
 };
 typedef std::shared_ptr<blue_dma_buffer> blue_dma_buffer_ptr;
 
-}
+}}

@@ -16,8 +16,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 
 struct audio_resampler::implementation
 {	
@@ -83,4 +82,4 @@ audio_resampler::audio_resampler(size_t output_channels, size_t input_channels, 
 				: impl_(new implementation(output_channels, input_channels, output_sample_rate, input_sample_rate, output_sample_format, input_sample_format)){}
 std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> audio_resampler::resample(std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>&& data){return impl_->resample(std::move(data));}
 
-}
+}}

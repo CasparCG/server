@@ -46,7 +46,7 @@
 
 #include <tbb/parallel_invoke.h>
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer
 {
@@ -221,7 +221,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {		
 	static const std::vector<std::wstring> extensions = boost::assign::list_of
 		(L"mpg")(L"mpeg")(L"m2v")(L"m4v")(L"mp3")(L"mp4")(L"mpga")
@@ -259,4 +259,4 @@ safe_ptr<core::frame_producer> create_ffmpeg_producer(const safe_ptr<core::frame
 	return make_safe<ffmpeg_producer>(frame_factory, path, filter_str, loop, start, length);
 }
 
-}
+}}

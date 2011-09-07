@@ -46,7 +46,7 @@ extern "C"
 	#include <libavfilter/avfilter.h>
 }
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 	
 int ffmpeg_lock_callback(void **mutex, enum AVLockOp op) 
 { 
@@ -151,7 +151,7 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     //colored_fputs(av_clip(level>>3, 0, 6), line);
 }
 
-void init_ffmpeg()
+void init()
 {
     avfilter_register_all();
 	av_register_all();
@@ -161,10 +161,10 @@ void init_ffmpeg()
 	av_log_set_callback(log_callback);
 	
 	//core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ffmpeg_consumer(params);});
-	core::register_producer_factory(create_ffmpeg_producer);
+	core::register_producer_factory(create_producer);
 }
 
-void uninit_ffmpeg()
+void uninit()
 {
 	avfilter_uninit();
 	av_lockmgr_register(nullptr);
@@ -202,4 +202,4 @@ std::wstring get_swscale_version()
 	return make_version(swscale_version());
 }
 
-}
+}}

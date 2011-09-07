@@ -6,7 +6,7 @@
 
 #include <core/video_format.h>
 
-namespace caspar {
+namespace caspar { namespace bluefish {
 	
 CBlueVelvet4* (*BlueVelvetFactory4)() = nullptr;
 void (*BlueVelvetDestroy)(CBlueVelvet4* pObj) = nullptr;
@@ -165,4 +165,4 @@ safe_ptr<CBlueVelvet4> create_blue(size_t device_index)
 	return blue;
 }
 
-}
+}}

@@ -43,7 +43,7 @@
 #include <memory>
 #include <array>
 
-namespace caspar { 
+namespace caspar { namespace bluefish { 
 			
 struct bluefish_consumer : boost::noncopyable
 {
@@ -356,7 +356,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"BLUEFISH")
 		return core::frame_consumer::empty();
@@ -369,7 +369,7 @@ safe_ptr<core::frame_consumer> create_bluefish_consumer(const std::vector<std::w
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
-safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tree::ptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
 {	
 	const auto device_index		= ptree.get("device",		  1);
 	const auto embedded_audio	= ptree.get("embedded-audio", false);
@@ -378,4 +378,4 @@ safe_ptr<core::frame_consumer> create_bluefish_consumer(const boost::property_tr
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
-}
+}}

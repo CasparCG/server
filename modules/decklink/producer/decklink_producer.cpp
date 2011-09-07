@@ -71,7 +71,7 @@ extern "C"
 
 #include <functional>
 
-namespace caspar { 
+namespace caspar { namespace decklink {
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
@@ -91,9 +91,9 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
 
 	std::exception_ptr											exception_;
-	filter														filter_;
+	ffmpeg::filter												filter_;
 		
-	frame_muxer													muxer_;
+	ffmpeg::frame_muxer											muxer_;
 
 public:
 	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
@@ -104,7 +104,7 @@ public:
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
 		, filter_(filter)
-		, muxer_(double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory)
+		, muxer_(ffmpeg::double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory)
 	{
 		frame_buffer_.set_capacity(2);
 		
@@ -285,7 +285,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_decklink_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
@@ -305,4 +305,4 @@ safe_ptr<core::frame_producer> create_decklink_producer(const safe_ptr<core::fra
 	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length);
 }
 
-}
+}}

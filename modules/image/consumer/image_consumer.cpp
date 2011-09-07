@@ -38,7 +38,7 @@
 
 #include <vector>
 
-namespace caspar {
+namespace caspar { namespace image {
 	
 struct image_consumer : public core::frame_consumer
 {
@@ -91,7 +91,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_consumer> create_image_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"IMAGE")
 		return core::frame_consumer::empty();
@@ -99,5 +99,4 @@ safe_ptr<core::frame_consumer> create_image_consumer(const std::vector<std::wstr
 	return make_safe<image_consumer>();
 }
 
-
-}
+}}

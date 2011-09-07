@@ -40,15 +40,15 @@
 
 #pragma warning(push)
 
-namespace caspar{
+namespace caspar { namespace decklink {
 
-void init_decklink()
+void init()
 {
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_decklink_consumer(params);});
-	core::register_producer_factory(create_decklink_producer);
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	core::register_producer_factory(create_producer);
 }
 
-std::wstring get_decklink_version() 
+std::wstring get_version() 
 {
 	std::wstring version = L"Not found";
 
@@ -65,7 +65,7 @@ std::wstring get_decklink_version()
 	return version;
 }
 
-std::vector<std::wstring> get_decklink_device_list()
+std::vector<std::wstring> get_device_list()
 {
 	std::vector<std::wstring> devices;
 
@@ -90,4 +90,4 @@ std::vector<std::wstring> get_decklink_device_list()
 	return devices;
 }
 
-}
+}}

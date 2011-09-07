@@ -39,7 +39,7 @@
 
 #include <tbb/concurrent_queue.h>
 
-namespace caspar {
+namespace caspar { namespace oal {
 
 struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 {
@@ -123,7 +123,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_consumer> create_oal_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"AUDIO")
 		return core::frame_consumer::empty();
@@ -131,9 +131,9 @@ safe_ptr<core::frame_consumer> create_oal_consumer(const std::vector<std::wstrin
 	return make_safe<oal_consumer>();
 }
 
-safe_ptr<core::frame_consumer> create_oal_consumer()
+safe_ptr<core::frame_consumer> create_consumer()
 {
 	return make_safe<oal_consumer>();
 }
 
-}
+}}

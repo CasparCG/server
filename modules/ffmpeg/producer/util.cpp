@@ -33,7 +33,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-namespace caspar {
+namespace caspar { namespace ffmpeg {
 
 core::field_mode::type get_mode(AVFrame& frame)
 {
@@ -287,4 +287,4 @@ void fix_meta_data(AVFormatContext& context)
 	video_context.time_base.den = static_cast<int>(closest_fps*1000000.0);
 }
 
-}
+}}
