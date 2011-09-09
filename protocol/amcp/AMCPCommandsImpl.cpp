@@ -548,13 +548,13 @@ bool LoadCommand::DoExecute()
 	catch(file_not_found&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("404 LOADBG ERROR\r\n"));
+		SetReplyString(TEXT("404 LOAD ERROR\r\n"));
 		return false;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 LOADBG FAILED\r\n"));
+		SetReplyString(TEXT("502 LOAD FAILED\r\n"));
 		return false;
 	}
 }
