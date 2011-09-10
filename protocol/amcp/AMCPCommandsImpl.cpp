@@ -221,7 +221,7 @@ bool MixerCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{	
-		if(_parameters[0] == L"KEYER")
+		if(_parameters[0] == L"KEYER" || _parameters[0] == L"IS_KEY")
 		{
 			bool value = lexical_cast_or_default(_parameters.at(1), false);
 			auto transform = [=](frame_transform transform) -> frame_transform
@@ -249,7 +249,7 @@ bool MixerCommand::DoExecute()
 			int layer = GetLayerIndex();
 			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
-		else if(_parameters[0] == L"FILL")
+		else if(_parameters[0] == L"FILL" || _parameters[0] == L"FILL_RECT")
 		{
 			int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[5], 0) : 0;
 			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
@@ -274,7 +274,7 @@ bool MixerCommand::DoExecute()
 			int layer = GetLayerIndex();
 			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
-		else if(_parameters[0] == L"CLIP")
+		else if(_parameters[0] == L"CLIP" || _parameters[0] == L"CLIP_RECT")
 		{
 			int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[5], 0) : 0;
 			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
