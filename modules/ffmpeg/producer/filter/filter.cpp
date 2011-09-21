@@ -22,7 +22,7 @@ extern "C"
 	#include <libavfilter/avfilter.h>
 	#include <libavfilter/avcodec.h>
 	#include <libavfilter/avfiltergraph.h>
-	#include <libavfilter/vsink_buffer.h>
+	#include <libavfilter/buffersink.h>
 	#include <libavfilter/vsrc_buffer.h>
 }
 #if defined(_MSC_VER)
@@ -88,7 +88,9 @@ struct filter::implementation
 			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get()), "[filter]");
 
 			// OPIX_FMT_BGRAutput
-			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts_.data(), graph_.get()), "[filter]");
+			AVBufferSinkParams *buffersink_params = av_buffersink_params_alloc();
+			buffersink_params->pixel_fmts = pix_fmts_.data();
+			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params, graph_.get()), "[filter]");
 			
 			AVFilterInOut* outputs = avfilter_inout_alloc();
 			AVFilterInOut* inputs  = avfilter_inout_alloc();
@@ -131,7 +133,7 @@ struct filter::implementation
 		while (avfilter_poll_frame(buffersink_ctx_->inputs[0])) 
 		{
 			AVFilterBufferRef *picref;
-			THROW_ON_ERROR2(av_vsink_buffer_get_video_buffer_ref(buffersink_ctx_, &picref, 0), "[filter]");
+			THROW_ON_ERROR2(av_buffersink_get_buffer_ref(buffersink_ctx_, &picref, 0), "[filter]");
 
             if (picref) 
 			{		
