@@ -29,8 +29,8 @@
 #include "libavutil/rational.h"
 
 #define LIBAVFILTER_VERSION_MAJOR  2
-#define LIBAVFILTER_VERSION_MINOR 37
-#define LIBAVFILTER_VERSION_MICRO  0
+#define LIBAVFILTER_VERSION_MINOR 43
+#define LIBAVFILTER_VERSION_MICRO  2
 
 #define LIBAVFILTER_VERSION_INT AV_VERSION_INT(LIBAVFILTER_VERSION_MAJOR, \
                                                LIBAVFILTER_VERSION_MINOR, \
@@ -39,6 +39,13 @@
                                            LIBAVFILTER_VERSION_MINOR,   \
                                            LIBAVFILTER_VERSION_MICRO)
 #define LIBAVFILTER_BUILD       LIBAVFILTER_VERSION_INT
+
+#ifndef FF_API_OLD_VSINK_API
+#define FF_API_OLD_VSINK_API        (LIBAVUTIL_VERSION_MAJOR < 3)
+#endif
+#ifndef FF_API_OLD_ALL_FORMATS_API
+#define FF_API_OLD_ALL_FORMATS_API (LIBAVUTIL_VERSION_MAJOR < 3)
+#endif
 
 #include <stddef.h>
 
@@ -102,7 +109,7 @@ typedef struct AVFilterBuffer {
 typedef struct AVFilterBufferRefAudioProps {
     int64_t channel_layout;     ///< channel layout of audio buffer
     int nb_samples;             ///< number of audio samples per channel
-    uint32_t sample_rate;       ///< audio buffer sample rate
+    int sample_rate;            ///< audio buffer sample rate
     int planar;                 ///< audio buffer - planar or packed
 } AVFilterBufferRefAudioProps;
 
@@ -254,20 +261,33 @@ AVFilterFormats *avfilter_make_format64_list(const int64_t *fmts);
  */
 int avfilter_add_format(AVFilterFormats **avff, int64_t fmt);
 
+#if FF_API_OLD_ALL_FORMATS_API
+/**
+ * @deprecated Use avfilter_make_all_formats() instead.
+ */
+attribute_deprecated
+AVFilterFormats *avfilter_all_formats(enum AVMediaType type);
+#endif
+
 /**
  * Return a list of all formats supported by FFmpeg for the given media type.
  */
-AVFilterFormats *avfilter_all_formats(enum AVMediaType type);
+AVFilterFormats *avfilter_make_all_formats(enum AVMediaType type);
+
+/**
+ * A list of all channel layouts supported by libavfilter.
+ */
+extern const int64_t avfilter_all_channel_layouts[];
 
 /**
  * Return a list of all channel layouts supported by FFmpeg.
  */
-AVFilterFormats *avfilter_all_channel_layouts(void);
+AVFilterFormats *avfilter_make_all_channel_layouts(void);
 
 /**
  * Return a list of all audio packing formats.
  */
-AVFilterFormats *avfilter_all_packing_formats(void);
+AVFilterFormats *avfilter_make_all_packing_formats(void);
 
 /**
  * Return a format list which contains the intersection of the formats of
@@ -386,9 +406,7 @@ struct AVFilterPad {
      *
      * Input audio pads only.
      */
-    AVFilterBufferRef *(*get_audio_buffer)(AVFilterLink *link, int perms,
-                                           enum AVSampleFormat sample_fmt, int nb_samples,
-                                           int64_t channel_layout, int planar);
+    AVFilterBufferRef *(*get_audio_buffer)(AVFilterLink *link, int perms, int nb_samples);
 
     /**
      * Callback called after the slices of a frame are completely sent. If
@@ -472,9 +490,8 @@ AVFilterBufferRef *avfilter_default_get_video_buffer(AVFilterLink *link,
                                                      int perms, int w, int h);
 
 /** default handler for get_audio_buffer() for audio inputs */
-AVFilterBufferRef *avfilter_default_get_audio_buffer(AVFilterLink *link, int perms,
-                                                     enum AVSampleFormat sample_fmt, int nb_samples,
-                                                     int64_t channel_layout, int planar);
+AVFilterBufferRef *avfilter_default_get_audio_buffer(AVFilterLink *link,
+                                                     int perms, int nb_samples);
 
 /**
  * Helpers for query_formats() which set all links to the same list of
@@ -506,9 +523,8 @@ AVFilterBufferRef *avfilter_null_get_video_buffer(AVFilterLink *link,
                                                   int perms, int w, int h);
 
 /** get_audio_buffer() handler for filters which simply pass audio along */
-AVFilterBufferRef *avfilter_null_get_audio_buffer(AVFilterLink *link, int perms,
-                                                  enum AVSampleFormat sample_fmt, int size,
-                                                  int64_t channel_layout, int planar);
+AVFilterBufferRef *avfilter_null_get_audio_buffer(AVFilterLink *link,
+                                                  int perms, int nb_samples);
 
 /**
  * Filter definition. This defines the pads a filter contains, and all the
@@ -623,7 +639,11 @@ struct AVFilterLink {
     AVRational sample_aspect_ratio; ///< agreed upon sample aspect ratio
     /* These parameters apply only to audio */
     int64_t channel_layout;     ///< channel layout of current buffer (see libavutil/audioconvert.h)
+#if LIBAVFILTER_VERSION_MAJOR < 3
     int64_t sample_rate;        ///< samples per second
+#else
+    int sample_rate;            ///< samples per second
+#endif
     int planar;                 ///< agreed upon packing mode of audio buffers. true if planar.
 
     int format;                 ///< agreed upon media format
@@ -727,16 +747,12 @@ avfilter_get_video_buffer_ref_from_arrays(uint8_t * const data[4], const int lin
  * @param link           the output link to the filter from which the buffer will
  *                       be requested
  * @param perms          the required access permissions
- * @param sample_fmt     the format of each sample in the buffer to allocate
  * @param nb_samples     the number of samples per channel
- * @param channel_layout the number and type of channels per sample in the buffer to allocate
- * @param planar         audio data layout - planar or packed
  * @return               A reference to the samples. This must be unreferenced with
  *                       avfilter_unref_buffer when you are finished with it.
  */
 AVFilterBufferRef *avfilter_get_audio_buffer(AVFilterLink *link, int perms,
-                                             enum AVSampleFormat sample_fmt, int nb_samples,
-                                             int64_t channel_layout, int planar);
+                                             int nb_samples);
 
 /**
  * Create an audio buffer reference wrapped around an already
