@@ -625,11 +625,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 	
-	size_t size() const
-	{
-		return frame_buffer_.size();
-	}
-
 	safe_ptr<core::write_frame> pop_video()
 	{
 		auto frame = video_streams_.front().front();
