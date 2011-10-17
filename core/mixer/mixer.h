@@ -49,9 +49,9 @@ public:
 		
 	safe_ptr<core::read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
 		
-	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);		
-	safe_ptr<core::write_frame> create_frame(const void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt = core::pixel_format::bgra);		
-	
+	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);			
+	boost::unique_future<safe_ptr<write_frame>> create_frame2(const void* video_stream_tag, const pixel_format_desc& desc);
+
 	core::video_format_desc get_video_format_desc() const; // nothrow
 
 

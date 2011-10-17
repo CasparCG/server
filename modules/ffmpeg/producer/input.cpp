@@ -24,22 +24,22 @@
 #include "../stdafx.h"
 
 #include "input.h"
+#include "util.h"
 #include "../ffmpeg_error.h"
 #include "../tbb_avcodec.h"
 
 #include <core/video_format.h>
 
+#include <common/concrt/scoped_oversubscription_token.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/exception/win32_exception.h>
 
-#include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
 
 #include <boost/range/algorithm.hpp>
-#include <boost/thread/condition_variable.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
+
+#include <agents.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -55,13 +55,15 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+using namespace Concurrency;
+
 namespace caspar { namespace ffmpeg {
 
 static const size_t MAX_BUFFER_COUNT = 100;
 static const size_t MIN_BUFFER_COUNT = 4;
 static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
 	
-struct input::implementation : boost::noncopyable
+struct input::implementation : public Concurrency::agent, boost::noncopyable
 {		
 	std::shared_ptr<AVFormatContext>							format_context_; // Destroy this last
 	int															default_stream_index_;
@@ -74,27 +76,35 @@ struct input::implementation : boost::noncopyable
 	const size_t												length_;
 	size_t														frame_number_;
 	
-	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
-	tbb::atomic<size_t>											buffer_size_;
-	boost::condition_variable									buffer_cond_;
-	boost::mutex												buffer_mutex_;
+	input::token_t&												active_token_;
+	input::target_t&						 					video_target_;
+	input::target_t&						 					audio_target_;
 		
-	boost::thread												thread_;
-	tbb::atomic<bool>											is_running_;
-
 	tbb::atomic<size_t>											nb_frames_;
 	tbb::atomic<size_t>											nb_loops_;
 
+	int															video_index_;
+	int															audio_index_;
+
 public:
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
-		: graph_(graph)
+	explicit implementation(input::token_t& active_token,
+							input::target_t& video_target,
+							input::target_t& audio_target,
+							const safe_ptr<diagnostics::graph>& graph, 
+							const std::wstring& filename, 
+							bool loop, 
+							size_t start,
+							size_t length)
+		: active_token_(active_token)
+		, video_target_(video_target)
+		, audio_target_(audio_target)
+		, graph_(graph)
 		, loop_(loop)
 		, filename_(filename)
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
 	{			
-		is_running_ = true;
 		nb_frames_	= 0;
 		nb_loops_	= 0;
 		
@@ -108,96 +118,58 @@ public:
 		THROW_ON_ERROR2(avformat_find_stream_info(format_context_.get(), nullptr), print());
 		
 		default_stream_index_ = THROW_ON_ERROR2(av_find_default_stream_index(format_context_.get()), print());
-
+		video_index_ = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+		audio_index_ = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0);
+		
 		if(start_ > 0)			
 			seek_frame(start_);
 		
-		for(int n = 0; n < 16 && !full(); ++n)
+		for(int n = 0; n < 16; ++n)
 			read_next_packet();
 						
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
-		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
 
-		thread_ = boost::thread([this]{run();});
+		agent::start();
 	}
 
 	~implementation()
 	{
-		is_running_ = false;
-		buffer_cond_.notify_all();
-		thread_.join();
+		agent::wait(this);
 	}
-		
-	bool try_pop(std::shared_ptr<AVPacket>& packet)
-	{
-		const bool result = buffer_.try_pop(packet);
-
-		if(result)
-		{
-			if(packet)
-				buffer_size_ -= packet->size;
-			buffer_cond_.notify_all();
-		}
-
-		graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-		graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
-
-		return result;
-	}
-
-	size_t nb_frames() const
-	{
-		return nb_frames_;
-	}
-
-	size_t nb_loops() const
-	{
-		return nb_loops_;
-	}
-
-private:
 	
-	void run()
-	{		
-		caspar::win32_exception::install_handler();
-
+	virtual void run()
+	{
 		try
 		{
-			CASPAR_LOG(info) << print() << " Thread Started.";
-
-			while(is_running_)
+			while(Concurrency::receive(active_token_))
 			{
+				if(!read_next_packet())
 				{
-					boost::unique_lock<boost::mutex> lock(buffer_mutex_);
-					while(full())
-						buffer_cond_.timed_wait(lock, boost::posix_time::millisec(20));
+					Concurrency::send(video_target_, eof_packet());
+					Concurrency::send(audio_target_, eof_packet());
+					break;
 				}
-				read_next_packet();			
-			}
-
-			CASPAR_LOG(info) << print() << " Thread Stopped.";
+			}				
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			is_running_ = false;
-		}
+		}		
+						
+		done();
 	}
-			
-	void read_next_packet()
+
+	bool read_next_packet()
 	{		
 		int ret = 0;
 
-		std::shared_ptr<AVPacket> read_packet(new AVPacket, [](AVPacket* p)
-		{
-			av_free_packet(p);
-			delete p;
-		});
-		av_init_packet(read_packet.get());
+		auto read_packet = create_packet();
 
-		ret = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
-		
+		{
+			Concurrency::scoped_oversubcription_token oversubscribe;
+			ret = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
+		}
+
 		if(is_eof(ret))														     
 		{
 			++nb_loops_;
@@ -221,11 +193,11 @@ private:
 			}	
 			else
 			{
-				is_running_ = false;
 				CASPAR_LOG(trace) << print() << " Stopping.";
+				return false;
 			}
 		}
-		else
+		else if(read_packet->stream_index == video_index_ || read_packet->stream_index == audio_index_)
 		{		
 			THROW_ON_ERROR(ret, print(), "av_read_frame");
 
@@ -247,24 +219,23 @@ private:
 				read_packet->size = size;
 				read_packet->data = data;
 			});
+	
+			if(read_packet->stream_index == video_index_)
+				Concurrency::send(video_target_, read_packet);
+			else if(read_packet->stream_index == audio_index_)
+				Concurrency::send(audio_target_, read_packet);
+		}	
 
-			buffer_.try_push(read_packet);
-			buffer_size_ += read_packet->size;
-				
-			graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-			graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
-		}			
-	}
-
-	bool full() const
-	{
-		return is_running_ && (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT;
+		return true;
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
 	{  							
-		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());		
-		buffer_.push(nullptr);
+		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());	
+		auto packet = create_packet();
+		packet->size = 0;
+		Concurrency::send(video_target_, loop_packet());		
+		Concurrency::send(audio_target_, loop_packet());
 	}		
 
 	bool is_eof(int ret)
@@ -283,11 +254,31 @@ private:
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
-	: impl_(new implementation(graph, filename, loop, start, length)){}
-bool input::eof() const {return !impl_->is_running_;}
-bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
-safe_ptr<AVFormatContext> input::context(){return make_safe(impl_->format_context_);}
-size_t input::nb_frames() const {return impl_->nb_frames();}
-size_t input::nb_loops() const {return impl_->nb_loops();}
+input::input(token_t& active_token,  
+			 target_t& video_target,  
+			 target_t& audio_target,  
+		     const safe_ptr<diagnostics::graph>& graph, 
+			 const std::wstring& filename, 
+			 bool loop, 
+			 size_t start, 
+			 size_t length)
+	: impl_(new implementation(active_token, video_target, audio_target, graph, filename, loop, start, length))
+{
+}
+
+safe_ptr<AVFormatContext> input::context()
+{
+	return safe_ptr<AVFormatContext>(impl_->format_context_);
+}
+
+size_t input::nb_frames() const
+{
+	return impl_->nb_frames_;
+}
+
+size_t input::nb_loops() const 
+{
+	return impl_->nb_loops_;
+}
+
 }}

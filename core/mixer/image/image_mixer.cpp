@@ -285,6 +285,11 @@ public:
 	{
 		return make_safe<write_frame>(ogl_, tag, desc);
 	}
+
+	boost::unique_future<safe_ptr<write_frame>> create_frame2(const void* tag, const pixel_format_desc& desc)
+	{
+		return ogl_.begin_invoke([=]{return make_safe<write_frame>(ogl_, tag, desc);}, high_priority);
+	}
 };
 
 image_mixer::image_mixer(ogl_device& ogl, const video_format_desc& format_desc) : impl_(new implementation(ogl, format_desc)){}
@@ -293,6 +298,7 @@ void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<host_buffer>> image_mixer::render(){return impl_->render();}
 safe_ptr<write_frame> image_mixer::create_frame(const void* tag, const pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
+boost::unique_future<safe_ptr<write_frame>> image_mixer::create_frame2(const void* tag, const pixel_format_desc& desc){return impl_->create_frame2(tag, desc);}
 void image_mixer::begin_layer(blend_mode::type blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 image_mixer& image_mixer::operator=(image_mixer&& other)

@@ -27,13 +27,7 @@
 #include "../../ffmpeg_error.h"
 #include "../../tbb_avcodec.h"
 
-#include <core/producer/frame/frame_transform.h>
-#include <core/producer/frame/frame_factory.h>
-
-#include <boost/range/algorithm_ext/push_back.hpp>
-#include <boost/filesystem.hpp>
-
-#include <queue>
+#include <core/producer/frame/basic_frame.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -50,13 +44,14 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 	
-struct video_decoder::implementation : boost::noncopyable
+struct video_decoder::implementation : public Concurrency::agent, boost::noncopyable
 {
-	const safe_ptr<core::frame_factory>		frame_factory_;
+	video_decoder::token_t&					active_token_;
+	video_decoder::source_t&				source_;
+	video_decoder::target_t&				target_;
+
 	std::shared_ptr<AVCodecContext>			codec_context_;
 	int										index_;
-
-	std::queue<std::shared_ptr<AVPacket>>	packets_;
 
 	filter									filter_;
 
@@ -65,15 +60,24 @@ struct video_decoder::implementation : boost::noncopyable
 
 	size_t									width_;
 	size_t									height_;
+	bool									is_progressive_;
 
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) 
-		: frame_factory_(frame_factory)
-		, filter_(filter)
-		, fps_(frame_factory_->get_video_format_desc().fps)
+	explicit implementation(video_decoder::token_t& active_token,
+							video_decoder::source_t& source,
+							video_decoder::target_t& target,
+							const safe_ptr<AVFormatContext>& context,
+							double fps,
+							const std::wstring& filter) 
+		: active_token_(active_token)
+		, source_(source)
+		, target_(target)
+		, filter_(filter.empty() ? L"copy" : filter)
+		, fps_(fps)
 		, nb_frames_(0)
 		, width_(0)
 		, height_(0)
+		, is_progressive_(true)
 	{
 		try
 		{
@@ -106,72 +110,77 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(warning) << "[video_decoder] Failed to open video-stream. Running without video.";	
 		}
-	}
 
-	void push(const std::shared_ptr<AVPacket>& packet)
+		start();
+	}
+	
+	~implementation()
 	{
-		if(packet && packet->stream_index != index_)
-			return;
-
-		packets_.push(packet);
+		agent::wait(this);
 	}
-
-	std::vector<std::shared_ptr<AVFrame>> poll()
-	{		
-		std::vector<std::shared_ptr<AVFrame>> result;
-
-		if(packets_.empty())
-			return result;
-
-		if(!codec_context_)
-			return empty_poll();
-
-		auto packet = packets_.front();
-					
-		if(packet)
-		{			
-			BOOST_FOREACH(auto& frame, decode(*packet))
-				boost::range::push_back(result, filter_.execute(frame));
-
-			if(packet->size == 0)
-				packets_.pop();
-		}
-		else
+	
+	virtual void run()
+	{
+		try
 		{
-			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+			while(Concurrency::receive(active_token_))
 			{
-				AVPacket pkt;
-				av_init_packet(&pkt);
-				pkt.data = nullptr;
-				pkt.size = 0;
+				auto packet = Concurrency::receive(source_);
+				if(packet == eof_packet())
+				{
+					Concurrency::send(target_, eof_video());
+					break;
+				}
 
-				BOOST_FOREACH(auto& frame, decode(pkt))
-					boost::range::push_back(result, filter_.execute(frame));	
-			}
+				if(packet == loop_packet())
+				{	
+					if(codec_context_)
+					{
+						if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+						{
+							AVPacket pkt;
+							av_init_packet(&pkt);
+							pkt.data = nullptr;
+							pkt.size = 0;
+				
+							BOOST_FOREACH(auto& frame1, decode(pkt))
+							{
+								BOOST_FOREACH(auto& frame2, filter_.execute(frame1))
+									Concurrency::send(target_, std::shared_ptr<AVFrame>(frame2));
+							}	
+						}
 
-			if(result.empty())
-			{					
-				packets_.pop();
-				avcodec_flush_buffers(codec_context_.get());
-				result.push_back(nullptr);
+						avcodec_flush_buffers(codec_context_.get());
+					}
+
+					Concurrency::send(target_, loop_video());	
+				}
+				else if(!codec_context_)
+				{
+					Concurrency::send(target_, empty_video());	
+				}
+				else
+				{
+					while(packet->size > 0)
+					{
+						BOOST_FOREACH(auto& frame1, decode(*packet))
+						{
+							BOOST_FOREACH(auto& frame2, filter_.execute(frame1))
+								Concurrency::send(target_, std::shared_ptr<AVFrame>(frame2));
+						}
+					}
+				}
 			}
 		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+
+		std::shared_ptr<AVPacket> packet;
+		Concurrency::try_receive(source_, packet);		
 		
-		return result;
-	}
-
-	std::vector<std::shared_ptr<AVFrame>> empty_poll()
-	{				
-		auto packet = packets_.front();
-		packets_.pop();
-
-		if(!packet)			
-			return boost::assign::list_of(nullptr);
-
-		std::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
-		frame->data[0] = nullptr;
-
-		return boost::assign::list_of(frame);					
+		done();
 	}
 
 	std::vector<std::shared_ptr<AVFrame>> decode(AVPacket& pkt)
@@ -193,27 +202,31 @@ public:
 		if(decoded_frame->repeat_pict % 2 > 0)
 			CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
 		
+		is_progressive_ = decoded_frame->interlaced_frame == 0;
+
 		return std::vector<std::shared_ptr<AVFrame>>(1 + decoded_frame->repeat_pict/2, decoded_frame);
 	}
-	
-	bool ready() const
-	{
-		return !packets_.empty();
-	}
-	
+		
 	double fps() const
 	{
 		return fps_;
 	}
 };
 
-video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter) : impl_(new implementation(context, frame_factory, filter)){}
-void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
-std::vector<std::shared_ptr<AVFrame>> video_decoder::poll(){return impl_->poll();}
-bool video_decoder::ready() const{return impl_->ready();}
+video_decoder::video_decoder(token_t& active_token,
+							 source_t& source,
+							 target_t& target,
+							 const safe_ptr<AVFormatContext>& context, 
+							 double fps, 
+							 const std::wstring& filter) 
+	: impl_(new implementation(active_token, source, target, context, fps, filter))
+{
+}
+
 double video_decoder::fps() const{return impl_->fps();}
 int64_t video_decoder::nb_frames() const{return impl_->nb_frames_;}
 size_t video_decoder::width() const{return impl_->width_;}
 size_t video_decoder::height() const{return impl_->height_;}
+bool video_decoder::is_progressive() const{return impl_->is_progressive_;}
 
 }}

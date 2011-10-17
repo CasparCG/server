@@ -4,14 +4,25 @@
 
 #include <core/video_format.h>
 #include <core/producer/frame/pixel_format.h>
+#include <core/mixer/audio/audio_mixer.h>
 
-extern "C"
+
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C" 
 {
 	#include <libavutil/pixfmt.h>
+	#include <libavcodec/avcodec.h>
 }
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
 
 struct AVFrame;
 struct AVFormatContext;
+struct AVPacket;
 
 namespace caspar {
 
@@ -34,5 +45,15 @@ int							make_alpha_format(int format); // NOTE: Be careful about CASPAR_PIX_FM
 safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints);
 
 void fix_meta_data(AVFormatContext& context);
+
+std::shared_ptr<AVPacket> create_packet();
+const std::shared_ptr<AVPacket>& loop_packet();
+const std::shared_ptr<AVPacket>& eof_packet();
+const std::shared_ptr<AVFrame>& loop_video();
+const std::shared_ptr<AVFrame>& empty_video();
+const std::shared_ptr<AVFrame>& eof_video();
+const std::shared_ptr<core::audio_buffer>& loop_audio();
+const std::shared_ptr<core::audio_buffer>& empty_audio();
+const std::shared_ptr<core::audio_buffer>& eof_audio();
 
 }}

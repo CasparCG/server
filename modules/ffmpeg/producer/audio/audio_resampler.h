@@ -4,6 +4,8 @@
 
 #include <libavutil/samplefmt.h>
 
+#include <tbb/cache_aligned_allocator.h>
+
 namespace caspar { namespace ffmpeg {
 
 class audio_resampler

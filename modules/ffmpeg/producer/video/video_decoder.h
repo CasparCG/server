@@ -25,6 +25,7 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <agents.h>
 #include <vector>
 
 struct AVFormatContext;
@@ -35,7 +36,6 @@ namespace caspar {
 
 namespace core {
 	struct frame_factory;
-	class write_frame;
 }
 
 namespace ffmpeg {
@@ -43,16 +43,23 @@ namespace ffmpeg {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter);
-	
-	void push(const std::shared_ptr<AVPacket>& packet);
-	bool ready() const;
-	std::vector<std::shared_ptr<AVFrame>> poll();
-	
+
+	typedef Concurrency::ISource<bool>						token_t;
+	typedef Concurrency::ISource<std::shared_ptr<AVPacket>> source_t;
+	typedef Concurrency::ITarget<std::shared_ptr<AVFrame>>	target_t;
+
+	explicit video_decoder(token_t& active_token,
+						   source_t& source,
+						   target_t& target,
+						   const safe_ptr<AVFormatContext>& context, 
+						   double fps, 
+						   const std::wstring& filter);	
+
 	size_t width() const;
 	size_t height() const;
 
 	int64_t nb_frames() const;
+	bool is_progressive() const;
 
 	double fps() const;
 private:
