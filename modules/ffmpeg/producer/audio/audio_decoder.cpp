@@ -20,16 +20,14 @@
 #include "../../stdafx.h"
 
 #include "audio_decoder.h"
-
 #include "audio_resampler.h"
 
+#include "../util.h"
 #include "../../ffmpeg_error.h"
 
 #include <core/video_format.h>
 
 #include <tbb/cache_aligned_allocator.h>
-
-#include <queue>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -46,21 +44,30 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 	
-struct audio_decoder::implementation : boost::noncopyable
-{	
+struct audio_decoder::implementation : public Concurrency::agent, boost::noncopyable
+{
+	audio_decoder::token_t&  active_token_;
+	audio_decoder::source_t& source_;
+	audio_decoder::target_t& target_;
+
 	std::shared_ptr<AVCodecContext>								codec_context_;		
 	const core::video_format_desc								format_desc_;
 	int															index_;
 	std::unique_ptr<audio_resampler>							resampler_;
 
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
-
-	std::queue<std::shared_ptr<AVPacket>>						packets_;
-
+	
 	int64_t														nb_frames_;
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
-		: format_desc_(format_desc)	
+	explicit implementation(audio_decoder::token_t& active_token,
+							audio_decoder::source_t& source,
+							audio_decoder::target_t& target,
+							const safe_ptr<AVFormatContext>& context, 
+							const core::video_format_desc& format_desc) 
+		: active_token_(active_token)
+		, source_(source)
+		, target_(target)
+		, format_desc_(format_desc)	
 		, nb_frames_(0)
 	{			   	
 		try
@@ -85,55 +92,51 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(warning) << "[audio_decoder] Failed to open audio-stream. Running without audio.";			
 		}
+
+		start();
 	}
 
-	void push(const std::shared_ptr<AVPacket>& packet)
-	{			
-		if(packet && packet->stream_index != index_)
-			return;
-
-		packets_.push(packet);
+	~implementation()
+	{
+		agent::wait(this);
 	}	
-	
-	std::vector<std::shared_ptr<core::audio_buffer>> poll()
+
+	virtual void run()
 	{
-		std::vector<std::shared_ptr<core::audio_buffer>> result;
-
-		if(packets_.empty())
-			return result;
-
-		if(!codec_context_)
-			return empty_poll();
-		
-		auto packet = packets_.front();
-
-		if(packet)		
+		try
 		{
-			result.push_back(decode(*packet));
-			if(packet->size == 0)					
-				packets_.pop();
+			while(Concurrency::receive(active_token_))
+			{
+				auto packet = Concurrency::receive(source_);
+				if(packet == eof_packet())
+				{
+					Concurrency::send(target_, eof_audio());
+					break;
+				}
+
+				if(packet == loop_packet())	
+				{	
+					if(codec_context_)
+						avcodec_flush_buffers(codec_context_.get());
+					Concurrency::send(target_, loop_audio());
+				}	
+				else if(!codec_context_)
+					Concurrency::send(target_, empty_audio());					
+				else		
+					Concurrency::send(target_, decode(*packet));		
+			}
 		}
-		else			
-		{	
-			avcodec_flush_buffers(codec_context_.get());
-			result.push_back(nullptr);
-			packets_.pop();
-		}		
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 
-		return result;
+		std::shared_ptr<AVPacket> packet;
+		Concurrency::try_receive(source_, packet);						
+
+		done();
 	}
-
-	std::vector<std::shared_ptr<core::audio_buffer>> empty_poll()
-	{
-		auto packet = packets_.front();
-		packets_.pop();
-
-		if(!packet)			
-			return boost::assign::list_of(nullptr);
-		
-		return boost::assign::list_of(std::make_shared<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));	
-	}
-
+	
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
 	{		
 		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
@@ -154,17 +157,16 @@ public:
 
 		return std::make_shared<core::audio_buffer>(samples, samples + n_samples);
 	}
-
-	bool ready() const
-	{
-		return !packets_.empty();
-	}
 };
 
-audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
-void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
-bool audio_decoder::ready() const{return impl_->ready();}
-std::vector<std::shared_ptr<core::audio_buffer>> audio_decoder::poll(){return impl_->poll();}
+audio_decoder::audio_decoder(token_t& active_token,
+							 source_t& source,
+							 target_t& target,
+							 const safe_ptr<AVFormatContext>& context, 
+							 const core::video_format_desc& format_desc)
+	: impl_(new implementation(active_token, source, target, context, format_desc))
+{
+}
 int64_t audio_decoder::nb_frames() const{return impl_->nb_frames_;}
 
 }}

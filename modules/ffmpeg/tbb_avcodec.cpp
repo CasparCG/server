@@ -8,7 +8,8 @@
 #include <common/env.h>
 #include <common/utility/assert.h>
 
-#include <tbb/task.h>
+#include <ppl.h>
+
 #include <tbb/atomic.h>
 #include <tbb/parallel_for.h>
 #include <tbb/tbb_thread.h>
@@ -31,14 +32,11 @@ namespace caspar { namespace ffmpeg {
 		
 int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2), void* arg, int* ret, int count, int size)
 {
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, count), [&](const tbb::blocked_range<size_t>& r)
+	Concurrency::parallel_for(0, count, [&](size_t n)
 	{
-		for(size_t n = r.begin(); n != r.end(); ++n)		
-		{
-			int r = func(s, reinterpret_cast<uint8_t*>(arg) + n*size);
-			if(ret)
-				ret[n] = r;
-		}
+		int r = func(s, reinterpret_cast<uint8_t*>(arg) + n*size);
+		if(ret)
+			ret[n] = r;
 	});
 
 	return 0;
@@ -51,15 +49,12 @@ int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg
 
 	CASPAR_ASSERT(tbb::tbb_thread::hardware_concurrency() < 16);
 	// Note: this will probably only work when tbb::task_scheduler_init::num_threads() < 16.
-    tbb::parallel_for(tbb::blocked_range<int>(0, count, 2), [&](const tbb::blocked_range<int> &r)    
+    Concurrency::parallel_for(0, count, 2, [&](int jobnr)    
     {   
         int threadnr = counter++;   
-        for(int jobnr = r.begin(); jobnr != r.end(); ++jobnr)
-        {   
-            int r = func(s, arg, jobnr, threadnr);   
-            if (ret)   
-                ret[jobnr] = r;   
-        }
+        int r = func(s, arg, jobnr, threadnr);   
+        if (ret)   
+            ret[jobnr] = r;  
         --counter;
     });   
 

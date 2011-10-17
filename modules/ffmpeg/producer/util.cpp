@@ -5,7 +5,7 @@
 #include "format/flv.h"
 
 #include <tbb/concurrent_unordered_map.h>
-#include <tbb/concurrent_queue.h>
+#include <concurrent_queue.h>
 
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
@@ -14,7 +14,7 @@
 
 #include <common/exception/exceptions.h>
 
-#include <tbb/parallel_for.h>
+#include <ppl.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -127,7 +127,7 @@ int make_alpha_format(int format)
 
 safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints)
 {			
-	static tbb::concurrent_unordered_map<size_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
+	static tbb::concurrent_unordered_map<size_t, Concurrency::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
@@ -188,12 +188,10 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			auto decoded_linesize = decoded_frame->linesize[n];
 				
 			// Copy line by line since ffmpeg sometimes pads each line.
-			tbb::affinity_partitioner ap;
-			tbb::parallel_for(tbb::blocked_range<size_t>(0, static_cast<int>(desc.planes[n].height)), [&](const tbb::blocked_range<size_t>& r)
+			Concurrency::parallel_for(0, static_cast<int>(desc.planes[n].height), [&](size_t y)
 			{
-				for(size_t y = r.begin(); y != r.end(); ++y)
-					memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-			}, ap);
+				memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+			});
 
 			write->commit(n);
 		}
@@ -285,6 +283,66 @@ void fix_meta_data(AVFormatContext& context)
 	
 	video_context.time_base.num = 1000000;
 	video_context.time_base.den = static_cast<int>(closest_fps*1000000.0);
+}
+
+std::shared_ptr<AVPacket> create_packet()
+{
+	std::shared_ptr<AVPacket> packet(new AVPacket, [](AVPacket* p)
+	{
+		av_free_packet(p);
+		delete p;
+	});
+	
+	av_init_packet(packet.get());
+	return packet;
+}
+
+const std::shared_ptr<AVPacket>& loop_packet()
+{
+	static auto packet1 = create_packet();
+	return packet1;
+}
+
+const std::shared_ptr<AVPacket>& eof_packet()
+{
+	static auto packet2 = create_packet();
+	return packet2;
+}
+
+const std::shared_ptr<AVFrame>& loop_video()
+{
+	static auto frame1 = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
+	return frame1;
+}
+
+const std::shared_ptr<AVFrame>& empty_video()
+{
+	static auto frame1 = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
+	return frame1;
+}
+
+const std::shared_ptr<AVFrame>& eof_video()
+{
+	static auto frame2 = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
+	return frame2;
+}
+
+const std::shared_ptr<core::audio_buffer>& loop_audio()
+{
+	static auto audio1 = std::make_shared<core::audio_buffer>();
+	return audio1;
+}
+
+const std::shared_ptr<core::audio_buffer>& empty_audio()
+{
+	static auto audio1 = std::make_shared<core::audio_buffer>();
+	return audio1;
+}
+
+const std::shared_ptr<core::audio_buffer>& eof_audio()
+{
+	static auto audio2 = std::make_shared<core::audio_buffer>();
+	return audio2;
 }
 
 }}

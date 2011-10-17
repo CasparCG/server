@@ -21,10 +21,12 @@
 
 #include <common/memory/safe_ptr.h>
 
+#include <agents.h>
 #include <memory>
 #include <string>
 
 #include <boost/noncopyable.hpp>
+#include <boost/range/iterator_range.hpp>
 
 struct AVFormatContext;
 struct AVPacket;
@@ -38,20 +40,28 @@ class graph;
 }
 	 
 namespace ffmpeg {
-
+			
 class input : boost::noncopyable
 {
 public:
-	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start = 0, size_t length = std::numeric_limits<size_t>::max());
+	
+	typedef Concurrency::ISource<bool>						token_t;
+	typedef Concurrency::ITarget<std::shared_ptr<AVPacket>> target_t;
 
-	bool try_pop(std::shared_ptr<AVPacket>& packet);
-	bool eof() const;
-
+	explicit input(token_t& active_token,
+				   target_t& video_target,  
+				   target_t& audio_target,  
+				   const safe_ptr<diagnostics::graph>& graph, 
+				   const std::wstring& filename, bool loop, 
+				   size_t start = 0, 
+				   size_t length = std::numeric_limits<size_t>::max());
+		
 	size_t nb_frames() const;
 	size_t nb_loops() const;
-
+	
 	safe_ptr<AVFormatContext> context();
 private:
+	friend struct implemenation;
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };

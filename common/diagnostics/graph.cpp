@@ -269,7 +269,7 @@ struct graph::implementation : public drawable
 
 	implementation(const printer& parent_printer) 
 		: parent_printer_(parent_printer)
-		, name_(parent_printer_ ? narrow(parent_printer_()) : "")
+		, name_("")
 		, counter_(0){}
 
 	void update(const std::string& name, double value)
@@ -356,14 +356,20 @@ private:
 	implementation& operator=(implementation&);
 };
 	
-graph::graph(const std::string& name) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(name) : nullptr)
+graph::graph(const std::string& name, bool start) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(name) : nullptr)
 {
-	if(impl_)
-		context::register_drawable(impl_);
+	if(start)
+		graph::start();
 }
 
-graph::graph(const printer& parent_printer) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(parent_printer) : nullptr)
+graph::graph(const printer& parent_printer, bool start) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(parent_printer) : nullptr)
 {
+	if(start)
+		graph::start();
+}
+
+void graph::start()
+{	
 	if(impl_)
 		context::register_drawable(impl_);
 }
@@ -424,13 +430,13 @@ void graph::add_guide(const std::string& name, double value)
 	}
 }
 
-safe_ptr<graph> create_graph(const std::string& name)
+safe_ptr<graph> create_graph(const std::string& name, bool start)
 {
-	return safe_ptr<graph>(new graph(name));
+	return safe_ptr<graph>(new graph(name, start));
 }
-safe_ptr<graph> create_graph(const printer& parent_printer)
+safe_ptr<graph> create_graph(const printer& parent_printer, bool start)
 {
-	return safe_ptr<graph>(new graph(parent_printer));
+	return safe_ptr<graph>(new graph(parent_printer, start));
 }
 
 

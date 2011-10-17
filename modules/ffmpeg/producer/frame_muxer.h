@@ -6,6 +6,7 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <agents.h>
 #include <vector>
 
 struct AVFrame;
@@ -41,6 +42,28 @@ public:
 	int64_t calc_nb_frames(int64_t nb_frames) const;
 
 	safe_ptr<core::basic_frame> pop();
+private:
+	struct implementation;
+	safe_ptr<implementation> impl_;
+};
+
+class frame_muxer2 : boost::noncopyable
+{
+public:
+	
+	typedef Concurrency::ISource<bool>									token_t;
+	typedef Concurrency::ISource<std::shared_ptr<AVFrame>>				video_source_t;
+	typedef Concurrency::ISource<std::shared_ptr<core::audio_buffer>>	audio_source_t;
+	typedef Concurrency::ITarget<std::shared_ptr<core::basic_frame>>	target_t;
+
+	frame_muxer2(token_t& active_token,
+				 video_source_t& video_source,
+				 audio_source_t& audio_source, 
+				 target_t& target,
+				 double in_fps, 
+				 const safe_ptr<core::frame_factory>& frame_factory);
+	
+	int64_t calc_nb_frames(int64_t nb_frames) const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
