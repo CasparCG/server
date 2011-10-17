@@ -209,6 +209,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
+    <ClInclude Include="concrt\bounded_buffer.h" />
+    <ClInclude Include="concrt\scoped_oversubscription_token.h" />
     <ClInclude Include="concurrency\com_context.h" />
     <ClInclude Include="concurrency\executor.h" />
     <ClInclude Include="diagnostics\graph.h" />

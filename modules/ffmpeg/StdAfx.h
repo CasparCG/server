@@ -41,9 +41,8 @@
 #include <string>
 #include <math.h>
 
-#include <tbb/atomic.h>
-#include <tbb/concurrent_queue.h>
-#include <tbb/parallel_for.h>
+#include <agents.h>
+#include <ppl.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>

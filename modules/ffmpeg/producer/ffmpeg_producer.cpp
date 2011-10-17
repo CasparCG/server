@@ -27,6 +27,7 @@
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 
+#include <common/concrt/bounded_buffer.h>
 #include <common/env.h>
 #include <common/utility/assert.h>
 #include <common/diagnostics/graph.h>
@@ -44,100 +45,84 @@
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/find.hpp>
 
-#include <tbb/parallel_invoke.h>
+#include <agents.h>
+#include <ppl.h>
 
 namespace caspar { namespace ffmpeg {
+
+template<typename T>
+struct buffer_alias
+{
+	typedef Concurrency::bounded_buffer<std::shared_ptr<T>> type;
+};
 				
 struct ffmpeg_producer : public core::frame_producer
-{
-	const std::wstring								filename_;
-	
-	const safe_ptr<diagnostics::graph>				graph_;
-	boost::timer									frame_timer_;
-	boost::timer									video_timer_;
-	boost::timer									audio_timer_;
+{	
+	const std::wstring						filename_;
+	const int								start_;
+	const bool								loop_;
+	const size_t							length_;
+
+	buffer_alias<AVPacket>::type			video_packets_;
+	buffer_alias<AVPacket>::type			audio_packets_;
+	buffer_alias<AVFrame>::type				video_frames_;
+	buffer_alias<core::audio_buffer>::type	audio_buffers_;
+	buffer_alias<core::basic_frame>::type	muxed_frames_;
+	Concurrency::overwrite_buffer<bool>		active_token_;
+		
+	const safe_ptr<diagnostics::graph>		graph_;
 					
-	const safe_ptr<core::frame_factory>				frame_factory_;
-	const core::video_format_desc					format_desc_;
+	input									input_;	
+	video_decoder							video_decoder_;
+	audio_decoder							audio_decoder_;	
+	frame_muxer2							muxer_;
 
-	input											input_;	
-	video_decoder									video_decoder_;
-	audio_decoder									audio_decoder_;	
-	double											fps_;
-	frame_muxer										muxer_;
-
-	const int										start_;
-	const bool										loop_;
-	const size_t									length_;
-
-	safe_ptr<core::basic_frame>						last_frame_;
-
-	const size_t									width_;
-	const size_t									height_;
-	bool											is_progressive_;
+	safe_ptr<core::basic_frame>				last_frame_;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, size_t length) 
 		: filename_(filename)
-		, graph_(diagnostics::create_graph([this]{return print();}))
-		, frame_factory_(frame_factory)		
-		, format_desc_(frame_factory->get_video_format_desc())
-		, input_(graph_, filename_, loop, start, length)
-		, video_decoder_(input_.context(), frame_factory, filter)
-		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
-		, fps_(video_decoder_.fps())
-		, muxer_(fps_, frame_factory)
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
+		, video_packets_(25)
+		, audio_packets_(25)
+		, video_frames_(2)
+		, audio_buffers_(2)
+		, muxed_frames_(2)
+		, graph_(diagnostics::create_graph([this]{return print();}, false))
+		, input_(active_token_, video_packets_, audio_packets_, graph_, filename_, loop, start, length)
+		, video_decoder_(active_token_, video_packets_, video_frames_, input_.context(), frame_factory->get_video_format_desc().fps, filter)
+		, audio_decoder_(active_token_, audio_packets_, audio_buffers_, input_.context(), frame_factory->get_video_format_desc())
+		, muxer_(active_token_, video_frames_, audio_buffers_, muxed_frames_, video_decoder_.fps(), frame_factory)
 		, last_frame_(core::basic_frame::empty())
-		, width_(video_decoder_.width())
-		, height_(video_decoder_.height())
-		, is_progressive_(true)
 	{
-		graph_->add_guide("frame-time", 0.5);
-		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
-		
-		// Do some pre-work in order to not block rendering thread for initialization and allocations.
+		graph_->start();
 
-		push_packets();
-		auto video_frames = video_decoder_.poll();
-		if(!video_frames.empty())
-		{
-			auto& video_frame = video_frames.front();
-			auto  desc		  = get_pixel_format_desc(static_cast<PixelFormat>(video_frame->format), video_frame->width, video_frame->height);
-			if(desc.pix_fmt == core::pixel_format::invalid)
-				get_pixel_format_desc(PIX_FMT_BGRA, video_frame->width, video_frame->height);
-			
-			for(int n = 0; n < 3; ++n)
-				frame_factory->create_frame(this, desc);
-		}
-		BOOST_FOREACH(auto& video, video_frames)			
-			muxer_.push(video, 0);	
+		Concurrency::send(active_token_, true);
 	}
-			
+
+	~ffmpeg_producer()
+	{
+		Concurrency::send(active_token_, false);
+		std::shared_ptr<core::basic_frame> frame;
+		Concurrency::try_receive(muxed_frames_, frame);
+	}
+					
 	virtual safe_ptr<core::basic_frame> receive(int hints)
 	{
 		auto frame = core::basic_frame::late();
 		
-		frame_timer_.restart();
-		
-		for(int n = 0; n < 64 && muxer_.empty(); ++n)
-			decode_frame(hints);
-		
-		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
-
-		if(!muxer_.empty())
-			frame = last_frame_ = muxer_.pop();	
-		else
-		{
-			if(input_.eof())
-				return core::basic_frame::eof();
-			else			
-				graph_->add_tag("underflow");	
+		try
+		{		
+			frame = last_frame_ = safe_ptr<core::basic_frame>(Concurrency::receive(muxed_frames_, 8));
 		}
-		
+		catch(Concurrency::operation_timed_out&)
+		{		
+			graph_->add_tag("underflow");	
+		}
+
 		return frame;
 	}
 
@@ -145,51 +130,8 @@ public:
 	{
 		return disable_audio(last_frame_);
 	}
-
-	void push_packets()
-	{
-		for(int n = 0; n < 16 && ((!muxer_.video_ready() && !video_decoder_.ready()) ||	(!muxer_.audio_ready() && !audio_decoder_.ready())); ++n) 
-		{
-			std::shared_ptr<AVPacket> pkt;
-			if(input_.try_pop(pkt))
-			{
-				video_decoder_.push(pkt);
-				audio_decoder_.push(pkt);
-			}
-		}
-	}
-
-	void decode_frame(int hints)
-	{
-		push_packets();
-		
-		tbb::parallel_invoke(
-		[&]
-		{
-			if(muxer_.video_ready())
-				return;
-
-			auto video_frames = video_decoder_.poll();
-			BOOST_FOREACH(auto& video, video_frames)	
-			{
-				is_progressive_ = video ? video->interlaced_frame == 0 : is_progressive_;
-				muxer_.push(video, hints);	
-			}
-		},
-		[&]
-		{
-			if(muxer_.audio_ready())
-				return;
-					
-			auto audio_samples = audio_decoder_.poll();
-			BOOST_FOREACH(auto& audio, audio_samples)
-				muxer_.push(audio);				
-		});
-
-		muxer_.commit();
-	}
-
-	virtual int64_t nb_frames() const 
+	
+	virtual int64_t nb_frames() const
 	{
 		if(loop_)
 			return std::numeric_limits<int64_t>::max();
@@ -215,8 +157,8 @@ public:
 	virtual std::wstring print() const
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
-						  + boost::lexical_cast<std::wstring>(width_) + L"x" + boost::lexical_cast<std::wstring>(height_)
-						  + (is_progressive_ ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(is_progressive_ ? fps_ : 2.0 * fps_)
+						  + boost::lexical_cast<std::wstring>(video_decoder_.width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_.height())
+						  + (video_decoder_.is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_.is_progressive() ? video_decoder_.fps() : 2.0 * video_decoder_.fps())
 						  + L"]";
 	}
 };

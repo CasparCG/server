@@ -159,6 +159,11 @@ public:
 	{		
 		return image_mixer_.create_frame(tag, desc);
 	}
+
+	boost::unique_future<safe_ptr<core::write_frame>> create_frame2(const void* tag, const core::pixel_format_desc& desc)
+	{		
+		return image_mixer_.create_frame2(tag, desc);
+	}
 		
 	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
@@ -207,14 +212,7 @@ mixer::mixer(video_channel_context& video_channel) : impl_(new implementation(vi
 safe_ptr<core::read_frame> mixer::execute(const std::map<int, safe_ptr<core::basic_frame>>& frames){ return impl_->execute(frames);}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->channel_.get_format_desc(); }
 safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
-safe_ptr<core::write_frame> mixer::create_frame(const void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
-{
-	// Create bgra frame
-	core::pixel_format_desc desc;
-	desc.pix_fmt = pix_fmt;
-	desc.planes.push_back( core::pixel_format_desc::plane(width, height, 4));
-	return create_frame(tag, desc);
-}
+boost::unique_future<safe_ptr<write_frame>> mixer::create_frame2(const void* video_stream_tag, const pixel_format_desc& desc){ return impl_->create_frame2(video_stream_tag, desc); }			
 void mixer::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
 void mixer::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void mixer::clear_transforms(){impl_->clear_transforms();}
