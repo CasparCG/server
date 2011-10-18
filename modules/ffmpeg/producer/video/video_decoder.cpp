@@ -125,7 +125,7 @@ public:
 		{
 			while(true)
 			{
-				auto packet = Concurrency::receive(source_);
+				auto packet = Concurrency::receive(source_, 5000);
 
 				if(packet == eof_packet() || packet == loop_packet() || packet->stream_index != index_)
 					Concurrency::send(forward_, packet);
