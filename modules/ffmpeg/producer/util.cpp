@@ -4,7 +4,7 @@
 
 #include "format/flv.h"
 
-#include <tbb/concurrent_unordered_map.h>
+#include <concurrent_unordered_map.h>
 #include <concurrent_queue.h>
 
 #include <core/producer/frame/frame_transform.h>
@@ -127,7 +127,7 @@ int make_alpha_format(int format)
 
 safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints)
 {			
-	static tbb::concurrent_unordered_map<size_t, Concurrency::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
+	static Concurrency::concurrent_unordered_map<size_t, Concurrency::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;

@@ -42,6 +42,9 @@
 #include <math.h>
 
 #include <agents.h>
+#include <agents_extras.h>
+#include <concrt.h>
+#include <concrt_extras.h>
 #include <ppl.h>
 
 #include <boost/assign.hpp>

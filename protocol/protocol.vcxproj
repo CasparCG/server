@@ -159,22 +159,22 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
+    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath);..\dependencies\concrt_extras</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
+    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath);..\dependencies\concrt_extras</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">
-    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
+    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath);..\dependencies\concrt_extras</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
-    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath)</IncludePath>
+    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath);..\dependencies\concrt_extras</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
