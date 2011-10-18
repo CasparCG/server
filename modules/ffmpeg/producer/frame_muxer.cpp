@@ -483,7 +483,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				{
 					while(!video_ready())
 					{
-						auto video = Concurrency::receive(video_source_);
+						auto video = Concurrency::receive(video_source_, 5000);
 						if(video == eof_video())
 							break;
 						push(video, 0);	
@@ -493,7 +493,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				{
 					while(!audio_ready())
 					{
-						auto audio = Concurrency::receive(audio_source_);
+						auto audio = Concurrency::receive(audio_source_, 5000);
 						if(audio == eof_audio())
 							break;
 						push(audio);	

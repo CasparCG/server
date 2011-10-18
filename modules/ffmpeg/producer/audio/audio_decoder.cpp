@@ -104,7 +104,7 @@ public:
 		{
 			while(true)
 			{
-				auto packet = Concurrency::receive(source_);
+				auto packet = Concurrency::receive(source_, 5000);
 				if(packet == eof_packet())				
 					break;
 				
