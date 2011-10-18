@@ -46,8 +46,8 @@ namespace caspar { namespace ffmpeg {
 	
 struct video_decoder::implementation : public Concurrency::agent, boost::noncopyable
 {
-	video_decoder::token_t&					active_token_;
 	video_decoder::source_t&				source_;
+	video_decoder::forward_t&				forward_;
 	video_decoder::target_t&				target_;
 
 	std::shared_ptr<AVCodecContext>			codec_context_;
@@ -63,14 +63,14 @@ struct video_decoder::implementation : public Concurrency::agent, boost::noncopy
 	bool									is_progressive_;
 
 public:
-	explicit implementation(video_decoder::token_t& active_token,
-							video_decoder::source_t& source,
+	explicit implementation(video_decoder::source_t& source,
+							video_decoder::forward_t& forward,
 							video_decoder::target_t& target,
 							const safe_ptr<AVFormatContext>& context,
 							double fps,
 							const std::wstring& filter) 
-		: active_token_(active_token)
-		, source_(source)
+		: source_(source)
+		, forward_(forward)
 		, target_(target)
 		, filter_(filter.empty() ? L"copy" : filter)
 		, fps_(fps)
@@ -123,15 +123,16 @@ public:
 	{
 		try
 		{
-			while(Concurrency::receive(active_token_))
+			while(true)
 			{
 				auto packet = Concurrency::receive(source_);
-				if(packet == eof_packet())
-				{
-					Concurrency::send(target_, eof_video());
-					break;
-				}
 
+				if(packet == eof_packet() || packet == loop_packet() || packet->stream_index != index_)
+					Concurrency::send(forward_, packet);
+				
+				if(packet == eof_packet())				
+					break;
+								
 				if(packet == loop_packet())
 				{	
 					if(codec_context_)
@@ -152,21 +153,24 @@ public:
 
 						avcodec_flush_buffers(codec_context_.get());
 					}
-
+					
 					Concurrency::send(target_, loop_video());	
 				}
-				else if(!codec_context_)
+				else if(packet->stream_index == index_)
 				{
-					Concurrency::send(target_, empty_video());	
-				}
-				else
-				{
-					while(packet->size > 0)
+					if(!codec_context_)
 					{
-						BOOST_FOREACH(auto& frame1, decode(*packet))
+						Concurrency::send(target_, empty_video());	
+					}
+					else
+					{
+						while(packet->size > 0)
 						{
-							BOOST_FOREACH(auto& frame2, filter_.execute(frame1))
-								Concurrency::send(target_, std::shared_ptr<AVFrame>(frame2));
+							BOOST_FOREACH(auto& frame1, decode(*packet))
+							{
+								BOOST_FOREACH(auto& frame2, filter_.execute(frame1))
+									Concurrency::send(target_, std::shared_ptr<AVFrame>(frame2));
+							}
 						}
 					}
 				}
@@ -176,10 +180,9 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-
-		std::shared_ptr<AVPacket> packet;
-		Concurrency::try_receive(source_, packet);		
 		
+		Concurrency::send(target_, eof_video());
+				
 		done();
 	}
 
@@ -213,13 +216,13 @@ public:
 	}
 };
 
-video_decoder::video_decoder(token_t& active_token,
-							 source_t& source,
+video_decoder::video_decoder(source_t& source,
+							 forward_t& forward,
 							 target_t& target,
 							 const safe_ptr<AVFormatContext>& context, 
 							 double fps, 
 							 const std::wstring& filter) 
-	: impl_(new implementation(active_token, source, target, context, fps, filter))
+	: impl_(new implementation(source, forward, target, context, fps, filter))
 {
 }
 
