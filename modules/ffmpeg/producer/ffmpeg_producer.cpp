@@ -27,7 +27,6 @@
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 
-#include <common/concrt/bounded_buffer.h>
 #include <common/env.h>
 #include <common/utility/assert.h>
 #include <common/diagnostics/graph.h>
@@ -46,16 +45,13 @@
 #include <boost/range/algorithm/find.hpp>
 
 #include <agents.h>
+#include <agents_extras.h>
 #include <ppl.h>
 
-namespace caspar { namespace ffmpeg {
+using namespace Concurrency;
 
-template<typename T>
-struct buffer_alias
-{
-	typedef Concurrency::bounded_buffer<std::shared_ptr<T>> type;
-};
-				
+namespace caspar { namespace ffmpeg {
+	
 struct ffmpeg_producer : public core::frame_producer
 {	
 	const std::wstring						filename_;
@@ -63,11 +59,11 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool								loop_;
 	const size_t							length_;
 
-	buffer_alias<AVPacket>::type					packets0_;
-	buffer_alias<AVPacket>::type					packets1_;
-	buffer_alias<AVFrame>::type						video_frames_;
-	buffer_alias<core::audio_buffer>::type			audio_buffers_;
-	buffer_alias<core::basic_frame>::type			muxed_frames_;
+	Concurrency::bounded_buffer<std::shared_ptr<AVPacket>>				packets0_;
+	Concurrency::bounded_buffer<std::shared_ptr<AVPacket>>				packets1_;
+	Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>				video_frames_;
+	Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_buffers_;
+	Concurrency::bounded_buffer<std::shared_ptr<core::basic_frame>>		muxed_frames_;
 		
 	const safe_ptr<diagnostics::graph>		graph_;
 					

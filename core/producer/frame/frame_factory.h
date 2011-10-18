@@ -23,9 +23,9 @@
 #include "../../video_format.h"
 
 #include <common/memory/safe_ptr.h>
-#include <common/concrt/scoped_oversubscription_token.h>
 
 #include <concrt.h>
+#include <concrt_extras.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>

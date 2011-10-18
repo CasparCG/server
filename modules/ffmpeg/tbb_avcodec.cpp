@@ -11,8 +11,6 @@
 #include <ppl.h>
 
 #include <tbb/atomic.h>
-#include <tbb/parallel_for.h>
-#include <tbb/tbb_thread.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -47,7 +45,6 @@ int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg
 	tbb::atomic<int> counter;   
     counter = 0;   
 
-	CASPAR_ASSERT(tbb::tbb_thread::hardware_concurrency() < 16);
 	// Note: this will probably only work when tbb::task_scheduler_init::num_threads() < 16.
     Concurrency::parallel_for(0, count, 2, [&](int jobnr)    
     {   
