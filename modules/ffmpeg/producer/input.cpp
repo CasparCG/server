@@ -30,16 +30,14 @@
 
 #include <core/video_format.h>
 
-#include <common/concrt/scoped_oversubscription_token.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/exception/win32_exception.h>
 
 #include <tbb/atomic.h>
 
-#include <boost/range/algorithm.hpp>
-
 #include <agents.h>
+#include <concrt_extras.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
