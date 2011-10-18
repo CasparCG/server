@@ -425,7 +425,6 @@ int64_t frame_muxer::calc_nb_frames(int64_t nb_frames) const {return impl_->calc
 
 struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopyable
 {	
-	frame_muxer2::token_t&			active_token_;
 	frame_muxer2::video_source_t&	video_source_;
 	frame_muxer2::audio_source_t&	audio_source_;
 	frame_muxer2::target_t&			target_;
@@ -447,14 +446,12 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	filter											filter_;
 	safe_ptr<core::frame_factory>					frame_factory_;
 				
-	implementation(frame_muxer2::token_t& active_token,
-				   frame_muxer2::video_source_t& video_source,
+	implementation(frame_muxer2::video_source_t& video_source,
 				   frame_muxer2::audio_source_t& audio_source,
 				   frame_muxer2::target_t& target,
 				   double in_fps, 
 				   const safe_ptr<core::frame_factory>& frame_factory)
-		: active_token_(active_token)
-		, video_source_(video_source)
+		: video_source_(video_source)
 		, audio_source_(audio_source)
 		, target_(target)
 		, video_streams_(1)
@@ -479,7 +476,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	{
 		try
 		{
-			while(Concurrency::receive(active_token_))
+			while(true)
 			{
 				Concurrency::parallel_invoke(
 				[&]
@@ -503,11 +500,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 					}					
 				});
 
-				if(!video_ready() || !audio_ready())
-				{
-					Concurrency::send(target_, std::shared_ptr<core::basic_frame>(core::basic_frame::eof()));
-					break;
-				}
+				if(!video_ready() || !audio_ready())				
+					break;				
 
 				commit();
 			
@@ -522,12 +516,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-
-		std::shared_ptr<AVFrame> video;
-		Concurrency::try_receive(video_source_, video);
-		std::shared_ptr<core::audio_buffer> audio;
-		Concurrency::try_receive(audio_source_, audio);
-					
+	
+		Concurrency::send(target_, std::shared_ptr<core::basic_frame>(core::basic_frame::eof()));
+							
 		done();
 	}
 
@@ -764,13 +755,12 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	}
 };
 
-frame_muxer2::frame_muxer2(token_t& active_token,
-						   video_source_t& video_source, 
+frame_muxer2::frame_muxer2(video_source_t& video_source, 
 						   audio_source_t& audio_source,
 						   target_t& target,
 						   double in_fps, 
 						   const safe_ptr<core::frame_factory>& frame_factory)
-	: impl_(new implementation(active_token, video_source, audio_source, target, in_fps, frame_factory))
+	: impl_(new implementation(video_source, audio_source, target, in_fps, frame_factory))
 {
 }
 int64_t frame_muxer2::calc_nb_frames(int64_t nb_frames) const

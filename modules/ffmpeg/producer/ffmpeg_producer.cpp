@@ -63,12 +63,11 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool								loop_;
 	const size_t							length_;
 
-	buffer_alias<AVPacket>::type			video_packets_;
-	buffer_alias<AVPacket>::type			audio_packets_;
-	buffer_alias<AVFrame>::type				video_frames_;
-	buffer_alias<core::audio_buffer>::type	audio_buffers_;
-	buffer_alias<core::basic_frame>::type	muxed_frames_;
-	Concurrency::overwrite_buffer<bool>		active_token_;
+	buffer_alias<AVPacket>::type					packets0_;
+	buffer_alias<AVPacket>::type					packets1_;
+	buffer_alias<AVFrame>::type						video_frames_;
+	buffer_alias<core::audio_buffer>::type			audio_buffers_;
+	buffer_alias<core::basic_frame>::type			muxed_frames_;
 		
 	const safe_ptr<diagnostics::graph>		graph_;
 					
@@ -85,31 +84,30 @@ public:
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
-		, video_packets_(25)
-		, audio_packets_(25)
+		, packets0_(2)
+		, packets1_(2)
 		, video_frames_(2)
 		, audio_buffers_(2)
 		, muxed_frames_(2)
 		, graph_(diagnostics::create_graph([this]{return print();}, false))
-		, input_(active_token_, video_packets_, audio_packets_, graph_, filename_, loop, start, length)
-		, video_decoder_(active_token_, video_packets_, video_frames_, input_.context(), frame_factory->get_video_format_desc().fps, filter)
-		, audio_decoder_(active_token_, audio_packets_, audio_buffers_, input_.context(), frame_factory->get_video_format_desc())
-		, muxer_(active_token_, video_frames_, audio_buffers_, muxed_frames_, video_decoder_.fps(), frame_factory)
+		, input_(packets0_, graph_, filename_, loop, start, length)
+		, video_decoder_(packets0_, packets1_, video_frames_, input_.context(), frame_factory->get_video_format_desc().fps, filter)
+		, audio_decoder_(packets1_, audio_buffers_, input_.context(), frame_factory->get_video_format_desc())
+		, muxer_(video_frames_, audio_buffers_, muxed_frames_, video_decoder_.fps(), frame_factory)
 		, last_frame_(core::basic_frame::empty())
 	{
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		graph_->start();
-
-		Concurrency::send(active_token_, true);
 	}
 
 	~ffmpeg_producer()
 	{
-		Concurrency::send(active_token_, false);
-		std::shared_ptr<core::basic_frame> frame;
-		Concurrency::try_receive(muxed_frames_, frame);
+		input_.stop();
+		while(Concurrency::receive(muxed_frames_) != core::basic_frame::eof())
+		{
+		}
 	}
-					
+						
 	virtual safe_ptr<core::basic_frame> receive(int hints)
 	{
 		auto frame = core::basic_frame::late();

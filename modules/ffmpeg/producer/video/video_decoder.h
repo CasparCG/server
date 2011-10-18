@@ -44,12 +44,12 @@ class video_decoder : boost::noncopyable
 {
 public:
 
-	typedef Concurrency::ISource<bool>						token_t;
 	typedef Concurrency::ISource<std::shared_ptr<AVPacket>> source_t;
+	typedef Concurrency::ITarget<std::shared_ptr<AVPacket>> forward_t;
 	typedef Concurrency::ITarget<std::shared_ptr<AVFrame>>	target_t;
 
-	explicit video_decoder(token_t& active_token,
-						   source_t& source,
+	explicit video_decoder(source_t& source,
+						   forward_t& forward,
 						   target_t& target,
 						   const safe_ptr<AVFormatContext>& context, 
 						   double fps, 

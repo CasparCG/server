@@ -45,12 +45,9 @@ class input : boost::noncopyable
 {
 public:
 	
-	typedef Concurrency::ISource<bool>						token_t;
 	typedef Concurrency::ITarget<std::shared_ptr<AVPacket>> target_t;
 
-	explicit input(token_t& active_token,
-				   target_t& video_target,  
-				   target_t& audio_target,  
+	explicit input(target_t& target,  
 				   const safe_ptr<diagnostics::graph>& graph, 
 				   const std::wstring& filename, bool loop, 
 				   size_t start = 0, 
@@ -60,6 +57,8 @@ public:
 	size_t nb_loops() const;
 	
 	safe_ptr<AVFormatContext> context();
+
+	void stop();
 private:
 	friend struct implemenation;
 	struct implementation;
