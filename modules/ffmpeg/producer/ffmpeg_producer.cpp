@@ -59,8 +59,8 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool								loop_;
 	const size_t							length_;
 
-	Concurrency::bounded_buffer<std::shared_ptr<AVPacket>>				packets0_;
-	Concurrency::bounded_buffer<std::shared_ptr<AVPacket>>				packets1_;
+	Concurrency::bounded_buffer<std::shared_ptr<AVPacket>>				pre_video_packets_;
+	Concurrency::bounded_buffer<std::shared_ptr<AVPacket>>				post_video_packets_;
 	Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>				video_frames_;
 	Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_buffers_;
 	Concurrency::bounded_buffer<std::shared_ptr<core::basic_frame>>		muxed_frames_;
@@ -80,15 +80,15 @@ public:
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
-		, packets0_(2)
-		, packets1_(2)
+		, pre_video_packets_(25)
+		, post_video_packets_(25)
 		, video_frames_(2)
 		, audio_buffers_(2)
 		, muxed_frames_(2)
 		, graph_(diagnostics::create_graph([this]{return print();}, false))
-		, input_(packets0_, graph_, filename_, loop, start, length)
-		, video_decoder_(packets0_, packets1_, video_frames_, input_.context(), frame_factory->get_video_format_desc().fps, filter)
-		, audio_decoder_(packets1_, audio_buffers_, input_.context(), frame_factory->get_video_format_desc())
+		, input_(pre_video_packets_, graph_, filename_, loop, start, length)
+		, video_decoder_(pre_video_packets_, post_video_packets_, video_frames_, input_.context(), frame_factory->get_video_format_desc().fps, filter)
+		, audio_decoder_(post_video_packets_, audio_buffers_, input_.context(), frame_factory->get_video_format_desc())
 		, muxer_(video_frames_, audio_buffers_, muxed_frames_, video_decoder_.fps(), frame_factory)
 		, last_frame_(core::basic_frame::empty())
 	{
