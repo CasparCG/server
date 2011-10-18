@@ -76,34 +76,34 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 	const size_t												length_;
 	size_t														frame_number_;
 	
-	input::token_t&												active_token_;
-	input::target_t&						 					video_target_;
-	input::target_t&						 					audio_target_;
+	input::target_t&						 					target_;
 		
 	tbb::atomic<size_t>											nb_frames_;
 	tbb::atomic<size_t>											nb_loops_;
 
-	int															video_index_;
-	int															audio_index_;
+	std::deque<std::shared_ptr<AVPacket>>						buffer_;
+	size_t														buffer_size_;
+
+	bool														eof_;
+	bool														stop_;
 
 public:
-	explicit implementation(input::token_t& active_token,
-							input::target_t& video_target,
-							input::target_t& audio_target,
+	explicit implementation(input::target_t& target,
 							const safe_ptr<diagnostics::graph>& graph, 
 							const std::wstring& filename, 
 							bool loop, 
 							size_t start,
 							size_t length)
-		: active_token_(active_token)
-		, video_target_(video_target)
-		, audio_target_(audio_target)
+		: target_(target)
 		, graph_(graph)
 		, loop_(loop)
 		, filename_(filename)
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
+		, buffer_size_(0)
+		, eof_(false)
+		, stop_(false)
 	{			
 		nb_frames_	= 0;
 		nb_loops_	= 0;
@@ -118,8 +118,6 @@ public:
 		THROW_ON_ERROR2(avformat_find_stream_info(format_context_.get(), nullptr), print());
 		
 		default_stream_index_ = THROW_ON_ERROR2(av_find_default_stream_index(format_context_.get()), print());
-		video_index_ = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-		audio_index_ = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0);
 		
 		if(start_ > 0)			
 			seek_frame(start_);
@@ -127,7 +125,9 @@ public:
 		for(int n = 0; n < 16; ++n)
 			read_next_packet();
 						
-		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
+		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
+		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
+		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));		
 
 		agent::start();
 	}
@@ -141,26 +141,44 @@ public:
 	{
 		try
 		{
-			while(Concurrency::receive(active_token_))
+			while(!stop_)
 			{
-				if(!read_next_packet())
-				{
-					Concurrency::send(video_target_, eof_packet());
-					Concurrency::send(audio_target_, eof_packet());
+				read_next_packet();
+
+				if(buffer_.empty())
 					break;
+
+				if(buffer_.size() < MIN_BUFFER_COUNT || (buffer_.size() < MAX_BUFFER_COUNT && buffer_size_ < MAX_BUFFER_SIZE))
+				{
+					if(Concurrency::asend(target_, buffer_.front()))
+						buffer_.pop_front();
+					Concurrency::wait(2);
 				}
+				else
+				{
+					Concurrency::send(target_, buffer_.front());
+					buffer_.pop_front();
+				}	
+
+				graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+				graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));			
 			}				
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-		}		
+		}	
+	
+		Concurrency::send(target_, eof_packet());	
 						
 		done();
 	}
 
-	bool read_next_packet()
+	void read_next_packet()
 	{		
+		if(eof_)
+			return;
+
 		int ret = 0;
 
 		auto read_packet = create_packet();
@@ -194,10 +212,10 @@ public:
 			else
 			{
 				CASPAR_LOG(trace) << print() << " Stopping.";
-				return false;
+				eof_ = true;
 			}
 		}
-		else if(read_packet->stream_index == video_index_ || read_packet->stream_index == audio_index_)
+		else
 		{		
 			THROW_ON_ERROR(ret, print(), "av_read_frame");
 
@@ -220,13 +238,12 @@ public:
 				read_packet->data = data;
 			});
 	
-			if(read_packet->stream_index == video_index_)
-				Concurrency::send(video_target_, read_packet);
-			else if(read_packet->stream_index == audio_index_)
-				Concurrency::send(audio_target_, read_packet);
+			buffer_.push_back(read_packet);
+			buffer_size_ += read_packet->size;
+				
+			graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+			graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
 		}	
-
-		return true;
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
@@ -234,8 +251,7 @@ public:
 		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());	
 		auto packet = create_packet();
 		packet->size = 0;
-		Concurrency::send(video_target_, loop_packet());		
-		Concurrency::send(audio_target_, loop_packet());
+		buffer_.push_back(loop_packet());
 	}		
 
 	bool is_eof(int ret)
@@ -254,15 +270,13 @@ public:
 	}
 };
 
-input::input(token_t& active_token,  
-			 target_t& video_target,  
-			 target_t& audio_target,  
+input::input(target_t& target,  
 		     const safe_ptr<diagnostics::graph>& graph, 
 			 const std::wstring& filename, 
 			 bool loop, 
 			 size_t start, 
 			 size_t length)
-	: impl_(new implementation(active_token, video_target, audio_target, graph, filename, loop, start, length))
+	: impl_(new implementation(target, graph, filename, loop, start, length))
 {
 }
 
@@ -279,6 +293,11 @@ size_t input::nb_frames() const
 size_t input::nb_loops() const 
 {
 	return impl_->nb_loops_;
+}
+
+void input::stop()
+{
+	impl_->stop_ = true;
 }
 
 }}

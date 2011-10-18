@@ -46,7 +46,6 @@ namespace caspar { namespace ffmpeg {
 	
 struct audio_decoder::implementation : public Concurrency::agent, boost::noncopyable
 {
-	audio_decoder::token_t&  active_token_;
 	audio_decoder::source_t& source_;
 	audio_decoder::target_t& target_;
 
@@ -59,13 +58,11 @@ struct audio_decoder::implementation : public Concurrency::agent, boost::noncopy
 	
 	int64_t														nb_frames_;
 public:
-	explicit implementation(audio_decoder::token_t& active_token,
-							audio_decoder::source_t& source,
+	explicit implementation(audio_decoder::source_t& source,
 							audio_decoder::target_t& target,
 							const safe_ptr<AVFormatContext>& context, 
 							const core::video_format_desc& format_desc) 
-		: active_token_(active_token)
-		, source_(source)
+		: source_(source)
 		, target_(target)
 		, format_desc_(format_desc)	
 		, nb_frames_(0)
@@ -105,34 +102,33 @@ public:
 	{
 		try
 		{
-			while(Concurrency::receive(active_token_))
+			while(true)
 			{
 				auto packet = Concurrency::receive(source_);
-				if(packet == eof_packet())
-				{
-					Concurrency::send(target_, eof_audio());
+				if(packet == eof_packet())				
 					break;
-				}
-
+				
 				if(packet == loop_packet())	
 				{	
 					if(codec_context_)
 						avcodec_flush_buffers(codec_context_.get());
 					Concurrency::send(target_, loop_audio());
 				}	
-				else if(!codec_context_)
-					Concurrency::send(target_, empty_audio());					
-				else		
-					Concurrency::send(target_, decode(*packet));		
+				else if(packet->stream_index == index_)
+				{
+					if(!codec_context_)
+						Concurrency::send(target_, empty_audio());					
+					else		
+						Concurrency::send(target_, decode(*packet));	
+				}
 			}
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-
-		std::shared_ptr<AVPacket> packet;
-		Concurrency::try_receive(source_, packet);						
+		
+		Concurrency::send(target_, eof_audio());
 
 		done();
 	}
@@ -159,12 +155,11 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(token_t& active_token,
-							 source_t& source,
+audio_decoder::audio_decoder(source_t& source,
 							 target_t& target,
 							 const safe_ptr<AVFormatContext>& context, 
 							 const core::video_format_desc& format_desc)
-	: impl_(new implementation(active_token, source, target, context, format_desc))
+	: impl_(new implementation(source, target, context, format_desc))
 {
 }
 int64_t audio_decoder::nb_frames() const{return impl_->nb_frames_;}
