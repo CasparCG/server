@@ -261,7 +261,7 @@ safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes)
 	if(g_shader)
 	{
 		blend_modes = g_blend_modes;
-		return make_safe(g_shader);
+		return make_safe_ptr(g_shader);
 	}
 		
 	try
@@ -288,7 +288,7 @@ safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes)
 	}
 
 	blend_modes = g_blend_modes;
-	return make_safe(g_shader);
+	return make_safe_ptr(g_shader);
 }
 
 }}

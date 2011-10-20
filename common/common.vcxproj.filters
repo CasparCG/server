@@ -37,6 +37,9 @@
     <Filter Include="source\compiler\vs">
       <UniqueIdentifier>{28c25c8a-1277-4d2c-9e85-5af33f9938ea}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\com">
+      <UniqueIdentifier>{f9a52080-be84-43f9-939d-855c6fd02414}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="exception\win32_exception.cpp">

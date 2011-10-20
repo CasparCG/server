@@ -26,7 +26,6 @@
 #include "input.h"
 #include "util.h"
 #include "../ffmpeg_error.h"
-#include "../tbb_avcodec.h"
 
 #include <core/video_format.h>
 
@@ -57,9 +56,7 @@ using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
 
-static const size_t MAX_BUFFER_COUNT = 100;
-static const size_t MIN_BUFFER_COUNT = 4;
-static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
+static const size_t MAX_BUFFER_COUNT = 16;
 	
 struct input::implementation : public Concurrency::agent, boost::noncopyable
 {		
@@ -78,12 +75,15 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 		
 	tbb::atomic<size_t>											nb_frames_;
 	tbb::atomic<size_t>											nb_loops_;
-
-	std::deque<std::shared_ptr<AVPacket>>						buffer_;
-	size_t														buffer_size_;
+	
+	tbb::atomic<size_t>											packets_count_;
 
 	bool														eof_;
 	bool														stop_;
+
+	Concurrency::unbounded_buffer<int>							tickets_;
+
+	boost::iterator_range<AVStream**>							streams_;
 
 public:
 	explicit implementation(input::target_t& target,
@@ -99,35 +99,37 @@ public:
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-		, buffer_size_(0)
 		, eof_(false)
 		, stop_(false)
 	{			
+		packets_count_ = 0;
 		nb_frames_	= 0;
 		nb_loops_	= 0;
 		
 		AVFormatContext* weak_format_context_ = nullptr;
 		THROW_ON_ERROR2(avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr), print());
+		CASPAR_VERIFY(weak_format_context_, ffmpeg_error());
 
 		format_context_.reset(weak_format_context_, av_close_input_file);
-
+		
 		av_dump_format(weak_format_context_, 0, narrow(filename).c_str(), 0);
 			
 		THROW_ON_ERROR2(avformat_find_stream_info(format_context_.get(), nullptr), print());
 		
+		streams_ = boost::make_iterator_range(format_context_->streams, format_context_->streams + format_context_->nb_streams);
 		default_stream_index_ = THROW_ON_ERROR2(av_find_default_stream_index(format_context_.get()), print());
 		
+		for(int n = 0; n < MAX_BUFFER_COUNT; ++n)
+			tickets_.enqueue(0);
+
 		if(start_ > 0)			
 			seek_frame(start_);
-		
-		for(int n = 0; n < 16; ++n)
-			read_next_packet();
-						
+								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
 		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
-		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));		
+		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
 
-		agent::start();
+		CASPAR_VERIFY(default_stream_index_ > -1, ffmpeg_error());
 	}
 
 	~implementation()
@@ -142,24 +144,8 @@ public:
 			while(!stop_)
 			{
 				read_next_packet();
-
-				if(buffer_.empty())
-					break;
-
-				if(buffer_.size() < MIN_BUFFER_COUNT || (buffer_.size() < MAX_BUFFER_COUNT && buffer_size_ < MAX_BUFFER_SIZE))
-				{
-					if(Concurrency::asend(target_, buffer_.front()))
-						buffer_.pop_front();
-					Concurrency::wait(2);
-				}
-				else
-				{
-					Concurrency::send(target_, buffer_.front());
-					buffer_.pop_front();
-				}	
-
-				graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-				graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));			
+													
+				graph_->update_value("buffer-count", (static_cast<double>(packets_count_)+0.001)/MAX_BUFFER_COUNT);			
 			}				
 		}
 		catch(...)
@@ -167,7 +153,10 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}	
 	
-		Concurrency::send(target_, eof_packet());	
+		std::for_each(streams_.begin(), streams_.end(), [this](const AVStream* stream)
+		{
+			Concurrency::send(target_, eof_packet(stream->index));	
+		});
 						
 		done();
 	}
@@ -179,11 +168,11 @@ public:
 
 		int ret = 0;
 
-		auto read_packet = create_packet();
+		auto packet = create_packet();
 
 		{
 			Concurrency::scoped_oversubcription_token oversubscribe;
-			ret = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
+			ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
 		}
 
 		if(is_eof(ret))														     
@@ -217,30 +206,33 @@ public:
 		{		
 			THROW_ON_ERROR(ret, print(), "av_read_frame");
 
-			if(read_packet->stream_index == default_stream_index_)
+			if(packet->stream_index == default_stream_index_)
 			{
 				if(nb_loops_ == 0)
 					++nb_frames_;
 				++frame_number_;
 			}
 
-			THROW_ON_ERROR2(av_dup_packet(read_packet.get()), print());
+			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
 				
 			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
-			auto size = read_packet->size;
-			auto data = read_packet->data;
+			auto size = packet->size;
+			auto data = packet->data;			
 
-			read_packet = std::shared_ptr<AVPacket>(read_packet.get(), [=](AVPacket*)
+			packet = std::shared_ptr<AVPacket>(packet.get(), [=](AVPacket*)
 			{
-				read_packet->size = size;
-				read_packet->data = data;
+				packet->size = size;
+				packet->data = data;
+				tickets_.enqueue(0);
+				--packets_count_;
 			});
-	
-			buffer_.push_back(read_packet);
-			buffer_size_ += read_packet->size;
-				
-			graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-			graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
+
+			tickets_.dequeue();
+			++packets_count_;
+
+			Concurrency::send(target_, packet);
+					
+			graph_->update_value("buffer-count", (static_cast<double>(packets_count_)+0.001)/MAX_BUFFER_COUNT);
 		}	
 	}
 
@@ -249,7 +241,11 @@ public:
 		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());	
 		auto packet = create_packet();
 		packet->size = 0;
-		buffer_.push_back(loop_packet());
+
+		std::for_each(streams_.begin(), streams_.end(), [this](const AVStream* stream)
+		{
+			Concurrency::send(target_, loop_packet(stream->index));	
+		});
 	}		
 
 	bool is_eof(int ret)
@@ -258,6 +254,8 @@ public:
 			CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. " << nb_frames_;
 		if(ret == AVERROR_EOF)
 			CASPAR_LOG(trace) << print() << " Received EOF. " << nb_frames_;
+
+		CASPAR_VERIFY(ret >= 0 || ret == AVERROR_EOF || ret == AVERROR(EIO), ffmpeg_error() << source_info(narrow(print())));
 
 		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
@@ -291,6 +289,11 @@ size_t input::nb_frames() const
 size_t input::nb_loops() const 
 {
 	return impl_->nb_loops_;
+}
+
+void input::start()
+{
+	impl_->start();
 }
 
 void input::stop()

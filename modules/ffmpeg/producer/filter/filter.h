@@ -30,7 +30,8 @@ public:
 	filter(filter&& other);
 	filter& operator=(filter&& other);
 
-	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame);
+	void push(const std::shared_ptr<AVFrame>& frame);
+	std::shared_ptr<AVFrame> poll();
 
 private:
 	struct implementation;

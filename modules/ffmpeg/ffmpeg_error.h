@@ -16,6 +16,7 @@ extern "C"
 namespace caspar { namespace ffmpeg {
 
 struct ffmpeg_error : virtual caspar_exception{};
+struct ffmpeg_stream_not_found : virtual ffmpeg_error{};
 
 static std::string av_error_str(int errn)
 {
@@ -40,14 +41,14 @@ static std::string av_error_str(int errn)
 #define THROW_ON_ERROR_STR_(call) #call
 #define THROW_ON_ERROR_STR(call) THROW_ON_ERROR_STR_(call)
 
-#define THROW_ON_ERROR2(call, source)										\
+#define THROW_ON_ERROR3(call, source, exception)										\
 	[&]() -> int															\
 	{																		\
 		int ret = call;														\
 		if(ret < 0)															\
 		{																	\
 			BOOST_THROW_EXCEPTION(											\
-				ffmpeg_error() <<											\
+				exception() <<											\
 				msg_info(av_error_str(ret)) <<								\
 				source_info(narrow(source)) << 								\
 				boost::errinfo_api_function(THROW_ON_ERROR_STR(call)) <<	\
@@ -55,5 +56,6 @@ static std::string av_error_str(int errn)
 		}																	\
 		return ret;															\
 	}();
+#define THROW_ON_ERROR2(call, source) THROW_ON_ERROR3(call, source, ffmpeg_error)
 
 }}

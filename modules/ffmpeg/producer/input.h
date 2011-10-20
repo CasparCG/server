@@ -40,7 +40,7 @@ class graph;
 }
 	 
 namespace ffmpeg {
-			
+				
 class input : boost::noncopyable
 {
 public:
@@ -58,6 +58,7 @@ public:
 	
 	safe_ptr<AVFormatContext> context();
 
+	void start();
 	void stop();
 private:
 	friend struct implemenation;

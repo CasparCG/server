@@ -32,36 +32,67 @@
 #include <common/exception/exceptions.h>
 #include <common/utility/move_on_copy.h>
 
+#include <concrt_extras.h>
+
 namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
 	
+struct destruction_context
+{
+	std::shared_ptr<frame_producer> producer;
+	Concurrency::event				event;
+
+	destruction_context(std::shared_ptr<frame_producer>&& producer) : producer(producer){}
+};
+
+void __cdecl destroy_producer(LPVOID lpParam)
+{
+	auto destruction = std::unique_ptr<destruction_context>(static_cast<destruction_context*>(lpParam));
+	
+	try
+	{		
+		if(destruction->producer.unique())
+		{
+			Concurrency::scoped_oversubcription_token oversubscribe;
+			destruction->producer.reset();
+		}
+		else
+			CASPAR_LOG(warning) << destruction->producer->print() << " Not destroyed asynchronously.";		
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+	}
+	
+	destruction->event.set();
+}
+
+void __cdecl destroy_and_wait_producer(LPVOID lpParam)
+{
+	try
+	{
+		auto destruction = static_cast<destruction_context*>(lpParam);
+		Concurrency::CurrentScheduler::ScheduleTask(destroy_producer, lpParam);
+		if(destruction->event.wait(1000) == Concurrency::COOPERATIVE_WAIT_TIMEOUT)
+			CASPAR_LOG(warning) << " Potential destruction deadlock detected. Might leak resources.";
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+	}
+}
+
 class destroy_producer_proxy : public frame_producer
 {
-	safe_ptr<frame_producer> producer_;
-	executor& destroy_context_;
+	std::shared_ptr<frame_producer> producer_;
 public:
-	destroy_producer_proxy(executor& destroy_context, const safe_ptr<frame_producer>& producer) 
-		: producer_(producer)
-		, destroy_context_(destroy_context){}
+	destroy_producer_proxy(const std::shared_ptr<frame_producer>& producer) 
+		: producer_(producer){}
 
 	~destroy_producer_proxy()
 	{		
-		if(destroy_context_.size() > 4)
-			CASPAR_LOG(error) << L" Potential destroyer deadlock.";
-
-		// Hacks to bypass compiler bugs.
-		auto mov_producer = make_move_on_copy<safe_ptr<frame_producer>>(std::move(producer_));
-		auto empty_producer = frame_producer::empty();
-		destroy_context_.begin_invoke([=]
-		{			
-			//if(!mov_producer.value.unique())
-			//	CASPAR_LOG(debug) << mov_producer.value->print() << L" Not destroyed on safe asynchronous destruction thread.";
-			//else
-			//	CASPAR_LOG(debug) << mov_producer.value->print() << L" Destroying on safe asynchronous destruction thread.";
-	
-			mov_producer.value = empty_producer;
-		});
+		Concurrency::CurrentScheduler::ScheduleTask(destroy_producer, new destruction_context(std::move(producer_)));
 	}
 
 	virtual safe_ptr<basic_frame>		receive(int hints)												{return producer_->receive(hints);}
@@ -73,9 +104,9 @@ public:
 	virtual int64_t						nb_frames() const												{return producer_->nb_frames();}
 };
 
-safe_ptr<core::frame_producer> create_destroy_producer_proxy(executor& destroy_context, const safe_ptr<frame_producer>& producer)
+safe_ptr<core::frame_producer> create_destroy_producer_proxy(const safe_ptr<frame_producer>& producer)
 {
-	return make_safe<destroy_producer_proxy>(destroy_context, producer);
+	return make_safe<destroy_producer_proxy>(producer);
 }
 
 class last_frame_producer : public frame_producer

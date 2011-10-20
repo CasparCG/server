@@ -26,7 +26,7 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_transform.h>
 
-#include <tbb/parallel_invoke.h>
+#include <ppl.h>
 
 #include <boost/assign.hpp>
 
@@ -74,7 +74,7 @@ struct transition_producer : public frame_producer
 		auto dest = basic_frame::empty();
 		auto source = basic_frame::empty();
 
-		tbb::parallel_invoke(
+		Concurrency::parallel_invoke(
 		[&]
 		{
 			dest = receive_and_follow(dest_producer_, hints);

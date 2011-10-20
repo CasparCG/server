@@ -47,8 +47,10 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 void fix_meta_data(AVFormatContext& context);
 
 std::shared_ptr<AVPacket> create_packet();
-const std::shared_ptr<AVPacket>& loop_packet();
-const std::shared_ptr<AVPacket>& eof_packet();
+
+const std::shared_ptr<AVPacket>& loop_packet(int index);
+const std::shared_ptr<AVPacket>& eof_packet(int index);
+
 const std::shared_ptr<AVFrame>& loop_video();
 const std::shared_ptr<AVFrame>& empty_video();
 const std::shared_ptr<AVFrame>& eof_video();

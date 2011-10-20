@@ -99,13 +99,13 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t 
 			throw;
 		}
 	}
-	return make_safe(buffer);
+	return make_safe_ptr(buffer);
 }
 				
 safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride)
 {
-	CASPAR_VERIFY(stride > 0 && stride < 5);
-	CASPAR_VERIFY(width > 0 && height > 0);
+	CASPAR_VERIFY(stride > 0 && stride < 5, invalid_argument());
+	CASPAR_VERIFY(width > 0 && height > 0, invalid_argument());
 	auto& pool = device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->items.try_pop(buffer))		
@@ -152,13 +152,13 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(size_t size, host_buffer:
 		}
 	}
 
-	return make_safe(buffer);
+	return make_safe_ptr(buffer);
 }
 	
 safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::usage_t usage)
 {
-	CASPAR_VERIFY(usage == host_buffer::write_only || usage == host_buffer::read_only);
-	CASPAR_VERIFY(size > 0);
+	CASPAR_VERIFY(usage == host_buffer::write_only || usage == host_buffer::read_only, invalid_argument());
+	CASPAR_VERIFY(size > 0, invalid_argument());
 	auto& pool = host_pools_[usage][size];
 	std::shared_ptr<host_buffer> buffer;
 	if(!pool->items.try_pop(buffer))	

@@ -297,16 +297,38 @@ std::shared_ptr<AVPacket> create_packet()
 	return packet;
 }
 
-const std::shared_ptr<AVPacket>& loop_packet()
+const std::shared_ptr<AVPacket>& loop_packet(int index)
 {
-	static auto packet1 = create_packet();
-	return packet1;
+	static Concurrency::critical_section mutex;
+	static std::map<int, std::shared_ptr<AVPacket>> packets;
+
+	Concurrency::critical_section::scoped_lock lock(mutex);
+
+	auto& packet = packets[index];
+	if(!packet)
+	{
+		packet = create_packet();
+		packet->stream_index = index;
+	}
+
+	return packet;
 }
 
-const std::shared_ptr<AVPacket>& eof_packet()
+const std::shared_ptr<AVPacket>& eof_packet(int index)
 {
-	static auto packet2 = create_packet();
-	return packet2;
+	static Concurrency::critical_section mutex;
+	static std::map<int, std::shared_ptr<AVPacket>> packets;
+
+	Concurrency::critical_section::scoped_lock lock(mutex);
+
+	auto& packet = packets[index];
+	if(!packet)
+	{
+		packet = create_packet();
+		packet->stream_index = index;
+	}
+
+	return packet;
 }
 
 const std::shared_ptr<AVFrame>& loop_video()
