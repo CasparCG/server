@@ -770,7 +770,7 @@ bool StatusCommand::DoExecute()
 			<< L"BACKGROUND:"		<< status.background << L"\r\n"
 			<< L"STATUS:"			<< (status.is_paused ? L"PAUSED" : L"PLAYING") << L"\r\n"
 			<< L"TOTAL FRAMES:"		<< (status.total_frames == std::numeric_limits<int64_t>::max() ? 0 : status.total_frames) << L"\r\n"
-			<< L"CURRENT FRAME:"	<< status.current_frame << L"\r\n";
+			<< L"CURRENT FRAME:"	<< status.current_frame << L"\r\n\r\n";
 
 		SetReplyString(status_text.str());
 		return true;
