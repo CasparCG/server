@@ -27,9 +27,6 @@
     <ClCompile Include="producer\ffmpeg_producer.cpp">
       <Filter>source\producer</Filter>
     </ClCompile>
-    <ClCompile Include="producer\input.cpp">
-      <Filter>source\producer</Filter>
-    </ClCompile>
     <ClCompile Include="producer\video\video_decoder.cpp">
       <Filter>source\producer\video</Filter>
     </ClCompile>
@@ -40,9 +37,6 @@
       <Filter>source\consumer</Filter>
     </ClCompile>
     <ClCompile Include="StdAfx.cpp" />
-    <ClCompile Include="tbb_avcodec.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="ffmpeg.cpp">
       <Filter>source</Filter>
     </ClCompile>
@@ -64,12 +58,12 @@
     <ClCompile Include="producer\audio\audio_resampler.cpp">
       <Filter>source\producer\audio</Filter>
     </ClCompile>
+    <ClCompile Include="producer\input.cpp">
+      <Filter>source\producer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\ffmpeg_producer.h">
-      <Filter>source\producer</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\input.h">
       <Filter>source\producer</Filter>
     </ClInclude>
     <ClInclude Include="producer\video\video_decoder.h">
@@ -82,9 +76,6 @@
       <Filter>source\consumer</Filter>
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="tbb_avcodec.h">
-      <Filter>source</Filter>
-    </ClInclude>
     <ClInclude Include="ffmpeg_error.h">
       <Filter>source</Filter>
     </ClInclude>
@@ -108,6 +99,9 @@
     </ClInclude>
     <ClInclude Include="producer\audio\audio_resampler.h">
       <Filter>source\producer\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\input.h">
+      <Filter>source\producer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

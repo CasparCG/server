@@ -34,7 +34,7 @@
 
 #include <boost/foreach.hpp>
 
-#include <tbb/parallel_for_each.h>
+#include <ppl.h>
 
 #include <map>
 #include <set>
@@ -60,7 +60,7 @@ public:
 			BOOST_FOREACH(auto& layer, layers_)			
 				frames[layer.first] = basic_frame::empty();	
 
-			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
+			Concurrency::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
 			{
 				frames[layer.first] = layer.second.receive();	
 			});
@@ -78,7 +78,7 @@ public:
 	{
 		channel_.execution().invoke([&]
 		{
-			layers_[index].load(create_destroy_producer_proxy(channel_.destruction(), producer), preview, auto_play_delta);
+			layers_[index].load(create_destroy_producer_proxy(producer), preview, auto_play_delta);
 		}, high_priority);
 	}
 

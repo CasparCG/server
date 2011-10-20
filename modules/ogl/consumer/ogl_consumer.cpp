@@ -294,8 +294,16 @@ public:
 		auto av_frame = get_av_frame();
 		av_frame->data[0] = const_cast<uint8_t*>(frame->image_data().begin());
 
-		auto frames = filter_.execute(av_frame);
-
+		std::vector<safe_ptr<AVFrame>> frames;
+		filter_.push(av_frame);
+		while(true)
+		{
+			auto frame = filter_.poll();
+			if(!frame)
+				break;
+			frames.push_back(make_safe_ptr(frame));
+		}
+		
 		if(frames.empty())
 			return;
 

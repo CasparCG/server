@@ -23,7 +23,7 @@
 
 #include <core/producer/frame/basic_frame.h>
 
-#include <tbb/parallel_invoke.h>
+#include <ppl.h>
 
 namespace caspar { namespace core {	
 
@@ -47,7 +47,7 @@ struct separated_producer : public frame_producer
 	
 	virtual safe_ptr<basic_frame> receive(int hints)
 	{
-		tbb::parallel_invoke(
+		Concurrency::parallel_invoke(
 		[&]
 		{
 			if(fill_ == core::basic_frame::late())

@@ -351,7 +351,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="tbb_avcodec.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consumer\ffmpeg_consumer.h" />
@@ -368,7 +367,6 @@
     <ClInclude Include="producer\util.h" />
     <ClInclude Include="producer\video\video_decoder.h" />
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="tbb_avcodec.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\common\common.vcxproj">

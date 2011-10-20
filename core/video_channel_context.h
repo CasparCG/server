@@ -29,7 +29,6 @@ public:
 	video_format_desc	get_format_desc();
 	void				set_format_desc(const video_format_desc& format_desc);
 	executor&			execution();
-	executor&			destruction();
 	ogl_device&			ogl();
 	std::wstring		print() const;
 private:

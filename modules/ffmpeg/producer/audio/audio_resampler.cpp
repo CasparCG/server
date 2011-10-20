@@ -53,10 +53,9 @@ struct audio_resampler::implementation
 									L" audio_channels:" << input_channels  <<
 									L" sample_fmt:" << input_sample_format;
 
-			if(resampler)
-				resampler_.reset(resampler, audio_resample_close);
-			else
-				BOOST_THROW_EXCEPTION(caspar_exception());
+			CASPAR_VERIFY(resampler, caspar_exception());
+
+			resampler_.reset(resampler, audio_resample_close);
 		}		
 	}
 
