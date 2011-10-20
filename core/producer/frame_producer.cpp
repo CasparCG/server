@@ -43,7 +43,10 @@ struct destruction_context
 	std::shared_ptr<frame_producer> producer;
 	Concurrency::event				event;
 
-	destruction_context(std::shared_ptr<frame_producer>&& producer) : producer(producer){}
+	destruction_context(std::shared_ptr<frame_producer>&& producer) 
+		: producer(producer)
+	{
+	}
 };
 
 void __cdecl destroy_producer(LPVOID lpParam)
@@ -88,7 +91,9 @@ class destroy_producer_proxy : public frame_producer
 	std::shared_ptr<frame_producer> producer_;
 public:
 	destroy_producer_proxy(const std::shared_ptr<frame_producer>& producer) 
-		: producer_(producer){}
+		: producer_(producer)
+	{
+	}
 
 	~destroy_producer_proxy()
 	{		
