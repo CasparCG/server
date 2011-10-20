@@ -41,6 +41,7 @@
 
 #include <agents.h>
 #include <agents_extras.h>
+#include <ppl.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
@@ -279,23 +280,29 @@ public:
 					
 				filter_.push(av_frame);
 
-				while(true)
+				Concurrency::parallel_invoke(
+				[&]
 				{
-					auto frame = filter_.poll();
-					if(!frame)
-						break;
-					Concurrency::send<std::shared_ptr<AVFrame>>(*video_frames_, frame);
-				}
-													
-				// It is assumed that audio is always equal or ahead of video.
-				if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
-				{
-					auto sample_frame_count = audio->GetSampleFrameCount();
-					auto audio_data = reinterpret_cast<int32_t*>(bytes);
-					Concurrency::send(*audio_buffers_, std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
-				}
-				else
-					Concurrency::send(*audio_buffers_, ffmpeg::empty_audio());	
+					while(true)
+					{
+						auto frame = filter_.poll();
+						if(!frame)
+							break;
+						Concurrency::send<std::shared_ptr<AVFrame>>(*video_frames_, frame);
+					}
+				},
+				[&]
+				{													
+					// It is assumed that audio is always equal or ahead of video.
+					if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
+					{
+						auto sample_frame_count = audio->GetSampleFrameCount();
+						auto audio_data = reinterpret_cast<int32_t*>(bytes);
+						Concurrency::send(*audio_buffers_, std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
+					}
+					else
+						Concurrency::send(*audio_buffers_, ffmpeg::empty_audio());	
+				});
 			}
 
 		}
