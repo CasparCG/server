@@ -20,6 +20,7 @@
 #pragma once
 
 #include "../log/log.h"
+#include "../exception/exceptions.h"
 
 #ifdef _MSC_VER
 #define _CASPAR_DBG_BREAK _CrtDbgBreak()
@@ -29,7 +30,9 @@
 
 #define CASPAR_VERIFY_EXPR_STR(str) #str
 
-#define CASPAR_VERIFY(expr) do{if(!(expr)){ CASPAR_LOG(warning) << "Assertion Failed: " << \
+#define CASPAR_VERIFY(expr, exception) do{if(!(expr)){ BOOST_THROW_EXCEPTION(exception << msg_info(CASPAR_VERIFY_EXPR_STR(expr)));}}while(0);
+
+#define CASPAR_ASSERT2(expr) do{if(!(expr)){ CASPAR_LOG(warning) << "Assertion Failed: " << \
 	CASPAR_VERIFY_EXPR_STR(expr) << " " \
 	<< "file:" << __FILE__ << " " \
 	<< "line:" << __LINE__ << " "; \
@@ -37,7 +40,7 @@
 	}}while(0);
 
 #ifdef _DEBUG
-#define CASPAR_ASSERT(expr) CASPAR_VERIFY(expr)
+#define CASPAR_ASSERT(expr) CASPAR_ASSERT2(expr)
 #else
 #define CASPAR_ASSERT(expr)
 #endif

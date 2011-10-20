@@ -39,6 +39,7 @@ struct filter::implementation
 	AVFilterContext*				buffersrc_ctx_;
 	std::shared_ptr<void>			parallel_yadif_ctx_;
 	std::vector<PixelFormat>		pix_fmts_;
+	std::queue<std::shared_ptr<AVFrame>> bypass_;
 		
 	implementation(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) 
 		: filters_(narrow(filters))
@@ -64,20 +65,17 @@ struct filter::implementation
 		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
 	}
 	
-	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame)
-	{
-		if(!frame)
-			return std::vector<safe_ptr<AVFrame>>();
-
-		if(filters_.empty())
-			return boost::assign::list_of(frame);
-
-		push(frame);
-		return poll();
-	}
-
 	void push(const std::shared_ptr<AVFrame>& frame)
 	{		
+		if(!frame)
+			return;
+
+		if(filters_.empty())
+		{
+			bypass_.push(frame);
+			return;
+		}
+
 		if(!graph_)
 		{
 			graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p){avfilter_graph_free(&p);});
@@ -119,18 +117,25 @@ struct filter::implementation
 					parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);
 			}
 		}
-	
+			
 		THROW_ON_ERROR2(av_vsrc_buffer_add_frame(buffersrc_ctx_, frame.get(), 0), "[filter]");
 	}
 
-	std::vector<safe_ptr<AVFrame>> poll()
+	std::shared_ptr<AVFrame> poll()
 	{
-		std::vector<safe_ptr<AVFrame>> result;
+		if(filters_.empty())
+		{
+			if(bypass_.empty())
+				return nullptr;
+			auto frame = bypass_.front();
+			bypass_.pop();
+			return frame;
+		}
 
 		if(!graph_)
-			return result;
+			return nullptr;
 		
-		while (avfilter_poll_frame(buffersink_ctx_->inputs[0])) 
+		if(avfilter_poll_frame(buffersink_ctx_->inputs[0])) 
 		{
 			AVFilterBufferRef *picref;
 			THROW_ON_ERROR2(av_buffersink_get_buffer_ref(buffersink_ctx_, &picref, 0), "[filter]");
@@ -157,17 +162,18 @@ struct filter::implementation
 				frame->pict_type			= picref->video->pict_type;
 				frame->sample_aspect_ratio	= picref->video->sample_aspect_ratio;
 
-				result.push_back(frame);
+				return frame;
             }
         }
 
-		return result;
+		return nullptr;
 	}
 };
 
 filter::filter(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) : impl_(new implementation(filters, pix_fmts)){}
 filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
 filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
-std::vector<safe_ptr<AVFrame>> filter::execute(const std::shared_ptr<AVFrame>& frame) {return impl_->execute(frame);}
+void filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
+std::shared_ptr<AVFrame> filter::poll(){return impl_->poll();}
 
 }}

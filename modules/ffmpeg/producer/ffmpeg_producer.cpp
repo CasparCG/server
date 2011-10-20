@@ -26,6 +26,7 @@
 #include "util.h"
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
+#include "../ffmpeg_error.h"
 
 #include <common/env.h>
 #include <common/utility/assert.h>
@@ -51,26 +52,25 @@
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
-	
+		
 struct ffmpeg_producer : public core::frame_producer
 {	
 	const std::wstring						filename_;
 	const int								start_;
 	const bool								loop_;
 	const size_t							length_;
-
-	Concurrency::bounded_buffer<std::shared_ptr<AVPacket>>				pre_video_packets_;
-	Concurrency::bounded_buffer<std::shared_ptr<AVPacket>>				post_video_packets_;
-	Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>				video_frames_;
-	Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_buffers_;
-	Concurrency::bounded_buffer<std::shared_ptr<core::basic_frame>>		muxed_frames_;
+	
+	Concurrency::unbounded_buffer<std::shared_ptr<AVPacket>>					packet_stream_;
+	std::shared_ptr<Concurrency::ISource<std::shared_ptr<AVFrame>>>				video_stream_;
+	std::shared_ptr<Concurrency::ISource<std::shared_ptr<core::audio_buffer>>>	audio_stream_;
+	Concurrency::bounded_buffer<std::shared_ptr<core::basic_frame>>				frame_stream_;
 		
 	const safe_ptr<diagnostics::graph>		graph_;
 					
 	input									input_;	
-	video_decoder							video_decoder_;
-	audio_decoder							audio_decoder_;	
-	frame_muxer2							muxer_;
+	std::unique_ptr<video_decoder>			video_decoder_;
+	std::unique_ptr<audio_decoder>			audio_decoder_;	
+	std::unique_ptr<frame_muxer2>			muxer_;
 
 	safe_ptr<core::basic_frame>				last_frame_;
 	
@@ -80,26 +80,57 @@ public:
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
-		, pre_video_packets_(25)
-		, post_video_packets_(25)
-		, video_frames_(2)
-		, audio_buffers_(2)
-		, muxed_frames_(2)
+		, frame_stream_(2)
 		, graph_(diagnostics::create_graph([this]{return print();}, false))
-		, input_(pre_video_packets_, graph_, filename_, loop, start, length)
-		, video_decoder_(pre_video_packets_, post_video_packets_, video_frames_, input_.context(), frame_factory->get_video_format_desc().fps, filter)
-		, audio_decoder_(post_video_packets_, audio_buffers_, input_.context(), frame_factory->get_video_format_desc())
-		, muxer_(video_frames_, audio_buffers_, muxed_frames_, video_decoder_.fps(), frame_factory)
+		, input_(packet_stream_, graph_, filename_, loop, start, length)
 		, last_frame_(core::basic_frame::empty())
 	{
+		try
+		{
+			auto target = std::make_shared<Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>>(2);
+			video_decoder_.reset(new video_decoder(packet_stream_, *target, input_.context(), frame_factory->get_video_format_desc().fps));
+			video_stream_ = target;
+		}
+		catch(ffmpeg_stream_not_found&)
+		{
+			CASPAR_LOG(warning) << "No video-stream found. Running without video.";	
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << "Failed to open video-stream. Running without video.";	
+		}
+
+		try
+		{
+			auto target = std::make_shared<Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>>(25);
+			audio_decoder_.reset(new audio_decoder(packet_stream_, *target, input_.context(), frame_factory->get_video_format_desc()));
+			audio_stream_ = target;
+		}
+		catch(ffmpeg_stream_not_found&)
+		{
+			CASPAR_LOG(warning) << "No audio-stream found. Running without video.";	
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << "Failed to open audio-stream. Running without audio.";		
+		}
+
+		CASPAR_VERIFY(video_decoder_ || audio_decoder_, ffmpeg_error());
+
+		muxer_.reset(new frame_muxer2(video_stream_, audio_stream_, frame_stream_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
+				
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		graph_->start();
+
+		input_.start();
 	}
 
 	~ffmpeg_producer()
 	{
-		input_.stop();
-		while(Concurrency::receive(muxed_frames_) != core::basic_frame::eof())
+		input_.stop();			
+		while(Concurrency::receive(frame_stream_) != core::basic_frame::eof())
 		{
 		}
 	}
@@ -110,7 +141,7 @@ public:
 		
 		try
 		{		
-			frame = last_frame_ = safe_ptr<core::basic_frame>(Concurrency::receive(muxed_frames_, 8));
+			frame = last_frame_ = safe_ptr<core::basic_frame>(Concurrency::receive(frame_stream_, 10));
 		}
 		catch(Concurrency::operation_timed_out&)
 		{		
@@ -135,13 +166,13 @@ public:
 		int64_t nb_frames = input_.nb_frames();
 		if(input_.nb_loops() < 1) // input still hasn't counted all frames
 		{
-			int64_t video_nb_frames = video_decoder_.nb_frames();
-			int64_t audio_nb_frames = audio_decoder_.nb_frames();
+			int64_t video_nb_frames = video_decoder_->nb_frames();
+			int64_t audio_nb_frames = audio_decoder_->nb_frames();
 
 			nb_frames = std::min(static_cast<int64_t>(length_), std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames)));
 		}
 
-		nb_frames = muxer_.calc_nb_frames(nb_frames);
+		nb_frames = muxer_->calc_nb_frames(nb_frames);
 
 		// TODO: Might need to scale nb_frames av frame_muxer transformations.
 
@@ -150,10 +181,15 @@ public:
 				
 	virtual std::wstring print() const
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
-						  + boost::lexical_cast<std::wstring>(video_decoder_.width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_.height())
-						  + (video_decoder_.is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_.is_progressive() ? video_decoder_.fps() : 2.0 * video_decoder_.fps())
-						  + L"]";
+		if(video_decoder_)
+		{
+			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
+							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
+							  + (video_decoder_->is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_->is_progressive() ? video_decoder_->fps() : 2.0 * video_decoder_->fps())
+							  + L"]";
+		}
+		
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 };
 

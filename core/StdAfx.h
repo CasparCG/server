@@ -43,6 +43,12 @@
 #include <string>
 #include <vector>
 
+#include <agents.h>
+#include <agents_extras.h>
+#include <concrt.h>
+#include <concrt_extras.h>
+#include <ppl.h>
+
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>

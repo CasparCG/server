@@ -23,30 +23,6 @@ struct frame_factory;
 
 namespace ffmpeg {
 
-class frame_muxer : boost::noncopyable
-{
-public:
-	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory);
-	
-	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
-	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);
-	
-	void commit();
-
-	bool video_ready() const;
-	bool audio_ready() const;
-
-	size_t size() const;
-	bool empty() const;
-
-	int64_t calc_nb_frames(int64_t nb_frames) const;
-
-	safe_ptr<core::basic_frame> pop();
-private:
-	struct implementation;
-	safe_ptr<implementation> impl_;
-};
-
 class frame_muxer2 : boost::noncopyable
 {
 public:
@@ -55,8 +31,8 @@ public:
 	typedef Concurrency::ISource<std::shared_ptr<core::audio_buffer>>	audio_source_t;
 	typedef Concurrency::ITarget<std::shared_ptr<core::basic_frame>>	target_t;
 
-	frame_muxer2(video_source_t& video_source,
-				 audio_source_t& audio_source, 
+	frame_muxer2(const std::shared_ptr<video_source_t>& video_source,
+				 const std::shared_ptr<audio_source_t>& audio_source, 
 				 target_t& target,
 				 double in_fps, 
 				 const safe_ptr<core::frame_factory>& frame_factory);
