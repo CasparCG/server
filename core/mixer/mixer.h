@@ -23,7 +23,10 @@
 
 #include "../producer/frame/frame_factory.h"
 
+#include <common/concurrency/message.h>
 #include <common/memory/safe_ptr.h>
+
+#include <agents.h>
 
 #include <map>
 
@@ -40,21 +43,22 @@ struct frame_transform;
 struct frame_transform;
 class video_channel_context;;
 struct pixel_format;
+class ogl_device;
 
 class mixer : public core::frame_factory
 {
 public:	
+	
+	typedef Concurrency::ISource<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>>	source_t;
+	typedef Concurrency::ITarget<safe_ptr<message<safe_ptr<core::read_frame>>>>				target_t;
 
-	explicit mixer(video_channel_context& video_channel);
-		
-	safe_ptr<core::read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
-		
+	explicit mixer(source_t& source, target_t& target, const video_format_desc& format_desc, ogl_device& ogl);
+				
 	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);			
 	boost::unique_future<safe_ptr<write_frame>> create_frame2(const void* video_stream_tag, const pixel_format_desc& desc);
 
 	core::video_format_desc get_video_format_desc() const; // nothrow
-
-
+	
 	void set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void clear_transforms();

@@ -49,7 +49,7 @@ class input : boost::noncopyable
 {
 public:
 	
-	typedef Concurrency::ITarget<packet_message_t> target_t;
+	typedef Concurrency::ITarget<safe_ptr<AVPacket>> target_t;
 
 	explicit input(target_t& target, 
 				   const safe_ptr<diagnostics::graph>& graph, 

@@ -61,10 +61,10 @@ struct video_decoder::implementation : public Concurrency::agent, boost::noncopy
 	bool									is_progressive_;
 	
 	overwrite_buffer<bool>					is_running_;
-	unbounded_buffer<packet_message_t>		source_;
-	ITarget<video_message_t>&				target_;
+	unbounded_buffer<safe_ptr<AVPacket>>	source_;
+	ITarget<safe_ptr<AVFrame>>&				target_;
 	
-	safe_ptr<semaphore> semaphore_;
+	safe_ptr<semaphore>						semaphore_;
 
 public:
 	explicit implementation(video_decoder::source_t& source, video_decoder::target_t& target, AVFormatContext& context) 
@@ -74,9 +74,9 @@ public:
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 		, is_progressive_(true)
-		, source_([this](const packet_message_t& message)
+		, source_([this](const safe_ptr<AVPacket>& packet)
 			{
-				return message->payload && message->payload->stream_index == index_;
+				return packet->stream_index == index_;
 			})
 		, target_(target)
 		, semaphore_(make_safe<Concurrency::semaphore>(1))
@@ -104,26 +104,23 @@ public:
 			send(is_running_, true);
 			while(is_running_.value())
 			{
-				auto message = receive(source_);
-				auto packet = message->payload;
+				auto packet = receive(source_);
 			
-				if(!packet)
-					continue;
-
 				if(packet == loop_packet(index_))
 				{
-					send(target_, make_message(loop_video()));
+					send(target_, loop_video());
 					continue;
 				}
 
 				if(packet == eof_packet(index_))
 					break;
 
-				token token(semaphore_);
-				std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), [this, token](AVFrame* frame)
+				std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), [this](AVFrame* frame)
 				{
 					av_free(frame);
+					semaphore_->release();
 				});
+				semaphore_->acquire();
 
 				int frame_finished = 0;
 				THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, packet.get()), "[video_decocer]");
@@ -141,7 +138,7 @@ public:
 		
 				is_progressive_ = decoded_frame->interlaced_frame == 0;
 				
-				send(target_, make_message(decoded_frame, message->token));
+				send(target_, make_safe_ptr(decoded_frame));
 				Concurrency::wait(10);
 			}
 		}
@@ -151,7 +148,7 @@ public:
 		}
 		
 		send(is_running_, false),
-		send(target_, make_message(eof_video()));
+		send(target_, eof_video());
 
 		done();
 	}

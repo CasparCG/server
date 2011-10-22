@@ -294,6 +294,7 @@ public:
 		auto av_frame = get_av_frame();
 		av_frame->data[0] = const_cast<uint8_t*>(frame->image_data().begin());
 
+		filter_.push(av_frame);
 		auto frames = filter_.poll_all();
 		
 		if(frames.empty())

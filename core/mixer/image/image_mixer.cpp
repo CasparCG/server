@@ -26,7 +26,6 @@
 #include "../gpu/ogl_device.h"
 #include "../gpu/host_buffer.h"
 #include "../gpu/device_buffer.h"
-#include "../../video_channel_context.h"
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>

@@ -58,9 +58,9 @@ struct audio_decoder::implementation : public agent, boost::noncopyable
 	
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
-	overwrite_buffer<bool>				is_running_;
-	unbounded_buffer<packet_message_t>	source_;
-	ITarget<audio_message_t>&			target_;
+	overwrite_buffer<bool>					is_running_;
+	unbounded_buffer<safe_ptr<AVPacket>>	source_;
+	ITarget<safe_ptr<core::audio_buffer>>&	target_;
 	
 public:
 	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
@@ -69,9 +69,9 @@ public:
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
-		, source_([this](const packet_message_t& message)
+		, source_([this](const safe_ptr<AVPacket>& packet)
 			{
-				return message->payload && message->payload->stream_index == index_;
+				return packet->stream_index == index_;
 			})
 		, target_(target)
 	{			   	
@@ -95,16 +95,12 @@ public:
 			send(is_running_, true);
 			while(is_running_.value())
 			{				
-				auto message = receive(source_);
-				auto packet = message->payload;
+				auto packet = receive(source_);
 			
-				if(!packet)
-					continue;
-
 				if(packet == loop_packet(index_))
 				{
-					send(target_, make_message(loop_audio()));
-					break;
+					send(target_, loop_audio());
+					continue;
 				}
 
 				if(packet == eof_packet(index_))
@@ -130,7 +126,7 @@ public:
 					const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
 					const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
 
-					send(target_, make_message(std::make_shared<core::audio_buffer>(samples, samples + n_samples)));
+					send(target_, make_safe<core::audio_buffer>(samples, samples + n_samples));
 				}
 			}
 		}
@@ -140,7 +136,7 @@ public:
 		}
 
 		send(is_running_, false);
-		send(target_, make_message(eof_audio()));
+		send(target_, eof_audio());
 
 		done();
 	}
