@@ -180,7 +180,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			{
 				auto video = receive(video_);
 				auto audio = receive(audio_);								
-				auto frame = make_safe<core::write_frame>(this);
+				auto write = make_safe<core::write_frame>(this);
 				
 				if(audio == eof_audio())
 				{
@@ -195,11 +195,13 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				}
 
 				if(video != empty_video())
-					frame = make_write_frame(this, video, frame_factory_, 0);
+					write = make_write_frame(this, video, frame_factory_, 0);
 				if(audio == empty_audio())
 					audio = make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
 
-				frame->audio_data() = std::move(*audio);
+				write->audio_data() = std::move(*audio);
+
+				auto frame = safe_ptr<core::basic_frame>(write);
 
 				switch(display_mode_)
 				{
@@ -207,35 +209,36 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				case display_mode::deinterlace:
 				case display_mode::deinterlace_bob:
 					{
-						send(target_, safe_ptr<core::basic_frame>(frame));
+						send(target_, frame);
 
 						break;
 					}
 				case display_mode::duplicate:					
 					{										
-						send(target_, safe_ptr<core::basic_frame>(frame));
-						send(target_, safe_ptr<core::basic_frame>(frame));
+						send(target_, frame);
+						send(target_, frame);
 
 						break;
 					}
 				case display_mode::half:						
 					{					
 						receive(video_); // throw away				
-						send(target_, safe_ptr<core::basic_frame>(frame));
+						send(target_, frame);
 
 						break;
 					}
 				case display_mode::deinterlace_bob_reinterlace:
 				case display_mode::interlace:					
 					{					
-						/*auto frame = safe_ptr<core::basic_frame>(frame);
 						auto video2 = receive(video_);	
-						if(video2 != empty_video() && video2 != eof_video())
-							frame = core::basic_frame::interlace(frame, safe_ptr<core::basic_frame>(video2), format_desc_.field_mode);
-						else
-							send(is_running_, false);
-
-						send(target_, frame);*/
+						auto frame2 = core::basic_frame::empty();
+						if(video2 != empty_video() && video2 != eof_video())		
+							frame2 = safe_ptr<core::basic_frame>(make_write_frame(this, video2, frame_factory_, 0));
+						else						
+							send(is_running_, false);						
+						
+						frame = core::basic_frame::interlace(frame, frame2, format_desc_.field_mode);	
+						send(target_, frame);
 
 						break;
 					}
