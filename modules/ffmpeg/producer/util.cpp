@@ -310,34 +310,20 @@ std::shared_ptr<AVPacket> create_packet()
 
 const std::shared_ptr<AVPacket>& loop_packet(int index)
 {
-	static Concurrency::critical_section mutex;
-	Concurrency::critical_section::scoped_lock lock(mutex);
-
-	static std::map<int, std::shared_ptr<AVPacket>> packets;
+	static std::shared_ptr<AVPacket> packets[] = {create_packet(), create_packet(), create_packet(), create_packet(), create_packet(), create_packet()};
 	
 	auto& packet = packets[index];
-	if(!packet)
-	{
-		packet = create_packet();
-		packet->stream_index = index;
-	}
+	packet->stream_index = index;
 
 	return packet;
 }
 
 const std::shared_ptr<AVPacket>& eof_packet(int index)
 {
-	static Concurrency::critical_section mutex;
-	Concurrency::critical_section::scoped_lock lock(mutex);
-
-	static std::map<int, std::shared_ptr<AVPacket>> packets;
+	static std::shared_ptr<AVPacket> packets[] = {create_packet(), create_packet(), create_packet(), create_packet(), create_packet(), create_packet()};
 	
 	auto& packet = packets[index];
-	if(!packet)
-	{
-		packet = create_packet();
-		packet->stream_index = index;
-	}
+	packet->stream_index = index;
 
 	return packet;
 }
