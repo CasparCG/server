@@ -62,9 +62,9 @@ using namespace protocol;
 
 struct server::implementation : boost::noncopyable
 {
+	ogl_device									ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
 	std::vector<safe_ptr<video_channel>>		channels_;
-	ogl_device									ogl_;
 
 	implementation()												
 	{			
