@@ -35,8 +35,8 @@ public:
 	
 	safe_ptr() : impl_(std::make_shared<T>()){}	
 	
-	safe_ptr(const safe_ptr<T>& other) : impl_(other.impl_){}  // noexcept
-	safe_ptr(safe_ptr<T>&& other) : impl_(std::move(other.impl_)){}
+	safe_ptr(const safe_ptr& other) : impl_(other.impl_){}  // noexcept
+	safe_ptr(safe_ptr&& other) : impl_(std::move(other.impl_)){}
 
 	template<typename U>
 	safe_ptr(const safe_ptr<U>& other, typename std::enable_if<std::is_convertible<U*, T*>::value, void*>::type = 0) : impl_(other.impl_){}  // noexcept
@@ -86,19 +86,26 @@ public:
 	}
 
 	template<typename U>
-	typename std::enable_if<std::is_convertible<U*, T*>::value, safe_ptr<T>&>::type
+	typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, T*>::value, safe_ptr&>::type
 	operator=(const safe_ptr<U>& other)
 	{
-		safe_ptr<T> temp(other);
-		temp.swap(*this);
+		safe_ptr(other).swap(*this);
+		return *this;
+	}
+
+	template<typename U>
+	typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, T*>::value, safe_ptr&>::type
+	operator=(safe_ptr<U>&& other)
+	{
+		safe_ptr(std::move(other)).swap(*this);
 		return *this;
 	}
 
 	template <typename U>
-	typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, T*>::value, safe_ptr<T>&>::type
+	typename std::enable_if<std::is_convertible<typename std::add_pointer<U>::type, T*>::value, safe_ptr&>::type
 	operator=(U&& impl)
 	{
-		safe_ptr<T> temp(std::forward<T>(impl));
+		safe_ptr temp(std::forward<T>(impl));
 		temp.swap(*this);
 		return *this;
 	}
@@ -127,7 +134,7 @@ public:
 	operator const std::shared_ptr<T>&() const { return impl_;}  // noexcept
 
 	template<class U>
-	bool owner_before(const safe_ptr<T>& ptr){ return impl_.owner_before(ptr.impl_); }  // noexcept
+	bool owner_before(const safe_ptr& ptr){ return impl_.owner_before(ptr.impl_); }  // noexcept
 
 	template<class U>
 	bool owner_before(const std::shared_ptr<U>& ptr){ return impl_.owner_before(ptr); }  // noexcept
