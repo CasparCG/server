@@ -287,7 +287,7 @@ public:
 
 		return av_frame;
 	}
-
+	
 	void render(const safe_ptr<core::read_frame>& frame)
 	{			
 		if(frame->image_data().empty())
@@ -303,24 +303,7 @@ public:
 			return;
 
 		av_frame = frames[0];
-
-		if(av_frame->linesize[0] != static_cast<int>(format_desc_.width*4))
-		{
-			const uint8_t *src_data[4] = {0};
-			memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
-			const int src_linesizes[4] = {0};
-			memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
-
-			auto av_frame2 = get_av_frame();
-			av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
-			av_frame = safe_ptr<AVFrame>(av_frame2.get(), [=](AVFrame*)
-			{
-				av_freep(&av_frame2->data[0]);
-			});
-
-			av_image_copy(av_frame2->data, av_frame2->linesize, src_data, src_linesizes, PIX_FMT_BGRA, av_frame2->width, av_frame2->height);
-		}
-
+		
 		glBindTexture(GL_TEXTURE_2D, texture_);
 
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]);
@@ -333,10 +316,20 @@ public:
 		if(ptr)
 		{
 			if(config_.key_only)
-				fast_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			{
+				Concurrency::parallel_for(0, av_frame->height, [&](int n)
+				{
+					fast_memshfl(reinterpret_cast<char*>(ptr)+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				});
+			}
 			else
-				fast_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
-
+			{
+				Concurrency::parallel_for(0, av_frame->height, [&](int n)
+				{
+					fast_memcpy(reinterpret_cast<char*>(ptr)+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4);
+				});
+			}
+			
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 		}
 
