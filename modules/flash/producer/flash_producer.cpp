@@ -281,7 +281,7 @@ public:
 
 		fps_ = 0;
 
-		graph_ = diagnostics::create_graph([this]{return print();});
+		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->set_color("output-buffer-count", diagnostics::color(1.0f, 1.0f, 0.0f));		 
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		
@@ -390,7 +390,8 @@ public:
 				}
 
 				graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
-				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));
+				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));				
+				graph_->update_text(narrow(print()));
 
 				render(renderer);
 			}
