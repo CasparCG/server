@@ -34,11 +34,12 @@ extern "C"
 
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
+#include <boost/assign.hpp>
 
-#include <agents.h>
-#include <ppl.h>
+#include <agents_extras.h>
 
 #include <deque>
+#include <tuple>
 #include <queue>
 #include <vector>
 
@@ -65,22 +66,14 @@ struct display_mode
 	{
 		switch(value)
 		{
-			case simple:
-				return L"simple";
-			case duplicate:
-				return L"duplicate";
-			case half:
-				return L"half";
-			case interlace:
-				return L"interlace";
-			case deinterlace_bob:
-				return L"deinterlace_bob";
-			case deinterlace_bob_reinterlace:
-				return L"deinterlace_bob_reinterlace";
-			case deinterlace:
-				return L"deinterlace";
-			default:
-				return L"invalid";
+			case simple:						return L"simple";
+			case duplicate:						return L"duplicate";
+			case half:							return L"half";
+			case interlace:						return L"interlace";
+			case deinterlace_bob:				return L"deinterlace_bob";
+			case deinterlace_bob_reinterlace:	return L"deinterlace_bob_reinterlace";
+			case deinterlace:					return L"deinterlace";
+			default:							return L"invalid";
 		}
 	}
 };
@@ -136,136 +129,78 @@ display_mode::type get_display_mode(const core::field_mode::type in_mode, double
 	return display_mode::invalid;
 }
 
-struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopyable
-{	
-	const std::shared_ptr<frame_muxer2::video_source_t>&	video_source_;
-	const std::shared_ptr<frame_muxer2::audio_source_t>&	audio_source_;
-	frame_muxer2::target_t&			target_;
 
-	std::deque<std::queue<safe_ptr<write_frame>>>	video_streams_;
-	std::deque<core::audio_buffer>					audio_streams_;
-	std::deque<safe_ptr<basic_frame>>				frame_buffer_;
-	display_mode::type								display_mode_;
-	const double									in_fps_;
-	const video_format_desc							format_desc_;
-	bool											auto_transcode_;
+struct frame_muxer2::implementation : boost::noncopyable
+{		
+	display_mode::type														display_mode_;
+	const double															in_fps_;
+	const video_format_desc													format_desc_;
+	bool																	auto_transcode_;
+	
+	filter																	filter_;
+	safe_ptr<core::frame_factory>											frame_factory_;
+	
+	Concurrency::call<std::shared_ptr<AVFrame>>								push_video_;
+	Concurrency::call<std::shared_ptr<core::audio_buffer>>					push_audio_;
+	
+	Concurrency::transformer<safe_ptr<AVFrame>, std::shared_ptr<core::write_frame>> video_;
+	Concurrency::unbounded_buffer<std::shared_ptr<core::audio_buffer>>				audio_;
 
-	size_t											audio_sample_count_;
-	size_t											video_frame_count_;
-		
-	size_t											processed_audio_sample_count_;
-	size_t											processed_video_frame_count_;
+	typedef std::tuple<std::shared_ptr<core::write_frame>, std::shared_ptr<core::audio_buffer>> join_element_t;
+	
+	Concurrency::transformer<join_element_t, safe_ptr<core::basic_frame>>	merge_;
+	safe_ptr<Concurrency::ISource<join_element_t>>							join_;
 
-	filter											filter_;
-	safe_ptr<core::frame_factory>					frame_factory_;
-				
-	implementation(const std::shared_ptr<frame_muxer2::video_source_t>& video_source,
-				   const std::shared_ptr<frame_muxer2::audio_source_t>& audio_source,
+	core::audio_buffer														audio_data_;
+	std::queue<safe_ptr<AVFrame>>											video_frames_;
+							
+	implementation(frame_muxer2::video_source_t* video_source,
+				   frame_muxer2::audio_source_t* audio_source,
 				   frame_muxer2::target_t& target,
 				   double in_fps, 
 				   const safe_ptr<core::frame_factory>& frame_factory)
-		: video_source_(video_source)
-		, audio_source_(audio_source)
-		, target_(target)
-		, video_streams_(1)
-		, audio_streams_(1)
-		, display_mode_(display_mode::invalid)
+		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
-		, audio_sample_count_(0)
-		, video_frame_count_(0)
 		, frame_factory_(make_safe<core::concrt_frame_factory>(frame_factory))
+		, video_(std::bind(&make_write_frame, this, std::placeholders::_1, frame_factory, 0))
+		, push_video_(std::bind(&implementation::push_video, this, std::placeholders::_1))
+		, push_audio_(std::bind(&implementation::push_audio, this, std::placeholders::_1))
+		, merge_(std::bind(&implementation::merge, this, std::placeholders::_1), &target)
+		, join_(make_join(&video_, &audio_))
 	{
-		start();
+		if(video_source)
+			video_source->link_target(&push_video_);
+		if(audio_source)
+			audio_source->link_target(&push_audio_);
+
+		join_->link_target(&merge_);
 	}
 
-	~implementation()
+	safe_ptr<core::basic_frame> merge(const join_element_t& element)
 	{
-		agent::wait(this);
+		//if(std::get<0>(element) == eof_video() || std::get<1>(element) == eof_audio())
+		//	return core::basic_frame::eof();
+		auto frame = std::get<0>(element);
+		frame->audio_data() = std::move(*std::get<1>(element));
+		return make_safe_ptr(frame);
 	}
-
-	virtual void run()
-	{
-		try
-		{
-			while(true)
-			{
-				Concurrency::parallel_invoke(
-				[&]
-				{
-					while(!video_ready())
-					{
-						if(video_source_)
-						{
-							auto video = Concurrency::receive(*video_source_);
-							if(video == eof_video())
-								break;
-							push(video, 0);	
-						}
-						else
-							push(empty_video(), 0);	
-					}
-				},
-				[&]
-				{
-					while(!audio_ready())
-					{
-						if(audio_source_)
-						{
-							auto audio = Concurrency::receive(*audio_source_);
-							if(audio == eof_audio())
-								break;
-							push(audio);	
-						}
-						else
-							push(empty_audio());	
-					}					
-				});
-
-				if((video_source_ && !video_ready()) || (audio_source_ && !audio_ready()))				
-					break;				
-
-				commit();
-			
-				if(!frame_buffer_.empty())
-				{
-					Concurrency::send(target_, std::shared_ptr<core::basic_frame>(frame_buffer_.front()));
-					frame_buffer_.pop_front();	
-				}
-			}
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
 	
-		Concurrency::send(target_, std::shared_ptr<core::basic_frame>(core::basic_frame::eof()));
-							
-		done();
-	}
-
-	void push(const std::shared_ptr<AVFrame>& video_frame, int hints)
+	void push_video(const std::shared_ptr<AVFrame>& video_frame)
 	{		
 		if(!video_frame)
 			return;
 
-		if(video_frame == loop_video())
-		{	
-			CASPAR_LOG(debug) << L"video-frame-count: " << static_cast<float>(video_frame_count_);
-			video_frame_count_ = 0;
-			video_streams_.push_back(std::queue<safe_ptr<write_frame>>());
-			return;
-		}
-
+		if(video_frame == loop_video())		
+			return;	
+				
 		if(video_frame == empty_video())
 		{
-			video_streams_.back().push(make_safe<core::write_frame>(this));
-			++video_frame_count_;
-			display_mode_ = display_mode::simple;
+			Concurrency::send(video_, make_safe_ptr(empty_video()));
 			return;
 		}
-
+		
 		if(display_mode_ == display_mode::invalid)
 		{
 			if(auto_transcode_)
@@ -290,12 +225,15 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				display_mode_ = display_mode::simple;
 			}
 
+			// copy <= We need to release frames
+			if(display_mode_ != display_mode::simple && filter_.filter_str().empty())
+				filter_ = filter(L"copy"); 
+
 			CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_);
 		}
-
-				
-		if(hints & core::frame_producer::ALPHA_HINT)
-			video_frame->format = make_alpha_format(video_frame->format);
+						
+		//if(hints & core::frame_producer::ALPHA_HINT)
+		//	video_frame->format = make_alpha_format(video_frame->format);
 		
 		auto format = video_frame->format;
 		if(video_frame->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
@@ -303,177 +241,88 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 		filter_.push(video_frame);
 
-		while(true)
-		{
-			auto av_frame = filter_.poll();
-			if(!av_frame)
-				break;
-		
+		BOOST_FOREACH(auto av_frame, filter_.poll_all())
+		{		
 			av_frame->format = format;
+			
+			video_frames_.push(av_frame);
 
-			auto frame = make_write_frame(this, make_safe_ptr(av_frame), frame_factory_, hints);
+			switch(display_mode_)
+			{
+			case display_mode::simple:			
+			case display_mode::deinterlace:
+			case display_mode::deinterlace_bob:
+				{
+					Concurrency::send(video_, video_frames_.front());
+					video_frames_.pop();
+					break;
+				}
+			case display_mode::duplicate:					
+				{
+					if(video_frames_.size() < 2)
+						return;
 
-			// Fix field-order if needed
-			if(frame->get_type() == core::field_mode::lower && format_desc_.field_mode == core::field_mode::upper)
-				frame->get_frame_transform().fill_translation[1] += 1.0/static_cast<double>(format_desc_.height);
-			else if(frame->get_type() == core::field_mode::upper && format_desc_.field_mode == core::field_mode::lower)
-				frame->get_frame_transform().fill_translation[1] -= 1.0/static_cast<double>(format_desc_.height);
+					Concurrency::send(video_, video_frames_.front());
+					video_frames_.pop();
+					Concurrency::send(video_, video_frames_.front());
+					video_frames_.pop();
+					break;
+				}
+			case display_mode::half:						
+				{
+					if(video_frames_.size() < 2)
+						break;
+					
+					Concurrency::send(video_, video_frames_.front());
+					video_frames_.pop();
+					video_frames_.pop();
 
-			video_streams_.back().push(frame);
-			++video_frame_count_;
+					break;
+				}
+			case display_mode::deinterlace_bob_reinterlace:
+			case display_mode::interlace:					
+				{
+					if(video_frames_.size() < 2)
+						break;
+
+					auto frame1 = video_frames_.front();
+					video_frames_.pop();
+					auto frame2 = video_frames_.front();
+					video_frames_.pop();
+					
+					//Concurrency::send(video_, video_, core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode));
+
+					break;
+				}
+			default:	
+				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
+			}
 		}
-
-		if(video_streams_.back().size() > 8)
-			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
-	void push(std::shared_ptr<core::audio_buffer> audio_samples)
+	void push_audio(const std::shared_ptr<core::audio_buffer>& audio_samples)
 	{
 		if(!audio_samples)
 			return;
 
-		if(audio_samples == loop_audio())	
-		{
-			CASPAR_LOG(debug) << L"audio-chunk-count: " << audio_sample_count_/format_desc_.audio_samples_per_frame;
-			audio_streams_.push_back(core::audio_buffer());
-			audio_sample_count_ = 0;
-			return;
-		}
+		if(audio_samples == loop_audio())			
+			return;		
 
 		if(audio_samples == empty_audio())		
-			audio_samples = std::make_shared<core::audio_buffer>(format_desc_.audio_samples_per_frame);		
+			Concurrency::send(audio_, std::make_shared<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));		
 
-		audio_sample_count_ += audio_samples->size();
-
-		boost::range::push_back(audio_streams_.back(), *audio_samples);
-
-		if(audio_streams_.back().size() > 8*format_desc_.audio_samples_per_frame)
-			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
-	}
-	
-	safe_ptr<core::write_frame> pop_video()
-	{
-		auto frame = video_streams_.front().front();
-		video_streams_.front().pop();
+		audio_data_.insert(audio_data_.end(), audio_samples->begin(), audio_samples->end());
 		
-		return frame;
-	}
-
-	core::audio_buffer pop_audio()
-	{
-		CASPAR_ASSERT(audio_streams_.front().size() >= format_desc_.audio_samples_per_frame);
-
-		auto begin = audio_streams_.front().begin();
-		auto end   = begin + format_desc_.audio_samples_per_frame;
-
-		auto samples = core::audio_buffer(begin, end);
-		audio_streams_.front().erase(begin, end);
-
-		return samples;
-	}
-	
-	bool video_ready() const
-	{		
-		return video_streams_.size() > 1 || (video_streams_.size() >= audio_streams_.size() && video_ready2());
-	}
-	
-	bool audio_ready() const
-	{
-		return audio_streams_.size() > 1 || (audio_streams_.size() >= video_streams_.size() && audio_ready2());
-	}
-
-	bool video_ready2() const
-	{		
-		switch(display_mode_)
+		while(audio_data_.size() >= format_desc_.audio_samples_per_frame)
 		{
-		case display_mode::deinterlace_bob_reinterlace:					
-		case display_mode::interlace:					
-			return video_streams_.front().size() >= 2;
-		default:										
-			return !video_streams_.front().empty();
+			auto begin = audio_data_.begin(); 
+			auto end   = begin + format_desc_.audio_samples_per_frame;
+					
+			Concurrency::send(audio_, std::make_shared<core::audio_buffer>(begin, end));
+			audio_data_.erase(begin, end);
 		}
 	}
-	
-	bool audio_ready2() const
-	{
-		switch(display_mode_)
-		{
-		case display_mode::duplicate:					
-			return audio_streams_.front().size()/2 >= format_desc_.audio_samples_per_frame;
-		default:										
-			return audio_streams_.front().size() >= format_desc_.audio_samples_per_frame;
-		}
-	}
-		
-	void commit()
-	{
-		if(video_streams_.size() > 1 && audio_streams_.size() > 1 && (!video_ready2() || !audio_ready2()))
-		{
-			if(!video_streams_.front().empty() || !audio_streams_.front().empty())
-				CASPAR_LOG(debug) << "Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
-
-			video_streams_.pop_front();
-			audio_streams_.pop_front();
-		}
-
-		if(!video_ready2() || !audio_ready2())
-			return;
-		
-		switch(display_mode_)
-		{
-		case display_mode::simple:						return simple(frame_buffer_);
-		case display_mode::duplicate:					return duplicate(frame_buffer_);
-		case display_mode::half:						return half(frame_buffer_);
-		case display_mode::interlace:					return interlace(frame_buffer_);
-		case display_mode::deinterlace_bob:				return simple(frame_buffer_);
-		case display_mode::deinterlace_bob_reinterlace:	return interlace(frame_buffer_);
-		case display_mode::deinterlace:					return simple(frame_buffer_);
-		default:										BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
-		}
-	}
-	
-	void simple(std::deque<safe_ptr<basic_frame>>& dest)
-	{		
-		auto frame1 = pop_video();
-		frame1->audio_data() = pop_audio();
-
-		dest.push_back(frame1);		
-	}
-
-	void duplicate(std::deque<safe_ptr<basic_frame>>& dest)
-	{		
-		auto frame = pop_video();
-
-		auto frame1 = make_safe<core::write_frame>(*frame); // make a copy
-		frame1->audio_data() = pop_audio();
-
-		auto frame2 = frame;
-		frame2->audio_data() = pop_audio();
-
-		dest.push_back(frame1);
-		dest.push_back(frame2);
-	}
-
-	void half(std::deque<safe_ptr<basic_frame>>& dest)
-	{							
-		auto frame1 = pop_video();
-		frame1->audio_data() = pop_audio();
-				
-		video_streams_.front().pop(); // Throw away
-
-		dest.push_back(frame1);
-	}
-	
-	void interlace(std::deque<safe_ptr<basic_frame>>& dest)
-	{				
-		auto frame1 = pop_video();
-		frame1->audio_data() = pop_audio();
-				
-		auto frame2 = pop_video();
-
-		dest.push_back(core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode));		
-	}
-	
+					
 	int64_t calc_nb_frames(int64_t nb_frames) const
 	{
 		switch(display_mode_)
@@ -490,14 +339,15 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	}
 };
 
-frame_muxer2::frame_muxer2(const std::shared_ptr<video_source_t>& video_source, 
-						   const std::shared_ptr<audio_source_t>& audio_source,
+frame_muxer2::frame_muxer2(video_source_t* video_source, 
+						   audio_source_t* audio_source,
 						   target_t& target,
 						   double in_fps, 
 						   const safe_ptr<core::frame_factory>& frame_factory)
 	: impl_(new implementation(video_source, audio_source, target, in_fps, frame_factory))
 {
 }
+
 int64_t frame_muxer2::calc_nb_frames(int64_t nb_frames) const
 {
 	return impl_->calc_nb_frames(nb_frames);

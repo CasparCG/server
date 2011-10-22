@@ -23,7 +23,7 @@
 
 #include <assert.h>
 
-#include <tbb/parallel_for.h>
+#include <ppl.h>
 
 namespace caspar {
 
@@ -58,13 +58,15 @@ static void* fast_memshfl(void* dest, const void* source, size_t count, int m1, 
 
 static void* fast_memshfl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
 {   
-	tbb::affinity_partitioner ap;
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, count/128), [&](const tbb::blocked_range<size_t>& r)
-	{       
-		internal::fast_memshfl(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128, m1, m2, m3, m4);   
-	}, ap);
+	size_t rest = count % 2048;
+	count -= rest;
 
-	return dest;
+	Concurrency::parallel_for<int>(0, count, 2048, [&](int n)
+	{       
+		internal::fast_memshfl(reinterpret_cast<char*>(dest) + n*2048, reinterpret_cast<const char*>(source) + n*2048, 2048, m1, m2, m3, m4);   
+	});
+
+	return internal::fast_memshfl(reinterpret_cast<char*>(dest) + count, reinterpret_cast<const char*>(source) + count, rest, m1, m2, m3, m4);   
 }
 
 

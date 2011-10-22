@@ -2,6 +2,7 @@
 
 #include "util.h"
 
+#include "../ffmpeg_error.h"
 #include "format/flv.h"
 
 #include <concurrent_unordered_map.h>
@@ -13,6 +14,7 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/exception/exceptions.h>
+#include <common/utility/assert.h>
 
 #include <ppl.h>
 
@@ -129,6 +131,9 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 {			
 	static Concurrency::concurrent_unordered_map<size_t, Concurrency::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
+	if(decoded_frame->width < 1 || decoded_frame->height < 1)
+		return make_safe<core::write_frame>(tag);
+
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
 	auto desc		  = get_pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
@@ -136,11 +141,13 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	if(hints & core::frame_producer::ALPHA_HINT)
 		desc = get_pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
 
+	std::shared_ptr<core::write_frame> write;
+
 	if(desc.pix_fmt == core::pixel_format::invalid)
 	{
 		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
 
-		auto write = frame_factory->create_frame(tag, get_pixel_format_desc(PIX_FMT_BGRA, width, height));
+		write = frame_factory->create_frame(tag, get_pixel_format_desc(PIX_FMT_BGRA, width, height));
 		write->set_type(get_mode(*decoded_frame));
 
 		std::shared_ptr<SwsContext> sws_context;
@@ -172,12 +179,10 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		pool.push(sws_context);
 
 		write->commit();
-
-		return write;
 	}
 	else
 	{
-		auto write = frame_factory->create_frame(tag, desc);
+		write = frame_factory->create_frame(tag, desc);
 		write->set_type(get_mode(*decoded_frame));
 
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
@@ -195,9 +200,15 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 
 			write->commit(n);
 		}
-		
-		return write;
 	}
+	
+	// Fix field-order if needed
+	if(write->get_type() == core::field_mode::lower && frame_factory->get_video_format_desc().field_mode == core::field_mode::upper)
+		write->get_frame_transform().fill_translation[1] += 1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
+	else if(write->get_type() == core::field_mode::upper && frame_factory->get_video_format_desc().field_mode == core::field_mode::lower)
+		write->get_frame_transform().fill_translation[1] -= 1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
+
+	return make_safe_ptr(write);
 }
 
 bool is_sane_fps(AVRational time_base)
@@ -365,6 +376,24 @@ const std::shared_ptr<core::audio_buffer>& eof_audio()
 {
 	static auto audio2 = std::make_shared<core::audio_buffer>();
 	return audio2;
+}
+
+safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index)
+{	
+	AVCodec* decoder;
+	index = THROW_ON_ERROR3(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "", ffmpeg_stream_not_found);
+	THROW_ON_ERROR2(avcodec_open(context.streams[index]->codec, decoder), "");
+	return safe_ptr<AVCodecContext>(context.streams[index]->codec, avcodec_close);
+}
+
+safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
+{
+	AVFormatContext* weak_context = nullptr;
+	THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(filename).c_str(), nullptr, nullptr), filename);
+	safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
+	THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), filename);
+	fix_meta_data(*context);
+	return context;
 }
 
 }}

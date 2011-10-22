@@ -20,6 +20,8 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+#include <agents.h>
+
 struct AVFrame;
 struct AVFormatContext;
 struct AVPacket;
@@ -35,7 +37,7 @@ struct frame_factory;
 }
 
 namespace ffmpeg {
-
+	
 static const PixelFormat	CASPAR_PIX_FMT_LUMA = PIX_FMT_MONOBLACK; // Just hijack some unual pixel format.
 
 core::field_mode::type		get_mode(AVFrame& frame);
@@ -57,5 +59,8 @@ const std::shared_ptr<AVFrame>& eof_video();
 const std::shared_ptr<core::audio_buffer>& loop_audio();
 const std::shared_ptr<core::audio_buffer>& empty_audio();
 const std::shared_ptr<core::audio_buffer>& eof_audio();
+
+safe_ptr<AVCodecContext> open_codec(AVFormatContext& context,  enum AVMediaType type, int& index);
+safe_ptr<AVFormatContext> open_input(const std::wstring& filename);
 
 }}

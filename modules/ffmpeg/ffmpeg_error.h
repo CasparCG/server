@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/exception/exceptions.h>
+#include <common/utility/string.h>
 
 #include <string>
 
@@ -55,7 +56,7 @@ static std::string av_error_str(int errn)
 				boost::errinfo_errno(AVUNERROR(ret)));						\
 		}																	\
 		return ret;															\
-	}();
+	}()
 #define THROW_ON_ERROR2(call, source) THROW_ON_ERROR3(call, source, ffmpeg_error)
 
 }}

@@ -48,8 +48,6 @@
 #include <boost/fusion/include/at_key.hpp>
 #include <boost/foreach.hpp>
 
-#include <tbb/parallel_invoke.h>
-
 #include <unordered_map>
 
 namespace caspar { namespace core {

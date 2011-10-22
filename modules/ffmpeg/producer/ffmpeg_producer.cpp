@@ -47,6 +47,8 @@
 
 #include <agents.h>
 #include <agents_extras.h>
+#include <connect.h>
+#include <concrt.h>
 #include <ppl.h>
 
 using namespace Concurrency;
@@ -60,17 +62,18 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool								loop_;
 	const size_t							length_;
 	
-	Concurrency::unbounded_buffer<std::shared_ptr<AVPacket>>					packet_stream_;
-	std::shared_ptr<Concurrency::ISource<std::shared_ptr<AVFrame>>>				video_stream_;
-	std::shared_ptr<Concurrency::ISource<std::shared_ptr<core::audio_buffer>>>	audio_stream_;
-	Concurrency::bounded_buffer<std::shared_ptr<core::basic_frame>>				frame_stream_;
+	Concurrency::unbounded_buffer<std::shared_ptr<AVPacket>>			packets_;
+	Concurrency::unbounded_buffer<std::shared_ptr<AVFrame>>				video_;
+	Concurrency::unbounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_;
+	Concurrency::bounded_buffer<safe_ptr<core::basic_frame>>			frames_;
 		
 	const safe_ptr<diagnostics::graph>		graph_;
 					
-	input									input_;	
-	std::unique_ptr<video_decoder>			video_decoder_;
-	std::unique_ptr<audio_decoder>			audio_decoder_;	
-	std::unique_ptr<frame_muxer2>			muxer_;
+	input											input_;	
+	std::shared_ptr<video_decoder>					video_decoder_;
+	std::shared_ptr<audio_decoder>					audio_decoder_;	
+	Concurrency::call<std::shared_ptr<AVPacket>>	throw_away_;
+	std::unique_ptr<frame_muxer2>					muxer_;
 
 	safe_ptr<core::basic_frame>				last_frame_;
 	
@@ -80,16 +83,19 @@ public:
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
-		, frame_stream_(2)
-		, graph_(diagnostics::create_graph([this]{return print();}, false))
-		, input_(packet_stream_, graph_, filename_, loop, start, length)
+		, throw_away_([](const std::shared_ptr<AVPacket>&){})
+		, frames_(2)
+		, graph_(diagnostics::create_graph("", false))
+		, input_(packets_, graph_, filename_, loop, start, length)
 		, last_frame_(core::basic_frame::empty())
 	{
+		frame_muxer2::video_source_t* video_source = nullptr;
+		frame_muxer2::audio_source_t* audio_source = nullptr;
+
 		try
 		{
-			auto target = std::make_shared<Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>>(2);
-			video_decoder_.reset(new video_decoder(packet_stream_, *target, input_.context(), frame_factory->get_video_format_desc().fps));
-			video_stream_ = target;
+			video_decoder_.reset(new video_decoder(packets_, video_, *input_.context()));
+			video_source = &video_;
 		}
 		catch(ffmpeg_stream_not_found&)
 		{
@@ -103,9 +109,8 @@ public:
 
 		try
 		{
-			auto target = std::make_shared<Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>>(25);
-			audio_decoder_.reset(new audio_decoder(packet_stream_, *target, input_.context(), frame_factory->get_video_format_desc()));
-			audio_stream_ = target;
+			audio_decoder_.reset(new audio_decoder(packets_, audio_, *input_.context(), frame_factory->get_video_format_desc()));
+			audio_source = &audio_;
 		}
 		catch(ffmpeg_stream_not_found&)
 		{
@@ -116,10 +121,12 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(warning) << "Failed to open audio-stream. Running without audio.";		
 		}
+		
+		Concurrency::connect(packets_, throw_away_);
 
 		CASPAR_VERIFY(video_decoder_ || audio_decoder_, ffmpeg_error());
 
-		muxer_.reset(new frame_muxer2(video_stream_, audio_stream_, frame_stream_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
+		muxer_.reset(new frame_muxer2(video_source, audio_source, frames_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
 				
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		graph_->start();
@@ -130,7 +137,7 @@ public:
 	~ffmpeg_producer()
 	{
 		input_.stop();			
-		while(Concurrency::receive(frame_stream_) != core::basic_frame::eof())
+		while(Concurrency::receive(frames_) != core::basic_frame::eof())
 		{
 		}
 	}
@@ -141,7 +148,8 @@ public:
 		
 		try
 		{		
-			frame = last_frame_ = safe_ptr<core::basic_frame>(Concurrency::receive(frame_stream_, 10));
+			frame = last_frame_ = safe_ptr<core::basic_frame>(Concurrency::receive(frames_, 10));
+			graph_->update_text(narrow(print()));
 		}
 		catch(Concurrency::operation_timed_out&)
 		{		

@@ -42,122 +42,85 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+#include <connect.h>
+#include <semaphore.h>
+
 namespace caspar { namespace ffmpeg {
 	
-struct audio_decoder::implementation : public Concurrency::agent, boost::noncopyable
-{
-	audio_decoder::source_t& source_;
-	audio_decoder::target_t& target_;
-
-	std::shared_ptr<AVCodecContext>								codec_context_;		
-	const core::video_format_desc								format_desc_;
+struct audio_decoder::implementation : boost::noncopyable
+{	
 	int															index_;
-	std::unique_ptr<audio_resampler>							resampler_;
-
+	std::shared_ptr<AVCodecContext>								codec_context_;		
+	
+	audio_resampler												resampler_;
+	
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
-	
-	int64_t														nb_frames_;
 
+	Concurrency::transformer<std::shared_ptr<AVPacket>, std::shared_ptr<core::audio_buffer>> transformer_;
+	
 public:
-	explicit implementation(audio_decoder::source_t& source,
-							audio_decoder::target_t& target,
-							const safe_ptr<AVFormatContext>& context, 
-							const core::video_format_desc& format_desc) 
-		: source_(source)
-		, target_(target)
-		, format_desc_(format_desc)	
-		, nb_frames_(0)
-	{			   	
-		
-		AVCodec* dec;
-		index_ = THROW_ON_ERROR3(av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0), "[audio_decoder]", ffmpeg_stream_not_found);
-		CASPAR_VERIFY(index_ > -1, ffmpeg_error());
-
-		THROW_ON_ERROR2(avcodec_open(context->streams[index_]->codec, dec), "[audio_decoder]");
-		CASPAR_VERIFY(context->streams[index_]->codec, ffmpeg_error());
-			
-		codec_context_.reset(context->streams[index_]->codec, avcodec_close);
-
-		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
-
-		resampler_.reset(new audio_resampler(format_desc_.audio_channels,    codec_context_->channels,
-												format_desc_.audio_sample_rate, codec_context_->sample_rate,
-												AV_SAMPLE_FMT_S32,				 codec_context_->sample_fmt));			
-		CASPAR_VERIFY(resampler_, ffmpeg_error());
-
-		start();
-	}
-
-	~implementation()
-	{
-		agent::wait(this);
-	}	
-
-	virtual void run()
-	{
-		try
-		{
-			while(true)
+	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
+		: codec_context_(open_codec(context, AVMEDIA_TYPE_AUDIO, index_))
+		, resampler_(format_desc.audio_channels,	codec_context_->channels,
+					 format_desc.audio_sample_rate, codec_context_->sample_rate,
+					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
+		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
+		, transformer_(std::bind(&implementation::decode, this, std::placeholders::_1), &target, [this](const std::shared_ptr<AVPacket>& packet)
 			{
-				auto packet = Concurrency::receive(source_, [this](const std::shared_ptr<AVPacket>& packet)
-				{
-					return packet && packet->stream_index == index_;
-				});
+				return packet && packet->stream_index == index_;
+			})
+	{			   	
+		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;
 
-				if(packet == eof_packet(index_))				
-					break;
-				
-				if(packet == loop_packet(index_))	
-				{	
-					avcodec_flush_buffers(codec_context_.get());
-					Concurrency::send(target_, loop_audio());
-				}	
-				else if(packet->stream_index == index_)
-				{
-					Concurrency::send(target_, decode(*packet));		
-					Concurrency::wait(0);
-				}
-			}
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-		
-		Concurrency::send(target_, eof_audio());
-
-		done();
+		Concurrency::connect(source, transformer_);
 	}
-	
-	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
+
+	std::shared_ptr<core::audio_buffer> decode(const std::shared_ptr<AVPacket>& packet)
 	{		
-		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
-		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
-		
-		int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, &pkt), "[audio_decoder]");
+		if(!packet)
+			return nullptr;
 
-		// There might be several frames in one packet.
-		pkt.size -= ret;
-		pkt.data += ret;
+		if(packet == loop_packet(index_))
+			return loop_audio();
+
+		if(packet == eof_packet(index_))
+			return eof_audio();
+
+		auto result = make_safe<core::audio_buffer>();
+
+		while(packet->size > 0)
+		{
+			buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
+			int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
+		
+			int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packet.get()), "[audio_decoder]");
+
+			// There might be several frames in one packet.
+			packet->size -= ret;
+			packet->data += ret;
 			
-		buffer1_.resize(written_bytes);
+			buffer1_.resize(written_bytes);
 
-		buffer1_ = resampler_->resample(std::move(buffer1_));
+			buffer1_ = resampler_.resample(std::move(buffer1_));
 		
-		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
-		const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
+			const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
+			const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
 
-		return n_samples > 0 ? std::make_shared<core::audio_buffer>(samples, samples + n_samples) : nullptr;
+			result->insert(result->end(), samples, samples + n_samples);
+		}
+				
+		return result;
 	}
 };
 
-audio_decoder::audio_decoder(source_t& source,
-							 target_t& target,
-							 const safe_ptr<AVFormatContext>& context, 
-							 const core::video_format_desc& format_desc)
+audio_decoder::audio_decoder(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc)
 	: impl_(new implementation(source, target, context, format_desc))
 {
 }
-int64_t audio_decoder::nb_frames() const{return impl_->nb_frames_;}
+
+int64_t audio_decoder::nb_frames() const
+{
+	return 0;
+}
 
 }}

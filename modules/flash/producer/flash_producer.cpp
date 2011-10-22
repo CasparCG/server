@@ -47,7 +47,9 @@
 
 #include <functional>
 
-#include <tbb/spin_mutex.h>
+#include <agents.h>
+#include <agents_extras.h>
+#include <concrt_extras.h>
 
 namespace caspar { namespace flash {
 		
@@ -128,7 +130,7 @@ class flash_renderer
 {	
 	const std::wstring filename_;
 
-	const std::shared_ptr<core::frame_factory> frame_factory_;
+	const safe_ptr<core::frame_factory> frame_factory_;
 	
 	CComObject<caspar::flash::FlashAxContainer>* ax_;
 	safe_ptr<core::basic_frame> head_;
@@ -144,10 +146,10 @@ class flash_renderer
 	const size_t height_;
 	
 public:
-	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
+	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: graph_(graph)
 		, filename_(filename)
-		, frame_factory_(frame_factory)
+		, frame_factory_(make_safe<core::concrt_frame_factory>(frame_factory))
 		, ax_(nullptr)
 		, head_(core::basic_frame::empty())
 		, bmp_(width, height)
@@ -198,6 +200,11 @@ public:
 		CASPAR_LOG(info) << print() << L" Thread ended.";
 	}
 	
+	void make_write_frame(const std::shared_ptr<bitmap>& bmp)
+	{
+
+	}
+
 	void param(const std::wstring& param)
 	{		
 		if(!ax_->FlashCall(param))
@@ -215,8 +222,12 @@ public:
 		if(ax_->IsEmpty())
 			return core::basic_frame::empty();		
 		
-		if(!has_underflow)			
+		if(!has_underflow)		
+		{
+			Concurrency::scoped_oversubcription_token oversubscribe;
 			timer_.tick(frame_time); // This will block the thread.
+			//Concurrency::wait(std::max<int>(0, frame_time-3));
+		}
 		else
 			graph_->add_tag("skip-sync");
 			
@@ -249,159 +260,146 @@ public:
 	}
 };
 
-struct flash_producer : public core::frame_producer
+struct flash_producer : public Concurrency::agent, public core::frame_producer
 {	
-	const std::wstring filename_;	
-	const safe_ptr<core::frame_factory> frame_factory_;
+	Concurrency::unbounded_buffer<std::wstring>					params_;
+	Concurrency::bounded_buffer<safe_ptr<core::basic_frame>>	frames_;
 
-	tbb::atomic<int> fps_;
+	tbb::atomic<bool>											is_running_;
+		
+	const safe_ptr<core::frame_factory>							frame_factory_;
+	const std::wstring											filename_;	
+	tbb::atomic<int>											fps_;
+	const int													width_;
+	const int													height_;
+		
+	mutable Concurrency::overwrite_buffer<safe_ptr<core::basic_frame>> last_frame_;
 
-	std::shared_ptr<diagnostics::graph> graph_;
-
-	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
-
-	mutable tbb::spin_mutex		last_frame_mutex_;
-	safe_ptr<core::basic_frame>	last_frame_;
+	safe_ptr<diagnostics::graph>								graph_;
 				
-	com_context<flash_renderer> context_;	
-
-	int width_;
-	int height_;
 public:
 	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, size_t width, size_t height) 
-		: filename_(filename)		
+		: frames_(frame_factory->get_video_format_desc().fps > 30.0 ? 2 : 1)
 		, frame_factory_(frame_factory)
-		, context_(L"flash_producer")
-		, last_frame_(core::basic_frame::empty())
+		, filename_(filename)		
 		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
+		, graph_(diagnostics::create_graph("", false))
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
-
-		fps_ = 0;
-
-		graph_ = diagnostics::create_graph([this]{return print();});
-		graph_->set_color("output-buffer-count", diagnostics::color(1.0f, 1.0f, 0.0f));		 
-		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		
-		frame_buffer_.set_capacity(frame_factory_->get_video_format_desc().fps > 30.0 ? 2 : 1);
+		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 
-		initialize();				
+		Concurrency::send(last_frame_, core::basic_frame::empty());
+		
+		fps_		= 0;
+		is_running_ = true;
+
+		graph_->start();
+		start();
 	}
 
 	~flash_producer()
 	{
-		frame_buffer_.clear();
+		is_running_ = false;
+		auto frame = core::basic_frame::empty();
+		while(Concurrency::try_receive(frames_, frame)){}
+		agent::wait(this);
 	}
+	
+	virtual void run()
+	{		
+		try
+		{
+			struct co_init
+			{
+				co_init()  {CoInitialize(NULL);}
+				~co_init() {CoUninitialize();}
+			} init;
 
+			flash_renderer renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);
+
+			is_running_ = true;
+			while(is_running_)
+			{
+				std::wstring param;
+				while(is_running_ && Concurrency::try_receive(params_, param))
+					renderer.param(param);
+			
+				const auto& format_desc = frame_factory_->get_video_format_desc();
+
+				if(abs(renderer.fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
+				{
+					auto frame1 = renderer.render_frame(false);
+					auto frame2 = renderer.render_frame(false);
+					Concurrency::send(last_frame_, frame2);
+					Concurrency::send(frames_, core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
+				}
+				else if(abs(renderer.fps()- format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
+				{
+					auto frame = renderer.render_frame(false);
+					Concurrency::send(last_frame_, frame);
+					Concurrency::send(frames_, frame);
+					Concurrency::send(frames_, frame);
+				}
+				else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
+				{
+					auto frame = renderer.render_frame(false);
+					Concurrency::send(last_frame_, frame);
+					Concurrency::send(frames_, frame);
+				}
+
+				fps_ = static_cast<int>(renderer.fps()*100.0);
+				graph_->update_text(narrow(print()));
+			}
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+		
+		is_running_ = false;
+		done();
+	}
+	
 	// frame_producer
 		
 	virtual safe_ptr<core::basic_frame> receive(int)
-	{				
-		graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
-
+	{						
 		auto frame = core::basic_frame::late();
-		if(!frame_buffer_.try_pop(frame))
+
+		try
+		{
+			frame = Concurrency::receive(frames_, 5);
+		}
+		catch(Concurrency::operation_timed_out&)
+		{			
 			graph_->add_tag("underflow");
+		}
 
 		return frame;
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const
 	{
-		tbb::spin_mutex::scoped_lock lock(last_frame_mutex_);
-		return last_frame_;
+		return last_frame_.value();
 	}		
 	
 	virtual void param(const std::wstring& param) 
 	{	
-		context_.begin_invoke([=]
+		if(!is_running_.fetch_and_store(true))
 		{
-			if(!context_)
-				initialize();
-
-			try
-			{
-				context_->param(param);	
-
-				//const auto& format_desc = frame_factory_->get_video_format_desc();
-				//if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
-				//	CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				context_.reset(nullptr);
-				frame_buffer_.push(core::basic_frame::empty());
-			}
-		});
+			agent::wait(this);
+			start();
+		}
+		Concurrency::asend(params_, param);
 	}
 		
 	virtual std::wstring print() const
 	{ 
 		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
-
-	// flash_producer
-
-	void initialize()
-	{
-		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);});
-		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
-		render(context_.get());
-	}
-
-	safe_ptr<core::basic_frame> render_frame()
-	{
-		auto frame = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());		
-		tbb::spin_mutex::scoped_lock lock(last_frame_mutex_);
-		last_frame_ = make_safe<core::basic_frame>(frame);
-		return frame;
-	}
-
-	void render(const flash_renderer* renderer)
-	{		
-		context_.begin_invoke([=]
-		{
-			if(context_.get() != renderer) // Since initialize will start a new recursive call make sure the recursive calls are only for a specific instance.
-				return;
-
-			try
-			{		
-				const auto& format_desc = frame_factory_->get_video_format_desc();
-
-				if(abs(context_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
-				{
-					auto frame1 = render_frame();
-					auto frame2 = render_frame();
-					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
-				}
-				else if(abs(context_->fps()- format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
-				{
-					auto frame = render_frame();
-					frame_buffer_.push(frame);
-					frame_buffer_.push(frame);
-				}
-				else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
-				{
-					auto frame = render_frame();
-					frame_buffer_.push(frame);
-				}
-
-				graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
-				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));
-
-				render(renderer);
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				context_.reset(nullptr);
-				frame_buffer_.push(core::basic_frame::empty());
-			}
-		});
-	}
 };
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)

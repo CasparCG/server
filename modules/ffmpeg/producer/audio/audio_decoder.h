@@ -45,13 +45,10 @@ class audio_decoder : boost::noncopyable
 {
 public:
 
-	typedef Concurrency::ISource<std::shared_ptr<AVPacket>>				source_t;
-	typedef Concurrency::ITarget<std::shared_ptr<core::audio_buffer>>	target_t;
-
-	explicit audio_decoder(source_t& source,
-						   target_t& target,
-						   const safe_ptr<AVFormatContext>& context, 
-						   const core::video_format_desc& format_desc);
+	typedef Concurrency::ISource<std::shared_ptr<AVPacket>>& source_t;
+	typedef Concurrency::ITarget<std::shared_ptr<core::audio_buffer>>& target_t;
+	
+	explicit audio_decoder(source_t& source, target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc);
 	
 	int64_t nb_frames() const;
 
