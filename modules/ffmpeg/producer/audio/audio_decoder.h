@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include "../util.h"
+
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <common/memory/safe_ptr.h>
@@ -45,8 +47,8 @@ class audio_decoder : boost::noncopyable
 {
 public:
 
-	typedef Concurrency::ISource<std::shared_ptr<AVPacket>>& source_t;
-	typedef Concurrency::ITarget<std::shared_ptr<core::audio_buffer>>& target_t;
+	typedef Concurrency::ISource<packet_message_t>& source_t;
+	typedef Concurrency::ITarget<audio_message_t>& target_t;
 	
 	explicit audio_decoder(source_t& source, target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc);
 	

@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include "util.h"
+
 #include <common/memory/safe_ptr.h>
 
 #include <agents.h>
@@ -47,7 +49,7 @@ class input : boost::noncopyable
 {
 public:
 	
-	typedef Concurrency::ITarget<std::shared_ptr<AVPacket>> target_t;
+	typedef Concurrency::ITarget<packet_message_t> target_t;
 
 	explicit input(target_t& target, 
 				   const safe_ptr<diagnostics::graph>& graph, 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util.h"
+
 #include <common/memory/safe_ptr.h>
 
 #include <core/mixer/audio/audio_mixer.h>
@@ -29,10 +31,10 @@ class frame_muxer2 : boost::noncopyable
 {
 public:
 	
-	typedef Concurrency::ISource<std::shared_ptr<AVFrame>>				video_source_t;
-	typedef Concurrency::ISource<std::shared_ptr<core::audio_buffer>>	audio_source_t;
-	typedef Concurrency::ITarget<safe_ptr<core::basic_frame>>			target_t;
-
+	typedef Concurrency::ISource<video_message_t>	video_source_t;
+	typedef Concurrency::ISource<audio_message_t>	audio_source_t;
+	typedef Concurrency::ITarget<frame_message_t>	target_t;
+								 
 	frame_muxer2(video_source_t* video_source,
 				 audio_source_t* audio_source, 
 				 target_t& target,

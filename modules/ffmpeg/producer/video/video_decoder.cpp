@@ -58,9 +58,9 @@ struct video_decoder::implementation : boost::noncopyable
 	size_t									height_;
 	bool									is_progressive_;
 	
-	Concurrency::transformer<std::shared_ptr<AVPacket>, std::shared_ptr<AVFrame>> transformer_;
+	Concurrency::transformer<packet_message_t, video_message_t> transformer_;
 	
-	Concurrency::semaphore semaphore_;
+	safe_ptr<Concurrency::semaphore> semaphore_;
 
 public:
 	explicit implementation(video_decoder::source_t& source, video_decoder::target_t& target, AVFormatContext& context) 
@@ -70,11 +70,11 @@ public:
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 		, is_progressive_(true)
-		, transformer_(std::bind(&implementation::decode, this, std::placeholders::_1), &target, [this](const std::shared_ptr<AVPacket>& packet)
+		, transformer_(std::bind(&implementation::decode, this, std::placeholders::_1), &target, [this](const packet_message_t& message)
 			{
-				return packet && packet->stream_index == index_;
+				return message->payload && message->payload->stream_index == index_;
 			})
-		, semaphore_(1)
+		, semaphore_(make_safe<Concurrency::semaphore>(1))
 	{		
 		CASPAR_LOG(debug) << "[video_decoder] " << context.streams[index_]->codec->codec->long_name;
 		
@@ -84,23 +84,24 @@ public:
 		Concurrency::connect(source, transformer_);
 	}
 		
-	std::shared_ptr<AVFrame> decode(const std::shared_ptr<AVPacket>& packet)
+	video_message_t decode(const packet_message_t& message)
 	{
+		auto packet = message->payload;
+
 		if(!packet)
-			return nullptr;
+			return make_message(std::shared_ptr<AVFrame>());
 
 		if(packet == loop_packet(index_))
-			return loop_video();
+			return make_message(loop_video());
 
 		if(packet == eof_packet(index_))
-			return eof_video();
+			return make_message(eof_video());
 		
-		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), [this](AVFrame* frame)
+		token token(semaphore_);
+		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), [this, token](AVFrame* frame)
 		{
 			av_free(frame);
-			semaphore_.release();
 		});
-		semaphore_.acquire();
 
 		int frame_finished = 0;
 		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, packet.get()), "[video_decocer]");
@@ -111,14 +112,15 @@ public:
 		// AVParser or demuxer which puted more then one frame in a AVPacket.
 
 		if(frame_finished == 0)	
-			return nullptr;
+			return make_message(std::shared_ptr<AVFrame>());
 
 		if(decoded_frame->repeat_pict > 0)
 			CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
 		
 		is_progressive_ = decoded_frame->interlaced_frame == 0;
 				
-		return decoded_frame;
+		Concurrency::wait(10);
+		return make_message(decoded_frame, message->token);
 	}
 		
 	double fps() const

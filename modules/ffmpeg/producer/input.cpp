@@ -57,7 +57,7 @@ using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
 
-static const size_t MAX_BUFFER_COUNT = 32;
+static const size_t MAX_TOKENS = 32;
 	
 struct input::implementation : public Concurrency::agent, boost::noncopyable
 {
@@ -78,8 +78,11 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 	tbb::atomic<size_t>						nb_frames_;
 	tbb::atomic<size_t>						nb_loops_;	
 	tbb::atomic<size_t>						packets_count_;
+	tbb::atomic<size_t>						packets_size_;
 
 	bool									stop_;
+
+	safe_ptr<Concurrency::semaphore>		semaphore_;
 	
 public:
 	explicit implementation(input::target_t& target,
@@ -99,8 +102,10 @@ public:
 		, length_(length)
 		, frame_number_(0)
 		, stop_(false)
+		, semaphore_(make_safe<Concurrency::semaphore>(MAX_TOKENS))
 	{		
 		packets_count_	= 0;
+		packets_size_	= 0;
 		nb_frames_		= 0;
 		nb_loops_		= 0;
 				
@@ -110,12 +115,13 @@ public:
 			seek_frame(start_);
 								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
-		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
-		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
 	}
-
-	~implementation()
+	
+	void stop()
 	{
+		stop_ = true;
+		for(size_t n = 0; n < format_context_->nb_streams+1; ++n)
+			semaphore_->release();
 		agent::wait(this);
 	}
 	
@@ -123,8 +129,37 @@ public:
 	{
 		try
 		{
-			while(!stop_ && read_next_packet())
+			while(!stop_)
 			{
+				auto packet = read_next_packet();
+				if(!packet)
+					break;
+
+				Concurrency::asend(target_, make_message(packet, packet->stream_index == default_stream_index_ ? std::make_shared<token>(semaphore_) : nullptr));
+				Concurrency::wait(0);
+
+				//std::vector<std::shared_ptr<AVPacket>> buffer;
+
+				//while(buffer.size() < 100 && !stop_)
+				//{
+				//	Concurrency::scoped_oversubcription_token oversubscribe;
+				//	auto packet = read_next_packet();
+				//	if(!packet)
+				//		stop_ = true;
+				//	else
+				//		buffer.push_back(packet);
+				//}
+				//				
+				//std::stable_partition(buffer.begin(), buffer.end(), [this](const std::shared_ptr<AVPacket>& packet)
+				//{
+				//	return packet->stream_index != default_stream_index_;
+				//});
+
+				//BOOST_FOREACH(auto packet, buffer)
+				//{
+				//	Concurrency::asend(target_, make_message(packet, packet->stream_index == default_stream_index_ ? std::make_shared<token>(semaphore_) : nullptr));
+				//	Concurrency::wait(0);
+				//}
 			}
 		}
 		catch(...)
@@ -133,12 +168,15 @@ public:
 		}	
 	
 		BOOST_FOREACH(auto stream, streams_)
-			Concurrency::send(target_, eof_packet(stream->index));	
-							
+		{
+			Concurrency::send(target_, make_message(eof_packet(stream->index), std::make_shared<token>(semaphore_)));	
+			Concurrency::send(target_, make_message(eof_packet(stream->index), std::make_shared<token>(semaphore_)));	
+		}
+
 		done();
 	}
 
-	bool read_next_packet()
+	std::shared_ptr<AVPacket> read_next_packet()
 	{		
 		auto packet = create_packet();
 		
@@ -161,42 +199,35 @@ public:
 			else
 			{
 				CASPAR_LOG(trace) << print() << " Stopping.";
-				return false;
+				return nullptr;
 			}
 		}
-		else
-		{		
-			THROW_ON_ERROR(ret, print(), "av_read_frame");
 
-			if(packet->stream_index == default_stream_index_)
-			{
-				if(nb_loops_ == 0)
-					++nb_frames_;
-				++frame_number_;
-			}
+		THROW_ON_ERROR(ret, print(), "av_read_frame");
 
-			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
+		if(packet->stream_index == default_stream_index_)
+		{
+			if(nb_loops_ == 0)
+				++nb_frames_;
+			++frame_number_;
+		}
+
+		THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
 				
-			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
-			auto size = packet->size;
-			auto data = packet->data;			
+		// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
+		auto size = packet->size;
+		auto data = packet->data;			
 
-			packet = std::shared_ptr<AVPacket>(packet.get(), [=](AVPacket*)
-			{
-				packet->size = size;
-				packet->data = data;
-				--packets_count_;
-				graph_->update_value("buffer-count", (static_cast<double>(packets_count_)+0.001)/MAX_BUFFER_COUNT);	
-			});
+		packet = std::shared_ptr<AVPacket>(packet.get(), [=](AVPacket*)
+		{
+			packet->size = size;
+			packet->data = data;
+			--packets_count_;
+		});
 
-			++packets_count_;
-
-			Concurrency::asend(target_, packet);
-					
-			graph_->update_value("buffer-count", (static_cast<double>(packets_count_)+0.001)/MAX_BUFFER_COUNT);
-		}	
-
-		return true;
+		++packets_count_;
+							
+		return packet;
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
@@ -215,10 +246,10 @@ public:
 
 		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());	
 		auto packet = create_packet();
-		packet->size = 0;		
+		packet->size = 0;
 
 		BOOST_FOREACH(auto stream, streams_)
-			Concurrency::send(target_, loop_packet(stream->index));	
+			Concurrency::send(target_, make_message(loop_packet(stream->index), std::make_shared<token>(semaphore_)));	
 
 		graph_->add_tag("seek");		
 	}		
@@ -273,7 +304,7 @@ void input::start()
 
 void input::stop()
 {
-	impl_->stop_ = true;
+	impl_->stop();
 }
 
 }}

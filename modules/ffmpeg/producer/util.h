@@ -21,6 +21,7 @@ extern "C"
 #endif
 
 #include <agents.h>
+#include <semaphore.h>
 
 struct AVFrame;
 struct AVFormatContext;
@@ -37,6 +38,46 @@ struct frame_factory;
 }
 
 namespace ffmpeg {
+	
+class token
+{
+	safe_ptr<Concurrency::semaphore> semaphore_;
+public:
+	token(const safe_ptr<Concurrency::semaphore>& semaphore)
+		: semaphore_(semaphore)
+	{
+		semaphore_->acquire();
+	}
+
+	~token()
+	{
+		semaphore_->release();
+	}
+};
+
+template <typename T>
+struct message
+{
+	message(const std::shared_ptr<T>& payload, const std::shared_ptr<token>& token = nullptr)
+		: payload(payload)
+		, token(token)
+	{
+	}
+
+	std::shared_ptr<T>	   payload;
+	std::shared_ptr<token> token;
+};
+
+template<typename T>
+std::shared_ptr<message<T>> make_message(const std::shared_ptr<T>& payload, const std::shared_ptr<token>& token = nullptr)
+{
+	return std::make_shared<message<T>>(payload, token);
+}
+
+typedef std::shared_ptr<message<AVPacket>>				packet_message_t;
+typedef std::shared_ptr<message<AVFrame>>				video_message_t;
+typedef std::shared_ptr<message<core::audio_buffer>>	audio_message_t;
+typedef std::shared_ptr<message<core::basic_frame>>		frame_message_t;
 	
 static const PixelFormat	CASPAR_PIX_FMT_LUMA = PIX_FMT_MONOBLACK; // Just hijack some unual pixel format.
 

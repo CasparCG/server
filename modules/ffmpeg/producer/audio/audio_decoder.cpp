@@ -56,7 +56,7 @@ struct audio_decoder::implementation : boost::noncopyable
 	
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
-	Concurrency::transformer<std::shared_ptr<AVPacket>, std::shared_ptr<core::audio_buffer>> transformer_;
+	Concurrency::transformer<packet_message_t, audio_message_t> transformer_;
 	
 public:
 	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
@@ -65,9 +65,9 @@ public:
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
-		, transformer_(std::bind(&implementation::decode, this, std::placeholders::_1), &target, [this](const std::shared_ptr<AVPacket>& packet)
+		, transformer_(std::bind(&implementation::decode, this, std::placeholders::_1), &target, [this](const packet_message_t& message)
 			{
-				return packet && packet->stream_index == index_;
+				return message->payload && message->payload->stream_index == index_;
 			})
 	{			   	
 		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;
@@ -75,18 +75,20 @@ public:
 		Concurrency::connect(source, transformer_);
 	}
 
-	std::shared_ptr<core::audio_buffer> decode(const std::shared_ptr<AVPacket>& packet)
+	audio_message_t decode(const packet_message_t& message)
 	{		
+		auto packet = message->payload;
+
 		if(!packet)
-			return nullptr;
+			return make_message(std::shared_ptr<core::audio_buffer>());
 
 		if(packet == loop_packet(index_))
-			return loop_audio();
+			return make_message(loop_audio());
 
 		if(packet == eof_packet(index_))
-			return eof_audio();
+			return make_message(eof_audio());
 
-		auto result = make_safe<core::audio_buffer>();
+		auto result = std::make_shared<core::audio_buffer>();
 
 		while(packet->size > 0)
 		{
@@ -109,7 +111,7 @@ public:
 			result->insert(result->end(), samples, samples + n_samples);
 		}
 				
-		return result;
+		return make_message(result, message->token);
 	}
 };
 
