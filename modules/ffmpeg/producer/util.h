@@ -68,4 +68,24 @@ safe_ptr<AVPacket> create_packet();
 safe_ptr<AVCodecContext> open_codec(AVFormatContext& context,  enum AVMediaType type, int& index);
 safe_ptr<AVFormatContext> open_input(const std::wstring& filename);
 
+
+//safe_ptr<AVFrame> copy_av_frame(safe_ptr<AVFrame> av_frame)
+//{
+//	const uint8_t *src_data[4] = {0};
+//	memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
+//	const int src_linesizes[4] = {0};
+//	memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
+//
+//	auto av_frame2 = get_av_frame();
+//	av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
+//	av_frame = safe_ptr<AVFrame>(av_frame2.get(), [=](AVFrame*)
+//	{
+//		av_freep(&av_frame2->data[0]);
+//	});
+//
+//	av_image_copy(av_frame2->data, av_frame2->linesize, src_data, src_linesizes, PIX_FMT_BGRA, av_frame2->width, av_frame2->height);
+//
+//	return av_frame;
+//}
+
 }}
