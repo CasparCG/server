@@ -148,8 +148,7 @@ public:
 		
 		try
 		{		
-			auto message = Concurrency::receive(frames_, 10);
-			frame = last_frame_ = make_safe_ptr(message->payload);
+			frame = last_frame_ = Concurrency::receive(frames_, 10)->payload;
 			graph_->update_text(narrow(print()));
 		}
 		catch(Concurrency::operation_timed_out&)
