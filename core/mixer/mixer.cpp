@@ -118,27 +118,29 @@ public:
 	{		
 		auto frames = msg->value();
 
-		critical_section::scoped_lock lock(mutex_);
-
-		BOOST_FOREACH(auto& frame, frames)
 		{
-			auto blend_it = blend_modes_.find(frame.first);
-			image_mixer_.begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
+			critical_section::scoped_lock lock(mutex_);
+
+			BOOST_FOREACH(auto& frame, frames)
+			{
+				auto blend_it = blend_modes_.find(frame.first);
+				image_mixer_.begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
 				
-			auto frame1 = make_safe<core::basic_frame>(frame.second);
-			frame1->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
+				auto frame1 = make_safe<core::basic_frame>(frame.second);
+				frame1->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
 
-			if(format_desc_.field_mode != core::field_mode::progressive)
-			{				
-				auto frame2 = make_safe<core::basic_frame>(frame.second);
-				frame2->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
-				frame1 = core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode);
-			}
+				if(format_desc_.field_mode != core::field_mode::progressive)
+				{				
+					auto frame2 = make_safe<core::basic_frame>(frame.second);
+					frame2->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
+					frame1 = core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode);
+				}
 									
-			frame1->accept(audio_mixer_);					
-			frame1->accept(image_mixer_);
+				frame1->accept(audio_mixer_);					
+				frame1->accept(image_mixer_);
 
-			image_mixer_.end_layer();
+				image_mixer_.end_layer();
+			}
 		}
 
 		auto image = image_mixer_.render();
