@@ -81,6 +81,8 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 	tbb::atomic<size_t>						packets_size_;
 
 	bool									stop_;
+
+	safe_ptr<semaphore>						semaphore_;
 		
 public:
 	explicit implementation(input::target_t& target,
@@ -100,6 +102,7 @@ public:
 		, length_(length)
 		, frame_number_(0)
 		, stop_(false)
+		, semaphore_(make_safe<semaphore>(8))
 	{		
 		packets_count_	= 0;
 		packets_size_	= 0;
@@ -131,7 +134,6 @@ public:
 					break;
 
 				Concurrency::asend(target_, make_safe_ptr(packet));
-				Concurrency::wait(20);
 			}
 		}
 		catch(...)
@@ -193,7 +195,9 @@ public:
 			packet->size = size;
 			packet->data = data;
 			--packets_count_;
+			semaphore_->release();
 		});
+		semaphore_->acquire();
 
 		++packets_count_;
 							

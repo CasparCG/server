@@ -8,8 +8,6 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_transform.h>
-#include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
 
@@ -33,15 +31,8 @@ extern "C"
 #endif
 
 #include <boost/foreach.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
-#include <boost/assign.hpp>
 
 #include <agents_extras.h>
-
-#include <deque>
-#include <tuple>
-#include <queue>
-#include <vector>
 
 using namespace caspar::core;
 
@@ -131,7 +122,6 @@ display_mode::type get_display_mode(const core::field_mode::type in_mode, double
 	return display_mode::invalid;
 }
 
-
 struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopyable
 {		
 	ITarget<safe_ptr<core::basic_frame>>&			target_;
@@ -153,8 +143,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 	Concurrency::overwrite_buffer<bool>				is_running_;
 
-	safe_ptr<semaphore> semaphore_;
-							
 	implementation(frame_muxer2::video_source_t* video_source,
 				   frame_muxer2::audio_source_t* audio_source,
 				   frame_muxer2::target_t& target,
@@ -168,7 +156,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, frame_factory_(make_safe<core::concrt_frame_factory>(frame_factory))
 		, push_video_(std::bind(&implementation::push_video, this, std::placeholders::_1))
 		, push_audio_(std::bind(&implementation::push_audio, this, std::placeholders::_1))
-		, semaphore_(make_safe<semaphore>(8))
 	{
 		if(video_source)
 			video_source->link_target(&push_video_);
@@ -319,10 +306,14 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 		filter_.push(video_frame);
 
-		BOOST_FOREACH(auto av_frame, filter_.poll_all())
-		{		
-			av_frame->format = format;			
-			send(video_, av_frame);
+		while(true)
+		{
+			auto frame = filter_.poll();
+			if(!frame)
+				break;	
+
+			frame->format = format;
+			send(video_, make_safe_ptr(frame));
 		}
 	}
 
