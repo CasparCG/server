@@ -103,13 +103,11 @@ struct output::implementation
 	high_prec_timer timer_;
 
 	critical_section								mutex_;
-	std::shared_ptr<Scheduler>						scheduler_;
 	call<safe_ptr<message<safe_ptr<read_frame>>>>	output_;
 		
 public:
 	implementation(output::source_t& source, const video_format_desc& format_desc) 
 		: format_desc_(format_desc)
-		//, scheduler_(Scheduler::Create(SchedulerPolicy(1, ContextPriority, THREAD_PRIORITY_ABOVE_NORMAL)), [](Scheduler* p){p->Release();})
 		, output_(std::bind(&implementation::execute, this, std::placeholders::_1))
 	{
 		source.link_target(&output_);
