@@ -147,9 +147,9 @@ class flash_renderer
 	
 public:
 	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
-		: graph_(graph)
-		, filename_(filename)
+		: filename_(filename)
 		, frame_factory_(make_safe<core::concrt_frame_factory>(frame_factory))
+		, graph_(graph)
 		, ax_(nullptr)
 		, head_(core::basic_frame::empty())
 		, bmp_(width, height)
@@ -200,11 +200,6 @@ public:
 		CASPAR_LOG(info) << print() << L" Thread ended.";
 	}
 	
-	void make_write_frame(const std::shared_ptr<bitmap>& bmp)
-	{
-
-	}
-
 	void param(const std::wstring& param)
 	{		
 		if(!ax_->FlashCall(param))
@@ -214,7 +209,7 @@ public:
 	
 	safe_ptr<core::basic_frame> render_frame(bool has_underflow)
 	{
-		float frame_time = 1.0f/ax_->GetFPS();
+		const float frame_time = 1.0f/ax_->GetFPS();
 
 		graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
 		tick_timer_.restart();
@@ -318,7 +313,7 @@ public:
 				~co_init() {CoUninitialize();}
 			} init;
 
-			flash_renderer renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);
+			flash_renderer renderer(graph_, frame_factory_, filename_, width_, height_);
 
 			is_running_ = true;
 			while(is_running_)

@@ -74,7 +74,7 @@ class ogl_device : boost::noncopyable
 	
 	unsigned int fbo_;
 
-	executor executor_;
+	safe_ptr<executor> executor_;
 				
 public:		
 	ogl_device();
@@ -104,13 +104,13 @@ public:
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{			
-		return executor_.begin_invoke(std::forward<Func>(func), priority);
+		return executor_->begin_invoke(std::forward<Func>(func), priority);
 	}
 	
 	template<typename Func>
 	auto invoke(Func&& func, task_priority priority = normal_priority) -> decltype(func())
 	{
-		return executor_.invoke(std::forward<Func>(func), priority);
+		return executor_->invoke(std::forward<Func>(func), priority);
 	}
 		
 	safe_ptr<device_buffer> create_device_buffer(size_t width, size_t height, size_t stride);

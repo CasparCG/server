@@ -132,27 +132,29 @@ display_mode::type get_display_mode(const core::field_mode::type in_mode, double
 
 struct frame_muxer2::implementation : boost::noncopyable
 {		
+	typedef std::shared_ptr<message<core::write_frame>> write_frame_message_t;
+
 	display_mode::type														display_mode_;
 	const double															in_fps_;
 	const video_format_desc													format_desc_;
 	bool																	auto_transcode_;
 	
 	filter																	filter_;
-	safe_ptr<core::frame_factory>											frame_factory_;
+	const safe_ptr<core::frame_factory>										frame_factory_;
 	
-	Concurrency::call<std::shared_ptr<AVFrame>>								push_video_;
-	Concurrency::call<std::shared_ptr<core::audio_buffer>>					push_audio_;
+	Concurrency::call<video_message_t>										push_video_;
+	Concurrency::call<audio_message_t>										push_audio_;
 	
-	Concurrency::transformer<safe_ptr<AVFrame>, std::shared_ptr<core::write_frame>> video_;
-	Concurrency::unbounded_buffer<std::shared_ptr<core::audio_buffer>>				audio_;
+	Concurrency::transformer<video_message_t, write_frame_message_t>		video_;
+	Concurrency::unbounded_buffer<audio_message_t>							audio_;
 
-	typedef std::tuple<std::shared_ptr<core::write_frame>, std::shared_ptr<core::audio_buffer>> join_element_t;
+	typedef std::tuple<write_frame_message_t, audio_message_t> join_element_t;
 	
-	Concurrency::transformer<join_element_t, safe_ptr<core::basic_frame>>	merge_;
+	Concurrency::transformer<join_element_t, frame_message_t>				merge_;
 	safe_ptr<Concurrency::ISource<join_element_t>>							join_;
 
 	core::audio_buffer														audio_data_;
-	std::queue<safe_ptr<AVFrame>>											video_frames_;
+	std::queue<video_message_t>												video_frames_;
 							
 	implementation(frame_muxer2::video_source_t* video_source,
 				   frame_muxer2::audio_source_t* audio_source,
@@ -164,7 +166,7 @@ struct frame_muxer2::implementation : boost::noncopyable
 		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
 		, frame_factory_(make_safe<core::concrt_frame_factory>(frame_factory))
-		, video_(std::bind(&make_write_frame, this, std::placeholders::_1, frame_factory, 0))
+		, video_(std::bind(&implementation::make_write_frame, this, std::placeholders::_1))
 		, push_video_(std::bind(&implementation::push_video, this, std::placeholders::_1))
 		, push_audio_(std::bind(&implementation::push_audio, this, std::placeholders::_1))
 		, merge_(std::bind(&implementation::merge, this, std::placeholders::_1), &target)
@@ -178,26 +180,44 @@ struct frame_muxer2::implementation : boost::noncopyable
 		join_->link_target(&merge_);
 	}
 
-	safe_ptr<core::basic_frame> merge(const join_element_t& element)
+	frame_message_t merge(const join_element_t& element)
 	{
-		//if(std::get<0>(element) == eof_video() || std::get<1>(element) == eof_audio())
-		//	return core::basic_frame::eof();
-		auto frame = std::get<0>(element);
-		frame->audio_data() = std::move(*std::get<1>(element));
-		return make_safe_ptr(frame);
+		if(!std::get<0>(element)->payload || !std::get<1>(element)->payload)
+			return make_message(std::shared_ptr<core::basic_frame>(core::basic_frame::eof()));
+
+		auto& frame = std::get<0>(element)->payload;
+		frame->audio_data() = std::move(*std::get<1>(element)->payload);
+		return make_message(std::shared_ptr<core::basic_frame>(frame), std::get<0>(element)->token);
+	}
+
+	write_frame_message_t make_write_frame(const video_message_t& message)
+	{
+		if(!message->payload)
+			return make_message(std::shared_ptr<core::write_frame>(), message->token);
+
+		auto frame = ffmpeg::make_write_frame(this, make_safe_ptr(message->payload), frame_factory_, 0);
+		return make_message(std::shared_ptr<core::write_frame>(frame), message->token);
 	}
 	
-	void push_video(const std::shared_ptr<AVFrame>& video_frame)
+	void push_video(const video_message_t& message)
 	{		
+		auto video_frame = message->payload;
+
 		if(!video_frame)
 			return;
+		
+		if(video_frame == eof_video())
+		{
+			Concurrency::send(video_, make_message(std::shared_ptr<AVFrame>()));
+			return;
+		}
 
 		if(video_frame == loop_video())		
 			return;	
 				
 		if(video_frame == empty_video())
 		{
-			Concurrency::send(video_, make_safe_ptr(empty_video()));
+			Concurrency::send(video_, make_message(empty_video(), message->token));
 			return;
 		}
 		
@@ -245,7 +265,7 @@ struct frame_muxer2::implementation : boost::noncopyable
 		{		
 			av_frame->format = format;
 			
-			video_frames_.push(av_frame);
+			video_frames_.push(make_message(std::shared_ptr<AVFrame>(av_frame), std::move(message->token)));
 
 			switch(display_mode_)
 			{
@@ -255,6 +275,7 @@ struct frame_muxer2::implementation : boost::noncopyable
 				{
 					Concurrency::send(video_, video_frames_.front());
 					video_frames_.pop();
+
 					break;
 				}
 			case display_mode::duplicate:					
@@ -266,6 +287,7 @@ struct frame_muxer2::implementation : boost::noncopyable
 					video_frames_.pop();
 					Concurrency::send(video_, video_frames_.front());
 					video_frames_.pop();
+
 					break;
 				}
 			case display_mode::half:						
@@ -300,16 +322,24 @@ struct frame_muxer2::implementation : boost::noncopyable
 		}
 	}
 
-	void push_audio(const std::shared_ptr<core::audio_buffer>& audio_samples)
+	void push_audio(const audio_message_t& message)
 	{
+		auto audio_samples = message->payload;
+
 		if(!audio_samples)
 			return;
+
+		if(audio_samples == eof_audio())
+		{
+			Concurrency::send(audio_, make_message(std::shared_ptr<core::audio_buffer>()));
+			return;
+		}
 
 		if(audio_samples == loop_audio())			
 			return;		
 
 		if(audio_samples == empty_audio())		
-			Concurrency::send(audio_, std::make_shared<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));		
+			Concurrency::send(audio_, make_message(std::make_shared<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0), message->token));		
 
 		audio_data_.insert(audio_data_.end(), audio_samples->begin(), audio_samples->end());
 		
@@ -318,7 +348,7 @@ struct frame_muxer2::implementation : boost::noncopyable
 			auto begin = audio_data_.begin(); 
 			auto end   = begin + format_desc_.audio_samples_per_frame;
 					
-			Concurrency::send(audio_, std::make_shared<core::audio_buffer>(begin, end));
+			Concurrency::send(audio_, make_message(std::make_shared<core::audio_buffer>(begin, end), message->token));
 			audio_data_.erase(begin, end);
 		}
 	}

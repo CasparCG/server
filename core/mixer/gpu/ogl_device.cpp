@@ -36,7 +36,7 @@
 namespace caspar { namespace core {
 
 ogl_device::ogl_device() 
-	: executor_(L"ogl_device")
+	: executor_(new executor(L"ogl_device"))
 	, pattern_(nullptr)
 	, attached_texture_(0)
 	, active_shader_(0)
@@ -109,7 +109,7 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 	auto& pool = device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->items.try_pop(buffer))		
-		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);}, high_priority);			
+		buffer = executor_->invoke([&]{return allocate_device_buffer(width, height, stride);}, high_priority);			
 	
 	//++pool->usage_count;
 
@@ -162,13 +162,14 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 	auto& pool = host_pools_[usage][size];
 	std::shared_ptr<host_buffer> buffer;
 	if(!pool->items.try_pop(buffer))	
-		buffer = executor_.invoke([=]{return allocate_host_buffer(size, usage);}, high_priority);	
+		buffer = executor_->invoke([=]{return allocate_host_buffer(size, usage);}, high_priority);	
 	
 	//++pool->usage_count;
 
+	auto exe = executor_;
 	return safe_ptr<host_buffer>(buffer.get(), [=](host_buffer*) mutable
 	{
-		executor_.begin_invoke([=]() mutable
+		exe->begin_invoke([=]() mutable
 		{		
 			if(usage == host_buffer::write_only)
 				buffer->map();
@@ -221,7 +222,7 @@ void ogl_device::flush()
 
 void ogl_device::yield()
 {
-	executor_.yield();
+	executor_->yield();
 }
 
 boost::unique_future<void> ogl_device::gc()
