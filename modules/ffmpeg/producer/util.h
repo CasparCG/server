@@ -40,56 +40,16 @@ struct frame_factory;
 namespace ffmpeg {
 	
 // Dataflow
-
-class token
-{
-	safe_ptr<Concurrency::semaphore> semaphore_;
-public:
-	token(const safe_ptr<Concurrency::semaphore>& semaphore)
-		: semaphore_(semaphore)
-	{
-		semaphore_->acquire();
-	}
-
-	~token()
-	{
-		semaphore_->release();
-	}
-};
-
-template <typename T>
-struct message
-{
-	message(const T& payload = T(), const std::shared_ptr<token>& token = nullptr)
-		: payload(payload)
-		, token(token)
-	{
-	}
-
-	T						payload;
-	std::shared_ptr<token>	token;
-};
-
-template<typename T>
-safe_ptr<message<T>> make_message(const T& payload, const std::shared_ptr<token>& token = nullptr)
-{
-	return make_safe<message<T>>(payload, token);
-}
-
-typedef safe_ptr<message<std::shared_ptr<AVPacket>>>			packet_message_t;
-typedef safe_ptr<message<std::shared_ptr<AVFrame>>>				video_message_t;
-typedef safe_ptr<message<std::shared_ptr<core::audio_buffer>>>	audio_message_t;
-typedef safe_ptr<message<safe_ptr<core::basic_frame>>>			frame_message_t;
 	
-const std::shared_ptr<AVPacket>& loop_packet(int index);
-const std::shared_ptr<AVPacket>& eof_packet(int index);
+const safe_ptr<AVPacket>& loop_packet(int index);
+const safe_ptr<AVPacket>& eof_packet(int index);
 
-const std::shared_ptr<AVFrame>& loop_video();
-const std::shared_ptr<AVFrame>& empty_video();
-const std::shared_ptr<AVFrame>& eof_video();
-const std::shared_ptr<core::audio_buffer>& loop_audio();
-const std::shared_ptr<core::audio_buffer>& empty_audio();
-const std::shared_ptr<core::audio_buffer>& eof_audio();
+const safe_ptr<AVFrame>& loop_video();
+const safe_ptr<AVFrame>& empty_video();
+const safe_ptr<AVFrame>& eof_video();
+const safe_ptr<core::audio_buffer>& loop_audio();
+const safe_ptr<core::audio_buffer>& empty_audio();
+const safe_ptr<core::audio_buffer>& eof_audio();
 
 // Utils
 
@@ -103,7 +63,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 
 void fix_meta_data(AVFormatContext& context);
 
-std::shared_ptr<AVPacket> create_packet();
+safe_ptr<AVPacket> create_packet();
 
 safe_ptr<AVCodecContext> open_codec(AVFormatContext& context,  enum AVMediaType type, int& index);
 safe_ptr<AVFormatContext> open_input(const std::wstring& filename);

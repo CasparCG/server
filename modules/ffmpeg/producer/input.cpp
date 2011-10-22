@@ -81,9 +81,7 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 	tbb::atomic<size_t>						packets_size_;
 
 	bool									stop_;
-
-	safe_ptr<Concurrency::semaphore>		semaphore_;
-	
+		
 public:
 	explicit implementation(input::target_t& target,
 							const safe_ptr<diagnostics::graph>& graph, 
@@ -102,7 +100,6 @@ public:
 		, length_(length)
 		, frame_number_(0)
 		, stop_(false)
-		, semaphore_(make_safe<Concurrency::semaphore>(MAX_TOKENS))
 	{		
 		packets_count_	= 0;
 		packets_size_	= 0;
@@ -120,8 +117,6 @@ public:
 	void stop()
 	{
 		stop_ = true;
-		for(size_t n = 0; n < format_context_->nb_streams+1; ++n)
-			semaphore_->release();
 		agent::wait(this);
 	}
 	
@@ -135,31 +130,8 @@ public:
 				if(!packet)
 					break;
 
-				Concurrency::asend(target_, make_message(packet, packet->stream_index == default_stream_index_ ? std::make_shared<token>(semaphore_) : nullptr));
-				Concurrency::wait(0);
-
-				//std::vector<std::shared_ptr<AVPacket>> buffer;
-
-				//while(buffer.size() < 100 && !stop_)
-				//{
-				//	Concurrency::scoped_oversubcription_token oversubscribe;
-				//	auto packet = read_next_packet();
-				//	if(!packet)
-				//		stop_ = true;
-				//	else
-				//		buffer.push_back(packet);
-				//}
-				//				
-				//std::stable_partition(buffer.begin(), buffer.end(), [this](const std::shared_ptr<AVPacket>& packet)
-				//{
-				//	return packet->stream_index != default_stream_index_;
-				//});
-
-				//BOOST_FOREACH(auto packet, buffer)
-				//{
-				//	Concurrency::asend(target_, make_message(packet, packet->stream_index == default_stream_index_ ? std::make_shared<token>(semaphore_) : nullptr));
-				//	Concurrency::wait(0);
-				//}
+				Concurrency::asend(target_, make_safe_ptr(packet));
+				Concurrency::wait(40);
 			}
 		}
 		catch(...)
@@ -168,7 +140,7 @@ public:
 		}	
 	
 		BOOST_FOREACH(auto stream, streams_)
-			Concurrency::send(target_, make_message(eof_packet(stream->index), std::make_shared<token>(semaphore_)));	
+			Concurrency::send(target_, eof_packet(stream->index));	
 
 		done();
 	}
@@ -216,7 +188,7 @@ public:
 		auto size = packet->size;
 		auto data = packet->data;			
 
-		packet = std::shared_ptr<AVPacket>(packet.get(), [=](AVPacket*)
+		packet = safe_ptr<AVPacket>(packet.get(), [=](AVPacket*)
 		{
 			packet->size = size;
 			packet->data = data;
@@ -247,7 +219,7 @@ public:
 		packet->size = 0;
 
 		BOOST_FOREACH(auto stream, streams_)
-			Concurrency::send(target_, make_message(loop_packet(stream->index), std::make_shared<token>(semaphore_)));	
+			Concurrency::asend(target_, loop_packet(stream->index));	
 
 		graph_->add_tag("seek");		
 	}		

@@ -27,8 +27,6 @@
 #include "audio/audio_mixer.h"
 #include "image/image_mixer.h"
 
-#include "../video_channel_context.h"
-
 #include <common/exception/exceptions.h>
 #include <common/concurrency/executor.h>
 #include <common/utility/tweener.h>
@@ -49,6 +47,8 @@
 #include <boost/foreach.hpp>
 
 #include <unordered_map>
+
+using namespace Concurrency;
 
 namespace caspar { namespace core {
 		
@@ -86,7 +86,12 @@ public:
 
 struct mixer::implementation : boost::noncopyable
 {		
-	video_channel_context& channel_;
+	critical_section			mutex_;
+	Concurrency::transformer<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>, 
+							 safe_ptr<message<safe_ptr<core::read_frame>>>> mixer_;
+
+	const video_format_desc format_desc_;
+	ogl_device&				ogl_;
 	
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
@@ -96,63 +101,68 @@ struct mixer::implementation : boost::noncopyable
 
 	std::queue<std::pair<boost::unique_future<safe_ptr<host_buffer>>, core::audio_buffer>> buffer_;
 	
-	const size_t buffer_size_;
 
 public:
-	implementation(video_channel_context& video_channel) 
-		: channel_(video_channel)
-		, audio_mixer_(channel_.get_format_desc())
-		, image_mixer_(channel_.ogl(), channel_.get_format_desc())
-		, buffer_size_(env::properties().get("configuration.producers.buffer-depth", 1))
+	implementation(mixer::source_t& source, mixer::target_t& target, const video_format_desc& format_desc, ogl_device& ogl) 
+		: format_desc_(format_desc)
+		, ogl_(ogl)
+		, audio_mixer_(format_desc)
+		, image_mixer_(ogl, format_desc)
+		, mixer_(std::bind(&implementation::mix, this, std::placeholders::_1), &target)
 	{	
-		CASPAR_LOG(info) << print() << L" Successfully initialized . Buffer-depth: " << buffer_size_;	
+		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
+		source.link_target(&mixer_);
 	}
-			
-	safe_ptr<read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames)
-	{			
-		try
-		{
-			BOOST_FOREACH(auto& frame, frames)
-			{
-				auto blend_it = blend_modes_.find(frame.first);
-				image_mixer_.begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
-				
-				auto frame1 = make_safe<core::basic_frame>(frame.second);
-				frame1->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
-
-				if(channel_.get_format_desc().field_mode != core::field_mode::progressive)
-				{				
-					auto frame2 = make_safe<core::basic_frame>(frame.second);
-					frame2->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
-					frame1 = core::basic_frame::interlace(frame1, frame2, channel_.get_format_desc().field_mode);
-				}
-									
-				frame1->accept(audio_mixer_);					
-				frame1->accept(image_mixer_);
-
-				image_mixer_.end_layer();
-			}
-
-			auto image = image_mixer_.render();
-			auto audio = audio_mixer_.mix();
-			
-			buffer_.push(std::make_pair(std::move(image), audio));
-
-			if(buffer_.size()-1 < buffer_size_)			
-				return make_safe<read_frame>();
 		
-			auto res = std::move(buffer_.front());
-			buffer_.pop();
+	safe_ptr<message<safe_ptr<core::read_frame>>> mix(const safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>& msg)
+	{		
+		auto frames = msg->value();
 
-			return make_safe<read_frame>(channel_.ogl(), channel_.get_format_desc().size, std::move(res.first.get()), std::move(res.second));	
-		}
-		catch(...)
+		critical_section::scoped_lock lock(mutex_);
+
+		BOOST_FOREACH(auto& frame, frames)
 		{
-			CASPAR_LOG(error) << L"[mixer] Error detected.";
-			throw;
-		}				
+			auto blend_it = blend_modes_.find(frame.first);
+			image_mixer_.begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
+				
+			auto frame1 = make_safe<core::basic_frame>(frame.second);
+			frame1->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
+
+			if(format_desc_.field_mode != core::field_mode::progressive)
+			{				
+				auto frame2 = make_safe<core::basic_frame>(frame.second);
+				frame2->get_frame_transform() = transforms_[frame.first].fetch_and_tick(1);
+				frame1 = core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode);
+			}
+									
+			frame1->accept(audio_mixer_);					
+			frame1->accept(image_mixer_);
+
+			image_mixer_.end_layer();
+		}
+
+		auto image = image_mixer_.render();
+		auto audio = audio_mixer_.mix();
+			
+		buffer_.push(std::make_pair(std::move(image), audio));
+
+		if(buffer_.size() < 2)
+			return msg->transfer(make_safe<core::read_frame>());	
+
+		auto res = std::move(buffer_.front());
+		buffer_.pop();
+
+		auto buffer = [&]() -> safe_ptr<core::host_buffer>
+		{
+			scoped_oversubcription_token oversubscribe;
+			return std::move(res.first.get());
+		}();
+
+		auto frame = make_safe<read_frame>(ogl_, format_desc_.size, std::move(buffer), std::move(res.second));
+
+		return msg->transfer<safe_ptr<core::read_frame>>(std::move(frame));	
 	}
-					
+						
 	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{		
 		return image_mixer_.create_frame(tag, desc);
@@ -165,39 +175,35 @@ public:
 		
 	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		channel_.execution().invoke([&]
-		{
-			auto src = transforms_[index].fetch();
-			auto dst = transform;
-			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+
+		auto src = transforms_[index].fetch();
+		auto dst = transform;
+		transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
 	}
 				
 	void apply_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		channel_.execution().invoke([&]
-		{
-			auto src = transforms_[index].fetch();
-			auto dst = transform(src);
-			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+
+		auto src = transforms_[index].fetch();
+		auto dst = transform(src);
+		transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
 	}
 
 	void clear_transforms()
 	{
-		channel_.execution().invoke([&]
-		{
-			transforms_.clear();
-			blend_modes_.clear();
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+
+		transforms_.clear();
+		blend_modes_.clear();
 	}
 		
 	void set_blend_mode(int index, blend_mode::type value)
 	{
-		channel_.execution().invoke([&]
-		{
-			blend_modes_[index] = value;
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+
+		blend_modes_[index] = value;
 	}
 
 	std::wstring print() const
@@ -206,9 +212,8 @@ public:
 	}
 };
 	
-mixer::mixer(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
-safe_ptr<core::read_frame> mixer::execute(const std::map<int, safe_ptr<core::basic_frame>>& frames){ return impl_->execute(frames);}
-core::video_format_desc mixer::get_video_format_desc() const { return impl_->channel_.get_format_desc(); }
+mixer::mixer(mixer::source_t& source, mixer::target_t& target, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(source, target, format_desc, ogl)){}
+core::video_format_desc mixer::get_video_format_desc() const { return impl_->format_desc_; }
 safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
 boost::unique_future<safe_ptr<write_frame>> mixer::create_frame2(const void* video_stream_tag, const pixel_format_desc& desc){ return impl_->create_frame2(video_stream_tag, desc); }			
 void mixer::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}

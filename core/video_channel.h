@@ -42,11 +42,10 @@ public:
 	safe_ptr<stage> stage();
 	safe_ptr<mixer>	mixer();
 	safe_ptr<output> output();
-
-	video_channel_context& context();
-
+	
+	// C_TODO
 	video_format_desc get_video_format_desc() const;
-	void set_video_format_desc(const video_format_desc& format_desc);
+	//void set_video_format_desc(const video_format_desc& format_desc);
 
 	std::wstring print() const;
 

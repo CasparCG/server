@@ -22,7 +22,6 @@
 
 #include "video_channel.h"
 
-#include "video_channel_context.h"
 #include "video_format.h"
 
 #include "consumer/output.h"
@@ -34,6 +33,8 @@
 
 #include "mixer/gpu/ogl_device.h"
 
+#include <agents_extras.h>
+
 #include <boost/timer.hpp>
 
 #ifdef _MSC_VER
@@ -44,107 +45,103 @@ namespace caspar { namespace core {
 
 struct video_channel::implementation : boost::noncopyable
 {
-	video_channel_context			context_;
+	Concurrency::unbounded_buffer<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>>	stage_frames_;
+	Concurrency::unbounded_buffer<safe_ptr<message<safe_ptr<read_frame>>>>					mixer_frames_;
+	
+	const video_format_desc format_desc_;
 
 	safe_ptr<caspar::core::output>			output_;
 	std::shared_ptr<caspar::core::mixer>	mixer_;
 	safe_ptr<caspar::core::stage>			stage_;
 
-	safe_ptr<diagnostics::graph>	diag_;
+	safe_ptr<diagnostics::graph>	graph_;
 	boost::timer					frame_timer_;
 	boost::timer					tick_timer_;
 	boost::timer					output_timer_;
 	
 public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
-		: context_(index, ogl, format_desc)
-		, diag_(diagnostics::create_graph(narrow(print())))
-		, output_(new caspar::core::output(context_, [this]{restart();}))
-		, mixer_(new caspar::core::mixer(context_))
-		, stage_(new caspar::core::stage(context_))	
+		: graph_(diagnostics::create_graph(narrow(print()), false))
+		, format_desc_(format_desc)
+		, output_(new caspar::core::output(mixer_frames_, format_desc))
+		, mixer_(new caspar::core::mixer(stage_frames_, mixer_frames_, format_desc, ogl))
+		, stage_(new caspar::core::stage(stage_frames_))	
 	{
-		diag_->add_guide("produce-time", 0.5f);	
-		diag_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
-		diag_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
-		diag_->set_color("output-time", diagnostics::color(1.0f, 0.5f, 0.0f));
-		diag_->set_color("mix-time", diagnostics::color(1.0f, 1.0f, 0.9f));
+		graph_->add_guide("produce-time", 0.5f);	
+		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_color("output-time", diagnostics::color(1.0f, 0.5f, 0.0f));
+		graph_->set_color("mix-time", diagnostics::color(1.0f, 1.0f, 0.9f));
+		graph_->start();
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
-		context_.execution().begin_invoke([this]{tick();});
 	}
+	
+	//void tick()
+	//{
+	//	try
+	//	{
+	//		// Produce
 
-	~implementation()
-	{
-		// Stop context before destroying devices.
-		context_.execution().stop();
-		context_.execution().join();
-	}
+	//		frame_timer_.restart();
 
-	void tick()
-	{
-		try
-		{
-			// Produce
+	//		auto simple_frames = stage_->execute();
 
-			frame_timer_.restart();
+	//		graph_->update_value("produce-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
+	//	
+	//		// Mix
 
-			auto simple_frames = stage_->execute();
+	//		frame_timer_.restart();
 
-			diag_->update_value("produce-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
-		
-			// Mix
+	//		auto finished_frame = mixer_->execute(simple_frames);
+	//	
+	//		graph_->update_value("mix-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
+	//	
+	//		// Consume
+	//	
+	//		output_timer_.restart();
 
-			frame_timer_.restart();
+	//		output_->execute(finished_frame);
+	//	
+	//		graph_->update_value("output-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
 
-			auto finished_frame = mixer_->execute(simple_frames);
-		
-			diag_->update_value("mix-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
-		
-			// Consume
-		
-			output_timer_.restart();
+	//	
+	//		graph_->update_value("tick-time", tick_timer_.elapsed()*context_.get_format_desc().fps*0.5);
+	//		tick_timer_.restart();
+	//	}
+	//	catch(...)
+	//	{
+	//		CASPAR_LOG_CURRENT_EXCEPTION();
+	//		CASPAR_LOG(error) << context_.print() << L" Unexpected exception. Clearing stage and freeing memory";
+	//		restart();
+	//	}
 
-			output_->execute(finished_frame);
-		
-			diag_->update_value("output-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
+	//	context_.execution().begin_invoke([this]{tick();});
+	//}
 
-		
-			diag_->update_value("tick-time", tick_timer_.elapsed()*context_.get_format_desc().fps*0.5);
-			tick_timer_.restart();
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(error) << context_.print() << L" Unexpected exception. Clearing stage and freeing memory";
-			restart();
-		}
+	//void restart()
+	//{
+	//	stage_->clear();
+	//	context_.ogl().gc().wait();
 
-		context_.execution().begin_invoke([this]{tick();});
-	}
-
-	void restart()
-	{
-		stage_->clear();
-		context_.ogl().gc().wait();
-
-		mixer_ = nullptr;
-		mixer_.reset(new caspar::core::mixer(context_));
-	}
+	//	mixer_ = nullptr;
+	//	mixer_.reset(new caspar::core::mixer(context_));
+	//}
 		
 	std::wstring print() const
 	{
-		return context_.print();
+		return L"video_channel";
 	}
 
-	void set_video_format_desc(const video_format_desc& format_desc)
-	{
-		context_.execution().begin_invoke([=]
-		{
-			stage_->clear();
-			context_.ogl().gc().wait();
-			context_.set_format_desc(format_desc);
-		});
-	}
+	//void set_video_format_desc(const video_format_desc& format_desc)
+	//{
+	//	context_.execution().begin_invoke([=]
+	//	{
+	//		stage_->clear();
+	//		context_.ogl().gc().wait();
+	//		context_.set_format_desc(format_desc);
+	//	});
+	//}
 };
 
 video_channel::video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
@@ -152,9 +149,7 @@ video_channel::video_channel(video_channel&& other) : impl_(std::move(other.impl
 safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
 safe_ptr<mixer> video_channel::mixer() { return make_safe_ptr(impl_->mixer_);} 
 safe_ptr<output> video_channel::output() { return impl_->output_;} 
-video_format_desc video_channel::get_video_format_desc() const{return impl_->context_.get_format_desc();}
-void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
+video_format_desc video_channel::get_video_format_desc() const{return impl_->format_desc_;}
 std::wstring video_channel::print() const { return impl_->print();}
-video_channel_context& video_channel::context(){return impl_->context_;}
 
 }}

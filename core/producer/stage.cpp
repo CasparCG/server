@@ -24,8 +24,6 @@
 
 #include "layer.h"
 
-#include "../video_channel_context.h"
-
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 
@@ -34,100 +32,110 @@
 
 #include <boost/foreach.hpp>
 
+#include <agents.h>
 #include <ppl.h>
 
 #include <map>
 #include <set>
 
+using namespace Concurrency;
+
 namespace caspar { namespace core {
 
-struct stage::implementation : boost::noncopyable
+struct stage::implementation : public agent, public boost::noncopyable
 {		
+	overwrite_buffer<bool>						is_running_;
+	Concurrency::critical_section				mutex_;
+	stage::target_t&							target_;
 	std::map<int, layer>						layers_;	
-	video_channel_context&						channel_;
+	safe_ptr<semaphore>							semaphore_;
 public:
-	implementation(video_channel_context& video_channel)  
-		: channel_(video_channel)
+	implementation(stage::target_t& target)  
+		: target_(target)
+		, semaphore_(make_safe<semaphore>(3))
 	{
+		start();
 	}
-						
-	std::map<int, safe_ptr<basic_frame>> execute()
-	{		
-		try
-		{
-			std::map<int, safe_ptr<basic_frame>> frames;
-		
-			BOOST_FOREACH(auto& layer, layers_)			
-				frames[layer.first] = basic_frame::empty();	
 
-			Concurrency::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
+	~implementation()
+	{
+		send(is_running_, false);
+		semaphore_->release();
+		agent::wait(this);
+	}
+
+	virtual void run()
+	{
+		send(is_running_, true);
+		while(is_running_.value())
+		{
+			try
 			{
-				frames[layer.first] = layer.second.receive();	
-			});
+				std::map<int, safe_ptr<basic_frame>> frames;
+				{
+					critical_section::scoped_lock lock(mutex_);
+		
+					BOOST_FOREACH(auto& layer, layers_)			
+						frames[layer.first] = basic_frame::empty();	
 
-			return frames;
+					Concurrency::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
+					{
+						frames[layer.first] = layer.second.receive();	
+					});
+				}
+
+				send(target_, make_safe<message<decltype(frames)>>(frames, token(semaphore_)));
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}	
 		}
-		catch(...)
-		{
-			CASPAR_LOG(error) << L"[stage] Error detected";
-			throw;
-		}		
-	}
 
+		send(is_running_, false);
+		done();
+	}
+				
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{
-		channel_.execution().invoke([&]
-		{
-			layers_[index].load(create_destroy_producer_proxy(producer), preview, auto_play_delta);
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+		layers_[index].load(create_destroy_producer_proxy(producer), preview, auto_play_delta);
 	}
 
 	void pause(int index)
 	{		
-		channel_.execution().invoke([&]
-		{
-			layers_[index].pause();
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+		layers_[index].pause();
 	}
 
 	void play(int index)
 	{		
-		channel_.execution().invoke([&]
-		{
-			layers_[index].play();
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+		layers_[index].play();
 	}
 
 	void stop(int index)
 	{		
-		channel_.execution().invoke([&]
-		{
-			layers_[index].stop();
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+		layers_[index].stop();
 	}
 
 	void clear(int index)
 	{
-		channel_.execution().invoke([&]
-		{
-			layers_.erase(index);
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+		layers_.erase(index);
 	}
 		
 	void clear()
 	{
-		channel_.execution().invoke([&]
-		{
-			layers_.clear();
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+		layers_.clear();
 	}	
 	
 	void swap_layer(int index, size_t other_index)
 	{
-		channel_.execution().invoke([&]
-		{
-			std::swap(layers_[index], layers_[other_index]);
-		}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+		std::swap(layers_[index], layers_[other_index]);
 	}
 
 	void swap_layer(int index, size_t other_index, stage& other)
@@ -135,12 +143,10 @@ public:
 		if(other.impl_.get() == this)
 			swap_layer(index, other_index);
 		else
-		{
-			auto func = [&]
-			{
-				std::swap(layers_[index], other.impl_->layers_[other_index]);
-			};		
-			channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);}, high_priority);
+		{			
+			critical_section::scoped_lock lock1(mutex_);
+			critical_section::scoped_lock lock2(other.impl_->mutex_);
+			std::swap(layers_[index], other.impl_->layers_[other_index]);
 		}
 	}
 
@@ -149,39 +155,38 @@ public:
 		if(other.impl_.get() == this)
 			return;
 		
-		auto func = [&]
-		{
-			std::swap(layers_, other.impl_->layers_);
-		};		
-		channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);}, high_priority);
+		critical_section::scoped_lock lock1(mutex_);
+		critical_section::scoped_lock lock2(other.impl_->mutex_);
+		std::swap(layers_, other.impl_->layers_);
 	}
 
 	layer_status get_status(int index)
 	{		
-		return channel_.execution().invoke([&]
-		{
-			return layers_[index].status();
-		}, high_priority );
+		critical_section::scoped_lock lock(mutex_);
+		return layers_[index].status();
 	}
 	
 	safe_ptr<frame_producer> foreground(int index)
 	{
-		return channel_.execution().invoke([=]{return layers_[index].foreground();}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+		return layers_[index].foreground();
 	}
 	
 	safe_ptr<frame_producer> background(int index)
 	{
-		return channel_.execution().invoke([=]{return layers_[index].background();}, high_priority);
+		critical_section::scoped_lock lock(mutex_);
+		return layers_[index].background();
 	}
 
 	std::wstring print() const
 	{
-		return L"stage [" + boost::lexical_cast<std::wstring>(channel_.index()) + L"]";
+		// C-TODO
+		return L"stage []";// + boost::lexical_cast<std::wstring>(channel_.index()) + L"]";
 	}
 
 };
 
-stage::stage(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
+stage::stage(target_t& target) : impl_(new implementation(target)){}
 void stage::swap(stage& other){impl_->swap(other);}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
@@ -194,5 +199,4 @@ void stage::swap_layer(int index, size_t other_index, stage& other){impl_->swap_
 layer_status stage::get_status(int index){return impl_->get_status(index);}
 safe_ptr<frame_producer> stage::foreground(size_t index) {return impl_->foreground(index);}
 safe_ptr<frame_producer> stage::background(size_t index) {return impl_->background(index);}
-std::map<int, safe_ptr<basic_frame>> stage::execute(){return impl_->execute();}
 }}
