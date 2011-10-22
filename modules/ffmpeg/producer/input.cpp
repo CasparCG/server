@@ -191,7 +191,8 @@ public:
 			if(loop_)
 			{
 				CASPAR_LOG(trace) << print() << " Looping.";
-				seek_frame(start_, AVSEEK_FLAG_BACKWARD);			
+				seek_frame(start_, AVSEEK_FLAG_BACKWARD);		
+				return read_next_packet();
 			}	
 			else
 			{

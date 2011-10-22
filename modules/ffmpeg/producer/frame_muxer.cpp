@@ -341,7 +341,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		BOOST_FOREACH(auto av_frame, filter_.poll_all())
 		{		
 			av_frame->format = format;			
-			send(video_, make_message(std::shared_ptr<AVFrame>(av_frame), std::move(message->token)));
+			send(video_, make_message(std::shared_ptr<AVFrame>(av_frame), message->token));
 		}
 	}
 
