@@ -33,6 +33,8 @@ public:
 	void push(const std::shared_ptr<AVFrame>& frame);
 	std::shared_ptr<AVFrame> poll();
 	std::vector<safe_ptr<AVFrame>> poll_all();
+
+	std::string filter_str() const;
 	
 private:
 	struct implementation;

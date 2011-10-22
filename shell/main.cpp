@@ -59,8 +59,7 @@
 
 #include <core/mixer/gpu/ogl_device.h>
 
-#include <tbb/task_scheduler_init.h>
-#include <tbb/task_scheduler_observer.h>
+#include <agents.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
 
@@ -191,20 +190,7 @@ int main(int argc, wchar_t* argv[])
 		inc_prec(){timeBeginPeriod(1);}
 		~inc_prec(){timeEndPeriod(1);}
 	} inc_prec;	
-
-	// Install unstructured exception handlers into all tbb threads.
-	struct tbb_thread_installer : public tbb::task_scheduler_observer
-	{
-		tbb_thread_installer(){observe(true);}
-		void on_scheduler_entry(bool is_worker)
-		{
-			//caspar::detail::SetThreadName(GetCurrentThreadId(), "tbb-worker-thread");
-			caspar::win32_exception::install_handler();
-		}
-	} tbb_thread_installer;
-
-	tbb::task_scheduler_init init;
-	
+		
 	try 
 	{
 		// Configure environment properties from configuration.

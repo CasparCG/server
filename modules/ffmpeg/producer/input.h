@@ -22,6 +22,8 @@
 #include <common/memory/safe_ptr.h>
 
 #include <agents.h>
+#include <concrt.h>
+
 #include <memory>
 #include <string>
 
@@ -47,7 +49,7 @@ public:
 	
 	typedef Concurrency::ITarget<std::shared_ptr<AVPacket>> target_t;
 
-	explicit input(target_t& target,  
+	explicit input(target_t& target, 
 				   const safe_ptr<diagnostics::graph>& graph, 
 				   const std::wstring& filename, bool loop, 
 				   size_t start = 0, 

@@ -23,42 +23,62 @@
 
 #include <cstring>
 
+#include <ppl.h>
+
 namespace caspar {
+
+namespace internal {
 
 static void* fast_memclr(void* dest, size_t count)
 {
-	if(count < 2048)
-		return memset(dest, 0, count);
-
 	assert(dest != nullptr);
 	
-	size_t rest = count % 128;
+	size_t rest = count % 2048;
 	count -= rest;
 
-	__asm   
-	{              
-		mov edi, dest;    
-		mov ebx, count;     
-		shr ebx, 7;
-		pxor xmm0, xmm0; 
+	if(count > 0)
+	{
+		__asm   
+		{              
+			mov edi, dest;    
+			mov ebx, count;     
+			shr ebx, 7;
+			pxor xmm0, xmm0; 
 
-		clr:             
-			movntdq [edi+00h], xmm0;
-			movntdq [edi+10h], xmm0;
-			movntdq [edi+20h], xmm0;    
-			movntdq [edi+30h], xmm0;
+			clr:             
+				movntdq [edi+00h], xmm0;
+				movntdq [edi+10h], xmm0;
+				movntdq [edi+20h], xmm0;    
+				movntdq [edi+30h], xmm0;
 			
-			movntdq [edi+40h], xmm0; 
-			movntdq [edi+50h], xmm0;      
-			movntdq [edi+60h], xmm0;    
-			movntdq [edi+70h], xmm0;    
+				movntdq [edi+40h], xmm0; 
+				movntdq [edi+50h], xmm0;      
+				movntdq [edi+60h], xmm0;    
+				movntdq [edi+70h], xmm0;    
 
-			lea edi, [edi+80h];         
+				lea edi, [edi+80h];         
 
-			dec ebx;      
-		jnz clr;  
-	}   
+				dec ebx;      
+			jnz clr;  
+		}   
+	}
+
 	return memset(reinterpret_cast<char*>(dest)+count, 0, rest);
+}
+
+}
+
+static void* fast_memclr(void* dest, size_t count)
+{   
+	size_t rest = count % 8192;
+	count -= rest;
+
+	Concurrency::parallel_for<int>(0, count / 8192, [&](size_t n)
+	{       
+		internal::fast_memclr(reinterpret_cast<char*>(dest) + n*8192, 8192);   
+	});
+
+	return internal::fast_memclr(reinterpret_cast<char*>(dest)+count, rest);
 }
 
 }

@@ -37,6 +37,7 @@
 
 #include <agents.h>
 #include <concrt_extras.h>
+#include <semaphore.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -56,35 +57,30 @@ using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
 
-static const size_t MAX_BUFFER_COUNT = 16;
+static const size_t MAX_BUFFER_COUNT = 32;
 	
 struct input::implementation : public Concurrency::agent, boost::noncopyable
-{		
-	std::shared_ptr<AVFormatContext>							format_context_; // Destroy this last
-	int															default_stream_index_;
+{
+	input::target_t&						target_;
 
-	safe_ptr<diagnostics::graph>								graph_;
+	const std::wstring						filename_;
+	const safe_ptr<AVFormatContext>			format_context_; // Destroy this last
+	int										default_stream_index_;
+	const boost::iterator_range<AVStream**>	streams_;
+
+	safe_ptr<diagnostics::graph>			graph_;
 		
-	const std::wstring											filename_;
-	const bool													loop_;
-	const size_t												start_;		
-	const size_t												length_;
-	size_t														frame_number_;
+	const bool								loop_;
+	const size_t							start_;		
+	const size_t							length_;
+	size_t									frame_number_;
+			
+	tbb::atomic<size_t>						nb_frames_;
+	tbb::atomic<size_t>						nb_loops_;	
+	tbb::atomic<size_t>						packets_count_;
+
+	bool									stop_;
 	
-	input::target_t&						 					target_;
-		
-	tbb::atomic<size_t>											nb_frames_;
-	tbb::atomic<size_t>											nb_loops_;
-	
-	tbb::atomic<size_t>											packets_count_;
-
-	bool														eof_;
-	bool														stop_;
-
-	Concurrency::unbounded_buffer<int>							tickets_;
-
-	boost::iterator_range<AVStream**>							streams_;
-
 public:
 	explicit implementation(input::target_t& target,
 							const safe_ptr<diagnostics::graph>& graph, 
@@ -93,43 +89,29 @@ public:
 							size_t start,
 							size_t length)
 		: target_(target)
+		, filename_(filename)
+		, format_context_(open_input(filename))		
+		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
+		, streams_(format_context_->streams, format_context_->streams + format_context_->nb_streams)
 		, graph_(graph)
 		, loop_(loop)
-		, filename_(filename)
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-		, eof_(false)
 		, stop_(false)
-	{			
-		packets_count_ = 0;
-		nb_frames_	= 0;
-		nb_loops_	= 0;
-		
-		AVFormatContext* weak_format_context_ = nullptr;
-		THROW_ON_ERROR2(avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr), print());
-		CASPAR_VERIFY(weak_format_context_, ffmpeg_error());
-
-		format_context_.reset(weak_format_context_, av_close_input_file);
-		
-		av_dump_format(weak_format_context_, 0, narrow(filename).c_str(), 0);
-			
-		THROW_ON_ERROR2(avformat_find_stream_info(format_context_.get(), nullptr), print());
-		
-		streams_ = boost::make_iterator_range(format_context_->streams, format_context_->streams + format_context_->nb_streams);
-		default_stream_index_ = THROW_ON_ERROR2(av_find_default_stream_index(format_context_.get()), print());
-		
-		for(int n = 0; n < MAX_BUFFER_COUNT; ++n)
-			tickets_.enqueue(0);
-
+	{		
+		packets_count_	= 0;
+		nb_frames_		= 0;
+		nb_loops_		= 0;
+				
+		av_dump_format(format_context_.get(), 0, narrow(filename).c_str(), 0);
+				
 		if(start_ > 0)			
 			seek_frame(start_);
 								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
 		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
 		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
-
-		CASPAR_VERIFY(default_stream_index_ > -1, ffmpeg_error());
 	}
 
 	~implementation()
@@ -141,39 +123,30 @@ public:
 	{
 		try
 		{
-			while(!stop_)
+			while(!stop_ && read_next_packet())
 			{
-				read_next_packet();
-													
-				graph_->update_value("buffer-count", (static_cast<double>(packets_count_)+0.001)/MAX_BUFFER_COUNT);			
-			}				
+			}
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}	
 	
-		std::for_each(streams_.begin(), streams_.end(), [this](const AVStream* stream)
-		{
+		BOOST_FOREACH(auto stream, streams_)
 			Concurrency::send(target_, eof_packet(stream->index));	
-		});
-						
+							
 		done();
 	}
 
-	void read_next_packet()
+	bool read_next_packet()
 	{		
-		if(eof_)
-			return;
-
-		int ret = 0;
-
 		auto packet = create_packet();
-
+		
+		int ret = [&]() -> int
 		{
 			Concurrency::scoped_oversubcription_token oversubscribe;
-			ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
-		}
+			return av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
+		}();
 
 		if(is_eof(ret))														     
 		{
@@ -182,24 +155,13 @@ public:
 
 			if(loop_)
 			{
-				int flags = AVSEEK_FLAG_BACKWARD;
-
-				int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-				if(vid_stream_index >= 0)
-				{
-					auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-					if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
-						flags |= AVSEEK_FLAG_BYTE;
-				}
-
-				seek_frame(start_, flags);
-				graph_->add_tag("seek");		
-				CASPAR_LOG(trace) << print() << " Looping.";			
+				CASPAR_LOG(trace) << print() << " Looping.";
+				seek_frame(start_, AVSEEK_FLAG_BACKWARD);			
 			}	
 			else
 			{
 				CASPAR_LOG(trace) << print() << " Stopping.";
-				eof_ = true;
+				return false;
 			}
 		}
 		else
@@ -223,29 +185,42 @@ public:
 			{
 				packet->size = size;
 				packet->data = data;
-				tickets_.enqueue(0);
 				--packets_count_;
+				graph_->update_value("buffer-count", (static_cast<double>(packets_count_)+0.001)/MAX_BUFFER_COUNT);	
 			});
 
-			tickets_.dequeue();
 			++packets_count_;
 
-			Concurrency::send(target_, packet);
+			Concurrency::asend(target_, packet);
 					
 			graph_->update_value("buffer-count", (static_cast<double>(packets_count_)+0.001)/MAX_BUFFER_COUNT);
 		}	
+
+		return true;
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
-	{  							
+	{  			
+		if(flags == AVSEEK_FLAG_BACKWARD)
+		{
+			// Fix VP6 seeking
+			int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+			if(vid_stream_index >= 0)
+			{
+				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
+				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+					flags |= AVSEEK_FLAG_BYTE;
+			}
+		}
+
 		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());	
 		auto packet = create_packet();
-		packet->size = 0;
+		packet->size = 0;		
 
-		std::for_each(streams_.begin(), streams_.end(), [this](const AVStream* stream)
-		{
+		BOOST_FOREACH(auto stream, streams_)
 			Concurrency::send(target_, loop_packet(stream->index));	
-		});
+
+		graph_->add_tag("seek");		
 	}		
 
 	bool is_eof(int ret)
@@ -266,8 +241,8 @@ public:
 	}
 };
 
-input::input(target_t& target,  
-		     const safe_ptr<diagnostics::graph>& graph, 
+input::input(input::target_t& target,
+			 const safe_ptr<diagnostics::graph>& graph, 
 			 const std::wstring& filename, 
 			 bool loop, 
 			 size_t start, 
