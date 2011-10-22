@@ -21,7 +21,7 @@
 
 #include <assert.h>
 
-#include <tbb/parallel_for.h>
+#include <ppl.h>
 
 namespace caspar {
 
@@ -73,17 +73,13 @@ static void* fast_memcpy(void* dest, const void* source, size_t count)
 
 static void* fast_memcpy(void* dest, const void* source, size_t count)
 {   
-	if(count < 2048)
-		return memcpy(dest, source, count);
-
-	size_t rest = count % 128;
+	size_t rest = count % 2048;
 	count -= rest;
 
-	tbb::affinity_partitioner ap;
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, count/128), [&](const tbb::blocked_range<size_t>& r)
+	Concurrency::parallel_for<int>(0, count / 2048, [&](size_t n)
 	{       
-		internal::fast_memcpy(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128);   
-	}, ap);
+		internal::fast_memcpy(reinterpret_cast<char*>(dest) + n*2048, reinterpret_cast<const char*>(source) + n*2048, 2048);   
+	});
 
 	return memcpy(reinterpret_cast<char*>(dest)+count,  reinterpret_cast<const char*>(source)+count, rest);
 }

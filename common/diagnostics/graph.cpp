@@ -258,19 +258,17 @@ public:
 struct graph::implementation : public drawable
 {
 	std::map<std::string, diagnostics::line> lines_;
-	const printer parent_printer_;
 	std::string name_;
-
-	int counter_;
-
+	std::string text_;
+	
 	implementation(const std::string& name) 
 		: name_(name)
-		, counter_(0){}
-
-	implementation(const printer& parent_printer) 
-		: parent_printer_(parent_printer)
-		, name_("")
-		, counter_(0){}
+		, text_(name_){}
+	
+	void update_text(const std::string& value)
+	{
+		text_ = value;
+	}
 
 	void update(const std::string& name, double value)
 	{
@@ -300,17 +298,11 @@ struct graph::implementation : public drawable
 private:
 	void render(sf::RenderTarget& target)
 	{
-		if(counter_++ > 25) // Don't update name too often since print can be implemented with locks.
-		{
-			counter_ = 0;
-			if(parent_printer_)
-				name_ = narrow(parent_printer_());
-		}
 		const size_t text_size = 15;
 		const size_t text_margin = 2;
 		const size_t text_offset = (text_size+text_margin*2)*2;
 
-		sf::String text(name_.c_str(), sf::Font::GetDefaultFont(), text_size);
+		sf::String text(text_.c_str(), sf::Font::GetDefaultFont(), text_size);
 		text.SetStyle(sf::String::Italic);
 		text.Move(text_margin, text_margin);
 		
@@ -362,16 +354,22 @@ graph::graph(const std::string& name, bool start) : impl_(env::properties().get(
 		graph::start();
 }
 
-graph::graph(const printer& parent_printer, bool start) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(parent_printer) : nullptr)
-{
-	if(start)
-		graph::start();
-}
-
 void graph::start()
 {	
 	if(impl_)
 		context::register_drawable(impl_);
+}
+
+void graph::update_text(const std::string& value)
+{
+	if(impl_)
+	{	
+		auto p = impl_;
+		context::begin_invoke([=]
+		{	
+			p->update_text(value);
+		});
+	}
 }
 
 void graph::update_value(const std::string& name, double value)
@@ -434,11 +432,6 @@ safe_ptr<graph> create_graph(const std::string& name, bool start)
 {
 	return safe_ptr<graph>(new graph(name, start));
 }
-safe_ptr<graph> create_graph(const printer& parent_printer, bool start)
-{
-	return safe_ptr<graph>(new graph(parent_printer, start));
-}
-
 
 //namespace v2
 //{	

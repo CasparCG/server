@@ -26,6 +26,7 @@
 #include <boost/noncopyable.hpp>
 
 #include <agents.h>
+
 #include <vector>
 
 struct AVFormatContext;
@@ -43,14 +44,11 @@ namespace ffmpeg {
 class video_decoder : boost::noncopyable
 {
 public:
-
+	
 	typedef Concurrency::ISource<std::shared_ptr<AVPacket>> source_t;
-	typedef Concurrency::ITarget<std::shared_ptr<AVFrame>>	target_t;
-
-	explicit video_decoder(source_t& source,
-						   target_t& target,
-						   const safe_ptr<AVFormatContext>& context, 
-						   double fps);	
+	typedef Concurrency::ITarget<std::shared_ptr<AVFrame>>  target_t;
+	
+	explicit video_decoder(source_t& source, target_t& target, AVFormatContext& context);	
 
 	size_t width() const;
 	size_t height() const;

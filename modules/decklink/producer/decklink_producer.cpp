@@ -88,7 +88,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	const core::video_format_desc		format_desc_;
 	const size_t						device_index_;
 
-	std::shared_ptr<diagnostics::graph>	graph_;
+	safe_ptr<diagnostics::graph>		graph_;
 	boost::timer						tick_timer_;
 	boost::timer						frame_timer_;
 
@@ -100,14 +100,15 @@ public:
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
 		, device_index_(device_index)
+		, graph_ (diagnostics::create_graph("", false))
 	{		
-		graph_ = diagnostics::create_graph(boost::bind(&decklink_producer::print, this));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
+		graph_->update_text(narrow(print()));
 
 		auto display_mode = get_display_mode(input_, format_desc_.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
 		
@@ -133,6 +134,8 @@ public:
 									<< boost::errinfo_api_function("StartStreams"));
 
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
+
+		graph_->start();
 	}
 
 	~decklink_producer()
@@ -144,7 +147,6 @@ public:
 			input_->DisableVideoInput();
 		}
 	}
-
 
 	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
 	virtual ULONG STDMETHODCALLTYPE		AddRef ()							{return 1;}
@@ -170,9 +172,9 @@ public:
 	
 class decklink_producer_proxy : public Concurrency::agent, public core::frame_producer
 {		
-	std::shared_ptr<Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>>			  video_frames_;
-	std::shared_ptr<Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>> audio_buffers_;
-	Concurrency::bounded_buffer<std::shared_ptr<core::basic_frame>>	 muxed_frames_;
+	Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>				video_frames_;
+	Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_buffers_;
+	Concurrency::bounded_buffer<safe_ptr<core::basic_frame>>			muxed_frames_;
 
 	const core::video_format_desc		format_desc_;
 	const size_t						device_index_;
@@ -190,15 +192,15 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 public:
 
 	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
-		: video_frames_(std::make_shared<Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>>(1))
-		, audio_buffers_(std::make_shared<Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>>(1))
+		: video_frames_(1)
+		, audio_buffers_(1)
 		, muxed_frames_(1)
 		, format_desc_(format_desc)
 		, device_index_(device_index)
 		, last_frame_(core::basic_frame::empty())
 		, length_(length)
 		, filter_(filter_str)
-		, muxer_(video_frames_, audio_buffers_, muxed_frames_, ffmpeg::double_rate(filter_str) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory)
+		, muxer_(&video_frames_, &audio_buffers_, muxed_frames_, ffmpeg::double_rate(filter_str) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory)
 		, is_running_(true)
 	{
 		agent::start();
@@ -245,7 +247,11 @@ public:
 	{
 		try
 		{
-			CoInitializeEx(NULL, COINIT_MULTITHREADED);
+			struct co_init
+			{
+				co_init()  {CoInitialize(NULL);}
+				~co_init() {CoUninitialize();}
+			} init;
 			
 			Concurrency::bounded_buffer<frame_packet> input_buffer(2);
 
@@ -288,7 +294,7 @@ public:
 						auto frame = filter_.poll();
 						if(!frame)
 							break;
-						Concurrency::send<std::shared_ptr<AVFrame>>(*video_frames_, frame);
+						Concurrency::send(video_frames_, frame);
 					}
 				},
 				[&]
@@ -298,10 +304,10 @@ public:
 					{
 						auto sample_frame_count = audio->GetSampleFrameCount();
 						auto audio_data = reinterpret_cast<int32_t*>(bytes);
-						Concurrency::send(*audio_buffers_, std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
+						Concurrency::send(audio_buffers_, std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
 					}
 					else
-						Concurrency::send(*audio_buffers_, ffmpeg::empty_audio());	
+						Concurrency::send(audio_buffers_, ffmpeg::empty_audio());	
 				});
 			}
 
@@ -310,9 +316,7 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-
-		CoUninitialize();
-
+		
 		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 
 		done();
