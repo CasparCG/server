@@ -37,6 +37,8 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 
+#include <concrt_extras.h>
+
 #include <tbb/concurrent_queue.h>
 
 namespace caspar { namespace oal {
@@ -91,9 +93,10 @@ public:
 				++preroll_count_;
 			Play();		
 		}
-
-		input_.push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>(core::audio_32_to_16_sse(frame->audio_data())));
-
+		
+		auto data = std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>(core::audio_32_to_16_sse(frame->audio_data()));
+		Concurrency::scoped_oversubcription_token oversubscribe;
+		input_.push(data);
 		return true;
 	}
 	

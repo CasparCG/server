@@ -160,7 +160,6 @@ public:
 		{		
 			try
 			{
-				scoped_oversubcription_token oversubscribe;
 				if(!pair.second->send(frame))
 					removables.push_back(pair.first);
 			}

@@ -43,6 +43,8 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 
+#include <concrt_extras.h>
+
 namespace caspar { namespace decklink { 
 	
 struct configuration
@@ -437,6 +439,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
+		Concurrency::scoped_oversubcription_token oversubscribe;
 		context_->send(frame);
 		return true;
 	}
