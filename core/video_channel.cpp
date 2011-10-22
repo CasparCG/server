@@ -76,72 +76,11 @@ public:
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
-	
-	//void tick()
-	//{
-	//	try
-	//	{
-	//		// Produce
-
-	//		frame_timer_.restart();
-
-	//		auto simple_frames = stage_->execute();
-
-	//		graph_->update_value("produce-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
-	//	
-	//		// Mix
-
-	//		frame_timer_.restart();
-
-	//		auto finished_frame = mixer_->execute(simple_frames);
-	//	
-	//		graph_->update_value("mix-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
-	//	
-	//		// Consume
-	//	
-	//		output_timer_.restart();
-
-	//		output_->execute(finished_frame);
-	//	
-	//		graph_->update_value("output-time", frame_timer_.elapsed()*context_.get_format_desc().fps*0.5);
-
-	//	
-	//		graph_->update_value("tick-time", tick_timer_.elapsed()*context_.get_format_desc().fps*0.5);
-	//		tick_timer_.restart();
-	//	}
-	//	catch(...)
-	//	{
-	//		CASPAR_LOG_CURRENT_EXCEPTION();
-	//		CASPAR_LOG(error) << context_.print() << L" Unexpected exception. Clearing stage and freeing memory";
-	//		restart();
-	//	}
-
-	//	context_.execution().begin_invoke([this]{tick();});
-	//}
-
-	//void restart()
-	//{
-	//	stage_->clear();
-	//	context_.ogl().gc().wait();
-
-	//	mixer_ = nullptr;
-	//	mixer_.reset(new caspar::core::mixer(context_));
-	//}
-		
+			
 	std::wstring print() const
 	{
 		return L"video_channel";
 	}
-
-	//void set_video_format_desc(const video_format_desc& format_desc)
-	//{
-	//	context_.execution().begin_invoke([=]
-	//	{
-	//		stage_->clear();
-	//		context_.ogl().gc().wait();
-	//		context_.set_format_desc(format_desc);
-	//	});
-	//}
 };
 
 video_channel::video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
