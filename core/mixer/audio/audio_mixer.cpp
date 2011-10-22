@@ -41,7 +41,7 @@ struct audio_mixer::implementation
 	std::stack<core::frame_transform>				transform_stack_;
 	std::map<const void*, core::frame_transform>	prev_frame_transforms_;
 	const core::video_format_desc					format_desc_;
-	std::vector<audio_item>							items;
+	std::vector<audio_item>							items_;
 
 public:
 	implementation(const core::video_format_desc& format_desc)
@@ -73,7 +73,7 @@ public:
 		item.transform	= transform_stack_.top();
 		item.audio_data = std::move(frame.audio_data());
 
-		items.push_back(item);		
+		items_.push_back(item);		
 	}
 
 	void begin(const core::frame_transform& transform)
@@ -94,7 +94,7 @@ public:
 
 		std::map<const void*, core::frame_transform> next_frame_transforms;
 		
-		BOOST_FOREACH(auto& item, items)
+		BOOST_FOREACH(auto& item, items_)
 		{			
 			const auto next = item.transform;
 			auto prev = next;
@@ -166,7 +166,7 @@ public:
 			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm7));
 		}
 
-		items.clear();
+		items_.clear();
 		prev_frame_transforms_ = std::move(next_frame_transforms);	
 
 		result.resize(format_desc_.audio_samples_per_frame);

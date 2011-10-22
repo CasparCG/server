@@ -87,8 +87,6 @@ public:
 struct mixer::implementation : boost::noncopyable
 {		
 	critical_section			mutex_;
-	Concurrency::transformer<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>, 
-							 safe_ptr<message<safe_ptr<core::read_frame>>>> mixer_;
 
 	const video_format_desc format_desc_;
 	ogl_device&				ogl_;
@@ -101,7 +99,8 @@ struct mixer::implementation : boost::noncopyable
 
 	std::queue<std::pair<boost::unique_future<safe_ptr<host_buffer>>, core::audio_buffer>> buffer_;
 	
-
+	Concurrency::transformer<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>, 
+							 safe_ptr<message<safe_ptr<core::read_frame>>>> mixer_;
 public:
 	implementation(mixer::source_t& source, mixer::target_t& target, const video_format_desc& format_desc, ogl_device& ogl) 
 		: format_desc_(format_desc)
