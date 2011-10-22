@@ -172,9 +172,9 @@ public:
 	
 class decklink_producer_proxy : public Concurrency::agent, public core::frame_producer
 {		
-	Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>				video_frames_;
-	Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_buffers_;
-	Concurrency::bounded_buffer<safe_ptr<core::basic_frame>>			muxed_frames_;
+	Concurrency::bounded_buffer<ffmpeg::video_message_t>	video_frames_;
+	Concurrency::bounded_buffer<ffmpeg::audio_message_t>	audio_buffers_;
+	Concurrency::bounded_buffer<ffmpeg::frame_message_t>	muxed_frames_;
 
 	const core::video_format_desc		format_desc_;
 	const size_t						device_index_;
@@ -187,6 +187,8 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 	ffmpeg::frame_muxer2				muxer_;
 
 	mutable Concurrency::single_assignment<std::wstring> print_;
+
+	safe_ptr<Concurrency::semaphore> semaphore_;
 
 	volatile bool is_running_;
 public:
@@ -202,6 +204,7 @@ public:
 		, filter_(filter_str)
 		, muxer_(&video_frames_, &audio_buffers_, muxed_frames_, ffmpeg::double_rate(filter_str) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory)
 		, is_running_(true)
+		, semaphore_(make_safe<Concurrency::semaphore>(3))
 	{
 		agent::start();
 	}
@@ -218,7 +221,8 @@ public:
 
 		try
 		{
-			last_frame_ = frame = safe_ptr<core::basic_frame>(Concurrency::receive(muxed_frames_));
+			auto message = Concurrency::receive(muxed_frames_);
+			last_frame_ = frame = make_safe_ptr(message->payload);
 		}
 		catch(Concurrency::operation_timed_out&)
 		{		
@@ -294,7 +298,7 @@ public:
 						auto frame = filter_.poll();
 						if(!frame)
 							break;
-						Concurrency::send(video_frames_, frame);
+						Concurrency::send(video_frames_, ffmpeg::make_message(frame, std::make_shared<ffmpeg::token>(semaphore_)));
 					}
 				},
 				[&]
@@ -304,10 +308,10 @@ public:
 					{
 						auto sample_frame_count = audio->GetSampleFrameCount();
 						auto audio_data = reinterpret_cast<int32_t*>(bytes);
-						Concurrency::send(audio_buffers_, std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
+						Concurrency::send(audio_buffers_, ffmpeg::make_message(std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels), std::make_shared<ffmpeg::token>(semaphore_)));
 					}
 					else
-						Concurrency::send(audio_buffers_, ffmpeg::empty_audio());	
+						Concurrency::send(audio_buffers_, ffmpeg::make_message(ffmpeg::empty_audio(), std::make_shared<ffmpeg::token>(semaphore_)));	
 				});
 			}
 

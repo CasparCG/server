@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include "../util.h"
+
 #include <common/memory/safe_ptr.h>
 
 #include <core/video_format.h>
@@ -45,8 +47,8 @@ class video_decoder : boost::noncopyable
 {
 public:
 	
-	typedef Concurrency::ISource<std::shared_ptr<AVPacket>> source_t;
-	typedef Concurrency::ITarget<std::shared_ptr<AVFrame>>  target_t;
+	typedef Concurrency::ISource<packet_message_t> source_t;
+	typedef Concurrency::ITarget<video_message_t>  target_t;
 	
 	explicit video_decoder(source_t& source, target_t& target, AVFormatContext& context);	
 

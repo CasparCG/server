@@ -62,18 +62,18 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool								loop_;
 	const size_t							length_;
 	
-	Concurrency::unbounded_buffer<std::shared_ptr<AVPacket>>			packets_;
-	Concurrency::unbounded_buffer<std::shared_ptr<AVFrame>>				video_;
-	Concurrency::unbounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_;
-	Concurrency::bounded_buffer<safe_ptr<core::basic_frame>>			frames_;
+	Concurrency::unbounded_buffer<packet_message_t>	packets_;
+	Concurrency::unbounded_buffer<video_message_t>	video_;
+	Concurrency::unbounded_buffer<audio_message_t>	audio_;
+	Concurrency::bounded_buffer<frame_message_t>	frames_;
+	Concurrency::call<packet_message_t>				throw_away_;
 		
 	const safe_ptr<diagnostics::graph>		graph_;
 					
-	input											input_;	
-	std::shared_ptr<video_decoder>					video_decoder_;
-	std::shared_ptr<audio_decoder>					audio_decoder_;	
-	Concurrency::call<std::shared_ptr<AVPacket>>	throw_away_;
-	std::unique_ptr<frame_muxer2>					muxer_;
+	input									input_;	
+	std::shared_ptr<video_decoder>			video_decoder_;
+	std::shared_ptr<audio_decoder>			audio_decoder_;	
+	std::unique_ptr<frame_muxer2>			muxer_;
 
 	safe_ptr<core::basic_frame>				last_frame_;
 	
@@ -83,7 +83,7 @@ public:
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
-		, throw_away_([](const std::shared_ptr<AVPacket>&){})
+		, throw_away_([](const packet_message_t&){})
 		, frames_(2)
 		, graph_(diagnostics::create_graph("", false))
 		, input_(packets_, graph_, filename_, loop, start, length)
@@ -137,7 +137,7 @@ public:
 	~ffmpeg_producer()
 	{
 		input_.stop();			
-		while(Concurrency::receive(frames_) != core::basic_frame::eof())
+		while(Concurrency::receive(frames_)->payload != core::basic_frame::eof())
 		{
 		}
 	}
@@ -148,7 +148,8 @@ public:
 		
 		try
 		{		
-			frame = last_frame_ = safe_ptr<core::basic_frame>(Concurrency::receive(frames_, 10));
+			auto message = Concurrency::receive(frames_, 10);
+			frame = last_frame_ = make_safe_ptr(message->payload);
 			graph_->update_text(narrow(print()));
 		}
 		catch(Concurrency::operation_timed_out&)
