@@ -108,7 +108,7 @@ public:
 	{
 		frame_buffer_.set_capacity(2);
 		
-		graph_ = diagnostics::create_graph(boost::bind(&decklink_producer::print, this));
+		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));

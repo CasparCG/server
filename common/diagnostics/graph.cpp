@@ -258,23 +258,24 @@ public:
 struct graph::implementation : public drawable
 {
 	std::map<std::string, diagnostics::line> lines_;
-	const printer parent_printer_;
 	std::string name_;
+	std::string text_;
 
 	int counter_;
 
 	implementation(const std::string& name) 
 		: name_(name)
+		, text_(name)
 		, counter_(0){}
-
-	implementation(const printer& parent_printer) 
-		: parent_printer_(parent_printer)
-		, name_(parent_printer_ ? narrow(parent_printer_()) : "")
-		, counter_(0){}
-
+	
 	void update(const std::string& name, double value)
 	{
 		lines_[name].update(value);
+	}
+
+	void update_text(const std::string& value)
+	{
+		text_ = value;
 	}
 
 	void set(const std::string& name, double value)
@@ -300,17 +301,11 @@ struct graph::implementation : public drawable
 private:
 	void render(sf::RenderTarget& target)
 	{
-		if(counter_++ > 25) // Don't update name too often since print can be implemented with locks.
-		{
-			counter_ = 0;
-			if(parent_printer_)
-				name_ = narrow(parent_printer_());
-		}
 		const size_t text_size = 15;
 		const size_t text_margin = 2;
 		const size_t text_offset = (text_size+text_margin*2)*2;
 
-		sf::String text(name_.c_str(), sf::Font::GetDefaultFont(), text_size);
+		sf::String text(text_.c_str(), sf::Font::GetDefaultFont(), text_size);
 		text.SetStyle(sf::String::Italic);
 		text.Move(text_margin, text_margin);
 		
@@ -362,12 +357,6 @@ graph::graph(const std::string& name) : impl_(env::properties().get("configurati
 		context::register_drawable(impl_);
 }
 
-graph::graph(const printer& parent_printer) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(parent_printer) : nullptr)
-{
-	if(impl_)
-		context::register_drawable(impl_);
-}
-
 void graph::update_value(const std::string& name, double value)
 {
 	if(impl_)
@@ -379,6 +368,19 @@ void graph::update_value(const std::string& name, double value)
 		});
 	}
 }
+
+void graph::update_text(const std::string& value)
+{
+	if(impl_)
+	{		
+		auto p = impl_;
+		context::begin_invoke([=]
+		{	
+			p->update_text(value);
+		});
+	}
+}
+
 void graph::set_value(const std::string& name, double value)
 {
 	if(impl_)
@@ -428,11 +430,6 @@ safe_ptr<graph> create_graph(const std::string& name)
 {
 	return safe_ptr<graph>(new graph(name));
 }
-safe_ptr<graph> create_graph(const printer& parent_printer)
-{
-	return safe_ptr<graph>(new graph(parent_printer));
-}
-
 
 //namespace v2
 //{	
