@@ -36,6 +36,8 @@
 
 #include <FreeImage.h>
 
+#include <concrt_extras.h>
+
 #include <vector>
 
 namespace caspar { namespace image {
@@ -57,6 +59,8 @@ public:
 
 		if(frames_.size() < core::consumer_buffer_depth())
 			return true;
+		
+		Concurrency::scoped_oversubcription_token oversubscribe;
 
 		auto my_frame = frames_.front();
 		boost::thread async([=]

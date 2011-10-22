@@ -38,6 +38,8 @@
 
 #include <tbb/concurrent_queue.h>
 
+#include <concrt_extras.h>
+
 #include <boost/timer.hpp>
 
 #include <memory>
@@ -338,6 +340,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
+		Concurrency::scoped_oversubcription_token oversubscribe;
 		consumer_->send(frame);
 		return true;
 	}

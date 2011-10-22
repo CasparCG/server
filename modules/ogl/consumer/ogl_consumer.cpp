@@ -48,6 +48,8 @@
 
 #include <boost/assign.hpp>
 
+#include <concrt_extras.h>
+
 #include <algorithm>
 #include <vector>
 
@@ -444,6 +446,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
+		Concurrency::scoped_oversubcription_token oversubscribe;
 		consumer_->send(frame);
 		return true;
 	}
