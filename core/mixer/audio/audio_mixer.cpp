@@ -124,7 +124,7 @@ public:
 			const float next_volume = static_cast<float>(next.volume);
 			const float delta		= 1.0f/static_cast<float>(format_desc_.audio_samples_per_frame/format_desc_.audio_channels);
 						
-			auto alpha_ps	= _mm_setr_ps(delta, delta, 0.0f, 0.0f);
+			auto alpha_ps	= _mm_setr_ps(0.0f, 0.0f, delta, delta);
 			auto delta2_ps	= _mm_set_ps1(delta*2.0f);
 			auto prev_ps	= _mm_set_ps1(prev_volume);
 			auto next_ps	= _mm_set_ps1(next_volume);	
