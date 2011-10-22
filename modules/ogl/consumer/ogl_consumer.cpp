@@ -273,11 +273,12 @@ public:
 		return format_desc_;
 	}
 
-	safe_ptr<AVFrame> get_av_frame()
+	safe_ptr<AVFrame> get_av_frame(uint8_t* data)
 	{		
 		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 		avcodec_get_frame_defaults(av_frame.get());
 						
+		av_frame->data[0]			= data;
 		av_frame->linesize[0]		= format_desc_.width*4;			
 		av_frame->format			= PIX_FMT_BGRA;
 		av_frame->width				= format_desc_.width;
@@ -293,16 +294,13 @@ public:
 		if(frame->image_data().empty())
 			return;
 					
-		auto av_frame = get_av_frame();
-		av_frame->data[0] = const_cast<uint8_t*>(frame->image_data().begin());
-
-		filter_.push(av_frame);
+		filter_.push(get_av_frame(const_cast<uint8_t*>(frame->image_data().begin())));
 		auto frames = filter_.poll_all();
 		
 		if(frames.empty())
 			return;
 
-		av_frame = frames[0];
+		auto av_frame = frames[0];
 		
 		glBindTexture(GL_TEXTURE_2D, texture_);
 
