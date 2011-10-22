@@ -267,10 +267,10 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		}
 		catch(...)
 		{
-			send(is_running_ , false);
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-
+		
+		send(is_running_ , false);
 		send(target_, make_message(core::basic_frame::eof()));
 
 		done();
