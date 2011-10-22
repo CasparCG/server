@@ -24,7 +24,7 @@
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
 
-#include <ppl.h>
+#include <tbb/parallel_for.h>
 
 #include <safeint.h>
 
@@ -98,6 +98,8 @@ public:
 
 		std::map<const void*, core::frame_transform> next_frame_transforms;
 		
+		tbb::affinity_partitioner ap;
+
 		BOOST_FOREACH(auto& item, items)
 		{			
 			const auto next = item.transform;
@@ -108,7 +110,7 @@ public:
 				prev = it->second;
 				
 			next_frame_transforms[item.tag] = next; // Store all active tags, inactive tags will be removed at the end.
-				
+
 			if(next.volume < 0.001 && prev.volume < 0.001)
 				continue;
 									
@@ -121,15 +123,14 @@ public:
 			const float prev_volume = static_cast<float>(prev.volume);
 			const float next_volume = static_cast<float>(next.volume);
 			const float delta		= 1.0f/static_cast<float>(format_desc_.audio_samples_per_frame/format_desc_.audio_channels);
-			
+						
 			auto alpha_ps	= _mm_setr_ps(delta, delta, 0.0f, 0.0f);
 			auto delta2_ps	= _mm_set_ps1(delta*2.0f);
 			auto prev_ps	= _mm_set_ps1(prev_volume);
 			auto next_ps	= _mm_set_ps1(next_volume);	
 
-			Concurrency::parallel_for<int>(0, format_desc_.audio_samples_per_frame/4,
-			[&](int n)
-			{			
+			for(size_t n = 0; n < format_desc_.audio_samples_per_frame/4; ++n)
+			{		
 				auto next2_ps		= _mm_mul_ps(next_ps, alpha_ps);
 				auto prev2_ps		= _mm_sub_ps(prev_ps, _mm_mul_ps(prev_ps, alpha_ps));
 				auto volume_ps		= _mm_add_ps(next2_ps, prev2_ps);
@@ -142,17 +143,16 @@ public:
 				alpha_ps			= _mm_add_ps(alpha_ps, delta2_ps);
 
 				_mm_store_ps(&intermediate[n*4], res_sample_ps);
-			});
+			}
 		}
 		
-		auto result = audio_buffer(format_desc_.audio_samples_per_frame+128, 0);	
-		
-		Concurrency::parallel_for<int>(0, format_desc_.audio_samples_per_frame/32, 		
-		[&](int n)
-		{		
-			auto intermediate_128 = reinterpret_cast<__m128i*>(intermediate.data()+n*32);
-			auto result_128		  = reinterpret_cast<__m128i*>(result.data()+n*32);
+		auto result = audio_buffer(format_desc_.audio_samples_per_frame+128);	
+			
+		auto intermediate_128 = reinterpret_cast<__m128i*>(intermediate.data());
+		auto result_128		  = reinterpret_cast<__m128i*>(result.data());
 				
+		for(size_t n = 0; n < format_desc_.audio_samples_per_frame/32; ++n)
+		{	
 			auto xmm0 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
 			auto xmm1 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
 			auto xmm2 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
@@ -170,7 +170,7 @@ public:
 			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm5));
 			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm6));
 			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm7));
-		});
+		}
 
 		items.clear();
 		prev_frame_transforms_ = std::move(next_frame_transforms);	
