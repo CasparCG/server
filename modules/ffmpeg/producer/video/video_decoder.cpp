@@ -44,9 +44,11 @@ extern "C"
 #include <connect.h>
 #include <semaphore.h>
 
+using namespace Concurrency;
+
 namespace caspar { namespace ffmpeg {
 	
-struct video_decoder::implementation : boost::noncopyable
+struct video_decoder::implementation : public Concurrency::agent, boost::noncopyable
 {	
 	int										index_;
 	std::shared_ptr<AVCodecContext>			codec_context_;
@@ -58,9 +60,11 @@ struct video_decoder::implementation : boost::noncopyable
 	size_t									height_;
 	bool									is_progressive_;
 	
-	Concurrency::transformer<packet_message_t, video_message_t> transformer_;
+	overwrite_buffer<bool>					is_running_;
+	unbounded_buffer<packet_message_t>		source_;
+	ITarget<video_message_t>&				target_;
 	
-	safe_ptr<Concurrency::semaphore> semaphore_;
+	safe_ptr<semaphore> semaphore_;
 
 public:
 	explicit implementation(video_decoder::source_t& source, video_decoder::target_t& target, AVFormatContext& context) 
@@ -70,10 +74,11 @@ public:
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 		, is_progressive_(true)
-		, transformer_(std::bind(&implementation::decode, this, std::placeholders::_1), &target, [this](const packet_message_t& message)
+		, source_([this](const packet_message_t& message)
 			{
 				return message->payload && message->payload->stream_index == index_;
 			})
+		, target_(target)
 		, semaphore_(make_safe<Concurrency::semaphore>(1))
 	{		
 		CASPAR_LOG(debug) << "[video_decoder] " << context.streams[index_]->codec->codec->long_name;
@@ -81,46 +86,74 @@ public:
 		CASPAR_VERIFY(width_ > 0, ffmpeg_error());
 		CASPAR_VERIFY(height_ > 0, ffmpeg_error());
 
-		Concurrency::connect(source, transformer_);
+		Concurrency::connect(source, source_);
+
+		start();
 	}
-		
-	video_message_t decode(const packet_message_t& message)
+
+	~implementation()
 	{
-		auto packet = message->payload;
+		send(is_running_, false);
+		agent::wait(this);
+	}
 
-		if(!packet)
-			return make_message(std::shared_ptr<AVFrame>());
-
-		if(packet == loop_packet(index_))
-			return make_message(loop_video());
-
-		if(packet == eof_packet(index_))
-			return make_message(eof_video());
-		
-		token token(semaphore_);
-		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), [this, token](AVFrame* frame)
+	virtual void run()
+	{
+		try
 		{
-			av_free(frame);
-		});
+			send(is_running_, true);
+			while(is_running_.value())
+			{
+				auto message = receive(source_);
+				auto packet = message->payload;
+			
+				if(!packet)
+					continue;
 
-		int frame_finished = 0;
-		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, packet.get()), "[video_decocer]");
+				if(packet == loop_packet(index_))
+				{
+					send(target_, make_message(loop_video()));
+					continue;
+				}
 
-		// 1 packet <=> 1 frame.
-		// If a decoder consumes less then the whole packet then something is wrong
-		// that might be just harmless padding at the end, or a problem with the
-		// AVParser or demuxer which puted more then one frame in a AVPacket.
+				if(packet == eof_packet(index_))
+					break;
 
-		if(frame_finished == 0)	
-			return make_message(std::shared_ptr<AVFrame>());
+				token token(semaphore_);
+				std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), [this, token](AVFrame* frame)
+				{
+					av_free(frame);
+				});
 
-		if(decoded_frame->repeat_pict > 0)
-			CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
+				int frame_finished = 0;
+				THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, packet.get()), "[video_decocer]");
+
+				// 1 packet <=> 1 frame.
+				// If a decoder consumes less then the whole packet then something is wrong
+				// that might be just harmless padding at the end, or a problem with the
+				// AVParser or demuxer which puted more then one frame in a AVPacket.
+
+				if(frame_finished == 0)	
+					continue;
+
+				if(decoded_frame->repeat_pict > 0)
+					CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
 		
-		is_progressive_ = decoded_frame->interlaced_frame == 0;
+				is_progressive_ = decoded_frame->interlaced_frame == 0;
 				
-		Concurrency::wait(10);
-		return make_message(decoded_frame, message->token);
+				send(target_, make_message(decoded_frame, message->token));
+				Concurrency::wait(10);
+			}
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+		
+		send(is_running_, false),
+		send(target_, make_message(eof_video()));
+
+		done();
 	}
 		
 	double fps() const

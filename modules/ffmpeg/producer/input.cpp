@@ -168,10 +168,7 @@ public:
 		}	
 	
 		BOOST_FOREACH(auto stream, streams_)
-		{
 			Concurrency::send(target_, make_message(eof_packet(stream->index), std::make_shared<token>(semaphore_)));	
-			Concurrency::send(target_, make_message(eof_packet(stream->index), std::make_shared<token>(semaphore_)));	
-		}
 
 		done();
 	}
