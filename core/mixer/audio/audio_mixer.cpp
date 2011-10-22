@@ -24,12 +24,8 @@
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
 
-#include <tbb/parallel_for.h>
-
-#include <safeint.h>
-
 #include <stack>
-#include <deque>
+#include <vector>
 
 namespace caspar { namespace core {
 
@@ -98,8 +94,6 @@ public:
 
 		std::map<const void*, core::frame_transform> next_frame_transforms;
 		
-		tbb::affinity_partitioner ap;
-
 		BOOST_FOREACH(auto& item, items)
 		{			
 			const auto next = item.transform;

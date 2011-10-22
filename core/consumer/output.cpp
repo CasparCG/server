@@ -35,8 +35,6 @@
 #include <common/utility/timer.h>
 #include <common/memory/memshfl.h>
 
-#include <tbb/mutex.h>
-
 #include <concrt_extras.h>
 
 using namespace Concurrency;
