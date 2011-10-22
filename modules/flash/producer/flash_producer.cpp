@@ -35,7 +35,6 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
-#include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>

@@ -31,7 +31,6 @@
 
 #include <common/log/log.h>
 #include <common/diagnostics/graph.h>
-#include <common/concurrency/com_context.h>
 #include <common/exception/exceptions.h>
 #include <common/memory/memclr.h>
 
