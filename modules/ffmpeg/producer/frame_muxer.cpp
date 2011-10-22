@@ -182,6 +182,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				auto audio = receive(audio_);								
 				auto write = make_safe<core::write_frame>(this);
 				
+				CASPAR_ASSERT(video != loop_video());
+				CASPAR_ASSERT(audio != loop_audio());
+
 				if(audio == eof_audio())
 				{
 					send(is_running_ , false);
