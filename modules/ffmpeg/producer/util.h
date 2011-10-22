@@ -39,6 +39,8 @@ struct frame_factory;
 
 namespace ffmpeg {
 	
+// Dataflow
+
 class token
 {
 	safe_ptr<Concurrency::semaphore> semaphore_;
@@ -58,27 +60,39 @@ public:
 template <typename T>
 struct message
 {
-	message(const std::shared_ptr<T>& payload, const std::shared_ptr<token>& token = nullptr)
+	message(const T& payload = T(), const std::shared_ptr<token>& token = nullptr)
 		: payload(payload)
 		, token(token)
 	{
 	}
 
-	std::shared_ptr<T>	   payload;
-	std::shared_ptr<token> token;
+	T						payload;
+	std::shared_ptr<token>	token;
 };
 
 template<typename T>
-std::shared_ptr<message<T>> make_message(const std::shared_ptr<T>& payload, const std::shared_ptr<token>& token = nullptr)
+safe_ptr<message<T>> make_message(const T& payload, const std::shared_ptr<token>& token = nullptr)
 {
-	return std::make_shared<message<T>>(payload, token);
+	return make_safe<message<T>>(payload, token);
 }
 
-typedef std::shared_ptr<message<AVPacket>>				packet_message_t;
-typedef std::shared_ptr<message<AVFrame>>				video_message_t;
-typedef std::shared_ptr<message<core::audio_buffer>>	audio_message_t;
-typedef std::shared_ptr<message<core::basic_frame>>		frame_message_t;
+typedef safe_ptr<message<std::shared_ptr<AVPacket>>>			packet_message_t;
+typedef safe_ptr<message<std::shared_ptr<AVFrame>>>				video_message_t;
+typedef safe_ptr<message<std::shared_ptr<core::audio_buffer>>>	audio_message_t;
+typedef safe_ptr<message<safe_ptr<core::basic_frame>>>			frame_message_t;
 	
+const std::shared_ptr<AVPacket>& loop_packet(int index);
+const std::shared_ptr<AVPacket>& eof_packet(int index);
+
+const std::shared_ptr<AVFrame>& loop_video();
+const std::shared_ptr<AVFrame>& empty_video();
+const std::shared_ptr<AVFrame>& eof_video();
+const std::shared_ptr<core::audio_buffer>& loop_audio();
+const std::shared_ptr<core::audio_buffer>& empty_audio();
+const std::shared_ptr<core::audio_buffer>& eof_audio();
+
+// Utils
+
 static const PixelFormat	CASPAR_PIX_FMT_LUMA = PIX_FMT_MONOBLACK; // Just hijack some unual pixel format.
 
 core::field_mode::type		get_mode(AVFrame& frame);
@@ -90,16 +104,6 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 void fix_meta_data(AVFormatContext& context);
 
 std::shared_ptr<AVPacket> create_packet();
-
-const std::shared_ptr<AVPacket>& loop_packet(int index);
-const std::shared_ptr<AVPacket>& eof_packet(int index);
-
-const std::shared_ptr<AVFrame>& loop_video();
-const std::shared_ptr<AVFrame>& empty_video();
-const std::shared_ptr<AVFrame>& eof_video();
-const std::shared_ptr<core::audio_buffer>& loop_audio();
-const std::shared_ptr<core::audio_buffer>& empty_audio();
-const std::shared_ptr<core::audio_buffer>& eof_audio();
 
 safe_ptr<AVCodecContext> open_codec(AVFormatContext& context,  enum AVMediaType type, int& index);
 safe_ptr<AVFormatContext> open_input(const std::wstring& filename);

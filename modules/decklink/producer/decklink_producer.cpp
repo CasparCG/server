@@ -221,8 +221,7 @@ public:
 
 		try
 		{
-			auto message = Concurrency::receive(muxed_frames_);
-			last_frame_ = frame = make_safe_ptr(message->payload);
+			last_frame_ = frame = Concurrency::receive(muxed_frames_)->payload;
 		}
 		catch(Concurrency::operation_timed_out&)
 		{		
