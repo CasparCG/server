@@ -51,13 +51,12 @@ namespace caspar { namespace ffmpeg {
 struct video_decoder::implementation : public Concurrency::agent, boost::noncopyable
 {	
 	int										index_;
-	std::shared_ptr<AVCodecContext>			codec_context_;
-	
-	double									fps_;
-	int64_t									nb_frames_;
+	safe_ptr<AVCodecContext>				codec_context_;	
+	const double							fps_;
+	const int64_t							nb_frames_;
+	const size_t							width_;
+	const size_t							height_;
 
-	size_t									width_;
-	size_t									height_;
 	bool									is_progressive_;
 	
 	overwrite_buffer<bool>					is_running_;
@@ -74,18 +73,12 @@ public:
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 		, is_progressive_(true)
-		, source_([this](const safe_ptr<AVPacket>& packet)
-			{
-				return packet->stream_index == index_;
-			})
+		, source_([this](const safe_ptr<AVPacket>& packet){return packet->stream_index == index_;})
 		, target_(target)
 		, semaphore_(make_safe<Concurrency::semaphore>(1))
 	{		
 		CASPAR_LOG(debug) << "[video_decoder] " << context.streams[index_]->codec->codec->long_name;
 		
-		CASPAR_VERIFY(width_ > 0, ffmpeg_error());
-		CASPAR_VERIFY(height_ > 0, ffmpeg_error());
-
 		Concurrency::connect(source, source_);
 
 		start();

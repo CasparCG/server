@@ -4,9 +4,6 @@
     <Filter Include="source">
       <UniqueIdentifier>{c9454245-e85a-45ba-960f-203b00d18454}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\consumer">
-      <UniqueIdentifier>{4db7d9c3-08ea-4423-a303-f18737629268}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\producer">
       <UniqueIdentifier>{c5a94fd1-4552-4f6d-97cd-24e44e662e0f}</UniqueIdentifier>
     </Filter>
@@ -32,9 +29,6 @@
     </ClCompile>
     <ClCompile Include="producer\audio\audio_decoder.cpp">
       <Filter>source\producer\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="consumer\ffmpeg_consumer.cpp">
-      <Filter>source\consumer</Filter>
     </ClCompile>
     <ClCompile Include="StdAfx.cpp" />
     <ClCompile Include="ffmpeg.cpp">
@@ -71,9 +65,6 @@
     </ClInclude>
     <ClInclude Include="producer\audio\audio_decoder.h">
       <Filter>source\producer\audio</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\ffmpeg_consumer.h">
-      <Filter>source\consumer</Filter>
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="ffmpeg_error.h">
