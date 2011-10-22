@@ -45,9 +45,11 @@ extern "C"
 #include <connect.h>
 #include <semaphore.h>
 
+using namespace Concurrency;
+
 namespace caspar { namespace ffmpeg {
 	
-struct audio_decoder::implementation : boost::noncopyable
+struct audio_decoder::implementation : public agent, boost::noncopyable
 {	
 	int															index_;
 	std::shared_ptr<AVCodecContext>								codec_context_;		
@@ -56,7 +58,9 @@ struct audio_decoder::implementation : boost::noncopyable
 	
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
-	Concurrency::transformer<packet_message_t, audio_message_t> transformer_;
+	overwrite_buffer<bool>				is_running_;
+	unbounded_buffer<packet_message_t>	source_;
+	ITarget<audio_message_t>&			target_;
 	
 public:
 	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
@@ -65,53 +69,80 @@ public:
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
-		, transformer_(std::bind(&implementation::decode, this, std::placeholders::_1), &target, [this](const packet_message_t& message)
+		, source_([this](const packet_message_t& message)
 			{
 				return message->payload && message->payload->stream_index == index_;
 			})
+		, target_(target)
 	{			   	
 		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;
 
-		Concurrency::connect(source, transformer_);
+		Concurrency::connect(source, source_);
+
+		start();
 	}
 
-	audio_message_t decode(const packet_message_t& message)
-	{		
-		auto packet = message->payload;
+	~implementation()
+	{
+		send(is_running_, false);
+		agent::wait(this);
+	}
 
-		if(!packet)
-			return make_message(std::shared_ptr<core::audio_buffer>());
-
-		if(packet == loop_packet(index_))
-			return make_message(loop_audio());
-
-		if(packet == eof_packet(index_))
-			return make_message(eof_audio());
-
-		auto result = std::make_shared<core::audio_buffer>();
-
-		while(packet->size > 0)
+	virtual void run()
+	{
+		try
 		{
-			buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
-			int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
-		
-			int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packet.get()), "[audio_decoder]");
-
-			// There might be several frames in one packet.
-			packet->size -= ret;
-			packet->data += ret;
+			send(is_running_, true);
+			while(is_running_.value())
+			{				
+				auto message = receive(source_);
+				auto packet = message->payload;
 			
-			buffer1_.resize(written_bytes);
+				if(!packet)
+					continue;
 
-			buffer1_ = resampler_.resample(std::move(buffer1_));
+				if(packet == loop_packet(index_))
+				{
+					send(target_, make_message(loop_audio()));
+					break;
+				}
+
+				if(packet == eof_packet(index_))
+					break;
+
+				auto result = std::make_shared<core::audio_buffer>();
+
+				while(packet->size > 0)
+				{
+					buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
+					int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
 		
-			const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
-			const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
+					int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packet.get()), "[audio_decoder]");
 
-			result->insert(result->end(), samples, samples + n_samples);
+					// There might be several frames in one packet.
+					packet->size -= ret;
+					packet->data += ret;
+			
+					buffer1_.resize(written_bytes);
+
+					buffer1_ = resampler_.resample(std::move(buffer1_));
+		
+					const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
+					const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
+
+					send(target_, make_message(std::make_shared<core::audio_buffer>(samples, samples + n_samples)));
+				}
+			}
 		}
-				
-		return make_message(result, message->token);
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+
+		send(is_running_, false);
+		send(target_, make_message(eof_audio()));
+
+		done();
 	}
 };
 
