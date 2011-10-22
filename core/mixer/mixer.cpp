@@ -86,8 +86,6 @@ public:
 
 struct mixer::implementation : boost::noncopyable
 {		
-	critical_section			mutex_;
-
 	const video_format_desc format_desc_;
 	ogl_device&				ogl_;
 	
@@ -96,9 +94,8 @@ struct mixer::implementation : boost::noncopyable
 	
 	std::unordered_map<int, tweened_transform<core::frame_transform>> transforms_;	
 	std::unordered_map<int, blend_mode::type> blend_modes_;
-
-	std::queue<std::pair<boost::unique_future<safe_ptr<host_buffer>>, core::audio_buffer>> buffer_;
-	
+		
+	critical_section			mutex_;
 	Concurrency::transformer<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>, 
 							 safe_ptr<message<safe_ptr<core::read_frame>>>> mixer_;
 public:
@@ -145,21 +142,12 @@ public:
 		auto image = image_mixer_.render();
 		auto audio = audio_mixer_.mix();
 			
-		buffer_.push(std::make_pair(std::move(image), audio));
-
-		if(buffer_.size() < 2)
-			return msg->transfer(make_safe<core::read_frame>());	
-
-		auto res = std::move(buffer_.front());
-		buffer_.pop();
-
-		auto buffer = [&]() -> safe_ptr<core::host_buffer>
 		{
 			scoped_oversubcription_token oversubscribe;
-			return std::move(res.first.get());
-		}();
+			image.wait();
+		}
 
-		auto frame = make_safe<read_frame>(ogl_, format_desc_.size, std::move(buffer), std::move(res.second));
+		auto frame = make_safe<read_frame>(ogl_, format_desc_.size, std::move(image.get()), std::move(audio));
 
 		return msg->transfer<safe_ptr<core::read_frame>>(std::move(frame));	
 	}
