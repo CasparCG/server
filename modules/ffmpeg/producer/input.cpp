@@ -134,6 +134,7 @@ public:
 					break;
 
 				Concurrency::asend(target_, make_safe_ptr(packet));
+				Concurrency::wait(10);
 			}
 		}
 		catch(...)
