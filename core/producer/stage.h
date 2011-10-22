@@ -23,8 +23,11 @@
 #include "frame_producer.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/concurrency/message.h>
 
 #include <boost/noncopyable.hpp>
+
+#include <agents.h>
 
 namespace caspar { namespace core {
 
@@ -35,12 +38,12 @@ struct layer_status;
 class stage : boost::noncopyable
 {
 public:
-	explicit stage(video_channel_context& video_channel);
+	typedef Concurrency::ITarget<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>> target_t;
+
+	explicit stage(target_t& target);
 
 	void swap(stage& other);
-
-	std::map<int, safe_ptr<basic_frame>> execute();
-		
+			
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false, int auto_play_delta = -1);
 	void pause(int index);
 	void play(int index);

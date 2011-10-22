@@ -33,7 +33,6 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
-#include <core/video_channel_context.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/stage.h>
@@ -1334,13 +1333,14 @@ bool SetCommand::DoExecute()
 
 	if(name == TEXT("MODE"))
 	{
-		auto format_desc = core::video_format_desc::get(value);
-		if(format_desc.format != core::video_format::invalid)
-		{
-			GetChannel()->set_video_format_desc(format_desc);
-			SetReplyString(TEXT("202 SET MODE OK\r\n"));
-		}
-		else
+		// C-TODO
+		//auto format_desc = core::video_format_desc::get(value);
+		//if(format_desc.format != core::video_format::invalid)
+		//{
+		//	GetChannel()->set_video_format_desc(format_desc);
+		//	SetReplyString(TEXT("202 SET MODE OK\r\n"));
+		//}
+		//else
 			SetReplyString(TEXT("501 SET MODE FAILED\r\n"));
 	}
 	else

@@ -21,9 +21,12 @@
 
 #include "../consumer/frame_consumer.h"
 
+#include <common/concurrency/message.h>
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
+
+#include <agents.h>
 
 namespace caspar { namespace core {
 	
@@ -32,12 +35,12 @@ class video_channel_context;
 class output : boost::noncopyable
 {
 public:
-	explicit output(video_channel_context& video_channel, const std::function<void()>& restart_channel);
+	typedef Concurrency::ISource<safe_ptr<message<safe_ptr<read_frame>>>> source_t;
+
+	explicit output(source_t& source, const video_format_desc& format_desc);
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);
-
-	void execute(const safe_ptr<read_frame>& frame); // nothrow
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

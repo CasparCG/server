@@ -47,8 +47,8 @@ class audio_decoder : boost::noncopyable
 {
 public:
 
-	typedef Concurrency::ISource<packet_message_t>& source_t;
-	typedef Concurrency::ITarget<audio_message_t>& target_t;
+	typedef Concurrency::ISource<safe_ptr<AVPacket>>& source_t;
+	typedef Concurrency::ITarget<safe_ptr<core::audio_buffer>>& target_t;
 	
 	explicit audio_decoder(source_t& source, target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc);
 	

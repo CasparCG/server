@@ -296,9 +296,9 @@ void fix_meta_data(AVFormatContext& context)
 	video_context.time_base.den = static_cast<int>(closest_fps*1000000.0);
 }
 
-std::shared_ptr<AVPacket> create_packet()
+safe_ptr<AVPacket> create_packet()
 {
-	std::shared_ptr<AVPacket> packet(new AVPacket, [](AVPacket* p)
+	safe_ptr<AVPacket> packet(new AVPacket, [](AVPacket* p)
 	{
 		av_free_packet(p);
 		delete p;
@@ -308,9 +308,9 @@ std::shared_ptr<AVPacket> create_packet()
 	return packet;
 }
 
-const std::shared_ptr<AVPacket>& loop_packet(int index)
+const safe_ptr<AVPacket>& loop_packet(int index)
 {
-	static std::shared_ptr<AVPacket> packets[] = {create_packet(), create_packet(), create_packet(), create_packet(), create_packet(), create_packet()};
+	static safe_ptr<AVPacket> packets[] = {create_packet(), create_packet(), create_packet(), create_packet(), create_packet(), create_packet()};
 	
 	auto& packet = packets[index];
 	packet->stream_index = index;
@@ -318,9 +318,9 @@ const std::shared_ptr<AVPacket>& loop_packet(int index)
 	return packet;
 }
 
-const std::shared_ptr<AVPacket>& eof_packet(int index)
+const safe_ptr<AVPacket>& eof_packet(int index)
 {
-	static std::shared_ptr<AVPacket> packets[] = {create_packet(), create_packet(), create_packet(), create_packet(), create_packet(), create_packet()};
+	static safe_ptr<AVPacket> packets[] = {create_packet(), create_packet(), create_packet(), create_packet(), create_packet(), create_packet()};
 	
 	auto& packet = packets[index];
 	packet->stream_index = index;
@@ -328,39 +328,39 @@ const std::shared_ptr<AVPacket>& eof_packet(int index)
 	return packet;
 }
 
-const std::shared_ptr<AVFrame>& loop_video()
+const safe_ptr<AVFrame>& loop_video()
 {
-	static auto frame1 = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
+	static auto frame1 = safe_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 	return frame1;
 }
 
-const std::shared_ptr<AVFrame>& empty_video()
+const safe_ptr<AVFrame>& empty_video()
 {
-	static auto frame1 = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
+	static auto frame1 = safe_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 	return frame1;
 }
 
-const std::shared_ptr<AVFrame>& eof_video()
+const safe_ptr<AVFrame>& eof_video()
 {
-	static auto frame2 = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
+	static auto frame2 = safe_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 	return frame2;
 }
 
-const std::shared_ptr<core::audio_buffer>& loop_audio()
+const safe_ptr<core::audio_buffer>& loop_audio()
 {
-	static auto audio1 = std::make_shared<core::audio_buffer>();
+	static auto audio1 = safe_ptr<core::audio_buffer>();
 	return audio1;
 }
 
-const std::shared_ptr<core::audio_buffer>& empty_audio()
+const safe_ptr<core::audio_buffer>& empty_audio()
 {
-	static auto audio1 = std::make_shared<core::audio_buffer>();
+	static auto audio1 = safe_ptr<core::audio_buffer>();
 	return audio1;
 }
 
-const std::shared_ptr<core::audio_buffer>& eof_audio()
+const safe_ptr<core::audio_buffer>& eof_audio()
 {
-	static auto audio2 = std::make_shared<core::audio_buffer>();
+	static auto audio2 = safe_ptr<core::audio_buffer>();
 	return audio2;
 }
 
