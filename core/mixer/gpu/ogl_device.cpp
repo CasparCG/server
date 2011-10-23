@@ -106,7 +106,7 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t 
 		}
 		catch(...)
 		{
-			CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
+			CASPAR_LOG(error) << L"[ogl_device] create_device_buffer failed!";
 			throw;
 		}
 	}
@@ -159,7 +159,7 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(size_t size, host_buffer:
 		}
 		catch(...)
 		{
-			CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
+			CASPAR_LOG(error) << L"[ogl_device] create_host_buffer failed!";
 			throw;		
 		}
 	}
