@@ -34,6 +34,7 @@
 #include "mixer/gpu/ogl_device.h"
 
 #include <agents_extras.h>
+#include <semaphore.h>
 
 #include <boost/timer.hpp>
 
@@ -49,7 +50,8 @@ struct video_channel::implementation : boost::noncopyable
 	Concurrency::unbounded_buffer<safe_ptr<message<safe_ptr<read_frame>>>>					mixer_frames_;
 	
 	const video_format_desc format_desc_;
-
+	
+	safe_ptr<Concurrency::semaphore>		semaphore_;
 	safe_ptr<caspar::core::output>			output_;
 	std::shared_ptr<caspar::core::mixer>	mixer_;
 	safe_ptr<caspar::core::stage>			stage_;
@@ -58,14 +60,16 @@ struct video_channel::implementation : boost::noncopyable
 	boost::timer					frame_timer_;
 	boost::timer					tick_timer_;
 	boost::timer					output_timer_;
+
 	
 public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
 		: graph_(diagnostics::create_graph(narrow(print()), false))
 		, format_desc_(format_desc)
+		, semaphore_(make_safe<Concurrency::semaphore>(3))
 		, output_(new caspar::core::output(mixer_frames_, format_desc))
 		, mixer_(new caspar::core::mixer(stage_frames_, mixer_frames_, format_desc, ogl))
-		, stage_(new caspar::core::stage(stage_frames_))	
+		, stage_(new caspar::core::stage(stage_frames_, semaphore_))	
 	{
 		graph_->add_guide("produce-time", 0.5f);	
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
