@@ -334,6 +334,7 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
+		Concurrency::scoped_oversubcription_token oversubscribe;
 		format_desc_ = format_desc;
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_));
 	}

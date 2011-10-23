@@ -98,7 +98,7 @@ struct server::implementation : boost::noncopyable
 			
 			channels_.push_back(video_channel(channels_.size(), format_desc, *ogl_));
 			
-			int index = 0;
+			int index = 1;
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))
 			{
 				try
