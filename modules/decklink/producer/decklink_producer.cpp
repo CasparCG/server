@@ -180,15 +180,11 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 
 	safe_ptr<core::basic_frame>			last_frame_;
 	const int64_t						length_;
-
-	ffmpeg::filter						filter_;
-		
+			
 	ffmpeg::frame_muxer2				muxer_;
 
 	mutable Concurrency::single_assignment<std::wstring> print_;
-
-	safe_ptr<Concurrency::semaphore> semaphore_;
-
+	
 	volatile bool is_running_;
 public:
 
@@ -200,10 +196,8 @@ public:
 		, device_index_(device_index)
 		, last_frame_(core::basic_frame::empty())
 		, length_(length)
-		, filter_(filter_str)
-		, muxer_(&video_frames_, &audio_buffers_, muxed_frames_, ffmpeg::double_rate(filter_str) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory)
+		, muxer_(&video_frames_, &audio_buffers_, muxed_frames_, format_desc.fps, frame_factory, filter_str)
 		, is_running_(true)
-		, semaphore_(make_safe<Concurrency::semaphore>(3))
 	{
 		agent::start();
 	}
@@ -286,18 +280,10 @@ public:
 				av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 				av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
 					
-				filter_.push(av_frame);
-
 				Concurrency::parallel_invoke(
 				[&]
 				{
-					while(true)
-					{
-						auto frame = filter_.poll();
-						if(!frame)
-							break;
-						Concurrency::send(video_frames_, make_safe_ptr(frame));
-					}
+					Concurrency::send(video_frames_, av_frame);					
 				},
 				[&]
 				{													
