@@ -42,31 +42,32 @@
 #pragma warning(disable : 4355)
 #endif
 
+using namespace Concurrency;
+
 namespace caspar { namespace core {
 
 struct video_channel::implementation : boost::noncopyable
 {
-	Concurrency::unbounded_buffer<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>>	stage_frames_;
-	Concurrency::unbounded_buffer<safe_ptr<message<safe_ptr<read_frame>>>>					mixer_frames_;
+	unbounded_buffer<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>>	stage_frames_;
+	unbounded_buffer<safe_ptr<message<safe_ptr<read_frame>>>>					mixer_frames_;
 	
-	const video_format_desc format_desc_;
+	const video_format_desc				format_desc_;
 	
-	safe_ptr<Concurrency::semaphore>		semaphore_;
-	safe_ptr<caspar::core::output>			output_;
-	std::shared_ptr<caspar::core::mixer>	mixer_;
-	safe_ptr<caspar::core::stage>			stage_;
+	safe_ptr<semaphore>					semaphore_;
+	safe_ptr<caspar::core::output>		output_;
+	safe_ptr<caspar::core::mixer>		mixer_;
+	safe_ptr<caspar::core::stage>		stage_;
 
-	safe_ptr<diagnostics::graph>	graph_;
-	boost::timer					frame_timer_;
-	boost::timer					tick_timer_;
-	boost::timer					output_timer_;
-
+	safe_ptr<diagnostics::graph>		graph_;
+	boost::timer						frame_timer_;
+	boost::timer						tick_timer_;
+	boost::timer						output_timer_;
 	
 public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
 		: graph_(diagnostics::create_graph(narrow(print()), false))
 		, format_desc_(format_desc)
-		, semaphore_(make_safe<Concurrency::semaphore>(3))
+		, semaphore_(make_safe<semaphore>(3))
 		, output_(new caspar::core::output(mixer_frames_, format_desc))
 		, mixer_(new caspar::core::mixer(stage_frames_, mixer_frames_, format_desc, ogl))
 		, stage_(new caspar::core::stage(stage_frames_, semaphore_))	
@@ -90,7 +91,7 @@ public:
 video_channel::video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
 video_channel::video_channel(video_channel&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
-safe_ptr<mixer> video_channel::mixer() { return make_safe_ptr(impl_->mixer_);} 
+safe_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
 safe_ptr<output> video_channel::output() { return impl_->output_;} 
 video_format_desc video_channel::get_video_format_desc() const{return impl_->format_desc_;}
 std::wstring video_channel::print() const { return impl_->print();}

@@ -150,7 +150,7 @@ public:
 			scoped_oversubcription_token oversubscribe;
 			timer_.tick(1.0/format_desc_.fps);
 		}
-		
+	
 		std::vector<int> removables;		
 		Concurrency::parallel_for_each(consumers_.begin(), consumers_.end(), [&](const decltype(*consumers_.begin())& pair)
 		{		

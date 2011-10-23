@@ -179,9 +179,9 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 	//++pool->usage_count;
 	
 	auto self = safe_from_this();
-	return safe_ptr<host_buffer>(buffer.get(), [self, pool, buffer, usage](host_buffer*) mutable
+	return safe_ptr<host_buffer>(buffer.get(), [self, pool, buffer, usage](host_buffer*)
 	{
-		self->begin_invoke([=]() mutable
+		self->begin_invoke([=]()
 		{		
 			if(usage == host_buffer::write_only)
 				buffer->map();
