@@ -31,8 +31,8 @@ class frame_muxer2 : boost::noncopyable
 {
 public:
 	
-	typedef Concurrency::ISource<std::shared_ptr<AVFrame>>				video_source_t;
-	typedef Concurrency::ISource<std::shared_ptr<core::audio_buffer>>	audio_source_t;
+	typedef Concurrency::ISource<safe_ptr<AVFrame>>				video_source_t;
+	typedef Concurrency::ISource<safe_ptr<core::audio_buffer>>	audio_source_t;
 	typedef Concurrency::ITarget<safe_ptr<core::basic_frame>>	target_t;
 								 
 	frame_muxer2(video_source_t* video_source,
@@ -40,7 +40,7 @@ public:
 				 target_t& target,
 				 double in_fps, 
 				 const safe_ptr<core::frame_factory>& frame_factory,
-				 const std::wstring& filter);
+				 const std::wstring& filter = L"");
 	
 	int64_t calc_nb_frames(int64_t nb_frames) const;
 private:

@@ -59,7 +59,7 @@
 
 #include <core/mixer/gpu/ogl_device.h>
 
-#include <agents.h>
+#include <concrt.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
 
@@ -190,6 +190,8 @@ int main(int argc, wchar_t* argv[])
 		inc_prec(){timeBeginPeriod(1);}
 		~inc_prec(){timeEndPeriod(1);}
 	} inc_prec;	
+
+	//Concurrency::Scheduler::SetDefaultSchedulerPolicy(Concurrency::SchedulerPolicy(1, Concurrency::SchedulerKind, Concurrency::UmsThreadDefault));
 		
 	try 
 	{

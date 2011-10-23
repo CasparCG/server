@@ -47,6 +47,7 @@
 
 #include <agents.h>
 #include <agents_extras.h>
+#include <connect.h>
 #include <concrt.h>
 #include <ppl.h>
 
@@ -61,17 +62,17 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool										loop_;
 	const size_t									length_;
 	
-	unbounded_buffer<safe_ptr<AVPacket>>			packets_;
-	unbounded_buffer<std::shared_ptr<AVFrame>>				video_;
-	unbounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_;
 	call<safe_ptr<AVPacket>>						throw_away_;
+	unbounded_buffer<safe_ptr<AVPacket>>			packets_;
+	unbounded_buffer<safe_ptr<AVFrame>>				video_;
+	unbounded_buffer<safe_ptr<core::audio_buffer>>	audio_;
 	bounded_buffer<safe_ptr<core::basic_frame>>		frames_;
 		
 	const safe_ptr<diagnostics::graph>				graph_;
 					
 	input											input_;	
-	std::shared_ptr<audio_decoder>					audio_decoder_;	
 	std::shared_ptr<video_decoder>					video_decoder_;
+	std::shared_ptr<audio_decoder>					audio_decoder_;	
 	std::unique_ptr<frame_muxer2>					muxer_;
 
 	safe_ptr<core::basic_frame>						last_frame_;
@@ -121,11 +122,11 @@ public:
 			CASPAR_LOG(warning) << "Failed to open audio-stream. Running without audio.";		
 		}
 		
-		packets_.link_target(&throw_away_);
+		Concurrency::connect(packets_, throw_away_);
 
 		CASPAR_VERIFY(video_decoder_ || audio_decoder_, ffmpeg_error());
 
-		muxer_.reset(new frame_muxer2(video_source, audio_source, frames_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory, filter));
+		muxer_.reset(new frame_muxer2(video_source, audio_source, frames_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
 				
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		graph_->start();
@@ -147,7 +148,7 @@ public:
 		
 		try
 		{		
-			frame = last_frame_ = Concurrency::receive(frames_, 5);
+			frame = last_frame_ = Concurrency::receive(frames_, 10);
 			graph_->update_text(narrow(print()));
 		}
 		catch(operation_timed_out&)
