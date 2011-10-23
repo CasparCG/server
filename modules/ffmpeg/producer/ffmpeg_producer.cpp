@@ -62,10 +62,10 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool										loop_;
 	const size_t									length_;
 	
-	call<safe_ptr<AVPacket>>						throw_away_;
 	unbounded_buffer<safe_ptr<AVPacket>>			packets_;
 	unbounded_buffer<safe_ptr<AVFrame>>				video_;
 	unbounded_buffer<safe_ptr<core::audio_buffer>>	audio_;
+	call<safe_ptr<AVPacket>>						throw_away_;
 	bounded_buffer<safe_ptr<core::basic_frame>>		frames_;
 		
 	const safe_ptr<diagnostics::graph>				graph_;

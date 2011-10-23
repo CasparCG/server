@@ -87,7 +87,6 @@ public:
 	{
 		send(is_running_, false);
 		semaphore_->release();
-		semaphore_->release();
 		agent::wait(this);
 	}
 
