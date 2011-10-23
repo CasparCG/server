@@ -53,9 +53,8 @@ public:
 	typedef Concurrency::ITarget<safe_ptr<message<safe_ptr<core::read_frame>>>>				target_t;
 
 	explicit mixer(source_t& source, target_t& target, const video_format_desc& format_desc, ogl_device& ogl);
-				
-	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);			
-	boost::unique_future<safe_ptr<write_frame>> create_frame2(const void* video_stream_tag, const pixel_format_desc& desc);
+						
+	boost::unique_future<safe_ptr<write_frame>> async_create_frame(const void* video_stream_tag, const pixel_format_desc& desc);
 
 	core::video_format_desc get_video_format_desc() const; // nothrow
 	

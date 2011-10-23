@@ -153,7 +153,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
-		, frame_factory_(make_safe<core::concrt_frame_factory>(frame_factory))
+		, frame_factory_(frame_factory)
 		, push_video_(std::bind(&implementation::push_video, this, std::placeholders::_1))
 		, push_audio_(std::bind(&implementation::push_audio, this, std::placeholders::_1))
 	{

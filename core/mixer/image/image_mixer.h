@@ -53,7 +53,7 @@ public:
 	boost::unique_future<safe_ptr<host_buffer>> render();
 
 	safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& format);
-	boost::unique_future<safe_ptr<write_frame>> create_frame2(const void* tag, const pixel_format_desc& format);
+	boost::unique_future<safe_ptr<write_frame>> async_create_frame(const void* tag, const pixel_format_desc& format);
 
 private:
 	struct implementation;
