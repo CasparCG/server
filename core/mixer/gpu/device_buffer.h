@@ -31,6 +31,8 @@ class device_buffer : boost::noncopyable
 {
 public:
 	
+	static const int max_stride = 4;
+
 	size_t stride() const;	
 	size_t width() const;
 	size_t height() const;
