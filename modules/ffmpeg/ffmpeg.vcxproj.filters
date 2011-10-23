@@ -94,5 +94,8 @@
     <ClInclude Include="producer\input.h">
       <Filter>source\producer</Filter>
     </ClInclude>
+    <ClInclude Include="producer\display_mode.h">
+      <Filter>source\producer</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
