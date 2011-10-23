@@ -50,6 +50,8 @@
 #include <agents_extras.h>
 #include <concrt_extras.h>
 
+using namespace Concurrency;
+
 namespace caspar { namespace flash {
 		
 class bitmap
@@ -127,22 +129,22 @@ template_host get_template_host(const core::video_format_desc& desc)
 
 class flash_renderer
 {	
-	const std::wstring filename_;
+	const std::wstring								filename_;
 
-	const safe_ptr<core::frame_factory> frame_factory_;
-	
-	CComObject<caspar::flash::FlashAxContainer>* ax_;
-	safe_ptr<core::basic_frame> head_;
-	bitmap bmp_;
-	
-	safe_ptr<diagnostics::graph> graph_;
-	boost::timer frame_timer_;
-	boost::timer tick_timer_;
+	const safe_ptr<core::frame_factory>				frame_factory_;
+	safe_ptr<diagnostics::graph>					graph_;
 
-	high_prec_timer timer_;
+	high_prec_timer									timer_;
+	safe_ptr<core::basic_frame>						head_;
+	bitmap											bmp_;
 
-	const size_t width_;
-	const size_t height_;
+	const size_t									width_;
+	const size_t									height_;
+			
+	boost::timer									frame_timer_;
+	boost::timer									tick_timer_;
+
+	CComObject<caspar::flash::FlashAxContainer>*	ax_;
 	
 public:
 	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
@@ -159,8 +161,7 @@ public:
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
-		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("skip-sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
+		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));		
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
@@ -206,7 +207,7 @@ public:
 		graph_->add_tag("param");
 	}
 	
-	safe_ptr<core::basic_frame> render_frame(bool has_underflow)
+	safe_ptr<core::basic_frame> operator()()
 	{
 		const float frame_time = 1.0f/ax_->GetFPS();
 
@@ -216,14 +217,9 @@ public:
 		if(ax_->IsEmpty())
 			return core::basic_frame::empty();		
 		
-		if(!has_underflow)		
-		{
-			Concurrency::scoped_oversubcription_token oversubscribe;
-			timer_.tick(frame_time); // This will block the thread.
-			//Concurrency::wait(std::max<int>(0, frame_time-3));
-		}
-		else
-			graph_->add_tag("skip-sync");
+		Concurrency::scoped_oversubcription_token oversubscribe;
+		timer_.tick(frame_time); // This will block the thread.
+		//Concurrency::wait(std::max<int>(0, frame_time-3));
 			
 		frame_timer_.restart();
 
@@ -256,8 +252,8 @@ public:
 
 struct flash_producer : public Concurrency::agent, public core::frame_producer
 {	
-	Concurrency::unbounded_buffer<std::wstring>					params_;
-	Concurrency::bounded_buffer<safe_ptr<core::basic_frame>>	frames_;
+	unbounded_buffer<std::wstring>								params_;
+	bounded_buffer<safe_ptr<core::basic_frame>>					frames_;
 
 	tbb::atomic<bool>											is_running_;
 		
@@ -267,7 +263,7 @@ struct flash_producer : public Concurrency::agent, public core::frame_producer
 	const int													width_;
 	const int													height_;
 		
-	mutable Concurrency::overwrite_buffer<safe_ptr<core::basic_frame>> last_frame_;
+	mutable overwrite_buffer<safe_ptr<core::basic_frame>>		last_frame_;
 
 	safe_ptr<diagnostics::graph>								graph_;
 				
@@ -278,7 +274,7 @@ public:
 		, filename_(filename)		
 		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
-		, graph_(diagnostics::create_graph("", false))
+		, graph_(diagnostics::create_graph("flash", false))
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
@@ -298,7 +294,7 @@ public:
 	{
 		is_running_ = false;
 		auto frame = core::basic_frame::empty();
-		while(Concurrency::try_receive(frames_, frame)){}
+		while(try_receive(frames_, frame)){}
 		agent::wait(this);
 	}
 	
@@ -325,23 +321,23 @@ public:
 
 				if(abs(renderer.fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
 				{
-					auto frame1 = renderer.render_frame(false);
-					auto frame2 = renderer.render_frame(false);
-					Concurrency::send(last_frame_, frame2);
-					Concurrency::send(frames_, core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
+					auto frame1 = renderer();
+					auto frame2 = renderer();
+					send(last_frame_, frame2);
+					send(frames_, core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
 				}
 				else if(abs(renderer.fps()- format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
 				{
-					auto frame = renderer.render_frame(false);
-					Concurrency::send(last_frame_, frame);
-					Concurrency::send(frames_, frame);
-					Concurrency::send(frames_, frame);
+					auto frame = renderer();
+					send(last_frame_, frame);
+					send(frames_, frame);
+					send(frames_, frame);
 				}
 				else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
 				{
-					auto frame = renderer.render_frame(false);
-					Concurrency::send(last_frame_, frame);
-					Concurrency::send(frames_, frame);
+					auto frame = renderer();
+					send(last_frame_, frame);
+					send(frames_, frame);
 				}
 
 				fps_ = static_cast<int>(renderer.fps()*100.0);
@@ -365,9 +361,9 @@ public:
 
 		try
 		{
-			frame = Concurrency::receive(frames_, 5);
+			frame = Concurrency::receive(frames_, 10);
 		}
-		catch(Concurrency::operation_timed_out&)
+		catch(operation_timed_out&)
 		{			
 			graph_->add_tag("underflow");
 		}
@@ -387,7 +383,7 @@ public:
 			agent::wait(this);
 			start();
 		}
-		Concurrency::asend(params_, param);
+		asend(params_, param);
 	}
 		
 	virtual std::wstring print() const
