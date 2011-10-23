@@ -5,6 +5,7 @@
 #include "filter/filter.h"
 
 #include "util.h"
+#include "display_mode.h"
 
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame/basic_frame.h>
@@ -30,105 +31,19 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <boost/foreach.hpp>
-
-#include <agents_extras.h>
-
-using namespace caspar::core;
+#include <agents.h>
 
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
-
-struct display_mode
-{
-	enum type
-	{
-		simple,
-		duplicate,
-		half,
-		interlace,
-		deinterlace_bob,
-		deinterlace_bob_reinterlace,
-		deinterlace,
-		count,
-		invalid
-	};
-
-	static std::wstring print(display_mode::type value)
-	{
-		switch(value)
-		{
-			case simple:						return L"simple";
-			case duplicate:						return L"duplicate";
-			case half:							return L"half";
-			case interlace:						return L"interlace";
-			case deinterlace_bob:				return L"deinterlace_bob";
-			case deinterlace_bob_reinterlace:	return L"deinterlace_bob_reinterlace";
-			case deinterlace:					return L"deinterlace";
-			default:							return L"invalid";
-		}
-	}
-};
-
-display_mode::type get_display_mode(const core::field_mode::type in_mode, double in_fps, const core::field_mode::type out_mode, double out_fps)
-{		
-	static const auto epsilon = 2.0;
-
-	if(in_fps < 20.0 || in_fps > 80.0)
-	{
-		//if(out_mode != core::field_mode::progressive && in_mode == core::field_mode::progressive)
-		//	return display_mode::interlace;
-		
-		if(out_mode == core::field_mode::progressive && in_mode != core::field_mode::progressive)
-		{
-			if(in_fps < 35.0)
-				return display_mode::deinterlace;
-			else
-				return display_mode::deinterlace_bob;
-		}
-	}
-
-	if(std::abs(in_fps - out_fps) < epsilon)
-	{
-		if(in_mode != core::field_mode::progressive && out_mode == core::field_mode::progressive)
-			return display_mode::deinterlace;
-		//else if(in_mode == core::field_mode::progressive && out_mode != core::field_mode::progressive)
-		//	simple(); // interlace_duplicate();
-		else
-			return display_mode::simple;
-	}
-	else if(std::abs(in_fps/2.0 - out_fps) < epsilon)
-	{
-		if(in_mode != core::field_mode::progressive)
-			return display_mode::invalid;
-
-		if(out_mode != core::field_mode::progressive)
-			return display_mode::interlace;
-		else
-			return display_mode::half;
-	}
-	else if(std::abs(in_fps - out_fps/2.0) < epsilon)
-	{
-		if(out_mode != core::field_mode::progressive)
-			return display_mode::invalid;
-
-		if(in_mode != core::field_mode::progressive)
-			return display_mode::deinterlace_bob;
-		else
-			return display_mode::duplicate;
-	}
-
-	return display_mode::invalid;
-}
-
+	
 struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopyable
 {		
 	ITarget<safe_ptr<core::basic_frame>>&			target_;
 	mutable single_assignment<display_mode::type>	display_mode_;
 	const double									in_fps_;
-	const video_format_desc							format_desc_;
-	bool											auto_transcode_;
+	const core::video_format_desc					format_desc_;
+	const bool										auto_transcode_;
 	
 	mutable single_assignment<safe_ptr<filter>>		filter_;
 	const safe_ptr<core::frame_factory>				frame_factory_;
@@ -141,7 +56,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	
 	core::audio_buffer								audio_data_;
 
-	Concurrency::overwrite_buffer<bool>				is_running_;
+	overwrite_buffer<bool>							is_running_;
 
 	std::wstring									filter_str_;
 	
@@ -178,8 +93,11 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		auto video = receive(video_);
 
 		if(!is_running_.value() || video == eof_video())
+		{	
+			send(is_running_ , false);
 			return nullptr;
-				
+		}
+
 		CASPAR_ASSERT(video != loop_video());
 
 		try
@@ -202,8 +120,11 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		auto audio = receive(audio_);
 
 		if(!is_running_.value() || audio == eof_audio())
+		{
+			send(is_running_ , false);
 			return nullptr;
-		
+		}
+
 		CASPAR_ASSERT(audio != loop_audio());
 
 		try
@@ -232,20 +153,12 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				auto video = receive_video();
 
 				if(!audio)
-				{
-					send(is_running_ , false);
 					break;
-				}
 
 				if(!video)
-				{
-					send(is_running_ , false);
 					break;
-				}
 
 				video->audio_data() = std::move(*audio);
-
-				auto frame = safe_ptr<core::basic_frame>(video);
 
 				switch(display_mode_.value())
 				{
@@ -253,48 +166,41 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				case display_mode::deinterlace:
 				case display_mode::deinterlace_bob:
 					{
-						send(target_, frame);
+						send(target_, safe_ptr<core::basic_frame>(std::move(video)));
 
 						break;
 					}
 				case display_mode::duplicate:					
 					{										
-						send(target_, frame);
+						send(target_, safe_ptr<core::basic_frame>(video));
 
 						auto audio2 = receive_audio();
 						if(audio2)
 						{
 							auto video2 = make_safe<core::write_frame>(*video);
 							video2->audio_data() = std::move(*audio2);
-							auto frame2 = safe_ptr<core::basic_frame>(video2);
-							send(target_, frame2);
+							send(target_, safe_ptr<core::basic_frame>(video2));
 						}
-						else
-							send(is_running_, false);
 
 						break;
 					}
 				case display_mode::half:						
 					{								
-						send(target_, frame);
-
-						if(!receive_video()) // throw away	
-							send(is_running_ , false);
-
+						send(target_, safe_ptr<core::basic_frame>(std::move(video)));
+						receive_video();
 						break;
 					}
 				case display_mode::deinterlace_bob_reinterlace:
 				case display_mode::interlace:					
 					{					
+						auto frame = safe_ptr<core::basic_frame>(std::move(video));
 						auto video2 = receive_video();
 						auto frame2 = core::basic_frame::empty();
 
 						if(video2)						
-							frame2 = safe_ptr<core::basic_frame>(video2);						
-						else
-							send(is_running_, false);						
+							frame2 = safe_ptr<core::basic_frame>(video2);								
 						
-						frame = core::basic_frame::interlace(frame, frame2, format_desc_.field_mode);	
+						frame = core::basic_frame::interlace(std::move(frame), std::move(frame2), format_desc_.field_mode);	
 						send(target_, frame);
 
 						break;

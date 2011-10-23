@@ -76,7 +76,7 @@ public:
 		, is_progressive_(true)
 		, source_([this](const safe_ptr<AVPacket>& packet){return packet->stream_index == index_;})
 		, target_(target)
-		, semaphore_(make_safe<Concurrency::semaphore>(1))
+		, semaphore_(make_safe<Concurrency::semaphore>(1)) // IMPORTANT: Must be 1 since avcodec_decode_video2 reuses frame memory.
 	{		
 		CASPAR_LOG(debug) << "[video_decoder] " << context.streams[index_]->codec->codec->long_name;
 		
@@ -134,7 +134,7 @@ public:
 				is_progressive_ = decoded_frame->interlaced_frame == 0;
 				
 				send(target_, make_safe_ptr(decoded_frame));
-				Concurrency::wait(10);
+				Concurrency::wait(2);
 			}
 		}
 		catch(...)
