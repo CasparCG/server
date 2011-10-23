@@ -381,17 +381,22 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 					
 	int64_t calc_nb_frames(int64_t nb_frames) const
 	{
-		switch(display_mode_)
+		switch(display_mode_) // Take into account transformation in run.
 		{
-		case display_mode::interlace:
+		case display_mode::deinterlace_bob_reinterlace:
+		case display_mode::interlace:	
 		case display_mode::half:
-			return nb_frames/2;
+			nb_frames /= 2;
+			break;
 		case display_mode::duplicate:
-		case display_mode::deinterlace_bob:
-			return nb_frames*2;
-		default:
-			return nb_frames;
+			nb_frames *= 2;
+			break;
 		}
+
+		if(is_double_rate(filter_str_)) // Take into account transformations in filter.
+			nb_frames *= 2;
+
+		return nb_frames;
 	}
 };
 
