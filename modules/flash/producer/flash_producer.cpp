@@ -361,7 +361,7 @@ public:
 
 		try
 		{
-			frame = Concurrency::receive(frames_, 10);
+			frame = Concurrency::receive(frames_, 5);
 		}
 		catch(operation_timed_out&)
 		{			
