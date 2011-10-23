@@ -65,8 +65,8 @@ public:
 	
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
+		// C-TODO: Consumers are destroyed asynchronously, need to wait for destruction to finish before callign initialize.
 		remove(index);
-		wait(100); // Wait a bit to allow asynchronous destruction to finish.
 
 		consumer->initialize(format_desc_);		
 		
