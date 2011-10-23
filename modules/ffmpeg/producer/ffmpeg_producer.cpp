@@ -62,17 +62,17 @@ struct ffmpeg_producer : public core::frame_producer
 	const size_t									length_;
 	
 	unbounded_buffer<safe_ptr<AVPacket>>			packets_;
-	unbounded_buffer<safe_ptr<AVFrame>>				video_;
-	unbounded_buffer<safe_ptr<core::audio_buffer>>	audio_;
+	unbounded_buffer<std::shared_ptr<AVFrame>>				video_;
+	unbounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_;
 	call<safe_ptr<AVPacket>>						throw_away_;
 	bounded_buffer<safe_ptr<core::basic_frame>>		frames_;
 		
 	const safe_ptr<diagnostics::graph>				graph_;
 					
+	input											input_;	
 	std::shared_ptr<audio_decoder>					audio_decoder_;	
 	std::shared_ptr<video_decoder>					video_decoder_;
 	std::unique_ptr<frame_muxer2>					muxer_;
-	input											input_;	
 
 	safe_ptr<core::basic_frame>						last_frame_;
 	

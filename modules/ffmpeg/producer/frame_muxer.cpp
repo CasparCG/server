@@ -48,8 +48,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	mutable single_assignment<safe_ptr<filter>>		filter_;
 	const safe_ptr<core::frame_factory>				frame_factory_;
 	
-	call<safe_ptr<AVFrame>>							push_video_;
-	call<safe_ptr<core::audio_buffer>>				push_audio_;
+	call<std::shared_ptr<AVFrame>>					push_video_;
+	call<std::shared_ptr<core::audio_buffer>>		push_audio_;
 	
 	unbounded_buffer<safe_ptr<AVFrame>>				video_;
 	unbounded_buffer<safe_ptr<core::audio_buffer>>	audio_;
@@ -86,6 +86,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	{
 		send(is_running_, false);
 		agent::wait(this);
+		CASPAR_LOG(trace) << "[frame_muxer] Stopped.";
 	}
 
 	std::shared_ptr<core::write_frame> receive_video()
@@ -149,12 +150,11 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			send(is_running_, true);
 			while(is_running_.value())
 			{
-				auto audio = receive_audio();								
-				auto video = receive_video();
-
+				auto audio = receive_audio();	
 				if(!audio)
 					break;
-
+											
+				auto video = receive_video();
 				if(!video)
 					break;
 
@@ -221,14 +221,14 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		done();
 	}
 			
-	void push_video(const safe_ptr<AVFrame>& video_frame)
-	{				
-		if(!is_running_.value())
+	void push_video(const std::shared_ptr<AVFrame>& video_frame)
+	{		
+		if(!video_frame)
 			return;
 
 		if(video_frame == eof_video() || video_frame == empty_video())
 		{
-			send(video_, video_frame);
+			send(video_, make_safe_ptr(video_frame));
 			return;
 		}
 				
@@ -237,9 +237,14 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		
 		try
 		{
+			if(!is_running_.value())
+				return;
+
 			if(!display_mode_.has_value())
 				initialize_display_mode(*video_frame);
 						
+			//send(video_, make_safe_ptr(video_frame));
+
 			//if(hints & core::frame_producer::ALPHA_HINT)
 			//	video_frame->format = make_alpha_format(video_frame->format);
 		
@@ -267,14 +272,14 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		}
 	}
 
-	void push_audio(const safe_ptr<core::audio_buffer>& audio_samples)
+	void push_audio(const std::shared_ptr<core::audio_buffer>& audio_samples)
 	{
-		if(!is_running_.value())
+		if(!audio_samples)
 			return;
 
 		if(audio_samples == eof_audio() || audio_samples == empty_audio())
 		{
-			send(audio_, audio_samples);
+			send(audio_, make_safe_ptr(audio_samples));
 			return;
 		}
 
@@ -282,7 +287,10 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			return;		
 
 		try
-		{
+		{		
+			if(!is_running_.value())
+				return;
+
 			audio_data_.insert(audio_data_.end(), audio_samples->begin(), audio_samples->end());
 		
 			while(audio_data_.size() >= format_desc_.audio_samples_per_frame)

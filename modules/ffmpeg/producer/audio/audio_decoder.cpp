@@ -43,14 +43,14 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <connect.h>
+#include <agents.h>
 #include <semaphore.h>
 
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
 	
-struct audio_decoder::implementation : public agent, boost::noncopyable
+struct audio_decoder::implementation : boost::noncopyable
 {	
 	int															index_;
 	std::shared_ptr<AVCodecContext>								codec_context_;		
@@ -58,13 +58,10 @@ struct audio_decoder::implementation : public agent, boost::noncopyable
 	audio_resampler												resampler_;
 	
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
-
-	overwrite_buffer<bool>					is_running_;
-	unbounded_buffer<safe_ptr<AVPacket>>	source_;
-	ITarget<safe_ptr<core::audio_buffer>>&	target_;
-
-	safe_ptr<semaphore>						semaphore_;
 	
+	safe_ptr<semaphore> semaphore_;
+
+	transformer<safe_ptr<AVPacket>, std::shared_ptr<core::audio_buffer>> transformer_;	
 public:
 	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
 		: codec_context_(open_codec(context, AVMEDIA_TYPE_AUDIO, index_))
@@ -72,87 +69,70 @@ public:
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
-		, source_([this](const safe_ptr<AVPacket>& packet){return packet->stream_index == index_;})
-		, target_(target)
 		, semaphore_(make_safe<semaphore>(32))
-	{			   	
-		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;
-
-		Concurrency::connect(source, source_);
-
-		start();
+		, transformer_([this](const safe_ptr<AVPacket>& packet){return (*this)(packet);}, &target,
+					   [this](const safe_ptr<AVPacket>& packet){return packet->stream_index == index_;})
+	{		
+		source.link_target(&transformer_);
+		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;		
 	}
-
+	
 	~implementation()
 	{
-		send(is_running_, false);
 		semaphore_->release();
-		agent::wait(this);
 	}
 
-	virtual void run()
-	{
+	std::shared_ptr<core::audio_buffer> operator()(const safe_ptr<AVPacket>& packet)
+	{			
 		try
 		{
-			send(is_running_, true);
-			while(is_running_.value())
-			{				
-				auto packet = receive(source_);
-			
-				if(packet == loop_packet(index_))
-				{
-					send(target_, loop_audio());
-					continue;
-				}
+			auto tok = make_safe<token>(semaphore_);
 
-				if(packet == eof_packet(index_))
-					break;
-
-				auto result = std::make_shared<core::audio_buffer>();
-
-				while(packet->size > 0)
-				{
-					buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
-					int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
-		
-					int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packet.get()), "[audio_decoder]");
-
-					// There might be several frames in one packet.
-					packet->size -= ret;
-					packet->data += ret;
-			
-					buffer1_.resize(written_bytes);
-
-					buffer1_ = resampler_.resample(std::move(buffer1_));
-		
-					const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
-					const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
-
-					auto audio_buffer = make_safe<core::audio_buffer>(samples, samples + n_samples);
-					safe_ptr<core::audio_buffer> audio(audio_buffer.get(), [this, audio_buffer](core::audio_buffer*)
-					{
-						semaphore_->release();
-					});
-					semaphore_->acquire();
-
-					send(target_, audio);
-					Concurrency::wait(2);
-				}
+			if(packet == loop_packet(index_))
+			{
+				avcodec_flush_buffers(codec_context_.get());
+				return loop_audio();
 			}
+
+			if(packet == eof_packet(index_))			
+				return eof_audio();			
+
+			auto result = safe_ptr<core::audio_buffer>(new core::audio_buffer(), [this, tok](core::audio_buffer* p)
+			{
+				delete p;
+			});
+
+			while(packet->size > 0)
+			{
+				buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
+				int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
+		
+				int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packet.get()), "[audio_decoder]");
+
+				// There might be several frames in one packet.
+				packet->size -= ret;
+				packet->data += ret;
+			
+				buffer1_.resize(written_bytes);
+
+				buffer1_ = resampler_.resample(std::move(buffer1_));
+		
+				const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
+				const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
+
+				result->insert(result->end(), samples, samples + n_samples);
+			}
+			return result;
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
+			return eof_audio();
 		}
-
-		send(is_running_, false);
-		send(target_, eof_audio());
-
-		done();
 	}
 };
 
-audio_decoder::audio_decoder(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc)
+audio_decoder::audio_decoder(source_t& source, target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc)
 	: impl_(new implementation(source, target, context, format_desc))
 {
 }
@@ -161,5 +141,6 @@ int64_t audio_decoder::nb_frames() const
 {
 	return 0;
 }
+
 
 }}

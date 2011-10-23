@@ -48,7 +48,7 @@ class video_decoder : boost::noncopyable
 public:
 	
 	typedef Concurrency::ISource<safe_ptr<AVPacket>> source_t;
-	typedef Concurrency::ITarget<safe_ptr<AVFrame>>  target_t;
+	typedef Concurrency::ITarget<std::shared_ptr<AVFrame>>  target_t;
 	
 	explicit video_decoder(source_t& source, target_t& target, AVFormatContext& context);	
 
