@@ -181,9 +181,7 @@ public:
 		}
 
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
-
-		// TODO: Might need to scale nb_frames av frame_muxer transformations.
-
+		
 		return nb_frames - start_;
 	}
 				
