@@ -308,7 +308,7 @@ safe_ptr<AVPacket> create_packet()
 	return packet;
 }
 
-const safe_ptr<AVPacket>& loop_packet(int index)
+safe_ptr<AVPacket> loop_packet(int index)
 {
 	static safe_ptr<AVPacket> packets[] = {create_packet(), create_packet(), create_packet(), create_packet(), create_packet(), create_packet()};
 	
@@ -318,7 +318,7 @@ const safe_ptr<AVPacket>& loop_packet(int index)
 	return packet;
 }
 
-const safe_ptr<AVPacket>& eof_packet(int index)
+safe_ptr<AVPacket> eof_packet(int index)
 {
 	static safe_ptr<AVPacket> packets[] = {create_packet(), create_packet(), create_packet(), create_packet(), create_packet(), create_packet()};
 	
@@ -328,37 +328,37 @@ const safe_ptr<AVPacket>& eof_packet(int index)
 	return packet;
 }
 
-const safe_ptr<AVFrame>& loop_video()
+safe_ptr<AVFrame> loop_video()
 {
 	static auto frame1 = safe_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 	return frame1;
 }
 
-const safe_ptr<AVFrame>& empty_video()
+safe_ptr<AVFrame> empty_video()
 {
 	static auto frame1 = safe_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 	return frame1;
 }
 
-const safe_ptr<AVFrame>& eof_video()
+safe_ptr<AVFrame> eof_video()
 {
 	static auto frame2 = safe_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 	return frame2;
 }
 
-const safe_ptr<core::audio_buffer>& loop_audio()
+safe_ptr<core::audio_buffer> loop_audio()
 {
 	static auto audio1 = safe_ptr<core::audio_buffer>();
 	return audio1;
 }
 
-const safe_ptr<core::audio_buffer>& empty_audio()
+safe_ptr<core::audio_buffer> empty_audio()
 {
 	static auto audio1 = safe_ptr<core::audio_buffer>();
 	return audio1;
 }
 
-const safe_ptr<core::audio_buffer>& eof_audio()
+safe_ptr<core::audio_buffer> eof_audio()
 {
 	static auto audio2 = safe_ptr<core::audio_buffer>();
 	return audio2;

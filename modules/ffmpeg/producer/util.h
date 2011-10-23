@@ -41,15 +41,14 @@ namespace ffmpeg {
 	
 // Dataflow
 	
-const safe_ptr<AVPacket>& loop_packet(int index);
-const safe_ptr<AVPacket>& eof_packet(int index);
-
-const safe_ptr<AVFrame>& loop_video();
-const safe_ptr<AVFrame>& empty_video();
-const safe_ptr<AVFrame>& eof_video();
-const safe_ptr<core::audio_buffer>& loop_audio();
-const safe_ptr<core::audio_buffer>& empty_audio();
-const safe_ptr<core::audio_buffer>& eof_audio();
+safe_ptr<AVPacket>				loop_packet(int index);
+safe_ptr<AVPacket>				eof_packet(int index);
+safe_ptr<AVFrame>				loop_video();
+safe_ptr<AVFrame>				empty_video();
+safe_ptr<AVFrame>				eof_video();
+safe_ptr<core::audio_buffer>	loop_audio();
+safe_ptr<core::audio_buffer>	empty_audio();
+safe_ptr<core::audio_buffer>	eof_audio();
 
 // Utils
 
