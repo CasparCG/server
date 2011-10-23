@@ -171,9 +171,9 @@ public:
 	
 class decklink_producer_proxy : public Concurrency::agent, public core::frame_producer
 {		
-	Concurrency::bounded_buffer<safe_ptr<AVFrame>>				video_frames_;
-	Concurrency::bounded_buffer<safe_ptr<core::audio_buffer>>	audio_buffers_;
-	Concurrency::bounded_buffer<safe_ptr<core::basic_frame>>	muxed_frames_;
+	Concurrency::bounded_buffer<std::shared_ptr<AVFrame>>				video_frames_;
+	Concurrency::bounded_buffer<std::shared_ptr<core::audio_buffer>>	audio_buffers_;
+	Concurrency::bounded_buffer<safe_ptr<core::basic_frame>>			muxed_frames_;
 
 	const core::video_format_desc		format_desc_;
 	const size_t						device_index_;
@@ -283,7 +283,7 @@ public:
 				Concurrency::parallel_invoke(
 				[&]
 				{
-					Concurrency::send(video_frames_, av_frame);					
+					Concurrency::send<std::shared_ptr<AVFrame>>(video_frames_, av_frame);					
 				},
 				[&]
 				{													
@@ -292,10 +292,10 @@ public:
 					{
 						auto sample_frame_count = audio->GetSampleFrameCount();
 						auto audio_data = reinterpret_cast<int32_t*>(bytes);
-						Concurrency::send(audio_buffers_, make_safe<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
+						Concurrency::send<std::shared_ptr<core::audio_buffer>>(audio_buffers_, make_safe<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
 					}
 					else
-						Concurrency::send(audio_buffers_, ffmpeg::empty_audio());	
+						Concurrency::send<std::shared_ptr<core::audio_buffer>>(audio_buffers_, ffmpeg::empty_audio());	
 				});
 			}
 
