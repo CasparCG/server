@@ -137,6 +137,7 @@ public:
 					semaphore_->acquire();
 
 					send(target_, audio);
+					Concurrency::wait(2);
 				}
 			}
 		}
