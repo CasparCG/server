@@ -295,9 +295,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 					display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
 				
 				if(display_mode_ == display_mode::deinterlace)
-					filter_str_ += L"YADIF=0:-1";
+					append_filter(filter_str_, L"YADIF=0:-1");
 				else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
-					filter_str_ += L"YADIF=1:-1";
+					append_filter(filter_str_, L"YADIF=1:-1");
 			}
 			else
 				display_mode_ = display_mode::simple;
@@ -310,7 +310,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 			// copy <= We need to release frames
 			if(display_mode_ != display_mode::simple && filter_str_.empty())
-				filter_ = filter(L"copy"); 
+				filter_str_ = L"copy"; 
 
 			filter_ = filter(filter_str_);
 

@@ -30,6 +30,11 @@ static bool is_deinterlacing(const std::wstring& filters)
 	return false;
 }
 
+static std::wstring append_filter(std::wstring& filters, const std::wstring& filter)
+{
+	return filters = filters + (filters.empty() ? L"" : L",") + filter;
+}
+
 class filter : boost::noncopyable
 {
 public:
