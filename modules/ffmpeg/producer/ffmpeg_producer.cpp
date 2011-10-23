@@ -148,7 +148,7 @@ public:
 		
 		try
 		{		
-			frame = last_frame_ = Concurrency::receive(frames_, 10);
+			frame = last_frame_ = Concurrency::receive(frames_, 5);
 			graph_->update_text(narrow(print()));
 		}
 		catch(operation_timed_out&)

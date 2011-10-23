@@ -132,7 +132,7 @@ public:
 					break;
 
 				Concurrency::asend(target_, make_safe_ptr(packet));
-				Concurrency::wait(1);
+				Concurrency::wait(2);
 			}
 		}
 		catch(...)
