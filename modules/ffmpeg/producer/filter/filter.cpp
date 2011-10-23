@@ -6,6 +6,8 @@
 
 #include "../../ffmpeg_error.h"
 
+#include <common/exception/exceptions.h>
+
 #include <boost/assign.hpp>
 
 #include <cstdio>
@@ -70,63 +72,77 @@ struct filter::implementation
 		if(!frame)
 			return;
 
+		if(frame->data[0] == nullptr || frame->width < 1)
+			BOOST_THROW_EXCEPTION(invalid_argument());
+
 		if(filters_.empty())
 		{
 			bypass_.push(frame);
 			return;
 		}
-
-		if(!graph_)
+		
+		try
 		{
-			try
+			if(!graph_)
 			{
-				graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p){avfilter_graph_free(&p);});
-								
-				// Input
-				std::stringstream args;
-				args << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
-				THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get()), "[filter]");
-
-				// OPIX_FMT_BGRAutput
-				AVBufferSinkParams *buffersink_params = av_buffersink_params_alloc();
-				buffersink_params->pixel_fmts = pix_fmts_.data();
-				THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params, graph_.get()), "[filter]");
-			
-				AVFilterInOut* outputs = avfilter_inout_alloc();
-				AVFilterInOut* inputs  = avfilter_inout_alloc();
-			
-				outputs->name			= av_strdup("in");
-				outputs->filter_ctx		= buffersrc_ctx_;
-				outputs->pad_idx		= 0;
-				outputs->next			= NULL;
-
-				inputs->name			= av_strdup("out");
-				inputs->filter_ctx		= buffersink_ctx_;
-				inputs->pad_idx			= 0;
-				inputs->next			= NULL;
-			
-				THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL), "[filter]");
-			
-				avfilter_inout_free(&inputs);
-				avfilter_inout_free(&outputs);
-
-				THROW_ON_ERROR2(avfilter_graph_config(graph_.get(), NULL), "[filter]");			
-
-				for(size_t n = 0; n < graph_->filter_count; ++n)
+				try
 				{
-					auto filter_name = graph_->filters[n]->name;
-					if(strstr(filter_name, "yadif") != 0)
-						parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);
+					graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p){avfilter_graph_free(&p);});
+								
+					// Input
+					std::stringstream args;
+					args << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
+					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get()), "[filter]");
+
+					// OPIX_FMT_BGRAutput
+					AVBufferSinkParams *buffersink_params = av_buffersink_params_alloc();
+					buffersink_params->pixel_fmts = pix_fmts_.data();
+					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params, graph_.get()), "[filter]");
+			
+					AVFilterInOut* outputs = avfilter_inout_alloc();
+					AVFilterInOut* inputs  = avfilter_inout_alloc();
+			
+					outputs->name			= av_strdup("in");
+					outputs->filter_ctx		= buffersrc_ctx_;
+					outputs->pad_idx		= 0;
+					outputs->next			= NULL;
+
+					inputs->name			= av_strdup("out");
+					inputs->filter_ctx		= buffersink_ctx_;
+					inputs->pad_idx			= 0;
+					inputs->next			= NULL;
+			
+					THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL), "[filter]");
+			
+					avfilter_inout_free(&inputs);
+					avfilter_inout_free(&outputs);
+
+					THROW_ON_ERROR2(avfilter_graph_config(graph_.get(), NULL), "[filter]");			
+
+					for(size_t n = 0; n < graph_->filter_count; ++n)
+					{
+						auto filter_name = graph_->filters[n]->name;
+						if(strstr(filter_name, "yadif") != 0)
+							parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);
+					}
+				}
+				catch(...)
+				{
+					graph_ = nullptr;
+					throw;
 				}
 			}
-			catch(...)
-			{
-				graph_ = nullptr;
-				throw;
-			}
+		
+			THROW_ON_ERROR2(av_vsrc_buffer_add_frame(buffersrc_ctx_, frame.get(), 0), "[filter]");
 		}
-			
-		THROW_ON_ERROR2(av_vsrc_buffer_add_frame(buffersrc_ctx_, frame.get(), 0), "[filter]");
+		catch(ffmpeg_error&)
+		{
+			throw;
+		}
+		catch(...)
+		{
+			BOOST_THROW_EXCEPTION(ffmpeg_error() << boost::errinfo_nested_exception(boost::current_exception()));
+		}
 	}
 
 	std::shared_ptr<AVFrame> poll()
@@ -143,36 +159,47 @@ struct filter::implementation
 		if(!graph_)
 			return nullptr;
 		
-		if(avfilter_poll_frame(buffersink_ctx_->inputs[0])) 
+		try
 		{
-			AVFilterBufferRef *picref;
-			THROW_ON_ERROR2(av_buffersink_get_buffer_ref(buffersink_ctx_, &picref, 0), "[filter]");
+			if(avfilter_poll_frame(buffersink_ctx_->inputs[0])) 
+			{
+				AVFilterBufferRef *picref;
+				THROW_ON_ERROR2(av_buffersink_get_buffer_ref(buffersink_ctx_, &picref, 0), "[filter]");
 
-            if (picref) 
-			{		
-				safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
-				{
-					av_free(p);
-					avfilter_unref_buffer(picref);
-				});
+				if (picref) 
+				{		
+					safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
+					{
+						av_free(p);
+						avfilter_unref_buffer(picref);
+					});
 
-				avcodec_get_frame_defaults(frame.get());	
+					avcodec_get_frame_defaults(frame.get());	
 
-				memcpy(frame->data,     picref->data,     sizeof(frame->data));
-				memcpy(frame->linesize, picref->linesize, sizeof(frame->linesize));
-				frame->format				= picref->format;
-				frame->width				= picref->video->w;
-				frame->height				= picref->video->h;
-				frame->pkt_pos				= picref->pos;
-				frame->interlaced_frame		= picref->video->interlaced;
-				frame->top_field_first		= picref->video->top_field_first;
-				frame->key_frame			= picref->video->key_frame;
-				frame->pict_type			= picref->video->pict_type;
-				frame->sample_aspect_ratio	= picref->video->sample_aspect_ratio;
+					memcpy(frame->data,     picref->data,     sizeof(frame->data));
+					memcpy(frame->linesize, picref->linesize, sizeof(frame->linesize));
+					frame->format				= picref->format;
+					frame->width				= picref->video->w;
+					frame->height				= picref->video->h;
+					frame->pkt_pos				= picref->pos;
+					frame->interlaced_frame		= picref->video->interlaced;
+					frame->top_field_first		= picref->video->top_field_first;
+					frame->key_frame			= picref->video->key_frame;
+					frame->pict_type			= picref->video->pict_type;
+					frame->sample_aspect_ratio	= picref->video->sample_aspect_ratio;
 
-				return frame;
-            }
-        }
+					return frame;
+				}
+			}
+		}
+		catch(ffmpeg_error&)
+		{
+			throw;
+		}
+		catch(...)
+		{
+			BOOST_THROW_EXCEPTION(ffmpeg_error() << boost::errinfo_nested_exception(boost::current_exception()));
+		}
 
 		return nullptr;
 	}
