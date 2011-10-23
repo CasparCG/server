@@ -12,7 +12,7 @@ enum PixelFormat;
 
 namespace caspar { namespace ffmpeg {
 		
-static bool double_rate(const std::wstring& filters)
+static bool is_double_rate(const std::wstring& filters)
 {
 	if(filters.find(L"YADIF=1") != std::string::npos)
 		return true;
@@ -20,6 +20,13 @@ static bool double_rate(const std::wstring& filters)
 	if(filters.find(L"YADIF=3") != std::string::npos)
 		return true;
 
+	return false;
+}
+
+static bool is_deinterlacing(const std::wstring& filters)
+{
+	if(filters.find(L"YADIF") != std::string::npos)
+		return true;	
 	return false;
 }
 

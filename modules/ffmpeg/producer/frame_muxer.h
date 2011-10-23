@@ -39,7 +39,8 @@ public:
 				 audio_source_t* audio_source, 
 				 target_t& target,
 				 double in_fps, 
-				 const safe_ptr<core::frame_factory>& frame_factory);
+				 const safe_ptr<core::frame_factory>& frame_factory,
+				 const std::wstring& filter);
 	
 	int64_t calc_nb_frames(int64_t nb_frames) const;
 private:
