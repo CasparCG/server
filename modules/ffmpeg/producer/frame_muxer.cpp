@@ -136,15 +136,15 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	call<safe_ptr<AVFrame>>							push_video_;
 	call<safe_ptr<core::audio_buffer>>				push_audio_;
 	
-	transformer<safe_ptr<AVFrame>, std::shared_ptr<core::write_frame>>				video_;
-	transformer<safe_ptr<core::audio_buffer>, std::shared_ptr<core::audio_buffer>>	audio_;
+	unbounded_buffer<safe_ptr<AVFrame>>				video_;
+	unbounded_buffer<safe_ptr<core::audio_buffer>>	audio_;
 	
 	core::audio_buffer								audio_data_;
 
 	Concurrency::overwrite_buffer<bool>				is_running_;
 
 	std::wstring									filter_str_;
-
+	
 	implementation(frame_muxer2::video_source_t* video_source,
 				   frame_muxer2::audio_source_t* audio_source,
 				   frame_muxer2::target_t& target,
@@ -158,8 +158,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, frame_factory_(frame_factory)
 		, push_video_(std::bind(&implementation::push_video, this, std::placeholders::_1))
 		, push_audio_(std::bind(&implementation::push_audio, this, std::placeholders::_1))
-		, video_(std::bind(&implementation::transform_video, this, std::placeholders::_1))
-		, audio_(std::bind(&implementation::transform_audio, this, std::placeholders::_1))
 	{
 		if(video_source)
 			video_source->link_target(&push_video_);
@@ -175,8 +173,10 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		agent::wait(this);
 	}
 
-	std::shared_ptr<core::write_frame> transform_video(const safe_ptr<AVFrame>& video)
+	std::shared_ptr<core::write_frame> receive_video()
 	{	
+		auto video = receive(video_);
+
 		if(!is_running_.value() || video == eof_video())
 			return nullptr;
 				
@@ -197,8 +197,10 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		}
 	}
 
-	std::shared_ptr<core::audio_buffer> transform_audio(const safe_ptr<core::audio_buffer>& audio)
+	std::shared_ptr<core::audio_buffer> receive_audio()
 	{		
+		auto audio = receive(audio_);
+
 		if(!is_running_.value() || audio == eof_audio())
 			return nullptr;
 		
@@ -226,9 +228,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			send(is_running_, true);
 			while(is_running_.value())
 			{
-				auto audio = receive(audio_);								
-				auto video = receive(video_);
-				
+				auto audio = receive_audio();								
+				auto video = receive_video();
+
 				if(!audio)
 				{
 					send(is_running_ , false);
@@ -258,7 +260,17 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				case display_mode::duplicate:					
 					{										
 						send(target_, frame);
-						send(target_, frame);
+
+						auto audio2 = receive_audio();
+						if(audio2)
+						{
+							auto video2 = make_safe<core::write_frame>(*video);
+							video2->audio_data() = std::move(*audio2);
+							auto frame2 = safe_ptr<core::basic_frame>(video2);
+							send(target_, frame2);
+						}
+						else
+							send(is_running_, false);
 
 						break;
 					}
@@ -266,7 +278,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 					{								
 						send(target_, frame);
 
-						if(!receive(video_)) // throw away	
+						if(!receive_video()) // throw away	
 							send(is_running_ , false);
 
 						break;
@@ -274,11 +286,11 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				case display_mode::deinterlace_bob_reinterlace:
 				case display_mode::interlace:					
 					{					
-						auto video2 = receive(video_);
+						auto video2 = receive_video();
 						auto frame2 = core::basic_frame::empty();
 
-						if(video2)
-							frame2 = safe_ptr<core::basic_frame>(video2);
+						if(video2)						
+							frame2 = safe_ptr<core::basic_frame>(video2);						
 						else
 							send(is_running_, false);						
 						
