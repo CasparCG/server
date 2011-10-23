@@ -27,6 +27,7 @@
 #include "../../ffmpeg_error.h"
 
 #include <core/producer/frame/basic_frame.h>
+#include <common/concurrency/message.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -87,6 +88,7 @@ public:
 	~implementation()
 	{
 		send(is_running_, false);
+		semaphore_->release();
 		agent::wait(this);
 	}
 

@@ -25,6 +25,7 @@
 #include "../util.h"
 #include "../../ffmpeg_error.h"
 
+#include <common/concurrency/message.h>
 #include <core/video_format.h>
 
 #include <tbb/cache_aligned_allocator.h>
@@ -61,6 +62,8 @@ struct audio_decoder::implementation : public agent, boost::noncopyable
 	overwrite_buffer<bool>					is_running_;
 	unbounded_buffer<safe_ptr<AVPacket>>	source_;
 	ITarget<safe_ptr<core::audio_buffer>>&	target_;
+
+	safe_ptr<semaphore>						semaphore_;
 	
 public:
 	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
@@ -69,11 +72,9 @@ public:
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
-		, source_([this](const safe_ptr<AVPacket>& packet)
-			{
-				return packet->stream_index == index_;
-			})
+		, source_([this](const safe_ptr<AVPacket>& packet){return packet->stream_index == index_;})
 		, target_(target)
+		, semaphore_(make_safe<semaphore>(32))
 	{			   	
 		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;
 
@@ -85,6 +86,8 @@ public:
 	~implementation()
 	{
 		send(is_running_, false);
+		semaphore_->release();
+		semaphore_->release();
 		agent::wait(this);
 	}
 
@@ -126,7 +129,14 @@ public:
 					const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
 					const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
 
-					send(target_, make_safe<core::audio_buffer>(samples, samples + n_samples));
+					auto audio_buffer = make_safe<core::audio_buffer>(samples, samples + n_samples);
+					safe_ptr<core::audio_buffer> audio(audio_buffer.get(), [this, audio_buffer](core::audio_buffer*)
+					{
+						semaphore_->release();
+					});
+					semaphore_->acquire();
+
+					send(target_, audio);
 				}
 			}
 		}
