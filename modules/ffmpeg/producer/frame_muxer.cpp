@@ -125,12 +125,12 @@ display_mode::type get_display_mode(const core::field_mode::type in_mode, double
 struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopyable
 {		
 	ITarget<safe_ptr<core::basic_frame>>&			target_;
-	display_mode::type								display_mode_;
+	mutable single_assignment<display_mode::type>	display_mode_;
 	const double									in_fps_;
 	const video_format_desc							format_desc_;
 	bool											auto_transcode_;
 	
-	filter											filter_;
+	mutable single_assignment<safe_ptr<filter>>		filter_;
 	const safe_ptr<core::frame_factory>				frame_factory_;
 	
 	call<safe_ptr<AVFrame>>							push_video_;
@@ -152,7 +152,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				   const safe_ptr<core::frame_factory>& frame_factory,
 				   const std::wstring& filter)
 		: target_(target)
-		, display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
@@ -161,7 +160,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, push_audio_(std::bind(&implementation::push_audio, this, std::placeholders::_1))
 		, video_(std::bind(&implementation::transform_video, this, std::placeholders::_1))
 		, audio_(std::bind(&implementation::transform_audio, this, std::placeholders::_1))
-		, filter_str_(filter)
 	{
 		if(video_source)
 			video_source->link_target(&push_video_);
@@ -247,7 +245,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 				auto frame = safe_ptr<core::basic_frame>(video);
 
-				switch(display_mode_)
+				switch(display_mode_.value())
 				{
 				case display_mode::simple:			
 				case display_mode::deinterlace:
@@ -321,7 +319,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		
 		try
 		{
-			if(display_mode_ == display_mode::invalid)
+			if(!display_mode_.has_value())
 				initialize_display_mode(*video_frame);
 						
 			//if(hints & core::frame_producer::ALPHA_HINT)
@@ -331,11 +329,11 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			if(video_frame->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
 				video_frame->format = PIX_FMT_GRAY8;
 
-			filter_.push(video_frame);
+			filter_.value()->push(video_frame);
 
 			while(true)
 			{
-				auto frame = filter_.poll();
+				auto frame = filter_.value()->poll();
 				if(!frame)
 					break;	
 
@@ -389,6 +387,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 	void initialize_display_mode(AVFrame& frame)
 	{
+		auto display_mode = display_mode::invalid;
+
 		if(auto_transcode_)
 		{
 			auto mode = get_mode(frame);
@@ -400,33 +400,35 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			if(is_double_rate(filter_str_))
 				fps *= 2;
 
-			display_mode_ = get_display_mode(mode, fps, format_desc_.field_mode, format_desc_.fps);
+			display_mode = get_display_mode(mode, fps, format_desc_.field_mode, format_desc_.fps);
 			
-			if(display_mode_ == display_mode::simple && mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && frame.height != static_cast<int>(format_desc_.height))
-				display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
+			if(display_mode == display_mode::simple && mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && frame.height != static_cast<int>(format_desc_.height))
+				display_mode = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
 				
-			if(display_mode_ == display_mode::deinterlace)
+			if(display_mode == display_mode::deinterlace)
 				append_filter(filter_str_, L"YADIF=0:-1");
-			else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
+			else if(display_mode == display_mode::deinterlace_bob || display_mode == display_mode::deinterlace_bob_reinterlace)
 				append_filter(filter_str_, L"YADIF=1:-1");
 		}
 		else
-			display_mode_ = display_mode::simple;
+			display_mode = display_mode::simple;
 
-		if(display_mode_ == display_mode::invalid)
+		if(display_mode == display_mode::invalid)
 		{
 			CASPAR_LOG(warning) << L"[frame_muxer] Failed to detect display-mode.";
-			display_mode_ = display_mode::simple;
+			display_mode = display_mode::simple;
 		}
 			
-		filter_ = filter(filter_str_);
+		send(filter_, make_safe<filter>(filter_str_));
 
-		CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_);
+		CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode);
+
+		send(display_mode_, display_mode);
 	}
 					
 	int64_t calc_nb_frames(int64_t nb_frames) const
 	{
-		switch(display_mode_) // Take into account transformation in run.
+		switch(display_mode_.value()) // Take into account transformation in run.
 		{
 		case display_mode::deinterlace_bob_reinterlace:
 		case display_mode::interlace:	
@@ -438,7 +440,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			break;
 		}
 
-		if(is_double_rate(filter_str_)) // Take into account transformations in filter.
+		if(is_double_rate(widen(filter_.value()->filter_str()))) // Take into account transformations in filter.
 			nb_frames *= 2;
 
 		return nb_frames;
