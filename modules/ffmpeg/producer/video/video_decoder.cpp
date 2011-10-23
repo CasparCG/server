@@ -134,6 +134,7 @@ public:
 				is_progressive_ = decoded_frame->interlaced_frame == 0;
 				
 				// Need to dupliace frame data since avcodec_decode_video2 reuses it.
+				// C-TODO: Avoid duplication.
 				send(target_, dup_frame(make_safe_ptr(decoded_frame)));
 				Concurrency::wait(10);
 			}
