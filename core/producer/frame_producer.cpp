@@ -189,7 +189,7 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(my_frame_factory, params);
 	
-	return make_safe<destroy_producer_proxy>(producer);
+	return producer;
 }
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
@@ -224,7 +224,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(narrow(str)));
 	}
 
-	return producer;
+	return make_safe<destroy_producer_proxy>(producer);
 }
 
 }}
