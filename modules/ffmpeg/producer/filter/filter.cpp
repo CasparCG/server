@@ -78,43 +78,51 @@ struct filter::implementation
 
 		if(!graph_)
 		{
-			graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p){avfilter_graph_free(&p);});
-								
-			// Input
-			std::stringstream args;
-			args << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
-			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get()), "[filter]");
-
-			// OPIX_FMT_BGRAutput
-			AVBufferSinkParams *buffersink_params = av_buffersink_params_alloc();
-			buffersink_params->pixel_fmts = pix_fmts_.data();
-			THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params, graph_.get()), "[filter]");
-			
-			AVFilterInOut* outputs = avfilter_inout_alloc();
-			AVFilterInOut* inputs  = avfilter_inout_alloc();
-			
-			outputs->name			= av_strdup("in");
-			outputs->filter_ctx		= buffersrc_ctx_;
-			outputs->pad_idx		= 0;
-			outputs->next			= NULL;
-
-			inputs->name			= av_strdup("out");
-			inputs->filter_ctx		= buffersink_ctx_;
-			inputs->pad_idx			= 0;
-			inputs->next			= NULL;
-			
-			THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL), "[filter]");
-			
-			avfilter_inout_free(&inputs);
-			avfilter_inout_free(&outputs);
-
-			THROW_ON_ERROR2(avfilter_graph_config(graph_.get(), NULL), "[filter]");			
-
-			for(size_t n = 0; n < graph_->filter_count; ++n)
+			try
 			{
-				auto filter_name = graph_->filters[n]->name;
-				if(strstr(filter_name, "yadif") != 0)
-					parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);
+				graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p){avfilter_graph_free(&p);});
+								
+				// Input
+				std::stringstream args;
+				args << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
+				THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get()), "[filter]");
+
+				// OPIX_FMT_BGRAutput
+				AVBufferSinkParams *buffersink_params = av_buffersink_params_alloc();
+				buffersink_params->pixel_fmts = pix_fmts_.data();
+				THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params, graph_.get()), "[filter]");
+			
+				AVFilterInOut* outputs = avfilter_inout_alloc();
+				AVFilterInOut* inputs  = avfilter_inout_alloc();
+			
+				outputs->name			= av_strdup("in");
+				outputs->filter_ctx		= buffersrc_ctx_;
+				outputs->pad_idx		= 0;
+				outputs->next			= NULL;
+
+				inputs->name			= av_strdup("out");
+				inputs->filter_ctx		= buffersink_ctx_;
+				inputs->pad_idx			= 0;
+				inputs->next			= NULL;
+			
+				THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL), "[filter]");
+			
+				avfilter_inout_free(&inputs);
+				avfilter_inout_free(&outputs);
+
+				THROW_ON_ERROR2(avfilter_graph_config(graph_.get(), NULL), "[filter]");			
+
+				for(size_t n = 0; n < graph_->filter_count; ++n)
+				{
+					auto filter_name = graph_->filters[n]->name;
+					if(strstr(filter_name, "yadif") != 0)
+						parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);
+				}
+			}
+			catch(...)
+			{
+				graph_ = nullptr;
+				throw;
 			}
 		}
 			
