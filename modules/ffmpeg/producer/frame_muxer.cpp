@@ -143,11 +143,14 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 	Concurrency::overwrite_buffer<bool>				is_running_;
 
+	std::wstring									filter_str_;
+
 	implementation(frame_muxer2::video_source_t* video_source,
 				   frame_muxer2::audio_source_t* audio_source,
 				   frame_muxer2::target_t& target,
 				   double in_fps, 
-				   const safe_ptr<core::frame_factory>& frame_factory)
+				   const safe_ptr<core::frame_factory>& frame_factory,
+				   const std::wstring& filter)
 		: target_(target)
 		, display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
@@ -156,6 +159,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, frame_factory_(frame_factory)
 		, push_video_(std::bind(&implementation::push_video, this, std::placeholders::_1))
 		, push_audio_(std::bind(&implementation::push_audio, this, std::placeholders::_1))
+		, filter_str_(filter)
 	{
 		if(video_source)
 			video_source->link_target(&push_video_);
@@ -276,16 +280,24 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		{
 			if(auto_transcode_)
 			{
-				auto in_mode = get_mode(*video_frame);
-				display_mode_ = get_display_mode(in_mode, in_fps_, format_desc_.field_mode, format_desc_.fps);
+				auto mode = get_mode(*video_frame);
+				auto fps	 = in_fps_;
+
+				if(is_deinterlacing(filter_str_))
+					mode = core::field_mode::progressive;
+
+				if(is_double_rate(filter_str_))
+					fps *= 2;
+
+				display_mode_ = get_display_mode(mode, fps, format_desc_.field_mode, format_desc_.fps);
 			
-				if(display_mode_ == display_mode::simple && in_mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && video_frame->height != static_cast<int>(format_desc_.height))
+				if(display_mode_ == display_mode::simple && mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && video_frame->height != static_cast<int>(format_desc_.height))
 					display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
 				
 				if(display_mode_ == display_mode::deinterlace)
-					filter_ = filter(L"YADIF=0:-1");
+					filter_str_ += L"YADIF=0:-1";
 				else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
-					filter_ = filter(L"YADIF=1:-1");
+					filter_str_ += L"YADIF=1:-1";
 			}
 			else
 				display_mode_ = display_mode::simple;
@@ -297,8 +309,10 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			}
 
 			// copy <= We need to release frames
-			if(display_mode_ != display_mode::simple && filter_.filter_str().empty())
+			if(display_mode_ != display_mode::simple && filter_str_.empty())
 				filter_ = filter(L"copy"); 
+
+			filter_ = filter(filter_str_);
 
 			CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_);
 		}
@@ -367,8 +381,9 @@ frame_muxer2::frame_muxer2(video_source_t* video_source,
 						   audio_source_t* audio_source,
 						   target_t& target,
 						   double in_fps, 
-						   const safe_ptr<core::frame_factory>& frame_factory)
-	: impl_(new implementation(video_source, audio_source, target, in_fps, frame_factory))
+						   const safe_ptr<core::frame_factory>& frame_factory,
+						   const std::wstring& filter)
+	: impl_(new implementation(video_source, audio_source, target, in_fps, frame_factory, filter))
 {
 }
 
