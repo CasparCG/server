@@ -37,33 +37,9 @@ struct video_format_desc;
 		
 struct frame_factory : boost::noncopyable
 {
-	virtual safe_ptr<write_frame> create_frame(const void* video_stream_tag, const pixel_format_desc& desc) = 0;
-	virtual safe_ptr<write_frame> create_frame(const void* video_stream_tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra)
-	{	
-		// Create bgra frame
-		core::pixel_format_desc desc;
-		desc.pix_fmt = pix_fmt;
-		desc.planes.push_back( core::pixel_format_desc::plane(width, height, 4));
-		return create_frame(video_stream_tag, desc);
-	}
-	
-	virtual boost::unique_future<safe_ptr<write_frame>> create_frame2(const void* video_stream_tag, const pixel_format_desc& desc) = 0;
-
-	virtual video_format_desc get_video_format_desc() const = 0; // nothrow
-};
-	
-class concrt_frame_factory : public frame_factory
-{	
-	safe_ptr<frame_factory> factory_;
-public:
-	concrt_frame_factory(const safe_ptr<frame_factory>& factory) 
-		: factory_(factory)
+	safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& desc)
 	{
-	}
-		
-	virtual safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& desc)
-	{
-		auto frame = factory_->create_frame2(tag, desc);
+		auto frame = async_create_frame(tag, desc);
 
 		Concurrency::wait(0);
 
@@ -75,15 +51,19 @@ public:
 		return frame.get();
 	}
 
-	virtual boost::unique_future<safe_ptr<write_frame>> create_frame2(const void* video_stream_tag, const pixel_format_desc& desc)
-	{
-		return factory_->create_frame2(video_stream_tag, desc);
+	safe_ptr<write_frame> create_frame(const void* video_stream_tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra)
+	{	
+		// Create bgra frame
+		core::pixel_format_desc desc;
+		desc.pix_fmt = pix_fmt;
+		desc.planes.push_back( core::pixel_format_desc::plane(width, height, 4));
+		return create_frame(video_stream_tag, desc);
 	}
 
-	virtual video_format_desc get_video_format_desc() const
-	{
-		return factory_->get_video_format_desc();
-	}
+	virtual video_format_desc get_video_format_desc() const = 0; // nothrow
+private:
+	
+	virtual boost::unique_future<safe_ptr<write_frame>> async_create_frame(const void* video_stream_tag, const pixel_format_desc& desc) = 0;
 };
-
+	
 }}

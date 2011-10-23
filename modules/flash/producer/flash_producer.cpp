@@ -149,7 +149,7 @@ class flash_renderer
 public:
 	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: filename_(filename)
-		, frame_factory_(make_safe<core::concrt_frame_factory>(frame_factory))
+		, frame_factory_(frame_factory)
 		, graph_(graph)
 		, ax_(nullptr)
 		, head_(core::basic_frame::empty())

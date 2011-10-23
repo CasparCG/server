@@ -152,14 +152,9 @@ public:
 		return msg->transfer<safe_ptr<core::read_frame>>(std::move(frame));	
 	}
 						
-	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
+	boost::unique_future<safe_ptr<core::write_frame>> async_create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{		
-		return image_mixer_.create_frame(tag, desc);
-	}
-
-	boost::unique_future<safe_ptr<core::write_frame>> create_frame2(const void* tag, const core::pixel_format_desc& desc)
-	{		
-		return image_mixer_.create_frame2(tag, desc);
+		return image_mixer_.async_create_frame(tag, desc);
 	}
 		
 	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
@@ -203,8 +198,7 @@ public:
 	
 mixer::mixer(mixer::source_t& source, mixer::target_t& target, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(source, target, format_desc, ogl)){}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->format_desc_; }
-safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
-boost::unique_future<safe_ptr<write_frame>> mixer::create_frame2(const void* video_stream_tag, const pixel_format_desc& desc){ return impl_->create_frame2(video_stream_tag, desc); }			
+boost::unique_future<safe_ptr<write_frame>> mixer::async_create_frame(const void* video_stream_tag, const pixel_format_desc& desc){ return impl_->async_create_frame(video_stream_tag, desc); }			
 void mixer::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
 void mixer::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void mixer::clear_transforms(){impl_->clear_transforms();}
