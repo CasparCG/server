@@ -29,7 +29,6 @@
 
 #include <core/video_format.h>
 
-#include <common/concurrency/message.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/exception/win32_exception.h>
@@ -78,10 +77,10 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 			
 	tbb::atomic<size_t>						nb_frames_;
 	tbb::atomic<size_t>						nb_loops_;	
-	
-	overwrite_buffer<bool>					is_running_;
+	tbb::atomic<size_t>						packets_count_;
+	tbb::atomic<size_t>						packets_size_;
 
-	safe_ptr<semaphore>						semaphore_;
+	bool									stop_;
 		
 public:
 	explicit implementation(input::target_t& target,
@@ -100,8 +99,10 @@ public:
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-		, semaphore_(make_safe<semaphore>(32))
+		, stop_(false)
 	{		
+		packets_count_	= 0;
+		packets_size_	= 0;
 		nb_frames_		= 0;
 		nb_loops_		= 0;
 				
@@ -112,37 +113,25 @@ public:
 								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
 	}
-
-	~implementation()
-	{
-		send(is_running_, false);
-		semaphore_->release();
-		semaphore_->release();
-		agent::wait(this);
-		CASPAR_LOG(info) << print() << " Stopped.";
-	}
 	
 	void stop()
 	{
-		send(is_running_, false);
-		semaphore_->release();
-		semaphore_->release();
-		CASPAR_LOG(info) << print() << " Stopping.";
+		stop_ = true;
+		agent::wait(this);
 	}
 	
 	virtual void run()
 	{
 		try
 		{
-			send(is_running_, true);
-			while(is_running_.value())
+			while(!stop_)
 			{
 				auto packet = read_next_packet();
 				if(!packet)
 					break;
 
 				Concurrency::asend(target_, make_safe_ptr(packet));
-				Concurrency::wait(2);
+				Concurrency::wait(20);
 			}
 		}
 		catch(...)
@@ -199,14 +188,15 @@ public:
 		auto size = packet->size;
 		auto data = packet->data;			
 
-		packet = safe_ptr<AVPacket>(packet.get(), [this, packet, size, data](AVPacket*)
+		packet = safe_ptr<AVPacket>(packet.get(), [=](AVPacket*)
 		{
 			packet->size = size;
 			packet->data = data;
-			semaphore_->release();
+			--packets_count_;
 		});
-		semaphore_->acquire();
-									
+
+		++packets_count_;
+							
 		return packet;
 	}
 

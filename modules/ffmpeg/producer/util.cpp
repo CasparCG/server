@@ -381,5 +381,22 @@ safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
 	fix_meta_data(*context);
 	return context;
 }
+//
+//void av_dup_frame(AVFrame* frame)
+//{
+//	AVFrame* new_frame = avcodec_alloc_frame();
+//
+//
+//	const uint8_t *src_data[4] = {0};
+//	memcpy(const_cast<uint8_t**>(&src_data[0]), frame->data, 4);
+//	const int src_linesizes[4] = {0};
+//	memcpy(const_cast<int*>(&src_linesizes[0]), frame->linesize, 4);
+//
+//	av_image_alloc(new_frame->data, new_frame->linesize, new_frame->width, new_frame->height, frame->format, 16);
+//
+//	av_image_copy(new_frame->data, new_frame->linesize, src_data, src_linesizes, frame->format, new_frame->width, new_frame->height);
+//
+//	frame =
+//}
 
 }}

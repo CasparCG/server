@@ -48,8 +48,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	mutable single_assignment<safe_ptr<filter>>		filter_;
 	const safe_ptr<core::frame_factory>				frame_factory_;
 	
-	call<std::shared_ptr<AVFrame>>					push_video_;
-	call<std::shared_ptr<core::audio_buffer>>		push_audio_;
+	call<safe_ptr<AVFrame>>							push_video_;
+	call<safe_ptr<core::audio_buffer>>				push_audio_;
 	
 	unbounded_buffer<safe_ptr<AVFrame>>				video_;
 	unbounded_buffer<safe_ptr<core::audio_buffer>>	audio_;
@@ -221,14 +221,11 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		done();
 	}
 			
-	void push_video(const std::shared_ptr<AVFrame>& video_frame)
+	void push_video(const safe_ptr<AVFrame>& video_frame)
 	{		
-		if(!video_frame)
-			return;
-
 		if(video_frame == eof_video() || video_frame == empty_video())
 		{
-			send(video_, make_safe_ptr(video_frame));
+			send(video_, video_frame);
 			return;
 		}
 				
@@ -272,14 +269,11 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		}
 	}
 
-	void push_audio(const std::shared_ptr<core::audio_buffer>& audio_samples)
+	void push_audio(const safe_ptr<core::audio_buffer>& audio_samples)
 	{
-		if(!audio_samples)
-			return;
-
 		if(audio_samples == eof_audio() || audio_samples == empty_audio())
 		{
-			send(audio_, make_safe_ptr(audio_samples));
+			send(audio_, audio_samples);
 			return;
 		}
 
