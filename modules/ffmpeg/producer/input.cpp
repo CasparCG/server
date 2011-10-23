@@ -112,12 +112,22 @@ public:
 								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
 	}
+
+	~implementation()
+	{
+		send(is_running_, false);
+		semaphore_->release();
+		semaphore_->release();
+		agent::wait(this);
+		CASPAR_LOG(info) << print() << " Stopped.";
+	}
 	
 	void stop()
 	{
 		send(is_running_, false);
 		semaphore_->release();
-		agent::wait(this);
+		semaphore_->release();
+		CASPAR_LOG(info) << print() << " Stopping.";
 	}
 	
 	virtual void run()
