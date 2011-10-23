@@ -89,6 +89,7 @@ public:
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
+				Concurrency::wait(20);
 			}	
 		}
 
