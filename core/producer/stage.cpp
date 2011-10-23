@@ -100,7 +100,7 @@ public:
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{
 		critical_section::scoped_lock lock(mutex_);
-		layers_[index].load(create_destroy_producer_proxy(producer), preview, auto_play_delta);
+		layers_[index].load(producer, preview, auto_play_delta);
 	}
 
 	void pause(int index)
