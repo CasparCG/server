@@ -152,17 +152,21 @@ public:
 
 	safe_ptr<AVFrame> dup_frame(const safe_ptr<AVFrame>& frame)
 	{
+		auto desc = get_pixel_format_desc(static_cast<PixelFormat>(frame->format), frame->width, frame->height);
+
+		auto count = desc.planes.size();
 		std::array<uint8_t*, 4> data;
-		parallel_for(0, 4, [&](int n)
+		parallel_for<size_t>(0, count, [&](size_t n)
 		{
 			data[n] = frame->data[n];
-			frame->data[n] = reinterpret_cast<uint8_t*>(scalable_aligned_malloc(frame->linesize[n]*frame->height, 32));
-			memcpy(frame->data[n], data[n], frame->linesize[n]*frame->height);
+			auto size = frame->linesize[n]*desc.planes[n].height;
+			frame->data[n] = reinterpret_cast<uint8_t*>(scalable_aligned_malloc(size, 32));
+			memcpy(frame->data[n], data[n], size);
 		});
 
-		return safe_ptr<AVFrame>(frame.get(), [frame, data](AVFrame*)
+		return safe_ptr<AVFrame>(frame.get(), [frame, data, count](AVFrame*)
 		{
-			for(int n = 0; n < 4; ++n)
+			for(size_t n = 0; n < count; ++n)
 			{
 				scalable_aligned_free(frame->data[n]);
 				frame->data[n] = data[n];
