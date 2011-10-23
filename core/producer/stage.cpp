@@ -99,44 +99,65 @@ public:
 				
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{
-		critical_section::scoped_lock lock(mutex_);
-		layers_[index].load(producer, preview, auto_play_delta);
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			layers_[index].load(producer, preview, auto_play_delta);
+		}
 	}
 
 	void pause(int index)
 	{		
-		critical_section::scoped_lock lock(mutex_);
-		layers_[index].pause();
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			layers_[index].pause();
+		}
 	}
 
 	void play(int index)
 	{		
-		critical_section::scoped_lock lock(mutex_);
-		layers_[index].play();
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			layers_[index].play();
+		}
 	}
 
 	void stop(int index)
 	{		
-		critical_section::scoped_lock lock(mutex_);
-		layers_[index].stop();
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			layers_[index].stop();
+		}
 	}
 
 	void clear(int index)
 	{
-		critical_section::scoped_lock lock(mutex_);
-		layers_.erase(index);
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			layers_.erase(index);
+		}
 	}
 		
 	void clear()
 	{
-		critical_section::scoped_lock lock(mutex_);
-		layers_.clear();
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			layers_.clear();
+		}
 	}	
 	
 	void swap_layer(int index, size_t other_index)
 	{
-		critical_section::scoped_lock lock(mutex_);
-		std::swap(layers_[index], layers_[other_index]);
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			std::swap(layers_[index], layers_[other_index]);
+		}
 	}
 
 	void swap_layer(int index, size_t other_index, stage& other)
@@ -145,9 +166,12 @@ public:
 			swap_layer(index, other_index);
 		else
 		{			
-			critical_section::scoped_lock lock1(mutex_);
-			critical_section::scoped_lock lock2(other.impl_->mutex_);
-			std::swap(layers_[index], other.impl_->layers_[other_index]);
+			{
+				critical_section::scoped_lock lock1(mutex_);
+				critical_section::scoped_lock lock2(other.impl_->mutex_);
+
+				std::swap(layers_[index], other.impl_->layers_[other_index]);
+			}
 		}
 	}
 
@@ -156,27 +180,39 @@ public:
 		if(other.impl_.get() == this)
 			return;
 		
-		critical_section::scoped_lock lock1(mutex_);
-		critical_section::scoped_lock lock2(other.impl_->mutex_);
-		std::swap(layers_, other.impl_->layers_);
+		{
+			critical_section::scoped_lock lock1(mutex_);
+			critical_section::scoped_lock lock2(other.impl_->mutex_);
+			
+			std::swap(layers_, other.impl_->layers_);
+		}
 	}
 
 	layer_status get_status(int index)
 	{		
-		critical_section::scoped_lock lock(mutex_);
-		return layers_[index].status();
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			return layers_[index].status();
+		}
 	}
 	
 	safe_ptr<frame_producer> foreground(int index)
 	{
-		critical_section::scoped_lock lock(mutex_);
-		return layers_[index].foreground();
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			return layers_[index].foreground();
+		}
 	}
 	
 	safe_ptr<frame_producer> background(int index)
 	{
-		critical_section::scoped_lock lock(mutex_);
-		return layers_[index].background();
+		{
+			critical_section::scoped_lock lock(mutex_);
+			
+			return layers_[index].background();
+		}
 	}
 
 	std::wstring print() const

@@ -65,29 +65,30 @@ public:
 	
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
-		{
-			critical_section::scoped_lock lock(mutex_);
-			consumers_.erase(index);
-		}
+		remove(index);
 
-		consumer->initialize(format_desc_);
+		consumer->initialize(format_desc_);		
 		
 		{
 			critical_section::scoped_lock lock(mutex_);
+
 			consumers_.insert(std::make_pair(index, consumer));
 
-			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
+			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";	
 		}
 	}
 
 	void remove(int index)
 	{
-		critical_section::scoped_lock lock(mutex_);
-		auto it = consumers_.find(index);
-		if(it != consumers_.end())
 		{
-			CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
-			consumers_.erase(it);
+			critical_section::scoped_lock lock(mutex_);
+
+			auto it = consumers_.find(index);
+			if(it != consumers_.end())
+			{
+				CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
+				consumers_.erase(it);
+			}
 		}
 	}
 						
@@ -95,42 +96,44 @@ public:
 	{	
 		auto frame = msg->value();
 
-		critical_section::scoped_lock lock(mutex_);		
+		{
+			critical_section::scoped_lock lock(mutex_);		
 
-		if(!has_synchronization_clock() || frame->image_size() != format_desc_.size)
-		{		
-			scoped_oversubcription_token oversubscribe;
-			timer_.tick(1.0/format_desc_.fps);
-		}
-	
-		std::vector<int> removables;		
-		Concurrency::parallel_for_each(consumers_.begin(), consumers_.end(), [&](const decltype(*consumers_.begin())& pair)
-		{		
-			try
-			{
-				if(!pair.second->send(frame))
-					removables.push_back(pair.first);
-			}
-			catch(...)
+			if(!has_synchronization_clock() || frame->image_size() != format_desc_.size)
 			{		
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(error) << "Consumer error. Trying to recover:" << pair.second->print();
+				scoped_oversubcription_token oversubscribe;
+				timer_.tick(1.0/format_desc_.fps);
+			}
+	
+			std::vector<int> removables;		
+			Concurrency::parallel_for_each(consumers_.begin(), consumers_.end(), [&](const decltype(*consumers_.begin())& pair)
+			{		
 				try
 				{
-					pair.second->initialize(format_desc_);
-					pair.second->send(frame);
+					if(!pair.second->send(frame))
+						removables.push_back(pair.first);
 				}
 				catch(...)
-				{
-					removables.push_back(pair.first);				
+				{		
 					CASPAR_LOG_CURRENT_EXCEPTION();
-					CASPAR_LOG(error) << "Failed to recover consumer: " << pair.second->print() << L". Removing it.";
+					CASPAR_LOG(error) << "Consumer error. Trying to recover:" << pair.second->print();
+					try
+					{
+						pair.second->initialize(format_desc_);
+						pair.second->send(frame);
+					}
+					catch(...)
+					{
+						removables.push_back(pair.first);				
+						CASPAR_LOG_CURRENT_EXCEPTION();
+						CASPAR_LOG(error) << "Failed to recover consumer: " << pair.second->print() << L". Removing it.";
+					}
 				}
-			}
-		});
+			});
 
-		BOOST_FOREACH(auto& removable, removables)
-			consumers_.erase(removable);			
+			BOOST_FOREACH(auto& removable, removables)
+				consumers_.erase(removable);		
+		}
 	}
 
 private:
