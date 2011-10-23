@@ -29,6 +29,7 @@
 
 #include <core/video_format.h>
 
+#include <common/concurrency/message.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/exception/win32_exception.h>
@@ -77,10 +78,8 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 			
 	tbb::atomic<size_t>						nb_frames_;
 	tbb::atomic<size_t>						nb_loops_;	
-	tbb::atomic<size_t>						packets_count_;
-	tbb::atomic<size_t>						packets_size_;
-
-	bool									stop_;
+	
+	overwrite_buffer<bool>					is_running_;
 
 	safe_ptr<semaphore>						semaphore_;
 		
@@ -101,11 +100,8 @@ public:
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-		, stop_(false)
-		, semaphore_(make_safe<semaphore>(8))
+		, semaphore_(make_safe<semaphore>(32))
 	{		
-		packets_count_	= 0;
-		packets_size_	= 0;
 		nb_frames_		= 0;
 		nb_loops_		= 0;
 				
@@ -119,7 +115,8 @@ public:
 	
 	void stop()
 	{
-		stop_ = true;
+		send(is_running_, false);
+		semaphore_->release();
 		agent::wait(this);
 	}
 	
@@ -127,14 +124,15 @@ public:
 	{
 		try
 		{
-			while(!stop_)
+			send(is_running_, true);
+			while(is_running_.value())
 			{
 				auto packet = read_next_packet();
 				if(!packet)
 					break;
 
 				Concurrency::asend(target_, make_safe_ptr(packet));
-				Concurrency::wait(20);
+				Concurrency::wait(1);
 			}
 		}
 		catch(...)
@@ -191,17 +189,14 @@ public:
 		auto size = packet->size;
 		auto data = packet->data;			
 
-		packet = safe_ptr<AVPacket>(packet.get(), [=](AVPacket*)
+		packet = safe_ptr<AVPacket>(packet.get(), [this, packet, size, data](AVPacket*)
 		{
 			packet->size = size;
 			packet->data = data;
-			--packets_count_;
 			semaphore_->release();
 		});
 		semaphore_->acquire();
-
-		++packets_count_;
-							
+									
 		return packet;
 	}
 
