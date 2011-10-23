@@ -41,54 +41,6 @@ using namespace Concurrency;
 
 namespace caspar { namespace core {
 	
-struct destruction_context
-{
-	std::shared_ptr<frame_consumer> consumer;
-	Concurrency::event				event;
-
-	destruction_context(std::shared_ptr<frame_consumer>&& consumer) 
-		: consumer(consumer)
-	{
-	}
-};
-
-void __cdecl destroy_consumer(LPVOID lpParam)
-{
-	auto destruction = std::unique_ptr<destruction_context>(static_cast<destruction_context*>(lpParam));
-	
-	try
-	{		
-		if(destruction->consumer.unique())
-		{
-			Concurrency::scoped_oversubcription_token oversubscribe;
-			destruction->consumer.reset();
-		}
-		else
-			CASPAR_LOG(warning) << destruction->consumer->print() << " Not destroyed asynchronously.";		
-	}
-	catch(...)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-	}
-	
-	destruction->event.set();
-}
-
-void __cdecl destroy_and_wait_consumer(LPVOID lpParam)
-{
-	try
-	{
-		auto destruction = static_cast<destruction_context*>(lpParam);
-		Concurrency::CurrentScheduler::ScheduleTask(destroy_consumer, lpParam);
-		if(destruction->event.wait(1000) == Concurrency::COOPERATIVE_WAIT_TIMEOUT)
-			CASPAR_LOG(warning) << " Potential destruction deadlock detected. Might leak resources.";
-	}
-	catch(...)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-	}
-}
-
 struct output::implementation
 {	
 	typedef std::pair<safe_ptr<read_frame>, safe_ptr<read_frame>> fill_and_key;
@@ -178,11 +130,7 @@ public:
 		});
 
 		BOOST_FOREACH(auto& removable, removables)
-		{
-			std::shared_ptr<frame_consumer> consumer = consumers_.find(removable)->second;
 			consumers_.erase(removable);			
-			Concurrency::CurrentScheduler::ScheduleTask(destroy_consumer, new destruction_context(std::move(consumer)));
-		}
 	}
 
 private:

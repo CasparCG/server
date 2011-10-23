@@ -31,10 +31,9 @@
 #include <common/exception/exceptions.h>
 
 #include <concrt_extras.h>
+#include <concurrent_vector.h>
 
 namespace caspar { namespace core {
-	
-std::vector<const producer_factory_t> g_factories;
 	
 struct destruction_context
 {
@@ -107,11 +106,6 @@ public:
 	virtual int64_t						nb_frames() const												{return producer_->nb_frames();}
 };
 
-safe_ptr<core::frame_producer> create_destroy_producer_proxy(const safe_ptr<frame_producer>& producer)
-{
-	return make_safe<destroy_producer_proxy>(producer);
-}
-
 class last_frame_producer : public frame_producer
 {
 	const std::wstring			print_;
@@ -165,10 +159,12 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int
 	}
 	return frame;
 }
+	
+Concurrency::concurrent_vector<std::shared_ptr<producer_factory_t>> g_factories;
 
 void register_producer_factory(const producer_factory_t& factory)
 {
-	g_factories.push_back(factory);
+	g_factories.push_back(std::make_shared<producer_factory_t>(factory));
 }
 
 safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
@@ -177,11 +173,11 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 	
 	auto producer = frame_producer::empty();
-	std::any_of(g_factories.begin(), g_factories.end(), [&](const producer_factory_t& factory) -> bool
+	std::any_of(g_factories.begin(), g_factories.end(), [&](const std::shared_ptr<producer_factory_t>& factory) -> bool
 		{
 			try
 			{
-				producer = factory(my_frame_factory, params);
+				producer = (*factory)(my_frame_factory, params);
 			}
 			catch(...)
 			{
@@ -193,9 +189,8 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(my_frame_factory, params);
 	
-	return producer;
+	return make_safe<destroy_producer_proxy>(producer);
 }
-
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
 {	
