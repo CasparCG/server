@@ -179,28 +179,46 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 	std::shared_ptr<core::write_frame> transform_video(const safe_ptr<AVFrame>& video)
 	{	
-		CASPAR_ASSERT(audio != loop_video());
-
-		if(video == eof_video())
+		if(!is_running_.value() || video == eof_video())
 			return nullptr;
+				
+		CASPAR_ASSERT(video != loop_video());
 
-		if(video == empty_video())
-			return make_safe<core::write_frame>(this);
-		
-		return make_write_frame(this, video, frame_factory_, 0);
+		try
+		{
+			if(video == empty_video())
+				return make_safe<core::write_frame>(this);
+
+			return make_write_frame(this, video, frame_factory_, 0);
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			send(is_running_, false);
+			return nullptr;
+		}
 	}
 
 	std::shared_ptr<core::audio_buffer> transform_audio(const safe_ptr<core::audio_buffer>& audio)
-	{			
+	{		
+		if(!is_running_.value() || audio == eof_audio())
+			return nullptr;
+		
 		CASPAR_ASSERT(audio != loop_audio());
 
-		if(audio == eof_audio())
+		try
+		{
+			if(audio == empty_audio())
+				return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
+
+			return audio;
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			send(is_running_, false);
 			return nullptr;
-
-		if(audio == empty_audio())
-			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
-
-		return audio;
+		}
 	}
 	
 	virtual void run()
@@ -289,6 +307,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			
 	void push_video(const safe_ptr<AVFrame>& video_frame)
 	{				
+		if(!is_running_.value())
+			return;
+
 		if(video_frame == eof_video() || video_frame == empty_video())
 		{
 			send(video_, video_frame);
@@ -298,65 +319,43 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		if(video_frame == loop_video())		
 			return;	
 		
-		if(display_mode_ == display_mode::invalid)
+		try
 		{
-			if(auto_transcode_)
-			{
-				auto mode = get_mode(*video_frame);
-				auto fps  = in_fps_;
-
-				if(is_deinterlacing(filter_str_))
-					mode = core::field_mode::progressive;
-
-				if(is_double_rate(filter_str_))
-					fps *= 2;
-
-				display_mode_ = get_display_mode(mode, fps, format_desc_.field_mode, format_desc_.fps);
-			
-				if(display_mode_ == display_mode::simple && mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && video_frame->height != static_cast<int>(format_desc_.height))
-					display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
-				
-				if(display_mode_ == display_mode::deinterlace)
-					append_filter(filter_str_, L"YADIF=0:-1");
-				else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
-					append_filter(filter_str_, L"YADIF=1:-1");
-			}
-			else
-				display_mode_ = display_mode::simple;
-
 			if(display_mode_ == display_mode::invalid)
-			{
-				CASPAR_LOG(warning) << L"[frame_muxer] Failed to detect display-mode.";
-				display_mode_ = display_mode::simple;
-			}
-			
-			filter_ = filter(filter_str_);
-
-			CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_);
-		}
+				initialize_display_mode(*video_frame);
 						
-		//if(hints & core::frame_producer::ALPHA_HINT)
-		//	video_frame->format = make_alpha_format(video_frame->format);
+			//if(hints & core::frame_producer::ALPHA_HINT)
+			//	video_frame->format = make_alpha_format(video_frame->format);
 		
-		auto format = video_frame->format;
-		if(video_frame->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
-			video_frame->format = PIX_FMT_GRAY8;
+			auto format = video_frame->format;
+			if(video_frame->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
+				video_frame->format = PIX_FMT_GRAY8;
 
-		filter_.push(video_frame);
+			filter_.push(video_frame);
 
-		while(true)
+			while(true)
+			{
+				auto frame = filter_.poll();
+				if(!frame)
+					break;	
+
+				frame->format = format;
+				send(video_, make_safe_ptr(frame));
+			}
+		}
+		catch(...)
 		{
-			auto frame = filter_.poll();
-			if(!frame)
-				break;	
-
-			frame->format = format;
-			send(video_, make_safe_ptr(frame));
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			send(is_running_ , false);
+			send(video_, eof_video());
 		}
 	}
 
 	void push_audio(const safe_ptr<core::audio_buffer>& audio_samples)
 	{
+		if(!is_running_.value())
+			return;
+
 		if(audio_samples == eof_audio() || audio_samples == empty_audio())
 		{
 			send(audio_, audio_samples);
@@ -366,17 +365,63 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		if(audio_samples == loop_audio())			
 			return;		
 
-		audio_data_.insert(audio_data_.end(), audio_samples->begin(), audio_samples->end());
-		
-		while(audio_data_.size() >= format_desc_.audio_samples_per_frame)
+		try
 		{
-			auto begin = audio_data_.begin(); 
-			auto end   = begin + format_desc_.audio_samples_per_frame;
+			audio_data_.insert(audio_data_.end(), audio_samples->begin(), audio_samples->end());
+		
+			while(audio_data_.size() >= format_desc_.audio_samples_per_frame)
+			{
+				auto begin = audio_data_.begin(); 
+				auto end   = begin + format_desc_.audio_samples_per_frame;
 					
-			send(audio_, make_safe<core::audio_buffer>(begin, end));
+				send(audio_, make_safe<core::audio_buffer>(begin, end));
 
-			audio_data_.erase(begin, end);
+				audio_data_.erase(begin, end);
+			}
 		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			send(is_running_ , false);
+			send(audio_, eof_audio());
+		}
+	}
+
+	void initialize_display_mode(AVFrame& frame)
+	{
+		if(auto_transcode_)
+		{
+			auto mode = get_mode(frame);
+			auto fps  = in_fps_;
+
+			if(is_deinterlacing(filter_str_))
+				mode = core::field_mode::progressive;
+
+			if(is_double_rate(filter_str_))
+				fps *= 2;
+
+			display_mode_ = get_display_mode(mode, fps, format_desc_.field_mode, format_desc_.fps);
+			
+			if(display_mode_ == display_mode::simple && mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && frame.height != static_cast<int>(format_desc_.height))
+				display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
+				
+			if(display_mode_ == display_mode::deinterlace)
+				append_filter(filter_str_, L"YADIF=0:-1");
+			else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
+				append_filter(filter_str_, L"YADIF=1:-1");
+		}
+		else
+			display_mode_ = display_mode::simple;
+
+		if(display_mode_ == display_mode::invalid)
+		{
+			CASPAR_LOG(warning) << L"[frame_muxer] Failed to detect display-mode.";
+			display_mode_ = display_mode::simple;
+		}
+			
+		filter_ = filter(filter_str_);
+
+		CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_);
 	}
 					
 	int64_t calc_nb_frames(int64_t nb_frames) const
