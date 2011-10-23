@@ -24,6 +24,7 @@
 #include "ogl_device.h"
 
 #include "shader.h"
+#include "fence.h"
 
 #include <common/exception/exceptions.h>
 #include <common/utility/assert.h>
@@ -40,7 +41,10 @@ ogl_device::ogl_device()
 	, pattern_(nullptr)
 	, attached_texture_(0)
 	, active_shader_(0)
+	, graph_(diagnostics::create_graph("gpu", true))
 {
+	graph_->set_color("fence", diagnostics::color(1.0f, 0.0f, 0.0f));
+
 	std::fill(binded_textures_.begin(), binded_textures_.end(), 0);
 	std::fill(viewport_.begin(), viewport_.end(), 0);
 	std::fill(scissor_.begin(), scissor_.end(), 0);
@@ -62,6 +66,8 @@ ogl_device::ogl_device()
 		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
         GL(glDisable(GL_MULTISAMPLE_ARB));
 	});
+
+	CASPAR_LOG(info) << L"Successfully Initialized GPU-Device";
 }
 
 ogl_device::~ogl_device()
@@ -74,6 +80,11 @@ ogl_device::~ogl_device()
 			pool.clear();
 		glDeleteFramebuffersEXT(1, &fbo_);
 	});
+	
+	executor_->stop();
+	executor_->join();
+
+	CASPAR_LOG(info) << L"Successfully Uninitialized GPU-Device";
 }
 
 safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t height, size_t stride)
@@ -113,7 +124,8 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 	
 	//++pool->usage_count;
 
-	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*) mutable
+	auto self = safe_from_this();
+	return safe_ptr<device_buffer>(buffer.get(), [self, pool, buffer](device_buffer*) mutable
 	{		
 		pool->items.push(buffer);	
 	});
@@ -165,11 +177,11 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 		buffer = executor_->invoke([=]{return allocate_host_buffer(size, usage);}, high_priority);	
 	
 	//++pool->usage_count;
-
-	auto exe = executor_;
-	return safe_ptr<host_buffer>(buffer.get(), [=](host_buffer*) mutable
+	
+	auto self = safe_from_this();
+	return safe_ptr<host_buffer>(buffer.get(), [self, pool, buffer, usage](host_buffer*) mutable
 	{
-		exe->begin_invoke([=]() mutable
+		self->begin_invoke([=]() mutable
 		{		
 			if(usage == host_buffer::write_only)
 				buffer->map();
@@ -357,6 +369,22 @@ void ogl_device::blend_func(int c1, int c2, int a1, int a2)
 void ogl_device::blend_func(int c1, int c2)
 {
 	blend_func(c1, c2, c1, c2);
+}
+
+void ogl_device::wait(const fence& fence)
+{
+	const int MAX_DELAY = 40;
+
+	int delay = 0;
+	if(!invoke([&]{return fence.ready();}, high_priority))
+	{
+		while(!invoke([&]{return fence.ready();}, normal_priority) && delay < MAX_DELAY)
+		{
+			delay += 4;
+			Sleep(4);
+		}
+	}
+	graph_->update_value("fence", delay/static_cast<double>(MAX_DELAY));
 }
 
 }}

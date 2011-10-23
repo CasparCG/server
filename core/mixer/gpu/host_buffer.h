@@ -25,7 +25,7 @@
 
 namespace caspar { namespace core {
 
-class ogl_device;
+class fence;
 		
 class host_buffer : boost::noncopyable
 {
@@ -33,7 +33,8 @@ public:
 	enum usage_t
 	{
 		write_only,
-		read_only
+		read_only,
+		usage_count
 	};
 	
 	const void* data() const;
@@ -48,7 +49,9 @@ public:
 	
 	void begin_read(size_t width, size_t height, unsigned int format);
 	bool ready() const;
-	void wait(ogl_device& ogl);
+
+	const fence& fence() const;
+
 private:
 	friend class ogl_device;
 	host_buffer(size_t size, usage_t usage);

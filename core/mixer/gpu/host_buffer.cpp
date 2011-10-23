@@ -44,7 +44,7 @@ struct host_buffer::implementation : boost::noncopyable
 	void*			data_;
 	GLenum			usage_;
 	GLenum			target_;
-	fence			fence_;
+	core::fence		fence_;
 
 public:
 	implementation(size_t size, usage_t usage) 
@@ -93,12 +93,7 @@ public:
 		if(!data_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
 	}
-
-	void wait(ogl_device& ogl)
-	{
-		fence_.wait(ogl);
-	}
-
+	
 	void unmap()
 	{
 		if(!data_)
@@ -145,6 +140,6 @@ void host_buffer::unbind(){impl_->unbind();}
 void host_buffer::begin_read(size_t width, size_t height, GLuint format){impl_->begin_read(width, height, format);}
 size_t host_buffer::size() const { return impl_->size_; }
 bool host_buffer::ready() const{return impl_->ready();}
-void host_buffer::wait(ogl_device& ogl){impl_->wait(ogl);}
+const fence& host_buffer::fence() const{return impl_->fence_;}
 
 }}

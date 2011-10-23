@@ -51,7 +51,7 @@ public:
 
 			if(!image_data_->data())
 			{
-				image_data_.get()->wait(ogl_);
+				ogl_.wait(image_data_.get()->fence());
 				ogl_.invoke([=]{image_data_.get()->map();}, high_priority);
 			}
 		}
