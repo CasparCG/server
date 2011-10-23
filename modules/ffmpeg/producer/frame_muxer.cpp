@@ -136,8 +136,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	call<safe_ptr<AVFrame>>							push_video_;
 	call<safe_ptr<core::audio_buffer>>				push_audio_;
 	
-	unbounded_buffer<safe_ptr<AVFrame>>				video_;
-	unbounded_buffer<safe_ptr<core::audio_buffer>>	audio_;
+	transformer<safe_ptr<AVFrame>, std::shared_ptr<core::write_frame>>				video_;
+	transformer<safe_ptr<core::audio_buffer>, std::shared_ptr<core::audio_buffer>>	audio_;
 	
 	core::audio_buffer								audio_data_;
 
@@ -159,6 +159,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, frame_factory_(frame_factory)
 		, push_video_(std::bind(&implementation::push_video, this, std::placeholders::_1))
 		, push_audio_(std::bind(&implementation::push_audio, this, std::placeholders::_1))
+		, video_(std::bind(&implementation::transform_video, this, std::placeholders::_1))
+		, audio_(std::bind(&implementation::transform_audio, this, std::placeholders::_1))
 		, filter_str_(filter)
 	{
 		if(video_source)
@@ -174,6 +176,32 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		send(is_running_, false);
 		agent::wait(this);
 	}
+
+	std::shared_ptr<core::write_frame> transform_video(const safe_ptr<AVFrame>& video)
+	{	
+		CASPAR_ASSERT(audio != loop_video());
+
+		if(video == eof_video())
+			return nullptr;
+
+		if(video == empty_video())
+			return make_safe<core::write_frame>(this);
+		
+		return make_write_frame(this, video, frame_factory_, 0);
+	}
+
+	std::shared_ptr<core::audio_buffer> transform_audio(const safe_ptr<core::audio_buffer>& audio)
+	{			
+		CASPAR_ASSERT(audio != loop_audio());
+
+		if(audio == eof_audio())
+			return nullptr;
+
+		if(audio == empty_audio())
+			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
+
+		return audio;
+	}
 	
 	virtual void run()
 	{
@@ -182,33 +210,24 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			send(is_running_, true);
 			while(is_running_.value())
 			{
-				auto video = receive(video_);
 				auto audio = receive(audio_);								
-				auto write = make_safe<core::write_frame>(this);
+				auto video = receive(video_);
 				
-				CASPAR_ASSERT(video != loop_video());
-				CASPAR_ASSERT(audio != loop_audio());
-
-				if(audio == eof_audio())
+				if(!audio)
 				{
 					send(is_running_ , false);
 					break;
 				}
 
-				if(video == eof_video())
+				if(!video)
 				{
 					send(is_running_ , false);
 					break;
 				}
 
-				if(video != empty_video())
-					write = make_write_frame(this, video, frame_factory_, 0);
-				if(audio == empty_audio())
-					audio = make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
+				video->audio_data() = std::move(*audio);
 
-				write->audio_data() = std::move(*audio);
-
-				auto frame = safe_ptr<core::basic_frame>(write);
+				auto frame = safe_ptr<core::basic_frame>(video);
 
 				switch(display_mode_)
 				{
@@ -228,20 +247,23 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 						break;
 					}
 				case display_mode::half:						
-					{					
-						receive(video_); // throw away				
+					{								
 						send(target_, frame);
+
+						if(!receive(video_)) // throw away	
+							send(is_running_ , false);
 
 						break;
 					}
 				case display_mode::deinterlace_bob_reinterlace:
 				case display_mode::interlace:					
 					{					
-						auto video2 = receive(video_);	
+						auto video2 = receive(video_);
 						auto frame2 = core::basic_frame::empty();
-						if(video2 != empty_video() && video2 != eof_video())		
-							frame2 = safe_ptr<core::basic_frame>(make_write_frame(this, video2, frame_factory_, 0));
-						else						
+
+						if(video2)
+							frame2 = safe_ptr<core::basic_frame>(video2);
+						else
 							send(is_running_, false);						
 						
 						frame = core::basic_frame::interlace(frame, frame2, format_desc_.field_mode);	
@@ -281,7 +303,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			if(auto_transcode_)
 			{
 				auto mode = get_mode(*video_frame);
-				auto fps	 = in_fps_;
+				auto fps  = in_fps_;
 
 				if(is_deinterlacing(filter_str_))
 					mode = core::field_mode::progressive;
@@ -307,11 +329,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				CASPAR_LOG(warning) << L"[frame_muxer] Failed to detect display-mode.";
 				display_mode_ = display_mode::simple;
 			}
-
-			// copy <= We need to release frames
-			if(display_mode_ != display_mode::simple && filter_str_.empty())
-				filter_str_ = L"copy"; 
-
+			
 			filter_ = filter(filter_str_);
 
 			CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_);
