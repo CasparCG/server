@@ -47,7 +47,6 @@
 
 #include <agents.h>
 #include <agents_extras.h>
-#include <connect.h>
 #include <concrt.h>
 #include <ppl.h>
 
@@ -70,10 +69,10 @@ struct ffmpeg_producer : public core::frame_producer
 		
 	const safe_ptr<diagnostics::graph>				graph_;
 					
-	input											input_;	
-	std::shared_ptr<video_decoder>					video_decoder_;
 	std::shared_ptr<audio_decoder>					audio_decoder_;	
+	std::shared_ptr<video_decoder>					video_decoder_;
 	std::unique_ptr<frame_muxer2>					muxer_;
+	input											input_;	
 
 	safe_ptr<core::basic_frame>						last_frame_;
 	
@@ -122,7 +121,7 @@ public:
 			CASPAR_LOG(warning) << "Failed to open audio-stream. Running without audio.";		
 		}
 		
-		Concurrency::connect(packets_, throw_away_);
+		packets_.link_target(&throw_away_);
 
 		CASPAR_VERIFY(video_decoder_ || audio_decoder_, ffmpeg_error());
 
