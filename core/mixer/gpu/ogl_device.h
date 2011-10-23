@@ -24,6 +24,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/memory/safe_ptr.h>
+#include <common/diagnostics/graph.h>
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
@@ -41,6 +42,7 @@
 namespace caspar { namespace core {
 
 class shader;
+class fence;
 
 template<typename T>
 struct buffer_pool
@@ -56,8 +58,10 @@ struct buffer_pool
 	}
 };
 
-class ogl_device : boost::noncopyable
+class ogl_device : public enable_safe_from_this<ogl_device>, boost::noncopyable
 {	
+	safe_ptr<diagnostics::graph>	graph_;
+
 	std::unordered_map<GLenum, bool> caps_;
 	std::array<size_t, 4>			 viewport_;
 	std::array<size_t, 4>			 scissor_;
@@ -69,15 +73,22 @@ class ogl_device : boost::noncopyable
 
 	std::unique_ptr<sf::Context> context_;
 	
-	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
-	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<buffer_pool<host_buffer>>>, 2> host_pools_;
+	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<buffer_pool<device_buffer>>>, device_buffer::max_stride> device_pools_;
+	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<buffer_pool<host_buffer>>>, host_buffer::usage_count> host_pools_;
 	
 	unsigned int fbo_;
 
 	safe_ptr<executor> executor_;
+
+	ogl_device();
 				
 public:		
-	ogl_device();
+
+	static safe_ptr<ogl_device> create()
+	{
+		return safe_ptr<ogl_device>(new ogl_device());
+	}
+
 	~ogl_device();
 
 	// Not thread-safe, must be called inside of context
@@ -116,6 +127,7 @@ public:
 	safe_ptr<device_buffer> create_device_buffer(size_t width, size_t height, size_t stride);
 	safe_ptr<host_buffer> create_host_buffer(size_t size, host_buffer::usage_t usage);
 	
+	void wait(const fence& fence);
 	void yield();
 	boost::unique_future<void> gc();
 

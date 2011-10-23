@@ -2,8 +2,6 @@
 
 #include "fence.h"
 
-#include "ogl_device.h"
-
 #include <common/gl/gl_check.h>
 
 #include <gl/glew.h>
@@ -35,22 +33,6 @@ struct fence::implementation
 
 		return values[0] == GL_SIGNALED;
 	}
-
-	void wait(ogl_device& ogl)
-	{	
-		int delay = 0;
-		if(!ogl.invoke([this]{return ready();}, high_priority))
-		{
-			while(!ogl.invoke([this]{return ready();}, normal_priority) && delay < 20)
-			{
-				delay += 2;
-				Sleep(2);
-			}
-		}
-
-		if(delay > 0)
-			CASPAR_LOG(debug) << L"[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms.";
-	}
 };
 	
 fence::fence() 
@@ -75,12 +57,6 @@ void fence::set()
 bool fence::ready() const 
 {
 	return impl_ ? impl_->ready() : true;
-}
-
-void fence::wait(ogl_device& ogl)
-{
-	if(impl_)
-		impl_->wait(ogl);
 }
 
 }}
