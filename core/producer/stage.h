@@ -28,6 +28,7 @@
 #include <boost/noncopyable.hpp>
 
 #include <agents.h>
+#include <semaphore.h>
 
 namespace caspar { namespace core {
 
@@ -40,7 +41,7 @@ class stage : boost::noncopyable
 public:
 	typedef Concurrency::ITarget<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>> target_t;
 
-	explicit stage(target_t& target);
+	explicit stage(target_t& target, const safe_ptr<Concurrency::semaphore>& semaphore);
 
 	void swap(stage& other);
 			

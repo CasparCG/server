@@ -50,9 +50,9 @@ struct stage::implementation : public agent, public boost::noncopyable
 	std::map<int, layer>						layers_;	
 	safe_ptr<semaphore>							semaphore_;
 public:
-	implementation(stage::target_t& target)  
+	implementation(stage::target_t& target, const safe_ptr<semaphore>& semaphore)  
 		: target_(target)
-		, semaphore_(make_safe<semaphore>(3))
+		, semaphore_(semaphore)
 	{
 		start();
 	}
@@ -186,7 +186,7 @@ public:
 
 };
 
-stage::stage(target_t& target) : impl_(new implementation(target)){}
+stage::stage(target_t& target, const safe_ptr<semaphore>& semaphore) : impl_(new implementation(target, semaphore)){}
 void stage::swap(stage& other){impl_->swap(other);}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
