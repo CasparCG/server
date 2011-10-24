@@ -101,6 +101,7 @@ public:
 			
 				if(packet == loop_packet(index_))
 				{
+					avcodec_flush_buffers(codec_context_.get());
 					send(target_, target_element_t(loop_video(), ticket_t()));
 					continue;
 				}
@@ -147,21 +148,22 @@ public:
 		auto desc = get_pixel_format_desc(static_cast<PixelFormat>(frame->format), frame->width, frame->height);
 
 		auto count = desc.planes.size();
-		std::array<uint8_t*, 4> data;
+		std::array<uint8_t*, 4> org_ptrs;
+		std::array<uint8_t*, 4> real_ptrs; // We need to store the "real" pointers, due to alignment hack.
 		parallel_for<size_t>(0, count, [&](size_t n)
 		{
-			data[n] = frame->data[n];
-			auto size = frame->linesize[n]*desc.planes[n].height;
-			frame->data[n] = reinterpret_cast<uint8_t*>(scalable_aligned_malloc(size, 32));
-			memcpy(frame->data[n], data[n], size);
+			auto size		= frame->linesize[n]*desc.planes[n].height;
+			org_ptrs[n]		= frame->data[n];
+			real_ptrs[n]	= reinterpret_cast<uint8_t*>(scalable_aligned_malloc(size+16, 32)); // Allocate 16 byte extra for alignment hack.
+			frame->data[n]	= reinterpret_cast<uint8_t*>(fast_memcpy_w_align_hack(real_ptrs[n], org_ptrs[n], size));
 		});
 
-		return safe_ptr<AVFrame>(frame.get(), [frame, data, count](AVFrame*)
+		return safe_ptr<AVFrame>(frame.get(), [frame, org_ptrs, real_ptrs, count](AVFrame*)
 		{
 			for(size_t n = 0; n < count; ++n)
 			{
-				scalable_aligned_free(frame->data[n]);
-				frame->data[n] = data[n];
+				scalable_aligned_free(real_ptrs[n]);
+				frame->data[n] = org_ptrs[n];
 			}
 		});
 	}

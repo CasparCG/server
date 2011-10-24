@@ -19,6 +19,8 @@
 */
 #pragma once
 
+#include "../utility/assert.h"
+
 #include <assert.h>
 
 #include <ppl.h>
@@ -29,8 +31,10 @@ namespace internal {
 
 static void* fast_memcpy(void* dest, const void* source, size_t count)
 {
-	assert(dest != nullptr);
-	assert(source != nullptr);
+	CASPAR_ASSERT(dest != nullptr);
+	CASPAR_ASSERT(source != nullptr);
+	CASPAR_ASSERT(reinterpret_cast<int>(dest) % 16 == 0);
+	CASPAR_ASSERT(reinterpret_cast<int>(source) % 16 == 0);
 
 	__asm   
 	{      
@@ -73,6 +77,9 @@ static void* fast_memcpy(void* dest, const void* source, size_t count)
 
 static void* fast_memcpy(void* dest, const void* source, size_t count)
 {   
+	if(reinterpret_cast<int>(source) % 16 != 0)
+		return memcpy(reinterpret_cast<char*>(dest),  reinterpret_cast<const char*>(source), count);
+
 	size_t rest = count % 2048;
 	count -= rest;
 
@@ -82,6 +89,40 @@ static void* fast_memcpy(void* dest, const void* source, size_t count)
 	});
 
 	return memcpy(reinterpret_cast<char*>(dest)+count,  reinterpret_cast<const char*>(source)+count, rest);
+}
+
+static void* fast_memcpy_small(void* dest, const void* source, size_t count)
+{   
+	if(reinterpret_cast<int>(source) % 16 != 0)
+		return memcpy(reinterpret_cast<char*>(dest),  reinterpret_cast<const char*>(source), count);
+
+	size_t rest = count % 128;
+	count -= rest;
+
+	internal::fast_memcpy(reinterpret_cast<char*>(dest), reinterpret_cast<const char*>(source), count);   
+	return memcpy(reinterpret_cast<char*>(dest)+count,  reinterpret_cast<const char*>(source)+count, rest);
+}
+
+static void* fast_memcpy_w_align_hack(void* dest, const void* source, size_t count)
+{   	
+	auto dest8			= reinterpret_cast<char*>(dest);
+	auto source8		= reinterpret_cast<const char*>(source);
+	
+	auto source_align	= reinterpret_cast<int>(source) % 16;
+		
+	source8 -= source_align;	
+
+	size_t rest = count % 512;
+	count -= rest;
+
+	Concurrency::parallel_for<int>(0, count / 512, [&](size_t n)
+	{       
+		internal::fast_memcpy(dest8 + n*512, source8 + n*512, 512);   
+	});
+
+	memcpy(dest8+count, source8+count, rest);
+
+	return dest8+source_align;
 }
 
 
