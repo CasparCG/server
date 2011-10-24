@@ -461,30 +461,30 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 	*ppvObj = NULL;
 	
 	HRESULT hr;
-	// Author: Makarov Igor
-	// Transparent Flash Control in Plain C++ 
-	// http://www.codeproject.com/KB/COM/flashcontrol.aspx 
-	if (IsEqualGUID(rsid, IID_IDirectDraw3))
-	{
-		if (!m_lpDD4)
-		{
-			m_lpDD4 = new IDirectDraw4Ptr;
-			hr = m_lpDD4->CreateInstance(CLSID_DirectDraw, NULL, CLSCTX_INPROC_SERVER); 
-			if (FAILED(hr))
-			{
-				delete m_lpDD4;
-				m_lpDD4 = NULL;
-				CASPAR_LOG(info) << print_() << " DirectDraw not installed. Running without DirectDraw.";
-				return E_NOINTERFACE;
-			}
-		}
-		if (m_lpDD4 && m_lpDD4->GetInterfacePtr())
-		{
-			*ppvObj = m_lpDD4->GetInterfacePtr();
-			m_lpDD4->AddRef();
-			return S_OK;
-		}
-	}
+	//// Author: Makarov Igor
+	//// Transparent Flash Control in Plain C++ 
+	//// http://www.codeproject.com/KB/COM/flashcontrol.aspx 
+	//if (IsEqualGUID(rsid, IID_IDirectDraw3))
+	//{
+	//	if (!m_lpDD4)
+	//	{
+	//		m_lpDD4 = new IDirectDraw4Ptr;
+	//		hr = m_lpDD4->CreateInstance(CLSID_DirectDraw, NULL, CLSCTX_INPROC_SERVER); 
+	//		if (FAILED(hr))
+	//		{
+	//			delete m_lpDD4;
+	//			m_lpDD4 = NULL;
+	//			CASPAR_LOG(info) << print_() << " DirectDraw not installed. Running without DirectDraw.";
+	//			return E_NOINTERFACE;
+	//		}
+	//	}
+	//	if (m_lpDD4 && m_lpDD4->GetInterfacePtr())
+	//	{
+	//		*ppvObj = m_lpDD4->GetInterfacePtr();
+	//		m_lpDD4->AddRef();
+	//		return S_OK;
+	//	}
+	//}
 
 	//TODO: The fullscreen-consumer requires that ths does NOT return an ITimerService
 	hr = QueryInterface(riid, ppvObj);//E_NOINTERFACE;
