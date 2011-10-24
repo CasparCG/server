@@ -42,6 +42,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+#undef Yield
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
@@ -55,9 +56,8 @@ struct audio_decoder::implementation : public agent, boost::noncopyable
 	
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
-	overwrite_buffer<bool>					is_running_;
-	unbounded_buffer<safe_ptr<AVPacket>>	source_;
-	ITarget<safe_ptr<core::audio_buffer>>&	target_;
+	unbounded_buffer<audio_decoder::source_element_t>			source_;
+	ITarget<audio_decoder::target_element_t>&					target_;
 	
 public:
 	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
@@ -66,10 +66,7 @@ public:
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
-		, source_([this](const safe_ptr<AVPacket>& packet)
-			{
-				return packet->stream_index == index_;
-			})
+		, source_([this](const audio_decoder::source_element_t& element){return element.first->stream_index == index_;})
 		, target_(target)
 	{			   	
 		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;
@@ -81,7 +78,6 @@ public:
 
 	~implementation()
 	{
-		send(is_running_, false);
 		agent::wait(this);
 	}
 
@@ -89,14 +85,14 @@ public:
 	{
 		try
 		{
-			send(is_running_, true);
-			while(is_running_.value())
+			while(true)
 			{				
-				auto packet = receive(source_);
+				auto element = receive(source_);
+				auto packet = element.first;
 			
 				if(packet == loop_packet(index_))
 				{
-					send(target_, loop_audio());
+					send(target_, audio_decoder::target_element_t(loop_audio(), ticket_t()));
 					continue;
 				}
 
@@ -123,9 +119,9 @@ public:
 					const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
 					const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
 
-					send(target_, make_safe<core::audio_buffer>(samples, samples + n_samples));
+					send(target_, audio_decoder::target_element_t(make_safe<core::audio_buffer>(samples, samples + n_samples), element.second));
+					Context::Yield();
 				}
-				Concurrency::wait(5);
 			}
 		}
 		catch(...)
@@ -133,8 +129,7 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		send(is_running_, false);
-		send(target_, eof_audio());
+		send(target_, audio_decoder::target_element_t(eof_audio(), ticket_t()));
 
 		done();
 	}

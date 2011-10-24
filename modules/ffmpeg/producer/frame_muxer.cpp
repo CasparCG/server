@@ -16,6 +16,8 @@
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
 
+#include <boost/range/algorithm_ext/push_back.hpp>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -39,7 +41,13 @@ namespace caspar { namespace ffmpeg {
 	
 struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopyable
 {		
-	ITarget<safe_ptr<core::basic_frame>>&			target_;
+	typedef	std::pair<std::shared_ptr<core::write_frame>, ticket_t>		write_element_t;
+	typedef	std::pair<std::shared_ptr<core::audio_buffer>, ticket_t>	audio_element_t;
+
+	frame_muxer2::video_source_t* video_source_;
+	frame_muxer2::audio_source_t* audio_source_;
+
+	ITarget<frame_muxer2::target_element_t>&		target_;
 	mutable single_assignment<display_mode::type>	display_mode_;
 	const double									in_fps_;
 	const core::video_format_desc					format_desc_;
@@ -47,16 +55,11 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	
 	mutable single_assignment<safe_ptr<filter>>		filter_;
 	const safe_ptr<core::frame_factory>				frame_factory_;
-	
-	call<safe_ptr<AVFrame>>							push_video_;
-	call<safe_ptr<core::audio_buffer>>				push_audio_;
-	
-	unbounded_buffer<safe_ptr<AVFrame>>				video_;
-	unbounded_buffer<safe_ptr<core::audio_buffer>>	audio_;
-	
+			
 	core::audio_buffer								audio_data_;
-
-	overwrite_buffer<bool>							is_running_;
+	
+	std::queue<write_element_t>						video_frames_;
+	std::queue<audio_element_t>						audio_buffers_;
 
 	std::wstring									filter_str_;
 	
@@ -66,97 +69,121 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				   double in_fps, 
 				   const safe_ptr<core::frame_factory>& frame_factory,
 				   const std::wstring& filter)
-		: target_(target)
+		: video_source_(video_source)
+		, audio_source_(audio_source)
+		, target_(target)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
 		, frame_factory_(frame_factory)
-		, push_video_(std::bind(&implementation::push_video, this, std::placeholders::_1))
-		, push_audio_(std::bind(&implementation::push_audio, this, std::placeholders::_1))
-	{
-		if(video_source)
-			video_source->link_target(&push_video_);
-		if(audio_source)
-			audio_source->link_target(&push_audio_);
-		
+	{		
 		start();
 	}
 
 	~implementation()
 	{
-		send(is_running_, false);
 		agent::wait(this);
-		CASPAR_LOG(trace) << "[frame_muxer] Stopped.";
 	}
-
-	std::shared_ptr<core::write_frame> receive_video()
+				
+	write_element_t receive_video()
 	{	
-		auto video = receive(video_);
-
-		if(!is_running_.value() || video == eof_video())
-		{	
-			send(is_running_ , false);
-			return nullptr;
-		}
-
-		CASPAR_ASSERT(video != loop_video());
-
-		try
+		if(!video_frames_.empty())
 		{
-			if(video == empty_video())
-				return make_safe<core::write_frame>(this);
-
-			return make_write_frame(this, video, frame_factory_, 0);
+			auto video_frame = video_frames_.front();
+			video_frames_.pop();
+			return video_frame;
 		}
-		catch(...)
+
+		auto element = receive(video_source_);
+		auto video = element.first;
+
+		if(video == eof_video())
+			return write_element_t(nullptr, ticket_t());	
+		else if(video == empty_video())
+			return write_element_t(make_safe<core::write_frame>(this), ticket_t());
+		else if(video != loop_video())
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			send(is_running_, false);
-			return nullptr;
+			if(!display_mode_.has_value())
+				initialize_display_mode(*video);
+
+			auto format = video->format;
+			if(video->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
+				video->format = PIX_FMT_GRAY8;
+
+			filter_.value()->push(video);
+			while(true)
+			{
+				auto frame = filter_.value()->poll();
+				if(!frame)
+					break;	
+
+				frame->format = format;
+				video_frames_.push(write_element_t(make_write_frame(this, video, frame_factory_, 0), element.second));
+			}
 		}
-	}
 
-	std::shared_ptr<core::audio_buffer> receive_audio()
-	{		
-		auto audio = receive(audio_);
-
-		if(!is_running_.value() || audio == eof_audio())
-		{
-			send(is_running_ , false);
-			return nullptr;
-		}
-
-		CASPAR_ASSERT(audio != loop_audio());
-
-		try
-		{
-			if(audio == empty_audio())
-				return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
-
-			return audio;
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			send(is_running_, false);
-			return nullptr;
-		}
+		return receive_video();
 	}
 	
+	audio_element_t receive_audio()
+	{		
+		if(!audio_buffers_.empty())
+		{
+			auto audio_buffer = audio_buffers_.front();
+			audio_buffers_.pop();
+			return audio_buffer;
+		}
+		
+		auto element = receive(audio_source_);
+		auto audio = element.first;
+
+		if(audio == eof_audio())
+			return audio_element_t(nullptr, ticket_t());	
+		else if(audio == empty_audio())		
+			audio_data_.resize(audio_data_.size() + format_desc_.audio_samples_per_frame, 0);
+		else if(audio != loop_audio())			
+			audio_data_.insert(audio_data_.end(), audio->begin(), audio->end());
+		
+		while(audio_data_.size() >= format_desc_.audio_samples_per_frame)
+		{
+			auto begin = audio_data_.begin(); 
+			auto end   = begin + format_desc_.audio_samples_per_frame;
+			auto audio = make_safe<core::audio_buffer>(begin, end);
+			audio_data_.erase(begin, end);
+			audio_buffers_.push(frame_muxer2::audio_source_element_t(audio, element.second));
+		}
+
+		return receive_audio();
+	}
+			
 	virtual void run()
 	{
 		try
 		{
-			send(is_running_, true);
-			while(is_running_.value())
+			bool eof = false;
+			while(!eof)
 			{
-				auto audio = receive_audio();	
+				ticket_t tickets;
+
+				auto audio_element = receive_audio();
+				boost::range::push_back(tickets, audio_element.second);
+
+				auto audio = audio_element.first;
 				if(!audio)
+				{
+					eof = true;
 					break;
-											
-				auto video = receive_video();
+				}
+				
+				auto video_element = receive_video();
+				boost::range::push_back(tickets, video_element.second);
+
+				auto video = video_element.first;
 				if(!video)
+				{
+					eof = true;
 					break;
+				}
 
 				video->audio_data() = std::move(*audio);
 
@@ -166,143 +193,72 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				case display_mode::deinterlace:
 				case display_mode::deinterlace_bob:
 					{
-						send(target_, safe_ptr<core::basic_frame>(std::move(video)));
+						send(target_, frame_muxer2::target_element_t(video, tickets));
 
 						break;
 					}
 				case display_mode::duplicate:					
 					{										
-						send(target_, safe_ptr<core::basic_frame>(video));
+						send(target_, frame_muxer2::target_element_t(video, tickets));
 
-						auto audio2 = receive_audio();
+						auto audio_element2 = receive_audio();
+						boost::range::push_back(tickets, audio_element.second);
+
+						auto audio2	= audio_element2.first;
 						if(audio2)
 						{
 							auto video2 = make_safe<core::write_frame>(*video);
 							video2->audio_data() = std::move(*audio2);
-							send(target_, safe_ptr<core::basic_frame>(video2));
+							send(target_, frame_muxer2::target_element_t(video2, tickets));
 						}
+						else
+							eof = true;
 
 						break;
 					}
 				case display_mode::half:						
 					{								
-						send(target_, safe_ptr<core::basic_frame>(std::move(video)));
-						receive_video();
+						send(target_, frame_muxer2::target_element_t(video, tickets));
+
+						if(!receive_video().first)
+							eof = true;
+
 						break;
 					}
 				case display_mode::deinterlace_bob_reinterlace:
 				case display_mode::interlace:					
 					{					
 						auto frame = safe_ptr<core::basic_frame>(std::move(video));
-						auto video2 = receive_video();
+
+						auto video_element2 = receive_video();
+						boost::range::push_back(tickets, video_element.second);
+
+						auto video2 = video_element2.first;
 						auto frame2 = core::basic_frame::empty();
 
 						if(video2)						
-							frame2 = safe_ptr<core::basic_frame>(video2);								
+							frame2 = safe_ptr<core::basic_frame>(video2);			
+						else
+							eof = true;
 						
 						frame = core::basic_frame::interlace(std::move(frame), std::move(frame2), format_desc_.field_mode);	
-						send(target_, frame);
+						send(target_, frame_muxer2::target_element_t(frame, tickets));
 
 						break;
 					}
 				default:	
 					BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
 				}
-			}
+			}	
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 		
-		send(is_running_ , false);
-		send(target_, core::basic_frame::eof());
+		send(target_, frame_muxer2::target_element_t(core::basic_frame::eof(), ticket_t()));
 
 		done();
-	}
-			
-	void push_video(const safe_ptr<AVFrame>& video_frame)
-	{		
-		if(video_frame == eof_video() || video_frame == empty_video())
-		{
-			send(video_, video_frame);
-			return;
-		}
-				
-		if(video_frame == loop_video())		
-			return;	
-		
-		try
-		{
-			if(!is_running_.value())
-				return;
-
-			if(!display_mode_.has_value())
-				initialize_display_mode(*video_frame);
-						
-			//send(video_, make_safe_ptr(video_frame));
-
-			//if(hints & core::frame_producer::ALPHA_HINT)
-			//	video_frame->format = make_alpha_format(video_frame->format);
-		
-			auto format = video_frame->format;
-			if(video_frame->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
-				video_frame->format = PIX_FMT_GRAY8;
-
-			filter_.value()->push(video_frame);
-
-			while(true)
-			{
-				auto frame = filter_.value()->poll();
-				if(!frame)
-					break;	
-
-				frame->format = format;
-				send(video_, make_safe_ptr(frame));
-			}
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			send(is_running_ , false);
-			send(video_, eof_video());
-		}
-	}
-
-	void push_audio(const safe_ptr<core::audio_buffer>& audio_samples)
-	{
-		if(audio_samples == eof_audio() || audio_samples == empty_audio())
-		{
-			send(audio_, audio_samples);
-			return;
-		}
-
-		if(audio_samples == loop_audio())			
-			return;		
-
-		try
-		{		
-			if(!is_running_.value())
-				return;
-
-			audio_data_.insert(audio_data_.end(), audio_samples->begin(), audio_samples->end());
-		
-			while(audio_data_.size() >= format_desc_.audio_samples_per_frame)
-			{
-				auto begin = audio_data_.begin(); 
-				auto end   = begin + format_desc_.audio_samples_per_frame;
-					
-				send(audio_, make_safe<core::audio_buffer>(begin, end));
-
-				audio_data_.erase(begin, end);
-			}
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			send(is_running_ , false);
-			send(audio_, eof_audio());
-		}
 	}
 
 	void initialize_display_mode(AVFrame& frame)

@@ -47,8 +47,8 @@ namespace caspar { namespace core {
 
 struct video_channel::implementation : boost::noncopyable
 {
-	unbounded_buffer<safe_ptr<std::pair<std::map<int, safe_ptr<basic_frame>>, ticket_t>>>	stage_frames_;
-	unbounded_buffer<safe_ptr<std::pair<safe_ptr<read_frame>, ticket_t>>>					mixer_frames_;
+	unbounded_buffer<stage::target_element_t>	stage_frames_;
+	unbounded_buffer<mixer::target_element_t>	mixer_frames_;
 	
 	const video_format_desc				format_desc_;
 	

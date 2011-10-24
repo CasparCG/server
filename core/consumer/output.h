@@ -35,8 +35,8 @@ class video_channel_context;
 class output : boost::noncopyable
 {
 public:
-	typedef safe_ptr<std::pair<safe_ptr<core::read_frame>, ticket_t>>	source_element_t;
-	typedef Concurrency::ISource<source_element_t>						source_t;
+	typedef std::pair<safe_ptr<core::read_frame>, ticket_t>	source_element_t;
+	typedef Concurrency::ISource<source_element_t>			source_t;
 
 	explicit output(source_t& source, const video_format_desc& format_desc);
 

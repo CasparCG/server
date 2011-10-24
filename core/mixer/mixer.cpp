@@ -111,7 +111,7 @@ public:
 		
 	mixer::target_element_t mix(const mixer::source_element_t& element)
 	{		
-		auto frames = element->first;
+		auto frames = element.first;
 
 		auto frame = make_safe<read_frame>();
 
@@ -158,7 +158,7 @@ public:
 			Concurrency::wait(20);
 		}
 
-		return mixer::target_element_t(std::make_pair(std::move(frame), element->second));	
+		return mixer::target_element_t(std::move(frame), element.second);	
 	}
 						
 	boost::unique_future<safe_ptr<core::write_frame>> async_create_frame(const void* tag, const core::pixel_format_desc& desc)

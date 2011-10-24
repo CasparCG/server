@@ -7,7 +7,8 @@
 #include <tbb/atomic.h>
 
 #include <boost/noncopyable.hpp>
-#include <boost/any.hpp>
+
+#include <vector>
 
 namespace caspar {
 	
@@ -77,17 +78,23 @@ namespace caspar {
 //	};
 //}
 	
-typedef safe_ptr<int> ticket_t;
+#undef Yield
+
+typedef std::vector<safe_ptr<int>> ticket_t;
 
 class governor : boost::noncopyable
 {
 	tbb::atomic<int> count_;
 	Concurrency::concurrent_queue<Concurrency::Context*> waiting_contexts_;
 
-	void acquire_ticket(Concurrency::Context* context)
+	void acquire_ticket()
 	{
+		if(count_ < 1)
+			Concurrency::Context::Yield();
+
 		if (--count_ < 0)
 		{
+			auto context = Concurrency::Context::CurrentContext();
 			waiting_contexts_.push(context);
 			context->Block();
 		}
@@ -99,7 +106,7 @@ class governor : boost::noncopyable
 		{
 			Concurrency:: Context* waiting = NULL;
 			while(!waiting_contexts_.try_pop(waiting))
-				Concurrency::wait(0);
+				Concurrency::Context::Yield();
 			waiting->Unblock();
 		}
 	}
@@ -113,18 +120,20 @@ public:
 	
 	ticket_t acquire()
 	{
-		acquire_ticket(Concurrency::Context::CurrentContext());
+		acquire_ticket();
 		
-		return safe_ptr<int>(new int, [this](int* p)
+		ticket_t ticket;
+		ticket.push_back(safe_ptr<int>(new int, [this](int* p)
 		{
 			delete p;
 			release_ticket();
-		});
+		}));
+		return ticket;
 	}
 
 	void cancel()
 	{
-		while(count_ <= 0)
+		while(count_ < 0)
 			release_ticket();
 	}
 };
