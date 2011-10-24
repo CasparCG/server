@@ -22,7 +22,6 @@ struct audio_resampler::implementation
 {	
 	std::shared_ptr<ReSampleContext> resampler_;
 	
-	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> copy_buffer_;
 	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> buffer2_;
 
 	const size_t			output_channels_;
