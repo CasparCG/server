@@ -210,7 +210,7 @@
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
     <ClInclude Include="concurrency\executor.h" />
-    <ClInclude Include="concurrency\message.h" />
+    <ClInclude Include="concurrency\governor.h" />
     <ClInclude Include="diagnostics\graph.h" />
     <ClInclude Include="exception\exceptions.h" />
     <ClInclude Include="exception\win32_exception.h" />

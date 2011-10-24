@@ -20,9 +20,6 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <agents.h>
-#include <semaphore.h>
-
 struct AVFrame;
 struct AVFormatContext;
 struct AVPacket;

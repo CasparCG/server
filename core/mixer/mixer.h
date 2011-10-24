@@ -23,7 +23,7 @@
 
 #include "../producer/frame/frame_factory.h"
 
-#include <common/concurrency/message.h>
+#include <common/concurrency/governor.h>
 #include <common/memory/safe_ptr.h>
 
 #include <agents.h>
@@ -49,8 +49,11 @@ class mixer : public core::frame_factory
 {
 public:	
 	
-	typedef Concurrency::ISource<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>>	source_t;
-	typedef Concurrency::ITarget<safe_ptr<message<safe_ptr<core::read_frame>>>>				target_t;
+	typedef safe_ptr<std::pair<std::map<int, safe_ptr<basic_frame>>, ticket_t>> source_element_t;
+	typedef safe_ptr<std::pair<safe_ptr<core::read_frame>, ticket_t>>			target_element_t;
+
+	typedef Concurrency::ISource<source_element_t>								source_t;
+	typedef Concurrency::ITarget<target_element_t>								target_t;
 
 	explicit mixer(source_t& source, target_t& target, const video_format_desc& format_desc, ogl_device& ogl);
 						

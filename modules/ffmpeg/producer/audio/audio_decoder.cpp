@@ -42,9 +42,6 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <connect.h>
-#include <semaphore.h>
-
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
@@ -77,7 +74,7 @@ public:
 	{			   	
 		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;
 
-		Concurrency::connect(source, source_);
+		source.link_target(&source_);
 
 		start();
 	}

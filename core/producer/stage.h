@@ -23,12 +23,11 @@
 #include "frame_producer.h"
 
 #include <common/memory/safe_ptr.h>
-#include <common/concurrency/message.h>
+#include <common/concurrency/governor.h>
 
 #include <boost/noncopyable.hpp>
 
 #include <agents.h>
-#include <semaphore.h>
 
 namespace caspar { namespace core {
 
@@ -39,9 +38,11 @@ struct layer_status;
 class stage : boost::noncopyable
 {
 public:
-	typedef Concurrency::ITarget<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>> target_t;
+	
+	typedef safe_ptr<std::pair<std::map<int, safe_ptr<basic_frame>>, ticket_t>> target_element_t;
+	typedef Concurrency::ITarget<target_element_t> target_t;
 
-	explicit stage(target_t& target, const safe_ptr<Concurrency::semaphore>& semaphore);
+	explicit stage(target_t& target, governor& governor);
 
 	void swap(stage& other);
 			
