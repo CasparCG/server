@@ -108,14 +108,22 @@ static void* fast_memcpy(void* dest, const void* source, size_t count)
 template<typename T>
 static safe_ptr<T> fast_memdup(const T* source, size_t count)
 {   	
-	auto dest			= safe_ptr<T>(reinterpret_cast<T*>(scalable_aligned_malloc(count + 16, 32)), scalable_free);
-	auto dest8			= reinterpret_cast<char*>(dest.get());
+	auto dest			= reinterpret_cast<T*>(scalable_aligned_malloc(count + 16, 32));
+	auto dest8			= reinterpret_cast<char*>(dest);
 	auto source8		= reinterpret_cast<const char*>(source);	
 	auto source_align	= reinterpret_cast<int>(source) & 15;
 		
-	fast_memcpy(dest8, source8-source_align, count);
+	try
+	{
+		fast_memcpy(dest8, source8-source_align, count);
+	}
+	catch(...)
+	{
+		scalable_free(dest);
+		throw;
+	}
 
-	return safe_ptr<T>(reinterpret_cast<T*>(dest8+source_align), [dest](T*){});
+	return safe_ptr<T>(reinterpret_cast<T*>(dest8+source_align), [dest](T*){scalable_free(dest);});
 }
 
 
