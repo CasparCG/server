@@ -107,14 +107,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				initialize_display_mode(*video);
 			
 			filter_.value()->push(video);
-			while(true)
-			{
-				auto frame = filter_.value()->poll();
-				if(!frame)
-					break;	
-
-				video_frames_.push(write_element_t(make_write_frame(this, video, frame_factory_, 0), element.second));
-			}
+			for(auto frame = filter_.value()->poll(); frame; frame = filter_.value()->poll())			
+				video_frames_.push(write_element_t(make_write_frame(this, video, frame_factory_, 0), element.second));			
 		}
 
 		return receive_video();
