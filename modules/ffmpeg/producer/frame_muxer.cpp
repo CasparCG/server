@@ -89,9 +89,12 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				
 	safe_ptr<core::write_frame> receive_video(ticket_t& tickets)
 	{	
+		if(!video_source_)
+			return make_safe<core::write_frame>(this);	
+
 		if(!video_frames_.empty())
 		{
-			auto video_frame = video_frames_.front();
+			auto video_frame = std::move(video_frames_.front());
 			video_frames_.pop();
 			boost::range::push_back(tickets, video_frame.second);
 			return video_frame.first;
@@ -99,32 +102,34 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 		auto element = receive(video_source_);
 		auto video	 = element.first;
+		
+		if(video == loop_video())
+			return receive_video(tickets);
 
 		if(eof_ || video == eof_video())
 		{
 			eof_ = true;
 			return make_safe<core::write_frame>(this);		
-		}
-		else if(video == empty_video())
-			return make_safe<core::write_frame>(this);		
-		else if(video != loop_video())
-		{
-			if(!display_mode_.has_value())
-				initialize_display_mode(*video);
-			
-			filter_.value()->push(video);
-			for(auto frame = filter_.value()->poll(); frame; frame = filter_.value()->poll())			
-				video_frames_.push(write_element_t(make_write_frame(this, make_safe_ptr(frame), frame_factory_, 0), element.second));			
-		}
+		}	
 
+		if(!display_mode_.has_value())
+			initialize_display_mode(*video);
+			
+		filter_.value()->push(video);
+		for(auto frame = filter_.value()->poll(); frame; frame = filter_.value()->poll())			
+			video_frames_.push(write_element_t(make_write_frame(this, make_safe_ptr(frame), frame_factory_, 0), element.second));		
+		
 		return receive_video(tickets);
 	}
 	
 	std::shared_ptr<core::audio_buffer> receive_audio(ticket_t& tickets)
 	{		
+		if(!audio_source_)
+			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
+
 		if(!audio_buffers_.empty())
 		{
-			auto audio_buffer = audio_buffers_.front();
+			auto audio_buffer = std::move(audio_buffers_.front());
 			audio_buffers_.pop();
 			boost::range::push_back(tickets, audio_buffer.second);
 			return audio_buffer.first;
@@ -133,16 +138,16 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		auto element = receive(audio_source_);
 		auto audio	 = element.first;
 
+		if(audio == loop_audio())
+			return receive_audio(tickets);
+
 		if(eof_ || audio == eof_audio())
 		{
 			eof_ = true;
 			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
-		}
-		else if(audio == empty_audio())		
-			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
-		else if(audio != loop_audio())			
-			audio_data_.insert(audio_data_.end(), audio->begin(), audio->end());
-		
+		}		
+			
+		audio_data_.insert(audio_data_.end(), audio->begin(), audio->end());		
 		while(audio_data_.size() >= format_desc_.audio_samples_per_frame)
 		{
 			auto begin = audio_data_.begin(); 

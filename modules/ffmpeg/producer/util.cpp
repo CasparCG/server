@@ -335,12 +335,6 @@ safe_ptr<AVFrame> loop_video()
 	return frame1;
 }
 
-safe_ptr<AVFrame> empty_video()
-{
-	static auto frame1 = safe_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
-	return frame1;
-}
-
 safe_ptr<AVFrame> eof_video()
 {
 	static auto frame2 = safe_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
@@ -348,12 +342,6 @@ safe_ptr<AVFrame> eof_video()
 }
 
 safe_ptr<core::audio_buffer> loop_audio()
-{
-	static auto audio1 = safe_ptr<core::audio_buffer>();
-	return audio1;
-}
-
-safe_ptr<core::audio_buffer> empty_audio()
 {
 	static auto audio1 = safe_ptr<core::audio_buffer>();
 	return audio1;

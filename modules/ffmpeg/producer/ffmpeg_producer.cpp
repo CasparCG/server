@@ -46,10 +46,6 @@
 #include <boost/range/algorithm/find.hpp>
 
 #include <agents.h>
-#include <agents_extras.h>
-#include <connect.h>
-#include <concrt.h>
-#include <ppl.h>
 
 using namespace Concurrency;
 
@@ -57,28 +53,25 @@ namespace caspar { namespace ffmpeg {
 		
 struct ffmpeg_producer : public core::frame_producer
 {	
-	const std::wstring										filename_;
-	const int												start_;
-	const bool												loop_;
-	const size_t											length_;
+	const std::wstring												filename_;
+	const int														start_;
+	const bool														loop_;
+	const size_t													length_;
 	
-	single_assignment<frame_muxer2::video_source_element_t>	empty_video_;
-	single_assignment<frame_muxer2::audio_source_element_t>	empty_audio_;
-
-	call<input::target_element_t>							throw_away_;
-	unbounded_buffer<input::target_element_t>				packets_;
-	unbounded_buffer<frame_muxer2::video_source_element_t>	video_;
-	unbounded_buffer<frame_muxer2::audio_source_element_t>	audio_;
-	unbounded_buffer<frame_muxer2::target_element_t>		frames_;
+	call<input::target_element_t>									throw_away_;
+	unbounded_buffer<input::target_element_t>						packets_;
+	std::shared_ptr<unbounded_buffer<frame_muxer2::video_source_element_t>>	video_;
+	std::shared_ptr<unbounded_buffer<frame_muxer2::audio_source_element_t>>	audio_;
+	unbounded_buffer<frame_muxer2::target_element_t>				frames_;
 		
-	const safe_ptr<diagnostics::graph>						graph_;
+	const safe_ptr<diagnostics::graph>								graph_;
 					
-	input													input_;	
-	std::unique_ptr<frame_muxer2>							muxer_;
-	std::shared_ptr<video_decoder>							video_decoder_;
-	std::shared_ptr<audio_decoder>							audio_decoder_;	
+	input															input_;	
+	std::unique_ptr<frame_muxer2>									muxer_;
+	std::shared_ptr<video_decoder>									video_decoder_;
+	std::shared_ptr<audio_decoder>									audio_decoder_;	
 
-	safe_ptr<core::basic_frame>								last_frame_;
+	safe_ptr<core::basic_frame>										last_frame_;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, size_t length) 
@@ -90,17 +83,12 @@ public:
 		, graph_(diagnostics::create_graph("", false))
 		, input_(packets_, graph_, filename_, loop, start, length)
 		, last_frame_(core::basic_frame::empty())
-	{
-		send(empty_video_, frame_muxer2::video_source_element_t(empty_video(), ticket_t()));
-		send(empty_audio_, frame_muxer2::audio_source_element_t(empty_audio(), ticket_t()));
-
-		frame_muxer2::video_source_t* video_source = &empty_video_;
-		frame_muxer2::audio_source_t* audio_source = &empty_audio_;
-
+	{		
 		try
 		{
-			video_decoder_.reset(new video_decoder(packets_, video_, *input_.context()));
-			video_source = &video_;
+			auto video = std::make_shared<unbounded_buffer<frame_muxer2::video_source_element_t>>();
+			video_decoder_.reset(new video_decoder(packets_, *video, *input_.context()));
+			video_ = video;
 		}
 		catch(ffmpeg_stream_not_found&)
 		{
@@ -114,8 +102,9 @@ public:
 
 		try
 		{
-			audio_decoder_.reset(new audio_decoder(packets_, audio_, *input_.context(), frame_factory->get_video_format_desc()));
-			audio_source = &audio_;
+			auto audio = std::make_shared<unbounded_buffer<frame_muxer2::audio_source_element_t>>();
+			audio_decoder_.reset(new audio_decoder(packets_, *audio, *input_.context(), frame_factory->get_video_format_desc()));
+			audio_ = audio;
 		}
 		catch(ffmpeg_stream_not_found&)
 		{
@@ -125,13 +114,12 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(warning) << "Failed to open audio-stream. Running without audio.";		
-		}
-		
-		Concurrency::connect(packets_, throw_away_);
+		}		
 
 		CASPAR_VERIFY(video_decoder_ || audio_decoder_, ffmpeg_error());
-
-		muxer_.reset(new frame_muxer2(video_source, audio_source, frames_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
+		
+		packets_.link_target(&throw_away_);
+		muxer_.reset(new frame_muxer2(video_.get(), audio_.get(), frames_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
 				
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		graph_->start();
