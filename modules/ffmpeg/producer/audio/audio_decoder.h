@@ -24,6 +24,7 @@
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <common/memory/safe_ptr.h>
+#include <common/concurrency/governor.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -47,8 +48,11 @@ class audio_decoder : boost::noncopyable
 {
 public:
 
-	typedef Concurrency::ISource<safe_ptr<AVPacket>>& source_t;
-	typedef Concurrency::ITarget<safe_ptr<core::audio_buffer>>& target_t;
+	typedef std::pair<safe_ptr<AVPacket>, ticket_t>				source_element_t;
+	typedef std::pair<safe_ptr<core::audio_buffer>, ticket_t>	target_element_t;
+
+	typedef Concurrency::ISource<source_element_t>&				source_t;
+	typedef Concurrency::ITarget<target_element_t>&				target_t;
 	
 	explicit audio_decoder(source_t& source, target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc);
 	

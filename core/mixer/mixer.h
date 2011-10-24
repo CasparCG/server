@@ -49,8 +49,8 @@ class mixer : public core::frame_factory
 {
 public:	
 	
-	typedef safe_ptr<std::pair<std::map<int, safe_ptr<basic_frame>>, ticket_t>> source_element_t;
-	typedef safe_ptr<std::pair<safe_ptr<core::read_frame>, ticket_t>>			target_element_t;
+	typedef std::pair<std::map<int, safe_ptr<basic_frame>>, ticket_t>	source_element_t;
+	typedef std::pair<safe_ptr<core::read_frame>, ticket_t>				target_element_t;
 
 	typedef Concurrency::ISource<source_element_t>								source_t;
 	typedef Concurrency::ITarget<target_element_t>								target_t;
