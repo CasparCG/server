@@ -36,6 +36,8 @@ namespace caspar { namespace core {
 
 static tbb::atomic<int> g_w_total_count;
 static tbb::atomic<int> g_r_total_count;
+static tbb::atomic<int> g_w_total_size;
+static tbb::atomic<int> g_r_total_size;
 																																								
 struct host_buffer::implementation : boost::noncopyable
 {	
@@ -62,8 +64,10 @@ public:
 
 		if(!pbo_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
-
-		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == write_only ? "write_only" : "read_only");
+		
+		(usage_ == write_only ? g_w_total_size : g_r_total_size) += size_;
+		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == write_only ? "write_only" : "read_only")
+			<< L" total-size: " << (usage_ == write_only ? g_w_total_size : g_r_total_size)/1000000 << L"MB.";	
 	}	
 
 	~implementation()

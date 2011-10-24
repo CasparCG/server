@@ -101,7 +101,7 @@ public:
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-		, governor_(4)
+		, governor_(8)
 	{		
 		packets_count_	= 0;
 		packets_size_	= 0;
@@ -133,17 +133,16 @@ public:
 	{
 		try
 		{
+			int last_stream_index = -1;
+
 			send(is_running_, true);
-			while(is_running_.value())
-			{
-				auto packet = read_next_packet();
-				if(!packet)
-					break;
-				
+			for(auto packet = read_next_packet(); packet && is_running_.value(); packet = read_next_packet())
+			{				
 				ticket_t ticket;
 
-				if(packet->stream_index != default_stream_index_)
+				if((format_context_->nb_streams < 2 || last_stream_index != packet->stream_index) && packet->stream_index == default_stream_index_)
 					ticket = governor_.acquire();
+				last_stream_index = packet->stream_index;
 
 				Concurrency::asend(target_, input::target_element_t(packet, ticket));
 				Context::Yield();

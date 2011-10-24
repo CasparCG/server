@@ -62,6 +62,9 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool												loop_;
 	const size_t											length_;
 	
+	single_assignment<frame_muxer2::video_source_element_t>	empty_video_;
+	single_assignment<frame_muxer2::audio_source_element_t>	empty_audio_;
+
 	call<input::target_element_t>							throw_away_;
 	unbounded_buffer<input::target_element_t>				packets_;
 	unbounded_buffer<frame_muxer2::video_source_element_t>	video_;
@@ -88,8 +91,11 @@ public:
 		, input_(packets_, graph_, filename_, loop, start, length)
 		, last_frame_(core::basic_frame::empty())
 	{
-		frame_muxer2::video_source_t* video_source = nullptr;
-		frame_muxer2::audio_source_t* audio_source = nullptr;
+		send(empty_video_, frame_muxer2::video_source_element_t(empty_video(), ticket_t()));
+		send(empty_audio_, frame_muxer2::audio_source_element_t(empty_audio(), ticket_t()));
+
+		frame_muxer2::video_source_t* video_source = &empty_video_;
+		frame_muxer2::audio_source_t* audio_source = &empty_audio_;
 
 		try
 		{
