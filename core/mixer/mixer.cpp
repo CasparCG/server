@@ -96,8 +96,7 @@ struct mixer::implementation : boost::noncopyable
 	std::unordered_map<int, blend_mode::type> blend_modes_;
 		
 	critical_section			mutex_;
-	Concurrency::transformer<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>, 
-							 safe_ptr<message<safe_ptr<core::read_frame>>>> mixer_;
+	Concurrency::transformer<mixer::source_element_t, mixer::target_element_t> mixer_;
 public:
 	implementation(mixer::source_t& source, mixer::target_t& target, const video_format_desc& format_desc, ogl_device& ogl) 
 		: format_desc_(format_desc)
@@ -110,9 +109,9 @@ public:
 		source.link_target(&mixer_);
 	}
 		
-	safe_ptr<message<safe_ptr<core::read_frame>>> mix(const safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>& msg)
+	mixer::target_element_t mix(const mixer::source_element_t& element)
 	{		
-		auto frames = msg->value();
+		auto frames = element->first;
 
 		auto frame = make_safe<read_frame>();
 
@@ -159,7 +158,7 @@ public:
 			Concurrency::wait(20);
 		}
 
-		return msg->transfer<safe_ptr<core::read_frame>>(std::move(frame));	
+		return mixer::target_element_t(std::make_pair(std::move(frame), element->second));	
 	}
 						
 	boost::unique_future<safe_ptr<core::write_frame>> async_create_frame(const void* tag, const core::pixel_format_desc& desc)
