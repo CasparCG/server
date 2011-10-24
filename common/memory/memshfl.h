@@ -21,7 +21,7 @@
 
 #include <intrin.h>
 
-#include <assert.h>
+#include "../utility/assert.h"
 
 #include <ppl.h>
 
@@ -31,6 +31,11 @@ namespace internal {
 
 static void* fast_memshfl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
 {
+	CASPAR_ASSERT(dest != nullptr);
+	CASPAR_ASSERT(source != nullptr);
+	CASPAR_ASSERT(reinterpret_cast<int>(dest) % 16 == 0);
+	CASPAR_ASSERT(reinterpret_cast<int>(source) % 16 == 0);
+
 	__m128i*	   dest128 = reinterpret_cast<__m128i*>(dest);	
 	const __m128i* source128 = reinterpret_cast<const __m128i*>(source);
 
