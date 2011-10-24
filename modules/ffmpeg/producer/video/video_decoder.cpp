@@ -172,22 +172,19 @@ public:
 
 		auto count = desc.planes.size();
 		std::array<uint8_t*, 4> org_ptrs;
-		std::array<uint8_t*, 4> real_ptrs; // We need to store the "real" pointers, due to alignment hack.
+		std::array<safe_ptr<uint8_t>, 4> new_ptrs;
 		parallel_for<size_t>(0, count, [&](size_t n)
 		{
 			auto size		= frame->linesize[n]*desc.planes[n].height;
+			new_ptrs[n]		= fast_memdup(frame->data[n], size);
 			org_ptrs[n]		= frame->data[n];
-			real_ptrs[n]	= reinterpret_cast<uint8_t*>(scalable_aligned_malloc(size+16, 32)); // Allocate 16 byte extra for alignment hack.
-			frame->data[n]	= reinterpret_cast<uint8_t*>(fast_memcpy_w_align_hack(real_ptrs[n], org_ptrs[n], size));
+			frame->data[n]	= new_ptrs[n].get();
 		});
 
-		return safe_ptr<AVFrame>(frame.get(), [frame, org_ptrs, real_ptrs, count](AVFrame*)
+		return safe_ptr<AVFrame>(frame.get(), [frame, org_ptrs, new_ptrs, count](AVFrame*)
 		{
 			for(size_t n = 0; n < count; ++n)
-			{
-				scalable_aligned_free(real_ptrs[n]);
 				frame->data[n] = org_ptrs[n];
-			}
 		});
 	}
 		

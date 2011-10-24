@@ -196,7 +196,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			// Copy line by line since ffmpeg sometimes pads each line.
 			Concurrency::parallel_for(0, static_cast<int>(desc.planes[n].height), [&](size_t y)
 			{
-				fast_memcpy_small(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+				fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 			});
 
 			write->commit(n);

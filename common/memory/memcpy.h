@@ -20,6 +20,7 @@
 #pragma once
 
 #include "../utility/assert.h"
+#include "../memory/safe_ptr.h"
 
 #include <assert.h>
 
@@ -76,19 +77,17 @@ static void* fast_memcpy(void* dest, const void* source, size_t count)
 	return dest;
 }
 
-}
-
 static void* fast_memcpy_small(void* dest, const void* source, size_t count)
 {   
-	if((reinterpret_cast<int>(source) & 15) || (reinterpret_cast<int>(dest) & 15))
-		return memcpy(reinterpret_cast<char*>(dest),  reinterpret_cast<const char*>(source), count);
-
 	size_t rest = count & 127;
 	count &= ~127;
 
 	internal::fast_memcpy(reinterpret_cast<char*>(dest), reinterpret_cast<const char*>(source), count);   
 	return memcpy(reinterpret_cast<char*>(dest)+count,  reinterpret_cast<const char*>(source)+count, rest);
 }
+
+}
+
 
 static void* fast_memcpy(void* dest, const void* source, size_t count)
 {   
@@ -103,30 +102,20 @@ static void* fast_memcpy(void* dest, const void* source, size_t count)
 		internal::fast_memcpy(reinterpret_cast<char*>(dest) + n*512, reinterpret_cast<const char*>(source) + n*512, 512);   
 	});
 
-	return fast_memcpy_small(reinterpret_cast<char*>(dest)+count,  reinterpret_cast<const char*>(source)+count, rest);
+	return internal::fast_memcpy_small(reinterpret_cast<char*>(dest)+count,  reinterpret_cast<const char*>(source)+count, rest);
 }
 
-
-static void* fast_memcpy_w_align_hack(void* dest, const void* source, size_t count)
+template<typename T>
+static safe_ptr<T> fast_memdup(const T* source, size_t count)
 {   	
-	auto dest8			= reinterpret_cast<char*>(dest);
-	auto source8		= reinterpret_cast<const char*>(source);
-	
+	auto dest			= safe_ptr<T>(reinterpret_cast<T*>(scalable_aligned_malloc(count + 16, 32)), scalable_free);
+	auto dest8			= reinterpret_cast<char*>(dest.get());
+	auto source8		= reinterpret_cast<const char*>(source);	
 	auto source_align	= reinterpret_cast<int>(source) & 15;
 		
-	source8 -= source_align;	
-	
-	size_t rest = count & 511;
-	count &= ~511;
+	fast_memcpy(dest8, source8-source_align, count);
 
-	Concurrency::parallel_for<int>(0, count / 512, [&](size_t n)
-	{       
-		internal::fast_memcpy(dest8 + n*512, source8 + n*512, 512);   
-	});
-
-	memcpy(dest8+count, source8+count, rest);
-
-	return dest8+source_align;
+	return safe_ptr<T>(reinterpret_cast<T*>(dest8+source_align), [dest](T*){});
 }
 
 

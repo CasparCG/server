@@ -296,7 +296,7 @@ public:
 						Concurrency::send(audio_buffers_, ffmpeg::frame_muxer2::audio_source_element_t(make_safe<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels), ticket_t()));
 					}
 					else
-						Concurrency::send(audio_buffers_, ffmpeg::frame_muxer2::audio_source_element_t(ffmpeg::empty_audio(), ticket_t()));	
+						Concurrency::send(audio_buffers_, ffmpeg::frame_muxer2::audio_source_element_t(make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0), ticket_t()));	
 				});
 			}
 
