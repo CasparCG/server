@@ -41,6 +41,7 @@ unsigned int format(size_t stride)
 }
 
 static tbb::atomic<int> g_total_count;
+static tbb::atomic<int> g_total_size;
 
 struct device_buffer::implementation : boost::noncopyable
 {
@@ -66,7 +67,9 @@ public:
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		CASPAR_LOG(trace) << "[device_buffer] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
+		g_total_size += width*height*stride;
+		CASPAR_LOG(trace) << L"[device_buffer] [" << ++g_total_count << L"] allocated size: " << width*height*stride/1000 << L"kB" 
+			<< L" total-size: " << g_total_size/1000000 << L"MB.";	
 	}	
 
 	~implementation()

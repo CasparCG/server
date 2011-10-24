@@ -187,7 +187,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 						break;
 					}
 				case display_mode::duplicate:					
-					{										
+					{						
+						auto video2 = make_safe<core::write_frame>(*video);				
 						send(target_, frame_muxer2::target_element_t(video, tickets));
 
 						auto audio_element2 = receive_audio();
@@ -196,7 +197,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 						auto audio2	= audio_element2.first;
 						if(audio2)
 						{
-							auto video2 = make_safe<core::write_frame>(*video);
 							video2->audio_data() = std::move(*audio2);
 							send(target_, frame_muxer2::target_element_t(video2, tickets));
 						}
