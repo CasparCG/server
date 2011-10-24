@@ -187,7 +187,7 @@ public:
 			}
 		}
 
-		THROW_ON_ERROR(ret, print(), "av_read_frame");
+		THROW_ON_ERROR(ret, "av_read_frame", print());
 
 		if(packet->stream_index == default_stream_index_)
 		{

@@ -90,7 +90,7 @@ public:
 			video_decoder_.reset(new video_decoder(packets_, *video, *input_.context()));
 			video_ = video;
 		}
-		catch(ffmpeg_stream_not_found&)
+		catch(averror_stream_not_found&)
 		{
 			CASPAR_LOG(warning) << "No video-stream found. Running without video.";	
 		}
@@ -106,7 +106,7 @@ public:
 			audio_decoder_.reset(new audio_decoder(packets_, *audio, *input_.context(), frame_factory->get_video_format_desc()));
 			audio_ = audio;
 		}
-		catch(ffmpeg_stream_not_found&)
+		catch(averror_stream_not_found&)
 		{
 			CASPAR_LOG(warning) << "No audio-stream found. Running without video.";	
 		}
