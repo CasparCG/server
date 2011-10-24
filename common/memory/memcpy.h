@@ -88,7 +88,6 @@ static void* fast_memcpy_small(void* dest, const void* source, size_t count)
 
 }
 
-
 static void* fast_memcpy(void* dest, const void* source, size_t count)
 {   
 	if((reinterpret_cast<int>(source) & 15) || (reinterpret_cast<int>(dest) & 15))
