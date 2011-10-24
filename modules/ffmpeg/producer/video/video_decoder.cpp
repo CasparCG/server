@@ -44,6 +44,7 @@ extern "C"
 
 #include <tbb/scalable_allocator.h>
 
+#undef Yield
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
@@ -60,9 +61,8 @@ struct video_decoder::implementation : public Concurrency::agent, boost::noncopy
 	size_t									height_;
 	bool									is_progressive_;
 	
-	overwrite_buffer<bool>					is_running_;
-	unbounded_buffer<safe_ptr<AVPacket>>	source_;
-	ITarget<safe_ptr<AVFrame>>&				target_;
+	unbounded_buffer<video_decoder::source_element_t>	source_;
+	ITarget<video_decoder::target_element_t>&			target_;
 	
 public:
 	explicit implementation(video_decoder::source_t& source, video_decoder::target_t& target, AVFormatContext& context) 
@@ -72,10 +72,7 @@ public:
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 		, is_progressive_(true)
-		, source_([this](const safe_ptr<AVPacket>& packet)
-			{
-				return packet->stream_index == index_;
-			})
+		, source_([this](const video_decoder::source_element_t& element){return element.first->stream_index == index_;})
 		, target_(target)
 	{		
 		CASPAR_LOG(debug) << "[video_decoder] " << context.streams[index_]->codec->codec->long_name;
@@ -90,7 +87,6 @@ public:
 
 	~implementation()
 	{
-		send(is_running_, false);
 		agent::wait(this);
 	}
 
@@ -98,14 +94,14 @@ public:
 	{
 		try
 		{
-			send(is_running_, true);
-			while(is_running_.value())
+			while(true)
 			{
-				auto packet = receive(source_);
+				auto element = receive(source_);
+				auto packet = element.first;
 			
 				if(packet == loop_packet(index_))
 				{
-					send(target_, loop_video());
+					send(target_, target_element_t(loop_video(), ticket_t()));
 					continue;
 				}
 
@@ -132,8 +128,8 @@ public:
 				
 				// C-TODO: Avoid duplication.
 				// Need to dupliace frame data since avcodec_decode_video2 reuses it.
-				send(target_, dup_frame(make_safe_ptr(decoded_frame)));
-				Concurrency::wait(10);
+				send(target_, target_element_t(dup_frame(make_safe_ptr(decoded_frame)), element.second));				
+				Context::Yield();
 			}
 		}
 		catch(...)
@@ -141,8 +137,7 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 		
-		send(is_running_, false),
-		send(target_, eof_video());
+		send(target_, target_element_t(eof_video(), ticket_t()));
 
 		done();
 	}

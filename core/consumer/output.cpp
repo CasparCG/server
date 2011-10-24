@@ -95,7 +95,7 @@ public:
 						
 	void execute(const output::source_element_t& element)
 	{	
-		auto frame = element->first;
+		auto frame = element.first;
 
 		{
 			critical_section::scoped_lock lock(mutex_);		

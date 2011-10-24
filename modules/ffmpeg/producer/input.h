@@ -22,6 +22,7 @@
 #include "util.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/concurrency/governor.h>
 
 #include <agents.h>
 #include <concrt.h>
@@ -49,7 +50,9 @@ class input : boost::noncopyable
 {
 public:
 	
-	typedef Concurrency::ITarget<safe_ptr<AVPacket>> target_t;
+	typedef std::pair<safe_ptr<AVPacket>, ticket_t> target_element_t;
+
+	typedef Concurrency::ITarget<target_element_t> target_t;
 
 	explicit input(target_t& target, 
 				   const safe_ptr<diagnostics::graph>& graph, 

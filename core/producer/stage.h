@@ -39,8 +39,8 @@ class stage : boost::noncopyable
 {
 public:
 	
-	typedef safe_ptr<std::pair<std::map<int, safe_ptr<basic_frame>>, ticket_t>> target_element_t;
-	typedef Concurrency::ITarget<target_element_t> target_t;
+	typedef std::pair<std::map<int, safe_ptr<basic_frame>>, ticket_t>	target_element_t;
+	typedef Concurrency::ITarget<target_element_t>						target_t;
 
 	explicit stage(target_t& target, governor& governor);
 

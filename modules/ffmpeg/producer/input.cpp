@@ -52,6 +52,8 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+
+#undef Yield
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
@@ -79,7 +81,8 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 	tbb::atomic<size_t>						packets_count_;
 	tbb::atomic<size_t>						packets_size_;
 
-	bool									stop_;
+	overwrite_buffer<bool>					is_running_;
+	governor								governor_;
 		
 public:
 	explicit implementation(input::target_t& target,
@@ -98,24 +101,31 @@ public:
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-		, stop_(false)
+		, governor_(4)
 	{		
 		packets_count_	= 0;
 		packets_size_	= 0;
 		nb_frames_		= 0;
 		nb_loops_		= 0;
 				
-		av_dump_format(format_context_.get(), 0, narrow(filename).c_str(), 0);
+		//av_dump_format(format_context_.get(), 0, narrow(filename).c_str(), 0);
 				
 		if(start_ > 0)			
 			seek_frame(start_);
 								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
 	}
+
+	~implementation()
+	{
+		if(is_running_.value())
+			stop();
+	}
 	
 	void stop()
 	{
-		stop_ = true;
+		send(is_running_, false);
+		governor_.cancel();
 		agent::wait(this);
 	}
 	
@@ -123,14 +133,19 @@ public:
 	{
 		try
 		{
-			while(!stop_)
+			send(is_running_, true);
+			while(is_running_.value())
 			{
 				auto packet = read_next_packet();
 				if(!packet)
 					break;
+				
+				if(packet->stream_index != default_stream_index_)
+					Concurrency::asend(target_, input::target_element_t(packet, governor_.acquire()));
+				else
+					Concurrency::asend(target_, input::target_element_t(packet, ticket_t()));
 
-				Concurrency::asend(target_, make_safe_ptr(packet));
-				Concurrency::wait(20);
+				Context::Yield();
 			}
 		}
 		catch(...)
@@ -139,7 +154,7 @@ public:
 		}	
 	
 		BOOST_FOREACH(auto stream, streams_)
-			Concurrency::send(target_, eof_packet(stream->index));	
+			Concurrency::send(target_, input::target_element_t(eof_packet(stream->index), ticket_t()));	
 
 		done();
 	}
@@ -218,7 +233,7 @@ public:
 		packet->size = 0;
 
 		BOOST_FOREACH(auto stream, streams_)
-			Concurrency::asend(target_, loop_packet(stream->index));	
+			Concurrency::asend(target_, input::target_element_t(loop_packet(stream->index), ticket_t()));	
 
 		graph_->add_tag("seek");		
 	}		
