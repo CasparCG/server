@@ -1259,7 +1259,7 @@ bool InfoCommand::DoExecute()
 	}
 	else
 	{
-		replyString << TEXT("200 INFO OK\r\n");
+		replyString << TEXT("201 INFO OK\r\n");
 		for(size_t n = 0; n < channels_.size(); ++n)
 			GenerateChannelInfo(n, channels_[n], replyString);
 		replyString << TEXT("\r\n");
@@ -1280,7 +1280,7 @@ bool ClsCommand::DoExecute()
 		col = still
 	*/
 	std::wstringstream replyString;
-	replyString << TEXT("200 CLS OK\r\n");
+	replyString << TEXT("202 CLS OK\r\n");
 	replyString << ListMedia();
 	replyString << TEXT("\r\n");
 	SetReplyString(boost::to_upper_copy(replyString.str()));
@@ -1290,7 +1290,7 @@ bool ClsCommand::DoExecute()
 bool TlsCommand::DoExecute()
 {
 	std::wstringstream replyString;
-	replyString << TEXT("200 TLS OK\r\n");
+	replyString << TEXT("202 TLS OK\r\n");
 
 	replyString << ListTemplates();
 	replyString << TEXT("\r\n");
