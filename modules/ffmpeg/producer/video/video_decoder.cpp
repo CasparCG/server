@@ -42,9 +42,6 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <connect.h>
-#include <semaphore.h>
-
 #include <tbb/scalable_allocator.h>
 
 using namespace Concurrency;
@@ -86,7 +83,7 @@ public:
 		CASPAR_VERIFY(width_ > 0, ffmpeg_error());
 		CASPAR_VERIFY(height_ > 0, ffmpeg_error());
 
-		Concurrency::connect(source, source_);
+		source.link_target(&source_);
 
 		start();
 	}

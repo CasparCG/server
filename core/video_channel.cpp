@@ -28,13 +28,12 @@
 #include "mixer/mixer.h"
 #include "producer/stage.h"
 
-#include <common/concurrency/executor.h>
+#include <common/concurrency/governor.h>
 #include <common/diagnostics/graph.h>
 
 #include "mixer/gpu/ogl_device.h"
 
 #include <agents_extras.h>
-#include <semaphore.h>
 
 #include <boost/timer.hpp>
 
@@ -48,12 +47,12 @@ namespace caspar { namespace core {
 
 struct video_channel::implementation : boost::noncopyable
 {
-	unbounded_buffer<safe_ptr<message<std::map<int, safe_ptr<basic_frame>>>>>	stage_frames_;
-	unbounded_buffer<safe_ptr<message<safe_ptr<read_frame>>>>					mixer_frames_;
+	unbounded_buffer<safe_ptr<std::pair<std::map<int, safe_ptr<basic_frame>>, ticket_t>>>	stage_frames_;
+	unbounded_buffer<safe_ptr<std::pair<safe_ptr<read_frame>, ticket_t>>>					mixer_frames_;
 	
 	const video_format_desc				format_desc_;
 	
-	safe_ptr<semaphore>					semaphore_;
+	governor							governor_;
 	safe_ptr<caspar::core::output>		output_;
 	safe_ptr<caspar::core::mixer>		mixer_;
 	safe_ptr<caspar::core::stage>		stage_;
@@ -67,10 +66,10 @@ public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
 		: graph_(diagnostics::create_graph(narrow(print()), false))
 		, format_desc_(format_desc)
-		, semaphore_(make_safe<semaphore>(3))
+		, governor_(3)
 		, output_(new caspar::core::output(mixer_frames_, format_desc))
 		, mixer_(new caspar::core::mixer(stage_frames_, mixer_frames_, format_desc, ogl))
-		, stage_(new caspar::core::stage(stage_frames_, semaphore_))	
+		, stage_(new caspar::core::stage(stage_frames_, governor_))	
 	{
 		graph_->add_guide("produce-time", 0.5f);	
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));

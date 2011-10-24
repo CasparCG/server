@@ -48,11 +48,11 @@ struct stage::implementation : public agent, public boost::noncopyable
 	Concurrency::critical_section				mutex_;
 	stage::target_t&							target_;
 	std::map<int, layer>						layers_;	
-	safe_ptr<semaphore>							semaphore_;
+	governor&									governor_;
 public:
-	implementation(stage::target_t& target, const safe_ptr<semaphore>& semaphore)  
+	implementation(stage::target_t& target, governor& governor)  
 		: target_(target)
-		, semaphore_(semaphore)
+		, governor_(governor)
 	{
 		start();
 	}
@@ -60,7 +60,7 @@ public:
 	~implementation()
 	{
 		send(is_running_, false);
-		semaphore_->release();
+		governor_.cancel();
 		agent::wait(this);
 	}
 
@@ -84,7 +84,7 @@ public:
 					});
 				}
 
-				send(target_, make_safe<message<decltype(frames)>>(frames, token(semaphore_)));
+				send(target_, stage::target_element_t(std::make_pair(frames, governor_.acquire())));
 			}
 			catch(...)
 			{
@@ -223,7 +223,7 @@ public:
 
 };
 
-stage::stage(target_t& target, const safe_ptr<semaphore>& semaphore) : impl_(new implementation(target, semaphore)){}
+stage::stage(target_t& target, governor& governor) : impl_(new implementation(target, governor)){}
 void stage::swap(stage& other){impl_->swap(other);}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}

@@ -21,7 +21,7 @@
 
 #include "../consumer/frame_consumer.h"
 
-#include <common/concurrency/message.h>
+#include <common/concurrency/governor.h>
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
@@ -35,7 +35,8 @@ class video_channel_context;
 class output : boost::noncopyable
 {
 public:
-	typedef Concurrency::ISource<safe_ptr<message<safe_ptr<read_frame>>>> source_t;
+	typedef safe_ptr<std::pair<safe_ptr<core::read_frame>, ticket_t>>	source_element_t;
+	typedef Concurrency::ISource<source_element_t>						source_t;
 
 	explicit output(source_t& source, const video_format_desc& format_desc);
 

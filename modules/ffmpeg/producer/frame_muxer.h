@@ -9,7 +9,6 @@
 #include <boost/noncopyable.hpp>
 
 #include <agents.h>
-#include <semaphore.h>
 
 #include <vector>
 

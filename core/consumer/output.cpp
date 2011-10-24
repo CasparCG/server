@@ -52,8 +52,8 @@ struct output::implementation
 	
 	high_prec_timer timer_;
 
-	critical_section								mutex_;
-	call<safe_ptr<message<safe_ptr<read_frame>>>>	output_;
+	critical_section				mutex_;
+	call<output::source_element_t>	output_;
 		
 public:
 	implementation(output::source_t& source, const video_format_desc& format_desc) 
@@ -93,9 +93,9 @@ public:
 		}
 	}
 						
-	void execute(const safe_ptr<message<safe_ptr<read_frame>>>& msg)
+	void execute(const output::source_element_t& element)
 	{	
-		auto frame = msg->value();
+		auto frame = element->first;
 
 		{
 			critical_section::scoped_lock lock(mutex_);		

@@ -37,7 +37,6 @@
 
 #include <agents.h>
 #include <concrt_extras.h>
-#include <semaphore.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
