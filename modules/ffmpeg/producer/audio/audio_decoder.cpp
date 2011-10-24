@@ -92,6 +92,7 @@ public:
 			
 				if(packet == loop_packet(index_))
 				{
+					avcodec_flush_buffers(codec_context_.get());
 					send(target_, audio_decoder::target_element_t(loop_audio(), ticket_t()));
 					continue;
 				}

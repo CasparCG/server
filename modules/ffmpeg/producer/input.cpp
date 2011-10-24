@@ -140,11 +140,12 @@ public:
 				if(!packet)
 					break;
 				
-				if(packet->stream_index != default_stream_index_)
-					Concurrency::asend(target_, input::target_element_t(packet, governor_.acquire()));
-				else
-					Concurrency::asend(target_, input::target_element_t(packet, ticket_t()));
+				ticket_t ticket;
 
+				if(packet->stream_index != default_stream_index_)
+					ticket = governor_.acquire();
+
+				Concurrency::asend(target_, input::target_element_t(packet, ticket));
 				Context::Yield();
 			}
 		}

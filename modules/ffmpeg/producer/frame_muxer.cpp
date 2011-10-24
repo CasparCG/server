@@ -95,7 +95,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		}
 
 		auto element = receive(video_source_);
-		auto video = element.first;
+		auto video	 = element.first;
 
 		if(video == eof_video())
 			return write_element_t(nullptr, ticket_t());	
@@ -105,11 +105,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		{
 			if(!display_mode_.has_value())
 				initialize_display_mode(*video);
-
-			auto format = video->format;
-			if(video->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
-				video->format = PIX_FMT_GRAY8;
-
+			
 			filter_.value()->push(video);
 			while(true)
 			{
@@ -117,7 +113,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				if(!frame)
 					break;	
 
-				frame->format = format;
 				video_frames_.push(write_element_t(make_write_frame(this, video, frame_factory_, 0), element.second));
 			}
 		}
@@ -135,7 +130,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		}
 		
 		auto element = receive(audio_source_);
-		auto audio = element.first;
+		auto audio	 = element.first;
 
 		if(audio == eof_audio())
 			return audio_element_t(nullptr, ticket_t());	

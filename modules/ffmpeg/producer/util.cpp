@@ -15,6 +15,7 @@
 
 #include <common/exception/exceptions.h>
 #include <common/utility/assert.h>
+#include <common/memory/memcpy.h>
 
 #include <ppl.h>
 
@@ -195,7 +196,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			// Copy line by line since ffmpeg sometimes pads each line.
 			Concurrency::parallel_for(0, static_cast<int>(desc.planes[n].height), [&](size_t y)
 			{
-				memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+				fast_memcpy_small(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 			});
 
 			write->commit(n);

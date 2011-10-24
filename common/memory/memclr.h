@@ -19,9 +19,7 @@
 */
 #pragma once
 
-#include <assert.h>
-
-#include <cstring>
+#include "../utility/assert.h"
 
 #include <ppl.h>
 
@@ -31,7 +29,8 @@ namespace internal {
 
 static void* fast_memclr(void* dest, size_t count)
 {
-	assert(dest != nullptr);
+	CASPAR_ASSERT(dest != nullptr);
+	CASPAR_ASSERT(reinterpret_cast<int>(dest) % 16 == 0);
 	
 	size_t rest = count % 2048;
 	count -= rest;
