@@ -356,7 +356,7 @@ safe_ptr<core::audio_buffer> eof_audio()
 safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index)
 {	
 	AVCodec* decoder;
-	index = THROW_ON_ERROR3(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "", ffmpeg_stream_not_found);
+	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "");
 	THROW_ON_ERROR2(avcodec_open(context.streams[index]->codec, decoder), "");
 	return safe_ptr<AVCodecContext>(context.streams[index]->codec, avcodec_close);
 }
