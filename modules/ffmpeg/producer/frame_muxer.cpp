@@ -41,8 +41,8 @@ namespace caspar { namespace ffmpeg {
 	
 struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopyable
 {		
-	typedef	std::pair<std::shared_ptr<core::write_frame>, ticket_t>		write_element_t;
-	typedef	std::pair<std::shared_ptr<core::audio_buffer>, ticket_t>	audio_element_t;
+	typedef	std::pair<safe_ptr<core::write_frame>, ticket_t>	write_element_t;
+	typedef	std::pair<safe_ptr<core::audio_buffer>, ticket_t>	audio_element_t;
 
 	frame_muxer2::video_source_t* video_source_;
 	frame_muxer2::audio_source_t* audio_source_;
@@ -87,25 +87,26 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		agent::wait(this);
 	}
 				
-	std::shared_ptr<core::write_frame> receive_video(ticket_t& tickets)
+	safe_ptr<core::write_frame> receive_video(ticket_t& tickets)
 	{	
 		if(!video_frames_.empty())
 		{
 			auto video_frame = video_frames_.front();
 			video_frames_.pop();
 			boost::range::push_back(tickets, video_frame.second);
-			if(!video_frame.first)
-				eof_ = true;
 			return video_frame.first;
 		}
 
 		auto element = receive(video_source_);
 		auto video	 = element.first;
 
-		if(video == eof_video())
-			video_frames_.push(write_element_t(nullptr, ticket_t()));	
+		if(eof_ || video == eof_video())
+		{
+			eof_ = true;
+			return make_safe<core::write_frame>(this);		
+		}
 		else if(video == empty_video())
-			video_frames_.push(write_element_t(make_safe<core::write_frame>(this), ticket_t()));		
+			return make_safe<core::write_frame>(this);		
 		else if(video != loop_video())
 		{
 			if(!display_mode_.has_value())
@@ -126,18 +127,19 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			auto audio_buffer = audio_buffers_.front();
 			audio_buffers_.pop();
 			boost::range::push_back(tickets, audio_buffer.second);
-			if(!audio_buffer.first)
-				eof_ = true;
 			return audio_buffer.first;
 		}
 		
 		auto element = receive(audio_source_);
 		auto audio	 = element.first;
 
-		if(audio == eof_audio())
-			audio_buffers_.push(audio_element_t(nullptr, ticket_t()));
+		if(eof_ || audio == eof_audio())
+		{
+			eof_ = true;
+			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
+		}
 		else if(audio == empty_audio())		
-			audio_data_.resize(audio_data_.size() + format_desc_.audio_samples_per_frame, 0);
+			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
 		else if(audio != loop_audio())			
 			audio_data_.insert(audio_data_.end(), audio->begin(), audio->end());
 		
@@ -160,16 +162,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			while(!eof_)
 			{
 				ticket_t tickets;
-
-				auto audio = receive_audio(tickets);
-				if(eof_)
-					break;				
 				
 				auto video = receive_video(tickets);
-				if(eof_)
-					break;				
-
-				video->audio_data() = std::move(*audio);
+				video->audio_data() = std::move(*receive_audio(tickets));
 
 				switch(display_mode_.value())
 				{
@@ -183,15 +178,11 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 					}
 				case display_mode::duplicate:					
 					{						
-						auto video2 = make_safe<core::write_frame>(*video);				
-						send(target_, frame_muxer2::target_element_t(std::move(video), std::move(tickets)));
-						
-						auto audio2	= receive_audio(tickets);
-						if(audio2)
-						{
-							video2->audio_data() = std::move(*audio2);
-							send(target_, frame_muxer2::target_element_t(std::move(video2), std::move(tickets)));
-						}
+						auto video2 = make_safe<core::write_frame>(*video);	
+						video2->audio_data() = std::move(*receive_audio(tickets));
+
+						send(target_, frame_muxer2::target_element_t(std::move(video), std::move(tickets)));						
+						send(target_, frame_muxer2::target_element_t(std::move(video2), std::move(tickets)));
 
 						break;
 					}
@@ -205,15 +196,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				case display_mode::deinterlace_bob_reinterlace:
 				case display_mode::interlace:					
 					{					
-						auto frame = safe_ptr<core::basic_frame>(video);
-
 						auto video2 = receive_video(tickets);
-						auto frame2 = core::basic_frame::empty();
-
-						if(video2)						
-							frame2 = safe_ptr<core::basic_frame>(video2);			
-						
-						frame = core::basic_frame::interlace(std::move(frame), std::move(frame2), format_desc_.field_mode);	
+												
+						auto frame = core::basic_frame::interlace(std::move(video), std::move(video2), format_desc_.field_mode);	
 						send(target_, frame_muxer2::target_element_t(std::move(frame), std::move(tickets)));
 
 						break;
