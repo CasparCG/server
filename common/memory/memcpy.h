@@ -114,7 +114,7 @@ static safe_ptr<T> fast_memdup(const T* source, size_t count)
 		
 	try
 	{
-		fast_memcpy(dest8, source8-source_align, count);
+		fast_memcpy(dest8, source8-source_align, count+source_align);
 	}
 	catch(...)
 	{
