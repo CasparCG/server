@@ -296,7 +296,7 @@ int main(int argc, wchar_t* argv[])
 	}	
 	
 	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
-	Sleep(100); // CAPSAR_LOG is asynchronous. Try to get text in correct order.
+	Sleep(500); // CAPSAR_LOG is asynchronous. Try to get text in correct order.
 	system("pause");
 	return 0;
 }
