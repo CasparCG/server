@@ -89,6 +89,27 @@ public:
 	{
 		agent::wait(this);
 	}
+	
+	std::shared_ptr<AVFrame> decode(AVPacket& packet)
+	{
+		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
+
+		int frame_finished = 0;
+		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &packet), "[video_decocer]");
+
+		// 1 packet <=> 1 frame.
+		// If a decoder consumes less then the whole packet then something is wrong
+		// that might be just harmless padding at the end, or a problem with the
+		// AVParser or demuxer which puted more then one frame in a AVPacket.
+
+		if(frame_finished == 0)	
+			return nullptr;
+				
+		if(decoded_frame->repeat_pict > 0)
+			CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
+
+		return decoded_frame;
+	}
 
 	virtual void run()
 	{
@@ -100,7 +121,21 @@ public:
 				auto packet = element.first;
 			
 				if(packet == loop_packet(index_))
-				{
+				{					
+					if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+					{
+						AVPacket pkt;
+						av_init_packet(&pkt);
+						pkt.data = nullptr;
+						pkt.size = 0;
+
+						for(auto decoded_frame = decode(pkt); decoded_frame; decoded_frame = decode(pkt))
+						{
+							send(target_, target_element_t(dup_frame(make_safe_ptr(decoded_frame)), element.second));
+							Context::Yield();
+						}
+					}
+
 					avcodec_flush_buffers(codec_context_.get());
 					send(target_, target_element_t(loop_video(), ticket_t()));
 					continue;
@@ -109,21 +144,9 @@ public:
 				if(packet == eof_packet(index_))
 					break;
 
-				std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
-
-				int frame_finished = 0;
-				THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, packet.get()), "[video_decocer]");
-
-				// 1 packet <=> 1 frame.
-				// If a decoder consumes less then the whole packet then something is wrong
-				// that might be just harmless padding at the end, or a problem with the
-				// AVParser or demuxer which puted more then one frame in a AVPacket.
-
-				if(frame_finished == 0)	
+				auto decoded_frame = decode(*packet);
+				if(!decoded_frame)
 					continue;
-				
-				if(decoded_frame->repeat_pict > 0)
-					CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
 		
 				is_progressive_ = decoded_frame->interlaced_frame == 0;
 				
