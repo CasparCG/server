@@ -28,9 +28,9 @@
 
 namespace caspar {
 
-namespace internal {
+namespace detail {
 
-static void* fast_memcpy(void* dest, const void* source, size_t count)
+static void* fast_memcpy_aligned_impl(void* dest, const void* source, size_t count)
 {
 	CASPAR_ASSERT(dest != nullptr);
 	CASPAR_ASSERT(source != nullptr);
@@ -77,52 +77,123 @@ static void* fast_memcpy(void* dest, const void* source, size_t count)
 	return dest;
 }
 
-static void* fast_memcpy_small(void* dest, const void* source, size_t count)
+
+static void* fast_memcpy_unaligned_impl(void* dest, const void* source, size_t count)
+{
+	CASPAR_ASSERT(dest != nullptr);
+	CASPAR_ASSERT(source != nullptr);
+
+	if(count == 0)
+		return dest;
+
+	__asm   
+	{      
+		mov esi, source;          
+		mov edi, dest;    
+		mov ebx, count;     
+		shr ebx, 7;
+
+		cpy:             
+			movdqu xmm0, [esi+00h];       
+			movdqu xmm1, [esi+10h];      
+			movdqu xmm2, [esi+20h];         
+			movdqu xmm3, [esi+30h];   
+
+			movdqu [edi+00h], xmm0;
+			movdqu [edi+10h], xmm1;
+			movdqu [edi+20h], xmm2;    
+			movdqu [edi+30h], xmm3;
+
+			movdqu xmm4, [esi+40h];
+			movdqu xmm5, [esi+50h];
+			movdqu xmm6, [esi+60h];
+			movdqu xmm7, [esi+70h];  
+
+			movdqu [edi+40h], xmm4; 
+			movdqu [edi+50h], xmm5;      
+			movdqu [edi+60h], xmm6;    
+			movdqu [edi+70h], xmm7;    
+
+			lea edi, [edi+80h];       
+			lea esi, [esi+80h];      
+
+			dec ebx;      
+		jnz cpy;  
+	}   
+	return dest;
+}
+
+static void* fast_memcpy_small_aligned(char* dest8, const char* source8, size_t count)
 {   
 	size_t rest = count & 127;
 	count &= ~127;
 
-	internal::fast_memcpy(reinterpret_cast<char*>(dest), reinterpret_cast<const char*>(source), count);   
-	return memcpy(reinterpret_cast<char*>(dest)+count,  reinterpret_cast<const char*>(source)+count, rest);
+	fast_memcpy_aligned_impl(dest8, source8, count);   
+
+	return memcpy(dest8+count,  source8+count, rest);
 }
 
-}
-
-static void* fast_memcpy(void* dest, const void* source, size_t count)
+static void* fast_memcpy_small_unaligned(char* dest8, const char* source8, size_t count)
 {   
-	if((reinterpret_cast<int>(source) & 15) || (reinterpret_cast<int>(dest) & 15) || count < 128)
-		return memcpy(reinterpret_cast<char*>(dest),  reinterpret_cast<const char*>(source), count);
-	
-	size_t rest = count & 511;
-	count &= ~511;
+	size_t rest = count & 127;
+	count &= ~127;
 
-	Concurrency::parallel_for<int>(0, count / 512, [&](size_t n)
+	fast_memcpy_unaligned_impl(dest8, source8, count);   
+
+	return memcpy(dest8+count,  source8+count, rest);
+}
+
+static void* fast_memcpy_aligned(void* dest, const void* source, size_t count)
+{   
+	auto dest8			= reinterpret_cast<char*>(dest);
+	auto source8		= reinterpret_cast<const char*>(source);
+		
+	size_t rest = count & 2047;
+	count &= ~2047;
+
+	Concurrency::parallel_for<size_t>(0, count / 2048, [&](size_t n)
 	{       
-		internal::fast_memcpy(reinterpret_cast<char*>(dest) + n*512, reinterpret_cast<const char*>(source) + n*512, 512);   
+		detail::fast_memcpy_aligned_impl(dest8 + n*2048, source8 + n*2048, 2048);   
 	});
 
-	return internal::fast_memcpy_small(reinterpret_cast<char*>(dest)+count,  reinterpret_cast<const char*>(source)+count, rest);
+	return detail::fast_memcpy_small_aligned(dest8+count, source8+count, rest);
+}
+
+static void* fast_memcpy_unaligned(void* dest, const void* source, size_t count)
+{   
+	auto dest8			= reinterpret_cast<char*>(dest);
+	auto source8		= reinterpret_cast<const char*>(source);
+		
+	size_t rest = count & 2047;
+	count &= ~2047;
+
+	Concurrency::parallel_for<size_t>(0, count / 2048, [&](size_t n)
+	{       
+		detail::fast_memcpy_unaligned_impl(dest8 + n*2048, source8 + n*2048, 2048);   
+	});
+
+	return detail::fast_memcpy_small_unaligned(dest8+count, source8+count, rest);
+}
+
 }
 
 template<typename T>
-static safe_ptr<T> fast_memdup(const T* source, size_t count)
-{   	
-	auto dest			= reinterpret_cast<T*>(scalable_aligned_malloc(count + 16, 32));
-	auto dest8			= reinterpret_cast<char*>(dest);
-	auto source8		= reinterpret_cast<const char*>(source);	
-	auto source_align	= reinterpret_cast<int>(source) & 15;
-		
-	try
-	{
-		fast_memcpy(dest8, source8-source_align, count+source_align);
-	}
-	catch(...)
-	{
-		scalable_free(dest);
-		throw;
-	}
+T* fast_memcpy(T* dest, const void* source, size_t count)
+{   
+	if((reinterpret_cast<int>(source) & 15) || (reinterpret_cast<int>(dest) & 15))
+		return reinterpret_cast<T*>(detail::fast_memcpy_unaligned(dest, source, count));
+	else
+		return reinterpret_cast<T*>(detail::fast_memcpy_aligned(dest, source, count));
+}
 
-	return safe_ptr<T>(reinterpret_cast<T*>(dest8+source_align), [dest](T*){scalable_free(dest);});
+template<typename T>
+safe_ptr<T> fast_memdup(const T* source, size_t count)
+{   	
+	auto source_align	= reinterpret_cast<int>(source) & 15;
+	auto dest8			= reinterpret_cast<char*>(scalable_aligned_malloc(count + source_align, 32));
+	auto source8		= reinterpret_cast<const char*>(source);	
+	detail::fast_memcpy_aligned(dest8, source8-source_align, count+source_align);
+	return safe_ptr<T>(reinterpret_cast<T*>(dest8+source_align), [dest8](T*){scalable_free(dest8);});
 }
 
 

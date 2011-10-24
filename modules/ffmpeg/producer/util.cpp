@@ -193,11 +193,18 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			auto decoded          = decoded_frame->data[n];
 			auto decoded_linesize = decoded_frame->linesize[n];
 				
-			// Copy line by line since ffmpeg sometimes pads each line.
-			Concurrency::parallel_for(0, static_cast<int>(desc.planes[n].height), [&](size_t y)
+			if(decoded_linesize != static_cast<int>(plane.width))
 			{
-				fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-			});
+				// Copy line by line since ffmpeg sometimes pads each line.
+				Concurrency::parallel_for<size_t>(0, desc.planes[n].height, [&](size_t y)
+				{
+					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+				});
+			}
+			else
+			{
+				fast_memcpy(result, decoded, plane.size);
+			}
 
 			write->commit(n);
 		}
