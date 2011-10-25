@@ -32,7 +32,6 @@
 #include <common/log/log.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
-#include <common/memory/memclr.h>
 
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
@@ -43,7 +42,6 @@
 #include <ppl.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
 #include <boost/timer.hpp>
 
 #if defined(_MSC_VER)
@@ -171,9 +169,9 @@ public:
 	
 class decklink_producer_proxy : public Concurrency::agent, public core::frame_producer
 {		
-	Concurrency::bounded_buffer<ffmpeg::frame_muxer2::video_source_element_t>	video_frames_;
-	Concurrency::bounded_buffer<ffmpeg::frame_muxer2::audio_source_element_t>	audio_buffers_;
-	Concurrency::bounded_buffer<ffmpeg::frame_muxer2::target_element_t>			muxed_frames_;
+	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::video_source_element_t>	video_frames_;
+	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::audio_source_element_t>	audio_buffers_;
+	Concurrency::overwrite_buffer<ffmpeg::frame_muxer2::target_element_t>		muxed_frames_;
 
 	const core::video_format_desc		format_desc_;
 	const size_t						device_index_;
@@ -189,9 +187,7 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 public:
 
 	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
-		: video_frames_(1)
-		, audio_buffers_(1)
-		, muxed_frames_(1)
+		: muxed_frames_(1)
 		, format_desc_(format_desc)
 		, device_index_(device_index)
 		, last_frame_(core::basic_frame::empty())
@@ -250,7 +246,7 @@ public:
 				~co_init() {CoUninitialize();}
 			} init;
 			
-			Concurrency::overwrite_buffer<frame_packet> input_buffer(2);
+			Concurrency::overwrite_buffer<frame_packet> input_buffer;
 
 			std::unique_ptr<decklink_producer> producer;
 			{				
