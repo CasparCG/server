@@ -56,7 +56,7 @@ void configure(const std::string& filename)
 	{
 		std::string initialPath = boost::filesystem::initial_path().file_string();
 	
-		boost::property_tree::read_xml(initialPath + "\\" + filename, pt);
+		boost::property_tree::read_xml(initialPath + "\\" + filename, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
 		auto paths = pt.get_child("configuration.paths");
 		media = widen(paths.get("media-path", initialPath + "\\media\\"));
