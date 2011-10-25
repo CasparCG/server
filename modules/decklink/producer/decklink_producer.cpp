@@ -169,6 +169,7 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 {		
 	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::video_source_element_t>	video_frames_;
 	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::audio_source_element_t>	audio_buffers_;
+	Concurrency::overwrite_buffer<ffmpeg::frame_muxer2::target_element_t>		muxed_frames_;
 
 	const core::video_format_desc		format_desc_;
 	const size_t						device_index_;
@@ -184,11 +185,12 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 public:
 
 	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
-		: format_desc_(format_desc)
+		: muxed_frames_(1)
+		, format_desc_(format_desc)
 		, device_index_(device_index)
 		, last_frame_(core::basic_frame::empty())
 		, length_(length)
-		, muxer_(&video_frames_, &audio_buffers_, format_desc.fps, frame_factory)
+		, muxer_(&video_frames_, &audio_buffers_, muxed_frames_, format_desc.fps, frame_factory)
 		, is_running_(true)
 	{
 		agent::start();
@@ -206,7 +208,8 @@ public:
 
 		try
 		{
-			last_frame_ = frame = muxer_.receive();
+			auto frame_element = Concurrency::receive(muxed_frames_);
+			last_frame_ = frame = frame_element.first;
 		}
 		catch(Concurrency::operation_timed_out&)
 		{		
