@@ -171,6 +171,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				auto video = receive_video(tickets);
 				video->audio_data() = std::move(*receive_audio(tickets));
 
+				if(eof_)
+					break;
+
 				switch(display_mode_.value())
 				{
 				case display_mode::simple:			
