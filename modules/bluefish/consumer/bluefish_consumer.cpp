@@ -55,7 +55,7 @@ struct bluefish_consumer : boost::noncopyable
 
 	const std::wstring					model_name_;
 
-	std::shared_ptr<diagnostics::graph> graph_;
+	safe_ptr<diagnostics::graph>		graph_;
 	boost::timer						frame_timer_;
 	boost::timer						tick_timer_;
 	boost::timer						sync_timer_;	
@@ -85,13 +85,14 @@ public:
 	{
 		executor_.set_capacity(core::consumer_buffer_depth());
 
-		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->add_guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("sync-time", diagnostics::color(0.5f, 1.0f, 0.2f));
 		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
 			
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 

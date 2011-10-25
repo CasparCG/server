@@ -57,25 +57,25 @@ namespace caspar { namespace ffmpeg {
 		
 struct ffmpeg_producer : public core::frame_producer
 {	
-	const std::wstring												filename_;
-	const int														start_;
-	const bool														loop_;
-	const size_t													length_;
+	const std::wstring														filename_;
+	const int																start_;
+	const bool																loop_;
+	const size_t															length_;
 	
-	call<input::target_element_t>									throw_away_;
-	unbounded_buffer<input::target_element_t>						packets_;
+	call<input::target_element_t>											throw_away_;
+	unbounded_buffer<input::target_element_t>								packets_;
 	std::shared_ptr<unbounded_buffer<frame_muxer2::video_source_element_t>>	video_;
 	std::shared_ptr<unbounded_buffer<frame_muxer2::audio_source_element_t>>	audio_;
-	unbounded_buffer<frame_muxer2::target_element_t>				frames_;
+	unbounded_buffer<frame_muxer2::target_element_t>						frames_;
 		
-	const safe_ptr<diagnostics::graph>								graph_;
+	const safe_ptr<diagnostics::graph>										graph_;
 					
-	input															input_;	
-	std::unique_ptr<frame_muxer2>									muxer_;
-	std::shared_ptr<video_decoder>									video_decoder_;
-	std::shared_ptr<audio_decoder>									audio_decoder_;	
+	input																	input_;	
+	std::unique_ptr<frame_muxer2>											muxer_;
+	std::shared_ptr<video_decoder>											video_decoder_;
+	std::shared_ptr<audio_decoder>											audio_decoder_;	
 
-	safe_ptr<core::basic_frame>										last_frame_;
+	safe_ptr<core::basic_frame>												last_frame_;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, size_t length) 
@@ -84,7 +84,6 @@ public:
 		, loop_(loop)
 		, length_(length)
 		, throw_away_([](const input::target_element_t&){})
-		, graph_(diagnostics::create_graph("", false))
 		, input_(packets_, graph_, filename_, loop, start, length)
 		, last_frame_(core::basic_frame::empty())
 	{		
@@ -126,7 +125,8 @@ public:
 		muxer_.reset(new frame_muxer2(video_.get(), audio_.get(), frames_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
 				
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
-		graph_->start();
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
 
 		input_.start();
 	}
@@ -144,7 +144,7 @@ public:
 		{		
 			auto frame_element = Concurrency::receive(frames_, 10);
 			frame = last_frame_ = frame_element.first;
-			graph_->update_text(narrow(print()));
+			graph_->set_text(narrow(print()));
 		}
 		catch(operation_timed_out&)
 		{		

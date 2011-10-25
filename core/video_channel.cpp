@@ -64,8 +64,7 @@ struct video_channel::implementation : boost::noncopyable
 	
 public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
-		: graph_(diagnostics::create_graph(narrow(print()), false))
-		, format_desc_(format_desc)
+		: format_desc_(format_desc)
 		, governor_(3)
 		, output_(new caspar::core::output(mixer_frames_, format_desc))
 		, mixer_(new caspar::core::mixer(stage_frames_, mixer_frames_, format_desc, ogl))
@@ -76,7 +75,8 @@ public:
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("output-time", diagnostics::color(1.0f, 0.5f, 0.0f));
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 1.0f, 0.9f));
-		graph_->start();
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}

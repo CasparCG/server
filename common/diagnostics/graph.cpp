@@ -125,7 +125,8 @@ private:
 	
 	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
 	{
-		drawables_.push_back(drawable);
+		if(std::find(drawables_.begin(), drawables_.end(), drawable) == drawables_.end())
+			drawables_.push_back(drawable);
 	}
 	
 	static context& get_instance()
@@ -265,7 +266,7 @@ struct graph::implementation : public drawable
 		: name_(name)
 		, text_(name_){}
 	
-	void update_text(const std::string& value)
+	void set_text(const std::string& value)
 	{
 		text_ = value;
 	}
@@ -348,28 +349,26 @@ private:
 	implementation& operator=(implementation&);
 };
 	
-graph::graph(const std::string& name, bool start) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(name) : nullptr)
+graph::graph() : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation("") : nullptr)
 {
-	if(start)
-		graph::start();
+
 }
 
-void graph::start()
-{	
-	if(impl_)
-		context::register_drawable(impl_);
-}
-
-void graph::update_text(const std::string& value)
+void graph::set_text(const std::string& value)
 {
 	if(impl_)
 	{	
 		auto p = impl_;
 		context::begin_invoke([=]
 		{	
-			p->update_text(value);
+			p->set_text(value);
 		});
 	}
+}
+
+void graph::set_text(const std::wstring& value)
+{
+	set_text(narrow(value));
 }
 
 void graph::update_value(const std::string& name, double value)
@@ -428,11 +427,11 @@ void graph::add_guide(const std::string& name, double value)
 	}
 }
 
-safe_ptr<graph> create_graph(const std::string& name, bool start)
+void register_graph(const safe_ptr<graph>& graph)
 {
-	return safe_ptr<graph>(new graph(name, start));
+	if(graph->impl_)
+		context::register_drawable(graph->impl_);
 }
-
 //namespace v2
 //{	
 //	
