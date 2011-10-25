@@ -55,6 +55,7 @@ void __cdecl destroy_producer(LPVOID lpParam)
 		if(destruction->producer.unique())
 		{
 			Concurrency::scoped_oversubcription_token oversubscribe;
+			CASPAR_LOG(info) << "Destroying: " << destruction->producer->print();
 			destruction->producer.reset();
 		}
 		else
