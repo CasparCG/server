@@ -161,8 +161,7 @@ struct frame_muxer2::implementation : boost::noncopyable
 
 		return receive_audio(tickets);
 	}
-		
-	
+			
 	safe_ptr<core::basic_frame> receive_frame()
 	{
 		try
@@ -172,7 +171,7 @@ struct frame_muxer2::implementation : boost::noncopyable
 
 			ticket_t tickets;
 				
-			auto video = receive_video(tickets);
+			auto video			= receive_video(tickets);
 			video->audio_data() = std::move(*receive_audio(tickets));
 
 			if(eof_)
