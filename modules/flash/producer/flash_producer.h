@@ -32,4 +32,6 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 
 std::wstring find_template(const std::wstring& templateName);
 
+safe_ptr<core::frame_producer> create_flash_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
+
 }}

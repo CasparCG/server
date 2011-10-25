@@ -392,6 +392,25 @@ public:
 	}	
 };
 
+safe_ptr<core::frame_producer> create_flash_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params)
+{		
+	static const std::vector<std::wstring> extensions = boost::assign::list_of
+		(L"swf");
+
+	std::wstring filename = env::media_folder() + L"\\" + params[0];
+	
+	auto ext = boost::find_if(extensions, [&](const std::wstring& ex)
+	{					
+		return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename + L"." + ex));
+	});
+
+	if(ext == extensions.end())
+		return core::frame_producer::empty();
+		
+	auto path = filename + L"." + *ext;
+	return make_safe<flash_producer>(frame_factory, path, 0, 0);
+}
+
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	auto template_host = get_template_host(frame_factory->get_video_format_desc());
