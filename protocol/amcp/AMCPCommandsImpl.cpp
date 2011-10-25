@@ -82,52 +82,57 @@ namespace caspar { namespace protocol {
 
 using namespace core;
 
+std::wstring MediaInfo(const boost::filesystem::wpath& path)
+{
+	if(boost::filesystem::is_regular_file(path))
+	{
+		std::wstring clipttype = TEXT(" N/A ");
+		std::wstring extension = boost::to_upper_copy(path.extension());
+		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
+			extension == L"GIF" || extension == L"BMP")
+			clipttype = TEXT(" STILL ");
+		else if(extension == TEXT(".SWF") || extension == TEXT(".DV") || extension == TEXT(".MOV") || extension == TEXT(".MPG") || 
+				extension == TEXT(".AVI") || extension == TEXT(".FLV") || extension == TEXT(".F4V") || extension == TEXT(".MP4") ||
+				extension == L".M2V" || extension == L".H264" || extension == L".MKV" || extension == L".WMV" || extension == L".DIVX" || 
+				extension == L".XVID" || extension == L".OGG")
+			clipttype = TEXT(" MOVIE ");
+		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
+			clipttype = TEXT(" STILL ");
+
+		if(clipttype != TEXT(" N/A "))
+		{		
+			auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
+
+			auto relativePath = boost::filesystem::wpath(path.file_string().substr(env::media_folder().size()-1, path.file_string().size()));
+
+			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
+			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
+			auto writeTimeWStr = std::wstring(writeTimeStr.begin(), writeTimeStr.end());
+
+			auto sizeStr = boost::lexical_cast<std::wstring>(boost::filesystem::file_size(path));
+			sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
+			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
+				
+			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			if(str[0] == '\\' || str[0] == '/')
+				str = std::wstring(str.begin() + 1, str.end());
+
+			return std::wstring() + TEXT("\"") + str +
+					+ TEXT("\" ") + clipttype +
+					+ TEXT(" ") + sizeStr +
+					+ TEXT(" ") + writeTimeWStr +
+					+ TEXT("\r\n"); 	
+		}	
+	}
+	return L"";
+}
+
 std::wstring ListMedia()
 {	
 	std::wstringstream replyString;
-	for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
-	{			
-		if(boost::filesystem::is_regular_file(itr->path()))
-		{
-			std::wstring clipttype = TEXT(" N/A ");
-			std::wstring extension = boost::to_upper_copy(itr->path().extension());
-			if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
-				extension == L"GIF" || extension == L"BMP")
-				clipttype = TEXT(" STILL ");
-			else if(extension == TEXT(".SWF") || extension == TEXT(".DV") || extension == TEXT(".MOV") || extension == TEXT(".MPG") || 
-					extension == TEXT(".AVI") || extension == TEXT(".FLV") || extension == TEXT(".F4V") || extension == TEXT(".MP4") ||
-					extension == L".M2V" || extension == L".H264" || extension == L".MKV" || extension == L".WMV" || extension == L".DIVX" || 
-					extension == L".XVID" || extension == L".OGG")
-				clipttype = TEXT(" MOVIE ");
-			else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
-				clipttype = TEXT(" STILL ");
-
-			if(clipttype != TEXT(" N/A "))
-			{		
-				auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
-
-				auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::media_folder().size()-1, itr->path().file_string().size()));
-
-				auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
-				writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
-				auto writeTimeWStr = std::wstring(writeTimeStr.begin(), writeTimeStr.end());
-
-				auto sizeStr = boost::lexical_cast<std::wstring>(boost::filesystem::file_size(itr->path()));
-				sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
-				auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
-				
-				auto str = relativePath.replace_extension(TEXT("")).external_file_string();
-				if(str[0] == '\\' || str[0] == '/')
-					str = std::wstring(str.begin() + 1, str.end());
-
-				replyString << TEXT("\"") << str
-							<< TEXT("\" ") << clipttype 
-							<< TEXT(" ") << sizeStr
-							<< TEXT(" ") << writeTimeWStr
-							<< TEXT("\r\n"); 	
-			}	
-		}
-	}
+	for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)	
+		replyString << MediaInfo(itr->path());
+	
 	return boost::to_upper_copy(replyString.str());
 }
 
@@ -1212,30 +1217,34 @@ bool DataCommand::DoExecuteList()
 bool CinfCommand::DoExecute()
 {
 	std::wstringstream replyString;
+	
+	try
+	{
+		std::wstring info;
+		for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
+		{
+			auto path = itr->path();
+			auto file = path.replace_extension(L"").filename();
+			if(boost::iequals(file, _parameters.at(0)))
+				info += MediaInfo(itr->path()) + L"\r\n";
+		}
 
-	std::wstring filename = _parameters[0];
-
-	// TODO:
-
-	//FileInfo fileInfo;
-
-	//MediaManagerPtr pMediaManager = GetApplication()->FindMediaFile(filename, &fileInfo);
-	//if(pMediaManager != 0 && fileInfo.filetype.length() >0)	//File was found
-	//{
-	//	if(pMediaManager->getFileInfo(&fileInfo))
-	//	{
-	//		TCHAR numBuffer[32];
-	//		_ui64tot_s(fileInfo.size, numBuffer, 32, 10);
-
-	//		replyString << TEXT("201 CINF OK\r\n\"") << fileInfo.filename << TEXT("\" ") << fileInfo.type << TEXT("/") << fileInfo.filetype << TEXT("/") << fileInfo.encoding << TEXT(" ") << numBuffer << TEXT("\r\n");
-
-	//		SetReplyString(replyString.str());
-	//		return true;
-	//	}
-	//}
-
-	SetReplyString(TEXT("404 CINF ERROR\r\n"));
-	return false;
+		if(info.empty())
+		{
+			SetReplyString(TEXT("404 CINF ERROR\r\n"));
+			return false;
+		}
+		replyString << TEXT("202 INFO OK\r\n");
+		replyString << info;
+	}
+	catch(...)
+	{
+		SetReplyString(TEXT("404 CINF ERROR\r\n"));
+		return false;
+	}
+	
+	SetReplyString(replyString.str());
+	return true;
 }
 
 void GenerateChannelInfo(int index, const safe_ptr<core::video_channel>& pChannel, std::wstringstream& replyString)
@@ -1245,32 +1254,30 @@ void GenerateChannelInfo(int index, const safe_ptr<core::video_channel>& pChanne
 
 bool InfoCommand::DoExecute()
 {
-	std::wstringstream replyString;
-
-	if(_parameters.size() >= 1)
+	try
 	{
-		int channelIndex = _ttoi(_parameters[0].c_str())-1;
-
-		if(channelIndex < channels_.size())
+		std::wstringstream replyString;
+		if(_parameters.size() >= 1)
 		{
+			int channelIndex = _ttoi(_parameters.at(0).c_str())-1;
 			replyString << TEXT("201 INFO OK\r\n");
-			GenerateChannelInfo(channelIndex, channels_[channelIndex], replyString);
+			GenerateChannelInfo(channelIndex, channels_.at(channelIndex), replyString);
 		}
 		else
 		{
-			SetReplyString(TEXT("401 INFO ERROR\r\n"));
-			return false;
+			replyString << TEXT("200 INFO OK\r\n");
+			for(size_t n = 0; n < channels_.size(); ++n)
+				GenerateChannelInfo(n, channels_[n], replyString);
+			replyString << TEXT("\r\n");
 		}
+		SetReplyString(replyString.str());
 	}
-	else
+	catch(...)
 	{
-		replyString << TEXT("200 INFO OK\r\n");
-		for(size_t n = 0; n < channels_.size(); ++n)
-			GenerateChannelInfo(n, channels_[n], replyString);
-		replyString << TEXT("\r\n");
+		SetReplyString(TEXT("401 INFO ERROR\r\n"));
+		return false;
 	}
 
-	SetReplyString(replyString.str());
 	return true;
 }
 
