@@ -47,6 +47,10 @@
 
 #include <agents.h>
 
+#include <iterator>
+#include <vector>
+#include <string>
+
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
@@ -174,6 +178,17 @@ public:
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
 		
 		return nb_frames - start_;
+	}
+
+	virtual void param(const std::wstring& param)
+	{
+		typedef std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t>> wistream_iterator;
+		std::wstringstream str(param);
+		std::vector<std::wstring> params;
+		std::copy(wistream_iterator(str), wistream_iterator(), std::back_inserter(params));
+
+		if(boost::iequals(params.at(0), L"LOOP"))
+			input_.loop(boost::lexical_cast<bool>(params.at(1)));
 	}
 				
 	virtual std::wstring print() const
