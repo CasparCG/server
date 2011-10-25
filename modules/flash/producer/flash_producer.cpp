@@ -274,19 +274,19 @@ public:
 		, filename_(filename)		
 		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
-		, graph_(diagnostics::create_graph("flash", false))
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 		
-		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
+		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
 
 		Concurrency::send(last_frame_, core::basic_frame::empty());
 		
 		fps_		= 0;
 		is_running_ = true;
 
-		graph_->start();
 		start();
 	}
 
@@ -341,7 +341,7 @@ public:
 				}
 
 				fps_ = static_cast<int>(renderer.fps()*100.0);
-				graph_->update_text(narrow(print()));
+				graph_->set_text(narrow(print()));
 			}
 		}
 		catch(...)

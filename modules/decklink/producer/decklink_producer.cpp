@@ -97,7 +97,6 @@ public:
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
 		, device_index_(device_index)
-		, graph_ (diagnostics::create_graph("", false))
 	{		
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
@@ -105,7 +104,8 @@ public:
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
-		graph_->update_text(narrow(print()));
+		graph_->set_text(narrow(print()));
+		diagnostics::register_graph(graph_);
 
 		auto display_mode = get_display_mode(input_, format_desc_.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
 		
@@ -131,8 +131,6 @@ public:
 									<< boost::errinfo_api_function("StartStreams"));
 
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
-
-		graph_->start();
 	}
 
 	~decklink_producer()
