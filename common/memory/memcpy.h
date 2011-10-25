@@ -153,10 +153,10 @@ static void* fast_memcpy_aligned(void* dest, const void* source, size_t count)
 
 	Concurrency::parallel_for<size_t>(0, count / 2048, [&](size_t n)
 	{       
-		detail::fast_memcpy_aligned_impl(dest8 + n*2048, source8 + n*2048, 2048);   
+		fast_memcpy_aligned_impl(dest8 + n*2048, source8 + n*2048, 2048);   
 	});
 
-	return detail::fast_memcpy_small_aligned(dest8+count, source8+count, rest);
+	return fast_memcpy_small_aligned(dest8+count, source8+count, rest);
 }
 
 static void* fast_memcpy_unaligned(void* dest, const void* source, size_t count)
@@ -169,10 +169,10 @@ static void* fast_memcpy_unaligned(void* dest, const void* source, size_t count)
 
 	Concurrency::parallel_for<size_t>(0, count / 2048, [&](size_t n)
 	{       
-		detail::fast_memcpy_unaligned_impl(dest8 + n*2048, source8 + n*2048, 2048);   
+		fast_memcpy_unaligned_impl(dest8 + n*2048, source8 + n*2048, 2048);   
 	});
 
-	return detail::fast_memcpy_small_unaligned(dest8+count, source8+count, rest);
+	return fast_memcpy_small_unaligned(dest8+count, source8+count, rest);
 }
 
 }
