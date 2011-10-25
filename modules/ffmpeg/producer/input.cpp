@@ -71,7 +71,7 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 
 	safe_ptr<diagnostics::graph>			graph_;
 		
-	const bool								loop_;
+	tbb::atomic<bool>						loop_;
 	const size_t							start_;		
 	const size_t							length_;
 	size_t									frame_number_;
@@ -97,12 +97,12 @@ public:
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, streams_(format_context_->streams, format_context_->streams + format_context_->nb_streams)
 		, graph_(graph)
-		, loop_(loop)
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
 		, governor_(8)
 	{		
+		loop_			= loop;
 		packets_count_	= 0;
 		packets_size_	= 0;
 		nb_frames_		= 0;
@@ -289,6 +289,15 @@ void input::start()
 void input::stop()
 {
 	impl_->stop();
+}
+
+bool input::loop() const
+{
+	return impl_->loop_;
+}
+void input::loop(bool value)
+{
+	impl_->loop_ = value;
 }
 
 }}
