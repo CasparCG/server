@@ -71,9 +71,9 @@ struct ffmpeg_producer : public core::frame_producer
 	const safe_ptr<diagnostics::graph>										graph_;
 					
 	input																	input_;	
+	std::unique_ptr<video_decoder>											video_decoder_;
+	std::unique_ptr<audio_decoder>											audio_decoder_;	
 	std::unique_ptr<frame_muxer2>											muxer_;
-	std::shared_ptr<video_decoder>											video_decoder_;
-	std::shared_ptr<audio_decoder>											audio_decoder_;	
 
 	safe_ptr<core::basic_frame>												last_frame_;
 	
