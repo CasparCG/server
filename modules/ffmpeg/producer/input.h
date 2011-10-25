@@ -65,6 +65,9 @@ public:
 	
 	safe_ptr<AVFormatContext> context();
 
+	bool loop() const;
+	void loop(bool value);
+
 	void start();
 	void stop();
 private:

@@ -195,11 +195,16 @@ bool ParamCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto what = _parameters.at(2);
+		auto what = _parameters.at(0);
+
+		std::wstring param = _parameters2.at(1);
+		for(auto it = std::begin(_parameters2)+2; it != std::end(_parameters2); ++it)
+			param += L" " + *it;
+
 		if(what == L"B")
-			GetChannel()->stage()->background(GetLayerIndex()).get()->param(_parameters.at(3));
+			GetChannel()->stage()->background(GetLayerIndex()).get()->param(param);
 		else if(what == L"F")
-			GetChannel()->stage()->foreground(GetLayerIndex()).get()->param(_parameters.at(3));
+			GetChannel()->stage()->foreground(GetLayerIndex()).get()->param(param);
 	
 		CASPAR_LOG(info) << "Executed param: " <<  _parameters[0] << TEXT(" successfully");
 
