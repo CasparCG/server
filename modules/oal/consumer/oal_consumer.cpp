@@ -75,6 +75,8 @@ public:
 		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
 		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
 		Stop();
+		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
+		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
