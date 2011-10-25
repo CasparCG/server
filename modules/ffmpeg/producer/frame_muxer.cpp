@@ -39,14 +39,15 @@ using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
 	
-struct frame_muxer2::implementation : boost::noncopyable
+struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopyable
 {		
-	typedef	std::pair<std::shared_ptr<AVFrame>, ticket_t>		video_element_t;
+	typedef	std::pair<safe_ptr<AVFrame>, ticket_t>				video_element_t;
 	typedef	std::pair<safe_ptr<core::audio_buffer>, ticket_t>	audio_element_t;
 
 	frame_muxer2::video_source_t* video_source_;
 	frame_muxer2::audio_source_t* audio_source_;
 
+	ITarget<frame_muxer2::target_element_t>&		target_;
 	mutable single_assignment<display_mode::type>	display_mode_;
 	const double									in_fps_;
 	const core::video_format_desc					format_desc_;
@@ -65,19 +66,27 @@ struct frame_muxer2::implementation : boost::noncopyable
 	
 	implementation(frame_muxer2::video_source_t* video_source,
 				   frame_muxer2::audio_source_t* audio_source,
+				   frame_muxer2::target_t& target,
 				   double in_fps, 
 				   const safe_ptr<core::frame_factory>& frame_factory,
 				   const std::wstring& filter)
 		: video_source_(video_source)
 		, audio_source_(audio_source)
+		, target_(target)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
 		, frame_factory_(frame_factory)
 		, eof_(false)
 	{		
+		start();
 	}
-					
+
+	~implementation()
+	{
+		agent::wait(this);
+	}
+				
 	safe_ptr<core::write_frame> receive_video(ticket_t& tickets)
 	{	
 		if(!video_source_)
@@ -88,10 +97,10 @@ struct frame_muxer2::implementation : boost::noncopyable
 			auto video_frame = std::move(video_frames_.front());
 			video_frames_.pop();
 			boost::range::push_back(tickets, video_frame.second);
-			return make_write_frame(this, make_safe_ptr(video_frame.first), frame_factory_, 0);
+			return make_write_frame(this, video_frame.first, frame_factory_, 0);
 		}
 
-		auto element = Concurrency::receive(video_source_);
+		auto element = receive(video_source_);
 		auto video	 = element.first;
 		
 		if(video == loop_video())
@@ -107,13 +116,9 @@ struct frame_muxer2::implementation : boost::noncopyable
 			initialize_display_mode(*video);
 			
 		filter_.value()->push(video);
-		for(auto frame = filter_.value()->poll(); frame; frame = filter_.value()->poll())		
-		{
+		for(auto frame = filter_.value()->poll(); frame; frame = filter_.value()->poll())			
 			video_frames_.push(video_element_t(make_safe_ptr(frame), element.second));		
-			if(display_mode_.value() == display_mode::duplicate)
-				video_frames_.push(video_element_t(make_safe_ptr(frame), element.second));	
-		}
-
+		
 		return receive_video(tickets);
 	}
 	
@@ -130,7 +135,7 @@ struct frame_muxer2::implementation : boost::noncopyable
 			return audio_buffer.first;
 		}
 		
-		auto element = Concurrency::receive(audio_source_);
+		auto element = receive(audio_source_);
 		auto audio	 = element.first;
 
 		if(audio == loop_audio())
@@ -162,51 +167,70 @@ struct frame_muxer2::implementation : boost::noncopyable
 		return receive_audio(tickets);
 	}
 			
-	safe_ptr<core::basic_frame> receive_frame()
+	virtual void run()
 	{
 		try
 		{
-			if(eof_)
-				return core::basic_frame::eof();
-
-			ticket_t tickets;
-				
-			auto video			= receive_video(tickets);
-			video->audio_data() = std::move(*receive_audio(tickets));
-
-			if(eof_)
-				return core::basic_frame::eof();
-
-			switch(display_mode_.value())
+			while(!eof_)
 			{
-			case display_mode::simple:			
-			case display_mode::deinterlace:
-			case display_mode::deinterlace_bob:
-			case display_mode::duplicate:
+				ticket_t tickets;
+				
+				auto video = receive_video(tickets);
+				video->audio_data() = std::move(*receive_audio(tickets));
+
+				if(eof_)
+					break;
+
+				switch(display_mode_.value())
 				{
-					return video;
-				}		
-			case display_mode::half:						
-				{				
-					receive_video(tickets);				
-					return video;
+				case display_mode::simple:			
+				case display_mode::deinterlace:
+				case display_mode::deinterlace_bob:
+					{
+						send(target_, frame_muxer2::target_element_t(std::move(video), std::move(tickets)));
+
+						break;
+					}
+				case display_mode::duplicate:					
+					{						
+						auto video2 = make_safe<core::write_frame>(*video);	
+						video2->audio_data() = std::move(*receive_audio(tickets));
+
+						send(target_, frame_muxer2::target_element_t(std::move(video), std::move(tickets)));						
+						send(target_, frame_muxer2::target_element_t(std::move(video2), std::move(tickets)));
+
+						break;
+					}
+				case display_mode::half:						
+					{								
+						send(target_, frame_muxer2::target_element_t(std::move(video), std::move(tickets)));
+						receive_video(tickets);
+
+						break;
+					}
+				case display_mode::deinterlace_bob_reinterlace:
+				case display_mode::interlace:					
+					{					
+						auto video2 = receive_video(tickets);
+												
+						auto frame = core::basic_frame::interlace(std::move(video), std::move(video2), format_desc_.field_mode);	
+						send(target_, frame_muxer2::target_element_t(std::move(frame), std::move(tickets)));
+
+						break;
+					}
+				default:	
+					BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
 				}
-			case display_mode::deinterlace_bob_reinterlace:
-			case display_mode::interlace:					
-				{					
-					auto video2 = receive_video(tickets);												
-					return core::basic_frame::interlace(std::move(video), std::move(video2), format_desc_.field_mode);	
-				}
-			default:	
-				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
-			}
+			}	
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			eof_ = true;
-			return core::basic_frame::eof();
 		}
+		
+		send(target_, frame_muxer2::target_element_t(core::basic_frame::eof(), ticket_t()));
+
+		done();
 	}
 
 	void initialize_display_mode(AVFrame& frame)
@@ -273,21 +297,17 @@ struct frame_muxer2::implementation : boost::noncopyable
 
 frame_muxer2::frame_muxer2(video_source_t* video_source, 
 						   audio_source_t* audio_source,
+						   target_t& target,
 						   double in_fps, 
 						   const safe_ptr<core::frame_factory>& frame_factory,
 						   const std::wstring& filter)
-	: impl_(new implementation(video_source, audio_source, in_fps, frame_factory, filter))
+	: impl_(new implementation(video_source, audio_source, target, in_fps, frame_factory, filter))
 {
 }
 
 int64_t frame_muxer2::calc_nb_frames(int64_t nb_frames) const
 {
 	return impl_->calc_nb_frames(nb_frames);
-}
-
-safe_ptr<core::basic_frame> frame_muxer2::receive()
-{
-	return impl_->receive_frame();
 }
 
 }}
