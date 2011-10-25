@@ -358,6 +358,7 @@
     <ClInclude Include="ffmpeg_error.h" />
     <ClInclude Include="producer\audio\audio_decoder.h" />
     <ClInclude Include="producer\audio\audio_resampler.h" />
+    <ClInclude Include="producer\display_mode.h" />
     <ClInclude Include="producer\ffmpeg_producer.h" />
     <ClInclude Include="producer\filter\filter.h" />
     <ClInclude Include="producer\filter\parallel_yadif.h" />
