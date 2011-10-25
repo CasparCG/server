@@ -116,25 +116,19 @@ public:
 						
 			const float prev_volume = static_cast<float>(prev.volume);
 			const float next_volume = static_cast<float>(next.volume);
-			const float delta		= 1.0f/static_cast<float>(format_desc_.audio_samples_per_frame/format_desc_.audio_channels);
-						
-			auto alpha_ps	= _mm_setr_ps(0.0f, 0.0f, delta, delta);
-			auto delta2_ps	= _mm_set_ps1(delta*2.0f);
-			auto prev_ps	= _mm_set_ps1(prev_volume);
-			auto next_ps	= _mm_set_ps1(next_volume);	
+									
+			auto alpha		= (next_volume-prev_volume)/static_cast<float>(format_desc_.audio_samples_per_frame/format_desc_.audio_channels);
+			auto alpha_ps	= _mm_set_ps1(alpha*2.0f);
+			auto volume_ps	= _mm_setr_ps(prev_volume, prev_volume, prev_volume+alpha, prev_volume+alpha);
 
 			for(size_t n = 0; n < format_desc_.audio_samples_per_frame/4; ++n)
 			{		
-				auto next2_ps		= _mm_mul_ps(next_ps, alpha_ps);
-				auto prev2_ps		= _mm_sub_ps(prev_ps, _mm_mul_ps(prev_ps, alpha_ps));
-				auto volume_ps		= _mm_add_ps(next2_ps, prev2_ps);
-
 				auto sample_ps		= _mm_cvtepi32_ps(_mm_load_si128(reinterpret_cast<__m128i*>(&item.audio_data[n*4])));
 				auto res_sample_ps	= _mm_load_ps(&intermediate[n*4]);											
 				sample_ps			= _mm_mul_ps(sample_ps, volume_ps);	
 				res_sample_ps		= _mm_add_ps(sample_ps, res_sample_ps);	
 
-				alpha_ps			= _mm_add_ps(alpha_ps, delta2_ps);
+				volume_ps			= _mm_add_ps(volume_ps, alpha_ps);
 
 				_mm_store_ps(&intermediate[n*4], res_sample_ps);
 			}
