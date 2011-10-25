@@ -139,7 +139,14 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		auto audio	 = element.first;
 
 		if(audio == loop_audio())
+		{
+			if(!audio_data_.empty())
+			{
+				CASPAR_LOG(info) << L"[frame_muxer] Truncating audio: " << audio_data_.size();
+				audio_data_.clear();
+			}
 			return receive_audio(tickets);
+		}
 
 		if(eof_ || audio == eof_audio())
 		{
