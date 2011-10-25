@@ -51,12 +51,11 @@ struct color
 
 class graph
 {
-	friend safe_ptr<graph> create_graph(const std::string& name, bool start);
-	graph(const std::string& name, bool start = true);
-	graph(const printer& parent_printer, bool start = true);
+	friend void register_graph(const safe_ptr<graph>& graph);
 public:
-	void start();
-	void update_text(const std::string& value);
+	graph();
+	void set_text(const std::string& value);
+	void set_text(const std::wstring& value);
 	void update_value(const std::string& name, double value);
 	void set_value(const std::string& name, double value);
 	void set_color(const std::string& name, color c);
@@ -67,8 +66,8 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-safe_ptr<graph> create_graph(const std::string& name, bool start = true);
-	
+void register_graph(const safe_ptr<graph>& graph);
+
 //namespace v2
 //{
 //	

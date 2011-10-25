@@ -41,9 +41,10 @@ ogl_device::ogl_device()
 	, pattern_(nullptr)
 	, attached_texture_(0)
 	, active_shader_(0)
-	, graph_(diagnostics::create_graph("gpu", true))
 {
 	graph_->set_color("fence", diagnostics::color(1.0f, 0.0f, 0.0f));
+	graph_->set_text("gpu");
+	diagnostics::register_graph(graph_);
 
 	std::fill(binded_textures_.begin(), binded_textures_.end(), 0);
 	std::fill(viewport_.begin(), viewport_.end(), 0);

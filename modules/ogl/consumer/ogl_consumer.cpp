@@ -136,7 +136,6 @@ public:
 		, screen_height_(format_desc.height)
 		, square_width_(format_desc.square_width)
 		, square_height_(format_desc.square_height)
-		, graph_(diagnostics::create_graph(narrow(print())))
 		, input_buffer_(core::consumer_buffer_depth()-1)
 		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
@@ -145,6 +144,8 @@ public:
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
 									
 		DISPLAY_DEVICE d_device = {sizeof(d_device), 0};			
 		std::vector<DISPLAY_DEVICE> displayDevices;
