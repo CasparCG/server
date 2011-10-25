@@ -1234,8 +1234,8 @@ bool CinfCommand::DoExecute()
 			SetReplyString(TEXT("404 CINF ERROR\r\n"));
 			return false;
 		}
-		replyString << TEXT("202 INFO OK\r\n");
-		replyString << info;
+		replyString << TEXT("200 INFO OK\r\n");
+		replyString << info << L"\r\n";
 	}
 	catch(...)
 	{
