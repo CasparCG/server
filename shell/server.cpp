@@ -114,7 +114,7 @@ struct server::implementation : boost::noncopyable
 						channels_.back()->output()->add(index++, decklink::create_consumer(xml_consumer.second));				
 					//else if(name == "file")					
 					//	channels_.back()->output()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
-					else if(name == "audio")
+					else if(name == "system-audio")
 						channels_.back()->output()->add(index++, oal::create_consumer());		
 					else if(name != "<xmlcomment>")
 						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
