@@ -66,7 +66,6 @@ struct ffmpeg_producer : public core::frame_producer
 	unbounded_buffer<input::target_element_t>								packets_;
 	std::shared_ptr<unbounded_buffer<frame_muxer2::video_source_element_t>>	video_;
 	std::shared_ptr<unbounded_buffer<frame_muxer2::audio_source_element_t>>	audio_;
-	unbounded_buffer<frame_muxer2::target_element_t>						frames_;
 		
 	const safe_ptr<diagnostics::graph>										graph_;
 					
@@ -122,7 +121,7 @@ public:
 		CASPAR_VERIFY(video_decoder_ || audio_decoder_, ffmpeg_error());
 		
 		packets_.link_target(&throw_away_);
-		muxer_.reset(new frame_muxer2(video_.get(), audio_.get(), frames_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
+		muxer_.reset(new frame_muxer2(video_.get(), audio_.get(), video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
 				
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		graph_->set_text(print());
@@ -133,7 +132,7 @@ public:
 
 	~ffmpeg_producer()
 	{
-		input_.stop();	
+		input_.stop();
 	}
 						
 	virtual safe_ptr<core::basic_frame> receive(int hints)
@@ -142,8 +141,7 @@ public:
 		
 		try
 		{		
-			auto frame_element = Concurrency::receive(frames_, 10);
-			frame = last_frame_ = frame_element.first;
+			frame = last_frame_ = muxer_->receive();
 			graph_->set_text(narrow(print()));
 		}
 		catch(operation_timed_out&)
