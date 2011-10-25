@@ -250,7 +250,7 @@ public:
 				~co_init() {CoUninitialize();}
 			} init;
 			
-			Concurrency::bounded_buffer<frame_packet> input_buffer(2);
+			Concurrency::overwrite_buffer<frame_packet> input_buffer(2);
 
 			std::unique_ptr<decklink_producer> producer;
 			{				
