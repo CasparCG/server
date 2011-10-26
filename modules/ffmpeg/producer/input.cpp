@@ -111,13 +111,6 @@ public:
 		agent::start();
 	}
 
-	~implementation()
-	{
-		is_running_ = false;
-		event_.set();
-		agent::wait(this);
-	}
-		
 	void stop()
 	{
 		is_running_ = false;
