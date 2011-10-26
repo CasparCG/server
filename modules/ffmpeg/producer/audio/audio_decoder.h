@@ -19,12 +19,16 @@
 */
 #pragma once
 
+#include "../util.h"
+
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <common/memory/safe_ptr.h>
+#include <common/concurrency/governor.h>
 
 #include <boost/noncopyable.hpp>
 
+#include <agents.h>
 #include <vector>
 
 struct AVPacket;
@@ -38,20 +42,24 @@ struct video_format_desc;
 
 }
 
-#include <agents.h>
-
 namespace ffmpeg {
 
 class audio_decoder : boost::noncopyable
 {
 public:
-	typedef Concurrency::ISource<safe_ptr<AVPacket>> source_t;
 
-	explicit audio_decoder(source_t& source, const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
+	typedef safe_ptr<AVPacket>						source_element_t;
+	typedef safe_ptr<core::audio_buffer>			target_element_t;
+
+	typedef Concurrency::ISource<source_element_t>&	source_t;
+	typedef Concurrency::ITarget<target_element_t>&	target_t;
 	
-	std::shared_ptr<core::audio_buffer> poll();
+	explicit audio_decoder(source_t& source, target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc);
 	
+	int64_t nb_frames() const;
+
 private:
+	
 	struct implementation;
 	safe_ptr<implementation> impl_;
 };
