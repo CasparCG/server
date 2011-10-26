@@ -65,7 +65,11 @@ struct ffmpeg_producer : public core::frame_producer
 	const safe_ptr<core::frame_factory>				frame_factory_;
 	const core::video_format_desc					format_desc_;
 	
-	unbounded_buffer<std::shared_ptr<AVPacket>>		packets_;
+	unbounded_buffer<safe_ptr<AVPacket>>			packets_;
+	unbounded_buffer<safe_ptr<AVPacket>>			video_packets_;
+	unbounded_buffer<safe_ptr<AVPacket>>			audio_packets_;
+	unbounded_buffer<safe_ptr<core::basic_frame>>	frames_;
+
 	input											input_;	
 	video_decoder									video_decoder_;
 	audio_decoder									audio_decoder_;	
@@ -89,10 +93,10 @@ public:
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
 		, input_(packets_, graph_, filename_, loop, start, length)
-		, video_decoder_(input_.context(), frame_factory)
-		, audio_decoder_(input_.context(), frame_factory->get_video_format_desc())
+		, video_decoder_(video_packets_, input_.context(), frame_factory)
+		, audio_decoder_(audio_packets_, input_.context(), frame_factory->get_video_format_desc())
 		, fps_(video_decoder_.fps())
-		, muxer_(fps_, frame_factory, filter)
+		, muxer_(frames_, fps_, frame_factory, filter)
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
@@ -118,13 +122,13 @@ public:
 		
 		frame_timer_.restart();
 		
-		for(int n = 0; n < 64 && muxer_.empty(); ++n)
+		for(int n = 0; n < 64 && !try_receive(frames_, frame); ++n)
 			decode_frame(hints);
 		
 		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 
-		if(!muxer_.empty())
-			frame = last_frame_ = muxer_.pop();	
+		if(frame != core::basic_frame::late())
+			last_frame_ = frame;	
 		else
 		{
 			if(input_.eof())
@@ -142,48 +146,45 @@ public:
 	{
 		return disable_audio(last_frame_);
 	}
-
-	void push_packets()
-	{
-		for(int n = 0; n < 16 && ((!muxer_.video_ready() && !video_decoder_.ready()) ||	(!muxer_.audio_ready() && !audio_decoder_.ready())); ++n) 
-		{
-			std::shared_ptr<AVPacket> pkt;
-			if(try_receive(packets_, pkt))
-			{
-				video_decoder_.push(pkt);
-				audio_decoder_.push(pkt);
-			}
-		}
-	}
-
+	
 	void decode_frame(int hints)
 	{
-		push_packets();
-		
-		parallel_invoke(
-		[&]
+		if(!muxer_.need_video())
 		{
-			if(muxer_.video_ready())
-				return;
-
-			auto video_frames = video_decoder_.poll();
-			BOOST_FOREACH(auto& video, video_frames)	
+			std::shared_ptr<AVFrame> video;
+			while(!video)
 			{
-				is_progressive_ = video ? video->interlaced_frame == 0 : is_progressive_;
-				muxer_.push(video, hints);	
+				auto pkt = create_packet();
+				if(try_receive(packets_, pkt))
+				{
+					send(video_packets_, pkt);
+					send(audio_packets_, pkt);
+				}
+				video = video_decoder_.poll();
+				Context::Yield();
 			}
-		},
-		[&]
-		{
-			if(muxer_.audio_ready())
-				return;
-					
-			auto audio_samples = audio_decoder_.poll();
-			BOOST_FOREACH(auto& audio, audio_samples)
-				muxer_.push(audio);				
-		});
+			is_progressive_ = video ? video->interlaced_frame == 0 : is_progressive_;
+			muxer_.push(make_safe_ptr(video), hints);	
+		}
 
-		muxer_.commit();
+		Context::Yield();
+		
+		if(!muxer_.need_audio())
+		{
+			std::shared_ptr<core::audio_buffer> audio;
+			while(!audio)
+			{
+				auto pkt = create_packet();
+				if(try_receive(packets_, pkt))
+				{
+					send(video_packets_, pkt);
+					send(audio_packets_, pkt);
+				}
+				audio = audio_decoder_.poll();
+				Context::Yield();
+			}
+			muxer_.push(make_safe_ptr(audio));	
+		}
 	}
 
 	virtual int64_t nb_frames() const 

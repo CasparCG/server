@@ -38,16 +38,18 @@ namespace core {
 	class write_frame;
 }
 
+#include <agents.h>
+
 namespace ffmpeg {
 
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory);
+	typedef Concurrency::ISource<safe_ptr<AVPacket>> source_t;
+
+	explicit video_decoder(source_t& source, const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory);
 	
-	void push(const std::shared_ptr<AVPacket>& packet);
-	bool ready() const;
-	std::vector<std::shared_ptr<AVFrame>> poll();
+	std::shared_ptr<AVFrame> poll();
 	
 	size_t width() const;
 	size_t height() const;

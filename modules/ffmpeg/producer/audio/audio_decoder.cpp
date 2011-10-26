@@ -45,21 +45,25 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+using namespace Concurrency;
+
 namespace caspar { namespace ffmpeg {
 	
 struct audio_decoder::implementation : boost::noncopyable
 {	
+	audio_decoder::source_t&									source_;
 	int															index_;
-	std::shared_ptr<AVCodecContext>								codec_context_;		
+	const safe_ptr<AVCodecContext>								codec_context_;		
 	const core::video_format_desc								format_desc_;
 	audio_resampler												resampler_;
 
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
-	std::queue<std::shared_ptr<AVPacket>>						packets_;
+	std::queue<safe_ptr<AVPacket>>								packets_;
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
-		: codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
+	explicit implementation(audio_decoder::source_t& source, const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
+		: source_(source)
+		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
 		, format_desc_(format_desc)	
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
 		, resampler_(format_desc_.audio_channels,    codec_context_->channels,
@@ -67,38 +71,34 @@ public:
 												 AV_SAMPLE_FMT_S32,				 codec_context_->sample_fmt)
 	{			   
 	}
-
-	void push(const std::shared_ptr<AVPacket>& packet)
-	{			
-		if(packet && packet->stream_index != index_)
-			return;
-
-		packets_.push(packet);
-	}	
-	
-	std::vector<std::shared_ptr<core::audio_buffer>> poll()
+		
+	std::shared_ptr<core::audio_buffer> poll()
 	{
-		std::vector<std::shared_ptr<core::audio_buffer>> result;
-
+		auto packet = create_packet();
+		
 		if(packets_.empty())
-			return result;
-				
-		auto packet = packets_.front();
-
-		if(packet)		
 		{
-			result.push_back(decode(*packet));
-			if(packet->size == 0)					
-				packets_.pop();
+			if(!try_receive(source_, packet) || packet->stream_index != index_)
+				return nullptr;
+			else
+				packets_.push(packet);
 		}
-		else			
+		
+		packet = packets_.front();
+										
+		std::shared_ptr<core::audio_buffer> audio;
+		if(packet == loop_packet())			
 		{	
-			avcodec_flush_buffers(codec_context_.get());
-			result.push_back(nullptr);
+			avcodec_flush_buffers(codec_context_.get());		
+			audio = loop_audio();
+		}	
+		else
+			audio = decode(*packet);
+		
+		if(packet->size == 0)					
 			packets_.pop();
-		}		
 
-		return result;
+		return audio;
 	}
 	
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
@@ -121,16 +121,9 @@ public:
 
 		return std::make_shared<core::audio_buffer>(samples, samples + n_samples);
 	}
-
-	bool ready() const
-	{
-		return !packets_.empty();
-	}
 };
 
-audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
-void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
-bool audio_decoder::ready() const{return impl_->ready();}
-std::vector<std::shared_ptr<core::audio_buffer>> audio_decoder::poll(){return impl_->poll();}
+audio_decoder::audio_decoder(audio_decoder::source_t& source, const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(source, context, format_desc)){}
+std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
 
 }}
