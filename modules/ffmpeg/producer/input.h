@@ -19,14 +19,19 @@
 */
 #pragma once
 
+#include "util.h"
+
 #include <common/memory/safe_ptr.h>
+#include <common/concurrency/governor.h>
+
+#include <agents.h>
+#include <concrt.h>
 
 #include <memory>
 #include <string>
 
 #include <boost/noncopyable.hpp>
-
-#include <agents.h>
+#include <boost/range/iterator_range.hpp>
 
 struct AVFormatContext;
 struct AVPacket;
@@ -40,23 +45,33 @@ class graph;
 }
 	 
 namespace ffmpeg {
-
+				
 class input : boost::noncopyable
 {
 public:
-	typedef Concurrency::ITarget<safe_ptr<AVPacket>> target_t;
+	
+	typedef safe_ptr<AVPacket> target_element_t;
 
-	explicit input(target_t& target, const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start = 0, size_t length = std::numeric_limits<size_t>::max());
+	typedef Concurrency::ITarget<target_element_t> target_t;
 
-	bool eof() const;
-
-	void stop();
-
+	explicit input(target_t& target, 
+				   const safe_ptr<diagnostics::graph>& graph, 
+				   const std::wstring& filename, bool loop, 
+				   size_t start = 0, 
+				   size_t length = std::numeric_limits<size_t>::max());
+		
 	size_t nb_frames() const;
 	size_t nb_loops() const;
-
+	
 	safe_ptr<AVFormatContext> context();
+
+	bool loop() const;
+	void loop(bool value);
+
+	void start();
+	void stop();
 private:
+	friend struct implemenation;
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };

@@ -24,7 +24,6 @@
 #include "../stdafx.h"
 
 #include "input.h"
-
 #include "util.h"
 #include "../ffmpeg_error.h"
 
@@ -34,13 +33,10 @@
 #include <common/exception/exceptions.h>
 #include <common/exception/win32_exception.h>
 
-#include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
 
-#include <boost/range/algorithm.hpp>
-#include <boost/thread/condition_variable.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
+#include <agents.h>
+#include <concrt_extras.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -56,108 +52,114 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <concrt_extras.h>
 
+#undef Yield
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
 
-static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
-static const size_t MAX_BUFFER_COUNT = 100;
+static const size_t MAX_PACKETS_SIZE = 16 * 1000000;
+static const size_t MAX_PACKETS_COUNT = 50;
 	
-struct input::implementation : public agent, boost::noncopyable
-{		
-	const safe_ptr<AVFormatContext>		format_context_;	
-	const safe_ptr<diagnostics::graph>	graph_;
+struct input::implementation : public Concurrency::agent, boost::noncopyable
+{
+	input::target_t&						target_;
 
-	input::target_t&					target_;
+	const std::wstring						filename_;
+	const safe_ptr<AVFormatContext>			format_context_; // Destroy this last
+	int										default_stream_index_;
+	const boost::iterator_range<AVStream**>	streams_;
 
-	const int							default_stream_index_;
+	safe_ptr<diagnostics::graph>			graph_;
 		
-	const std::wstring					filename_;
-	const bool							loop_;
-	const size_t						start_;		
-	const size_t						length_;
-	size_t								frame_number_;
-	
-	tbb::atomic<size_t>					buffer_size_;
-	tbb::atomic<size_t>					buffer_count_;
-	Concurrency::event					event_;
+	tbb::atomic<bool>						loop_;
+	const size_t							start_;		
+	const size_t							length_;
+	size_t									frame_number_;
+			
+	tbb::atomic<size_t>						nb_frames_;
+	tbb::atomic<size_t>						nb_loops_;	
+	tbb::atomic<size_t>						packets_count_;
+	tbb::atomic<size_t>						packets_size_;
+
+	tbb::atomic<bool>						is_running_;
+
+	Concurrency::event						event_;
 		
-	tbb::atomic<bool>					is_running_;
-
-	tbb::atomic<size_t>					nb_frames_;
-	tbb::atomic<size_t>					nb_loops_;
-
 public:
-	explicit implementation(input::target_t& target, const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
-		: format_context_(open_input(filename))
-		, graph_(graph)
-		, target_(target)
-		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
-		, loop_(loop)
+	explicit implementation(input::target_t& target,
+							const safe_ptr<diagnostics::graph>& graph, 
+							const std::wstring& filename, 
+							bool loop, 
+							size_t start,
+							size_t length)
+		: target_(target)
 		, filename_(filename)
+		, format_context_(open_input(filename))		
+		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
+		, streams_(format_context_->streams, format_context_->streams + format_context_->nb_streams)
+		, graph_(graph)
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-	{	
+	{		
 		event_.set();
-		
+		loop_			= loop;
+				
+		//av_dump_format(format_context_.get(), 0, narrow(filename).c_str(), 0);
+				
 		if(start_ > 0)			
 			seek_frame(start_);
 								
-		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
-
-		agent::start();
+		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
+				
+		is_running_ = true;
 	}
 
+	~implementation()
+	{
+		if(is_running_)
+			stop();
+	}
+	
 	void stop()
 	{
 		is_running_ = false;
 		event_.set();
 		agent::wait(this);
 	}
-
-	size_t nb_frames() const
-	{
-		return nb_frames_;
-	}
-
-	size_t nb_loops() const
-	{
-		return nb_loops_;
-	}
-
-private:
 	
 	virtual void run()
-	{		
+	{
+		win32_exception::install_handler();
+
 		try
-		{			
-			is_running_	= true;
-			while(is_running_)
-			{
-				read_next_packet();		
-				event_.wait();	
+		{
+			for(auto packet = read_next_packet(); packet && is_running_; packet = read_next_packet())
+			{				
+				Concurrency::asend(target_, make_safe_ptr(packet));
+				Context::Yield();
+				event_.wait();
 			}
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-		
-		is_running_ = false;
+		}	
+	
+		BOOST_FOREACH(auto stream, streams_)
+			Concurrency::send(target_, eof_packet(stream->index));	
+
 		done();
 	}
-			
-	void read_next_packet()
-	{				
-		auto packet = create_packet();
 
+	std::shared_ptr<AVPacket> read_next_packet()
+	{		
+		auto packet = create_packet();
+		
 		int ret = [&]() -> int
 		{
-			scoped_oversubcription_token oversubscribe;
+			Concurrency::scoped_oversubcription_token oversubscribe;
 			return av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
 		}();
 
@@ -165,7 +167,7 @@ private:
 		{
 			++nb_loops_;
 			frame_number_ = 0;
-			
+
 			if(loop_)
 			{
 				CASPAR_LOG(trace) << print() << " Looping.";
@@ -175,50 +177,43 @@ private:
 			else
 			{
 				CASPAR_LOG(trace) << print() << " Stopping.";
-				is_running_ = false;
+				return nullptr;
 			}
 		}
-		else
-		{		
-			THROW_ON_ERROR(ret, "av_read_frame", print());
 
-			if(packet->stream_index == default_stream_index_)
-			{
-				if(nb_loops_ == 0)
-					++nb_frames_;
-				++frame_number_;
-			}
+		THROW_ON_ERROR(ret, "av_read_frame", print());
 
-			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
+		if(packet->stream_index == default_stream_index_)
+		{
+			if(nb_loops_ == 0)
+				++nb_frames_;
+			++frame_number_;
+		}
+
+		THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
 				
-			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
-			auto size = packet->size;
-			auto data = packet->data;
+		// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
+		auto size = packet->size;
+		auto data = packet->data;			
+		
+		++packets_count_;
+		packets_size_ += size;
 
-			packet = safe_ptr<AVPacket>(packet.get(), [=](AVPacket*)
-			{
-				packet->size = size;
-				packet->data = data;
+		packet = safe_ptr<AVPacket>(packet.get(), [=](AVPacket*)
+		{
+			packet->size = size;
+			packet->data = data;
+			--packets_count_;
+			packets_size_ -= size;
+			event_.set();
+		});
 
-				buffer_size_ -= packet->size;
-				--buffer_count_;
-				event_.set();
-				graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-				graph_->update_value("buffer-count", (static_cast<double>(buffer_count_)+0.001)/MAX_BUFFER_COUNT);
-			});
-			
-			buffer_size_ += packet->size;
-			++buffer_count_;
-			if((buffer_size_ > MAX_BUFFER_SIZE || buffer_count_ > MAX_BUFFER_COUNT) && is_running_)
-				event_.reset();
-
-			send(target_, packet);
-				
-			graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-			graph_->update_value("buffer-count", (static_cast<double>(buffer_count_)+0.001)/MAX_BUFFER_COUNT);
-		}			
+		if(is_running_ && (packets_count_ > MAX_PACKETS_COUNT || packets_size_ > MAX_PACKETS_SIZE))
+			event_.reset();
+									
+		return packet;
 	}
-	
+
 	void seek_frame(int64_t frame, int flags = 0)
 	{  			
 		if(flags == AVSEEK_FLAG_BACKWARD)
@@ -234,11 +229,14 @@ private:
 		}
 
 		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());	
-	
-		Concurrency::asend(target_, loop_packet());	
+		auto packet = create_packet();
+		packet->size = 0;
+
+		BOOST_FOREACH(auto stream, streams_)
+			Concurrency::asend(target_, loop_packet(stream->index));	
 
 		graph_->add_tag("seek");		
-	}	
+	}		
 
 	bool is_eof(int ret)
 	{
@@ -246,6 +244,8 @@ private:
 			CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. " << nb_frames_;
 		if(ret == AVERROR_EOF)
 			CASPAR_LOG(trace) << print() << " Received EOF. " << nb_frames_;
+
+		CASPAR_VERIFY(ret >= 0 || ret == AVERROR_EOF || ret == AVERROR(EIO), ffmpeg_error() << source_info(narrow(print())));
 
 		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
@@ -256,11 +256,48 @@ private:
 	}
 };
 
-input::input(target_t& target, const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length)
-	: impl_(new implementation(target, graph, filename, loop, start, length)){}
-bool input::eof() const {return !impl_->is_running_;}
-safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
-size_t input::nb_frames() const {return impl_->nb_frames();}
-size_t input::nb_loops() const {return impl_->nb_loops();}
-void input::stop(){impl_->stop();}
+input::input(input::target_t& target,
+			 const safe_ptr<diagnostics::graph>& graph, 
+			 const std::wstring& filename, 
+			 bool loop, 
+			 size_t start, 
+			 size_t length)
+	: impl_(new implementation(target, graph, filename, loop, start, length))
+{
+}
+
+safe_ptr<AVFormatContext> input::context()
+{
+	return safe_ptr<AVFormatContext>(impl_->format_context_);
+}
+
+size_t input::nb_frames() const
+{
+	return impl_->nb_frames_;
+}
+
+size_t input::nb_loops() const 
+{
+	return impl_->nb_loops_;
+}
+
+void input::start()
+{
+	impl_->start();
+}
+
+void input::stop()
+{
+	impl_->stop();
+}
+
+bool input::loop() const
+{
+	return impl_->loop_;
+}
+void input::loop(bool value)
+{
+	impl_->loop_ = value;
+}
+
 }}
