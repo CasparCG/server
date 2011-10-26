@@ -9,14 +9,15 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_transform.h>
-#include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
 
+#include <common/concurrency/governor.h>
 #include <common/env.h>
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
+
+#include <boost/range/algorithm_ext/push_back.hpp>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -33,248 +34,207 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <boost/foreach.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
+#include <agents.h>
 
-#include <deque>
-#include <queue>
-#include <vector>
-
-using namespace caspar::core;
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
 	
-struct frame_muxer::implementation : boost::noncopyable
-{	
-	frame_muxer::target_t&							target_;
-	std::deque<std::queue<safe_ptr<write_frame>>>	video_streams_;
-	std::deque<core::audio_buffer>					audio_streams_;
-	std::deque<safe_ptr<basic_frame>>				frame_buffer_;
-	display_mode::type								display_mode_;
-	const double									in_fps_;
-	const video_format_desc							format_desc_;
-	bool											auto_transcode_;
+struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopyable
+{		
+	frame_muxer2::video_source_t* video_source_;
+	frame_muxer2::audio_source_t* audio_source_;
 
-	size_t											audio_sample_count_;
-	size_t											video_frame_count_;
-		
-	size_t											processed_audio_sample_count_;
-	size_t											processed_video_frame_count_;
+	ITarget<frame_muxer2::target_element_t>&			target_;
+	mutable single_assignment<display_mode::type>		display_mode_;
+	const double										in_fps_;
+	const core::video_format_desc						format_desc_;
+	const bool											auto_transcode_;
+	
+	mutable single_assignment<safe_ptr<filter>>			filter_;
+	const safe_ptr<core::frame_factory>					frame_factory_;
+			
+	core::audio_buffer									audio_data_;
+	
+	std::queue<frame_muxer2::video_source_element_t>	video_frames_;
+	std::queue<frame_muxer2::audio_source_element_t>	audio_buffers_;
 
-	filter											filter_;
-	safe_ptr<core::frame_factory>					frame_factory_;
-	std::wstring									filter_str_;
-		
-	implementation(frame_muxer::target_t& target, double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
-		: target_(target)
-		, video_streams_(1)
-		, audio_streams_(1)
-		, display_mode_(display_mode::invalid)
+	std::wstring										filter_str_;
+
+	governor											governor_;
+	tbb::atomic<bool>									is_running_;
+	
+	implementation(frame_muxer2::video_source_t* video_source,
+				   frame_muxer2::audio_source_t* audio_source,
+				   frame_muxer2::target_t& target,
+				   double in_fps, 
+				   const safe_ptr<core::frame_factory>& frame_factory,
+				   const std::wstring& filter)
+		: video_source_(video_source)
+		, audio_source_(audio_source)
+		, target_(target)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
-		, audio_sample_count_(0)
-		, video_frame_count_(0)
 		, frame_factory_(frame_factory)
-		, filter_str_(filter_str)
-	{
-	}
-
-	void push(const safe_ptr<AVFrame>& video_frame, int hints)
+		, governor_(2)
 	{		
-		if(video_frame == loop_video())
-		{	
-			CASPAR_LOG(debug) << L"video-frame-count: " << static_cast<float>(video_frame_count_);
-			video_frame_count_ = 0;
-			video_streams_.push_back(std::queue<safe_ptr<write_frame>>());
-			return;
-		}
-		
-		if(display_mode_ == display_mode::invalid)
-			initialize(*video_frame);
-						
-		if(hints & core::frame_producer::ALPHA_HINT)
-			video_frame->format = make_alpha_format(video_frame->format);
-		
-		auto format = video_frame->format;
-		if(video_frame->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
-			video_frame->format = PIX_FMT_GRAY8;
-
-		filter_.push(video_frame);
-		BOOST_FOREACH(auto& av_frame, filter_.poll_all())
-		{
-			av_frame->format = format;
-						
-			video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, hints));
-			++video_frame_count_;
-		}
-
-		if(video_streams_.back().size() > 8)
-			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
-		
-		commit();
+		is_running_ = true;
+		start();
 	}
 
-	void push(const safe_ptr<core::audio_buffer>& audio_samples)
+	~implementation()
 	{
-		if(audio_samples == loop_audio())	
-		{
-			CASPAR_LOG(debug) << L"audio-chunk-count: " << audio_sample_count_/format_desc_.audio_samples_per_frame;
-			audio_streams_.push_back(core::audio_buffer());
-			audio_sample_count_ = 0;
-			return;
-		}
-
-		audio_sample_count_ += audio_samples->size();
-
-		boost::range::push_back(audio_streams_.back(), *audio_samples);
-
-		if(audio_streams_.back().size() > 8*format_desc_.audio_samples_per_frame)
-			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
-
-		commit();
+		is_running_ = false;
+		governor_.cancel();
+		agent::wait(this);
 	}
-	
-	safe_ptr<core::write_frame> pop_video()
-	{
-		auto frame = video_streams_.front().front();
-		video_streams_.front().pop();
-		
-		return frame;
-	}
-
-	core::audio_buffer pop_audio()
-	{
-		auto begin = audio_streams_.front().begin();
-		auto end   = begin + format_desc_.audio_samples_per_frame;
-
-		auto samples = core::audio_buffer(begin, end);
-		audio_streams_.front().erase(begin, end);
-
-		return samples;
-	}
-	
-	bool need_video() const
-	{		
-		return video_streams_.size() > 1 || (video_streams_.size() >= audio_streams_.size() && need_video2());
-	}
-	
-	bool need_audio() const
-	{
-		return audio_streams_.size() > 1 || (audio_streams_.size() >= video_streams_.size() && need_audio2());
-	}
-
-	bool need_video2() const
-	{		
-		switch(display_mode_)
-		{
-		case display_mode::deinterlace_bob_reinterlace:					
-		case display_mode::interlace:					
-			return video_streams_.front().size() >= 2;
-		default:										
-			return !video_streams_.front().empty();
-		}
-	}
-	
-	bool need_audio2() const
-	{
-		switch(display_mode_)
-		{
-		case display_mode::duplicate:					
-			return audio_streams_.front().size()/2 >= format_desc_.audio_samples_per_frame;
-		default:										
-			return audio_streams_.front().size() >= format_desc_.audio_samples_per_frame;
-		}
-	}
-		
-	bool try_pop(safe_ptr<core::basic_frame>& frame)
-	{
-		commit();
-
-		if(frame_buffer_.empty())
-			return false;
-
-		frame = std::move(frame_buffer_.front());
-		frame_buffer_.pop_front();		
-		return true;
-	}
-
-	void commit()
-	{
-		if(video_streams_.size() > 1 && audio_streams_.size() > 1 && (!need_video2() || !need_audio2()))
-		{
-			if(!video_streams_.front().empty() || !audio_streams_.front().empty())
-				CASPAR_LOG(debug) << "Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
-
-			video_streams_.pop_front();
-			audio_streams_.pop_front();
-		}
-
-		if(!need_video2() || !need_audio2())
-			return;
-		
-		switch(display_mode_)
-		{
-		case display_mode::simple:
-		case display_mode::deinterlace_bob:
-		case display_mode::deinterlace:					
-			return simple();
-		case display_mode::duplicate:					
-			return duplicate();
-		case display_mode::half:						
-			return half();
-		case display_mode::interlace:
-		case display_mode::deinterlace_bob_reinterlace:	
-			return interlace();
-		default:										
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
-		}
-	}
-	
-	void simple()
-	{		
-		auto frame1 = pop_video();
-		frame1->audio_data() = pop_audio();
-		
-		send(target_, safe_ptr<basic_frame>(frame1));	
-	}
-
-	void duplicate()
-	{		
-		auto frame = pop_video();
-
-		auto frame1 = make_safe<core::write_frame>(*frame); // make a copy
-		frame1->audio_data() = pop_audio();
-
-		auto frame2 = frame;
-		frame2->audio_data() = pop_audio();
-		
-		send(target_, safe_ptr<basic_frame>(frame1));	
-		send(target_, safe_ptr<basic_frame>(frame2));	
-	}
-
-	void half()
-	{							
-		auto frame1 = pop_video();
-		frame1->audio_data() = pop_audio();
 				
-		video_streams_.front().pop(); // Throw away
+	safe_ptr<core::write_frame> receive_video()
+	{	
+		if(!video_source_)
+			return make_safe<core::write_frame>(this);	
+
+		if(!video_frames_.empty())
+		{
+			auto video_frame = std::move(video_frames_.front());
+			video_frames_.pop();
+			return make_write_frame(this, video_frame, frame_factory_, 0);
+		}
+
+		auto video	 = receive(video_source_);
 		
-		send(target_, safe_ptr<basic_frame>(frame1));	
+		if(video == loop_video())
+			return receive_video();
+
+		if(!is_running_ || video == eof_video())
+		{
+			is_running_ = false;
+			return make_safe<core::write_frame>(this);		
+		}	
+
+		if(!display_mode_.has_value())
+			initialize_display_mode(*video);
+			
+		filter_.value()->push(std::move(video));
+		for(auto frame = filter_.value()->poll(); frame; frame = filter_.value()->poll())			
+			video_frames_.push(make_safe_ptr(frame));		
+		
+		return receive_video();
 	}
 	
-	void interlace()
-	{				
-		auto frame1 = pop_video();
-		frame1->audio_data() = pop_audio();
-				
-		auto frame2 = pop_video();
+	safe_ptr<core::audio_buffer> receive_audio()
+	{		
+		if(!audio_source_)
+			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
+
+		if(!audio_buffers_.empty())
+		{
+			auto audio_buffer = std::move(audio_buffers_.front());
+			audio_buffers_.pop();
+			return audio_buffer;
+		}
 		
-		send(target_, core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode));		
+		auto audio	 = receive(audio_source_);
+
+		if(audio == loop_audio())
+		{
+			if(!audio_data_.empty())
+			{
+				CASPAR_LOG(info) << L"[frame_muxer] Truncating audio: " << audio_data_.size();
+				audio_data_.clear();
+			}
+			return receive_audio();
+		}
+
+		if(!is_running_ || audio == eof_audio())
+		{
+			is_running_ = false;
+			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
+		}		
+			
+		audio_data_.insert(audio_data_.end(), audio->begin(), audio->end());		
+		while(audio_data_.size() >= format_desc_.audio_samples_per_frame)
+		{
+			auto begin = audio_data_.begin(); 
+			auto end   = begin + format_desc_.audio_samples_per_frame;
+			auto audio = make_safe<core::audio_buffer>(begin, end);
+			audio_data_.erase(begin, end);
+			audio_buffers_.push(audio);
+		}
+
+		return receive_audio();
 	}
+			
+	virtual void run()
+	{
+		win32_exception::install_handler();
+
+		try
+		{
+			while(is_running_)
+			{	
+				auto ticket = governor_.acquire();
+
+				auto video = receive_video();
+				video->audio_data() = std::move(*receive_audio());
+
+				if(!is_running_)
+					break;
+
+				switch(display_mode_.value())
+				{
+				case display_mode::simple:			
+				case display_mode::deinterlace:
+				case display_mode::deinterlace_bob:
+					{
+						send(target_, frame_muxer2::target_element_t(std::move(video), ticket));
+
+						break;
+					}
+				case display_mode::duplicate:					
+					{						
+						auto video2 = make_safe<core::write_frame>(*video);	
+						video2->audio_data() = std::move(*receive_audio());
+
+						send(target_, frame_muxer2::target_element_t(std::move(video), ticket));						
+						send(target_, frame_muxer2::target_element_t(std::move(video2), ticket));
+
+						break;
+					}
+				case display_mode::half:						
+					{								
+						send(target_, frame_muxer2::target_element_t(std::move(video), ticket));
+						receive_video();
+
+						break;
+					}
+				case display_mode::deinterlace_bob_reinterlace:
+				case display_mode::interlace:					
+					{					
+						auto video2 = receive_video();
+												
+						auto frame = core::basic_frame::interlace(std::move(video), std::move(video2), format_desc_.field_mode);	
+						send(target_, frame_muxer2::target_element_t(std::move(frame), ticket));
+
+						break;
+					}
+				default:	
+					BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
+				}
+			}	
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 		
-	void initialize(AVFrame& frame)
+		send(target_, frame_muxer2::target_element_t(core::basic_frame::eof(), ticket_t()));
+
+		done();
+	}
+
+	void initialize_display_mode(AVFrame& frame)
 	{
 		auto display_mode = display_mode::invalid;
 
@@ -308,16 +268,16 @@ struct frame_muxer::implementation : boost::noncopyable
 			display_mode = display_mode::simple;
 		}
 			
-		filter_ = filter(filter_str_);
-		display_mode_ = display_mode;
+		send(filter_, make_safe<filter>(filter_str_));
 
 		CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode);
-	}
-		
 
+		send(display_mode_, display_mode);
+	}
+					
 	int64_t calc_nb_frames(int64_t nb_frames) const
 	{
-		switch(display_mode_) // Take into account transformation in run.
+		switch(display_mode_.value()) // Take into account transformation in run.
 		{
 		case display_mode::deinterlace_bob_reinterlace:
 		case display_mode::interlace:	
@@ -329,19 +289,26 @@ struct frame_muxer::implementation : boost::noncopyable
 			break;
 		}
 
-		if(is_double_rate(widen(filter_.filter_str()))) // Take into account transformations in filter.
+		if(is_double_rate(widen(filter_.value()->filter_str()))) // Take into account transformations in filter.
 			nb_frames *= 2;
 
 		return nb_frames;
 	}
 };
 
-frame_muxer::frame_muxer(target_t& target, double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
-	: impl_(new implementation(target, in_fps, frame_factory, filter_str)){}
-void frame_muxer::push(const safe_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
-void frame_muxer::push(const safe_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
-bool frame_muxer::need_video() const{return impl_->need_video();}
-bool frame_muxer::need_audio() const{return impl_->need_audio();}
-int64_t frame_muxer::calc_nb_frames(int64_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
+frame_muxer2::frame_muxer2(video_source_t* video_source, 
+						   audio_source_t* audio_source,
+						   target_t& target,
+						   double in_fps, 
+						   const safe_ptr<core::frame_factory>& frame_factory,
+						   const std::wstring& filter)
+	: impl_(new implementation(video_source, audio_source, target, in_fps, frame_factory, filter))
+{
+}
+
+int64_t frame_muxer2::calc_nb_frames(int64_t nb_frames) const
+{
+	return impl_->calc_nb_frames(nb_frames);
+}
 
 }}
