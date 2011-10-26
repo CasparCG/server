@@ -192,7 +192,10 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			auto result           = write->image_data(n).begin();
 			auto decoded          = decoded_frame->data[n];
 			auto decoded_linesize = decoded_frame->linesize[n];
-				
+			
+			CASPAR_ASSERT(decoded);
+			CASPAR_ASSERT(write->image_data(n).begin());
+
 			if(decoded_linesize != static_cast<int>(plane.width))
 			{
 				// Copy line by line since ffmpeg sometimes pads each line.
