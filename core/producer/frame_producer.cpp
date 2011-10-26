@@ -57,7 +57,7 @@ void __cdecl destroy_producer(LPVOID lpParam)
 		{
 			{
 				Concurrency::critical_section::scoped_lock lock(mutex);
-				Concurrency::wait(100);
+				Concurrency::wait(200);
 			}
 			Concurrency::scoped_oversubcription_token oversubscribe;
 			CASPAR_LOG(info) << "Destroying: " << destruction->producer->print();
