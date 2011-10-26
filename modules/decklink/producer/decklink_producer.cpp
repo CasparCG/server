@@ -208,8 +208,7 @@ public:
 
 		try
 		{
-			auto frame_element = Concurrency::receive(muxed_frames_);
-			last_frame_ = frame = frame_element.first;
+			last_frame_ = frame = Concurrency::receive(muxed_frames_, 10);
 		}
 		catch(Concurrency::operation_timed_out&)
 		{		
@@ -278,7 +277,7 @@ public:
 				Concurrency::parallel_invoke(
 				[&]
 				{
-					Concurrency::send(video_frames_, ffmpeg::frame_muxer2::video_source_element_t(av_frame, ticket_t()));					
+					Concurrency::send(video_frames_, av_frame);					
 				},
 				[&]
 				{													
@@ -287,10 +286,10 @@ public:
 					{
 						auto sample_frame_count = audio->GetSampleFrameCount();
 						auto audio_data = reinterpret_cast<int32_t*>(bytes);
-						Concurrency::send(audio_buffers_, ffmpeg::frame_muxer2::audio_source_element_t(make_safe<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels), ticket_t()));
+						Concurrency::send(audio_buffers_, make_safe<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
 					}
 					else
-						Concurrency::send(audio_buffers_, ffmpeg::frame_muxer2::audio_source_element_t(make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0), ticket_t()));	
+						Concurrency::send(audio_buffers_, make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));	
 				});
 			}
 

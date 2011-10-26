@@ -48,12 +48,17 @@ struct destruction_context
 
 void __cdecl destroy_producer(LPVOID lpParam)
 {
+	static Concurrency::critical_section mutex;
 	auto destruction = std::unique_ptr<destruction_context>(static_cast<destruction_context*>(lpParam));
 	
 	try
 	{		
 		if(destruction->producer.unique())
 		{
+			{
+				Concurrency::critical_section::scoped_lock lock(mutex);
+				Concurrency::wait(100);
+			}
 			Concurrency::scoped_oversubcription_token oversubscribe;
 			CASPAR_LOG(info) << "Destroying: " << destruction->producer->print();
 			destruction->producer.reset();
