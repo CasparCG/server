@@ -1,15 +1,10 @@
 #pragma once
 
-#include "util.h"
-
 #include <common/memory/safe_ptr.h>
-#include <common/concurrency/governor.h>
 
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <boost/noncopyable.hpp>
-
-#include <agents.h>
 
 #include <vector>
 
@@ -27,26 +22,25 @@ struct frame_factory;
 
 namespace ffmpeg {
 
-class frame_muxer2 : boost::noncopyable
+class frame_muxer : boost::noncopyable
 {
 public:
+	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str);
 	
-	typedef	std::pair<safe_ptr<AVFrame>, ticket_t>				video_source_element_t;
-	typedef	std::pair<safe_ptr<core::audio_buffer>, ticket_t>	audio_source_element_t;
-	typedef	std::pair<safe_ptr<core::basic_frame>, ticket_t>	target_element_t;
+	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
+	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);
+	
+	void commit();
 
-	typedef Concurrency::ISource<video_source_element_t>		video_source_t;
-	typedef Concurrency::ISource<audio_source_element_t>		audio_source_t;
-	typedef Concurrency::ITarget<target_element_t>				target_t;
-								 
-	frame_muxer2(video_source_t* video_source,
-				 audio_source_t* audio_source, 
-				 target_t& target,
-				 double in_fps, 
-				 const safe_ptr<core::frame_factory>& frame_factory,
-				 const std::wstring& filter = L"");
-	
+	bool video_ready() const;
+	bool audio_ready() const;
+
+	size_t size() const;
+	bool empty() const;
+
 	int64_t calc_nb_frames(int64_t nb_frames) const;
+
+	safe_ptr<core::basic_frame> pop();
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

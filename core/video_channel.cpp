@@ -65,7 +65,7 @@ struct video_channel::implementation : boost::noncopyable
 public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
 		: format_desc_(format_desc)
-		, governor_(3)
+		, governor_(2)
 		, output_(new caspar::core::output(mixer_frames_, format_desc))
 		, mixer_(new caspar::core::mixer(stage_frames_, mixer_frames_, format_desc, ogl))
 		, stage_(new caspar::core::stage(stage_frames_, governor_))	

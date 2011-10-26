@@ -19,16 +19,11 @@
 */
 #pragma once
 
-#include "../util.h"
-
 #include <common/memory/safe_ptr.h>
-#include <common/concurrency/governor.h>
 
 #include <core/video_format.h>
 
 #include <boost/noncopyable.hpp>
-
-#include <agents.h>
 
 #include <vector>
 
@@ -40,6 +35,7 @@ namespace caspar {
 
 namespace core {
 	struct frame_factory;
+	class write_frame;
 }
 
 namespace ffmpeg {
@@ -47,20 +43,16 @@ namespace ffmpeg {
 class video_decoder : boost::noncopyable
 {
 public:
+	explicit video_decoder(const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory);
 	
-	typedef std::pair<safe_ptr<AVPacket>, ticket_t> source_element_t;
-	typedef std::pair<safe_ptr<AVFrame>, ticket_t> target_element_t;
-
-	typedef Concurrency::ISource<source_element_t>	source_t;
-	typedef Concurrency::ITarget<target_element_t>  target_t;
+	void push(const std::shared_ptr<AVPacket>& packet);
+	bool ready() const;
+	std::vector<std::shared_ptr<AVFrame>> poll();
 	
-	explicit video_decoder(source_t& source, target_t& target, AVFormatContext& context);	
-
 	size_t width() const;
 	size_t height() const;
 
 	int64_t nb_frames() const;
-	bool is_progressive() const;
 
 	double fps() const;
 private:

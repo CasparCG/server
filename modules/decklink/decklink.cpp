@@ -23,7 +23,7 @@
 #include "util/util.h"
 
 #include "consumer/decklink_consumer.h"
-#include "producer/decklink_producer.h"
+//#include "producer/decklink_producer.h"
 
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
@@ -45,7 +45,7 @@ namespace caspar { namespace decklink {
 void init()
 {
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
-	core::register_producer_factory(create_producer);
+	//core::register_producer_factory(create_producer);
 }
 
 std::wstring get_version() 

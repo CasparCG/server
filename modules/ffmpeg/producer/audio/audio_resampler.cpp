@@ -22,6 +22,7 @@ struct audio_resampler::implementation
 {	
 	std::shared_ptr<ReSampleContext> resampler_;
 	
+	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> copy_buffer_;
 	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> buffer2_;
 
 	const size_t			output_channels_;
@@ -52,15 +53,16 @@ struct audio_resampler::implementation
 									L" audio_channels:" << input_channels  <<
 									L" sample_fmt:" << input_sample_format;
 
-			CASPAR_VERIFY(resampler, caspar_exception());
-
-			resampler_.reset(resampler, audio_resample_close);
+			if(resampler)
+				resampler_.reset(resampler, audio_resample_close);
+			else
+				BOOST_THROW_EXCEPTION(caspar_exception());
 		}		
 	}
 
 	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> resample(std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>&& data)
 	{
-		if(resampler_ && !data.empty())
+		if(resampler_)
 		{
 			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
 			auto ret = audio_resample(resampler_.get(),
