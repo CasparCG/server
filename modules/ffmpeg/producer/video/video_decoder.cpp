@@ -47,24 +47,28 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+using namespace Concurrency;
+
 namespace caspar { namespace ffmpeg {
 	
 struct video_decoder::implementation : boost::noncopyable
 {
+	video_decoder::source_t&				source_;
 	const safe_ptr<core::frame_factory>		frame_factory_;
 	int										index_;
-	safe_ptr<AVCodecContext>				codec_context_;
+	const safe_ptr<AVCodecContext>			codec_context_;
 
-	std::queue<std::shared_ptr<AVPacket>>	packets_;
+	std::queue<safe_ptr<AVPacket>>			packets_;
 	
 	const double							fps_;
 	const int64_t							nb_frames_;
 	const size_t							width_;
 	const size_t							height_;
-
+	
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory) 
-		: frame_factory_(frame_factory)
+	explicit implementation(video_decoder::source_t& source, const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory) 
+		: source_(source)
+		, frame_factory_(frame_factory)
 		, codec_context_(open_codec(*context, AVMEDIA_TYPE_VIDEO, index_))
 		, fps_(static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num))
 		, nb_frames_(context->streams[index_]->nb_frames)
@@ -72,32 +76,24 @@ public:
 		, height_(codec_context_->height)
 	{			
 	}
-
-	void push(const std::shared_ptr<AVPacket>& packet)
-	{
-		if(packet && packet->stream_index != index_)
-			return;
-
-		packets_.push(packet);
-	}
-
-	std::vector<std::shared_ptr<AVFrame>> poll()
+	
+	std::shared_ptr<AVFrame> poll()
 	{		
-		std::vector<std::shared_ptr<AVFrame>> result;
-
-		if(packets_.empty())
-			return result;
+		auto packet = create_packet();
 		
-		auto packet = packets_.front();
-					
-		if(packet)
-		{			
-			boost::range::push_back(result, decode(*packet));
-
-			if(packet->size == 0)
-				packets_.pop();
+		if(packets_.empty())
+		{
+			if(!try_receive(source_, packet) || packet->stream_index != index_)
+				return nullptr;
+			else
+				packets_.push(packet);
 		}
-		else
+		
+		packet = packets_.front();
+
+		std::shared_ptr<AVFrame> video;
+
+		if(packet == loop_packet())
 		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
@@ -106,21 +102,27 @@ public:
 				pkt.data = nullptr;
 				pkt.size = 0;
 
-				boost::range::push_back(result, decode(pkt));	
+				video = decode(pkt);
+				if(video)
+					packets_.push(packet);
 			}
 
-			if(result.empty())
-			{					
-				packets_.pop();
+			if(!video)
+			{
 				avcodec_flush_buffers(codec_context_.get());
-				result.push_back(nullptr);
+				video = loop_video();
 			}
-		}
-		
-		return result;
+		}			
+		else
+			video = decode(*packet);
+
+		if(packet->size == 0)
+			packets_.pop();
+						
+		return video;
 	}
 	
-	std::vector<std::shared_ptr<AVFrame>> decode(AVPacket& pkt)
+	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
@@ -134,17 +136,12 @@ public:
 		pkt.size = 0;
 
 		if(frame_finished == 0)	
-			return std::vector<std::shared_ptr<AVFrame>>();
+			return nullptr;
 
-		if(decoded_frame->repeat_pict % 2 > 0)
+		if(decoded_frame->repeat_pict > 0)
 			CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
 		
-		return std::vector<std::shared_ptr<AVFrame>>(1 + decoded_frame->repeat_pict/2, decoded_frame);
-	}
-	
-	bool ready() const
-	{
-		return !packets_.empty();
+		return decoded_frame;
 	}
 	
 	double fps() const
@@ -153,10 +150,8 @@ public:
 	}
 };
 
-video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(context, frame_factory)){}
-void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
-std::vector<std::shared_ptr<AVFrame>> video_decoder::poll(){return impl_->poll();}
-bool video_decoder::ready() const{return impl_->ready();}
+video_decoder::video_decoder(video_decoder::source_t& source, const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory) : impl_(new implementation(source, context, frame_factory)){}
+std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
 double video_decoder::fps() const{return impl_->fps();}
 int64_t video_decoder::nb_frames() const{return impl_->nb_frames_;}
 size_t video_decoder::width() const{return impl_->width_;}
