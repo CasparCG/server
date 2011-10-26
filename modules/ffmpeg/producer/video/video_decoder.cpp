@@ -175,6 +175,7 @@ public:
 		std::array<safe_ptr<uint8_t>, 4> new_ptrs;
 		parallel_for<size_t>(0, count, [&](size_t n)
 		{
+			CASPAR_ASSERT(frame->data[n]);
 			auto size		= frame->linesize[n]*desc.planes[n].height;
 			new_ptrs[n]		= fast_memdup(frame->data[n], size);
 			org_ptrs[n]		= frame->data[n];

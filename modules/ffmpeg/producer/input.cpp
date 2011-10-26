@@ -83,6 +83,9 @@ struct input::implementation : public Concurrency::agent, boost::noncopyable
 
 	overwrite_buffer<bool>					is_running_;
 	governor								governor_;
+
+	const int								video_index_;
+	const int								audio_index_;
 		
 public:
 	explicit implementation(input::target_t& target,
@@ -100,7 +103,9 @@ public:
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-		, governor_(8)
+		, governor_(4)
+		, video_index_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0))
+		, audio_index_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0))
 	{		
 		loop_			= loop;
 		packets_count_	= 0;
@@ -133,16 +138,27 @@ public:
 	{
 		try
 		{
-			int last_stream_index = -1;
+			double current_dts = 0;
+			std::map<int, double> dts;
 
 			send(is_running_, true);
 			for(auto packet = read_next_packet(); packet && is_running_.value(); packet = read_next_packet())
 			{				
 				ticket_t ticket;
+				
+				if(packet->stream_index > 0 && (packet->stream_index == video_index_ || packet->stream_index == audio_index_))
+					dts[packet->stream_index] = packet->dts*av_q2d(format_context_->streams[packet->stream_index]->time_base);
 
-				if((format_context_->nb_streams < 2 || last_stream_index != packet->stream_index) && packet->stream_index == default_stream_index_)
+				auto it = std::min_element(dts.begin(), dts.end(), [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs)
+				{
+					return lhs.second < rhs.second;
+				});
+
+				if(it != dts.end() && it->second > current_dts)
+				{
 					ticket = governor_.acquire();
-				last_stream_index = packet->stream_index;
+					current_dts = it->second;
+				}
 
 				Concurrency::asend(target_, input::target_element_t(packet, ticket));
 				Context::Yield();
