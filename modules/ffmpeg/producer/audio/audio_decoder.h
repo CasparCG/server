@@ -38,16 +38,18 @@ struct video_format_desc;
 
 }
 
+#include <agents.h>
+
 namespace ffmpeg {
 
 class audio_decoder : boost::noncopyable
 {
 public:
-	explicit audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
+	typedef Concurrency::ISource<safe_ptr<AVPacket>> source_t;
+
+	explicit audio_decoder(source_t& source, const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
 	
-	void push(const std::shared_ptr<AVPacket>& packet);
-	bool ready() const;
-	std::vector<std::shared_ptr<core::audio_buffer>> poll();
+	std::shared_ptr<core::audio_buffer> poll();
 	
 private:
 	struct implementation;

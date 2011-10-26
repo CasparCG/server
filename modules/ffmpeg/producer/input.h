@@ -44,7 +44,7 @@ namespace ffmpeg {
 class input : boost::noncopyable
 {
 public:
-	typedef Concurrency::ITarget<std::shared_ptr<AVPacket>> target_t;
+	typedef Concurrency::ITarget<safe_ptr<AVPacket>> target_t;
 
 	explicit input(target_t& target, const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start = 0, size_t length = std::numeric_limits<size_t>::max());
 

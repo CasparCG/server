@@ -20,27 +20,24 @@ struct frame_factory;
 
 }
 
+#include <agents.h>
+
 namespace ffmpeg {
 
 class frame_muxer : boost::noncopyable
 {
 public:
-	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str);
-	
-	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
-	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);
-	
-	void commit();
+	typedef Concurrency::ITarget<safe_ptr<core::basic_frame>> target_t;
 
-	bool video_ready() const;
-	bool audio_ready() const;
-
-	size_t size() const;
-	bool empty() const;
+	frame_muxer(target_t& target, double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str);
+	
+	void push(const safe_ptr<AVFrame>& video_frame, int hints = 0);
+	void push(const safe_ptr<core::audio_buffer>& audio_samples);
+	
+	bool need_video() const;
+	bool need_audio() const;	
 
 	int64_t calc_nb_frames(int64_t nb_frames) const;
-
-	safe_ptr<core::basic_frame> pop();
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

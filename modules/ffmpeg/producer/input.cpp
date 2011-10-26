@@ -65,34 +65,35 @@ namespace caspar { namespace ffmpeg {
 static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
 static const size_t MAX_BUFFER_COUNT = 100;
 	
-struct input::implementation : public agent, public std::enable_shared_from_this<input::implementation>, boost::noncopyable
+struct input::implementation : public agent, boost::noncopyable
 {		
-	input::target_t&											target_;
-	const safe_ptr<diagnostics::graph>							graph_;
+	const safe_ptr<AVFormatContext>		format_context_;	
+	const safe_ptr<diagnostics::graph>	graph_;
 
-	const safe_ptr<AVFormatContext>								format_context_; // Destroy this last
-	const int													default_stream_index_;
+	input::target_t&					target_;
+
+	const int							default_stream_index_;
 		
-	const std::wstring											filename_;
-	const bool													loop_;
-	const size_t												start_;		
-	const size_t												length_;
-	size_t														frame_number_;
+	const std::wstring					filename_;
+	const bool							loop_;
+	const size_t						start_;		
+	const size_t						length_;
+	size_t								frame_number_;
 	
-	tbb::atomic<size_t>											buffer_size_;
-	tbb::atomic<size_t>											buffer_count_;
-	Concurrency::event											event_;
+	tbb::atomic<size_t>					buffer_size_;
+	tbb::atomic<size_t>					buffer_count_;
+	Concurrency::event					event_;
 		
-	tbb::atomic<bool>											is_running_;
+	tbb::atomic<bool>					is_running_;
 
-	tbb::atomic<size_t>											nb_frames_;
-	tbb::atomic<size_t>											nb_loops_;
+	tbb::atomic<size_t>					nb_frames_;
+	tbb::atomic<size_t>					nb_loops_;
 
 public:
 	explicit implementation(input::target_t& target, const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
-		: target_(target)
+		: format_context_(open_input(filename))
 		, graph_(graph)
-		, format_context_(open_input(filename))
+		, target_(target)
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, loop_(loop)
 		, filename_(filename)
@@ -194,17 +195,16 @@ private:
 			auto size = packet->size;
 			auto data = packet->data;
 
-			auto self = shared_from_this();
 			packet = safe_ptr<AVPacket>(packet.get(), [=](AVPacket*)
 			{
 				packet->size = size;
 				packet->data = data;
 
-				self->buffer_size_ -= packet->size;
-				--self->buffer_count_;
-				self->event_.set();
-				self->graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-				self->graph_->update_value("buffer-count", (static_cast<double>(buffer_count_)+0.001)/MAX_BUFFER_COUNT);
+				buffer_size_ -= packet->size;
+				--buffer_count_;
+				event_.set();
+				graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+				graph_->update_value("buffer-count", (static_cast<double>(buffer_count_)+0.001)/MAX_BUFFER_COUNT);
 			});
 			
 			buffer_size_ += packet->size;
@@ -212,7 +212,7 @@ private:
 			if((buffer_size_ > MAX_BUFFER_SIZE || buffer_count_ > MAX_BUFFER_COUNT) && is_running_)
 				event_.reset();
 
-			send(target_, std::shared_ptr<AVPacket>(packet));
+			send(target_, packet);
 				
 			graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
 			graph_->update_value("buffer-count", (static_cast<double>(buffer_count_)+0.001)/MAX_BUFFER_COUNT);
@@ -235,7 +235,7 @@ private:
 
 		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());	
 	
-		Concurrency::asend(target_, std::shared_ptr<AVPacket>());	
+		Concurrency::asend(target_, loop_packet());	
 
 		graph_->add_tag("seek");		
 	}	

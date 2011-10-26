@@ -74,3 +74,5 @@ extern "C"
 }
 
 #pragma warning(pop)
+
+#undef	Yield
