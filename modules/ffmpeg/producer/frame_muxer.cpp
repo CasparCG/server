@@ -82,7 +82,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 	~implementation()
 	{
-		governor_.cancel();
 		agent::wait(this);
 	}
 				
@@ -161,11 +160,16 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				auto ticket = governor_.acquire();
 
 				auto video = receive_video();
-				video->audio_data() = std::move(*receive_audio());
-
 				if(!video)
 					break;
 
+				auto audio = receive_audio();
+
+				if(!audio)
+					break;
+
+				video->audio_data() = std::move(*audio);
+				
 				switch(display_mode_.value())
 				{
 				case display_mode::simple:			
