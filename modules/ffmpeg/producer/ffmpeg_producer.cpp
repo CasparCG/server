@@ -21,9 +21,9 @@
 
 #include "ffmpeg_producer.h"
 
-#include "frame_muxer.h"
-#include "input.h"
-#include "util.h"
+#include "muxer/frame_muxer.h"
+#include "input/input.h"
+#include "util/util.h"
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 #include "../ffmpeg_error.h"
