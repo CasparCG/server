@@ -85,10 +85,14 @@ typedef std::vector<safe_ptr<int>> ticket_t;
 class governor : boost::noncopyable
 {
 	tbb::atomic<int> count_;
+	tbb::atomic<int> is_running_;
 	Concurrency::concurrent_queue<Concurrency::Context*> waiting_contexts_;
 
 	void acquire_ticket()
 	{
+		if(!is_running_)
+			return;
+
 		if(count_ < 1)
 			Concurrency::Context::Yield();
 
@@ -102,6 +106,9 @@ class governor : boost::noncopyable
 
 	void release_ticket()
 	{
+		if(!is_running_)
+			return;
+
 		if(++count_ <= 0)
 		{
 			Concurrency:: Context* waiting = NULL;
@@ -115,6 +122,7 @@ public:
 
 	governor(size_t capacity) 
 	{
+		is_running_ = true;
 		count_ = capacity;
 	}
 	
@@ -133,8 +141,10 @@ public:
 
 	void cancel()
 	{
-		while(count_ < 0)
-			release_ticket();
+		is_running_ = false;
+		Concurrency::Context* waiting = NULL;
+		while(waiting_contexts_.try_pop(waiting))
+			waiting->Unblock();
 	}
 };
 
