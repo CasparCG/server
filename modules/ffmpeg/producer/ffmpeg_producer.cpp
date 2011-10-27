@@ -139,6 +139,8 @@ public:
 						
 	virtual safe_ptr<core::basic_frame> receive(int hints)
 	{
+		win32_exception::install_handler();
+
 		auto frame = core::basic_frame::late();
 		
 		try
