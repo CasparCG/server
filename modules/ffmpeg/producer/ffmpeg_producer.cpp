@@ -44,6 +44,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/find.hpp>
+#include <boost/algorithm/string/split.hpp>
 
 #include <agents.h>
 #include <concrt.h>
@@ -184,15 +185,17 @@ public:
 		return nb_frames - start_;
 	}
 
-	virtual void param(const std::wstring& param)
+	virtual bool param(const std::wstring& param)
 	{
-		typedef std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t>> wistream_iterator;
-		std::wstringstream str(param);
 		std::vector<std::wstring> params;
-		std::copy(wistream_iterator(str), wistream_iterator(), std::back_inserter(params));
+		boost::split(params, param, boost::is_any_of(" "), boost::token_compress_on);
 
 		if(boost::iequals(params.at(0), L"LOOP"))
+		{
 			input_.loop(boost::lexical_cast<bool>(params.at(1)));
+			return true;
+		}
+		return false;
 	}
 				
 	virtual std::wstring print() const

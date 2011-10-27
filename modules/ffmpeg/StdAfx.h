@@ -29,6 +29,7 @@
 #include <crtdbg.h>
 #endif
 
+#define _SCL_SECURE_NO_WARNINGS 
 #define NOMINMAX
 
 #include <memory>

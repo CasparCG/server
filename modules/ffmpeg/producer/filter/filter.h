@@ -3,6 +3,7 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 
 #include <string>
 #include <vector>
@@ -14,10 +15,10 @@ namespace caspar { namespace ffmpeg {
 		
 static bool is_double_rate(const std::wstring& filters)
 {
-	if(filters.find(L"YADIF=1") != std::string::npos)
+	if(boost::to_upper_copy(filters).find(L"YADIF=1") != std::string::npos)
 		return true;
 	
-	if(filters.find(L"YADIF=3") != std::string::npos)
+	if(boost::to_upper_copy(filters).find(L"YADIF=3") != std::string::npos)
 		return true;
 
 	return false;
@@ -25,7 +26,7 @@ static bool is_double_rate(const std::wstring& filters)
 
 static bool is_deinterlacing(const std::wstring& filters)
 {
-	if(filters.find(L"YADIF") != std::string::npos)
+	if(boost::to_upper_copy(filters).find(L"YADIF") != std::string::npos)
 		return true;	
 	return false;
 }

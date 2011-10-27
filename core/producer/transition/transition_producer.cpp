@@ -106,6 +106,11 @@ struct transition_producer : public frame_producer
 		return L"transition[" + source_producer_->print() + L"|" + dest_producer_->print() + L"]";
 	}
 	
+	virtual bool param(const std::wstring& str)
+	{
+		return get_following_producer()->param(str);
+	}
+	
 	// transition_producer
 						
 	safe_ptr<basic_frame> compose(const safe_ptr<basic_frame>& dest_frame, const safe_ptr<basic_frame>& src_frame) 

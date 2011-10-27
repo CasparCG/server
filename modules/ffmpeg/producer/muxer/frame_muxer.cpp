@@ -114,15 +114,15 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		return receive_video();
 	}
 	
-	std::shared_ptr<core::audio_buffer> receive_audio(size_t n_samples)
+	std::shared_ptr<core::audio_buffer> receive_audio()
 	{		
 		if(!audio_source_)
-			return make_safe<core::audio_buffer>(n_samples, 0);
+			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
 					
-		if(audio_data_.size() >= n_samples)
+		if(audio_data_.size() >= format_desc_.audio_samples_per_frame)
 		{
 			auto begin = audio_data_.begin(); 
-			auto end   = begin + n_samples;
+			auto end   = begin + format_desc_.audio_samples_per_frame;
 			auto audio = make_safe<core::audio_buffer>(begin, end);
 			audio_data_.erase(begin, end);
 			return audio;
@@ -145,17 +145,18 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		audio_data_.insert(audio_data_.end(), audio->begin(), audio->end());	
 		audio.reset();
 		
-		return receive_audio(n_samples);
+		return receive_audio();
 	}
 			
 	virtual void run()
 	{
+		win32_exception::install_handler();
+
 		try
 		{
 			while(display())
 			{	
-			}
-				
+			}				
 		}
 		catch(...)
 		{
@@ -175,7 +176,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		if(!video)
 			return false;
 
-		auto audio = receive_audio(format_desc_.audio_samples_per_frame);
+		auto audio = receive_audio();
 		if(!audio)
 			return false;
 				
@@ -196,7 +197,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 				send(target_, frame_muxer2::target_element_t(video, ticket));
 								
 				auto video2 = make_safe<core::write_frame>(*video);	
-				auto audio2 = receive_audio(format_desc_.audio_samples_per_frame);
+				auto audio2 = receive_audio();
 
 				if(audio2)
 				{
