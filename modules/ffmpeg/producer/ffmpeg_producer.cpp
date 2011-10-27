@@ -134,6 +134,7 @@ public:
 	~ffmpeg_producer()
 	{
 		input_.stop();	
+		while(Concurrency::receive(frames_).first != core::basic_frame::eof()){}
 	}
 						
 	virtual safe_ptr<core::basic_frame> receive(int hints)
