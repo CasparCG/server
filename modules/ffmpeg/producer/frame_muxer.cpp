@@ -74,7 +74,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
 		, frame_factory_(frame_factory)
-		, governor_(1)
+		, governor_(2)
 	{		
 		is_running_ = true;
 		start();
