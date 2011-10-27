@@ -80,6 +80,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 	~implementation()
 	{
+		governor_.cancel();
 		agent::wait(this);
 	}
 				
@@ -151,7 +152,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	{
 		try
 		{
-			win32_exception::install_handler();
 			while(display())
 			{	
 			}

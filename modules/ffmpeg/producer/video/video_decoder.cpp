@@ -87,6 +87,7 @@ public:
 
 	~implementation()
 	{
+		governor_.cancel();
 		agent::wait(this);
 	}
 
@@ -94,7 +95,6 @@ public:
 	{
 		try
 		{
-			win32_exception::install_handler();
 			while(true)
 			{
 				auto ticket = governor_.acquire();
