@@ -96,10 +96,10 @@ public:
 				auto ticket = governor_.acquire();
 				auto packet = receive(source_);
 			
-				if(packet == loop_packet(index_))
+				if(packet == flush_packet(index_))
 				{
 					avcodec_flush_buffers(codec_context_.get());
-					send(target_, loop_audio());
+					send(target_, flush_audio());
 					continue;
 				}
 

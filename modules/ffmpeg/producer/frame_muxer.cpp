@@ -59,7 +59,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	std::wstring										filter_str_;
 
 	governor											governor_;
-	tbb::atomic<bool>									is_running_;
 	
 	implementation(frame_muxer2::video_source_t* video_source,
 				   frame_muxer2::audio_source_t* audio_source,
@@ -76,7 +75,6 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, frame_factory_(frame_factory)
 		, governor_(2)
 	{		
-		is_running_ = true;
 		start();
 	}
 
@@ -96,40 +94,42 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		
 		video = receive(video_source_);
 		
-		if(video == loop_video())
+		if(video == flush_video())
+		{
+			if(filter_.has_value())
+				filter_.value()->push(nullptr);
 			return receive_video();
+		}
 
 		if(video == eof_video())
-		{
-			is_running_ = false;
-			return nullptr;
-		}
+			return nullptr;		
 
 		if(!display_mode_.has_value())
 			initialize_display_mode(*video);
 			
-		filter_.value()->push(std::move(video));
+		filter_.value()->push(video);
+		video.reset();
 
 		return receive_video();
 	}
 	
-	std::shared_ptr<core::audio_buffer> receive_audio()
+	std::shared_ptr<core::audio_buffer> receive_audio(size_t n_samples)
 	{		
 		if(!audio_source_)
-			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
+			return make_safe<core::audio_buffer>(n_samples, 0);
 					
-		if(audio_data_.size() >= format_desc_.audio_samples_per_frame)
+		if(audio_data_.size() >= n_samples)
 		{
 			auto begin = audio_data_.begin(); 
-			auto end   = begin + format_desc_.audio_samples_per_frame;
+			auto end   = begin + n_samples;
 			auto audio = make_safe<core::audio_buffer>(begin, end);
 			audio_data_.erase(begin, end);
 			return audio;
 		}
 				
-		auto audio = receive(audio_source_);
+		std::shared_ptr<core::audio_buffer> audio = receive(audio_source_);
 
-		if(audio == loop_audio())
+		if(audio == flush_audio())
 		{
 			if(!audio_data_.empty())
 			{
@@ -139,14 +139,12 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		}
 
 		if(audio == eof_audio())
-		{
-			is_running_ = false;
 			return nullptr;
-		}
 
 		audio_data_.insert(audio_data_.end(), audio->begin(), audio->end());	
-
-		return receive_audio();
+		audio.reset();
+		
+		return receive_audio(n_samples);
 	}
 			
 	virtual void run()
@@ -154,68 +152,10 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		try
 		{
 			win32_exception::install_handler();
-			while(is_running_)
+			while(display())
 			{	
-				auto ticket = governor_.acquire();
-
-				auto video = receive_video();
-				if(!video)
-					break;
-
-				auto audio = receive_audio();
-
-				if(!audio)
-					break;
-
-				video->audio_data() = std::move(*audio);
+			}
 				
-				switch(display_mode_.value())
-				{
-				case display_mode::simple:			
-				case display_mode::deinterlace:
-				case display_mode::deinterlace_bob:
-					{
-						send(target_, frame_muxer2::target_element_t(video, ticket));
-
-						break;
-					}
-				case display_mode::duplicate:					
-					{			
-						auto video2 = make_safe<core::write_frame>(*video);	
-						auto audio2 = receive_audio();
-						
-						send(target_, frame_muxer2::target_element_t(video, ticket));
-						if(audio2)
-						{
-							video2->audio_data() = std::move(*receive_audio());					
-							send(target_, frame_muxer2::target_element_t(video2, ticket));
-						}
-
-						break;
-					}
-				case display_mode::half:						
-					{								
-						send(target_, frame_muxer2::target_element_t(video, ticket));
-						receive_video();
-
-						break;
-					}
-				case display_mode::deinterlace_bob_reinterlace:
-				case display_mode::interlace:					
-					{					
-						std::shared_ptr<core::basic_frame> video2 = receive_video();
-						if(!video2)
-							video2 = core::basic_frame::empty();
-												
-						auto frame = core::basic_frame::interlace(make_safe_ptr(video), make_safe_ptr(video2), format_desc_.field_mode);	
-						send(target_, frame_muxer2::target_element_t(frame, ticket));
-
-						break;
-					}
-				default:	
-					BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
-				}
-			}	
 		}
 		catch(...)
 		{
@@ -227,6 +167,69 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		done();
 	}
 
+	bool display()
+	{
+		auto ticket = governor_.acquire();
+
+		auto video = receive_video();
+		if(!video)
+			return false;
+
+		auto audio = receive_audio(format_desc_.audio_samples_per_frame);
+		if(!audio)
+			return false;
+				
+		video->audio_data() = std::move(*audio);
+
+		switch(display_mode_.value())
+		{
+		case display_mode::simple:			
+		case display_mode::deinterlace:
+		case display_mode::deinterlace_bob:
+			{
+				send(target_, frame_muxer2::target_element_t(video, ticket));
+				
+				return true;
+			}
+		case display_mode::duplicate:					
+			{			
+				send(target_, frame_muxer2::target_element_t(video, ticket));
+								
+				auto video2 = make_safe<core::write_frame>(*video);	
+				auto audio2 = receive_audio(format_desc_.audio_samples_per_frame);
+
+				if(audio2)
+				{
+					video2->audio_data() = std::move(*audio2);
+					send(target_, frame_muxer2::target_element_t(video2, ticket));
+				}
+
+				return audio2 != nullptr;
+			}
+		case display_mode::half:						
+			{								
+				send(target_, frame_muxer2::target_element_t(video, ticket));
+				auto video2 = receive_video();
+				
+				return video2 != nullptr;
+			}
+		case display_mode::deinterlace_bob_reinterlace:
+		case display_mode::interlace:					
+			{					
+				std::shared_ptr<core::basic_frame> video2 = receive_video();
+				if(!video2)
+					video2 = core::basic_frame::empty();
+												
+				auto frame = core::basic_frame::interlace(make_safe_ptr(video), make_safe_ptr(video2), format_desc_.field_mode);	
+				send(target_, frame_muxer2::target_element_t(frame, ticket));
+				
+				return video2 != nullptr;
+			}
+		default:	
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
+		}
+	}	
+	
 	void initialize_display_mode(AVFrame& frame)
 	{
 		auto display_mode = display_mode::invalid;

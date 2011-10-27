@@ -38,11 +38,11 @@ namespace ffmpeg {
 	
 // Dataflow
 	
-safe_ptr<AVPacket>				loop_packet(int index);
+safe_ptr<AVPacket>				flush_packet(int index);
 safe_ptr<AVPacket>				eof_packet(int index);
-safe_ptr<AVFrame>				loop_video();
+safe_ptr<AVFrame>				flush_video();
 safe_ptr<AVFrame>				eof_video();
-safe_ptr<core::audio_buffer>	loop_audio();
+safe_ptr<core::audio_buffer>	flush_audio();
 safe_ptr<core::audio_buffer>	eof_audio();
 
 // Utils
