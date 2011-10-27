@@ -21,7 +21,7 @@
 
 #include "video_decoder.h"
 
-#include "../util.h"
+#include "../util/util.h"
 #include "../filter/filter.h"
 
 #include "../../ffmpeg_error.h"
