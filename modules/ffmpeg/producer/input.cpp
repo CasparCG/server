@@ -131,10 +131,9 @@ public:
 	
 	virtual void run()
 	{
-		win32_exception::install_handler();
-
 		try
 		{
+			win32_exception::install_handler();
 			for(auto packet = read_next_packet(); packet && is_running_; packet = read_next_packet())
 			{				
 				Concurrency::asend(target_, make_safe_ptr(packet));

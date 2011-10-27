@@ -151,10 +151,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			
 	virtual void run()
 	{
-		win32_exception::install_handler();
-
 		try
 		{
+			win32_exception::install_handler();
 			while(is_running_)
 			{	
 				auto ticket = governor_.acquire();

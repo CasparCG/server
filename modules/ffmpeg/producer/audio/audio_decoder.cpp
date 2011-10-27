@@ -88,10 +88,9 @@ public:
 
 	virtual void run()
 	{
-		win32_exception::install_handler();
-
 		try
 		{
+			win32_exception::install_handler();
 			while(true)
 			{		
 				auto ticket = governor_.acquire();
