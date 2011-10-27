@@ -147,6 +147,8 @@ public:
 		}	
 	
 		BOOST_FOREACH(auto stream, streams_)
+			Concurrency::send(target_, flush_packet(stream->index));	
+		BOOST_FOREACH(auto stream, streams_)
 			Concurrency::send(target_, eof_packet(stream->index));	
 
 		done();
@@ -232,7 +234,7 @@ public:
 		packet->size = 0;
 
 		BOOST_FOREACH(auto stream, streams_)
-			Concurrency::asend(target_, loop_packet(stream->index));	
+			Concurrency::asend(target_, flush_packet(stream->index));	
 
 		graph_->add_tag("seek");		
 	}		

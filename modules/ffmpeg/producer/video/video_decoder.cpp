@@ -53,14 +53,13 @@ namespace caspar { namespace ffmpeg {
 struct video_decoder::implementation : public Concurrency::agent, boost::noncopyable
 {	
 	int										index_;
-	std::shared_ptr<AVCodecContext>			codec_context_;
+	const safe_ptr<AVCodecContext>			codec_context_;
 	
-	double									fps_;
-	int64_t									nb_frames_;
-
-	size_t									width_;
-	size_t									height_;
-	bool									is_progressive_;
+	const double										fps_;
+	const int64_t										nb_frames_;
+	const size_t										width_;
+	const size_t										height_;
+	bool												is_progressive_;
 	
 	unbounded_buffer<video_decoder::source_element_t>	source_;
 	ITarget<video_decoder::target_element_t>&			target_;
@@ -101,7 +100,7 @@ public:
 				auto ticket = governor_.acquire();
 				auto packet = receive(source_);
 			
-				if(packet == loop_packet(index_))
+				if(packet == flush_packet(index_))
 				{					
 					if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 					{
@@ -118,7 +117,7 @@ public:
 					}
 
 					avcodec_flush_buffers(codec_context_.get());
-					send(target_, loop_video());
+					send(target_, flush_video());
 					continue;
 				}
 

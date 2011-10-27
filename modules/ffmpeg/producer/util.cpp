@@ -319,7 +319,7 @@ safe_ptr<AVPacket> create_packet()
 	return packet;
 }
 
-safe_ptr<AVPacket> loop_packet(int index)
+safe_ptr<AVPacket> flush_packet(int index)
 {
 	static safe_ptr<AVPacket> packets[] = {create_packet(), create_packet(), create_packet(), create_packet(), create_packet(), create_packet()};
 	
@@ -339,7 +339,7 @@ safe_ptr<AVPacket> eof_packet(int index)
 	return packet;
 }
 
-safe_ptr<AVFrame> loop_video()
+safe_ptr<AVFrame> flush_video()
 {
 	static auto frame1 = safe_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 	return frame1;
@@ -351,7 +351,7 @@ safe_ptr<AVFrame> eof_video()
 	return frame2;
 }
 
-safe_ptr<core::audio_buffer> loop_audio()
+safe_ptr<core::audio_buffer> flush_audio()
 {
 	static auto audio1 = safe_ptr<core::audio_buffer>();
 	return audio1;
