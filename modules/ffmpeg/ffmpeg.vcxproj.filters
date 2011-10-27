@@ -19,7 +19,13 @@
     <Filter Include="source\producer\video">
       <UniqueIdentifier>{4b0f3949-6dc5-4895-837f-4c3ef1759a90}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\producer\format">
+    <Filter Include="source\producer\muxer">
+      <UniqueIdentifier>{67d447e6-39d4-4f91-8c45-a846a18128bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\producer\input">
+      <UniqueIdentifier>{2348fa44-7ba5-4ddc-b859-2306633eeb69}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\producer\util">
       <UniqueIdentifier>{613cfb2a-5714-46dc-b5ad-6964dded5b02}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -43,23 +49,23 @@
     <ClCompile Include="producer\filter\filter.cpp">
       <Filter>source\producer\filter</Filter>
     </ClCompile>
-    <ClCompile Include="producer\frame_muxer.cpp">
-      <Filter>source\producer</Filter>
-    </ClCompile>
     <ClCompile Include="producer\filter\parallel_yadif.cpp">
       <Filter>source\producer\filter</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\util.cpp">
-      <Filter>source\producer</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\format\flv.cpp">
-      <Filter>source\producer\format</Filter>
     </ClCompile>
     <ClCompile Include="producer\audio\audio_resampler.cpp">
       <Filter>source\producer\audio</Filter>
     </ClCompile>
-    <ClCompile Include="producer\input.cpp">
-      <Filter>source\producer</Filter>
+    <ClCompile Include="producer\util\util.cpp">
+      <Filter>source\producer\util</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\muxer\frame_muxer.cpp">
+      <Filter>source\producer\muxer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\input\input.cpp">
+      <Filter>source\producer\input</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\util\flv.cpp">
+      <Filter>source\producer\util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -85,26 +91,26 @@
     <ClInclude Include="producer\filter\filter.h">
       <Filter>source\producer\filter</Filter>
     </ClInclude>
-    <ClInclude Include="producer\util.h">
-      <Filter>source\producer</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame_muxer.h">
-      <Filter>source\producer</Filter>
-    </ClInclude>
     <ClInclude Include="producer\filter\parallel_yadif.h">
       <Filter>source\producer\filter</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\format\flv.h">
-      <Filter>source\producer\format</Filter>
     </ClInclude>
     <ClInclude Include="producer\audio\audio_resampler.h">
       <Filter>source\producer\audio</Filter>
     </ClInclude>
-    <ClInclude Include="producer\input.h">
-      <Filter>source\producer</Filter>
+    <ClInclude Include="producer\util\util.h">
+      <Filter>source\producer\util</Filter>
     </ClInclude>
-    <ClInclude Include="producer\display_mode.h">
-      <Filter>source\producer</Filter>
+    <ClInclude Include="producer\muxer\display_mode.h">
+      <Filter>source\producer\muxer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\muxer\frame_muxer.h">
+      <Filter>source\producer\muxer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\input\input.h">
+      <Filter>source\producer\input</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\util\flv.h">
+      <Filter>source\producer\util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

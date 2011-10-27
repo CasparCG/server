@@ -21,11 +21,12 @@
 #pragma warning (disable : 4244)
 #endif
 
-#include "../stdafx.h"
+#include "../../stdafx.h"
 
 #include "input.h"
-#include "util.h"
-#include "../ffmpeg_error.h"
+
+#include "../util/util.h"
+#include "../../ffmpeg_error.h"
 
 #include <core/video_format.h>
 

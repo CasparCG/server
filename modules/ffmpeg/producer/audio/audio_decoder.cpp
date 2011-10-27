@@ -22,7 +22,7 @@
 #include "audio_decoder.h"
 #include "audio_resampler.h"
 
-#include "../util.h"
+#include "../util/util.h"
 #include "../../ffmpeg_error.h"
 
 #include <common/concurrency/governor.h>

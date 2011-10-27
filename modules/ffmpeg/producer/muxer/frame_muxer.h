@@ -1,7 +1,5 @@
 #pragma once
 
-#include "util.h"
-
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/governor.h>
 

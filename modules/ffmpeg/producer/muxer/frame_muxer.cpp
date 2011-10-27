@@ -1,11 +1,11 @@
-#include "../StdAfx.h"
+#include "../../StdAfx.h"
 
 #include "frame_muxer.h"
 
-#include "filter/filter.h"
-
-#include "util.h"
 #include "display_mode.h"
+
+#include "../filter/filter.h"
+#include "../util/util.h"
 
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame/basic_frame.h>
