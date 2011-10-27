@@ -200,11 +200,14 @@ public:
 		CASPAR_LOG(info) << print() << L" Thread ended.";
 	}
 	
-	void param(const std::wstring& param)
+	bool param(const std::wstring& param)
 	{		
-		if(!ax_->FlashCall(param))
+		bool success = ax_->FlashCall(param); 
+		if(!success)
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
-		graph_->add_tag("param");
+		else
+			graph_->add_tag("param");
+		return success;
 	}
 	
 	safe_ptr<core::basic_frame> operator()()
@@ -376,7 +379,7 @@ public:
 		return last_frame_.value();
 	}		
 	
-	virtual void param(const std::wstring& param) 
+	virtual bool param(const std::wstring& param) 
 	{	
 		if(!is_running_.fetch_and_store(true))
 		{
@@ -384,6 +387,7 @@ public:
 			start();
 		}
 		asend(params_, param);
+		return true;
 	}
 		
 	virtual std::wstring print() const
