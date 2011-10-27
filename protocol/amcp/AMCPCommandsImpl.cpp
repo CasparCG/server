@@ -206,11 +206,19 @@ bool ParamCommand::DoExecute()
 		for(auto it = std::begin(_parameters2)+2; it != std::end(_parameters2); ++it)
 			param += L" " + *it;
 
+		bool success = false;
+		
 		if(what == L"B")
-			GetChannel()->stage()->background(GetLayerIndex()).get()->param(param);
+			success = GetChannel()->stage()->background(GetLayerIndex()).get()->param(param);
 		else if(what == L"F")
-			GetChannel()->stage()->foreground(GetLayerIndex()).get()->param(param);
+			success = GetChannel()->stage()->foreground(GetLayerIndex()).get()->param(param);
 	
+		if(!success)
+		{
+			SetReplyString(TEXT("502 PARAM FAILED\r\n"));
+			return false;
+		}
+
 		CASPAR_LOG(info) << "Executed param: " <<  _parameters[0] << TEXT(" successfully");
 
 		SetReplyString(TEXT("202 PARAM OK\r\n"));

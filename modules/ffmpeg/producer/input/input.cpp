@@ -115,6 +115,8 @@ public:
 			seek_frame(start_);
 								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
+		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
+		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
 				
 		is_running_ = true;
 	}
@@ -134,9 +136,10 @@ public:
 	
 	virtual void run()
 	{
+		win32_exception::install_handler();
+
 		try
 		{
-			win32_exception::install_handler();
 			for(auto packet = read_next_packet(); packet && is_running_; packet = read_next_packet())
 			{				
 				Concurrency::asend(target_, make_safe_ptr(packet));
@@ -202,6 +205,9 @@ public:
 		
 		++packets_count_;
 		packets_size_ += size;
+		
+		graph_->update_value("buffer-size", (packets_size_+0.001)/MAX_PACKETS_SIZE);
+		graph_->update_value("buffer-count", (packets_count_+0.001)/MAX_PACKETS_COUNT);
 
 		auto self = shared_from_this();
 		packet = safe_ptr<AVPacket>(packet.get(), [this, self, packet, size, data](AVPacket*)
@@ -211,6 +217,9 @@ public:
 			--packets_count_;
 			packets_size_ -= size;
 			event_.set();
+
+			graph_->update_value("buffer-size", (packets_size_+0.001)/MAX_PACKETS_SIZE);
+			graph_->update_value("buffer-count", (packets_count_+0.001)/MAX_PACKETS_COUNT);
 		});
 
 		if(is_running_ && (packets_count_ > MAX_PACKETS_COUNT || packets_size_ > MAX_PACKETS_SIZE))
