@@ -77,7 +77,7 @@ public:
 		, is_progressive_(true)
 		, source_([this](const video_decoder::source_element_t& packet){return packet->stream_index == index_;})
 		, target_(target)
-		, governor_(2)
+		, governor_(1) // IMPORTANT: Must be 1 since avcodec_decode_video2 reuses memory.
 	{		
 		CASPAR_LOG(debug) << "[video_decoder] " << context.streams[index_]->codec->codec->long_name;
 		
@@ -132,9 +132,8 @@ public:
 						pkt.size = 0;
 
 						for(auto decoded_frame = decode(pkt); decoded_frame; decoded_frame = decode(pkt))
-						{
-							auto frame = dup_frame(make_safe_ptr(decoded_frame));								
-							send(target_, safe_ptr<AVFrame>(frame.get(), [frame, ticket](AVFrame*){}));
+						{						
+							send(target_, safe_ptr<AVFrame>(decoded_frame.get(), [decoded_frame, ticket](AVFrame*){}));
 							Context::Yield();
 						}
 					}
@@ -155,8 +154,7 @@ public:
 				
 				// C-TODO: Avoid duplication.
 				// Need to dupliace frame data since avcodec_decode_video2 reuses it.
-				auto frame = dup_frame(make_safe_ptr(decoded_frame));
-				send(target_, safe_ptr<AVFrame>(frame.get(), [frame, ticket](AVFrame*){}));				
+				send(target_, safe_ptr<AVFrame>(decoded_frame.get(), [decoded_frame, ticket](AVFrame*){}));				
 				Context::Yield();
 			}
 		}
@@ -169,30 +167,7 @@ public:
 
 		done();
 	}
-
-	safe_ptr<AVFrame> dup_frame(const safe_ptr<AVFrame>& frame)
-	{
-		auto desc = get_pixel_format_desc(static_cast<PixelFormat>(frame->format), frame->width, frame->height);
-
-		auto count = desc.planes.size();
-		std::array<uint8_t*, 4> org_ptrs;
-		std::array<safe_ptr<uint8_t>, 4> new_ptrs;
-		parallel_for<size_t>(0, count, [&](size_t n)
-		{
-			CASPAR_ASSERT(frame->data[n]);
-			auto size		= frame->linesize[n]*desc.planes[n].height;
-			new_ptrs[n]		= fast_memdup(frame->data[n], size);
-			org_ptrs[n]		= frame->data[n];
-			frame->data[n]	= new_ptrs[n].get();
-		});
-
-		return safe_ptr<AVFrame>(frame.get(), [frame, org_ptrs, new_ptrs, count](AVFrame*)
-		{
-			for(size_t n = 0; n < count; ++n)
-				frame->data[n] = org_ptrs[n];
-		});
-	}
-		
+			
 	double fps() const
 	{
 		return fps_;
