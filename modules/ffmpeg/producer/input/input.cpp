@@ -67,18 +67,17 @@ struct input::implementation : public Concurrency::agent
 							 , boost::noncopyable
 {
 	input::target_t&						target_;
+	safe_ptr<diagnostics::graph>			graph_;
 
 	const std::wstring						filename_;
 	const safe_ptr<AVFormatContext>			format_context_; // Destroy this last
-	int										default_stream_index_;
+	const int								default_stream_index_;
 	const boost::iterator_range<AVStream**>	streams_;
-
-	safe_ptr<diagnostics::graph>			graph_;
-		
-	tbb::atomic<bool>						loop_;
 	const size_t							start_;		
 	const size_t							length_;
+			
 	size_t									frame_number_;
+	tbb::atomic<bool>						loop_;
 			
 	tbb::atomic<size_t>						nb_frames_;
 	tbb::atomic<size_t>						nb_loops_;	
@@ -97,11 +96,11 @@ public:
 							size_t start,
 							size_t length)
 		: target_(target)
+		, graph_(graph)
 		, filename_(filename)
 		, format_context_(open_input(filename))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, streams_(format_context_->streams, format_context_->streams + format_context_->nb_streams)
-		, graph_(graph)
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
@@ -141,7 +140,7 @@ public:
 
 		try
 		{
-			for(auto packet = read_next_packet(); packet && is_running_; packet = read_next_packet())
+			for(auto packet = read_next_packet(); is_running_ && packet; packet = read_next_packet())
 			{				
 				Concurrency::asend(target_, make_safe_ptr(packet));
 				Context::Yield();
