@@ -59,6 +59,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	std::wstring										filter_str_;
 
 	governor											governor_;
+
+	tbb::atomic<bool>									is_running_;
 	
 	implementation(frame_muxer2::video_source_t* video_source,
 				   frame_muxer2::audio_source_t* audio_source,
@@ -75,11 +77,13 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, frame_factory_(frame_factory)
 		, governor_(2)
 	{		
+		is_running_ = true;
 		start();
 	}
 
 	~implementation()
 	{
+		is_running_ = false;
 		governor_.cancel();
 		agent::wait(this);
 	}
@@ -150,7 +154,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 		try
 		{
-			while(display())
+			while(is_running_ && display())
 			{	
 			}				
 		}

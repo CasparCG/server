@@ -62,6 +62,8 @@ struct audio_decoder::implementation : public agent, boost::noncopyable
 	ITarget<audio_decoder::target_element_t>&					target_;
 
 	governor													governor_;
+
+	tbb::atomic<bool>											is_running_;
 	
 public:
 	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
@@ -78,11 +80,14 @@ public:
 
 		source.link_target(&source_);
 		
+		is_running_ = true;
+
 		start();
 	}
 
 	~implementation()
 	{
+		is_running_ = false;
 		governor_.cancel();
 		agent::wait(this);
 	}
@@ -93,7 +98,7 @@ public:
 
 		try
 		{
-			while(true)
+			while(is_running_)
 			{		
 				auto ticket = governor_.acquire();
 				auto packet = receive(source_);
