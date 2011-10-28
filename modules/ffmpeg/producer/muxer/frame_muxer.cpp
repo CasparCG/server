@@ -61,6 +61,9 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	governor											governor_;
 
 	tbb::atomic<bool>									is_running_;
+	
+	size_t												video_loop_count_;
+	size_t												audio_loop_count_;
 		
 	implementation(frame_muxer2::video_source_t* video_source,
 				   frame_muxer2::audio_source_t* audio_source,
@@ -76,6 +79,8 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
 		, frame_factory_(frame_factory)
 		, governor_(2)
+		, video_loop_count_(0)
+		, audio_loop_count_(0)
 	{		
 		is_running_ = true;
 		start();
@@ -94,13 +99,16 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 			return make_safe<core::write_frame>(this);	
 
 		auto video = filter_.has_value() ? filter_.value()->poll() : nullptr;
-		if(video)		
+		if(video_loop_count_ >= audio_loop_count_ && video)		
 			return make_write_frame(this, make_safe_ptr(video), frame_factory_, 0);		
 		
 		video = receive(video_source_);
 		
 		if(video == flush_video())
+		{
+			++video_loop_count_;
 			return receive_video();
+		}
 
 		if(video == eof_video())
 			return nullptr;		
@@ -119,7 +127,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		if(!audio_source_)
 			return make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0);
 					
-		if(audio_data_.size() >= format_desc_.audio_samples_per_frame)
+		if(audio_loop_count_ >= video_loop_count_ && audio_data_.size() >= format_desc_.audio_samples_per_frame)
 		{
 			auto begin = audio_data_.begin(); 
 			auto end   = begin + format_desc_.audio_samples_per_frame;
@@ -131,7 +139,12 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		std::shared_ptr<core::audio_buffer> audio = receive(audio_source_);
 
 		if(audio == flush_audio())
-			return receive_audio();
+		{
+			CASPAR_LOG(trace) << L"Truncating: " << audio_data_.size() << L" audio-samples:";
+			audio_data_.clear();
+			++audio_loop_count_;
+			return receive_audio();		
+		}
 
 		if(audio == eof_audio())
 			return nullptr;
