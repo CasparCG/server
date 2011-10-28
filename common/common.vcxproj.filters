@@ -130,5 +130,8 @@
     <ClInclude Include="concurrency\governor.h">
       <Filter>source\concurrency</Filter>
     </ClInclude>
+    <ClInclude Include="concurrency\throw_away.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
