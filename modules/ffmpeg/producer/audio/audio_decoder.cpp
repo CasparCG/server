@@ -82,7 +82,6 @@ public:
 		source.link_target(&source_);
 		
 		is_running_ = true;
-
 		start();
 	}
 
