@@ -51,15 +51,16 @@ namespace caspar { namespace ffmpeg {
 	
 struct audio_decoder::implementation : public agent, boost::noncopyable
 {	
+	ITarget<audio_decoder::target_element_t>&					target_;
+
 	int															index_;
-	std::shared_ptr<AVCodecContext>								codec_context_;		
+	const safe_ptr<AVCodecContext>								codec_context_;		
 	
 	audio_resampler												resampler_;
 	
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
 	unbounded_buffer<audio_decoder::source_element_t>			source_;
-	ITarget<audio_decoder::target_element_t>&					target_;
 
 	governor													governor_;
 
@@ -67,13 +68,13 @@ struct audio_decoder::implementation : public agent, boost::noncopyable
 	
 public:
 	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
-		: codec_context_(open_codec(context, AVMEDIA_TYPE_AUDIO, index_))
+		: target_(target)
+		, codec_context_(open_codec(context, AVMEDIA_TYPE_AUDIO, index_))
 		, resampler_(format_desc.audio_channels,	codec_context_->channels,
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
 		, source_([this](const audio_decoder::source_element_t& packet){return packet->stream_index == index_;})
-		, target_(target)
 		, governor_(2)
 	{		
 		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;

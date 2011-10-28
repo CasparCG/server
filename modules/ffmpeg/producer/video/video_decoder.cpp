@@ -52,8 +52,11 @@ namespace caspar { namespace ffmpeg {
 	
 struct video_decoder::implementation : public Concurrency::agent, boost::noncopyable
 {	
-	int										index_;
-	const safe_ptr<AVCodecContext>			codec_context_;
+	unbounded_buffer<video_decoder::source_element_t>	source_;
+	ITarget<video_decoder::target_element_t>&			target_;
+
+	int													index_;
+	const safe_ptr<AVCodecContext>						codec_context_;
 	
 	const double										fps_;
 	const int64_t										nb_frames_;
@@ -61,23 +64,20 @@ struct video_decoder::implementation : public Concurrency::agent, boost::noncopy
 	const size_t										height_;
 	bool												is_progressive_;
 	
-	unbounded_buffer<video_decoder::source_element_t>	source_;
-	ITarget<video_decoder::target_element_t>&			target_;
-
 	governor											governor_;
 
 	tbb::atomic<bool>									is_running_;
 	
 public:
 	explicit implementation(video_decoder::source_t& source, video_decoder::target_t& target, AVFormatContext& context) 
-		: codec_context_(open_codec(context, AVMEDIA_TYPE_VIDEO, index_))
+		: source_([this](const video_decoder::source_element_t& packet){return packet->stream_index == index_;})
+		, target_(target)
+		, codec_context_(open_codec(context, AVMEDIA_TYPE_VIDEO, index_))
 		, fps_(static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num))
 		, nb_frames_(context.streams[index_]->nb_frames)
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 		, is_progressive_(true)
-		, source_([this](const video_decoder::source_element_t& packet){return packet->stream_index == index_;})
-		, target_(target)
 		, governor_(1) // IMPORTANT: Must be 1 since avcodec_decode_video2 reuses memory.
 	{		
 		CASPAR_LOG(debug) << "[video_decoder] " << context.streams[index_]->codec->codec->long_name;
