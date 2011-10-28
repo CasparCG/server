@@ -96,11 +96,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		video = receive(video_source_);
 		
 		if(video == flush_video())
-		{
-			if(filter_.has_value())
-				filter_.value()->push(nullptr);
 			return receive_video();
-		}
 
 		if(video == eof_video())
 			return nullptr;		
