@@ -61,7 +61,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 	governor											governor_;
 
 	tbb::atomic<bool>									is_running_;
-	
+		
 	implementation(frame_muxer2::video_source_t* video_source,
 				   frame_muxer2::audio_source_t* audio_source,
 				   frame_muxer2::target_t& target,
@@ -131,13 +131,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		std::shared_ptr<core::audio_buffer> audio = receive(audio_source_);
 
 		if(audio == flush_audio())
-		{
-			if(!audio_data_.empty())
-			{
-				CASPAR_LOG(info) << L"[frame_muxer] Truncating audio: " << audio_data_.size();
-				audio_data_.clear();
-			}
-		}
+			return receive_audio();
 
 		if(audio == eof_audio())
 			return nullptr;
