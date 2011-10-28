@@ -278,23 +278,17 @@ public:
 				av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 				av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
 					
-				Concurrency::parallel_invoke(
-				[&]
+				Concurrency::send(video_frames_, av_frame);					
+				
+				// It is assumed that audio is always equal or ahead of video.
+				if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 				{
-					Concurrency::send(video_frames_, av_frame);					
-				},
-				[&]
-				{													
-					// It is assumed that audio is always equal or ahead of video.
-					if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
-					{
-						auto sample_frame_count = audio->GetSampleFrameCount();
-						auto audio_data = reinterpret_cast<int32_t*>(bytes);
-						Concurrency::send(audio_buffers_, make_safe<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
-					}
-					else
-						Concurrency::send(audio_buffers_, make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));	
-				});
+					auto sample_frame_count = audio->GetSampleFrameCount();
+					auto audio_data = reinterpret_cast<int32_t*>(bytes);
+					Concurrency::send(audio_buffers_, make_safe<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
+				}
+				else
+					Concurrency::send(audio_buffers_, make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));	
 			}
 
 		}
