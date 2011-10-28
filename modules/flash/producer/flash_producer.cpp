@@ -34,8 +34,9 @@
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
 
-#include <common/env.h>
+#include <common/concurrency/throw_away.h>
 #include <common/diagnostics/graph.h>
+#include <common/env.h>
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
 #include <common/utility/timer.h>
@@ -296,8 +297,7 @@ public:
 	~flash_producer()
 	{
 		is_running_ = false;
-		auto frame = core::basic_frame::empty();
-		while(try_receive(frames_, frame)){}
+		link_throw_away(frames_);
 		agent::wait(this);
 	}
 	

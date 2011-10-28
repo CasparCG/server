@@ -28,9 +28,10 @@
 #include "video/video_decoder.h"
 #include "../ffmpeg_error.h"
 
+#include <common/concurrency/throw_away.h>
 #include <common/env.h>
-#include <common/utility/assert.h>
 #include <common/diagnostics/graph.h>
+#include <common/utility/assert.h>
 
 #include <core/video_format.h>
 #include <core/producer/frame_producer.h>
@@ -63,8 +64,6 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool																loop_;
 	const size_t															length_;
 	
-	call<input::target_element_t>											throw_away_packets_;
-	call<frame_muxer2::target_element_t>									throw_away_frames_;
 	unbounded_buffer<input::target_element_t>								packets_;
 	std::shared_ptr<unbounded_buffer<frame_muxer2::video_source_element_t>>	video_;
 	std::shared_ptr<unbounded_buffer<frame_muxer2::audio_source_element_t>>	audio_;
@@ -85,8 +84,6 @@ public:
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
-		, throw_away_packets_([](const input::target_element_t&){})
-		, throw_away_frames_([](const frame_muxer2::target_element_t&){})
 		, input_(packets_, graph_, filename_, loop, start, length)
 		, last_frame_(core::basic_frame::empty())
 	{		
@@ -124,7 +121,7 @@ public:
 
 		CASPAR_VERIFY(video_decoder_ || audio_decoder_, ffmpeg_error());
 		
-		packets_.link_target(&throw_away_packets_);
+		link_throw_away(packets_);
 		muxer_.reset(new frame_muxer2(video_.get(), audio_.get(), frames_, video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory));
 				
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
@@ -137,7 +134,7 @@ public:
 	~ffmpeg_producer()
 	{
 		input_.stop();	
-		frames_.link_target(&throw_away_frames_);
+		link_throw_away(frames_);
 	}
 						
 	virtual safe_ptr<core::basic_frame> receive(int hints)
