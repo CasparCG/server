@@ -233,11 +233,14 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
+	std::vector<std::wstring> params2 = params;
+	std::for_each(std::begin(params2), std::end(params2), std::bind(&boost::to_upper<std::wstring>, std::placeholders::_1, std::locale()));
+
 	auto path		= filename + L"." + *ext;
-	auto loop		= boost::range::find(params, L"LOOP") != params.end();
-	auto start		= core::get_param(L"SEEK", params, 0);
-	auto length		= core::get_param(L"LENGTH", params, std::numeric_limits<size_t>::max());
-	auto filter_str = core::get_param<std::wstring>(L"FILTER", params, L""); 	
+	auto loop		= boost::range::find(params2, L"LOOP") != params2.end();
+	auto start		= core::get_param(L"SEEK", params2, 0);
+	auto length		= core::get_param(L"LENGTH", params2, std::numeric_limits<size_t>::max());
+	auto filter_str = core::get_param<std::wstring>(L"FILTER", params2, L""); 	
 		
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");

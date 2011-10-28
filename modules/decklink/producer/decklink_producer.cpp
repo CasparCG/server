@@ -26,8 +26,8 @@
 #include "../util/util.h"
 
 #include "../../ffmpeg/producer/filter/filter.h"
-#include "../../ffmpeg/producer/util.h"
-#include "../../ffmpeg/producer/frame_muxer.h"
+#include "../../ffmpeg/producer/util/util.h"
+#include "../../ffmpeg/producer/muxer/frame_muxer.h"
 
 #include <common/log/log.h>
 #include <common/diagnostics/graph.h>
@@ -68,6 +68,7 @@ extern "C"
 
 #pragma warning(push)
 
+#include <algorithm>
 #include <functional>
 
 namespace caspar { namespace decklink {
@@ -167,6 +168,8 @@ public:
 	
 class decklink_producer_proxy : public Concurrency::agent, public core::frame_producer
 {		
+	safe_ptr<diagnostics::graph>												graph_;
+
 	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::video_source_element_t>	video_frames_;
 	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::audio_source_element_t>	audio_buffers_;
 	Concurrency::overwrite_buffer<ffmpeg::frame_muxer2::target_element_t>		muxed_frames_;
@@ -181,7 +184,7 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 
 	mutable Concurrency::single_assignment<std::wstring> print_;
 	
-	volatile bool is_running_;
+	tbb::atomic<bool> is_running_;
 public:
 
 	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
@@ -191,8 +194,9 @@ public:
 		, last_frame_(core::basic_frame::empty())
 		, length_(length)
 		, muxer_(&video_frames_, &audio_buffers_, muxed_frames_, format_desc.fps, frame_factory)
-		, is_running_(true)
 	{
+		diagnostics::register_graph(graph_);
+		is_running_ = true;
 		agent::start();
 	}
 
@@ -208,11 +212,11 @@ public:
 
 		try
 		{
-			last_frame_ = frame = Concurrency::receive(muxed_frames_, 10);
+			last_frame_ = frame = Concurrency::receive(muxed_frames_, 10).first;
 		}
 		catch(Concurrency::operation_timed_out&)
 		{		
-			//graph_->add_tag("underflow");	
+			graph_->add_tag("underflow");	
 		}
 
 		return frame;
@@ -309,15 +313,18 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 {
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
+	
+	std::vector<std::wstring> params2 = params;
+	std::for_each(std::begin(params2), std::end(params2), std::bind(&boost::to_upper<std::wstring>, std::placeholders::_1, std::locale()));
 
-	auto device_index	= core::get_param(L"DEVICE", params, 1);
-	auto filter_str		= core::get_param<std::wstring>(L"FILTER", params, L""); 	
-	auto length			= core::get_param(L"LENGTH", params, std::numeric_limits<int64_t>::max()); 	
+	auto device_index	= core::get_param(L"DEVICE", params2, 1);
+	auto filter_str		= core::get_param<std::wstring>(L"FILTER", params2, L""); 	
+	auto length			= core::get_param(L"LENGTH", params2, std::numeric_limits<int64_t>::max()); 	
 	
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 
-	auto format_desc	= core::video_format_desc::get(core::get_param<std::wstring>(L"FORMAT", params, L"INVALID"));
+	auto format_desc	= core::video_format_desc::get(core::get_param<std::wstring>(L"FORMAT", params2, L"INVALID"));
 
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();
