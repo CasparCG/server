@@ -182,6 +182,7 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 
 	safe_ptr<core::basic_frame>			last_frame_;
 	const int64_t						length_;
+	int64_t								frame_number_;
 			
 	ffmpeg::frame_muxer2				muxer_;
 
@@ -196,6 +197,7 @@ public:
 		, device_index_(device_index)
 		, last_frame_(core::basic_frame::empty())
 		, length_(length)
+		, frame_number_(0)
 		, muxer_(&video_frames_, &audio_buffers_, muxed_frames_, format_desc.fps, frame_factory)
 	{
 		diagnostics::register_graph(graph_);
@@ -215,7 +217,11 @@ public:
 
 		try
 		{
+			if(frame_number_ > length_)
+				return core::basic_frame::eof();
+
 			last_frame_ = frame = Concurrency::receive(muxed_frames_, 10).first;
+			++frame_number_;
 		}
 		catch(Concurrency::operation_timed_out&)
 		{		
