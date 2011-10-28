@@ -107,9 +107,11 @@ public:
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
 		graph_->set_text(narrow(print()));
 		diagnostics::register_graph(graph_);
-
+		
 		auto display_mode = get_display_mode(input_, format_desc_.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
 		
+		Concurrency::scoped_oversubcription_token oversubscribe;
+
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
 		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
@@ -142,6 +144,7 @@ public:
 			input_->StopStreams();
 			input_->DisableVideoInput();
 		}
+		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
@@ -239,6 +242,8 @@ public:
 
 	virtual void run()
 	{
+		win32_exception::install_handler();
+
 		try
 		{
 			struct co_init
@@ -249,21 +254,17 @@ public:
 			
 			Concurrency::overwrite_buffer<frame_packet> input_buffer;
 
-			std::unique_ptr<decklink_producer> producer;
-			{				
-				Concurrency::scoped_oversubcription_token oversubscribe;
-				producer.reset(new decklink_producer(input_buffer, format_desc_, device_index_));
-			}
-
-			Concurrency::send(print_, producer->print());
+			decklink_producer producer(input_buffer, format_desc_, device_index_);
+			
+			Concurrency::send(print_, producer.print());
 
 			while(is_running_)
 			{
 				auto packet = Concurrency::receive(input_buffer);
 				auto video  = packet.first;
-				auto audio  = packet.second;
-				
+				auto audio  = packet.second;				
 				void* bytes = nullptr;
+
 				if(FAILED(video->GetBytes(&bytes)) || !bytes)
 					continue;
 			
@@ -281,7 +282,7 @@ public:
 				Concurrency::send(video_frames_, av_frame);					
 				
 				// It is assumed that audio is always equal or ahead of video.
-				if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
+				if(audio && SUCCEEDED(audio->GetBytes(&bytes)) && bytes)
 				{
 					auto sample_frame_count = audio->GetSampleFrameCount();
 					auto audio_data = reinterpret_cast<int32_t*>(bytes);
