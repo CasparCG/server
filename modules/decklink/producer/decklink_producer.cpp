@@ -173,8 +173,8 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 {		
 	safe_ptr<diagnostics::graph>												graph_;
 
-	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::video_source_element_t>	video_frames_;
-	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::audio_source_element_t>	audio_buffers_;
+	Concurrency::overwrite_buffer<ffmpeg::frame_muxer2::video_source_element_t>	video_frames_;
+	Concurrency::overwrite_buffer<ffmpeg::frame_muxer2::audio_source_element_t>	audio_buffers_;
 	Concurrency::overwrite_buffer<ffmpeg::frame_muxer2::target_element_t>		muxed_frames_;
 
 	const core::video_format_desc		format_desc_;
