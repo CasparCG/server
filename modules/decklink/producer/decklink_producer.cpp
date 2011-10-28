@@ -75,7 +75,7 @@ namespace caspar { namespace decklink {
 		
 typedef std::pair<CComPtr<IDeckLinkVideoInputFrame>, CComPtr<IDeckLinkAudioInputPacket>> frame_packet;
 
-class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
+class decklink_input : boost::noncopyable, public IDeckLinkInputCallback
 {	
 	Concurrency::ITarget<frame_packet>&	target_;
 
@@ -91,7 +91,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	boost::timer						frame_timer_;
 
 public:
-	decklink_producer(Concurrency::ITarget<frame_packet>& target, const core::video_format_desc& format_desc, size_t device_index)
+	decklink_input(Concurrency::ITarget<frame_packet>& target, const core::video_format_desc& format_desc, size_t device_index)
 		: target_(target)
 		, decklink_(get_device(device_index))
 		, input_(decklink_)
@@ -136,7 +136,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
-	~decklink_producer()
+	~decklink_input()
 	{
 		Concurrency::scoped_oversubcription_token oversubscribe;
 		if(input_ != nullptr) 
@@ -169,7 +169,7 @@ public:
 	}
 };
 	
-class decklink_producer_proxy : public Concurrency::agent, public core::frame_producer
+class decklink_producer : public Concurrency::agent, public core::frame_producer
 {		
 	safe_ptr<diagnostics::graph>												graph_;
 
@@ -191,7 +191,7 @@ class decklink_producer_proxy : public Concurrency::agent, public core::frame_pr
 	tbb::atomic<bool> is_running_;
 public:
 
-	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
+	explicit decklink_producer(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
 		: muxed_frames_(1)
 		, format_desc_(format_desc)
 		, device_index_(device_index)
@@ -205,7 +205,7 @@ public:
 		agent::start();
 	}
 
-	~decklink_producer_proxy()
+	~decklink_producer()
 	{
 		is_running_ = false;
 		agent::wait(this);
@@ -260,9 +260,9 @@ public:
 			
 			Concurrency::overwrite_buffer<frame_packet> input_buffer;
 
-			decklink_producer producer(input_buffer, format_desc_, device_index_);
+			decklink_input input(input_buffer, format_desc_, device_index_);
 			
-			Concurrency::send(print_, producer.print());
+			Concurrency::send(print_, input.print());
 
 			while(is_running_)
 			{
@@ -328,7 +328,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();
 			
-	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length);
+	return make_safe<decklink_producer>(frame_factory, format_desc, device_index, filter_str, length);
 }
 
 }}
