@@ -65,6 +65,8 @@ struct video_decoder::implementation : public Concurrency::agent, boost::noncopy
 	ITarget<video_decoder::target_element_t>&			target_;
 
 	governor											governor_;
+
+	tbb::atomic<bool>									is_running_;
 	
 public:
 	explicit implementation(video_decoder::source_t& source, video_decoder::target_t& target, AVFormatContext& context) 
@@ -82,11 +84,14 @@ public:
 		
 		source.link_target(&source_);
 		
+		is_running_ = true;
+
 		start();
 	}
 
 	~implementation()
 	{
+		is_running_ = false;
 		governor_.cancel();
 		agent::wait(this);
 	}
@@ -97,7 +102,7 @@ public:
 
 		try
 		{
-			while(true)
+			while(is_running_)
 			{
 				auto ticket = governor_.acquire();
 				auto packet = receive(source_);
