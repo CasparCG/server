@@ -68,7 +68,6 @@ public:
 	bool loop() const;
 	void loop(bool value);
 
-	void start();
 	void stop();
 private:
 	friend struct implemenation;
