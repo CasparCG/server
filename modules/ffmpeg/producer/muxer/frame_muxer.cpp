@@ -210,7 +210,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 		case display_mode::half:						
 			{								
 				send(target_, frame_muxer2::target_element_t(video, ticket));
-				auto video2 = receive_video();
+				auto video2 = receive_video(); // throw away
 				
 				return video2 != nullptr;
 			}
