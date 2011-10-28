@@ -119,6 +119,7 @@ public:
 		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
 				
 		is_running_ = true;
+		agent::start();
 	}
 
 	~implementation()
@@ -126,7 +127,7 @@ public:
 		if(is_running_)
 			stop();
 	}
-	
+		
 	void stop()
 	{
 		is_running_ = false;
@@ -293,11 +294,6 @@ size_t input::nb_frames() const
 size_t input::nb_loops() const 
 {
 	return impl_->nb_loops_;
-}
-
-void input::start()
-{
-	impl_->start();
 }
 
 void input::stop()
