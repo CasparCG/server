@@ -298,8 +298,6 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 		
-		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
-
 		done();
 	}
 };
