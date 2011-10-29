@@ -101,6 +101,7 @@ public:
 	virtual std::wstring print() const										{return consumer_->print();}
 	virtual bool has_synchronization_clock() const							{return consumer_->has_synchronization_clock();}
 	virtual const core::video_format_desc& get_video_format_desc() const	{return consumer_->get_video_format_desc();}
+	virtual size_t buffer_depth() const										{return consumer_->buffer_depth();}
 };
 
 Concurrency::concurrent_vector<std::shared_ptr<consumer_factory_t>> g_factories;

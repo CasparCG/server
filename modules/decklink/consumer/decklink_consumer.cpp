@@ -450,6 +450,11 @@ public:
 		context_->send(frame);
 		return true;
 	}
+
+	virtual size_t buffer_depth() const
+	{
+		return config_.preroll_count();
+	}
 	
 	virtual std::wstring print() const
 	{

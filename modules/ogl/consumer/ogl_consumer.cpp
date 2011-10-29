@@ -357,7 +357,7 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
-	void send(const safe_ptr<core::read_frame>& frame)
+	virtual void send(const safe_ptr<core::read_frame>& frame)
 	{
 		if(exception_.has_value())
 			std::rethrow_exception(exception_.value());
@@ -368,8 +368,8 @@ public:
 		else
 			Concurrency::send(frame_buffer_, safe_ptr<core::read_frame>(frame.get(), [frame, ticket](core::read_frame*){}));
 	}
-		
-	std::wstring print() const
+			
+	virtual std::wstring print() const
 	{	
 		return  L"ogl[" + boost::lexical_cast<std::wstring>(config_.screen_index) + L"|" + format_desc_.name + L"]";
 	}
@@ -462,6 +462,11 @@ public:
 	virtual bool has_synchronization_clock() const 
 	{
 		return false;
+	}
+	
+	virtual size_t buffer_depth() const
+	{
+		return 1;
 	}
 
 	virtual const core::video_format_desc& get_video_format_desc() const

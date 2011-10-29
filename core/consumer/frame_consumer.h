@@ -45,7 +45,7 @@ struct frame_consumer : boost::noncopyable
 	virtual std::wstring print() const = 0;
 	virtual bool has_synchronization_clock() const {return true;}
 	virtual const core::video_format_desc& get_video_format_desc() const = 0; // nothrow
-
+	virtual size_t buffer_depth() const = 0;
 	static const safe_ptr<frame_consumer>& empty()
 	{
 		struct empty_frame_consumer : public frame_consumer
@@ -56,6 +56,7 @@ struct frame_consumer : boost::noncopyable
 			virtual std::wstring print() const {return L"empty";}
 			virtual bool has_synchronization_clock() const {return false;}
 			virtual const core::video_format_desc& get_video_format_desc() const{return format_desc;}; // nothrow
+			virtual size_t buffer_depth() const {return 0;}
 		};
 		static safe_ptr<frame_consumer> consumer = make_safe<empty_frame_consumer>();
 		return consumer;
