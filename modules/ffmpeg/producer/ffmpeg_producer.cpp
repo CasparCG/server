@@ -64,6 +64,8 @@ struct ffmpeg_producer : public core::frame_producer
 	const bool																loop_;
 	const size_t															length_;
 	
+	std::unique_ptr<input>													input_;	
+
 	unbounded_buffer<input::target_element_t>								packets_;
 	std::shared_ptr<unbounded_buffer<frame_muxer2::video_source_element_t>>	video_;
 	std::shared_ptr<unbounded_buffer<frame_muxer2::audio_source_element_t>>	audio_;
@@ -71,7 +73,6 @@ struct ffmpeg_producer : public core::frame_producer
 		
 	const safe_ptr<diagnostics::graph>										graph_;
 					
-	input																	input_;	
 	std::unique_ptr<video_decoder>											video_decoder_;
 	std::unique_ptr<audio_decoder>											audio_decoder_;	
 	std::unique_ptr<frame_muxer2>											muxer_;
@@ -84,13 +85,14 @@ public:
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
-		, input_(packets_, graph_, filename_, loop, start, length)
 		, last_frame_(core::basic_frame::empty())
 	{		
+		input_.reset(new input(packets_, graph_, filename_, loop, start, length));
+
 		try
 		{
 			auto video = std::make_shared<unbounded_buffer<frame_muxer2::video_source_element_t>>();
-			video_decoder_.reset(new video_decoder(packets_, *video, *input_.context()));
+			video_decoder_.reset(new video_decoder(packets_, *video, *input_->context()));
 			video_ = video;
 		}
 		catch(averror_stream_not_found&)
@@ -106,7 +108,7 @@ public:
 		try
 		{
 			auto audio = std::make_shared<unbounded_buffer<frame_muxer2::audio_source_element_t>>();
-			audio_decoder_.reset(new audio_decoder(packets_, *audio, *input_.context(), frame_factory->get_video_format_desc()));
+			audio_decoder_.reset(new audio_decoder(packets_, *audio, *input_->context(), frame_factory->get_video_format_desc()));
 			audio_ = audio;
 		}
 		catch(averror_stream_not_found&)
@@ -131,7 +133,7 @@ public:
 
 	~ffmpeg_producer()
 	{
-		input_.stop();	
+		input_->stop();	
 	}
 						
 	virtual safe_ptr<core::basic_frame> receive(int hints)
@@ -165,8 +167,8 @@ public:
 
 		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
 
-		int64_t nb_frames = input_.nb_frames();
-		if(input_.nb_loops() < 1) // input still hasn't counted all frames
+		int64_t nb_frames = input_->nb_frames();
+		if(input_->nb_loops() < 1) // input still hasn't counted all frames
 		{
 			int64_t video_nb_frames = video_decoder_->nb_frames();
 			int64_t audio_nb_frames = audio_decoder_->nb_frames();
@@ -186,7 +188,7 @@ public:
 
 		if(boost::iequals(params.at(0), L"LOOP"))
 		{
-			input_.loop(boost::lexical_cast<bool>(params.at(1)));
+			input_->loop(boost::lexical_cast<bool>(params.at(1)));
 			return true;
 		}
 		return false;
