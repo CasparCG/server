@@ -53,6 +53,7 @@ namespace caspar { namespace bluefish {
 struct bluefish_consumer : public Concurrency::agent, boost::noncopyable
 {
 	unbounded_buffer<safe_ptr<core::read_frame>> frames_;
+	overwrite_buffer<std::exception_ptr>		exception_;
 
 	safe_ptr<CBlueVelvet4>						blue_;
 	const unsigned int							device_index_;
@@ -94,6 +95,8 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 			
+		Concurrency::scoped_oversubcription_token oversubscribe;
+
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
@@ -203,6 +206,9 @@ public:
 	
 	void send(const safe_ptr<core::read_frame>& frame)
 	{	
+		if(exception_.has_value())
+			std::rethrow_exception(exception_.value());
+
 		auto ticket = governor_.acquire();
 		Concurrency::send(frames_, safe_ptr<core::read_frame>(frame.get(), [frame, ticket](core::read_frame*){}));
 	}
@@ -287,7 +293,7 @@ public:
 		}
 		catch(...)
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
+			Concurrency::send(exception_, std::current_exception());
 		}
 
 		done();
@@ -337,16 +343,11 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		if(consumer_)
-			BOOST_THROW_EXCEPTION(invalid_operation());
-
-		Concurrency::scoped_oversubcription_token oversubscribe;
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
-		Concurrency::scoped_oversubcription_token oversubscribe;
 		consumer_->send(frame);
 		return true;
 	}
@@ -362,11 +363,6 @@ public:
 			consumer_->print();
 
 		return L"bluefish [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
-	}
-
-	virtual size_t buffer_depth() const
-	{
-		return 1;
 	}
 };	
 
