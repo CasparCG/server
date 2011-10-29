@@ -64,5 +64,3 @@
 #include "../common/log/Log.h"
 #include "../common/exception/exceptions.h"
 #include "../common/exception/win32_exception.h"
-
-#include <assert.h>

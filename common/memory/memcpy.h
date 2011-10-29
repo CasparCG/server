@@ -77,7 +77,6 @@ static void* fast_memcpy_aligned_impl(void* dest, const void* source, size_t cou
 	return dest;
 }
 
-
 static void* fast_memcpy_unaligned_impl(void* dest, const void* source, size_t count)
 {
 	CASPAR_ASSERT(dest != nullptr);
@@ -185,16 +184,5 @@ T* fast_memcpy(T* dest, const void* source, size_t count)
 	else
 		return reinterpret_cast<T*>(detail::fast_memcpy_aligned(dest, source, count));
 }
-
-template<typename T>
-safe_ptr<T> fast_memdup(const T* source, size_t count)
-{   	
-	auto source_align	= reinterpret_cast<int>(source) & 15;
-	auto dest8			= reinterpret_cast<char*>(scalable_aligned_malloc(count + source_align, 32));
-	auto source8		= reinterpret_cast<const char*>(source);	
-	detail::fast_memcpy_aligned(dest8, source8-source_align, count+source_align);
-	return safe_ptr<T>(reinterpret_cast<T*>(dest8+source_align), [dest8](T*){scalable_free(dest8);});
-}
-
 
 }
