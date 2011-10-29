@@ -50,18 +50,15 @@ using namespace Concurrency;
 
 namespace caspar { namespace bluefish { 
 			
-struct bluefish_consumer : public Concurrency::agent, boost::noncopyable
+struct bluefish_consumer : boost::noncopyable
 {
-	unbounded_buffer<safe_ptr<core::read_frame>> frames_;
-	overwrite_buffer<std::exception_ptr>		exception_;
-
-	safe_ptr<CBlueVelvet4>						blue_;
+	const safe_ptr<CBlueVelvet4>				blue_;
 	const unsigned int							device_index_;
 	const core::video_format_desc				format_desc_;
 
 	const std::wstring							model_name_;
 
-	safe_ptr<diagnostics::graph>				graph_;
+	const safe_ptr<diagnostics::graph>			graph_;
 	boost::timer								frame_timer_;
 	boost::timer								tick_timer_;
 	boost::timer								sync_timer_;	
@@ -72,9 +69,6 @@ struct bluefish_consumer : public Concurrency::agent, boost::noncopyable
 	
 	const bool									embedded_audio_;
 	const bool									key_only_;
-	
-	governor									governor_;
-	tbb::atomic<bool>							is_running_;
 public:
 	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only) 
 		: blue_(create_blue(device_index))
@@ -84,14 +78,12 @@ public:
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
 		, embedded_audio_(embedded_audio)
 		, key_only_(key_only)
-		, governor_(1)
 	{
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->add_guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("sync-time", diagnostics::color(0.5f, 1.0f, 0.2f));
-		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
+		graph_->set_color("sync-time", diagnostics::color(1.0f, 0.3f, 0.5f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 			
@@ -162,18 +154,12 @@ public:
 		{
 			return std::make_shared<blue_dma_buffer>(format_desc_.size, n++);
 		});
-
-		is_running_ = true;
-		start();
-								
+										
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
 	~bluefish_consumer()
 	{
-		is_running_ = false;
-		governor_.cancel();
-		agent::wait(this);
 		try
 		{			
 			disable_video_output();
@@ -206,99 +192,76 @@ public:
 	
 	void send(const safe_ptr<core::read_frame>& frame)
 	{	
-		if(exception_.has_value())
-			std::rethrow_exception(exception_.value());
+		static std::vector<int16_t> silence(MAX_HANC_BUFFER_SIZE, 0);
 
-		auto ticket = governor_.acquire();
-		Concurrency::send(frames_, safe_ptr<core::read_frame>(frame.get(), [frame, ticket](core::read_frame*){}));
+		const size_t audio_samples	 = format_desc_.audio_samples_per_frame;
+		const size_t audio_nchannels = format_desc_.audio_channels;
+
+		frame_timer_.restart();
+				
+		// Copy to local buffers
+
+		if(!frame->image_data().empty())
+		{
+			if(key_only_)						
+				fast_memshfl(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			else
+				fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
+		}
+		else
+			fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
+								
+		// Sync
+
+		sync_timer_.restart();
+		unsigned long n_field = 0;
+		{
+			scoped_oversubcription_token oversubscribe;
+			blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
+		}
+		graph_->update_value("sync-time", static_cast<float>(sync_timer_.elapsed()*format_desc_.fps*0.5));
+
+		// Send and display
+
+		if(embedded_audio_)
+		{		
+			auto frame_audio	  = core::audio_32_to_16_sse(frame->audio_data());
+			auto frame_audio_data = frame_audio.size() != audio_samples ? silence.data() : frame_audio.data();	
+
+			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio_data, audio_samples, audio_nchannels);
+								
+			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
+											reserved_frames_.front()->image_size(), 
+											nullptr, 
+											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
+
+			blue_->system_buffer_write_async(reserved_frames_.front()->hanc_data(),
+											reserved_frames_.front()->hanc_size(), 
+											nullptr,                 
+											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_HANC));
+
+			if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
+				CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
+		}
+		else
+		{
+			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
+											reserved_frames_.front()->image_size(), 
+											nullptr,                 
+											BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
+			
+			if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
+				CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
+		}
+
+		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
+				
+		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
+
+		graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
+		tick_timer_.restart();				
 	}
 	
-	virtual void run()
-	{
-		static std::vector<int16_t> silence(MAX_HANC_BUFFER_SIZE, 0);
-		
-		try
-		{
-			while(is_running_)
-			{
-				auto frame = receive(frames_);
-
-				const size_t audio_samples	 = format_desc_.audio_samples_per_frame;
-				const size_t audio_nchannels = format_desc_.audio_channels;
-
-				frame_timer_.restart();
-				
-				// Copy to local buffers
-
-				if(!frame->image_data().empty())
-				{
-					if(key_only_)						
-						fast_memshfl(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-					else
-						fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
-				}
-				else
-					fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
-								
-				// Sync
-
-				sync_timer_.restart();
-				unsigned long n_field = 0;
-				{
-					scoped_oversubcription_token oversubscribe;
-					blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
-				}
-				graph_->update_value("sync-time", static_cast<float>(sync_timer_.elapsed()*format_desc_.fps*0.5));
-
-				// Send and display
-
-				if(embedded_audio_)
-				{		
-					auto frame_audio	  = core::audio_32_to_16_sse(frame->audio_data());
-					auto frame_audio_data = frame_audio.size() != audio_samples ? silence.data() : frame_audio.data();	
-
-					encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio_data, audio_samples, audio_nchannels);
-								
-					blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
-													reserved_frames_.front()->image_size(), 
-													nullptr, 
-													BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
-
-					blue_->system_buffer_write_async(reserved_frames_.front()->hanc_data(),
-													reserved_frames_.front()->hanc_size(), 
-													nullptr,                 
-													BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_HANC));
-
-					if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
-						CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
-				}
-				else
-				{
-					blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
-													reserved_frames_.front()->image_size(), 
-													nullptr,                 
-													BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
-			
-					if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
-						CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
-				}
-
-				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
-				
-				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
-
-				graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
-				tick_timer_.restart();				
-			}
-		}
-		catch(...)
-		{
-			Concurrency::send(exception_, std::current_exception());
-		}
-
-		done();
-	}
-
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
 		const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN;

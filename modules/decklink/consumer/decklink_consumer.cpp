@@ -399,6 +399,7 @@ public:
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Is not running."));
 		
+		Concurrency::scoped_oversubcription_token oversubscribe;		
 		if(config_.embedded_audio)
 			audio_frame_buffer_.push(frame);	
 		video_frame_buffer_.push(frame);	
@@ -445,7 +446,6 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
-		Concurrency::scoped_oversubcription_token oversubscribe;
 		context_->send(frame);
 		return true;
 	}
