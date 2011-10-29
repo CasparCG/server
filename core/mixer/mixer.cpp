@@ -28,7 +28,6 @@
 #include "image/image_mixer.h"
 
 #include <common/exception/exceptions.h>
-#include <common/concurrency/executor.h>
 #include <common/utility/tweener.h>
 #include <common/env.h>
 #include <common/gl/gl_check.h>
