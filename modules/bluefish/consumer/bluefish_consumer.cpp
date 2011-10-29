@@ -26,7 +26,7 @@
 
 #include <core/mixer/read_frame.h>
 
-#include <common/concurrency/executor.h>
+#include <common/concurrency/governor.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/memclr.h>
 #include <common/memory/memcpy.h>
@@ -38,6 +38,7 @@
 
 #include <tbb/concurrent_queue.h>
 
+#include <agents.h>
 #include <concrt_extras.h>
 
 #include <boost/timer.hpp>
@@ -45,32 +46,34 @@
 #include <memory>
 #include <array>
 
+using namespace Concurrency;
+
 namespace caspar { namespace bluefish { 
 			
-struct bluefish_consumer : boost::noncopyable
+struct bluefish_consumer : public Concurrency::agent, boost::noncopyable
 {
-	safe_ptr<CBlueVelvet4>				blue_;
-	const unsigned int					device_index_;
-	const core::video_format_desc		format_desc_;
+	unbounded_buffer<safe_ptr<core::read_frame>> frames_;
 
-	const std::wstring					model_name_;
+	safe_ptr<CBlueVelvet4>						blue_;
+	const unsigned int							device_index_;
+	const core::video_format_desc				format_desc_;
 
-	safe_ptr<diagnostics::graph>		graph_;
-	boost::timer						frame_timer_;
-	boost::timer						tick_timer_;
-	boost::timer						sync_timer_;	
+	const std::wstring							model_name_;
+
+	safe_ptr<diagnostics::graph>				graph_;
+	boost::timer								frame_timer_;
+	boost::timer								tick_timer_;
+	boost::timer								sync_timer_;	
 			
-	unsigned int						vid_fmt_;
+	const unsigned int							vid_fmt_;
 
-	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
-	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> frame_buffer_;
-
-	int									preroll_count_;
-
-	const bool							embedded_audio_;
-	const bool							key_only_;
+	std::array<blue_dma_buffer_ptr, 4>			reserved_frames_;	
 	
-	executor							executor_;
+	const bool									embedded_audio_;
+	const bool									key_only_;
+	
+	governor									governor_;
+	tbb::atomic<bool>							is_running_;
 public:
 	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only) 
 		: blue_(create_blue(device_index))
@@ -78,13 +81,10 @@ public:
 		, format_desc_(format_desc) 
 		, model_name_(get_card_desc(*blue_))
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
-		, preroll_count_(0)
 		, embedded_audio_(embedded_audio)
 		, key_only_(key_only)
-		, executor_(print())
+		, governor_(1)
 	{
-		executor_.set_capacity(core::consumer_buffer_depth());
-
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->add_guide("frame-time", 0.5f);	
@@ -159,19 +159,22 @@ public:
 		{
 			return std::make_shared<blue_dma_buffer>(format_desc_.size, n++);
 		});
+
+		is_running_ = true;
+		start();
 								
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
 	~bluefish_consumer()
 	{
+		is_running_ = false;
+		governor_.cancel();
+		agent::wait(this);
 		try
-		{
-			executor_.invoke([&]
-			{
-				disable_video_output();
-				blue_->device_detach();		
-			});
+		{			
+			disable_video_output();
+			blue_->device_detach();		
 		}
 		catch(...)
 		{
@@ -200,23 +203,20 @@ public:
 	
 	void send(const safe_ptr<core::read_frame>& frame)
 	{	
-		if(preroll_count_ < executor_.capacity())
-		{
-			while(preroll_count_++ < executor_.capacity())
-				schedule_next_video(make_safe<core::read_frame>());
-		}
-		
-		schedule_next_video(frame);			
+		auto ticket = governor_.acquire();
+		Concurrency::send(frames_, safe_ptr<core::read_frame>(frame.get(), [frame, ticket](core::read_frame*){}));
 	}
 	
-	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
+	virtual void run()
 	{
 		static std::vector<int16_t> silence(MAX_HANC_BUFFER_SIZE, 0);
 		
-		executor_.begin_invoke([=]
+		try
 		{
-			try
+			while(is_running_)
 			{
+				auto frame = receive(frames_);
+
 				const size_t audio_samples	 = format_desc_.audio_samples_per_frame;
 				const size_t audio_nchannels = format_desc_.audio_channels;
 
@@ -238,7 +238,10 @@ public:
 
 				sync_timer_.restart();
 				unsigned long n_field = 0;
-				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
+				{
+					scoped_oversubcription_token oversubscribe;
+					blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
+				}
 				graph_->update_value("sync-time", static_cast<float>(sync_timer_.elapsed()*format_desc_.fps*0.5));
 
 				// Send and display
@@ -279,15 +282,15 @@ public:
 				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 
 				graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
-				tick_timer_.restart();
+				tick_timer_.restart();				
 			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-			}
-			graph_->set_value("input-buffer", static_cast<double>(executor_.size())/static_cast<double>(executor_.capacity()));
-		});
-		graph_->set_value("input-buffer", static_cast<double>(executor_.size())/static_cast<double>(executor_.capacity()));
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+
+		done();
 	}
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
@@ -323,7 +326,6 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	const size_t						device_index_;
 	const bool							embedded_audio_;
 	const bool							key_only_;
-	core::video_format_desc				format_desc_;
 public:
 
 	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
@@ -335,8 +337,10 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
+		if(consumer_)
+			BOOST_THROW_EXCEPTION(invalid_operation());
+
 		Concurrency::scoped_oversubcription_token oversubscribe;
-		format_desc_ = format_desc;
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_));
 	}
 	
@@ -358,6 +362,11 @@ public:
 			consumer_->print();
 
 		return L"bluefish [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+	}
+
+	virtual size_t buffer_depth() const
+	{
+		return 1;
 	}
 };	
 
