@@ -40,7 +40,6 @@
 #include <vector>
 
 #include <tbb/atomic.h>
-#include <tbb/concurrent_queue.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
