@@ -89,6 +89,8 @@ public:
 		return L"image[]";
 	}
 
+	virtual size_t buffer_depth() const {return 0;}
+
 	virtual const core::video_format_desc& get_video_format_desc() const
 	{
 		return format_desc_;
