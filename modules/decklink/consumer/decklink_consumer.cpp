@@ -439,6 +439,7 @@ public:
 			co_init(){CoInitialize(nullptr);}
 			~co_init(){CoUninitialize();}
 		} init;		
+		context_ = nullptr;
 		context_.reset(new decklink_consumer(config_, format_desc_));		
 				
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
