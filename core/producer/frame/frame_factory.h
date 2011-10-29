@@ -37,19 +37,7 @@ struct video_format_desc;
 		
 struct frame_factory : boost::noncopyable
 {
-	safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& desc)
-	{
-		auto frame = async_create_frame(tag, desc);
-
-		Concurrency::wait(0);
-
-		if(!frame.has_value())
-		{
-			Concurrency::scoped_oversubcription_token oversubscribe;
-			frame.wait();
-		}
-		return frame.get();
-	}
+	virtual safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& desc) = 0;
 
 	safe_ptr<write_frame> create_frame(const void* video_stream_tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra)
 	{	
@@ -61,9 +49,6 @@ struct frame_factory : boost::noncopyable
 	}
 
 	virtual video_format_desc get_video_format_desc() const = 0; // nothrow
-private:
-	
-	virtual boost::unique_future<safe_ptr<write_frame>> async_create_frame(const void* video_stream_tag, const pixel_format_desc& desc) = 0;
 };
 	
 }}

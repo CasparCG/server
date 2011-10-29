@@ -161,9 +161,18 @@ public:
 		return mixer::target_element_t(std::move(frame), element.second);	
 	}
 						
-	boost::unique_future<safe_ptr<core::write_frame>> async_create_frame(const void* tag, const core::pixel_format_desc& desc)
-	{		
-		return image_mixer_.async_create_frame(tag, desc);
+	safe_ptr<core::write_frame> async_create_frame(const void* tag, const core::pixel_format_desc& desc)
+	{			
+		auto frame = image_mixer_.async_create_frame(tag, desc);
+
+		Concurrency::Context::Yield();
+
+		if(!frame.has_value())
+		{
+			Concurrency::scoped_oversubcription_token oversubscribe;
+			frame.wait();
+		}
+		return frame.get();
 	}
 		
 	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
@@ -207,7 +216,7 @@ public:
 	
 mixer::mixer(mixer::source_t& source, mixer::target_t& target, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(source, target, format_desc, ogl)){}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->format_desc_; }
-boost::unique_future<safe_ptr<write_frame>> mixer::async_create_frame(const void* video_stream_tag, const pixel_format_desc& desc){ return impl_->async_create_frame(video_stream_tag, desc); }			
+safe_ptr<write_frame> mixer::create_frame(const void* video_stream_tag, const pixel_format_desc& desc){ return impl_->async_create_frame(video_stream_tag, desc); }			
 void mixer::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
 void mixer::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void mixer::clear_transforms(){impl_->clear_transforms();}
