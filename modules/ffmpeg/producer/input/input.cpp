@@ -62,9 +62,7 @@ namespace caspar { namespace ffmpeg {
 static const size_t MAX_PACKETS_SIZE = 16 * 1000000;
 static const size_t MAX_PACKETS_COUNT = 50;
 	
-struct input::implementation : public Concurrency::agent
-							 , public std::enable_shared_from_this<implementation>
-							 , boost::noncopyable
+struct input::implementation : public Concurrency::agent, boost::noncopyable
 {
 	input::target_t&						target_;
 	safe_ptr<diagnostics::graph>			graph_;
@@ -209,8 +207,7 @@ public:
 		graph_->update_value("buffer-size", (packets_size_+0.001)/MAX_PACKETS_SIZE);
 		graph_->update_value("buffer-count", (packets_count_+0.001)/MAX_PACKETS_COUNT);
 
-		auto self = shared_from_this();
-		packet = safe_ptr<AVPacket>(packet.get(), [this, self, packet, size, data](AVPacket*)
+		packet = safe_ptr<AVPacket>(packet.get(), [this, packet, size, data](AVPacket*)
 		{
 			packet->size = size;
 			packet->data = data;
