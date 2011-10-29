@@ -321,6 +321,11 @@ public:
 		return consumer_->get_video_format_desc();
 	}
 	
+	virtual size_t buffer_depth() const
+	{
+		return 0;
+	}
+
 	virtual std::wstring print() const
 	{
 		if(consumer_)

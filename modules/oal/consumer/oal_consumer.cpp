@@ -110,6 +110,11 @@ public:
 
 		return is_running_;
 	}
+	
+	virtual size_t buffer_depth() const
+	{
+		return 2;
+	}
 
 	virtual std::wstring print() const
 	{
