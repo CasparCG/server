@@ -53,11 +53,9 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	tbb::atomic<bool>									is_running_;
 
 	core::video_format_desc								format_desc_;
-	int													preroll_count_;
 public:
 	oal_consumer() 
 		: container_(16)
-		, preroll_count_(0)
 	{
 		if(core::consumer_buffer_depth() < 3)
 			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("audio-consumer does not support buffer-depth lower than 3."));
@@ -67,38 +65,31 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
-		is_running_ = true;
-		input_.set_capacity(core::consumer_buffer_depth()-2);
+		input_.set_capacity(1);
 	}
 
 	~oal_consumer()
 	{
 		is_running_ = false;
 		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
-		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
 		Stop();
-		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
-		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		Concurrency::scoped_oversubcription_token oversubscribe;
+		if(!is_running_.fetch_and_store(true))
+		{			
+			Concurrency::scoped_oversubcription_token oversubscribe;
+			sf::SoundStream::Initialize(2, 48000);
+			Play();		
+			CASPAR_LOG(info) << print() << " Sucessfully initialized.";
+		}
 		format_desc_ = format_desc;		
-		sf::SoundStream::Initialize(2, 48000);
-		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
-	{			
-		if(preroll_count_ < input_.capacity())
-		{
-			while(input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>(format_desc_.audio_samples_per_frame, 0)))
-				++preroll_count_;
-			Play();		
-		}
-		
+	{					
 		auto data = std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>(core::audio_32_to_16_sse(frame->audio_data()));
 		Concurrency::scoped_oversubcription_token oversubscribe;
 		input_.push(data);

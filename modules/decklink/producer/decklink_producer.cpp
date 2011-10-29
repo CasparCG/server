@@ -77,6 +77,7 @@ class decklink_producer : public core::frame_producer, public IDeckLinkInputCall
 	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::video_source_element_t>	video_;
 	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::audio_source_element_t>	audio_;
 	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::target_element_t>		frames_;
+	Concurrency::overwrite_buffer<std::exception_ptr>							exception_;
 			
 	ffmpeg::frame_muxer2														muxer_;
 		
@@ -205,7 +206,7 @@ public:
 		}
 		catch(...)
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
+			send(exception_, std::current_exception());
 			return E_FAIL;
 		}
 		
@@ -214,6 +215,9 @@ public:
 		
 	virtual safe_ptr<core::basic_frame> receive(int)
 	{
+		if(exception_.has_value())
+			std::rethrow_exception(exception_.value());
+
 		auto frame = core::basic_frame::late();
 
 		try

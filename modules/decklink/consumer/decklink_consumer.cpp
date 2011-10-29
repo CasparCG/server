@@ -42,6 +42,7 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 
+#include <agents.h>
 #include <concrt_extras.h>
 
 namespace caspar { namespace decklink { 
@@ -53,15 +54,21 @@ struct configuration
 	bool	internal_key;
 	bool	low_latency;
 	bool	key_only;
-	size_t	buffer_depth;
 	
 	configuration()
 		: device_index(1)
 		, embedded_audio(false)
 		, internal_key(false)
 		, low_latency(false)
-		, key_only(false)
-		, buffer_depth(core::consumer_buffer_depth()){}
+		, key_only(false){}
+
+	size_t preroll_count() const
+	{
+		size_t count = 0;
+		count += low_latency ? 2 : 3;
+		count += embedded_audio ? 1 : 0;
+		return count;
+	}
 };
 
 class decklink_frame : public IDeckLinkVideoFrame
@@ -138,8 +145,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	CComQIPtr<IDeckLinkConfiguration>	configuration_;
 	CComQIPtr<IDeckLinkKeyer>			keyer_;
 
-	tbb::spin_mutex						exception_mutex_;
-	std::exception_ptr					exception_;
+	Concurrency::overwrite_buffer<std::exception_ptr>	exception_;
 
 	tbb::atomic<bool>					is_running_;
 		
@@ -169,7 +175,7 @@ public:
 		, keyer_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
-		, buffer_size_(config.embedded_audio ? config.buffer_depth + 1 : config.buffer_depth) // Minimum buffer-size 3.
+		, buffer_size_(config.preroll_count())
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
 		, preroll_count_(0)
@@ -325,8 +331,7 @@ public:
 		}
 		catch(...)
 		{
-			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
-			exception_ = std::current_exception();
+			Concurrency::send(exception_, std::current_exception());
 			return E_FAIL;
 		}
 
@@ -359,8 +364,7 @@ public:
 		}
 		catch(...)
 		{
-			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
-			exception_ = std::current_exception();
+			Concurrency::send(exception_, std::current_exception());
 			return E_FAIL;
 		}
 
@@ -389,11 +393,8 @@ public:
 
 	void send(const safe_ptr<core::read_frame>& frame)
 	{
-		{
-			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
-			if(exception_ != nullptr)
-				std::rethrow_exception(exception_);
-		}
+		if(exception_.has_value())
+			std::rethrow_exception(exception_.value());
 
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Is not running."));

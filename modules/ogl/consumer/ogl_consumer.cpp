@@ -23,6 +23,7 @@
 #include <GL/glew.h>
 #include <SFML/Window.hpp>
 
+#include <common/concurrency/governor.h>
 #include <common/diagnostics/graph.h>
 #include <common/gl/gl_check.h>
 #include <common/log/log.h>
@@ -68,6 +69,10 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+#include <agents.h>
+
+using namespace Concurrency;
+
 namespace caspar { namespace ogl {
 		
 enum stretch
@@ -96,7 +101,7 @@ struct configuration
 	}
 };
 
-struct ogl_consumer : boost::noncopyable
+struct ogl_consumer : public agent, boost::noncopyable
 {		
 	const configuration		config_;
 	core::video_format_desc format_desc_;
@@ -118,14 +123,14 @@ struct ogl_consumer : boost::noncopyable
 	safe_ptr<diagnostics::graph>	graph_;
 	boost::timer					perf_timer_;
 
-	boost::circular_buffer<safe_ptr<core::read_frame>>			input_buffer_;
-	tbb::concurrent_bounded_queue<safe_ptr<core::read_frame>>	frame_buffer_;
 
-	boost::thread			thread_;
-	tbb::atomic<bool>		is_running_;
-
+	tbb::atomic<bool>				is_running_;
 	
-	ffmpeg::filter			filter_;
+	ffmpeg::filter					filter_;
+
+	unbounded_buffer<safe_ptr<core::read_frame>>	frame_buffer_;
+	overwrite_buffer<std::exception_ptr>			exception_;
+	governor										governor_;
 public:
 	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc) 
 		: config_(config)
@@ -136,11 +141,9 @@ public:
 		, screen_height_(format_desc.height)
 		, square_width_(format_desc.square_width)
 		, square_height_(format_desc.square_height)
-		, input_buffer_(core::consumer_buffer_depth()-1)
 		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
+		, governor_(1)
 	{		
-		frame_buffer_.set_capacity(2);
-
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -165,20 +168,23 @@ public:
 		screen_height_	= config_.windowed ? square_height_ : devmode.dmPelsHeight;
 		
 		is_running_ = true;
-		thread_ = boost::thread([this]{run();});
+		start();
 	}
 	
 	~ogl_consumer()
 	{
 		is_running_ = false;
-		frame_buffer_.try_push(make_safe<core::read_frame>());
-		thread_.join();
+		governor_.cancel();
+		Concurrency::send(frame_buffer_, make_safe<core::read_frame>());
+		agent::wait(this);
 	}
 
 	void init()
 	{
 		if(!GLEW_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
+
+		scoped_oversubcription_token oversubscribe;
 
 		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize : sf::Style::Fullscreen);
 		window_.ShowMouseCursor(false);
@@ -227,7 +233,7 @@ public:
 		CASPAR_LOG(info) << print() << " Sucessfully Uninitialized.";
 	}
 
-	void run()
+	virtual void run()
 	{
 		try
 		{
@@ -246,9 +252,7 @@ public:
 							calculate_aspect();
 					}
 			
-					safe_ptr<core::read_frame> frame;
-					frame_buffer_.pop(frame);
-					render(frame);
+					render(Concurrency::receive(frame_buffer_));
 
 					window_.Display();
 
@@ -265,8 +269,9 @@ public:
 		}
 		catch(...)
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
+			Concurrency::send(exception_, std::current_exception());
 		}
+		done();
 	}
 	
 	const core::video_format_desc& get_video_format_desc() const
@@ -311,7 +316,12 @@ public:
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]);
 		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW);
 
-		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		auto ptr = [&]() -> GLvoid*
+		{
+			scoped_oversubcription_token oversubscribe;
+			return glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		}();
+
 		if(ptr)
 		{
 			if(config_.key_only)
@@ -349,13 +359,14 @@ public:
 
 	void send(const safe_ptr<core::read_frame>& frame)
 	{
-		input_buffer_.push_back(frame);
+		if(exception_.has_value())
+			std::rethrow_exception(exception_.value());
 
-		if(input_buffer_.full())
-		{
-			if(!frame_buffer_.try_push(input_buffer_.front()))
-				graph_->add_tag("dropped-frame");
-		}
+		ticket_t ticket;
+		if(!governor_.try_acquire(ticket))
+			graph_->add_tag("dropped-frame");
+		else
+			Concurrency::send(frame_buffer_, safe_ptr<core::read_frame>(frame.get(), [frame, ticket](core::read_frame*){}));
 	}
 		
 	std::wstring print() const
@@ -433,13 +444,11 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		Concurrency::scoped_oversubcription_token oversubscribe;
 		consumer_.reset(new ogl_consumer(config_, format_desc));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{
-		Concurrency::scoped_oversubcription_token oversubscribe;
 		consumer_->send(frame);
 		return true;
 	}
