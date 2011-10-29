@@ -57,7 +57,7 @@ public:
 
 	explicit mixer(source_t& source, target_t& target, const video_format_desc& format_desc, ogl_device& ogl);
 						
-	boost::unique_future<safe_ptr<write_frame>> async_create_frame(const void* video_stream_tag, const pixel_format_desc& desc);
+	virtual safe_ptr<write_frame> create_frame(const void* video_stream_tag, const pixel_format_desc& desc);
 
 	core::video_format_desc get_video_format_desc() const; // nothrow
 	
