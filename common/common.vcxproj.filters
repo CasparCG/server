@@ -133,5 +133,8 @@
     <ClInclude Include="concurrency\throw_away.h">
       <Filter>source\concurrency</Filter>
     </ClInclude>
+    <ClInclude Include="utility\co_init.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

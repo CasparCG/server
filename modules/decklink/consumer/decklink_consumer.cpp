@@ -424,11 +424,6 @@ public:
 	~decklink_consumer_proxy()
 	{
 		auto str = print();
-		struct co_init
-		{
-			co_init(){CoInitialize(nullptr);}
-			~co_init(){CoUninitialize();}
-		} init;		
 		context_.reset();
 		CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
 	}
