@@ -56,7 +56,6 @@
 #include <common/utility/string.h>
 #include <common/utility/assert.h>
 #include <common/memory/safe_ptr.h>
-//#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
 #include <common/log/log.h>
 #include <common/exception/exceptions.h>

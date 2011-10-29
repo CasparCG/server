@@ -49,7 +49,6 @@
 
 #include "../common/memory/safe_ptr.h"
 #include "../common/utility/string.h"
-//#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
 #include "../common/exception/exceptions.h"
 #include "../common/exception/win32_exception.h"

@@ -30,11 +30,7 @@
 #include <stdint.h>
 #include <numeric>
 
-namespace caspar { 
-	
-class executor;
-	
-namespace core {
+namespace caspar { namespace core {
 
 class basic_frame;
 struct frame_factory;
