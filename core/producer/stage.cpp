@@ -27,9 +27,6 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 
-#include <common/concurrency/executor.h>
-#include <common/utility/move_on_copy.h>
-
 #include <boost/foreach.hpp>
 
 #include <agents.h>

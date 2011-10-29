@@ -30,10 +30,8 @@
 #include "../mixer/gpu/ogl_device.h"
 #include "../mixer/read_frame.h"
 
-#include <common/concurrency/executor.h>
 #include <common/utility/assert.h>
 #include <common/utility/timer.h>
-#include <common/memory/memshfl.h>
 
 #include <concrt_extras.h>
 

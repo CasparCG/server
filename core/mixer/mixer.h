@@ -30,11 +30,7 @@
 
 #include <map>
 
-namespace caspar { 
-
-class executor;
-	
-namespace core {
+namespace caspar { namespace core {
 
 class read_frame;
 class write_frame;
