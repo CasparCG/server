@@ -25,21 +25,19 @@
 #include "../interop/DeckLinkAPI_h.h"
 #include "../util/util.h"
 
-#include "../../ffmpeg/producer/filter/filter.h"
 #include "../../ffmpeg/producer/util/util.h"
 #include "../../ffmpeg/producer/muxer/frame_muxer.h"
 
-#include <common/log/log.h>
+#include <common/concurrency/governor.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
+#include <common/log/log.h>
+#include <common/utility/co_init.h>
 
-#include <core/mixer/write_frame.h>
-#include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
+#include <core/producer/frame/basic_frame.h>
 
 #include <agents.h>
-#include <agents_extras.h>
-#include <ppl.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
@@ -58,46 +56,43 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
-
-	#include <atlbase.h>
-
-	#include <atlcom.h>
-	#include <atlhost.h>
-
-#pragma warning(push)
-
-#include <algorithm>
-#include <functional>
-
 namespace caspar { namespace decklink {
 		
-typedef std::pair<CComPtr<IDeckLinkVideoInputFrame>, CComPtr<IDeckLinkAudioInputPacket>> frame_packet;
-
-class decklink_input : boost::noncopyable, public IDeckLinkInputCallback
-{	
-	Concurrency::ITarget<frame_packet>&	target_;
-
-	CComPtr<IDeckLink>					decklink_;
-	CComQIPtr<IDeckLinkInput>			input_;
+class decklink_producer : public core::frame_producer, public IDeckLinkInputCallback
+{		
+	safe_ptr<diagnostics::graph>												graph_;
 	
-	const std::wstring					model_name_;
-	const core::video_format_desc		format_desc_;
-	const size_t						device_index_;
+	const core::video_format_desc												format_desc_;
+	const size_t																device_index_;
 
-	safe_ptr<diagnostics::graph>		graph_;
-	boost::timer						tick_timer_;
-	boost::timer						frame_timer_;
+	safe_ptr<core::basic_frame>													last_frame_;
+	const int64_t																length_;
+	int64_t																		frame_number_;
+	
+	CComPtr<IDeckLink>															decklink_;
+	CComQIPtr<IDeckLinkInput>													input_;
+
+	const std::wstring															model_name_;
+
+	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::video_source_element_t>	video_;
+	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::audio_source_element_t>	audio_;
+	Concurrency::unbounded_buffer<ffmpeg::frame_muxer2::target_element_t>		frames_;
+			
+	ffmpeg::frame_muxer2														muxer_;
+		
+	governor																	governor_;
 
 public:
-	decklink_input(Concurrency::ITarget<frame_packet>& target, const core::video_format_desc& format_desc, size_t device_index)
-		: target_(target)
+	decklink_producer(const co_init& com, const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
+		: format_desc_(format_desc)
+		, device_index_(device_index)
+		, length_(length)
+		, frame_number_(0)
 		, decklink_(get_device(device_index))
 		, input_(decklink_)
 		, model_name_(get_model_name(decklink_))
-		, format_desc_(format_desc)
-		, device_index_(device_index)
+		, muxer_(&video_, &audio_, frames_, format_desc.fps, frame_factory, filter_str)
+		, governor_(1)
 	{		
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
@@ -111,7 +106,7 @@ public:
 		auto display_mode = get_display_mode(input_, format_desc_.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
 		
 		Concurrency::scoped_oversubcription_token oversubscribe;
-
+		
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
 		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
@@ -136,14 +131,20 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
-	~decklink_input()
+	~decklink_producer()
 	{
+		governor_.cancel();
+		
+		send(video_, ffmpeg::eof_video());
+		send(audio_, ffmpeg::eof_audio());
+
 		Concurrency::scoped_oversubcription_token oversubscribe;
 		if(input_ != nullptr) 
 		{
 			input_->StopStreams();
 			input_->DisableVideoInput();
 		}
+
 		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";
 	}
 
@@ -156,61 +157,61 @@ public:
 		return S_OK;
 	}
 
-	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
+	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* raw_video, IDeckLinkAudioInputPacket* raw_audio)
 	{	
-		if(!Concurrency::asend(target_, frame_packet(CComPtr<IDeckLinkVideoInputFrame>(video), CComPtr<IDeckLinkAudioInputPacket>(audio))))
-			graph_->add_tag("dropped-frame");
+		try
+		{
+			ticket_t ticket;
+			if(!governor_.try_acquire(ticket))
+			{
+				graph_->add_tag("dropped-frame");
+				return S_OK;
+			}
+
+			CComPtr<IDeckLinkVideoInputFrame>  video = raw_video;
+			CComPtr<IDeckLinkAudioInputPacket> audio = raw_audio;
+
+			void* bytes = nullptr;
+
+			if(!video || FAILED(video->GetBytes(&bytes)) || !bytes)
+				return S_OK;
+			
+			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+			avcodec_get_frame_defaults(av_frame.get());
+		
+			av_frame = safe_ptr<AVFrame>(av_frame.get(), [av_frame, video, ticket](AVFrame*){});
+								
+			av_frame->data[0]			= reinterpret_cast<uint8_t*>(bytes);
+			av_frame->linesize[0]		= video->GetRowBytes();			
+			av_frame->format			= PIX_FMT_UYVY422;
+			av_frame->width				= video->GetWidth();
+			av_frame->height			= video->GetHeight();
+			av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
+			av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+					
+			Concurrency::send(video_, av_frame);
+
+			// It is assumed that audio is always equal or ahead of video.
+			if(!audio || FAILED(audio->GetBytes(&bytes)) || !bytes)
+				Concurrency::send(audio_, make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));	
+			else
+			{
+				auto sample_frame_count = audio->GetSampleFrameCount();
+				auto audio_data = reinterpret_cast<int32_t*>(bytes);
+				auto audio_buffer = make_safe<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels);			
+				audio_buffer = safe_ptr<core::audio_buffer>(audio_buffer.get(), [audio_buffer, audio, ticket](core::audio_buffer*){});
+				Concurrency::send(audio_, audio_buffer);
+			}
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			return E_FAIL;
+		}
+		
 		return S_OK;
 	}
 		
-	std::wstring print() const
-	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
-	}
-};
-	
-class decklink_producer : public Concurrency::agent, public core::frame_producer
-{		
-	safe_ptr<diagnostics::graph>												graph_;
-
-	Concurrency::overwrite_buffer<ffmpeg::frame_muxer2::video_source_element_t>	video_frames_;
-	Concurrency::overwrite_buffer<ffmpeg::frame_muxer2::audio_source_element_t>	audio_buffers_;
-	Concurrency::overwrite_buffer<ffmpeg::frame_muxer2::target_element_t>		muxed_frames_;
-
-	const core::video_format_desc		format_desc_;
-	const size_t						device_index_;
-
-	safe_ptr<core::basic_frame>			last_frame_;
-	const int64_t						length_;
-	int64_t								frame_number_;
-			
-	ffmpeg::frame_muxer2				muxer_;
-
-	mutable Concurrency::single_assignment<std::wstring> print_;
-	
-	tbb::atomic<bool> is_running_;
-public:
-
-	explicit decklink_producer(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
-		: muxed_frames_(1)
-		, format_desc_(format_desc)
-		, device_index_(device_index)
-		, last_frame_(core::basic_frame::empty())
-		, length_(length)
-		, frame_number_(0)
-		, muxer_(&video_frames_, &audio_buffers_, muxed_frames_, format_desc.fps, frame_factory)
-	{
-		diagnostics::register_graph(graph_);
-		is_running_ = true;
-		agent::start();
-	}
-
-	~decklink_producer()
-	{
-		is_running_ = false;
-		agent::wait(this);
-	}
-				
 	virtual safe_ptr<core::basic_frame> receive(int)
 	{
 		auto frame = core::basic_frame::late();
@@ -220,7 +221,7 @@ public:
 			if(frame_number_ > length_)
 				return core::basic_frame::eof();
 
-			last_frame_ = frame = Concurrency::receive(muxed_frames_, 10).first;
+			last_frame_ = frame = Concurrency::receive(frames_, 10).first;
 			++frame_number_;
 		}
 		catch(Concurrency::operation_timed_out&)
@@ -241,73 +242,12 @@ public:
 		return length_;
 	}
 	
-	std::wstring print() const
+	virtual std::wstring print() const
 	{
-		return print_.value();
-	}
-
-	virtual void run()
-	{
-		win32_exception::install_handler();
-
-		try
-		{
-			struct co_init
-			{
-				co_init()  {CoInitialize(NULL);}
-				~co_init() {CoUninitialize();}
-			} init;
-			
-			Concurrency::overwrite_buffer<frame_packet> input_buffer;
-
-			decklink_input input(input_buffer, format_desc_, device_index_);
-			
-			Concurrency::send(print_, input.print());
-
-			while(is_running_)
-			{
-				auto packet = Concurrency::receive(input_buffer);
-				auto video  = packet.first;
-				auto audio  = packet.second;				
-				void* bytes = nullptr;
-
-				if(FAILED(video->GetBytes(&bytes)) || !bytes)
-					continue;
-			
-				safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-				avcodec_get_frame_defaults(av_frame.get());
-						
-				av_frame->data[0]			= reinterpret_cast<uint8_t*>(bytes);
-				av_frame->linesize[0]		= video->GetRowBytes();			
-				av_frame->format			= PIX_FMT_UYVY422;
-				av_frame->width				= video->GetWidth();
-				av_frame->height			= video->GetHeight();
-				av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
-				av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
-					
-				Concurrency::send(video_frames_, av_frame);					
-				
-				// It is assumed that audio is always equal or ahead of video.
-				if(audio && SUCCEEDED(audio->GetBytes(&bytes)) && bytes)
-				{
-					auto sample_frame_count = audio->GetSampleFrameCount();
-					auto audio_data = reinterpret_cast<int32_t*>(bytes);
-					Concurrency::send(audio_buffers_, make_safe<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
-				}
-				else
-					Concurrency::send(audio_buffers_, make_safe<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));	
-			}
-
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-		
-		done();
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
-
+	
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
@@ -328,7 +268,8 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();
 			
-	return make_safe<decklink_producer>(frame_factory, format_desc, device_index, filter_str, length);
+	co_init com;
+	return make_safe<decklink_producer>(com, frame_factory, format_desc, device_index, filter_str, length);
 }
 
 }}

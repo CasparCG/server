@@ -14,7 +14,7 @@ namespace caspar {
 		
 #undef Yield
 
-typedef std::vector<safe_ptr<int>> ticket_t;
+typedef std::vector<std::shared_ptr<void>> ticket_t;
 
 class governor : boost::noncopyable
 {
@@ -38,6 +38,22 @@ class governor : boost::noncopyable
 				waiting_contexts_.push(context);
 				context->Block();
 			}
+		}
+		
+		bool try_acquire_ticket()
+		{
+			if(!is_running_)
+				return false;
+
+			if(count_ < 1)
+				Concurrency::Context::Yield();
+
+			if (--count_ < 0)
+			{
+				++count_;
+				return false;
+			}
+			return true;
 		}
 
 		void release_ticket()
@@ -68,12 +84,25 @@ class governor : boost::noncopyable
 		
 			auto self = shared_from_this();
 			ticket_t ticket;
-			ticket.push_back(safe_ptr<int>(new int, [this, self](int* p)
+			ticket.push_back(std::shared_ptr<void>(nullptr, [self](void*)
 			{
-				delete p;
-				release_ticket();
+				self->release_ticket();
 			}));
 			return ticket;
+		}
+		
+		bool try_acquire(ticket_t& ticket)
+		{
+			if(!try_acquire_ticket())
+				return false;
+		
+			auto self = shared_from_this();
+			ticket.push_back(std::shared_ptr<void>(nullptr, [=](void*)
+			{
+				self->release_ticket();
+			}));
+
+			return true;
 		}
 
 		void cancel()
@@ -93,6 +122,11 @@ public:
 	ticket_t acquire()
 	{
 		return impl_->acquire();
+	}
+
+	bool try_acquire(ticket_t& ticket)
+	{
+		return impl_->try_acquire(ticket);
 	}
 
 	void cancel()

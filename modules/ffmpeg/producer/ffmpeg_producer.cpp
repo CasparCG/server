@@ -132,7 +132,6 @@ public:
 	~ffmpeg_producer()
 	{
 		input_.stop();	
-		link_throw_away(frames_);
 	}
 						
 	virtual safe_ptr<core::basic_frame> receive(int hints)
