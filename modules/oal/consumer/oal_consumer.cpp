@@ -113,7 +113,7 @@ public:
 	
 	virtual size_t buffer_depth() const
 	{
-		return 2;
+		return 3;
 	}
 
 	virtual std::wstring print() const

@@ -52,6 +52,8 @@ struct output::implementation
 
 	critical_section				mutex_;
 	call<output::source_element_t>	output_;
+
+	boost::circular_buffer<safe_ptr<read_frame>> frames_;
 		
 public:
 	implementation(output::source_t& source, const video_format_desc& format_desc) 
@@ -90,6 +92,21 @@ public:
 			}
 		}
 	}
+
+	std::pair<size_t, size_t> minmax_buffer_depth() const
+	{		
+		if(consumers_.empty())
+			return std::make_pair(0, 0);
+		std::vector<size_t> buffer_depths;
+		std::transform(consumers_.begin(), consumers_.end(), std::back_inserter(buffer_depths), [](const decltype(*consumers_.begin())& pair)
+		{
+			return pair.second->buffer_depth();
+		});
+		std::sort(buffer_depths.begin(), buffer_depths.end());
+		auto min = buffer_depths.front();
+		auto max = buffer_depths.back();
+		return std::make_pair(min, max);
+	}
 						
 	void execute(const output::source_element_t& element)
 	{	
@@ -97,19 +114,29 @@ public:
 
 		{
 			critical_section::scoped_lock lock(mutex_);		
-
+			
 			if(!has_synchronization_clock() || frame->image_size() != format_desc_.size)
 			{		
 				scoped_oversubcription_token oversubscribe;
 				timer_.tick(1.0/format_desc_.fps);
 			}
-	
+				
+			auto minmax = minmax_buffer_depth();
+
+			frames_.set_capacity(minmax.second - minmax.first + 1);
+			frames_.push_back(frame);
+
+			if(!frames_.full())
+				return;
+
 			std::vector<int> removables;		
 			Concurrency::parallel_for_each(consumers_.begin(), consumers_.end(), [&](const decltype(*consumers_.begin())& pair)
 			{		
 				try
 				{
-					if(!pair.second->send(frame))
+					auto consumer = pair.second;
+
+					if(!consumer->send(frames_.at(consumer->buffer_depth()-minmax.first)))
 						removables.push_back(pair.first);
 				}
 				catch(...)
