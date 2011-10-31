@@ -33,6 +33,7 @@
 #include <common/utility/assert.h>
 #include <common/utility/timer.h>
 
+#include <concurrent_vector.h>
 #include <concrt_extras.h>
 
 using namespace Concurrency;
@@ -110,7 +111,10 @@ public:
 						
 	void execute(const output::source_element_t& element)
 	{	
-		auto frame = element.first;
+		const auto frame = element.first;
+
+		if(frame->image_data().size() != format_desc_.size)
+			return;
 
 		{
 			critical_section::scoped_lock lock(mutex_);		
@@ -121,7 +125,7 @@ public:
 				timer_.tick(1.0/format_desc_.fps);
 			}
 				
-			auto minmax = minmax_buffer_depth();
+			const auto minmax = minmax_buffer_depth();
 
 			frames_.set_capacity(minmax.second - minmax.first + 1);
 			frames_.push_back(frame);
@@ -129,7 +133,7 @@ public:
 			if(!frames_.full())
 				return;
 
-			std::vector<int> removables;		
+			Concurrency::concurrent_vector<int> removables;		
 			Concurrency::parallel_for_each(consumers_.begin(), consumers_.end(), [&](const decltype(*consumers_.begin())& pair)
 			{		
 				try
