@@ -128,42 +128,18 @@ template_host get_template_host(const core::video_format_desc& desc)
 	return template_host;
 }
 
-class flash_renderer
-{	
-	const std::wstring								filename_;
-
-	const safe_ptr<core::frame_factory>				frame_factory_;
-	safe_ptr<diagnostics::graph>					graph_;
-
-	high_prec_timer									timer_;
-	safe_ptr<core::basic_frame>						head_;
-	bitmap											bmp_;
-
-	const size_t									width_;
-	const size_t									height_;
-			
-	boost::timer									frame_timer_;
-	boost::timer									tick_timer_;
-
+class flash_player
+{
+	const std::wstring	filename_;
+	const size_t		width_;
+	const size_t		height_;
 	CComObject<caspar::flash::FlashAxContainer>*	ax_;
-	
 public:
-	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
+	flash_player(const std::wstring& filename, size_t width, size_t height)
 		: filename_(filename)
-		, frame_factory_(frame_factory)
-		, graph_(graph)
-		, ax_(nullptr)
-		, head_(core::basic_frame::empty())
-		, bmp_(width, height)
 		, width_(width)
 		, height_(height)
 	{		
-		graph_->add_guide("frame-time", 0.5f);
-		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
-		graph_->add_guide("tick-time", 0.5);
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
-		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));		
-		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
 		
@@ -185,25 +161,99 @@ public:
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Set Scale Mode"));
 						
-		ax_->SetSize(width_, height_);		
-	
-		CASPAR_LOG(info) << print() << L" Thread started.";
-		CASPAR_LOG(info) << print() << L" Successfully initialized with template-host: " << filename << L" width: " << width_ << L" height: " << height_ << L".";
+		ax_->SetSize(width, height);	
+
+		CASPAR_LOG(info) << "Initialized" << print();
 	}
 
-	~flash_renderer()
-	{		
+	~flash_player()
+	{
 		if(ax_)
 		{
 			ax_->DestroyAxControl();
 			ax_->Release();
 		}
-		CASPAR_LOG(info) << print() << L" Thread ended.";
+		CASPAR_LOG(info) << "Uninitialized " << print();
 	}
+
+	bool is_empty() const
+	{
+		return ax_->IsEmpty();
+	}
+
+	void tick()
+	{
+		ax_->Tick();
+	}
+
+	bool invalid_rect() const
+	{
+		return ax_->InvalidRect();
+	}
+
+	bool draw_control(HDC targetDC)
+	{
+		return ax_->DrawControl(targetDC);
+	}
+
+	bool flash_call(const std::wstring& param)
+	{
+		return ax_->FlashCall(param);
+	}
+
+	double fps() const
+	{
+		return ax_->GetFPS();
+	}
+
+	std::wstring print()
+	{
+		return L"flash-player[" + boost::filesystem::wpath(filename_).filename() + L"|" + boost::lexical_cast<std::wstring>(width_) + L"|" + boost::lexical_cast<std::wstring>(height_) + L"]";		
+	}
+};
+
+class flash_renderer
+{	
+	const std::wstring								filename_;
+
+	const safe_ptr<core::frame_factory>				frame_factory_;
+	safe_ptr<diagnostics::graph>					graph_;
+
+	high_prec_timer									timer_;
+	safe_ptr<core::basic_frame>						head_;
+	bitmap											bmp_;
+
+	const size_t									width_;
+	const size_t									height_;
+			
+	boost::timer									frame_timer_;
+	boost::timer									tick_timer_;
+
+	std::unique_ptr<flash_player>					player_;
 	
+public:
+	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
+		: filename_(filename)
+		, frame_factory_(frame_factory)
+		, graph_(graph)
+		, head_(core::basic_frame::empty())
+		, bmp_(width, height)
+		, width_(width)
+		, height_(height)
+	{		
+		graph_->add_guide("frame-time", 0.5f);
+		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
+		graph_->add_guide("tick-time", 0.5);
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
+		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));		
+	}
+		
 	bool param(const std::wstring& param)
 	{		
-		bool success = ax_->FlashCall(param); 
+		if(!player_)
+			player_.reset(new flash_player(filename_, width_, height_));
+
+		bool success = player_->flash_call(param); 
 		if(!success)
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
 		else
@@ -213,13 +263,19 @@ public:
 	
 	safe_ptr<core::basic_frame> operator()()
 	{
-		const float frame_time = 1.0f/ax_->GetFPS();
+		if(player_ && player_->is_empty())
+			player_.reset();
+
+		if(!player_)
+		{
+			graph_->update_value("tick-time", 0.0);
+			return core::basic_frame::empty();	
+		}
+
+		const float frame_time = 1.0f/player_->fps();
 
 		graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
 		tick_timer_.restart();
-
-		if(ax_->IsEmpty())
-			return core::basic_frame::empty();		
 		
 		Concurrency::scoped_oversubcription_token oversubscribe;
 		timer_.tick(frame_time); // This will block the thread.
@@ -227,11 +283,11 @@ public:
 			
 		frame_timer_.restart();
 
-		ax_->Tick();
-		if(ax_->InvalidRect())
+		player_->tick();
+		if(player_->invalid_rect())
 		{			
 			fast_memclr(bmp_.data(), width_*height_*4);
-			ax_->DrawControl(bmp_);
+			player_->draw_control(bmp_);
 		
 			auto frame = frame_factory_->create_frame(this, width_, height_);
 			fast_memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
@@ -245,7 +301,7 @@ public:
 
 	double fps() const
 	{
-		return ax_->GetFPS();	
+		return player_ ? player_->fps() : 0.0;	
 	}
 	
 	std::wstring print()
