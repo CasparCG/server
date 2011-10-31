@@ -444,7 +444,7 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		consumer_.reset();
+		consumer_ = nullptr;
 		consumer_.reset(new ogl_consumer(config_, format_desc));
 	}
 	
