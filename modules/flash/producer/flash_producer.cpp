@@ -238,6 +238,11 @@ public:
 		return head_;
 	}
 
+	bool is_empty() const
+	{
+		return ax_->IsEmpty();
+	}
+
 	double fps() const
 	{
 		return ax_->GetFPS();	
@@ -302,7 +307,7 @@ public:
 		graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
 		auto frame = core::basic_frame::late();
-		if(!frame_buffer_.try_pop(frame))
+		if(!frame_buffer_.try_pop(frame) && context_)
 			graph_->add_tag("underflow");
 
 		return frame;
@@ -387,6 +392,12 @@ public:
 				{
 					auto frame = render_frame();
 					frame_buffer_.push(frame);
+				}
+
+				if(context_->is_empty())
+				{
+					context_.reset(nullptr);
+					return;
 				}
 
 				graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
