@@ -74,7 +74,7 @@ public:
 		try
 		{
 			GL(glDeleteTextures(1, &id_));
-			CASPAR_LOG(trace) << "[device_buffer] [" << --g_total_count << L"] deallocated size:" << width_*height_*stride_;
+			//CASPAR_LOG(trace) << "[device_buffer] [" << --g_total_count << L"] deallocated size:" << width_*height_*stride_;
 		}
 		catch(...)
 		{
