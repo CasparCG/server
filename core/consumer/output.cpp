@@ -113,7 +113,7 @@ public:
 	{	
 		const auto frame = element.first;
 
-		if(frame->image_data().size() != format_desc_.size)
+		if(frame->image_data().size() != static_cast<int>(format_desc_.size))
 			return;
 
 		{
