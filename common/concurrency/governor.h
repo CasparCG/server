@@ -3,7 +3,8 @@
 #include "../memory/safe_ptr.h"
 
 #include <concrt.h>
-#include <concurrent_queue.h>
+#include <queue>
+
 #include <tbb/atomic.h>
 
 #include <boost/noncopyable.hpp>
@@ -20,10 +21,11 @@ class governor : boost::noncopyable
 {
 	struct impl : std::enable_shared_from_this<impl>
 	{
-		tbb::atomic<int> count_;
-		tbb::atomic<int> is_running_;
-		Concurrency::concurrent_queue<Concurrency::Context*> waiting_contexts_;
-
+		tbb::atomic<int>					count_;
+		tbb::atomic<int>					is_running_;
+		std::queue<Concurrency::Context*>	waiting_contexts_;
+		Concurrency::critical_section		mutex_;
+		
 		void acquire_ticket()
 		{
 			if(!is_running_)
@@ -32,12 +34,20 @@ class governor : boost::noncopyable
 			if(count_ < 1)
 				Concurrency::Context::Yield();
 
-			if (--count_ < 0)
+			Concurrency::Context* context = nullptr;
+
 			{
-				auto context = Concurrency::Context::CurrentContext();
-				waiting_contexts_.push(context);
-				context->Block();
+				Concurrency::critical_section::scoped_lock lock(mutex_);
+
+				if (--count_ < 0)
+				{
+					context = Concurrency::Context::CurrentContext();
+					waiting_contexts_.push(context);
+				}
 			}
+
+			if(context)
+				context->Block();
 		}
 		
 		bool try_acquire_ticket()
@@ -46,13 +56,18 @@ class governor : boost::noncopyable
 				return false;
 
 			if(count_ < 1)
-				Concurrency::Context::Yield();
-
-			if (--count_ < 0)
-			{
-				++count_;
 				return false;
+
+			{
+				Concurrency::critical_section::scoped_lock lock(mutex_);
+						
+				if (--count_ < 0)
+				{
+					++count_;
+					return false;
+				}
 			}
+
 			return true;
 		}
 
@@ -60,13 +75,15 @@ class governor : boost::noncopyable
 		{
 			if(!is_running_)
 				return;
-
-			if(++count_ <= 0)
+			
 			{
-				Concurrency:: Context* waiting = NULL;
-				while(!waiting_contexts_.try_pop(waiting))
-					Concurrency::Context::Yield();
-				waiting->Unblock();
+				Concurrency::critical_section::scoped_lock lock(mutex_);
+
+				if(++count_ <= 0)
+				{
+					waiting_contexts_.front()->Unblock();
+					waiting_contexts_.pop();
+				}
 			}
 		}
 
@@ -75,7 +92,7 @@ class governor : boost::noncopyable
 		impl(size_t capacity) 
 		{
 			is_running_ = true;
-			count_ = capacity;
+			count_		= capacity;
 		}
 	
 		ticket_t acquire()
@@ -90,14 +107,14 @@ class governor : boost::noncopyable
 			}));
 			return ticket;
 		}
-		
+		 
 		bool try_acquire(ticket_t& ticket)
 		{
 			if(!try_acquire_ticket())
 				return false;
 		
 			auto self = shared_from_this();
-			ticket.push_back(std::shared_ptr<void>(nullptr, [=](void*)
+			ticket.push_back(std::shared_ptr<void>(nullptr, [self](void*)
 			{
 				self->release_ticket();
 			}));
@@ -108,9 +125,16 @@ class governor : boost::noncopyable
 		void cancel()
 		{
 			is_running_ = false;
-			Concurrency::Context* waiting = NULL;
-			while(waiting_contexts_.try_pop(waiting))
-				waiting->Unblock();
+			
+			{
+				Concurrency::critical_section::scoped_lock lock(mutex_);
+			
+				while(!waiting_contexts_.empty())
+				{
+					waiting_contexts_.front()->Unblock();
+					waiting_contexts_.pop();
+				}
+			}
 		}
 	};
 
