@@ -95,28 +95,35 @@ struct template_host
 
 template_host get_template_host(const core::video_format_desc& desc)
 {
-	std::vector<template_host> template_hosts;
-	BOOST_FOREACH(auto& xml_mapping, env::properties().get_child("configuration.producers.template-hosts"))
+	try
 	{
-		try
+		std::vector<template_host> template_hosts;
+		BOOST_FOREACH(auto& xml_mapping, env::properties().get_child("configuration.producers.template-hosts"))
 		{
-			template_host template_host;
-			template_host.field_mode		= xml_mapping.second.get("video-mode", narrow(desc.name));
-			template_host.filename			= xml_mapping.second.get("filename", "cg.fth");
-			template_host.width				= xml_mapping.second.get("width", desc.width);
-			template_host.height			= xml_mapping.second.get("height", desc.height);
-			template_hosts.push_back(template_host);
+			try
+			{
+				template_host template_host;
+				template_host.field_mode		= xml_mapping.second.get("video-mode", narrow(desc.name));
+				template_host.filename			= xml_mapping.second.get("filename", "cg.fth");
+				template_host.width				= xml_mapping.second.get("width", desc.width);
+				template_host.height			= xml_mapping.second.get("height", desc.height);
+				template_hosts.push_back(template_host);
+			}
+			catch(...){}
 		}
-		catch(...){}
+
+		auto template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.field_mode == narrow(desc.name);});
+		if(template_host_it == template_hosts.end())
+			template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.field_mode == "";});
+
+		if(template_host_it != template_hosts.end())
+			return *template_host_it;
+	}
+	catch(...)
+	{
+		CASPAR_LOG(info) << L" Found no correct template-host configuration. Using cg.fth.";
 	}
 
-	auto template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.field_mode == narrow(desc.name);});
-	if(template_host_it == template_hosts.end())
-		template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.field_mode == "";});
-
-	if(template_host_it != template_hosts.end())
-		return *template_host_it;
-	
 	template_host template_host;
 	template_host.filename = "cg.fth";
 	template_host.width = desc.width;

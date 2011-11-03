@@ -129,11 +129,11 @@ safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_fac
 	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".ct";
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
-	
-	boost::algorithm::replace_all(filename, L"\\", L"/");
-	boost::algorithm::replace_all(filename, L"//", L"/");
-	boost::algorithm::replace_all(filename, L"///", L"/");
-	
+		
+	boost::filesystem2::wpath path(filename);
+	path = boost::filesystem2::complete(path);
+	filename = path.file_string();
+
 	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
 	auto producer = make_safe<cg_producer>(flash_producer);
 	producer->add(0, filename, 1);
