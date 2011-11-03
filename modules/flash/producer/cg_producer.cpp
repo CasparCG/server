@@ -29,6 +29,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
 		
 namespace caspar { namespace flash {
 	
@@ -128,6 +129,10 @@ safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_fac
 	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".ct";
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
+	
+	boost::algorithm::replace_all(filename, L"\\", L"/");
+	boost::algorithm::replace_all(filename, L"//", L"/");
+	boost::algorithm::replace_all(filename, L"///", L"/");
 	
 	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
 	auto producer = make_safe<cg_producer>(flash_producer);
