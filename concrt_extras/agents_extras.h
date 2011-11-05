@@ -1181,11 +1181,11 @@ namespace Concurrency
         /// <param name="_PMessage">
         ///     A pointer to a new message.
         /// </param>
-        virtual void propagate_to_any_targets(message<_Type> * _PMessage)
+		virtual void propagate_to_any_targets(message<_Type> * _PMessage)
         {
             // Enqueue pMessage to the internal message buffer if it is non-NULL.
             // pMessage can be NULL if this LWT was the result of a Repropagate call
-            // out of a Consume or Release (where no new message is queued up, but
+           // out of a Consume or Release (where no new message is queued up, but
             // everything remaining in the bounded buffer needs to be propagated out)
             if (_PMessage != NULL)
             {
@@ -1194,13 +1194,16 @@ namespace Concurrency
                 // If the incoming pMessage is not the head message, we can safely assume that
                 // the head message is blocked and waiting on Consume(), Release() or a new
                 // link_target() and cannot be propagated out.
-                if (_M_messageBuffer.is_head(_PMessage->msg_id()))
+                if (!_M_messageBuffer.is_head(_PMessage->msg_id()))
                 {
-                    _Propagate_priority_order();
+                    return;
                 }
             }
-            else
+
+            _Propagate_priority_order();
+            
             {
+
                 // While current size is less than capacity try to consume
                 // any previously offered ids.
                 bool _ConsumedMsg = true;
