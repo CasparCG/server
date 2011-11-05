@@ -140,7 +140,7 @@ struct frame_muxer2::implementation : public Concurrency::agent, boost::noncopya
 
 		if(audio == flush_audio())
 		{
-			CASPAR_LOG(trace) << L"Truncating: " << audio_data_.size() << L" audio-samples:";
+			CASPAR_LOG(info) << L"Truncating: " << audio_data_.size() << L" audio-samples:";
 			audio_data_.clear();
 			++audio_loop_count_;
 			return receive_audio();		

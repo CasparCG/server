@@ -183,6 +183,8 @@ int main(int argc, wchar_t* argv[])
 
 	// Install structured exception handler.
 	caspar::win32_exception::install_handler();
+
+	caspar::log::set_log_level(L"debug");
 			
 	// Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
 	struct inc_prec

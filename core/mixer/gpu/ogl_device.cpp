@@ -386,6 +386,19 @@ void ogl_device::wait(const fence& fence)
 		}
 	}
 	graph_->update_value("fence", delay/static_cast<double>(MAX_DELAY));
+		
+	static tbb::atomic<bool> warned;
+		
+	if(delay > 2)
+	{
+		if(!warned.fetch_and_store(true))
+		{
+			CASPAR_LOG(warning) << L"[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms. Further warnings are sent to diagnostics."
+								<< L" You can ignore this warning if you do not notice any problems with output video. This warning is caused by insufficent support or performance of your graphics card for OpenGL based memory transfers. "
+								<< L" Please try to update your graphics drivers or update your graphics card, see recommendations on (www.casparcg.com)."
+								<< L" Further help is available at (www.casparcg.com/forum).";
+		}
+	}
 }
 
 }}
