@@ -44,6 +44,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
 #include <boost/timer.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <functional>
 
@@ -121,11 +122,20 @@ template_host get_template_host(const core::video_format_desc& desc)
 	}
 	catch(...)
 	{
-		CASPAR_LOG(info) << L" Found no correct template-host configuration. Using cg.fth.";
 	}
-
+		
 	template_host template_host;
 	template_host.filename = "cg.fth";
+
+	for(auto it = boost::filesystem2::wdirectory_iterator(env::template_folder()); it != boost::filesystem2::wdirectory_iterator(); ++it)
+	{
+		if(boost::iequals(it->path().extension(), L"." + desc.name))
+		{
+			template_host.filename = narrow(it->filename());
+			break;
+		}
+	}
+
 	template_host.width = desc.width;
 	template_host.height = desc.height;
 	return template_host;
