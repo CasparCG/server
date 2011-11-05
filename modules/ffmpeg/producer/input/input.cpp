@@ -175,13 +175,13 @@ public:
 
 			if(loop_)
 			{
-				CASPAR_LOG(trace) << print() << " Looping.";
+				CASPAR_LOG(debug) << print() << " Looping.";
 				seek_frame(start_, AVSEEK_FLAG_BACKWARD);		
 				return read_next_packet();
 			}	
 			else
 			{
-				CASPAR_LOG(trace) << print() << " Stopping.";
+				CASPAR_LOG(debug) << print() << " Stopping.";
 				return nullptr;
 			}
 		}
@@ -254,7 +254,7 @@ public:
 		if(ret == AVERROR(EIO))
 			CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. " << nb_frames_;
 		if(ret == AVERROR_EOF)
-			CASPAR_LOG(trace) << print() << " Received EOF. " << nb_frames_;
+			CASPAR_LOG(debug) << print() << " Received EOF. " << nb_frames_;
 
 		CASPAR_VERIFY(ret >= 0 || ret == AVERROR_EOF || ret == AVERROR(EIO), ffmpeg_error() << source_info(narrow(print())));
 
