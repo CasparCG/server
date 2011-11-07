@@ -136,8 +136,6 @@ public:
 		
 				is_progressive_ = decoded_frame->interlaced_frame == 0;
 				
-				// C-TODO: Avoid duplication.
-				// Need to dupliace frame data since avcodec_decode_video2 reuses it.
 				send(target_, safe_ptr<AVFrame>(decoded_frame.get(), [decoded_frame, ticket](AVFrame*){}));				
 				Context::Yield();
 			}
