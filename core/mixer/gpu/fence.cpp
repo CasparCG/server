@@ -47,10 +47,11 @@ struct fence::implementation
 				Sleep(2);
 			}
 		}
-
+		
+		static tbb::atomic<size_t> count;
 		static tbb::atomic<bool> warned;
 		
-		if(delay > 2)
+		if(delay > 2 && ++count > 16)
 		{
 			if(!warned.fetch_and_store(true))
 			{
