@@ -387,9 +387,10 @@ void ogl_device::wait(const fence& fence)
 	}
 	graph_->update_value("fence", delay/static_cast<double>(MAX_DELAY));
 		
+	static tbb::atomic<size_t> count;
 	static tbb::atomic<bool> warned;
 		
-	if(delay > 2)
+	if(delay > 2 && ++count > 8)
 	{
 		if(!warned.fetch_and_store(true))
 		{
