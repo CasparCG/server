@@ -69,16 +69,14 @@ std::string get_blend_color_func()
 	"																					\n"																			  
 	"vec4 blend(vec4 fore)																\n"
 	"{																					\n"
-	"   vec4 back = texture2D(background, gl_TexCoord[1].st).bgra;						\n"		
-	"	fore.rgb = get_blend_color(back.rgb, fore.rgb);									\n"
-	"																					\n"		
-	"	switch(keyer)																	\n"
-	"	{																				\n"
-	"		case 0: return fore + (1.0-fore.a)*back; // linear							\n"
-	"		case 1: return fore + back; // additive										\n"
+	"   vec4 back = texture2D(background, gl_TexCoord[1].st).bgra;						\n"
+	"   if(blend_mode != 0)																\n"
+	"		fore.rgb = get_blend_color(back.rgb/(back.a+0.0000001), fore.rgb/(fore.a+0.0000001))*fore.a;\n"
+	"	switch(keyer)																	\n"	
+	"	{																				\n"	
+	"		case 1:  return fore + back; // additive									\n"
+	"		default: return fore + (1.0-fore.a)*back; // linear							\n"
 	"	}																				\n"
-	"																					\n"					
-	"	return fore + (1.0-fore.a)*back;												\n"
 	"}																					\n";			
 }
 		
