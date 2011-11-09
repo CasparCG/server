@@ -141,7 +141,7 @@ private:
 		std::shared_ptr<device_buffer> local_key_buffer;
 		std::shared_ptr<device_buffer> local_mix_buffer;
 				
-		if(layer.first != blend_mode::normal && layer.second.size() > 1)
+		if(layer.first != blend_mode::normal)
 		{
 			auto layer_draw_buffer = create_mixer_buffer(4);
 
