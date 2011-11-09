@@ -136,8 +136,8 @@ template_host get_template_host(const core::video_format_desc& desc)
 		}
 	}
 
-	template_host.width = desc.width;
-	template_host.height = desc.height;
+	template_host.width = desc.square_width;
+	template_host.height = desc.square_height;
 	return template_host;
 }
 
