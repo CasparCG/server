@@ -99,22 +99,8 @@ public:
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		
-		// Do some pre-work in order to not block rendering thread for initialization and allocations.
-
-		push_packets();
-		auto video_frames = video_decoder_.poll();
-		if(!video_frames.empty())
-		{
-			auto& video_frame = video_frames.front();
-			auto  desc		  = get_pixel_format_desc(static_cast<PixelFormat>(video_frame->format), video_frame->width, video_frame->height);
-			if(desc.pix_fmt == core::pixel_format::invalid)
-				get_pixel_format_desc(PIX_FMT_BGRA, video_frame->width, video_frame->height);
-			
-			for(int n = 0; n < 3; ++n)
-				frame_factory->create_frame(this, desc);
-		}
-		BOOST_FOREACH(auto& video, video_frames)			
-			muxer_.push(video, 0);	
+		for(int n = 0; n < 3; ++n)
+			frame_factory->create_frame(this, std::max<size_t>(2, video_decoder_.width()), std::max<size_t>(2, video_decoder_.height()));
 	}
 			
 	virtual safe_ptr<core::basic_frame> receive(int hints)
