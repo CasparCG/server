@@ -30,6 +30,12 @@ std::wstring ListTemplates();
 
 namespace amcp {
 	
+class DiagnosticsCommand : public AMCPCommandBase<false, AddToQueue, 0>
+{
+	std::wstring print() const { return L"DiagnosticsCommand";}
+	bool DoExecute();
+};
+
 class ParamCommand : public AMCPCommandBase<true, AddToQueue, 2>
 {
 	std::wstring print() const { return L"ParamCommand";}
