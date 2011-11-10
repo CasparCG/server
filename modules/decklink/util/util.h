@@ -132,7 +132,7 @@ static CComPtr<IDeckLink> get_device(size_t device_index)
 {
 	CComPtr<IDeckLinkIterator> pDecklinkIterator;
 	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink drivers installed."));
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink drivers not found."));
 		
 	size_t n = 0;
 	CComPtr<IDeckLink> decklink;

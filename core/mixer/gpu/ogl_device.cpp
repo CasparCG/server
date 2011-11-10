@@ -99,7 +99,7 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t 
 			throw;
 		}
 	}
-	return make_safe(buffer);
+	return make_safe_ptr(buffer);
 }
 				
 safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride)
@@ -152,7 +152,7 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(size_t size, host_buffer:
 		}
 	}
 
-	return make_safe(buffer);
+	return make_safe_ptr(buffer);
 }
 	
 safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::usage_t usage)

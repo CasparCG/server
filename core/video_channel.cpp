@@ -152,7 +152,7 @@ public:
 video_channel::video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
 video_channel::video_channel(video_channel&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
-safe_ptr<mixer> video_channel::mixer() { return make_safe(impl_->mixer_);} 
+safe_ptr<mixer> video_channel::mixer() { return make_safe_ptr(impl_->mixer_);} 
 safe_ptr<output> video_channel::output() { return impl_->output_;} 
 video_format_desc video_channel::get_video_format_desc() const{return impl_->context_.get_format_desc();}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}

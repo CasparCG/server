@@ -227,7 +227,7 @@ private:
 		}
 		else
 		{		
-			THROW_ON_ERROR(ret, print(), "av_read_frame");
+			THROW_ON_ERROR(ret, "av_read_frame", print());
 
 			if(read_packet->stream_index == default_stream_index_)
 			{
@@ -287,7 +287,7 @@ input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& file
 	: impl_(new implementation(graph, filename, loop, start, length)){}
 bool input::eof() const {return !impl_->is_running_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
-safe_ptr<AVFormatContext> input::context(){return make_safe(impl_->format_context_);}
+safe_ptr<AVFormatContext> input::context(){return make_safe_ptr(impl_->format_context_);}
 size_t input::nb_frames() const {return impl_->nb_frames();}
 size_t input::nb_loops() const {return impl_->nb_loops();}
 }}
