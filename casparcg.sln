@@ -32,10 +32,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "image", "modules\image\image.vcxproj", "{3E11FF65-A9DA-4F80-87F2-A7C6379ED5E2}"
 EndProject
 Global
-	GlobalSection(SubversionScc) = preSolution
-		Svn-Managed = True
-		Manager = AnkhSVN - Subversion Support for Visual Studio
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
 		Develop|Win32 = Develop|Win32
@@ -143,5 +139,9 @@ Global
 		{82ED7ED6-8A15-40EC-A8AF-F5E712E0DA68} = {C54DA43E-4878-45DB-B76D-35970553672C}
 		{88F974F0-D09F-4788-8CF8-F563209E60C1} = {C54DA43E-4878-45DB-B76D-35970553672C}
 		{3E11FF65-A9DA-4F80-87F2-A7C6379ED5E2} = {C54DA43E-4878-45DB-B76D-35970553672C}
+	EndGlobalSection
+	GlobalSection(SubversionScc) = preSolution
+		Svn-Managed = True
+		Manager = AnkhSVN - Subversion Support for Visual Studio
 	EndGlobalSection
 EndGlobal

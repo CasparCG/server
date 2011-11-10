@@ -319,7 +319,7 @@ public:
 
 			std::shared_ptr<core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);					
-			schedule_next_video(make_safe(frame));	
+			schedule_next_video(make_safe_ptr(frame));	
 		}
 		catch(...)
 		{
@@ -352,7 +352,7 @@ public:
 			{
 				std::shared_ptr<core::read_frame> frame;
 				audio_frame_buffer_.pop(frame);
-				schedule_next_audio(make_safe(frame));	
+				schedule_next_audio(make_safe_ptr(frame));	
 			}
 		}
 		catch(...)
