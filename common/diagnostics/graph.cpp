@@ -48,7 +48,7 @@ struct drawable : public sf::Drawable
 
 class context : public drawable
 {	
-	sf::RenderWindow window_;
+	std::unique_ptr<sf::RenderWindow> window_;
 	
 	std::list<std::shared_ptr<drawable>> drawables_;
 		
@@ -71,31 +71,51 @@ public:
 			get_instance().do_register_drawable(drawable);
 		});
 	}
-			
+
+	static void show(bool value)
+	{
+		begin_invoke([=]
+		{	
+			get_instance().do_show(value);
+		});
+	}
+				
 private:
 	context() : executor_(L"diagnostics")
 	{
-		executor_.begin_invoke([this]
-		{			
-			SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
-			window_.Create(sf::VideoMode(600, 1000), "CasparCG Diagnostics");
-			window_.SetPosition(0, 0);
-			window_.SetActive();
-			glEnable(GL_BLEND);
-			glEnable(GL_LINE_SMOOTH);
-			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			tick();
-		});
+	}
+
+	void do_show(bool value)
+	{
+		if(value)
+		{
+			if(!window_)
+			{
+				SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
+				window_.reset(new sf::RenderWindow(sf::VideoMode(600, 1000), "CasparCG Diagnostics"));
+				window_->SetPosition(0, 0);
+				window_->SetActive();
+				glEnable(GL_BLEND);
+				glEnable(GL_LINE_SMOOTH);
+				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				tick();
+			}
+		}
+		else
+			window_.reset();
 	}
 
 	void tick()
 	{
+		if(!window_)
+			return;
+
 		sf::Event e;
-		while(window_.GetEvent(e)){}		
+		while(window_->GetEvent(e)){}		
 		glClear(GL_COLOR_BUFFER_BIT);
-		window_.Draw(*this);
-		window_.Display();
+		window_->Draw(*this);
+		window_->Display();
 		boost::this_thread::sleep(boost::posix_time::milliseconds(20));
 		executor_.begin_invoke([this]{tick();});
 	}
@@ -112,8 +132,8 @@ private:
 			auto& drawable = *it;
 			if(!drawable.unique())
 			{
-				drawable->SetScale(static_cast<float>(window_.GetWidth()), static_cast<float>(target_dy*window_.GetHeight()));
-				float target_y = std::max(last_y, static_cast<float>(n * window_.GetHeight())*target_dy);
+				drawable->SetScale(static_cast<float>(window_->GetWidth()), static_cast<float>(target_dy*window_->GetHeight()));
+				float target_y = std::max(last_y, static_cast<float>(n * window_->GetHeight())*target_dy);
 				drawable->SetPosition(0.0f, target_y);			
 				target.Draw(*drawable);				
 				++it;		
@@ -125,7 +145,8 @@ private:
 	
 	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
 	{
-		drawables_.push_back(drawable);
+		if(std::find(drawables_.begin(), drawables_.end(), drawable) == drawables_.end())
+			drawables_.push_back(drawable);
 	}
 	
 	static context& get_instance()
@@ -168,12 +189,13 @@ class line : public drawable
 	boost::optional<diagnostics::guide> guide_;
 	boost::circular_buffer<std::pair<double, bool>> line_data_;
 
-	std::vector<double>		tick_data_;
-	bool					tick_tag_;
+	boost::circular_buffer<double>	tick_data_;
+	bool							tick_tag_;
 	color c_;
 public:
 	line(size_t res = 600)
 		: line_data_(res)
+		, tick_data_(50)
 		, tick_tag_(false)
 		, c_(1.0f, 1.0f, 1.0f)
 	{
@@ -260,22 +282,19 @@ struct graph::implementation : public drawable
 	std::map<std::string, diagnostics::line> lines_;
 	std::string name_;
 	std::string text_;
-
-	int counter_;
-
+	
 	implementation(const std::string& name) 
 		: name_(name)
-		, text_(name)
-		, counter_(0){}
+		, text_(name_){}
 	
+	void set_text(const std::string& value)
+	{
+		text_ = value;
+	}
+
 	void update(const std::string& name, double value)
 	{
 		lines_[name].update(value);
-	}
-
-	void update_text(const std::string& value)
-	{
-		text_ = value;
 	}
 
 	void set(const std::string& name, double value)
@@ -351,84 +370,74 @@ private:
 	implementation& operator=(implementation&);
 };
 	
-graph::graph(const std::string& name) : impl_(env::properties().get("configuration.diagnostics.graphs", true) ? new implementation(name) : nullptr)
+graph::graph() : impl_(new implementation(""))
 {
-	if(impl_)
-		context::register_drawable(impl_);
+
+}
+
+void graph::set_text(const std::string& value)
+{
+	auto p = impl_;
+	context::begin_invoke([=]
+	{	
+		p->set_text(value);
+	});
+}
+
+void graph::set_text(const std::wstring& value)
+{
+	set_text(narrow(value));
 }
 
 void graph::update_value(const std::string& name, double value)
 {
-	if(impl_)
+	auto p = impl_;
+	context::begin_invoke([=]
 	{	
-		auto p = impl_;
-		context::begin_invoke([=]
-		{	
-			p->update(name, value);
-		});
-	}
+		p->update(name, value);
+	});
 }
-
-void graph::update_text(const std::string& value)
-{
-	if(impl_)
-	{		
-		auto p = impl_;
-		context::begin_invoke([=]
-		{	
-			p->update_text(value);
-		});
-	}
-}
-
 void graph::set_value(const std::string& name, double value)
-{
-	if(impl_)
-	{		
-		auto p = impl_;
-		context::begin_invoke([=]
-		{	
-			p->set(name, value);
-		});
-	}
+{	
+	auto p = impl_;
+	context::begin_invoke([=]
+	{	
+		p->set(name, value);
+	});	
 }
 void graph::set_color(const std::string& name, color c)
-{	
-	if(impl_)
-	{		
-		auto p = impl_;
-		context::begin_invoke([=]
-		{	
-			p->set_color(name, c);
-		});
-	}
+{		
+	auto p = impl_;
+	context::begin_invoke([=]
+	{	
+		p->set_color(name, c);
+	});
 }
 void graph::add_tag(const std::string& name)
-{	
-	if(impl_)
-	{		
-		auto p = impl_;
-		context::begin_invoke([=]
-		{	
-			p->tag(name);
-		});
-	}
+{		
+	auto p = impl_;
+	context::begin_invoke([=]
+	{	
+		p->tag(name);
+	});
 }
 void graph::add_guide(const std::string& name, double value)
 {	
-	if(impl_)
-	{		
-		auto p = impl_;
-		context::begin_invoke([=]
-		{	
-			p->guide(name, value);
-		});
-	}
+	auto p = impl_;
+	context::begin_invoke([=]
+	{	
+		p->guide(name, value);
+	});
 }
 
-safe_ptr<graph> create_graph(const std::string& name)
+void register_graph(const safe_ptr<graph>& graph)
 {
-	return safe_ptr<graph>(new graph(name));
+	context::register_drawable(graph->impl_);
+}
+
+void show_graphs(bool value)
+{
+	context::show(value);
 }
 
 //namespace v2

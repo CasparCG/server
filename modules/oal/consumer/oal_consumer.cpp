@@ -54,8 +54,7 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	int													preroll_count_;
 public:
 	oal_consumer() 
-		: graph_(diagnostics::create_graph(narrow(print())))
-		, container_(16)
+		: container_(16)
 		, preroll_count_(0)
 	{
 		if(core::consumer_buffer_depth() < 3)
@@ -63,6 +62,9 @@ public:
 
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
+
 		is_running_ = true;
 		input_.set_capacity(core::consumer_buffer_depth()-2);
 	}

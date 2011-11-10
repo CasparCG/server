@@ -156,7 +156,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> video_frame_buffer_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> audio_frame_buffer_;
 	
-	std::shared_ptr<diagnostics::graph> graph_;
+	safe_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
 
 public:
@@ -179,12 +179,13 @@ public:
 		video_frame_buffer_.set_capacity(1);
 		audio_frame_buffer_.set_capacity(1);
 
-		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("flushed-frame", diagnostics::color(0.4f, 0.3f, 0.8f));
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
 		
 		enable_video(get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault));
 				

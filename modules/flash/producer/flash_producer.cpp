@@ -278,7 +278,7 @@ struct flash_producer : public core::frame_producer
 
 	tbb::atomic<int> fps_;
 
-	std::shared_ptr<diagnostics::graph> graph_;
+	safe_ptr<diagnostics::graph> graph_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
 
@@ -303,9 +303,10 @@ public:
 
 		fps_ = 0;
 
-		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->set_color("output-buffer-count", diagnostics::color(1.0f, 1.0f, 0.0f));		 
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
 		
 		frame_buffer_.set_capacity(frame_factory_->get_video_format_desc().fps > 30.0 ? 2 : 1);
 
@@ -419,7 +420,7 @@ public:
 
 				graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));				
-				graph_->update_text(narrow(print()));
+				graph_->set_text(narrow(print()));
 
 				render(renderer);
 			}

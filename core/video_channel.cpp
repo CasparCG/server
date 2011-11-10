@@ -58,7 +58,6 @@ struct video_channel::implementation : boost::noncopyable
 public:
 	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
 		: context_(index, ogl, format_desc)
-		, diag_(diagnostics::create_graph(narrow(print())))
 		, output_(new caspar::core::output(context_, [this]{restart();}))
 		, mixer_(new caspar::core::mixer(context_))
 		, stage_(new caspar::core::stage(context_))	
@@ -68,6 +67,8 @@ public:
 		diag_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		diag_->set_color("output-time", diagnostics::color(1.0f, 0.5f, 0.0f));
 		diag_->set_color("mix-time", diagnostics::color(1.0f, 1.0f, 0.9f));
+		diag_->set_text(print());
+		diagnostics::register_graph(diag_);
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 		context_.execution().begin_invoke([this]{tick();});

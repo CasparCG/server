@@ -79,7 +79,6 @@ struct ffmpeg_producer : public core::frame_producer
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, size_t length) 
 		: filename_(filename)
-		, graph_(diagnostics::create_graph(""))
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
 		, input_(graph_, filename_, loop, start, length)
@@ -98,6 +97,7 @@ public:
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
+		diagnostics::register_graph(graph_);
 		
 		for(int n = 0; n < 3; ++n)
 			frame_factory->create_frame(this, std::max<size_t>(2, video_decoder_.width()), std::max<size_t>(2, video_decoder_.height()));
@@ -124,7 +124,7 @@ public:
 				graph_->add_tag("underflow");	
 		}
 
-		graph_->update_text(narrow(print()));
+		graph_->set_text(print());
 		
 		return frame;
 	}
