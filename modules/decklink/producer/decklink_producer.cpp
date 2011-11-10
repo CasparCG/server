@@ -82,7 +82,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	const core::video_format_desc								format_desc_;
 	const size_t												device_index_;
 
-	std::shared_ptr<diagnostics::graph>							graph_;
+	safe_ptr<diagnostics::graph>								graph_;
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
 		
@@ -108,13 +108,14 @@ public:
 	{
 		frame_buffer_.set_capacity(2);
 		
-		graph_ = diagnostics::create_graph(narrow(print()));
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("output-buffer", diagnostics::color(0.0f, 1.0f, 0.0f));
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
 		
 		auto display_mode = get_display_mode(input_, format_desc_.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
 		

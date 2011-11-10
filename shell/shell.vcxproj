@@ -251,7 +251,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <LargeAddressAware>false</LargeAddressAware>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"

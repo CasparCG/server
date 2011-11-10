@@ -30,6 +30,7 @@
 #include <common/env.h>
 
 #include <common/log/log.h>
+#include <common/diagnostics/graph.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
@@ -194,6 +195,24 @@ void AMCPCommand::Clear()
 	pClientInfo_.reset();
 	channelIndex_ = 0;
 	_parameters.clear();
+}
+
+bool DiagnosticsCommand::DoExecute()
+{	
+	try
+	{
+		diagnostics::show_graphs(boost::lexical_cast<bool>(_parameters.at(0)));
+
+		SetReplyString(TEXT("202 DIAG OK\r\n"));
+
+		return true;
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("502 DIAG FAILED\r\n"));
+		return false;
+	}
 }
 
 bool ParamCommand::DoExecute()
