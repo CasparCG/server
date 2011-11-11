@@ -67,6 +67,7 @@ private:
 };
 
 void register_graph(const safe_ptr<graph>& graph);
+void show_graphs(bool value);
 
 //namespace v2
 //{
