@@ -44,6 +44,16 @@ namespace caspar { namespace decklink {
 
 void init()
 {
+	struct co_init
+	{
+		co_init(){::CoInitialize(nullptr);}
+		~co_init(){::CoUninitialize();}
+	} init;
+	
+	CComPtr<IDeckLinkIterator> pDecklinkIterator;
+	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))		
+		return;
+		
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
 }
@@ -51,8 +61,13 @@ void init()
 std::wstring get_version() 
 {
 	std::wstring version = L"Not found";
+	
+	struct co_init
+	{
+		co_init(){::CoInitialize(nullptr);}
+		~co_init(){::CoUninitialize();}
+	} init;
 
-	::CoInitialize(nullptr);
 	try
 	{
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
@@ -60,7 +75,6 @@ std::wstring get_version()
 			version = get_version(pDecklinkIterator);
 	}
 	catch(...){}
-	::CoUninitialize();
 
 	return version;
 }
@@ -68,8 +82,13 @@ std::wstring get_version()
 std::vector<std::wstring> get_device_list()
 {
 	std::vector<std::wstring> devices;
+	
+	struct co_init
+	{
+		co_init(){::CoInitialize(nullptr);}
+		~co_init(){::CoUninitialize();}
+	} init;
 
-	::CoInitialize(nullptr);
 	try
 	{
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
@@ -85,7 +104,6 @@ std::vector<std::wstring> get_device_list()
 		}
 	}
 	catch(...){}
-	::CoUninitialize();
 
 	return devices;
 }

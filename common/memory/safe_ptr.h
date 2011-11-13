@@ -37,19 +37,7 @@ public:
         : p_(other.p_)
     {
     }
-
-    template<typename U>    
-    safe_ptr(U&& v, typename std::enable_if<std::is_convertible<U*, T*>::value, void>::type* = 0)
-        : p_(std::make_shared<U>(std::forward<U>(v))) 
-    {
-    }
-
-    template<typename U, typename D>    
-    safe_ptr(U&& v, D d, typename std::enable_if<std::is_convertible<U*, T*>::value, void>::type* = 0)
-        : p_(new U(std::forward<U>(v)), d) 
-    {
-    }
-
+	
     template<typename U>    
     explicit safe_ptr(const std::shared_ptr<U>& p, typename std::enable_if<std::is_convertible<U*, T*>::value, void*>::type = 0) 
         : p_(p)
@@ -97,15 +85,7 @@ public:
         safe_ptr<T>(std::move(other)).swap(*this);
         return *this;
     }
-
-    template <typename U>
-    typename std::enable_if<std::is_convertible<U*, T*>::value, safe_ptr&>::type
-    operator=(U&& v)
-    {
-        safe_ptr(std::forward<U>(v)).swap(*this);
-        return *this;
-    }
-
+	
     T& operator*() const 
     { 
         return *p_.get();

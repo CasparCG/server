@@ -23,6 +23,7 @@
 
 #include "audio_resampler.h"
 
+#include "../util/util.h"
 #include "../../ffmpeg_error.h"
 
 #include <core/video_format.h>
@@ -48,90 +49,59 @@ namespace caspar { namespace ffmpeg {
 	
 struct audio_decoder::implementation : boost::noncopyable
 {	
-	std::shared_ptr<AVCodecContext>								codec_context_;		
-	const core::video_format_desc								format_desc_;
 	int															index_;
-	std::unique_ptr<audio_resampler>							resampler_;
+	const safe_ptr<AVCodecContext>								codec_context_;		
+	const core::video_format_desc								format_desc_;
+
+	audio_resampler												resampler_;
 
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
-	std::queue<std::shared_ptr<AVPacket>>						packets_;
+	std::queue<safe_ptr<AVPacket>>								packets_;
 
-	int64_t														nb_frames_;
+	const int64_t												nb_frames_;
 public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
-		, nb_frames_(0)
-	{			   	
-		try
-		{
-			AVCodec* dec;
-			index_ = THROW_ON_ERROR2(av_find_best_stream(context.get(), AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0), "[audio_decoder]");
-
-			THROW_ON_ERROR2(avcodec_open(context->streams[index_]->codec, dec), "[audio_decoder]");
-			
-			codec_context_.reset(context->streams[index_]->codec, avcodec_close);
-
-			buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
-
-			resampler_.reset(new audio_resampler(format_desc_.audio_channels,    codec_context_->channels,
-												 format_desc_.audio_sample_rate, codec_context_->sample_rate,
-												 AV_SAMPLE_FMT_S32,				 codec_context_->sample_fmt));	
-		}
-		catch(...)
-		{
-			index_ = THROW_ON_ERROR2(av_find_best_stream(context.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0), "[audio_decoder]");
-
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << "[audio_decoder] Failed to open audio-stream. Running without audio.";			
-		}
+		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
+		, resampler_(format_desc.audio_channels,	codec_context_->channels,
+					 format_desc.audio_sample_rate, codec_context_->sample_rate,
+					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
+		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
+		, nb_frames_(context->streams[index_]->nb_frames)
+	{		
+		CASPAR_LOG(debug) << "[audio_decoder] " << context->streams[index_]->codec->codec->long_name;	   
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
 	{			
-		if(packet && packet->stream_index != index_)
+		if(!packet)
 			return;
 
-		packets_.push(packet);
+		if(packet->stream_index == index_ || packet == flush_packet())
+			packets_.push(make_safe_ptr(packet));
 	}	
 	
-	std::vector<std::shared_ptr<core::audio_buffer>> poll()
+	std::shared_ptr<core::audio_buffer> poll()
 	{
-		std::vector<std::shared_ptr<core::audio_buffer>> result;
-
 		if(packets_.empty())
-			return result;
-
-		if(!codec_context_)
-			return empty_poll();
-		
+			return nullptr;
+				
 		auto packet = packets_.front();
 
-		if(packet)		
+		if(packet == flush_packet())
 		{
-			result.push_back(decode(*packet));
-			if(packet->size == 0)					
-				packets_.pop();
-		}
-		else			
-		{	
-			avcodec_flush_buffers(codec_context_.get());
-			result.push_back(nullptr);
 			packets_.pop();
-		}		
+			avcodec_flush_buffers(codec_context_.get());
+			return flush_audio();
+		}
 
-		return result;
-	}
+		auto audio = decode(*packet);
 
-	std::vector<std::shared_ptr<core::audio_buffer>> empty_poll()
-	{
-		auto packet = packets_.front();
-		packets_.pop();
+		if(packet->size == 0)					
+			packets_.pop();
 
-		if(!packet)			
-			return boost::assign::list_of(nullptr);
-		
-		return boost::assign::list_of(std::make_shared<core::audio_buffer>(format_desc_.audio_samples_per_frame, 0));	
+		return audio;
 	}
 
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
@@ -147,7 +117,7 @@ public:
 			
 		buffer1_.resize(written_bytes);
 
-		buffer1_ = resampler_->resample(std::move(buffer1_));
+		buffer1_ = resampler_.resample(std::move(buffer1_));
 		
 		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
 		const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
@@ -157,14 +127,14 @@ public:
 
 	bool ready() const
 	{
-		return !packets_.empty();
+		return packets_.size() > 10;
 	}
 };
 
 audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
-std::vector<std::shared_ptr<core::audio_buffer>> audio_decoder::poll(){return impl_->poll();}
+std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
 int64_t audio_decoder::nb_frames() const{return impl_->nb_frames_;}
 
 }}

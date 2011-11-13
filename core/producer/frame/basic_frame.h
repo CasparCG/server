@@ -35,12 +35,12 @@ struct frame_transform;
 
 class basic_frame
 {
-	basic_frame(std::vector<safe_ptr<basic_frame>>&& frames);
 public:
 	basic_frame();	
 	basic_frame(const safe_ptr<basic_frame>& frame);
 	basic_frame(safe_ptr<basic_frame>&& frame);
 	basic_frame(const std::vector<safe_ptr<basic_frame>>& frames);
+	basic_frame(std::vector<safe_ptr<basic_frame>>&& frames);
 	basic_frame(const basic_frame& other);
 	basic_frame(basic_frame&& other);
 

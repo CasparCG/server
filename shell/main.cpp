@@ -133,6 +133,7 @@ void print_info()
 		CASPAR_LOG(info) << device;
 	});
 		
+	CASPAR_LOG(info) << L"Bluefish " << caspar::bluefish::get_version();
 	auto blue = caspar::bluefish::get_device_list();
 	std::for_each(blue.begin(), blue.end(), [](const std::wstring& device)
 	{
@@ -160,7 +161,7 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 	}
 	catch(...){}
 
-    return EXCEPTION_CONTINUE_EXECUTION;
+    return EXCEPTION_EXECUTE_HANDLER;
 }
 
 int main(int argc, wchar_t* argv[])
@@ -292,6 +293,9 @@ int main(int argc, wchar_t* argv[])
 			wcmd += L"\r\n";
 			amcp.Parse(wcmd.c_str(), wcmd.length(), dummy);
 		}
+		
+		Sleep(100); // CAPSAR_LOG is asynchronous. Try to get text in correct order.
+		system("pause");
 	}
 	catch(boost::property_tree::file_parser_error&)
 	{
@@ -301,7 +305,7 @@ int main(int argc, wchar_t* argv[])
 	catch(caspar::gl::ogl_exception&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled OpenGL Error in main thread. Please try to update graphics drivers in order to receive full OpenGL 3.1+ Support.";
+		CASPAR_LOG(fatal) << L"Unhandled OpenGL Error in main thread. Please try to update graphics drivers for OpenGL 3.0+ Support.";
 	}
 	catch(...)
 	{
@@ -310,7 +314,5 @@ int main(int argc, wchar_t* argv[])
 	}	
 	
 	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
-	Sleep(100); // CAPSAR_LOG is asynchronous. Try to get text in correct order.
-	system("pause");
 	return 0;
 }

@@ -111,8 +111,8 @@ public:
 		
 	explicit executor(const std::wstring& name) : name_(narrow(name)) // noexcept
 	{
-		thread_ = boost::thread([this]{run();});
 		is_running_ = true;
+		thread_ = boost::thread([this]{run();});
 	}
 	
 	virtual ~executor() // noexcept
@@ -132,7 +132,7 @@ public:
 		{
 			if(p == high_priority_class)
 				SetThreadPriority(GetCurrentThread(), HIGH_PRIORITY_CLASS);
-			if(p == above_normal_priority_class)
+			else if(p == above_normal_priority_class)
 				SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
 			else if(p == normal_priority_class)
 				SetThreadPriority(GetCurrentThread(), NORMAL_PRIORITY_CLASS);
