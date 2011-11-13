@@ -112,7 +112,14 @@ private:
 			return;
 
 		sf::Event e;
-		while(window_->GetEvent(e)){}		
+		while(window_->GetEvent(e))
+		{
+			if(e.Type == sf::Event::Closed)
+			{
+				window_.reset();
+				return;
+			}
+		}		
 		glClear(GL_COLOR_BUFFER_BIT);
 		window_->Draw(*this);
 		window_->Display();
