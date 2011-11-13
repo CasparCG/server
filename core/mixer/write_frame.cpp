@@ -126,7 +126,7 @@ write_frame::write_frame(const void* tag) : impl_(new implementation(tag)){}
 write_frame::write_frame(ogl_device& ogl, const void* tag, const core::pixel_format_desc& desc) 
 	: impl_(new implementation(ogl, tag, desc)){}
 write_frame::write_frame(const write_frame& other) : impl_(new implementation(*other.impl_)){}
-write_frame::write_frame(write_frame&& other) : impl_(std::move(*other.impl_)){}
+write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(const write_frame& other)
 {
 	basic_frame temp(other);

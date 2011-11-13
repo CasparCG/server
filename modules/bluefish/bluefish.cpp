@@ -42,11 +42,7 @@ void init()
 			return create_consumer(params);
 		});
 	}
-	catch(...)
-	{
-		//CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(info) << L"Bluefish not supported.";
-	}
+	catch(...){}
 }
 
 std::wstring get_version()

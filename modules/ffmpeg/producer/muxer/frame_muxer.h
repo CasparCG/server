@@ -25,22 +25,18 @@ namespace ffmpeg {
 class frame_muxer : boost::noncopyable
 {
 public:
-	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory);
+	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter = L"");
 	
 	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
 	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);
 	
-	void commit();
-
 	bool video_ready() const;
 	bool audio_ready() const;
 
-	size_t size() const;
-	bool empty() const;
+	std::shared_ptr<core::basic_frame> poll();
 
 	int64_t calc_nb_frames(int64_t nb_frames) const;
 
-	safe_ptr<core::basic_frame> pop();
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

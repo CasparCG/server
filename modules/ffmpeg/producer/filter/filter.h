@@ -3,6 +3,7 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 
 #include <string>
 #include <vector>
@@ -12,15 +13,27 @@ enum PixelFormat;
 
 namespace caspar { namespace ffmpeg {
 		
-static bool double_rate(const std::wstring& filters)
+static bool is_double_rate(const std::wstring& filters)
 {
-	if(filters.find(L"YADIF=1") != std::string::npos)
+	if(boost::to_upper_copy(filters).find(L"YADIF=1") != std::string::npos)
 		return true;
 	
-	if(filters.find(L"YADIF=3") != std::string::npos)
+	if(boost::to_upper_copy(filters).find(L"YADIF=3") != std::string::npos)
 		return true;
 
 	return false;
+}
+
+static bool is_deinterlacing(const std::wstring& filters)
+{
+	if(boost::to_upper_copy(filters).find(L"YADIF") != std::string::npos)
+		return true;	
+	return false;
+}
+
+static std::wstring append_filter(const std::wstring& filters, const std::wstring& filter)
+{
+	return filters + (filters.empty() ? L"" : L",") + filter;
 }
 
 class filter : boost::noncopyable
@@ -30,8 +43,12 @@ public:
 	filter(filter&& other);
 	filter& operator=(filter&& other);
 
-	std::vector<safe_ptr<AVFrame>> execute(const std::shared_ptr<AVFrame>& frame);
+	void push(const std::shared_ptr<AVFrame>& frame);
+	std::shared_ptr<AVFrame> poll();
+	std::vector<safe_ptr<AVFrame>> poll_all();
 
+	std::string filter_str() const;
+	
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

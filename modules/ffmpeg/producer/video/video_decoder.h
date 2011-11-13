@@ -21,11 +21,7 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include <core/video_format.h>
-
 #include <boost/noncopyable.hpp>
-
-#include <vector>
 
 struct AVFormatContext;
 struct AVFrame;
@@ -43,18 +39,17 @@ namespace ffmpeg {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(const safe_ptr<AVFormatContext>& context, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter);
+	explicit video_decoder(const safe_ptr<AVFormatContext>& context);
 	
-	void push(const std::shared_ptr<AVPacket>& packet);
 	bool ready() const;
-	std::vector<std::shared_ptr<AVFrame>> poll();
+	void push(const std::shared_ptr<AVPacket>& packet);
+	std::shared_ptr<AVFrame> poll();
 	
-	size_t width() const;
-	size_t height() const;
-
+	size_t	width()		const;
+	size_t	height()	const;
 	int64_t nb_frames() const;
-
-	double fps() const;
+	double	fps()		const;
+	bool	is_progressive() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

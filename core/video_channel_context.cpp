@@ -10,18 +10,15 @@ struct video_channel_context::implementation
 	const int					index_;
 	video_format_desc			format_desc_;
 	executor					execution_;
-	executor					destruction_;
 	ogl_device&					ogl_;
 
 	implementation(int index, ogl_device& ogl, const video_format_desc& format_desc)
 		: index_(index)
 		, format_desc_(format_desc)
 		, execution_(print() + L"/execution")
-		, destruction_(print() + L"/destruction")
 		, ogl_(ogl)
 	{
 		execution_.set_priority_class(above_normal_priority_class);
-		destruction_.set_priority_class(below_normal_priority_class);
 	}
 
 	std::wstring print() const
@@ -50,7 +47,6 @@ void video_channel_context::set_format_desc(const video_format_desc& format_desc
 }
 
 executor& video_channel_context::execution() {return impl_->execution_;}
-executor& video_channel_context::destruction() {return impl_->destruction_;}
 ogl_device& video_channel_context::ogl() { return impl_->ogl_;}
 
 std::wstring video_channel_context::print() const

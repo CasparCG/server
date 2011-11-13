@@ -25,13 +25,11 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <vector>
-
 struct AVPacket;
 struct AVFormatContext;
 
-namespace caspar {
-
+namespace caspar { 
+			
 namespace core {
 
 struct video_format_desc;
@@ -39,15 +37,15 @@ struct video_format_desc;
 }
 
 namespace ffmpeg {
-
+	
 class audio_decoder : boost::noncopyable
 {
 public:
 	explicit audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
 	
-	void push(const std::shared_ptr<AVPacket>& packet);
 	bool ready() const;
-	std::vector<std::shared_ptr<core::audio_buffer>> poll();
+	void push(const std::shared_ptr<AVPacket>& packet);
+	std::shared_ptr<core::audio_buffer> poll();
 
 	int64_t nb_frames() const;
 
