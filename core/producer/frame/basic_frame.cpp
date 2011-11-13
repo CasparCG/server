@@ -122,7 +122,7 @@ safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1
 	std::vector<safe_ptr<basic_frame>> frames;
 	frames.push_back(my_frame1);
 	frames.push_back(my_frame2);
-	return basic_frame(std::move(frames));
+	return make_safe<basic_frame>(std::move(frames));
 }
 
 safe_ptr<basic_frame> basic_frame::combine(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2)
@@ -136,7 +136,7 @@ safe_ptr<basic_frame> basic_frame::combine(const safe_ptr<basic_frame>& frame1, 
 	std::vector<safe_ptr<basic_frame>> frames;
 	frames.push_back(frame1);
 	frames.push_back(frame2);
-	return basic_frame(std::move(frames));
+	return make_safe<basic_frame>(std::move(frames));
 }
 
 safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key)
@@ -151,14 +151,14 @@ safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fil
 	key->get_frame_transform().is_key = true;
 	frames.push_back(key);
 	frames.push_back(fill);
-	return basic_frame(std::move(frames));
+	return make_safe<basic_frame>(std::move(frames));
 }
 
 safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame)
 {
 	basic_frame frame2 = frame;
 	frame2.get_frame_transform().volume = 0.0;
-	return std::move(frame2);
+	return make_safe<basic_frame>(std::move(frame2));
 }
 	
 }}

@@ -182,7 +182,7 @@ struct image_scroll_producer : public core::frame_producer
 			}
 		}
 
-		return last_frame_ = core::basic_frame(frames_);
+		return last_frame_ = make_safe<core::basic_frame>(frames_);
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const

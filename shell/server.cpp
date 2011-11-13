@@ -69,16 +69,31 @@ struct server::implementation : boost::noncopyable
 	implementation()												
 	{			
 		ffmpeg::init();
-		bluefish::init();
-		decklink::init();
-		flash::init();
-		oal::init();
-		ogl::init();
-		//init_silverlight();
-		image::init();
+		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
+							  
+		bluefish::init();	  
+		CASPAR_LOG(info) << L"Initialized bluefish module.";
+							  
+		decklink::init();	  
+		CASPAR_LOG(info) << L"Initialized decklink module.";
+							  
+		flash::init();		  
+		CASPAR_LOG(info) << L"Initialized flash module.";
+							  
+		oal::init();		  
+		CASPAR_LOG(info) << L"Initialized oal module.";
+							  
+		ogl::init();		  
+		CASPAR_LOG(info) << L"Initialized ogl module.";
+
+		image::init();		  
+		CASPAR_LOG(info) << L"Initialized image module.";
 
 		setup_channels(env::properties());
+		CASPAR_LOG(info) << L"Initialized channels.";
+
 		setup_controllers(env::properties());
+		CASPAR_LOG(info) << L"Initialized controllers.";
 	}
 
 	~implementation()
@@ -98,7 +113,7 @@ struct server::implementation : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(video_channel(channels_.size(), format_desc, ogl_));
+			channels_.push_back(make_safe<video_channel>(channels_.size(), format_desc, ogl_));
 			
 			int index = 0;
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))

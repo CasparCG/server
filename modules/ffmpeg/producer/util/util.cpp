@@ -2,7 +2,9 @@
 
 #include "util.h"
 
-#include "format/flv.h"
+#include "flv.h"
+
+#include "../../ffmpeg_error.h"
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
@@ -13,6 +15,8 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/exception/exceptions.h>
+#include <common/utility/assert.h>
+#include <common/memory/memcpy.h>
 
 #include <tbb/parallel_for.h>
 
@@ -34,8 +38,38 @@ extern "C"
 #endif
 
 namespace caspar { namespace ffmpeg {
+		
+safe_ptr<AVPacket> flush_packet()
+{
+	static auto packet = create_packet();
+	return packet;
+}
 
-core::field_mode::type get_mode(AVFrame& frame)
+std::shared_ptr<core::audio_buffer> flush_audio()
+{
+	static std::shared_ptr<core::audio_buffer> audio(new core::audio_buffer());
+	return audio;
+}
+
+std::shared_ptr<core::audio_buffer> empty_audio()
+{
+	static std::shared_ptr<core::audio_buffer> audio(new core::audio_buffer());
+	return audio;
+}
+
+std::shared_ptr<AVFrame>			flush_video()
+{
+	static std::shared_ptr<AVFrame> video(avcodec_alloc_frame(), av_free);
+	return video;
+}
+
+std::shared_ptr<AVFrame>			empty_video()
+{
+	static std::shared_ptr<AVFrame> video(avcodec_alloc_frame(), av_free);
+	return video;
+}
+
+core::field_mode::type get_mode(const AVFrame& frame)
 {
 	if(!frame.interlaced_frame)
 		return core::field_mode::progressive;
@@ -113,15 +147,11 @@ int make_alpha_format(int format)
 {
 	switch(get_pixel_format(static_cast<PixelFormat>(format)))
 	{
-	case core::pixel_format::luma:
-	case core::pixel_format::gray:
-	case core::pixel_format::invalid:
-		return format;
 	case core::pixel_format::ycbcr:
 	case core::pixel_format::ycbcra:
 		return CASPAR_PIX_FMT_LUMA;
 	default:
-	return PIX_FMT_GRAY8;
+		return format;
 	}
 }
 
@@ -129,6 +159,9 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 {			
 	static tbb::concurrent_unordered_map<size_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
+	if(decoded_frame->width < 1 || decoded_frame->height < 1)
+		return make_safe<core::write_frame>(tag);
+
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
 	auto desc		  = get_pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
@@ -136,11 +169,13 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	if(hints & core::frame_producer::ALPHA_HINT)
 		desc = get_pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
 
+	std::shared_ptr<core::write_frame> write;
+
 	if(desc.pix_fmt == core::pixel_format::invalid)
 	{
 		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
 
-		auto write = frame_factory->create_frame(tag, get_pixel_format_desc(PIX_FMT_BGRA, width, height));
+		write = frame_factory->create_frame(tag, get_pixel_format_desc(PIX_FMT_BGRA, width, height));
 		write->set_type(get_mode(*decoded_frame));
 
 		std::shared_ptr<SwsContext> sws_context;
@@ -172,12 +207,10 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		pool.push(sws_context);
 
 		write->commit();
-
-		return write;
 	}
 	else
 	{
-		auto write = frame_factory->create_frame(tag, desc);
+		write = frame_factory->create_frame(tag, desc);
 		write->set_type(get_mode(*decoded_frame));
 
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
@@ -186,20 +219,34 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			auto result           = write->image_data(n).begin();
 			auto decoded          = decoded_frame->data[n];
 			auto decoded_linesize = decoded_frame->linesize[n];
-				
-			// Copy line by line since ffmpeg sometimes pads each line.
-			tbb::affinity_partitioner ap;
-			tbb::parallel_for(tbb::blocked_range<size_t>(0, static_cast<int>(desc.planes[n].height)), [&](const tbb::blocked_range<size_t>& r)
+			
+			CASPAR_ASSERT(decoded);
+			CASPAR_ASSERT(write->image_data(n).begin());
+
+			if(decoded_linesize != static_cast<int>(plane.width))
 			{
-				for(size_t y = r.begin(); y != r.end(); ++y)
-					memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-			}, ap);
+				// Copy line by line since ffmpeg sometimes pads each line.
+				tbb::parallel_for<size_t>(0, desc.planes[n].height, [&](size_t y)
+				{
+					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+				});
+			}
+			else
+			{
+				fast_memcpy(result, decoded, plane.size);
+			}
 
 			write->commit(n);
 		}
-		
-		return write;
 	}
+	
+	// Fix field-order if needed
+	if(write->get_type() == core::field_mode::lower && frame_factory->get_video_format_desc().field_mode == core::field_mode::upper)
+		write->get_frame_transform().fill_translation[1] += 1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
+	else if(write->get_type() == core::field_mode::upper && frame_factory->get_video_format_desc().field_mode == core::field_mode::lower)
+		write->get_frame_transform().fill_translation[1] -= 1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
+
+	return make_safe_ptr(write);
 }
 
 bool is_sane_fps(AVRational time_base)
@@ -255,17 +302,22 @@ void fix_meta_data(AVFormatContext& context)
 
 		if(audio_index > -1) // Check for invalid double frame-rate
 		{
-			auto& audio_context = *context.streams[audio_index]->codec;
-			auto& audio_stream  = *context.streams[audio_index];
+			auto& audio_context		= *context.streams[audio_index]->codec;
+			auto& audio_stream		= *context.streams[audio_index];
 
-			double duration_sec = audio_stream.duration / static_cast<double>(audio_context.sample_rate);
-			double fps = static_cast<double>(video_context.time_base.den) / static_cast<double>(video_context.time_base.num);
+			double duration_sec		= audio_stream.duration / static_cast<double>(audio_context.sample_rate);
+			double fps				= static_cast<double>(video_context.time_base.den) / static_cast<double>(video_context.time_base.num);
 
 			double fps_nb_frames	= static_cast<double>(duration_sec*fps);
-			double stream_nb_frames =  static_cast<double>(video_stream.nb_frames);
-			double diff = std::abs(fps_nb_frames - stream_nb_frames*2.0);
+			double stream_nb_frames = static_cast<double>(video_stream.nb_frames);
+			double diff				= std::abs(fps_nb_frames - stream_nb_frames*2.0);
 			if(diff < fps_nb_frames*0.05)
 				video_context.time_base.num *= 2;
+		}
+		else
+		{
+			video_context.time_base.den = video_stream.r_frame_rate.num;
+			video_context.time_base.num = video_stream.r_frame_rate.den;
 		}
 	}
 
@@ -286,5 +338,52 @@ void fix_meta_data(AVFormatContext& context)
 	video_context.time_base.num = 1000000;
 	video_context.time_base.den = static_cast<int>(closest_fps*1000000.0);
 }
+
+safe_ptr<AVPacket> create_packet()
+{
+	safe_ptr<AVPacket> packet(new AVPacket, [](AVPacket* p)
+	{
+		av_free_packet(p);
+		delete p;
+	});
+	
+	av_init_packet(packet.get());
+	return packet;
+}
+
+safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index)
+{	
+	AVCodec* decoder;
+	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "");
+	THROW_ON_ERROR2(avcodec_open(context.streams[index]->codec, decoder), "");
+	return safe_ptr<AVCodecContext>(context.streams[index]->codec, avcodec_close);
+}
+
+safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
+{
+	AVFormatContext* weak_context = nullptr;
+	THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(filename).c_str(), nullptr, nullptr), filename);
+	safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
+	THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), filename);
+	fix_meta_data(*context);
+	return context;
+}
+//
+//void av_dup_frame(AVFrame* frame)
+//{
+//	AVFrame* new_frame = avcodec_alloc_frame();
+//
+//
+//	const uint8_t *src_data[4] = {0};
+//	memcpy(const_cast<uint8_t**>(&src_data[0]), frame->data, 4);
+//	const int src_linesizes[4] = {0};
+//	memcpy(const_cast<int*>(&src_linesizes[0]), frame->linesize, 4);
+//
+//	av_image_alloc(new_frame->data, new_frame->linesize, new_frame->width, new_frame->height, frame->format, 16);
+//
+//	av_image_copy(new_frame->data, new_frame->linesize, src_data, src_linesizes, frame->format, new_frame->width, new_frame->height);
+//
+//	frame =
+//}
 
 }}

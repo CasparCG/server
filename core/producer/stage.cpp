@@ -78,7 +78,7 @@ public:
 	{
 		channel_.execution().invoke([&]
 		{
-			layers_[index].load(create_destroy_producer_proxy(channel_.destruction(), producer), preview, auto_play_delta);
+			layers_[index].load(producer, preview, auto_play_delta);
 		}, high_priority);
 	}
 

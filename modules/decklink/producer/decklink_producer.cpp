@@ -26,8 +26,8 @@
 #include "../util/util.h"
 
 #include "../../ffmpeg/producer/filter/filter.h"
-#include "../../ffmpeg/producer/util.h"
-#include "../../ffmpeg/producer/frame_muxer.h"
+#include "../../ffmpeg/producer/util/util.h"
+#include "../../ffmpeg/producer/muxer/frame_muxer.h"
 
 #include <common/log/log.h>
 #include <common/diagnostics/graph.h>
@@ -91,7 +91,6 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
 
 	std::exception_ptr											exception_;
-	ffmpeg::filter												filter_;
 		
 	ffmpeg::frame_muxer											muxer_;
 
@@ -103,8 +102,7 @@ public:
 		, format_desc_(format_desc)
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
-		, filter_(filter)
-		, muxer_(ffmpeg::double_rate(filter) ? format_desc.fps * 2.0 : format_desc.fps, frame_factory)
+		, muxer_(format_desc.fps, frame_factory, filter)
 	{
 		frame_buffer_.set_capacity(2);
 		
@@ -188,8 +186,7 @@ public:
 			av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 			av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
 					
-			BOOST_FOREACH(auto& av_frame2, filter_.execute(av_frame))
-				muxer_.push(av_frame2);		
+			muxer_.push(av_frame);		
 									
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
@@ -201,11 +198,9 @@ public:
 			else
 				muxer_.push(std::make_shared<core::audio_buffer>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
 					
-			muxer_.commit();
-
-			while(!muxer_.empty())
+			for(auto frame = muxer_.poll(); frame; frame = muxer_.poll())
 			{
-				if(!frame_buffer_.try_push(muxer_.pop()))
+				if(!frame_buffer_.try_push(make_safe_ptr(frame)))
 					graph_->add_tag("dropped-frame");
 			}
 
@@ -303,7 +298,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();
 			
-	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length);
+	return create_destroy_proxy(make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length));
 }
 
 }}

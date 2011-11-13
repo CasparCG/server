@@ -79,8 +79,6 @@ public:
 		// Stop context before destroying devices.
 		context_.execution().stop();
 		context_.execution().join();
-		context_.destruction().stop();
-		context_.destruction().join();
 	}
 
 	void tick()

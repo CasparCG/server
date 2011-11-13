@@ -21,11 +21,12 @@
 #pragma warning (disable : 4244)
 #endif
 
-#include "../stdafx.h"
+#include "../../stdafx.h"
 
 #include "input.h"
-#include "../ffmpeg_error.h"
-#include "../tbb_avcodec.h"
+
+#include "../util/util.h"
+#include "../../ffmpeg_error.h"
 
 #include <core/video_format.h>
 
@@ -63,11 +64,11 @@ static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
 	
 struct input::implementation : boost::noncopyable
 {		
-	std::shared_ptr<AVFormatContext>							format_context_; // Destroy this last
-	int															default_stream_index_;
-
 	safe_ptr<diagnostics::graph>								graph_;
-		
+
+	const safe_ptr<AVFormatContext>								format_context_; // Destroy this last
+	const int													default_stream_index_;
+			
 	const std::wstring											filename_;
 	const bool													loop_;
 	const size_t												start_;		
@@ -79,46 +80,31 @@ struct input::implementation : boost::noncopyable
 	boost::condition_variable									buffer_cond_;
 	boost::mutex												buffer_mutex_;
 		
-	boost::thread												thread_;
-	tbb::atomic<bool>											is_running_;
-
 	tbb::atomic<size_t>											nb_frames_;
 	tbb::atomic<size_t>											nb_loops_;
+
+	boost::thread												thread_;
+	tbb::atomic<bool>											is_running_;
 
 public:
 	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
 		: graph_(graph)
+		, format_context_(open_input(filename))		
+		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, loop_(loop)
 		, filename_(filename)
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-	{			
-		is_running_ = true;
-		nb_frames_	= 0;
-		nb_loops_	= 0;
-		
-		AVFormatContext* weak_format_context_ = nullptr;
-		THROW_ON_ERROR2(avformat_open_input(&weak_format_context_, narrow(filename).c_str(), nullptr, nullptr), print());
-
-		format_context_.reset(weak_format_context_, av_close_input_file);
-
-		av_dump_format(weak_format_context_, 0, narrow(filename).c_str(), 0);
-			
-		THROW_ON_ERROR2(avformat_find_stream_info(format_context_.get(), nullptr), print());
-		
-		default_stream_index_ = THROW_ON_ERROR2(av_find_default_stream_index(format_context_.get()), print());
-
+	{					
 		if(start_ > 0)			
 			seek_frame(start_);
-		
-		for(int n = 0; n < 16 && !full(); ++n)
-			read_next_packet();
-						
+								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
 		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
-
+		
+		is_running_ = true;
 		thread_ = boost::thread([this]{run();});
 	}
 
@@ -187,16 +173,8 @@ private:
 			
 	void read_next_packet()
 	{		
-		int ret = 0;
-
-		std::shared_ptr<AVPacket> read_packet(new AVPacket, [](AVPacket* p)
-		{
-			av_free_packet(p);
-			delete p;
-		});
-		av_init_packet(read_packet.get());
-
-		ret = av_read_frame(format_context_.get(), read_packet.get()); // read_packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
+		auto packet = create_packet();
+		auto ret	= av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
 		
 		if(is_eof(ret))														     
 		{
@@ -229,27 +207,27 @@ private:
 		{		
 			THROW_ON_ERROR(ret, "av_read_frame", print());
 
-			if(read_packet->stream_index == default_stream_index_)
+			if(packet->stream_index == default_stream_index_)
 			{
 				if(nb_loops_ == 0)
 					++nb_frames_;
 				++frame_number_;
 			}
 
-			THROW_ON_ERROR2(av_dup_packet(read_packet.get()), print());
+			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
 				
 			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
-			auto size = read_packet->size;
-			auto data = read_packet->data;
+			auto size = packet->size;
+			auto data = packet->data;
 
-			read_packet = std::shared_ptr<AVPacket>(read_packet.get(), [=](AVPacket*)
+			packet = safe_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
 			{
-				read_packet->size = size;
-				read_packet->data = data;
+				packet->size = size;
+				packet->data = data;
 			});
 
-			buffer_.try_push(read_packet);
-			buffer_size_ += read_packet->size;
+			buffer_.try_push(packet);
+			buffer_size_ += packet->size;
 				
 			graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
 			graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
@@ -262,9 +240,22 @@ private:
 	}
 
 	void seek_frame(int64_t frame, int flags = 0)
-	{  							
+	{  			
+		if(flags == AVSEEK_FLAG_BACKWARD)
+		{
+			// Fix VP6 seeking
+			int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+			if(vid_stream_index >= 0)
+			{
+				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
+				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+					flags |= AVSEEK_FLAG_BYTE;
+			}
+		}
+
 		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());		
-		buffer_.push(nullptr);
+
+		buffer_.push(flush_packet());
 	}		
 
 	bool is_eof(int ret)
@@ -287,7 +278,7 @@ input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& file
 	: impl_(new implementation(graph, filename, loop, start, length)){}
 bool input::eof() const {return !impl_->is_running_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
-safe_ptr<AVFormatContext> input::context(){return make_safe_ptr(impl_->format_context_);}
+safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 size_t input::nb_frames() const {return impl_->nb_frames();}
 size_t input::nb_loops() const {return impl_->nb_loops();}
 }}
