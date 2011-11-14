@@ -51,7 +51,7 @@ struct fence::implementation
 		static tbb::atomic<size_t> count;
 		static tbb::atomic<bool> warned;
 		
-		if(delay > 2 && ++count > 16)
+		if(delay > 2 && ++count > 32)
 		{
 			if(!warned.fetch_and_store(true))
 			{
