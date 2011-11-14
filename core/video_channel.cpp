@@ -56,7 +56,7 @@ struct video_channel::implementation : boost::noncopyable
 	boost::timer					output_timer_;
 	
 public:
-	implementation(int index, const video_format_desc& format_desc, ogl_device& ogl)  
+	implementation(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl)  
 		: context_(index, ogl, format_desc)
 		, output_(new caspar::core::output(context_, [this]{restart();}))
 		, mixer_(new caspar::core::mixer(context_))
@@ -126,7 +126,7 @@ public:
 	void restart()
 	{
 		stage_->clear();
-		context_.ogl().gc().wait();
+		context_.ogl()->gc().wait();
 
 		mixer_ = nullptr;
 		mixer_.reset(new caspar::core::mixer(context_));
@@ -142,13 +142,13 @@ public:
 		context_.execution().begin_invoke([=]
 		{
 			stage_->clear();
-			context_.ogl().gc().wait();
+			context_.ogl()->gc().wait();
 			context_.set_format_desc(format_desc);
 		});
 	}
 };
 
-video_channel::video_channel(int index, const video_format_desc& format_desc, ogl_device& ogl) : impl_(new implementation(index, format_desc, ogl)){}
+video_channel::video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) : impl_(new implementation(index, format_desc, ogl)){}
 video_channel::video_channel(video_channel&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
 safe_ptr<mixer> video_channel::mixer() { return make_safe_ptr(impl_->mixer_);} 

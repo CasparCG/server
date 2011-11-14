@@ -166,9 +166,10 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 	
 	//++pool->usage_count;
 
+	auto self = shared_from_this();
 	return safe_ptr<host_buffer>(buffer.get(), [=](host_buffer*) mutable
 	{
-		executor_.begin_invoke([=]() mutable
+		self->executor_.begin_invoke([=]() mutable
 		{		
 			if(usage == host_buffer::write_only)
 				buffer->map();
@@ -178,6 +179,11 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::u
 			pool->items.push(buffer);
 		}, high_priority);	
 	});
+}
+
+safe_ptr<ogl_device> ogl_device::create()
+{
+	return safe_ptr<ogl_device>(new ogl_device());
 }
 
 //template<typename T>
