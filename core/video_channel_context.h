@@ -23,14 +23,14 @@ class video_channel_context
 {
 
 public:
-	video_channel_context(int index, ogl_device& ogl, const video_format_desc& format_desc);
+	video_channel_context(int index, const safe_ptr<ogl_device>& ogl, const video_format_desc& format_desc);
 
-	const int			index() const;
-	video_format_desc	get_format_desc();
-	void				set_format_desc(const video_format_desc& format_desc);
-	executor&			execution();
-	ogl_device&			ogl();
-	std::wstring		print() const;
+	const int				index() const;
+	video_format_desc		get_format_desc();
+	void					set_format_desc(const video_format_desc& format_desc);
+	executor&				execution();
+	safe_ptr<ogl_device>	ogl();
+	std::wstring			print() const;
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;

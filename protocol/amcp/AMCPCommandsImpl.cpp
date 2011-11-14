@@ -201,7 +201,7 @@ bool DiagnosticsCommand::DoExecute()
 {	
 	try
 	{
-		diagnostics::show_graphs(boost::lexical_cast<bool>(_parameters.at(0)));
+		diagnostics::show_graphs(true);
 
 		SetReplyString(TEXT("202 DIAG OK\r\n"));
 

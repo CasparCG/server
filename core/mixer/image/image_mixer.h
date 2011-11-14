@@ -40,7 +40,7 @@ struct pixel_format_desc;
 class image_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	image_mixer(ogl_device& ogl, const video_format_desc& format_desc);
+	image_mixer(const safe_ptr<ogl_device>& ogl, const video_format_desc& format_desc);
 	
 	virtual void begin(core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);

@@ -10,9 +10,9 @@ struct video_channel_context::implementation
 	const int					index_;
 	video_format_desc			format_desc_;
 	executor					execution_;
-	ogl_device&					ogl_;
+	safe_ptr<ogl_device>		ogl_;
 
-	implementation(int index, ogl_device& ogl, const video_format_desc& format_desc)
+	implementation(int index, const safe_ptr<ogl_device>& ogl, const video_format_desc& format_desc)
 		: index_(index)
 		, format_desc_(format_desc)
 		, execution_(print() + L"/execution")
@@ -27,7 +27,7 @@ struct video_channel_context::implementation
 	}
 };
 
-video_channel_context::video_channel_context(int index, ogl_device& ogl, const video_format_desc& format_desc) 
+video_channel_context::video_channel_context(int index, const safe_ptr<ogl_device>& ogl, const video_format_desc& format_desc) 
 	: impl_(new implementation(index, ogl, format_desc))
 {
 }
@@ -47,7 +47,7 @@ void video_channel_context::set_format_desc(const video_format_desc& format_desc
 }
 
 executor& video_channel_context::execution() {return impl_->execution_;}
-ogl_device& video_channel_context::ogl() { return impl_->ogl_;}
+safe_ptr<ogl_device> video_channel_context::ogl() { return impl_->ogl_;}
 
 std::wstring video_channel_context::print() const
 {

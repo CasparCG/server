@@ -62,11 +62,12 @@ using namespace protocol;
 
 struct server::implementation : boost::noncopyable
 {
-	ogl_device									ogl_;
+	safe_ptr<ogl_device>						ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
 	std::vector<safe_ptr<video_channel>>		channels_;
 
-	implementation()												
+	implementation()		
+		: ogl_(ogl_device::create())
 	{			
 		ffmpeg::init();
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
