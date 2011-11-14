@@ -41,6 +41,8 @@ ogl_device::ogl_device()
 	, attached_texture_(0)
 	, active_shader_(0)
 {
+	CASPAR_LOG(info) << L"Initializing OpenGL Device.";
+
 	std::fill(binded_textures_.begin(), binded_textures_.end(), 0);
 	std::fill(viewport_.begin(), viewport_.end(), 0);
 	std::fill(scissor_.begin(), scissor_.end(), 0);
@@ -53,14 +55,18 @@ ogl_device::ogl_device()
 		
 		if (glewInit() != GLEW_OK)
 			BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
-				
-		if(!GLEW_VERSION_3_2)
-			CASPAR_LOG(warning) << "Missing OpenGL 3.2 support.";
+						
+		if(!GLEW_VERSION_3_0)
+			CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";
 	
+		CASPAR_LOG(info) << L"Successfully initialized GLEW.";
+
 		GL(glGenFramebuffers(1, &fbo_));		
 		GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
 		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
         GL(glDisable(GL_MULTISAMPLE_ARB));
+
+		CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
 	});
 }
 
