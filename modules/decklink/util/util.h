@@ -99,12 +99,12 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 		
 	BMDDisplayModeSupport displayModeSupport;
 	if(FAILED(device->DoesSupportVideoMode(mode->GetDisplayMode(), pix_fmt, flag, &displayModeSupport, nullptr)) || displayModeSupport == bmdDisplayModeNotSupported)
-		CASPAR_LOG(warning) << L"Device does not support video-format.";
+		CASPAR_LOG(warning) << L"Device does not support video-format: " << mode->GetDisplayMode();
 		//BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Device does not support requested video-format.")
 		//										 << arg_value_info(boost::lexical_cast<std::string>(format))
 		//										 << arg_name_info("format"));
 	else if(displayModeSupport == bmdDisplayModeSupportedWithConversion)
-		CASPAR_LOG(warning) << L"Device supports video-format with conversion.";
+		CASPAR_LOG(warning) << L"Device supports video-format with conversion: " << mode->GetDisplayMode();
 
 	return mode->GetDisplayMode();
 }
