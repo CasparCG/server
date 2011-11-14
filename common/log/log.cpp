@@ -136,9 +136,10 @@ void add_file_sink(const std::wstring& folder)
 			BOOST_THROW_EXCEPTION(directory_not_found());
 
 		auto file_sink = boost::make_shared<file_sink_type>(
-			boost::log::keywords::file_name = (folder + L"caspar_%Y-%m-%d_%H-%M-%S.%N.log"),
+			boost::log::keywords::file_name = (folder + L"caspar_%Y-%m-%d.log"),
 			boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
-			boost::log::keywords::auto_flush = true
+			boost::log::keywords::auto_flush = true,
+			boost::log::keywords::open_mode = std::ios::app
 		);
 		
 		file_sink->locked_backend()->set_formatter(&my_formatter);
