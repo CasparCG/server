@@ -150,10 +150,11 @@ static void* fast_memcpy_aligned(void* dest, const void* source, size_t count)
 	size_t rest = count & 2047;
 	count &= ~2047;
 		
+	tbb::affinity_partitioner ap;
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, count/128), [&](const tbb::blocked_range<size_t>& r)
 	{       
 		fast_memcpy_aligned_impl(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128);   
-	});
+	}, ap);
 	
 	return fast_memcpy_small_aligned(dest8+count, source8+count, rest);
 }
@@ -166,10 +167,11 @@ static void* fast_memcpy_unaligned(void* dest, const void* source, size_t count)
 	size_t rest = count & 2047;
 	count &= ~2047;
 		
+	tbb::affinity_partitioner ap;
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, count/128), [&](const tbb::blocked_range<size_t>& r)
 	{       
 		fast_memcpy_unaligned_impl(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128);   
-	});
+	}, ap);
 	
 	return fast_memcpy_small_unaligned(dest8+count, source8+count, rest);
 }

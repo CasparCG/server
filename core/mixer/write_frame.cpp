@@ -34,7 +34,7 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::implementation
 {				
-	ogl_device*									ogl_;
+	std::shared_ptr<ogl_device>					ogl_;
 	std::vector<std::shared_ptr<host_buffer>>	buffers_;
 	std::vector<safe_ptr<device_buffer>>		textures_;
 	audio_buffer								audio_data_;
@@ -47,8 +47,8 @@ struct write_frame::implementation
 	{
 	}
 
-	implementation(ogl_device& ogl, const void* tag, const core::pixel_format_desc& desc) 
-		: ogl_(&ogl)
+	implementation(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc) 
+		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
 		, mode_(core::field_mode::progressive)
@@ -123,7 +123,7 @@ struct write_frame::implementation
 };
 	
 write_frame::write_frame(const void* tag) : impl_(new implementation(tag)){}
-write_frame::write_frame(ogl_device& ogl, const void* tag, const core::pixel_format_desc& desc) 
+write_frame::write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc) 
 	: impl_(new implementation(ogl, tag, desc)){}
 write_frame::write_frame(const write_frame& other) : impl_(new implementation(*other.impl_)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}

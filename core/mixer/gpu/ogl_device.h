@@ -56,7 +56,7 @@ struct buffer_pool
 	}
 };
 
-class ogl_device : boost::noncopyable
+class ogl_device : public std::enable_shared_from_this<ogl_device>, boost::noncopyable
 {	
 	std::unordered_map<GLenum, bool> caps_;
 	std::array<size_t, 4>			 viewport_;
@@ -76,8 +76,9 @@ class ogl_device : boost::noncopyable
 
 	executor executor_;
 				
-public:		
 	ogl_device();
+public:		
+	static safe_ptr<ogl_device> create();
 	~ogl_device();
 
 	// Not thread-safe, must be called inside of context
