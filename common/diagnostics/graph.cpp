@@ -83,6 +83,7 @@ public:
 private:
 	context() : executor_(L"diagnostics")
 	{
+		executor_.set_priority_class(below_normal_priority_class);
 	}
 
 	void do_show(bool value)
@@ -91,7 +92,6 @@ private:
 		{
 			if(!window_)
 			{
-				SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
 				window_.reset(new sf::RenderWindow(sf::VideoMode(600, 1000), "CasparCG Diagnostics"));
 				window_->SetPosition(0, 0);
 				window_->SetActive();
