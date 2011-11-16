@@ -40,12 +40,18 @@ namespace caspar { namespace gl {
 void SMFL_GLCheckError(const std::string& expr, const std::string& file, unsigned int line)
 {
 	// Get the last error
-	GLenum ErrorCode = glGetError();
+	GLenum LastErrorCode = GL_NO_ERROR;
 
-	if (ErrorCode != GL_NO_ERROR)
+	for(GLenum ErrorCode = glGetError(); ErrorCode != GL_NO_ERROR; ErrorCode = glGetError())
+	{
+		CASPAR_LOG(error) << "OpenGL Error: " << ErrorCode << L" " << glewGetErrorString(ErrorCode);
+		LastErrorCode = ErrorCode;
+	}
+
+	if (LastErrorCode != GL_NO_ERROR)
 	{
 		// Decode the error code
-		switch (ErrorCode)
+		switch (LastErrorCode)
 		{
 			case GL_INVALID_ENUM :
 				BOOST_THROW_EXCEPTION(ogl_invalid_enum()
