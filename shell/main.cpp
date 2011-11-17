@@ -198,7 +198,7 @@ int main(int argc, wchar_t* argv[])
 	
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
 
-	CASPAR_LOG(info) << L"Type \"q\" to close application";
+	std::wcout << L"Type \"q\" to close application." << std::endl;
 	
 	// Set debug mode.
 	#ifdef _DEBUG
@@ -248,7 +248,8 @@ int main(int argc, wchar_t* argv[])
 		#endif	 
 
 			// Start logging to file.
-			caspar::log::add_file_sink(caspar::env::log_folder());
+			caspar::log::add_file_sink(caspar::env::log_folder());			
+			std::wcout << L"Logging [info] or higher severity to " << caspar::env::log_folder() << std::endl << std::endl;
 		
 			// Setup console window.
 			setup_console_window();
