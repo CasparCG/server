@@ -24,12 +24,10 @@
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
 
-#include <tbb/parallel_for.h>
-
-#include <safeint.h>
-
 #include <stack>
-#include <deque>
+#include <vector>
+
+#include <tbb/parallel_for.h>
 
 namespace caspar { namespace core {
 
@@ -45,7 +43,7 @@ struct audio_mixer::implementation
 	std::stack<core::frame_transform>				transform_stack_;
 	std::map<const void*, core::frame_transform>	prev_frame_transforms_;
 	const core::video_format_desc					format_desc_;
-	std::vector<audio_item>							items;
+	std::vector<audio_item>							items_;
 
 public:
 	implementation(const core::video_format_desc& format_desc)
@@ -77,7 +75,7 @@ public:
 		item.transform	= transform_stack_.top();
 		item.audio_data = std::move(frame.audio_data());
 
-		items.push_back(item);		
+		items_.push_back(item);		
 	}
 
 	void begin(const core::frame_transform& transform)
@@ -95,12 +93,11 @@ public:
 		// NOTE: auto data should be larger than format_desc_.audio_samples_per_frame to allow sse to read/write beyond size.
 
 		auto intermediate = std::vector<float, tbb::cache_aligned_allocator<float>>(format_desc_.audio_samples_per_frame+128, 0.0f);
+		auto result		  = audio_buffer(format_desc_.audio_samples_per_frame+128);	
 
 		std::map<const void*, core::frame_transform> next_frame_transforms;
 		
-		tbb::affinity_partitioner ap;
-
-		BOOST_FOREACH(auto& item, items)
+		BOOST_FOREACH(auto& item, items_)
 		{			
 			const auto next = item.transform;
 			auto prev = next;
@@ -122,31 +119,23 @@ public:
 						
 			const float prev_volume = static_cast<float>(prev.volume);
 			const float next_volume = static_cast<float>(next.volume);
-			const float delta		= 1.0f/static_cast<float>(format_desc_.audio_samples_per_frame/format_desc_.audio_channels);
-						
-			auto alpha_ps	= _mm_setr_ps(delta, delta, 0.0f, 0.0f);
-			auto delta2_ps	= _mm_set_ps1(delta*2.0f);
-			auto prev_ps	= _mm_set_ps1(prev_volume);
-			auto next_ps	= _mm_set_ps1(next_volume);	
+									
+			auto alpha		= (next_volume-prev_volume)/static_cast<float>(format_desc_.audio_samples_per_frame/format_desc_.audio_channels);
+			auto alpha_ps	= _mm_set_ps1(alpha*2.0f);
+			auto volume_ps	= _mm_setr_ps(prev_volume, prev_volume, prev_volume+alpha, prev_volume+alpha);
 
 			for(size_t n = 0; n < format_desc_.audio_samples_per_frame/4; ++n)
 			{		
-				auto next2_ps		= _mm_mul_ps(next_ps, alpha_ps);
-				auto prev2_ps		= _mm_sub_ps(prev_ps, _mm_mul_ps(prev_ps, alpha_ps));
-				auto volume_ps		= _mm_add_ps(next2_ps, prev2_ps);
-
 				auto sample_ps		= _mm_cvtepi32_ps(_mm_load_si128(reinterpret_cast<__m128i*>(&item.audio_data[n*4])));
 				auto res_sample_ps	= _mm_load_ps(&intermediate[n*4]);											
 				sample_ps			= _mm_mul_ps(sample_ps, volume_ps);	
 				res_sample_ps		= _mm_add_ps(sample_ps, res_sample_ps);	
 
-				alpha_ps			= _mm_add_ps(alpha_ps, delta2_ps);
+				volume_ps			= _mm_add_ps(volume_ps, alpha_ps);
 
 				_mm_store_ps(&intermediate[n*4], res_sample_ps);
 			}
-		}
-		
-		auto result = audio_buffer(format_desc_.audio_samples_per_frame+128);	
+		}		
 			
 		auto intermediate_128 = reinterpret_cast<__m128i*>(intermediate.data());
 		auto result_128		  = reinterpret_cast<__m128i*>(result.data());
@@ -172,7 +161,7 @@ public:
 			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm7));
 		}
 
-		items.clear();
+		items_.clear();
 		prev_frame_transforms_ = std::move(next_frame_transforms);	
 
 		result.resize(format_desc_.audio_samples_per_frame);
