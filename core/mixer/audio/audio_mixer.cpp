@@ -92,11 +92,12 @@ public:
 	{	
 		// NOTE: auto data should be larger than format_desc_.audio_samples_per_frame to allow sse to read/write beyond size.
 
-		auto intermediate = std::vector<float, tbb::cache_aligned_allocator<float>>(format_desc_.audio_samples_per_frame+128, 0.0f);
-		auto result		  = audio_buffer(format_desc_.audio_samples_per_frame+128);	
+		auto intermediate	= std::vector<float, tbb::cache_aligned_allocator<float>>(format_desc_.audio_samples_per_frame+128, 0.0f);
+		auto result			= audio_buffer(format_desc_.audio_samples_per_frame+128);	
+		auto result_128		= reinterpret_cast<__m128i*>(result.data());
 
 		std::map<const void*, core::frame_transform> next_frame_transforms;
-		
+						
 		BOOST_FOREACH(auto& item, items_)
 		{			
 			const auto next = item.transform;
@@ -124,42 +125,33 @@ public:
 			auto alpha_ps	= _mm_set_ps1(alpha*2.0f);
 			auto volume_ps	= _mm_setr_ps(prev_volume, prev_volume, prev_volume+alpha, prev_volume+alpha);
 
-			for(size_t n = 0; n < format_desc_.audio_samples_per_frame/4; ++n)
-			{		
-				auto sample_ps		= _mm_cvtepi32_ps(_mm_load_si128(reinterpret_cast<__m128i*>(&item.audio_data[n*4])));
-				auto res_sample_ps	= _mm_load_ps(&intermediate[n*4]);											
-				sample_ps			= _mm_mul_ps(sample_ps, volume_ps);	
-				res_sample_ps		= _mm_add_ps(sample_ps, res_sample_ps);	
+			if(&item != &items_.back())
+			{
+				for(size_t n = 0; n < format_desc_.audio_samples_per_frame/4; ++n)
+				{		
+					auto sample_ps		= _mm_cvtepi32_ps(_mm_load_si128(reinterpret_cast<__m128i*>(&item.audio_data[n*4])));
+					auto res_sample_ps	= _mm_load_ps(&intermediate[n*4]);											
+					sample_ps			= _mm_mul_ps(sample_ps, volume_ps);	
+					res_sample_ps		= _mm_add_ps(sample_ps, res_sample_ps);	
 
-				volume_ps			= _mm_add_ps(volume_ps, alpha_ps);
+					volume_ps			= _mm_add_ps(volume_ps, alpha_ps);
 
-				_mm_store_ps(&intermediate[n*4], res_sample_ps);
+					_mm_store_ps(&intermediate[n*4], res_sample_ps);
+				}
 			}
-		}		
-			
-		auto intermediate_128 = reinterpret_cast<__m128i*>(intermediate.data());
-		auto result_128		  = reinterpret_cast<__m128i*>(result.data());
-				
-		for(size_t n = 0; n < format_desc_.audio_samples_per_frame/32; ++n)
-		{	
-			auto xmm0 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm1 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm2 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm3 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm4 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm5 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm6 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm7 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm0));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm1));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm2));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm3));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm4));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm5));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm6));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm7));
-		}
+			else
+			{
+				for(size_t n = 0; n < format_desc_.audio_samples_per_frame/4; ++n)
+				{		
+					auto sample_ps		= _mm_cvtepi32_ps(_mm_load_si128(reinterpret_cast<__m128i*>(&item.audio_data[n*4])));
+					auto res_sample_ps	= _mm_load_ps(&intermediate[n*4]);											
+					sample_ps			= _mm_mul_ps(sample_ps, volume_ps);	
+					res_sample_ps		= _mm_add_ps(sample_ps, res_sample_ps);	
+					
+					_mm_stream_si128(result_128++, _mm_cvtps_epi32(res_sample_ps));
+				}
+			}
+		}				
 
 		items_.clear();
 		prev_frame_transforms_ = std::move(next_frame_transforms);	
