@@ -220,8 +220,10 @@ public:
 			auto video_nb_frames = video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
 			auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
 
-			nb_frames = std::min(static_cast<int64_t>(length_), std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames)));
+			nb_frames = std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames));
 		}
+
+		nb_frames = std::min(static_cast<int64_t>(length_), nb_frames);
 
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
 

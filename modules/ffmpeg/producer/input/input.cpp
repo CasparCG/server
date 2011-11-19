@@ -97,6 +97,10 @@ public:
 		, length_(length)
 		, frame_number_(0)
 	{					
+		buffer_size_	= 0;
+		nb_frames_		= 0;
+		nb_loops_		= 0;
+
 		if(start_ > 0)			
 			seek_frame(start_);
 								
@@ -106,6 +110,8 @@ public:
 		
 		is_running_ = true;
 		thread_ = boost::thread([this]{run();});
+
+		CASPAR_LOG(info) << print() << L" Initialized.";
 	}
 
 	~implementation()
@@ -151,6 +157,8 @@ private:
 		try
 		{
 			CASPAR_LOG(info) << print() << " Thread Started.";
+			
+			CASPAR_ASSERT(nb_frames_ < 1000);
 
 			while(is_running_)
 			{
@@ -176,6 +184,8 @@ private:
 		auto packet = create_packet();
 		auto ret	= av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
 		
+		CASPAR_ASSERT(nb_frames_ < 1000);
+
 		if(is_eof(ret))														     
 		{
 			++nb_loops_;
