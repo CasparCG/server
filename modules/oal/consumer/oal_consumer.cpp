@@ -80,8 +80,11 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
 		format_desc_ = format_desc;		
-		sf::SoundStream::Initialize(2, 48000);
-		Play();		
+		if(Status() != Playing)
+		{
+			sf::SoundStream::Initialize(2, 48000);
+			Play();		
+		}
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 	
