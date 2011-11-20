@@ -239,6 +239,12 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			write->commit(n);
 		}
 	}
+
+	if(decoded_frame->height == 480) // NTSC DV
+	{
+		write->get_frame_transform().fill_translation[1] += 2.0/static_cast<double>(frame_factory->get_video_format_desc().height);
+		write->get_frame_transform().fill_scale[1] = 1.0 - 6.0*1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
+	}
 	
 	// Fix field-order if needed
 	if(write->get_type() == core::field_mode::lower && frame_factory->get_video_format_desc().field_mode == core::field_mode::upper)

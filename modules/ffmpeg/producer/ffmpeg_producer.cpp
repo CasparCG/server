@@ -224,7 +224,6 @@ public:
 		}
 
 		nb_frames = std::min(static_cast<int64_t>(length_), nb_frames);
-
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
 
 		// TODO: Might need to scale nb_frames av frame_muxer transformations.

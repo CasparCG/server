@@ -56,6 +56,8 @@ ogl_device::ogl_device()
 		if (glewInit() != GLEW_OK)
 			BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
 						
+		CASPAR_LOG(info) << L"OpenGL " << version();
+
 		if(!GLEW_VERSION_3_0)
 			CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";
 	
@@ -262,14 +264,13 @@ boost::unique_future<void> ogl_device::gc()
 	}, high_priority);
 }
 
-std::wstring ogl_device::get_version()
+std::wstring ogl_device::version()
 {	
 	static std::wstring ver = L"Not found";
 	try
 	{
-		auto tmp = ogl_device::create();
-		ver = widen(tmp->invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
-		+ " "	+ tmp->invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));			
+		ver = widen(invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
+		+ " "	+ invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));			
 	}
 	catch(...){}
 

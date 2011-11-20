@@ -644,6 +644,22 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	{
 		CASPAR_LOG(error) << print_() << L" Error: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
 	}
+	else if(str.find(TEXT("OnDebug")) != std::wstring::npos)
+	{
+		CASPAR_LOG(error) << print_() << L" Debug: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+	}
+	//else if(str.find(TEXT("OnTemplateDescription")) != std::wstring::npos)
+	//{
+	//	CASPAR_LOG(error) << print_() << L" TemplateDescription: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+	//}
+	//else if(str.find(TEXT("OnGetInfo")) != std::wstring::npos)
+	//{
+	//	CASPAR_LOG(error) << print_() << L" Info: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+	//}
+	//else
+	//{
+	//	CASPAR_LOG(error) << print_() << L" Unknown: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+	//}
 
 	CComPtr<IShockwaveFlash> spFlash;
 	HRESULT hr = m_spOleObject->QueryInterface(__uuidof(IShockwaveFlash), (void**) &spFlash);
@@ -887,7 +903,7 @@ void FlashAxContainer::Tick()
 	}
 }
 
-bool FlashAxContainer::FlashCall(const std::wstring& str)
+bool FlashAxContainer::FlashCall(const std::wstring& str, std::wstring& result2)
 {
 	CComBSTR result;
 	CComPtr<IShockwaveFlash> spFlash;
@@ -898,6 +914,9 @@ bool FlashAxContainer::FlashCall(const std::wstring& str)
 	bCallSuccessful_ = false;
 	for(size_t retries = 0; !bCallSuccessful_ && retries < 4; ++retries)
 		spFlash->CallFunction(request, &result);
+
+	result2 = result;
+
 	return bCallSuccessful_;
 }
 

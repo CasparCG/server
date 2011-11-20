@@ -53,17 +53,14 @@ struct write_frame::implementation
 		, tag_(tag)
 		, mode_(core::field_mode::progressive)
 	{
-		ogl_->invoke([&]
+		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
 		{
-			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
-			{
-				return ogl_->create_host_buffer(plane.size, host_buffer::write_only);
-			});
-			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures_), [&](const core::pixel_format_desc::plane& plane)
-			{
-				return ogl_->create_device_buffer(plane.width, plane.height, plane.channels);	
-			});
-		}, high_priority);
+			return ogl_->create_host_buffer(plane.size, host_buffer::write_only);
+		});
+		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures_), [&](const core::pixel_format_desc::plane& plane)
+		{
+			return ogl_->create_device_buffer(plane.width, plane.height, plane.channels);	
+		});
 	}
 			
 	void accept(write_frame& self, core::frame_visitor& visitor)
@@ -80,15 +77,7 @@ struct write_frame::implementation
 		auto ptr = static_cast<uint8_t*>(buffers_[index]->data());
 		return boost::iterator_range<uint8_t*>(ptr, ptr+buffers_[index]->size());
 	}
-
-	const boost::iterator_range<const uint8_t*> image_data(size_t index) const
-	{
-		if(index >= buffers_.size() || !buffers_[index]->data())
-			return boost::iterator_range<const uint8_t*>();
-		auto ptr = static_cast<const uint8_t*>(buffers_[index]->data());
-		return boost::iterator_range<const uint8_t*>(ptr, ptr+buffers_[index]->size());
-	}
-
+	
 	void commit()
 	{
 		for(size_t n = 0; n < buffers_.size(); ++n)
@@ -143,10 +132,6 @@ void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 
 boost::iterator_range<uint8_t*> write_frame::image_data(size_t index){return impl_->image_data(index);}
 audio_buffer& write_frame::audio_data() { return impl_->audio_data_; }
-const boost::iterator_range<const uint8_t*> write_frame::image_data(size_t index) const
-{
-	return boost::iterator_range<const uint8_t*>(impl_->image_data(index).begin(), impl_->image_data(index).end());
-}
 const boost::iterator_range<const int32_t*> write_frame::audio_data() const
 {
 	return boost::iterator_range<const int32_t*>(impl_->audio_data_.data(), impl_->audio_data_.data() + impl_->audio_data_.size());

@@ -81,14 +81,13 @@ public:
 		, key_only_(key_only)
 		, executor_(print())
 	{
-		executor_.set_capacity(core::consumer_buffer_depth());
+		executor_.set_capacity(1);
 
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->add_guide("frame-time", 0.5f);	
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("sync-time", diagnostics::color(0.5f, 1.0f, 0.2f));
-		graph_->set_color("input-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 			
@@ -215,9 +214,6 @@ public:
 		{
 			try
 			{
-				const size_t audio_samples	 = format_desc_.audio_samples_per_frame;
-				const size_t audio_nchannels = format_desc_.audio_channels;
-
 				frame_timer_.restart();
 				
 				// Copy to local buffers
@@ -237,16 +233,15 @@ public:
 				sync_timer_.restart();
 				unsigned long n_field = 0;
 				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
-				graph_->update_value("sync-time", static_cast<float>(sync_timer_.elapsed()*format_desc_.fps*0.5));
+				graph_->update_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
 
 				// Send and display
 
 				if(embedded_audio_)
 				{		
-					auto frame_audio	  = core::audio_32_to_16_sse(frame->audio_data());
-					auto frame_audio_data = frame_audio.size() != audio_samples ? silence.data() : frame_audio.data();	
+					auto frame_audio16 = core::audio_32_to_16_sse(frame->audio_data());
 
-					encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio_data, audio_samples, audio_nchannels);
+					encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio16.data(), frame->audio_data().size(), format_desc_.audio_channels);
 								
 					blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 													reserved_frames_.front()->image_size(), 
@@ -283,9 +278,7 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
-			graph_->set_value("input-buffer", static_cast<double>(executor_.size())/static_cast<double>(executor_.capacity()));
 		});
-		graph_->set_value("input-buffer", static_cast<double>(executor_.size())/static_cast<double>(executor_.capacity()));
 	}
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
@@ -354,6 +347,11 @@ public:
 			consumer_->print();
 
 		return L"bluefish [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+	}
+
+	size_t buffer_depth() const
+	{
+		return 1;
 	}
 };	
 

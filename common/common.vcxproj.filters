@@ -127,5 +127,11 @@
     <ClInclude Include="utility\move_on_copy.h">
       <Filter>source\utility</Filter>
     </ClInclude>
+    <ClInclude Include="concurrency\target.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="concurrency\governor.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

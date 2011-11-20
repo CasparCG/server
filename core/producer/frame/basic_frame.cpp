@@ -57,15 +57,6 @@ public:
 			frame->accept(visitor);
 		visitor.end();
 	}	
-
-	std::wstring print() const
-	{
-		std::wstring str = L"\tbasic_frame[\n";
-		BOOST_FOREACH(auto& frame, frames_)
-			str += frame->print() + L"\n";
-		str += L"\n]";
-		return str;
-	}
 };
 	
 basic_frame::basic_frame() : impl_(new implementation(std::vector<safe_ptr<basic_frame>>())){}
@@ -91,8 +82,6 @@ void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
 
 const frame_transform& basic_frame::get_frame_transform() const { return impl_->frame_transform_;}
 frame_transform& basic_frame::get_frame_transform() { return impl_->frame_transform_;}
-
-std::wstring basic_frame::print() const{return impl_->print();}
 void basic_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, field_mode::type mode)

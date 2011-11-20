@@ -116,7 +116,6 @@ struct ogl_consumer : boost::noncopyable
 	safe_ptr<diagnostics::graph>	graph_;
 	boost::timer					perf_timer_;
 
-	boost::circular_buffer<safe_ptr<core::read_frame>>			input_buffer_;
 	tbb::concurrent_bounded_queue<safe_ptr<core::read_frame>>	frame_buffer_;
 
 	boost::thread			thread_;
@@ -134,7 +133,6 @@ public:
 		, screen_height_(format_desc.height)
 		, square_width_(format_desc.square_width)
 		, square_height_(format_desc.square_height)
-		, input_buffer_(core::consumer_buffer_depth()-1)
 		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
 		frame_buffer_.set_capacity(2);
@@ -289,7 +287,7 @@ public:
 
 	void render(const safe_ptr<core::read_frame>& frame)
 	{			
-		if(frame->image_data().empty())
+		if(static_cast<size_t>(frame->image_data().size()) != format_desc_.size)
 			return;
 					
 		auto av_frame = get_av_frame();
@@ -356,13 +354,8 @@ public:
 
 	void send(const safe_ptr<core::read_frame>& frame)
 	{
-		input_buffer_.push_back(frame);
-
-		if(input_buffer_.full())
-		{
-			if(!frame_buffer_.try_push(input_buffer_.front()))
-				graph_->add_tag("dropped-frame");
-		}
+		if(!frame_buffer_.try_push(frame))
+			graph_->add_tag("dropped-frame");
 	}
 		
 	std::wstring print() const
@@ -440,6 +433,7 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
+		consumer_.reset();
 		consumer_.reset(new ogl_consumer(config_, format_desc));
 	}
 	
@@ -462,6 +456,11 @@ public:
 	virtual const core::video_format_desc& get_video_format_desc() const
 	{
 		return consumer_->get_video_format_desc();
+	}
+
+	virtual size_t buffer_depth() const
+	{
+		return 1;
 	}
 };	
 
@@ -486,7 +485,7 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
 {
 	configuration config;
-	config.screen_index		= ptree.get("device",   config.screen_index);
+	config.screen_index		= ptree.get("device",   config.screen_index+1)-1;
 	config.windowed			= ptree.get("windowed", config.windowed);
 	config.key_only			= ptree.get("key-only", config.key_only);
 	config.auto_deinterlace	= ptree.get("auto-deinterlace", config.auto_deinterlace);

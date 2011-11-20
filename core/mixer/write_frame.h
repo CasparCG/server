@@ -53,7 +53,6 @@ public:
 	void swap(write_frame& other);
 			
 	boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
-	const boost::iterator_range<const uint8_t*> image_data(size_t plane_index = 0) const;
 
 	audio_buffer& audio_data();
 	const boost::iterator_range<const int32_t*> audio_data() const;

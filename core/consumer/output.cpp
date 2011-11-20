@@ -26,8 +26,6 @@
 
 #include "output.h"
 
-#include "../video_channel_context.h"
-
 #include "../video_format.h"
 #include "../mixer/gpu/ogl_device.h"
 #include "../mixer/read_frame.h"
@@ -36,8 +34,10 @@
 #include <common/utility/assert.h>
 #include <common/utility/timer.h>
 #include <common/memory/memshfl.h>
+#include <common/env.h>
 
-#include <tbb/mutex.h>
+#include <boost/circular_buffer.hpp>
+#include <boost/timer.hpp>
 
 namespace caspar { namespace core {
 
@@ -45,31 +45,41 @@ struct output::implementation
 {	
 	typedef std::pair<safe_ptr<read_frame>, safe_ptr<read_frame>> fill_and_key;
 	
-	video_channel_context&		channel_;
-	const std::function<void()> restart_channel_;
+	safe_ptr<diagnostics::graph>	graph_;
+	boost::timer					consume_timer_;
+
+	video_format_desc				format_desc_;
 
 	std::map<int, safe_ptr<frame_consumer>> consumers_;
 	typedef std::map<int, safe_ptr<frame_consumer>>::value_type layer_t;
 	
 	high_prec_timer timer_;
+
+	boost::circular_buffer<safe_ptr<read_frame>> frames_;
+
+	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>> input_;
+
+	executor executor_;
 		
 public:
-	implementation(video_channel_context& video_channel, const std::function<void()>& restart_channel) 
-		: channel_(video_channel)
-		, restart_channel_(restart_channel)
+	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) 
+		: graph_(graph)
+		, format_desc_(format_desc)
+		, executor_(L"output")
 	{
+		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f));
 	}	
 	
 	void add(int index, safe_ptr<frame_consumer>&& consumer)
 	{		
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			consumers_.erase(index);
 		});
 
-		consumer->initialize(channel_.get_format_desc());
+		consumer->initialize(format_desc_);
 
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			consumers_.insert(std::make_pair(index, consumer));
 
@@ -79,7 +89,7 @@ public:
 
 	void remove(int index)
 	{
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
@@ -89,62 +99,114 @@ public:
 			}
 		});
 	}
-						
-	void execute(const safe_ptr<read_frame>& frame)
-	{			
-		if(!has_synchronization_clock())
-			timer_.tick(1.0/channel_.get_format_desc().fps);
-
-		if(frame->image_size() != channel_.get_format_desc().size)
+	
+	void set_video_format_desc(const video_format_desc& format_desc)
+	{
+		executor_.invoke([&]
 		{
-			timer_.tick(1.0/channel_.get_format_desc().fps);
-			return;
-		}
-		
-		auto it = consumers_.begin();
-		while(it != consumers_.end())
-		{
-			auto consumer = it->second;
+			format_desc_ = format_desc;
 
-			if(consumer->get_video_format_desc() != channel_.get_format_desc())
-				consumer->initialize(channel_.get_format_desc());
-
-			try
-			{
-				if(consumer->send(frame))
-					++it;
-				else
-					consumers_.erase(it++);
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << "Trying to restart consumer: " << consumer->print() << L".";
+			auto it = consumers_.begin();
+			while(it != consumers_.end())
+			{						
 				try
 				{
-					consumer->initialize(channel_.get_format_desc());
-					consumer->send(frame);
+					it->second->initialize(format_desc_);
+					++it;
 				}
 				catch(...)
-				{	
-					CASPAR_LOG_CURRENT_EXCEPTION();	
-					CASPAR_LOG(warning) << "Consumer restart failed, trying to restart channel: " << consumer->print() << L".";	
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					consumers_.erase(it++);
+				}
+			}
 
+			frames_.clear();
+		});
+	}
+			
+	std::pair<size_t, size_t> minmax_buffer_depth() const
+	{		
+		if(consumers_.empty())
+			return std::make_pair(0, 0);
+		std::vector<size_t> buffer_depths;
+		std::transform(consumers_.begin(), consumers_.end(), std::back_inserter(buffer_depths), [](const decltype(*consumers_.begin())& pair)
+		{
+			return pair.second->buffer_depth();
+		});
+		std::sort(buffer_depths.begin(), buffer_depths.end());
+		auto min = buffer_depths.front();
+		auto max = buffer_depths.back();
+		return std::make_pair(min, max);
+	}
+
+	void send(const std::pair<safe_ptr<read_frame>, ticket>& packet)
+	{
+		executor_.begin_invoke([=]
+		{
+			try
+			{
+				consume_timer_.restart();
+
+				auto input_frame = packet.first;
+
+				if(!has_synchronization_clock())
+					timer_.tick(1.0/format_desc_.fps);
+
+				if(input_frame->image_size() != format_desc_.size)
+				{
+					timer_.tick(1.0/format_desc_.fps);
+					return;
+				}
+					
+				const auto minmax = minmax_buffer_depth();
+
+				frames_.set_capacity(minmax.second - minmax.first + 1);
+				frames_.push_back(input_frame);
+
+				if(!frames_.full())
+					return;
+
+				auto it = consumers_.begin();
+				while(it != consumers_.end())
+				{
+					auto consumer	= it->second;
+					auto frame		= frames_.at(consumer->buffer_depth()-minmax.first);
+						
 					try
 					{
-						restart_channel_();
-						consumer->initialize(channel_.get_format_desc());
-						consumer->send(frame);
+						if(consumer->send(frame))
+							++it;
+						else
+							consumers_.erase(it++);
 					}
 					catch(...)
 					{
 						CASPAR_LOG_CURRENT_EXCEPTION();
-						CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << L". Removing it.";
-						consumers_.erase(it++);
+						try
+						{
+							consumer->initialize(format_desc_);
+							if(consumer->send(frame))
+								++it;
+							else
+								consumers_.erase(it++);
+						}
+						catch(...)
+						{
+							CASPAR_LOG_CURRENT_EXCEPTION();
+							CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << L". Removing it.";
+							consumers_.erase(it++);
+						}
 					}
 				}
+						
+				graph_->update_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
 			}
-		}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
+		});
 	}
 
 private:
@@ -163,8 +225,9 @@ private:
 	}
 };
 
-output::output(video_channel_context& video_channel, const std::function<void()>& restart_channel) : impl_(new implementation(video_channel, restart_channel)){}
+output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) : impl_(new implementation(graph, format_desc)){}
 void output::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void output::remove(int index){impl_->remove(index);}
-void output::execute(const safe_ptr<read_frame>& frame) {impl_->execute(frame); }
+void output::send(const std::pair<safe_ptr<read_frame>, ticket>& frame) {impl_->send(frame); }
+void output::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 }}

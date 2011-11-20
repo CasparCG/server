@@ -26,12 +26,7 @@
 #include <common/exception/exceptions.h>
 
 namespace caspar { namespace core {
-
-size_t consumer_buffer_depth()
-{
-	return env::properties().get("configuration.consumers.buffer-depth", 5);
-}
-	
+		
 std::vector<const consumer_factory_t> g_factories;
 
 void register_consumer_factory(const consumer_factory_t& factory)

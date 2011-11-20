@@ -93,7 +93,7 @@ public:
 	virtual safe_ptr<basic_frame>		receive(int hints)												{return (*producer_)->receive(hints);}
 	virtual safe_ptr<basic_frame>		last_frame() const												{return (*producer_)->last_frame();}
 	virtual std::wstring				print() const													{return (*producer_)->print();}
-	virtual void						param(const std::wstring& str)									{(*producer_)->param(str);}
+	virtual std::wstring				param(const std::wstring& str)									{return (*producer_)->param(str);}
 	virtual safe_ptr<frame_producer>	get_following_producer() const									{return (*producer_)->get_following_producer();}
 	virtual void						set_leading_producer(const safe_ptr<frame_producer>& producer)	{(*producer_)->set_leading_producer(producer);}
 	virtual int64_t						nb_frames() const												{return (*producer_)->nb_frames();}

@@ -138,6 +138,9 @@ public:
 									<< msg_info(narrow(print()) + " Failed to start input stream.")
 									<< boost::errinfo_api_function("StartStreams"));
 
+		if(format_desc_.duration == 1001)
+			CASPAR_LOG(warning) << print() << L"Audio not supported in NTSC frame-rates.";
+
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
@@ -189,7 +192,7 @@ public:
 			muxer_.push(av_frame);		
 									
 			// It is assumed that audio is always equal or ahead of video.
-			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
+			if(audio && SUCCEEDED(audio->GetBytes(&bytes)) && format_desc_.duration != 1001)
 			{
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<int32_t*>(bytes);
