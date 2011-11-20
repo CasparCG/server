@@ -168,9 +168,17 @@ public:
 
 		execution_queue_[priority].push([=]
 		{
-			try{task_adaptor.value();}
-			catch(boost::task_already_started&){}
-			catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
+			try
+			{
+				task_adaptor.value();
+			}
+			catch(boost::task_already_started&)
+			{
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
 		});
 
 		if(priority != normal_priority)

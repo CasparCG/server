@@ -57,16 +57,13 @@ public:
 		: container_(16)
 		, preroll_count_(0)
 	{
-		if(core::consumer_buffer_depth() < 3)
-			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("audio-consumer does not support buffer-depth lower than 3."));
-
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
 		is_running_ = true;
-		input_.set_capacity(core::consumer_buffer_depth()-2);
+		input_.set_capacity(1);
 	}
 
 	~oal_consumer()
@@ -84,18 +81,12 @@ public:
 	{
 		format_desc_ = format_desc;		
 		sf::SoundStream::Initialize(2, 48000);
+		Play();		
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
 	{			
-		if(preroll_count_ < input_.capacity())
-		{
-			while(input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>(format_desc_.audio_samples_per_frame, 0)))
-				++preroll_count_;
-			Play();		
-		}
-
 		input_.push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>(core::audio_32_to_16_sse(frame->audio_data())));
 
 		return true;
@@ -124,6 +115,11 @@ public:
 	virtual const core::video_format_desc& get_video_format_desc() const
 	{
 		return format_desc_;
+	}
+
+	virtual size_t buffer_depth() const
+	{
+		return 2;
 	}
 };
 

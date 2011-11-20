@@ -251,7 +251,7 @@ public:
 //	static ATL::CComObject<FlashAxContainer>* CreateInstance();
 
 	void Tick();
-	bool FlashCall(const std::wstring& str);
+	bool FlashCall(const std::wstring& str, std::wstring& result);
 	bool DrawControl(HDC targetDC);
 	bool InvalidRect() const { return bInvalidRect_; } 
 	bool IsEmpty() const { return bIsEmpty_; }

@@ -96,7 +96,11 @@ public:
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
-	{					
+	{				
+		buffer_size_	= 0;
+		nb_frames_		= 0;
+		nb_loops_		= 0;
+
 		buffer_size_	= 0;
 		nb_frames_		= 0;
 		nb_loops_		= 0;

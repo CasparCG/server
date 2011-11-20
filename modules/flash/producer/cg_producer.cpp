@@ -87,11 +87,30 @@ public:
 		flash_producer_->param(str);
 	}
 
-	void invoke(int layer, const std::wstring& label)
+	std::wstring invoke(int layer, const std::wstring& label)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") % layer % label).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking invoke-command: " << str;
-		flash_producer_->param(str);
+		return flash_producer_->param(str);
+	}
+
+	std::wstring description(int layer)
+	{
+		auto str = (boost::wformat(L"<invoke name=\"GetDescription\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
+		CASPAR_LOG(info) << flash_producer_->print() << " Invoking description-command: " << str;
+		return flash_producer_->param(str);
+	}
+
+	std::wstring info()
+	{
+		auto str = (boost::wformat(L"<invoke name=\"GetInfo\" returntype=\"xml\"><arguments></arguments></invoke>")).str();
+		CASPAR_LOG(info) << flash_producer_->print() << " Invoking info-command: " << str;
+		return flash_producer_->param(str);
+	}
+
+	virtual std::wstring param(const std::wstring& str)
+	{		
+		return flash_producer_->param(str);
 	}
 
 	virtual safe_ptr<core::basic_frame> receive(int hints)
@@ -102,7 +121,7 @@ public:
 	virtual safe_ptr<core::basic_frame> last_frame() const
 	{
 		return flash_producer_->last_frame();
-	}			
+	}		
 			
 	std::wstring print() const
 	{
@@ -151,7 +170,10 @@ void cg_producer::play(int layer){impl_->play(layer);}
 void cg_producer::stop(int layer, unsigned int mix_out_duration){impl_->stop(layer, mix_out_duration);}
 void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
-void cg_producer::invoke(int layer, const std::wstring& label){impl_->invoke(layer, label);}
+std::wstring cg_producer::invoke(int layer, const std::wstring& label){return impl_->invoke(layer, label);}
 std::wstring cg_producer::print() const{return impl_->print();}
+std::wstring cg_producer::param(const std::wstring& str){return impl_->param(str);}
+std::wstring cg_producer::description(int layer){return impl_->description(layer);}
+std::wstring cg_producer::info(){return impl_->info();}
 
 }}

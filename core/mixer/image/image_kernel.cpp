@@ -36,11 +36,7 @@
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_transform.h>
 
-#include <GL/glew.h>
-
 #include <boost/noncopyable.hpp>
-
-#include <unordered_map>
 
 namespace caspar { namespace core {
 	
@@ -58,10 +54,17 @@ GLubyte lower_pattern[] = {
 
 struct image_kernel::implementation : boost::noncopyable
 {	
-	std::shared_ptr<shader>	shader_;
+	safe_ptr<ogl_device>	ogl_;
+	safe_ptr<shader>		shader_;
 	bool					blend_modes_;
 							
-	void draw(ogl_device& ogl, draw_params&& params)
+	implementation(const safe_ptr<ogl_device>& ogl)
+		: ogl_(ogl)
+		, shader_(ogl_->invoke([&]{return get_image_shader(*ogl, blend_modes_);}))
+	{
+	}
+
+	void draw(draw_params&& params)
 	{
 		static const double epsilon = 0.001;
 
@@ -75,8 +78,8 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		if(!std::all_of(params.textures.begin(), params.textures.end(), std::mem_fn(&device_buffer::ready)))
 		{
-			CASPAR_LOG(warning) << L"[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
-			ogl.yield(); // Try to give it some more time.
+			CASPAR_LOG(trace) << L"[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
+			ogl_->yield(); // Try to give it some more time.
 		}		
 		
 		// Bind textures
@@ -91,11 +94,8 @@ struct image_kernel::implementation : boost::noncopyable
 			params.layer_key->bind(texture_id::layer_key);
 			
 		// Setup shader
-
-		if(!shader_)
-			shader_ = get_image_shader(ogl, blend_modes_);
-						
-		ogl.use(*shader_);
+								
+		ogl_->use(*shader_);
 
 		shader_->set("plane[0]",		texture_id::plane0);
 		shader_->set("plane[1]",		texture_id::plane1);
@@ -127,11 +127,11 @@ struct image_kernel::implementation : boost::noncopyable
 			switch(params.keyer)
 			{
 			case keyer::additive:
-				ogl.blend_func(GL_ONE, GL_ONE);	
+				ogl_->blend_func(GL_ONE, GL_ONE);	
 				break;
 			case keyer::linear:
 			default:				
-				ogl.blend_func(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);	
+				ogl_->blend_func(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);	
 			}		
 		}
 
@@ -169,20 +169,20 @@ struct image_kernel::implementation : boost::noncopyable
 		// Setup interlacing
 
 		if(params.transform.field_mode == core::field_mode::progressive)			
-			ogl.disable(GL_POLYGON_STIPPLE);			
+			ogl_->disable(GL_POLYGON_STIPPLE);			
 		else			
 		{
-			ogl.enable(GL_POLYGON_STIPPLE);
+			ogl_->enable(GL_POLYGON_STIPPLE);
 
 			if(params.transform.field_mode == core::field_mode::upper)
-				ogl.stipple_pattern(upper_pattern);
+				ogl_->stipple_pattern(upper_pattern);
 			else if(params.transform.field_mode == core::field_mode::lower)
-				ogl.stipple_pattern(lower_pattern);
+				ogl_->stipple_pattern(lower_pattern);
 		}
 
 		// Setup drawing area
 		
-		ogl.viewport(0, 0, params.background->width(), params.background->height());
+		ogl_->viewport(0, 0, params.background->width(), params.background->height());
 								
 		auto m_p = params.transform.clip_translation;
 		auto m_s = params.transform.clip_scale;
@@ -195,8 +195,8 @@ struct image_kernel::implementation : boost::noncopyable
 			double w = static_cast<double>(params.background->width());
 			double h = static_cast<double>(params.background->height());
 		
-			ogl.enable(GL_SCISSOR_TEST);
-			ogl.scissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h));
+			ogl_->enable(GL_SCISSOR_TEST);
+			ogl_->scissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h));
 		}
 
 		auto f_p = params.transform.fill_translation;
@@ -204,23 +204,23 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		// Set render target
 		
-		ogl.attach(*params.background);
+		ogl_->attach(*params.background);
 		
 		// Draw
-
+				
 		glBegin(GL_QUADS);
 			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex2d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0);
 			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
 			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
 		glEnd();
-
+		
 		// Cleanup
 
-		ogl.disable(GL_SCISSOR_TEST);	
-				
+		ogl_->disable(GL_SCISSOR_TEST);	
+						
 		params.textures.clear();
-		ogl.yield(); // Return resources to pool as early as possible.
+		ogl_->yield(); // Return resources to pool as early as possible.
 
 		if(blend_modes_)
 		{
@@ -231,10 +231,10 @@ struct image_kernel::implementation : boost::noncopyable
 	}
 };
 
-image_kernel::image_kernel() : impl_(new implementation()){}
-void image_kernel::draw(ogl_device& ogl, draw_params&& params)
+image_kernel::image_kernel(const safe_ptr<ogl_device>& ogl) : impl_(new implementation(ogl)){}
+void image_kernel::draw(draw_params&& params)
 {
-	impl_->draw(ogl, std::move(params));
+	impl_->draw(std::move(params));
 }
 
 }}

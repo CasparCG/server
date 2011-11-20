@@ -38,13 +38,13 @@ typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer
 class audio_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	audio_mixer(const core::video_format_desc& format_desc);
+	audio_mixer();
 
 	virtual void begin(core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
-	audio_buffer mix();
+	audio_buffer mix(const video_format_desc& format_desc);
 	
 	audio_mixer& operator=(audio_mixer&& other);
 private:

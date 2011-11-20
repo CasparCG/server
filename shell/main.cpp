@@ -63,6 +63,7 @@
 #include <tbb/task_scheduler_observer.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #include <algorithm>
 
@@ -173,7 +174,6 @@ void print_info()
 	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
 	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< caspar::ffmpeg::get_avutil_version();
 	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::ffmpeg::get_swscale_version();
-	CASPAR_LOG(info) << L"OpenGL " << caspar::core::ogl_device::get_version() << "\n\n";
 }
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
@@ -241,7 +241,7 @@ int main(int argc, wchar_t* argv[])
 		{
 			// Configure environment properties from configuration.
 			caspar::env::configure("casparcg.config");
-
+				
 		#ifdef _DEBUG
 			if(caspar::env::properties().get("configuration.debugging.remote", false))
 				MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
@@ -256,6 +256,11 @@ int main(int argc, wchar_t* argv[])
 
 			// Print environment information.
 			print_info();
+			
+			std::stringstream str;
+			boost::property_tree::xml_writer_settings<char> w(' ', 3);
+			boost::property_tree::write_xml(str, caspar::env::properties(), w);
+			CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
 				
 			// Create server object which initializes channels, protocols and controllers.
 			caspar::server caspar_server;
@@ -345,7 +350,7 @@ int main(int argc, wchar_t* argv[])
 				shutdown_cond.wait(lock);				
 		}	
 			
-		Sleep(200); // CAPSAR_LOG is asynchronous. Try to get text in correct order.'
+		Sleep(500); // CAPSAR_LOG is asynchronous. Try to get text in correct order.'
 
 		if(shutdown_event == application_state::pause_and_shutdown)
 			system("pause");	
