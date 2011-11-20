@@ -40,6 +40,7 @@ public:
 	virtual safe_ptr<core::basic_frame> receive(int);
 	virtual safe_ptr<core::basic_frame> last_frame() const;
 	virtual std::wstring print() const;
+	virtual std::wstring param(const std::wstring&);
 
 	//cg_producer
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));
@@ -48,7 +49,9 @@ public:
 	void stop(int layer, unsigned int mix_out_duration);
 	void next(int layer);
 	void update(int layer, const std::wstring& data);
-	void invoke(int layer, const std::wstring& label);
+	std::wstring invoke(int layer, const std::wstring& label);
+	std::wstring description(int layer);
+	std::wstring info();
 
 private:
 	struct implementation;

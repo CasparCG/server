@@ -66,7 +66,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
-		, auto_transcode_(env::properties().get("configuration.producers.auto-transcode", false))
+		, auto_transcode_(env::properties().get("configuration.auto-transcode", true))
 		, audio_sample_count_(0)
 		, video_frame_count_(0)
 		, frame_factory_(frame_factory)
@@ -278,9 +278,13 @@ struct frame_muxer::implementation : boost::noncopyable
 			
 			display_mode_ = get_display_mode(mode, fps, format_desc_.field_mode, format_desc_.fps);
 			
-			if(display_mode_ == display_mode::simple && mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && frame.height != static_cast<int>(format_desc_.height))
+			if((frame.height != 480 || format_desc_.height != 486) && 
+				display_mode_ == display_mode::simple && mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && 
+				frame.height != static_cast<int>(format_desc_.height))
+			{
 				display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
-				
+			}
+
 			if(display_mode_ == display_mode::deinterlace)
 				filter_str_ = append_filter(filter_str_, L"YADIF=0:-1");
 			else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)

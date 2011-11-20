@@ -37,18 +37,13 @@ class video_channel : boost::noncopyable
 {
 public:
 	explicit video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
-	video_channel(video_channel&& other);
 
 	safe_ptr<stage> stage();
 	safe_ptr<mixer>	mixer();
 	safe_ptr<output> output();
-
-	video_channel_context& context();
-
+	
 	video_format_desc get_video_format_desc() const;
 	void set_video_format_desc(const video_format_desc& format_desc);
-
-	std::wstring print() const;
 
 private:
 	struct implementation;

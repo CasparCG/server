@@ -25,7 +25,6 @@
 #include <boost/noncopyable.hpp>
 
 #include <string>
-#include <utility>
 
 namespace caspar { namespace core {
 
@@ -56,7 +55,6 @@ public:
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
-	void param(const std::wstring& param);
 
 	bool is_paused() const;
 	int64_t frame_number() const;

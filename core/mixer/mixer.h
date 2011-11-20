@@ -24,6 +24,9 @@
 #include "../producer/frame/frame_factory.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/concurrency/target.h>
+#include <common/concurrency/governor.h>
+#include <common/diagnostics/graph.h>
 
 #include <map>
 
@@ -36,31 +39,32 @@ namespace core {
 class read_frame;
 class write_frame;
 class basic_frame;
+class ogl_device;
 struct frame_transform;
-struct frame_transform;
-class video_channel_context;;
 struct pixel_format;
 
-class mixer : public core::frame_factory
+class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, ticket>>, public core::frame_factory
 {
 public:	
+	typedef target<std::pair<safe_ptr<read_frame>, ticket>> target_t;
 
-	explicit mixer(video_channel_context& video_channel);
+	explicit mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
 		
-	safe_ptr<core::read_frame> execute(const std::map<int, safe_ptr<core::basic_frame>>& frames); // nothrow
+	virtual void send(const std::pair<std::map<int, safe_ptr<basic_frame>>, ticket>& frames); // nothrow
 		
 	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);		
-	safe_ptr<core::write_frame> create_frame(const void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt = core::pixel_format::bgra);		
+	safe_ptr<core::write_frame> create_frame(const void* tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra);		
 	
 	core::video_format_desc get_video_format_desc() const; // nothrow
-
+	void set_video_format_desc(const video_format_desc& format_desc);
 
 	void set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_frame_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void clear_transforms(int index);
 	void clear_transforms();
 
 	void set_blend_mode(int index, blend_mode::type value);
-
+	
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

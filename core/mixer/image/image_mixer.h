@@ -40,7 +40,7 @@ struct pixel_format_desc;
 class image_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	image_mixer(const safe_ptr<ogl_device>& ogl, const video_format_desc& format_desc);
+	image_mixer(const safe_ptr<ogl_device>& ogl);
 	
 	virtual void begin(core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);
@@ -51,10 +51,11 @@ public:
 
 	image_mixer& operator=(image_mixer&& other);
 	
-	boost::unique_future<safe_ptr<host_buffer>> render();
+	boost::unique_future<safe_ptr<host_buffer>> render(const video_format_desc& format_desc);
 
 	safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& format);
-
+	
+	void set_video_format_desc(const video_format_desc& format_desc);
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

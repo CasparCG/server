@@ -106,9 +106,6 @@
     <ClInclude Include="video_channel.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="video_channel_context.h">
-      <Filter>source</Filter>
-    </ClInclude>
     <ClInclude Include="mixer\image\blending_glsl.h">
       <Filter>source\mixer\image</Filter>
     </ClInclude>
@@ -188,9 +185,6 @@
       <Filter>source\consumer</Filter>
     </ClCompile>
     <ClCompile Include="video_channel.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
-    <ClCompile Include="video_channel_context.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="video_format.cpp">

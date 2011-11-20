@@ -99,7 +99,7 @@ template_host get_template_host(const core::video_format_desc& desc)
 	try
 	{
 		std::vector<template_host> template_hosts;
-		BOOST_FOREACH(auto& xml_mapping, env::properties().get_child("configuration.producers.template-hosts"))
+		BOOST_FOREACH(auto& xml_mapping, env::properties().get_child("configuration.template-hosts"))
 		{
 			try
 			{
@@ -201,7 +201,6 @@ public:
 						
 		ax_->SetSize(width_, height_);		
 	
-		CASPAR_LOG(info) << print() << L" Thread started.";
 		CASPAR_LOG(info) << print() << L" Successfully initialized with template-host: " << filename << L" width: " << width_ << L" height: " << height_ << L".";
 	}
 
@@ -212,14 +211,18 @@ public:
 			ax_->DestroyAxControl();
 			ax_->Release();
 		}
-		CASPAR_LOG(info) << print() << L" Thread ended.";
+		CASPAR_LOG(info) << print() << L" Uninitialized.";
 	}
 	
-	void param(const std::wstring& param)
+	std::wstring param(const std::wstring& param)
 	{		
-		if(!ax_->FlashCall(param))
+		std::wstring result;
+
+		if(!ax_->FlashCall(param, result))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
 		graph_->add_tag("param");
+
+		return result;
 	}
 	
 	safe_ptr<core::basic_frame> render_frame(bool has_underflow)
@@ -337,16 +340,16 @@ public:
 		return last_frame_;
 	}		
 	
-	virtual void param(const std::wstring& param) 
+	virtual std::wstring param(const std::wstring& param) 
 	{	
-		context_.begin_invoke([=]
+		return context_.invoke([=]() -> std::wstring
 		{
 			if(!context_)
 				initialize();
 
 			try
 			{
-				context_->param(param);	
+				return context_->param(param);	
 
 				//const auto& format_desc = frame_factory_->get_video_format_desc();
 				//if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
@@ -358,6 +361,8 @@ public:
 				context_.reset(nullptr);
 				frame_buffer_.push(core::basic_frame::empty());
 			}
+
+			return L"";
 		});
 	}
 		

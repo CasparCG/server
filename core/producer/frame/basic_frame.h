@@ -75,8 +75,6 @@ public:
 	}
 	
 	virtual void accept(frame_visitor& visitor);
-
-	virtual std::wstring print() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

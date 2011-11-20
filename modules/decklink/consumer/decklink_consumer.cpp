@@ -52,15 +52,17 @@ struct configuration
 	bool	internal_key;
 	bool	low_latency;
 	bool	key_only;
+	size_t	base_buffer_depth;
 	size_t	buffer_depth;
 	
 	configuration()
 		: device_index(1)
 		, embedded_audio(false)
 		, internal_key(false)
-		, low_latency(false)
+		, low_latency(true)
 		, key_only(false)
-		, buffer_depth(core::consumer_buffer_depth()){}
+		, base_buffer_depth(3)
+		, buffer_depth(base_buffer_depth + (low_latency ? 0 : 1) + (embedded_audio ? 1 : 0)){}
 };
 
 class decklink_frame : public IDeckLinkVideoFrame
@@ -168,7 +170,7 @@ public:
 		, keyer_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
-		, buffer_size_(config.embedded_audio ? config.buffer_depth + 1 : config.buffer_depth) // Minimum buffer-size 3.
+		, buffer_size_(config.buffer_depth) // Minimum buffer-size 3.
 		, frames_scheduled_(0)
 		, audio_scheduled_(0)
 		, preroll_count_(0)
@@ -451,6 +453,11 @@ public:
 	{
 		return format_desc_;
 	}
+
+	virtual size_t buffer_depth() const
+	{
+		return config_.buffer_depth;
+	}
 };	
 
 safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params) 
@@ -475,11 +482,12 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree
 {
 	configuration config;
 
-	config.internal_key		= ptree.get("internal-key",	  config.internal_key);
-	config.low_latency		= ptree.get("low-latency",	  config.low_latency);
-	config.key_only			= ptree.get("key-only",		  config.key_only);
-	config.device_index		= ptree.get("device",		  config.device_index);
-	config.embedded_audio	= ptree.get("embedded-audio", config.embedded_audio);
+	config.internal_key			= ptree.get("internal-key",		config.internal_key);
+	config.low_latency			= ptree.get("low-latency",		config.low_latency);
+	config.key_only				= ptree.get("key-only",			config.key_only);
+	config.device_index			= ptree.get("device",			config.device_index);
+	config.embedded_audio		= ptree.get("embedded-audio",	config.embedded_audio);
+	config.base_buffer_depth	= ptree.get("buffer-depth",		config.base_buffer_depth);
 
 	return make_safe<decklink_consumer_proxy>(config);
 }

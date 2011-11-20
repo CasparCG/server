@@ -24,37 +24,63 @@
 
 #include "layer.h"
 
-#include "../video_channel_context.h"
-
-#include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_factory.h>
+#include "frame/basic_frame.h"
+#include "frame/frame_factory.h"
 
 #include <common/concurrency/executor.h>
-#include <common/utility/move_on_copy.h>
+#include <common/concurrency/governor.h>
+#include <common/env.h>
 
 #include <boost/foreach.hpp>
+#include <boost/timer.hpp>
 
 #include <tbb/parallel_for_each.h>
 
 #include <map>
-#include <set>
 
 namespace caspar { namespace core {
 
 struct stage::implementation : boost::noncopyable
 {		
-	std::map<int, layer>						layers_;	
-	video_channel_context&						channel_;
+	safe_ptr<diagnostics::graph>	graph_;
+	safe_ptr<stage::target_t>		target_;
+	video_format_desc				format_desc_;
+
+	boost::timer					produce_timer_;
+	boost::timer					tick_timer_;
+
+	std::map<int, layer>			layers_;	
+
+	governor						governor_;
+	executor						executor_;
 public:
-	implementation(video_channel_context& video_channel)  
-		: channel_(video_channel)
+	implementation(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<stage::target_t>& target, const video_format_desc& format_desc)  
+		: graph_(graph)
+		, format_desc_(format_desc)
+		, target_(target)
+		, executor_(L"stage")
+		, governor_(std::max(1, env::properties().get("configuration.pipeline-tokens", 2)))
 	{
+		graph_->add_guide("tick-time", 0.5f);	
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
+
+		executor_.begin_invoke([this]{tick();});
+	}
+
+	~implementation()
+	{
+		governor_.cancel();
 	}
 						
-	std::map<int, safe_ptr<basic_frame>> execute()
+	void tick()
 	{		
 		try
 		{
+			auto ticket = governor_.acquire();
+
+			produce_timer_.restart();
+
 			std::map<int, safe_ptr<basic_frame>> frames;
 		
 			BOOST_FOREACH(auto& layer, layers_)			
@@ -64,19 +90,25 @@ public:
 			{
 				frames[layer.first] = layer.second.receive();	
 			});
+			
+			graph_->update_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
+			
+			target_->send(std::make_pair(frames, ticket));
 
-			return frames;
+			graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
+			tick_timer_.restart();
 		}
 		catch(...)
 		{
-			CASPAR_LOG(error) << L"[stage] Error detected";
-			throw;
+			layers_.clear();
+			CASPAR_LOG_CURRENT_EXCEPTION();
 		}		
+		executor_.begin_invoke([this]{tick();});
 	}
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			layers_[index].load(producer, preview, auto_play_delta);
 		}, high_priority);
@@ -84,7 +116,7 @@ public:
 
 	void pause(int index)
 	{		
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			layers_[index].pause();
 		}, high_priority);
@@ -92,7 +124,7 @@ public:
 
 	void play(int index)
 	{		
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			layers_[index].play();
 		}, high_priority);
@@ -100,7 +132,7 @@ public:
 
 	void stop(int index)
 	{		
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			layers_[index].stop();
 		}, high_priority);
@@ -108,7 +140,7 @@ public:
 
 	void clear(int index)
 	{
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			layers_.erase(index);
 		}, high_priority);
@@ -116,7 +148,7 @@ public:
 		
 	void clear()
 	{
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			layers_.clear();
 		}, high_priority);
@@ -124,7 +156,7 @@ public:
 	
 	void swap_layer(int index, size_t other_index)
 	{
-		channel_.execution().invoke([&]
+		executor_.invoke([&]
 		{
 			std::swap(layers_[index], layers_[other_index]);
 		}, high_priority);
@@ -140,7 +172,7 @@ public:
 			{
 				std::swap(layers_[index], other.impl_->layers_[other_index]);
 			};		
-			channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);}, high_priority);
+			executor_.invoke([&]{other.impl_->executor_.invoke(func, high_priority);}, high_priority);
 		}
 	}
 
@@ -153,12 +185,12 @@ public:
 		{
 			std::swap(layers_, other.impl_->layers_);
 		};		
-		channel_.execution().invoke([&]{other.impl_->channel_.execution().invoke(func, high_priority);}, high_priority);
+		executor_.invoke([&]{other.impl_->executor_.invoke(func, high_priority);}, high_priority);
 	}
 
 	layer_status get_status(int index)
 	{		
-		return channel_.execution().invoke([&]
+		return executor_.invoke([&]
 		{
 			return layers_[index].status();
 		}, high_priority );
@@ -166,22 +198,24 @@ public:
 	
 	safe_ptr<frame_producer> foreground(int index)
 	{
-		return channel_.execution().invoke([=]{return layers_[index].foreground();}, high_priority);
+		return executor_.invoke([=]{return layers_[index].foreground();}, high_priority);
 	}
 	
 	safe_ptr<frame_producer> background(int index)
 	{
-		return channel_.execution().invoke([=]{return layers_[index].background();}, high_priority);
+		return executor_.invoke([=]{return layers_[index].background();}, high_priority);
 	}
-
-	std::wstring print() const
+	
+	void set_video_format_desc(const video_format_desc& format_desc)
 	{
-		return L"stage [" + boost::lexical_cast<std::wstring>(channel_.index()) + L"]";
+		executor_.begin_invoke([=]
+		{
+			format_desc_ = format_desc;
+		}, high_priority );
 	}
-
 };
 
-stage::stage(video_channel_context& video_channel) : impl_(new implementation(video_channel)){}
+stage::stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc) : impl_(new implementation(graph, target, format_desc)){}
 void stage::swap(stage& other){impl_->swap(other);}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
@@ -194,5 +228,5 @@ void stage::swap_layer(int index, size_t other_index, stage& other){impl_->swap_
 layer_status stage::get_status(int index){return impl_->get_status(index);}
 safe_ptr<frame_producer> stage::foreground(size_t index) {return impl_->foreground(index);}
 safe_ptr<frame_producer> stage::background(size_t index) {return impl_->background(index);}
-std::map<int, safe_ptr<basic_frame>> stage::execute(){return impl_->execute();}
+void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 }}

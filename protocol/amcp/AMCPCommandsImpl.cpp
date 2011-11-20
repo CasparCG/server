@@ -34,7 +34,6 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
-#include <core/video_channel_context.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/stage.h>
@@ -225,15 +224,19 @@ bool ParamCommand::DoExecute()
 		std::wstring param = _parameters2.at(1);
 		for(auto it = std::begin(_parameters2)+2; it != std::end(_parameters2); ++it)
 			param += L" " + *it;
-
+		
+		std::wstring result;
 		if(what == L"B")
-			GetChannel()->stage()->background(GetLayerIndex()).get()->param(param);
+			result = GetChannel()->stage()->background(GetLayerIndex()).get()->param(param);
 		else if(what == L"F")
-			GetChannel()->stage()->foreground(GetLayerIndex()).get()->param(param);
+			result = GetChannel()->stage()->foreground(GetLayerIndex()).get()->param(param);
 	
 		CASPAR_LOG(info) << "Executed param: " <<  _parameters[0] << TEXT(" successfully");
-
-		SetReplyString(TEXT("202 PARAM OK\r\n"));
+		
+		std::wstringstream replyString;
+		replyString << TEXT("201 PARAM OK\r\n") << result << L"\r\n";
+		
+		SetReplyString(replyString.str());
 
 		return true;
 	}
@@ -436,7 +439,11 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"CLEAR")
 		{
-			GetChannel()->mixer()->clear_transforms();
+			int layer = GetLayerIndex(std::numeric_limits<int>::max());
+			if(layer ==	std::numeric_limits<int>::max())
+				GetChannel()->mixer()->clear_transforms();
+			else
+				GetChannel()->mixer()->clear_transforms(layer);
 		}
 		else
 		{
@@ -1099,6 +1106,9 @@ bool CGCommand::DoExecuteUpdate()
 
 bool CGCommand::DoExecuteInvoke() 
 {
+	std::wstringstream replyString;
+	replyString << TEXT("201 CG OK\r\n");
+
 	if(_parameters.size() > 2)
 	{
 		if(!ValidateLayer(_parameters[1]))
@@ -1107,23 +1117,44 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
+		auto result = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
+		replyString << result << TEXT("\r\n"); 
 	}
 	else 
 	{
 		SetReplyString(TEXT("402 CG ERROR\r\n"));
 		return true;
 	}
-
-	SetReplyString(TEXT("202 CG OK\r\n"));
+	
+	SetReplyString(replyString.str());
 	return true;
 }
 
 bool CGCommand::DoExecuteInfo() 
 {
-	// TODO
-	//flash::get_default_cg_producer(GetChannel())->Info();
-	SetReplyString(TEXT("600 CG FAILED\r\n"));
+	std::wstringstream replyString;
+	replyString << TEXT("201 CG OK\r\n");
+
+	if(_parameters.size() > 1)
+	{
+		if(!ValidateLayer(_parameters[1]))
+		{
+			SetReplyString(TEXT("403 CG ERROR\r\n"));
+			return false;
+		}
+
+		int layer = _ttoi(_parameters[1].c_str());
+		auto desc = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->description(layer);
+		
+		replyString << desc << TEXT("\r\n"); 
+	}
+	else 
+	{
+		auto info = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->info();
+		replyString << info << TEXT("\r\n"); 
+	}	
+
+	SetReplyString(replyString.str());
 	return true;
 }
 

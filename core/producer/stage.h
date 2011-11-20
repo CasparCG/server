@@ -23,24 +23,26 @@
 #include "frame_producer.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/concurrency/target.h>
+#include <common/concurrency/governor.h>
+#include <common/diagnostics/graph.h>
 
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
 
 struct video_format_desc;
-class video_channel_context;
 struct layer_status;
 
 class stage : boost::noncopyable
 {
 public:
-	explicit stage(video_channel_context& video_channel);
+	typedef target<std::pair<std::map<int, safe_ptr<basic_frame>>, ticket>> target_t;
+
+	explicit stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc);
 
 	void swap(stage& other);
-
-	std::map<int, safe_ptr<basic_frame>> execute();
-		
+			
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false, int auto_play_delta = -1);
 	void pause(int index);
 	void play(int index);
@@ -53,6 +55,8 @@ public:
 	layer_status get_status(int index);
 	safe_ptr<frame_producer> foreground(size_t index);
 	safe_ptr<frame_producer> background(size_t index);
+	
+	void set_video_format_desc(const video_format_desc& format_desc);
 
 private:
 	struct implementation;
