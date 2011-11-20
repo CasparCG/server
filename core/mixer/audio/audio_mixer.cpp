@@ -105,6 +105,9 @@ public:
 			if(prev.volume < 0.001 && next.volume < 0.001)
 				continue;
 
+			if(item.audio_data.size() != format_desc.audio_samples_per_frame)
+				continue;
+
 			const float prev_volume = static_cast<float>(prev.volume);
 			const float next_volume = static_cast<float>(next.volume);
 									
