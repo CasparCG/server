@@ -38,7 +38,7 @@ namespace caspar { namespace core {
 struct video_channel::implementation : boost::noncopyable
 {
 	const int						index_;
-	const video_format_desc			format_desc_;
+	video_format_desc				format_desc_;
 	const safe_ptr<ogl_device>		ogl_;
 	safe_ptr<diagnostics::graph>	graph_;
 
@@ -63,9 +63,19 @@ public:
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
-		mixer_->set_video_format_desc(format_desc);
-		output_->set_video_format_desc(format_desc);
-		ogl_->gc();
+		try
+		{
+			output_->set_video_format_desc(format_desc);
+			mixer_->set_video_format_desc(format_desc);
+			ogl_->gc();
+		}
+		catch(...)
+		{
+			output_->set_video_format_desc(format_desc_);
+			mixer_->set_video_format_desc(format_desc_);
+			throw;
+		}
+		format_desc_ = format_desc;
 	}
 		
 	std::wstring print() const

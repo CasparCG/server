@@ -48,14 +48,14 @@ public:
 
 		auto str = (boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?TEXT("<true/>"):TEXT("<false/>")) % label % data).str();
 
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command:" << str;
+		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command: " << str;
 		flash_producer_->param(str);
 	}
 
 	void remove(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking remove-command:" << str;
+		CASPAR_LOG(info) << flash_producer_->print() << " Invoking remove-command: " << str;
 		flash_producer_->param(str);
 	}
 
@@ -69,21 +69,21 @@ public:
 	void stop(int layer, unsigned int)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") % layer).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking stop-command:" << str;
+		CASPAR_LOG(info) << flash_producer_->print() << " Invoking stop-command: " << str;
 		flash_producer_->param(str);
 	}
 
 	void next(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking next-command:" << str;
+		CASPAR_LOG(info) << flash_producer_->print() << " Invoking next-command: " << str;
 		flash_producer_->param(str);
 	}
 
 	void update(int layer, const std::wstring& data)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></arguments></invoke>") % layer % data).str();
-		CASPAR_LOG(info) << flash_producer_->print() <<" Invoking update-command:" << str;
+		CASPAR_LOG(info) << flash_producer_->print() <<" Invoking update-command: " << str;
 		flash_producer_->param(str);
 	}
 
