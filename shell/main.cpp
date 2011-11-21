@@ -359,6 +359,7 @@ int main(int argc, wchar_t* argv[])
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
 		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (casparcg.config) for errors.";
+		system("pause");	
 	}
 	catch(caspar::gl::ogl_exception&)
 	{
