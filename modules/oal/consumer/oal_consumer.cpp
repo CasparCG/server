@@ -51,11 +51,9 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	tbb::atomic<bool>									is_running_;
 
 	core::video_format_desc								format_desc_;
-	int													preroll_count_;
 public:
 	oal_consumer() 
 		: container_(16)
-		, preroll_count_(0)
 	{
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
@@ -114,12 +112,7 @@ public:
 	{
 		return L"oal[" + format_desc_.name + L"]";
 	}
-
-	virtual const core::video_format_desc& get_video_format_desc() const
-	{
-		return format_desc_;
-	}
-
+	
 	virtual size_t buffer_depth() const
 	{
 		return 2;

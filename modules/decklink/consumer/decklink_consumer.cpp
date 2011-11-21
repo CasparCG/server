@@ -224,11 +224,6 @@ public:
 		}
 	}
 			
-	const core::video_format_desc& get_video_format_desc() const
-	{
-		return format_desc_;
-	}
-
 	void set_latency(bool low_latency)
 	{		
 		if(!low_latency)
@@ -424,7 +419,6 @@ struct decklink_consumer_proxy : public core::frame_consumer
 {
 	const configuration				config_;
 	com_context<decklink_consumer>	context_;
-	core::video_format_desc			format_desc_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
@@ -442,8 +436,7 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		format_desc_ = format_desc;
-		context_.reset([&]{return new decklink_consumer(config_, format_desc_);});		
+		context_.reset([&]{return new decklink_consumer(config_, format_desc);});		
 				
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
@@ -457,12 +450,7 @@ public:
 	virtual std::wstring print() const
 	{
 		return context_ ? context_->print() : L"decklink_consumer";
-	}
-			
-	virtual const core::video_format_desc& get_video_format_desc() const
-	{
-		return format_desc_;
-	}
+	}			
 
 	virtual size_t buffer_depth() const
 	{
