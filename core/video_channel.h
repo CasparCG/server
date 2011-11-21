@@ -31,7 +31,6 @@ class mixer;
 class output;
 class ogl_device;
 struct video_format_desc;
-class video_channel_context;
 
 class video_channel : boost::noncopyable
 {
