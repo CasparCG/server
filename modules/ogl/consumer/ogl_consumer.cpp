@@ -265,11 +265,6 @@ public:
 		}
 	}
 	
-	const core::video_format_desc& get_video_format_desc() const
-	{
-		return format_desc_;
-	}
-
 	safe_ptr<AVFrame> get_av_frame()
 	{		
 		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
@@ -452,12 +447,7 @@ public:
 	{
 		return false;
 	}
-
-	virtual const core::video_format_desc& get_video_format_desc() const
-	{
-		return consumer_->get_video_format_desc();
-	}
-
+	
 	virtual size_t buffer_depth() const
 	{
 		return 1;
