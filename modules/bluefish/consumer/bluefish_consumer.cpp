@@ -62,9 +62,7 @@ struct bluefish_consumer : boost::noncopyable
 
 	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> frame_buffer_;
-
-	int									preroll_count_;
-
+	
 	const bool							embedded_audio_;
 	const bool							key_only_;
 	
@@ -76,7 +74,6 @@ public:
 		, format_desc_(format_desc) 
 		, model_name_(get_card_desc(*blue_))
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
-		, preroll_count_(0)
 		, embedded_audio_(embedded_audio)
 		, key_only_(key_only)
 		, executor_(print())
@@ -196,18 +193,7 @@ public:
 	}
 	
 	void send(const safe_ptr<core::read_frame>& frame)
-	{	
-		if(preroll_count_ < executor_.capacity())
-		{
-			while(preroll_count_++ < executor_.capacity())
-				schedule_next_video(make_safe<core::read_frame>());
-		}
-		
-		schedule_next_video(frame);			
-	}
-	
-	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
-	{
+	{			
 		static std::vector<int16_t> silence(MAX_HANC_BUFFER_SIZE, 0);
 		
 		executor_.begin_invoke([=]
