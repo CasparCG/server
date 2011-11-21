@@ -186,6 +186,8 @@ public:
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("flushed-frame", diagnostics::color(0.4f, 0.3f, 0.8f));
+		graph_->set_color("buffered-audio", diagnostics::color(0.9f, 0.9f, 0.5f));
+		graph_->set_color("buffered-video", diagnostics::color(0.2f, 0.9f, 0.9f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 		
@@ -323,6 +325,10 @@ public:
 			std::shared_ptr<core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);					
 			schedule_next_video(make_safe_ptr(frame));	
+			
+			unsigned long buffered;
+			output_->GetBufferedVideoFrameCount(&buffered);
+			graph_->update_value("buffered-video", static_cast<double>(buffered)/format_desc_.fps);
 		}
 		catch(...)
 		{
@@ -357,6 +363,10 @@ public:
 				audio_frame_buffer_.pop(frame);
 				schedule_next_audio(make_safe_ptr(frame));	
 			}
+
+			unsigned long buffered;
+			output_->GetBufferedAudioSampleFrameCount(&buffered);
+			graph_->update_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_samples_per_frame*2));
 		}
 		catch(...)
 		{
