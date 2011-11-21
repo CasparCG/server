@@ -25,9 +25,8 @@
 #include <core/producer/frame/frame_transform.h>
 
 #include <stack>
+#include <map>
 #include <vector>
-
-#include <tbb/parallel_for.h>
 
 namespace caspar { namespace core {
 
