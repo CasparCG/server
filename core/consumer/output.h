@@ -30,8 +30,6 @@
 
 namespace caspar { namespace core {
 	
-class video_channel_context;
-
 class output : public target<std::pair<safe_ptr<read_frame>, ticket>>, boost::noncopyable
 {
 public:
