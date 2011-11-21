@@ -175,11 +175,6 @@ public:
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 	
-	const core::video_format_desc& get_video_format_desc() const
-	{
-		return format_desc_;
-	}
-
 	void enable_video_output()
 	{
 		if(!BLUE_PASS(set_card_property(blue_, VIDEO_BLACKGENERATOR, 0)))
@@ -300,7 +295,6 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	const size_t						device_index_;
 	const bool							embedded_audio_;
 	const bool							key_only_;
-	core::video_format_desc				format_desc_;
 public:
 
 	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
@@ -312,7 +306,6 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc)
 	{
-		format_desc_ = format_desc;
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_));
 	}
 	
@@ -321,18 +314,10 @@ public:
 		consumer_->send(frame);
 		return true;
 	}
-
-	virtual const core::video_format_desc& get_video_format_desc() const
-	{
-		return consumer_->get_video_format_desc();
-	}
-	
+		
 	virtual std::wstring print() const
 	{
-		if(consumer_)
-			consumer_->print();
-
-		return L"bluefish [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return consumer_ ? consumer_->print() : L"bluefish_consumer";
 	}
 
 	size_t buffer_depth() const
