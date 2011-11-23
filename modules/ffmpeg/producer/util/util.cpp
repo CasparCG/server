@@ -4,6 +4,7 @@
 
 #include "flv.h"
 
+#include "../tbb_avcodec.h"
 #include "../../ffmpeg_error.h"
 
 #include <tbb/concurrent_unordered_map.h>
@@ -361,8 +362,8 @@ safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType t
 {	
 	AVCodec* decoder;
 	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "");
-	THROW_ON_ERROR2(avcodec_open(context.streams[index]->codec, decoder), "");
-	return safe_ptr<AVCodecContext>(context.streams[index]->codec, avcodec_close);
+	THROW_ON_ERROR2(tbb_avcodec_open(context.streams[index]->codec, decoder), "");
+	return safe_ptr<AVCodecContext>(context.streams[index]->codec, tbb_avcodec_close);
 }
 
 safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
