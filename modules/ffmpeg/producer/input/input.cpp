@@ -188,8 +188,6 @@ private:
 		auto packet = create_packet();
 		auto ret	= av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
 		
-		CASPAR_ASSERT(nb_frames_ < 1000);
-
 		if(is_eof(ret))														     
 		{
 			++nb_loops_;
@@ -255,19 +253,22 @@ private:
 
 	void seek_frame(int64_t frame, int flags = 0)
 	{  			
-		if(flags == AVSEEK_FLAG_BACKWARD)
-		{
-			// Fix VP6 seeking
-			int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-			if(vid_stream_index >= 0)
-			{
-				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
-					flags |= AVSEEK_FLAG_BYTE;
-			}
-		}
+		CASPAR_LOG(debug) << print() << " Seeking: " << frame;
 
-		THROW_ON_ERROR2(av_seek_frame(format_context_.get(), default_stream_index_, frame, flags), print());		
+		flags |= AVSEEK_FLAG_FRAME;
+		//if(flags == AVSEEK_FLAG_BACKWARD)
+		//{
+		//	// Fix VP6 seeking
+		//	int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+		//	if(vid_stream_index >= 0)
+		//	{
+		//		auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
+		//		if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+		//			flags |= AVSEEK_FLAG_BYTE;
+		//	}
+		//}
+		
+		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::max<int64_t>(0, frame-50), frame, frame+50, flags), print());		
 
 		buffer_.push(flush_packet());
 	}		
