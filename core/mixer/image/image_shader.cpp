@@ -110,7 +110,7 @@ std::string get_fragment(bool blend_modes)
 {
 	return
 
-	"#version 120																		\n"
+	"#version 130																		\n"
 	"uniform sampler2D	background;														\n"
 	"uniform sampler2D	plane[4];														\n"
 	"uniform sampler2D	local_key;														\n"
