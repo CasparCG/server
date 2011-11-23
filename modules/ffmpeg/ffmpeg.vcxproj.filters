@@ -30,9 +30,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="producer\ffmpeg_producer.cpp">
-      <Filter>source\producer</Filter>
-    </ClCompile>
     <ClCompile Include="producer\video\video_decoder.cpp">
       <Filter>source\producer\video</Filter>
     </ClCompile>
@@ -66,6 +63,12 @@
     </ClCompile>
     <ClCompile Include="producer\muxer\frame_muxer.cpp">
       <Filter>source\producer\muxer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\tbb_avcodec.cpp">
+      <Filter>source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg_producer.cpp">
+      <Filter>source\producer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -111,6 +114,9 @@
     </ClInclude>
     <ClInclude Include="producer\muxer\display_mode.h">
       <Filter>source\producer\muxer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\tbb_avcodec.h">
+      <Filter>source\producer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
