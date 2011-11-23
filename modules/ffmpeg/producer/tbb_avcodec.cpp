@@ -73,7 +73,7 @@ void thread_init(AVCodecContext* s)
 	s->thread_opaque	  = &dummy_opaque; 
     s->execute			  = thread_execute;
     s->execute2			  = thread_execute2;
-    s->thread_count		  = MAX_THREADS; // We are using a task-scheduler, so use as many "threads/tasks" as possible. 
+    s->thread_count		  = tbb::tbb_thread::hardware_concurrency(); // MAX_THREADS; // We are using a task-scheduler, so use as many "threads/tasks" as possible. 
 
 	CASPAR_LOG(info) << "Initialized ffmpeg tbb context.";
 }
