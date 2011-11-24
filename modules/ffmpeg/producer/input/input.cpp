@@ -195,17 +195,7 @@ private:
 
 			if(loop_)
 			{
-				int flags = AVSEEK_FLAG_BACKWARD;
-
-				int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-				if(vid_stream_index >= 0)
-				{
-					auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-					if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
-						flags |= AVSEEK_FLAG_BYTE;
-				}
-
-				seek_frame(start_, flags);
+				seek_frame(start_);
 				graph_->add_tag("seek");		
 				CASPAR_LOG(debug) << print() << " Looping.";			
 			}	
@@ -251,24 +241,24 @@ private:
 		return is_running_ && (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT;
 	}
 
-	void seek_frame(int64_t frame, int flags = 0)
+	void seek_frame(int64_t frame)
 	{  			
 		CASPAR_LOG(debug) << print() << " Seeking: " << frame;
 
-		flags |= AVSEEK_FLAG_FRAME;
-		//if(flags == AVSEEK_FLAG_BACKWARD)
-		//{
-		//	// Fix VP6 seeking
-		//	int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-		//	if(vid_stream_index >= 0)
-		//	{
-		//		auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-		//		if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
-		//			flags |= AVSEEK_FLAG_BYTE;
-		//	}
-		//}
+		int flags = AVSEEK_FLAG_FRAME;
+		if(frame == 0)
+		{
+			// Fix VP6 seeking
+			int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+			if(vid_stream_index >= 0)
+			{
+				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
+				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+					flags = AVSEEK_FLAG_BYTE;
+			}
+		}
 		
-		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::max<int64_t>(0, frame-50), frame, frame+50, flags), print());		
+		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), frame, std::numeric_limits<int64_t>::max(), flags), print());		
 
 		buffer_.push(flush_packet());
 	}		
