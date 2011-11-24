@@ -294,6 +294,14 @@ void fix_meta_data(AVFormatContext& context)
 		{			
 			if(video_context.time_base.num == 1)
 				video_context.time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(video_context.time_base.den)))-1));	
+			
+			if(!is_sane_fps(video_context.time_base))
+			{
+				auto tmp = video_context.time_base;
+				tmp.den /= 2;
+				if(is_sane_fps(tmp))
+					video_context.time_base = tmp;
+			}
 
 			if(!is_sane_fps(video_context.time_base) && audio_index > -1)
 			{
