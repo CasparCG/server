@@ -115,6 +115,7 @@ struct ogl_consumer : boost::noncopyable
 	
 	safe_ptr<diagnostics::graph>	graph_;
 	boost::timer					perf_timer_;
+	boost::timer					tick_timer_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::read_frame>>	frame_buffer_;
 
@@ -136,9 +137,10 @@ public:
 		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
 		frame_buffer_.set_capacity(2);
-
-		graph_->add_guide("frame-time", 0.5);
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		
+		graph_->add_guide("tick-time", 0.5);
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
@@ -233,7 +235,6 @@ public:
 			{			
 				try
 				{
-					perf_timer_.restart();
 
 					sf::Event e;		
 					while(window_.GetEvent(e))
@@ -244,11 +245,15 @@ public:
 			
 					safe_ptr<core::read_frame> frame;
 					frame_buffer_.pop(frame);
+					
+					perf_timer_.restart();
 					render(frame);
+					graph_->update_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);	
 
 					window_.Display();
-
-					graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()*format_desc_.fps*0.5));	
+					
+					graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);	
+					tick_timer_.restart();
 				}
 				catch(...)
 				{
