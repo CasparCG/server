@@ -362,7 +362,7 @@ safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType t
 {	
 	AVCodec* decoder;
 	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "");
-	if(strcmp(decoder->name, "prores") == 0 && strcmp(decoder->next->name,"prores_lgpl") == 0)
+	if(strcmp(decoder->name, "prores") == 0 && strcmp(decoder->next->name, "prores_lgpl") == 0)
 		decoder = decoder->next;
 
 	THROW_ON_ERROR2(tbb_avcodec_open(context.streams[index]->codec, decoder), "");
