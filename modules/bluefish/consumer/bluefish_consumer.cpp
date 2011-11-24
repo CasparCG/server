@@ -188,9 +188,7 @@ public:
 	}
 	
 	void send(const safe_ptr<core::read_frame>& frame)
-	{			
-		static std::vector<int16_t> silence(MAX_HANC_BUFFER_SIZE, 0);
-		
+	{					
 		executor_.begin_invoke([=]
 		{
 			try
