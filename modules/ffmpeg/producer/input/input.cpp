@@ -241,12 +241,12 @@ private:
 		return is_running_ && (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT;
 	}
 
-	void seek_frame(int64_t frame)
+	void seek_frame(int64_t target)
 	{  			
-		CASPAR_LOG(debug) << print() << " Seeking: " << frame;
+		CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
 		int flags = AVSEEK_FLAG_FRAME;
-		if(frame == 0)
+		if(target == 0)
 		{
 			// Fix VP6 seeking
 			int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
@@ -258,7 +258,12 @@ private:
 			}
 		}
 		
-		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), frame, std::numeric_limits<int64_t>::max(), flags), print());		
+		auto time_base = format_context_->streams[default_stream_index_]->time_base;
+		target = (target*time_base.den)/time_base.num;
+		auto fixed_time_base = fix_time_base(time_base);
+		target = (target * fixed_time_base.num) / fixed_time_base.den;
+
+		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), target, std::numeric_limits<int64_t>::max(), 0), print());		
 
 		buffer_.push(flush_packet());
 	}		
