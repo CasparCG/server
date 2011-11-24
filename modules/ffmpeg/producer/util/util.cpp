@@ -262,6 +262,22 @@ bool is_sane_fps(AVRational time_base)
 	return fps > 20.0 && fps < 65.0;
 }
 
+AVRational fix_time_base(AVRational time_base)
+{
+	if(time_base.num == 1)
+		time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(time_base.den)))-1));	
+			
+	if(!is_sane_fps(time_base))
+	{
+		auto tmp = time_base;
+		tmp.den /= 2;
+		if(is_sane_fps(tmp))
+			time_base = tmp;
+	}
+
+	return time_base;
+}
+
 void fix_meta_data(AVFormatContext& context)
 {
 	auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
@@ -292,16 +308,7 @@ void fix_meta_data(AVFormatContext& context)
 
 		if(!is_sane_fps(video_context.time_base))
 		{			
-			if(video_context.time_base.num == 1)
-				video_context.time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(video_context.time_base.den)))-1));	
-			
-			if(!is_sane_fps(video_context.time_base))
-			{
-				auto tmp = video_context.time_base;
-				tmp.den /= 2;
-				if(is_sane_fps(tmp))
-					video_context.time_base = tmp;
-			}
+			video_context.time_base = fix_time_base(video_context.time_base);
 
 			if(!is_sane_fps(video_context.time_base) && audio_index > -1)
 			{
