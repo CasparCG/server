@@ -45,6 +45,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/find.hpp>
+#include <boost/regex.hpp>
 
 #include <tbb/parallel_invoke.h>
 
@@ -229,6 +230,27 @@ public:
 		// TODO: Might need to scale nb_frames av frame_muxer transformations.
 
 		return nb_frames - start_;
+	}
+
+	virtual std::wstring param(const std::wstring& param)
+	{
+		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)");
+		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)");
+		
+		boost::wsmatch what;
+		if(boost::regex_match(param, what, loop_exp))
+		{
+			if(!what["VALUE"].str().empty())
+				input_.loop(boost::lexical_cast<bool>(what["VALUE"].str()));
+			return boost::lexical_cast<std::wstring>(input_.loop());
+		}
+		if(boost::regex_match(param, what, seek_exp))
+		{
+			input_.seek(boost::lexical_cast<int64_t>(what["VALUE"].str()));
+			return L"";
+		}
+
+		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
 				
 	virtual std::wstring print() const
