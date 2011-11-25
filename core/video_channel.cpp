@@ -51,7 +51,7 @@ public:
 		: index_(index)
 		, format_desc_(format_desc)
 		, ogl_(ogl)
-		, output_(new caspar::core::output(graph_, format_desc))
+		, output_(new caspar::core::output(graph_, format_desc, index))
 		, mixer_(new caspar::core::mixer(graph_, output_, format_desc, ogl))
 		, stage_(new caspar::core::stage(graph_, mixer_, format_desc))	
 	{
@@ -80,7 +80,7 @@ public:
 		
 	std::wstring print() const
 	{
-		return L"video_channel[" + boost::lexical_cast<std::wstring>(index_+1) + L"|" +  format_desc_.name + L"]";
+		return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" +  format_desc_.name + L"]";
 	}
 };
 

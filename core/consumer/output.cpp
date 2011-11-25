@@ -45,6 +45,7 @@ struct output::implementation
 {	
 	typedef std::pair<safe_ptr<read_frame>, safe_ptr<read_frame>> fill_and_key;
 	
+	const int						channel_index_;
 	safe_ptr<diagnostics::graph>	graph_;
 	boost::timer					consume_timer_;
 
@@ -62,8 +63,9 @@ struct output::implementation
 	executor executor_;
 		
 public:
-	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) 
-		: graph_(graph)
+	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) 
+		: channel_index_(channel_index)
+		, graph_(graph)
 		, format_desc_(format_desc)
 		, executor_(L"output")
 	{
@@ -77,7 +79,7 @@ public:
 			consumers_.erase(index);
 		});
 
-		consumer->initialize(format_desc_);
+		consumer->initialize(format_desc_, channel_index_, index);
 
 		executor_.invoke([&]
 		{
@@ -111,7 +113,7 @@ public:
 			{						
 				try
 				{
-					it->second->initialize(format_desc_);
+					it->second->initialize(format_desc_, channel_index_, it->first);
 					++it;
 				}
 				catch(...)
@@ -185,7 +187,7 @@ public:
 						CASPAR_LOG_CURRENT_EXCEPTION();
 						try
 						{
-							consumer->initialize(format_desc_);
+							consumer->initialize(format_desc_, channel_index_, it->first);
 							if(consumer->send(frame))
 								++it;
 							else
@@ -225,7 +227,7 @@ private:
 	}
 };
 
-output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) : impl_(new implementation(graph, format_desc)){}
+output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new implementation(graph, format_desc, channel_index)){}
 void output::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void output::remove(int index){impl_->remove(index);}
 void output::send(const std::pair<safe_ptr<read_frame>, ticket>& frame) {impl_->send(frame); }

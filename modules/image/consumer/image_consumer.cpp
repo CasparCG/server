@@ -45,7 +45,7 @@ struct image_consumer : public core::frame_consumer
 	core::video_format_desc					format_desc_;
 public:
 
-	virtual void initialize(const core::video_format_desc& format_desc)
+	virtual void initialize(const core::video_format_desc& format_desc, int, int)
 	{
 		format_desc_ = format_desc;
 	}

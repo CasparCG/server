@@ -78,14 +78,16 @@ enum stretch
 
 struct configuration
 {
-	size_t		screen_index;
-	stretch		stretch;
-	bool		windowed;
-	bool		auto_deinterlace;
-	bool		key_only;
+	std::wstring	name;
+	size_t			screen_index;
+	stretch			stretch;
+	bool			windowed;
+	bool			auto_deinterlace;
+	bool			key_only;
 
 	configuration()
-		: screen_index(0)
+		: name(L"ogl")
+		, screen_index(0)
 		, stretch(fill)
 		, windowed(true)
 		, auto_deinterlace(true)
@@ -98,7 +100,9 @@ struct ogl_consumer : boost::noncopyable
 {		
 	const configuration		config_;
 	core::video_format_desc format_desc_;
-	
+	int						channel_index_;
+	int						sub_index_;
+
 	GLuint					texture_;
 	std::vector<GLuint>		pbos_;
 	
@@ -125,9 +129,11 @@ struct ogl_consumer : boost::noncopyable
 	
 	ffmpeg::filter			filter_;
 public:
-	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc) 
+	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index, int sub_index) 
 		: config_(config)
 		, format_desc_(format_desc)
+		, channel_index_(channel_index)
+		, sub_index_(sub_index)
 		, texture_(0)
 		, pbos_(2, 0)	
 		, screen_width_(format_desc.width)
@@ -360,7 +366,7 @@ public:
 		
 	std::wstring print() const
 	{	
-		return  L"ogl[" + boost::lexical_cast<std::wstring>(config_.screen_index) + L"|" + format_desc_.name + L"]";
+		return config_.name + L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + boost::lexical_cast<std::wstring>(sub_index_) + L"|" + format_desc_.name + L"]";
 	}
 	
 	void calculate_aspect()
@@ -431,10 +437,10 @@ public:
 	ogl_consumer_proxy(const configuration& config)
 		: config_(config){}
 	
-	virtual void initialize(const core::video_format_desc& format_desc)
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index)
 	{
 		consumer_.reset();
-		consumer_.reset(new ogl_consumer(config_, format_desc));
+		consumer_.reset(new ogl_consumer(config_, format_desc, channel_index, sub_index));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
@@ -480,6 +486,7 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
 {
 	configuration config;
+	config.name				= widen(ptree.get("name",		narrow(config.name)));
 	config.screen_index		= ptree.get("device",   config.screen_index+1)-1;
 	config.windowed			= ptree.get("windowed", config.windowed);
 	config.key_only			= ptree.get("key-only", config.key_only);

@@ -133,6 +133,8 @@ public:
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
 	const configuration					config_;
+	const int							channel_index_;
+	const int							sub_index_;
 
 	CComPtr<IDeckLink>					decklink_;
 	CComQIPtr<IDeckLinkOutput>			output_;
@@ -162,8 +164,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	boost::timer tick_timer_;
 
 public:
-	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc) 
+	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index, int sub_index) 
 		: config_(config)
+		, channel_index_(channel_index)
+		, sub_index_(sub_index)
 		, decklink_(get_device(config.device_index))
 		, output_(decklink_)
 		, configuration_(decklink_)
@@ -411,7 +415,8 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(config_.device_index) + L"|" +  format_desc_.name + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + boost::lexical_cast<std::wstring>(sub_index_) + L"|device " +
+			boost::lexical_cast<std::wstring>(config_.device_index) + L"|" +  format_desc_.name + L"]";
 	}
 };
 
@@ -434,9 +439,9 @@ public:
 		CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
 	}
 	
-	virtual void initialize(const core::video_format_desc& format_desc)
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index)
 	{
-		context_.reset([&]{return new decklink_consumer(config_, format_desc);});		
+		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index, sub_index);});		
 				
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
@@ -449,7 +454,7 @@ public:
 	
 	virtual std::wstring print() const
 	{
-		return context_ ? context_->print() : L"decklink_consumer";
+		return context_->print();
 	}			
 
 	virtual size_t buffer_depth() const
