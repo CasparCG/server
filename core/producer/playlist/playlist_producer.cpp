@@ -85,9 +85,9 @@ struct playlist_producer : public frame_producer
 	virtual std::wstring param(const std::wstring& param)
 	{		
 		static const boost::wregex push_front_exp	(L"PUSH_FRONT (?<PARAM>.+)");		
-		static const boost::wregex push_back_exp	(L"PUSH_BACK (?<PARAM>.+)");
+		static const boost::wregex push_back_exp	(L"(PUSH_BACK|PUSH) (?<PARAM>.+)");
 		static const boost::wregex pop_front_exp	(L"POP_FRONT");		
-		static const boost::wregex pop_back_exp		(L"POP_BACK");			
+		static const boost::wregex pop_back_exp		(L"(POP_BACK|POP)");			
 		static const boost::wregex insert_exp		(L"INSERT (?<POS>\\d+) (?<PARAM>.+)");	
 		static const boost::wregex remove_exp		(L"REMOVE (?<POS>\\d+) (?<PARAM>.+)");	
 		static const boost::wregex list_exp			(L"LIST");			
@@ -164,7 +164,7 @@ struct playlist_producer : public frame_producer
 	{
 		std::wstring result = L"<array>";
 		BOOST_FOREACH(auto& producer, producers_)		
-			result += L"<string>" + producer->print() + L"</string>\n";
+			result += L"\t<string>" + producer->print() + L"</string>\n";
 		return result + L"</array>";
 	}
 };
