@@ -803,12 +803,16 @@ bool StatusCommand::DoExecute()
 		auto status = GetChannel()->stage()->get_status(GetLayerIndex());
 		std::wstringstream status_text;
 		status_text
-			<< L"200 STATUS OK\r\n"
-			<< L"FOREGROUND:"		<< status.foreground << L"\r\n"
-			<< L"BACKGROUND:"		<< status.background << L"\r\n"
-			<< L"STATUS:"			<< (status.is_paused ? L"PAUSED" : L"PLAYING") << L"\r\n"
-			<< L"TOTAL FRAMES:"		<< (status.total_frames == std::numeric_limits<int64_t>::max() ? 0 : status.total_frames) << L"\r\n"
-			<< L"CURRENT FRAME:"	<< status.current_frame << L"\r\n\r\n";
+			<< L"201 STATUS OK\r\n"
+			<< L"<layer>"
+			<< L"\n\t<index>"			<< GetLayerIndex() << L"</index>"
+			<< L"\n\t<foreground>"		<< status.foreground << L"</foreground>"
+			<< L"\n\t<background>"		<< status.background << L"</background>"
+			<< L"\n\t<status>"			<< (status.is_paused ? L"paused" : L"playing") << L"</status>"
+			<< L"\n\t<total-frames>"	<< (status.total_frames == std::numeric_limits<int64_t>::max() ? 0 : status.total_frames) << L"</total-frames>"
+			<< L"\n\t<current-frame>"	<< status.current_frame << L"</current-frame>"
+			<< L"\n</layer>"
+			<< L"\r\n";
 
 		SetReplyString(status_text.str());
 		return true;
