@@ -33,7 +33,7 @@ namespace caspar { namespace core {
 class output : public target<std::pair<safe_ptr<read_frame>, ticket>>, boost::noncopyable
 {
 public:
-	explicit output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc);
+	explicit output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index);
 
 	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);

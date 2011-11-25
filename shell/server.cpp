@@ -114,7 +114,7 @@ struct server::implementation : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(make_safe<video_channel>(channels_.size(), format_desc, ogl_));
+			channels_.push_back(make_safe<video_channel>(channels_.size()+1, format_desc, ogl_));
 			
 			int index = 0;
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))
