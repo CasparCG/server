@@ -142,8 +142,7 @@ struct playlist_producer : public frame_producer
 		producers_.pop_back();
 		return L"";
 	}
-
-
+	
 	std::wstring  insert(size_t pos, const std::wstring& str)
 	{
 		if(pos >= producers_.size())
