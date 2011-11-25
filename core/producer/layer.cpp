@@ -133,6 +133,11 @@ public:
 		return status;
 	}
 
+	std::wstring param(bool foreground, const std::wstring& param)
+	{
+		return (foreground ? foreground_ : background_)->param(param);
+	}
+
 	bool empty() const
 	{
 		return background_ == core::frame_producer::empty() && foreground_ == core::frame_producer::empty();
@@ -168,4 +173,5 @@ safe_ptr<basic_frame> layer::receive() {return impl_->receive();}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}
+std::wstring layer::param(bool foreground, const std::wstring& param){return impl_->param(foreground, param);}
 }}

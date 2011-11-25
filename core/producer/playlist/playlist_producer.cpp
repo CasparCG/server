@@ -24,6 +24,10 @@
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame/basic_frame.h>
 
+#include <boost/regex.hpp>
+
+#include <deque>
+
 namespace caspar { namespace core {	
 
 struct playlist_producer : public frame_producer
@@ -33,7 +37,7 @@ struct playlist_producer : public frame_producer
 	safe_ptr<frame_producer>			current_;
 	bool								loop_;
 
-	std::list<safe_ptr<frame_producer>> producers_;
+	std::deque<safe_ptr<frame_producer>> producers_;
 
 	playlist_producer(const safe_ptr<frame_factory>& factory, bool loop) 
 		: factory_(factory)
@@ -79,31 +83,89 @@ struct playlist_producer : public frame_producer
 	}
 
 	virtual std::wstring param(const std::wstring& param)
-	{
-		const static std::wstring push_front_str	= L"PUSH_FRONT ";
-		const static std::wstring push_back_str		= L"PUSH_BACK ";
-
-		auto pos = param.find(push_front_str);
-
-		if(pos  != std::wstring::npos)
-			push_front(param.substr(pos+push_front_str.size()));
-				
-		pos = param.find(push_back_str);
+	{		
+		static const boost::wregex push_front_exp	(L"PUSH_FRONT (?<PARAM>.+)");		
+		static const boost::wregex push_back_exp	(L"PUSH_BACK (?<PARAM>.+)");
+		static const boost::wregex pop_front_exp	(L"POP_FRONT");		
+		static const boost::wregex pop_back_exp		(L"POP_BACK");			
+		static const boost::wregex insert_exp		(L"INSERT (?<POS>\\d+) (?<PARAM>.+)");	
+		static const boost::wregex remove_exp		(L"REMOVE (?<POS>\\d+) (?<PARAM>.+)");	
+		static const boost::wregex list_exp			(L"LIST");			
+		static const boost::wregex loop_exp			(L"LOOP\\s*(?<VALUE>\\d?)");
 		
-		if(pos  != std::wstring::npos)
-			push_back(param.substr(pos+push_back_str.size()));
+		boost::wsmatch what;
 
-		return L"";
+		if(boost::regex_match(param, what, push_front_exp))
+			return push_front(what["PARAM"].str()); 
+		else if(boost::regex_match(param, what, push_back_exp))
+			return push_back(what["PARAM"].str()); 
+		if(boost::regex_match(param, what, pop_front_exp))
+			return pop_front(); 
+		else if(boost::regex_match(param, what, pop_back_exp))
+			return pop_back(); 
+		else if(boost::regex_match(param, what, insert_exp))
+			return insert(boost::lexical_cast<size_t>(what["POS"].str()), what["PARAM"].str());
+		else if(boost::regex_match(param, what, remove_exp))
+			return erase(boost::lexical_cast<size_t>(what["POS"].str()));
+		else if(boost::regex_match(param, what, list_exp))
+			return list();
+		else if(boost::regex_match(param, what, loop_exp))
+		{
+			if(!what["VALUE"].str().empty())
+				loop_ = boost::lexical_cast<bool>(what["VALUE"].str());
+			return boost::lexical_cast<std::wstring>(loop_);
+		}
+
+		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
 	
-	void push_back(const std::wstring& param)
+	std::wstring push_front(const std::wstring& str)
 	{
-		producers_.push_back(create_producer(factory_, param)); 
+		producers_.push_front(create_producer(factory_, str)); 
+		return L"";
 	}
 
-	void push_front(const std::wstring& param)
+	std::wstring  push_back(const std::wstring& str)
 	{
-		producers_.push_front(create_producer(factory_, param)); 
+		producers_.push_back(create_producer(factory_, str)); 
+		return L"";
+	}
+
+	std::wstring pop_front()
+	{
+		producers_.pop_front();
+		return L"";
+	}
+
+	std::wstring pop_back()
+	{
+		producers_.pop_back();
+		return L"";
+	}
+
+
+	std::wstring  insert(size_t pos, const std::wstring& str)
+	{
+		if(pos >= producers_.size())
+			BOOST_THROW_EXCEPTION(out_of_range());
+		producers_.insert(std::begin(producers_) + pos, create_producer(factory_, str));
+		return L"";
+	}
+
+	std::wstring  erase(size_t pos)
+	{
+		if(pos >= producers_.size())
+			BOOST_THROW_EXCEPTION(out_of_range());
+		producers_.erase(std::begin(producers_) + pos);
+		return L"";
+	}
+
+	std::wstring list() const
+	{
+		std::wstring result = L"<array>";
+		BOOST_FOREACH(auto& producer, producers_)		
+			result += L"<string>" + producer->print() + L"</string>\n";
+		return result + L"</array>";
 	}
 };
 

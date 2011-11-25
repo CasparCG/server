@@ -154,6 +154,14 @@ public:
 		}, high_priority);
 	}	
 	
+	std::wstring param(int index, bool foreground, const std::wstring& param)
+	{
+		return executor_.invoke([&]
+		{
+			return layers_[index].param(foreground, param);
+		}, high_priority);
+	}
+
 	void swap_layer(int index, size_t other_index)
 	{
 		executor_.invoke([&]
@@ -229,4 +237,5 @@ layer_status stage::get_status(int index){return impl_->get_status(index);}
 safe_ptr<frame_producer> stage::foreground(size_t index) {return impl_->foreground(index);}
 safe_ptr<frame_producer> stage::background(size_t index) {return impl_->background(index);}
 void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
+std::wstring stage::param(int index, bool foreground, const std::wstring& param){return impl_->param(index, foreground, param);}
 }}
