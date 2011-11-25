@@ -25,6 +25,7 @@
 #include "frame/frame_transform.h"
 
 #include "color/color_producer.h"
+#include "playlist/playlist_producer.h"
 #include "separated/separated_producer.h"
 
 #include <common/memory/safe_ptr.h>
@@ -185,6 +186,9 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(my_frame_factory, params);
 	
+	if(producer == frame_producer::empty())
+		producer = create_playlist_producer(my_frame_factory, params);
+
 	return producer;
 }
 
@@ -222,6 +226,16 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	}
 
 	return producer;
+}
+
+
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& factory, const std::wstring& params)
+{
+	std::wstringstream iss(params);
+	std::vector<std::wstring> tokens;
+	typedef std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t> > iterator;
+	std::copy(iterator(iss),  iterator(), std::back_inserter(tokens));
+	return create_producer(factory, tokens);
 }
 
 }}

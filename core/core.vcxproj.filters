@@ -34,6 +34,9 @@
     <Filter Include="source\consumer">
       <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\producer\playlist">
+      <UniqueIdentifier>{80ce21ca-5ecd-48c1-97d2-c20ea8e2f2b6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
@@ -127,6 +130,9 @@
     <ClInclude Include="mixer\audio\audio_util.h">
       <Filter>source\mixer\audio</Filter>
     </ClInclude>
+    <ClInclude Include="producer\playlist\playlist_producer.h">
+      <Filter>source\producer\playlist</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -204,6 +210,9 @@
     </ClCompile>
     <ClCompile Include="producer\frame\frame_transform.cpp">
       <Filter>source\producer\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\playlist\playlist_producer.cpp">
+      <Filter>source\producer\playlist</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
