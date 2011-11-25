@@ -23,6 +23,7 @@
 
 #include <memory>
 #include <string>
+#include <cstdint>
 
 #include <boost/noncopyable.hpp>
 
@@ -49,6 +50,11 @@ public:
 
 	size_t nb_frames() const;
 	size_t nb_loops() const;
+
+	void loop(bool value);
+	bool loop() const;
+
+	void seek(int64_t target);
 
 	safe_ptr<AVFormatContext> context();
 private:

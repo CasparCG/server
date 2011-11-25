@@ -227,9 +227,9 @@ bool ParamCommand::DoExecute()
 		
 		std::wstring result;
 		if(what == L"B")
-			result = GetChannel()->stage()->background(GetLayerIndex()).get()->param(param);
-		else if(what == L"F")
-			result = GetChannel()->stage()->foreground(GetLayerIndex()).get()->param(param);
+			result = GetChannel()->stage()->param(GetLayerIndex(), false, param);
+		else
+			result = GetChannel()->stage()->param(GetLayerIndex(), true, param);
 	
 		CASPAR_LOG(info) << "Executed param: " <<  _parameters[0] << TEXT(" successfully");
 		
