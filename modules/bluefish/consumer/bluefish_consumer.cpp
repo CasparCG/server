@@ -50,6 +50,8 @@ struct bluefish_consumer : boost::noncopyable
 	safe_ptr<CBlueVelvet4>				blue_;
 	const unsigned int					device_index_;
 	const core::video_format_desc		format_desc_;
+	const int							channel_index_;
+	const int							sub_index_;
 
 	const std::wstring					model_name_;
 
@@ -68,10 +70,12 @@ struct bluefish_consumer : boost::noncopyable
 	
 	executor							executor_;
 public:
-	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only) 
+	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only, int channel_index, int sub_index) 
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
 		, format_desc_(format_desc) 
+		, channel_index_(channel_index)
+		, sub_index_(sub_index)
 		, model_name_(get_card_desc(*blue_))
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
 		, embedded_audio_(embedded_audio)
@@ -283,7 +287,8 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + boost::lexical_cast<std::wstring>(sub_index_) + L"|device " + 
+			boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
 	}
 };
 
@@ -302,9 +307,9 @@ public:
 	{
 	}
 	
-	virtual void initialize(const core::video_format_desc& format_desc)
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index)
 	{
-		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_));
+		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index, sub_index));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame)
@@ -315,7 +320,7 @@ public:
 		
 	virtual std::wstring print() const
 	{
-		return consumer_ ? consumer_->print() : L"bluefish_consumer";
+		return consumer_->print();
 	}
 
 	size_t buffer_depth() const
