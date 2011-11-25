@@ -228,8 +228,10 @@ bool ParamCommand::DoExecute()
 		std::wstring result;
 		if(what == L"B")
 			result = GetChannel()->stage()->param(GetLayerIndex(), false, param);
-		else
+		else if(what == L"F")
 			result = GetChannel()->stage()->param(GetLayerIndex(), true, param);
+		else
+			result = GetChannel()->stage()->param(GetLayerIndex(), true, _parameters.at(0) + L" " + param);
 	
 		CASPAR_LOG(info) << "Executed param: " <<  _parameters[0] << TEXT(" successfully");
 		
