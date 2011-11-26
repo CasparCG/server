@@ -108,7 +108,9 @@ struct frame_muxer::implementation : boost::noncopyable
 			filter_.push(video_frame);
 			BOOST_FOREACH(auto& av_frame, filter_.poll_all())
 			{
-				av_frame->format = format;
+				if(video_frame->format == PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
+					av_frame->format = format;
+
 				video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, hints));
 				++video_frame_count_;
 			}
