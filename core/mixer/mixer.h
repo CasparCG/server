@@ -50,8 +50,12 @@ public:
 
 	explicit mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
 		
-	virtual void send(const std::pair<std::map<int, safe_ptr<basic_frame>>, ticket>& frames); // nothrow
+	// target
+
+	virtual void send(const std::pair<std::map<int, safe_ptr<basic_frame>>, ticket>& frames) override; 
 		
+	// mixer
+
 	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);		
 	safe_ptr<core::write_frame> create_frame(const void* tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra);		
 	

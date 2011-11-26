@@ -40,6 +40,8 @@ public:
 	typedef target<std::pair<std::map<int, safe_ptr<basic_frame>>, ticket>> target_t;
 
 	explicit stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc);
+	
+	// stage
 
 	void swap(stage& other);
 			
