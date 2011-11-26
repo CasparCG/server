@@ -52,6 +52,7 @@ struct bad_alloc				: virtual caspar_exception {};
 
 struct invalid_operation		: virtual caspar_exception {};
 struct operation_failed			: virtual caspar_exception {};
+struct timed_out				: virtual caspar_exception {};
 
 struct not_supported			: virtual caspar_exception {};
 struct not_implemented			: virtual caspar_exception {};

@@ -184,7 +184,29 @@ public:
 		return nb_frames - start_;
 	}
 
-	virtual std::wstring call(const std::wstring& param) override
+	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
+	{
+		boost::promise<std::wstring> promise;
+		promise.set_value(do_call(param));
+		return promise.get_future();
+	}
+				
+	virtual std::wstring print() const override
+	{
+		if(video_decoder_)
+		{
+			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
+							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
+							  + (video_decoder_->is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_->is_progressive() ? video_decoder_->fps() : 2.0 * video_decoder_->fps())
+							  + L"]";
+		}
+		
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
+	}
+
+	// ffmpeg_producer
+				
+	std::wstring do_call(const std::wstring& param)
 	{
 		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)");
 		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)");
@@ -204,22 +226,7 @@ public:
 
 		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
-				
-	virtual std::wstring print() const override
-	{
-		if(video_decoder_)
-		{
-			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
-							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
-							  + (video_decoder_->is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_->is_progressive() ? video_decoder_->fps() : 2.0 * video_decoder_->fps())
-							  + L"]";
-		}
-		
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
-	}
 
-	// ffmpeg_producer
-		
 	void try_decode_frame(int hints)
 	{
 		std::shared_ptr<AVPacket> pkt;

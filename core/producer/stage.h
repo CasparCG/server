@@ -49,7 +49,7 @@ public:
 	void stop(int index);
 	void clear(int index);
 	void clear();	
-	std::wstring call(int index, bool foreground, const std::wstring& param);
+	boost::unique_future<std::wstring> call(int index, bool foreground, const std::wstring& param);
 	void swap_layer(int index, size_t other_index);
 	void swap_layer(int index, size_t other_index, stage& other);
 
