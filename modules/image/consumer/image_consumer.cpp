@@ -45,12 +45,14 @@ struct image_consumer : public core::frame_consumer
 	core::video_format_desc					format_desc_;
 public:
 
-	virtual void initialize(const core::video_format_desc& format_desc, int, int)
+	// frame_consumer
+
+	virtual void initialize(const core::video_format_desc& format_desc, int, int) override
 	{
 		format_desc_ = format_desc;
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{				
 		auto format_desc = format_desc_;
 		boost::thread async([format_desc, frame]
@@ -74,17 +76,12 @@ public:
 		return false;
 	}
 
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return L"image[]";
 	}
 
-	virtual const core::video_format_desc& get_video_format_desc() const
-	{
-		return format_desc_;
-	}
-
-	virtual size_t buffer_depth() const 
+	virtual size_t buffer_depth() const override
 	{
 		return 0;
 	}

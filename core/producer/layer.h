@@ -55,7 +55,7 @@ public:
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
-	std::wstring param(bool foreground, const std::wstring& param);
+	std::wstring call(bool foreground, const std::wstring& param);
 
 	bool is_paused() const;
 	int64_t frame_number() const;

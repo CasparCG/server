@@ -46,8 +46,10 @@ struct playlist_producer : public frame_producer
 		, loop_(loop)
 	{
 	}
+
+	// frame_producer
 	
-	virtual safe_ptr<basic_frame> receive(int hints)
+	virtual safe_ptr<basic_frame> receive(int hints) override
 	{
 		if(current_ == frame_producer::empty() && !producers_.empty())
 		{
@@ -67,22 +69,22 @@ struct playlist_producer : public frame_producer
 		return last_frame_ = frame;
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		return disable_audio(last_frame_);
 	}
 
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return L"playlist[]";
 	}	
 
-	virtual int64_t nb_frames() const 
+	virtual int64_t nb_frames() const  override
 	{
 		return std::numeric_limits<int>::max();
 	}
 
-	virtual std::wstring param(const std::wstring& param)
+	virtual std::wstring call(const std::wstring& param) override
 	{		
 		static const boost::wregex push_front_exp	(L"PUSH_FRONT (?<PARAM>.+)");		
 		static const boost::wregex push_back_exp	(L"(PUSH_BACK|PUSH) (?<PARAM>.+)");
@@ -118,6 +120,8 @@ struct playlist_producer : public frame_producer
 
 		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
+
+	// playlist_producer
 	
 	std::wstring push_front(const std::wstring& str)
 	{

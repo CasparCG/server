@@ -126,8 +126,10 @@ public:
 
 		muxer_.reset(new frame_muxer(video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory, filter));
 	}
+
+	// frame_producer
 	
-	virtual safe_ptr<core::basic_frame> receive(int hints)
+	virtual safe_ptr<core::basic_frame> receive(int hints) override
 	{		
 		frame_timer_.restart();
 		
@@ -153,11 +155,71 @@ public:
 		return last_frame_;
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		return disable_audio(last_frame_);
 	}
-	
+
+	virtual int64_t nb_frames() const override
+	{
+		if(loop_)
+			return std::numeric_limits<int64_t>::max();
+
+		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
+
+		int64_t nb_frames = input_.nb_frames();
+		if(input_.nb_loops() < 1) // input still hasn't counted all frames
+		{
+			auto video_nb_frames = video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
+			auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
+
+			nb_frames = std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames));
+		}
+
+		nb_frames = std::min(static_cast<int64_t>(length_), nb_frames);
+		nb_frames = muxer_->calc_nb_frames(nb_frames);
+
+		// TODO: Might need to scale nb_frames av frame_muxer transformations.
+
+		return nb_frames - start_;
+	}
+
+	virtual std::wstring call(const std::wstring& param) override
+	{
+		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)");
+		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)");
+		
+		boost::wsmatch what;
+		if(boost::regex_match(param, what, loop_exp))
+		{
+			if(!what["VALUE"].str().empty())
+				input_.loop(boost::lexical_cast<bool>(what["VALUE"].str()));
+			return boost::lexical_cast<std::wstring>(input_.loop());
+		}
+		if(boost::regex_match(param, what, seek_exp))
+		{
+			input_.seek(boost::lexical_cast<int64_t>(what["VALUE"].str()));
+			return L"";
+		}
+
+		BOOST_THROW_EXCEPTION(invalid_argument());
+	}
+				
+	virtual std::wstring print() const override
+	{
+		if(video_decoder_)
+		{
+			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
+							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
+							  + (video_decoder_->is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_->is_progressive() ? video_decoder_->fps() : 2.0 * video_decoder_->fps())
+							  + L"]";
+		}
+		
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
+	}
+
+	// ffmpeg_producer
+		
 	void try_decode_frame(int hints)
 	{
 		std::shared_ptr<AVPacket> pkt;
@@ -206,64 +268,6 @@ public:
 		
 		for(auto frame = muxer_->poll(); frame; frame = muxer_->poll())
 			frame_buffer_.push(make_safe_ptr(frame));
-	}
-
-	virtual int64_t nb_frames() const 
-	{
-		if(loop_)
-			return std::numeric_limits<int64_t>::max();
-
-		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
-
-		int64_t nb_frames = input_.nb_frames();
-		if(input_.nb_loops() < 1) // input still hasn't counted all frames
-		{
-			auto video_nb_frames = video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
-			auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
-
-			nb_frames = std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames));
-		}
-
-		nb_frames = std::min(static_cast<int64_t>(length_), nb_frames);
-		nb_frames = muxer_->calc_nb_frames(nb_frames);
-
-		// TODO: Might need to scale nb_frames av frame_muxer transformations.
-
-		return nb_frames - start_;
-	}
-
-	virtual std::wstring param(const std::wstring& param)
-	{
-		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)");
-		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)");
-		
-		boost::wsmatch what;
-		if(boost::regex_match(param, what, loop_exp))
-		{
-			if(!what["VALUE"].str().empty())
-				input_.loop(boost::lexical_cast<bool>(what["VALUE"].str()));
-			return boost::lexical_cast<std::wstring>(input_.loop());
-		}
-		if(boost::regex_match(param, what, seek_exp))
-		{
-			input_.seek(boost::lexical_cast<int64_t>(what["VALUE"].str()));
-			return L"";
-		}
-
-		BOOST_THROW_EXCEPTION(invalid_argument());
-	}
-				
-	virtual std::wstring print() const
-	{
-		if(video_decoder_)
-		{
-			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
-							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
-							  + (video_decoder_->is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_->is_progressive() ? video_decoder_->fps() : 2.0 * video_decoder_->fps())
-							  + L"]";
-		}
-		
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 };
 

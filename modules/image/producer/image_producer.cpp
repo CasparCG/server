@@ -57,14 +57,17 @@ struct image_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<core::basic_frame> receive(int){return frame_;}
+	virtual safe_ptr<core::basic_frame> receive(int) override
+	{
+		return frame_;
+	}
 		
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		return frame_;
 	}
 
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return L"image_producer[" + filename_ + L"]";
 	}

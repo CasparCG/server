@@ -46,9 +46,20 @@ public:
 
 	// frame_producer
 			
-	virtual safe_ptr<basic_frame> receive(int) { return frame_; }	
-	virtual safe_ptr<basic_frame> last_frame() const { return frame_; }	
-	virtual std::wstring print() const { return L"color[" + color_str_ + L"]"; }
+	virtual safe_ptr<basic_frame> receive(int) override
+	{
+		return frame_;
+	}	
+
+	virtual safe_ptr<basic_frame> last_frame() const override
+	{
+		return frame_; 
+	}	
+
+	virtual std::wstring print() const override
+	{
+		return L"color[" + color_str_ + L"]";
+	}
 };
 
 std::wstring get_hex_color(const std::wstring& str)
