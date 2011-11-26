@@ -152,7 +152,7 @@ struct image_scroll_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<core::basic_frame> receive(int)
+	virtual safe_ptr<core::basic_frame> receive(int) override
 	{		
 		delta_ += speed_;
 
@@ -185,17 +185,17 @@ struct image_scroll_producer : public core::frame_producer
 		return last_frame_ = make_safe<core::basic_frame>(frames_);
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		return last_frame_;
 	}
 		
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return L"image_scroll_producer[" + filename_ + L"]";
 	}
 
-	virtual int64_t nb_frames() const 
+	virtual int64_t nb_frames() const override
 	{
 		if(height_ > format_desc_.height)
 		{

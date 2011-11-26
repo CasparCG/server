@@ -37,12 +37,14 @@ public:
 	cg_producer(cg_producer&& other);
 	
 	// frame_producer
-	virtual safe_ptr<core::basic_frame> receive(int);
-	virtual safe_ptr<core::basic_frame> last_frame() const;
-	virtual std::wstring print() const;
-	virtual std::wstring param(const std::wstring&);
+
+	virtual safe_ptr<core::basic_frame> receive(int) override;
+	virtual safe_ptr<core::basic_frame> last_frame() const override;
+	virtual std::wstring print() const override;
+	virtual std::wstring call(const std::wstring&) override;
 
 	//cg_producer
+
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));
 	void remove(int layer);
 	void play(int layer);

@@ -30,5 +30,6 @@
 #pragma warning (disable : 4702) //  unreachable code
 #pragma warning (disable : 4714) // marked as __forceinline not inlined
 #pragma warning (disable : 4505) //  unreferenced local function has been removed
+#pragma warning (disable : 4481) //  nonstandard extension used: override specifier 'override'
 #endif
 

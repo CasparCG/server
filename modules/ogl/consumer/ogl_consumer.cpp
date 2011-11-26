@@ -437,29 +437,31 @@ public:
 	ogl_consumer_proxy(const configuration& config)
 		: config_(config){}
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index)
+	// frame_consumer
+
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
 	{
 		consumer_.reset();
 		consumer_.reset(new ogl_consumer(config_, format_desc, channel_index, sub_index));
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
 		consumer_->send(frame);
 		return true;
 	}
 	
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return consumer_->print();
 	}
 
-	virtual bool has_synchronization_clock() const 
+	virtual bool has_synchronization_clock() const override
 	{
 		return false;
 	}
 	
-	virtual size_t buffer_depth() const
+	virtual size_t buffer_depth() const override
 	{
 		return 1;
 	}

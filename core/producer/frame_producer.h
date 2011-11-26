@@ -52,7 +52,7 @@ public:
 
 	virtual std::wstring print() const = 0; // nothrow
 
-	virtual std::wstring param(const std::wstring&){return L"";}
+	virtual std::wstring call(const std::wstring&) {return L"";}
 
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow

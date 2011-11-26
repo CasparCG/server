@@ -438,26 +438,28 @@ public:
 		context_.reset();
 		CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
 	}
+
+	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index)
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
 	{
 		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index, sub_index);});		
 				
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
 		context_->send(frame);
 		return true;
 	}
 	
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return context_->print();
 	}			
 
-	virtual size_t buffer_depth() const
+	virtual size_t buffer_depth() const override
 	{
 		return config_.buffer_depth;
 	}

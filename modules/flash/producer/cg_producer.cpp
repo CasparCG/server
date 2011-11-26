@@ -30,6 +30,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/regex.hpp>
 		
 namespace caspar { namespace flash {
 	
@@ -41,7 +42,7 @@ public:
 		: flash_producer_(frame_producer)
 	{}
 	
-	void add(int layer, std::wstring filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
+	std::wstring add(int layer, std::wstring filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
 	{
 		if(filename.size() > 0 && filename[0] == L'/')
 			filename = filename.substr(1, filename.size()-1);
@@ -49,76 +50,104 @@ public:
 		auto str = (boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?TEXT("<true/>"):TEXT("<false/>")) % label % data).str();
 
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command: " << str;
-		flash_producer_->param(str);
+		return flash_producer_->call(str);
 	}
 
-	void remove(int layer)
+	std::wstring remove(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking remove-command: " << str;
-		flash_producer_->param(str);
+		return flash_producer_->call(str);
 	}
 
-	void play(int layer)
+	std::wstring play(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Play\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking play-command: " << str;
-		flash_producer_->param(str);
+		return flash_producer_->call(str);
 	}
 
-	void stop(int layer, unsigned int)
+	std::wstring stop(int layer, unsigned int)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking stop-command: " << str;
-		flash_producer_->param(str);
+		return flash_producer_->call(str);
 	}
 
-	void next(int layer)
+	std::wstring next(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking next-command: " << str;
-		flash_producer_->param(str);
+		return flash_producer_->call(str);
 	}
 
-	void update(int layer, const std::wstring& data)
+	std::wstring update(int layer, const std::wstring& data)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></arguments></invoke>") % layer % data).str();
 		CASPAR_LOG(info) << flash_producer_->print() <<" Invoking update-command: " << str;
-		flash_producer_->param(str);
+		return flash_producer_->call(str);
 	}
 
 	std::wstring invoke(int layer, const std::wstring& label)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") % layer % label).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking invoke-command: " << str;
-		return flash_producer_->param(str);
+		return flash_producer_->call(str);
 	}
 
 	std::wstring description(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"GetDescription\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking description-command: " << str;
-		return flash_producer_->param(str);
+		return flash_producer_->call(str);
 	}
 
 	std::wstring info()
 	{
 		auto str = (boost::wformat(L"<invoke name=\"GetInfo\" returntype=\"xml\"><arguments></arguments></invoke>")).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking info-command: " << str;
-		return flash_producer_->param(str);
+		return flash_producer_->call(str);
 	}
 
-	virtual std::wstring param(const std::wstring& str)
+	std::wstring call(const std::wstring& str)
 	{		
-		return flash_producer_->param(str);
+		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)\\s?(?<DATA>.*)?");
+		static const boost::wregex remove_exp		(L"REMOVE (?<LAYER>\\d+)");
+		static const boost::wregex play_exp			(L"PLAY (?<LAYER>\\d+)");
+		static const boost::wregex stop_exp			(L"STOP (?<LAYER>\\d+)");
+		static const boost::wregex next_exp			(L"NEXT (?<LAYER>\\d+)");
+		static const boost::wregex update_exp		(L"UPDATE (?<LAYER>\\d+) (?<DATA>.+)");
+		static const boost::wregex invoke_exp		(L"INVOKE (?<LAYER>\\d+) (?<LABEL>.+)");
+		static const boost::wregex description_exp	(L"INFO (?<LAYER>\\d+)");
+		static const boost::wregex info_exp			(L"INFO");
+		
+		boost::wsmatch what;
+		if(boost::regex_match(str, what, add_exp))
+			return add(boost::lexical_cast<int>(what["LAYER"].str()), what["FILENAME"].str(), boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()), L"", what["DATA"].str()); 
+		else if(boost::regex_match(str, what, remove_exp))
+			return remove(boost::lexical_cast<int>(what["LAYER"].str())); 
+		else if(boost::regex_match(str, what, stop_exp))
+			return stop(boost::lexical_cast<int>(what["LAYER"].str()), 0); 
+		else if(boost::regex_match(str, what, next_exp))
+			return next(boost::lexical_cast<int>(what["LAYER"].str())); 
+		else if(boost::regex_match(str, what, update_exp))
+			return update(boost::lexical_cast<int>(what["LAYER"].str()), what["DATA"].str()); 
+		else if(boost::regex_match(str, what, next_exp))
+			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABEL"].str()); 
+		else if(boost::regex_match(str, what, description_exp))
+			return description(boost::lexical_cast<int>(what["LAYER"].str())); 
+		else if(boost::regex_match(str, what, invoke_exp))
+			return info(); 
+
+		return flash_producer_->call(str);
 	}
 
-	virtual safe_ptr<core::basic_frame> receive(int hints)
+	safe_ptr<core::basic_frame> receive(int hints)
 	{
 		return flash_producer_->receive(hints);
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	safe_ptr<core::basic_frame> last_frame() const
 	{
 		return flash_producer_->last_frame();
 	}		
@@ -172,7 +201,7 @@ void cg_producer::next(int layer){impl_->next(layer);}
 void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
 std::wstring cg_producer::invoke(int layer, const std::wstring& label){return impl_->invoke(layer, label);}
 std::wstring cg_producer::print() const{return impl_->print();}
-std::wstring cg_producer::param(const std::wstring& str){return impl_->param(str);}
+std::wstring cg_producer::call(const std::wstring& str){return impl_->call(str);}
 std::wstring cg_producer::description(int layer){return impl_->description(layer);}
 std::wstring cg_producer::info(){return impl_->info();}
 

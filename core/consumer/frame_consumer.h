@@ -48,12 +48,11 @@ struct frame_consumer : boost::noncopyable
 	{
 		struct empty_frame_consumer : public frame_consumer
 		{
-			core::video_format_desc format_desc;
-			virtual bool send(const safe_ptr<read_frame>&){return false;}
-			virtual void initialize(const video_format_desc&, int, int){}
-			virtual std::wstring print() const {return L"empty";}
-			virtual bool has_synchronization_clock() const {return false;}
-			virtual size_t buffer_depth() const {return 0;};
+			virtual bool send(const safe_ptr<read_frame>&) override {return false;}
+			virtual void initialize(const video_format_desc&, int, int) override{}
+			virtual std::wstring print() const override {return L"empty";}
+			virtual bool has_synchronization_clock() const override {return false;}
+			virtual size_t buffer_depth() const override {return 0;};
 		};
 		static safe_ptr<frame_consumer> consumer = make_safe<empty_frame_consumer>();
 		return consumer;

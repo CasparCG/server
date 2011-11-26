@@ -312,7 +312,7 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	
 	if	   (s == TEXT("MIXER"))		return std::make_shared<MixerCommand>();
 	else if(s == TEXT("DIAG"))		return std::make_shared<DiagnosticsCommand>();
-	else if(s == TEXT("PARAM"))		return std::make_shared<ParamCommand>();
+	else if(s == TEXT("CALL"))		return std::make_shared<CallCommand>();
 	else if(s == TEXT("SWAP"))		return std::make_shared<SwapCommand>();
 	else if(s == TEXT("LOAD"))		return std::make_shared<LoadCommand>();
 	else if(s == TEXT("LOADBG"))	return std::make_shared<LoadbgCommand>();

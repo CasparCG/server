@@ -259,8 +259,10 @@ public:
 		context_.reset();
 		CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
 	}
+
+	// frame_producer
 				
-	virtual safe_ptr<core::basic_frame> receive(int)
+	virtual safe_ptr<core::basic_frame> receive(int) override
 	{
 		auto frame = context_->get_frame();
 		if(frame != core::basic_frame::late())
@@ -268,17 +270,17 @@ public:
 		return frame;
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		return disable_audio(last_frame_);
 	}
 	
-	virtual int64_t nb_frames() const 
+	virtual int64_t nb_frames() const override
 	{
 		return length_;
 	}
 	
-	std::wstring print() const
+	std::wstring print() const override
 	{
 		return context_->print();
 	}
