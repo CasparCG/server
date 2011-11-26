@@ -52,12 +52,7 @@ struct playlist_producer : public frame_producer
 	virtual safe_ptr<basic_frame> receive(int hints) override
 	{
 		if(current_ == frame_producer::empty() && !producers_.empty())
-		{
-			current_ = producers_.front();
-			producers_.pop_front();
-			if(loop_)
-				producers_.push_back(current_);
-		}
+			next();
 
 		auto frame = current_->receive(hints);
 		if(frame == basic_frame::eof())
@@ -76,7 +71,7 @@ struct playlist_producer : public frame_producer
 
 	virtual std::wstring print() const override
 	{
-		return L"playlist[]";
+		return L"playlist[" + current_->print() + L"]";
 	}	
 
 	virtual int64_t nb_frames() const  override
@@ -98,7 +93,9 @@ struct playlist_producer : public frame_producer
 		static const boost::wregex push_front_exp	(L"PUSH_FRONT (?<PARAM>.+)");		
 		static const boost::wregex push_back_exp	(L"(PUSH_BACK|PUSH) (?<PARAM>.+)");
 		static const boost::wregex pop_front_exp	(L"POP_FRONT");		
-		static const boost::wregex pop_back_exp		(L"(POP_BACK|POP)");			
+		static const boost::wregex pop_back_exp		(L"(POP_BACK|POP)");
+		static const boost::wregex clear_exp		(L"CLEAR");
+		static const boost::wregex next_exp			(L"NEXT");
 		static const boost::wregex insert_exp		(L"INSERT (?<POS>\\d+) (?<PARAM>.+)");	
 		static const boost::wregex remove_exp		(L"REMOVE (?<POS>\\d+) (?<PARAM>.+)");	
 		static const boost::wregex list_exp			(L"LIST");			
@@ -114,6 +111,10 @@ struct playlist_producer : public frame_producer
 			return pop_front(); 
 		else if(boost::regex_match(param, what, pop_back_exp))
 			return pop_back(); 
+		else if(boost::regex_match(param, what, clear_exp))
+			return clear();
+		else if(boost::regex_match(param, what, next_exp))
+			return next(); 
 		else if(boost::regex_match(param, what, insert_exp))
 			return insert(boost::lexical_cast<size_t>(what["POS"].str()), what["PARAM"].str());
 		else if(boost::regex_match(param, what, remove_exp))
@@ -154,6 +155,24 @@ struct playlist_producer : public frame_producer
 		return L"";
 	}
 	
+	std::wstring clear()
+	{
+		producers_.clear();
+		return L"";
+	}
+
+	std::wstring next()
+	{
+		if(!producers_.empty())
+		{
+			current_ = producers_.front();
+			producers_.pop_front();
+			if(loop_)
+				producers_.push_back(current_);
+		}
+		return L"";
+	}
+	
 	std::wstring  insert(size_t pos, const std::wstring& str)
 	{
 		if(pos >= producers_.size())
@@ -172,7 +191,7 @@ struct playlist_producer : public frame_producer
 
 	std::wstring list() const
 	{
-		std::wstring result = L"<playlist>";
+		std::wstring result = L"<playlist>\n";
 		BOOST_FOREACH(auto& producer, producers_)		
 			result += L"\t<producer>" + producer->print() + L"</producer>\n";
 		return result + L"</playlist>";
