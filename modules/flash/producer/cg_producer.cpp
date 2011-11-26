@@ -111,7 +111,7 @@ public:
 
 	std::wstring call(const std::wstring& str)
 	{		
-		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)\\s?(?<DATA>.*)?");
+		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)( (?<DATA>.*))?");
 		static const boost::wregex remove_exp		(L"REMOVE (?<LAYER>\\d+)");
 		static const boost::wregex play_exp			(L"PLAY (?<LAYER>\\d+)");
 		static const boost::wregex stop_exp			(L"STOP (?<LAYER>\\d+)");
