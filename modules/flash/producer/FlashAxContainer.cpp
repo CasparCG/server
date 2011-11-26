@@ -915,7 +915,8 @@ bool FlashAxContainer::FlashCall(const std::wstring& str, std::wstring& result2)
 	for(size_t retries = 0; !bCallSuccessful_ && retries < 4; ++retries)
 		spFlash->CallFunction(request, &result);
 
-	result2 = result;
+	if(bCallSuccessful_)
+		result2 = result;
 
 	return bCallSuccessful_;
 }

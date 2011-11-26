@@ -91,13 +91,13 @@ public:
 		}
 	}
 
-	virtual safe_ptr<basic_frame>		receive(int hints) override												{return (*producer_)->receive(hints);}
-	virtual safe_ptr<basic_frame>		last_frame() const override		 										{return (*producer_)->last_frame();}
-	virtual std::wstring				print() const override													{return (*producer_)->print();}
-	virtual std::wstring				call(const std::wstring& str) override									{return (*producer_)->call(str);}
-	virtual safe_ptr<frame_producer>	get_following_producer() const override									{return (*producer_)->get_following_producer();}
-	virtual void						set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(*producer_)->set_leading_producer(producer);}
-	virtual int64_t						nb_frames() const override												{return (*producer_)->nb_frames();}
+	virtual safe_ptr<basic_frame>				receive(int hints) override												{return (*producer_)->receive(hints);}
+	virtual safe_ptr<basic_frame>				last_frame() const override		 										{return (*producer_)->last_frame();}
+	virtual std::wstring						print() const override													{return (*producer_)->print();}
+	virtual boost::unique_future<std::wstring>	call(const std::wstring& str) override									{return (*producer_)->call(str);}
+	virtual safe_ptr<frame_producer>			get_following_producer() const override									{return (*producer_)->get_following_producer();}
+	virtual void								set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(*producer_)->set_leading_producer(producer);}
+	virtual int64_t								nb_frames() const override												{return (*producer_)->nb_frames();}
 };
 
 safe_ptr<core::frame_producer> create_destroy_proxy(safe_ptr<core::frame_producer>&& producer)

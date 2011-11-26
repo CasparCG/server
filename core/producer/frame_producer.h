@@ -30,6 +30,8 @@
 #include <stdint.h>
 #include <numeric>
 
+#include <boost/thread/future.hpp>
+
 namespace caspar { 
 	
 class executor;
@@ -52,7 +54,12 @@ public:
 
 	virtual std::wstring print() const = 0; // nothrow
 
-	virtual std::wstring call(const std::wstring&) {return L"";}
+	virtual boost::unique_future<std::wstring> call(const std::wstring&) 
+	{
+		boost::promise<std::wstring> promise;
+		promise.set_value(L"");
+		return promise.get_future();
+	}
 
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow

@@ -340,9 +340,9 @@ public:
 		return last_frame_;
 	}		
 	
-	virtual std::wstring call(const std::wstring& param) override
+	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{	
-		return context_.invoke([=]() -> std::wstring
+		return context_.begin_invoke([=]() -> std::wstring
 		{
 			if(!context_)
 				initialize();

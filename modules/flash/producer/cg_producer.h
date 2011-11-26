@@ -24,6 +24,8 @@
 #include <core/video_format.h>
 #include <core/video_channel.h>
 
+#include <boost/thread/future.hpp>
+
 #include <string>
 
 namespace caspar { namespace flash {
@@ -41,7 +43,7 @@ public:
 	virtual safe_ptr<core::basic_frame> receive(int) override;
 	virtual safe_ptr<core::basic_frame> last_frame() const override;
 	virtual std::wstring print() const override;
-	virtual std::wstring call(const std::wstring&) override;
+	virtual boost::unique_future<std::wstring> call(const std::wstring&) override;
 
 	//cg_producer
 
@@ -62,5 +64,6 @@ private:
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
 safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
+safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
 
 }}
