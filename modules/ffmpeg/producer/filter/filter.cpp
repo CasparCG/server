@@ -200,7 +200,7 @@ struct filter::implementation
 						else if(in_format_ == PIX_FMT_YUV422P10)
 							frame->format = PIX_FMT_YUV420P;//PIX_FMT_YUV422P;
 						else
-							BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("libavfilter bug: Mframe format == 0."));
+							BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("libavfilter bug: frame format == 0."));
 						
 						if(!warned_)
 						{
