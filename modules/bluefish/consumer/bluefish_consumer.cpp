@@ -306,24 +306,26 @@ public:
 		, key_only_(key_only)
 	{
 	}
+
+	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index)
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
 	{
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index, sub_index));
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
 		consumer_->send(frame);
 		return true;
 	}
 		
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return consumer_->print();
 	}
 
-	size_t buffer_depth() const
+	size_t buffer_depth() const override
 	{
 		return 1;
 	}

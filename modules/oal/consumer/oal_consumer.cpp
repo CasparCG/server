@@ -79,7 +79,9 @@ public:
 		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index)
+	// frame consumer
+
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
 	{
 		format_desc_	= format_desc;		
 		channel_index_	= channel_index;
@@ -92,14 +94,26 @@ public:
 		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{			
 		input_.push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>(core::audio_32_to_16_sse(frame->audio_data())));
 
 		return true;
 	}
 	
-	virtual bool OnGetData(sf::SoundStream::Chunk& data)
+	virtual std::wstring print() const override
+	{
+		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + boost::lexical_cast<std::wstring>(sub_index_) + L"|" + format_desc_.name + L"]";
+	}
+	
+	virtual size_t buffer_depth() const override
+	{
+		return 2;
+	}
+
+	// oal_consumer
+	
+	virtual bool OnGetData(sf::SoundStream::Chunk& data) override
 	{		
 		std::shared_ptr<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>> audio_data;		
 		input_.pop(audio_data);
@@ -112,16 +126,6 @@ public:
 		perf_timer_.restart();
 
 		return is_running_;
-	}
-
-	virtual std::wstring print() const
-	{
-		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + boost::lexical_cast<std::wstring>(sub_index_) + L"|" + format_desc_.name + L"]";
-	}
-	
-	virtual size_t buffer_depth() const
-	{
-		return 2;
 	}
 };
 

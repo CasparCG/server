@@ -56,17 +56,17 @@ struct transition_producer : public frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<frame_producer> get_following_producer() const
+	virtual safe_ptr<frame_producer> get_following_producer() const override
 	{
 		return dest_producer_;
 	}
 	
-	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer)
+	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer) override
 	{
 		source_producer_ = producer;
 	}
 
-	virtual safe_ptr<basic_frame> receive(int hints)
+	virtual safe_ptr<basic_frame> receive(int hints) override
 	{
 		if(++current_frame_ >= info_.duration)
 			return basic_frame::eof();
@@ -91,17 +91,17 @@ struct transition_producer : public frame_producer
 		return compose(dest, source);
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		return disable_audio(last_frame_);
 	}
 
-	virtual int64_t nb_frames() const 
+	virtual int64_t nb_frames() const override
 	{
 		return get_following_producer()->nb_frames();
 	}
 
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return L"transition[" + source_producer_->print() + L"|" + dest_producer_->print() + L"]";
 	}

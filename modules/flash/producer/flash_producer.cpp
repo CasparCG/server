@@ -214,7 +214,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Uninitialized.";
 	}
 	
-	std::wstring param(const std::wstring& param)
+	std::wstring call(const std::wstring& param)
 	{		
 		std::wstring result;
 
@@ -323,7 +323,7 @@ public:
 
 	// frame_producer
 		
-	virtual safe_ptr<core::basic_frame> receive(int)
+	virtual safe_ptr<core::basic_frame> receive(int) override
 	{				
 		graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
@@ -334,13 +334,13 @@ public:
 		return frame;
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		tbb::spin_mutex::scoped_lock lock(last_frame_mutex_);
 		return last_frame_;
 	}		
 	
-	virtual std::wstring param(const std::wstring& param) 
+	virtual std::wstring call(const std::wstring& param) override
 	{	
 		return context_.invoke([=]() -> std::wstring
 		{
@@ -349,7 +349,7 @@ public:
 
 			try
 			{
-				return context_->param(param);	
+				return context_->call(param);	
 
 				//const auto& format_desc = frame_factory_->get_video_format_desc();
 				//if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
@@ -366,7 +366,7 @@ public:
 		});
 	}
 		
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{ 
 		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	

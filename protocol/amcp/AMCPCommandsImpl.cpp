@@ -214,7 +214,7 @@ bool DiagnosticsCommand::DoExecute()
 	}
 }
 
-bool ParamCommand::DoExecute()
+bool CallCommand::DoExecute()
 {	
 	//Perform loading of the clip
 	try
@@ -227,16 +227,16 @@ bool ParamCommand::DoExecute()
 		
 		std::wstring result;
 		if(what == L"B")
-			result = GetChannel()->stage()->param(GetLayerIndex(), false, param);
+			result = GetChannel()->stage()->call(GetLayerIndex(), false, param);
 		else if(what == L"F")
-			result = GetChannel()->stage()->param(GetLayerIndex(), true, param);
+			result = GetChannel()->stage()->call(GetLayerIndex(), true, param);
 		else
-			result = GetChannel()->stage()->param(GetLayerIndex(), true, _parameters.at(0) + L" " + param);
+			result = GetChannel()->stage()->call(GetLayerIndex(), true, _parameters.at(0) + L" " + param);
 	
-		CASPAR_LOG(info) << "Executed param: " <<  _parameters[0] << TEXT(" successfully");
+		CASPAR_LOG(info) << "Executed call: " <<  _parameters[0] << TEXT(" successfully");
 		
 		std::wstringstream replyString;
-		replyString << TEXT("201 PARAM OK\r\n") << result << L"\r\n";
+		replyString << TEXT("201 CALL OK\r\n") << result << L"\r\n";
 		
 		SetReplyString(replyString.str());
 
@@ -245,7 +245,7 @@ bool ParamCommand::DoExecute()
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 PARAM FAILED\r\n"));
+		SetReplyString(TEXT("502 CALL FAILED\r\n"));
 		return false;
 	}
 }
