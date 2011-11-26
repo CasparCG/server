@@ -35,12 +35,17 @@ class output : public target<std::pair<safe_ptr<read_frame>, ticket>>, boost::no
 public:
 	explicit output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index);
 
+	// target
+	
+	virtual void send(const std::pair<safe_ptr<read_frame>, ticket>& frame) override;
+
+	// output
+
 	void add(int index, safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);
 	
 	void set_video_format_desc(const video_format_desc& format_desc);
 
-	virtual void send(const std::pair<safe_ptr<read_frame>, ticket>& frame); // nothrow
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
