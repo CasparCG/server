@@ -31,6 +31,7 @@ namespace caspar { namespace flash {
 void init()
 {
 	core::register_producer_factory(create_ct_producer);
+	core::register_producer_factory(create_cg_producer);
 }
 
 std::wstring get_cg_version()

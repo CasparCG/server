@@ -154,12 +154,12 @@ public:
 		}, high_priority);
 	}	
 	
-	std::wstring call(int index, bool foreground, const std::wstring& param)
+	boost::unique_future<std::wstring> call(int index, bool foreground, const std::wstring& param)
 	{
-		return executor_.invoke([&]
+		return std::move(*executor_.invoke([&]() -> std::shared_ptr<boost::unique_future<std::wstring>>
 		{
-			return layers_[index].call(foreground, param);
-		}, high_priority);
+			return std::make_shared<boost::unique_future<std::wstring>>(std::move(layers_[index].call(foreground, param)));
+		}, high_priority));
 	}
 
 	void swap_layer(int index, size_t other_index)
@@ -237,5 +237,5 @@ layer_status stage::get_status(int index){return impl_->get_status(index);}
 safe_ptr<frame_producer> stage::foreground(size_t index) {return impl_->foreground(index);}
 safe_ptr<frame_producer> stage::background(size_t index) {return impl_->background(index);}
 void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
-std::wstring stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
+boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
 }}

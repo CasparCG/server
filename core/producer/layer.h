@@ -23,6 +23,7 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/thread/future.hpp>
 
 #include <string>
 
@@ -55,7 +56,7 @@ public:
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
-	std::wstring call(bool foreground, const std::wstring& param);
+	boost::unique_future<std::wstring> call(bool foreground, const std::wstring& param);
 
 	bool is_paused() const;
 	int64_t frame_number() const;

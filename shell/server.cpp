@@ -77,10 +77,7 @@ struct server::implementation : boost::noncopyable
 							  
 		decklink::init();	  
 		CASPAR_LOG(info) << L"Initialized decklink module.";
-							  
-		flash::init();		  
-		CASPAR_LOG(info) << L"Initialized flash module.";
-							  
+							  							  
 		oal::init();		  
 		CASPAR_LOG(info) << L"Initialized oal module.";
 							  
@@ -89,6 +86,9 @@ struct server::implementation : boost::noncopyable
 
 		image::init();		  
 		CASPAR_LOG(info) << L"Initialized image module.";
+
+		flash::init();		  
+		CASPAR_LOG(info) << L"Initialized flash module.";
 
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";

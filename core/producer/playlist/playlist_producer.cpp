@@ -83,8 +83,17 @@ struct playlist_producer : public frame_producer
 	{
 		return std::numeric_limits<int>::max();
 	}
+	
+	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
+	{
+		boost::promise<std::wstring> promise;
+		promise.set_value(do_call(param));
+		return promise.get_future();
+	}	
 
-	virtual std::wstring call(const std::wstring& param) override
+	// playlist_producer
+
+	std::wstring do_call(const std::wstring& param)
 	{		
 		static const boost::wregex push_front_exp	(L"PUSH_FRONT (?<PARAM>.+)");		
 		static const boost::wregex push_back_exp	(L"(PUSH_BACK|PUSH) (?<PARAM>.+)");
@@ -120,8 +129,6 @@ struct playlist_producer : public frame_producer
 
 		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
-
-	// playlist_producer
 	
 	std::wstring push_front(const std::wstring& str)
 	{
@@ -174,7 +181,7 @@ struct playlist_producer : public frame_producer
 
 safe_ptr<frame_producer> create_playlist_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
-	if(boost::range::find(params, L"PLAYLIST") == params.end())
+	if(boost::range::find(params, L"[PLAYLIST]") == params.end())
 		return core::frame_producer::empty();
 
 	bool loop = boost::range::find(params, L"LOOP") != params.end();

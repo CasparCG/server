@@ -133,7 +133,7 @@ public:
 		return status;
 	}
 
-	std::wstring call(bool foreground, const std::wstring& param)
+	boost::unique_future<std::wstring> call(bool foreground, const std::wstring& param)
 	{
 		return (foreground ? foreground_ : background_)->call(param);
 	}
@@ -173,5 +173,5 @@ safe_ptr<basic_frame> layer::receive() {return impl_->receive();}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}
-std::wstring layer::call(bool foreground, const std::wstring& param){return impl_->call(foreground, param);}
+boost::unique_future<std::wstring> layer::call(bool foreground, const std::wstring& param){return impl_->call(foreground, param);}
 }}

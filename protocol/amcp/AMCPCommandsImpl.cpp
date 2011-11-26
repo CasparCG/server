@@ -225,7 +225,7 @@ bool CallCommand::DoExecute()
 		for(auto it = std::begin(_parameters2)+2; it != std::end(_parameters2); ++it)
 			param += L" " + *it;
 		
-		std::wstring result;
+		boost::unique_future<std::wstring> result;
 		if(what == L"B")
 			result = GetChannel()->stage()->call(GetLayerIndex(), false, param);
 		else if(what == L"F")
@@ -233,10 +233,13 @@ bool CallCommand::DoExecute()
 		else
 			result = GetChannel()->stage()->call(GetLayerIndex(), true, _parameters.at(0) + L" " + param);
 	
+		if(!result.timed_wait(boost::posix_time::seconds(2)))
+			BOOST_THROW_EXCEPTION(timed_out());
+
 		CASPAR_LOG(info) << "Executed call: " <<  _parameters[0] << TEXT(" successfully");
 		
 		std::wstringstream replyString;
-		replyString << TEXT("201 CALL OK\r\n") << result << L"\r\n";
+		replyString << TEXT("201 CALL OK\r\n") << result.get() << L"\r\n";
 		
 		SetReplyString(replyString.str());
 
