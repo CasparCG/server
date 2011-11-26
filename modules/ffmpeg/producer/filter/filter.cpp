@@ -42,18 +42,22 @@ struct filter::implementation
 	std::shared_ptr<void>			parallel_yadif_ctx_;
 	std::vector<PixelFormat>		pix_fmts_;
 	std::queue<std::shared_ptr<AVFrame>> bypass_;
+	int								in_format_;
+	bool							warned_;
 		
 	implementation(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) 
 		: filters_(narrow(filters))
 		, parallel_yadif_ctx_(nullptr)
 		, pix_fmts_(pix_fmts)
+		, in_format_(0)
+		, warned_(false)
 	{
 		if(pix_fmts_.empty())
 		{
-			pix_fmts_.push_back(PIX_FMT_YUV420P);
 			pix_fmts_.push_back(PIX_FMT_YUVA420P);
-			pix_fmts_.push_back(PIX_FMT_YUV422P);
 			pix_fmts_.push_back(PIX_FMT_YUV444P);
+			pix_fmts_.push_back(PIX_FMT_YUV422P);
+			pix_fmts_.push_back(PIX_FMT_YUV420P);
 			pix_fmts_.push_back(PIX_FMT_YUV411P);
 			pix_fmts_.push_back(PIX_FMT_ARGB);
 			pix_fmts_.push_back(PIX_FMT_RGBA);
@@ -87,6 +91,7 @@ struct filter::implementation
 			{
 				try
 				{
+					in_format_ = frame->format;
 					graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p){avfilter_graph_free(&p);});
 								
 					// Input
@@ -186,6 +191,23 @@ struct filter::implementation
 					frame->key_frame			= picref->video->key_frame;
 					frame->pict_type			= picref->video->pict_type;
 					frame->sample_aspect_ratio	= picref->video->sample_aspect_ratio;
+
+					// HACK: Workaround for missing format bug in libavfilter.
+					if(frame->format == 0)
+					{
+						if(in_format_ == PIX_FMT_YUV444P10)
+							frame->format = PIX_FMT_YUV420P;//PIX_FMT_YUV444P;
+						else if(in_format_ == PIX_FMT_YUV422P10)
+							frame->format = PIX_FMT_YUV420P;//PIX_FMT_YUV422P;
+						else
+							BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("libavfilter bug: Mframe format == 0."));
+						
+						if(!warned_)
+						{
+							CASPAR_LOG(warning) << "[ffmpeg] libavfilter bug workaround: frame format == 0, guessing PIX_FMT_YUV420P.";
+							warned_ = true;
+						}
+					}
 
 					return frame;
 				}

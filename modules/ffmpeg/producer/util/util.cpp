@@ -202,8 +202,9 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		// Use sws_scale when provided colorspace has no hw-accel.
 		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 		avcodec_get_frame_defaults(av_frame.get());			
-		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
-		 
+		auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
+		CASPAR_VERIFY(size == write->image_data().size()); 
+
 		sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
 		pool.push(sws_context);
 

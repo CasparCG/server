@@ -79,8 +79,8 @@ public:
 	
 	audio_buffer mix(const video_format_desc& format_desc)
 	{	
-		CASPAR_ASSERT(format_desc.audio_channels == 2);
-		CASPAR_ASSERT(format_desc.audio_samples_per_frame % 4 == 0);
+		//CASPAR_ASSERT(format_desc.audio_channels == 2);
+		//CASPAR_ASSERT(format_desc.audio_samples_per_frame % 4 == 0);
 
 		// NOTE: auto data should be larger than format_desc_.audio_samples_per_frame to allow sse to read/write beyond size.
 
