@@ -172,10 +172,10 @@ struct playlist_producer : public frame_producer
 
 	std::wstring list() const
 	{
-		std::wstring result = L"<array>";
+		std::wstring result = L"<playlist>";
 		BOOST_FOREACH(auto& producer, producers_)		
-			result += L"\t<string>" + producer->print() + L"</string>\n";
-		return result + L"</array>";
+			result += L"\t<producer>" + producer->print() + L"</producer>\n";
+		return result + L"</playlist>";
 	}
 };
 
