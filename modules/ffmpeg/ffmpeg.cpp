@@ -151,9 +151,49 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     //colored_fputs(av_clip(level>>3, 0, 6), line);
 }
 
+//static int query_yadif_formats(AVFilterContext *ctx)
+//{
+//    static const int pix_fmts[] = {
+//        PIX_FMT_YUV444P,
+//        PIX_FMT_YUV422P,
+//        PIX_FMT_YUV420P,
+//        PIX_FMT_YUV410P,
+//        PIX_FMT_YUV411P,
+//        PIX_FMT_GRAY8,
+//        PIX_FMT_YUVJ444P,
+//        PIX_FMT_YUVJ422P,
+//        PIX_FMT_YUVJ420P,
+//        AV_NE( PIX_FMT_GRAY16BE, PIX_FMT_GRAY16LE ),
+//        PIX_FMT_YUV440P,
+//        PIX_FMT_YUVJ440P,
+//        AV_NE( PIX_FMT_YUV444P16BE, PIX_FMT_YUV444P16LE ),
+//        AV_NE( PIX_FMT_YUV422P16BE, PIX_FMT_YUV422P16LE ),
+//        AV_NE( PIX_FMT_YUV420P16BE, PIX_FMT_YUV420P16LE ),
+//        PIX_FMT_YUVA420P,
+//        PIX_FMT_NONE
+//    };
+//    avfilter_set_common_pixel_formats(ctx, avfilter_make_format_list(pix_fmts));
+//
+//    return 0;
+//}
+//
+//#pragma warning (push)
+//#pragma warning (disable : 4706)
+//void fix_yadif_filter_format_query()
+//{
+//	AVFilter** filter = nullptr;
+//    while((filter = av_filter_next(filter)) && *filter)
+//	{
+//		if(strstr((*filter)->name, "yadif") != 0)
+//			(*filter)->query_formats = query_yadif_formats;
+//	}
+//}
+//#pragma warning (pop)
+
 void init()
 {
     avfilter_register_all();
+	//fix_yadif_filter_format_query();
 	av_register_all();
 	avcodec_init();
     avcodec_register_all();
