@@ -167,8 +167,8 @@ struct playlist_producer : public frame_producer
 		{
 			current_ = producers_.front();
 			producers_.pop_front();
-			if(loop_)
-				producers_.push_back(current_);
+			//if(loop_)
+			//	producers_.push_back(current_);
 		}
 		return L"";
 	}

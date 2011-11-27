@@ -49,7 +49,13 @@ public:
 
 	write_frame& operator=(const write_frame& other);
 	write_frame& operator=(write_frame&& other);
-		
+			
+	// basic_frame
+
+	virtual void accept(core::frame_visitor& visitor) override;
+
+	// write _frame
+
 	void swap(write_frame& other);
 			
 	boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
@@ -66,12 +72,6 @@ public:
 	const void* tag() const;
 
 	const core::pixel_format_desc& get_pixel_format_desc() const;
-	
-	// basic_frame
-
-	virtual void accept(core::frame_visitor& visitor);
-
-	virtual std::wstring print() const;
 	
 private:
 	friend class image_mixer;
