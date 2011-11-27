@@ -231,7 +231,7 @@ struct input::implementation : boost::noncopyable
 		return is_running_ && (is_eof_ || (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT);
 	}
 	
-	void do_seek(int64_t target)
+	void do_seek(const int64_t target)
 	{  	
 		CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
@@ -249,11 +249,11 @@ struct input::implementation : boost::noncopyable
 		}
 		
 		auto time_base = format_context_->streams[default_stream_index_]->time_base;
-		target = (target*time_base.den)/time_base.num;
+		auto fixed_target = (target*time_base.den)/time_base.num;
 		auto fixed_time_base = fix_time_base(time_base);
-		target = (target * fixed_time_base.num) / fixed_time_base.den;
+		fixed_target = (target * fixed_time_base.num) / fixed_time_base.den;
 
-		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), target, std::numeric_limits<int64_t>::max(), 0), print());		
+		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, std::numeric_limits<int64_t>::max(), 0), print());		
 
 		is_eof_ = false;
 		buffer_cond_.notify_all();
