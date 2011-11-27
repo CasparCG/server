@@ -142,7 +142,7 @@ public:
 		return std::make_pair(min, max);
 	}
 
-	void send(const std::pair<safe_ptr<read_frame>, ticket>& packet)
+	void send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& packet)
 	{
 		executor_.begin_invoke([=]
 		{
@@ -230,6 +230,6 @@ private:
 output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new implementation(graph, format_desc, channel_index)){}
 void output::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
 void output::remove(int index){impl_->remove(index);}
-void output::send(const std::pair<safe_ptr<read_frame>, ticket>& frame) {impl_->send(frame); }
+void output::send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) {impl_->send(frame); }
 void output::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 }}

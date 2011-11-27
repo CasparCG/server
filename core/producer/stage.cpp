@@ -28,8 +28,6 @@
 #include "frame/frame_factory.h"
 
 #include <common/concurrency/executor.h>
-#include <common/concurrency/governor.h>
-#include <common/env.h>
 
 #include <boost/foreach.hpp>
 #include <boost/timer.hpp>
@@ -40,7 +38,8 @@
 
 namespace caspar { namespace core {
 
-struct stage::implementation : boost::noncopyable
+struct stage::implementation : public std::enable_shared_from_this<implementation>
+							 , boost::noncopyable
 {		
 	safe_ptr<diagnostics::graph>	graph_;
 	safe_ptr<stage::target_t>		target_;
@@ -51,7 +50,6 @@ struct stage::implementation : boost::noncopyable
 
 	std::map<int, layer>			layers_;	
 
-	governor						governor_;
 	executor						executor_;
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<stage::target_t>& target, const video_format_desc& format_desc)  
@@ -59,26 +57,22 @@ public:
 		, format_desc_(format_desc)
 		, target_(target)
 		, executor_(L"stage")
-		, governor_(std::max(1, env::properties().get("configuration.pipeline-tokens", 2)))
 	{
 		graph_->add_guide("tick-time", 0.5f);	
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
-
-		executor_.begin_invoke([this]{tick();});
 	}
 
-	~implementation()
+	void spawn_token()
 	{
-		governor_.cancel();
+		std::weak_ptr<implementation> self = shared_from_this();
+		executor_.begin_invoke([=]{tick(self);});
 	}
-						
-	void tick()
+							
+	void tick(const std::weak_ptr<implementation>& self)
 	{		
 		try
 		{
-			auto ticket = governor_.acquire();
-
 			produce_timer_.restart();
 
 			std::map<int, safe_ptr<basic_frame>> frames;
@@ -93,6 +87,13 @@ public:
 			
 			graph_->update_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
 			
+			std::shared_ptr<void> ticket(nullptr, [self](void*)
+			{
+				auto self2 = self.lock();
+				if(self2)				
+					self2->executor_.begin_invoke([=]{tick(self);});				
+			});
+
 			target_->send(std::make_pair(frames, ticket));
 
 			graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
@@ -103,7 +104,6 @@ public:
 			layers_.clear();
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}		
-		executor_.begin_invoke([this]{tick();});
 	}
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
@@ -224,6 +224,7 @@ public:
 };
 
 stage::stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc) : impl_(new implementation(graph, target, format_desc)){}
+void stage::spawn_token(){impl_->spawn_token();}
 void stage::swap(stage& other){impl_->swap(other);}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}

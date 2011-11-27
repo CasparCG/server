@@ -30,6 +30,7 @@
 #include "producer/stage.h"
 
 #include <common/diagnostics/graph.h>
+#include <common/env.h>
 
 #include <string>
 
@@ -57,6 +58,9 @@ public:
 	{
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
+
+		for(int n = 0; n < std::max(1, env::properties().get("configuration.pipeline-tokens", 2)); ++n)
+			stage_->spawn_token();
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
