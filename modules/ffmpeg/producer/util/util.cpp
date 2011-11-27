@@ -288,10 +288,6 @@ void fix_meta_data(AVFormatContext& context)
 	{
 		auto video_context = context.streams[video_index]->codec;
 		auto video_stream  = context.streams[video_index];
-
-		auto nb_frames = static_cast<double>(video_stream->duration*video_stream->time_base.num)/static_cast<double>(video_stream->time_base.den);
-		nb_frames = (nb_frames*video_context->time_base.den)/video_context->time_base.num;
-		video_stream->nb_frames = static_cast<int64_t>(nb_frames+0.5);
 						
 		if(boost::filesystem2::path(context.filename).extension() == ".flv")
 		{
@@ -345,6 +341,10 @@ void fix_meta_data(AVFormatContext& context)
 			//	video_context->time_base.num = video_stream->r_frame_rate.den;
 			//}
 		}
+
+		auto nb_frames = static_cast<double>(video_stream->duration*video_stream->time_base.num)/static_cast<double>(video_stream->time_base.den);
+		nb_frames = (nb_frames*video_context->time_base.den)/video_context->time_base.num;
+		video_stream->nb_frames = static_cast<int64_t>(nb_frames+0.5);
 
 		double fps = static_cast<double>(video_context->time_base.den) / static_cast<double>(video_context->time_base.num);
 
