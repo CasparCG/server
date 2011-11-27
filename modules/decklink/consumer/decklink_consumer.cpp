@@ -434,9 +434,12 @@ public:
 
 	~decklink_consumer_proxy()
 	{
-		auto str = print();
-		context_.reset();
-		CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
+		if(context_)
+		{
+			auto str = print();
+			context_.reset();
+			CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
+		}
 	}
 
 	// frame_consumer
@@ -456,7 +459,7 @@ public:
 	
 	virtual std::wstring print() const override
 	{
-		return context_->print();
+		return context_ ? context_->print() : L"[decklink_consumer]";
 	}			
 
 	virtual size_t buffer_depth() const override

@@ -440,12 +440,23 @@ public:
 	ogl_consumer_proxy(const configuration& config)
 		: config_(config){}
 	
+	~ogl_consumer_proxy()
+	{
+		if(consumer_)
+		{
+			auto str = print();
+			consumer_.reset();
+			CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
+		}
+	}
+
 	// frame_consumer
 
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
 	{
 		consumer_.reset();
 		consumer_.reset(new ogl_consumer(config_, format_desc, channel_index, sub_index));
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -455,7 +466,7 @@ public:
 	
 	virtual std::wstring print() const override
 	{
-		return consumer_->print();
+		return consumer_ ? consumer_->print() : L"[ogl_consumer]";
 	}
 
 	virtual bool has_synchronization_clock() const override
