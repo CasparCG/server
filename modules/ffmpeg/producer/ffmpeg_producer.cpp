@@ -129,6 +129,9 @@ public:
 			CASPAR_LOG(warning) << "Failed to open audio-stream. Running without audio.";		
 		}	
 
+		if(!video_decoder_ && !audio_decoder_)
+			BOOST_THROW_EXCEPTION(averror_stream_not_found() << msg_info("No streams found"));
+
 		muxer_.reset(new frame_muxer(video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory, filter));
 	}
 
