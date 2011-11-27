@@ -204,7 +204,7 @@ public:
 
 	virtual int64_t file_frame_number() const override
 	{
-		return file_frame_number_;
+		return std::max<int64_t>(0, file_frame_number_-frame_buffer_.size()+1);
 	}
 
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
