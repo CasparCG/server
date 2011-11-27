@@ -24,7 +24,6 @@
 
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
-#include <common/concurrency/governor.h>
 #include <common/diagnostics/graph.h>
 
 #include <boost/noncopyable.hpp>
@@ -37,11 +36,13 @@ struct layer_status;
 class stage : boost::noncopyable
 {
 public:
-	typedef target<std::pair<std::map<int, safe_ptr<basic_frame>>, ticket>> target_t;
+	typedef target<std::pair<std::map<int, safe_ptr<basic_frame>>, std::shared_ptr<void>>> target_t;
 
 	explicit stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc);
 	
 	// stage
+
+	void spawn_token();
 
 	void swap(stage& other);
 			

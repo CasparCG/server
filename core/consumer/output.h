@@ -23,21 +23,20 @@
 
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
-#include <common/concurrency/governor.h>
 #include <common/diagnostics/graph.h>
 
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
 	
-class output : public target<std::pair<safe_ptr<read_frame>, ticket>>, boost::noncopyable
+class output : public target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>>, boost::noncopyable
 {
 public:
 	explicit output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index);
 
 	// target
 	
-	virtual void send(const std::pair<safe_ptr<read_frame>, ticket>& frame) override;
+	virtual void send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) override;
 
 	// output
 
