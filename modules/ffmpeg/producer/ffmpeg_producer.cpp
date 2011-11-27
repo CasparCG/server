@@ -172,9 +172,9 @@ public:
 		if(input_.nb_loops() < 1) // input still hasn't counted all frames
 		{
 			auto video_nb_frames = video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
-			auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
+			//auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
 
-			nb_frames = std::max(nb_frames, std::max(video_nb_frames, audio_nb_frames));
+			nb_frames = std::max(nb_frames, video_nb_frames);
 		}
 
 		nb_frames = std::min(static_cast<int64_t>(length_), nb_frames);
@@ -197,7 +197,7 @@ public:
 			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
 							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
 							  + (video_decoder_->is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_->is_progressive() ? video_decoder_->fps() : 2.0 * video_decoder_->fps())
-							  + L"]";
+							  + L"|" + boost::lexical_cast<std::wstring>(nb_frames()) + L"]";
 		}
 		
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
