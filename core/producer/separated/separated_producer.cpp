@@ -88,6 +88,21 @@ struct separated_producer : public frame_producer
 	{
 		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
 	}
+		
+	virtual int64_t file_nb_frames() const override
+	{
+		return std::min(fill_producer_->file_nb_frames(), key_producer_->file_nb_frames());
+	}
+	
+	virtual int64_t frame_number() const override
+	{
+		return std::max(fill_producer_->frame_number(), key_producer_->frame_number());
+	}
+	
+	virtual int64_t file_frame_number() const override
+	{
+		return std::max(fill_producer_->file_frame_number(), key_producer_->file_frame_number());
+	}
 };
 
 safe_ptr<frame_producer> create_separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key)

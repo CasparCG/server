@@ -65,6 +65,10 @@ public:
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
 		
 	virtual int64_t nb_frames() const {return std::numeric_limits<int>::max();}
+	virtual int64_t file_nb_frames() const {return nb_frames();}
+
+	virtual int64_t frame_number() const {return 0;}
+	virtual int64_t file_frame_number() const {return frame_number();}
 	
 	virtual safe_ptr<basic_frame> receive(int hints) = 0;
 	virtual safe_ptr<core::basic_frame> last_frame() const = 0;

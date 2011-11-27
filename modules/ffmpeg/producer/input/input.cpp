@@ -211,7 +211,7 @@ struct input::implementation : boost::noncopyable
 			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
 			auto size = packet->size;
 			auto data = packet->data;
-
+			
 			packet = safe_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
 			{
 				packet->size = size;
@@ -258,7 +258,12 @@ struct input::implementation : boost::noncopyable
 		is_eof_ = false;
 		buffer_cond_.notify_all();
 
-		buffer_.push(flush_packet());
+		auto flush_packet	= create_packet();
+		flush_packet->data	= nullptr;
+		flush_packet->size	= 0;
+		flush_packet->pos	= target;
+
+		buffer_.push(flush_packet);
 	}	
 
 	void seek(int64_t target)

@@ -37,8 +37,10 @@ struct layer_status
 	std::wstring	foreground;
 	std::wstring	background;
 	bool			is_paused;
-	int64_t			total_frames;
-	int64_t			current_frame;
+	int64_t			nb_frames;
+	int64_t			frame_number;
+	int64_t			file_nb_frames;
+	int64_t			file_frame_number;
 };
 
 class layer : boost::noncopyable

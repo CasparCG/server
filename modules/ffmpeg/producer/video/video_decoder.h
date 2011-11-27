@@ -50,6 +50,8 @@ public:
 	int64_t nb_frames() const;
 	double	fps()		const;
 	bool	is_progressive() const;
+
+	size_t file_frame_number() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

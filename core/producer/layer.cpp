@@ -124,11 +124,13 @@ public:
 	layer_status status() const
 	{
 		layer_status status;
-		status.foreground	 = foreground_->print();
-		status.background	 = background_->print();
-		status.is_paused	 = is_paused_;
-		status.total_frames	 = foreground_->nb_frames();
-		status.current_frame = frame_number_;
+		status.foreground			= foreground_->print();
+		status.background			= background_->print();
+		status.is_paused			= is_paused_;
+		status.nb_frames			= foreground_->nb_frames();
+		status.frame_number			= std::max(frame_number_, foreground_->frame_number());
+		status.file_nb_frames		= foreground_->file_nb_frames();
+		status.file_frame_number	= foreground_->file_frame_number();
 
 		return status;
 	}

@@ -40,12 +40,6 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 		
-safe_ptr<AVPacket> flush_packet()
-{
-	static auto packet = create_packet();
-	return packet;
-}
-
 std::shared_ptr<core::audio_buffer> flush_audio()
 {
 	static std::shared_ptr<core::audio_buffer> audio(new core::audio_buffer());
