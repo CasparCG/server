@@ -166,16 +166,7 @@ public:
 		if(loop_)
 			return std::numeric_limits<int64_t>::max();
 
-		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
-
-		int64_t nb_frames = input_.nb_frames();
-		if(input_.nb_loops() < 1) // input still hasn't counted all frames
-		{
-			auto video_nb_frames = video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
-			//auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
-
-			nb_frames = std::max(nb_frames, video_nb_frames);
-		}
+		auto nb_frames = file_nb_frames();
 
 		nb_frames = std::min(static_cast<int64_t>(length_), nb_frames);
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
@@ -197,13 +188,28 @@ public:
 			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
 							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
 							  + (video_decoder_->is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_->is_progressive() ? video_decoder_->fps() : 2.0 * video_decoder_->fps())
-							  + L"|" + boost::lexical_cast<std::wstring>(nb_frames()) + L"]";
+							  + L"|" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 		}
 		
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
 	}
 
 	// ffmpeg_producer
+
+	int64_t file_nb_frames() const
+	{
+		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
+
+		int64_t nb_frames = input_.nb_frames();
+		if(input_.nb_loops() < 1) // input still hasn't counted all frames
+		{
+			auto video_nb_frames = video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
+			//auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
+
+			nb_frames = std::max(nb_frames, video_nb_frames);
+		}
+		return nb_frames;
+	}
 				
 	std::wstring do_call(const std::wstring& param)
 	{
