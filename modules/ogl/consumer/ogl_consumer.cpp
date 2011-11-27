@@ -184,7 +184,7 @@ public:
 		if(!GLEW_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
-		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize : sf::Style::Fullscreen);
+		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
 		window_.ShowMouseCursor(false);
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
@@ -247,6 +247,8 @@ public:
 					{
 						if(e.Type == sf::Event::Resized)
 							calculate_aspect();
+						else if(e.Type == sf::Event::Closed)
+							is_running_ = false;
 					}
 			
 					safe_ptr<core::read_frame> frame;
@@ -358,10 +360,11 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
-	void send(const safe_ptr<core::read_frame>& frame)
+	bool send(const safe_ptr<core::read_frame>& frame)
 	{
 		if(!frame_buffer_.try_push(frame))
 			graph_->add_tag("dropped-frame");
+		return is_running_;
 	}
 		
 	std::wstring print() const
@@ -447,8 +450,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
-		consumer_->send(frame);
-		return true;
+		return consumer_->send(frame);
 	}
 	
 	virtual std::wstring print() const override
