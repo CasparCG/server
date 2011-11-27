@@ -73,7 +73,7 @@ struct write_frame::implementation
 	boost::iterator_range<uint8_t*> image_data(size_t index)
 	{
 		if(index >= buffers_.size() || !buffers_[index]->data())
-			return boost::iterator_range<const uint8_t*>();
+			return boost::iterator_range<uint8_t*>();
 		auto ptr = static_cast<uint8_t*>(buffers_[index]->data());
 		return boost::iterator_range<uint8_t*>(ptr, ptr+buffers_[index]->size());
 	}
@@ -103,11 +103,6 @@ struct write_frame::implementation
 			texture->begin_read();
 			buffer->unbind();
 		}, high_priority);
-	}
-
-	std::wstring print() const
-	{
-		return L"write_frame[" + boost::lexical_cast<std::wstring>(tag_) + L"]";
 	}
 };
 	
@@ -143,8 +138,6 @@ void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
 void write_frame::set_type(const field_mode::type& mode){impl_->mode_ = mode;}
 core::field_mode::type write_frame::get_type() const{return impl_->mode_;}
-
-std::wstring write_frame::print() const{return impl_->print();}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 }}
