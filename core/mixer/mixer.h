@@ -25,7 +25,6 @@
 
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
-#include <common/concurrency/governor.h>
 #include <common/diagnostics/graph.h>
 
 #include <map>
@@ -43,16 +42,16 @@ class ogl_device;
 struct frame_transform;
 struct pixel_format;
 
-class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, ticket>>, public core::frame_factory
+class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>>, public core::frame_factory
 {
 public:	
-	typedef target<std::pair<safe_ptr<read_frame>, ticket>> target_t;
+	typedef target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>> target_t;
 
 	explicit mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
 		
 	// target
 
-	virtual void send(const std::pair<std::map<int, safe_ptr<basic_frame>>, ticket>& frames) override; 
+	virtual void send(const std::pair<std::map<int, safe_ptr<basic_frame>>, std::shared_ptr<void>>& frames) override; 
 		
 	// mixer
 

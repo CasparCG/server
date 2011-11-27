@@ -114,7 +114,7 @@ public:
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f));
 	}
 	
-	void send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, ticket>& packet)
+	void send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& packet)
 	{			
 		executor_.begin_invoke([=]
 		{		
@@ -238,7 +238,7 @@ public:
 	
 mixer::mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
 	: impl_(new implementation(graph, target, format_desc, ogl)){}
-void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, ticket>& frames){ impl_->send(frames);}
+void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }
 safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
 safe_ptr<core::write_frame> mixer::create_frame(const void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
