@@ -221,7 +221,7 @@ public:
 			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
 							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
 							  + (video_decoder_->is_progressive() ? L"p" : L"i")  + boost::lexical_cast<std::wstring>(video_decoder_->is_progressive() ? video_decoder_->fps() : 2.0 * video_decoder_->fps())
-							  + L"|" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
+							  + L"|" + boost::lexical_cast<std::wstring>(file_frame_number()) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 		}
 		
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
