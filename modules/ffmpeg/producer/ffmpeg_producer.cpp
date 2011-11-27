@@ -80,6 +80,9 @@ struct ffmpeg_producer : public core::frame_producer
 	safe_ptr<core::basic_frame>						last_frame_;
 	
 	std::queue<safe_ptr<core::basic_frame>>			frame_buffer_;
+
+	int64_t											frame_number_;
+	int64_t											file_frame_number_;;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, size_t length) 
@@ -91,6 +94,7 @@ public:
 		, loop_(loop)
 		, length_(length)
 		, last_frame_(core::basic_frame::empty())
+		, frame_number_(0)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -153,6 +157,7 @@ public:
 
 		graph_->set_text(print());
 
+		++frame_number_;
 		return last_frame_;
 	}
 
@@ -172,6 +177,31 @@ public:
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
 		
 		return nb_frames - start_;
+	}
+
+	virtual int64_t file_nb_frames() const override
+	{
+		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
+
+		int64_t nb_frames = input_.nb_frames();
+		if(input_.nb_loops() < 1) // input still hasn't counted all frames
+		{
+			auto video_nb_frames = video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
+			//auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
+
+			nb_frames = std::max(nb_frames, video_nb_frames);
+		}
+		return nb_frames;
+	}
+
+	virtual int64_t frame_number() const override
+	{
+		return frame_number_;
+	}
+
+	virtual int64_t file_frame_number() const override
+	{
+		return file_frame_number_;
 	}
 
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
@@ -195,22 +225,7 @@ public:
 	}
 
 	// ffmpeg_producer
-
-	int64_t file_nb_frames() const
-	{
-		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
-
-		int64_t nb_frames = input_.nb_frames();
-		if(input_.nb_loops() < 1) // input still hasn't counted all frames
-		{
-			auto video_nb_frames = video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
-			//auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
-
-			nb_frames = std::max(nb_frames, video_nb_frames);
-		}
-		return nb_frames;
-	}
-				
+					
 	std::wstring do_call(const std::wstring& param)
 	{
 		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)", boost::regex::icase);
@@ -250,15 +265,21 @@ public:
 		tbb::parallel_invoke(
 		[&]
 		{
-			if(!muxer_->video_ready() && video_decoder_)			
-				video = video_decoder_->poll();			
+			if(!muxer_->video_ready() && video_decoder_)	
+			{
+				video = video_decoder_->poll();	
+				file_frame_number_ = video_decoder_->file_frame_number();
+			}
 		},
 		[&]
 		{		
-			if(!muxer_->audio_ready() && audio_decoder_)			
-				audio = audio_decoder_->poll();			
+			if(!muxer_->audio_ready() && audio_decoder_)		
+			{
+				audio = audio_decoder_->poll();		
+				file_frame_number_ = video_decoder_->file_frame_number();
+			}	
 		});
-
+		
 		muxer_->push(video, hints);
 		muxer_->push(audio);
 

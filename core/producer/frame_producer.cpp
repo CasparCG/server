@@ -98,6 +98,9 @@ public:
 	virtual safe_ptr<frame_producer>			get_following_producer() const override									{return (*producer_)->get_following_producer();}
 	virtual void								set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(*producer_)->set_leading_producer(producer);}
 	virtual int64_t								nb_frames() const override												{return (*producer_)->nb_frames();}
+	virtual int64_t								file_nb_frames() const override											{return (*producer_)->file_nb_frames();}
+	virtual int64_t								frame_number() const override											{return (*producer_)->frame_number();}
+	virtual int64_t								file_frame_number() const override										{return (*producer_)->file_frame_number();}
 };
 
 safe_ptr<core::frame_producer> create_destroy_proxy(safe_ptr<core::frame_producer>&& producer)
