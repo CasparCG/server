@@ -48,7 +48,8 @@ public:
 	std::shared_ptr<core::audio_buffer> poll();
 
 	int64_t nb_frames() const;
-
+	
+	size_t file_frame_number() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

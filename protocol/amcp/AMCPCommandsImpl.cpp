@@ -808,12 +808,14 @@ bool StatusCommand::DoExecute()
 		status_text
 			<< L"201 STATUS OK\r\n"
 			<< L"<layer>"
-			<< L"\n\t<index>"			<< GetLayerIndex() << L"</index>"
-			<< L"\n\t<foreground>"		<< status.foreground << L"</foreground>"
-			<< L"\n\t<background>"		<< status.background << L"</background>"
-			<< L"\n\t<status>"			<< (status.is_paused ? L"paused" : L"playing") << L"</status>"
-			<< L"\n\t<total-frames>"	<< (status.total_frames == std::numeric_limits<int64_t>::max() ? 0 : status.total_frames) << L"</total-frames>"
-			<< L"\n\t<current-frame>"	<< status.current_frame << L"</current-frame>"
+			<< L"\n\t<index>"				<< GetLayerIndex() << L"</index>"
+			<< L"\n\t<foreground>"			<< status.foreground << L"</foreground>"
+			<< L"\n\t<background>"			<< status.background << L"</background>"
+			<< L"\n\t<status>"				<< (status.is_paused ? L"paused" : L"playing") << L"</status>"
+			<< L"\n\t<nb-frames>"			<< (status.nb_frames == std::numeric_limits<int64_t>::max() ? 0 : status.nb_frames) << L"</nb-frames>"
+			<< L"\n\t<frame-number>"		<< status.frame_number << L"</frame-number>"
+			<< L"\n\t<file-nb-frames>"		<< (status.file_nb_frames == std::numeric_limits<int64_t>::max() ? 0 : status.file_nb_frames) << L"</file-nb-frames>"
+			<< L"\n\t<file-frame-number>"	<< status.file_frame_number << L"</file-frame-number>"
 			<< L"\n</layer>"
 			<< L"\r\n";
 

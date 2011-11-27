@@ -60,6 +60,7 @@ struct audio_decoder::implementation : boost::noncopyable
 	std::queue<safe_ptr<AVPacket>>								packets_;
 
 	const int64_t												nb_frames_;
+	tbb::atomic<size_t>											file_frame_number_;
 public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
@@ -70,6 +71,7 @@ public:
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
 		, nb_frames_(context->streams[index_]->nb_frames)
 	{		
+		file_frame_number_ = 0;
 		CASPAR_LOG(debug) << "[audio_decoder] " << context->streams[index_]->codec->codec->long_name;	   
 	}
 
@@ -78,7 +80,7 @@ public:
 		if(!packet)
 			return;
 
-		if(packet->stream_index == index_ || packet == flush_packet())
+		if(packet->stream_index == index_ || packet->data == nullptr)
 			packets_.push(make_safe_ptr(packet));
 	}	
 	
@@ -89,9 +91,10 @@ public:
 				
 		auto packet = packets_.front();
 
-		if(packet == flush_packet())
+		if(packet->data == nullptr)
 		{
 			packets_.pop();
+			file_frame_number_ = static_cast<size_t>(packet->pos);
 			avcodec_flush_buffers(codec_context_.get());
 			return flush_audio();
 		}
@@ -122,6 +125,8 @@ public:
 		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
 		const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
 
+		++file_frame_number_;
+
 		return std::make_shared<core::audio_buffer>(samples, samples + n_samples);
 	}
 
@@ -136,5 +141,6 @@ void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(pa
 bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
 int64_t audio_decoder::nb_frames() const{return impl_->nb_frames_;}
+size_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 
 }}

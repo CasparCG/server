@@ -62,6 +62,8 @@ struct video_decoder::implementation : boost::noncopyable
 	const size_t							height_;
 	bool									is_progressive_;
 
+	tbb::atomic<size_t>						file_frame_number_;
+
 public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context) 
 		: codec_context_(open_codec(*context, AVMEDIA_TYPE_VIDEO, index_))
@@ -70,6 +72,7 @@ public:
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 	{
+		file_frame_number_ = 0;
 		CASPAR_LOG(debug) << "[video_decoder] " << context->streams[index_]->codec->codec->long_name;
 	}
 
@@ -78,7 +81,7 @@ public:
 		if(!packet)
 			return;
 
-		if(packet->stream_index == index_ || packet == flush_packet())
+		if(packet->stream_index == index_ || packet->data == nullptr)
 			packets_.push(make_safe_ptr(packet));
 	}
 
@@ -89,21 +92,17 @@ public:
 		
 		auto packet = packets_.front();
 					
-		if(packet == flush_packet())
+		if(packet->data == nullptr)
 		{			
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
-				AVPacket pkt;
-				av_init_packet(&pkt);
-				pkt.data = nullptr;
-				pkt.size = 0;
-
-				auto video = decode(pkt);
+				auto video = decode(*packet);
 				if(video)
 					return video;
 			}
-		
+					
 			packets_.pop();
+			file_frame_number_ = static_cast<size_t>(packet->pos);
 			avcodec_flush_buffers(codec_context_.get());
 			return flush_video();	
 		}
@@ -131,6 +130,8 @@ public:
 		if(decoded_frame->repeat_pict > 0)
 			CASPAR_LOG(warning) << "[video_decoder] Field repeat_pict not implemented.";
 		
+		++file_frame_number_;
+
 		return decoded_frame;
 	}
 	
@@ -154,5 +155,6 @@ int64_t video_decoder::nb_frames() const{return impl_->nb_frames_;}
 size_t video_decoder::width() const{return impl_->width_;}
 size_t video_decoder::height() const{return impl_->height_;}
 bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}
+size_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 
 }}

@@ -100,6 +100,21 @@ struct transition_producer : public frame_producer
 	{
 		return get_following_producer()->nb_frames();
 	}
+	
+	virtual int64_t file_nb_frames() const override
+	{
+		return get_following_producer()->file_nb_frames();
+	}
+	
+	virtual int64_t frame_number() const override
+	{
+		return get_following_producer()->frame_number();
+	}
+	
+	virtual int64_t file_frame_number() const override
+	{
+		return get_following_producer()->file_frame_number();
+	}
 
 	virtual std::wstring print() const override
 	{
