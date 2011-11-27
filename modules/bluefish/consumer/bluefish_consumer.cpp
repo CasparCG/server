@@ -157,8 +157,6 @@ public:
 		{
 			return std::make_shared<blue_dma_buffer>(format_desc_.size, n++);
 		});
-								
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
 	~bluefish_consumer()
@@ -175,8 +173,6 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-		
-		CASPAR_LOG(info) << print() << L" Shutting down.";	
 	}
 	
 	void enable_video_output()
@@ -306,12 +302,23 @@ public:
 		, key_only_(key_only)
 	{
 	}
+	
+	~bluefish_consumer_proxy()
+	{
+		if(consumer_)
+		{
+			auto str = print();
+			consumer_.reset();
+			CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
+		}
+	}
 
 	// frame_consumer
 	
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
 	{
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index, sub_index));
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -322,7 +329,7 @@ public:
 		
 	virtual std::wstring print() const override
 	{
-		return consumer_->print();
+		return consumer_ ? consumer_->print() : L"[bluefish_consumer]";
 	}
 
 	size_t buffer_depth() const override

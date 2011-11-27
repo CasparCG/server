@@ -76,7 +76,8 @@ public:
 		Stop();
 		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
 		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
-		CASPAR_LOG(info) << print() << L" Shutting down.";	
+
+		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
 
 	// frame consumer
@@ -91,7 +92,7 @@ public:
 			sf::SoundStream::Initialize(2, 48000);
 			Play();		
 		}
-		CASPAR_LOG(info) << print() << " Sucessfully initialized.";
+		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
