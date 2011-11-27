@@ -305,7 +305,12 @@ void fix_meta_data(AVFormatContext& context)
 	else
 	{
 		if(video_stream.nb_frames == 0)
+			video_stream.nb_frames = (video_stream.duration*video_stream.time_base.num)/video_stream.time_base.den;
+		
+		if(video_stream.nb_frames == 0)
 			video_stream.nb_frames = video_stream.duration;
+
+		video_context.time_base.num *= video_context.ticks_per_frame;
 
 		if(!is_sane_fps(video_context.time_base))
 		{			
@@ -323,25 +328,25 @@ void fix_meta_data(AVFormatContext& context)
 			}
 		}
 
-		if(audio_index > -1) // Check for invalid double frame-rate
-		{
-			auto& audio_context		= *context.streams[audio_index]->codec;
-			auto& audio_stream		= *context.streams[audio_index];
+		//if(audio_index > -1) // Check for invalid double frame-rate
+		//{
+		//	auto& audio_context		= *context.streams[audio_index]->codec;
+		//	auto& audio_stream		= *context.streams[audio_index];
+		//	
+		//	double duration_sec		= audio_stream.duration / static_cast<double>(audio_context.sample_rate);
+		//	double fps				= static_cast<double>(video_context.time_base.den) / static_cast<double>(video_context.time_base.num);
 
-			double duration_sec		= audio_stream.duration / static_cast<double>(audio_context.sample_rate);
-			double fps				= static_cast<double>(video_context.time_base.den) / static_cast<double>(video_context.time_base.num);
-
-			double fps_nb_frames	= static_cast<double>(duration_sec*fps);
-			double stream_nb_frames = static_cast<double>(video_stream.nb_frames);
-			double diff				= std::abs(fps_nb_frames - stream_nb_frames*2.0);
-			if(diff < fps_nb_frames*0.05)
-				video_context.time_base.num *= 2;
-		}
-		else
-		{
-			video_context.time_base.den = video_stream.r_frame_rate.num;
-			video_context.time_base.num = video_stream.r_frame_rate.den;
-		}
+		//	double fps_nb_frames	= static_cast<double>(duration_sec*fps);
+		//	double stream_nb_frames = static_cast<double>(video_stream.nb_frames);
+		//	double diff				= std::abs(fps_nb_frames - stream_nb_frames*2.0);
+		//	if(diff < fps_nb_frames*0.05)
+		//		video_context.time_base.num *= 2;
+		//}
+		//else
+		//{
+		//	video_context.time_base.den = video_stream.r_frame_rate.num;
+		//	video_context.time_base.num = video_stream.r_frame_rate.den;
+		//}
 	}
 
 	double fps = static_cast<double>(video_context.time_base.den) / static_cast<double>(video_context.time_base.num);
