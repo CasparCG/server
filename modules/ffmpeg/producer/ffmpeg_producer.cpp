@@ -133,13 +133,13 @@ public:
 	{		
 		frame_timer_.restart();
 		
-		for(int n = 0; n < 32 && frame_buffer_.size() < 2; ++n)
+		for(int n = 0; n < 16 && frame_buffer_.size() < 2; ++n)
 			try_decode_frame(hints);
 		
 		graph_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 				
 		if(frame_buffer_.empty() && input_.eof())
-			return core::basic_frame::eof();
+			return last_frame();
 
 		if(frame_buffer_.empty())
 		{
@@ -206,8 +206,8 @@ public:
 				
 	std::wstring do_call(const std::wstring& param)
 	{
-		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)");
-		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)");
+		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)", boost::regex::icase);
+		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
 		
 		boost::wsmatch what;
 		if(boost::regex_match(param, what, loop_exp))

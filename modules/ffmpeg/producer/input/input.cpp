@@ -86,6 +86,7 @@ struct input::implementation : boost::noncopyable
 
 	boost::thread												thread_;
 	tbb::atomic<bool>											is_running_;
+	tbb::atomic<bool>											is_eof_;
 
 	tbb::recursive_mutex										mutex_;
 
@@ -98,6 +99,7 @@ struct input::implementation : boost::noncopyable
 		, length_(length)
 		, frame_number_(0)
 	{		
+		is_eof_			= false;
 		loop_			= loop;
 		buffer_size_	= 0;
 		nb_frames_		= 0;
@@ -183,19 +185,15 @@ struct input::implementation : boost::noncopyable
 		if(is_eof(ret))														     
 		{
 			++nb_loops_;
-			frame_number_ = 0;
+			frame_number_	= 0;
+			is_eof_			= true;
 
 			if(loop_)
 			{
 				do_seek(start_);
 				graph_->add_tag("seek");		
 				CASPAR_LOG(debug) << print() << " Looping.";			
-			}	
-			else
-			{
-				is_running_ = false;
-				CASPAR_LOG(debug) << print() << " Stopping.";
-			}
+			}					
 		}
 		else
 		{		
@@ -230,7 +228,7 @@ struct input::implementation : boost::noncopyable
 
 	bool full() const
 	{
-		return is_running_ && (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT;
+		return is_running_ && (is_eof_ || (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT);
 	}
 	
 	void do_seek(int64_t target)
@@ -256,6 +254,9 @@ struct input::implementation : boost::noncopyable
 		target = (target * fixed_time_base.num) / fixed_time_base.den;
 
 		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), target, std::numeric_limits<int64_t>::max(), 0), print());		
+
+		is_eof_ = false;
+		buffer_cond_.notify_all();
 
 		buffer_.push(flush_packet());
 	}	
@@ -290,7 +291,7 @@ struct input::implementation : boost::noncopyable
 
 input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
 	: impl_(new implementation(graph, filename, loop, start, length)){}
-bool input::eof() const {return !impl_->is_running_;}
+bool input::eof() const {return impl_->is_eof_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 size_t input::nb_frames() const {return impl_->nb_frames_;}
