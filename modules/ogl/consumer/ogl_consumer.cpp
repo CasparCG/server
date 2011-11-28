@@ -214,7 +214,7 @@ public:
 		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 
-		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
+		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
 
 	void uninit()
@@ -227,8 +227,6 @@ public:
 			if(pbo)
 				glDeleteBuffers(1, &pbo);
 		}
-
-		CASPAR_LOG(info) << print() << " Sucessfully Uninitialized.";
 	}
 
 	void run()
