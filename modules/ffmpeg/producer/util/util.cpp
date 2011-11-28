@@ -359,8 +359,7 @@ void fix_meta_data(AVFormatContext& context)
 		}
 		else
 		{
-			video_stream->nb_frames = (video_stream->duration*video_stream->time_base.num*video_context->time_base.den)/(video_stream->time_base.den*video_context->time_base.num*video_context->ticks_per_frame);		
-		}
+			video_stream->nb_frames = (video_stream->duration*video_stream->time_base.num*video_context->time_base.den)/(video_stream->time_base.den*video_context->time_base.num*video_context->ticks_per_frame);		}
 	}
 }
 
