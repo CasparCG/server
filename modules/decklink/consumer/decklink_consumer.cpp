@@ -59,7 +59,7 @@ struct configuration
 		: device_index(1)
 		, embedded_audio(false)
 		, internal_key(false)
-		, low_latency(true)
+		, low_latency(false)
 		, key_only(false)
 		, base_buffer_depth(3)
 		, buffer_depth(base_buffer_depth + (low_latency ? 0 : 1) + (embedded_audio ? 1 : 0)){}

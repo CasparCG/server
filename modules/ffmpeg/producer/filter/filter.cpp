@@ -55,6 +55,7 @@ struct filter::implementation
 			pix_fmts_.push_back(PIX_FMT_YUV422P);
 			pix_fmts_.push_back(PIX_FMT_YUV420P);
 			pix_fmts_.push_back(PIX_FMT_YUV411P);
+			pix_fmts_.push_back(PIX_FMT_BGRA);
 			pix_fmts_.push_back(PIX_FMT_ARGB);
 			pix_fmts_.push_back(PIX_FMT_RGBA);
 			pix_fmts_.push_back(PIX_FMT_ABGR);
