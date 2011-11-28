@@ -4,6 +4,6 @@
 
 namespace caspar { namespace flash {
 
-std::wstring read_swf_meta_info(const std::wstring& filename);
+std::wstring read_template_meta_info(const std::wstring& filename);
 
 }}
