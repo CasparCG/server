@@ -81,9 +81,6 @@ struct input::implementation : boost::noncopyable
 	boost::condition_variable									buffer_cond_;
 	boost::mutex												buffer_mutex_;
 		
-	tbb::atomic<size_t>											nb_frames_;
-	tbb::atomic<size_t>											nb_loops_;
-
 	boost::thread												thread_;
 	tbb::atomic<bool>											is_running_;
 	tbb::atomic<bool>											is_eof_;
@@ -102,12 +99,6 @@ struct input::implementation : boost::noncopyable
 		is_eof_			= false;
 		loop_			= loop;
 		buffer_size_	= 0;
-		nb_frames_		= 0;
-		nb_loops_		= 0;
-
-		buffer_size_	= 0;
-		nb_frames_		= 0;
-		nb_loops_		= 0;
 
 		if(start_ > 0)			
 			do_seek(start_);
@@ -153,8 +144,6 @@ struct input::implementation : boost::noncopyable
 		try
 		{
 			CASPAR_LOG(info) << print() << " Thread Started.";
-			
-			CASPAR_ASSERT(nb_frames_ < 1000);
 
 			while(is_running_)
 			{
@@ -184,7 +173,6 @@ struct input::implementation : boost::noncopyable
 		
 		if(is_eof(ret))														     
 		{
-			++nb_loops_;
 			frame_number_	= 0;
 			is_eof_			= true;
 
@@ -200,11 +188,7 @@ struct input::implementation : boost::noncopyable
 			THROW_ON_ERROR(ret, "av_read_frame", print());
 
 			if(packet->stream_index == default_stream_index_)
-			{
-				if(nb_loops_ == 0)
-					++nb_frames_;
 				++frame_number_;
-			}
 
 			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
 				
@@ -248,12 +232,10 @@ struct input::implementation : boost::noncopyable
 			}
 		}
 		
-		auto time_base = format_context_->streams[default_stream_index_]->time_base;
-		auto fixed_target = (target*time_base.den)/time_base.num;
-		auto fixed_time_base = fix_time_base(time_base);
-		fixed_target = (fixed_target * fixed_time_base.num) / fixed_time_base.den;
-		fixed_target = fixed_target * format_context_->streams[default_stream_index_]->codec->ticks_per_frame;
-
+		auto stream = format_context_->streams[default_stream_index_];
+		auto codec  = stream->codec;
+		auto fixed_target = (target*stream->time_base.den*codec->time_base.num)/(stream->time_base.num*codec->time_base.den);
+		
 		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, std::numeric_limits<int64_t>::max(), 0), print());		
 
 		is_eof_ = false;
@@ -282,9 +264,9 @@ struct input::implementation : boost::noncopyable
 	bool is_eof(int ret)
 	{
 		if(ret == AVERROR(EIO))
-			CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. " << nb_frames_;
+			CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. ";
 		if(ret == AVERROR_EOF)
-			CASPAR_LOG(debug) << print() << " Received EOF. " << nb_frames_;
+			CASPAR_LOG(debug) << print() << " Received EOF. ";
 
 		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
@@ -300,8 +282,6 @@ input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& file
 bool input::eof() const {return impl_->is_eof_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
-size_t input::nb_frames() const {return impl_->nb_frames_;}
-size_t input::nb_loops() const {return impl_->nb_loops_;}
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}
 void input::seek(int64_t target){impl_->seek(target);}

@@ -48,7 +48,6 @@ public:
 	size_t	width()		const;
 	size_t	height()	const;
 	int64_t nb_frames() const;
-	double	fps()		const;
 	bool	is_progressive() const;
 
 	size_t file_frame_number() const;

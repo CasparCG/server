@@ -48,9 +48,6 @@ public:
 	bool try_pop(std::shared_ptr<AVPacket>& packet);
 	bool eof() const;
 
-	size_t nb_frames() const;
-	size_t nb_loops() const;
-
 	void loop(bool value);
 	bool loop() const;
 

@@ -57,6 +57,6 @@ safe_ptr<AVFormatContext> open_input(const std::wstring& filename);
 bool is_sane_fps(AVRational time_base);
 AVRational fix_time_base(AVRational time_base);
 
-//void av_dup_frame(AVFrame* frame);
+double read_fps(AVFormatContext& context, double fail_value);
 
 }}
