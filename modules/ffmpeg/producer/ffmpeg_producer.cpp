@@ -73,6 +73,7 @@ struct ffmpeg_producer : public core::frame_producer
 	std::unique_ptr<audio_decoder>								audio_decoder_;	
 	std::unique_ptr<frame_muxer>								muxer_;
 
+	const double												fps_;
 	const int													start_;
 	const bool													loop_;
 	const size_t												length_;
@@ -90,6 +91,7 @@ public:
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
 		, input_(graph_, filename_, loop, start, length)
+		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
 		, loop_(loop)
 		, length_(length)
@@ -132,7 +134,7 @@ public:
 		if(!video_decoder_ && !audio_decoder_)
 			BOOST_THROW_EXCEPTION(averror_stream_not_found() << msg_info("No streams found"));
 
-		muxer_.reset(new frame_muxer(video_decoder_ ? video_decoder_->fps() : frame_factory->get_video_format_desc().fps, frame_factory, filter));
+		muxer_.reset(new frame_muxer(fps_, frame_factory, filter));
 	}
 
 	// frame_producer
@@ -186,17 +188,7 @@ public:
 
 	virtual int64_t file_nb_frames() const override
 	{
-		// This function estimates nb_frames until input has read all packets for one loop, at which point the count should be accurate.
-
-		int64_t nb_frames = input_.nb_frames();
-		if(input_.nb_loops() < 1) // input still hasn't counted all frames
-		{
-			auto video_nb_frames = video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
-			//auto audio_nb_frames = audio_decoder_ ? audio_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
-
-			nb_frames = std::max(nb_frames, video_nb_frames);
-		}
-		return nb_frames;
+		return video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
 	}
 
 	virtual int64_t frame_number() const override
@@ -221,7 +213,7 @@ public:
 		if(video_decoder_)
 		{
 			std::wostringstream fps_ss;
-			fps_ss << std::fixed << std::setprecision(2) << (video_decoder_->is_progressive() ? video_decoder_->fps() : 2.0 * video_decoder_->fps());
+			fps_ss << std::fixed << std::setprecision(2) << (video_decoder_->is_progressive() ? fps_ : 2.0 * fps_);
 
 			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
 							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
@@ -303,7 +295,7 @@ public:
 		
 		size_t file_frame_number = 0;
 		file_frame_number = std::max(file_frame_number, video_decoder_ ? video_decoder_->file_frame_number() : 0);
-		file_frame_number = std::max(file_frame_number, audio_decoder_ ? audio_decoder_->file_frame_number() : 0);
+		//file_frame_number = std::max(file_frame_number, audio_decoder_ ? audio_decoder_->file_frame_number() : 0);
 
 		for(auto frame = muxer_->poll(); frame; frame = muxer_->poll())
 			frame_buffer_.push(std::make_pair(make_safe_ptr(frame), file_frame_number));

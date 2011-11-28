@@ -273,74 +273,52 @@ AVRational fix_time_base(AVRational time_base)
 	return time_base;
 }
 
-void fix_meta_data(AVFormatContext& context)
-{
+double read_fps(AVFormatContext& context, double fail_value)
+{						
 	auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
 	auto audio_index = av_find_best_stream(&context, AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0);
-
+	
 	if(video_index > -1)
 	{
-		auto video_context = context.streams[video_index]->codec;
-		auto video_stream  = context.streams[video_index];
+		const auto video_context = context.streams[video_index]->codec;
+		const auto video_stream  = context.streams[video_index];
 						
+		AVRational time_base = video_context->time_base;
+
 		if(boost::filesystem2::path(context.filename).extension() == ".flv")
 		{
 			try
 			{
 				auto meta = read_flv_meta_info(context.filename);
-				double fps = boost::lexical_cast<double>(meta["framerate"]);
-				video_context->time_base.num = 1000000;
-				video_context->time_base.den = static_cast<int>(fps*1000000.0);
-				video_stream->nb_frames = static_cast<int64_t>(boost::lexical_cast<double>(meta["duration"])*fps);
+				return boost::lexical_cast<double>(meta["framerate"]);
 			}
-			catch(...){}
+			catch(...)
+			{
+				return 0.0;
+			}
 		}
 		else
 		{
-			video_context->time_base.num *= video_context->ticks_per_frame;
+			time_base.num *= video_context->ticks_per_frame;
 
-			if(!is_sane_fps(video_context->time_base))
+			if(!is_sane_fps(time_base))
 			{			
-				video_context->time_base = fix_time_base(video_context->time_base);
+				time_base = fix_time_base(time_base);
 
-				if(!is_sane_fps(video_context->time_base) && audio_index > -1)
+				if(!is_sane_fps(time_base) && audio_index > -1)
 				{
 					auto& audio_context = *context.streams[audio_index]->codec;
 					auto& audio_stream  = *context.streams[audio_index];
 
 					double duration_sec = audio_stream.duration / static_cast<double>(audio_context.sample_rate);
 								
-					video_context->time_base.num = static_cast<int>(duration_sec*100000.0);
-					video_context->time_base.den = static_cast<int>(video_stream->nb_frames*100000);
+					time_base.num = static_cast<int>(duration_sec*100000.0);
+					time_base.den = static_cast<int>(video_stream->nb_frames*100000);
 				}
 			}
-				
-			//if(audio_index > -1) // Check for invalid double frame-rate
-			//{
-			//	auto& audio_context		= *context.streams[audio_index]->codec;
-			//	auto& audio_stream		= *context.streams[audio_index];
-			//	
-			//	double duration_sec		= audio_stream.duration / static_cast<double>(audio_context.sample_rate);
-			//	double fps				= static_cast<double>(video_context->time_base.den) / static_cast<double>(video_context->time_base.num);
-
-			//	double fps_nb_frames	= static_cast<double>(duration_sec*fps);
-			//	double stream_nb_frames = static_cast<double>(video_stream->nb_frames);
-			//	double diff				= std::abs(fps_nb_frames - stream_nb_frames*2.0);
-			//	if(diff < fps_nb_frames*0.05)
-			//		video_context->time_base.num *= 2;
-			//}
-			//else
-			//{
-			//	video_context->time_base.den = video_stream->r_frame_rate.num;
-			//	video_context->time_base.num = video_stream->r_frame_rate.den;
-			//}
 		}
-
-		auto nb_frames = static_cast<double>(video_stream->duration*video_stream->time_base.num)/static_cast<double>(video_stream->time_base.den);
-		nb_frames = (nb_frames*video_context->time_base.den)/video_context->time_base.num;
-		video_stream->nb_frames = static_cast<int64_t>(nb_frames+0.5);
-
-		double fps = static_cast<double>(video_context->time_base.den) / static_cast<double>(video_context->time_base.num);
+		
+		double fps = static_cast<double>(time_base.den) / static_cast<double>(time_base.num);
 
 		double closest_fps = 0.0;
 		for(int n = 0; n < core::video_format::count; ++n)
@@ -354,8 +332,35 @@ void fix_meta_data(AVFormatContext& context)
 				closest_fps = format.fps;
 		}
 	
-		video_context->time_base.num = 1000000;
-		video_context->time_base.den = static_cast<int>(closest_fps*1000000.0);
+		return closest_fps;
+	}
+
+	return fail_value;	
+}
+
+void fix_meta_data(AVFormatContext& context)
+{
+	auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+
+	if(video_index > -1)
+	{
+		auto video_stream   = context.streams[video_index];
+		auto video_context  = context.streams[video_index]->codec;
+						
+		if(boost::filesystem2::path(context.filename).extension() == ".flv")
+		{
+			try
+			{
+				auto meta = read_flv_meta_info(context.filename);
+				double fps = boost::lexical_cast<double>(meta["framerate"]);
+				video_stream->nb_frames = static_cast<int64_t>(boost::lexical_cast<double>(meta["duration"])*fps);
+			}
+			catch(...){}
+		}
+		else
+		{
+			video_stream->nb_frames = (video_stream->duration*video_stream->time_base.num*video_context->time_base.den)/(video_stream->time_base.den*video_context->time_base.num*video_context->ticks_per_frame);		
+		}
 	}
 }
 
