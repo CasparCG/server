@@ -10,6 +10,9 @@
     <Filter Include="source\interop">
       <UniqueIdentifier>{bd73f842-a8f5-4d98-92cf-81c623283dde}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\util">
+      <UniqueIdentifier>{74e59dfb-eba8-4169-ae40-4b6ac7bcbe3d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="interop\Flash9e.IDL">
@@ -33,6 +36,9 @@
     <ClCompile Include="flash.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="util\swf.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="interop\TimerHelper.h">
@@ -53,6 +59,9 @@
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="flash.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="util\swf.h">
+      <Filter>source\util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
