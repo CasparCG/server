@@ -1327,7 +1327,7 @@ bool InfoCommand::DoExecute()
 
 			std::wstringstream ss;
 			ss << L"201 INFO OK\r\n";
-			ss << flash::read_swf_meta_info(filename) << L"\r\n";
+			ss << flash::read_template_meta_info(filename) << L"\r\n";
 
 			SetReplyString(ss.str());
 			return true;

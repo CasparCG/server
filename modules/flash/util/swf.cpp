@@ -29,7 +29,7 @@ std::vector<char> decompress_one_file(const std::vector<char>& in_data, uLong bu
 	return out_data;
 }
 
-std::wstring read_swf_meta_info(const std::wstring& filename)
+std::wstring read_template_meta_info(const std::wstring& filename)
 {
 	auto file = std::fstream(filename, std::ios::in | std::ios::binary);
 
