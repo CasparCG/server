@@ -73,7 +73,7 @@ void thread_init(AVCodecContext* s)
 	s->thread_opaque	  = &dummy_opaque; 
     s->execute			  = thread_execute;
     s->execute2			  = thread_execute2;
-    s->thread_count		  = tbb::tbb_thread::hardware_concurrency(); // MAX_THREADS; // We are using a task-scheduler, so use as many "threads/tasks" as possible. 
+    s->thread_count		  = MAX_THREADS;//tbb::tbb_thread::hardware_concurrency(); // MAX_THREADS; // We are using a task-scheduler, so use as many "threads/tasks" as possible. 
 
 	CASPAR_LOG(info) << "Initialized ffmpeg tbb context.";
 }
@@ -90,7 +90,7 @@ void thread_free(AVCodecContext* s)
 
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 {
-	CodecID supported_codecs[] = {CODEC_ID_MPEG2VIDEO, CODEC_ID_PRORES};
+	CodecID supported_codecs[] = {CODEC_ID_MPEG2VIDEO, CODEC_ID_PRORES, CODEC_ID_FFV1};
 
 	avctx->thread_count = 1;
 	// Some codecs don't like to have multiple multithreaded decoding instances. Only enable for those we know work.

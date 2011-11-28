@@ -69,7 +69,7 @@ public:
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
-		, nb_frames_(context->streams[index_]->nb_frames)
+		, nb_frames_(0)//context->streams[index_]->nb_frames)
 	{		
 		file_frame_number_ = 0;
 		CASPAR_LOG(debug) << "[audio_decoder] " << context->streams[index_]->codec->codec->long_name;	   
@@ -134,13 +134,18 @@ public:
 	{
 		return packets_.size() > 10;
 	}
+
+	int64_t nb_frames() const
+	{
+		return std::max<int64_t>(nb_frames_, file_frame_number_);
+	}
 };
 
 audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
-int64_t audio_decoder::nb_frames() const{return impl_->nb_frames_;}
+int64_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
 size_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 
 }}
