@@ -58,31 +58,31 @@ namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer
 {
-	const std::wstring								filename_;
+	const std::wstring											filename_;
 	
-	const safe_ptr<diagnostics::graph>				graph_;
-	boost::timer									frame_timer_;
-	boost::timer									video_timer_;
-	boost::timer									audio_timer_;
+	const safe_ptr<diagnostics::graph>							graph_;
+	boost::timer												frame_timer_;
+	boost::timer												video_timer_;
+	boost::timer												audio_timer_;
 					
-	const safe_ptr<core::frame_factory>				frame_factory_;
-	const core::video_format_desc					format_desc_;
+	const safe_ptr<core::frame_factory>							frame_factory_;
+	const core::video_format_desc								format_desc_;
 
-	input											input_;	
-	std::unique_ptr<video_decoder>					video_decoder_;
-	std::unique_ptr<audio_decoder>					audio_decoder_;	
-	std::unique_ptr<frame_muxer>					muxer_;
+	input														input_;	
+	std::unique_ptr<video_decoder>								video_decoder_;
+	std::unique_ptr<audio_decoder>								audio_decoder_;	
+	std::unique_ptr<frame_muxer>								muxer_;
 
-	const int										start_;
-	const bool										loop_;
-	const size_t									length_;
+	const int													start_;
+	const bool													loop_;
+	const size_t												length_;
 
-	safe_ptr<core::basic_frame>						last_frame_;
+	safe_ptr<core::basic_frame>									last_frame_;
 	
-	std::queue<safe_ptr<core::basic_frame>>			frame_buffer_;
+	std::queue<std::pair<safe_ptr<core::basic_frame>, size_t>>	frame_buffer_;
 
-	int64_t											frame_number_;
-	int64_t											file_frame_number_;;
+	int64_t														frame_number_;
+	int64_t														file_frame_number_;;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, size_t length) 
@@ -155,13 +155,15 @@ public:
 			return core::basic_frame::late();			
 		}
 		
-		last_frame_ = frame_buffer_.front();	
+		auto frame = frame_buffer_.front(); 
 		frame_buffer_.pop();
+		
+		++frame_number_;
+		file_frame_number_ = frame.second;
 
 		graph_->set_text(print());
 
-		++frame_number_;
-		return last_frame_;
+		return last_frame_ = frame.first;
 	}
 
 	virtual safe_ptr<core::basic_frame> last_frame() const override
@@ -204,7 +206,7 @@ public:
 
 	virtual int64_t file_frame_number() const override
 	{
-		return std::max<int64_t>(0, file_frame_number_-frame_buffer_.size()+1);
+		return file_frame_number_;
 	}
 
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
@@ -272,18 +274,12 @@ public:
 		[&]
 		{
 			if(!muxer_->video_ready() && video_decoder_)	
-			{
 				video = video_decoder_->poll();	
-				file_frame_number_ = video_decoder_->file_frame_number();
-			}
 		},
 		[&]
 		{		
 			if(!muxer_->audio_ready() && audio_decoder_)		
-			{
 				audio = audio_decoder_->poll();		
-				file_frame_number_ = video_decoder_->file_frame_number();
-			}	
 		});
 		
 		muxer_->push(video, hints);
@@ -305,8 +301,12 @@ public:
 				muxer_->push(empty_video(), 0);
 		}
 		
+		size_t file_frame_number = 0;
+		file_frame_number = std::max(file_frame_number, video_decoder_ ? video_decoder_->file_frame_number() : 0);
+		file_frame_number = std::max(file_frame_number, audio_decoder_ ? audio_decoder_->file_frame_number() : 0);
+
 		for(auto frame = muxer_->poll(); frame; frame = muxer_->poll())
-			frame_buffer_.push(make_safe_ptr(frame));
+			frame_buffer_.push(std::make_pair(make_safe_ptr(frame), file_frame_number));
 	}
 };
 
