@@ -42,6 +42,7 @@
 #include <core/consumer/output.h>
 
 #include <modules/flash/flash.h>
+#include <modules/flash/util/swf.h>
 #include <modules/flash/producer/flash_producer.h>
 #include <modules/flash/producer/cg_producer.h>
 
@@ -1316,31 +1317,54 @@ void GenerateChannelInfo(int index, const safe_ptr<core::video_channel>& pChanne
 
 bool InfoCommand::DoExecute()
 {
-	try
-	{
-		std::wstringstream replyString;
-		if(_parameters.size() >= 1)
+	if(_parameters.size() >= 1 && _parameters[0] == L"TEMPLATE")
+	{		
+		try
 		{
-			int channelIndex = _ttoi(_parameters.at(0).c_str())-1;
-			replyString << TEXT("201 INFO OK\r\n");
-			GenerateChannelInfo(channelIndex, channels_.at(channelIndex), replyString);
-		}
-		else
-		{
-			replyString << TEXT("200 INFO OK\r\n");
-			for(size_t n = 0; n < channels_.size(); ++n)
-				GenerateChannelInfo(n, channels_[n], replyString);
-			replyString << TEXT("\r\n");
-		}
-		SetReplyString(replyString.str());
-	}
-	catch(...)
-	{
-		SetReplyString(TEXT("401 INFO ERROR\r\n"));
-		return false;
-	}
+			// Needs to be extended for any file, not just flash.
 
-	return true;
+			auto filename = flash::find_template(env::template_folder() + _parameters.at(1));
+
+			std::wstringstream ss;
+			ss << flash::read_swf_meta_info(filename) << L"\r\n";
+			ss << L"201 INFO OK\r\n";
+
+			SetReplyString(ss.str());
+			return true;
+		}
+		catch(...)
+		{
+			SetReplyString(TEXT("403 INFO ERROR\r\n"));
+			return false;
+		}
+	}
+	else // channel
+	{
+		try
+		{
+			std::wstringstream replyString;
+			if(_parameters.size() >= 1)
+			{
+				int channelIndex = boost::lexical_cast<int>(_parameters.at(0).c_str())-1;
+				replyString << TEXT("201 INFO OK\r\n");
+				GenerateChannelInfo(channelIndex, channels_.at(channelIndex), replyString);
+			}
+			else
+			{
+				replyString << TEXT("200 INFO OK\r\n");
+				for(size_t n = 0; n < channels_.size(); ++n)
+					GenerateChannelInfo(n, channels_[n], replyString);
+				replyString << TEXT("\r\n");
+			}
+			SetReplyString(replyString.str());
+			return true;
+		}
+		catch(...)
+		{
+			SetReplyString(TEXT("403 INFO ERROR\r\n"));
+			return false;
+		}
+	}
 }
 
 bool ClsCommand::DoExecute()
