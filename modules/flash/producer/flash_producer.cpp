@@ -453,6 +453,9 @@ std::wstring find_template(const std::wstring& template_name)
 	
 	if(boost::filesystem::exists(template_name + L".ct"))
 		return template_name + L".ct";
+	
+	if(boost::filesystem::exists(template_name + L".swf"))
+		return template_name + L".swf";
 
 	return L"";
 }
