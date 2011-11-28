@@ -1326,8 +1326,8 @@ bool InfoCommand::DoExecute()
 			auto filename = flash::find_template(env::template_folder() + _parameters.at(1));
 
 			std::wstringstream ss;
-			ss << flash::read_swf_meta_info(filename) << L"\r\n";
 			ss << L"201 INFO OK\r\n";
+			ss << flash::read_swf_meta_info(filename) << L"\r\n";
 
 			SetReplyString(ss.str());
 			return true;
