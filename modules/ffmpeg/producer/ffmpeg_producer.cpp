@@ -188,7 +188,10 @@ public:
 
 	virtual int64_t file_nb_frames() const override
 	{
-		return video_decoder_ ? video_decoder_->nb_frames() : std::numeric_limits<int64_t>::max();
+		int64_t file_nb_frames = 0;
+		file_nb_frames = std::max(file_nb_frames, video_decoder_ ? video_decoder_->nb_frames() : 0);
+		file_nb_frames = std::max(file_nb_frames, audio_decoder_ ? audio_decoder_->nb_frames() : 0);
+		return file_nb_frames;
 	}
 
 	virtual int64_t frame_number() const override

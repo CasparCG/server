@@ -137,13 +137,18 @@ public:
 	{
 		return packets_.size() > 10;
 	}
+
+	int64_t nb_frames() const
+	{
+		return std::max<int64_t>(nb_frames_, file_frame_number_);
+	}
 };
 
 video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context) : impl_(new implementation(context)){}
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}
-int64_t video_decoder::nb_frames() const{return impl_->nb_frames_;}
+int64_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 size_t video_decoder::width() const{return impl_->width_;}
 size_t video_decoder::height() const{return impl_->height_;}
 bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}
