@@ -251,7 +251,7 @@ struct input::implementation : boost::noncopyable
 		auto time_base = format_context_->streams[default_stream_index_]->time_base;
 		auto fixed_target = (target*time_base.den)/time_base.num;
 		auto fixed_time_base = fix_time_base(time_base);
-		fixed_target = (target * fixed_time_base.num) / fixed_time_base.den;
+		fixed_target = (fixed_target * fixed_time_base.num) / fixed_time_base.den;
 
 		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, std::numeric_limits<int64_t>::max(), 0), print());		
 
