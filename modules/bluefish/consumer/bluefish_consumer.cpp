@@ -148,10 +148,9 @@ public:
 		if(blue_->GetHDCardType(device_index_) != CRD_HD_INVALID) 
 			blue_->Set_DownConverterSignalType(vid_fmt_ == VID_FMT_PAL ? SD_SDI : HD_SDI);	
 	
-		//unsigned long engine_mode = VIDEO_ENGINE_FRAMESTORE;
-		//if(BLUE_FAIL(blue_->set_video_engine(engine_mode)))
-		//	BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set video engine."));
-
+		if(BLUE_FAIL(set_card_property(blue_, VIDEO_OUTPUT_ENGINE, VIDEO_ENGINE_FRAMESTORE))) 
+			CASPAR_LOG(warning) << print() << TEXT(" Failed to set video engine.");	
+		
 		enable_video_output();
 						
 		int n = 0;
