@@ -306,10 +306,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			
 		filter_ = filter(filter_str_);
 
-		CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_) 
-			<< L" " << frame.width << L"x" << frame.height 
-			<< (frame.interlaced_frame ? L"i" : L"p") 
-			<< (frame.interlaced_frame ? in_fps_*2 : in_fps_);
+		CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame.width, frame.height, in_fps_, frame.interlaced_frame > 0);
 	}
 
 	int64_t calc_nb_frames(int64_t nb_frames) const

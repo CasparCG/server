@@ -395,6 +395,14 @@ safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
 	fix_meta_data(*context);
 	return context;
 }
+
+std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced)
+{
+	std::wostringstream fps_ss;
+	fps_ss << std::fixed << std::setprecision(2) << (!interlaced ? fps : 2.0 * fps);
+
+	return boost::lexical_cast<std::wstring>(width) + L"x" + boost::lexical_cast<std::wstring>(height) + (!interlaced ? L"p" : L"i") + fps_ss.str();
+}
 //
 //void av_dup_frame(AVFrame* frame)
 //{

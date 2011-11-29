@@ -43,8 +43,11 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/assign.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/timer.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
+#include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>
 
 #include "../common/memory/safe_ptr.h"
