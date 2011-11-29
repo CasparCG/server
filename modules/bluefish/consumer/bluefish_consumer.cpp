@@ -40,7 +40,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/timer.hpp>
-#include <boost/range/algorithm/rotate.hpp>
+#include <boost/range/algorithm.hpp>
 
 #include <memory>
 #include <array>
@@ -154,10 +154,7 @@ public:
 		enable_video_output();
 						
 		int n = 0;
-		std::generate(reserved_frames_.begin(), reserved_frames_.end(), [&]
-		{
-			return std::make_shared<blue_dma_buffer>(format_desc_.size, n++);
-		});
+		boost::range::generate(reserved_frames_, [&]{return std::make_shared<blue_dma_buffer>(format_desc_.size, n++);});
 	}
 
 	~bluefish_consumer()
@@ -218,9 +215,9 @@ public:
 		if(!frame->image_data().empty())
 		{
 			if(key_only_)						
-				fast_memshfl(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				fast_memshfl(reserved_frames_.front()->image_data(), std::begin(frame->image_data()), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
-				fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
+				fast_memcpy(reserved_frames_.front()->image_data(), std::begin(frame->image_data()), frame->image_data().size());
 		}
 		else
 			fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
@@ -263,7 +260,7 @@ public:
 				CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
 		}
 
-		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
+		boost::range::rotate(reserved_frames_, std::begin(reserved_frames_)+1);
 	}
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
