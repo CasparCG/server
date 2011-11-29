@@ -236,8 +236,8 @@ public:
 
 		if(embedded_audio_)
 		{		
-			auto frame_audio = core::audio_32_to_16(frame->audio_data());			
-			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio.data(), frame->audio_data().size()/2, format_desc_.audio_channels);
+			auto frame_audio = core::audio_32_to_16_sse(frame->audio_data());			
+			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio.data(), frame->audio_data().size()/format_desc_.audio_channels, format_desc_.audio_channels);
 								
 			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 											reserved_frames_.front()->image_size(), 
