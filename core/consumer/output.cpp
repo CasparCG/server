@@ -38,29 +38,26 @@
 
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
+#include <boost/range/algorithm.hpp>
+#include <boost/range/adaptors.hpp>
 
 namespace caspar { namespace core {
 	
 struct output::implementation
-{	
-	typedef std::pair<safe_ptr<read_frame>, safe_ptr<read_frame>> fill_and_key;
+{		
+	const int										channel_index_;
+	const safe_ptr<diagnostics::graph>				graph_;
+	boost::timer									consume_timer_;
+
+	video_format_desc								format_desc_;
+
+	std::map<int, safe_ptr<frame_consumer>>			consumers_;
 	
-	const int						channel_index_;
-	safe_ptr<diagnostics::graph>	graph_;
-	boost::timer					consume_timer_;
+	high_prec_timer									sync_timer_;
 
-	video_format_desc				format_desc_;
+	boost::circular_buffer<safe_ptr<read_frame>>	frames_;
 
-	std::map<int, safe_ptr<frame_consumer>> consumers_;
-	typedef std::map<int, safe_ptr<frame_consumer>>::value_type layer_t;
-	
-	high_prec_timer timer_;
-
-	boost::circular_buffer<safe_ptr<read_frame>> frames_;
-
-	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>> input_;
-
-	executor executor_;
+	executor										executor_;
 		
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) 
@@ -77,7 +74,7 @@ public:
 		executor_.invoke([&]
 		{
 			consumers_.erase(index);
-		});
+		}, high_priority);
 
 		consumer = create_consumer_cadence_guard(std::move(consumer));
 		consumer->initialize(format_desc_, channel_index_, index);
@@ -87,7 +84,7 @@ public:
 			consumers_.insert(std::make_pair(index, consumer));
 
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
-		});
+		}, high_priority);
 	}
 
 	void remove(int index)
@@ -97,18 +94,16 @@ public:
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
 			{
-				CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
 				consumers_.erase(it);
+				CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
 			}
-		});
+		}, high_priority);
 	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
 		executor_.invoke([&]
 		{
-			format_desc_ = format_desc;
-
 			auto it = consumers_.begin();
 			while(it != consumers_.end())
 			{						
@@ -123,24 +118,28 @@ public:
 					consumers_.erase(it++);
 				}
 			}
-
+			
+			format_desc_ = format_desc;
 			frames_.clear();
 		});
 	}
-			
+
 	std::pair<size_t, size_t> minmax_buffer_depth() const
 	{		
 		if(consumers_.empty())
 			return std::make_pair(0, 0);
-		std::vector<size_t> buffer_depths;
-		std::transform(consumers_.begin(), consumers_.end(), std::back_inserter(buffer_depths), [](const decltype(*consumers_.begin())& pair)
-		{
-			return pair.second->buffer_depth();
-		});
-		std::sort(buffer_depths.begin(), buffer_depths.end());
-		auto min = buffer_depths.front();
-		auto max = buffer_depths.back();
-		return std::make_pair(min, max);
+		
+		auto buffer_depths = consumers_ | 
+							 boost::adaptors::map_values | // std::function is MSVC workaround
+							 boost::adaptors::transformed(std::function<int(const safe_ptr<frame_consumer>&)>([](const safe_ptr<frame_consumer>& x){return x->buffer_depth();})); 
+		
+
+		return std::make_pair(*boost::range::min_element(buffer_depths), *boost::range::max_element(buffer_depths));
+	}
+
+	bool has_synchronization_clock() const
+	{
+		return boost::range::count_if(consumers_ | boost::adaptors::map_values, [](const safe_ptr<frame_consumer>& x){return x->has_synchronization_clock();}) > 0;
 	}
 
 	void send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& packet)
@@ -154,15 +153,15 @@ public:
 				auto input_frame = packet.first;
 
 				if(!has_synchronization_clock())
-					timer_.tick(1.0/format_desc_.fps);
+					sync_timer_.tick(1.0/format_desc_.fps);
 
 				if(input_frame->image_size() != format_desc_.size)
 				{
-					timer_.tick(1.0/format_desc_.fps);
+					sync_timer_.tick(1.0/format_desc_.fps);
 					return;
 				}
 					
-				const auto minmax = minmax_buffer_depth();
+				auto minmax = minmax_buffer_depth();
 
 				frames_.set_capacity(minmax.second - minmax.first + 1);
 				frames_.push_back(input_frame);
@@ -212,19 +211,9 @@ public:
 		});
 	}
 
-private:
-	
-	bool has_synchronization_clock()
-	{
-		return std::any_of(consumers_.begin(), consumers_.end(), [](const decltype(*consumers_.begin())& p)
-		{
-			return p.second->has_synchronization_clock();
-		});
-	}
-	
 	std::wstring print() const
 	{
-		return L"output";
+		return L"output[" + boost::lexical_cast<std::wstring>(channel_index_) + L"]";
 	}
 };
 
