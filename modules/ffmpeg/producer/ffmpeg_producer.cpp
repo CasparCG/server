@@ -215,12 +215,7 @@ public:
 	{
 		if(video_decoder_)
 		{
-			std::wostringstream fps_ss;
-			fps_ss << std::fixed << std::setprecision(2) << (video_decoder_->is_progressive() ? fps_ : 2.0 * fps_);
-
-			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
-							  + boost::lexical_cast<std::wstring>(video_decoder_->width()) + L"x" + boost::lexical_cast<std::wstring>(video_decoder_->height())
-							  + (video_decoder_->is_progressive() ? L"p" : L"i") + fps_ss.str()
+			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" + print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive())
 							  + L"|" + boost::lexical_cast<std::wstring>(file_frame_number()) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 		}
 		

@@ -26,14 +26,12 @@
 
 #include <tbb/cache_aligned_allocator.h>
 
-#include <boost/range.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
+#include <boost/range/adaptors.hpp>
+#include <boost/range/distance.hpp>
 
-#include <array>
 #include <map>
 #include <stack>
 #include <vector>
-#include <valarray>
 
 namespace caspar { namespace core {
 
@@ -137,44 +135,38 @@ public:
 			const float prev_volume = static_cast<float>(prev_transform.volume);
 			const float next_volume = static_cast<float>(next_transform.volume);
 									
-			auto alpha		= (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/format_desc.audio_channels);
+			auto alpha = (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/format_desc.audio_channels);
 			
-			audio_buffer_ps result;
-			result.reserve(item.audio_data.size());
-			for(size_t n = 0; n < item.audio_data.size()/2; ++n)
-			{
-				result.push_back(item.audio_data[n*2+0] * (prev_volume + n * alpha));
-				result.push_back(item.audio_data[n*2+1] * (prev_volume + n * alpha));
-			}
-						
-			boost::range::push_back(next_audio, std::move(result));
-				
+			for(size_t n = 0; n < item.audio_data.size(); ++n)
+				next_audio.push_back(item.audio_data[n] * (prev_volume + static_cast<float>(n)/static_cast<float>(format_desc_.audio_channels) * alpha));
+										
 			next_audio_streams_[item.tag].transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
 			next_audio_streams_[item.tag].audio_data = std::move(next_audio);			
 		}				
+
 		items_.clear();
 
-		audio_streams_	= std::move(next_audio_streams_);
-		next_audio_streams_.clear();
+		audio_streams_ = std::move(next_audio_streams_);
 		
 		if(audio_streams_.empty())		
 			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_cadence_.front(), 0.0f);
 				
+		{ // sanity check
+
+			auto invalid_streams = boost::distance(audio_streams_ | 
+												   boost::adaptors::map_values | 
+												   boost::adaptors::filtered([&](const audio_stream& x)
+												   {return x.audio_data.size() < audio_cadence_.front();}));
+
+			if(invalid_streams > 0)		
+				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";			
+		}
+
 		std::vector<float> result_ps(audio_cadence_.front(), 0.0f);
-		BOOST_FOREACH(auto& stream, audio_streams_)
+		BOOST_FOREACH(auto& stream, audio_streams_ | boost::adaptors::map_values)
 		{
-			auto& audio_data	= stream.second.audio_data;
-			
-			if(audio_data.size() < audio_cadence_.front())
-			{
-				CASPAR_LOG(warning) << "[audio_mixer] Incorrect frame audio cadence, prepending silence: " << audio_cadence_.front()-audio_data.size();
-				boost::range::push_back(audio_data, audio_buffer_ps(audio_cadence_.front()-audio_data.size(), 0.0f));
-			}
-
-			for(size_t n = 0; n < audio_cadence_.front(); ++n)
-				result_ps[n] += audio_data[n];
-
-			audio_data.erase(std::begin(audio_data), std::begin(audio_data) + audio_cadence_.front());
+			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<float>());
+			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
 		}		
 		
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
