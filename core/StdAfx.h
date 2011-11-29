@@ -48,8 +48,12 @@
 #include <tbb/concurrent_unordered_map.h>
 
 #include <boost/assign.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/timer.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
+#include <boost/range.hpp>
+#include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
 
 #include <common/utility/string.h>
