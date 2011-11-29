@@ -33,39 +33,39 @@ static std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_32_to_1
 	return output16;
 }
 
-//template<typename T>
-//static std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> audio_32_to_24(const T& audio_data)
-//{	
-//	auto size		 = std::distance(std::begin(audio_data), std::end(audio_data));
-//	auto input8		 = reinterpret_cast<const int8_t*>(&(*std::begin(audio_data)));
-//	auto output8	 = std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>();
-//			
-//	output8.reserve(size*3);
-//	for(int n = 0; n < size; ++n)
-//	{
-//		output8.push_back(input8[n*4+1]);
-//		output8.push_back(input8[n*4+2]);
-//		output8.push_back(input8[n*4+3]);
-//	}
-//
-//	return output8;
-//}
-//
-//template<typename T>
-//static std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> audio_32_to_16(const T& audio_data)
-//{	
-//	auto size		 = std::distance(std::begin(audio_data), std::end(audio_data));
-//	auto input8		 = reinterpret_cast<const int8_t*>(&(*std::begin(audio_data)));
-//	auto output8	 = std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>();
-//			
-//	output8.reserve(size*2);
-//	for(int n = 0; n < size; ++n)
-//	{
-//		output8.push_back(input8[n*4+2]);
-//		output8.push_back(input8[n*4+3]);
-//	}
-//
-//	return output8;
-//}
+template<typename T>
+static std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> audio_32_to_24(const T& audio_data)
+{	
+	auto size		 = std::distance(std::begin(audio_data), std::end(audio_data));
+	auto input8		 = reinterpret_cast<const int8_t*>(&(*std::begin(audio_data)));
+	auto output8	 = std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>();
+			
+	output8.reserve(size*3);
+	for(int n = 0; n < size; ++n)
+	{
+		output8.push_back(input8[n*4+1]);
+		output8.push_back(input8[n*4+2]);
+		output8.push_back(input8[n*4+3]);
+	}
+
+	return output8;
+}
+
+template<typename T>
+static std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> audio_32_to_16(const T& audio_data)
+{	
+	auto size		 = std::distance(std::begin(audio_data), std::end(audio_data));
+	auto input8		 = reinterpret_cast<const int8_t*>(&(*std::begin(audio_data)));
+	auto output8	 = std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>();
+			
+	output8.reserve(size*2);
+	for(int n = 0; n < size; ++n)
+	{
+		output8.push_back(input8[n*4+2]);
+		output8.push_back(input8[n*4+3]);
+	}
+
+	return output8;
+}
 
 }}
