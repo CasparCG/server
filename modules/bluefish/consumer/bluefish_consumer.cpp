@@ -233,7 +233,7 @@ public:
 
 		if(embedded_audio_)
 		{		
-			auto frame_audio = core::audio_32_to_16(frame->audio_data());			
+			auto frame_audio = core::audio_32_to_24(frame->audio_data());			
 			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio.data(), frame->audio_data().size()/format_desc_.audio_channels, format_desc_.audio_channels);
 								
 			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
@@ -265,7 +265,7 @@ public:
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
-		const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN;
+		const auto sample_type = AUDIO_CHANNEL_24BIT | AUDIO_CHANNEL_LITTLEENDIAN;
 		const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
 		
 		hanc_stream_info_struct hanc_stream_info;
