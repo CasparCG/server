@@ -103,7 +103,7 @@ public:
 	virtual int64_t								file_frame_number() const override										{return (*producer_)->file_frame_number();}
 };
 
-safe_ptr<core::frame_producer> create_destroy_proxy(safe_ptr<core::frame_producer>&& producer)
+safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer>&& producer)
 {
 	return make_safe<destroy_producer_proxy>(std::move(producer));
 }

@@ -59,7 +59,7 @@ struct configuration
 		: device_index(1)
 		, embedded_audio(false)
 		, internal_key(false)
-		, low_latency(false)
+		, low_latency(true)
 		, key_only(false)
 		, base_buffer_depth(3)
 		, buffer_depth(base_buffer_depth + (low_latency ? 0 : 1) + (embedded_audio ? 1 : 0)){}
@@ -80,6 +80,11 @@ public:
 		, key_only_(key_only)
 	{
 		ref_count_ = 0;
+	}
+
+	const boost::iterator_range<const int32_t*> audio_data()
+	{
+		return frame_->audio_data();
 	}
 	
 	STDMETHOD (QueryInterface(REFIID, LPVOID*))		{return E_NOINTERFACE;}
@@ -132,9 +137,9 @@ public:
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
-	const configuration					config_;
 	const int							channel_index_;
 	const int							sub_index_;
+	const configuration					config_;
 
 	CComPtr<IDeckLink>					decklink_;
 	CComQIPtr<IDeckLinkOutput>			output_;
@@ -150,7 +155,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	const core::video_format_desc		format_desc_;
 	const size_t						buffer_size_;
 
-	long long							frames_scheduled_;
+	long long							video_scheduled_;
 	long long							audio_scheduled_;
 
 	size_t								preroll_count_;
@@ -165,9 +170,9 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 
 public:
 	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index, int sub_index) 
-		: config_(config)
-		, channel_index_(channel_index)
+		: channel_index_(channel_index)
 		, sub_index_(sub_index)
+		, config_(config)
 		, decklink_(get_device(config.device_index))
 		, output_(decklink_)
 		, configuration_(decklink_)
@@ -175,7 +180,7 @@ public:
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
 		, buffer_size_(config.buffer_depth) // Minimum buffer-size 3.
-		, frames_scheduled_(0)
+		, video_scheduled_(0)
 		, audio_scheduled_(0)
 		, preroll_count_(0)
 		, audio_container_(buffer_size_+1)
@@ -313,8 +318,11 @@ public:
 			if(result == bmdOutputFrameDisplayedLate)
 			{
 				graph_->add_tag("late-frame");
-				++frames_scheduled_;
-				++audio_scheduled_;
+				video_scheduled_ += format_desc_.duration;
+				audio_scheduled_ += reinterpret_cast<decklink_frame*>(completed_frame)->audio_data().size()/format_desc_.audio_channels;
+				//++video_scheduled_;
+				//audio_scheduled_ += format_desc_.audio_cadence[0];
+				//++audio_scheduled_;
 			}
 			else if(result == bmdOutputFrameDropped)
 				graph_->add_tag("dropped-frame");
@@ -354,18 +362,18 @@ public:
 					start_playback();				
 				}
 				else
-					schedule_next_audio(make_safe<core::read_frame>());	
+					schedule_next_audio(core::audio_buffer(format_desc_.audio_cadence[preroll % format_desc_.audio_cadence.size()], 0));	
 			}
 			else
 			{
 				std::shared_ptr<core::read_frame> frame;
 				audio_frame_buffer_.pop(frame);
-				schedule_next_audio(make_safe_ptr(frame));	
+				schedule_next_audio(frame->audio_data());
 			}
 
 			unsigned long buffered;
 			output_->GetBufferedAudioSampleFrameCount(&buffered);
-			graph_->update_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_samples_per_frame*2));
+			graph_->update_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0]*2));
 		}
 		catch(...)
 		{
@@ -377,21 +385,26 @@ public:
 		return S_OK;
 	}
 
-	void schedule_next_audio(const safe_ptr<core::read_frame>& frame)
+	template<typename T>
+	void schedule_next_audio(const T& audio_data)
 	{
-		const int sample_frame_count = frame->audio_data().size()/format_desc_.audio_channels;
+		const int sample_frame_count = audio_data.size()/format_desc_.audio_channels;
 
-		audio_container_.push_back(std::vector<int32_t>(frame->audio_data().begin(), frame->audio_data().end()));
+		audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
 
-		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), sample_frame_count, (audio_scheduled_++) * sample_frame_count, format_desc_.audio_sample_rate, nullptr)))
+		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), sample_frame_count, audio_scheduled_, format_desc_.audio_sample_rate, nullptr)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
+
+		audio_scheduled_ += sample_frame_count;
 	}
 			
 	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
 		CComPtr<IDeckLinkVideoFrame> frame2(new decklink_frame(frame, format_desc_, config_.key_only));
-		if(FAILED(output_->ScheduleVideoFrame(frame2, (frames_scheduled_++) * format_desc_.duration, format_desc_.duration, format_desc_.time_scale)))
+		if(FAILED(output_->ScheduleVideoFrame(frame2, video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
+
+		video_scheduled_ += format_desc_.duration;
 
 		graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 		tick_timer_.restart();
@@ -424,6 +437,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 {
 	const configuration				config_;
 	com_context<decklink_consumer>	context_;
+	std::vector<size_t>				audio_cadence_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
@@ -447,12 +461,16 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
 	{
 		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index, sub_index);});		
-				
+		audio_cadence_ = format_desc.audio_cadence;		
+
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
+		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
+		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+
 		context_->send(frame);
 		return true;
 	}

@@ -53,6 +53,8 @@ struct frame_muxer::implementation : boost::noncopyable
 	const double									in_fps_;
 	const video_format_desc							format_desc_;
 	bool											auto_transcode_;
+	
+	std::vector<size_t>								audio_cadence_;
 
 	size_t											audio_sample_count_;
 	size_t											video_frame_count_;
@@ -67,6 +69,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, auto_transcode_(env::properties().get("configuration.auto-transcode", true))
+		, audio_cadence_(format_desc_.audio_cadence)
 		, audio_sample_count_(0)
 		, video_frame_count_(0)
 		, frame_factory_(frame_factory)
@@ -74,6 +77,8 @@ struct frame_muxer::implementation : boost::noncopyable
 	{
 		video_streams_.push(std::queue<safe_ptr<write_frame>>());
 		audio_streams_.push(core::audio_buffer());
+		boost::range::sort(audio_cadence_);
+		boost::range::reverse(audio_cadence_);
 	}
 
 	void push(const std::shared_ptr<AVFrame>& video_frame, int hints)
@@ -83,7 +88,6 @@ struct frame_muxer::implementation : boost::noncopyable
 		
 		if(video_frame == flush_video())
 		{	
-			CASPAR_LOG(trace) << L"video-frame-count: " << static_cast<float>(video_frame_count_);
 			video_frame_count_ = 0;
 			video_streams_.push(std::queue<safe_ptr<write_frame>>());
 		}
@@ -127,13 +131,12 @@ struct frame_muxer::implementation : boost::noncopyable
 
 		if(audio == flush_audio())
 		{
-			CASPAR_LOG(trace) << L"audio-frame-count: " << audio_sample_count_/format_desc_.audio_samples_per_frame;
 			audio_sample_count_ = 0;
 			audio_streams_.push(core::audio_buffer());
 		}
 		else if(audio == empty_audio())
 		{
-			boost::range::push_back(audio_streams_.back(), core::audio_buffer(format_desc_.audio_samples_per_frame, 0));
+			boost::range::push_back(audio_streams_.back(), core::audio_buffer(audio_cadence_.front(), 0));
 			audio_sample_count_ += audio->size();
 		}
 		else
@@ -142,7 +145,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			audio_sample_count_ += audio->size();
 		}
 
-		if(audio_streams_.back().size() > 32*format_desc_.audio_samples_per_frame)
+		if(audio_streams_.back().size() > 32*audio_cadence_.front())
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 	
@@ -174,9 +177,9 @@ struct frame_muxer::implementation : boost::noncopyable
 		switch(display_mode_)
 		{
 		case display_mode::duplicate:					
-			return audio_streams_.front().size()/2 >= format_desc_.audio_samples_per_frame;
+			return audio_streams_.front().size()/2 >= audio_cadence_.front();
 		default:										
-			return audio_streams_.front().size() >= format_desc_.audio_samples_per_frame;
+			return audio_streams_.front().size() >= audio_cadence_.front();
 		}
 	}
 		
@@ -253,13 +256,15 @@ struct frame_muxer::implementation : boost::noncopyable
 
 	core::audio_buffer pop_audio()
 	{
-		CASPAR_VERIFY(audio_streams_.front().size() >= format_desc_.audio_samples_per_frame);
+		CASPAR_VERIFY(audio_streams_.front().size() >= audio_cadence_.front());
 
 		auto begin = audio_streams_.front().begin();
-		auto end   = begin + format_desc_.audio_samples_per_frame;
+		auto end   = begin + audio_cadence_.front();
 
-		auto samples = core::audio_buffer(begin, end);
+		core::audio_buffer samples(begin, end);
 		audio_streams_.front().erase(begin, end);
+		
+		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
 		return samples;
 	}

@@ -20,9 +20,8 @@
 
 #pragma once
 
+#include <vector>
 #include <string>
-
-#include <common/compiler/vs/disable_silly_warnings.h>
 
 namespace caspar { namespace core {
 	
@@ -95,21 +94,21 @@ struct video_format_desc
 
 	size_t					audio_sample_rate;
 	size_t					audio_channels;
-	size_t					audio_samples_per_frame;
+	std::vector<size_t>		audio_cadence;
 
 	static const video_format_desc& get(video_format::type format);
 	static const video_format_desc& get(const std::wstring& name);
+	
+	bool operator==(const video_format_desc& lhs)
+	{
+		return format == lhs.format;
+	}
+
+	bool operator!=(const video_format_desc& lhs)
+	{
+		return !(*this == lhs);
+	}
 };
-
-inline bool operator==(const video_format_desc& rhs, const video_format_desc& lhs)
-{
-	return rhs.format == lhs.format;
-}
-
-inline bool operator!=(const video_format_desc& rhs, const video_format_desc& lhs)
-{
-	return !(rhs == lhs);
-}
 
 inline std::wostream& operator<<(std::wostream& out, const video_format_desc& format_desc)
 {

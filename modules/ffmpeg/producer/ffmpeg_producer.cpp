@@ -340,7 +340,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
-	return create_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, path, filter_str, loop, start, length));
+	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, path, filter_str, loop, start, length));
 }
 
 }}

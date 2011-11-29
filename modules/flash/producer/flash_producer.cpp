@@ -443,7 +443,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 {
 	auto template_host = get_template_host(frame_factory->get_video_format_desc());
 	
-	return create_destroy_proxy(make_safe<flash_producer>(frame_factory, env::template_folder() + L"\\" + widen(template_host.filename), template_host.width, template_host.height));
+	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, env::template_folder() + L"\\" + widen(template_host.filename), template_host.width, template_host.height));
 }
 
 std::wstring find_template(const std::wstring& template_name)

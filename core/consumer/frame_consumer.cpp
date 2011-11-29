@@ -24,6 +24,10 @@
 #include <common/env.h>
 #include <common/memory/safe_ptr.h>
 #include <common/exception/exceptions.h>
+#include <core/video_format.h>
+#include <core/mixer/read_frame.h>
+
+#include <boost/circular_buffer.hpp>
 
 namespace caspar { namespace core {
 		
@@ -57,6 +61,69 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
 
 	return consumer;
+}
+
+// This class is used to guarantee that audio cadence is correct. This is important for NTSC audio.
+class cadence_guard : public frame_consumer
+{
+	safe_ptr<frame_consumer>		consumer_;
+	std::vector<size_t>				audio_cadence_;
+	boost::circular_buffer<size_t>	sync_buffer_;
+	bool							synced_;
+public:
+	cadence_guard(safe_ptr<frame_consumer>&& consumer)
+		: consumer_(std::move(consumer))
+	{
+	}
+	
+	virtual void initialize(const video_format_desc& format_desc, int channel_index, int sub_index) override
+	{
+		audio_cadence_	= format_desc.audio_cadence;
+		sync_buffer_	= boost::circular_buffer<size_t>(format_desc.audio_cadence.size());
+		consumer_->initialize(format_desc, channel_index, sub_index);
+	}
+
+	virtual bool send(const safe_ptr<read_frame>& frame) override
+	{		
+		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size()));
+		
+		if(!boost::range::equal(sync_buffer_, audio_cadence_))
+		{
+			synced_ = false;
+			CASPAR_LOG(trace) << L"[cadence_guard] Audio cadence unsynced. Skipping frame.";
+			return true;
+		}
+		else if(!synced_)
+		{
+			synced_ = true;
+			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+			return true;
+		}
+
+		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+
+		return consumer_->send(frame);
+	}
+
+	virtual std::wstring print() const override
+	{
+		return consumer_->print();
+	}
+
+	virtual bool has_synchronization_clock() const override
+	{
+		return consumer_->has_synchronization_clock();
+	}
+
+	virtual size_t buffer_depth() const override
+	{
+		return consumer_->buffer_depth();
+	}
+};
+
+safe_ptr<frame_consumer> create_consumer_cadence_guard(safe_ptr<frame_consumer>&& consumer)
+{
+	return make_safe<cadence_guard>(std::move(consumer));
 }
 
 }}
