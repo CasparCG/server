@@ -49,7 +49,7 @@ struct audio_resampler::implementation
 			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
 
 			CASPAR_LOG(warning) << L"Resampling." <<
-									L" sample_rate:" << input_channels  <<
+									L" sample_rate:" << input_sample_rate  <<
 									L" audio_channels:" << input_channels  <<
 									L" sample_fmt:" << input_sample_format;
 

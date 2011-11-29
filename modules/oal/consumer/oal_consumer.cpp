@@ -41,6 +41,8 @@
 
 namespace caspar { namespace oal {
 
+typedef std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_buffer_16;
+
 struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 {
 	safe_ptr<diagnostics::graph>						graph_;
@@ -48,9 +50,10 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	int													channel_index_;
 	int													sub_index_;
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>>	input_;
-	boost::circular_buffer<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>			container_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<audio_buffer_16>>	input_;
+	boost::circular_buffer<audio_buffer_16>			container_;
 	tbb::atomic<bool>									is_running_;
+	core::audio_buffer									temp;
 
 	core::video_format_desc								format_desc_;
 public:
@@ -71,11 +74,11 @@ public:
 	~oal_consumer()
 	{
 		is_running_ = false;
-		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
-		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
+		input_.try_push(std::make_shared<audio_buffer_16>());
+		input_.try_push(std::make_shared<audio_buffer_16>());
 		Stop();
-		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
-		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
+		input_.try_push(std::make_shared<audio_buffer_16>());
+		input_.try_push(std::make_shared<audio_buffer_16>());
 
 		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
@@ -97,8 +100,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{			
-		input_.push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>(core::audio_32_to_16_sse(frame->audio_data())));
-
+		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16_sse(frame->audio_data())));
 		return true;
 	}
 	
@@ -116,7 +118,7 @@ public:
 	
 	virtual bool OnGetData(sf::SoundStream::Chunk& data) override
 	{		
-		std::shared_ptr<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>> audio_data;		
+		std::shared_ptr<audio_buffer_16> audio_data;		
 		input_.pop(audio_data);
 				
 		container_.push_back(std::move(*audio_data));

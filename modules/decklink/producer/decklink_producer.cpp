@@ -87,6 +87,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	boost::timer												frame_timer_;
 		
 	safe_ptr<core::frame_factory>								frame_factory_;
+	std::vector<size_t>											audio_cadence_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
 
@@ -102,6 +103,7 @@ public:
 		, format_desc_(format_desc)
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
+		, audio_cadence_(frame_factory->get_video_format_desc().audio_cadence)
 		, muxer_(format_desc.fps, frame_factory, filter)
 	{
 		frame_buffer_.set_capacity(2);
@@ -137,10 +139,7 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() 
 									<< msg_info(narrow(print()) + " Failed to start input stream.")
 									<< boost::errinfo_api_function("StartStreams"));
-
-		if(format_desc_.duration == 1001)
-			CASPAR_LOG(warning) << print() << L"Audio not supported in NTSC frame-rates.";
-
+		
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
@@ -192,15 +191,18 @@ public:
 			muxer_.push(av_frame);		
 									
 			// It is assumed that audio is always equal or ahead of video.
-			if(audio && SUCCEEDED(audio->GetBytes(&bytes)) && format_desc_.duration != 1001)
+			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
 			{
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<int32_t*>(bytes);
 				muxer_.push(std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
 			}
 			else
-				muxer_.push(std::make_shared<core::audio_buffer>(frame_factory_->get_video_format_desc().audio_samples_per_frame, 0));
-					
+			{
+				muxer_.push(std::make_shared<core::audio_buffer>(audio_cadence_.front(), 0));
+				std::rotate(std::begin(audio_cadence_), std::begin(audio_cadence_)+1, std::end(audio_cadence_));
+			}
+
 			for(auto frame = muxer_.poll(); frame; frame = muxer_.poll())
 			{
 				if(!frame_buffer_.try_push(make_safe_ptr(frame)))
@@ -303,7 +305,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();
 			
-	return create_destroy_proxy(make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length));
+	return create_producer_destroy_proxy(make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length));
 }
 
 }}

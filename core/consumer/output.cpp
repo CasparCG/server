@@ -40,7 +40,7 @@
 #include <boost/timer.hpp>
 
 namespace caspar { namespace core {
-
+	
 struct output::implementation
 {	
 	typedef std::pair<safe_ptr<read_frame>, safe_ptr<read_frame>> fill_and_key;
@@ -79,6 +79,7 @@ public:
 			consumers_.erase(index);
 		});
 
+		consumer = create_consumer_cadence_guard(std::move(consumer));
 		consumer->initialize(format_desc_, channel_index_, index);
 
 		executor_.invoke([&]

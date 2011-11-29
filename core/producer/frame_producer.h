@@ -82,7 +82,7 @@ typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factor
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& params);
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::wstring& params);
-safe_ptr<core::frame_producer> create_destroy_proxy(safe_ptr<core::frame_producer>&& producer);
+safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer>&& producer);
 
 template<typename T>
 typename std::decay<T>::type get_param(const std::wstring& name, const std::vector<std::wstring>& params, T fail_value)
