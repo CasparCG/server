@@ -100,7 +100,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{			
-		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16_sse(frame->audio_data())));
+		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame->audio_data())));
 		return true;
 	}
 	
