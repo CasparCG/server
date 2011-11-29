@@ -138,7 +138,7 @@ public:
 			auto alpha = (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/format_desc.audio_channels);
 			
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
-				next_audio.push_back(item.audio_data[n] * (prev_volume + static_cast<float>(n)/static_cast<float>(format_desc_.audio_channels) * alpha));
+				next_audio.push_back(item.audio_data[n] * (prev_volume + (n/format_desc_.audio_channels) * alpha));
 										
 			next_audio_streams_[item.tag].transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
 			next_audio_streams_[item.tag].audio_data = std::move(next_audio);			
