@@ -69,9 +69,7 @@ struct bluefish_consumer : boost::noncopyable
 	
 	const bool							embedded_audio_;
 	const bool							key_only_;
-
-	uint64_t							frame_number_;
-	
+		
 	executor							executor_;
 public:
 	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only, int channel_index, int sub_index) 
@@ -84,7 +82,6 @@ public:
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
 		, embedded_audio_(embedded_audio)
 		, key_only_(key_only)
-		, frame_number_(0)
 		, executor_(print())
 	{
 		executor_.set_capacity(1);
@@ -239,24 +236,8 @@ public:
 
 		if(embedded_audio_)
 		{		
-			auto frame_audio = core::audio_32_to_16_sse(frame->audio_data());
-
-			if(format_desc_.format == core::video_format::ntsc)
-			{
-				size_t cadence[] = {1602,1601,1602,1601,1602};
-				CASPAR_VERIFY(cadence[(frame_number_++) % 5] == (frame->audio_data().size()/format_desc_.audio_channels));
-			}
-
-			// 24 bit audio causes access violation in encode_hanc.
-			//auto frame_audio24 = core::audio_32_to_24(frame->audio_data());
-
-			//static_assert(sizeof(frame_audio24.front()) == 1, "");
-			//static_assert(sizeof(frame->audio_data().front()) == 4, "");
-			//CASPAR_VERIFY(frame_audio24.size() / 3 == static_cast<size_t>(frame->audio_data().size()));
-
-			// audio cadence is guaranteed by input, see output.cpp and frame_producer.cpp - cadence_guard.
-
-			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio.data(), frame->audio_data().size(), format_desc_.audio_channels);
+			auto frame_audio = core::audio_32_to_16_sse(frame->audio_data());			
+			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio.data(), frame->audio_data().size()/2, format_desc_.audio_channels);
 								
 			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 											reserved_frames_.front()->image_size(), 
@@ -287,7 +268,7 @@ public:
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
-		const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN; // AUDIO_CHANNEL_24BIT | AUDIO_CHANNEL_LITTLEENDIAN;
+		const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN;
 		const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
 		
 		hanc_stream_info_struct hanc_stream_info;
