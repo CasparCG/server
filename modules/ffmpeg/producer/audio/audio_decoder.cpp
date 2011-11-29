@@ -137,7 +137,7 @@ public:
 
 	int64_t nb_frames() const
 	{
-		return std::max<int64_t>(nb_frames_, file_frame_number_);
+		return 0;//std::max<int64_t>(nb_frames_, file_frame_number_);
 	}
 };
 
