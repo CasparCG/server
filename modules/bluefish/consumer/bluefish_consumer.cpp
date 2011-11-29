@@ -24,6 +24,7 @@
 #include "../util/blue_velvet.h"
 #include "../util/memory.h"
 
+#include <core/video_format.h>
 #include <core/mixer/read_frame.h>
 
 #include <common/concurrency/executor.h>
@@ -39,6 +40,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/timer.hpp>
+#include <boost/range/algorithm/rotate.hpp>
 
 #include <memory>
 #include <array>
@@ -67,6 +69,8 @@ struct bluefish_consumer : boost::noncopyable
 	
 	const bool							embedded_audio_;
 	const bool							key_only_;
+
+	uint64_t							frame_number_;
 	
 	executor							executor_;
 public:
@@ -80,6 +84,7 @@ public:
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
 		, embedded_audio_(embedded_audio)
 		, key_only_(key_only)
+		, frame_number_(0)
 		, executor_(print())
 	{
 		executor_.set_capacity(1);
@@ -146,9 +151,9 @@ public:
 		if(blue_->GetHDCardType(device_index_) != CRD_HD_INVALID) 
 			blue_->Set_DownConverterSignalType(vid_fmt_ == VID_FMT_PAL ? SD_SDI : HD_SDI);	
 	
-		unsigned long engine_mode = VIDEO_ENGINE_FRAMESTORE;
-		if(BLUE_FAIL(blue_->set_video_engine(engine_mode)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set video engine."));
+		//unsigned long engine_mode = VIDEO_ENGINE_FRAMESTORE;
+		//if(BLUE_FAIL(blue_->set_video_engine(engine_mode)))
+		//	BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set video engine."));
 
 		enable_video_output();
 						
@@ -193,61 +198,10 @@ public:
 		{
 			try
 			{
-				frame_timer_.restart();
-				
-				// Copy to local buffers
+				frame_timer_.restart();			
 
-				if(!frame->image_data().empty())
-				{
-					if(key_only_)						
-						fast_memshfl(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-					else
-						fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
-				}
-				else
-					fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
-								
-				// Sync
+				display_frame(frame);
 
-				sync_timer_.restart();
-				unsigned long n_field = 0;
-				blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
-				graph_->update_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
-
-				// Send and display
-
-				if(embedded_audio_)
-				{		
-					auto frame_audio16 = core::audio_32_to_16_sse(frame->audio_data());
-
-					encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio16.data(), frame->audio_data().size(), format_desc_.audio_channels);
-								
-					blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
-													reserved_frames_.front()->image_size(), 
-													nullptr, 
-													BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
-
-					blue_->system_buffer_write_async(reserved_frames_.front()->hanc_data(),
-													reserved_frames_.front()->hanc_size(), 
-													nullptr,                 
-													BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_HANC));
-
-					if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
-						CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
-				}
-				else
-				{
-					blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
-													reserved_frames_.front()->image_size(), 
-													nullptr,                 
-													BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
-			
-					if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
-						CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
-				}
-
-				std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
-				
 				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 
 				graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
@@ -260,9 +214,80 @@ public:
 		});
 	}
 
+	void display_frame(const safe_ptr<core::read_frame>& frame)
+	{
+		// Copy to local buffers
+
+		if(!frame->image_data().empty())
+		{
+			if(key_only_)						
+				fast_memshfl(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			else
+				fast_memcpy(reserved_frames_.front()->image_data(), frame->image_data().begin(), frame->image_data().size());
+		}
+		else
+			fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
+								
+		// Sync
+
+		sync_timer_.restart();
+		unsigned long n_field = 0;
+		blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
+		graph_->update_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
+
+		// Send and display
+
+		if(embedded_audio_)
+		{		
+			auto frame_audio = core::audio_32_to_16_sse(frame->audio_data());
+
+			if(format_desc_.format == core::video_format::ntsc)
+			{
+				size_t cadence[] = {1602,1601,1602,1601,1602};
+				CASPAR_VERIFY(cadence[(frame_number_++) % 5] == (frame->audio_data().size()/format_desc_.audio_channels));
+			}
+
+			// 24 bit audio causes access violation in encode_hanc.
+			//auto frame_audio24 = core::audio_32_to_24(frame->audio_data());
+
+			//static_assert(sizeof(frame_audio24.front()) == 1, "");
+			//static_assert(sizeof(frame->audio_data().front()) == 4, "");
+			//CASPAR_VERIFY(frame_audio24.size() / 3 == static_cast<size_t>(frame->audio_data().size()));
+
+			// audio cadence is guaranteed by input, see output.cpp and frame_producer.cpp - cadence_guard.
+
+			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio.data(), frame->audio_data().size(), format_desc_.audio_channels);
+								
+			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
+											reserved_frames_.front()->image_size(), 
+											nullptr, 
+											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
+
+			blue_->system_buffer_write_async(reserved_frames_.front()->hanc_data(),
+											reserved_frames_.front()->hanc_size(), 
+											nullptr,                 
+											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_HANC));
+
+			if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
+				CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
+		}
+		else
+		{
+			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
+											reserved_frames_.front()->image_size(), 
+											nullptr,                 
+											BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
+			
+			if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
+				CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
+		}
+
+		std::rotate(reserved_frames_.begin(), reserved_frames_.begin() + 1, reserved_frames_.end());
+	}
+
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
-		const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN;
+		const auto sample_type = AUDIO_CHANNEL_16BIT | AUDIO_CHANNEL_LITTLEENDIAN; // AUDIO_CHANNEL_24BIT | AUDIO_CHANNEL_LITTLEENDIAN;
 		const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
 		
 		hanc_stream_info_struct hanc_stream_info;
@@ -294,6 +319,7 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	const size_t						device_index_;
 	const bool							embedded_audio_;
 	const bool							key_only_;
+	std::vector<size_t>					audio_cadence_;
 public:
 
 	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
@@ -318,11 +344,15 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
 	{
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index, sub_index));
+		audio_cadence_ = format_desc.audio_cadence;
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
+		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
+		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+
 		consumer_->send(frame);
 		return true;
 	}
