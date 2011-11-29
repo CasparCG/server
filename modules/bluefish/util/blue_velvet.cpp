@@ -77,12 +77,16 @@ bool is_epoch_card(CBlueVelvet4& blue)
 {
 	switch(blue.has_video_cardtype())
 	{
-	case CRD_BLUE_EPOCH_2K:
 	case CRD_BLUE_EPOCH_HORIZON:
-	case CRD_BLUE_EPOCH_2K_CORE:
-	case CRD_BLUE_EPOCH_2K_ULTRA:
 	case CRD_BLUE_EPOCH_CORE:
 	case CRD_BLUE_EPOCH_ULTRA:
+	case CRD_BLUE_EPOCH_2K_HORIZON:
+	case CRD_BLUE_EPOCH_2K_CORE:
+	case CRD_BLUE_EPOCH_2K_ULTRA:
+	case CRD_BLUE_CREATE_HD:
+	case CRD_BLUE_CREATE_2K:
+	case CRD_BLUE_CREATE_2K_ULTRA:
+	case CRD_BLUE_SUPER_NOVA:
 		return true;
 	default:
 		return false;
