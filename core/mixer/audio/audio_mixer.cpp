@@ -153,12 +153,12 @@ public:
 				
 		{ // sanity check
 
-			auto invalid_streams = boost::distance(audio_streams_ | 
-												   boost::adaptors::map_values | 
-												   boost::adaptors::filtered([&](const audio_stream& x)
-												   {return x.audio_data.size() < audio_cadence_.front();}));
+			auto nb_invalid_streams = boost::count_if(audio_streams_ | boost::adaptors::map_values, [&](const audio_stream& x)
+			{
+				return x.audio_data.size() < audio_cadence_.front();
+			});
 
-			if(invalid_streams > 0)		
+			if(nb_invalid_streams > 0)		
 				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";			
 		}
 
