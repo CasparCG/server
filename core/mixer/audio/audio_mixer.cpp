@@ -113,7 +113,7 @@ public:
 			format_desc_ = format_desc;
 		}		
 		
-		std::map<const void*, audio_stream>	next_audio_streams_;
+		std::map<const void*, audio_stream>	next_audio_streams;
 
 		BOOST_FOREACH(auto& item, items_)
 		{			
@@ -140,13 +140,13 @@ public:
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
 				next_audio.push_back(item.audio_data[n] * (prev_volume + (n/format_desc_.audio_channels) * alpha));
 										
-			next_audio_streams_[item.tag].transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
-			next_audio_streams_[item.tag].audio_data = std::move(next_audio);			
+			next_audio_streams[item.tag].transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
+			next_audio_streams[item.tag].audio_data = std::move(next_audio);			
 		}				
 
 		items_.clear();
 
-		audio_streams_ = std::move(next_audio_streams_);
+		audio_streams_ = std::move(next_audio_streams);
 		
 		if(audio_streams_.empty())		
 			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_cadence_.front(), 0.0f);
