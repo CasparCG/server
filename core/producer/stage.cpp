@@ -156,7 +156,7 @@ public:
 	
 	boost::unique_future<std::wstring> call(int index, bool foreground, const std::wstring& param)
 	{
-		return std::move(*executor_.invoke([&]() -> std::shared_ptr<boost::unique_future<std::wstring>>
+		return std::move(*executor_.invoke([&]
 		{
 			return std::make_shared<boost::unique_future<std::wstring>>(std::move(layers_[index].call(foreground, param)));
 		}, high_priority));
