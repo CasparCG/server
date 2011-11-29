@@ -89,8 +89,8 @@ public:
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->add_guide("frame-time", 0.5f);	
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
-		graph_->set_color("sync-time", diagnostics::color(0.5f, 1.0f, 0.2f));
+		graph_->set_color("sync-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		graph_->set_color("frame-time", diagnostics::color(0.5f, 1.0f, 0.2f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 			
@@ -191,13 +191,8 @@ public:
 		executor_.begin_invoke([=]
 		{
 			try
-			{
-				frame_timer_.restart();			
-
-				display_frame(frame);
-
-				graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
-
+			{	
+				display_frame(frame);				
 				graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
 				tick_timer_.restart();
 			}
@@ -210,8 +205,17 @@ public:
 
 	void display_frame(const safe_ptr<core::read_frame>& frame)
 	{
-		// Copy to local buffers
+		// Sync
 
+		sync_timer_.restart();
+		unsigned long n_field = 0;
+		blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
+		graph_->update_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
+		
+		frame_timer_.restart();		
+
+		// Copy to local buffers
+		
 		if(!frame->image_data().empty())
 		{
 			if(key_only_)						
@@ -222,12 +226,6 @@ public:
 		else
 			fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
 								
-		// Sync
-
-		sync_timer_.restart();
-		unsigned long n_field = 0;
-		blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
-		graph_->update_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
 
 		// Send and display
 
@@ -261,6 +259,8 @@ public:
 		}
 
 		boost::range::rotate(reserved_frames_, std::begin(reserved_frames_)+1);
+		
+		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 	}
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
