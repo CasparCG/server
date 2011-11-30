@@ -35,6 +35,7 @@
 #include <common/env.h>
 
 #include <boost/thread/once.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/parallel_invoke.h>
@@ -81,7 +82,7 @@ struct ffmpeg_consumer : boost::noncopyable
 	std::shared_ptr<SwsContext>				img_convert_ctx_;
 	
 public:
-	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc)
+	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, const std::string& codec, int bitrate)
 		: filename_(filename + ".mov")
 		, video_outbuf_(1920*1080*8)
 		, audio_outbuf_(48000)
@@ -99,9 +100,13 @@ public:
 
 		strcpy_s(oc_->filename, filename_.c_str());
 		
+		auto video_codec = avcodec_find_encoder_by_name(codec.c_str());
+		if(video_codec == nullptr)
+			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info(codec));
+
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs .
-		video_st_ = add_video_stream(oc_->oformat->video_codec);
-		audio_st_ = add_audio_stream(oc_->oformat->audio_codec);
+		video_st_ = add_video_stream(video_codec->id, bitrate);
+		audio_st_ = add_audio_stream();
 				
 		dump_format(oc_.get(), 0, filename_.c_str(), 1);
 		 
@@ -111,7 +116,7 @@ public:
 				
 		THROW_ON_ERROR2(av_write_header(oc_.get()), "[ffmpeg_consumer]");
 
-		CASPAR_LOG(info) << print() << L" Successfully initialized.";	
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 
 	~ffmpeg_consumer()
@@ -134,6 +139,8 @@ public:
 
 			if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
 				THROW_ON_ERROR2(avio_close(oc_->pb), "[ffmpeg_consumer]"); // Close the output ffmpeg.
+
+			CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 		}
 		catch(...)
 		{
@@ -147,7 +154,7 @@ public:
 		return L"ffmpeg[" + widen(filename_) + L"]";
 	}
 
-	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id)
+	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id, int bitrate)
 	{ 
 		auto st = av_new_stream(oc_.get(), 0);
 		if (!st) 
@@ -156,15 +163,28 @@ public:
 				<< msg_info("Could not alloc video-stream")				
 				<< boost::errinfo_api_function("av_new_stream"));
 		}
-
-		st->codec->codec_id			= CODEC_ID_DNXHD;
+		
+		st->codec->codec_id			= codec_id;
 		st->codec->codec_type		= AVMEDIA_TYPE_VIDEO;
-		st->codec->bit_rate			= 145*1000000;
-		st->codec->width			= std::min<size_t>(1280, format_desc_.width);
-		st->codec->height			= std::min<size_t>(720, format_desc_.height);
+		st->codec->width			= format_desc_.width;
+		st->codec->height			= format_desc_.height;
 		st->codec->time_base.den	= format_desc_.time_scale;
 		st->codec->time_base.num	= format_desc_.duration;
-		st->codec->pix_fmt			= st->codec->pix_fmt == -1 ? PIX_FMT_YUV422P : st->codec->pix_fmt;
+
+		if(st->codec->codec_id == CODEC_ID_PRORES)
+		{			
+			st->codec->bit_rate	= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 42*1000000 : 147*1000000;
+			st->codec->pix_fmt	= PIX_FMT_YUV422P10;
+		}
+		else if(st->codec->codec_id == CODEC_ID_DNXHD)
+		{
+			st->codec->bit_rate	= bitrate > 0 ? bitrate : 145*1000000;
+			st->codec->width	= std::min<size_t>(1280, format_desc_.width);
+			st->codec->height	= std::min<size_t>(720, format_desc_.height);
+			st->codec->pix_fmt	= PIX_FMT_YUV422P;
+		}
+		else
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("unsupported codec"));
 		
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			st->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
@@ -181,7 +201,7 @@ public:
 		});
 	}
 	
-	std::shared_ptr<AVStream> add_audio_stream(enum CodecID codec_id)
+	std::shared_ptr<AVStream> add_audio_stream()
 	{
 		auto st = av_new_stream(oc_.get(), 1);
 		if (!st) 
@@ -287,21 +307,27 @@ public:
 
 struct ffmpeg_consumer_proxy : public core::frame_consumer
 {
-	const std::wstring filename_;
-	const bool key_only_;
+	const std::wstring	filename_;
+	const bool			key_only_;
+	const std::string	codec_;
+	const int			bitrate_;
 
 	std::unique_ptr<ffmpeg_consumer> consumer_;
 
 public:
 
-	ffmpeg_consumer_proxy(const std::wstring& filename, bool key_only)
+	ffmpeg_consumer_proxy(const std::wstring& filename, bool key_only, const std::string codec, int bitrate)
 		: filename_(filename)
-		, key_only_(key_only){}
+		, key_only_(key_only)
+		, codec_(boost::to_lower_copy(codec))
+		, bitrate_(bitrate)
+	{
+	}
 	
 	virtual void initialize(const core::video_format_desc& format_desc, int, int)
 	{
 		consumer_.reset();
-		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc));
+		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, codec_, bitrate_));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -335,15 +361,27 @@ safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wst
 	boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + params[1])); // Delete the file if it exists
 	bool key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
 
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + params[1], key_only);
+	std::string codec = "dnxhd";
+	auto codec_it = std::find(params.begin(), params.end(), L"CODEC");
+	if(codec_it++ != params.end())
+		codec = narrow(*codec_it);
+
+	int bitrate = 0;	
+	auto bitrate_it = std::find(params.begin(), params.end(), L"BITRATE");
+	if(bitrate_it++ != params.end())
+		bitrate = boost::lexical_cast<int>(*codec_it);
+
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + params[1], key_only, codec, bitrate);
 }
 
 safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree)
 {
 	std::string filename = ptree.get<std::string>("path");
-	bool key_only		 = ptree.get("key-only", false);
+	auto key_only		 = ptree.get("key-only", false);
+	auto codec			 = ptree.get("codec", "dnxhd");
+	auto bitrate		 = ptree.get("bitrate", 0);
 	
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + widen(filename), key_only);
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + widen(filename), key_only, codec, bitrate);
 }
 
 }}
