@@ -44,7 +44,6 @@ public:
 
 	void spawn_token();
 
-	void swap(stage& other);
 			
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false, int auto_play_delta = -1);
 	void pause(int index);
@@ -52,13 +51,14 @@ public:
 	void stop(int index);
 	void clear(int index);
 	void clear();	
-	boost::unique_future<std::wstring> call(int index, bool foreground, const std::wstring& param);
+	void swap_layers(const safe_ptr<stage>& other);
 	void swap_layer(int index, size_t other_index);
-	void swap_layer(int index, size_t other_index, stage& other);
-
-	layer_status get_status(int index);
-	safe_ptr<frame_producer> foreground(size_t index);
-	safe_ptr<frame_producer> background(size_t index);
+	void swap_layer(int index, size_t other_index, const safe_ptr<stage>& other);
+	
+	boost::unique_future<std::wstring>				call(int index, bool foreground, const std::wstring& param);
+	boost::unique_future<layer_status>				get_status(int index);
+	boost::unique_future<safe_ptr<frame_producer>>	foreground(size_t index);
+	boost::unique_future<safe_ptr<frame_producer>>	background(size_t index);
 	
 	void set_video_format_desc(const video_format_desc& format_desc);
 

@@ -108,7 +108,7 @@ public:
 
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			layers_[index].load(producer, preview, auto_play_delta);
 		}, high_priority);
@@ -116,7 +116,7 @@ public:
 
 	void pause(int index)
 	{		
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			layers_[index].pause();
 		}, high_priority);
@@ -124,7 +124,7 @@ public:
 
 	void play(int index)
 	{		
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			layers_[index].play();
 		}, high_priority);
@@ -132,7 +132,7 @@ public:
 
 	void stop(int index)
 	{		
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			layers_[index].stop();
 		}, high_priority);
@@ -140,7 +140,7 @@ public:
 
 	void clear(int index)
 	{
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			layers_.erase(index);
 		}, high_priority);
@@ -148,7 +148,7 @@ public:
 		
 	void clear()
 	{
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			layers_.clear();
 		}, high_priority);
@@ -156,62 +156,74 @@ public:
 	
 	boost::unique_future<std::wstring> call(int index, bool foreground, const std::wstring& param)
 	{
-		return std::move(*executor_.invoke([&]
+		return std::move(*executor_.invoke([=]
 		{
 			return std::make_shared<boost::unique_future<std::wstring>>(std::move(layers_[index].call(foreground, param)));
 		}, high_priority));
 	}
+	
+	void swap_layers(const safe_ptr<stage>& other)
+	{
+		if(other->impl_.get() == this)
+			return;
+		
+		auto func = [=]
+		{
+			std::swap(layers_, other->impl_->layers_);
+		};		
+		executor_.begin_invoke([=]
+		{
+			other->impl_->executor_.invoke(func, high_priority);
+		}, high_priority);
+	}
 
 	void swap_layer(int index, size_t other_index)
 	{
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			std::swap(layers_[index], layers_[other_index]);
 		}, high_priority);
 	}
 
-	void swap_layer(int index, size_t other_index, stage& other)
+	void swap_layer(int index, size_t other_index, const safe_ptr<stage>& other)
 	{
-		if(other.impl_.get() == this)
+		if(other->impl_.get() == this)
 			swap_layer(index, other_index);
 		else
 		{
-			auto func = [&]
+			auto func = [=]
 			{
-				std::swap(layers_[index], other.impl_->layers_[other_index]);
+				std::swap(layers_[index], other->impl_->layers_[other_index]);
 			};		
-			executor_.invoke([&]{other.impl_->executor_.invoke(func, high_priority);}, high_priority);
+			executor_.begin_invoke([=]
+			{
+				other->impl_->executor_.invoke(func, high_priority);
+			}, high_priority);
 		}
 	}
 
-	void swap(stage& other)
-	{
-		if(other.impl_.get() == this)
-			return;
-		
-		auto func = [&]
-		{
-			std::swap(layers_, other.impl_->layers_);
-		};		
-		executor_.invoke([&]{other.impl_->executor_.invoke(func, high_priority);}, high_priority);
-	}
-
-	layer_status get_status(int index)
+	boost::unique_future<layer_status> get_status(int index)
 	{		
-		return executor_.invoke([&]
+		return executor_.begin_invoke([=]
 		{
 			return layers_[index].status();
 		}, high_priority );
 	}
 	
-	safe_ptr<frame_producer> foreground(int index)
+	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
 	{
-		return executor_.invoke([=]{return layers_[index].foreground();}, high_priority);
+		return executor_.begin_invoke([=]
+		{
+			return layers_[index].foreground();
+		}, high_priority);
 	}
 	
-	safe_ptr<frame_producer> background(int index)
+	boost::unique_future<safe_ptr<frame_producer>> background(int index)
 	{
-		return executor_.invoke([=]{return layers_[index].background();}, high_priority);
+		return executor_.begin_invoke([=]
+		{
+			return layers_[index].background();
+		}, high_priority);
 	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
@@ -225,18 +237,18 @@ public:
 
 stage::stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc) : impl_(new implementation(graph, target, format_desc)){}
 void stage::spawn_token(){impl_->spawn_token();}
-void stage::swap(stage& other){impl_->swap(other);}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
 void stage::play(int index){impl_->play(index);}
 void stage::stop(int index){impl_->stop(index);}
 void stage::clear(int index){impl_->clear(index);}
 void stage::clear(){impl_->clear();}
+void stage::swap_layers(const safe_ptr<stage>& other){impl_->swap_layers(other);}
 void stage::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
-void stage::swap_layer(int index, size_t other_index, stage& other){impl_->swap_layer(index, other_index, other);}
-layer_status stage::get_status(int index){return impl_->get_status(index);}
-safe_ptr<frame_producer> stage::foreground(size_t index) {return impl_->foreground(index);}
-safe_ptr<frame_producer> stage::background(size_t index) {return impl_->background(index);}
-void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
+void stage::swap_layer(int index, size_t other_index, const safe_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
+boost::unique_future<layer_status> stage::get_status(int index){return impl_->get_status(index);}
+boost::unique_future<safe_ptr<frame_producer>> stage::foreground(size_t index) {return impl_->foreground(index);}
+boost::unique_future<safe_ptr<frame_producer>> stage::background(size_t index) {return impl_->background(index);}
 boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
+void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 }}

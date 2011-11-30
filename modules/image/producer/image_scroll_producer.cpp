@@ -84,7 +84,11 @@ struct image_scroll_producer : public core::frame_producer
 		{
 			while(count > 0)
 			{
-				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), width_, format_desc_.height);
+				core::pixel_format_desc desc;
+				desc.pix_fmt = core::pixel_format::bgra;
+				desc.planes.push_back(core::pixel_format_desc::plane(width_, format_desc_.height, 4));
+				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
+
 				if(count >= frame->image_data().size())
 				{	
 					std::copy_n(bytes + count - frame->image_data().size(), frame->image_data().size(), frame->image_data().begin());
@@ -113,7 +117,10 @@ struct image_scroll_producer : public core::frame_producer
 			int i = 0;
 			while(count > 0)
 			{
-				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), format_desc_.width, height_);
+				core::pixel_format_desc desc;
+				desc.pix_fmt = core::pixel_format::bgra;
+				desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width, height_, 4));
+				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
 				if(count >= frame->image_data().size())
 				{	
 					for(size_t y = 0; y < height_; ++y)

@@ -49,7 +49,12 @@ struct image_producer : public core::frame_producer
 	{
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
-		auto frame = frame_factory->create_frame(this, FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), core::pixel_format::bgra);
+		
+		core::pixel_format_desc desc;
+		desc.pix_fmt = core::pixel_format::bgra;
+		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
+		auto frame = frame_factory->create_frame(this, desc);
+
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
 		frame->commit();
 		frame_ = std::move(frame);
