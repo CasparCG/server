@@ -17,10 +17,17 @@ BLUE_UINT32 (*encode_hanc_frame_ex)(BLUE_UINT32 card_type, struct hanc_stream_in
 void blue_velvet_initialize()
 {
 #ifdef _DEBUG
-	auto module = LoadLibrary(L"BlueVelvet3_d.dll");
+	std::string module_str = "BlueVelvet3_d.dll";
 #else
-	auto module = LoadLibrary(L"BlueVelvet3.dll");
+	std::string module_str = "BlueVelvet3.dll";
 #endif
+	std::string sys_drive = getenv("SystemDrive");
+
+	auto module = LoadLibraryA(module_str.c_str());
+	if(!module)
+		LoadLibraryA((sys_drive + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+	if(!module)
+		LoadLibraryA((sys_drive + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
@@ -32,10 +39,18 @@ void blue_velvet_initialize()
 void blue_hanc_initialize()
 {
 #ifdef _DEBUG
-	auto module = LoadLibrary(L"BlueHancUtils_d.dll");
+	std::string module_str = "BlueHancUtils_d.dll";
 #else
-	auto module = LoadLibrary(L"BlueHancUtils.dll");
+	std::string module_str = "BlueHancUtils.dll";
 #endif
+
+	std::string sys_drive = getenv("SystemDrive");
+
+	auto module = LoadLibraryA(module_str.c_str());
+	if(!module)
+		LoadLibraryA((sys_drive + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+	if(!module)
+		LoadLibraryA((sys_drive + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
@@ -45,8 +60,8 @@ void blue_hanc_initialize()
 
 void blue_initialize()
 {
-	blue_velvet_initialize();
 	blue_hanc_initialize();
+	blue_velvet_initialize();
 }
 
 EVideoMode vid_fmt_from_video_format(const core::video_format::type& fmt) 
