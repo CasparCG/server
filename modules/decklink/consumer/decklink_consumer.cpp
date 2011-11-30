@@ -71,7 +71,7 @@ class decklink_frame : public IDeckLinkVideoFrame
 	std::shared_ptr<core::read_frame>							frame_;
 	const core::video_format_desc								format_desc_;
 
-	bool														key_only_;
+	const bool													key_only_;
 	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> key_data_;
 public:
 	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
