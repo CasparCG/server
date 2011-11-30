@@ -23,11 +23,11 @@ void blue_velvet_initialize()
 #endif
 	std::string sys_drive = getenv("SystemDrive");
 
-	auto module = LoadLibraryA(module_str.c_str());
+	auto module = LoadLibrary(widen(module_str).c_str());
 	if(!module)
-		LoadLibraryA((sys_drive + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(widen(sys_drive + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
 	if(!module)
-		LoadLibraryA((sys_drive + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(widen(sys_drive + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
@@ -46,11 +46,11 @@ void blue_hanc_initialize()
 
 	std::string sys_drive = getenv("SystemDrive");
 
-	auto module = LoadLibraryA(module_str.c_str());
+	auto module = LoadLibrary(widen(module_str).c_str());
 	if(!module)
-		LoadLibraryA((sys_drive + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(widen(sys_drive + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
 	if(!module)
-		LoadLibraryA((sys_drive + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(widen(sys_drive + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
