@@ -164,19 +164,10 @@ public:
 	{		
 		return image_mixer_.create_frame(tag, desc);
 	}
-	
-	safe_ptr<core::write_frame> create_frame(const void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
-	{
-		// Create bgra frame
-		core::pixel_format_desc desc;
-		desc.pix_fmt = pix_fmt;
-		desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
-		return create_frame(tag, desc);
-	}
-		
+			
 	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			auto src = transforms_[index].fetch();
 			auto dst = transform;
@@ -186,7 +177,7 @@ public:
 				
 	void apply_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			auto src = transforms_[index].fetch();
 			auto dst = transform(src);
@@ -196,7 +187,7 @@ public:
 
 	void clear_transforms(int index)
 	{
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			transforms_.erase(index);
 			blend_modes_.erase(index);
@@ -205,7 +196,7 @@ public:
 
 	void clear_transforms()
 	{
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			transforms_.clear();
 			blend_modes_.clear();
@@ -214,7 +205,7 @@ public:
 		
 	void set_blend_mode(int index, blend_mode::type value)
 	{
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			blend_modes_[index] = value;
 		}, high_priority);
@@ -241,14 +232,6 @@ mixer::mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>
 void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }
 safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
-safe_ptr<core::write_frame> mixer::create_frame(const void* tag, size_t width, size_t height, core::pixel_format::type pix_fmt)
-{
-	// Create bgra frame
-	core::pixel_format_desc desc;
-	desc.pix_fmt = pix_fmt;
-	desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
-	return create_frame(tag, desc);
-}
 void mixer::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
 void mixer::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween)
 {impl_->apply_transform(index, transform, mix_duration, tween);}
