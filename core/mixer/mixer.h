@@ -56,7 +56,6 @@ public:
 	// mixer
 
 	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);		
-	safe_ptr<core::write_frame> create_frame(const void* tag, size_t width, size_t height, pixel_format::type pix_fmt = pixel_format::bgra);		
 	
 	core::video_format_desc get_video_format_desc() const; // nothrow
 	void set_video_format_desc(const video_format_desc& format_desc);

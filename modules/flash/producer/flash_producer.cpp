@@ -248,7 +248,11 @@ public:
 			fast_memclr(bmp_.data(), width_*height_*4);
 			ax_->DrawControl(bmp_);
 		
-			auto frame = frame_factory_->create_frame(this, width_, height_);
+			core::pixel_format_desc desc;
+			desc.pix_fmt = core::pixel_format::bgra;
+			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
+			auto frame = frame_factory_->create_frame(this, desc);
+
 			fast_memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
 			frame->commit();
 			head_ = frame;

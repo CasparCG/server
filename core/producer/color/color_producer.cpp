@@ -119,8 +119,11 @@ safe_ptr<core::write_frame> create_color_frame(void* tag, const safe_ptr<core::f
 	auto color2 = get_hex_color(color);
 	if(color2.length() != 9 || color2[0] != '#')
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color2)) << msg_info("Invalid color."));
-
-	auto frame = frame_factory->create_frame(tag, 1, 1, pixel_format::bgra);
+	
+	core::pixel_format_desc desc;
+	desc.pix_fmt = pixel_format::bgra;
+	desc.planes.push_back(core::pixel_format_desc::plane(1, 1, 4));
+	auto frame = frame_factory->create_frame(tag, desc);
 		
 	// Read color from hex-string and write to frame pixel.
 
