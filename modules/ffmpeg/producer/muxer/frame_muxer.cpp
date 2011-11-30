@@ -195,7 +195,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		if(video_streams_.size() > 1 && audio_streams_.size() > 1 && (!video_ready2() || !audio_ready2()))
 		{
 			if(!video_streams_.front().empty() || !audio_streams_.front().empty())
-				CASPAR_LOG(debug) << "Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
+				CASPAR_LOG(trace) << "Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
 
 			video_streams_.pop();
 			audio_streams_.pop();
