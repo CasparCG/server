@@ -94,8 +94,8 @@ public:
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
 			{
-				consumers_.erase(it);
 				CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
+				consumers_.erase(it);
 			}
 		}, high_priority);
 	}
