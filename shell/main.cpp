@@ -152,21 +152,20 @@ void print_info()
 	CASPAR_LOG(info) << caspar::get_cpu_info();
 	CASPAR_LOG(info) << caspar::get_system_product_name();
 	CASPAR_LOG(info) << L"Flash " << caspar::flash::get_version();
-	CASPAR_LOG(info) << L"Flash-Template-Host " << caspar::flash::get_cg_version();
 	CASPAR_LOG(info) << L"FreeImage " << caspar::image::get_version();
 	
 	CASPAR_LOG(info) << L"Decklink " << caspar::decklink::get_version();
 	auto deck = caspar::decklink::get_device_list();
 	std::for_each(deck.begin(), deck.end(), [](const std::wstring& device)
 	{
-		CASPAR_LOG(info) << device;
+		CASPAR_LOG(info) << L" - " << device;
 	});
 		
 	CASPAR_LOG(info) << L"Bluefish " << caspar::bluefish::get_version();
 	auto blue = caspar::bluefish::get_device_list();
 	std::for_each(blue.begin(), blue.end(), [](const std::wstring& device)
 	{
-		CASPAR_LOG(info) << device;
+		CASPAR_LOG(info) << L" - " << device;
 	});
 	
 	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
