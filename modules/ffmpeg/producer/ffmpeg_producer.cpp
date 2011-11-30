@@ -62,8 +62,6 @@ struct ffmpeg_producer : public core::frame_producer
 	
 	const safe_ptr<diagnostics::graph>							graph_;
 	boost::timer												frame_timer_;
-	boost::timer												video_timer_;
-	boost::timer												audio_timer_;
 					
 	const safe_ptr<core::frame_factory>							frame_factory_;
 	const core::video_format_desc								format_desc_;
