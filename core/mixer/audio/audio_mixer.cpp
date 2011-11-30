@@ -57,7 +57,7 @@ typedef std::vector<float, tbb::cache_aligned_allocator<float>> audio_buffer_ps;
 	
 struct audio_stream
 {
-	frame_transform		transform;
+	frame_transform		prev_transform;
 	audio_buffer_ps		audio_data;
 };
 
@@ -125,7 +125,7 @@ public:
 			const auto it = audio_streams_.find(item.tag);
 			if(it != audio_streams_.end())
 			{	
-				prev_transform	= it->second.transform;
+				prev_transform	= it->second.prev_transform;
 				next_audio		= std::move(it->second.audio_data);
 			}
 
@@ -140,8 +140,8 @@ public:
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
 				next_audio.push_back(item.audio_data[n] * (prev_volume + (n/format_desc_.audio_channels) * alpha));
 										
-			next_audio_streams[item.tag].transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
-			next_audio_streams[item.tag].audio_data = std::move(next_audio);			
+			next_audio_streams[item.tag].prev_transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
+			next_audio_streams[item.tag].audio_data		 = std::move(next_audio);			
 		}				
 
 		items_.clear();
