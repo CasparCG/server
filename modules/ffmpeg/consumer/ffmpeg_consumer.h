@@ -19,14 +19,21 @@
 */
 #pragma once
 
-//#include <boost/property_tree/ptree.hpp>
-//
-//#include <string>
-//#include <vector>
+#include <boost/property_tree/ptree.hpp>
+
+#include <string>
+#include <vector>
 
 namespace caspar { 
-	
-//safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params);
-//safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree);
 
+namespace core {
+	struct frame_consumer;
 }
+
+namespace ffmpeg {
+
+	
+safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree);
+
+}}
