@@ -101,7 +101,6 @@ struct ogl_consumer : boost::noncopyable
 	const configuration		config_;
 	core::video_format_desc format_desc_;
 	int						channel_index_;
-	int						sub_index_;
 
 	GLuint					texture_;
 	std::vector<GLuint>		pbos_;
@@ -125,15 +124,13 @@ struct ogl_consumer : boost::noncopyable
 
 	boost::thread			thread_;
 	tbb::atomic<bool>		is_running_;
-
 	
 	ffmpeg::filter			filter_;
 public:
-	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index, int sub_index) 
+	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
 		: config_(config)
 		, format_desc_(format_desc)
 		, channel_index_(channel_index)
-		, sub_index_(sub_index)
 		, texture_(0)
 		, pbos_(2, 0)	
 		, screen_width_(format_desc.width)
@@ -367,7 +364,7 @@ public:
 		
 	std::wstring print() const
 	{	
-		return config_.name + L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + boost::lexical_cast<std::wstring>(sub_index_) + L"|" + format_desc_.name + L"]";
+		return config_.name + L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
 	}
 	
 	void calculate_aspect()
@@ -450,10 +447,10 @@ public:
 
 	// frame_consumer
 
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		consumer_.reset();
-		consumer_.reset(new ogl_consumer(config_, format_desc, channel_index, sub_index));
+		consumer_.reset(new ogl_consumer(config_, format_desc, channel_index));
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
@@ -475,6 +472,11 @@ public:
 	virtual size_t buffer_depth() const override
 	{
 		return 1;
+	}
+
+	virtual int index() const override
+	{
+		return 600;
 	}
 };	
 

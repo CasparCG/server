@@ -40,7 +40,7 @@ public:
 
 	// output
 
-	void add(int index, safe_ptr<frame_consumer>&& consumer);
+	void add(safe_ptr<frame_consumer>&& consumer);
 	void remove(int index);
 	
 	void set_video_format_desc(const video_format_desc& format_desc);
