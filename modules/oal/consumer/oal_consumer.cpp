@@ -50,7 +50,7 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	int													channel_index_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<audio_buffer_16>>	input_;
-	boost::circular_buffer<audio_buffer_16>			container_;
+	boost::circular_buffer<audio_buffer_16>				container_;
 	tbb::atomic<bool>									is_running_;
 	core::audio_buffer									temp;
 
@@ -62,7 +62,6 @@ public:
 	{
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
-		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
 		is_running_ = true;
@@ -87,6 +86,8 @@ public:
 	{
 		format_desc_	= format_desc;		
 		channel_index_	= channel_index;
+		graph_->set_text(print());
+
 		if(Status() != Playing)
 		{
 			sf::SoundStream::Initialize(2, 48000);

@@ -71,10 +71,7 @@ public:
 	
 	void add(safe_ptr<frame_consumer>&& consumer)
 	{		
-		executor_.invoke([&]
-		{
-			consumers_.erase(consumer->index());
-		}, high_priority);
+		remove(consumer->index());
 
 		consumer = create_consumer_cadence_guard(std::move(consumer));
 		consumer->initialize(format_desc_, channel_index_);
@@ -82,22 +79,31 @@ public:
 		executor_.invoke([&]
 		{
 			consumers_.insert(std::make_pair(consumer->index(), consumer));
-
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
 		}, high_priority);
 	}
 
 	void remove(int index)
-	{
+	{		
+		// Destroy  consumer on calling thread:
+		std::shared_ptr<frame_consumer> old_consumer;
+
 		executor_.invoke([&]
 		{
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
 			{
-				CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
+				old_consumer = it->second;
 				consumers_.erase(it);
 			}
 		}, high_priority);
+
+		if(old_consumer)
+		{
+			auto str = old_consumer->print();
+			old_consumer.reset();
+			CASPAR_LOG(info) << print() << L" " << str << L" Removed.";
+		}
 	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
