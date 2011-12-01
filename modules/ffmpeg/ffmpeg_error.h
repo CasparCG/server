@@ -149,4 +149,16 @@ static void throw_on_ffmpeg_error(int ret, const std::wstring& source, const cha
 		return ret;															\
 	}()
 
+#define LOG_ON_ERROR2(call, source)											\
+	[&]() -> int															\
+	{					\
+		int ret = -1;\
+		try{																\
+		 ret = call;															\
+		throw_on_ffmpeg_error(ret, source, THROW_ON_ERROR_STR(call), __FUNCTION__, __FILE__, __LINE__);	\
+		return ret;															\
+		}catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}						\
+		return ret;															\
+	}()
+
 }}
