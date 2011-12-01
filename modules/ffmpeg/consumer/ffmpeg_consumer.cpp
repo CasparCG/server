@@ -464,7 +464,7 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree
 {
 	std::string filename = ptree.get<std::string>("path");
 	auto key_only		 = ptree.get("key-only", false);
-	auto codec			 = ptree.get("codec", "dnxhd");
+	auto codec			 = ptree.get("codec", "libx264");
 	auto options		 = ptree.get("options", "");
 	
 	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + widen(filename), key_only, codec, options);
