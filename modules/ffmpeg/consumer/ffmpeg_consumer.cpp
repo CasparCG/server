@@ -185,7 +185,7 @@ public:
 		bitrate *= 1000000;
 		
 		st->codec->codec_id			= codec_id;
-		st->codec->bit_rate			= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 42*1000000 : 147*1000000;
+		st->codec->bit_rate			= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 63*1000000 : 220*1000000;
 		st->codec->codec_type		= AVMEDIA_TYPE_VIDEO;
 		st->codec->width			= format_desc_.width;
 		st->codec->height			= format_desc_.height;
@@ -202,9 +202,8 @@ public:
 			if(format_desc_.width < 1280 || format_desc_.height < 720)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("unsupported dimension"));
 
-			st->codec->bit_rate	= bitrate > 0 ? bitrate : 145*1000000;
+			st->codec->bit_rate	= bitrate > 0 ? bitrate : 220*1000000;
 			st->codec->pix_fmt	= PIX_FMT_YUV422P;
-
 		}
 		else if(st->codec->codec_id == CODEC_ID_DVVIDEO)
 		{
