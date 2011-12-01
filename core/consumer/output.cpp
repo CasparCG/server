@@ -115,6 +115,7 @@ public:
 				catch(...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
+					CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
 					consumers_.erase(it++);
 				}
 			}
@@ -180,7 +181,10 @@ public:
 						if(consumer->send(frame))
 							++it;
 						else
+						{
+							CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
 							consumers_.erase(it++);
+						}
 					}
 					catch(...)
 					{

@@ -21,7 +21,6 @@
 #include "../StdAfx.h"
 
 #include "../ffmpeg_error.h"
-#include "../producer/tbb_avcodec.h"
 
 #include "ffmpeg_consumer.h"
 
@@ -31,10 +30,13 @@
 #include <core/video_format.h>
 
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
 #include <common/utility/string.h>
 #include <common/env.h>
 
+#include <boost/timer.hpp>
 #include <boost/thread/once.hpp>
+#include <boost/thread.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <tbb/cache_aligned_allocator.h>
@@ -66,7 +68,12 @@ struct ffmpeg_consumer : boost::noncopyable
 	const std::shared_ptr<AVFormatContext>	oc_;
 	const core::video_format_desc			format_desc_;
 	
+	const safe_ptr<diagnostics::graph>		graph_;
+	boost::timer							frame_timer_;
+	boost::timer							write_timer_;
+
 	executor								executor_;
+	executor								file_write_executor_;
 
 	// Audio
 	std::shared_ptr<AVStream>				audio_st_;
@@ -89,9 +96,17 @@ public:
 		, oc_(avformat_alloc_context(), av_free)
 		, format_desc_(format_desc)
 		, executor_(print())
+		, file_write_executor_(print() + L"/output")
 	{
-		executor_.set_capacity(25);
-		
+		graph_->add_guide("frame-time", 0.5);
+		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
+		graph_->set_color("write-time", diagnostics::color(0.5f, 0.5f, 0.1f));
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
+
+		executor_.set_capacity(8);
+		file_write_executor_.set_capacity(8);
+
 		oc_->oformat = av_guess_format(nullptr, filename_.c_str(), nullptr);
 		if (!oc_->oformat)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not find suitable output format."));
@@ -121,6 +136,9 @@ public:
 
 	~ffmpeg_consumer()
 	{    
+		file_write_executor_.stop();
+		file_write_executor_.join();
+
 		executor_.stop();
 		executor_.join();
 		
@@ -163,8 +181,11 @@ public:
 				<< msg_info("Could not alloc video-stream")				
 				<< boost::errinfo_api_function("av_new_stream"));
 		}
+
+		bitrate *= 1000000;
 		
 		st->codec->codec_id			= codec_id;
+		st->codec->bit_rate			= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 42*1000000 : 147*1000000;
 		st->codec->codec_type		= AVMEDIA_TYPE_VIDEO;
 		st->codec->width			= format_desc_.width;
 		st->codec->height			= format_desc_.height;
@@ -178,11 +199,28 @@ public:
 		}
 		else if(st->codec->codec_id == CODEC_ID_DNXHD)
 		{
+			if(format_desc_.width < 1280 || format_desc_.height < 720)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("unsupported dimension"));
+
 			st->codec->bit_rate	= bitrate > 0 ? bitrate : 145*1000000;
-			st->codec->width	= std::min<size_t>(1280, format_desc_.width);
-			st->codec->height	= std::min<size_t>(720, format_desc_.height);
+			st->codec->pix_fmt	= PIX_FMT_YUV422P;
+
+		}
+		else if(st->codec->codec_id == CODEC_ID_DVVIDEO)
+		{
+			st->codec->bit_rate	= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 50*1000000 : 100*1000000;
 			st->codec->pix_fmt	= PIX_FMT_YUV422P;
 		}
+		//else if(st->codec->codec_id == CODEC_ID_H264)
+		//{			
+		//	st->codec->pix_fmt		= PIX_FMT_YUV422P;
+		//	st->codec->me_range		= 16;
+		//	st->codec->max_qdiff	= 4;
+		//	st->codec->qmin			= 10;
+		//	st->codec->qmax			= 51;
+		//	st->codec->qcompress	= 0.6;
+		//	st->codec->gop_size		= 25;
+		//}
 		else
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("unsupported codec"));
 		
@@ -193,11 +231,12 @@ public:
 		if (!codec)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("codec not found"));
 
-		THROW_ON_ERROR2(tbb_avcodec_open(st->codec, codec), "[ffmpeg_consumer]");
+		st->codec->thread_count = boost::thread::hardware_concurrency();
+		THROW_ON_ERROR2(avcodec_open(st->codec, codec), "[ffmpeg_consumer]");
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
-			tbb_avcodec_close(st->codec);
+			avcodec_close(st->codec);
 		});
 	}
 	
@@ -211,11 +250,11 @@ public:
 				<< boost::errinfo_api_function("av_new_stream"));
 		}
 
-		st->codec->codec_id		= CODEC_ID_PCM_S16LE;
-		st->codec->codec_type	= AVMEDIA_TYPE_AUDIO;
-		st->codec->sample_rate	= 48000;
-		st->codec->channels		= 2;
-		st->codec->sample_fmt	= SAMPLE_FMT_S16;
+		st->codec->codec_id			= CODEC_ID_PCM_S16LE;
+		st->codec->codec_type		= AVMEDIA_TYPE_AUDIO;
+		st->codec->sample_rate		= 48000;
+		st->codec->channels			= 2;
+		st->codec->sample_fmt		= SAMPLE_FMT_S16;
 		
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			st->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
@@ -232,7 +271,7 @@ public:
 		});
 	}
   
-	void encode_video_frame(const safe_ptr<core::read_frame>& frame)
+	std::shared_ptr<AVPacket> encode_video_frame(const safe_ptr<core::read_frame>& frame)
 	{ 
 		auto c = video_st_->codec;
  
@@ -258,49 +297,72 @@ public:
 		int out_size = THROW_ON_ERROR2(avcodec_encode_video(c, video_outbuf_.data(), video_outbuf_.size(), local_av_frame.get()), "[ffmpeg_consumer]");
 		if(out_size > 0)
 		{
-			AVPacket pkt;
-			av_init_packet(&pkt);
+			safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
+			{
+				av_free_packet(p);
+				delete p;
+			});
+			av_init_packet(pkt.get());
  
 			if (c->coded_frame->pts != AV_NOPTS_VALUE)
-				pkt.pts= av_rescale_q(c->coded_frame->pts, c->time_base, video_st_->time_base);
+				pkt->pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st_->time_base);
 
 			if(c->coded_frame->key_frame)
-				pkt.flags |= AV_PKT_FLAG_KEY;
+				pkt->flags |= AV_PKT_FLAG_KEY;
 
-			pkt.stream_index	= video_st_->index;
-			pkt.data			= video_outbuf_.data();
-			pkt.size			= out_size;
+			pkt->stream_index	= video_st_->index;
+			pkt->data			= video_outbuf_.data();
+			pkt->size			= out_size;
  
-			THROW_ON_ERROR2(av_interleaved_write_frame(oc_.get(), &pkt), L"[ffmpeg_consumer]");
+			av_dup_packet(pkt.get());
+			return pkt;
 		}	
+		return nullptr;
 	}
 		
-	void encode_audio_frame(const safe_ptr<core::read_frame>& frame)
+	std::shared_ptr<AVPacket> encode_audio_frame(const safe_ptr<core::read_frame>& frame)
 	{			
 		auto c = audio_st_->codec;
 
 		auto audio_data = core::audio_32_to_16(frame->audio_data());
-
-		AVPacket pkt;
-		av_init_packet(&pkt);
+		
+		safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
+		{
+			av_free_packet(p);
+			delete p;
+		});
+		av_init_packet(pkt.get());
 		
 		if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
-			pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, audio_st_->time_base);
+			pkt->pts = av_rescale_q(c->coded_frame->pts, c->time_base, audio_st_->time_base);
 
-		pkt.flags		 |= AV_PKT_FLAG_KEY;
-		pkt.stream_index = audio_st_->index;
-		pkt.size		 = audio_data.size()*2;
-		pkt.data		 = reinterpret_cast<uint8_t*>(audio_data.data());
+		pkt->flags		 |= AV_PKT_FLAG_KEY;
+		pkt->stream_index = audio_st_->index;
+		pkt->size		 = audio_data.size()*2;
+		pkt->data		 = reinterpret_cast<uint8_t*>(audio_data.data());
 		
-		THROW_ON_ERROR2(av_interleaved_write_frame(oc_.get(), &pkt), L"[ffmpeg_consumer]");
+		av_dup_packet(pkt.get());
+		return pkt;
 	}
 		 
 	void send(const safe_ptr<core::read_frame>& frame)
 	{
 		executor_.begin_invoke([=]
-		{				
-			encode_video_frame(frame);
-			encode_audio_frame(frame);
+		{		
+			frame_timer_.restart();
+			auto video = encode_video_frame(frame);
+			auto audio = encode_audio_frame(frame);
+			graph_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
+			
+			file_write_executor_.begin_invoke([=]
+			{
+				write_timer_.restart();
+				if(video)
+					av_write_frame(oc_.get(), video.get());
+				if(audio)
+					av_write_frame(oc_.get(), audio.get());
+				graph_->update_value("write-time", write_timer_.elapsed()*format_desc_.fps*0.5);
+			});
 		});
 	}
 };
@@ -363,13 +425,13 @@ safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wst
 
 	std::string codec = "dnxhd";
 	auto codec_it = std::find(params.begin(), params.end(), L"CODEC");
-	if(codec_it++ != params.end())
+	if(codec_it != params.end() && codec_it++ != params.end())
 		codec = narrow(*codec_it);
 
 	int bitrate = 0;	
 	auto bitrate_it = std::find(params.begin(), params.end(), L"BITRATE");
-	if(bitrate_it++ != params.end())
-		bitrate = boost::lexical_cast<int>(*codec_it);
+	if(bitrate_it != params.end() && bitrate_it++ != params.end())
+		bitrate = boost::lexical_cast<int>(*bitrate_it);
 
 	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + params[1], key_only, codec, bitrate);
 }
