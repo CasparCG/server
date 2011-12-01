@@ -140,11 +140,11 @@ public:
 
 	~ffmpeg_consumer()
 	{    
-		file_write_executor_.stop();
-		file_write_executor_.join();
-
 		executor_.stop();
 		executor_.join();
+
+		file_write_executor_.stop();
+		file_write_executor_.join();
 		
 		try
 		{
@@ -153,12 +153,6 @@ public:
 			audio_st_.reset();
 			video_st_.reset();
 			  
-			for(size_t i = 0; i < oc_->nb_streams; i++) 
-			{
-				av_freep(&oc_->streams[i]->codec);
-				av_freep(&oc_->streams[i]);
-			}
-
 			if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
 				THROW_ON_ERROR2(avio_close(oc_->pb), "[ffmpeg_consumer]"); // Close the output ffmpeg.
 
@@ -168,7 +162,6 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-
 	}
 			
 	std::wstring print() const
@@ -176,16 +169,11 @@ public:
 		return L"ffmpeg[" + widen(filename_) + L"]";
 	}
 
-
 	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id, const std::string& options)
 	{ 
 		auto st = av_new_stream(oc_.get(), 0);
-		if (!st) 
-		{
-			BOOST_THROW_EXCEPTION(caspar_exception() 
-				<< msg_info("Could not alloc video-stream")				
-				<< boost::errinfo_api_function("av_new_stream"));
-		}
+		if (!st) 		
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream") << boost::errinfo_api_function("av_new_stream"));		
 
 		auto encoder = avcodec_find_encoder(codec_id);
 		if (!encoder)
@@ -207,7 +195,7 @@ public:
 		{			
 			c->bit_rate	= c->bit_rate > 0 ? c->bit_rate : format_desc_.width < 1280 ? 42*1000000 : 147*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P10;
-			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
+			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else if(c->codec_id == CODEC_ID_DNXHD)
 		{
@@ -217,30 +205,32 @@ public:
 			c->bit_rate	= c->bit_rate > 0 ? c->bit_rate : 220*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P;
 			
-			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
+			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else if(c->codec_id == CODEC_ID_DVVIDEO)
 		{
 			c->bit_rate	= c->bit_rate > 0 ? c->bit_rate : format_desc_.width < 1280 ? 50*1000000 : 100*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P;
 			
-			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
+			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else if(c->codec_id == CODEC_ID_H264)
 		{			   
-			c->pix_fmt		= PIX_FMT_YUV420P;    
-			av_opt_set(c->priv_data, "preset", "faster", 0);
+			c->pix_fmt = PIX_FMT_YUV420P;    
+			av_opt_set(c->priv_data, "preset", "ultrafast", 0);
+			av_opt_set(c->priv_data, "tune",   "film",   0);
+			av_opt_set(c->priv_data, "crf",    "10",     0);
 			
-			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
-
-			c->max_b_frames = 0; // b-franes bit supported.
+			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else
 		{
-			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
+			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 			CASPAR_LOG(warning) << " Potentially unsupported output parameters.";
 		}
 		
+		c->max_b_frames = 0; // b-franes bit supported.
+
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 		
@@ -250,18 +240,16 @@ public:
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
 			avcodec_close(st->codec);
+			av_freep(&st->codec);
+			av_freep(&st);
 		});
 	}
 	
 	std::shared_ptr<AVStream> add_audio_stream()
 	{
 		auto st = av_new_stream(oc_.get(), 1);
-		if (!st) 
-		{
-			BOOST_THROW_EXCEPTION(caspar_exception() 
-				<< msg_info("Could not alloc audio-stream")				
-				<< boost::errinfo_api_function("av_new_stream"));
-		}
+		if(!st)
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate audio-stream") << boost::errinfo_api_function("av_new_stream"));		
 
 		st->codec->codec_id			= CODEC_ID_PCM_S16LE;
 		st->codec->codec_type		= AVMEDIA_TYPE_AUDIO;
@@ -281,6 +269,8 @@ public:
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
 			avcodec_close(st->codec);
+			av_freep(&st->codec);
+			av_freep(&st);
 		});
 	}
 
@@ -370,17 +360,21 @@ public:
 		executor_.begin_invoke([=]
 		{		
 			frame_timer_.restart();
+
 			auto video = encode_video_frame(frame);
 			auto audio = encode_audio_frame(frame);
+
 			graph_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 			
 			file_write_executor_.begin_invoke([=]
 			{
 				write_timer_.restart();
+
 				if(video)
 					av_write_frame(oc_.get(), video.get());
 				if(audio)
 					av_write_frame(oc_.get(), audio.get());
+
 				graph_->update_value("write-time", write_timer_.elapsed()*format_desc_.fps*0.5);
 			});
 		});
