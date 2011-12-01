@@ -92,7 +92,7 @@ struct ffmpeg_consumer : boost::noncopyable
 	int64_t									frame_number_;
 	
 public:
-	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, const std::string& codec, int bitrate)
+	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, const std::string& codec, const std::string& options)
 		: filename_(filename + ".mov")
 		, video_outbuf_(1920*1080*8)
 		, audio_outbuf_(48000)
@@ -124,7 +124,7 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info(codec));
 
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs .
-		video_st_ = add_video_stream(video_codec->id, bitrate);
+		video_st_ = add_video_stream(video_codec->id, options);
 		audio_st_ = add_audio_stream();
 				
 		dump_format(oc_.get(), 0, filename_.c_str(), 1);
@@ -176,7 +176,8 @@ public:
 		return L"ffmpeg[" + widen(filename_) + L"]";
 	}
 
-	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id, int bitrate)
+
+	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id, const std::string& options)
 	{ 
 		auto st = av_new_stream(oc_.get(), 0);
 		if (!st) 
@@ -193,11 +194,8 @@ public:
 		auto c = st->codec;
 
 		avcodec_get_context_defaults3(c, encoder);
-
-		bitrate *= 1000000;
-		
+				
 		c->codec_id			= codec_id;
-		c->bit_rate			= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 63*1000000 : 220*1000000;
 		c->codec_type		= AVMEDIA_TYPE_VIDEO;
 		c->width			= format_desc_.width;
 		c->height			= format_desc_.height;
@@ -207,29 +205,41 @@ public:
 
 		if(c->codec_id == CODEC_ID_PRORES)
 		{			
-			c->bit_rate	= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 42*1000000 : 147*1000000;
+			c->bit_rate	= c->bit_rate > 0 ? c->bit_rate : format_desc_.width < 1280 ? 42*1000000 : 147*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P10;
+			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
 		}
 		else if(c->codec_id == CODEC_ID_DNXHD)
 		{
 			if(format_desc_.width < 1280 || format_desc_.height < 720)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("unsupported dimension"));
 
-			c->bit_rate	= bitrate > 0 ? bitrate : 220*1000000;
+			c->bit_rate	= c->bit_rate > 0 ? c->bit_rate : 220*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P;
+			
+			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
 		}
 		else if(c->codec_id == CODEC_ID_DVVIDEO)
 		{
-			c->bit_rate	= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 50*1000000 : 100*1000000;
+			c->bit_rate	= c->bit_rate > 0 ? c->bit_rate : format_desc_.width < 1280 ? 50*1000000 : 100*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P;
+			
+			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
 		}
-		//else if(st->codec->codec_id == CODEC_ID_H264)
-		//{			   
-		//	c->pix_fmt = PIX_FMT_YUV422P;    
-		//	THROW_ON_ERROR2(av_opt_set(c->priv_data, "preset", "slow", 0), "[ffmpeg_consumer]");
-		//}
+		else if(c->codec_id == CODEC_ID_H264)
+		{			   
+			c->pix_fmt		= PIX_FMT_YUV420P;    
+			av_opt_set(c->priv_data, "preset", "faster", 0);
+			
+			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
+
+			c->max_b_frames = 0; // b-franes bit supported.
+		}
 		else
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("unsupported codec"));
+		{
+			CASPAR_LOG(info) << print() << L"Options set: " << av_set_options_string(c->priv_data, options.c_str(), "=", ":");
+			CASPAR_LOG(warning) << " Potentially unsupported output parameters.";
+		}
 		
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			c->flags |= CODEC_FLAG_GLOBAL_HEADER;
@@ -273,11 +283,9 @@ public:
 			avcodec_close(st->codec);
 		});
 	}
-  
-	std::shared_ptr<AVPacket> encode_video_frame(const safe_ptr<core::read_frame>& frame)
-	{ 
-		auto c = video_st_->codec;
- 
+
+	std::shared_ptr<AVFrame> convert_video_frame(const safe_ptr<core::read_frame>& frame, AVCodecContext* c)
+	{
 		if(!img_convert_ctx_) 
 		{
 			img_convert_ctx_.reset(sws_getContext(format_desc_.width, format_desc_.height, PIX_FMT_BGRA, c->width, c->height, c->pix_fmt, SWS_BICUBIC, nullptr, nullptr, nullptr), sws_freeContext);
@@ -289,16 +297,24 @@ public:
 		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), const_cast<uint8_t*>(frame->image_data().begin()), PIX_FMT_BGRA, format_desc_.width, format_desc_.height);
 				
 		std::shared_ptr<AVFrame> local_av_frame(avcodec_alloc_frame(), av_free);
-		local_av_frame->interlaced_frame = format_desc_.field_mode != core::field_mode::progressive;
-		local_av_frame->top_field_first  = format_desc_.field_mode == core::field_mode::upper;
-		local_av_frame->pts				 = (frame_number_ * video_st_->time_base.den) * video_st_->time_base.num;
-
 		picture_buf_.resize(avpicture_get_size(c->pix_fmt, format_desc_.width, format_desc_.height));
 		avpicture_fill(reinterpret_cast<AVPicture*>(local_av_frame.get()), picture_buf_.data(), c->pix_fmt, format_desc_.width, format_desc_.height);
 
 		sws_scale(img_convert_ctx_.get(), av_frame->data, av_frame->linesize, 0, c->height, local_av_frame->data, local_av_frame->linesize);
-				
-		int out_size = THROW_ON_ERROR2(avcodec_encode_video(c, video_outbuf_.data(), video_outbuf_.size(), local_av_frame.get()), "[ffmpeg_consumer]");
+
+		return local_av_frame;
+	}
+  
+	std::shared_ptr<AVPacket> encode_video_frame(const safe_ptr<core::read_frame>& frame)
+	{ 
+		auto c = video_st_->codec;
+ 
+		auto av_frame = convert_video_frame(frame, c);
+		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
+		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper;
+		av_frame->pts				= frame_number_++;
+
+		int out_size = THROW_ON_ERROR2(avcodec_encode_video(c, video_outbuf_.data(), video_outbuf_.size(), av_frame.get()), "[ffmpeg_consumer]");
 		if(out_size > 0)
 		{
 			safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
@@ -365,7 +381,6 @@ public:
 					av_write_frame(oc_.get(), video.get());
 				if(audio)
 					av_write_frame(oc_.get(), audio.get());
-				++frame_number_;
 				graph_->update_value("write-time", write_timer_.elapsed()*format_desc_.fps*0.5);
 			});
 		});
@@ -377,24 +392,24 @@ struct ffmpeg_consumer_proxy : public core::frame_consumer
 	const std::wstring	filename_;
 	const bool			key_only_;
 	const std::string	codec_;
-	const int			bitrate_;
+	const std::string	options_;
 
 	std::unique_ptr<ffmpeg_consumer> consumer_;
 
 public:
 
-	ffmpeg_consumer_proxy(const std::wstring& filename, bool key_only, const std::string codec, int bitrate)
+	ffmpeg_consumer_proxy(const std::wstring& filename, bool key_only, const std::string codec, const std::string& options)
 		: filename_(filename)
 		, key_only_(key_only)
 		, codec_(boost::to_lower_copy(codec))
-		, bitrate_(bitrate)
+		, options_(options)
 	{
 	}
 	
 	virtual void initialize(const core::video_format_desc& format_desc, int, int)
 	{
 		consumer_.reset();
-		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, codec_, bitrate_));
+		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, codec_, options_));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -436,12 +451,12 @@ safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wst
 	if(codec == "H264" || codec == "h264")
 		codec = "libx264";
 
-	int bitrate = 0;	
-	auto bitrate_it = std::find(params.begin(), params.end(), L"BITRATE");
-	if(bitrate_it != params.end() && bitrate_it++ != params.end())
-		bitrate = boost::lexical_cast<int>(*bitrate_it);
+	std::string options = "";
+	auto options_it = std::find(params.begin(), params.end(), L"OPTIONS");
+	if(options_it != params.end() && options_it++ != params.end())
+		options = narrow(*options_it);
 
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + params[1], key_only, codec, bitrate);
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + params[1], key_only, codec, boost::to_lower_copy(options));
 }
 
 safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree)
@@ -449,9 +464,9 @@ safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree
 	std::string filename = ptree.get<std::string>("path");
 	auto key_only		 = ptree.get("key-only", false);
 	auto codec			 = ptree.get("codec", "dnxhd");
-	auto bitrate		 = ptree.get("bitrate", 0);
+	auto options		 = ptree.get("options", "");
 	
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + widen(filename), key_only, codec, bitrate);
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + widen(filename), key_only, codec, options);
 }
 
 }}
