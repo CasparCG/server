@@ -54,6 +54,7 @@ extern "C"
 	#define __STDC_LIMIT_MACROS
 	#include <libavformat/avformat.h>
 	#include <libswscale/swscale.h>
+	#include <libavutil/opt.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)
@@ -87,6 +88,8 @@ struct ffmpeg_consumer : boost::noncopyable
 
 	std::vector<uint8_t>					picture_buf_;
 	std::shared_ptr<SwsContext>				img_convert_ctx_;
+
+	int64_t									frame_number_;
 	
 public:
 	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, const std::string& codec, int bitrate)
@@ -97,6 +100,7 @@ public:
 		, format_desc_(format_desc)
 		, executor_(print())
 		, file_write_executor_(print() + L"/output")
+		, frame_number_(0)
 	{
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -182,56 +186,56 @@ public:
 				<< boost::errinfo_api_function("av_new_stream"));
 		}
 
+		auto encoder = avcodec_find_encoder(codec_id);
+		if (!encoder)
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("codec not found"));
+
+		auto c = st->codec;
+
+		avcodec_get_context_defaults3(c, encoder);
+
 		bitrate *= 1000000;
 		
-		st->codec->codec_id			= codec_id;
-		st->codec->bit_rate			= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 63*1000000 : 220*1000000;
-		st->codec->codec_type		= AVMEDIA_TYPE_VIDEO;
-		st->codec->width			= format_desc_.width;
-		st->codec->height			= format_desc_.height;
-		st->codec->time_base.den	= format_desc_.time_scale;
-		st->codec->time_base.num	= format_desc_.duration;
+		c->codec_id			= codec_id;
+		c->bit_rate			= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 63*1000000 : 220*1000000;
+		c->codec_type		= AVMEDIA_TYPE_VIDEO;
+		c->width			= format_desc_.width;
+		c->height			= format_desc_.height;
+		c->time_base.den	= format_desc_.time_scale;
+		c->time_base.num	= format_desc_.duration;
+		c->gop_size			= 25;
 
-		if(st->codec->codec_id == CODEC_ID_PRORES)
+		if(c->codec_id == CODEC_ID_PRORES)
 		{			
-			st->codec->bit_rate	= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 42*1000000 : 147*1000000;
-			st->codec->pix_fmt	= PIX_FMT_YUV422P10;
+			c->bit_rate	= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 42*1000000 : 147*1000000;
+			c->pix_fmt	= PIX_FMT_YUV422P10;
 		}
-		else if(st->codec->codec_id == CODEC_ID_DNXHD)
+		else if(c->codec_id == CODEC_ID_DNXHD)
 		{
 			if(format_desc_.width < 1280 || format_desc_.height < 720)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("unsupported dimension"));
 
-			st->codec->bit_rate	= bitrate > 0 ? bitrate : 220*1000000;
-			st->codec->pix_fmt	= PIX_FMT_YUV422P;
+			c->bit_rate	= bitrate > 0 ? bitrate : 220*1000000;
+			c->pix_fmt	= PIX_FMT_YUV422P;
 		}
-		else if(st->codec->codec_id == CODEC_ID_DVVIDEO)
+		else if(c->codec_id == CODEC_ID_DVVIDEO)
 		{
-			st->codec->bit_rate	= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 50*1000000 : 100*1000000;
-			st->codec->pix_fmt	= PIX_FMT_YUV422P;
+			c->bit_rate	= bitrate > 0 ? bitrate : format_desc_.width < 1280 ? 50*1000000 : 100*1000000;
+			c->pix_fmt	= PIX_FMT_YUV422P;
 		}
 		//else if(st->codec->codec_id == CODEC_ID_H264)
-		//{			
-		//	st->codec->pix_fmt		= PIX_FMT_YUV422P;
-		//	st->codec->me_range		= 16;
-		//	st->codec->max_qdiff	= 4;
-		//	st->codec->qmin			= 10;
-		//	st->codec->qmax			= 51;
-		//	st->codec->qcompress	= 0.6;
-		//	st->codec->gop_size		= 25;
+		//{			   
+		//	c->pix_fmt = PIX_FMT_YUV422P;    
+		//	THROW_ON_ERROR2(av_opt_set(c->priv_data, "preset", "slow", 0), "[ffmpeg_consumer]");
 		//}
 		else
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("unsupported codec"));
 		
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
-			st->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
-
-		auto codec = avcodec_find_encoder(st->codec->codec_id);
-		if (!codec)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("codec not found"));
-
-		st->codec->thread_count = boost::thread::hardware_concurrency();
-		THROW_ON_ERROR2(avcodec_open(st->codec, codec), "[ffmpeg_consumer]");
+			c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+		
+		c->thread_count = boost::thread::hardware_concurrency();
+		THROW_ON_ERROR2(avcodec_open(c, encoder), "[ffmpeg_consumer]");
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
@@ -287,6 +291,7 @@ public:
 		std::shared_ptr<AVFrame> local_av_frame(avcodec_alloc_frame(), av_free);
 		local_av_frame->interlaced_frame = format_desc_.field_mode != core::field_mode::progressive;
 		local_av_frame->top_field_first  = format_desc_.field_mode == core::field_mode::upper;
+		local_av_frame->pts				 = (frame_number_ * video_st_->time_base.den) * video_st_->time_base.num;
 
 		picture_buf_.resize(avpicture_get_size(c->pix_fmt, format_desc_.width, format_desc_.height));
 		avpicture_fill(reinterpret_cast<AVPicture*>(local_av_frame.get()), picture_buf_.data(), c->pix_fmt, format_desc_.width, format_desc_.height);
@@ -360,6 +365,7 @@ public:
 					av_write_frame(oc_.get(), video.get());
 				if(audio)
 					av_write_frame(oc_.get(), audio.get());
+				++frame_number_;
 				graph_->update_value("write-time", write_timer_.elapsed()*format_desc_.fps*0.5);
 			});
 		});
@@ -426,6 +432,9 @@ safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wst
 	auto codec_it = std::find(params.begin(), params.end(), L"CODEC");
 	if(codec_it != params.end() && codec_it++ != params.end())
 		codec = narrow(*codec_it);
+
+	if(codec == "H264" || codec == "h264")
+		codec = "libx264";
 
 	int bitrate = 0;	
 	auto bitrate_it = std::find(params.begin(), params.end(), L"BITRATE");
