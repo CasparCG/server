@@ -182,7 +182,7 @@ public:
 
 		if(c->codec_id == CODEC_ID_PRORES)
 		{			
-			c->bit_rate	= c->bit_rate > 0 ? c->bit_rate : format_desc_.width < 1280 ? 42*1000000 : 147*1000000;
+			c->bit_rate	= format_desc_.width < 1280 ? 63*1000000 : 220*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P10;
 			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
@@ -191,15 +191,22 @@ public:
 			if(format_desc_.width < 1280 || format_desc_.height < 720)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("unsupported dimension"));
 
-			c->bit_rate	= c->bit_rate > 0 ? c->bit_rate : 220*1000000;
+			c->bit_rate	= 220*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P;
 			
 			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else if(c->codec_id == CODEC_ID_DVVIDEO)
 		{
-			c->bit_rate	= c->bit_rate > 0 ? c->bit_rate : format_desc_.width < 1280 ? 50*1000000 : 100*1000000;
+			c->bit_rate	= format_desc_.width < 1280 ? 50*1000000 : 100*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P;
+			
+			c->width = format_desc_.height == 1280 ? 960  : c->width;
+
+			if(format_desc_.duration == 1001)			
+				c->width = format_desc_.height == 1080 ? 1280 : c->width;			
+			else
+				c->width = format_desc_.height == 1080 ? 1440 : c->width;
 			
 			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
@@ -426,13 +433,16 @@ safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wst
 	boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + params[1])); // Delete the file if it exists
 	bool key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
 
-	std::string codec = "dnxhd";
+	std::string codec = "libx264";
 	auto codec_it = std::find(params.begin(), params.end(), L"CODEC");
 	if(codec_it != params.end() && codec_it++ != params.end())
 		codec = narrow(*codec_it);
 
-	if(codec == "H264" || codec == "h264")
+	if(codec == "H264")
 		codec = "libx264";
+
+	if(codec == "DVCPRO")
+		codec = "dvvideo";
 
 	std::string options = "";
 	auto options_it = std::find(params.begin(), params.end(), L"OPTIONS");
