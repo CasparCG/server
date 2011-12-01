@@ -78,16 +78,13 @@ struct ffmpeg_consumer : boost::noncopyable
 
 	// Audio
 	std::shared_ptr<AVStream>				audio_st_;
-	std::vector<uint8_t>					audio_outbuf_;
-
-	std::vector<int16_t>					audio_input_buffer_;
-
+	
 	// Video
 	std::shared_ptr<AVStream>				video_st_;
-	std::vector<uint8_t>					video_outbuf_;
 
+	std::vector<uint8_t>					video_outbuf_;
 	std::vector<uint8_t>					picture_buf_;
-	std::shared_ptr<SwsContext>				img_convert_ctx_;
+	std::shared_ptr<SwsContext>				sws_;
 
 	int64_t									frame_number_;
 	
@@ -95,7 +92,6 @@ public:
 	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, const std::string& codec, const std::string& options)
 		: filename_(filename + ".mov")
 		, video_outbuf_(1920*1080*8)
-		, audio_outbuf_(48000)
 		, oc_(avformat_alloc_context(), av_free)
 		, format_desc_(format_desc)
 		, executor_(print())
@@ -269,10 +265,10 @@ public:
 
 	std::shared_ptr<AVFrame> convert_video_frame(const safe_ptr<core::read_frame>& frame, AVCodecContext* c)
 	{
-		if(!img_convert_ctx_) 
+		if(!sws_) 
 		{
-			img_convert_ctx_.reset(sws_getContext(format_desc_.width, format_desc_.height, PIX_FMT_BGRA, c->width, c->height, c->pix_fmt, SWS_BICUBIC, nullptr, nullptr, nullptr), sws_freeContext);
-			if (img_convert_ctx_ == nullptr) 
+			sws_.reset(sws_getContext(format_desc_.width, format_desc_.height, PIX_FMT_BGRA, c->width, c->height, c->pix_fmt, SWS_BICUBIC, nullptr, nullptr, nullptr), sws_freeContext);
+			if (sws_ == nullptr) 
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Cannot initialize the conversion context"));
 		}
 
@@ -283,7 +279,7 @@ public:
 		picture_buf_.resize(avpicture_get_size(c->pix_fmt, format_desc_.width, format_desc_.height));
 		avpicture_fill(reinterpret_cast<AVPicture*>(local_av_frame.get()), picture_buf_.data(), c->pix_fmt, format_desc_.width, format_desc_.height);
 
-		sws_scale(img_convert_ctx_.get(), av_frame->data, av_frame->linesize, 0, c->height, local_av_frame->data, local_av_frame->linesize);
+		sws_scale(sws_.get(), av_frame->data, av_frame->linesize, 0, c->height, local_av_frame->data, local_av_frame->linesize);
 
 		return local_av_frame;
 	}
