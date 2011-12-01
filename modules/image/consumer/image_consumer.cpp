@@ -47,7 +47,7 @@ public:
 
 	// frame_consumer
 
-	virtual void initialize(const core::video_format_desc& format_desc, int, int) override
+	virtual void initialize(const core::video_format_desc& format_desc, int) override
 	{
 		format_desc_ = format_desc;
 	}
@@ -84,6 +84,11 @@ public:
 	virtual size_t buffer_depth() const override
 	{
 		return 0;
+	}
+
+	virtual int index() const override
+	{
+		return 100;
 	}
 };
 

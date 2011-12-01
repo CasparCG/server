@@ -48,7 +48,6 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	safe_ptr<diagnostics::graph>						graph_;
 	boost::timer										perf_timer_;
 	int													channel_index_;
-	int													sub_index_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<audio_buffer_16>>	input_;
 	boost::circular_buffer<audio_buffer_16>			container_;
@@ -60,7 +59,6 @@ public:
 	oal_consumer() 
 		: container_(16)
 		, channel_index_(-1)
-		, sub_index_(-1)
 	{
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
@@ -85,11 +83,10 @@ public:
 
 	// frame consumer
 
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		format_desc_	= format_desc;		
 		channel_index_	= channel_index;
-		sub_index_	= sub_index;
 		if(Status() != Playing)
 		{
 			sf::SoundStream::Initialize(2, 48000);
@@ -106,7 +103,7 @@ public:
 	
 	virtual std::wstring print() const override
 	{
-		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + boost::lexical_cast<std::wstring>(sub_index_) + L"|" + format_desc_.name + L"]";
+		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
 	}
 	
 	virtual size_t buffer_depth() const override
@@ -129,6 +126,11 @@ public:
 		perf_timer_.restart();
 
 		return is_running_;
+	}
+
+	virtual int index() const override
+	{
+		return 500;
 	}
 };
 

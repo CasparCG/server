@@ -116,22 +116,21 @@ struct server::implementation : boost::noncopyable
 			
 			channels_.push_back(make_safe<video_channel>(channels_.size()+1, format_desc, ogl_));
 			
-			int index = 0;
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))
 			{
 				try
 				{
 					const std::string name = xml_consumer.first;
 					if(name == "screen")
-						channels_.back()->output()->add(index++, ogl::create_consumer(xml_consumer.second));					
+						channels_.back()->output()->add(ogl::create_consumer(xml_consumer.second));					
 					else if(name == "bluefish")					
-						channels_.back()->output()->add(index++, bluefish::create_consumer(xml_consumer.second));					
+						channels_.back()->output()->add(bluefish::create_consumer(xml_consumer.second));					
 					else if(name == "decklink")					
-						channels_.back()->output()->add(index++, decklink::create_consumer(xml_consumer.second));				
-					//else if(name == "file")					
-					//	channels_.back()->output()->add(index++, create_ffmpeg_consumer(xml_consumer.second));						
+						channels_.back()->output()->add(decklink::create_consumer(xml_consumer.second));				
+					else if(name == "file")					
+						channels_.back()->output()->add(ffmpeg::create_consumer(xml_consumer.second));						
 					else if(name == "system-audio")
-						channels_.back()->output()->add(index++, oal::create_consumer());		
+						channels_.back()->output()->add(oal::create_consumer());		
 					else if(name != "<xmlcomment>")
 						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
 				}
