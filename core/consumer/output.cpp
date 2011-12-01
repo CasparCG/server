@@ -69,19 +69,19 @@ public:
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f));
 	}	
 	
-	void add(int index, safe_ptr<frame_consumer>&& consumer)
+	void add(safe_ptr<frame_consumer>&& consumer)
 	{		
 		executor_.invoke([&]
 		{
-			consumers_.erase(index);
+			consumers_.erase(consumer->index());
 		}, high_priority);
 
 		consumer = create_consumer_cadence_guard(std::move(consumer));
-		consumer->initialize(format_desc_, channel_index_, index);
+		consumer->initialize(format_desc_, channel_index_);
 
 		executor_.invoke([&]
 		{
-			consumers_.insert(std::make_pair(index, consumer));
+			consumers_.insert(std::make_pair(consumer->index(), consumer));
 
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
 		}, high_priority);
@@ -109,7 +109,7 @@ public:
 			{						
 				try
 				{
-					it->second->initialize(format_desc_, channel_index_, it->first);
+					it->second->initialize(format_desc_, channel_index_);
 					++it;
 				}
 				catch(...)
@@ -191,7 +191,7 @@ public:
 						CASPAR_LOG_CURRENT_EXCEPTION();
 						try
 						{
-							consumer->initialize(format_desc_, channel_index_, it->first);
+							consumer->initialize(format_desc_, channel_index_);
 							if(consumer->send(frame))
 								++it;
 							else
@@ -222,7 +222,7 @@ public:
 };
 
 output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new implementation(graph, format_desc, channel_index)){}
-void output::add(int index, safe_ptr<frame_consumer>&& consumer){impl_->add(index, std::move(consumer));}
+void output::add(safe_ptr<frame_consumer>&& consumer){impl_->add(std::move(consumer));}
 void output::remove(int index){impl_->remove(index);}
 void output::send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) {impl_->send(frame); }
 void output::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}

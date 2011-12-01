@@ -90,7 +90,7 @@ struct ffmpeg_consumer : boost::noncopyable
 	
 public:
 	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, const std::string& codec, const std::string& options)
-		: filename_(filename + ".mov")
+		: filename_(filename)
 		, video_outbuf_(1920*1080*8)
 		, oc_(avformat_alloc_context(), av_free)
 		, format_desc_(format_desc)
@@ -98,6 +98,9 @@ public:
 		, file_write_executor_(print() + L"/output")
 		, frame_number_(0)
 	{
+		// TODO: Ask stakeholders about case where file already exists.
+		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
+
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("write-time", diagnostics::color(0.5f, 0.5f, 0.1f));
@@ -396,7 +399,7 @@ public:
 	{
 	}
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int, int)
+	virtual void initialize(const core::video_format_desc& format_desc, int)
 	{
 		consumer_.reset();
 		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, codec_, options_));
@@ -422,15 +425,20 @@ public:
 	{
 		return 1;
 	}
+
+	virtual int index() const override
+	{
+		return 200;
+	}
 };	
 
-safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 2 || params[0] != L"FILE")
+	if(params.size() < 1 || params[0] != L"FILE")
 		return core::frame_consumer::empty();
 	
-	// TODO: Ask stakeholders about case where file already exists.
-	boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + params[1])); // Delete the file if it exists
+	auto filename = (params.size() > 1 ? params[1] : L"");
+
 	bool key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
 
 	std::string codec = "libx264";
@@ -449,10 +457,10 @@ safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const std::vector<std::wst
 	if(options_it != params.end() && options_it++ != params.end())
 		options = narrow(*options_it);
 
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + params[1], key_only, codec, boost::to_lower_copy(options));
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, boost::to_lower_copy(options));
 }
 
-safe_ptr<core::frame_consumer> create_ffmpeg_consumer(const boost::property_tree::ptree& ptree)
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree)
 {
 	std::string filename = ptree.get<std::string>("path");
 	auto key_only		 = ptree.get("key-only", false);

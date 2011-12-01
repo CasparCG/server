@@ -76,11 +76,11 @@ public:
 	{
 	}
 	
-	virtual void initialize(const video_format_desc& format_desc, int channel_index, int sub_index) override
+	virtual void initialize(const video_format_desc& format_desc, int channel_index) override
 	{
 		audio_cadence_	= format_desc.audio_cadence;
 		sync_buffer_	= boost::circular_buffer<size_t>(format_desc.audio_cadence.size());
-		consumer_->initialize(format_desc, channel_index, sub_index);
+		consumer_->initialize(format_desc, channel_index);
 	}
 
 	virtual bool send(const safe_ptr<read_frame>& frame) override
@@ -118,6 +118,11 @@ public:
 	virtual size_t buffer_depth() const override
 	{
 		return consumer_->buffer_depth();
+	}
+
+	virtual int index() const override
+	{
+		return consumer_->index();
 	}
 };
 

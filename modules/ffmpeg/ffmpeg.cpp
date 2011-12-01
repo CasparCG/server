@@ -200,7 +200,7 @@ void init()
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_callback);
 	
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ffmpeg_consumer(params);});
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
 }
 

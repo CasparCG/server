@@ -53,7 +53,6 @@ struct bluefish_consumer : boost::noncopyable
 	const unsigned int					device_index_;
 	const core::video_format_desc		format_desc_;
 	const int							channel_index_;
-	const int							sub_index_;
 
 	const std::wstring					model_name_;
 
@@ -72,12 +71,11 @@ struct bluefish_consumer : boost::noncopyable
 		
 	executor							executor_;
 public:
-	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only, int channel_index, int sub_index) 
+	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only, int channel_index) 
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
 		, format_desc_(format_desc) 
 		, channel_index_(channel_index)
-		, sub_index_(sub_index)
 		, model_name_(get_card_desc(*blue_))
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
 		, embedded_audio_(embedded_audio)
@@ -286,7 +284,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + boost::lexical_cast<std::wstring>(sub_index_) + L"|device " + 
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"|device " + 
 			boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
 	}
 };
@@ -319,9 +317,9 @@ public:
 
 	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
-		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index, sub_index));
+		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index));
 		audio_cadence_ = format_desc.audio_cadence;
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
@@ -343,6 +341,11 @@ public:
 	size_t buffer_depth() const override
 	{
 		return 1;
+	}
+	
+	virtual int index() const override
+	{
+		return 400 + device_index_;
 	}
 };	
 

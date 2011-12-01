@@ -525,7 +525,7 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->output()->add(GetLayerIndex(), create_consumer(_parameters));
+		GetChannel()->output()->add(create_consumer(_parameters));
 	
 		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
 
@@ -552,7 +552,11 @@ bool RemoveCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->output()->remove(GetLayerIndex());
+		auto index = GetLayerIndex(std::numeric_limits<int>::min());
+		if(index == std::numeric_limits<int>::min())
+			index = create_consumer(_parameters)->index();
+
+		GetChannel()->output()->remove(index);
 
 		SetReplyString(TEXT("202 REMOVE OK\r\n"));
 
@@ -793,7 +797,7 @@ bool ClearCommand::DoExecute()
 
 bool PrintCommand::DoExecute()
 {
-	GetChannel()->output()->add(99978, create_consumer(boost::assign::list_of(L"IMAGE")));
+	GetChannel()->output()->add(create_consumer(boost::assign::list_of(L"IMAGE")));
 		
 	SetReplyString(TEXT("202 PRINT OK\r\n"));
 

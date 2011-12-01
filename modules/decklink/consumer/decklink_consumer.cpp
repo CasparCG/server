@@ -138,7 +138,6 @@ public:
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
 	const int							channel_index_;
-	const int							sub_index_;
 	const configuration					config_;
 
 	CComPtr<IDeckLink>					decklink_;
@@ -169,9 +168,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	boost::timer tick_timer_;
 
 public:
-	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index, int sub_index) 
+	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
 		: channel_index_(channel_index)
-		, sub_index_(sub_index)
 		, config_(config)
 		, decklink_(get_device(config.device_index))
 		, output_(decklink_)
@@ -428,7 +426,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + boost::lexical_cast<std::wstring>(sub_index_) + L"|device " +
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"|device " +
 			boost::lexical_cast<std::wstring>(config_.device_index) + L"|" +  format_desc_.name + L"]";
 	}
 };
@@ -458,9 +456,9 @@ public:
 
 	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index, int sub_index) override
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
-		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index, sub_index);});		
+		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index);});		
 		audio_cadence_ = format_desc.audio_cadence;		
 
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
@@ -483,6 +481,11 @@ public:
 	virtual size_t buffer_depth() const override
 	{
 		return config_.buffer_depth;
+	}
+
+	virtual int index() const override
+	{
+		return 300 + config_.device_index;
 	}
 };	
 
