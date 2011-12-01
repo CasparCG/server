@@ -146,22 +146,15 @@ public:
 		file_write_executor_.stop();
 		file_write_executor_.join();
 		
-		try
-		{
-			THROW_ON_ERROR2(av_write_trailer(oc_.get()), "[ffmpeg_consumer]");
+		LOG_ON_ERROR2(av_write_trailer(oc_.get()), "[ffmpeg_consumer]");
 		
-			audio_st_.reset();
-			video_st_.reset();
+		audio_st_.reset();
+		video_st_.reset();
 			  
-			if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
-				THROW_ON_ERROR2(avio_close(oc_->pb), "[ffmpeg_consumer]"); // Close the output ffmpeg.
+		if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
+			LOG_ON_ERROR2(avio_close(oc_->pb), "[ffmpeg_consumer]"); // Close the output ffmpeg.
 
-			CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
+		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
 			
 	std::wstring print() const
@@ -219,7 +212,7 @@ public:
 			c->pix_fmt = PIX_FMT_YUV420P;    
 			av_opt_set(c->priv_data, "preset", "ultrafast", 0);
 			av_opt_set(c->priv_data, "tune",   "film",   0);
-			av_opt_set(c->priv_data, "crf",    "10",     0);
+			av_opt_set(c->priv_data, "crf",    "5",     0);
 			
 			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
@@ -229,7 +222,7 @@ public:
 			CASPAR_LOG(warning) << " Potentially unsupported output parameters.";
 		}
 		
-		c->max_b_frames = 0; // b-franes bit supported.
+		c->max_b_frames = 0; // b-franes not supported.
 
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			c->flags |= CODEC_FLAG_GLOBAL_HEADER;
@@ -239,7 +232,7 @@ public:
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
-			avcodec_close(st->codec);
+			LOG_ON_ERROR2(avcodec_close(st->codec), "[ffmpeg_consumer]");
 			av_freep(&st->codec);
 			av_freep(&st);
 		});
@@ -268,7 +261,7 @@ public:
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
-			avcodec_close(st->codec);
+			LOG_ON_ERROR2(avcodec_close(st->codec), "[ffmpeg_consumer]");;
 			av_freep(&st->codec);
 			av_freep(&st);
 		});
