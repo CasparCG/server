@@ -31,6 +31,7 @@
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <algorithm>
 
@@ -75,6 +76,14 @@ struct image_producer : public core::frame_producer
 	virtual std::wstring print() const override
 	{
 		return L"image_producer[" + filename_ + L"]";
+	}
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"image-producer");
+		info.add(L"filename", filename_);
+		return info;
 	}
 };
 

@@ -806,38 +806,6 @@ bool PrintCommand::DoExecute()
 	return true;
 }
 
-bool StatusCommand::DoExecute()
-{				
-	if (GetLayerIndex() > -1)
-	{
-		auto status = GetChannel()->stage()->get_status(GetLayerIndex()).get();
-		std::wstringstream status_text;
-		status_text
-			<< L"201 STATUS OK\r\n"
-			<< L"<layer>"
-			<< L"\n\t<index>"				<< GetLayerIndex() << L"</index>"
-			<< L"\n\t<foreground>"			<< status.foreground << L"</foreground>"
-			<< L"\n\t<background>"			<< status.background << L"</background>"
-			<< L"\n\t<status>"				<< (status.is_paused ? L"paused" : L"playing") << L"</status>"
-			<< L"\n\t<nb-frames>"			<< (status.nb_frames == std::numeric_limits<int64_t>::max() ? 0 : status.nb_frames) << L"</nb-frames>"
-			<< L"\n\t<frame-number>"		<< status.frame_number << L"</frame-number>"
-			<< L"\n\t<file-nb-frames>"		<< (status.file_nb_frames == std::numeric_limits<int64_t>::max() ? 0 : status.file_nb_frames) << L"</file-nb-frames>"
-			<< L"\n\t<file-frame-number>"	<< status.file_frame_number << L"</file-frame-number>"
-			<< L"\n</layer>"
-			<< L"\r\n";
-
-		SetReplyString(status_text.str());
-		return true;
-	}
-	else
-	{
-		//NOTE: Possible to extend soo that "channel" status is returned when no layer is specified.
-
-		SetReplyString(TEXT("403 LAYER MUST BE SPECIFIED\r\n"));
-		return false;
-	}
-}
-
 bool LogCommand::DoExecute()
 {
 	if(_parameters.at(0) == L"LEVEL")
@@ -1168,7 +1136,7 @@ bool CGCommand::DoExecuteInfo()
 	}
 	else 
 	{
-		auto info = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->info();
+		auto info = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->template_host_info();
 		replyString << info << TEXT("\r\n"); 
 	}	
 
@@ -1360,22 +1328,28 @@ bool InfoCommand::DoExecute()
 
 			if(_parameters.size() >= 1)
 			{
-				int channelIndex = boost::lexical_cast<int>(_parameters.at(0).c_str())-1;					
-				boost::property_tree::xml_parser::write_xml(replyString, channels_.at(channelIndex)->info(), boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
+				std::vector<std::wstring> split;
+				boost::split(split, _parameters[0], boost::is_any_of("-"));
+					
+				int layer = std::numeric_limits<int>::min();
+				int channel = boost::lexical_cast<int>(split[0]) - 1;
+
+				if(split.size() > 1)
+					layer = boost::lexical_cast<int>(split[1]);
+				
+				if(layer == std::numeric_limits<int>::min())
+					boost::property_tree::xml_parser::write_xml(replyString, channels_.at(channel)->info(), boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
+				else
+					boost::property_tree::xml_parser::write_xml(replyString, channels_.at(channel)->stage()->info(layer).get(), boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
 			}
 			else
 			{
 				boost::property_tree::wptree info;
-				auto& node = info.add(L"channels", L"");
 				int index = 0;
 				BOOST_FOREACH(auto channel, channels_)
-				{
-					BOOST_FOREACH(auto update, channel->info())
-					{
-						auto& channel = node.add_child(update.first, update.second);
-						channel.push_front(std::make_pair(L"index", boost::lexical_cast<std::wstring>(++index)));
-					}
-				}
+					info.add_child(L"channels.channel", channel->info())
+					    .add(L"index", ++index);
+
 				boost::property_tree::xml_parser::write_xml(replyString, info, boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
 			}
 			replyString << TEXT("\r\n");

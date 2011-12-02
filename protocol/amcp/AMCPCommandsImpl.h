@@ -108,12 +108,6 @@ class PrintCommand : public AMCPCommandBase<true, AddToQueue, 0>
 	bool DoExecute();
 };
 
-class StatusCommand : public AMCPCommandBase<true, AddToQueue, 0>
-{
-	std::wstring print() const { return L"StatusCommand";}
-	bool DoExecute();
-};
-
 class LogCommand : public AMCPCommandBase<false, AddToQueue, 0>
 {
 	std::wstring print() const { return L"LogCommand";}

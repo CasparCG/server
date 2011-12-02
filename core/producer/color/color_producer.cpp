@@ -60,6 +60,14 @@ public:
 	{
 		return L"color[" + color_str_ + L"]";
 	}
+
+	boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"color-producer");
+		info.add(L"color", color_str_);
+		return info;
+	}
 };
 
 std::wstring get_hex_color(const std::wstring& str)

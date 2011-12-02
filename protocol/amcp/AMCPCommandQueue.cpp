@@ -24,76 +24,26 @@
 
 namespace caspar { namespace protocol { namespace amcp {
 	
-AMCPCommandQueue::AMCPCommandQueue() : newCommandEvent_(FALSE, FALSE) 
-{}
+AMCPCommandQueue::AMCPCommandQueue() 
+	: executor_(L"AMCPCommandQueue")
+{
+}
 
 AMCPCommandQueue::~AMCPCommandQueue() 
 {
-	Stop();
 }
 
-bool AMCPCommandQueue::Start() 
+void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 {
-	if(commandPump_.IsRunning())
-		return false;
+	if(!pCurrentCommand)
+		return;
 
-	return commandPump_.Start(this);
-}
-
-void AMCPCommandQueue::Stop() 
-{
-	commandPump_.Stop();
-}
-
-void AMCPCommandQueue::AddCommand(AMCPCommandPtr pNewCommand)
-{
+	//if(pNewCommand->GetScheduling() == ImmediatelyAndClear)
+	//	executor_.clear();
+	
+	executor_.begin_invoke([=]
 	{
-		tbb::mutex::scoped_lock lock(mutex_);
-
-		if(pNewCommand->GetScheduling() == ImmediatelyAndClear) {
-			//Clears the queue, objects are deleted automatically
-			commands_.clear();
-
-			commands_.push_back(pNewCommand);
-			CASPAR_LOG(info) << "Cleared queue and added command";
-		}
-		else {
-			commands_.push_back(pNewCommand);
-			CASPAR_LOG(info) << "Added command to end of queue";
-		}
-	}
-
-	SetEvent(newCommandEvent_);
-}
-
-void AMCPCommandQueue::Run(HANDLE stopEvent)
-{
-	bool logTemporarilyBadState = true;
-	AMCPCommandPtr pCurrentCommand;
-
-	CASPAR_LOG(info) << "AMCP CommandPump started";
-
-	while(WaitForSingleObject(stopEvent, 0) != WAIT_OBJECT_0)
-	{
-		DWORD waitResult = WaitForSingleObject(newCommandEvent_, 50);
-		if(waitResult == WAIT_OBJECT_0) 
-		{
-			tbb::mutex::scoped_lock lock(mutex_);
-
-			if(commands_.size() > 0)
-			{
-				CASPAR_LOG(debug) << "Found " << commands_.size() << " commands in queue";
-
-				AMCPCommandPtr pNextCommand = commands_.front();
-
-				if(pCurrentCommand == 0 || pNextCommand->GetScheduling() == ImmediatelyAndClear) {
-					pCurrentCommand = pNextCommand;
-					commands_.pop_front();
-				}
-			}
-		}
-
-		if(pCurrentCommand != 0) 
+		try
 		{
 			try
 			{
@@ -109,32 +59,14 @@ void AMCPCommandQueue::Run(HANDLE stopEvent)
 			}
 				
 			pCurrentCommand->SendReply();
-			pCurrentCommand.reset();
-
-			newCommandEvent_.Set();
-			logTemporarilyBadState = true;
-
+			
 			CASPAR_LOG(info) << "Ready for a new command";
 		}
-	}
-
-	CASPAR_LOG(info) << "CommandPump ended";
-}
-
-bool AMCPCommandQueue::OnUnhandledException(const std::exception& ex) throw() 
-{
-	bool bDoRestart = true;
-
-	try 
-	{
-		CASPAR_LOG(fatal) << "UNHANDLED EXCEPTION in commandqueue. Message: " << ex.what();
-	}
-	catch(...)
-	{
-		bDoRestart = false;
-	}
-
-	return bDoRestart;
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+	});
 }
 
 }}}

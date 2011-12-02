@@ -42,6 +42,7 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
@@ -462,6 +463,16 @@ public:
 	virtual std::wstring print() const override
 	{
 		return consumer_ ? consumer_->print() : L"[ogl_consumer]";
+	}
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"ogl-consumer");
+		info.add(L"key-only", config_.key_only);
+		info.add(L"windowed", config_.windowed);
+		info.add(L"auto-deinterlace", config_.auto_deinterlace);
+		return info;
 	}
 
 	virtual bool has_synchronization_clock() const override

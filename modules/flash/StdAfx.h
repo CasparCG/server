@@ -49,6 +49,10 @@
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/regex.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include "../common/utility/string.h"
 #include "../common/memory/safe_ptr.h"

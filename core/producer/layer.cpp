@@ -123,20 +123,6 @@ public:
 		}
 	}
 
-	layer_status status() const
-	{
-		layer_status status;
-		status.foreground			= foreground_->print();
-		status.background			= background_->print();
-		status.is_paused			= is_paused_;
-		status.nb_frames			= foreground_->nb_frames();
-		status.frame_number			= std::max(frame_number_, foreground_->frame_number());
-		status.file_nb_frames		= foreground_->file_nb_frames();
-		status.file_frame_number	= foreground_->file_frame_number();
-
-		return status;
-	}
-
 	boost::unique_future<std::wstring> call(bool foreground, const std::wstring& param)
 	{
 		return (foreground ? foreground_ : background_)->call(param);
@@ -150,10 +136,16 @@ public:
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
-		info.add_child(L"layer.foreground", foreground_->info());
-		info.add_child(L"layer.background", foreground_->info());
-		info.add(L"layer.status",     is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"));
-		info.add(L"layer.auto_delta", auto_play_delta_);
+		info.add(L"status",		is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"));
+		info.add(L"auto_delta",	auto_play_delta_);
+		info.add(L"frame-number", frame_number_);
+
+		auto nb_frames = foreground_->nb_frames();
+
+		info.add(L"nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
+		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - frame_number_ - auto_play_delta_));
+		info.add_child(L"foreground", foreground_->info());
+		info.add_child(L"background", background_->info());
 		return info;
 	}
 };
@@ -182,7 +174,6 @@ void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 bool layer::is_paused() const{return impl_->is_paused_;}
 int64_t layer::frame_number() const{return impl_->frame_number_;}
-layer_status layer::status() const {return impl_->status();}
 safe_ptr<basic_frame> layer::receive() {return impl_->receive();}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}

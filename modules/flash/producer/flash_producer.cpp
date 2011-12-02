@@ -42,6 +42,7 @@
 #include <common/utility/timer.h>
 
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/thread.hpp>
 #include <boost/timer.hpp>
 #include <boost/algorithm/string.hpp>
@@ -374,6 +375,13 @@ public:
 	{ 
 		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"flash-producer");
+		return info;
+	}
 
 	// flash_producer
 
