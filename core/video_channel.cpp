@@ -32,6 +32,8 @@
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 
+#include <boost/property_tree/ptree.hpp>
+
 #include <string>
 
 namespace caspar { namespace core {
@@ -86,6 +88,26 @@ public:
 	{
 		return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" +  format_desc_.name + L"]";
 	}
+
+	boost::property_tree::wptree info() const
+	{
+		boost::property_tree::wptree info;
+		info.put(L"channel.video-mode", format_desc_.name);
+
+		auto& channel_node = info.get_child(L"channel");
+		auto stage_info  = stage_->info();
+		auto mixer_info  = mixer_->info();
+		auto output_info = output_->info();
+
+		BOOST_FOREACH(auto& update, stage_info.get())   
+			channel_node.put_child(update.first, update.second);
+		BOOST_FOREACH(auto& update, mixer_info.get())   
+			channel_node.put_child(update.first, update.second);
+		BOOST_FOREACH(auto& update, output_info.get())   
+			channel_node.put_child(update.first, update.second);
+   
+		return info;			   
+	}
 };
 
 video_channel::video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) : impl_(new implementation(index, format_desc, ogl)){}
@@ -94,5 +116,6 @@ safe_ptr<mixer> video_channel::mixer() { return impl_->mixer_;}
 safe_ptr<output> video_channel::output() { return impl_->output_;} 
 video_format_desc video_channel::get_video_format_desc() const{return impl_->format_desc_;}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
+boost::property_tree::wptree video_channel::info() const{return impl_->info();}
 
 }}

@@ -27,6 +27,9 @@
 #include <common/concurrency/target.h>
 #include <common/diagnostics/graph.h>
 
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/thread/future.hpp>
+
 #include <map>
 
 namespace caspar { 
@@ -42,7 +45,8 @@ class ogl_device;
 struct frame_transform;
 struct pixel_format;
 
-class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>>, public core::frame_factory
+class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>>
+			, public core::frame_factory
 {
 public:	
 	typedef target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>> target_t;
@@ -66,6 +70,8 @@ public:
 	void clear_transforms();
 
 	void set_blend_mode(int index, blend_mode::type value);
+
+	boost::unique_future<boost::property_tree::wptree> info() const;
 	
 private:
 	struct implementation;

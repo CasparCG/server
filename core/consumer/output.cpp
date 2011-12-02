@@ -40,6 +40,7 @@
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/adaptors.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
 	
@@ -69,18 +70,23 @@ public:
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f));
 	}	
 	
-	void add(safe_ptr<frame_consumer>&& consumer)
+	void add(int index, safe_ptr<frame_consumer> consumer)
 	{		
-		remove(consumer->index());
+		remove(index);
 
-		consumer = create_consumer_cadence_guard(std::move(consumer));
+		consumer = create_consumer_cadence_guard(consumer);
 		consumer->initialize(format_desc_, channel_index_);
 
 		executor_.invoke([&]
 		{
-			consumers_.insert(std::make_pair(consumer->index(), consumer));
+			consumers_.insert(std::make_pair(index, consumer));
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
 		}, high_priority);
+	}
+
+	void add(const safe_ptr<frame_consumer>& consumer)
+	{
+		add(consumer->index(), consumer);
 	}
 
 	void remove(int index)
@@ -104,6 +110,11 @@ public:
 			old_consumer.reset();
 			CASPAR_LOG(info) << print() << L" " << str << L" Removed.";
 		}
+	}
+
+	void remove(const safe_ptr<frame_consumer>& consumer)
+	{
+		remove(consumer->index());
 	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
@@ -225,11 +236,29 @@ public:
 	{
 		return L"output[" + boost::lexical_cast<std::wstring>(channel_index_) + L"]";
 	}
+
+	boost::unique_future<boost::property_tree::wptree> info()
+	{
+		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
+		{			
+			boost::property_tree::wptree info;
+			BOOST_FOREACH(auto& consumer, consumers_)
+			{
+				auto& node = info.add(L"output.devices.device", L"");
+				node.add(L"index", consumer.first);
+				node.add(L"consumer", consumer.second->print());
+			}
+			return info;
+		}, high_priority));
+	}
 };
 
 output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new implementation(graph, format_desc, channel_index)){}
-void output::add(safe_ptr<frame_consumer>&& consumer){impl_->add(std::move(consumer));}
+void output::add(int index, const safe_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
+void output::add(const safe_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}
+void output::remove(const safe_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 void output::send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) {impl_->send(frame); }
 void output::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
+boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
 }}
