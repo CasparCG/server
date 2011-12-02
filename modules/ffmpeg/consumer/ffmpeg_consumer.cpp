@@ -36,14 +36,10 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
-#include <boost/thread/once.hpp>
-#include <boost/thread.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/parallel_invoke.h>
-
-#include <cstdio>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
