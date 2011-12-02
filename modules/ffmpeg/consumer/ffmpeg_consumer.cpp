@@ -182,6 +182,7 @@ public:
 		c->time_base.den	= format_desc_.time_scale;
 		c->time_base.num	= format_desc_.duration;
 		c->gop_size			= 25;
+		c->flags		   |= format_desc_.field_mode == core::field_mode::progressive ? 0 : (CODEC_FLAG_INTERLACED_ME | CODEC_FLAG_INTERLACED_DCT);
 
 		if(c->codec_id == CODEC_ID_PRORES)
 		{			
