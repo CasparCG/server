@@ -2,10 +2,6 @@
 
 #include <common/exception/exceptions.h>
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-#include <boost/algorithm/string/replace.hpp>
-
 #include <zlib.h>
 
 #include <fstream>
