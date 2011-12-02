@@ -55,6 +55,9 @@
 #include <boost/range.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/thread.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #include <common/utility/string.h>
 #include <common/memory/safe_ptr.h>

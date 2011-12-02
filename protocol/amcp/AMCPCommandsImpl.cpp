@@ -1331,14 +1331,18 @@ bool InfoCommand::DoExecute()
 
 			auto filename = flash::find_template(env::template_folder() + _parameters.at(1));
 
-			std::wstringstream ss;
-			ss << L"201 INFO OK\r\n";
+			std::wstringstream replyString;
+			replyString << L"201 INFO OK\r\n";
 			
-			auto xml = flash::read_template_meta_info(filename);
-			ss << widen(xml);
-			ss << L"\r\n";
+			std::wstringstream str;
+			str << widen(flash::read_template_meta_info(filename));
+			boost::property_tree::wptree info;
+			boost::property_tree::xml_parser::read_xml(str, info, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
+			boost::property_tree::xml_parser::write_xml(replyString, info, boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
 
-			SetReplyString(ss.str());
+			replyString << L"\r\n";
+
+			SetReplyString(replyString.str());
 			return true;
 		}
 		catch(...)
@@ -1418,14 +1422,14 @@ bool TlsCommand::DoExecute()
 
 bool VersionCommand::DoExecute()
 {
-	std::wstring replyString = TEXT("201 VERSION OK\r\n SERVER: ") + env::version() + TEXT("\r\n");
+	std::wstring replyString = TEXT("201 VERSION OK\r\n") + env::version() + TEXT("\r\n");
 
 	if(_parameters.size() > 0)
 	{
 		if(_parameters[0] == L"FLASH")
-			replyString = TEXT("201 VERSION OK\r\n FLASH: ") + flash::get_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n") + flash::get_version() + TEXT("\r\n");
 		else if(_parameters[0] == L"TEMPLATEHOST")
-			replyString = TEXT("201 VERSION OK\r\n TEMPLATEHOST: ") + flash::get_cg_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n") + flash::get_cg_version() + TEXT("\r\n");
 		else if(_parameters[0] != L"SERVER")
 			replyString = TEXT("403 VERSION ERROR\r\n");
 	}
