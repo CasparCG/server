@@ -44,6 +44,7 @@ public:
 	virtual safe_ptr<core::basic_frame> last_frame() const override;
 	virtual std::wstring print() const override;
 	virtual boost::unique_future<std::wstring> call(const std::wstring&) override;
+	virtual boost::property_tree::wptree info() const override;
 
 	//cg_producer
 
@@ -55,7 +56,7 @@ public:
 	void update(int layer, const std::wstring& data);
 	std::wstring invoke(int layer, const std::wstring& label);
 	std::wstring description(int layer);
-	std::wstring info();
+	std::wstring template_host_info();
 
 private:
 	struct implementation;

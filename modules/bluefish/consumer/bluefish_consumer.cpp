@@ -41,6 +41,7 @@
 
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <memory>
 #include <array>
@@ -336,6 +337,16 @@ public:
 	virtual std::wstring print() const override
 	{
 		return consumer_ ? consumer_->print() : L"[bluefish_consumer]";
+	}
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"bluefish-consumer");
+		info.add(L"key-only", key_only_);
+		info.add(L"device", device_index_);
+		info.add(L"embedded-audio", embedded_audio_);
+		return info;
 	}
 
 	size_t buffer_depth() const override

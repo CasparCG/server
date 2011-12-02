@@ -25,6 +25,7 @@
 #include <core/producer/frame/basic_frame.h>
 
 #include <boost/regex.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <deque>
 
@@ -73,6 +74,13 @@ struct playlist_producer : public frame_producer
 	{
 		return L"playlist[" + current_->print() + L"]";
 	}	
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"playlist-producer");
+		return info;
+	}
 
 	virtual int64_t nb_frames() const  override
 	{

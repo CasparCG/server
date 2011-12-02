@@ -141,9 +141,6 @@
     <ClCompile Include="consumer\frame_consumer.cpp">
       <Filter>source\consumer</Filter>
     </ClCompile>
-    <ClCompile Include="producer\frame_producer.cpp">
-      <Filter>source\producer</Filter>
-    </ClCompile>
     <ClCompile Include="producer\color\color_producer.cpp">
       <Filter>source\producer\color</Filter>
     </ClCompile>
@@ -213,6 +210,9 @@
     </ClCompile>
     <ClCompile Include="producer\playlist\playlist_producer.cpp">
       <Filter>source\producer\playlist</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\frame_producer.cpp">
+      <Filter>source\producer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

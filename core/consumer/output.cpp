@@ -244,9 +244,8 @@ public:
 			boost::property_tree::wptree info;
 			BOOST_FOREACH(auto& consumer, consumers_)
 			{
-				auto& node = info.add(L"output.devices.device", L"");
-				node.add(L"index", consumer.first);
-				node.add(L"consumer", consumer.second->print());
+				info.add_child(L"consumers.consumer", consumer.second->info())
+					.add(L"index", consumer.first); 
 			}
 			return info;
 		}, high_priority));

@@ -110,6 +110,11 @@ public:
 		return consumer_->print();
 	}
 
+	virtual boost::property_tree::wptree info() const override
+	{
+		return consumer_->info();
+	}
+
 	virtual bool has_synchronization_clock() const override
 	{
 		return consumer_->has_synchronization_clock();
@@ -129,6 +134,27 @@ public:
 safe_ptr<frame_consumer> create_consumer_cadence_guard(const safe_ptr<frame_consumer>& consumer)
 {
 	return make_safe<cadence_guard>(std::move(consumer));
+}
+
+const safe_ptr<frame_consumer>& frame_consumer::empty()
+{
+	struct empty_frame_consumer : public frame_consumer
+	{
+		virtual bool send(const safe_ptr<read_frame>&) override {return false;}
+		virtual void initialize(const video_format_desc&, int) override{}
+		virtual std::wstring print() const override {return L"empty";}
+		virtual bool has_synchronization_clock() const override {return false;}
+		virtual size_t buffer_depth() const override {return 0;};
+		virtual int index() const{return -1;}
+		virtual boost::property_tree::wptree info() const override
+		{
+			boost::property_tree::wptree info;
+			info.add(L"type", L"empty-consumer");
+			return info;
+		}
+	};
+	static safe_ptr<frame_consumer> consumer = make_safe<empty_frame_consumer>();
+	return consumer;
 }
 
 }}

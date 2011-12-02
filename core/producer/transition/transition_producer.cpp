@@ -100,27 +100,21 @@ struct transition_producer : public frame_producer
 	{
 		return get_following_producer()->nb_frames();
 	}
-	
-	virtual int64_t file_nb_frames() const override
-	{
-		return get_following_producer()->file_nb_frames();
-	}
-	
-	virtual int64_t frame_number() const override
-	{
-		return get_following_producer()->frame_number();
-	}
-	
-	virtual int64_t file_frame_number() const override
-	{
-		return get_following_producer()->file_frame_number();
-	}
 
 	virtual std::wstring print() const override
 	{
 		return L"transition[" + source_producer_->print() + L"|" + dest_producer_->print() + L"]";
 	}
 	
+	boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"transition-producer");
+		info.add_child(L"source.producer",	   source_producer_->info());
+		info.add_child(L"destination.producer", dest_producer_->info());
+		return info;
+	}
+
 	// transition_producer
 						
 	safe_ptr<basic_frame> compose(const safe_ptr<basic_frame>& dest_frame, const safe_ptr<basic_frame>& src_frame) 

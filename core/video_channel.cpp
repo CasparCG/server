@@ -92,19 +92,19 @@ public:
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
-		info.put(L"channel.video-mode", format_desc_.name);
 
-		auto& channel_node = info.get_child(L"channel");
 		auto stage_info  = stage_->info();
 		auto mixer_info  = mixer_->info();
 		auto output_info = output_->info();
 
-		BOOST_FOREACH(auto& update, stage_info.get())   
-			channel_node.put_child(update.first, update.second);
-		BOOST_FOREACH(auto& update, mixer_info.get())   
-			channel_node.put_child(update.first, update.second);
-		BOOST_FOREACH(auto& update, output_info.get())   
-			channel_node.put_child(update.first, update.second);
+		stage_info.timed_wait(boost::posix_time::seconds(2));
+		mixer_info.timed_wait(boost::posix_time::seconds(2));
+		output_info.timed_wait(boost::posix_time::seconds(2));
+		
+		info.add(L"video-mode", format_desc_.name);
+		info.add_child(L"stage", stage_info.get());
+		info.add_child(L"mixer", mixer_info.get());
+		info.add_child(L"output", output_info.get());
    
 		return info;			   
 	}

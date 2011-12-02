@@ -184,7 +184,7 @@ public:
 		return nb_frames - start_;
 	}
 
-	virtual int64_t file_nb_frames() const override
+	virtual int64_t file_nb_frames() const
 	{
 		int64_t file_nb_frames = 0;
 		file_nb_frames = std::max(file_nb_frames, video_decoder_ ? video_decoder_->nb_frames() : 0);
@@ -192,12 +192,12 @@ public:
 		return file_nb_frames;
 	}
 
-	virtual int64_t frame_number() const override
+	virtual int64_t frame_number() const
 	{
 		return frame_number_;
 	}
 
-	virtual int64_t file_frame_number() const override
+	virtual int64_t file_frame_number() const
 	{
 		return file_frame_number_;
 	}
@@ -211,16 +211,35 @@ public:
 				
 	virtual std::wstring print() const override
 	{
-		if(video_decoder_)
-		{
-			return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" + print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive())
-							  + L"|" + boost::lexical_cast<std::wstring>(file_frame_number()) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
-		}
-		
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"]";
+		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
+						  + print_mode() + L"|" 
+						  + boost::lexical_cast<std::wstring>(file_frame_number()) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
+	}
+
+	boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type",				L"ffmpeg-producer");
+		info.add(L"filename",			filename_);
+		info.add(L"width",				video_decoder_ ? video_decoder_->width() : 0);
+		info.add(L"height",				video_decoder_ ? video_decoder_->height() : 0);
+		info.add(L"progressive",		video_decoder_ ? video_decoder_->is_progressive() : false);
+		info.add(L"fps",				fps_);
+		info.add(L"loop",				input_.loop());
+		info.add(L"frame-number",		frame_number_);
+		auto nb_frames2 = nb_frames();
+		info.add(L"nb-frames",			nb_frames2 == std::numeric_limits<int64_t>::max() ? -1 : nb_frames2);
+		info.add(L"file-frame-number",	file_frame_number_);
+		info.add(L"file-nb-frames",		file_nb_frames());
+		return info;
 	}
 
 	// ffmpeg_producer
+
+	std::wstring print_mode() const
+	{
+		return video_decoder_ ? ffmpeg::print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive()) : L"";
+	}
 					
 	std::wstring do_call(const std::wstring& param)
 	{

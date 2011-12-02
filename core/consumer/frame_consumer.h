@@ -22,6 +22,7 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <functional>
 #include <string>
@@ -39,24 +40,12 @@ struct frame_consumer : boost::noncopyable
 	virtual bool send(const safe_ptr<read_frame>& frame) = 0;
 	virtual void initialize(const video_format_desc& format_desc, int channel_index) = 0;
 	virtual std::wstring print() const = 0;
+	virtual boost::property_tree::wptree info() const = 0;
 	virtual bool has_synchronization_clock() const {return true;}
 	virtual size_t buffer_depth() const = 0;
 	virtual int index() const = 0;
 
-	static const safe_ptr<frame_consumer>& empty()
-	{
-		struct empty_frame_consumer : public frame_consumer
-		{
-			virtual bool send(const safe_ptr<read_frame>&) override {return false;}
-			virtual void initialize(const video_format_desc&, int) override{}
-			virtual std::wstring print() const override {return L"empty";}
-			virtual bool has_synchronization_clock() const override {return false;}
-			virtual size_t buffer_depth() const override {return 0;};
-			virtual int index() const{return -1;}
-		};
-		static safe_ptr<frame_consumer> consumer = make_safe<empty_frame_consumer>();
-		return consumer;
-	}
+	static const safe_ptr<frame_consumer>& empty();
 };
 
 safe_ptr<frame_consumer> create_consumer_cadence_guard(const safe_ptr<frame_consumer>& consumer);

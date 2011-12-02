@@ -43,6 +43,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
 
 #if defined(_MSC_VER)
@@ -285,6 +286,13 @@ public:
 	std::wstring print() const override
 	{
 		return context_->print();
+	}
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"decklink-producer");
+		return info;
 	}
 };
 
