@@ -39,6 +39,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <algorithm>
 #include <array>
@@ -200,6 +201,14 @@ struct image_scroll_producer : public core::frame_producer
 	virtual std::wstring print() const override
 	{
 		return L"image_scroll_producer[" + filename_ + L"]";
+	}
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"image-scroll-producer");
+		info.add(L"filename", filename_);
+		return info;
 	}
 
 	virtual int64_t nb_frames() const override

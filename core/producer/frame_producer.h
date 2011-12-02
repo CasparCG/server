@@ -31,7 +31,7 @@
 #include <numeric>
 
 #include <boost/thread/future.hpp>
-#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 namespace caspar { 
 	
@@ -54,6 +54,7 @@ public:
 	virtual ~frame_producer(){}	
 
 	virtual std::wstring print() const = 0; // nothrow
+	virtual boost::property_tree::wptree info() const = 0;
 
 	virtual boost::unique_future<std::wstring> call(const std::wstring&) 
 	{
@@ -62,21 +63,10 @@ public:
 		return promise.get_future();
 	}
 
-	virtual boost::property_tree::wptree info() const
-	{
-		boost::property_tree::wptree info;
-		info.push_front(std::make_pair(L"producer", print()));
-		return info;
-	}
-
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
 		
 	virtual int64_t nb_frames() const {return std::numeric_limits<int>::max();}
-	virtual int64_t file_nb_frames() const {return nb_frames();}
-
-	virtual int64_t frame_number() const {return 0;}
-	virtual int64_t file_frame_number() const {return frame_number();}
 	
 	virtual safe_ptr<basic_frame> receive(int hints) = 0;
 	virtual safe_ptr<core::basic_frame> last_frame() const = 0;

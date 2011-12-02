@@ -31,6 +31,7 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
+#include <boost/property_tree/ptree.hpp>
 		
 namespace caspar { namespace flash {
 	
@@ -102,7 +103,7 @@ public:
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::wstring> info()
+	boost::unique_future<std::wstring> template_host_info()
 	{
 		auto str = (boost::wformat(L"<invoke name=\"GetInfo\" returntype=\"xml\"><arguments></arguments></invoke>")).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking info-command: " << str;
@@ -137,7 +138,7 @@ public:
 		else if(boost::regex_match(str, what, description_exp))
 			return description(boost::lexical_cast<int>(what["LAYER"].str())); 
 		else if(boost::regex_match(str, what, invoke_exp))
-			return info(); 
+			return template_host_info(); 
 
 		return flash_producer_->call(str);
 	}
@@ -157,6 +158,13 @@ public:
 		return flash_producer_->print();
 	}
 
+	boost::property_tree::wptree info() const
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"cg-producer");
+		return info;
+	}
+
 	std::wstring timed_invoke(int layer, const std::wstring& label)
 	{
 		auto result = invoke(layer, label);
@@ -171,9 +179,9 @@ public:
 			return result.get();
 		return L"";
 	}
-	std::wstring timed_info()
+	std::wstring timed_template_host_info()
 	{
-		auto result = info();
+		auto result = template_host_info();
 		if(result.timed_wait(boost::posix_time::seconds(2)))
 			return result.get();
 		return L"";
@@ -233,6 +241,7 @@ std::wstring cg_producer::print() const{return impl_->print();}
 boost::unique_future<std::wstring> cg_producer::call(const std::wstring& str){return impl_->call(str);}
 std::wstring cg_producer::invoke(int layer, const std::wstring& label){return impl_->timed_invoke(layer, label);}
 std::wstring cg_producer::description(int layer){return impl_->timed_description(layer);}
-std::wstring cg_producer::info(){return impl_->timed_info();}
+std::wstring cg_producer::template_host_info(){return impl_->timed_template_host_info();}
+boost::property_tree::wptree cg_producer::info() const{return impl_->info();}
 
 }}

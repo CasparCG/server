@@ -79,29 +79,23 @@ struct separated_producer : public frame_producer
 		return disable_audio(last_frame_);
 	}
 
+	virtual int64_t nb_frames() const override
+	{
+		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
+	}
+
 	virtual std::wstring print() const override
 	{
 		return L"separated[fill:" + fill_producer_->print() + L"|key:" + key_producer_->print() + L"]";
 	}	
 
-	virtual int64_t nb_frames() const override
+	boost::property_tree::wptree info() const override
 	{
-		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
-	}
-		
-	virtual int64_t file_nb_frames() const override
-	{
-		return std::min(fill_producer_->file_nb_frames(), key_producer_->file_nb_frames());
-	}
-	
-	virtual int64_t frame_number() const override
-	{
-		return std::max(fill_producer_->frame_number(), key_producer_->frame_number());
-	}
-	
-	virtual int64_t file_frame_number() const override
-	{
-		return std::max(fill_producer_->file_frame_number(), key_producer_->file_frame_number());
+		boost::property_tree::wptree info;
+		info.add(L"type", L"separated-producer");
+		info.add_child(L"fill.producer",	fill_producer_->info());
+		info.add_child(L"key.producer",	key_producer_->info());
+		return info;
 	}
 };
 

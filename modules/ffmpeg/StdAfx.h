@@ -49,6 +49,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <common/utility/string.h>
 #include <common/utility/assert.h>

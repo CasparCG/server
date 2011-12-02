@@ -35,6 +35,7 @@
 #include <SFML/Audio.hpp>
 
 #include <boost/circular_buffer.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
 
 #include <tbb/concurrent_queue.h>
@@ -105,6 +106,13 @@ public:
 	virtual std::wstring print() const override
 	{
 		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+	}
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"oal-consumer");
+		return info;
 	}
 	
 	virtual size_t buffer_depth() const override

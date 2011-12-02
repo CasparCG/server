@@ -42,6 +42,7 @@
 
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace decklink { 
 	
@@ -476,7 +477,20 @@ public:
 	virtual std::wstring print() const override
 	{
 		return context_ ? context_->print() : L"[decklink_consumer]";
-	}			
+	}		
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"decklink-consumer");
+		info.add(L"key-only", config_.key_only);
+		info.add(L"device", config_.device_index);
+		info.add(L"low-latency", config_.low_latency);
+		info.add(L"embedded-audio", config_.embedded_audio);
+		info.add(L"low-latency", config_.low_latency);
+		info.add(L"internal-key", config_.internal_key);
+		return info;
+	}
 
 	virtual size_t buffer_depth() const override
 	{

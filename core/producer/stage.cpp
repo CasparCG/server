@@ -203,15 +203,7 @@ public:
 			}, high_priority);
 		}
 	}
-
-	boost::unique_future<layer_status> get_status(int index)
-	{		
-		return executor_.begin_invoke([=]
-		{
-			return layers_[index].status();
-		}, high_priority );
-	}
-	
+		
 	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
 	{
 		return executor_.begin_invoke([=]
@@ -241,15 +233,18 @@ public:
 		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
 		{
 			boost::property_tree::wptree info;
-			auto& layers_node = info.add(L"stage.layers", L"");
-			BOOST_FOREACH(auto& layer, layers_)
-			{
-				auto layer_info = layer.second.info();
-				layer_info.add(L"layer.index", layer.first);
-				BOOST_FOREACH(auto& update, layer_info)   
-					layers_node.add_child(update.first, update.second);
-			}
+			BOOST_FOREACH(auto& layer, layers_)			
+				info.add_child(L"layers.layer", layer.second.info())
+					.add(L"index", layer.first);	
 			return info;
+		}, high_priority));
+	}
+
+	boost::unique_future<boost::property_tree::wptree> info(int index)
+	{
+		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
+		{
+			return layers_[index].info();
 		}, high_priority));
 	}
 };
@@ -265,10 +260,10 @@ void stage::clear(){impl_->clear();}
 void stage::swap_layers(const safe_ptr<stage>& other){impl_->swap_layers(other);}
 void stage::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
 void stage::swap_layer(int index, size_t other_index, const safe_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
-boost::unique_future<layer_status> stage::get_status(int index){return impl_->get_status(index);}
-boost::unique_future<safe_ptr<frame_producer>> stage::foreground(size_t index) {return impl_->foreground(index);}
-boost::unique_future<safe_ptr<frame_producer>> stage::background(size_t index) {return impl_->background(index);}
+boost::unique_future<safe_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
+boost::unique_future<safe_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
 boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
 void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
+boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
 }}

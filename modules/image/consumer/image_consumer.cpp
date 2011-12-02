@@ -81,6 +81,13 @@ public:
 		return L"image[]";
 	}
 
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"image-consumer");
+		return info;
+	}
+
 	virtual size_t buffer_depth() const override
 	{
 		return 0;

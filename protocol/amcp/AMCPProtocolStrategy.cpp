@@ -52,13 +52,7 @@ inline std::shared_ptr<core::video_channel> GetChannelSafe(unsigned int index, c
 
 AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels) : channels_(channels) {
 	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue());
-	if(!pGeneralCommandQueue->Start()) {
-		CASPAR_LOG(error) << "Failed to start the general command-queue";
-
-		//TODO: THROW!
-	}
-	else
-		commandQueues_.push_back(pGeneralCommandQueue);
+	commandQueues_.push_back(pGeneralCommandQueue);
 
 
 	std::shared_ptr<core::video_channel> pChannel;
@@ -71,16 +65,8 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<core::vide
 		//HACK: Perform real conversion from int to string
 		TCHAR num = TEXT('1')+static_cast<TCHAR>(index);
 		title += num;
-
-		if(!pChannelCommandQueue->Start()) {
-			std::wstring logString = TEXT("Failed to start command-queue for ");
-			logString += title;
-			CASPAR_LOG(error) << logString;
-
-			//TODO: THROW!
-		}
-		else
-			commandQueues_.push_back(pChannelCommandQueue);
+		
+		commandQueues_.push_back(pChannelCommandQueue);
 	}
 }
 
@@ -323,7 +309,6 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	else if(s == TEXT("STOP"))		return std::make_shared<StopCommand>();
 	else if(s == TEXT("CLEAR"))		return std::make_shared<ClearCommand>();
 	else if(s == TEXT("PRINT"))		return std::make_shared<PrintCommand>();
-	else if(s == TEXT("STATUS"))	return std::make_shared<StatusCommand>();
 	else if(s == TEXT("LOG"))		return std::make_shared<LogCommand>();
 	else if(s == TEXT("CG"))		return std::make_shared<CGCommand>();
 	else if(s == TEXT("DATA"))		return std::make_shared<DataCommand>();

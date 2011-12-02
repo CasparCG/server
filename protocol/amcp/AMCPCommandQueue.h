@@ -23,11 +23,13 @@
 
 #include "AMCPCommand.h"
 
+#include <common/concurrency/executor.h>
+
 #include <tbb\mutex.h>
 
 namespace caspar { namespace protocol { namespace amcp {
 
-class AMCPCommandQueue : public IRunnable
+class AMCPCommandQueue
 {
 	AMCPCommandQueue(const AMCPCommandQueue&);
 	AMCPCommandQueue& operator=(const AMCPCommandQueue&);
@@ -35,20 +37,10 @@ public:
 	AMCPCommandQueue();
 	~AMCPCommandQueue();
 
-	bool Start();
-	void Stop();
 	void AddCommand(AMCPCommandPtr pCommand);
 
 private:
-	Thread				commandPump_;
-	virtual void Run(HANDLE stopEvent);
-	virtual bool OnUnhandledException(const std::exception& ex) throw();
-
-	Event newCommandEvent_;
-
-	//Needs synro-protection
-	std::list<AMCPCommandPtr>	commands_;
-	tbb::mutex mutex_;
+	executor			executor_;
 };
 typedef std::tr1::shared_ptr<AMCPCommandQueue> AMCPCommandQueuePtr;
 
