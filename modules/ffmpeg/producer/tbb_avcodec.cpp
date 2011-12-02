@@ -29,15 +29,12 @@ namespace caspar {
 		
 int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2), void* arg, int* ret, int count, int size)
 {
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, count), [&](const tbb::blocked_range<size_t>& r)
+	tbb::parallel_for(0, count, 1, [&](int i)
 	{
-		for(size_t n = r.begin(); n != r.end(); ++n)		
-		{
-			int r = func(s, reinterpret_cast<uint8_t*>(arg) + n*size);
-			if(ret)
-				ret[n] = r;
-		}
-	});
+        int r = func(s, (char*)arg + i*size);
+        if(ret) 
+			ret[i] = r;
+    });
 
 	return 0;
 }
@@ -47,7 +44,7 @@ int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg
 	tbb::atomic<int> counter;   
     counter = 0;   
 
-	CASPAR_ASSERT(tbb::tbb_thread::hardware_concurrency() < 16);
+	CASPAR_VERIFY(tbb::tbb_thread::hardware_concurrency() < 16);
 	// Note: this will probably only work when tbb::task_scheduler_init::num_threads() < 16.
     tbb::parallel_for(tbb::blocked_range<int>(0, count, 2), [&](const tbb::blocked_range<int> &r)    
     {   
@@ -96,7 +93,7 @@ int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 	// Some codecs don't like to have multiple multithreaded decoding instances. Only enable for those we know work.
 	if(std::find(std::begin(supported_codecs), std::end(supported_codecs), codec->id) != std::end(supported_codecs) && 
 	  (codec->capabilities & CODEC_CAP_SLICE_THREADS) && 
-	  (avctx->thread_type & FF_THREAD_SLICE))
+	  (avctx->thread_type & FF_THREAD_SLICE)) 
 	{
 		thread_init(avctx);
 	}	
