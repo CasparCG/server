@@ -26,25 +26,31 @@
 #include <common/diagnostics/graph.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
 	
-class output : public target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>>, boost::noncopyable
+class output : public target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>>
+			 , boost::noncopyable
 {
 public:
 	explicit output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index);
 
 	// target
 	
-	virtual void send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) override;
+	virtual void send( const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) override;
 
 	// output
-
-	void add(safe_ptr<frame_consumer>&& consumer);
+	
+	void add(const safe_ptr<frame_consumer>& consumer);
+	void add(int index, const safe_ptr<frame_consumer>& consumer);
+	void remove(const safe_ptr<frame_consumer>& consumer);
 	void remove(int index);
 	
 	void set_video_format_desc(const video_format_desc& format_desc);
 
+	boost::unique_future<boost::property_tree::wptree> info() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

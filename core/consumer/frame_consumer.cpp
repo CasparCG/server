@@ -71,8 +71,8 @@ class cadence_guard : public frame_consumer
 	boost::circular_buffer<size_t>	sync_buffer_;
 	bool							synced_;
 public:
-	cadence_guard(safe_ptr<frame_consumer>&& consumer)
-		: consumer_(std::move(consumer))
+	cadence_guard(const safe_ptr<frame_consumer>& consumer)
+		: consumer_(consumer)
 	{
 	}
 	
@@ -126,7 +126,7 @@ public:
 	}
 };
 
-safe_ptr<frame_consumer> create_consumer_cadence_guard(safe_ptr<frame_consumer>&& consumer)
+safe_ptr<frame_consumer> create_consumer_cadence_guard(const safe_ptr<frame_consumer>& consumer)
 {
 	return make_safe<cadence_guard>(std::move(consumer));
 }

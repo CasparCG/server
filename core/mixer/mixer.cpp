@@ -44,6 +44,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/timer.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/spin_mutex.h>
@@ -225,6 +226,13 @@ public:
 		tbb::spin_mutex::scoped_lock lock(format_desc_mutex_);
 		return format_desc_;
 	}
+
+	boost::unique_future<boost::property_tree::wptree> info() const
+	{
+		boost::promise<boost::property_tree::wptree> info;
+		info.set_value(boost::property_tree::wptree());
+		return info.get_future();
+	}
 };
 	
 mixer::mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
@@ -239,4 +247,5 @@ void mixer::clear_transforms(int index){impl_->clear_transforms(index);}
 void mixer::clear_transforms(){impl_->clear_transforms();}
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
+boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 }}
