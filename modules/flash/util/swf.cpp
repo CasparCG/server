@@ -2,10 +2,14 @@
 
 #include <common/exception/exceptions.h>
 
-#include <fstream>
-#include <streambuf>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include <zlib.h>
+
+#include <fstream>
+#include <streambuf>
 
 namespace caspar { namespace flash {
 	
@@ -29,7 +33,7 @@ std::vector<char> decompress_one_file(const std::vector<char>& in_data, uLong bu
 	return out_data;
 }
 
-std::wstring read_template_meta_info(const std::wstring& filename)
+std::string read_template_meta_info(const std::wstring& filename)
 {
 	auto file = std::fstream(filename, std::ios::in | std::ios::binary);
 
@@ -67,8 +71,8 @@ std::wstring read_template_meta_info(const std::wstring& filename)
 	
 	if(beg_it == data.end() || end_it == data.end())
 		BOOST_THROW_EXCEPTION(file_read_error());
-	
-	return widen(std::string(beg_it, end_it+end_str.size()));
+			
+	return std::string(beg_it, end_it+end_str.size());
 }
 
 }}

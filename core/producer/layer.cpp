@@ -25,6 +25,8 @@
 #include "frame_producer.h"
 #include "frame/basic_frame.h"
 
+#include <boost/property_tree/ptree.hpp>
+
 namespace caspar { namespace core {
 	
 struct layer::implementation
@@ -144,6 +146,16 @@ public:
 	{
 		return background_ == core::frame_producer::empty() && foreground_ == core::frame_producer::empty();
 	}
+
+	boost::property_tree::wptree info() const
+	{
+		boost::property_tree::wptree info;
+		info.add_child(L"layer.foreground", foreground_->info());
+		info.add_child(L"layer.background", foreground_->info());
+		info.add(L"layer.status",     is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"));
+		info.add(L"layer.auto_delta", auto_play_delta_);
+		return info;
+	}
 };
 
 layer::layer() : impl_(new implementation()){}
@@ -176,4 +188,5 @@ safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}
 boost::unique_future<std::wstring> layer::call(bool foreground, const std::wstring& param){return impl_->call(foreground, param);}
+boost::property_tree::wptree layer::info() const{return impl_->info();}
 }}

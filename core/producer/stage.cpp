@@ -34,6 +34,8 @@
 
 #include <tbb/parallel_for_each.h>
 
+#include <boost/property_tree/ptree.hpp>
+
 #include <map>
 
 namespace caspar { namespace core {
@@ -231,7 +233,24 @@ public:
 		executor_.begin_invoke([=]
 		{
 			format_desc_ = format_desc;
-		}, high_priority );
+		}, high_priority);
+	}
+
+	boost::unique_future<boost::property_tree::wptree> info()
+	{
+		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
+		{
+			boost::property_tree::wptree info;
+			auto& layers_node = info.add(L"layers", L"");
+			BOOST_FOREACH(auto& layer, layers_)
+			{
+				auto layer_info = layer.second.info();
+				layer_info.add(L"layer.index", layer.first);
+				BOOST_FOREACH(auto& update, layer_info)   
+					layers_node.add_child(update.first, update.second);
+			}
+			return info;
+		}, high_priority));
 	}
 };
 
@@ -251,4 +270,5 @@ boost::unique_future<safe_ptr<frame_producer>> stage::foreground(size_t index) {
 boost::unique_future<safe_ptr<frame_producer>> stage::background(size_t index) {return impl_->background(index);}
 boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
 void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
+boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 }}

@@ -24,6 +24,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
 
@@ -71,6 +72,8 @@ public:
 	safe_ptr<frame_producer> background() const; // nothrow
 
 	safe_ptr<basic_frame> receive(); // nothrow
+
+	boost::property_tree::wptree info() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

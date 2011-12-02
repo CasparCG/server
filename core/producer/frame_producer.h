@@ -31,6 +31,7 @@
 #include <numeric>
 
 #include <boost/thread/future.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { 
 	
@@ -59,6 +60,13 @@ public:
 		boost::promise<std::wstring> promise;
 		promise.set_value(L"");
 		return promise.get_future();
+	}
+
+	virtual boost::property_tree::wptree info() const
+	{
+		boost::property_tree::wptree info;
+		info.push_front(std::make_pair(L"producer", print()));
+		return info;
 	}
 
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow

@@ -57,6 +57,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 /* Return codes
 
@@ -525,7 +526,8 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->output()->add(create_consumer(_parameters));
+		auto consumer = create_consumer(_parameters);
+		GetChannel()->output()->add(GetLayerIndex(consumer->index()), consumer);
 	
 		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
 
@@ -1301,7 +1303,7 @@ bool CinfCommand::DoExecute()
 			SetReplyString(TEXT("404 CINF ERROR\r\n"));
 			return false;
 		}
-		replyString << TEXT("200 INFO OK\r\n");
+		replyString << TEXT("200 CINF OK\r\n");
 		replyString << info << "\r\n";
 	}
 	catch(...)
@@ -1331,7 +1333,10 @@ bool InfoCommand::DoExecute()
 
 			std::wstringstream ss;
 			ss << L"201 INFO OK\r\n";
-			ss << flash::read_template_meta_info(filename) << L"\r\n";
+			
+			auto xml = flash::read_template_meta_info(filename);
+			ss << widen(xml);
+			ss << L"\r\n";
 
 			SetReplyString(ss.str());
 			return true;
@@ -1347,19 +1352,29 @@ bool InfoCommand::DoExecute()
 		try
 		{
 			std::wstringstream replyString;
+			replyString << TEXT("201 INFO OK\r\n");
+
 			if(_parameters.size() >= 1)
 			{
-				int channelIndex = boost::lexical_cast<int>(_parameters.at(0).c_str())-1;
-				replyString << TEXT("201 INFO OK\r\n");
-				GenerateChannelInfo(channelIndex, channels_.at(channelIndex), replyString);
+				int channelIndex = boost::lexical_cast<int>(_parameters.at(0).c_str())-1;					
+				boost::property_tree::xml_parser::write_xml(replyString, channels_.at(channelIndex)->info(), boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
 			}
 			else
 			{
-				replyString << TEXT("200 INFO OK\r\n");
-				for(size_t n = 0; n < channels_.size(); ++n)
-					GenerateChannelInfo(n, channels_[n], replyString);
-				replyString << TEXT("\r\n");
+				boost::property_tree::wptree info;
+				auto& node = info.add(L"channels", L"");
+				int index = 0;
+				BOOST_FOREACH(auto channel, channels_)
+				{
+					BOOST_FOREACH(auto update, channel->info())
+					{
+						auto& channel = node.add_child(update.first, update.second);
+						channel.push_front(std::make_pair(L"index", boost::lexical_cast<std::wstring>(++index)));
+					}
+				}
+				boost::property_tree::xml_parser::write_xml(replyString, info, boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
 			}
+			replyString << TEXT("\r\n");
 			SetReplyString(replyString.str());
 			return true;
 		}
