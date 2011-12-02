@@ -241,7 +241,7 @@ public:
 		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
 		{
 			boost::property_tree::wptree info;
-			auto& layers_node = info.add(L"layers", L"");
+			auto& layers_node = info.add(L"stage.layers", L"");
 			BOOST_FOREACH(auto& layer, layers_)
 			{
 				auto layer_info = layer.second.info();
