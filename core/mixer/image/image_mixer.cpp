@@ -283,25 +283,14 @@ public:
 	{
 		return renderer_(std::move(layers_), format_desc);
 	}
-
-	safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& desc)
-	{
-		return make_safe<write_frame>(ogl_, tag, desc);
-	}
 };
 
 image_mixer::image_mixer(const safe_ptr<ogl_device>& ogl) : impl_(new implementation(ogl)){}
 void image_mixer::begin(basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
-boost::unique_future<safe_ptr<host_buffer>> image_mixer::render(const video_format_desc& format_desc){return impl_->render(format_desc);}
-safe_ptr<write_frame> image_mixer::create_frame(const void* tag, const pixel_format_desc& desc){return impl_->create_frame(tag, desc);}
+boost::unique_future<safe_ptr<host_buffer>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(blend_mode::type blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
-image_mixer& image_mixer::operator=(image_mixer&& other)
-{
-	impl_ = std::move(other.impl_);
-	return *this;
-}
 
 }}

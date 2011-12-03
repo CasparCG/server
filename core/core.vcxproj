@@ -250,9 +250,9 @@
     <ClInclude Include="mixer\audio\audio_util.h" />
     <ClInclude Include="mixer\gpu\fence.h" />
     <ClInclude Include="mixer\gpu\shader.h" />
-    <ClInclude Include="mixer\image\blending_glsl.h" />
     <ClInclude Include="mixer\image\blend_modes.h" />
-    <ClInclude Include="mixer\image\image_shader.h" />
+    <ClInclude Include="mixer\image\shader\blending_glsl.h" />
+    <ClInclude Include="mixer\image\shader\image_shader.h" />
     <ClInclude Include="producer\playlist\playlist_producer.h" />
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="consumer\output.h" />
@@ -304,11 +304,8 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="mixer\image\image_shader.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    <ClCompile Include="mixer\image\shader\image_shader.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\playlist\playlist_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../stdafx.h</PrecompiledHeaderFile>

@@ -46,9 +46,8 @@ public:
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
-	audio_buffer mix(const video_format_desc& format_desc);
+	audio_buffer operator()(const video_format_desc& format_desc);
 	
-	audio_mixer& operator=(audio_mixer&& other);
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
