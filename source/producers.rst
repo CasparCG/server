@@ -109,7 +109,7 @@ Configures as libavfilter which will be used for the file.
 Syntax::
 
 	FILTER (?<libavfilter-parameters>[\d\w]+)
-	
+		
 Example::
 		
 	PLAY 1-1 MOVIE FILTER hflip:yadif=0:0
@@ -121,15 +121,20 @@ Functions
 ^^^^
 LOOP
 ^^^^
-Sets whether file will loop.
+Sets whether file will loop. 
 
 Syntax::
 
-	LOOP (?<frame>0|1)
+	LOOP (?<frame>0|1)?
+	
+Returns
+
+	The value of LOOP after the command have completed.
 	
 Example::
 	
 	CALL 1-1 LOOP 1
+	CALL 1-1 LOOP   // Queries without changing.
 	
 ^^^^
 SEEK
@@ -139,6 +144,10 @@ Seeks in the file.
 Syntax::
 
 	SEEK (?<frames>\d+)
+	
+Returns
+
+	Nothing.
 	
 Example::
 	
