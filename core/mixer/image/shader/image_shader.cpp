@@ -19,12 +19,12 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../StdAfx.h"
+#include "../../../StdAfx.h"
 
 #include "image_shader.h"
 
-#include "../gpu/shader.h"
-#include "../gpu/ogl_device.h"
+#include "../../gpu/shader.h"
+#include "../../gpu/ogl_device.h"
 
 #include "blending_glsl.h"
 

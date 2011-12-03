@@ -148,8 +148,8 @@ public:
 					image_mixer_.end_layer();
 				}
 
-				auto image = image_mixer_.render(format_desc_);
-				auto audio = audio_mixer_.mix(format_desc_);
+				auto image = image_mixer_(format_desc_);
+				auto audio = audio_mixer_(format_desc_);
 				image.wait();
 
 				graph_->update_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
@@ -165,7 +165,7 @@ public:
 					
 	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{		
-		return image_mixer_.create_frame(tag, desc);
+		return make_safe<write_frame>(ogl_, tag, desc);
 	}
 			
 	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
