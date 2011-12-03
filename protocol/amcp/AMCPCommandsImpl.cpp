@@ -98,7 +98,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 		else if(extension == TEXT(".SWF") || extension == TEXT(".DV") || extension == TEXT(".MOV") || extension == TEXT(".MPG") || 
 				extension == TEXT(".AVI") || extension == TEXT(".FLV") || extension == TEXT(".F4V") || extension == TEXT(".MP4") ||
 				extension == L".M2V" || extension == L".H264" || extension == L".MKV" || extension == L".WMV" || extension == L".DIVX" || 
-				extension == L".XVID" || extension == L".OGG" || extension == L".CT")
+				extension == L".XVID" || extension == L".OGG" || extension == L".CT" || extension == L".MXF)
 			clipttype = TEXT(" MOVIE ");
 		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
 			clipttype = TEXT(" STILL ");
