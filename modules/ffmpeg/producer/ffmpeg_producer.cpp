@@ -330,6 +330,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 		(L"dv")		
 		(L"f4v")(L"flv")
 		(L"mkv")(L"mka")
+		(L"mxf")
 		(L"wmv")(L"wma")(L"wav")
 		(L"rm")(L"ram")
 		(L"ogg")(L"ogv")(L"oga")(L"ogx")
