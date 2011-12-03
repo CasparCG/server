@@ -10,16 +10,11 @@ Contents:
 
 .. 	toctree::
 	:maxdepth: 2
+	:numbered:
    
 	producers
 	consumers
 	commands
-	basic-commands
-	template-graphics-commands
-	data-commands
-	mixer-commands
-	query-commands
-	misc-commands
 
 Indices and tables
 ==================

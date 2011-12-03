@@ -78,10 +78,15 @@ Server Error
 * 502 [command] FAILED	- Media file unreadable
 
 .. include:: basic-commands.rst
+
 .. include:: template-graphics-commands.rst
+
 .. include:: data-commands.rst
+
 .. include:: mixer-commands.rst
+
 .. include:: query-commands.rst
+
 .. include:: misc-commands.rst
 	
 	

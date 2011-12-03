@@ -1,6 +1,6 @@
-************-
+*************
 Misc Commands
-************-
+*************
 Opens the diagnostics window.
 
 ====
