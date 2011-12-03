@@ -23,9 +23,9 @@
 
 #include "image_kernel.h"
 
-#include "image_shader.h"
+#include "shader/image_shader.h"
+#include "shader/blending_glsl.h"
 
-#include "blending_glsl.h"
 #include "../gpu/shader.h"
 #include "../gpu/device_buffer.h"
 #include "../gpu/ogl_device.h"

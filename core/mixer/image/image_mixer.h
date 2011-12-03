@@ -50,14 +50,9 @@ public:
 
 	void begin_layer(blend_mode::type blend_mode);
 	void end_layer();
-
-	image_mixer& operator=(image_mixer&& other);
-	
-	boost::unique_future<safe_ptr<host_buffer>> render(const video_format_desc& format_desc);
-
-	safe_ptr<write_frame> create_frame(const void* tag, const pixel_format_desc& format);
-	
-	void set_video_format_desc(const video_format_desc& format_desc);
+		
+	boost::unique_future<safe_ptr<host_buffer>> operator()(const video_format_desc& format_desc);
+		
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

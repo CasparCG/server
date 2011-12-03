@@ -184,11 +184,6 @@ audio_mixer::audio_mixer() : impl_(new implementation()){}
 void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
-audio_buffer audio_mixer::mix(const video_format_desc& format_desc){return impl_->mix(format_desc);}
-audio_mixer& audio_mixer::operator=(audio_mixer&& other)
-{
-	impl_ = std::move(other.impl_);
-	return *this;
-}
+audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){return impl_->mix(format_desc);}
 
 }}
