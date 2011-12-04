@@ -30,6 +30,8 @@
 
 #include <common/concurrency/executor.h>
 
+#include <core/producer/frame/frame_transform.h>
+
 #include <boost/foreach.hpp>
 #include <boost/timer.hpp>
 
@@ -40,6 +42,38 @@
 #include <map>
 
 namespace caspar { namespace core {
+	
+template<typename T>
+class tweened_transform
+{
+	T source_;
+	T dest_;
+	int duration_;
+	int time_;
+	tweener_t tweener_;
+public:	
+	tweened_transform()
+		: duration_(0)
+		, time_(0)
+		, tweener_(get_tweener(L"linear")){}
+	tweened_transform(const T& source, const T& dest, int duration, const std::wstring& tween = L"linear")
+		: source_(source)
+		, dest_(dest)
+		, duration_(duration)
+		, time_(0)
+		, tweener_(get_tweener(tween)){}
+	
+	T fetch()
+	{
+		return time_ == duration_ ? dest_ : tween(static_cast<double>(time_), source_, dest_, static_cast<double>(duration_), tweener_);
+	}
+
+	T fetch_and_tick(int num)
+	{						
+		time_ = std::min(time_+num, duration_);
+		return fetch();
+	}
+};
 
 struct stage::implementation : public std::enable_shared_from_this<implementation>
 							 , boost::noncopyable
@@ -52,6 +86,7 @@ struct stage::implementation : public std::enable_shared_from_this<implementatio
 	boost::timer					tick_timer_;
 
 	std::map<int, layer>			layers_;	
+	std::map<int, tweened_transform<core::frame_transform>> transforms_;	
 
 	executor						executor_;
 public:
@@ -85,7 +120,31 @@ public:
 
 			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
 			{
-				frames[layer.first] = layer.second.receive();	
+				auto transform = transforms_[layer.first].fetch_and_tick(1);
+
+				int hints = frame_producer::NO_HINT;
+				if(format_desc_.field_mode != field_mode::progressive)
+				{
+					hints |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::DEINTERLACE_HINT : frame_producer::NO_HINT;
+					hints |= std::abs(transform.fill_translation[1]) > 0.0001 ? frame_producer::DEINTERLACE_HINT : frame_producer::NO_HINT;
+				}
+
+				if(transform.is_key)
+					hints |= frame_producer::ALPHA_HINT;
+
+				auto frame = layer.second.receive(hints);	
+				
+				auto frame1 = make_safe<core::basic_frame>(frame);
+				frame1->get_frame_transform() = transform;
+
+				if(format_desc_.field_mode != core::field_mode::progressive)
+				{				
+					auto frame2 = make_safe<core::basic_frame>(frame);
+					frame2->get_frame_transform() = transforms_[layer.first].fetch_and_tick(1);
+					frame1 = core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode);
+				}
+
+				frames[layer.first] = frame1;
 			});
 			
 			graph_->update_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
@@ -108,7 +167,42 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}		
 	}
+		void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
+	{
+		executor_.begin_invoke([=]
+		{
+			auto src = transforms_[index].fetch();
+			auto dst = transform;
+			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
+		}, high_priority);
+	}
+				
+	void apply_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween)
+	{
+		executor_.begin_invoke([=]
+		{
+			auto src = transforms_[index].fetch();
+			auto dst = transform(src);
+			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
+		}, high_priority);
+	}
 
+	void clear_transforms(int index)
+	{
+		executor_.begin_invoke([=]
+		{
+			transforms_.erase(index);
+		}, high_priority);
+	}
+
+	void clear_transforms()
+	{
+		executor_.begin_invoke([=]
+		{
+			transforms_.clear();
+		}, high_priority);
+	}
+		
 	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
 	{
 		executor_.begin_invoke([=]
@@ -251,6 +345,10 @@ public:
 };
 
 stage::stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc) : impl_(new implementation(graph, target, format_desc)){}
+void stage::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
+void stage::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
+void stage::clear_transforms(int index){impl_->clear_transforms(index);}
+void stage::clear_transforms(){impl_->clear_transforms();}
 void stage::spawn_token(){impl_->spawn_token();}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}

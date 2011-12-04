@@ -31,9 +31,12 @@
 #include <boost/property_tree/ptree_fwd.hpp>
 #include <boost/thread/future.hpp>
 
+#include <functional>
+
 namespace caspar { namespace core {
 
 struct video_format_desc;
+struct frame_transform;
 
 class stage : boost::noncopyable
 {
@@ -43,6 +46,11 @@ public:
 	explicit stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc);
 	
 	// stage
+	
+	void set_frame_transform(int index, const frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_frame_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void clear_transforms(int index);
+	void clear_transforms();
 
 	void spawn_token();
 			

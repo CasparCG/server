@@ -271,7 +271,7 @@ bool MixerCommand::DoExecute()
 			};
 
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform);
 		}
 		else if(_parameters[0] == L"OPACITY")
 		{
@@ -287,7 +287,7 @@ bool MixerCommand::DoExecute()
 			};
 
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"FILL" || _parameters[0] == L"FILL_RECT")
 		{
@@ -312,7 +312,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"CLIP" || _parameters[0] == L"CLIP_RECT")
 		{
@@ -333,7 +333,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"GRID")
 		{
@@ -358,7 +358,7 @@ bool MixerCommand::DoExecute()
 						transform.clip_scale[1]			= delta;			
 						return transform;
 					};
-					GetChannel()->mixer()->apply_frame_transform(index, transform, duration, tween);
+					GetChannel()->stage()->apply_frame_transform(index, transform, duration, tween);
 				}
 			}
 		}
@@ -380,7 +380,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"SATURATION")
 		{
@@ -394,7 +394,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"CONTRAST")
 		{
@@ -408,7 +408,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"LEVELS")
 		{
@@ -428,7 +428,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"VOLUME")
 		{
@@ -443,15 +443,15 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"CLEAR")
 		{
 			int layer = GetLayerIndex(std::numeric_limits<int>::max());
 			if(layer ==	std::numeric_limits<int>::max())
-				GetChannel()->mixer()->clear_transforms();
+				GetChannel()->stage()->clear_transforms();
 			else
-				GetChannel()->mixer()->clear_transforms(layer);
+				GetChannel()->stage()->clear_transforms(layer);
 		}
 		else
 		{
