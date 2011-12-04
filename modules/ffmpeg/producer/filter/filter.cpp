@@ -30,6 +30,11 @@
 #include <common/exception/exceptions.h>
 
 #include <boost/assign.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/range/adaptors.hpp>
+#include <boost/assign.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 
 #include <cstdio>
 #include <sstream>
@@ -51,6 +56,7 @@ extern "C"
 #if defined(_MSC_VER)
 #pragma warning (pop)
 #endif
+
 
 namespace caspar { namespace ffmpeg {
 
@@ -75,6 +81,13 @@ static int query_formats_420(AVFilterContext *ctx)
     return 0;
 }
 
+static int query_formats_420a(AVFilterContext *ctx)
+{
+    static const int pix_fmts[] = {PIX_FMT_YUVA420P, PIX_FMT_NONE};
+    avfilter_set_common_pixel_formats(ctx, avfilter_make_format_list(pix_fmts));
+    return 0;
+}
+
 static int query_formats_411(AVFilterContext *ctx)
 {
     static const int pix_fmts[] = {PIX_FMT_YUV411P, PIX_FMT_NONE};
@@ -84,7 +97,7 @@ static int query_formats_411(AVFilterContext *ctx)
 
 struct filter::implementation
 {
-	std::string						filters_;
+	std::wstring					filters_;
 	std::shared_ptr<AVFilterGraph>	graph_;	
 	AVFilterContext*				buffersink_ctx_;
 	AVFilterContext*				buffersrc_ctx_;
@@ -93,28 +106,26 @@ struct filter::implementation
 	std::queue<safe_ptr<AVFrame>>	bypass_;
 		
 	implementation(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) 
-		: filters_(narrow(filters))
+		: filters_(filters)
 		, parallel_yadif_ctx_(nullptr)
 		, pix_fmts_(pix_fmts)
 	{
 		if(pix_fmts_.empty())
 		{
-			pix_fmts_.push_back(PIX_FMT_YUVA420P);
-			pix_fmts_.push_back(PIX_FMT_YUV444P);
-			pix_fmts_.push_back(PIX_FMT_YUV422P);
-			pix_fmts_.push_back(PIX_FMT_YUV420P);
-			pix_fmts_.push_back(PIX_FMT_YUV411P);
-			pix_fmts_.push_back(PIX_FMT_BGRA);
-			pix_fmts_.push_back(PIX_FMT_ARGB);
-			pix_fmts_.push_back(PIX_FMT_RGBA);
-			pix_fmts_.push_back(PIX_FMT_ABGR);
-			pix_fmts_.push_back(PIX_FMT_GRAY8);
-			pix_fmts_.push_back(PIX_FMT_NONE);
+			pix_fmts_ = boost::assign::list_of
+				(PIX_FMT_YUVA420P)
+				(PIX_FMT_YUV444P)
+				(PIX_FMT_YUV422P)
+				(PIX_FMT_YUV420P)
+				(PIX_FMT_YUV411P)
+				(PIX_FMT_BGRA)
+				(PIX_FMT_ARGB)
+				(PIX_FMT_RGBA)
+				(PIX_FMT_ABGR)
+				(PIX_FMT_GRAY8);
 		}
-		else
-			pix_fmts_.push_back(PIX_FMT_NONE);
-
-		std::transform(filters_.begin(), filters_.end(), filters_.begin(), ::tolower);
+		
+		pix_fmts_.push_back(PIX_FMT_NONE);
 	}
 	
 	void push(const std::shared_ptr<AVFrame>& frame)
@@ -151,52 +162,54 @@ struct filter::implementation
 					buffersink_params->pixel_fmts = pix_fmts_.data();
 					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params.get(), graph_.get()), "[filter]");
 #endif
-					AVFilterInOut* outputs = avfilter_inout_alloc();
 					AVFilterInOut* inputs  = avfilter_inout_alloc();
-			
+					AVFilterInOut* outputs = avfilter_inout_alloc();
+								
 					outputs->name			= av_strdup("in");
 					outputs->filter_ctx		= buffersrc_ctx_;
 					outputs->pad_idx		= 0;
-					outputs->next			= NULL;
+					outputs->next			= nullptr;
 
 					inputs->name			= av_strdup("out");
 					inputs->filter_ctx		= buffersink_ctx_;
 					inputs->pad_idx			= 0;
-					inputs->next			= NULL;
+					inputs->next			= nullptr;
 			
-					THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL), "[filter]");
+					std::string filters = boost::to_lower_copy(narrow(filters_));
+					THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters.c_str(), &inputs, &outputs, NULL), "[filter]");
 			
-					for(size_t n = 0; n < graph_->filter_count; ++n)
+					auto yadif_filter = boost::adaptors::filtered([&](AVFilterContext* p){return strstr(p->name, "yadif") != 0;});
+
+					BOOST_FOREACH(auto filter_ctx, boost::make_iterator_range(graph_->filters, graph_->filters + graph_->filter_count) | yadif_filter)
 					{
-						auto filter_name = graph_->filters[n]->name;
-						if(strstr(filter_name, "yadif") != 0)
+						filter_ctx->filter->query_formats = [&]() -> int (*)(AVFilterContext*)
 						{
-							if(frame->format == PIX_FMT_UYVY422)
-								graph_->filters[n]->filter->query_formats = query_formats_422;
-							if(frame->format == PIX_FMT_YUYV422)
-								graph_->filters[n]->filter->query_formats = query_formats_422;
-							if(frame->format == PIX_FMT_UYYVYY411)
-								graph_->filters[n]->filter->query_formats = query_formats_411;
-							else if(frame->format == PIX_FMT_YUV420P10)
-								graph_->filters[n]->filter->query_formats = query_formats_420;
-							else if(frame->format == PIX_FMT_YUV422P10)
-								graph_->filters[n]->filter->query_formats = query_formats_422;
-							else if(frame->format == PIX_FMT_YUV444P10)
-								graph_->filters[n]->filter->query_formats = query_formats_444;
-						}
+							switch(frame->format)
+							{
+							case PIX_FMT_UYVY422:	return query_formats_422;
+							case PIX_FMT_YUYV422:	return query_formats_422;
+							case PIX_FMT_UYYVYY411: return query_formats_411;
+							case PIX_FMT_YUV420P10: return query_formats_420;
+							case PIX_FMT_YUV422P10: return query_formats_422;
+							case PIX_FMT_YUV444P10: return query_formats_444;
+							case PIX_FMT_YUV420P9:  return query_formats_420;
+							case PIX_FMT_YUV422P9:  return query_formats_422;
+							case PIX_FMT_YUV444P9:  return query_formats_444;
+							case PIX_FMT_BGR24:		return query_formats_444;
+							case PIX_FMT_RGB24:		return query_formats_444;
+							case PIX_FMT_BGRA:		return query_formats_420a;
+							case PIX_FMT_RGBA:		return query_formats_420a;
+							case PIX_FMT_ABGR:		return query_formats_420a;
+							case PIX_FMT_ARGB:		return query_formats_420a;
+							default:				return filter_ctx->filter->query_formats;
+							}
+						}();
 					}
-
-					avfilter_inout_free(&inputs);
-					avfilter_inout_free(&outputs);
-
-					THROW_ON_ERROR2(avfilter_graph_config(graph_.get(), NULL), "[filter]");			
-
-					for(size_t n = 0; n < graph_->filter_count; ++n)
-					{
-						auto filter_name = graph_->filters[n]->name;
-						if(strstr(filter_name, "yadif") != 0)						
-							parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);						
-					}
+					
+					THROW_ON_ERROR2(avfilter_graph_config(graph_.get(), NULL), "[filter]");	
+					
+					BOOST_FOREACH(auto filter_ctx, boost::make_iterator_range(graph_->filters, graph_->filters + graph_->filter_count) | yadif_filter)						
+						parallel_yadif_ctx_ = make_parallel_yadif(filter_ctx);						
 				}
 				catch(...)
 				{
@@ -238,31 +251,33 @@ struct filter::implementation
 				AVFilterBufferRef *picref;
 				THROW_ON_ERROR2(av_buffersink_get_buffer_ref(buffersink_ctx_, &picref, 0), "[filter]");
 
-				if (picref) 
-				{		
-					safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
-					{
-						av_free(p);
-						avfilter_unref_buffer(picref);
-					});
+				if (!picref) 
+					return nullptr;
+				
+				safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
+				{
+					av_free(p);
+					avfilter_unref_buffer(picref);
+				});
 
-					avcodec_get_frame_defaults(frame.get());	
+				avcodec_get_frame_defaults(frame.get());	
 
-					memcpy(frame->data,     picref->data,     sizeof(frame->data));
-					memcpy(frame->linesize, picref->linesize, sizeof(frame->linesize));
-					frame->format				= picref->format;
-					frame->width				= picref->video->w;
-					frame->height				= picref->video->h;
-					frame->pkt_pos				= picref->pos;
-					frame->interlaced_frame		= picref->video->interlaced;
-					frame->top_field_first		= picref->video->top_field_first;
-					frame->key_frame			= picref->video->key_frame;
-					frame->pict_type			= picref->video->pict_type;
-					frame->sample_aspect_ratio	= picref->video->sample_aspect_ratio;
+				memcpy(frame->data,     picref->data,     sizeof(frame->data));
+				memcpy(frame->linesize, picref->linesize, sizeof(frame->linesize));
+				frame->format				= picref->format;
+				frame->width				= picref->video->w;
+				frame->height				= picref->video->h;
+				frame->pkt_pos				= picref->pos;
+				frame->interlaced_frame		= picref->video->interlaced;
+				frame->top_field_first		= picref->video->top_field_first;
+				frame->key_frame			= picref->video->key_frame;
+				frame->pict_type			= picref->video->pict_type;
+				frame->sample_aspect_ratio	= picref->video->sample_aspect_ratio;
 					
-					return frame;
-				}
+				return frame;				
 			}
+
+			return nullptr;
 		}
 		catch(ffmpeg_error&)
 		{
@@ -272,8 +287,6 @@ struct filter::implementation
 		{
 			BOOST_THROW_EXCEPTION(ffmpeg_error() << boost::errinfo_nested_exception(boost::current_exception()));
 		}
-
-		return nullptr;
 	}
 };
 
@@ -282,7 +295,7 @@ filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
 filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
 void filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
 std::shared_ptr<AVFrame> filter::poll(){return impl_->poll();}
-std::wstring filter::filter_str() const{return widen(impl_->filters_);}
+std::wstring filter::filter_str() const{return impl_->filters_;}
 std::vector<safe_ptr<AVFrame>> filter::poll_all()
 {	
 	std::vector<safe_ptr<AVFrame>> frames;

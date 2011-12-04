@@ -178,7 +178,7 @@ struct input::implementation : boost::noncopyable
 			{
 				do_seek(start_);
 				graph_->add_tag("seek");		
-				CASPAR_LOG(debug) << print() << " Looping.";			
+				CASPAR_LOG(trace) << print() << " Looping.";			
 			}					
 		}
 		else
@@ -264,7 +264,7 @@ struct input::implementation : boost::noncopyable
 		if(ret == AVERROR(EIO))
 			CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. ";
 		if(ret == AVERROR_EOF)
-			CASPAR_LOG(debug) << print() << " Received EOF. ";
+			CASPAR_LOG(trace) << print() << " Received EOF. ";
 
 		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
