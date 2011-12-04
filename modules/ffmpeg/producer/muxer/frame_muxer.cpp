@@ -216,7 +216,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			audio_streams_.pop();
 		}
 
-		if(!video_ready2() || !audio_ready2())
+		if(!video_ready2() || !audio_ready2() || display_mode_ == display_mode::invalid)
 			return nullptr;
 				
 		auto frame1				= pop_video();
