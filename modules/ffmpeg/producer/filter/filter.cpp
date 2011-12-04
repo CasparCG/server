@@ -122,9 +122,7 @@ struct filter::implementation
 					safe_ptr<AVBufferSinkParams> buffersink_params(av_buffersink_params_alloc(), av_free);
 					buffersink_params->pixel_fmts = pix_fmts_.data();
 					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params.get(), graph_.get()), "[filter]");
-
 #endif
-
 					AVFilterInOut* outputs = avfilter_inout_alloc();
 					AVFilterInOut* inputs  = avfilter_inout_alloc();
 			
