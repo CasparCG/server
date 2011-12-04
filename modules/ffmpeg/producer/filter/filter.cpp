@@ -53,7 +53,28 @@ extern "C"
 #endif
 
 namespace caspar { namespace ffmpeg {
-	
+
+static int query_formats_444(AVFilterContext *ctx)
+{
+    static const int pix_fmts[] = {PIX_FMT_YUV444P, PIX_FMT_NONE};
+    avfilter_set_common_pixel_formats(ctx, avfilter_make_format_list(pix_fmts));
+    return 0;
+}
+
+static int query_formats_422(AVFilterContext *ctx)
+{
+    static const int pix_fmts[] = {PIX_FMT_YUV422P, PIX_FMT_NONE};
+    avfilter_set_common_pixel_formats(ctx, avfilter_make_format_list(pix_fmts));
+    return 0;
+}
+
+static int query_formats_420(AVFilterContext *ctx)
+{
+    static const int pix_fmts[] = {PIX_FMT_YUV420P, PIX_FMT_NONE};
+    avfilter_set_common_pixel_formats(ctx, avfilter_make_format_list(pix_fmts));
+    return 0;
+}
+
 struct filter::implementation
 {
 	std::string						filters_;
@@ -138,6 +159,22 @@ struct filter::implementation
 			
 					THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters_.c_str(), &inputs, &outputs, NULL), "[filter]");
 			
+					for(size_t n = 0; n < graph_->filter_count; ++n)
+					{
+						auto filter_name = graph_->filters[n]->name;
+						if(strstr(filter_name, "yadif") != 0)
+						{
+							if(frame->format == PIX_FMT_UYVY422)
+								graph_->filters[n]->filter->query_formats = query_formats_422;
+							else if(frame->format == PIX_FMT_YUV420P10)
+								graph_->filters[n]->filter->query_formats = query_formats_420;
+							else if(frame->format == PIX_FMT_YUV422P10)
+								graph_->filters[n]->filter->query_formats = query_formats_422;
+							else if(frame->format == PIX_FMT_YUV444P10)
+								graph_->filters[n]->filter->query_formats = query_formats_444;
+						}
+					}
+
 					avfilter_inout_free(&inputs);
 					avfilter_inout_free(&outputs);
 
@@ -146,8 +183,8 @@ struct filter::implementation
 					for(size_t n = 0; n < graph_->filter_count; ++n)
 					{
 						auto filter_name = graph_->filters[n]->name;
-						if(strstr(filter_name, "yadif") != 0)
-							parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);
+						if(strstr(filter_name, "yadif") != 0)						
+							parallel_yadif_ctx_ = make_parallel_yadif(graph_->filters[n]);						
 					}
 				}
 				catch(...)
