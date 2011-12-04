@@ -90,7 +90,7 @@ struct filter::implementation
 	AVFilterContext*				buffersrc_ctx_;
 	std::shared_ptr<void>			parallel_yadif_ctx_;
 	std::vector<PixelFormat>		pix_fmts_;
-	std::queue<std::shared_ptr<AVFrame>> bypass_;
+	std::queue<safe_ptr<AVFrame>>	bypass_;
 		
 	implementation(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) 
 		: filters_(narrow(filters))
@@ -127,7 +127,7 @@ struct filter::implementation
 
 		if(filters_.empty())
 		{
-			bypass_.push(frame);
+			bypass_.push(make_safe_ptr(frame));
 			return;
 		}
 		
