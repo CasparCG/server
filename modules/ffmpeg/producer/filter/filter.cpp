@@ -75,6 +75,13 @@ static int query_formats_420(AVFilterContext *ctx)
     return 0;
 }
 
+static int query_formats_411(AVFilterContext *ctx)
+{
+    static const int pix_fmts[] = {PIX_FMT_YUV411P, PIX_FMT_NONE};
+    avfilter_set_common_pixel_formats(ctx, avfilter_make_format_list(pix_fmts));
+    return 0;
+}
+
 struct filter::implementation
 {
 	std::string						filters_;
@@ -166,6 +173,10 @@ struct filter::implementation
 						{
 							if(frame->format == PIX_FMT_UYVY422)
 								graph_->filters[n]->filter->query_formats = query_formats_422;
+							if(frame->format == PIX_FMT_YUYV422)
+								graph_->filters[n]->filter->query_formats = query_formats_422;
+							if(frame->format == PIX_FMT_UYYVYY411)
+								graph_->filters[n]->filter->query_formats = query_formats_411;
 							else if(frame->format == PIX_FMT_YUV420P10)
 								graph_->filters[n]->filter->query_formats = query_formats_420;
 							else if(frame->format == PIX_FMT_YUV422P10)
