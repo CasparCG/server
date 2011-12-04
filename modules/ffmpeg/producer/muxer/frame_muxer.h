@@ -58,6 +58,8 @@ public:
 
 	int64_t calc_nb_frames(int64_t nb_frames) const;
 
+	void force_deinterlacing(bool value);
+
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

@@ -142,6 +142,9 @@ public:
 	virtual safe_ptr<core::basic_frame> receive(int hints) override
 	{		
 		frame_timer_.restart();
+
+		// TODO: buffered frame is not deinterlaced.
+		muxer_->force_deinterlacing(hints == core::frame_producer::DEINTERLACE_HINT);
 		
 		for(int n = 0; n < 16 && frame_buffer_.size() < 2; ++n)
 			try_decode_frame(hints);

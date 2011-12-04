@@ -234,7 +234,7 @@ filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
 filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
 void filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
 std::shared_ptr<AVFrame> filter::poll(){return impl_->poll();}
-std::string filter::filter_str() const{return impl_->filters_;}
+std::wstring filter::filter_str() const{return widen(impl_->filters_);}
 std::vector<safe_ptr<AVFrame>> filter::poll_all()
 {	
 	std::vector<safe_ptr<AVFrame>> frames;
