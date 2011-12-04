@@ -194,6 +194,10 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 
 		if(pix_fmt == PIX_FMT_UYVY422)
 			target_pix_fmt = PIX_FMT_YUV422P;
+		else if(pix_fmt == PIX_FMT_YUYV422)
+			target_pix_fmt = PIX_FMT_YUV422P;
+		else if(pix_fmt == PIX_FMT_UYYVYY411)
+			target_pix_fmt = PIX_FMT_YUV411P;
 		else if(pix_fmt == PIX_FMT_YUV420P10)
 			target_pix_fmt = PIX_FMT_YUV420P;
 		else if(pix_fmt == PIX_FMT_YUV422P10)
