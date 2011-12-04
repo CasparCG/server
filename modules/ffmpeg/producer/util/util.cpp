@@ -190,22 +190,34 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	if(desc.pix_fmt == core::pixel_format::invalid)
 	{
 		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
+		auto target_pix_fmt = PIX_FMT_BGRA;
 
-		write = frame_factory->create_frame(tag, get_pixel_format_desc(PIX_FMT_BGRA, width, height));
+		if(pix_fmt == PIX_FMT_UYVY422)
+			target_pix_fmt = PIX_FMT_YUV422P;
+		else if(pix_fmt == PIX_FMT_YUV420P10)
+			target_pix_fmt = PIX_FMT_YUV420P;
+		else if(pix_fmt == PIX_FMT_YUV422P10)
+			target_pix_fmt = PIX_FMT_YUV422P;
+		else if(pix_fmt == PIX_FMT_YUV444P10)
+			target_pix_fmt = PIX_FMT_YUV444P;
+		
+		auto target_desc = get_pixel_format_desc(target_pix_fmt, width, height);
+
+		write = frame_factory->create_frame(tag, target_desc);
 		write->set_type(get_mode(*decoded_frame));
 
 		std::shared_ptr<SwsContext> sws_context;
 
 		//CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
 
-		size_t key = width << 20 | height << 8 | pix_fmt;
+		size_t key = ((width << 22) & 0xFFC00000) | ((height << 6) & 0x003FC000) | ((pix_fmt << 7) & 0x00007F00) | ((target_pix_fmt << 0) & 0x0000007F);
 			
 		auto& pool = sws_contexts_[key];
 						
 		if(!pool.try_pop(sws_context))
 		{
 			double param;
-			sws_context.reset(sws_getContext(width, height, pix_fmt, width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+			sws_context.reset(sws_getContext(width, height, pix_fmt, width, height, target_pix_fmt, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 		}
 			
 		if(!sws_context)
@@ -213,17 +225,29 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << 
 									boost::errinfo_api_function("sws_getContext"));
 		}	
-
-		// Use sws_scale when provided colorspace has no hw-accel.
+		
 		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 		avcodec_get_frame_defaults(av_frame.get());			
-		auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
-		CASPAR_VERIFY(size == write->image_data().size()); 
+		if(target_pix_fmt == PIX_FMT_BGRA)
+		{
+			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
+			CASPAR_VERIFY(size == write->image_data().size()); 
+		}
+		else
+		{
+			av_frame->width	 = width;
+			av_frame->height = height;
+			for(size_t n = 0; n < target_desc.planes.size(); ++n)
+			{
+				av_frame->data[n]		= write->image_data(n).begin();
+				av_frame->linesize[n]	= target_desc.planes[n].linesize;
+			}
+		}
 
 		sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
 		pool.push(sws_context);
 
-		write->commit();
+		write->commit();		
 	}
 	else
 	{
