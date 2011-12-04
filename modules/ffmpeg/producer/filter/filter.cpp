@@ -189,36 +189,43 @@ struct filter::implementation
 
 					BOOST_FOREACH(auto filter_ctx, boost::make_iterator_range(graph_->filters, graph_->filters + graph_->filter_count) | yadif_filter)
 					{
-						// Don't trust libavfilter format choice.
+						// Don't trust that libavfilter chooses optimal format.
 						filter_ctx->filter->query_formats = [&]() -> int (*)(AVFilterContext*)
 						{
 							switch(frame->format)
 							{
-							case PIX_FMT_YUV410P:	return query_formats_410;
-							case PIX_FMT_YUV411P:	return query_formats_411;
-							case PIX_FMT_YUV420P:	return query_formats_420;
-							case PIX_FMT_YUV422P:	return query_formats_422;
-							case PIX_FMT_YUV444P:	return query_formats_444;
-							case PIX_FMT_YUVA420P:	return query_formats_420a;
-							case PIX_FMT_UYVY422:	return query_formats_422;
-							case PIX_FMT_YUYV422:	return query_formats_422;
-							case PIX_FMT_UYYVYY411: return query_formats_411;
-							case PIX_FMT_YUV420P10: return query_formats_420;
-							case PIX_FMT_YUV422P10: return query_formats_422;
-							case PIX_FMT_YUV444P10: return query_formats_444;
-							case PIX_FMT_YUV420P16: return query_formats_420;
-							case PIX_FMT_YUV422P16: return query_formats_422;
-							case PIX_FMT_YUV444P16: return query_formats_444;
-							case PIX_FMT_YUV420P9:  return query_formats_420;
-							case PIX_FMT_YUV422P9:  return query_formats_422;
-							case PIX_FMT_YUV444P9:  return query_formats_444;
-							case PIX_FMT_BGR24:		return query_formats_444;
-							case PIX_FMT_RGB24:		return query_formats_444;
-							case PIX_FMT_BGRA:		return query_formats_420a;
-							case PIX_FMT_RGBA:		return query_formats_420a;
-							case PIX_FMT_ABGR:		return query_formats_420a;
-							case PIX_FMT_ARGB:		return query_formats_420a;
-							default:				return filter_ctx->filter->query_formats;
+							case PIX_FMT_YUV444P16: 
+							case PIX_FMT_YUV444P10: 
+							case PIX_FMT_YUV444P9:  	
+							case PIX_FMT_YUV444P:	
+							case PIX_FMT_BGR24:		
+							case PIX_FMT_RGB24:	
+								return query_formats_444;
+							case PIX_FMT_YUV422P16: 
+							case PIX_FMT_YUV422P10: 
+							case PIX_FMT_YUV422P9:  
+							case PIX_FMT_YUV422P:	
+							case PIX_FMT_UYVY422:	
+							case PIX_FMT_YUYV422:	
+								return query_formats_422;
+							case PIX_FMT_YUV420P16: 
+							case PIX_FMT_YUV420P10: 
+							case PIX_FMT_YUV420P9:  
+							case PIX_FMT_YUV420P:	
+								return query_formats_420;
+							case PIX_FMT_YUVA420P:	
+							case PIX_FMT_BGRA:		
+							case PIX_FMT_RGBA:		
+							case PIX_FMT_ABGR:		
+							case PIX_FMT_ARGB:		
+								return query_formats_420a;
+							case PIX_FMT_UYYVYY411: 
+							case PIX_FMT_YUV411P:	
+								return query_formats_411;
+							case PIX_FMT_YUV410P:	
+								return query_formats_410;
+							default:				
+								return filter_ctx->filter->query_formats;
 							}
 						}();
 					}
