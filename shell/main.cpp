@@ -248,10 +248,12 @@ int main(int argc, wchar_t* argv[])
 			while(true)
 			{
 				std::getline(std::wcin, wcmd); // TODO: It's blocking...
+				
+				boost::to_upper(wcmd);
 
-				if(wcmd == L"exit" || wcmd == L"q")
+				if(wcmd == L"EXIT" || wcmd == L"Q" || wcmd == L"QUIT" || wcmd == L"BYE")
 					break;
-
+				
 				// This is just dummy code for testing.
 				if(wcmd.substr(0, 1) == L"1")
 					wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
