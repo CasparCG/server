@@ -68,20 +68,6 @@
 
 #include <algorithm>
 
-struct application_state
-{
-	enum type
-	{
-		running,
-		shutdown,
-		pause_and_shutdown
-	};
-};
-
-boost::condition_variable	shutdown_cond;
-boost::mutex				shutdown_mut;
-tbb::atomic<int>			shutdown_event;
-
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
@@ -95,27 +81,14 @@ void change_icon( const HICON hNewIcon )
    ::FreeLibrary(hMod);
 }
 
-BOOL WINAPI HandlerRoutine(__in  DWORD dwCtrlType)
-{
-	switch(dwCtrlType)
-	{
-	case CTRL_CLOSE_EVENT:
-	case CTRL_SHUTDOWN_EVENT:
-		shutdown_event = application_state::shutdown;
-		shutdown_cond.notify_all();
-		return true;
-	}
-	return false;
-}
-
 void setup_console_window()
 {	 
 	auto hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	// Disable close button in console to avoid shutdown without cleanup.
-	//EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
-	//DrawMenuBar(GetConsoleWindow());
-	SetConsoleCtrlHandler(HandlerRoutine, true);
+	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
+	DrawMenuBar(GetConsoleWindow());
+	//SetConsoleCtrlHandler(HandlerRoutine, true);
 
 	// Configure console size and position.
 	auto coord = GetLargestConsoleWindowSize(hOut);
@@ -238,30 +211,30 @@ int main(int argc, wchar_t* argv[])
 	
 	try 
 	{
-		{
-			// Configure environment properties from configuration.
-			caspar::env::configure("casparcg.config");
+		// Configure environment properties from configuration.
+		caspar::env::configure("casparcg.config");
 				
-		#ifdef _DEBUG
-			if(caspar::env::properties().get("configuration.debugging.remote", false))
-				MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
-		#endif	 
+	#ifdef _DEBUG
+		if(caspar::env::properties().get("configuration.debugging.remote", false))
+			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
+	#endif	 
 
-			// Start logging to file.
-			caspar::log::add_file_sink(caspar::env::log_folder());			
-			std::wcout << L"Logging [info] or higher severity to " << caspar::env::log_folder() << std::endl << std::endl;
+		// Start logging to file.
+		caspar::log::add_file_sink(caspar::env::log_folder());			
+		std::wcout << L"Logging [info] or higher severity to " << caspar::env::log_folder() << std::endl << std::endl;
 		
-			// Setup console window.
-			setup_console_window();
+		// Setup console window.
+		setup_console_window();
 
-			// Print environment information.
-			print_info();
+		// Print environment information.
+		print_info();
 			
-			std::stringstream str;
-			boost::property_tree::xml_writer_settings<char> w(' ', 3);
-			boost::property_tree::write_xml(str, caspar::env::properties(), w);
-			CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
+		std::stringstream str;
+		boost::property_tree::xml_writer_settings<char> w(' ', 3);
+		boost::property_tree::write_xml(str, caspar::env::properties(), w);
+		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
 				
+		{
 			// Create server object which initializes channels, protocols and controllers.
 			caspar::server caspar_server;
 				
@@ -271,89 +244,69 @@ int main(int argc, wchar_t* argv[])
 			// Create a dummy client which prints amcp responses to console.
 			auto console_client = std::make_shared<caspar::IO::ConsoleClientInfo>();
 
-			boost::thread input_thread([&]
+			std::wstring wcmd;
+			while(true)
 			{
-				while(shutdown_event == application_state::running)
-				{
-					std::wstring wcmd;
-					std::getline(std::wcin, wcmd); // TODO: It's blocking...
+				std::getline(std::wcin, wcmd); // TODO: It's blocking...
 
+				if(wcmd == L"exit" || wcmd == L"q")
+					break;
+
+				// This is just dummy code for testing.
+				if(wcmd.substr(0, 1) == L"1")
+					wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
+				else if(wcmd.substr(0, 1) == L"2")
+					wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
+				else if(wcmd.substr(0, 1) == L"3")
+					wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
+				else if(wcmd.substr(0, 1) == L"4")
+					wcmd = L"PLAY 1-1 DV FILTER yadif=1:-1 LOOP";
+				else if(wcmd.substr(0, 1) == L"5")
+				{
+					auto file = wcmd.substr(2, wcmd.length()-1);
+					wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n" 
+							L"PLAY 1-2 " + file + L" LOOP\r\n" 
+							L"PLAY 1-3 " + file + L" LOOP\r\n"
+							L"PLAY 2-1 " + file + L" LOOP\r\n" 
+							L"PLAY 2-2 " + file + L" LOOP\r\n" 
+							L"PLAY 2-3 " + file + L" LOOP\r\n";
+				}
+				else if(wcmd.substr(0, 1) == L"X")
+				{
+					int num = 0;
+					std::wstring file;
 					try
 					{
-						if(wcmd == L"exit" || wcmd == L"q")
-						{
-							shutdown_event = application_state::pause_and_shutdown;
-							shutdown_cond.notify_all();
-							return;
-						}
-
-						// This is just dummy code for testing.
-						if(wcmd.substr(0, 1) == L"1")
-							wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
-						else if(wcmd.substr(0, 1) == L"2")
-							wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
-						else if(wcmd.substr(0, 1) == L"3")
-							wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
-						else if(wcmd.substr(0, 1) == L"4")
-							wcmd = L"PLAY 1-1 DV FILTER yadif=1:-1 LOOP";
-						else if(wcmd.substr(0, 1) == L"5")
-						{
-							auto file = wcmd.substr(2, wcmd.length()-1);
-							wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n" 
-								   L"PLAY 1-2 " + file + L" LOOP\r\n" 
-								   L"PLAY 1-3 " + file + L" LOOP\r\n"
-								   L"PLAY 2-1 " + file + L" LOOP\r\n" 
-								   L"PLAY 2-2 " + file + L" LOOP\r\n" 
-								   L"PLAY 2-3 " + file + L" LOOP\r\n";
-						}
-						else if(wcmd.substr(0, 1) == L"X")
-						{
-							int num = 0;
-							std::wstring file;
-							try
-							{
-								num = boost::lexical_cast<int>(wcmd.substr(1, 2));
-								file = wcmd.substr(4, wcmd.length()-1);
-							}
-							catch(...)
-							{
-								num = boost::lexical_cast<int>(wcmd.substr(1, 1));
-								file = wcmd.substr(3, wcmd.length()-1);
-							}
-
-							int n = 0;
-							int num2 = num;
-							while(num2 > 0)
-							{
-								num2 >>= 1;
-								n++;
-							}
-
-							wcmd = L"MIXER 1 GRID " + boost::lexical_cast<std::wstring>(n);
-
-							for(int i = 1; i <= num; ++i)
-								wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" LOOP";// + L" SLIDE 100 LOOP";
-						}
-
-						wcmd += L"\r\n";
-						amcp.Parse(wcmd.c_str(), wcmd.length(), console_client);
+						num = boost::lexical_cast<int>(wcmd.substr(1, 2));
+						file = wcmd.substr(4, wcmd.length()-1);
 					}
 					catch(...)
 					{
-						CASPAR_LOG_CURRENT_EXCEPTION();
+						num = boost::lexical_cast<int>(wcmd.substr(1, 1));
+						file = wcmd.substr(3, wcmd.length()-1);
 					}
+
+					int n = 0;
+					int num2 = num;
+					while(num2 > 0)
+					{
+						num2 >>= 1;
+						n++;
+					}
+
+					wcmd = L"MIXER 1 GRID " + boost::lexical_cast<std::wstring>(n);
+
+					for(int i = 1; i <= num; ++i)
+						wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" LOOP";// + L" SLIDE 100 LOOP";
 				}
-			});
 
-			boost::unique_lock<boost::mutex> lock(shutdown_mut);
-			while(shutdown_event == application_state::running)			
-				shutdown_cond.wait(lock);				
-		}	
-			
-		Sleep(500); // CAPSAR_LOG is asynchronous. Try to get text in correct order.'
-
-		if(shutdown_event == application_state::pause_and_shutdown)
-			system("pause");	
+				wcmd += L"\r\n";
+				amcp.Parse(wcmd.c_str(), wcmd.length(), console_client);
+			}	
+		}
+		Sleep(500);
+		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
+		system("pause");	
 	}
 	catch(boost::property_tree::file_parser_error&)
 	{
@@ -372,6 +325,5 @@ int main(int argc, wchar_t* argv[])
 		CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the CasparCG forums (www.casparcg.com/forum).";
 	}	
 	
-	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 	return 0;
 }
