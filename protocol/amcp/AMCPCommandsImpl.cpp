@@ -1329,7 +1329,8 @@ bool InfoCommand::DoExecute()
 		{
 			std::wstringstream replyString;
 			replyString << TEXT("201 INFO OK\r\n");
-
+			
+			boost::property_tree::wptree info;
 			if(_parameters.size() >= 1)
 			{
 				std::vector<std::wstring> split;
@@ -1342,20 +1343,35 @@ bool InfoCommand::DoExecute()
 					layer = boost::lexical_cast<int>(split[1]);
 				
 				if(layer == std::numeric_limits<int>::min())
-					boost::property_tree::xml_parser::write_xml(replyString, channels_.at(channel)->info(), boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
+				{	
+					info.add_child(L"channel", channels_.at(channel)->info())
+							.add(L"index", channel);
+				}
 				else
-					boost::property_tree::xml_parser::write_xml(replyString, channels_.at(channel)->stage()->info(layer).get(), boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
+				{
+					if(_parameters.size() >= 2)
+					{
+						if(_parameters[1] == L"B")
+							info.add_child(L"producer", channels_.at(channel)->stage()->background(layer).get()->info());
+						else
+							info.add_child(L"producer", channels_.at(channel)->stage()->foreground(layer).get()->info());
+					}
+					else
+					{
+						info.add_child(L"layer", channels_.at(channel)->stage()->info(layer).get())
+							.add(L"index", layer);
+					}
+				}
 			}
 			else
 			{
-				boost::property_tree::wptree info;
 				int index = 0;
 				BOOST_FOREACH(auto channel, channels_)
 					info.add_child(L"channels.channel", channel->info())
 					    .add(L"index", ++index);
-
-				boost::property_tree::xml_parser::write_xml(replyString, info, boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
 			}
+
+			boost::property_tree::xml_parser::write_xml(replyString, info, boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
 			replyString << TEXT("\r\n");
 			SetReplyString(replyString.str());
 			return true;
