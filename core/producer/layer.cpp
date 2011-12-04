@@ -66,7 +66,7 @@ public:
 		if(preview) // Play the first frame and pause.
 		{			
 			play();
-			receive();
+			receive(frame_producer::NO_HINT);
 			pause();
 		}
 	}
@@ -96,14 +96,14 @@ public:
 		is_paused_			= true;
 	}
 		
-	safe_ptr<basic_frame> receive()
+	safe_ptr<basic_frame> receive(int hints)
 	{		
 		try
 		{
 			if(is_paused_)
 				return disable_audio(foreground_->last_frame());
 		
-			auto frame = receive_and_follow(foreground_, frame_producer::NO_HINT);
+			auto frame = receive_and_follow(foreground_, hints);
 			if(frame == core::basic_frame::late())
 				return foreground_->last_frame();
 
@@ -111,7 +111,7 @@ public:
 			if(auto_play_delta_ > -1 && frames_left < 1)
 			{
 				play();
-				return receive();
+				return receive(hints);
 			}
 				
 			return frame;
@@ -175,7 +175,7 @@ void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 bool layer::is_paused() const{return impl_->is_paused_;}
 int64_t layer::frame_number() const{return impl_->frame_number_;}
-safe_ptr<basic_frame> layer::receive() {return impl_->receive();}
+safe_ptr<basic_frame> layer::receive(int hints) {return impl_->receive(hints);}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}

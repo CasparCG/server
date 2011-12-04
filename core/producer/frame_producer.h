@@ -50,7 +50,8 @@ public:
 	enum hints
 	{
 		NO_HINT = 0,
-		ALPHA_HINT = 1
+		ALPHA_HINT = 1,
+		DEINTERLACE_HINT
 	};
 
 	virtual ~frame_producer(){}	

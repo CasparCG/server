@@ -65,12 +65,7 @@ public:
 	
 	core::video_format_desc get_video_format_desc() const; // nothrow
 	void set_video_format_desc(const video_format_desc& format_desc);
-
-	void set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_frame_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void clear_transforms(int index);
-	void clear_transforms();
-
+	
 	void set_blend_mode(int index, blend_mode::type value);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;

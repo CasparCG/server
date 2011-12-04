@@ -50,6 +50,14 @@ static bool is_deinterlacing(const std::wstring& filters)
 	if(boost::to_upper_copy(filters).find(L"YADIF") != std::string::npos)
 		return true;	
 	return false;
+}	
+	
+static int filter_delay(const std::wstring& filters)
+{
+	if(is_double_rate(filters))
+		return 1;
+	
+	return 0;
 }
 
 static std::wstring append_filter(const std::wstring& filters, const std::wstring& filter)
@@ -68,7 +76,7 @@ public:
 	std::shared_ptr<AVFrame> poll();
 	std::vector<safe_ptr<AVFrame>> poll_all();
 
-	std::string filter_str() const;
+	std::wstring filter_str() const;
 	
 private:
 	struct implementation;
