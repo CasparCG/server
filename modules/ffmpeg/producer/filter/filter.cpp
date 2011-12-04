@@ -95,6 +95,13 @@ static int query_formats_411(AVFilterContext *ctx)
     return 0;
 }
 
+static int query_formats_410(AVFilterContext *ctx)
+{
+    static const int pix_fmts[] = {PIX_FMT_YUV410P, PIX_FMT_NONE};
+    avfilter_set_common_pixel_formats(ctx, avfilter_make_format_list(pix_fmts));
+    return 0;
+}
+
 struct filter::implementation
 {
 	std::wstring					filters_;
@@ -182,16 +189,26 @@ struct filter::implementation
 
 					BOOST_FOREACH(auto filter_ctx, boost::make_iterator_range(graph_->filters, graph_->filters + graph_->filter_count) | yadif_filter)
 					{
+						// Don't trust libavfilter format choice.
 						filter_ctx->filter->query_formats = [&]() -> int (*)(AVFilterContext*)
 						{
 							switch(frame->format)
 							{
+							case PIX_FMT_YUV410P:	return query_formats_410;
+							case PIX_FMT_YUV411P:	return query_formats_411;
+							case PIX_FMT_YUV420P:	return query_formats_420;
+							case PIX_FMT_YUV422P:	return query_formats_422;
+							case PIX_FMT_YUV444P:	return query_formats_444;
+							case PIX_FMT_YUVA420P:	return query_formats_420a;
 							case PIX_FMT_UYVY422:	return query_formats_422;
 							case PIX_FMT_YUYV422:	return query_formats_422;
 							case PIX_FMT_UYYVYY411: return query_formats_411;
 							case PIX_FMT_YUV420P10: return query_formats_420;
 							case PIX_FMT_YUV422P10: return query_formats_422;
 							case PIX_FMT_YUV444P10: return query_formats_444;
+							case PIX_FMT_YUV420P16: return query_formats_420;
+							case PIX_FMT_YUV422P16: return query_formats_422;
+							case PIX_FMT_YUV444P16: return query_formats_444;
 							case PIX_FMT_YUV420P9:  return query_formats_420;
 							case PIX_FMT_YUV422P9:  return query_formats_422;
 							case PIX_FMT_YUV444P9:  return query_formats_444;
