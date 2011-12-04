@@ -89,6 +89,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
 		
+	tbb::atomic<int>											hints_;
 	safe_ptr<core::frame_factory>								frame_factory_;
 	std::vector<size_t>											audio_cadence_;
 
@@ -109,6 +110,7 @@ public:
 		, audio_cadence_(frame_factory->get_video_format_desc().audio_cadence)
 		, muxer_(format_desc.fps, frame_factory, filter, ffmpeg::display_mode::deinterlace)
 	{
+		hints_ = 0;
 		frame_buffer_.set_capacity(2);
 		
 		graph_->add_guide("tick-time", 0.5);
@@ -171,6 +173,8 @@ public:
 
 		try
 		{
+			muxer_.force_deinterlacing((hints_ & core::frame_producer::DEINTERLACE_HINT) != 0);
+
 			graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 
@@ -225,10 +229,12 @@ public:
 		return S_OK;
 	}
 	
-	safe_ptr<core::basic_frame> get_frame()
+	safe_ptr<core::basic_frame> get_frame(int hints)
 	{
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
+
+		hints_ = hints;
 
 		safe_ptr<core::basic_frame> frame = core::basic_frame::late();
 		if(!frame_buffer_.try_pop(frame))
@@ -267,9 +273,9 @@ public:
 
 	// frame_producer
 				
-	virtual safe_ptr<core::basic_frame> receive(int) override
+	virtual safe_ptr<core::basic_frame> receive(int hints) override
 	{
-		auto frame = context_->get_frame();
+		auto frame = context_->get_frame(hints);
 		if(frame != core::basic_frame::late())
 			last_frame_ = frame;
 		return frame;

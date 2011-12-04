@@ -144,7 +144,7 @@ public:
 		frame_timer_.restart();
 
 		// TODO: buffered frame is not deinterlaced.
-		muxer_->force_deinterlacing(hints == core::frame_producer::DEINTERLACE_HINT);
+		muxer_->force_deinterlacing((hints & core::frame_producer::DEINTERLACE_HINT) != 0);
 		
 		for(int n = 0; n < 16 && frame_buffer_.size() < 2; ++n)
 			try_decode_frame(hints);
