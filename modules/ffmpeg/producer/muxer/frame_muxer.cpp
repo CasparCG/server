@@ -23,8 +23,6 @@
 
 #include "frame_muxer.h"
 
-#include "display_mode.h"
-
 #include "../filter/filter.h"
 #include "../util/util.h"
 
@@ -84,8 +82,9 @@ struct frame_muxer::implementation : boost::noncopyable
 	filter											filter_;
 	const std::wstring								filter_str_;
 	bool											force_deinterlacing_;
+	display_mode::type								force_deinterlacing_mode_;
 		
-	implementation(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
+	implementation(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str, display_mode::type force_deinterlacing_mode)
 		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -95,6 +94,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		, frame_factory_(frame_factory)
 		, filter_str_(filter_str)
 		, force_deinterlacing_(false)
+		, force_deinterlacing_mode_(force_deinterlacing_mode)
 	{
 		video_streams_.push(std::queue<safe_ptr<write_frame>>());
 		audio_streams_.push(core::audio_buffer());
@@ -227,36 +227,34 @@ struct frame_muxer::implementation : boost::noncopyable
 		case display_mode::simple:						
 		case display_mode::deinterlace_bob:				
 		case display_mode::deinterlace:	
-		{
-			frame_buffer_.push(frame1);
-			break;
-		}
+			{
+				frame_buffer_.push(frame1);
+				break;
+			}
 		case display_mode::interlace:					
 		case display_mode::deinterlace_bob_reinterlace:	
-		{				
-			auto frame2 = pop_video();
+			{				
+				auto frame2 = pop_video();
 
-			frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode));	
-			break;
-		}
+				frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode));	
+				break;
+			}
 		case display_mode::duplicate:	
-		{
-			auto frame2				= make_safe<core::write_frame>(*frame1);
-			frame2->audio_data()	= pop_audio();
+			{
+				auto frame2				= make_safe<core::write_frame>(*frame1);
+				frame2->audio_data()	= pop_audio();
 
-			frame_buffer_.push(frame1);
-			frame_buffer_.push(frame2);
-			break;
-		}
+				frame_buffer_.push(frame1);
+				frame_buffer_.push(frame2);
+				break;
+			}
 		case display_mode::half:	
-		{				
-			pop_video(); // Throw away
+			{				
+				pop_video(); // Throw away
 
-			frame_buffer_.push(frame1);
-			break;
-		}
-		default:										
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("invalid display-mode"));
+				frame_buffer_.push(frame1);
+				break;
+			}
 		}
 		
 		return frame_buffer_.empty() ? nullptr : poll();
@@ -294,20 +292,26 @@ struct frame_muxer::implementation : boost::noncopyable
 			auto mode = get_mode(*frame);
 			auto fps  = in_fps_;
 
-			if(is_deinterlacing(filter_str_))
+			if(filter::is_deinterlacing(filter_str_))
 				mode = core::field_mode::progressive;
 
-			if(is_double_rate(filter_str_))
+			if(filter::is_double_rate(filter_str_))
 				fps *= 2;
 			
 			display_mode_ = get_display_mode(mode, fps, format_desc_.field_mode, format_desc_.fps);
 			
-			if(force_deinterlacing_ || 
-				((frame->height != 480 || format_desc_.height != 486) && 
+			if((frame->height != 480 || format_desc_.height != 486) && // don't deinterlace for NTSC DV
 					display_mode_ == display_mode::simple && mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && 
-					frame->height != static_cast<int>(format_desc_.height)))
+					frame->height != static_cast<int>(format_desc_.height))
 			{
 				display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
+			}
+
+			if(force_deinterlacing_ && mode != core::field_mode::progressive && display_mode_ != display_mode::deinterlace && display_mode_ != display_mode::deinterlace_bob)			
+			{	
+				if(force_deinterlacing_mode_ == display_mode::deinterlace)
+					CASPAR_LOG(warning) << L"[frame_muxer] Forcing non bob deinterlacing.";
+				display_mode_ = force_deinterlacing_mode_;
 			}
 
 			if(display_mode_ == display_mode::deinterlace)
@@ -324,7 +328,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			
 		if(!boost::iequals(filter_.filter_str(), filter_str))
 		{
-			for(int n = 0; n < filter_delay(filter_.filter_str()); ++n)
+			for(int n = 0; n < filter_.delay(); ++n)
 			{
 				filter_.push(frame);
 				auto av_frame = filter_.poll();
@@ -359,15 +363,15 @@ struct frame_muxer::implementation : boost::noncopyable
 			break;
 		}
 
-		if(is_double_rate(widen(filter_.filter_str()))) // Take into account transformations in filter.
+		if(filter_.is_double_rate()) // Take into account transformations in filter.
 			nb_frames *= 2;
 
 		return nb_frames;
 	}
 };
 
-frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
-	: impl_(new implementation(in_fps, frame_factory, filter)){}
+frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter, display_mode::type force_deinterlacing_mode)
+	: impl_(new implementation(in_fps, frame_factory, filter, force_deinterlacing_mode)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
 std::shared_ptr<basic_frame> frame_muxer::poll(){return impl_->poll();}
