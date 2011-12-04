@@ -33,32 +33,6 @@ struct AVFrame;
 enum PixelFormat;
 
 namespace caspar { namespace ffmpeg {
-		
-static bool is_double_rate(const std::wstring& filters)
-{
-	if(boost::to_upper_copy(filters).find(L"YADIF=1") != std::string::npos)
-		return true;
-	
-	if(boost::to_upper_copy(filters).find(L"YADIF=3") != std::string::npos)
-		return true;
-
-	return false;
-}
-
-static bool is_deinterlacing(const std::wstring& filters)
-{
-	if(boost::to_upper_copy(filters).find(L"YADIF") != std::string::npos)
-		return true;	
-	return false;
-}	
-	
-static int filter_delay(const std::wstring& filters)
-{
-	if(is_double_rate(filters))
-		return 1;
-	
-	return 0;
-}
 
 static std::wstring append_filter(const std::wstring& filters, const std::wstring& filter)
 {
@@ -77,7 +51,44 @@ public:
 	std::vector<safe_ptr<AVFrame>> poll_all();
 
 	std::wstring filter_str() const;
+			
+	static bool is_double_rate(const std::wstring& filters)
+	{
+		if(boost::to_upper_copy(filters).find(L"YADIF=1") != std::string::npos)
+			return true;
 	
+		if(boost::to_upper_copy(filters).find(L"YADIF=3") != std::string::npos)
+			return true;
+
+		return false;
+	}
+
+	static bool is_deinterlacing(const std::wstring& filters)
+	{
+		if(boost::to_upper_copy(filters).find(L"YADIF") != std::string::npos)
+			return true;	
+		return false;
+	}	
+	
+	static int delay(const std::wstring& filters)
+	{
+		return is_double_rate(filters) ? 1 : 1;
+	}
+
+	int delay() const
+	{
+		return delay(filter_str());
+	}
+
+	bool is_double_rate() const
+	{
+		return is_double_rate(filter_str());
+	}
+	
+	bool is_deinterlacing() const
+	{
+		return is_deinterlacing(filter_str());
+	}
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

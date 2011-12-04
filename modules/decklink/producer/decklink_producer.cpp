@@ -29,6 +29,7 @@
 #include "../../ffmpeg/producer/filter/filter.h"
 #include "../../ffmpeg/producer/util/util.h"
 #include "../../ffmpeg/producer/muxer/frame_muxer.h"
+#include "../../ffmpeg/producer/muxer/display_mode.h"
 
 #include <common/log/log.h>
 #include <common/diagnostics/graph.h>
@@ -106,7 +107,7 @@ public:
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
 		, audio_cadence_(frame_factory->get_video_format_desc().audio_cadence)
-		, muxer_(format_desc.fps, frame_factory, filter)
+		, muxer_(format_desc.fps, frame_factory, filter, ffmpeg::display_mode::deinterlace)
 	{
 		frame_buffer_.set_capacity(2);
 		

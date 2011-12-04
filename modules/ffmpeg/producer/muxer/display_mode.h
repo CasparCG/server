@@ -56,7 +56,7 @@ struct display_mode
 	}
 };
 
-display_mode::type get_display_mode(const core::field_mode::type in_mode, double in_fps, const core::field_mode::type out_mode, double out_fps)
+static display_mode::type get_display_mode(const core::field_mode::type in_mode, double in_fps, const core::field_mode::type out_mode, double out_fps)
 {		
 	static const auto epsilon = 2.0;
 
