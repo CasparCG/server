@@ -31,6 +31,7 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
+#include <common/log/log.h>
 #include <common/memory/memclr.h>
 #include <common/exception/exceptions.h>
 
@@ -155,6 +156,8 @@ struct image_scroll_producer : public core::frame_producer
 				start_offset_[0] = (std::ceil(static_cast<double>(width_) / static_cast<double>(format_desc_.width)) + 1.0) * 0.5;// - 1.5;
 			}
 		}
+
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 	
 	// frame_producer

@@ -31,11 +31,12 @@
 #include "../../ffmpeg/producer/muxer/frame_muxer.h"
 #include "../../ffmpeg/producer/muxer/display_mode.h"
 
-#include <common/log/log.h>
-#include <common/diagnostics/graph.h>
 #include <common/concurrency/com_context.h>
+#include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
+#include <common/log/log.h>
 #include <common/memory/memclr.h>
+#include <common/utility/param.h>
 
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
@@ -309,15 +310,14 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
 
-	auto device_index	= core::get_param(L"DEVICE", params, 1);
-	auto filter_str		= core::get_param<std::wstring>(L"FILTER", params, L""); 	
-	auto length			= core::get_param(L"LENGTH", params, std::numeric_limits<int64_t>::max()); 	
+	auto device_index	= get_param(L"DEVICE", params, 1);
+	auto filter_str		= get_param(L"FILTER", params); 	
+	auto length			= get_param(L"LENGTH", params, std::numeric_limits<int64_t>::max()); 	
+	auto format_desc	= core::video_format_desc::get(get_param(L"FORMAT", params, L"INVALID"));
 	
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
-
-	auto format_desc	= core::video_format_desc::get(core::get_param<std::wstring>(L"FORMAT", params, L"INVALID"));
-
+	
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();
 			

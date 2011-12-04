@@ -30,6 +30,7 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
+#include <common/log/log.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
@@ -61,6 +62,8 @@ struct image_producer : public core::frame_producer
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
 		frame->commit();
 		frame_ = std::move(frame);
+
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 	
 	// frame_producer

@@ -228,6 +228,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="utility\assert.h" />
     <ClInclude Include="utility\move_on_copy.h" />
+    <ClInclude Include="utility\param.h" />
     <ClInclude Include="utility\string.h" />
     <ClInclude Include="utility\timer.h" />
     <ClInclude Include="utility\tweener.h" />
