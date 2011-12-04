@@ -242,7 +242,10 @@ bool CallCommand::DoExecute()
 		CASPAR_LOG(info) << "Executed call: " <<  _parameters[0] << TEXT(" successfully");
 		
 		std::wstringstream replyString;
-		replyString << TEXT("201 CALL OK\r\n") << result.get() << L"\r\n";
+		if(result.get().empty())
+			replyString << TEXT("202 CALL OK\r\n");
+		else
+			replyString << TEXT("201 CALL OK\r\n") << result.get() << L"\r\n";
 		
 		SetReplyString(replyString.str());
 
