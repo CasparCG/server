@@ -459,6 +459,40 @@ std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced
 
 	return boost::lexical_cast<std::wstring>(width) + L"x" + boost::lexical_cast<std::wstring>(height) + (!interlaced ? L"p" : L"i") + fps_ss.str();
 }
+
+bool is_valid_file(const std::wstring filename)
+{			
+	auto filename2 = narrow(filename);
+
+	std::ifstream file(filename2);
+
+	std::vector<unsigned char> buf;
+	for(auto file_it = std::istreambuf_iterator<char>(file); file_it != std::istreambuf_iterator<char>() && buf.size() < 2048; ++file_it)
+		buf.push_back(*file_it);
+
+	if(buf.empty())
+		return nullptr;
+
+	AVProbeData pb;
+	pb.filename = filename2.c_str();
+	pb.buf		= buf.data();
+	pb.buf_size = buf.size();
+
+	int score = 0;
+	return av_probe_input_format2(&pb, true, &score) != nullptr;
+}
+
+std::wstring probe_stem(const std::wstring stem)
+{
+	auto stem2 = boost::filesystem2::wpath(stem);
+	auto dir = stem2.parent_path();
+	for(auto it = boost::filesystem2::wdirectory_iterator(dir); it != boost::filesystem2::wdirectory_iterator(); ++it)
+	{
+		if(boost::iequals(it->path().stem(), stem2.filename()) && is_valid_file(it->path().file_string()))
+			return it->path().file_string();
+	}
+	return L"";
+}
 //
 //void av_dup_frame(AVFrame* frame)
 //{

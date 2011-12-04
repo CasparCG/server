@@ -70,8 +70,8 @@ struct input::implementation : boost::noncopyable
 			
 	const std::wstring											filename_;
 	tbb::atomic<bool>											loop_;
-	const size_t												start_;		
-	const size_t												length_;
+	const uint64_t												start_;		
+	const uint64_t												length_;
 	size_t														frame_number_;
 	
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
@@ -85,7 +85,7 @@ struct input::implementation : boost::noncopyable
 
 	tbb::recursive_mutex										mutex_;
 
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
+	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int64_t start, int64_t length) 
 		: graph_(graph)
 		, format_context_(open_input(filename))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
@@ -275,7 +275,7 @@ struct input::implementation : boost::noncopyable
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, size_t start, size_t length) 
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int64_t start, int64_t length) 
 	: impl_(new implementation(graph, filename, loop, start, length)){}
 bool input::eof() const {return impl_->is_eof_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}

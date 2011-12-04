@@ -46,6 +46,7 @@
 #include <modules/flash/util/swf.h>
 #include <modules/flash/producer/flash_producer.h>
 #include <modules/flash/producer/cg_producer.h>
+#include <modules/ffmpeg/producer/util/util.h>
 
 #include <algorithm>
 #include <locale>
@@ -95,13 +96,10 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
 			extension == L"GIF" || extension == L"BMP")
 			clipttype = TEXT(" STILL ");
-		else if(extension == TEXT(".SWF") || extension == TEXT(".DV") || extension == TEXT(".MOV") || extension == TEXT(".MPG") || 
-				extension == TEXT(".AVI") || extension == TEXT(".FLV") || extension == TEXT(".F4V") || extension == TEXT(".MP4") ||
-				extension == L".M2V" || extension == L".H264" || extension == L".MKV" || extension == L".WMV" || extension == L".DIVX" || 
-				extension == L".XVID" || extension == L".OGG" || extension == L".CT" || extension == L".MXF")
-			clipttype = TEXT(" MOVIE ");
 		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
 			clipttype = TEXT(" STILL ");
+		else if(caspar::ffmpeg::is_valid_file(path.file_string()) || extension == L".CT")
+			clipttype = TEXT(" MOVIE ");
 
 		if(clipttype != TEXT(" N/A "))
 		{		

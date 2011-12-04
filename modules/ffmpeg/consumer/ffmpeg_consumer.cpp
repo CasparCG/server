@@ -32,8 +32,9 @@
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/utility/string.h>
 #include <common/env.h>
+#include <common/utility/string.h>
+#include <common/utility/param.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
@@ -447,27 +448,20 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	if(params.size() < 1 || params[0] != L"FILE")
 		return core::frame_consumer::empty();
 	
-	auto filename = (params.size() > 1 ? params[1] : L"");
-
-	bool key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
-
-	std::wstring codec = L"libx264";
-	auto codec_it = std::find(params.begin(), params.end(), L"CODEC");
-	if(codec_it != params.end() && codec_it++ != params.end())
-		codec = *codec_it;
-
+	auto filename	= (params.size() > 1 ? params[1] : L"");
+	bool key_only	= get_param(L"KEY_ONLY", params, false);
+	auto codec		= get_param(L"CODEC", params, L"libx264");
+	auto options	= get_param(L"OPTIONS", params);
+	
 	if(codec == L"H264")
 		codec = L"libx264";
 
 	if(codec == L"DVCPRO")
 		codec = L"dvvideo";
 
-	std::wstring options = L"";
-	auto options_it = std::find(params.begin(), params.end(), L"OPTIONS");
-	if(options_it != params.end() && options_it++ != params.end())
-		options = *options_it;
+	boost::to_lower(options);
 
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, boost::to_lower_copy(options));
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
 }
 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree)
