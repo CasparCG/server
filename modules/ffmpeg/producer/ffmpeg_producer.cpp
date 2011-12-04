@@ -33,6 +33,7 @@
 
 #include <common/env.h>
 #include <common/utility/assert.h>
+#include <common/utility/param.h>
 #include <common/diagnostics/graph.h>
 
 #include <core/video_format.h>
@@ -74,9 +75,9 @@ struct ffmpeg_producer : public core::frame_producer
 	std::unique_ptr<frame_muxer>								muxer_;
 
 	const double												fps_;
-	const int													start_;
+	const int64_t												start_;
+	const int64_t												length_;
 	const bool													loop_;
-	const size_t												length_;
 
 	safe_ptr<core::basic_frame>									last_frame_;
 	
@@ -86,15 +87,15 @@ struct ffmpeg_producer : public core::frame_producer
 	int64_t														file_frame_number_;;
 	
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int start, size_t length) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int64_t start, int64_t length) 
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
 		, input_(graph_, filename_, loop, start, length)
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
-		, loop_(loop)
 		, length_(length)
+		, loop_(loop)
 		, last_frame_(core::basic_frame::empty())
 		, frame_number_(0)
 	{
@@ -324,41 +325,20 @@ public:
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {		
-	static const std::vector<std::wstring> extensions = boost::assign::list_of
-		(L"mpg")(L"mpeg")(L"m2v")(L"m4v")(L"mp3")(L"mp4")(L"mpga")
-		(L"avi")
-		(L"mov")
-		(L"qt")
-		(L"webm")
-		(L"dv")		
-		(L"f4v")(L"flv")
-		(L"mkv")(L"mka")
-		(L"mxf")
-		(L"wmv")(L"wma")(L"wav")
-		(L"rm")(L"ram")
-		(L"ogg")(L"ogv")(L"oga")(L"ogx")
-		(L"divx")(L"xvid");
+	auto filename = probe_stem(env::media_folder() + L"\\" + params.at(0));
 
-	std::wstring filename = env::media_folder() + L"\\" + params[0];
-	
-	auto ext = boost::find_if(extensions, [&](const std::wstring& ex)
-	{					
-		return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename + L"." + ex));
-	});
-
-	if(ext == extensions.end())
+	if(filename.empty())
 		return core::frame_producer::empty();
-
-	auto path		= filename + L"." + *ext;
+	
 	auto loop		= boost::range::find(params, L"LOOP") != params.end();
-	auto start		= core::get_param(L"SEEK", params, 0);
-	auto length		= core::get_param(L"LENGTH", params, std::numeric_limits<size_t>::max());
-	auto filter_str = core::get_param<std::wstring>(L"FILTER", params, L""); 	
+	auto start		= get_param(L"SEEK", params, static_cast<uint64_t>(0));
+	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint64_t>::max());
+	auto filter_str = get_param(L"FILTER", params, L""); 	
 		
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
-	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, path, filter_str, loop, start, length));
+	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length));
 }
 
 }}

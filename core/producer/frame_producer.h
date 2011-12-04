@@ -85,21 +85,4 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, c
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::wstring& params);
 safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer>&& producer);
 
-template<typename T>
-typename std::decay<T>::type get_param(const std::wstring& name, const std::vector<std::wstring>& params, T fail_value)
-{	
-	auto it = std::find(params.begin(), params.end(), name);
-	if(it == params.end() || ++it == params.end())	
-		return fail_value;
-	
-	T value = fail_value;
-	try
-	{
-		value = boost::lexical_cast<std::decay<T>::type>(*it);
-	}
-	catch(boost::bad_lexical_cast&){}
-
-	return value;
-}
-
 }}
