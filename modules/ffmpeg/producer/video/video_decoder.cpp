@@ -57,7 +57,7 @@ struct video_decoder::implementation : boost::noncopyable
 
 	std::queue<safe_ptr<AVPacket>>			packets_;
 	
-	const int64_t							nb_frames_;
+	const uint32_t							nb_frames_;
 
 	const size_t							width_;
 	const size_t							height_;
@@ -68,7 +68,7 @@ struct video_decoder::implementation : boost::noncopyable
 public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context) 
 		: codec_context_(open_codec(*context, AVMEDIA_TYPE_VIDEO, index_))
-		, nb_frames_(context->streams[index_]->nb_frames)
+		, nb_frames_(static_cast<uint32_t>(context->streams[index_]->nb_frames))
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 	{
@@ -140,9 +140,9 @@ public:
 		return packets_.size() > 10;
 	}
 
-	int64_t nb_frames() const
+	uint32_t nb_frames() const
 	{
-		return std::max<int64_t>(nb_frames_, file_frame_number_);
+		return std::max<uint32_t>(nb_frames_, file_frame_number_);
 	}
 };
 
@@ -150,10 +150,10 @@ video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context) : impl_(n
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}
-int64_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 size_t video_decoder::width() const{return impl_->width_;}
 size_t video_decoder::height() const{return impl_->height_;}
+uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
+uint32_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}
-size_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 
 }}

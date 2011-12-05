@@ -70,9 +70,9 @@ struct input::implementation : boost::noncopyable
 			
 	const std::wstring											filename_;
 	tbb::atomic<bool>											loop_;
-	const uint64_t												start_;		
-	const uint64_t												length_;
-	size_t														frame_number_;
+	const uint32_t												start_;		
+	const uint32_t												length_;
+	uint32_t													frame_number_;
 	
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
 	tbb::atomic<size_t>											buffer_size_;
@@ -85,7 +85,7 @@ struct input::implementation : boost::noncopyable
 
 	tbb::recursive_mutex										mutex_;
 
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int64_t start, int64_t length) 
+	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
 		: graph_(graph)
 		, format_context_(open_input(filename))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
@@ -213,7 +213,7 @@ struct input::implementation : boost::noncopyable
 		return is_running_ && (is_eof_ || (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT);
 	}
 	
-	void do_seek(const int64_t target)
+	void do_seek(const uint32_t target)
 	{  	
 		CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
@@ -247,7 +247,7 @@ struct input::implementation : boost::noncopyable
 		buffer_.push(flush_packet);
 	}	
 
-	void seek(int64_t target)
+	void seek(uint32_t target)
 	{
 		tbb::recursive_mutex::scoped_lock lock(mutex_);
 
@@ -275,12 +275,12 @@ struct input::implementation : boost::noncopyable
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int64_t start, int64_t length) 
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
 	: impl_(new implementation(graph, filename, loop, start, length)){}
 bool input::eof() const {return impl_->is_eof_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}
-void input::seek(int64_t target){impl_->seek(target);}
+void input::seek(uint32_t target){impl_->seek(target);}
 }}

@@ -254,10 +254,10 @@ class decklink_producer_proxy : public core::frame_producer
 {		
 	safe_ptr<core::basic_frame>		last_frame_;
 	com_context<decklink_producer>	context_;
-	const int64_t					length_;
+	const uint32_t					length_;
 public:
 
-	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, int64_t length)
+	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length)
 		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, last_frame_(core::basic_frame::empty())
 		, length_(length)
@@ -287,7 +287,7 @@ public:
 		return disable_audio(last_frame_);
 	}
 	
-	virtual int64_t nb_frames() const override
+	virtual uint32_t nb_frames() const override
 	{
 		return length_;
 	}
@@ -312,7 +312,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 
 	auto device_index	= get_param(L"DEVICE", params, 1);
 	auto filter_str		= get_param(L"FILTER", params); 	
-	auto length			= get_param(L"LENGTH", params, std::numeric_limits<int64_t>::max()); 	
+	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
 	auto format_desc	= core::video_format_desc::get(get_param(L"FORMAT", params, L"INVALID"));
 	
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");

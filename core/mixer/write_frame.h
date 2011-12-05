@@ -54,22 +54,20 @@ public:
 			
 	// basic_frame
 
-	virtual void accept(core::frame_visitor& visitor) override;
+	virtual void accept(frame_visitor& visitor) override;
 
 	// write _frame
 
 	void swap(write_frame& other);
 			
 	boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
-
 	audio_buffer& audio_data();
-	const boost::iterator_range<const int32_t*> audio_data() const;
 	
 	void commit(uint32_t plane_index);
 	void commit();
 	
-	void set_type(const core::field_mode::type& mode);
-	core::field_mode::type get_type() const;
+	void set_type(const field_mode::type& mode);
+	field_mode::type get_type() const;
 	
 	const void* tag() const;
 
