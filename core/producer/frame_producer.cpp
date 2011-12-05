@@ -99,7 +99,7 @@ public:
 	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (*producer_)->call(str);}
 	virtual safe_ptr<frame_producer>							get_following_producer() const override									{return (*producer_)->get_following_producer();}
 	virtual void												set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(*producer_)->set_leading_producer(producer);}
-	virtual int64_t												nb_frames() const override												{return (*producer_)->nb_frames();}
+	virtual uint32_t											nb_frames() const override												{return (*producer_)->nb_frames();}
 };
 
 safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer>&& producer)
@@ -111,7 +111,7 @@ class last_frame_producer : public frame_producer
 {
 	const std::wstring			print_;
 	const safe_ptr<basic_frame>	frame_;
-	const int64_t				nb_frames_;
+	const uint32_t				nb_frames_;
 public:
 	last_frame_producer(const safe_ptr<frame_producer>& producer) 
 		: print_(producer->print())
@@ -123,7 +123,7 @@ public:
 	virtual safe_ptr<basic_frame> receive(int){return frame_;}
 	virtual safe_ptr<core::basic_frame> last_frame() const{return frame_;}
 	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
-	virtual int64_t nb_frames() const {return nb_frames_;}	
+	virtual uint32_t nb_frames() const {return nb_frames_;}	
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
@@ -137,7 +137,7 @@ struct empty_frame_producer : public frame_producer
 	virtual safe_ptr<basic_frame> receive(int){return basic_frame::empty();}
 	virtual safe_ptr<basic_frame> last_frame() const{return basic_frame::empty();}
 	virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
-	virtual int64_t nb_frames() const {return 0;}
+	virtual uint32_t nb_frames() const {return 0;}
 	virtual std::wstring print() const { return L"empty";}
 	
 	virtual boost::property_tree::wptree info() const override

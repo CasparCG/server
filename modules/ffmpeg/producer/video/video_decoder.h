@@ -47,12 +47,14 @@ public:
 	void push(const std::shared_ptr<AVPacket>& packet);
 	std::shared_ptr<AVFrame> poll();
 	
-	size_t	width()		const;
-	size_t	height()	const;
-	int64_t nb_frames() const;
-	bool	is_progressive() const;
+	size_t	 width()		const;
+	size_t	 height()	const;
 
-	size_t file_frame_number() const;
+	uint32_t nb_frames() const;
+	uint32_t file_frame_number() const;
+
+	bool	 is_progressive() const;
+
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

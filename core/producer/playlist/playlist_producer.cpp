@@ -84,9 +84,9 @@ struct playlist_producer : public frame_producer
 		return info;
 	}
 
-	virtual int64_t nb_frames() const  override
+	virtual uint32_t nb_frames() const  override
 	{
-		return std::numeric_limits<int>::max();
+		return std::numeric_limits<uint32_t>::max();
 	}
 	
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
