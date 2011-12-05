@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #pragma once
 
 #include <common/exception/exceptions.h>
@@ -99,12 +101,12 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 		
 	BMDDisplayModeSupport displayModeSupport;
 	if(FAILED(device->DoesSupportVideoMode(mode->GetDisplayMode(), pix_fmt, flag, &displayModeSupport, nullptr)) || displayModeSupport == bmdDisplayModeNotSupported)
-		CASPAR_LOG(warning) << L"Device does not support video-format.";
+		CASPAR_LOG(warning) << L"Device does not support video-format: " << mode->GetDisplayMode();
 		//BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Device does not support requested video-format.")
 		//										 << arg_value_info(boost::lexical_cast<std::string>(format))
 		//										 << arg_name_info("format"));
 	else if(displayModeSupport == bmdDisplayModeSupportedWithConversion)
-		CASPAR_LOG(warning) << L"Device supports video-format with conversion.";
+		CASPAR_LOG(warning) << L"Device supports video-format with conversion: " << mode->GetDisplayMode();
 
 	return mode->GetDisplayMode();
 }
@@ -132,7 +134,7 @@ static CComPtr<IDeckLink> get_device(size_t device_index)
 {
 	CComPtr<IDeckLinkIterator> pDecklinkIterator;
 	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("No Decklink drivers installed."));
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink drivers not found."));
 		
 	size_t n = 0;
 	CComPtr<IDeckLink> decklink;

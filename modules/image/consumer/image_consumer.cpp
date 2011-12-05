@@ -1,23 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
- 
+
 #include "image_consumer.h"
 
 #include <common/exception/exceptions.h>
@@ -36,8 +37,6 @@
 
 #include <FreeImage.h>
 
-#include <concrt_extras.h>
-
 #include <vector>
 
 namespace caspar { namespace image {
@@ -45,32 +44,26 @@ namespace caspar { namespace image {
 struct image_consumer : public core::frame_consumer
 {
 	core::video_format_desc					format_desc_;
-	std::vector<safe_ptr<core::read_frame>> frames_;
 public:
 
-	virtual void initialize(const core::video_format_desc& format_desc)
+	// frame_consumer
+
+	virtual void initialize(const core::video_format_desc& format_desc, int) override
 	{
 		format_desc_ = format_desc;
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame)
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{				
-		frames_.push_back(frame);
-
-		if(frames_.size() < core::consumer_buffer_depth())
-			return true;
-		
-		Concurrency::scoped_oversubcription_token oversubscribe;
-
-		auto my_frame = frames_.front();
-		boost::thread async([=]
+		auto format_desc = format_desc_;
+		boost::thread async([format_desc, frame]
 		{
 			try
 			{
 				auto filename = narrow(env::data_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
 
-				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(format_desc_.width, format_desc_.height, 32), FreeImage_Unload);
-				memcpy(FreeImage_GetBits(bitmap.get()), my_frame->image_data().begin(), my_frame->image_size());
+				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(format_desc.width, format_desc.height, 32), FreeImage_Unload);
+				memcpy(FreeImage_GetBits(bitmap.get()), frame->image_data().begin(), frame->image_size());
 				FreeImage_FlipVertical(bitmap.get());
 				FreeImage_Save(FIF_PNG, bitmap.get(), filename.c_str(), 0);
 			}
@@ -84,16 +77,26 @@ public:
 		return false;
 	}
 
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return L"image[]";
 	}
 
-	virtual size_t buffer_depth() const {return 0;}
-
-	virtual const core::video_format_desc& get_video_format_desc() const
+	virtual boost::property_tree::wptree info() const override
 	{
-		return format_desc_;
+		boost::property_tree::wptree info;
+		info.add(L"type", L"image-consumer");
+		return info;
+	}
+
+	virtual size_t buffer_depth() const override
+	{
+		return 0;
+	}
+
+	virtual int index() const override
+	{
+		return 100;
 	}
 };
 

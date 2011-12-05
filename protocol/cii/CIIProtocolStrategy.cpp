@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Nicklas P Andersson
 */
+
  
 #include "../StdAfx.h"
 
@@ -184,7 +186,7 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 
 	std::wstringstream flashParam;
 	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");
-	producer->param(flashParam.str());
+	producer->call(flashParam.str());
 
 	CASPAR_LOG(info) << "Saved an instance of " << templateName << TEXT(" as ") << titleName ;
 
@@ -213,7 +215,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition.type = transition::mix;
 	transition.duration = 12;
 
-	auto pFP = create_producer(GetChannel()->mixer(), boost::assign::list_of(filename));
+	auto pFP = create_producer(GetChannel()->mixer(), filename);
 	auto pTransition = create_transition_producer(GetChannel()->get_video_format_desc().field_mode, pFP, transition);
 
 	try

@@ -1,23 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
- 
+
 #include "oal_consumer.h"
 
 #include <common/exception/exceptions.h>
@@ -35,70 +36,96 @@
 #include <SFML/Audio.hpp>
 
 #include <boost/circular_buffer.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
-
-#include <concrt_extras.h>
 
 #include <tbb/concurrent_queue.h>
 
 namespace caspar { namespace oal {
 
+typedef std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_buffer_16;
+
 struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 {
 	safe_ptr<diagnostics::graph>						graph_;
 	boost::timer										perf_timer_;
+	int													channel_index_;
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>>	input_;
-	boost::circular_buffer<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>			container_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<audio_buffer_16>>	input_;
+	boost::circular_buffer<audio_buffer_16>				container_;
 	tbb::atomic<bool>									is_running_;
+	core::audio_buffer									temp;
 
 	core::video_format_desc								format_desc_;
 public:
 	oal_consumer() 
 		: container_(16)
+		, channel_index_(-1)
 	{
-		if(core::consumer_buffer_depth() < 3)
-			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("audio-consumer does not support buffer-depth lower than 3."));
-
 		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
-		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
+		is_running_ = true;
 		input_.set_capacity(1);
 	}
 
 	~oal_consumer()
 	{
 		is_running_ = false;
-		input_.try_push(std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>());
+		input_.try_push(std::make_shared<audio_buffer_16>());
+		input_.try_push(std::make_shared<audio_buffer_16>());
 		Stop();
-		CASPAR_LOG(info) << print() << L" Shutting down.";	
+		input_.try_push(std::make_shared<audio_buffer_16>());
+		input_.try_push(std::make_shared<audio_buffer_16>());
+
+		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
 
-	virtual void initialize(const core::video_format_desc& format_desc)
+	// frame consumer
+
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
-		if(!is_running_.fetch_and_store(true))
-		{			
-			Concurrency::scoped_oversubcription_token oversubscribe;
+		format_desc_	= format_desc;		
+		channel_index_	= channel_index;
+		graph_->set_text(print());
+
+		if(Status() != Playing)
+		{
 			sf::SoundStream::Initialize(2, 48000);
 			Play();		
-			CASPAR_LOG(info) << print() << " Sucessfully initialized.";
 		}
-		format_desc_ = format_desc;		
+		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame)
-	{					
-		auto data = std::make_shared<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>>(core::audio_32_to_16_sse(frame->audio_data()));
-		Concurrency::scoped_oversubcription_token oversubscribe;
-		input_.push(data);
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	{			
+		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame->audio_data())));
 		return true;
 	}
 	
-	virtual bool OnGetData(sf::SoundStream::Chunk& data)
+	virtual std::wstring print() const override
+	{
+		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+	}
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"oal-consumer");
+		return info;
+	}
+	
+	virtual size_t buffer_depth() const override
+	{
+		return 2;
+	}
+
+	// oal_consumer
+	
+	virtual bool OnGetData(sf::SoundStream::Chunk& data) override
 	{		
-		std::shared_ptr<std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>>> audio_data;		
+		std::shared_ptr<audio_buffer_16> audio_data;		
 		input_.pop(audio_data);
 				
 		container_.push_back(std::move(*audio_data));
@@ -110,20 +137,10 @@ public:
 
 		return is_running_;
 	}
-	
-	virtual size_t buffer_depth() const
-	{
-		return 3;
-	}
 
-	virtual std::wstring print() const
+	virtual int index() const override
 	{
-		return L"oal[" + format_desc_.name + L"]";
-	}
-
-	virtual const core::video_format_desc& get_video_format_desc() const
-	{
-		return format_desc_;
+		return 500;
 	}
 };
 

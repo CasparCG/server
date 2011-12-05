@@ -1,3 +1,24 @@
+/*
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+*
+* This file is part of CasparCG (www.casparcg.com).
+*
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
+*/
+
 #include "../../StdAfx.h"
 
 #include "parallel_yadif.h"
@@ -16,8 +37,8 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <ppl.h>
-#include <concurrent_queue.h>
+#include <tbb/parallel_for.h>
+#include <tbb/concurrent_queue.h>
 
 #include <boost/thread/once.hpp>
 
@@ -67,9 +88,10 @@ void parallel_yadif_filter_line(parallel_yadif_context& ctx, uint8_t *dst, uint8
 	
 	if(ctx.index == ctx.last_index)
 	{		
-		Concurrency::parallel_for(0, ctx.index, [=](size_t n)
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, ctx.index), [=](const tbb::blocked_range<size_t>& r)
 		{
-			org_yadif_filter_line(ctx.args[n].dst, ctx.args[n].prev, ctx.args[n].cur, ctx.args[n].next, ctx.args[n].w, ctx.args[n].prefs, ctx.args[n].mrefs, ctx.args[n].parity, ctx.args[n].mode);
+			for(auto n = r.begin(); n != r.end(); ++n)
+				org_yadif_filter_line(ctx.args[n].dst, ctx.args[n].prev, ctx.args[n].cur, ctx.args[n].next, ctx.args[n].w, ctx.args[n].prefs, ctx.args[n].mrefs, ctx.args[n].parity, ctx.args[n].mode);
 		});
 		ctx.index = 0;
 	}
@@ -77,7 +99,7 @@ void parallel_yadif_filter_line(parallel_yadif_context& ctx, uint8_t *dst, uint8
 
 namespace caspar { namespace ffmpeg {
 	
-Concurrency::concurrent_queue<decltype(org_yadif_filter_line)> parallel_line_func_pool;
+tbb::concurrent_bounded_queue<decltype(org_yadif_filter_line)> parallel_line_func_pool;
 std::array<parallel_yadif_context, 18> ctxs;
 
 #define RENAME(a) f ## a

@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #include "../../stdafx.h"
 
 #include "device_buffer.h"
@@ -41,7 +43,6 @@ unsigned int format(size_t stride)
 }
 
 static tbb::atomic<int> g_total_count;
-static tbb::atomic<int> g_total_size;
 
 struct device_buffer::implementation : boost::noncopyable
 {
@@ -67,9 +68,7 @@ public:
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		g_total_size += width*height*stride;
-		CASPAR_LOG(trace) << L"[device_buffer] [" << ++g_total_count << L"] allocated size: " << width*height*stride/1000 << L"kB" 
-			<< L" total-size: " << g_total_size/1000000 << L"MB.";	
+		CASPAR_LOG(trace) << "[device_buffer] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
 	}	
 
 	~implementation()
@@ -77,7 +76,7 @@ public:
 		try
 		{
 			GL(glDeleteTextures(1, &id_));
-			CASPAR_LOG(trace) << "[device_buffer] [" << --g_total_count << L"] deallocated size:" << width_*height_*stride_;
+			//CASPAR_LOG(trace) << "[device_buffer] [" << --g_total_count << L"] deallocated size:" << width_*height_*stride_;
 		}
 		catch(...)
 		{

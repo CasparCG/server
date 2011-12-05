@@ -1,3 +1,24 @@
+/*
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+*
+* This file is part of CasparCG (www.casparcg.com).
+*
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
+*/
+
 #include "../StdAfx.h"
 
 #include "blue_velvet.h"
@@ -17,10 +38,16 @@ BLUE_UINT32 (*encode_hanc_frame_ex)(BLUE_UINT32 card_type, struct hanc_stream_in
 void blue_velvet_initialize()
 {
 #ifdef _DEBUG
-	auto module = LoadLibrary(L"BlueVelvet3_d.dll");
+	std::string module_str = "BlueVelvet3_d.dll";
 #else
-	auto module = LoadLibrary(L"BlueVelvet3.dll");
+	std::string module_str = "BlueVelvet3.dll";
 #endif
+
+	auto module = LoadLibrary(widen(module_str).c_str());
+	if(!module)
+		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+	if(!module)
+		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
@@ -32,10 +59,16 @@ void blue_velvet_initialize()
 void blue_hanc_initialize()
 {
 #ifdef _DEBUG
-	auto module = LoadLibrary(L"BlueHancUtils_d.dll");
+	std::string module_str = "BlueHancUtils_d.dll";
 #else
-	auto module = LoadLibrary(L"BlueHancUtils.dll");
+	std::string module_str = "BlueHancUtils.dll";
 #endif
+	
+	auto module = LoadLibrary(widen(module_str).c_str());
+	if(!module)
+		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+	if(!module)
+		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
@@ -45,8 +78,8 @@ void blue_hanc_initialize()
 
 void blue_initialize()
 {
-	blue_velvet_initialize();
 	blue_hanc_initialize();
+	blue_velvet_initialize();
 }
 
 EVideoMode vid_fmt_from_video_format(const core::video_format::type& fmt) 
@@ -77,12 +110,16 @@ bool is_epoch_card(CBlueVelvet4& blue)
 {
 	switch(blue.has_video_cardtype())
 	{
-	case CRD_BLUE_EPOCH_2K:
 	case CRD_BLUE_EPOCH_HORIZON:
-	case CRD_BLUE_EPOCH_2K_CORE:
-	case CRD_BLUE_EPOCH_2K_ULTRA:
 	case CRD_BLUE_EPOCH_CORE:
 	case CRD_BLUE_EPOCH_ULTRA:
+	case CRD_BLUE_EPOCH_2K_HORIZON:
+	case CRD_BLUE_EPOCH_2K_CORE:
+	case CRD_BLUE_EPOCH_2K_ULTRA:
+	case CRD_BLUE_CREATE_HD:
+	case CRD_BLUE_CREATE_2K:
+	case CRD_BLUE_CREATE_2K_ULTRA:
+	case CRD_BLUE_SUPER_NOVA:
 		return true;
 	default:
 		return false;

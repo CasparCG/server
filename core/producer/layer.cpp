@@ -1,21 +1,22 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
 
 #include "../stdafx.h"
@@ -24,6 +25,8 @@
 
 #include "frame_producer.h"
 #include "frame/basic_frame.h"
+
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
 	
@@ -63,7 +66,7 @@ public:
 		if(preview) // Play the first frame and pause.
 		{			
 			play();
-			receive();
+			receive(frame_producer::NO_HINT);
 			pause();
 		}
 	}
@@ -93,14 +96,14 @@ public:
 		is_paused_			= true;
 	}
 		
-	safe_ptr<basic_frame> receive()
+	safe_ptr<basic_frame> receive(int hints)
 	{		
 		try
 		{
 			if(is_paused_)
 				return disable_audio(foreground_->last_frame());
 		
-			auto frame = receive_and_follow(foreground_, frame_producer::NO_HINT);
+			auto frame = receive_and_follow(foreground_, hints);
 			if(frame == core::basic_frame::late())
 				return foreground_->last_frame();
 
@@ -108,7 +111,7 @@ public:
 			if(auto_play_delta_ > -1 && frames_left < 1)
 			{
 				play();
-				return receive();
+				return receive(hints);
 			}
 				
 			return frame;
@@ -121,21 +124,30 @@ public:
 		}
 	}
 
-	layer_status status() const
+	boost::unique_future<std::wstring> call(bool foreground, const std::wstring& param)
 	{
-		layer_status status;
-		status.foreground	 = foreground_->print();
-		status.background	 = background_->print();
-		status.is_paused	 = is_paused_;
-		status.total_frames	 = foreground_->nb_frames();
-		status.current_frame = frame_number_;
-
-		return status;
+		return (foreground ? foreground_ : background_)->call(param);
 	}
 
 	bool empty() const
 	{
 		return background_ == core::frame_producer::empty() && foreground_ == core::frame_producer::empty();
+	}
+
+	boost::property_tree::wptree info() const
+	{
+		boost::property_tree::wptree info;
+		info.add(L"status",		is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"));
+		info.add(L"auto_delta",	auto_play_delta_);
+		info.add(L"frame-number", frame_number_);
+
+		auto nb_frames = foreground_->nb_frames();
+
+		info.add(L"nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
+		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - frame_number_ - auto_play_delta_));
+		info.add_child(L"foreground", foreground_->info());
+		info.add_child(L"background", background_->info());
+		return info;
 	}
 };
 
@@ -163,9 +175,10 @@ void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 bool layer::is_paused() const{return impl_->is_paused_;}
 int64_t layer::frame_number() const{return impl_->frame_number_;}
-layer_status layer::status() const {return impl_->status();}
-safe_ptr<basic_frame> layer::receive() {return impl_->receive();}
+safe_ptr<basic_frame> layer::receive(int hints) {return impl_->receive(hints);}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}
+boost::unique_future<std::wstring> layer::call(bool foreground, const std::wstring& param){return impl_->call(foreground, param);}
+boost::property_tree::wptree layer::info() const{return impl_->info();}
 }}

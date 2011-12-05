@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
+*/
 
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
-*
-*/ 
 #include "../../stdafx.h"
 
 #include "transition_producer.h"
@@ -26,7 +28,7 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_transform.h>
 
-#include <ppl.h>
+#include <tbb/parallel_invoke.h>
 
 #include <boost/assign.hpp>
 
@@ -56,17 +58,17 @@ struct transition_producer : public frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<frame_producer> get_following_producer() const
+	virtual safe_ptr<frame_producer> get_following_producer() const override
 	{
 		return dest_producer_;
 	}
 	
-	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer)
+	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer) override
 	{
 		source_producer_ = producer;
 	}
 
-	virtual safe_ptr<basic_frame> receive(int hints)
+	virtual safe_ptr<basic_frame> receive(int hints) override
 	{
 		if(++current_frame_ >= info_.duration)
 			return basic_frame::eof();
@@ -74,7 +76,7 @@ struct transition_producer : public frame_producer
 		auto dest = basic_frame::empty();
 		auto source = basic_frame::empty();
 
-		Concurrency::parallel_invoke(
+		tbb::parallel_invoke(
 		[&]
 		{
 			dest = receive_and_follow(dest_producer_, hints);
@@ -91,26 +93,30 @@ struct transition_producer : public frame_producer
 		return compose(dest, source);
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		return disable_audio(last_frame_);
 	}
 
-	virtual int64_t nb_frames() const 
+	virtual int64_t nb_frames() const override
 	{
 		return get_following_producer()->nb_frames();
 	}
 
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return L"transition[" + source_producer_->print() + L"|" + dest_producer_->print() + L"]";
 	}
 	
-	virtual bool param(const std::wstring& str)
+	boost::property_tree::wptree info() const override
 	{
-		return get_following_producer()->param(str);
+		boost::property_tree::wptree info;
+		info.add(L"type", L"transition-producer");
+		info.add_child(L"source.producer",	   source_producer_->info());
+		info.add_child(L"destination.producer", dest_producer_->info());
+		return info;
 	}
-	
+
 	// transition_producer
 						
 	safe_ptr<basic_frame> compose(const safe_ptr<basic_frame>& dest_frame, const safe_ptr<basic_frame>& src_frame) 

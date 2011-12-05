@@ -25,6 +25,9 @@
     <ProjectReference Include="..\core\core.vcxproj">
       <Project>{79388c20-6499-4bf6-b8b9-d8c33d7d4ddd}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\modules\ffmpeg\ffmpeg.vcxproj">
+      <Project>{f6223af3-be0b-4b61-8406-98922ce521c2}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\modules\flash\flash.vcxproj">
       <Project>{816deaba-3757-4306-afe0-c27cf96c4dea}</Project>
     </ProjectReference>
@@ -159,22 +162,22 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath);..\dependencies\concrt_extras</IncludePath>
+    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath);..\dependencies\concrt_extras</IncludePath>
+    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">
-    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath);..\dependencies\concrt_extras</IncludePath>
+    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
-    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost_1_44_0;$(IncludePath);..\dependencies\concrt_extras</IncludePath>
+    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
