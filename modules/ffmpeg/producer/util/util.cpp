@@ -464,7 +464,7 @@ bool is_valid_file(const std::wstring filename)
 {			
 	auto filename2 = narrow(filename);
 
-	std::ifstream file(filename2);
+	std::ifstream file(filename);
 
 	std::vector<unsigned char> buf;
 	for(auto file_it = std::istreambuf_iterator<char>(file); file_it != std::istreambuf_iterator<char>() && buf.size() < 2048; ++file_it)
