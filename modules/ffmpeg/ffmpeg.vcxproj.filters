@@ -19,20 +19,17 @@
     <Filter Include="source\producer\video">
       <UniqueIdentifier>{4b0f3949-6dc5-4895-837f-4c3ef1759a90}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\producer\muxer">
-      <UniqueIdentifier>{67d447e6-39d4-4f91-8c45-a846a18128bc}</UniqueIdentifier>
+    <Filter Include="source\producer\util">
+      <UniqueIdentifier>{d6af0416-0c85-45f8-97a3-4d0560b18691}</UniqueIdentifier>
     </Filter>
     <Filter Include="source\producer\input">
-      <UniqueIdentifier>{2348fa44-7ba5-4ddc-b859-2306633eeb69}</UniqueIdentifier>
+      <UniqueIdentifier>{28be54fb-eb6d-4c56-a0fa-8286ae1032bf}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\producer\util">
-      <UniqueIdentifier>{613cfb2a-5714-46dc-b5ad-6964dded5b02}</UniqueIdentifier>
+    <Filter Include="source\producer\muxer">
+      <UniqueIdentifier>{26599786-a0d9-4cc3-b5a4-633e9c81563a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="producer\ffmpeg_producer.cpp">
-      <Filter>source\producer</Filter>
-    </ClCompile>
     <ClCompile Include="producer\video\video_decoder.cpp">
       <Filter>source\producer\video</Filter>
     </ClCompile>
@@ -58,14 +55,20 @@
     <ClCompile Include="producer\util\util.cpp">
       <Filter>source\producer\util</Filter>
     </ClCompile>
-    <ClCompile Include="producer\muxer\frame_muxer.cpp">
-      <Filter>source\producer\muxer</Filter>
+    <ClCompile Include="producer\util\flv.cpp">
+      <Filter>source\producer\util</Filter>
     </ClCompile>
     <ClCompile Include="producer\input\input.cpp">
       <Filter>source\producer\input</Filter>
     </ClCompile>
-    <ClCompile Include="producer\util\flv.cpp">
-      <Filter>source\producer\util</Filter>
+    <ClCompile Include="producer\muxer\frame_muxer.cpp">
+      <Filter>source\producer\muxer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\tbb_avcodec.cpp">
+      <Filter>source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg_producer.cpp">
+      <Filter>source\producer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -97,20 +100,23 @@
     <ClInclude Include="producer\audio\audio_resampler.h">
       <Filter>source\producer\audio</Filter>
     </ClInclude>
-    <ClInclude Include="producer\util\util.h">
+    <ClInclude Include="producer\util\flv.h">
       <Filter>source\producer\util</Filter>
     </ClInclude>
-    <ClInclude Include="producer\muxer\display_mode.h">
-      <Filter>source\producer\muxer</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\muxer\frame_muxer.h">
-      <Filter>source\producer\muxer</Filter>
+    <ClInclude Include="producer\util\util.h">
+      <Filter>source\producer\util</Filter>
     </ClInclude>
     <ClInclude Include="producer\input\input.h">
       <Filter>source\producer\input</Filter>
     </ClInclude>
-    <ClInclude Include="producer\util\flv.h">
-      <Filter>source\producer\util</Filter>
+    <ClInclude Include="producer\muxer\frame_muxer.h">
+      <Filter>source\producer\muxer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\muxer\display_mode.h">
+      <Filter>source\producer\muxer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\tbb_avcodec.h">
+      <Filter>source\producer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

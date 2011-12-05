@@ -1,35 +1,38 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #include "../../stdafx.h"
 
 #include "audio_decoder.h"
+
 #include "audio_resampler.h"
 
 #include "../util/util.h"
 #include "../../ffmpeg_error.h"
 
-#include <common/concurrency/governor.h>
-#include <common/exception/win32_exception.h>
 #include <core/video_format.h>
 
 #include <tbb/cache_aligned_allocator.h>
+
+#include <queue>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -44,121 +47,107 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#undef Yield
-using namespace Concurrency;
-
 namespace caspar { namespace ffmpeg {
 	
-struct audio_decoder::implementation : public agent, boost::noncopyable
+struct audio_decoder::implementation : boost::noncopyable
 {	
-	ITarget<audio_decoder::target_element_t>&					target_;
-
 	int															index_;
 	const safe_ptr<AVCodecContext>								codec_context_;		
-	
+	const core::video_format_desc								format_desc_;
+
 	audio_resampler												resampler_;
-	
+
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
-	unbounded_buffer<audio_decoder::source_element_t>			source_;
+	std::queue<safe_ptr<AVPacket>>								packets_;
 
-	governor													governor_;
-
-	tbb::atomic<bool>											is_running_;
-	
+	const int64_t												nb_frames_;
+	tbb::atomic<size_t>											file_frame_number_;
 public:
-	explicit implementation(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc) 
-		: target_(target)
-		, codec_context_(open_codec(context, AVMEDIA_TYPE_AUDIO, index_))
+	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
+		: format_desc_(format_desc)	
+		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
 		, resampler_(format_desc.audio_channels,	codec_context_->channels,
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
-		, source_([this](const audio_decoder::source_element_t& packet){return packet->stream_index == index_;})
-		, governor_(2)
+		, nb_frames_(0)//context->streams[index_]->nb_frames)
 	{		
-		CASPAR_LOG(debug) << "[audio_decoder] " << context.streams[index_]->codec->codec->long_name;
-
-		source.link_target(&source_);
-		
-		is_running_ = true;
-		start();
+		file_frame_number_ = 0;
+		CASPAR_LOG(debug) << "[audio_decoder] " << context->streams[index_]->codec->codec->long_name;	   
 	}
 
-	~implementation()
+	void push(const std::shared_ptr<AVPacket>& packet)
+	{			
+		if(!packet)
+			return;
+
+		if(packet->stream_index == index_ || packet->data == nullptr)
+			packets_.push(make_safe_ptr(packet));
+	}	
+	
+	std::shared_ptr<core::audio_buffer> poll()
 	{
-		is_running_ = false;
-		governor_.cancel();
-		agent::wait(this);
-	}
-
-	virtual void run()
-	{
-		win32_exception::install_handler();
-
-		try
-		{
-			while(is_running_)
-			{		
-				auto ticket = governor_.acquire();
-				auto packet = receive(source_);
-			
-				if(packet == flush_packet(index_))
-				{
-					avcodec_flush_buffers(codec_context_.get());
-					send(target_, flush_audio());
-					continue;
-				}
-
-				if(packet == eof_packet(index_))
-					break;
-
-				auto result = std::make_shared<core::audio_buffer>();
+		if(packets_.empty())
+			return nullptr;
 				
-				while(packet->size > 0)
-				{
-					buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
-					int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
-		
-					int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, packet.get()), "[audio_decoder]");
+		auto packet = packets_.front();
 
-					// There might be several frames in one packet.
-					packet->size -= ret;
-					packet->data += ret;
-			
-					buffer1_.resize(written_bytes);
-
-					buffer1_ = resampler_.resample(std::move(buffer1_));
-		
-					const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
-					const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
-
-					auto audio = make_safe<core::audio_buffer>(samples, samples + n_samples);
-
-					send(target_, safe_ptr<core::audio_buffer>(audio.get(), [audio, ticket](core::audio_buffer*){}));
-					Context::Yield();
-				}
-			}
-		}
-		catch(...)
+		if(packet->data == nullptr)
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
+			packets_.pop();
+			file_frame_number_ = static_cast<size_t>(packet->pos);
+			avcodec_flush_buffers(codec_context_.get());
+			return flush_audio();
 		}
 
-		send(target_, eof_audio());
+		auto audio = decode(*packet);
 
-		done();
+		if(packet->size == 0)					
+			packets_.pop();
+
+		return audio;
+	}
+
+	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
+	{		
+		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
+		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
+		
+		int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, &pkt), "[audio_decoder]");
+
+		// There might be several frames in one packet.
+		pkt.size -= ret;
+		pkt.data += ret;
+			
+		buffer1_.resize(written_bytes);
+
+		buffer1_ = resampler_.resample(std::move(buffer1_));
+		
+		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
+		const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
+
+		++file_frame_number_;
+
+		return std::make_shared<core::audio_buffer>(samples, samples + n_samples);
+	}
+
+	bool ready() const
+	{
+		return packets_.size() > 10;
+	}
+
+	int64_t nb_frames() const
+	{
+		return 0;//std::max<int64_t>(nb_frames_, file_frame_number_);
 	}
 };
 
-audio_decoder::audio_decoder(audio_decoder::source_t& source, audio_decoder::target_t& target, AVFormatContext& context, const core::video_format_desc& format_desc)
-	: impl_(new implementation(source, target, context, format_desc))
-{
-}
-
-int64_t audio_decoder::nb_frames() const
-{
-	return 0;
-}
+audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
+void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
+bool audio_decoder::ready() const{return impl_->ready();}
+std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
+int64_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
+size_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 
 }}

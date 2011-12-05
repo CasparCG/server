@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #pragma once
 
 #include "../exception/win32_exception.h"
@@ -111,8 +113,8 @@ public:
 		
 	explicit executor(const std::wstring& name) : name_(narrow(name)) // noexcept
 	{
-		thread_ = boost::thread([this]{run();});
 		is_running_ = true;
+		thread_ = boost::thread([this]{run();});
 	}
 	
 	virtual ~executor() // noexcept
@@ -132,7 +134,7 @@ public:
 		{
 			if(p == high_priority_class)
 				SetThreadPriority(GetCurrentThread(), HIGH_PRIORITY_CLASS);
-			if(p == above_normal_priority_class)
+			else if(p == above_normal_priority_class)
 				SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
 			else if(p == normal_priority_class)
 				SetThreadPriority(GetCurrentThread(), NORMAL_PRIORITY_CLASS);
@@ -168,9 +170,17 @@ public:
 
 		execution_queue_[priority].push([=]
 		{
-			try{task_adaptor.value();}
-			catch(boost::task_already_started&){}
-			catch(...){CASPAR_LOG_CURRENT_EXCEPTION();}
+			try
+			{
+				task_adaptor.value();
+			}
+			catch(boost::task_already_started&)
+			{
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
 		});
 
 		if(priority != normal_priority)

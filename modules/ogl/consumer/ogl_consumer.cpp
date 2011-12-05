@@ -1,21 +1,22 @@
 ﻿/*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
 
 #include "ogl_consumer.h"
@@ -23,7 +24,6 @@
 #include <GL/glew.h>
 #include <SFML/Window.hpp>
 
-#include <common/concurrency/governor.h>
 #include <common/diagnostics/graph.h>
 #include <common/gl/gl_check.h>
 #include <common/log/log.h>
@@ -43,13 +43,12 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 
 #include <boost/assign.hpp>
-
-#include <concrt_extras.h>
 
 #include <algorithm>
 #include <vector>
@@ -69,10 +68,6 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <agents.h>
-
-using namespace Concurrency;
-
 namespace caspar { namespace ogl {
 		
 enum stretch
@@ -85,14 +80,16 @@ enum stretch
 
 struct configuration
 {
-	size_t		screen_index;
-	stretch		stretch;
-	bool		windowed;
-	bool		auto_deinterlace;
-	bool		key_only;
+	std::wstring	name;
+	size_t			screen_index;
+	stretch			stretch;
+	bool			windowed;
+	bool			auto_deinterlace;
+	bool			key_only;
 
 	configuration()
-		: screen_index(0)
+		: name(L"ogl")
+		, screen_index(0)
 		, stretch(fill)
 		, windowed(true)
 		, auto_deinterlace(true)
@@ -101,11 +98,12 @@ struct configuration
 	}
 };
 
-struct ogl_consumer : public agent, boost::noncopyable
+struct ogl_consumer : boost::noncopyable
 {		
 	const configuration		config_;
 	core::video_format_desc format_desc_;
-	
+	int						channel_index_;
+
 	GLuint					texture_;
 	std::vector<GLuint>		pbos_;
 	
@@ -122,19 +120,19 @@ struct ogl_consumer : public agent, boost::noncopyable
 	
 	safe_ptr<diagnostics::graph>	graph_;
 	boost::timer					perf_timer_;
+	boost::timer					tick_timer_;
 
+	tbb::concurrent_bounded_queue<safe_ptr<core::read_frame>>	frame_buffer_;
 
-	tbb::atomic<bool>				is_running_;
+	boost::thread			thread_;
+	tbb::atomic<bool>		is_running_;
 	
-	ffmpeg::filter					filter_;
-
-	unbounded_buffer<safe_ptr<core::read_frame>>	frame_buffer_;
-	overwrite_buffer<std::exception_ptr>			exception_;
-	governor										governor_;
+	ffmpeg::filter			filter_;
 public:
-	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc) 
+	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
 		: config_(config)
 		, format_desc_(format_desc)
+		, channel_index_(channel_index)
 		, texture_(0)
 		, pbos_(2, 0)	
 		, screen_width_(format_desc.width)
@@ -142,10 +140,12 @@ public:
 		, square_width_(format_desc.square_width)
 		, square_height_(format_desc.square_height)
 		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
-		, governor_(1)
 	{		
-		graph_->add_guide("frame-time", 0.5);
-		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
+		frame_buffer_.set_capacity(2);
+		
+		graph_->add_guide("tick-time", 0.5);
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
@@ -168,15 +168,14 @@ public:
 		screen_height_	= config_.windowed ? square_height_ : devmode.dmPelsHeight;
 		
 		is_running_ = true;
-		start();
+		thread_ = boost::thread([this]{run();});
 	}
 	
 	~ogl_consumer()
 	{
 		is_running_ = false;
-		governor_.cancel();
-		Concurrency::send(frame_buffer_, make_safe<core::read_frame>());
-		agent::wait(this);
+		frame_buffer_.try_push(make_safe<core::read_frame>());
+		thread_.join();
 	}
 
 	void init()
@@ -184,9 +183,7 @@ public:
 		if(!GLEW_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
-		scoped_oversubcription_token oversubscribe;
-
-		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize : sf::Style::Fullscreen);
+		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
 		window_.ShowMouseCursor(false);
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
@@ -201,8 +198,8 @@ public:
 			
 		GL(glGenTextures(1, &texture_));
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
-		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP));
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0));
@@ -216,7 +213,7 @@ public:
 		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 
-		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
+		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
 
 	void uninit()
@@ -229,11 +226,9 @@ public:
 			if(pbo)
 				glDeleteBuffers(1, &pbo);
 		}
-
-		CASPAR_LOG(info) << print() << " Sucessfully Uninitialized.";
 	}
 
-	virtual void run()
+	void run()
 	{
 		try
 		{
@@ -243,20 +238,27 @@ public:
 			{			
 				try
 				{
-					perf_timer_.restart();
 
 					sf::Event e;		
 					while(window_.GetEvent(e))
 					{
 						if(e.Type == sf::Event::Resized)
 							calculate_aspect();
+						else if(e.Type == sf::Event::Closed)
+							is_running_ = false;
 					}
 			
-					render(Concurrency::receive(frame_buffer_));
+					safe_ptr<core::read_frame> frame;
+					frame_buffer_.pop(frame);
+					
+					perf_timer_.restart();
+					render(frame);
+					graph_->update_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);	
 
 					window_.Display();
-
-					graph_->update_value("frame-time", static_cast<float>(perf_timer_.elapsed()*format_desc_.fps*0.5));	
+					
+					graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);	
+					tick_timer_.restart();
 				}
 				catch(...)
 				{
@@ -269,22 +271,15 @@ public:
 		}
 		catch(...)
 		{
-			Concurrency::send(exception_, std::current_exception());
+			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-		done();
 	}
 	
-	const core::video_format_desc& get_video_format_desc() const
-	{
-		return format_desc_;
-	}
-
-	safe_ptr<AVFrame> get_av_frame(uint8_t* data)
+	safe_ptr<AVFrame> get_av_frame()
 	{		
 		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 		avcodec_get_frame_defaults(av_frame.get());
 						
-		av_frame->data[0]			= data;
 		av_frame->linesize[0]		= format_desc_.width*4;			
 		av_frame->format			= PIX_FMT_BGRA;
 		av_frame->width				= format_desc_.width;
@@ -294,20 +289,40 @@ public:
 
 		return av_frame;
 	}
-	
+
 	void render(const safe_ptr<core::read_frame>& frame)
 	{			
-		if(frame->image_data().empty())
+		if(static_cast<size_t>(frame->image_data().size()) != format_desc_.size)
 			return;
 					
-		filter_.push(get_av_frame(const_cast<uint8_t*>(frame->image_data().begin())));
+		auto av_frame = get_av_frame();
+		av_frame->data[0] = const_cast<uint8_t*>(frame->image_data().begin());
+
+		filter_.push(av_frame);
 		auto frames = filter_.poll_all();
-		
+
 		if(frames.empty())
 			return;
 
-		auto av_frame = frames[0];
-		
+		av_frame = frames[0];
+
+		if(av_frame->linesize[0] != static_cast<int>(format_desc_.width*4))
+		{
+			const uint8_t *src_data[4] = {0};
+			memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
+			const int src_linesizes[4] = {0};
+			memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
+
+			auto av_frame2 = get_av_frame();
+			av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
+			av_frame = safe_ptr<AVFrame>(av_frame2.get(), [=](AVFrame*)
+			{
+				av_freep(&av_frame2->data[0]);
+			});
+
+			av_image_copy(av_frame2->data, av_frame2->linesize, src_data, src_linesizes, PIX_FMT_BGRA, av_frame2->width, av_frame2->height);
+		}
+
 		glBindTexture(GL_TEXTURE_2D, texture_);
 
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]);
@@ -316,29 +331,14 @@ public:
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]);
 		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW);
 
-		auto ptr = [&]() -> GLvoid*
-		{
-			scoped_oversubcription_token oversubscribe;
-			return glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-		}();
-
+		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
 		if(ptr)
 		{
 			if(config_.key_only)
-			{
-				Concurrency::parallel_for(0, av_frame->height, [&](int n)
-				{
-					fast_memshfl(reinterpret_cast<char*>(ptr)+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-				});
-			}
+				fast_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
-			{
-				Concurrency::parallel_for(0, av_frame->height, [&](int n)
-				{
-					fast_memcpy(reinterpret_cast<char*>(ptr)+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4);
-				});
-			}
-			
+				fast_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
+
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 		}
 
@@ -357,21 +357,16 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
-	virtual void send(const safe_ptr<core::read_frame>& frame)
+	bool send(const safe_ptr<core::read_frame>& frame)
 	{
-		if(exception_.has_value())
-			std::rethrow_exception(exception_.value());
-
-		ticket_t ticket;
-		if(!governor_.try_acquire(ticket))
+		if(!frame_buffer_.try_push(frame))
 			graph_->add_tag("dropped-frame");
-		else
-			Concurrency::send(frame_buffer_, safe_ptr<core::read_frame>(frame.get(), [frame, ticket](core::read_frame*){}));
+		return is_running_;
 	}
-			
-	virtual std::wstring print() const
+		
+	std::wstring print() const
 	{	
-		return  L"ogl[" + boost::lexical_cast<std::wstring>(config_.screen_index) + L"|" + format_desc_.name + L"]";
+		return config_.name + L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
 	}
 	
 	void calculate_aspect()
@@ -442,36 +437,58 @@ public:
 	ogl_consumer_proxy(const configuration& config)
 		: config_(config){}
 	
-	virtual void initialize(const core::video_format_desc& format_desc)
+	~ogl_consumer_proxy()
 	{
-		consumer_ = nullptr;
-		consumer_.reset(new ogl_consumer(config_, format_desc));
-	}
-	
-	virtual bool send(const safe_ptr<core::read_frame>& frame)
-	{
-		consumer_->send(frame);
-		return true;
-	}
-	
-	virtual std::wstring print() const
-	{
-		return consumer_->print();
+		if(consumer_)
+		{
+			auto str = print();
+			consumer_.reset();
+			CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
+		}
 	}
 
-	virtual bool has_synchronization_clock() const 
+	// frame_consumer
+
+	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	{
+		consumer_.reset();
+		consumer_.reset(new ogl_consumer(config_, format_desc, channel_index));
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
+	}
+	
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	{
+		return consumer_->send(frame);
+	}
+	
+	virtual std::wstring print() const override
+	{
+		return consumer_ ? consumer_->print() : L"[ogl_consumer]";
+	}
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"ogl-consumer");
+		info.add(L"key-only", config_.key_only);
+		info.add(L"windowed", config_.windowed);
+		info.add(L"auto-deinterlace", config_.auto_deinterlace);
+		return info;
+	}
+
+	virtual bool has_synchronization_clock() const override
 	{
 		return false;
 	}
 	
-	virtual size_t buffer_depth() const
+	virtual size_t buffer_depth() const override
 	{
 		return 1;
 	}
 
-	virtual const core::video_format_desc& get_video_format_desc() const
+	virtual int index() const override
 	{
-		return consumer_->get_video_format_desc();
+		return 600;
 	}
 };	
 
@@ -493,18 +510,19 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	return make_safe<ogl_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
 {
 	configuration config;
-	config.screen_index		= ptree.get("device",   config.screen_index);
-	config.windowed			= ptree.get("windowed", config.windowed);
-	config.key_only			= ptree.get("key-only", config.key_only);
-	config.auto_deinterlace	= ptree.get("auto-deinterlace", config.auto_deinterlace);
+	config.name				= ptree.get(L"name",	 config.name);
+	config.screen_index		= ptree.get(L"device",   config.screen_index+1)-1;
+	config.windowed			= ptree.get(L"windowed", config.windowed);
+	config.key_only			= ptree.get(L"key-only", config.key_only);
+	config.auto_deinterlace	= ptree.get(L"auto-deinterlace", config.auto_deinterlace);
 	
-	auto stretch_str = ptree.get("stretch", "default");
-	if(stretch_str == "uniform")
+	auto stretch_str = ptree.get(L"stretch", L"default");
+	if(stretch_str == L"uniform")
 		config.stretch = stretch::uniform;
-	else if(stretch_str == "uniform_to_fill")
+	else if(stretch_str == L"uniform_to_fill")
 		config.stretch = stretch::uniform_to_fill;
 	
 	return make_safe<ogl_consumer_proxy>(config);

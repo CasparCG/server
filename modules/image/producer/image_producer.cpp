@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #include "image_producer.h"
 
 #include "../util/image_loader.h"
@@ -28,9 +30,11 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
+#include <common/log/log.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <algorithm>
 
@@ -49,24 +53,42 @@ struct image_producer : public core::frame_producer
 	{
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
-		auto frame = frame_factory->create_frame(this, FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), core::pixel_format::bgra);
+		
+		core::pixel_format_desc desc;
+		desc.pix_fmt = core::pixel_format::bgra;
+		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
+		auto frame = frame_factory->create_frame(this, desc);
+
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
 		frame->commit();
 		frame_ = std::move(frame);
+
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 	
 	// frame_producer
 
-	virtual safe_ptr<core::basic_frame> receive(int){return frame_;}
+	virtual safe_ptr<core::basic_frame> receive(int) override
+	{
+		return frame_;
+	}
 		
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		return frame_;
 	}
 
-	virtual std::wstring print() const
+	virtual std::wstring print() const override
 	{
 		return L"image_producer[" + filename_ + L"]";
+	}
+
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"image-producer");
+		info.add(L"filename", filename_);
+		return info;
 	}
 };
 

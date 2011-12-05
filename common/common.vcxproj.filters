@@ -37,9 +37,6 @@
     <Filter Include="source\compiler\vs">
       <UniqueIdentifier>{28c25c8a-1277-4d2c-9e85-5af33f9938ea}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\com">
-      <UniqueIdentifier>{f9a52080-be84-43f9-939d-855c6fd02414}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="exception\win32_exception.cpp">
@@ -118,6 +115,9 @@
     <ClInclude Include="os\windows\system_info.h">
       <Filter>source\os\windows</Filter>
     </ClInclude>
+    <ClInclude Include="concurrency\com_context.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
     <ClInclude Include="memory\memshfl.h">
       <Filter>source\memory</Filter>
     </ClInclude>
@@ -127,13 +127,16 @@
     <ClInclude Include="utility\move_on_copy.h">
       <Filter>source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="concurrency\governor.h">
+    <ClInclude Include="concurrency\target.h">
       <Filter>source\concurrency</Filter>
     </ClInclude>
-    <ClInclude Include="concurrency\throw_away.h">
-      <Filter>source\concurrency</Filter>
+    <ClInclude Include="utility\param.h">
+      <Filter>source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="utility\co_init.h">
+    <ClInclude Include="utility\utf8conv.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\utf8conv_inl.h">
       <Filter>source\utility</Filter>
     </ClInclude>
   </ItemGroup>
