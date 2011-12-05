@@ -1,21 +1,22 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
 
 #include "../StdAfx.h"
@@ -25,92 +26,86 @@
 #include "frame/frame_transform.h"
 
 #include "color/color_producer.h"
+#include "playlist/playlist_producer.h"
 #include "separated/separated_producer.h"
 
 #include <common/memory/safe_ptr.h>
+#include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
-
-#include <concrt_extras.h>
-#include <concurrent_vector.h>
+#include <common/utility/move_on_copy.h>
 
 namespace caspar { namespace core {
 	
-struct destruction_context
-{
-	std::shared_ptr<frame_producer> producer;
-	Concurrency::event				event;
-
-	destruction_context(std::shared_ptr<frame_producer>&& producer) 
-		: producer(producer)
-	{
-	}
-};
-
-void __cdecl destroy_producer(LPVOID lpParam)
-{
-	static Concurrency::critical_section mutex;
-	auto destruction = std::unique_ptr<destruction_context>(static_cast<destruction_context*>(lpParam));
+std::vector<const producer_factory_t> g_factories;
 	
-	try
-	{		
-		if(destruction->producer.unique())
-		{
-			{
-				Concurrency::critical_section::scoped_lock lock(mutex);
-				Concurrency::wait(200);
-			}
-			Concurrency::scoped_oversubcription_token oversubscribe;
-			CASPAR_LOG(info) << "Destroying: " << destruction->producer->print();
-			destruction->producer.reset();
-		}
-		else
-			CASPAR_LOG(warning) << destruction->producer->print() << " Not destroyed asynchronously.";		
-	}
-	catch(...)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-	}
-	
-	destruction->event.set();
-}
-
-void __cdecl destroy_and_wait_producer(LPVOID lpParam)
-{
-	try
-	{
-		auto destruction = static_cast<destruction_context*>(lpParam);
-		Concurrency::CurrentScheduler::ScheduleTask(destroy_producer, lpParam);
-		if(destruction->event.wait(1000) == Concurrency::COOPERATIVE_WAIT_TIMEOUT)
-			CASPAR_LOG(warning) << " Potential destruction deadlock detected. Might leak resources.";
-	}
-	catch(...)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-	}
-}
-
 class destroy_producer_proxy : public frame_producer
-{
-	std::shared_ptr<frame_producer> producer_;
+{	
+	std::shared_ptr<frame_producer>* producer_;
 public:
-	destroy_producer_proxy(const std::shared_ptr<frame_producer>& producer) 
-		: producer_(producer)
+	destroy_producer_proxy(safe_ptr<frame_producer>&& producer) 
+		: producer_(new std::shared_ptr<frame_producer>(std::move(producer)))
 	{
 	}
 
 	~destroy_producer_proxy()
 	{		
-		Concurrency::CurrentScheduler::ScheduleTask(destroy_producer, new destruction_context(std::move(producer_)));
+		static auto destroyers = std::make_shared<tbb::concurrent_bounded_queue<std::shared_ptr<executor>>>();
+		static tbb::atomic<int> destroyer_count;
+
+		try
+		{
+			std::shared_ptr<executor> destroyer;
+			if(!destroyers->try_pop(destroyer))
+			{
+				destroyer.reset(new executor(L"destroyer"));
+				destroyer->set_priority_class(below_normal_priority_class);
+				if(++destroyer_count > 16)
+					CASPAR_LOG(warning) << L"Potential destroyer dead-lock detected.";
+				CASPAR_LOG(trace) << "Created destroyer: " << destroyer_count;
+			}
+				
+			auto producer = producer_;
+			auto pool	  = destroyers;
+			destroyer->begin_invoke([=]
+			{
+				try
+				{
+					if(!producer->unique())
+						CASPAR_LOG(trace) << (*producer)->print() << L" Not destroyed on safe asynchronous destruction thread: " << producer->use_count();
+					else
+						CASPAR_LOG(trace) << (*producer)->print() << L" Destroying on safe asynchronous destruction thread.";
+				}
+				catch(...){}
+
+				delete producer;
+				pool->push(destroyer);
+			}); 
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			try
+			{
+				delete producer_;
+			}
+			catch(...){}
+		}
 	}
 
-	virtual safe_ptr<basic_frame>		receive(int hints)												{return producer_->receive(hints);}
-	virtual safe_ptr<basic_frame>		last_frame() const												{return producer_->last_frame();}
-	virtual std::wstring				print() const													{return producer_->print();}
-	virtual bool						param(const std::wstring& str)									{return producer_->param(str);}
-	virtual safe_ptr<frame_producer>	get_following_producer() const									{return producer_->get_following_producer();}
-	virtual void						set_leading_producer(const safe_ptr<frame_producer>& producer)	{producer_->set_leading_producer(producer);}
-	virtual int64_t						nb_frames() const												{return producer_->nb_frames();}
+	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
+	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (*producer_)->last_frame();}
+	virtual std::wstring										print() const override													{return (*producer_)->print();}
+	virtual boost::property_tree::wptree 						info() const override													{return (*producer_)->info();}
+	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (*producer_)->call(str);}
+	virtual safe_ptr<frame_producer>							get_following_producer() const override									{return (*producer_)->get_following_producer();}
+	virtual void												set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(*producer_)->set_leading_producer(producer);}
+	virtual int64_t												nb_frames() const override												{return (*producer_)->nb_frames();}
 };
+
+safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer>&& producer)
+{
+	return make_safe<destroy_producer_proxy>(std::move(producer));
+}
 
 class last_frame_producer : public frame_producer
 {
@@ -129,6 +124,12 @@ public:
 	virtual safe_ptr<core::basic_frame> last_frame() const{return frame_;}
 	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
 	virtual int64_t nb_frames() const {return nb_frames_;}	
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"last-frame-producer");
+		return info;
+	}
 };
 
 struct empty_frame_producer : public frame_producer
@@ -138,6 +139,13 @@ struct empty_frame_producer : public frame_producer
 	virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
 	virtual int64_t nb_frames() const {return 0;}
 	virtual std::wstring print() const { return L"empty";}
+	
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"empty-producer");
+		return info;
+	}
 };
 
 const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
@@ -165,12 +173,10 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int
 	}
 	return frame;
 }
-	
-Concurrency::concurrent_vector<std::shared_ptr<producer_factory_t>> g_factories;
 
 void register_producer_factory(const producer_factory_t& factory)
 {
-	g_factories.push_back(std::make_shared<producer_factory_t>(factory));
+	g_factories.push_back(factory);
 }
 
 safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
@@ -179,11 +185,11 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 	
 	auto producer = frame_producer::empty();
-	std::any_of(g_factories.begin(), g_factories.end(), [&](const std::shared_ptr<producer_factory_t>& factory) -> bool
+	std::any_of(g_factories.begin(), g_factories.end(), [&](const producer_factory_t& factory) -> bool
 		{
 			try
 			{
-				producer = (*factory)(my_frame_factory, params);
+				producer = factory(my_frame_factory, params);
 			}
 			catch(...)
 			{
@@ -195,8 +201,12 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(my_frame_factory, params);
 	
+	if(producer == frame_producer::empty())
+		producer = create_playlist_producer(my_frame_factory, params);
+
 	return producer;
 }
+
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
 {	
@@ -220,7 +230,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	catch(...){}
 
 	if(producer != frame_producer::empty() && key_producer != frame_producer::empty())
-		producer = create_separated_producer(producer, key_producer);
+		return create_separated_producer(producer, key_producer);
 	
 	if(producer == frame_producer::empty())
 	{
@@ -230,7 +240,17 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(narrow(str)));
 	}
 
-	return make_safe<destroy_producer_proxy>(producer);
+	return producer;
+}
+
+
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& factory, const std::wstring& params)
+{
+	std::wstringstream iss(params);
+	std::vector<std::wstring> tokens;
+	typedef std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t> > iterator;
+	std::copy(iterator(iss),  iterator(), std::back_inserter(tokens));
+	return create_producer(factory, tokens);
 }
 
 }}

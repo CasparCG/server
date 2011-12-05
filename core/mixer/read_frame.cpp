@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #include "../stdafx.h"
 
 #include "read_frame.h"
@@ -31,14 +33,14 @@ namespace caspar { namespace core {
 																																							
 struct read_frame::implementation : boost::noncopyable
 {
-	ogl_device&					ogl_;
+	safe_ptr<ogl_device>		ogl_;
 	size_t						size_;
 	safe_ptr<host_buffer>		image_data_;
 	tbb::mutex					mutex_;
 	audio_buffer				audio_data_;
 
 public:
-	implementation(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
+	implementation(const safe_ptr<ogl_device>& ogl, size_t size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
 		: ogl_(ogl)
 		, size_(size)
 		, image_data_(std::move(image_data))
@@ -51,8 +53,8 @@ public:
 
 			if(!image_data_->data())
 			{
-				ogl_.wait(image_data_.get()->fence());
-				ogl_.invoke([=]{image_data_.get()->map();}, high_priority);
+				image_data_.get()->wait(*ogl_);
+				ogl_->invoke([=]{image_data_.get()->map();}, high_priority);
 			}
 		}
 
@@ -65,7 +67,7 @@ public:
 	}
 };
 
-read_frame::read_frame(ogl_device& ogl, size_t size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
+read_frame::read_frame(const safe_ptr<ogl_device>& ogl, size_t size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
 	: impl_(new implementation(ogl, size, std::move(image_data), std::move(audio_data))){}
 read_frame::read_frame(){}
 const boost::iterator_range<const uint8_t*> read_frame::image_data()

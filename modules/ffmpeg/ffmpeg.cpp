@@ -1,21 +1,22 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
 
 #include "StdAfx.h"
@@ -28,7 +29,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
-#include <ppl.h>
+#include <tbb/recursive_mutex.h>
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
@@ -53,13 +54,13 @@ int ffmpeg_lock_callback(void **mutex, enum AVLockOp op)
 	if(!mutex)
 		return 0;
 
-	auto my_mutex = reinterpret_cast<Concurrency::critical_section*>(*mutex);
+	auto my_mutex = reinterpret_cast<tbb::recursive_mutex*>(*mutex);
 	
 	switch(op) 
 	{ 
 		case AV_LOCK_CREATE: 
 		{ 
-			*mutex = new Concurrency::critical_section(); 
+			*mutex = new tbb::recursive_mutex(); 
 			break; 
 		} 
 		case AV_LOCK_OBTAIN: 
@@ -151,16 +152,56 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     //colored_fputs(av_clip(level>>3, 0, 6), line);
 }
 
+//static int query_yadif_formats(AVFilterContext *ctx)
+//{
+//    static const int pix_fmts[] = {
+//        PIX_FMT_YUV444P,
+//        PIX_FMT_YUV422P,
+//        PIX_FMT_YUV420P,
+//        PIX_FMT_YUV410P,
+//        PIX_FMT_YUV411P,
+//        PIX_FMT_GRAY8,
+//        PIX_FMT_YUVJ444P,
+//        PIX_FMT_YUVJ422P,
+//        PIX_FMT_YUVJ420P,
+//        AV_NE( PIX_FMT_GRAY16BE, PIX_FMT_GRAY16LE ),
+//        PIX_FMT_YUV440P,
+//        PIX_FMT_YUVJ440P,
+//        AV_NE( PIX_FMT_YUV444P16BE, PIX_FMT_YUV444P16LE ),
+//        AV_NE( PIX_FMT_YUV422P16BE, PIX_FMT_YUV422P16LE ),
+//        AV_NE( PIX_FMT_YUV420P16BE, PIX_FMT_YUV420P16LE ),
+//        PIX_FMT_YUVA420P,
+//        PIX_FMT_NONE
+//    };
+//    avfilter_set_common_pixel_formats(ctx, avfilter_make_format_list(pix_fmts));
+//
+//    return 0;
+//}
+//
+//#pragma warning (push)
+//#pragma warning (disable : 4706)
+//void fix_yadif_filter_format_query()
+//{
+//	AVFilter** filter = nullptr;
+//    while((filter = av_filter_next(filter)) && *filter)
+//	{
+//		if(strstr((*filter)->name, "yadif") != 0)
+//			(*filter)->query_formats = query_yadif_formats;
+//	}
+//}
+//#pragma warning (pop)
+
 void init()
 {
     avfilter_register_all();
+	//fix_yadif_filter_format_query();
 	av_register_all();
 	avcodec_init();
     avcodec_register_all();
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_callback);
 	
-	//core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_ffmpeg_consumer(params);});
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
 }
 

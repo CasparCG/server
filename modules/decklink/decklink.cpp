@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #include "stdafx.h"
 
 #include "decklink.h"
@@ -44,6 +46,16 @@ namespace caspar { namespace decklink {
 
 void init()
 {
+	struct co_init
+	{
+		co_init(){::CoInitialize(nullptr);}
+		~co_init(){::CoUninitialize();}
+	} init;
+	
+	CComPtr<IDeckLinkIterator> pDecklinkIterator;
+	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))		
+		return;
+		
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
 }
@@ -51,8 +63,13 @@ void init()
 std::wstring get_version() 
 {
 	std::wstring version = L"Not found";
+	
+	struct co_init
+	{
+		co_init(){::CoInitialize(nullptr);}
+		~co_init(){::CoUninitialize();}
+	} init;
 
-	::CoInitialize(nullptr);
 	try
 	{
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
@@ -60,7 +77,6 @@ std::wstring get_version()
 			version = get_version(pDecklinkIterator);
 	}
 	catch(...){}
-	::CoUninitialize();
 
 	return version;
 }
@@ -68,8 +84,13 @@ std::wstring get_version()
 std::vector<std::wstring> get_device_list()
 {
 	std::vector<std::wstring> devices;
+	
+	struct co_init
+	{
+		co_init(){::CoInitialize(nullptr);}
+		~co_init(){::CoUninitialize();}
+	} init;
 
-	::CoInitialize(nullptr);
 	try
 	{
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
@@ -85,7 +106,6 @@ std::vector<std::wstring> get_device_list()
 		}
 	}
 	catch(...){}
-	::CoUninitialize();
 
 	return devices;
 }

@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #include "../../stdafx.h"
 
 #include "audio_mixer.h"
@@ -24,6 +26,12 @@
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
 
+#include <tbb/cache_aligned_allocator.h>
+
+#include <boost/range/adaptors.hpp>
+#include <boost/range/distance.hpp>
+
+#include <map>
 #include <stack>
 #include <vector>
 
@@ -34,18 +42,38 @@ struct audio_item
 	const void*			tag;
 	frame_transform		transform;
 	audio_buffer		audio_data;
+
+	audio_item()
+	{
+	}
+
+	audio_item(audio_item&& other)
+		: tag(std::move(other.tag))
+		, transform(std::move(other.transform))
+		, audio_data(std::move(other.audio_data))
+	{
+	}
 };
+
+typedef std::vector<float, tbb::cache_aligned_allocator<float>> audio_buffer_ps;
 	
+struct audio_stream
+{
+	frame_transform		prev_transform;
+	audio_buffer_ps		audio_data;
+};
+
 struct audio_mixer::implementation
 {
-	std::stack<core::frame_transform>				transform_stack_;
-	std::map<const void*, core::frame_transform>	prev_frame_transforms_;
-	const core::video_format_desc					format_desc_;
-	std::vector<audio_item>							items_;
-
+	std::stack<core::frame_transform>	transform_stack_;
+	std::map<const void*, audio_stream>	audio_streams_;
+	std::vector<audio_item>				items_;
+	std::vector<size_t>					audio_cadence_;
+	video_format_desc					format_desc_;
+	
 public:
-	implementation(const core::video_format_desc& format_desc)
-		: format_desc_(format_desc)
+	implementation()
+		: format_desc_(video_format_desc::get(video_format::invalid))
 	{
 		transform_stack_.push(core::frame_transform());
 	}
@@ -57,23 +85,15 @@ public:
 
 	void visit(core::write_frame& frame)
 	{
-		// We only care about the last field.
-		if(format_desc_.field_mode == field_mode::upper && transform_stack_.top().field_mode == field_mode::upper)
-			return;
-
-		if(format_desc_.field_mode == field_mode::lower && transform_stack_.top().field_mode == field_mode::lower)
-			return;
-
-		// Skip empty audio.
 		if(transform_stack_.top().volume < 0.002 || frame.audio_data().empty())
 			return;
 
 		audio_item item;
 		item.tag		= frame.tag();
 		item.transform	= transform_stack_.top();
-		item.audio_data = std::move(frame.audio_data());
-
-		items_.push_back(item);		
+		item.audio_data = std::move(frame.audio_data()); // Note: We don't need to care about upper/lower since audio_data is removed/moved from the last field.
+		
+		items_.push_back(std::move(item));		
 	}
 
 	void begin(const core::frame_transform& transform)
@@ -86,97 +106,84 @@ public:
 		transform_stack_.pop();
 	}
 	
-	audio_buffer mix()
+	audio_buffer mix(const video_format_desc& format_desc)
 	{	
-		// NOTE: auto data should be larger than format_desc_.audio_samples_per_frame to allow sse to read/write beyond size.
-
-		auto intermediate = std::vector<float, tbb::cache_aligned_allocator<float>>(format_desc_.audio_samples_per_frame+128, 0.0f);
-
-		std::map<const void*, core::frame_transform> next_frame_transforms;
+		if(format_desc_ != format_desc)
+		{
+			audio_streams_.clear();
+			audio_cadence_ = format_desc.audio_cadence;
+			format_desc_ = format_desc;
+		}		
 		
+		std::map<const void*, audio_stream>	next_audio_streams;
+
 		BOOST_FOREACH(auto& item, items_)
 		{			
-			const auto next = item.transform;
-			auto prev = next;
+			audio_buffer_ps next_audio;
 
-			const auto it = prev_frame_transforms_.find(item.tag);
-			if(it != prev_frame_transforms_.end())
-				prev = it->second;
-				
-			next_frame_transforms[item.tag] = next; // Store all active tags, inactive tags will be removed at the end.
+			auto next_transform = item.transform;
+			auto prev_transform = next_transform;
 
-			if(next.volume < 0.001 && prev.volume < 0.001)
-				continue;
-									
-			if(static_cast<size_t>(item.audio_data.size()) != format_desc_.audio_samples_per_frame)
-				continue;
-
-			CASPAR_ASSERT(format_desc_.audio_channels == 2);
-			CASPAR_ASSERT(format_desc_.audio_samples_per_frame % 4 == 0);
-						
-			const float prev_volume = static_cast<float>(prev.volume);
-			const float next_volume = static_cast<float>(next.volume);
-									
-			auto alpha		= (next_volume-prev_volume)/static_cast<float>(format_desc_.audio_samples_per_frame/format_desc_.audio_channels);
-			auto alpha_ps	= _mm_set_ps1(alpha*2.0f);
-			auto volume_ps	= _mm_setr_ps(prev_volume, prev_volume, prev_volume+alpha, prev_volume+alpha);
-
-			for(size_t n = 0; n < format_desc_.audio_samples_per_frame/4; ++n)
-			{		
-				auto sample_ps		= _mm_cvtepi32_ps(_mm_load_si128(reinterpret_cast<__m128i*>(&item.audio_data[n*4])));
-				auto res_sample_ps	= _mm_load_ps(&intermediate[n*4]);											
-				sample_ps			= _mm_mul_ps(sample_ps, volume_ps);	
-				res_sample_ps		= _mm_add_ps(sample_ps, res_sample_ps);	
-
-				volume_ps			= _mm_add_ps(volume_ps, alpha_ps);
-
-				_mm_store_ps(&intermediate[n*4], res_sample_ps);
+			const auto it = audio_streams_.find(item.tag);
+			if(it != audio_streams_.end())
+			{	
+				prev_transform	= it->second.prev_transform;
+				next_audio		= std::move(it->second.audio_data);
 			}
-		}
-		
-		auto result = audio_buffer(format_desc_.audio_samples_per_frame+128);	
+
+			if(prev_transform.volume < 0.001 && next_transform.volume < 0.001)
+				continue;
 			
-		auto intermediate_128 = reinterpret_cast<__m128i*>(intermediate.data());
-		auto result_128		  = reinterpret_cast<__m128i*>(result.data());
-				
-		for(size_t n = 0; n < format_desc_.audio_samples_per_frame/32; ++n)
-		{	
-			auto xmm0 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm1 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm2 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm3 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm4 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm5 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm6 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
-			auto xmm7 = _mm_load_ps(reinterpret_cast<float*>(intermediate_128++));
+			const float prev_volume = static_cast<float>(prev_transform.volume);
+			const float next_volume = static_cast<float>(next_transform.volume);
+									
+			auto alpha = (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/format_desc.audio_channels);
 			
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm0));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm1));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm2));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm3));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm4));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm5));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm6));
-			_mm_stream_si128(result_128++, _mm_cvtps_epi32(xmm7));
-		}
+			for(size_t n = 0; n < item.audio_data.size(); ++n)
+				next_audio.push_back(item.audio_data[n] * (prev_volume + (n/format_desc_.audio_channels) * alpha));
+										
+			next_audio_streams[item.tag].prev_transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
+			next_audio_streams[item.tag].audio_data		 = std::move(next_audio);			
+		}				
 
 		items_.clear();
-		prev_frame_transforms_ = std::move(next_frame_transforms);	
 
-		result.resize(format_desc_.audio_samples_per_frame);
-		return std::move(result);
+		audio_streams_ = std::move(next_audio_streams);
+		
+		if(audio_streams_.empty())		
+			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_cadence_.front(), 0.0f);
+				
+		{ // sanity check
+
+			auto nb_invalid_streams = boost::count_if(audio_streams_ | boost::adaptors::map_values, [&](const audio_stream& x)
+			{
+				return x.audio_data.size() < audio_cadence_.front();
+			});
+
+			if(nb_invalid_streams > 0)		
+				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";			
+		}
+
+		std::vector<float> result_ps(audio_cadence_.front(), 0.0f);
+		BOOST_FOREACH(auto& stream, audio_streams_ | boost::adaptors::map_values)
+		{
+			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<float>());
+			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
+		}		
+		
+		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+		
+		audio_buffer result;
+		result.reserve(result_ps.size());
+		boost::range::transform(result_ps, std::back_inserter(result), [](float sample){return static_cast<int32_t>(sample);});						
+		return result;
 	}
 };
 
-audio_mixer::audio_mixer(const core::video_format_desc& format_desc) : impl_(new implementation(format_desc)){}
+audio_mixer::audio_mixer() : impl_(new implementation()){}
 void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
-audio_buffer audio_mixer::mix(){return impl_->mix();}
-audio_mixer& audio_mixer::operator=(audio_mixer&& other)
-{
-	impl_ = std::move(other.impl_);
-	return *this;
-}
+audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){return impl_->mix(format_desc);}
 
 }}

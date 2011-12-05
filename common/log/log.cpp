@@ -1,24 +1,23 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
-// TODO: Colors in console.
-// TODO: Think through filters.
 
 #include "../stdafx.h"
 
@@ -136,9 +135,10 @@ void add_file_sink(const std::wstring& folder)
 			BOOST_THROW_EXCEPTION(directory_not_found());
 
 		auto file_sink = boost::make_shared<file_sink_type>(
-			boost::log::keywords::file_name = (folder + L"caspar_%Y-%m-%d_%H-%M-%S.%N.log"),
+			boost::log::keywords::file_name = (folder + L"caspar_%Y-%m-%d.log"),
 			boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
-			boost::log::keywords::auto_flush = true
+			boost::log::keywords::auto_flush = true,
+			boost::log::keywords::open_mode = std::ios::app
 		);
 		
 		file_sink->locked_backend()->set_formatter(&my_formatter);
@@ -149,8 +149,6 @@ void add_file_sink(const std::wstring& folder)
 //		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
 //#endif
 		boost::log::wcore::get()->add_sink(file_sink);
-
-		CASPAR_LOG(info) << L"Logging [info] or higher severity to " << folder << std::endl << std::endl;
 	}
 	catch(...)
 	{

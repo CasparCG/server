@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #pragma once
 
 #include "../utility/assert.h"
@@ -24,7 +26,7 @@
 
 #include <assert.h>
 
-#include <ppl.h>
+#include <tbb/parallel_for.h>
 
 namespace caspar {
 
@@ -149,12 +151,13 @@ static void* fast_memcpy_aligned(void* dest, const void* source, size_t count)
 		
 	size_t rest = count & 2047;
 	count &= ~2047;
-
-	Concurrency::parallel_for<size_t>(0, count / 2048, [&](size_t n)
+		
+	tbb::affinity_partitioner ap;
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, count/128), [&](const tbb::blocked_range<size_t>& r)
 	{       
-		fast_memcpy_aligned_impl(dest8 + n*2048, source8 + n*2048, 2048);   
-	});
-
+		fast_memcpy_aligned_impl(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128);   
+	}, ap);
+	
 	return fast_memcpy_small_aligned(dest8+count, source8+count, rest);
 }
 
@@ -165,12 +168,13 @@ static void* fast_memcpy_unaligned(void* dest, const void* source, size_t count)
 		
 	size_t rest = count & 2047;
 	count &= ~2047;
-
-	Concurrency::parallel_for<size_t>(0, count / 2048, [&](size_t n)
+		
+	tbb::affinity_partitioner ap;
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, count/128), [&](const tbb::blocked_range<size_t>& r)
 	{       
-		fast_memcpy_unaligned_impl(dest8 + n*2048, source8 + n*2048, 2048);   
-	});
-
+		fast_memcpy_unaligned_impl(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128);   
+	}, ap);
+	
 	return fast_memcpy_small_unaligned(dest8+count, source8+count, rest);
 }
 

@@ -1,23 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Nicklas P Andersson
 */
- 
+
 #include "../stdafx.h"
 
 #include "FlashAxContainer.h"
@@ -461,30 +462,30 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 	*ppvObj = NULL;
 	
 	HRESULT hr;
-	//// Author: Makarov Igor
-	//// Transparent Flash Control in Plain C++ 
-	//// http://www.codeproject.com/KB/COM/flashcontrol.aspx 
-	//if (IsEqualGUID(rsid, IID_IDirectDraw3))
-	//{
-	//	if (!m_lpDD4)
-	//	{
-	//		m_lpDD4 = new IDirectDraw4Ptr;
-	//		hr = m_lpDD4->CreateInstance(CLSID_DirectDraw, NULL, CLSCTX_INPROC_SERVER); 
-	//		if (FAILED(hr))
-	//		{
-	//			delete m_lpDD4;
-	//			m_lpDD4 = NULL;
-	//			CASPAR_LOG(info) << print_() << " DirectDraw not installed. Running without DirectDraw.";
-	//			return E_NOINTERFACE;
-	//		}
-	//	}
-	//	if (m_lpDD4 && m_lpDD4->GetInterfacePtr())
-	//	{
-	//		*ppvObj = m_lpDD4->GetInterfacePtr();
-	//		m_lpDD4->AddRef();
-	//		return S_OK;
-	//	}
-	//}
+	// Author: Makarov Igor
+	// Transparent Flash Control in Plain C++ 
+	// http://www.codeproject.com/KB/COM/flashcontrol.aspx 
+	if (IsEqualGUID(rsid, IID_IDirectDraw3))
+	{
+		if (!m_lpDD4)
+		{
+			m_lpDD4 = new IDirectDraw4Ptr;
+			hr = m_lpDD4->CreateInstance(CLSID_DirectDraw, NULL, CLSCTX_INPROC_SERVER); 
+			if (FAILED(hr))
+			{
+				delete m_lpDD4;
+				m_lpDD4 = NULL;
+				CASPAR_LOG(info) << print_() << " DirectDraw not installed. Running without DirectDraw.";
+				return E_NOINTERFACE;
+			}
+		}
+		if (m_lpDD4 && m_lpDD4->GetInterfacePtr())
+		{
+			*ppvObj = m_lpDD4->GetInterfacePtr();
+			m_lpDD4->AddRef();
+			return S_OK;
+		}
+	}
 
 	//TODO: The fullscreen-consumer requires that ths does NOT return an ITimerService
 	hr = QueryInterface(riid, ppvObj);//E_NOINTERFACE;
@@ -607,12 +608,12 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("OnCommand")) != std::wstring::npos) {
 		//this is how templatehost 1.8 reports that a command has been received
-		CASPAR_LOG(info)  << print_()  << L" Command: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+		CASPAR_LOG(debug)  << print_()  << L" Command: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
 		bCallSuccessful_ = true;
 	}
 	else if(str.find(TEXT("Activity")) != std::wstring::npos)
 	{
-		CASPAR_LOG(info) << print_() << L" Activity: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+		CASPAR_LOG(debug) << print_() << L" Activity: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
 
 		//this is how templatehost 1.7 reports that a command has been received
 		if(str.find(TEXT("Command recieved")) != std::wstring::npos)
@@ -644,6 +645,22 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	{
 		CASPAR_LOG(error) << print_() << L" Error: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
 	}
+	else if(str.find(TEXT("OnDebug")) != std::wstring::npos)
+	{
+		CASPAR_LOG(error) << print_() << L" Debug: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+	}
+	//else if(str.find(TEXT("OnTemplateDescription")) != std::wstring::npos)
+	//{
+	//	CASPAR_LOG(error) << print_() << L" TemplateDescription: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+	//}
+	//else if(str.find(TEXT("OnGetInfo")) != std::wstring::npos)
+	//{
+	//	CASPAR_LOG(error) << print_() << L" Info: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+	//}
+	//else
+	//{
+	//	CASPAR_LOG(error) << print_() << L" Unknown: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+	//}
 
 	CComPtr<IShockwaveFlash> spFlash;
 	HRESULT hr = m_spOleObject->QueryInterface(__uuidof(IShockwaveFlash), (void**) &spFlash);
@@ -887,7 +904,7 @@ void FlashAxContainer::Tick()
 	}
 }
 
-bool FlashAxContainer::FlashCall(const std::wstring& str)
+bool FlashAxContainer::FlashCall(const std::wstring& str, std::wstring& result2)
 {
 	CComBSTR result;
 	CComPtr<IShockwaveFlash> spFlash;
@@ -898,6 +915,10 @@ bool FlashAxContainer::FlashCall(const std::wstring& str)
 	bCallSuccessful_ = false;
 	for(size_t retries = 0; !bCallSuccessful_ && retries < 4; ++retries)
 		spFlash->CallFunction(request, &result);
+
+	if(bCallSuccessful_)
+		result2 = result;
+
 	return bCallSuccessful_;
 }
 

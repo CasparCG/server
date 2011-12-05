@@ -1,34 +1,39 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #include "../../stdafx.h"
 
 #include "video_decoder.h"
 
 #include "../util/util.h"
-#include "../filter/filter.h"
 
 #include "../../ffmpeg_error.h"
 
-#include <core/producer/frame/basic_frame.h>
-#include <common/memory/memcpy.h>
-#include <common/concurrency/governor.h>
+#include <core/producer/frame/frame_transform.h>
+#include <core/producer/frame/frame_factory.h>
+
+#include <boost/range/algorithm_ext/push_back.hpp>
+#include <boost/filesystem.hpp>
+
+#include <queue>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -43,150 +48,112 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <tbb/scalable_allocator.h>
-
-#undef Yield
-using namespace Concurrency;
-
 namespace caspar { namespace ffmpeg {
 	
-struct video_decoder::implementation : public Concurrency::agent, boost::noncopyable
-{	
-	unbounded_buffer<video_decoder::source_element_t>	source_;
-	ITarget<video_decoder::target_element_t>&			target_;
+struct video_decoder::implementation : boost::noncopyable
+{
+	int										index_;
+	const safe_ptr<AVCodecContext>			codec_context_;
 
-	int													index_;
-	const safe_ptr<AVCodecContext>						codec_context_;
+	std::queue<safe_ptr<AVPacket>>			packets_;
 	
-	const double										fps_;
-	const int64_t										nb_frames_;
-	const size_t										width_;
-	const size_t										height_;
-	bool												is_progressive_;
-	
-	governor											governor_;
+	const int64_t							nb_frames_;
 
-	tbb::atomic<bool>									is_running_;
-	
+	const size_t							width_;
+	const size_t							height_;
+	bool									is_progressive_;
+
+	tbb::atomic<size_t>						file_frame_number_;
+
 public:
-	explicit implementation(video_decoder::source_t& source, video_decoder::target_t& target, AVFormatContext& context) 
-		: source_([this](const video_decoder::source_element_t& packet){return packet->stream_index == index_;})
-		, target_(target)
-		, codec_context_(open_codec(context, AVMEDIA_TYPE_VIDEO, index_))
-		, fps_(static_cast<double>(codec_context_->time_base.den) / static_cast<double>(codec_context_->time_base.num))
-		, nb_frames_(context.streams[index_]->nb_frames)
+	explicit implementation(const safe_ptr<AVFormatContext>& context) 
+		: codec_context_(open_codec(*context, AVMEDIA_TYPE_VIDEO, index_))
+		, nb_frames_(context->streams[index_]->nb_frames)
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
-		, is_progressive_(true)
-		, governor_(1) // IMPORTANT: Must be 1 since avcodec_decode_video2 reuses memory.
+	{
+		file_frame_number_ = 0;
+		CASPAR_LOG(debug) << "[video_decoder] " << context->streams[index_]->codec->codec->long_name;
+	}
+
+	void push(const std::shared_ptr<AVPacket>& packet)
+	{
+		if(!packet)
+			return;
+
+		if(packet->stream_index == index_ || packet->data == nullptr)
+			packets_.push(make_safe_ptr(packet));
+	}
+
+	std::shared_ptr<AVFrame> poll()
 	{		
-		CASPAR_LOG(debug) << "[video_decoder] " << context.streams[index_]->codec->codec->long_name;
+		if(packets_.empty())
+			return nullptr;
 		
-		source.link_target(&source_);
-		
-		is_running_ = true;
-		start();
-	}
-
-	~implementation()
-	{
-		is_running_ = false;
-		governor_.cancel();
-		agent::wait(this);
-	}
-
-	virtual void run()
-	{
-		win32_exception::install_handler();
-
-		try
-		{
-			while(is_running_)
+		auto packet = packets_.front();
+					
+		if(packet->data == nullptr)
+		{			
+			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
-				auto ticket = governor_.acquire();
-				auto packet = receive(source_);
-			
-				if(packet == flush_packet(index_))
-				{					
-					if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
-					{
-						AVPacket pkt;
-						av_init_packet(&pkt);
-						pkt.data = nullptr;
-						pkt.size = 0;
-
-						for(auto decoded_frame = decode(pkt); decoded_frame; decoded_frame = decode(pkt))
-						{						
-							send(target_, safe_ptr<AVFrame>(decoded_frame.get(), [decoded_frame, ticket](AVFrame*){}));
-							Context::Yield();
-						}
-					}
-
-					avcodec_flush_buffers(codec_context_.get());
-					send(target_, flush_video());
-					continue;
-				}
-
-				if(packet == eof_packet(index_))
-					break;
-
-				auto decoded_frame = decode(*packet);
-				if(!decoded_frame)
-					continue;
-		
-				is_progressive_ = decoded_frame->interlaced_frame == 0;
-				
-				send(target_, safe_ptr<AVFrame>(decoded_frame.get(), [decoded_frame, ticket](AVFrame*){}));				
-				Context::Yield();
+				auto video = decode(*packet);
+				if(video)
+					return video;
 			}
+					
+			packets_.pop();
+			file_frame_number_ = static_cast<size_t>(packet->pos);
+			avcodec_flush_buffers(codec_context_.get());
+			return flush_video();	
 		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}
-		
-		send(target_, eof_video());
-
-		done();
+			
+		packets_.pop();
+		return decode(*packet);
 	}
-	
-	std::shared_ptr<AVFrame> decode(AVPacket& packet)
+
+	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
 	{
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 		int frame_finished = 0;
-		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &packet), "[video_decocer]");
-
-		// 1 packet <=> 1 frame.
+		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &pkt), "[video_decocer]");
+		
 		// If a decoder consumes less then the whole packet then something is wrong
 		// that might be just harmless padding at the end, or a problem with the
 		// AVParser or demuxer which puted more then one frame in a AVPacket.
 
 		if(frame_finished == 0)	
 			return nullptr;
-				
+
+		is_progressive_ = !decoded_frame->interlaced_frame;
+
 		if(decoded_frame->repeat_pict > 0)
-			CASPAR_LOG(warning) << "[video_decoder]: Field repeat_pict not implemented.";
+			CASPAR_LOG(warning) << "[video_decoder] Field repeat_pict not implemented.";
+		
+		++file_frame_number_;
 
 		return decoded_frame;
 	}
-
-			
-	double fps() const
+	
+	bool ready() const
 	{
-		return fps_;
+		return packets_.size() > 10;
+	}
+
+	int64_t nb_frames() const
+	{
+		return std::max<int64_t>(nb_frames_, file_frame_number_);
 	}
 };
 
-video_decoder::video_decoder(video_decoder::source_t& source, video_decoder::target_t& target, AVFormatContext& context) 
-	: impl_(new implementation(source, target, context))
-{
-}
-
-double video_decoder::fps() const{return impl_->fps();}
-int64_t video_decoder::nb_frames() const{return impl_->nb_frames_;}
+video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context) : impl_(new implementation(context)){}
+void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
+std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
+bool video_decoder::ready() const{return impl_->ready();}
+int64_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 size_t video_decoder::width() const{return impl_->width_;}
 size_t video_decoder::height() const{return impl_->height_;}
-bool video_decoder::is_progressive() const{return impl_->is_progressive_;}
+bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}
+size_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 
 }}

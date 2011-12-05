@@ -1,13 +1,33 @@
+/*
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+*
+* This file is part of CasparCG (www.casparcg.com).
+*
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
+*/
+
 #pragma once
 
+#include "display_mode.h"
+
 #include <common/memory/safe_ptr.h>
-#include <common/concurrency/governor.h>
 
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <boost/noncopyable.hpp>
-
-#include <agents.h>
 
 #include <vector>
 
@@ -25,26 +45,23 @@ struct frame_factory;
 
 namespace ffmpeg {
 
-class frame_muxer2 : boost::noncopyable
+class frame_muxer : boost::noncopyable
 {
 public:
+	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter = L"", display_mode::type force_deinterlace_mode = display_mode::deinterlace_bob_reinterlace);
 	
-	typedef	safe_ptr<AVFrame>									video_source_element_t;
-	typedef	safe_ptr<core::audio_buffer>						audio_source_element_t;
-	typedef	std::pair<safe_ptr<core::basic_frame>, ticket_t>	target_element_t;
+	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
+	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);
+	
+	bool video_ready() const;
+	bool audio_ready() const;
 
-	typedef Concurrency::ISource<video_source_element_t>		video_source_t;
-	typedef Concurrency::ISource<audio_source_element_t>		audio_source_t;
-	typedef Concurrency::ITarget<target_element_t>				target_t;
-								 
-	frame_muxer2(video_source_t* video_source,
-				 audio_source_t* audio_source, 
-				 target_t& target,
-				 double in_fps, 
-				 const safe_ptr<core::frame_factory>& frame_factory,
-				 const std::wstring& filter = L"");
-	
+	std::shared_ptr<core::basic_frame> poll();
+
 	int64_t calc_nb_frames(int64_t nb_frames) const;
+
+	void force_deinterlacing(bool value);
+
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

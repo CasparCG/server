@@ -1,28 +1,28 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
 
 #pragma once
 
+#include <vector>
 #include <string>
-
-#include <common/compiler/vs/disable_silly_warnings.h>
 
 namespace caspar { namespace core {
 	
@@ -95,21 +95,21 @@ struct video_format_desc
 
 	size_t					audio_sample_rate;
 	size_t					audio_channels;
-	size_t					audio_samples_per_frame;
+	std::vector<size_t>		audio_cadence;
 
 	static const video_format_desc& get(video_format::type format);
 	static const video_format_desc& get(const std::wstring& name);
+	
+	bool operator==(const video_format_desc& lhs)
+	{
+		return format == lhs.format;
+	}
+
+	bool operator!=(const video_format_desc& lhs)
+	{
+		return !(*this == lhs);
+	}
 };
-
-inline bool operator==(const video_format_desc& rhs, const video_format_desc& lhs)
-{
-	return rhs.format == lhs.format;
-}
-
-inline bool operator!=(const video_format_desc& rhs, const video_format_desc& lhs)
-{
-	return !(rhs == lhs);
-}
 
 inline std::wostream& operator<<(std::wostream& out, const video_format_desc& format_desc)
 {

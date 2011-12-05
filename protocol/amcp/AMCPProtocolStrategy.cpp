@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Nicklas P Andersson
 */
+
  
 #include "../StdAfx.h"
 
@@ -52,13 +54,7 @@ inline std::shared_ptr<core::video_channel> GetChannelSafe(unsigned int index, c
 
 AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels) : channels_(channels) {
 	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue());
-	if(!pGeneralCommandQueue->Start()) {
-		CASPAR_LOG(error) << "Failed to start the general command-queue";
-
-		//TODO: THROW!
-	}
-	else
-		commandQueues_.push_back(pGeneralCommandQueue);
+	commandQueues_.push_back(pGeneralCommandQueue);
 
 
 	std::shared_ptr<core::video_channel> pChannel;
@@ -71,16 +67,8 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<core::vide
 		//HACK: Perform real conversion from int to string
 		TCHAR num = TEXT('1')+static_cast<TCHAR>(index);
 		title += num;
-
-		if(!pChannelCommandQueue->Start()) {
-			std::wstring logString = TEXT("Failed to start command-queue for ");
-			logString += title;
-			CASPAR_LOG(error) << logString;
-
-			//TODO: THROW!
-		}
-		else
-			commandQueues_.push_back(pChannelCommandQueue);
+		
+		commandQueues_.push_back(pChannelCommandQueue);
 	}
 }
 
@@ -312,7 +300,7 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	
 	if	   (s == TEXT("MIXER"))		return std::make_shared<MixerCommand>();
 	else if(s == TEXT("DIAG"))		return std::make_shared<DiagnosticsCommand>();
-	else if(s == TEXT("PARAM"))		return std::make_shared<ParamCommand>();
+	else if(s == TEXT("CALL"))		return std::make_shared<CallCommand>();
 	else if(s == TEXT("SWAP"))		return std::make_shared<SwapCommand>();
 	else if(s == TEXT("LOAD"))		return std::make_shared<LoadCommand>();
 	else if(s == TEXT("LOADBG"))	return std::make_shared<LoadbgCommand>();
@@ -323,7 +311,6 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	else if(s == TEXT("STOP"))		return std::make_shared<StopCommand>();
 	else if(s == TEXT("CLEAR"))		return std::make_shared<ClearCommand>();
 	else if(s == TEXT("PRINT"))		return std::make_shared<PrintCommand>();
-	else if(s == TEXT("STATUS"))	return std::make_shared<StatusCommand>();
 	else if(s == TEXT("LOG"))		return std::make_shared<LogCommand>();
 	else if(s == TEXT("CG"))		return std::make_shared<CGCommand>();
 	else if(s == TEXT("DATA"))		return std::make_shared<DataCommand>();

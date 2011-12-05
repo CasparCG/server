@@ -1,29 +1,31 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
+*/
 
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
-*
-*/ 
 #include "../../stdafx.h"
 
 #include "separated_producer.h"
 
 #include <core/producer/frame/basic_frame.h>
 
-#include <ppl.h>
+#include <tbb/parallel_invoke.h>
 
 namespace caspar { namespace core {	
 
@@ -43,11 +45,12 @@ struct separated_producer : public frame_producer
 		, last_frame_(core::basic_frame::empty())
 	{
 	}
+
 	// frame_producer
 	
-	virtual safe_ptr<basic_frame> receive(int hints)
+	virtual safe_ptr<basic_frame> receive(int hints) override
 	{
-		Concurrency::parallel_invoke(
+		tbb::parallel_invoke(
 		[&]
 		{
 			if(fill_ == core::basic_frame::late())
@@ -73,19 +76,28 @@ struct separated_producer : public frame_producer
 		return last_frame_ = frame;
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const
+	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
 		return disable_audio(last_frame_);
 	}
 
-	virtual std::wstring print() const
+	virtual int64_t nb_frames() const override
+	{
+		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
+	}
+
+	virtual std::wstring print() const override
 	{
 		return L"separated[fill:" + fill_producer_->print() + L"|key:" + key_producer_->print() + L"]";
 	}	
 
-	virtual int64_t nb_frames() const 
+	boost::property_tree::wptree info() const override
 	{
-		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
+		boost::property_tree::wptree info;
+		info.add(L"type", L"separated-producer");
+		info.add_child(L"fill.producer",	fill_producer_->info());
+		info.add_child(L"key.producer",	key_producer_->info());
+		return info;
 	}
 };
 

@@ -1,21 +1,22 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Nicklas P Andersson
 */
 
 #include "../StdAfx.h"
@@ -31,6 +32,8 @@
 
 #include <common/log/log.h>
 #include <common/diagnostics/graph.h>
+#include <common/os/windows/current_version.h>
+#include <common/os/windows/system_info.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
@@ -41,9 +44,15 @@
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
 
+#include <modules/bluefish/bluefish.h>
+#include <modules/decklink/decklink.h>
+#include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
+#include <modules/flash/util/swf.h>
 #include <modules/flash/producer/flash_producer.h>
 #include <modules/flash/producer/cg_producer.h>
+#include <modules/ffmpeg/producer/util/util.h>
+#include <modules/image/image.h>
 
 #include <algorithm>
 #include <locale>
@@ -56,6 +65,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 /* Return codes
 
@@ -92,13 +102,10 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
 			extension == L"GIF" || extension == L"BMP")
 			clipttype = TEXT(" STILL ");
-		else if(extension == TEXT(".SWF") || extension == TEXT(".DV") || extension == TEXT(".MOV") || extension == TEXT(".MPG") || 
-				extension == TEXT(".AVI") || extension == TEXT(".FLV") || extension == TEXT(".F4V") || extension == TEXT(".MP4") ||
-				extension == L".M2V" || extension == L".H264" || extension == L".MKV" || extension == L".WMV" || extension == L".DIVX" || 
-				extension == L".XVID" || extension == L".OGG")
-			clipttype = TEXT(" MOVIE ");
 		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
 			clipttype = TEXT(" STILL ");
+		else if(caspar::ffmpeg::is_valid_file(path.file_string()) || extension == L".CT")
+			clipttype = TEXT(" MOVIE ");
 
 		if(clipttype != TEXT(" N/A "))
 		{		
@@ -143,7 +150,7 @@ std::wstring ListTemplates()
 
 	for (boost::filesystem::wrecursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
 	{		
-		if(boost::filesystem::is_regular_file(itr->path()) && itr->path().extension() == L".ft")
+		if(boost::filesystem::is_regular_file(itr->path()) && (itr->path().extension() == L".ft" || itr->path().extension() == L".ct"))
 		{
 			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::template_folder().size()-1, itr->path().file_string().size()));
 
@@ -200,7 +207,7 @@ bool DiagnosticsCommand::DoExecute()
 {	
 	try
 	{
-		diagnostics::show_graphs(boost::lexical_cast<bool>(_parameters.at(0)));
+		diagnostics::show_graphs(true);
 
 		SetReplyString(TEXT("202 DIAG OK\r\n"));
 
@@ -214,7 +221,7 @@ bool DiagnosticsCommand::DoExecute()
 	}
 }
 
-bool ParamCommand::DoExecute()
+bool CallCommand::DoExecute()
 {	
 	//Perform loading of the clip
 	try
@@ -224,30 +231,34 @@ bool ParamCommand::DoExecute()
 		std::wstring param = _parameters2.at(1);
 		for(auto it = std::begin(_parameters2)+2; it != std::end(_parameters2); ++it)
 			param += L" " + *it;
-
-		bool success = false;
 		
+		boost::unique_future<std::wstring> result;
 		if(what == L"B")
-			success = GetChannel()->stage()->background(GetLayerIndex()).get()->param(param);
+			result = GetChannel()->stage()->call(GetLayerIndex(), false, param);
 		else if(what == L"F")
-			success = GetChannel()->stage()->foreground(GetLayerIndex()).get()->param(param);
+			result = GetChannel()->stage()->call(GetLayerIndex(), true, param);
+		else
+			result = GetChannel()->stage()->call(GetLayerIndex(), true, _parameters.at(0) + L" " + param);
 	
-		if(!success)
-		{
-			SetReplyString(TEXT("502 PARAM FAILED\r\n"));
-			return false;
-		}
+		if(!result.timed_wait(boost::posix_time::seconds(2)))
+			BOOST_THROW_EXCEPTION(timed_out());
 
-		CASPAR_LOG(info) << "Executed param: " <<  _parameters[0] << TEXT(" successfully");
-
-		SetReplyString(TEXT("202 PARAM OK\r\n"));
+		CASPAR_LOG(info) << "Executed call: " <<  _parameters[0] << TEXT(" successfully");
+		
+		std::wstringstream replyString;
+		if(result.get().empty())
+			replyString << TEXT("202 CALL OK\r\n");
+		else
+			replyString << TEXT("201 CALL OK\r\n") << result.get() << L"\r\n";
+		
+		SetReplyString(replyString.str());
 
 		return true;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 PARAM FAILED\r\n"));
+		SetReplyString(TEXT("502 CALL FAILED\r\n"));
 		return false;
 	}
 }
@@ -267,7 +278,7 @@ bool MixerCommand::DoExecute()
 			};
 
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform);
 		}
 		else if(_parameters[0] == L"OPACITY")
 		{
@@ -283,7 +294,7 @@ bool MixerCommand::DoExecute()
 			};
 
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"FILL" || _parameters[0] == L"FILL_RECT")
 		{
@@ -308,7 +319,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"CLIP" || _parameters[0] == L"CLIP_RECT")
 		{
@@ -329,7 +340,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"GRID")
 		{
@@ -354,7 +365,7 @@ bool MixerCommand::DoExecute()
 						transform.clip_scale[1]			= delta;			
 						return transform;
 					};
-					GetChannel()->mixer()->apply_frame_transform(index, transform, duration, tween);
+					GetChannel()->stage()->apply_frame_transform(index, transform, duration, tween);
 				}
 			}
 		}
@@ -376,7 +387,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"SATURATION")
 		{
@@ -390,7 +401,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"CONTRAST")
 		{
@@ -404,7 +415,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"LEVELS")
 		{
@@ -424,7 +435,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"VOLUME")
 		{
@@ -439,11 +450,15 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"CLEAR")
 		{
-			GetChannel()->mixer()->clear_transforms();
+			int layer = GetLayerIndex(std::numeric_limits<int>::max());
+			if(layer ==	std::numeric_limits<int>::max())
+				GetChannel()->stage()->clear_transforms();
+			else
+				GetChannel()->stage()->clear_transforms(layer);
 		}
 		else
 		{
@@ -485,13 +500,13 @@ bool SwapCommand::DoExecute()
 			int l1 = GetLayerIndex();
 			int l2 = boost::lexical_cast<int>(strs.at(1));
 
-			ch1->stage()->swap_layer(l1, l2, *ch2->stage());
+			ch1->stage()->swap_layer(l1, l2, ch2->stage());
 		}
 		else
 		{
 			auto ch1 = GetChannel();
 			auto ch2 = GetChannels().at(boost::lexical_cast<int>(_parameters[0])-1);
-			ch1->stage()->swap(*ch2->stage());
+			ch1->stage()->swap_layers(ch2->stage());
 		}
 
 		CASPAR_LOG(info) << "Swapped successfully";
@@ -519,7 +534,8 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->output()->add(GetLayerIndex(), create_consumer(_parameters));
+		auto consumer = create_consumer(_parameters);
+		GetChannel()->output()->add(GetLayerIndex(consumer->index()), consumer);
 	
 		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
 
@@ -546,7 +562,11 @@ bool RemoveCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		GetChannel()->output()->remove(GetLayerIndex());
+		auto index = GetLayerIndex(std::numeric_limits<int>::min());
+		if(index == std::numeric_limits<int>::min())
+			index = create_consumer(_parameters)->index();
+
+		GetChannel()->output()->remove(index);
 
 		SetReplyString(TEXT("202 REMOVE OK\r\n"));
 
@@ -787,37 +807,11 @@ bool ClearCommand::DoExecute()
 
 bool PrintCommand::DoExecute()
 {
-	GetChannel()->output()->add(99978, create_consumer(boost::assign::list_of(L"IMAGE")));
+	GetChannel()->output()->add(create_consumer(boost::assign::list_of(L"IMAGE")));
 		
 	SetReplyString(TEXT("202 PRINT OK\r\n"));
 
 	return true;
-}
-
-bool StatusCommand::DoExecute()
-{				
-	if (GetLayerIndex() > -1)
-	{
-		auto status = GetChannel()->stage()->get_status(GetLayerIndex());
-		std::wstringstream status_text;
-		status_text
-			<< L"200 STATUS OK\r\n"
-			<< L"FOREGROUND:"		<< status.foreground << L"\r\n"
-			<< L"BACKGROUND:"		<< status.background << L"\r\n"
-			<< L"STATUS:"			<< (status.is_paused ? L"PAUSED" : L"PLAYING") << L"\r\n"
-			<< L"TOTAL FRAMES:"		<< (status.total_frames == std::numeric_limits<int64_t>::max() ? 0 : status.total_frames) << L"\r\n"
-			<< L"CURRENT FRAME:"	<< status.current_frame << L"\r\n\r\n";
-
-		SetReplyString(status_text.str());
-		return true;
-	}
-	else
-	{
-		//NOTE: Possible to extend soo that "channel" status is returned when no layer is specified.
-
-		SetReplyString(TEXT("403 LAYER MUST BE SPECIFIED\r\n"));
-		return false;
-	}
 }
 
 bool LogCommand::DoExecute()
@@ -1106,6 +1100,9 @@ bool CGCommand::DoExecuteUpdate()
 
 bool CGCommand::DoExecuteInvoke() 
 {
+	std::wstringstream replyString;
+	replyString << TEXT("201 CG OK\r\n");
+
 	if(_parameters.size() > 2)
 	{
 		if(!ValidateLayer(_parameters[1]))
@@ -1114,23 +1111,44 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
+		auto result = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
+		replyString << result << TEXT("\r\n"); 
 	}
 	else 
 	{
 		SetReplyString(TEXT("402 CG ERROR\r\n"));
 		return true;
 	}
-
-	SetReplyString(TEXT("202 CG OK\r\n"));
+	
+	SetReplyString(replyString.str());
 	return true;
 }
 
 bool CGCommand::DoExecuteInfo() 
 {
-	// TODO
-	//flash::get_default_cg_producer(GetChannel())->Info();
-	SetReplyString(TEXT("600 CG FAILED\r\n"));
+	std::wstringstream replyString;
+	replyString << TEXT("201 CG OK\r\n");
+
+	if(_parameters.size() > 1)
+	{
+		if(!ValidateLayer(_parameters[1]))
+		{
+			SetReplyString(TEXT("403 CG ERROR\r\n"));
+			return false;
+		}
+
+		int layer = _ttoi(_parameters[1].c_str());
+		auto desc = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->description(layer);
+		
+		replyString << desc << TEXT("\r\n"); 
+	}
+	else 
+	{
+		auto info = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->template_host_info();
+		replyString << info << TEXT("\r\n"); 
+	}	
+
+	SetReplyString(replyString.str());
 	return true;
 }
 
@@ -1261,8 +1279,8 @@ bool CinfCommand::DoExecute()
 			SetReplyString(TEXT("404 CINF ERROR\r\n"));
 			return false;
 		}
-		replyString << TEXT("200 INFO OK\r\n");
-		replyString << info << L"\r\n";
+		replyString << TEXT("200 CINF OK\r\n");
+		replyString << info << "\r\n";
 	}
 	catch(...)
 	{
@@ -1281,30 +1299,140 @@ void GenerateChannelInfo(int index, const safe_ptr<core::video_channel>& pChanne
 
 bool InfoCommand::DoExecute()
 {
+	std::wstringstream replyString;
+	
+	boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+
 	try
 	{
-		std::wstringstream replyString;
-		if(_parameters.size() >= 1)
-		{
-			int channelIndex = _ttoi(_parameters.at(0).c_str())-1;
-			replyString << TEXT("201 INFO OK\r\n");
-			GenerateChannelInfo(channelIndex, channels_.at(channelIndex), replyString);
+		if(_parameters.size() >= 1 && _parameters[0] == L"TEMPLATE")
+		{		
+			replyString << L"201 INFO TEMPLATE OK\r\n";
+
+			// Needs to be extended for any file, not just flash.
+
+			auto filename = flash::find_template(env::template_folder() + _parameters.at(1));
+						
+			std::wstringstream str;
+			str << widen(flash::read_template_meta_info(filename));
+			boost::property_tree::wptree info;
+			boost::property_tree::xml_parser::read_xml(str, info, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
+
+			boost::property_tree::xml_parser::write_xml(replyString, info, w);
 		}
-		else
-		{
-			replyString << TEXT("200 INFO OK\r\n");
-			for(size_t n = 0; n < channels_.size(); ++n)
-				GenerateChannelInfo(n, channels_[n], replyString);
-			replyString << TEXT("\r\n");
+		else if(_parameters.size() >= 1 && _parameters[0] == L"CONFIG")
+		{		
+			replyString << L"201 INFO CONFIG OK\r\n";
+
+			boost::property_tree::write_xml(replyString, caspar::env::properties(), w);
 		}
-		SetReplyString(replyString.str());
+		else if(_parameters.size() >= 1 && _parameters[0] == L"PATHS")
+		{
+			replyString << L"201 INFO PATHS OK\r\n";
+
+			boost::property_tree::wptree info;
+			info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
+			info.add(L"paths.initial-path", boost::filesystem2::initial_path<boost::filesystem2::wpath>().directory_string() + L"\\");
+
+			boost::property_tree::write_xml(replyString, info, w);
+		}
+		else if(_parameters.size() >= 1 && _parameters[0] == L"SYSTEM")
+		{
+			replyString << L"201 INFO SYSTEM OK\r\n";
+			
+			boost::property_tree::wptree info;
+			
+			info.add(L"system.name",					caspar::get_system_product_name());
+			info.add(L"system.windows.name",			caspar::get_win_product_name());
+			info.add(L"system.windows.service-pack",	caspar::get_win_sp_version());
+			info.add(L"system.cpu",						caspar::get_cpu_info());
+	
+			BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+				info.add(L"system.decklink.device", device);
+
+			BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
+				info.add(L"system.bluefish.device", device);
+				
+			info.add(L"system.flash",					caspar::flash::get_version());
+			info.add(L"system.free-image",				caspar::image::get_version());
+			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
+			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
+			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
+			info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
+			info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
+						
+			boost::property_tree::write_xml(replyString, info, w);
+		}
+		else if(_parameters.size() >= 1 && _parameters[0] == L"SERVER")
+		{
+			replyString << L"201 INFO SYSTEM OK\r\n";
+			
+			boost::property_tree::wptree info;
+
+			int index = 0;
+			BOOST_FOREACH(auto channel, channels_)
+				info.add_child(L"channels.channel", channel->info())
+					.add(L"index", ++index);
+			
+			boost::property_tree::write_xml(replyString, info, w);
+		}
+		else // channel
+		{			
+			if(_parameters.size() >= 1)
+			{
+				replyString << TEXT("201 INFO OK\r\n");
+				boost::property_tree::wptree info;
+
+				std::vector<std::wstring> split;
+				boost::split(split, _parameters[0], boost::is_any_of("-"));
+					
+				int layer = std::numeric_limits<int>::min();
+				int channel = boost::lexical_cast<int>(split[0]) - 1;
+
+				if(split.size() > 1)
+					layer = boost::lexical_cast<int>(split[1]);
+				
+				if(layer == std::numeric_limits<int>::min())
+				{	
+					info.add_child(L"channel", channels_.at(channel)->info())
+							.add(L"index", channel);
+				}
+				else
+				{
+					if(_parameters.size() >= 2)
+					{
+						if(_parameters[1] == L"B")
+							info.add_child(L"producer", channels_.at(channel)->stage()->background(layer).get()->info());
+						else
+							info.add_child(L"producer", channels_.at(channel)->stage()->foreground(layer).get()->info());
+					}
+					else
+					{
+						info.add_child(L"layer", channels_.at(channel)->stage()->info(layer).get())
+							.add(L"index", layer);
+					}
+				}
+				boost::property_tree::xml_parser::write_xml(replyString, info, w);
+			}
+			else
+			{
+				// This is needed for backwards compatibility with old clients
+				replyString << TEXT("200 INFO OK\r\n");
+				for(size_t n = 0; n < channels_.size(); ++n)
+					GenerateChannelInfo(n, channels_[n], replyString);
+				replyString << TEXT("\r\n");
+			}
+
+		}
 	}
 	catch(...)
 	{
-		SetReplyString(TEXT("401 INFO ERROR\r\n"));
+		SetReplyString(TEXT("403 INFO ERROR\r\n"));
 		return false;
 	}
 
+	replyString << TEXT("\r\n");
+	SetReplyString(replyString.str());
 	return true;
 }
 
@@ -1340,14 +1468,14 @@ bool TlsCommand::DoExecute()
 
 bool VersionCommand::DoExecute()
 {
-	std::wstring replyString = TEXT("201 VERSION OK\r\n SERVER: ") + env::version() + TEXT("\r\n");
+	std::wstring replyString = TEXT("201 VERSION OK\r\n") + env::version() + TEXT("\r\n");
 
 	if(_parameters.size() > 0)
 	{
 		if(_parameters[0] == L"FLASH")
-			replyString = TEXT("201 VERSION OK\r\n FLASH: ") + flash::get_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n") + flash::get_version() + TEXT("\r\n");
 		else if(_parameters[0] == L"TEMPLATEHOST")
-			replyString = TEXT("201 VERSION OK\r\n TEMPLATEHOST: ") + flash::get_cg_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n") + flash::get_cg_version() + TEXT("\r\n");
 		else if(_parameters[0] != L"SERVER")
 			replyString = TEXT("403 VERSION ERROR\r\n");
 	}
@@ -1372,14 +1500,13 @@ bool SetCommand::DoExecute()
 
 	if(name == TEXT("MODE"))
 	{
-		// C-TODO
-		//auto format_desc = core::video_format_desc::get(value);
-		//if(format_desc.format != core::video_format::invalid)
-		//{
-		//	GetChannel()->set_video_format_desc(format_desc);
-		//	SetReplyString(TEXT("202 SET MODE OK\r\n"));
-		//}
-		//else
+		auto format_desc = core::video_format_desc::get(value);
+		if(format_desc.format != core::video_format::invalid)
+		{
+			GetChannel()->set_video_format_desc(format_desc);
+			SetReplyString(TEXT("202 SET MODE OK\r\n"));
+		}
+		else
 			SetReplyString(TEXT("501 SET MODE FAILED\r\n"));
 	}
 	else

@@ -1,3 +1,24 @@
+/*
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+*
+* This file is part of CasparCG (www.casparcg.com).
+*
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
+*/
+
 #include "../../StdAfx.h"
 
 #include "audio_resampler.h"
@@ -22,6 +43,7 @@ struct audio_resampler::implementation
 {	
 	std::shared_ptr<ReSampleContext> resampler_;
 	
+	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> copy_buffer_;
 	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> buffer2_;
 
 	const size_t			output_channels_;
@@ -48,13 +70,14 @@ struct audio_resampler::implementation
 			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
 
 			CASPAR_LOG(warning) << L"Resampling." <<
-									L" sample_rate:" << input_channels  <<
+									L" sample_rate:" << input_sample_rate  <<
 									L" audio_channels:" << input_channels  <<
 									L" sample_fmt:" << input_sample_format;
 
-			CASPAR_VERIFY(resampler, caspar_exception());
-
-			resampler_.reset(resampler, audio_resample_close);
+			if(resampler)
+				resampler_.reset(resampler, audio_resample_close);
+			else
+				BOOST_THROW_EXCEPTION(caspar_exception());
 		}		
 	}
 

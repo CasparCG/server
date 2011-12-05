@@ -1,22 +1,24 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #include "../../stdafx.h"
 
 #include "host_buffer.h"
@@ -36,8 +38,6 @@ namespace caspar { namespace core {
 
 static tbb::atomic<int> g_w_total_count;
 static tbb::atomic<int> g_r_total_count;
-static tbb::atomic<int> g_w_total_size;
-static tbb::atomic<int> g_r_total_size;
 																																								
 struct host_buffer::implementation : boost::noncopyable
 {	
@@ -46,7 +46,7 @@ struct host_buffer::implementation : boost::noncopyable
 	void*			data_;
 	GLenum			usage_;
 	GLenum			target_;
-	core::fence		fence_;
+	fence			fence_;
 
 public:
 	implementation(size_t size, usage_t usage) 
@@ -64,10 +64,8 @@ public:
 
 		if(!pbo_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
-		
-		(usage_ == write_only ? g_w_total_size : g_r_total_size) += size_;
-		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == write_only ? "write_only" : "read_only")
-			<< L" total-size: " << (usage_ == write_only ? g_w_total_size : g_r_total_size)/1000000 << L"MB.";	
+
+		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == write_only ? "write_only" : "read_only");
 	}	
 
 	~implementation()
@@ -75,7 +73,7 @@ public:
 		try
 		{
 			GL(glDeleteBuffers(1, &pbo_));
-			CASPAR_LOG(trace) << "[host_buffer] [" << --(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] deallocated size:" << size_ << " usage: " << (usage_ == write_only ? "write_only" : "read_only");
+			//CASPAR_LOG(trace) << "[host_buffer] [" << --(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] deallocated size:" << size_ << " usage: " << (usage_ == write_only ? "write_only" : "read_only");
 		}
 		catch(...)
 		{
@@ -97,7 +95,12 @@ public:
 		if(!data_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
 	}
-	
+
+	void wait(ogl_device& ogl)
+	{
+		fence_.wait(ogl);
+	}
+
 	void unmap()
 	{
 		if(!data_)
@@ -144,6 +147,6 @@ void host_buffer::unbind(){impl_->unbind();}
 void host_buffer::begin_read(size_t width, size_t height, GLuint format){impl_->begin_read(width, height, format);}
 size_t host_buffer::size() const { return impl_->size_; }
 bool host_buffer::ready() const{return impl_->ready();}
-const fence& host_buffer::fence() const{return impl_->fence_;}
+void host_buffer::wait(ogl_device& ogl){impl_->wait(ogl);}
 
 }}

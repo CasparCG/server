@@ -1,29 +1,31 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
+
 #pragma once
 
 #include <intrin.h>
 
-#include "../utility/assert.h"
+#include <assert.h>
 
-#include <ppl.h>
+#include <tbb/parallel_for.h>
 
 namespace caspar {
 
@@ -31,11 +33,6 @@ namespace internal {
 
 static void* fast_memshfl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
 {
-	CASPAR_ASSERT(dest != nullptr);
-	CASPAR_ASSERT(source != nullptr);
-	CASPAR_ASSERT(reinterpret_cast<int>(dest) % 16 == 0);
-	CASPAR_ASSERT(reinterpret_cast<int>(source) % 16 == 0);
-
 	__m128i*	   dest128 = reinterpret_cast<__m128i*>(dest);	
 	const __m128i* source128 = reinterpret_cast<const __m128i*>(source);
 
@@ -63,15 +60,13 @@ static void* fast_memshfl(void* dest, const void* source, size_t count, int m1, 
 
 static void* fast_memshfl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)
 {   
-	size_t rest = count % 2048;
-	count -= rest;
-
-	Concurrency::parallel_for<int>(0, count, 2048, [&](int n)
+	tbb::affinity_partitioner ap;
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, count/128), [&](const tbb::blocked_range<size_t>& r)
 	{       
-		internal::fast_memshfl(reinterpret_cast<char*>(dest) + n*2048, reinterpret_cast<const char*>(source) + n*2048, 2048, m1, m2, m3, m4);   
-	});
+		internal::fast_memshfl(reinterpret_cast<char*>(dest) + r.begin()*128, reinterpret_cast<const char*>(source) + r.begin()*128, r.size()*128, m1, m2, m3, m4);   
+	}, ap);
 
-	return internal::fast_memshfl(reinterpret_cast<char*>(dest) + count, reinterpret_cast<const char*>(source) + count, rest, m1, m2, m3, m4);   
+	return dest;
 }
 
 

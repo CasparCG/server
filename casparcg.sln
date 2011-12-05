@@ -1,8 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common", "common\common.vcxproj", "{02308602-7FE0-4253-B96E-22134919F56A}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "core", "core\core.vcxproj", "{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shell", "shell\shell.vcxproj", "{8C26C94F-8092-4769-8D84-DEA479721C5B}"
@@ -16,9 +14,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documentation", "documentat
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "modules", "modules", "{C54DA43E-4878-45DB-B76D-35970553672C}"
-	ProjectSection(SolutionItems) = preProject
-		README.txt = README.txt
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bluefish", "modules\bluefish\bluefish.vcxproj", "{69313D25-9F54-4FC9-9872-628A4DD79464}"
 EndProject
@@ -34,6 +29,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ogl", "modules\ogl\ogl.vcxp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "image", "modules\image\image.vcxproj", "{3E11FF65-A9DA-4F80-87F2-A7C6379ED5E2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common", "common\common.vcxproj", "{02308602-7FE0-4253-B96E-22134919F56A}"
+EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
 		Svn-Managed = True
@@ -46,14 +43,6 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{02308602-7FE0-4253-B96E-22134919F56A}.Debug|Win32.ActiveCfg = Debug|Win32
-		{02308602-7FE0-4253-B96E-22134919F56A}.Debug|Win32.Build.0 = Debug|Win32
-		{02308602-7FE0-4253-B96E-22134919F56A}.Develop|Win32.ActiveCfg = Develop|Win32
-		{02308602-7FE0-4253-B96E-22134919F56A}.Develop|Win32.Build.0 = Develop|Win32
-		{02308602-7FE0-4253-B96E-22134919F56A}.Profile|Win32.ActiveCfg = Profile|Win32
-		{02308602-7FE0-4253-B96E-22134919F56A}.Profile|Win32.Build.0 = Profile|Win32
-		{02308602-7FE0-4253-B96E-22134919F56A}.Release|Win32.ActiveCfg = Release|Win32
-		{02308602-7FE0-4253-B96E-22134919F56A}.Release|Win32.Build.0 = Release|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Debug|Win32.ActiveCfg = Debug|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Debug|Win32.Build.0 = Debug|Win32
 		{79388C20-6499-4BF6-B8B9-D8C33D7D4DDD}.Develop|Win32.ActiveCfg = Develop|Win32
@@ -134,6 +123,14 @@ Global
 		{3E11FF65-A9DA-4F80-87F2-A7C6379ED5E2}.Profile|Win32.Build.0 = Profile|Win32
 		{3E11FF65-A9DA-4F80-87F2-A7C6379ED5E2}.Release|Win32.ActiveCfg = Release|Win32
 		{3E11FF65-A9DA-4F80-87F2-A7C6379ED5E2}.Release|Win32.Build.0 = Release|Win32
+		{02308602-7FE0-4253-B96E-22134919F56A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{02308602-7FE0-4253-B96E-22134919F56A}.Debug|Win32.Build.0 = Debug|Win32
+		{02308602-7FE0-4253-B96E-22134919F56A}.Develop|Win32.ActiveCfg = Develop|Win32
+		{02308602-7FE0-4253-B96E-22134919F56A}.Develop|Win32.Build.0 = Develop|Win32
+		{02308602-7FE0-4253-B96E-22134919F56A}.Profile|Win32.ActiveCfg = Profile|Win32
+		{02308602-7FE0-4253-B96E-22134919F56A}.Profile|Win32.Build.0 = Profile|Win32
+		{02308602-7FE0-4253-B96E-22134919F56A}.Release|Win32.ActiveCfg = Release|Win32
+		{02308602-7FE0-4253-B96E-22134919F56A}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
