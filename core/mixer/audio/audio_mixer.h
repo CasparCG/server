@@ -31,7 +31,15 @@
 
 #include <vector>
 
-namespace caspar { namespace core {
+namespace caspar {
+	
+namespace diagnostics {
+	
+class graph;
+
+}
+
+namespace core {
 
 struct video_format_desc;
 	
@@ -40,7 +48,7 @@ typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer
 class audio_mixer : public core::frame_visitor, boost::noncopyable
 {
 public:
-	audio_mixer();
+	audio_mixer(const safe_ptr<diagnostics::graph>& graph);
 
 	virtual void begin(core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);

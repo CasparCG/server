@@ -213,7 +213,7 @@ struct image_scroll_producer : public core::frame_producer
 		return info;
 	}
 
-	virtual int64_t nb_frames() const override
+	virtual uint32_t nb_frames() const override
 	{
 		if(height_ > format_desc_.height)
 		{

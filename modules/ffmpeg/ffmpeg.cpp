@@ -196,6 +196,7 @@ void init()
     avfilter_register_all();
 	//fix_yadif_filter_format_query();
 	av_register_all();
+    avformat_network_init();
 	avcodec_init();
     avcodec_register_all();
 	av_lockmgr_register(ffmpeg_lock_callback);
@@ -208,6 +209,7 @@ void init()
 void uninit()
 {
 	avfilter_uninit();
+    avformat_network_deinit();
 	av_lockmgr_register(nullptr);
 }
 

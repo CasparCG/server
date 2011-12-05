@@ -69,7 +69,7 @@ public:
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
 		
-	virtual int64_t nb_frames() const {return std::numeric_limits<int>::max();}
+	virtual uint32_t nb_frames() const {return std::numeric_limits<uint32_t>::max();}
 	
 	virtual safe_ptr<basic_frame> receive(int hints) = 0;
 	virtual safe_ptr<core::basic_frame> last_frame() const = 0;

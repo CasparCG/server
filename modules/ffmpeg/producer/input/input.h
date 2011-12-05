@@ -45,7 +45,7 @@ namespace ffmpeg {
 class input : boost::noncopyable
 {
 public:
-	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, int64_t start, int64_t length);
+	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length);
 
 	bool try_pop(std::shared_ptr<AVPacket>& packet);
 	bool eof() const;
@@ -53,7 +53,7 @@ public:
 	void loop(bool value);
 	bool loop() const;
 
-	void seek(int64_t target);
+	void seek(uint32_t target);
 
 	safe_ptr<AVFormatContext> context();
 private:
