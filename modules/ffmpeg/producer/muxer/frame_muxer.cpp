@@ -349,24 +349,26 @@ struct frame_muxer::implementation : boost::noncopyable
 		display_mode_ = display_mode::invalid;
 	}
 
-	int64_t calc_nb_frames(int64_t nb_frames) const
+	uint32_t calc_nb_frames(uint32_t nb_frames) const
 	{
+		uint64_t nb_frames2 = nb_frames;
+
 		switch(display_mode_) // Take into account transformation in run.
 		{
 		case display_mode::deinterlace_bob_reinterlace:
 		case display_mode::interlace:	
 		case display_mode::half:
-			nb_frames /= 2;
+			nb_frames2 /= 2;
 			break;
 		case display_mode::duplicate:
-			nb_frames *= 2;
+			nb_frames2 *= 2;
 			break;
 		}
 
 		if(filter_.is_double_rate()) // Take into account transformations in filter.
-			nb_frames *= 2;
+			nb_frames2 *= 2;
 
-		return nb_frames;
+		return static_cast<uint32_t>(nb_frames2);
 	}
 };
 
@@ -375,7 +377,7 @@ frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& fra
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
 std::shared_ptr<basic_frame> frame_muxer::poll(){return impl_->poll();}
-int64_t frame_muxer::calc_nb_frames(int64_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
+uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}
 bool frame_muxer::audio_ready() const{return impl_->audio_ready();}
 void frame_muxer::force_deinterlacing(bool value){impl_->force_deinterlacing(value);}

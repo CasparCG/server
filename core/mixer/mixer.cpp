@@ -79,6 +79,7 @@ public:
 		, format_desc_(format_desc)
 		, ogl_(ogl)
 		, image_mixer_(ogl)
+		, audio_mixer_(graph_)
 		, executor_(L"mixer")
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f));

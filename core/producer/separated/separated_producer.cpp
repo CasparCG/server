@@ -81,7 +81,7 @@ struct separated_producer : public frame_producer
 		return disable_audio(last_frame_);
 	}
 
-	virtual int64_t nb_frames() const override
+	virtual uint32_t nb_frames() const override
 	{
 		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
 	}

@@ -75,19 +75,18 @@ struct ffmpeg_producer : public core::frame_producer
 	std::unique_ptr<frame_muxer>								muxer_;
 
 	const double												fps_;
-	const int64_t												start_;
-	const int64_t												length_;
-	const bool													loop_;
+	const uint32_t												start_;
+	const uint32_t												length_;
 
 	safe_ptr<core::basic_frame>									last_frame_;
 	
 	std::queue<std::pair<safe_ptr<core::basic_frame>, size_t>>	frame_buffer_;
 
 	int64_t														frame_number_;
-	int64_t														file_frame_number_;;
+	uint32_t													file_frame_number_;
 	
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, int64_t start, int64_t length) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -95,7 +94,6 @@ public:
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
 		, length_(length)
-		, loop_(loop)
 		, last_frame_(core::basic_frame::empty())
 		, frame_number_(0)
 	{
@@ -177,37 +175,27 @@ public:
 		return disable_audio(last_frame_);
 	}
 
-	virtual int64_t nb_frames() const override
+	virtual uint32_t nb_frames() const override
 	{
-		if(loop_)
-			return std::numeric_limits<int64_t>::max();
+		if(input_.loop())
+			return std::numeric_limits<uint32_t>::max();
 
-		auto nb_frames = file_nb_frames();
+		uint32_t nb_frames = file_nb_frames();
 
-		nb_frames = std::min(static_cast<int64_t>(length_), nb_frames);
+		nb_frames = std::min(length_, nb_frames);
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
 		
-		return nb_frames - start_;
+		return nb_frames > start_ ? nb_frames - start_ : 0;
 	}
 
-	virtual int64_t file_nb_frames() const
+	uint32_t file_nb_frames() const
 	{
-		int64_t file_nb_frames = 0;
+		uint32_t file_nb_frames = 0;
 		file_nb_frames = std::max(file_nb_frames, video_decoder_ ? video_decoder_->nb_frames() : 0);
 		file_nb_frames = std::max(file_nb_frames, audio_decoder_ ? audio_decoder_->nb_frames() : 0);
 		return file_nb_frames;
 	}
-
-	virtual int64_t frame_number() const
-	{
-		return frame_number_;
-	}
-
-	virtual int64_t file_frame_number() const
-	{
-		return file_frame_number_;
-	}
-
+	
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{
 		boost::promise<std::wstring> promise;
@@ -219,7 +207,7 @@ public:
 	{
 		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
 						  + print_mode() + L"|" 
-						  + boost::lexical_cast<std::wstring>(file_frame_number()) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
+						  + boost::lexical_cast<std::wstring>(file_frame_number_) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 	}
 
 	boost::property_tree::wptree info() const override
@@ -261,7 +249,7 @@ public:
 		}
 		if(boost::regex_match(param, what, seek_exp))
 		{
-			input_.seek(boost::lexical_cast<int64_t>(what["VALUE"].str()));
+			input_.seek(boost::lexical_cast<uint32_t>(what["VALUE"].str()));
 			return L"";
 		}
 
@@ -331,8 +319,8 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 		return core::frame_producer::empty();
 	
 	auto loop		= boost::range::find(params, L"LOOP") != params.end();
-	auto start		= get_param(L"SEEK", params, static_cast<uint64_t>(0));
-	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint64_t>::max());
+	auto start		= get_param(L"SEEK", params, static_cast<uint32_t>(0));
+	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 	auto filter_str = get_param(L"FILTER", params, L""); 	
 		
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");

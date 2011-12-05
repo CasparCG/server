@@ -25,6 +25,7 @@
 
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
+#include <common/diagnostics/graph.h>
 
 #include <tbb/cache_aligned_allocator.h>
 
@@ -65,6 +66,7 @@ struct audio_stream
 
 struct audio_mixer::implementation
 {
+	safe_ptr<diagnostics::graph>		graph_;
 	std::stack<core::frame_transform>	transform_stack_;
 	std::map<const void*, audio_stream>	audio_streams_;
 	std::vector<audio_item>				items_;
@@ -72,9 +74,11 @@ struct audio_mixer::implementation
 	video_format_desc					format_desc_;
 	
 public:
-	implementation()
-		: format_desc_(video_format_desc::get(video_format::invalid))
+	implementation(const safe_ptr<diagnostics::graph>& graph)
+		: graph_(graph)
+		, format_desc_(video_format_desc::get(video_format::invalid))
 	{
+		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
 		transform_stack_.push(core::frame_transform());
 	}
 	
@@ -175,12 +179,17 @@ public:
 		
 		audio_buffer result;
 		result.reserve(result_ps.size());
-		boost::range::transform(result_ps, std::back_inserter(result), [](float sample){return static_cast<int32_t>(sample);});						
+		boost::range::transform(result_ps, std::back_inserter(result), [](float sample){return static_cast<int32_t>(sample);});		
+
+		auto max = boost::range::max_element(result);
+
+		graph_->update_value("volume", static_cast<double>(std::abs(*max))/std::numeric_limits<int32_t>::max());
+
 		return result;
 	}
 };
 
-audio_mixer::audio_mixer() : impl_(new implementation()){}
+audio_mixer::audio_mixer(const safe_ptr<diagnostics::graph>& graph) : impl_(new implementation(graph)){}
 void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}

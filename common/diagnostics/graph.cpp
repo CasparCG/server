@@ -58,9 +58,10 @@ class context : public drawable
 public:					
 
 	template<typename Func>
-	static auto begin_invoke(Func&& func) -> boost::unique_future<decltype(func())> // noexcept
+	static void begin_invoke(Func&& func) // noexcept
 	{	
-		return get_instance().executor_.begin_invoke(std::forward<Func>(func));	
+		if(get_instance().executor_.size() < 1024)
+			get_instance().executor_.begin_invoke(std::forward<Func>(func));	
 	}
 
 	static void register_drawable(const std::shared_ptr<drawable>& drawable)
@@ -249,7 +250,7 @@ public:
 
 		if(!tick_data_.empty())
 		{
-			float sum = std::accumulate(tick_data_.begin(), tick_data_.end(), 0.0) + std::numeric_limits<float>::min();
+			float sum = *std::max_element(tick_data_.begin(), tick_data_.end()) + std::numeric_limits<float>::min();
 			line_data_.push_back(std::make_pair(static_cast<float>(sum)/static_cast<float>(tick_data_.size()), tick_tag_));
 			tick_data_.clear();
 		}
