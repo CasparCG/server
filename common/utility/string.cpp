@@ -21,11 +21,13 @@
 
 #include "../stdafx.h"
 
+#include "utf8conv.h"
+
 namespace caspar {
 	
 std::wstring widen(const std::string& str)
 {
-	return std::wstring(str.begin(), str.end());
+	return utf8util::UTF16FromUTF8(str);//std::wstring(str.begin(), str.end());
 }
 
 std::wstring widen(const std::wstring& str)
@@ -35,7 +37,7 @@ std::wstring widen(const std::wstring& str)
 	   
 std::string narrow(const std::wstring& str)
 {
-	return std::string(str.begin(), str.end());
+	return utf8util::UTF8FromUTF16(str);//std::string(str.begin(), str.end());
 }
 	   
 std::string narrow(const std::string& str)
