@@ -32,6 +32,8 @@
 
 #include <common/log/log.h>
 #include <common/diagnostics/graph.h>
+#include <common/os/windows/current_version.h>
+#include <common/os/windows/system_info.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
@@ -42,11 +44,15 @@
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
 
+#include <modules/bluefish/bluefish.h>
+#include <modules/decklink/decklink.h>
+#include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
 #include <modules/flash/util/swf.h>
 #include <modules/flash/producer/flash_producer.h>
 #include <modules/flash/producer/cg_producer.h>
 #include <modules/ffmpeg/producer/util/util.h>
+#include <modules/image/image.h>
 
 #include <algorithm>
 #include <locale>
@@ -1293,39 +1299,72 @@ void GenerateChannelInfo(int index, const safe_ptr<core::video_channel>& pChanne
 
 bool InfoCommand::DoExecute()
 {
-	if(_parameters.size() >= 1 && _parameters[0] == L"TEMPLATE")
-	{		
-		try
-		{
+	std::wstringstream replyString;
+	
+	boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+
+	try
+	{
+		if(_parameters.size() >= 1 && _parameters[0] == L"TEMPLATE")
+		{		
+			replyString << L"201 INFO TEMPLATE OK\r\n";
+
 			// Needs to be extended for any file, not just flash.
 
 			auto filename = flash::find_template(env::template_folder() + _parameters.at(1));
-
-			std::wstringstream replyString;
-			replyString << L"201 INFO OK\r\n";
-			
+						
 			std::wstringstream str;
 			str << widen(flash::read_template_meta_info(filename));
 			boost::property_tree::wptree info;
 			boost::property_tree::xml_parser::read_xml(str, info, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
-			boost::property_tree::xml_parser::write_xml(replyString, info, boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
 
-			replyString << L"\r\n";
+			boost::property_tree::xml_parser::write_xml(replyString, info, w);
+		}
+		else if(_parameters.size() >= 1 && _parameters[0] == L"CONFIG")
+		{		
+			replyString << L"201 INFO CONFIG OK\r\n";
 
-			SetReplyString(replyString.str());
-			return true;
+			boost::property_tree::write_xml(replyString, caspar::env::properties(), w);
 		}
-		catch(...)
+		else if(_parameters.size() >= 1 && _parameters[0] == L"PATHS")
 		{
-			SetReplyString(TEXT("403 INFO ERROR\r\n"));
-			return false;
+			replyString << L"201 INFO PATHS OK\r\n";
+
+			boost::property_tree::wptree info;
+			info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
+			info.add(L"paths.initial-path", boost::filesystem2::initial_path<boost::filesystem2::wpath>().directory_string() + L"\\");
+
+			boost::property_tree::write_xml(replyString, info, w);
 		}
-	}
-	else // channel
-	{
-		try
+		else if(_parameters.size() >= 1 && _parameters[0] == L"SYSTEM")
 		{
-			std::wstringstream replyString;
+			replyString << L"201 INFO SYSTEM OK\r\n";
+			
+			boost::property_tree::wptree info;
+			
+			info.add(L"system.name",					caspar::get_system_product_name());
+			info.add(L"system.windows.name",			caspar::get_win_product_name());
+			info.add(L"system.windows.service-pack",	caspar::get_win_sp_version());
+			info.add(L"system.cpu",						caspar::get_cpu_info());
+	
+			BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+				info.add(L"system.decklink.device", device);
+
+			BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
+				info.add(L"system.bluefish.device", device);
+				
+			info.add(L"system.flash",					caspar::flash::get_version());
+			info.add(L"system.free-image",				caspar::image::get_version());
+			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
+			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
+			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
+			info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
+			info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
+						
+			boost::property_tree::write_xml(replyString, info, w);
+		}
+		else // channel
+		{
 			replyString << TEXT("201 INFO OK\r\n");
 			
 			boost::property_tree::wptree info;
@@ -1366,20 +1405,21 @@ bool InfoCommand::DoExecute()
 				int index = 0;
 				BOOST_FOREACH(auto channel, channels_)
 					info.add_child(L"channels.channel", channel->info())
-					    .add(L"index", ++index);
+						.add(L"index", ++index);
 			}
 
-			boost::property_tree::xml_parser::write_xml(replyString, info, boost::property_tree::xml_writer_settings<wchar_t>(' ', 3));
-			replyString << TEXT("\r\n");
-			SetReplyString(replyString.str());
-			return true;
-		}
-		catch(...)
-		{
-			SetReplyString(TEXT("403 INFO ERROR\r\n"));
-			return false;
+			boost::property_tree::xml_parser::write_xml(replyString, info, w);
 		}
 	}
+	catch(...)
+	{
+		SetReplyString(TEXT("403 INFO ERROR\r\n"));
+		return false;
+	}
+
+	replyString << TEXT("\r\n");
+	SetReplyString(replyString.str());
+	return true;
 }
 
 bool ClsCommand::DoExecute()

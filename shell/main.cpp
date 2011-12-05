@@ -58,15 +58,12 @@
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
 
-#include <core/mixer/gpu/ogl_device.h>
-
 #include <tbb/task_scheduler_init.h>
 #include <tbb/task_scheduler_observer.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
-
-#include <algorithm>
+#include <boost/foreach.hpp>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -125,23 +122,17 @@ void print_info()
 	CASPAR_LOG(info) << L"on " << caspar::get_win_product_name() << L" " << caspar::get_win_sp_version();
 	CASPAR_LOG(info) << caspar::get_cpu_info();
 	CASPAR_LOG(info) << caspar::get_system_product_name();
-	CASPAR_LOG(info) << L"Flash " << caspar::flash::get_version();
-	CASPAR_LOG(info) << L"FreeImage " << caspar::image::get_version();
 	
 	CASPAR_LOG(info) << L"Decklink " << caspar::decklink::get_version();
-	auto deck = caspar::decklink::get_device_list();
-	std::for_each(deck.begin(), deck.end(), [](const std::wstring& device)
-	{
-		CASPAR_LOG(info) << L" - " << device;
-	});
+	BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+		CASPAR_LOG(info) << L" - " << device;	
 		
 	CASPAR_LOG(info) << L"Bluefish " << caspar::bluefish::get_version();
-	auto blue = caspar::bluefish::get_device_list();
-	std::for_each(blue.begin(), blue.end(), [](const std::wstring& device)
-	{
-		CASPAR_LOG(info) << L" - " << device;
-	});
+	BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
+		CASPAR_LOG(info) << L" - " << device;	
 	
+	CASPAR_LOG(info) << L"Flash "			<< caspar::flash::get_version();
+	CASPAR_LOG(info) << L"FreeImage "		<< caspar::image::get_version();
 	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
 	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::ffmpeg::get_avformat_version();
 	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
@@ -212,10 +203,10 @@ int main(int argc, wchar_t* argv[])
 	try 
 	{
 		// Configure environment properties from configuration.
-		caspar::env::configure("casparcg.config");
+		caspar::env::configure(L"casparcg.config");
 				
 	#ifdef _DEBUG
-		if(caspar::env::properties().get("configuration.debugging.remote", false))
+		if(caspar::env::properties().get(L"configuration.debugging.remote", false))
 			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 	#endif	 
 
@@ -229,8 +220,8 @@ int main(int argc, wchar_t* argv[])
 		// Print environment information.
 		print_info();
 			
-		std::stringstream str;
-		boost::property_tree::xml_writer_settings<char> w(' ', 3);
+		std::wstringstream str;
+		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
 		boost::property_tree::write_xml(str, caspar::env::properties(), w);
 		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
 				

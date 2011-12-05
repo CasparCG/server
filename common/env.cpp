@@ -44,7 +44,7 @@ std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
 std::wstring data;
-boost::property_tree::ptree pt;
+boost::property_tree::wptree pt;
 
 void check_is_configured()
 {
@@ -52,19 +52,20 @@ void check_is_configured()
 		BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Enviroment properties has not been configured"));
 }
 
-void configure(const std::string& filename)
+void configure(const std::wstring& filename)
 {
 	try
 	{
-		std::string initialPath = boost::filesystem::initial_path().file_string();
+		auto initialPath = boost::filesystem::initial_path<boost::filesystem2::wpath>().file_string();
 	
-		boost::property_tree::read_xml(initialPath + "\\" + filename, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
+		std::wifstream file(initialPath + L"\\" + filename);
+		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
-		auto paths = pt.get_child("configuration.paths");
-		media = widen(paths.get("media-path", initialPath + "\\media\\"));
-		log = widen(paths.get("log-path", initialPath + "\\log\\"));
-		ftemplate = complete(wpath(widen(paths.get("template-path", initialPath + "\\template\\")))).string();		
-		data = widen(paths.get("data-path", initialPath + "\\data\\"));
+		auto paths = pt.get_child(L"configuration.paths");
+		media = widen(paths.get(L"media-path", initialPath + L"\\media\\"));
+		log = widen(paths.get(L"log-path", initialPath + L"\\log\\"));
+		ftemplate = complete(wpath(widen(paths.get(L"template-path", initialPath + L"\\template\\")))).string();		
+		data = widen(paths.get(L"data-path", initialPath + L"\\data\\"));
 	}
 	catch(...)
 	{
@@ -103,7 +104,7 @@ const std::wstring& version()
 	return ver;
 }
 
-const boost::property_tree::ptree& properties()
+const boost::property_tree::wptree& properties()
 {
 	check_is_configured();
 	return pt;

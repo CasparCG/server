@@ -285,7 +285,7 @@ safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes)
 		
 	try
 	{				
-		g_blend_modes  = glTextureBarrierNV ? env::properties().get("configuration.blend-modes", false) : false;
+		g_blend_modes  = glTextureBarrierNV ? env::properties().get(L"configuration.blend-modes", false) : false;
 		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
 	}
 	catch(...)
