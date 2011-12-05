@@ -49,9 +49,9 @@ public:
 	void push(const std::shared_ptr<AVPacket>& packet);
 	std::shared_ptr<core::audio_buffer> poll();
 
-	int64_t nb_frames() const;
+	uint32_t nb_frames() const;
 	
-	size_t file_frame_number() const;
+	uint32_t file_frame_number() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

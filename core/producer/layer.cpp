@@ -35,7 +35,7 @@ struct layer::implementation
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	int64_t						frame_number_;
-	int							auto_play_delta_;
+	int32_t						auto_play_delta_;
 	bool						is_paused_;
 
 public:
@@ -62,6 +62,9 @@ public:
 	{		
 		background_		 = producer;
 		auto_play_delta_ = auto_play_delta;
+
+		if(auto_play_delta_ > -1 && foreground_ == frame_producer::empty())
+			play();
 
 		if(preview) // Play the first frame and pause.
 		{			
@@ -107,7 +110,7 @@ public:
 			if(frame == core::basic_frame::late())
 				return foreground_->last_frame();
 
-			auto frames_left = foreground_->nb_frames() - (++frame_number_) - auto_play_delta_;
+			auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(++frame_number_) - static_cast<int64_t>(auto_play_delta_);
 			if(auto_play_delta_ > -1 && frames_left < 1)
 			{
 				play();
