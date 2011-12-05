@@ -90,10 +90,10 @@ private:
 
 struct template_host
 {
-	std::string  field_mode;
-	std::string  filename;
-	size_t		 width;
-	size_t		 height;
+	std::wstring  video_mode;
+	std::wstring  filename;
+	size_t		  width;
+	size_t		  height;
 };
 
 template_host get_template_host(const core::video_format_desc& desc)
@@ -101,44 +101,42 @@ template_host get_template_host(const core::video_format_desc& desc)
 	try
 	{
 		std::vector<template_host> template_hosts;
-		BOOST_FOREACH(auto& xml_mapping, env::properties().get_child("configuration.template-hosts"))
+		BOOST_FOREACH(auto& xml_mapping, env::properties().get_child(L"configuration.template-hosts"))
 		{
 			try
 			{
 				template_host template_host;
-				template_host.field_mode		= xml_mapping.second.get("video-mode", narrow(desc.name));
-				template_host.filename			= xml_mapping.second.get("filename", "cg.fth");
-				template_host.width				= xml_mapping.second.get("width", desc.width);
-				template_host.height			= xml_mapping.second.get("height", desc.height);
+				template_host.video_mode		= xml_mapping.second.get(L"video-mode", L"");
+				template_host.filename			= xml_mapping.second.get(L"filename",	L"cg.fth");
+				template_host.width				= xml_mapping.second.get(L"width",		desc.width);
+				template_host.height			= xml_mapping.second.get(L"height",		desc.height);
 				template_hosts.push_back(template_host);
 			}
 			catch(...){}
 		}
 
-		auto template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.field_mode == narrow(desc.name);});
+		auto template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.video_mode == desc.name;});
 		if(template_host_it == template_hosts.end())
-			template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.field_mode == "";});
+			template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.video_mode == L"";});
 
 		if(template_host_it != template_hosts.end())
 			return *template_host_it;
 	}
-	catch(...)
-	{
-	}
+	catch(...){}
 		
 	template_host template_host;
-	template_host.filename = "cg.fth";
+	template_host.filename = L"cg.fth";
 
 	for(auto it = boost::filesystem2::wdirectory_iterator(env::template_folder()); it != boost::filesystem2::wdirectory_iterator(); ++it)
 	{
 		if(boost::iequals(it->path().extension(), L"." + desc.name))
 		{
-			template_host.filename = narrow(it->filename());
+			template_host.filename = it->filename();
 			break;
 		}
 	}
 
-	template_host.width = desc.square_width;
+	template_host.width =  desc.square_width;
 	template_host.height = desc.square_height;
 	return template_host;
 }
@@ -456,7 +454,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 {
 	auto template_host = get_template_host(frame_factory->get_video_format_desc());
 	
-	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, env::template_folder() + L"\\" + widen(template_host.filename), template_host.width, template_host.height));
+	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, env::template_folder() + L"\\" + template_host.filename, template_host.width, template_host.height));
 }
 
 std::wstring find_template(const std::wstring& template_name)

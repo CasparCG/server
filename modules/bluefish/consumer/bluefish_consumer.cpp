@@ -374,11 +374,11 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
 {	
-	const auto device_index		= ptree.get("device",		  1);
-	const auto embedded_audio	= ptree.get("embedded-audio", false);
-	const auto key_only			= ptree.get("key-only",		  false);
+	const auto device_index		= ptree.get(L"device",			1);
+	const auto embedded_audio	= ptree.get(L"embedded-audio",	false);
+	const auto key_only			= ptree.get(L"key-only",		false);
 
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }

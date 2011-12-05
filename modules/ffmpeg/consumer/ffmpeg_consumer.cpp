@@ -464,14 +464,14 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree)
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
 {
-	std::string filename = ptree.get<std::string>("path");
-	auto key_only		 = ptree.get("key-only", false);
-	auto codec			 = ptree.get("codec", "libx264");
-	auto options		 = ptree.get("options", "");
+	auto filename	= ptree.get<std::wstring>(L"path");
+	auto key_only	= ptree.get(L"key-only", false);
+	auto codec		= ptree.get(L"codec", L"libx264");
+	auto options	= ptree.get(L"options", L"");
 	
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + widen(filename), key_only, widen(codec), widen(options));
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
 }
 
 }}

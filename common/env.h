@@ -27,7 +27,7 @@
 
 namespace caspar { namespace env {
 
-void configure(const std::string& filename);
+void configure(const std::wstring& filename);
 
 const std::wstring& media_folder();
 const std::wstring& log_folder();
@@ -35,6 +35,6 @@ const std::wstring& template_folder();
 const std::wstring& data_folder();
 const std::wstring& version();
 
-const boost::property_tree::ptree& properties();
+const boost::property_tree::wptree& properties();
 
 } }
