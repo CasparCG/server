@@ -1363,13 +1363,26 @@ bool InfoCommand::DoExecute()
 						
 			boost::property_tree::write_xml(replyString, info, w);
 		}
-		else // channel
+		else if(_parameters.size() >= 1 && _parameters[0] == L"SERVER")
 		{
-			replyString << TEXT("201 INFO OK\r\n");
+			replyString << L"201 INFO SYSTEM OK\r\n";
 			
 			boost::property_tree::wptree info;
+
+			int index = 0;
+			BOOST_FOREACH(auto channel, channels_)
+				info.add_child(L"channels.channel", channel->info())
+					.add(L"index", ++index);
+			
+			boost::property_tree::write_xml(replyString, info, w);
+		}
+		else // channel
+		{			
 			if(_parameters.size() >= 1)
 			{
+				replyString << TEXT("201 INFO OK\r\n");
+				boost::property_tree::wptree info;
+
 				std::vector<std::wstring> split;
 				boost::split(split, _parameters[0], boost::is_any_of("-"));
 					
@@ -1399,16 +1412,17 @@ bool InfoCommand::DoExecute()
 							.add(L"index", layer);
 					}
 				}
+				boost::property_tree::xml_parser::write_xml(replyString, info, w);
 			}
 			else
 			{
-				int index = 0;
-				BOOST_FOREACH(auto channel, channels_)
-					info.add_child(L"channels.channel", channel->info())
-						.add(L"index", ++index);
+				// This is needed for backwards compatibility with old clients
+				replyString << TEXT("200 INFO OK\r\n");
+				for(size_t n = 0; n < channels_.size(); ++n)
+					GenerateChannelInfo(n, channels_[n], replyString);
+				replyString << TEXT("\r\n");
 			}
 
-			boost::property_tree::xml_parser::write_xml(replyString, info, w);
 		}
 	}
 	catch(...)
