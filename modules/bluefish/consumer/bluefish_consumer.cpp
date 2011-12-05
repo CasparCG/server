@@ -286,7 +286,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"|device " + 
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + 
 			boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
 	}
 };
