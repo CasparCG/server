@@ -522,16 +522,16 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	return make_safe<decklink_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
 {
 	configuration config;
 
-	config.internal_key			= ptree.get("internal-key",		config.internal_key);
-	config.low_latency			= ptree.get("low-latency",		config.low_latency);
-	config.key_only				= ptree.get("key-only",			config.key_only);
-	config.device_index			= ptree.get("device",			config.device_index);
-	config.embedded_audio		= ptree.get("embedded-audio",	config.embedded_audio);
-	config.base_buffer_depth	= ptree.get("buffer-depth",		config.base_buffer_depth);
+	config.internal_key			= ptree.get(L"internal-key",	config.internal_key);
+	config.low_latency			= ptree.get(L"low-latency",		config.low_latency);
+	config.key_only				= ptree.get(L"key-only",		config.key_only);
+	config.device_index			= ptree.get(L"device",			config.device_index);
+	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
+	config.base_buffer_depth	= ptree.get(L"buffer-depth",	config.base_buffer_depth);
 
 	return make_safe<decklink_consumer_proxy>(config);
 }

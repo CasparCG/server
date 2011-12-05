@@ -510,19 +510,19 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	return make_safe<ogl_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
 {
 	configuration config;
-	config.name				= widen(ptree.get("name",		narrow(config.name)));
-	config.screen_index		= ptree.get("device",   config.screen_index+1)-1;
-	config.windowed			= ptree.get("windowed", config.windowed);
-	config.key_only			= ptree.get("key-only", config.key_only);
-	config.auto_deinterlace	= ptree.get("auto-deinterlace", config.auto_deinterlace);
+	config.name				= ptree.get(L"name",	 config.name);
+	config.screen_index		= ptree.get(L"device",   config.screen_index+1)-1;
+	config.windowed			= ptree.get(L"windowed", config.windowed);
+	config.key_only			= ptree.get(L"key-only", config.key_only);
+	config.auto_deinterlace	= ptree.get(L"auto-deinterlace", config.auto_deinterlace);
 	
-	auto stretch_str = ptree.get("stretch", "default");
-	if(stretch_str == "uniform")
+	auto stretch_str = ptree.get(L"stretch", L"default");
+	if(stretch_str == L"uniform")
 		config.stretch = stretch::uniform;
-	else if(stretch_str == "uniform_to_fill")
+	else if(stretch_str == L"uniform_to_fill")
 		config.stretch = stretch::uniform_to_fill;
 	
 	return make_safe<ogl_consumer_proxy>(config);

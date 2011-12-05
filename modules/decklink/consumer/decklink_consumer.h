@@ -39,6 +39,6 @@ namespace core {
 namespace decklink {
 
 safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree);
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
 
 }}
