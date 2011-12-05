@@ -98,7 +98,7 @@ struct transition_producer : public frame_producer
 		return disable_audio(last_frame_);
 	}
 
-	virtual int64_t nb_frames() const override
+	virtual uint32_t nb_frames() const override
 	{
 		return get_following_producer()->nb_frames();
 	}

@@ -137,7 +137,7 @@ public:
 		return packets_.size() > 10;
 	}
 
-	int64_t nb_frames() const
+	uint32_t nb_frames() const
 	{
 		return 0;//std::max<int64_t>(nb_frames_, file_frame_number_);
 	}
@@ -147,7 +147,7 @@ audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const cor
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
-int64_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
-size_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
+uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
+uint32_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 
 }}
