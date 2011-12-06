@@ -39,7 +39,7 @@ CComBSTR FlashAxContainer::flashGUID_(_T("{D27CDB6E-AE6D-11CF-96B8-444553540000}
 _ATL_FUNC_INFO fnInfoFlashCallEvent = { CC_STDCALL, VT_EMPTY, 1, { VT_BSTR } };
 _ATL_FUNC_INFO fnInfoReadyStateChangeEvent = { CC_STDCALL, VT_EMPTY, 1, { VT_I4 } };
 
-FlashAxContainer::FlashAxContainer() : bInPlaceActive_(FALSE), pTimerHelper(0), bInvalidRect_(false), bReadyToRender_(false), bHasNewTiming_(false), m_lpDD4(0), timerCount_(0)
+FlashAxContainer::FlashAxContainer() : bInPlaceActive_(FALSE), pTimerHelper(0), bInvalidRect_(false), bReadyToRender_(false), bHasNewTiming_(false), m_lpDD4(0), timerCount_(0), bIsEmpty_(true)
 {
 }
 FlashAxContainer::~FlashAxContainer()
