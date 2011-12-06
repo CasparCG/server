@@ -280,30 +280,31 @@ public:
 
 struct flash_producer : public core::frame_producer
 {	
-	const std::wstring filename_;	
-	const safe_ptr<core::frame_factory> frame_factory_;
+	const std::wstring											filename_;	
+	const safe_ptr<core::frame_factory>							frame_factory_;
 
-	tbb::atomic<int> fps_;
+	tbb::atomic<int>											fps_;
 
 	safe_ptr<diagnostics::graph> graph_;
 
-	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>> frame_buffer_;
+	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
 
-	mutable tbb::spin_mutex		last_frame_mutex_;
-	safe_ptr<core::basic_frame>	last_frame_;
-				
-	com_context<flash_renderer> context_;	
+	mutable tbb::spin_mutex										last_frame_mutex_;
+	safe_ptr<core::basic_frame>									last_frame_;
+		
+	int															width_;
+	int															height_;
 
-	int width_;
-	int height_;
+	com_context<flash_renderer>									context_;	
+
 public:
 	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, size_t width, size_t height) 
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
-		, context_(L"flash_producer")
 		, last_frame_(core::basic_frame::empty())
 		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
+		, context_(L"flash_producer")
 	{	
 		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	

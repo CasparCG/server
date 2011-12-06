@@ -47,6 +47,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <unordered_map>
+#include <string>
 #include <locale>
 #include <functional>
 #include <vector>
@@ -376,76 +377,75 @@ double ease_out_in_bounce (double t, double b, double c, double d, const std::ve
 	return ease_in_bounce((t*2)-d, b+c/2, c/2, d, params);
 }
 
-tweener_t get_tweener(ustring name)
+tweener_t get_tweener(std::wstring name)
 {
-	// QWE
-	//std::transform(name.begin(), name.end(), name.begin(), std::tolower);
+	std::transform(name.begin(), name.end(), name.begin(), std::tolower);
 
-	if(name == "linear")
+	if(name == L"linear")
 		return [](double t, double b, double c, double d){return ease_none(t, b, c, d, std::vector<double>());};
 	
 	std::vector<double> params;
 	
-	//static const boost::regex expr("(?<NAME>\\w*)(:(?<V0>\\d+\\.?\\d?))?(:(?<V1>\\d+\\.?\\d?))?"); // boost::regex has no repeated captures?
-	//boost::smatch what;
-	//if(boost::regex_match(name, what, expr))
-	//{
-	//	name = what["NAME"].str();
-	//	if(what["V0"].matched)
-	//		params.push_back(boost::lexical_cast<double>(what["V0"].str()));
-	//	if(what["V1"].matched)
-	//		params.push_back(boost::lexical_cast<double>(what["V1"].str()));
-	//}
+	static const boost::wregex expr(L"(?<NAME>\\w*)(:(?<V0>\\d+\\.?\\d?))?(:(?<V1>\\d+\\.?\\d?))?"); // boost::regex has no repeated captures?
+	boost::wsmatch what;
+	if(boost::regex_match(name, what, expr))
+	{
+		name = what["NAME"].str();
+		if(what["V0"].matched)
+			params.push_back(boost::lexical_cast<double>(what["V0"].str()));
+		if(what["V1"].matched)
+			params.push_back(boost::lexical_cast<double>(what["V1"].str()));
+	}
 		
 	typedef std::function<double(double, double, double, double, const std::vector<double>&)> tween_t;	
-	static const std::unordered_map<ustring, tween_t> tweens = boost::assign::map_list_of	
-		("",					ease_none		   )	
-		("linear",				ease_none		   )	
-		("easenone",			ease_none		   )
-		("easeinquad",			ease_in_quad	   )
-		("easeoutquad",		ease_out_quad	   )
-		("easeinoutquad",		ease_in_out_quad   )
-		("easeoutinquad",		ease_out_in_quad   )
-		("easeincubic",		ease_in_cubic	   )
-		("easeoutcubic",		ease_out_cubic	   )
-		("easeinoutcubic",		ease_in_out_cubic  )
-		("easeoutincubic",		ease_out_in_cubic  )
-		("easeinquart", 		ease_in_quart 	   )
-		("easeoutquart",		ease_out_quart	   )
-		("easeinoutquart",		ease_in_out_quart  )
-		("easeoutinquart",		ease_out_in_quart  )
-		("easeinquint",		ease_in_quint	   )
-		("easeoutquint",		ease_out_quint	   )
-		("easeinoutquint",		ease_in_out_quint  )
-		("easeoutinquint",		ease_out_in_quint  )
-		("easeinsine",			ease_in_sine	   )
-		("easeoutsine",		ease_out_sine	   )
-		("easeinoutsine",		ease_in_out_sine   )
-		("easeoutinsine",		ease_out_in_sine   )
-		("easeinexpo",			ease_in_expo	   )
-		("easeoutexpo",		ease_out_expo	   )
-		("easeinoutexpo",		ease_in_out_expo   )
-		("easeoutinexpo",		ease_out_in_expo   )
-		("easeincirc",			ease_in_circ	   )
-		("easeoutcirc",		ease_out_circ	   )
-		("easeinoutcirc",		ease_in_out_circ   )
-		("easeoutincirc",		ease_out_in_circ   )
-		("easeinelastic",		ease_in_elastic	   )
-		("easeoutelastic",		ease_out_elastic   )
-		("easeinoutelastic",	ease_in_out_elastic)
-		("easeoutinelastic",	ease_out_in_elastic)
-		("easeinback",			ease_in_back	   )
-		("easeoutback",		ease_out_back	   )
-		("easeinoutback",		ease_in_out_back   )
-		("easeoutintback",		ease_out_int_back  )
-		("easeoutbounce",		ease_out_bounce	   )
-		("easeinbounce",		ease_in_bounce	   )
-		("easeinoutbounce",	ease_in_out_bounce )
-		("easeoutinbounce",	ease_out_in_bounce );
+	static const std::unordered_map<std::wstring, tween_t> tweens = boost::assign::map_list_of	
+		(L"",					ease_none		   )	
+		(L"linear",				ease_none		   )	
+		(L"easenone",			ease_none		   )
+		(L"easeinquad",			ease_in_quad	   )
+		(L"easeoutquad",		ease_out_quad	   )
+		(L"easeinoutquad",		ease_in_out_quad   )
+		(L"easeoutinquad",		ease_out_in_quad   )
+		(L"easeincubic",		ease_in_cubic	   )
+		(L"easeoutcubic",		ease_out_cubic	   )
+		(L"easeinoutcubic",		ease_in_out_cubic  )
+		(L"easeoutincubic",		ease_out_in_cubic  )
+		(L"easeinquart", 		ease_in_quart 	   )
+		(L"easeoutquart",		ease_out_quart	   )
+		(L"easeinoutquart",		ease_in_out_quart  )
+		(L"easeoutinquart",		ease_out_in_quart  )
+		(L"easeinquint",		ease_in_quint	   )
+		(L"easeoutquint",		ease_out_quint	   )
+		(L"easeinoutquint",		ease_in_out_quint  )
+		(L"easeoutinquint",		ease_out_in_quint  )
+		(L"easeinsine",			ease_in_sine	   )
+		(L"easeoutsine",		ease_out_sine	   )
+		(L"easeinoutsine",		ease_in_out_sine   )
+		(L"easeoutinsine",		ease_out_in_sine   )
+		(L"easeinexpo",			ease_in_expo	   )
+		(L"easeoutexpo",		ease_out_expo	   )
+		(L"easeinoutexpo",		ease_in_out_expo   )
+		(L"easeoutinexpo",		ease_out_in_expo   )
+		(L"easeincirc",			ease_in_circ	   )
+		(L"easeoutcirc",		ease_out_circ	   )
+		(L"easeinoutcirc",		ease_in_out_circ   )
+		(L"easeoutincirc",		ease_out_in_circ   )
+		(L"easeinelastic",		ease_in_elastic	   )
+		(L"easeoutelastic",		ease_out_elastic   )
+		(L"easeinoutelastic",	ease_in_out_elastic)
+		(L"easeoutinelastic",	ease_out_in_elastic)
+		(L"easeinback",			ease_in_back	   )
+		(L"easeoutback",		ease_out_back	   )
+		(L"easeinoutback",		ease_in_out_back   )
+		(L"easeoutintback",		ease_out_int_back  )
+		(L"easeoutbounce",		ease_out_bounce	   )
+		(L"easeinbounce",		ease_in_bounce	   )
+		(L"easeinoutbounce",	ease_in_out_bounce )
+		(L"easeoutinbounce",	ease_out_in_bounce );
 
 	auto it = tweens.find(name);
 	if(it == tweens.end())
-		it = tweens.find("linear");
+		it = tweens.find(L"linear");
 	
 	return [=](double t, double b, double c, double d)
 	{
