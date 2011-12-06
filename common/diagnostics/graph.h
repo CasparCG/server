@@ -33,7 +33,7 @@
 
 namespace caspar {
 		
-typedef std::function<std::string()> printer;
+typedef std::function<std::wstring()> printer;
 	
 namespace diagnostics {
 	
@@ -57,6 +57,7 @@ class graph
 public:
 	graph();
 	void set_text(const std::string& value);
+	void set_text(const std::wstring& value);
 	void update_value(const std::string& name, double value);
 	void set_value(const std::string& name, double value);
 	void set_color(const std::string& name, color c);
@@ -82,11 +83,11 @@ void show_graphs(bool value);
 //	{
 //	public:
 //		line();
-//		line(const std::string& name);
-//		std::string print() const;
+//		line(const std::wstring& name);
+//		std::wstring print() const;
 //		void update_value(float value);
 //		void set_value(float value);
-//		void set_tag(const std::string& tag);
+//		void set_tag(const std::wstring& tag);
 //
 //		boost::circular_buffer<data>& ticks();
 //	private:
@@ -100,19 +101,19 @@ void show_graphs(bool value);
 //	class graph
 //	{
 //	public:
-//		graph(const std::string& name);
+//		graph(const std::wstring& name);
 //		graph(const printer& parent_printer);
 //
-//		void update_value(const std::string& name, float value);
-//		void set_value(const std::string& name, float value);
+//		void update_value(const std::wstring& name, float value);
+//		void set_value(const std::wstring& name, float value);
 //
-//		void set_guide(const std::string& name, float value);
-//		void set_color(const std::string& name, color c);
+//		void set_guide(const std::wstring& name, float value);
+//		void set_color(const std::wstring& name, color c);
 //
 //		color get_color() const;
-//		std::map<std::string, line>& get_lines();
+//		std::map<std::wstring, line>& get_lines();
 //
-//		std::string print() const;
+//		std::wstring print() const;
 //
 //		safe_ptr<graph> clone() const;
 //	private:
@@ -120,7 +121,7 @@ void show_graphs(bool value);
 //		std::shared_ptr<implementation> impl_;
 //	};
 //	
-//	static safe_ptr<graph> create_graph(const std::string& name);
+//	static safe_ptr<graph> create_graph(const std::wstring& name);
 //	static safe_ptr<graph> create_graph(const printer& parent_printer);
 //	static std::vector<safe_ptr<graph>> get_all_graphs();
 //}

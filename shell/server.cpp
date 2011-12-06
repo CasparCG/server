@@ -72,31 +72,31 @@ struct server::implementation : boost::noncopyable
 		: ogl_(ogl_device::create())
 	{			
 		ffmpeg::init();
-		CASPAR_LOG(info) << "Initialized ffmpeg module.";
+		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
 							  
 		bluefish::init();	  
-		CASPAR_LOG(info) << "Initialized bluefish module.";
+		CASPAR_LOG(info) << L"Initialized bluefish module.";
 							  
 		decklink::init();	  
-		CASPAR_LOG(info) << "Initialized decklink module.";
+		CASPAR_LOG(info) << L"Initialized decklink module.";
 							  							  
 		oal::init();		  
-		CASPAR_LOG(info) << "Initialized oal module.";
+		CASPAR_LOG(info) << L"Initialized oal module.";
 							  
 		ogl::init();		  
-		CASPAR_LOG(info) << "Initialized ogl module.";
+		CASPAR_LOG(info) << L"Initialized ogl module.";
 
 		image::init();		  
-		CASPAR_LOG(info) << "Initialized image module.";
+		CASPAR_LOG(info) << L"Initialized image module.";
 
 		flash::init();		  
-		CASPAR_LOG(info) << "Initialized flash module.";
+		CASPAR_LOG(info) << L"Initialized flash module.";
 
 		setup_channels(env::properties());
-		CASPAR_LOG(info) << "Initialized channels.";
+		CASPAR_LOG(info) << L"Initialized channels.";
 
 		setup_controllers(env::properties());
-		CASPAR_LOG(info) << "Initialized controllers.";
+		CASPAR_LOG(info) << L"Initialized controllers.";
 	}
 
 	~implementation()
@@ -107,34 +107,34 @@ struct server::implementation : boost::noncopyable
 		channels_.clear();
 	}
 				
-	void setup_channels(const boost::property_tree::ptree& pt)
+	void setup_channels(const boost::property_tree::wptree& pt)
 	{   
-		using boost::property_tree::ptree;
-		BOOST_FOREACH(auto& xml_channel, pt.get_child("configuration.channels"))
+		using boost::property_tree::wptree;
+		BOOST_FOREACH(auto& xml_channel, pt.get_child(L"configuration.channels"))
 		{		
-			auto format_desc = video_format_desc::get(xml_channel.second.get("video-mode", "PAL"));		
+			auto format_desc = video_format_desc::get(widen(xml_channel.second.get(L"video-mode", L"PAL")));		
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
 			channels_.push_back(make_safe<video_channel>(channels_.size()+1, format_desc, ogl_));
 			
-			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child("consumers"))
+			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child(L"consumers"))
 			{
 				try
 				{
 					auto name = xml_consumer.first;
-					if(name == "screen")
+					if(name == L"screen")
 						channels_.back()->output()->add(ogl::create_consumer(xml_consumer.second));					
-					else if(name == "bluefish")					
+					else if(name == L"bluefish")					
 						channels_.back()->output()->add(bluefish::create_consumer(xml_consumer.second));					
-					else if(name == "decklink")					
+					else if(name == L"decklink")					
 						channels_.back()->output()->add(decklink::create_consumer(xml_consumer.second));				
-					else if(name == "file")					
+					else if(name == L"file")					
 						channels_.back()->output()->add(ffmpeg::create_consumer(xml_consumer.second));						
-					else if(name == "system-audio")
+					else if(name == L"system-audio")
 						channels_.back()->output()->add(oal::create_consumer());		
-					else if(name != "<xmlcomment>")
-						CASPAR_LOG(warning) << "Invalid consumer: " << name;	
+					else if(name != L"<xmlcomment>")
+						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
 				}
 				catch(...)
 				{
@@ -144,25 +144,25 @@ struct server::implementation : boost::noncopyable
 		}
 	}
 		
-	void setup_controllers(const boost::property_tree::ptree& pt)
+	void setup_controllers(const boost::property_tree::wptree& pt)
 	{		
-		using boost::property_tree::ptree;
-		BOOST_FOREACH(auto& xml_controller, pt.get_child("configuration.controllers"))
+		using boost::property_tree::wptree;
+		BOOST_FOREACH(auto& xml_controller, pt.get_child(L"configuration.controllers"))
 		{
 			try
 			{
 				auto name = xml_controller.first;
-				auto protocol = xml_controller.second.get<std::string>("protocol");	
+				auto protocol = xml_controller.second.get<std::wstring>(L"protocol");	
 
-				if(name == "tcp")
+				if(name == L"tcp")
 				{					
-					unsigned int port = xml_controller.second.get("port", 5250);
+					unsigned int port = xml_controller.second.get(L"port", 5250);
 					auto asyncbootstrapper = make_safe<IO::AsyncEventServer>(create_protocol(protocol), port);
 					asyncbootstrapper->Start();
 					async_servers_.push_back(asyncbootstrapper);
 				}
 				else
-					CASPAR_LOG(warning) << "Invalid controller: " << u8(name);	
+					CASPAR_LOG(warning) << "Invalid controller: " << widen(name);	
 			}
 			catch(...)
 			{
@@ -171,16 +171,16 @@ struct server::implementation : boost::noncopyable
 		}
 	}
 
-	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::string& name) const
+	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
 	{
-		if(iequals(name, "AMCP"))
+		if(boost::iequals(name, L"AMCP"))
 			return make_safe<amcp::AMCPProtocolStrategy>(channels_);
-		else if(iequals(name, "CII"))
+		else if(boost::iequals(name, L"CII"))
 			return make_safe<cii::CIIProtocolStrategy>(channels_);
-		else if(iequals(name, "CLOCK"))
+		else if(boost::iequals(name, L"CLOCK"))
 			return make_safe<CLK::CLKProtocolStrategy>(channels_);
 		
-		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info("name") << arg_value_info((name)) << msg_info("Invalid protocol"));
+		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info("name") << arg_value_info(narrow(name)) << msg_info("Invalid protocol"));
 	}
 };
 

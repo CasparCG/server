@@ -80,7 +80,7 @@ public:
 		, ogl_(ogl)
 		, image_mixer_(ogl)
 		, audio_mixer_(graph_)
-		, executor_("mixer")
+		, executor_(L"mixer")
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f));
 	}
@@ -149,10 +149,10 @@ public:
 		return format_desc_;
 	}
 
-	boost::unique_future<boost::property_tree::ptree> info() const
+	boost::unique_future<boost::property_tree::wptree> info() const
 	{
-		boost::promise<boost::property_tree::ptree> info;
-		info.set_value(boost::property_tree::ptree());
+		boost::promise<boost::property_tree::wptree> info;
+		info.set_value(boost::property_tree::wptree());
 		return info.get_future();
 	}
 };
@@ -164,5 +164,5 @@ core::video_format_desc mixer::get_video_format_desc() const { return impl_->get
 safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
-boost::unique_future<boost::property_tree::ptree> mixer::info() const{return impl_->info();}
+boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 }}

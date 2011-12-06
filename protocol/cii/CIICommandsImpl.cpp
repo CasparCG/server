@@ -143,7 +143,7 @@ void MiscellaneousCommand::Execute()
 
 	//TODO: Need to be checked for validity
 	else if(state_ == 1)
-		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->add(layer_, u8(filename_), false, "", u8(xmlData_));
+		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->add(layer_, filename_, false, TEXT(""), xmlData_);
 }
 
 

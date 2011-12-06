@@ -26,7 +26,7 @@
 namespace caspar { namespace protocol { namespace amcp {
 	
 AMCPCommandQueue::AMCPCommandQueue() 
-	: executor_("AMCPCommandQueue")
+	: executor_(L"AMCPCommandQueue")
 {
 }
 
@@ -49,14 +49,14 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 			try
 			{
 				if(pCurrentCommand->Execute()) 
-					CASPAR_LOG(info) << "Executed command: " << u8(pCurrentCommand->print());
+					CASPAR_LOG(info) << "Executed command: " << pCurrentCommand->print();
 				else 
-					CASPAR_LOG(info) << "Failed to execute command: " << u8(pCurrentCommand->print());
+					CASPAR_LOG(info) << "Failed to execute command: " << pCurrentCommand->print();
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(info) << "Failed to execute command:" << u8(pCurrentCommand->print());
+				CASPAR_LOG(info) << "Failed to execute command:" << pCurrentCommand->print();
 			}
 				
 			pCurrentCommand->SendReply();

@@ -36,14 +36,14 @@ void init()
 	core::register_producer_factory(create_cg_producer);
 }
 
-std::string get_cg_version()
+std::wstring get_cg_version()
 {
-	return "Unknown";
+	return L"Unknown";
 }
 
-std::string get_version()
+std::wstring get_version()
 {		
-	std::string version = "Not found";
+	std::wstring version = L"Not found";
 #ifdef WIN32
 	HKEY   hkey;
  
@@ -56,7 +56,7 @@ std::string get_version()
 		dwSize = sizeof(ver_str);
 		RegQueryValueEx(hkey, TEXT("Version"), NULL, &dwType, (PBYTE)&ver_str, &dwSize);
  
-		version = u8(ver_str);
+		version = ver_str;
 
 		RegCloseKey(hkey);
 	}

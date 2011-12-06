@@ -47,7 +47,7 @@ public:
 	video_format_desc get_video_format_desc() const;
 	void set_video_format_desc(const video_format_desc& format_desc);
 	
-	boost::property_tree::ptree info() const;
+	boost::property_tree::wptree info() const;
 
 private:
 	struct implementation;

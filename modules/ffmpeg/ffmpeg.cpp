@@ -137,17 +137,17 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     sanitize((uint8_t*)line);
 	
 	if(level == AV_LOG_DEBUG)
-		CASPAR_LOG(debug) << "[ffmpeg] " << line;
+		CASPAR_LOG(debug) << L"[ffmpeg] " << line;
 	else if(level == AV_LOG_INFO)
-		CASPAR_LOG(info) << "[ffmpeg] " << line;
+		CASPAR_LOG(info) << L"[ffmpeg] " << line;
 	else if(level == AV_LOG_WARNING)
-		CASPAR_LOG(warning) << "[ffmpeg] " << line;
+		CASPAR_LOG(warning) << L"[ffmpeg] " << line;
 	else if(level == AV_LOG_ERROR)
-		CASPAR_LOG(error) << "[ffmpeg] " << line;
+		CASPAR_LOG(error) << L"[ffmpeg] " << line;
 	else if(level == AV_LOG_FATAL)
-		CASPAR_LOG(fatal) << "[ffmpeg] " << line;
+		CASPAR_LOG(fatal) << L"[ffmpeg] " << line;
 	else
-		CASPAR_LOG(trace) << "[ffmpeg] " << line;
+		CASPAR_LOG(trace) << L"[ffmpeg] " << line;
 
     //colored_fputs(av_clip(level>>3, 0, 6), line);
 }
@@ -202,7 +202,7 @@ void init()
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_callback);
 	
-	core::register_consumer_factory([](const std::vector<std::string>& params){return create_consumer(params);});
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
 }
 
@@ -213,34 +213,34 @@ void uninit()
 	av_lockmgr_register(nullptr);
 }
 
-std::string make_version(unsigned int ver)
+std::wstring make_version(unsigned int ver)
 {
-	std::stringstream str;
-	str << ((ver >> 16) & 0xFF) << "." << ((ver >> 8) & 0xFF) << "." << ((ver >> 0) & 0xFF);
+	std::wstringstream str;
+	str << ((ver >> 16) & 0xFF) << L"." << ((ver >> 8) & 0xFF) << L"." << ((ver >> 0) & 0xFF);
 	return str.str();
 }
 
-std::string get_avcodec_version()
+std::wstring get_avcodec_version()
 {
 	return make_version(avcodec_version());
 }
 
-std::string get_avformat_version()
+std::wstring get_avformat_version()
 {
 	return make_version(avformat_version());
 }
 
-std::string get_avutil_version()
+std::wstring get_avutil_version()
 {
 	return make_version(avutil_version());
 }
 
-std::string get_avfilter_version()
+std::wstring get_avfilter_version()
 {
 	return make_version(avfilter_version());
 }
 
-std::string get_swscale_version()
+std::wstring get_swscale_version()
 {
 	return make_version(swscale_version());
 }
