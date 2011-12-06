@@ -75,6 +75,7 @@ class cadence_guard : public frame_consumer
 public:
 	cadence_guard(const safe_ptr<frame_consumer>& consumer)
 		: consumer_(consumer)
+		, synced_(false)
 	{
 	}
 	

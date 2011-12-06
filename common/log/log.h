@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include "../utility/string.h"
-
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4100)
@@ -44,7 +42,7 @@ namespace internal{
 void init();
 }
 
-void add_file_sink(const ustring& folder);
+void add_file_sink(const std::wstring& folder);
 
 enum severity_level
 {
@@ -78,7 +76,7 @@ inline std::basic_ostream< CharT, TraitsT >& operator<< (
 	return strm;
 }
 
-typedef boost::log::sources::severity_logger_mt<severity_level> caspar_logger;
+typedef boost::log::sources::wseverity_logger_mt<severity_level> caspar_logger;
 
 BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 {
@@ -95,7 +93,7 @@ BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	{CASPAR_LOG(error) << boost::current_exception_diagnostic_information().c_str();}\
 	catch(...){}
 
-void set_log_level(const ustring& lvl);
+void set_log_level(const std::wstring& lvl);
 
 }}
 
