@@ -90,10 +90,10 @@ private:
 
 struct template_host
 {
-	std::string video_mode;
-	std::string	filename;
-	size_t		width;
-	size_t		height;
+	std::wstring  video_mode;
+	std::wstring  filename;
+	size_t		  width;
+	size_t		  height;
 };
 
 template_host get_template_host(const core::video_format_desc& desc)
@@ -101,15 +101,15 @@ template_host get_template_host(const core::video_format_desc& desc)
 	try
 	{
 		std::vector<template_host> template_hosts;
-		BOOST_FOREACH(auto& xml_mapping, env::properties().get_child("configuration.template-hosts"))
+		BOOST_FOREACH(auto& xml_mapping, env::properties().get_child(L"configuration.template-hosts"))
 		{
 			try
 			{
 				template_host template_host;
-				template_host.video_mode		= xml_mapping.second.get("video-mode", "");
-				template_host.filename			= xml_mapping.second.get("filename",	"cg.fth");
-				template_host.width				= xml_mapping.second.get("width",		desc.width);
-				template_host.height			= xml_mapping.second.get("height",		desc.height);
+				template_host.video_mode		= xml_mapping.second.get(L"video-mode", L"");
+				template_host.filename			= xml_mapping.second.get(L"filename",	L"cg.fth");
+				template_host.width				= xml_mapping.second.get(L"width",		desc.width);
+				template_host.height			= xml_mapping.second.get(L"height",		desc.height);
 				template_hosts.push_back(template_host);
 			}
 			catch(...){}
@@ -117,7 +117,7 @@ template_host get_template_host(const core::video_format_desc& desc)
 
 		auto template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.video_mode == desc.name;});
 		if(template_host_it == template_hosts.end())
-			template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.video_mode == "";});
+			template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.video_mode == L"";});
 
 		if(template_host_it != template_hosts.end())
 			return *template_host_it;
@@ -125,11 +125,11 @@ template_host get_template_host(const core::video_format_desc& desc)
 	catch(...){}
 		
 	template_host template_host;
-	template_host.filename = "cg.fth";
+	template_host.filename = L"cg.fth";
 
-	for(auto it = boost::filesystem2::directory_iterator(env::template_folder()); it != boost::filesystem2::directory_iterator(); ++it)
+	for(auto it = boost::filesystem2::wdirectory_iterator(env::template_folder()); it != boost::filesystem2::wdirectory_iterator(); ++it)
 	{
-		if(iequals(it->path().extension(), "." + desc.name))
+		if(boost::iequals(it->path().extension(), L"." + desc.name))
 		{
 			template_host.filename = it->filename();
 			break;
@@ -143,7 +143,7 @@ template_host get_template_host(const core::video_format_desc& desc)
 
 class flash_renderer
 {	
-	const std::string filename_;
+	const std::wstring filename_;
 
 	const std::shared_ptr<core::frame_factory> frame_factory_;
 	
@@ -161,7 +161,7 @@ class flash_renderer
 	const size_t height_;
 	
 public:
-	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::string& filename, int width, int height) 
+	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: graph_(graph)
 		, filename_(filename)
 		, frame_factory_(frame_factory)
@@ -179,29 +179,29 @@ public:
 		graph_->set_color("skip-sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to create FlashAxContainer"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
 		
 		ax_->set_print([this]{return L"flash_renderer";});
 
 		if(FAILED(ax_->CreateAxControl()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to Create FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Create FlashAxControl"));
 		
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to Query FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Query FlashAxControl"));
 												
 		if(FAILED(spFlash->put_Playing(true)) )
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to start playing Flash"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to start playing Flash"));
 
-		if(FAILED(spFlash->put_Movie(CComBSTR(u16(filename).c_str()))))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to Load Template Host"));
+		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Load Template Host"));
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to Set Scale Mode"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Set Scale Mode"));
 						
 		ax_->SetSize(width_, height_);		
 	
-		CASPAR_LOG(info) << print() << " Successfully initialized with template-host: " << filename << " width: " << width_ << " height: " << height_ << ".";
+		CASPAR_LOG(info) << print() << L" Successfully initialized with template-host: " << filename << L" width: " << width_ << L" height: " << height_ << L".";
 	}
 
 	~flash_renderer()
@@ -211,18 +211,18 @@ public:
 			ax_->DestroyAxControl();
 			ax_->Release();
 		}
-		CASPAR_LOG(info) << print() << " Uninitialized.";
+		CASPAR_LOG(info) << print() << L" Uninitialized.";
 	}
 	
-	std::string call(const std::string& param)
+	std::wstring call(const std::wstring& param)
 	{		
 		std::wstring result;
 
-		if(!ax_->FlashCall(u16(param), result))
-			CASPAR_LOG(warning) << print() << " Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info((param)));
+		if(!ax_->FlashCall(param, result))
+			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
 		graph_->add_tag("param");
 
-		return u8(result);
+		return result;
 	}
 	
 	safe_ptr<core::basic_frame> render_frame(bool has_underflow)
@@ -272,15 +272,15 @@ public:
 		return ax_->GetFPS();	
 	}
 	
-	std::string print()
+	std::wstring print()
 	{
-		return "flash[" + boost::filesystem::path(filename_).filename() + "]";		
+		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]";		
 	}
 };
 
 struct flash_producer : public core::frame_producer
 {	
-	const std::string filename_;	
+	const std::wstring filename_;	
 	const safe_ptr<core::frame_factory> frame_factory_;
 
 	tbb::atomic<int> fps_;
@@ -297,16 +297,16 @@ struct flash_producer : public core::frame_producer
 	int width_;
 	int height_;
 public:
-	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::string& filename, size_t width, size_t height) 
+	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, size_t width, size_t height) 
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
-		, context_("flash_producer")
+		, context_(L"flash_producer")
 		, last_frame_(core::basic_frame::empty())
 		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
 	{	
 		if(!boost::filesystem::exists(filename))
-			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(filename));	
+			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 
 		fps_ = 0;
 
@@ -344,9 +344,9 @@ public:
 		return last_frame_;
 	}		
 	
-	virtual boost::unique_future<std::string> call(const std::string& param) override
+	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{	
-		return context_.begin_invoke([=]() -> std::string
+		return context_.begin_invoke([=]() -> std::wstring
 		{
 			if(!context_)
 				initialize();
@@ -357,7 +357,7 @@ public:
 
 				//const auto& format_desc = frame_factory_->get_video_format_desc();
 				//if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
-				//	CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << ". Should be either " << format_desc.fps << " or " << format_desc.fps*2.0 << ".";
+				//	CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
 			}
 			catch(...)
 			{
@@ -366,19 +366,19 @@ public:
 				frame_buffer_.push(core::basic_frame::empty());
 			}
 
-			return "";
+			return L"";
 		});
 	}
 		
-	virtual std::string print() const override
+	virtual std::wstring print() const override
 	{ 
-		return "flash[" + boost::filesystem::path(filename_).filename() + "|" + boost::lexical_cast<std::string>(fps_) + "]";		
+		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
 
-	virtual boost::property_tree::ptree info() const override
+	virtual boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::ptree info;
-		info.add("type", "flash-producer");
+		boost::property_tree::wptree info;
+		info.add(L"type", L"flash-producer");
 		return info;
 	}
 
@@ -436,7 +436,7 @@ public:
 
 				graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));				
-				graph_->set_text(print());
+				graph_->set_text(narrow(print()));
 
 				render(renderer);
 			}
@@ -450,25 +450,25 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::string>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	auto template_host = get_template_host(frame_factory->get_video_format_desc());
 	
-	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, env::template_folder() + "\\" + template_host.filename, template_host.width, template_host.height));
+	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, env::template_folder() + L"\\" + template_host.filename, template_host.width, template_host.height));
 }
 
-std::string find_template(const std::string& template_name)
+std::wstring find_template(const std::wstring& template_name)
 {
-	if(boost::filesystem::exists(template_name + ".ft")) 
-		return template_name + ".ft";
+	if(boost::filesystem::exists(template_name + L".ft")) 
+		return template_name + L".ft";
 	
-	if(boost::filesystem::exists(template_name + ".ct"))
-		return template_name + ".ct";
+	if(boost::filesystem::exists(template_name + L".ct"))
+		return template_name + L".ct";
 	
-	if(boost::filesystem::exists(template_name + ".swf"))
-		return template_name + ".swf";
+	if(boost::filesystem::exists(template_name + L".swf"))
+		return template_name + L".swf";
 
-	return "";
+	return L"";
 }
 
 }}

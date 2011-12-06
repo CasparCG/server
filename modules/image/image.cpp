@@ -38,12 +38,12 @@ void init()
 {
 	core::register_producer_factory(create_scroll_producer);
 	core::register_producer_factory(create_producer);
-	core::register_consumer_factory([](const std::vector<std::string>& params){return create_consumer(params);});
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 }
 
-std::string get_version()
+std::wstring get_version()
 {
-	return std::string(FreeImage_GetVersion());
+	return widen(std::string(FreeImage_GetVersion()));
 }
 
 }}

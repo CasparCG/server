@@ -24,8 +24,6 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
-#include "../../utility/string.h"
-
 #include <windows.h>
 
 #include <string>
@@ -33,9 +31,9 @@
 
 namespace caspar {
 	
-static std::string get_cpu_info()
+static std::wstring get_cpu_info()
 {
-	std::string cpu_name = "Unknown CPU";
+	std::wstring cpu_name = L"Unknown CPU";
 	HKEY hkey; 
 	DWORD dwType, dwSize;
 	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0"), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS)
@@ -46,7 +44,7 @@ static std::string get_cpu_info()
 		dwSize = sizeof(p_name_str);
 
 		if(RegQueryValueEx(hkey, TEXT("ProcessorNameString"), NULL, &dwType, (PBYTE)&p_name_str, &dwSize) == ERROR_SUCCESS)		
-			cpu_name = u8(p_name_str);		
+			cpu_name = p_name_str;		
 		 
 		RegCloseKey(hkey);
 	}
@@ -55,16 +53,16 @@ static std::string get_cpu_info()
 	SYSTEM_INFO sysinfo;
 	GetSystemInfo(&sysinfo);
 
-	std::stringstream s;
+	std::wstringstream s;
 
-	s << cpu_name << " Physical Threads: " << sysinfo.dwNumberOfProcessors;
+	s << cpu_name << L" Physical Threads: " << sysinfo.dwNumberOfProcessors;
 
 	return s.str();
 }
 
-static std::string get_system_product_name()
+static std::wstring get_system_product_name()
 {
-	std::string system_product_name = "Unknown System";
+	std::wstring system_product_name = L"Unknown System";
 	HKEY hkey; 
 	DWORD dwType, dwSize;
 	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("HARDWARE\\DESCRIPTION\\System\\BIOS"), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS)
@@ -75,7 +73,7 @@ static std::string get_system_product_name()
 		dwSize = sizeof(p_name_str);
 
 		if(RegQueryValueEx(hkey, TEXT("SystemProductName"), NULL, &dwType, (PBYTE)&p_name_str, &dwSize) == ERROR_SUCCESS)		
-			system_product_name = u8(p_name_str);		
+			system_product_name = p_name_str;		
 		 
 		RegCloseKey(hkey);
 	}

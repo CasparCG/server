@@ -28,7 +28,7 @@ namespace caspar { namespace decklink {
 
 void init();
 
-std::string get_version();
-std::vector<std::string> get_device_list();
+std::wstring get_version();
+std::vector<std::wstring> get_device_list();
 
 }}

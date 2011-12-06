@@ -72,15 +72,15 @@ struct playlist_producer : public frame_producer
 		return disable_audio(last_frame_);
 	}
 
-	virtual std::string print() const override
+	virtual std::wstring print() const override
 	{
-		return "playlist[" + current_->print() + "]";
+		return L"playlist[" + current_->print() + L"]";
 	}	
 
-	virtual boost::property_tree::ptree info() const override
+	virtual boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::ptree info;
-		info.add("type", "playlist-producer");
+		boost::property_tree::wptree info;
+		info.add(L"type", L"playlist-producer");
 		return info;
 	}
 
@@ -89,18 +89,17 @@ struct playlist_producer : public frame_producer
 		return std::numeric_limits<uint32_t>::max();
 	}
 	
-	virtual boost::unique_future<std::string> call(const std::string& param) override
+	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{
-		boost::promise<std::string> promise;
+		boost::promise<std::wstring> promise;
 		promise.set_value(do_call(param));
 		return promise.get_future();
 	}	
 
 	// playlist_producer
 
-	std::string do_call(const std::string& param2)
+	std::wstring do_call(const std::wstring& param)
 	{		
-		auto param = u16(param2);
 		static const boost::wregex push_front_exp	(L"PUSH_FRONT (?<PARAM>.+)");		
 		static const boost::wregex push_back_exp	(L"(PUSH_BACK|PUSH) (?<PARAM>.+)");
 		static const boost::wregex pop_front_exp	(L"POP_FRONT");		
@@ -115,9 +114,9 @@ struct playlist_producer : public frame_producer
 		boost::wsmatch what;
 
 		if(boost::regex_match(param, what, push_front_exp))
-			return push_front(u8(what["PARAM"].str())); 
+			return push_front(what["PARAM"].str()); 
 		else if(boost::regex_match(param, what, push_back_exp))
-			return push_back(u8(what["PARAM"].str())); 
+			return push_back(what["PARAM"].str()); 
 		if(boost::regex_match(param, what, pop_front_exp))
 			return pop_front(); 
 		else if(boost::regex_match(param, what, pop_back_exp))
@@ -127,7 +126,7 @@ struct playlist_producer : public frame_producer
 		else if(boost::regex_match(param, what, next_exp))
 			return next(); 
 		else if(boost::regex_match(param, what, insert_exp))
-			return insert(boost::lexical_cast<size_t>(what["POS"].str()), u8(what["PARAM"].str()));
+			return insert(boost::lexical_cast<size_t>(what["POS"].str()), what["PARAM"].str());
 		else if(boost::regex_match(param, what, remove_exp))
 			return erase(boost::lexical_cast<size_t>(what["POS"].str()));
 		else if(boost::regex_match(param, what, list_exp))
@@ -136,43 +135,43 @@ struct playlist_producer : public frame_producer
 		{
 			if(!what["VALUE"].str().empty())
 				loop_ = boost::lexical_cast<bool>(what["VALUE"].str());
-			return boost::lexical_cast<std::string>(loop_);
+			return boost::lexical_cast<std::wstring>(loop_);
 		}
 
 		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
 	
-	std::string push_front(const std::string& str)
+	std::wstring push_front(const std::wstring& str)
 	{
 		producers_.push_front(create_producer(factory_, str)); 
-		return "";
+		return L"";
 	}
 
-	std::string  push_back(const std::string& str)
+	std::wstring  push_back(const std::wstring& str)
 	{
 		producers_.push_back(create_producer(factory_, str)); 
-		return "";
+		return L"";
 	}
 
-	std::string pop_front()
+	std::wstring pop_front()
 	{
 		producers_.pop_front();
-		return "";
+		return L"";
 	}
 
-	std::string pop_back()
+	std::wstring pop_back()
 	{
 		producers_.pop_back();
-		return "";
+		return L"";
 	}
 	
-	std::string clear()
+	std::wstring clear()
 	{
 		producers_.clear();
-		return "";
+		return L"";
 	}
 
-	std::string next()
+	std::wstring next()
 	{
 		if(!producers_.empty())
 		{
@@ -181,40 +180,40 @@ struct playlist_producer : public frame_producer
 			//if(loop_)
 			//	producers_.push_back(current_);
 		}
-		return "";
+		return L"";
 	}
 	
-	std::string  insert(size_t pos, const std::string& str)
+	std::wstring  insert(size_t pos, const std::wstring& str)
 	{
 		if(pos >= producers_.size())
 			BOOST_THROW_EXCEPTION(out_of_range());
 		producers_.insert(std::begin(producers_) + pos, create_producer(factory_, str));
-		return "";
+		return L"";
 	}
 
-	std::string  erase(size_t pos)
+	std::wstring  erase(size_t pos)
 	{
 		if(pos >= producers_.size())
 			BOOST_THROW_EXCEPTION(out_of_range());
 		producers_.erase(std::begin(producers_) + pos);
-		return "";
+		return L"";
 	}
 
-	std::string list() const
+	std::wstring list() const
 	{
-		std::string result = "<playlist>\n";
+		std::wstring result = L"<playlist>\n";
 		BOOST_FOREACH(auto& producer, producers_)		
-			result += "\t<producer>" + producer->print() + "</producer>\n";
-		return result + "</playlist>";
+			result += L"\t<producer>" + producer->print() + L"</producer>\n";
+		return result + L"</playlist>";
 	}
 };
 
-safe_ptr<frame_producer> create_playlist_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::string>& params)
+safe_ptr<frame_producer> create_playlist_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
-	if(boost::range::find(params, "[PLAYLIST]") == params.end())
+	if(boost::range::find(params, L"[PLAYLIST]") == params.end())
 		return core::frame_producer::empty();
 
-	bool loop = boost::range::find(params, "LOOP") != params.end();
+	bool loop = boost::range::find(params, L"LOOP") != params.end();
 
 	return make_safe<playlist_producer>(frame_factory, loop);
 }

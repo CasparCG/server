@@ -34,15 +34,15 @@ enum PixelFormat;
 
 namespace caspar { namespace ffmpeg {
 
-static std::string append_filter(const std::string& filters, const std::string& filter)
+static std::wstring append_filter(const std::wstring& filters, const std::wstring& filter)
 {
-	return filters + (filters.empty() ? "" : ",") + filter;
+	return filters + (filters.empty() ? L"" : L",") + filter;
 }
 
 class filter : boost::noncopyable
 {
 public:
-	filter(const std::string& filters = "", const std::vector<PixelFormat>& pix_fmts = std::vector<PixelFormat>());
+	filter(const std::wstring& filters = L"", const std::vector<PixelFormat>& pix_fmts = std::vector<PixelFormat>());
 	filter(filter&& other);
 	filter& operator=(filter&& other);
 
@@ -50,27 +50,27 @@ public:
 	std::shared_ptr<AVFrame> poll();
 	std::vector<safe_ptr<AVFrame>> poll_all();
 
-	std::string filter_str() const;
+	std::wstring filter_str() const;
 			
-	static bool is_double_rate(const std::string& filters)
+	static bool is_double_rate(const std::wstring& filters)
 	{
-		if(to_upper_copy(filters).find("YADIF=1") != std::string::npos)
+		if(boost::to_upper_copy(filters).find(L"YADIF=1") != std::string::npos)
 			return true;
 	
-		if(to_upper_copy(filters).find("YADIF=3") != std::string::npos)
+		if(boost::to_upper_copy(filters).find(L"YADIF=3") != std::string::npos)
 			return true;
 
 		return false;
 	}
 
-	static bool is_deinterlacing(const std::string& filters)
+	static bool is_deinterlacing(const std::wstring& filters)
 	{
-		if(to_upper_copy(filters).find("YADIF") != std::string::npos)
+		if(boost::to_upper_copy(filters).find(L"YADIF") != std::string::npos)
 			return true;	
 		return false;
 	}	
 	
-	static int delay(const std::string& filters)
+	static int delay(const std::wstring& filters)
 	{
 		return is_double_rate(filters) ? 1 : 1;
 	}

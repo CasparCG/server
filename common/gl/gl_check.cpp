@@ -44,7 +44,7 @@ void SMFL_GLCheckError(const std::string& expr, const std::string& file, unsigne
 
 	for(GLenum ErrorCode = glGetError(); ErrorCode != GL_NO_ERROR; ErrorCode = glGetError())
 	{
-		CASPAR_LOG(error) << "OpenGL Error: " << ErrorCode << " " << glewGetErrorString(ErrorCode);
+		CASPAR_LOG(error) << "OpenGL Error: " << ErrorCode << L" " << glewGetErrorString(ErrorCode);
 		LastErrorCode = ErrorCode;
 	}
 

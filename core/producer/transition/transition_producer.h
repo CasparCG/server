@@ -59,7 +59,7 @@ struct transition_info
 		: type(transition::cut)
 		, duration(0)
 		, direction(transition_direction::from_left)
-		, tweener(get_tweener("linear")){}
+		, tweener(get_tweener(L"linear")){}
 		
 	size_t						duration;
 	transition_direction::type	direction;

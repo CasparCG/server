@@ -68,7 +68,7 @@ public:
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		CASPAR_LOG(trace) << "[device_buffer] [" << ++g_total_count << "] allocated size:" << width*height*stride;	
+		CASPAR_LOG(trace) << "[device_buffer] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
 	}	
 
 	~implementation()
@@ -76,7 +76,7 @@ public:
 		try
 		{
 			GL(glDeleteTextures(1, &id_));
-			//CASPAR_LOG(trace) << "[device_buffer] [" << --g_total_count << "] deallocated size:" << width_*height_*stride_;
+			//CASPAR_LOG(trace) << "[device_buffer] [" << --g_total_count << L"] deallocated size:" << width_*height_*stride_;
 		}
 		catch(...)
 		{

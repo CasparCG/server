@@ -8,7 +8,7 @@
 namespace caspar {
 		
 template<typename T, typename C>
-typename std::enable_if<!std::is_convertible<T, std::string>::value, typename std::decay<T>::type>::type get_param(const std::string& name, C&& params, T fail_value = T())
+typename std::enable_if<!std::is_convertible<T, std::wstring>::value, typename std::decay<T>::type>::type get_param(const std::wstring& name, C&& params, T fail_value = T())
 {	
 	auto it = std::find(std::begin(params), std::end(params), name);
 	if(it == params.end() || ++it == params.end())	
@@ -25,7 +25,7 @@ typename std::enable_if<!std::is_convertible<T, std::string>::value, typename st
 }
 
 template<typename C>
-std::string get_param(const std::string& name, C&& params, const std::string& fail_value = "")
+std::wstring get_param(const std::wstring& name, C&& params, const std::wstring& fail_value = L"")
 {	
 	auto it = std::find(std::begin(params), std::end(params), name);
 	if(it == params.end() || ++it == params.end())	

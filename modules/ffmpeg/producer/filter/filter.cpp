@@ -104,7 +104,7 @@ static int query_formats_410(AVFilterContext *ctx)
 
 struct filter::implementation
 {
-	std::string					filters_;
+	std::wstring					filters_;
 	std::shared_ptr<AVFilterGraph>	graph_;	
 	AVFilterContext*				buffersink_ctx_;
 	AVFilterContext*				buffersrc_ctx_;
@@ -112,7 +112,7 @@ struct filter::implementation
 	std::vector<PixelFormat>		pix_fmts_;
 	std::queue<safe_ptr<AVFrame>>	bypass_;
 		
-	implementation(const std::string& filters, const std::vector<PixelFormat>& pix_fmts) 
+	implementation(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) 
 		: filters_(filters)
 		, parallel_yadif_ctx_(nullptr)
 		, pix_fmts_(pix_fmts)
@@ -182,7 +182,7 @@ struct filter::implementation
 					inputs->pad_idx			= 0;
 					inputs->next			= nullptr;
 			
-					std::string filters = to_lower_copy((filters_));
+					std::string filters = boost::to_lower_copy(narrow(filters_));
 					THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters.c_str(), &inputs, &outputs, NULL), "[filter]");
 			
 					auto yadif_filter = boost::adaptors::filtered([&](AVFilterContext* p){return strstr(p->name, "yadif") != 0;});
@@ -314,12 +314,12 @@ struct filter::implementation
 	}
 };
 
-filter::filter(const std::string& filters, const std::vector<PixelFormat>& pix_fmts) : impl_(new implementation(filters, pix_fmts)){}
+filter::filter(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) : impl_(new implementation(filters, pix_fmts)){}
 filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
 filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
 void filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
 std::shared_ptr<AVFrame> filter::poll(){return impl_->poll();}
-std::string filter::filter_str() const{return impl_->filters_;}
+std::wstring filter::filter_str() const{return impl_->filters_;}
 std::vector<safe_ptr<AVFrame>> filter::poll_all()
 {	
 	std::vector<safe_ptr<AVFrame>> frames;

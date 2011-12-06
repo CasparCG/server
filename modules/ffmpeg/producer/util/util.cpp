@@ -442,27 +442,27 @@ safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType t
 	return safe_ptr<AVCodecContext>(context.streams[index]->codec, tbb_avcodec_close);
 }
 
-safe_ptr<AVFormatContext> open_input(const std::string& filename)
+safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
 {
 	AVFormatContext* weak_context = nullptr;
-	THROW_ON_ERROR2(avformat_open_input(&weak_context, (filename).c_str(), nullptr, nullptr), filename);
+	THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(filename).c_str(), nullptr, nullptr), filename);
 	safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
 	THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), filename);
 	fix_meta_data(*context);
 	return context;
 }
 
-std::string print_mode(size_t width, size_t height, double fps, bool interlaced)
+std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced)
 {
-	std::stringstream fps_ss;
+	std::wostringstream fps_ss;
 	fps_ss << std::fixed << std::setprecision(2) << (!interlaced ? fps : 2.0 * fps);
 
-	return boost::lexical_cast<std::string>(width) + "x" + boost::lexical_cast<std::string>(height) + (!interlaced ? "p" : "i") + fps_ss.str();
+	return boost::lexical_cast<std::wstring>(width) + L"x" + boost::lexical_cast<std::wstring>(height) + (!interlaced ? L"p" : L"i") + fps_ss.str();
 }
 
-bool is_valid_file(const std::string filename)
+bool is_valid_file(const std::wstring filename)
 {			
-	auto filename2 = (filename);
+	auto filename2 = narrow(filename);
 
 	std::ifstream file(filename);
 
@@ -482,16 +482,16 @@ bool is_valid_file(const std::string filename)
 	return av_probe_input_format2(&pb, true, &score) != nullptr;
 }
 
-std::string probe_stem(const std::string stem)
+std::wstring probe_stem(const std::wstring stem)
 {
-	auto stem2 = boost::filesystem2::path(stem);
+	auto stem2 = boost::filesystem2::wpath(stem);
 	auto dir = stem2.parent_path();
-	for(auto it = boost::filesystem2::directory_iterator(dir); it != boost::filesystem2::directory_iterator(); ++it)
+	for(auto it = boost::filesystem2::wdirectory_iterator(dir); it != boost::filesystem2::wdirectory_iterator(); ++it)
 	{
-		if(iequals(it->path().stem(), stem2.filename()) && is_valid_file(it->path().file_string()))
+		if(boost::iequals(it->path().stem(), stem2.filename()) && is_valid_file(it->path().file_string()))
 			return it->path().file_string();
 	}
-	return "";
+	return L"";
 }
 //
 //void av_dup_frame(AVFrame* frame)

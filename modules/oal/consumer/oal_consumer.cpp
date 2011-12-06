@@ -79,7 +79,7 @@ public:
 		input_.try_push(std::make_shared<audio_buffer_16>());
 		input_.try_push(std::make_shared<audio_buffer_16>());
 
-		CASPAR_LOG(info) << print() << " Successfully Uninitialized.";	
+		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
 
 	// frame consumer
@@ -104,15 +104,15 @@ public:
 		return true;
 	}
 	
-	virtual std::string print() const override
+	virtual std::wstring print() const override
 	{
-		return "oal[" + boost::lexical_cast<std::string>(channel_index_) + "|" + format_desc_.name + "]";
+		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
 	}
 
-	virtual boost::property_tree::ptree info() const override
+	virtual boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::ptree info;
-		info.add("type", "oal-consumer");
+		boost::property_tree::wptree info;
+		info.add(L"type", L"oal-consumer");
 		return info;
 	}
 	
@@ -144,9 +144,9 @@ public:
 	}
 };
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 1 || params[0] != "AUDIO")
+	if(params.size() < 1 || params[0] != L"AUDIO")
 		return core::frame_consumer::empty();
 
 	return make_safe<oal_consumer>();

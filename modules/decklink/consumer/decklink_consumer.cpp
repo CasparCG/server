@@ -152,7 +152,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 
 	tbb::atomic<bool>					is_running_;
 		
-	const std::string					model_name_;
+	const std::wstring					model_name_;
 	const core::video_format_desc		format_desc_;
 	const size_t						buffer_size_;
 
@@ -238,12 +238,12 @@ public:
 		if(!low_latency)
 		{
 			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
-			CASPAR_LOG(info) << print() << " Enabled normal-latency mode";
+			CASPAR_LOG(info) << print() << L" Enabled normal-latency mode";
 		}
 		else
 		{			
 			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
-			CASPAR_LOG(info) << print() << " Enabled low-latency mode";
+			CASPAR_LOG(info) << print() << L" Enabled low-latency mode";
 		}
 	}
 
@@ -252,49 +252,49 @@ public:
 		if(internal_key) 
 		{
 			if(FAILED(keyer_->Enable(FALSE)))			
-				CASPAR_LOG(error) << print() << " Failed to enable internal keyer.";			
+				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
 			else if(FAILED(keyer_->SetLevel(255)))			
-				CASPAR_LOG(error) << print() << " Failed to set key-level to max.";
+				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
 			else
-				CASPAR_LOG(info) << print() << " Enabled internal keyer.";		
+				CASPAR_LOG(info) << print() << L" Enabled internal keyer.";		
 		}
 		else
 		{
 			if(FAILED(keyer_->Enable(TRUE)))			
-				CASPAR_LOG(error) << print() << " Failed to enable external keyer.";	
+				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
 			else if(FAILED(keyer_->SetLevel(255)))			
-				CASPAR_LOG(error) << print() << " Failed to set key-level to max.";
+				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
 			else
-				CASPAR_LOG(info) << print() << " Enabled external keyer.";			
+				CASPAR_LOG(info) << print() << L" Enabled external keyer.";			
 		}
 	}
 	
 	void enable_audio()
 	{
 		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, 2, bmdAudioOutputStreamTimestamped)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Could not enable audio output."));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable audio output."));
 				
 		if(FAILED(output_->SetAudioCallback(this)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Could not set audio callback."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not set audio callback."));
 
-		CASPAR_LOG(info) << print() << " Enabled embedded-audio.";
+		CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
 	}
 
 	void enable_video(BMDDisplayMode display_mode)
 	{
 		if(FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Could not enable video output."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video output."));
 		
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(print() + " Failed to set playback completion callback.")
+									<< msg_info(narrow(print()) + " Failed to set playback completion callback.")
 									<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
 	}
 
 	void start_playback()
 	{
 		if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to schedule playback."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to schedule playback."));
 	}
 	
 	STDMETHOD (QueryInterface(REFIID, LPVOID*))	{return E_NOINTERFACE;}
@@ -304,7 +304,7 @@ public:
 	STDMETHOD(ScheduledPlaybackHasStopped())
 	{
 		is_running_ = false;
-		CASPAR_LOG(info) << print() << " Scheduled playback has stopped.";
+		CASPAR_LOG(info) << print() << L" Scheduled playback has stopped.";
 		return S_OK;
 	}
 
@@ -393,7 +393,7 @@ public:
 		audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
 
 		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), sample_frame_count, audio_scheduled_, format_desc_.audio_sample_rate, nullptr)))
-			CASPAR_LOG(error) << print() << " Failed to schedule audio.";
+			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
 
 		audio_scheduled_ += sample_frame_count;
 	}
@@ -402,7 +402,7 @@ public:
 	{
 		CComPtr<IDeckLinkVideoFrame> frame2(new decklink_frame(frame, format_desc_, config_.key_only));
 		if(FAILED(output_->ScheduleVideoFrame(frame2, video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
-			CASPAR_LOG(error) << print() << " Failed to schedule video.";
+			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
 		video_scheduled_ += format_desc_.duration;
 
@@ -419,17 +419,17 @@ public:
 		}
 
 		if(!is_running_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Is not running."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Is not running."));
 		
 		if(config_.embedded_audio)
 			audio_frame_buffer_.push(frame);	
 		video_frame_buffer_.push(frame);	
 	}
 	
-	std::string print() const
+	std::wstring print() const
 	{
-		return model_name_ + " [" + boost::lexical_cast<std::string>(channel_index_) + "-" +
-			boost::lexical_cast<std::string>(config_.device_index) + "|" +  format_desc_.name + "]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" +
+			boost::lexical_cast<std::wstring>(config_.device_index) + L"|" +  format_desc_.name + L"]";
 	}
 };
 
@@ -442,7 +442,7 @@ public:
 
 	decklink_consumer_proxy(const configuration& config)
 		: config_(config)
-		, context_("decklink_consumer[" + boost::lexical_cast<std::string>(config.device_index) + "]")
+		, context_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
 	{
 	}
 
@@ -452,7 +452,7 @@ public:
 		{
 			auto str = print();
 			context_.reset();
-			CASPAR_LOG(info) << str << " Successfully Uninitialized.";	
+			CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
 		}
 	}
 
@@ -463,7 +463,7 @@ public:
 		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index);});		
 		audio_cadence_ = format_desc.audio_cadence;		
 
-		CASPAR_LOG(info) << print() << " Successfully Initialized.";	
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -475,21 +475,21 @@ public:
 		return true;
 	}
 	
-	virtual std::string print() const override
+	virtual std::wstring print() const override
 	{
-		return context_ ? context_->print() : "[decklink_consumer]";
+		return context_ ? context_->print() : L"[decklink_consumer]";
 	}		
 
-	virtual boost::property_tree::ptree info() const override
+	virtual boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::ptree info;
-		info.add("type", "decklink-consumer");
-		info.add("key-only", config_.key_only);
-		info.add("device", config_.device_index);
-		info.add("low-latency", config_.low_latency);
-		info.add("embedded-audio", config_.embedded_audio);
-		info.add("low-latency", config_.low_latency);
-		info.add("internal-key", config_.internal_key);
+		boost::property_tree::wptree info;
+		info.add(L"type", L"decklink-consumer");
+		info.add(L"key-only", config_.key_only);
+		info.add(L"device", config_.device_index);
+		info.add(L"low-latency", config_.low_latency);
+		info.add(L"embedded-audio", config_.embedded_audio);
+		info.add(L"low-latency", config_.low_latency);
+		info.add(L"internal-key", config_.internal_key);
 		return info;
 	}
 
@@ -504,9 +504,9 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params) 
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params) 
 {
-	if(params.size() < 1 || params[0] != "DECKLINK")
+	if(params.size() < 1 || params[0] != L"DECKLINK")
 		return core::frame_consumer::empty();
 	
 	configuration config;
@@ -514,24 +514,24 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& p
 	if(params.size() > 1)
 		config.device_index = lexical_cast_or_default<int>(params[1], config.device_index);
 	
-	config.internal_key		= std::find(params.begin(), params.end(), "INTERNAL_KEY")	 != params.end();
-	config.low_latency		= std::find(params.begin(), params.end(), "LOW_LATENCY")	 != params.end();
-	config.embedded_audio	= std::find(params.begin(), params.end(), "EMBEDDED_AUDIO") != params.end();
-	config.key_only			= std::find(params.begin(), params.end(), "KEY_ONLY")		 != params.end();
+	config.internal_key		= std::find(params.begin(), params.end(), L"INTERNAL_KEY")	 != params.end();
+	config.low_latency		= std::find(params.begin(), params.end(), L"LOW_LATENCY")	 != params.end();
+	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
+	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
 
 	return make_safe<decklink_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
 {
 	configuration config;
 
-	config.internal_key			= ptree.get("internal-key",	config.internal_key);
-	config.low_latency			= ptree.get("low-latency",		config.low_latency);
-	config.key_only				= ptree.get("key-only",		config.key_only);
-	config.device_index			= ptree.get("device",			config.device_index);
-	config.embedded_audio		= ptree.get("embedded-audio",	config.embedded_audio);
-	config.base_buffer_depth	= ptree.get("buffer-depth",	config.base_buffer_depth);
+	config.internal_key			= ptree.get(L"internal-key",	config.internal_key);
+	config.low_latency			= ptree.get(L"low-latency",		config.low_latency);
+	config.key_only				= ptree.get(L"key-only",		config.key_only);
+	config.device_index			= ptree.get(L"device",			config.device_index);
+	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
+	config.base_buffer_depth	= ptree.get(L"buffer-depth",	config.base_buffer_depth);
 
 	return make_safe<decklink_consumer_proxy>(config);
 }

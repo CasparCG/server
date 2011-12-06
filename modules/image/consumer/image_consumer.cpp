@@ -60,7 +60,7 @@ public:
 		{
 			try
 			{
-				auto filename = (env::data_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
+				auto filename = narrow(env::data_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
 
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(format_desc.width, format_desc.height, 32), FreeImage_Unload);
 				memcpy(FreeImage_GetBits(bitmap.get()), frame->image_data().begin(), frame->image_size());
@@ -77,15 +77,15 @@ public:
 		return false;
 	}
 
-	virtual std::string print() const override
+	virtual std::wstring print() const override
 	{
-		return "image[]";
+		return L"image[]";
 	}
 
-	virtual boost::property_tree::ptree info() const override
+	virtual boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::ptree info;
-		info.add("type", "image-consumer");
+		boost::property_tree::wptree info;
+		info.add(L"type", L"image-consumer");
 		return info;
 	}
 
@@ -100,9 +100,9 @@ public:
 	}
 };
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 1 || params[0] != "IMAGE")
+	if(params.size() < 1 || params[0] != L"IMAGE")
 		return core::frame_consumer::empty();
 
 	return make_safe<image_consumer>();

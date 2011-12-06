@@ -31,7 +31,6 @@
 #include "../exception/exceptions.h"
 #include "../utility/string.h"
 #include <ios>
-#include <string>
 #include <ostream>
 
 #include <boost/shared_ptr.hpp>
@@ -120,7 +119,7 @@ void init()
 
 }
 
-void add_file_sink(const std::string& folder)
+void add_file_sink(const ustring& folder)
 {	
 	boost::log::add_common_attributes<char>();
 	typedef boost::log::aux::add_common_attributes_constants<char> traits_t;
@@ -154,20 +153,21 @@ void add_file_sink(const std::string& folder)
 	}
 }
 
-void set_log_level(const std::string& lvl)
+void set_log_level(const ustring& lvl)
 {	
-	if(iequals(lvl, "trace"))
-		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= trace);
-	else if(iequals(lvl, "debug"))
-		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= debug);
-	else if(iequals(lvl, "info"))
-		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= info);
-	else if(iequals(lvl, "warning"))
-		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= warning);
-	else if(iequals(lvl, "error"))
-		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= error);
-	else if(iequals(lvl, "fatal"))
-		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= fatal);
+	//QWE
+	//if(iequals(lvl, "trace"))
+	//	boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= trace);
+	//else if(iequals(lvl, "debug"))
+	//	boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= debug);
+	//else if(iequals(lvl, "info"))
+	//	boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= info);
+	//else if(iequals(lvl, "warning"))
+	//	boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= warning);
+	//else if(iequals(lvl, "error"))
+	//	boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= error);
+	//else if(iequals(lvl, "fatal"))
+	//	boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= fatal);
 }
 
 }}

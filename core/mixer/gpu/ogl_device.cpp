@@ -38,12 +38,12 @@
 namespace caspar { namespace core {
 
 ogl_device::ogl_device() 
-	: executor_("ogl_device")
+	: executor_(L"ogl_device")
 	, pattern_(nullptr)
 	, attached_texture_(0)
 	, active_shader_(0)
 {
-	CASPAR_LOG(info) << "Initializing OpenGL Device.";
+	CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
 	std::fill(binded_textures_.begin(), binded_textures_.end(), 0);
 	std::fill(viewport_.begin(), viewport_.end(), 0);
@@ -58,19 +58,19 @@ ogl_device::ogl_device()
 		if (glewInit() != GLEW_OK)
 			BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
 						
-		CASPAR_LOG(info) << "OpenGL " << version();
+		CASPAR_LOG(info) << L"OpenGL " << version();
 
 		if(!GLEW_VERSION_3_0)
 			CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";
 	
-		CASPAR_LOG(info) << "Successfully initialized GLEW.";
+		CASPAR_LOG(info) << L"Successfully initialized GLEW.";
 
 		GL(glGenFramebuffers(1, &fbo_));		
 		GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
 		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
         //GL(glDisable(GL_MULTISAMPLE_ARB));
 
-		CASPAR_LOG(info) << "Successfully initialized OpenGL Device.";
+		CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
 	});
 }
 
@@ -105,7 +105,7 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t 
 		}
 		catch(...)
 		{
-			CASPAR_LOG(error) << "ogl: create_device_buffer failed!";
+			CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
 			throw;
 		}
 	}
@@ -157,7 +157,7 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(size_t size, host_buffer:
 		}
 		catch(...)
 		{
-			CASPAR_LOG(error) << "ogl: create_host_buffer failed!";
+			CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
 			throw;		
 		}
 	}
@@ -266,13 +266,13 @@ boost::unique_future<void> ogl_device::gc()
 	}, high_priority);
 }
 
-std::string ogl_device::version()
+std::wstring ogl_device::version()
 {	
-	static std::string ver = "Not found";
+	static std::wstring ver = L"Not found";
 	try
 	{
-		ver = invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
-		+ " "	+ invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));});			
+		ver = widen(invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
+		+ " "	+ invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));			
 	}
 	catch(...){}
 

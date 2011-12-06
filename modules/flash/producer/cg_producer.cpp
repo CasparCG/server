@@ -45,76 +45,75 @@ public:
 		: flash_producer_(frame_producer)
 	{}
 	
-	boost::unique_future<std::string> add(int layer, std::string filename,  bool play_on_load, const std::string& label, const std::string& data)
+	boost::unique_future<std::wstring> add(int layer, std::wstring filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
 	{
 		if(filename.size() > 0 && filename[0] == L'/')
 			filename = filename.substr(1, filename.size()-1);
 
-		auto str = (boost::format("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?TEXT("<true/>"):TEXT("<false/>")) % label % data).str();
+		auto str = (boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?TEXT("<true/>"):TEXT("<false/>")) % label % data).str();
 
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command: " << str;
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> remove(int layer)
+	boost::unique_future<std::wstring> remove(int layer)
 	{
-		auto str = (boost::format("<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
+		auto str = (boost::wformat(L"<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking remove-command: " << str;
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> play(int layer)
+	boost::unique_future<std::wstring> play(int layer)
 	{
-		auto str = (boost::format("<invoke name=\"Play\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
+		auto str = (boost::wformat(L"<invoke name=\"Play\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking play-command: " << str;
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> stop(int layer, unsigned int)
+	boost::unique_future<std::wstring> stop(int layer, unsigned int)
 	{
-		auto str = (boost::format("<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") % layer).str();
+		auto str = (boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking stop-command: " << str;
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> next(int layer)
+	boost::unique_future<std::wstring> next(int layer)
 	{
-		auto str = (boost::format("<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
+		auto str = (boost::wformat(L"<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking next-command: " << str;
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> update(int layer, const std::string& data)
+	boost::unique_future<std::wstring> update(int layer, const std::wstring& data)
 	{
-		auto str = (boost::format("<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></arguments></invoke>") % layer % data).str();
+		auto str = (boost::wformat(L"<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></arguments></invoke>") % layer % data).str();
 		CASPAR_LOG(info) << flash_producer_->print() <<" Invoking update-command: " << str;
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> invoke(int layer, const std::string& label)
+	boost::unique_future<std::wstring> invoke(int layer, const std::wstring& label)
 	{
-		auto str = (boost::format("<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") % layer % label).str();
+		auto str = (boost::wformat(L"<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") % layer % label).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking invoke-command: " << str;
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> description(int layer)
+	boost::unique_future<std::wstring> description(int layer)
 	{
-		auto str = (boost::format("<invoke name=\"GetDescription\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
+		auto str = (boost::wformat(L"<invoke name=\"GetDescription\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking description-command: " << str;
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> template_host_info()
+	boost::unique_future<std::wstring> template_host_info()
 	{
-		auto str = (boost::format("<invoke name=\"GetInfo\" returntype=\"xml\"><arguments></arguments></invoke>")).str();
+		auto str = (boost::wformat(L"<invoke name=\"GetInfo\" returntype=\"xml\"><arguments></arguments></invoke>")).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking info-command: " << str;
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> call(const std::string& str2)
+	boost::unique_future<std::wstring> call(const std::wstring& str)
 	{		
-		auto str = u16(str2);
 		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)( (?<DATA>.*))?");
 		static const boost::wregex remove_exp		(L"REMOVE (?<LAYER>\\d+)");
 		static const boost::wregex play_exp			(L"PLAY (?<LAYER>\\d+)");
@@ -127,7 +126,7 @@ public:
 		
 		boost::wsmatch what;
 		if(boost::regex_match(str, what, add_exp))
-			return add(boost::lexical_cast<int>(what["LAYER"].str()), flash::find_template(env::template_folder() + u8(what["FILENAME"].str())), boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()), "", u8(what["DATA"].str())); 
+			return add(boost::lexical_cast<int>(what["LAYER"].str()), flash::find_template(env::template_folder() + what["FILENAME"].str()), boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()), L"", what["DATA"].str()); 
 		else if(boost::regex_match(str, what, remove_exp))
 			return remove(boost::lexical_cast<int>(what["LAYER"].str())); 
 		else if(boost::regex_match(str, what, stop_exp))
@@ -135,15 +134,15 @@ public:
 		else if(boost::regex_match(str, what, next_exp))
 			return next(boost::lexical_cast<int>(what["LAYER"].str())); 
 		else if(boost::regex_match(str, what, update_exp))
-			return update(boost::lexical_cast<int>(what["LAYER"].str()), u8(what["DATA"].str())); 
+			return update(boost::lexical_cast<int>(what["LAYER"].str()), what["DATA"].str()); 
 		else if(boost::regex_match(str, what, next_exp))
-			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), u8(what["LABE"].str())); 
+			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABEL"].str()); 
 		else if(boost::regex_match(str, what, description_exp))
 			return description(boost::lexical_cast<int>(what["LAYER"].str())); 
 		else if(boost::regex_match(str, what, invoke_exp))
 			return template_host_info(); 
 
-		return flash_producer_->call(str2);
+		return flash_producer_->call(str);
 	}
 
 	safe_ptr<core::basic_frame> receive(int hints)
@@ -156,38 +155,38 @@ public:
 		return flash_producer_->last_frame();
 	}		
 			
-	std::string print() const
+	std::wstring print() const
 	{
 		return flash_producer_->print();
 	}
 
-	boost::property_tree::ptree info() const
+	boost::property_tree::wptree info() const
 	{
-		boost::property_tree::ptree info;
-		info.add("type", "cg-producer");
+		boost::property_tree::wptree info;
+		info.add(L"type", L"cg-producer");
 		return info;
 	}
 
-	std::string timed_invoke(int layer, const std::string& label)
+	std::wstring timed_invoke(int layer, const std::wstring& label)
 	{
 		auto result = invoke(layer, label);
 		if(result.timed_wait(boost::posix_time::seconds(2)))
 			return result.get();
-		return "";
+		return L"";
 	}
-	std::string timed_description(int layer)
+	std::wstring timed_description(int layer)
 	{
 		auto result = description(layer);
 		if(result.timed_wait(boost::posix_time::seconds(2)))
 			return result.get();
-		return "";
+		return L"";
 	}
-	std::string timed_template_host_info()
+	std::wstring timed_template_host_info()
 	{
 		auto result = template_host_info();
 		if(result.timed_wait(boost::posix_time::seconds(2)))
 			return result.get();
-		return "";
+		return L"";
 	}
 };
 	
@@ -195,9 +194,9 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 {	
 	auto flash_producer = video_channel->stage()->foreground(render_layer).get();
 
-	if(flash_producer->print().find("flash[") == std::string::npos) // UGLY hack
+	if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
 	{
-		flash_producer = make_safe<cg_producer>(flash::create_producer(video_channel->mixer(), boost::assign::list_of<std::string>()));	
+		flash_producer = make_safe<cg_producer>(flash::create_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>()));	
 		video_channel->stage()->load(render_layer, flash_producer); 
 		video_channel->stage()->play(render_layer);
 	}
@@ -205,46 +204,46 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 	return static_pointer_cast<cg_producer>(flash_producer);
 }
 
-safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::string>& params) 
+safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
 {
-	std::string filename = env::media_folder() + "\\" + params[0] + ".ct";
+	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".ct";
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
 		
-	boost::filesystem2::path path(filename);
+	boost::filesystem2::wpath path(filename);
 	path = boost::filesystem2::complete(path);
 	filename = path.file_string();
 
-	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::string>());	
+	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
 	auto producer = make_safe<cg_producer>(flash_producer);
 	producer->add(0, filename, 1);
 
 	return producer;
 }
 
-safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::string>& params) 
+safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
 {
-	if(params.empty() || params.at(0) != "[CG]")
+	if(params.empty() || params.at(0) != L"[CG]")
 		return core::frame_producer::empty();
 
-	return make_safe<cg_producer>(flash::create_producer(frame_factory, boost::assign::list_of<std::string>()));	
+	return make_safe<cg_producer>(flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>()));	
 }
 
 cg_producer::cg_producer(const safe_ptr<core::frame_producer>& frame_producer) : impl_(new implementation(frame_producer)){}
 cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<core::basic_frame> cg_producer::receive(int hints){return impl_->receive(hints);}
 safe_ptr<core::basic_frame> cg_producer::last_frame() const{return impl_->last_frame();}
-void cg_producer::add(int layer, const std::string& template_name,  bool play_on_load, const std::string& startFromLabel, const std::string& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
+void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}
 void cg_producer::play(int layer){impl_->play(layer);}
 void cg_producer::stop(int layer, unsigned int mix_out_duration){impl_->stop(layer, mix_out_duration);}
 void cg_producer::next(int layer){impl_->next(layer);}
-void cg_producer::update(int layer, const std::string& data){impl_->update(layer, data);}
-std::string cg_producer::print() const{return impl_->print();}
-boost::unique_future<std::string> cg_producer::call(const std::string& str){return impl_->call(str);}
-std::string cg_producer::invoke(int layer, const std::string& label){return impl_->timed_invoke(layer, label);}
-std::string cg_producer::description(int layer){return impl_->timed_description(layer);}
-std::string cg_producer::template_host_info(){return impl_->timed_template_host_info();}
-boost::property_tree::ptree cg_producer::info() const{return impl_->info();}
+void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
+std::wstring cg_producer::print() const{return impl_->print();}
+boost::unique_future<std::wstring> cg_producer::call(const std::wstring& str){return impl_->call(str);}
+std::wstring cg_producer::invoke(int layer, const std::wstring& label){return impl_->timed_invoke(layer, label);}
+std::wstring cg_producer::description(int layer){return impl_->timed_description(layer);}
+std::wstring cg_producer::template_host_info(){return impl_->timed_template_host_info();}
+boost::property_tree::wptree cg_producer::info() const{return impl_->info();}
 
 }}
