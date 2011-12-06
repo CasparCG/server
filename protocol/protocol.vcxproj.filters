@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{3bfec261-0108-4128-80ab-794afa5f2226}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\util">
+      <UniqueIdentifier>{ac6eb3ad-c1d7-4bae-a03d-b1fd752a0305}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\clk">
+      <UniqueIdentifier>{9ed5b10f-d494-4460-b868-e36357b3e04d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\cii">
+      <UniqueIdentifier>{abb11aa5-fa66-4e76-8ea6-38f01f6e7dff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\amcp">
+      <UniqueIdentifier>{93331f26-581b-4d15-81a6-0aae31ad3958}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="amcp\AMCPCommand.h">
+      <Filter>source\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="amcp\AMCPProtocolStrategy.h">
+      <Filter>source\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="amcp\AMCPCommandQueue.h">
+      <Filter>source\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="amcp\AMCPCommandsImpl.h">
+      <Filter>source\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="util\AsyncEventServer.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="cii\CIICommand.h">
+      <Filter>source\cii</Filter>
+    </ClInclude>
+    <ClInclude Include="cii\CIIProtocolStrategy.h">
+      <Filter>source\cii</Filter>
+    </ClInclude>
+    <ClInclude Include="cii\CIICommandsImpl.h">
+      <Filter>source\cii</Filter>
+    </ClInclude>
+    <ClInclude Include="clk\CLKProtocolStrategy.h">
+      <Filter>source\clk</Filter>
+    </ClInclude>
+    <ClInclude Include="clk\CLKCommand.h">
+      <Filter>source\clk</Filter>
+    </ClInclude>
+    <ClInclude Include="util\ClientInfo.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="util\Thread.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="util\ProtocolStrategy.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="util\SocketInfo.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="amcp\AMCPCommandQueue.cpp">
+      <Filter>source\amcp</Filter>
+    </ClCompile>
+    <ClCompile Include="amcp\AMCPCommandsImpl.cpp">
+      <Filter>source\amcp</Filter>
+    </ClCompile>
+    <ClCompile Include="amcp\AMCPProtocolStrategy.cpp">
+      <Filter>source\amcp</Filter>
+    </ClCompile>
+    <ClCompile Include="util\AsyncEventServer.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
+    <ClCompile Include="cii\CIICommandsImpl.cpp">
+      <Filter>source\cii</Filter>
+    </ClCompile>
+    <ClCompile Include="cii\CIIProtocolStrategy.cpp">
+      <Filter>source\cii</Filter>
+    </ClCompile>
+    <ClCompile Include="clk\CLKCommand.cpp">
+      <Filter>source\clk</Filter>
+    </ClCompile>
+    <ClCompile Include="clk\CLKProtocolStrategy.cpp">
+      <Filter>source\clk</Filter>
+    </ClCompile>
+    <ClCompile Include="util\SocketInfo.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
+    <ClCompile Include="util\Thread.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
+    <ClCompile Include="StdAfx.cpp" />
+  </ItemGroup>
+</Project>

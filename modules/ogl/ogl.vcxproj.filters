@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{17d30d8e-4f28-410d-b8f9-ce880259b11a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\consumer">
+      <UniqueIdentifier>{013ef3ed-0241-481f-b887-a54e4749045f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="consumer\ogl_consumer.cpp">
+      <Filter>source\consumer</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="consumer\ogl_consumer.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl.h">
+      <Filter>source</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

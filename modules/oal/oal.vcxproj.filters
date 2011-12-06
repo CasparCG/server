@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{c40c13eb-e8ef-4528-8972-fa108b0d0ed0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\consumer">
+      <UniqueIdentifier>{2de4befc-0e04-496c-be98-83b7d4a76e8a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="consumer\oal_consumer.cpp">
+      <Filter>source\consumer</Filter>
+    </ClCompile>
+    <ClCompile Include="oal.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="consumer\oal_consumer.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="oal.h">
+      <Filter>source</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
