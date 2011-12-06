@@ -58,9 +58,4 @@ std::shared_ptr<FIBITMAP> load_image(const std::string& filename)
 	return bitmap;
 }
 
-std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
-{
-	return load_image(narrow(filename));
-}
-
 }}

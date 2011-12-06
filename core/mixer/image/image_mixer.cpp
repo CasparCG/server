@@ -45,8 +45,6 @@
 #include <algorithm>
 #include <deque>
 
-using namespace boost::assign;
-
 namespace caspar { namespace core {
 	
 struct item
@@ -219,8 +217,8 @@ private:
 
 		draw_params draw_params;
 		draw_params.pix_desc.pix_fmt	= pixel_format::bgra;
-		draw_params.pix_desc.planes		= list_of(pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4));
-		draw_params.textures			= list_of(source_buffer);
+		draw_params.pix_desc.planes		= boost::assign::list_of(pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4));
+		draw_params.textures			= boost::assign::list_of(source_buffer);
 		draw_params.transform			= frame_transform();
 		draw_params.blend_mode			= blend_mode;
 		draw_params.background			= draw_buffer;

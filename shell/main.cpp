@@ -57,6 +57,7 @@
 #include <common/gl/gl_check.h>
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
+#include <common/utility/string.h>
 
 #include <tbb/task_scheduler_init.h>
 #include <tbb/task_scheduler_observer.h>
@@ -101,7 +102,7 @@ void setup_console_window()
 	change_icon(::LoadIcon(GetModuleHandle(0), MAKEINTRESOURCE(101)));
 
 	// Set console title.
-	std::wstringstream str;
+	std::stringstream str;
 	str << "CasparCG Server " << caspar::env::version();
 #ifdef COMPILE_RELEASE
 	str << " Release";
@@ -112,44 +113,44 @@ void setup_console_window()
 #elif  COMPILE_DEBUG
 	str << " Debug";
 #endif
-	SetConsoleTitle(str.str().c_str());
+	SetConsoleTitle(caspar::u16(str.str()).c_str());
 }
 
 void print_info()
 {
-	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
-	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << caspar::env::version();
-	CASPAR_LOG(info) << L"on " << caspar::get_win_product_name() << L" " << caspar::get_win_sp_version();
+	CASPAR_LOG(info) << "Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
+	CASPAR_LOG(info) << "Starting CasparCG Video and Graphics Playout Server " << caspar::env::version();
+	CASPAR_LOG(info) << "on " << caspar::get_win_product_name() << " " << caspar::get_win_sp_version();
 	CASPAR_LOG(info) << caspar::get_cpu_info();
 	CASPAR_LOG(info) << caspar::get_system_product_name();
 	
-	CASPAR_LOG(info) << L"Decklink " << caspar::decklink::get_version();
+	CASPAR_LOG(info) << "Decklink " << caspar::decklink::get_version();
 	BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
-		CASPAR_LOG(info) << L" - " << device;	
+		CASPAR_LOG(info) << " - " << device;	
 		
-	CASPAR_LOG(info) << L"Bluefish " << caspar::bluefish::get_version();
+	CASPAR_LOG(info) << "Bluefish " << caspar::bluefish::get_version();
 	BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
-		CASPAR_LOG(info) << L" - " << device;	
+		CASPAR_LOG(info) << " - " << device;	
 	
-	CASPAR_LOG(info) << L"Flash "			<< caspar::flash::get_version();
-	CASPAR_LOG(info) << L"FreeImage "		<< caspar::image::get_version();
-	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
-	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::ffmpeg::get_avformat_version();
-	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
-	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< caspar::ffmpeg::get_avutil_version();
-	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::ffmpeg::get_swscale_version();
+	CASPAR_LOG(info) << "Flash "			<< caspar::flash::get_version();
+	CASPAR_LOG(info) << "FreeImage "		<< caspar::image::get_version();
+	CASPAR_LOG(info) << "FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
+	CASPAR_LOG(info) << "FFMPEG-avformat " << caspar::ffmpeg::get_avformat_version();
+	CASPAR_LOG(info) << "FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
+	CASPAR_LOG(info) << "FFMPEG-avutil "	<< caspar::ffmpeg::get_avutil_version();
+	CASPAR_LOG(info) << "FFMPEG-swscale "  << caspar::ffmpeg::get_swscale_version();
 }
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 {
 	try
 	{
-		CASPAR_LOG(fatal) << L"#######################\n UNHANDLED EXCEPTION: \n" 
-			<< L"Adress:" << info->ExceptionRecord->ExceptionAddress << L"\n"
-			<< L"Code:" << info->ExceptionRecord->ExceptionCode << L"\n"
-			<< L"Flag:" << info->ExceptionRecord->ExceptionFlags << L"\n"
-			<< L"Info:" << info->ExceptionRecord->ExceptionInformation << L"\n"
-			<< L"Continuing execution. \n#######################";
+		CASPAR_LOG(fatal) << "#######################\n UNHANDLED EXCEPTION: \n" 
+			<< "Adress:" << info->ExceptionRecord->ExceptionAddress << "\n"
+			<< "Code:" << info->ExceptionRecord->ExceptionCode << "\n"
+			<< "Flag:" << info->ExceptionRecord->ExceptionFlags << "\n"
+			<< "Info:" << info->ExceptionRecord->ExceptionInformation << "\n"
+			<< "Continuing execution. \n#######################";
 	}
 	catch(...){}
 
@@ -162,7 +163,7 @@ int main(int argc, wchar_t* argv[])
 	
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
 
-	std::wcout << L"Type \"q\" to close application." << std::endl;
+	std::wcout << "Type \"q\" to close application." << std::endl;
 	
 	// Set debug mode.
 	#ifdef _DEBUG
@@ -178,7 +179,7 @@ int main(int argc, wchar_t* argv[])
 	// Install structured exception handler.
 	caspar::win32_exception::install_handler();
 
-	caspar::log::set_log_level(L"debug");
+	caspar::log::set_log_level("debug");
 			
 	// Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
 	struct inc_prec
@@ -203,16 +204,16 @@ int main(int argc, wchar_t* argv[])
 	try 
 	{
 		// Configure environment properties from configuration.
-		caspar::env::configure(L"casparcg.config");
+		caspar::env::configure("casparcg.config");
 				
 	#ifdef _DEBUG
-		if(caspar::env::properties().get(L"configuration.debugging.remote", false))
+		if(caspar::env::properties().get("configuration.debugging.remote", false))
 			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 	#endif	 
 
 		// Start logging to file.
 		caspar::log::add_file_sink(caspar::env::log_folder());			
-		std::wcout << L"Logging [info] or higher severity to " << caspar::env::log_folder() << std::endl << std::endl;
+		std::cout << "Logging [info] or higher severity to " << caspar::env::log_folder() << std::endl << std::endl;
 		
 		// Setup console window.
 		setup_console_window();
@@ -220,10 +221,10 @@ int main(int argc, wchar_t* argv[])
 		// Print environment information.
 		print_info();
 			
-		std::wstringstream str;
-		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+		std::stringstream str;
+		boost::property_tree::xml_writer_settings<char> w(' ', 3);
 		boost::property_tree::write_xml(str, caspar::env::properties(), w);
-		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
+		CASPAR_LOG(info) << "casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << "-----------------------------------------";
 				
 		{
 			// Create server object which initializes channels, protocols and controllers.
@@ -240,14 +241,14 @@ int main(int argc, wchar_t* argv[])
 			{
 				std::getline(std::wcin, wcmd); // TODO: It's blocking...
 				
-				boost::to_upper(wcmd);
+				caspar::to_upper(wcmd);
 
 				if(wcmd == L"EXIT" || wcmd == L"Q" || wcmd == L"QUIT" || wcmd == L"BYE")
 					break;
 				
 				// This is just dummy code for testing.
 				if(wcmd.substr(0, 1) == L"1")
-					wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
+					wcmd = L"LOADBG 1-1 L" + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
 				else if(wcmd.substr(0, 1) == L"2")
 					wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
 				else if(wcmd.substr(0, 1) == L"3")
@@ -257,12 +258,12 @@ int main(int argc, wchar_t* argv[])
 				else if(wcmd.substr(0, 1) == L"5")
 				{
 					auto file = wcmd.substr(2, wcmd.length()-1);
-					wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n" 
-							L"PLAY 1-2 " + file + L" LOOP\r\n" 
-							L"PLAY 1-3 " + file + L" LOOP\r\n"
-							L"PLAY 2-1 " + file + L" LOOP\r\n" 
-							L"PLAY 2-2 " + file + L" LOOP\r\n" 
-							L"PLAY 2-3 " + file + L" LOOP\r\n";
+					wcmd = L"PLAY 1-1 L" + file + L" LOOP\r\n" 
+						   L"PLAY 1-2 L" + file + L" LOOP\r\n" 
+						   L"PLAY 1-3 L" + file + L" LOOP\r\n"
+						   L"PLAY 2-1 L" + file + L" LOOP\r\n" 
+						   L"PLAY 2-2 L" + file + L" LOOP\r\n" 
+						   L"PLAY 2-3 L" + file + L" LOOP\r\n";
 				}
 				else if(wcmd.substr(0, 1) == L"X")
 				{
@@ -287,10 +288,10 @@ int main(int argc, wchar_t* argv[])
 						n++;
 					}
 
-					wcmd = L"MIXER 1 GRID " + boost::lexical_cast<std::wstring>(n);
+					wcmd = L"MIXER 1 GRID L" + boost::lexical_cast<std::wstring>(n);
 
 					for(int i = 1; i <= num; ++i)
-						wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" LOOP";// + L" SLIDE 100 LOOP";
+						wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" L" + file + L" LOOP";// + L" SLIDE 100 LOOP";
 				}
 
 				wcmd += L"\r\n";
@@ -304,18 +305,18 @@ int main(int argc, wchar_t* argv[])
 	catch(boost::property_tree::file_parser_error&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (casparcg.config) for errors.";
+		CASPAR_LOG(fatal) << "Unhandled configuration error in main thread. Please check the configuration file (casparcg.config) for errors.";
 		system("pause");	
 	}
 	catch(caspar::gl::ogl_exception&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled OpenGL Error in main thread. Please try to update graphics drivers for OpenGL 3.0+ Support.";
+		CASPAR_LOG(fatal) << "Unhandled OpenGL Error in main thread. Please try to update graphics drivers for OpenGL 3.0+ Support.";
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the CasparCG forums (www.casparcg.com/forum).";
+		CASPAR_LOG(fatal) << "Unhandled exception in main thread. Please report this error on the CasparCG forums (www.casparcg.com/forum).";
 	}	
 	
 	return 0;

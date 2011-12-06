@@ -159,7 +159,7 @@ void AsyncEventServer::Run(HANDLE stopEvent)
 					if(networkEvents.iErrorCode[FD_ACCEPT_BIT] == 0)
 						OnAccept(pSocketInfo);
 					else {
-						CASPAR_LOG(debug) << "OnAccept (ErrorCode: " << networkEvents.iErrorCode[FD_ACCEPT_BIT] << TEXT(")");
+						CASPAR_LOG(debug) << "OnAccept (ErrorCode: " << networkEvents.iErrorCode[FD_ACCEPT_BIT] << ")";
 						OnError(waitEvent, networkEvents.iErrorCode[FD_ACCEPT_BIT]);
 					}
 				}
@@ -168,7 +168,7 @@ void AsyncEventServer::Run(HANDLE stopEvent)
 					if(networkEvents.iErrorCode[FD_CLOSE_BIT] == 0)
 						OnClose(pSocketInfo);
 					else {
-						CASPAR_LOG(debug) << "OnClose (ErrorCode: " << networkEvents.iErrorCode[FD_CLOSE_BIT] << TEXT(")");
+						CASPAR_LOG(debug) << "OnClose (ErrorCode: " << networkEvents.iErrorCode[FD_CLOSE_BIT] << ")";
 						OnError(waitEvent, networkEvents.iErrorCode[FD_CLOSE_BIT]);
 					}
 					continue;
@@ -178,7 +178,7 @@ void AsyncEventServer::Run(HANDLE stopEvent)
 					if(networkEvents.iErrorCode[FD_READ_BIT] == 0)
 						OnRead(pSocketInfo);
 					else {
-						CASPAR_LOG(debug) << "OnRead (ErrorCode: " << networkEvents.iErrorCode[FD_READ_BIT] << TEXT(")");
+						CASPAR_LOG(debug) << "OnRead (ErrorCode: " << networkEvents.iErrorCode[FD_READ_BIT] << ")";
 						OnError(waitEvent, networkEvents.iErrorCode[FD_READ_BIT]);
 					}
 				}
@@ -187,7 +187,7 @@ void AsyncEventServer::Run(HANDLE stopEvent)
 					if(networkEvents.iErrorCode[FD_WRITE_BIT] == 0)
 						OnWrite(pSocketInfo);
 					else {
-						CASPAR_LOG(debug) << "OnWrite (ErrorCode: " << networkEvents.iErrorCode[FD_WRITE_BIT] << TEXT(")");
+						CASPAR_LOG(debug) << "OnWrite (ErrorCode: " << networkEvents.iErrorCode[FD_WRITE_BIT] << ")";
 						OnError(waitEvent, networkEvents.iErrorCode[FD_WRITE_BIT]);
 					}
 				}
@@ -271,7 +271,7 @@ bool AsyncEventServer::OnAccept(SocketInfoPtr& pSI) {
 
 	socketInfoCollection_.AddSocketInfo(pClientSocket);
 
-	CASPAR_LOG(info) << "Accepted connection from " << pClientSocket->host_.c_str();
+	CASPAR_LOG(info) << "Accepted connection from " << u8(pClientSocket->host_);
 
 	return true;
 }
@@ -347,7 +347,7 @@ bool AsyncEventServer::OnRead(SocketInfoPtr& pSI) {
 	recvResult = recv(pSI->socket_, pSI->recvBuffer_+pSI->recvLeftoverOffset_, maxRecvLength, 0);
 	while(recvResult != SOCKET_ERROR) {
 		if(recvResult == 0) {
-			CASPAR_LOG(info) << "Client " << pSI->host_.c_str() << TEXT(" disconnected");
+			CASPAR_LOG(info) << "Client " << u8(pSI->host_) << " disconnected";
 
 			socketInfoCollection_.RemoveSocketInfo(pSI);
 			return true;
@@ -357,7 +357,7 @@ bool AsyncEventServer::OnRead(SocketInfoPtr& pSI) {
 		if(ConvertMultiByteToWideChar(pProtocolStrategy_->GetCodepage(), pSI->recvBuffer_, recvResult + pSI->recvLeftoverOffset_, pSI->wideRecvBuffer_, pSI->recvLeftoverOffset_))
 			pProtocolStrategy_->Parse(&pSI->wideRecvBuffer_[0], pSI->wideRecvBuffer_.size(), pSI);
 		else			
-			CASPAR_LOG(error) << "Read from " << pSI->host_.c_str() << TEXT(" failed, could not convert command to UNICODE");
+			CASPAR_LOG(error) << "Read from " << u8(pSI->host_) << " failed, could not convert command to UNICODE";
 			
 		
 
@@ -408,7 +408,7 @@ void AsyncEventServer::DoSend(SocketInfo& socketInfo) {
 			//Read the next string in the queue and convert to UTF-8
 			if(!ConvertWideCharToMultiByte(pProtocolStrategy_->GetCodepage(), socketInfo.sendQueue_.front(), socketInfo.currentlySending_))
 			{
-				CASPAR_LOG(error) << "Send to " << socketInfo.host_.c_str() << TEXT(" failed, could not convert response to UTF-8");
+				CASPAR_LOG(error) << "Send to " << u8(socketInfo.host_) << " failed, could not convert response to UTF-8";
 			}
 			socketInfo.currentlySendingOffset_ = 0;
 		}
@@ -419,7 +419,7 @@ void AsyncEventServer::DoSend(SocketInfo& socketInfo) {
 			if(sentBytes == SOCKET_ERROR) {
 				int errorCode = WSAGetLastError();
 				if(errorCode == WSAEWOULDBLOCK) {
-					CASPAR_LOG(debug) << "Send to " << socketInfo.host_.c_str() << TEXT(" would block, sending later");
+					CASPAR_LOG(debug) << "Send to " << u8(socketInfo.host_) << " would block, sending later";
 					break;
 				}
 				else {
@@ -435,9 +435,9 @@ void AsyncEventServer::DoSend(SocketInfo& socketInfo) {
 			else {
 				if(sentBytes == bytesToSend) {
 					if(sentBytes < 200)
-						CASPAR_LOG(info) << "Sent " << socketInfo.sendQueue_.front().c_str() << TEXT(" to ") << socketInfo.host_.c_str();
+						CASPAR_LOG(info) << "Sent " << u8(socketInfo.sendQueue_.front()) << " to " << u8(socketInfo.host_);
 					else
-						CASPAR_LOG(info) << "Sent more than 200 bytes to " << socketInfo.host_.c_str();
+						CASPAR_LOG(info) << "Sent more than 200 bytes to " << u8(socketInfo.host_);
 
 					socketInfo.currentlySending_.resize(0);
 					socketInfo.currentlySendingOffset_ = 0;
@@ -445,7 +445,7 @@ void AsyncEventServer::DoSend(SocketInfo& socketInfo) {
 				}
 				else {
 					socketInfo.currentlySendingOffset_ += sentBytes;
-					CASPAR_LOG(info) << "Sent partial message to " << socketInfo.host_.c_str();
+					CASPAR_LOG(info) << "Sent partial message to " << u8(socketInfo.host_);
 				}
 			}
 		}
@@ -459,7 +459,7 @@ void AsyncEventServer::DoSend(SocketInfo& socketInfo) {
 // PARAMS: ...
 // COMMENT: Called when a client disconnects / is disconnected
 void AsyncEventServer::OnClose(SocketInfoPtr& pSI) {
-	CASPAR_LOG(info) << "Client " << pSI->host_.c_str() << TEXT(" was disconnected");
+	CASPAR_LOG(info) << "Client " << u8(pSI->host_) << " was disconnected";
 
 	socketInfoCollection_.RemoveSocketInfo(pSI);
 }
@@ -472,7 +472,7 @@ void AsyncEventServer::OnError(HANDLE waitEvent, int errorCode) {
 	if(errorCode == WSAENETDOWN || errorCode == WSAECONNABORTED || errorCode == WSAECONNRESET || errorCode == WSAESHUTDOWN || errorCode == WSAETIMEDOUT || errorCode == WSAENOTCONN || errorCode == WSAENETRESET) {
 		SocketInfoPtr pSocketInfo;
 		if(socketInfoCollection_.FindSocketInfo(waitEvent, pSocketInfo)) {
-			CASPAR_LOG(info) << "Client " << pSocketInfo->host_.c_str() << TEXT(" was disconnected, Errorcode ") << errorCode;
+			CASPAR_LOG(info) << "Client " << u8(pSocketInfo->host_) << " was disconnected, Errorcode " << errorCode;
 		}
 
 		socketInfoCollection_.RemoveSocketInfo(waitEvent);
@@ -495,7 +495,7 @@ void AsyncEventServer::LogSocketError(const TCHAR* pStr, int socketError) {
 	if(socketError == 0)
 		socketError = WSAGetLastError();
 
-	CASPAR_LOG(error) << "Failed to " << pStr << TEXT(" Errorcode: ") << socketError;
+	CASPAR_LOG(error) << "Failed to " << u8(pStr) << " Errorcode: " << socketError;
 }
 
 

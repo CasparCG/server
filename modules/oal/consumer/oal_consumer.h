@@ -35,7 +35,7 @@ namespace core {
 
 namespace oal {
 	
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params);
 safe_ptr<core::frame_consumer> create_consumer();
 
 }}

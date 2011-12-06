@@ -25,24 +25,35 @@
 
 namespace caspar {
 	
-std::wstring widen(const std::string& str)
+std::wstring u16(const std::string& str)
 {
 	return utf8util::UTF16FromUTF8(str);//std::wstring(str.begin(), str.end());
 }
-
-std::wstring widen(const std::wstring& str)
-{
-	return str;
-}
 	   
-std::string narrow(const std::wstring& str)
+std::string u8(const std::wstring& str)
 {
 	return utf8util::UTF8FromUTF16(str);//std::string(str.begin(), str.end());
 }
-	   
-std::string narrow(const std::string& str)
+
+std::wstring u8_u16(const std::string& str)
 {
-	return str ;
+	return u16(str);
 }
 
+std::wstring u16(const std::wstring& str)
+{
+	return str;
+}
+
+std::string u16_u8(const std::wstring& str)
+{
+	return u8(str);
+}
+
+std::string u8(const std::string& str)
+{
+	return str;
+}
+
+	  
 }

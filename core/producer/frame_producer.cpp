@@ -57,10 +57,10 @@ public:
 			std::shared_ptr<executor> destroyer;
 			if(!destroyers->try_pop(destroyer))
 			{
-				destroyer.reset(new executor(L"destroyer"));
+				destroyer.reset(new executor("destroyer"));
 				destroyer->set_priority_class(below_normal_priority_class);
 				if(++destroyer_count > 16)
-					CASPAR_LOG(warning) << L"Potential destroyer dead-lock detected.";
+					CASPAR_LOG(warning) << "Potential destroyer dead-lock detected.";
 				CASPAR_LOG(trace) << "Created destroyer: " << destroyer_count;
 			}
 				
@@ -71,9 +71,9 @@ public:
 				try
 				{
 					if(!producer->unique())
-						CASPAR_LOG(trace) << (*producer)->print() << L" Not destroyed on safe asynchronous destruction thread: " << producer->use_count();
+						CASPAR_LOG(trace) << (*producer)->print() << " Not destroyed on safe asynchronous destruction thread: " << producer->use_count();
 					else
-						CASPAR_LOG(trace) << (*producer)->print() << L" Destroying on safe asynchronous destruction thread.";
+						CASPAR_LOG(trace) << (*producer)->print() << " Destroying on safe asynchronous destruction thread.";
 				}
 				catch(...){}
 
@@ -94,9 +94,9 @@ public:
 
 	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
 	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (*producer_)->last_frame();}
-	virtual std::wstring										print() const override													{return (*producer_)->print();}
-	virtual boost::property_tree::wptree 						info() const override													{return (*producer_)->info();}
-	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (*producer_)->call(str);}
+	virtual std::string										print() const override													{return (*producer_)->print();}
+	virtual boost::property_tree::ptree 						info() const override													{return (*producer_)->info();}
+	virtual boost::unique_future<std::string>					call(const std::string& str) override									{return (*producer_)->call(str);}
 	virtual safe_ptr<frame_producer>							get_following_producer() const override									{return (*producer_)->get_following_producer();}
 	virtual void												set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(*producer_)->set_leading_producer(producer);}
 	virtual uint32_t											nb_frames() const override												{return (*producer_)->nb_frames();}
@@ -109,7 +109,7 @@ safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::fram
 
 class last_frame_producer : public frame_producer
 {
-	const std::wstring			print_;
+	const std::string			print_;
 	const safe_ptr<basic_frame>	frame_;
 	const uint32_t				nb_frames_;
 public:
@@ -122,12 +122,12 @@ public:
 	
 	virtual safe_ptr<basic_frame> receive(int){return frame_;}
 	virtual safe_ptr<core::basic_frame> last_frame() const{return frame_;}
-	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
+	virtual std::string print() const{return "dummy[" + print_ + "]";}
 	virtual uint32_t nb_frames() const {return nb_frames_;}	
-	virtual boost::property_tree::wptree info() const override
+	virtual boost::property_tree::ptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"last-frame-producer");
+		boost::property_tree::ptree info;
+		info.add("type", "last-frame-producer");
 		return info;
 	}
 };
@@ -138,12 +138,12 @@ struct empty_frame_producer : public frame_producer
 	virtual safe_ptr<basic_frame> last_frame() const{return basic_frame::empty();}
 	virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
 	virtual uint32_t nb_frames() const {return 0;}
-	virtual std::wstring print() const { return L"empty";}
+	virtual std::string print() const { return "empty";}
 	
-	virtual boost::property_tree::wptree info() const override
+	virtual boost::property_tree::ptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"empty-producer");
+		boost::property_tree::ptree info;
+		info.add("type", "empty-producer");
 		return info;
 	}
 };
@@ -179,7 +179,7 @@ void register_producer_factory(const producer_factory_t& factory)
 	g_factories.push_back(factory);
 }
 
-safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::string>& params)
 {
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
@@ -208,7 +208,7 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 }
 
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::string>& params)
 {	
 	auto producer = do_create_producer(my_frame_factory, params);
 	auto key_producer = frame_producer::empty();
@@ -218,11 +218,11 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		auto params_copy = params;
 		if(params_copy.size() > 0)
 		{
-			params_copy[0] += L"_A";
+			params_copy[0] += "_A";
 			key_producer = do_create_producer(my_frame_factory, params_copy);			
 			if(key_producer == frame_producer::empty())
 			{
-				params_copy[0] += L"LPHA";
+				params_copy[0] += "LPHA";
 				key_producer = do_create_producer(my_frame_factory, params_copy);	
 			}
 		}
@@ -234,22 +234,22 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	
 	if(producer == frame_producer::empty())
 	{
-		std::wstring str;
+		std::string str;
 		BOOST_FOREACH(auto& param, params)
-			str += param + L" ";
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(narrow(str)));
+			str += param + " ";
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info((str)));
 	}
 
 	return producer;
 }
 
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& factory, const std::wstring& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& factory, const std::string& params)
 {
-	std::wstringstream iss(params);
-	std::vector<std::wstring> tokens;
-	typedef std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t> > iterator;
-	std::copy(iterator(iss),  iterator(), std::back_inserter(tokens));
+	std::stringstream iss(params);
+	std::vector<std::string> tokens;
+	typedef std::istream_iterator<std::string, char, std::char_traits<char> > iterator;
+	std::copy(iterator(iss), iterator(), std::back_inserter(tokens));
 	return create_producer(factory, tokens);
 }
 

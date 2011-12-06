@@ -94,11 +94,11 @@ public:
 		, oc_(avformat_alloc_context(), av_free)
 		, format_desc_(format_desc)
 		, executor_(print())
-		, file_write_executor_(print() + L"/output")
+		, file_write_executor_(print() + "/output")
 		, frame_number_(0)
 	{
 		// TODO: Ask stakeholders about case where file already exists.
-		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
+		boost::filesystem2::remove(boost::filesystem2::path(env::media_folder() + filename)); // Delete the file if it exists
 
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -133,7 +133,7 @@ public:
 				
 		THROW_ON_ERROR2(av_write_header(oc_.get()), "[ffmpeg_consumer]");
 
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
+		CASPAR_LOG(info) << print() << " Successfully Initialized.";	
 	}
 
 	~ffmpeg_consumer()
@@ -152,12 +152,12 @@ public:
 		if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
 			LOG_ON_ERROR2(avio_close(oc_->pb), "[ffmpeg_consumer]"); // Close the output ffmpeg.
 
-		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
+		CASPAR_LOG(info) << print() << " Successfully Uninitialized.";	
 	}
 			
-	std::wstring print() const
+	std::string print() const
 	{
-		return L"ffmpeg[" + widen(filename_) + L"]";
+		return "ffmpeg[" + filename_ + "]";
 	}
 
 	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id, const std::string& options)
@@ -382,19 +382,19 @@ public:
 
 struct ffmpeg_consumer_proxy : public core::frame_consumer
 {
-	const std::wstring	filename_;
+	const std::string	filename_;
 	const bool			key_only_;
-	const std::wstring	codec_;
-	const std::wstring	options_;
+	const std::string	codec_;
+	const std::string	options_;
 
 	std::unique_ptr<ffmpeg_consumer> consumer_;
 
 public:
 
-	ffmpeg_consumer_proxy(const std::wstring& filename, bool key_only, const std::wstring codec, const std::wstring& options)
+	ffmpeg_consumer_proxy(const std::string& filename, bool key_only, const std::string codec, const std::string& options)
 		: filename_(filename)
 		, key_only_(key_only)
-		, codec_(boost::to_lower_copy(codec))
+		, codec_(to_lower_copy(codec))
 		, options_(options)
 	{
 	}
@@ -402,7 +402,7 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int)
 	{
 		consumer_.reset();
-		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, narrow(codec_), narrow(options_)));
+		consumer_.reset(new ffmpeg_consumer((filename_), format_desc, codec_, options_));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -411,19 +411,19 @@ public:
 		return true;
 	}
 	
-	virtual std::wstring print() const override
+	virtual std::string print() const override
 	{
-		return consumer_ ? consumer_->print() : L"[ffmpeg_consumer]";
+		return consumer_ ? consumer_->print() : "[ffmpeg_consumer]";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	virtual boost::property_tree::ptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"ffmpeg-consumer");
-		info.add(L"key-only", key_only_);
-		info.add(L"filename", filename_);
-		info.add(L"codec", codec_);
-		info.add(L"options", options_);
+		boost::property_tree::ptree info;
+		info.add("type", "ffmpeg-consumer");
+		info.add("key-only", key_only_);
+		info.add("filename", filename_);
+		info.add("codec", codec_);
+		info.add("options", options_);
 		return info;
 	}
 		
@@ -443,33 +443,33 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params)
 {
-	if(params.size() < 1 || params[0] != L"FILE")
+	if(params.size() < 1 || params[0] != "FILE")
 		return core::frame_consumer::empty();
 	
-	auto filename	= (params.size() > 1 ? params[1] : L"");
-	bool key_only	= get_param(L"KEY_ONLY", params, false);
-	auto codec		= get_param(L"CODEC", params, L"libx264");
-	auto options	= get_param(L"OPTIONS", params);
+	auto filename	= (params.size() > 1 ? params[1] : "");
+	bool key_only	= get_param("KEY_ONLY", params, false);
+	auto codec		= get_param("CODEC", params, "libx264");
+	auto options	= get_param("OPTIONS", params);
 	
-	if(codec == L"H264")
-		codec = L"libx264";
+	if(codec == "H264")
+		codec = "libx264";
 
-	if(codec == L"DVCPRO")
-		codec = L"dvvideo";
+	if(codec == "DVCPRO")
+		codec = "dvvideo";
 
-	boost::to_lower(options);
+	to_lower(options);
 
 	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree)
 {
-	auto filename	= ptree.get<std::wstring>(L"path");
-	auto key_only	= ptree.get(L"key-only", false);
-	auto codec		= ptree.get(L"codec", L"libx264");
-	auto options	= ptree.get(L"options", L"");
+	auto filename	= ptree.get<std::string>("path");
+	auto key_only	= ptree.get("key-only", false);
+	auto codec		= ptree.get("codec", "libx264");
+	auto options	= ptree.get("options", "");
 	
 	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
 }

@@ -28,10 +28,10 @@ namespace caspar { namespace ffmpeg {
 void init();
 void uninit();
 
-std::wstring get_avcodec_version();
-std::wstring get_avformat_version();
-std::wstring get_avutil_version();
-std::wstring get_avfilter_version();
-std::wstring get_swscale_version();
+std::string get_avcodec_version();
+std::string get_avformat_version();
+std::string get_avutil_version();
+std::string get_avfilter_version();
+std::string get_swscale_version();
 
 }}
