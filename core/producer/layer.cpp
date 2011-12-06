@@ -127,7 +127,7 @@ public:
 		}
 	}
 
-	boost::unique_future<std::string> call(bool foreground, const std::string& param)
+	boost::unique_future<std::wstring> call(bool foreground, const std::wstring& param)
 	{
 		return (foreground ? foreground_ : background_)->call(param);
 	}
@@ -137,19 +137,19 @@ public:
 		return background_ == core::frame_producer::empty() && foreground_ == core::frame_producer::empty();
 	}
 
-	boost::property_tree::ptree info() const
+	boost::property_tree::wptree info() const
 	{
-		boost::property_tree::ptree info;
-		info.add("status",		is_paused_ ? "paused" : (foreground_ == frame_producer::empty() ? "stopped" : "playing"));
-		info.add("auto_delta",	auto_play_delta_);
-		info.add("frame-number", frame_number_);
+		boost::property_tree::wptree info;
+		info.add(L"status",		is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"));
+		info.add(L"auto_delta",	auto_play_delta_);
+		info.add(L"frame-number", frame_number_);
 
 		auto nb_frames = foreground_->nb_frames();
 
-		info.add("nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
-		info.add("frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - frame_number_ - auto_play_delta_));
-		info.add_child("foreground", foreground_->info());
-		info.add_child("background", background_->info());
+		info.add(L"nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
+		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - frame_number_ - auto_play_delta_));
+		info.add_child(L"foreground", foreground_->info());
+		info.add_child(L"background", background_->info());
 		return info;
 	}
 };
@@ -182,6 +182,6 @@ safe_ptr<basic_frame> layer::receive(int hints) {return impl_->receive(hints);}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}
-boost::unique_future<std::string> layer::call(bool foreground, const std::string& param){return impl_->call(foreground, param);}
-boost::property_tree::ptree layer::info() const{return impl_->info();}
+boost::unique_future<std::wstring> layer::call(bool foreground, const std::wstring& param){return impl_->call(foreground, param);}
+boost::property_tree::wptree layer::info() const{return impl_->info();}
 }}

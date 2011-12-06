@@ -98,13 +98,13 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 	if(boost::filesystem::is_regular_file(path))
 	{
 		std::wstring clipttype = TEXT(" N/A ");
-		std::wstring extension = to_upper_copy(path.extension());
+		std::wstring extension = boost::to_upper_copy(path.extension());
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
 			extension == L"GIF" || extension == L"BMP")
 			clipttype = TEXT(" STILL ");
 		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
 			clipttype = TEXT(" STILL ");
-		else if(caspar::ffmpeg::is_valid_file(u8(path.file_string())) || extension == L".CT")
+		else if(caspar::ffmpeg::is_valid_file(path.file_string()) || extension == L".CT")
 			clipttype = TEXT(" MOVIE ");
 
 		if(clipttype != TEXT(" N/A "))
@@ -138,17 +138,17 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 std::wstring ListMedia()
 {	
 	std::wstringstream replyString;
-	for (boost::filesystem::wrecursive_directory_iterator itr(u16(env::media_folder())), end; itr != end; ++itr)	
+	for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)	
 		replyString << MediaInfo(itr->path());
 	
-	return to_upper_copy(replyString.str());
+	return boost::to_upper_copy(replyString.str());
 }
 
 std::wstring ListTemplates() 
 {
 	std::wstringstream replyString;
 
-	for (boost::filesystem::wrecursive_directory_iterator itr(u16(env::template_folder())), end; itr != end; ++itr)
+	for (boost::filesystem::wrecursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
 	{		
 		if(boost::filesystem::is_regular_file(itr->path()) && (itr->path().extension() == L".ft" || itr->path().extension() == L".ct"))
 		{
@@ -164,7 +164,7 @@ std::wstring ListTemplates()
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 
 			std::wstring dir = relativePath.parent_path().external_directory_string();
-			std::wstring file = to_upper_copy(relativePath.filename());
+			std::wstring file = boost::to_upper_copy(relativePath.filename());
 			relativePath = boost::filesystem::wpath(dir + L"/" + file);
 						
 			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
@@ -232,24 +232,24 @@ bool CallCommand::DoExecute()
 		for(auto it = std::begin(_parameters2)+2; it != std::end(_parameters2); ++it)
 			param += L" " + *it;
 		
-		boost::unique_future<std::string> result;
+		boost::unique_future<std::wstring> result;
 		if(what == L"B")
-			result = GetChannel()->stage()->call(GetLayerIndex(), false, u8(param));
+			result = GetChannel()->stage()->call(GetLayerIndex(), false, param);
 		else if(what == L"F")
-			result = GetChannel()->stage()->call(GetLayerIndex(), true, u8(param));
+			result = GetChannel()->stage()->call(GetLayerIndex(), true, param);
 		else
-			result = GetChannel()->stage()->call(GetLayerIndex(), true, u8(_parameters.at(0)) + " " + u8(param));
+			result = GetChannel()->stage()->call(GetLayerIndex(), true, _parameters.at(0) + L" " + param);
 	
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
 			BOOST_THROW_EXCEPTION(timed_out());
 
-		CASPAR_LOG(info) << "Executed call: " <<  u8(_parameters[0]) << TEXT(" successfully");
+		CASPAR_LOG(info) << "Executed call: " <<  _parameters[0] << TEXT(" successfully");
 		
 		std::wstringstream replyString;
 		if(result.get().empty())
 			replyString << TEXT("202 CALL OK\r\n");
 		else
-			replyString << TEXT("201 CALL OK\r\n") << u16(result.get()) << L"\r\n";
+			replyString << TEXT("201 CALL OK\r\n") << result.get() << L"\r\n";
 		
 		SetReplyString(replyString.str());
 
@@ -294,7 +294,7 @@ bool MixerCommand::DoExecute()
 			};
 
 			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, u8(tween));
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"FILL" || _parameters[0] == L"FILL_RECT")
 		{
@@ -319,7 +319,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, u8(tween));
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"CLIP" || _parameters[0] == L"CLIP_RECT")
 		{
@@ -340,7 +340,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, u8(tween));
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"GRID")
 		{
@@ -365,7 +365,7 @@ bool MixerCommand::DoExecute()
 						transform.clip_scale[1]			= delta;			
 						return transform;
 					};
-					GetChannel()->stage()->apply_frame_transform(index, transform, duration, u8(tween));
+					GetChannel()->stage()->apply_frame_transform(index, transform, duration, tween);
 				}
 			}
 		}
@@ -373,7 +373,7 @@ bool MixerCommand::DoExecute()
 		{
 			auto blend_str = _parameters.at(1);								
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(u8(blend_str)));	
+			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
 		}
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
@@ -387,7 +387,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, u8(tween));	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"SATURATION")
 		{
@@ -401,7 +401,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, u8(tween));	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"CONTRAST")
 		{
@@ -415,7 +415,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, u8(tween));	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"LEVELS")
 		{
@@ -435,7 +435,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, u8(tween));	
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
 		}
 		else if(_parameters[0] == L"VOLUME")
 		{
@@ -450,7 +450,7 @@ bool MixerCommand::DoExecute()
 			};
 				
 			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, u8(tween));
+			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
 		}
 		else if(_parameters[0] == L"CLEAR")
 		{
@@ -534,13 +534,10 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		std::vector<std::string> params;
-		boost::range::transform(_parameters, std::back_inserter(params), u16_u8);
-
-		auto consumer = create_consumer(params);
+		auto consumer = create_consumer(_parameters);
 		GetChannel()->output()->add(GetLayerIndex(consumer->index()), consumer);
 	
-		CASPAR_LOG(info) << "Added " << u8(_parameters[0]) << " successfully";
+		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
 
 		SetReplyString(TEXT("202 ADD OK\r\n"));
 
@@ -565,12 +562,9 @@ bool RemoveCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		std::vector<std::string> params;
-		boost::range::transform(_parameters, std::back_inserter(params), u16_u8);
-
 		auto index = GetLayerIndex(std::numeric_limits<int>::min());
 		if(index == std::numeric_limits<int>::min())
-			index = create_consumer(params)->index();
+			index = create_consumer(_parameters)->index();
 
 		GetChannel()->output()->remove(index);
 
@@ -598,14 +592,10 @@ bool LoadCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		
-		std::vector<std::string> params;
-		boost::range::transform(_parameters, std::back_inserter(params), u16_u8);
-
-		auto pFP = create_producer(GetChannel()->mixer(), params);		
+		auto pFP = create_producer(GetChannel()->mixer(), _parameters);		
 		GetChannel()->stage()->load(GetLayerIndex(), pFP, true);
 	
-		CASPAR_LOG(info) << "Loaded " << u8(_parameters[0]) << TEXT(" successfully");
+		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
 
 		SetReplyString(TEXT("202 LOAD OK\r\n"));
 
@@ -683,7 +673,7 @@ bool LoadbgCommand::DoExecute()
 		transitionInfo.duration = lexical_cast_or_default<size_t>(what["DURATION"].str());
 		auto direction = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
 		auto tween = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
-		transitionInfo.tweener = get_tweener(u8(tween));		
+		transitionInfo.tweener = get_tweener(tween);		
 
 		if(transition == TEXT("CUT"))
 			transitionInfo.type = transition::cut;
@@ -710,19 +700,16 @@ bool LoadbgCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		std::vector<std::string> params;
-		boost::range::transform(_parameters, std::back_inserter(params), u16_u8);
-
-		auto pFP = create_producer(GetChannel()->mixer(), params);
+		auto pFP = create_producer(GetChannel()->mixer(), _parameters);
 		if(pFP == frame_producer::empty())
-			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? u8(_parameters[0]) : ""));
+			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
 		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
 
 		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc().field_mode, pFP, transitionInfo);
 		GetChannel()->stage()->load(GetLayerIndex(), pFP2, false, auto_play ? transitionInfo.duration : -1); // TODO: LOOP
 	
-		CASPAR_LOG(info) << "Loaded " << u8(_parameters[0]) << " successfully to background";
+		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
 
 		return true;
@@ -773,7 +760,7 @@ bool PlayCommand::DoExecute()
 			if(!lbg.Execute())
 				CASPAR_LOG(warning) << " Failed to play.";
 
-			CASPAR_LOG(info) << "Playing " << u8(_parameters[0]);
+			CASPAR_LOG(info) << "Playing " << _parameters[0];
 		}
 
 		GetChannel()->stage()->play(GetLayerIndex());
@@ -820,7 +807,7 @@ bool ClearCommand::DoExecute()
 
 bool PrintCommand::DoExecute()
 {
-	GetChannel()->output()->add(create_consumer(boost::assign::list_of("IMAGE")));
+	GetChannel()->output()->add(create_consumer(boost::assign::list_of(L"IMAGE")));
 		
 	SetReplyString(TEXT("202 PRINT OK\r\n"));
 
@@ -830,7 +817,7 @@ bool PrintCommand::DoExecute()
 bool LogCommand::DoExecute()
 {
 	if(_parameters.at(0) == L"LEVEL")
-		log::set_log_level(u8(_parameters.at(1)));
+		log::set_log_level(_parameters.at(1));
 
 	SetReplyString(TEXT("202 LOG OK\r\n"));
 
@@ -932,7 +919,7 @@ bool CGCommand::DoExecuteAdd() {
 		else 
 		{
 			//The data is not an XML-string, it must be a filename
-			std::wstring filename = u16(env::data_folder());
+			std::wstring filename = env::data_folder();
 			filename.append(dataString);
 			filename.append(TEXT(".ftd"));
 
@@ -951,19 +938,19 @@ bool CGCommand::DoExecuteAdd() {
 		}
 	}
 
-	std::wstring fullFilename = u16(flash::find_template(env::template_folder() + u8(_parameters[2])));
+	std::wstring fullFilename = flash::find_template(env::template_folder() + _parameters[2]);
 	if(!fullFilename.empty())
 	{
 		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
 		std::wstring filename = _parameters[2];
 		filename.append(extension);
 
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->add(layer, u8(filename), bDoStart, u8(label), u8((pDataString!=0) ? pDataString : TEXT("")));
+		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
 		SetReplyString(TEXT("202 CG OK\r\n"));
 	}
 	else
 	{
-		CASPAR_LOG(warning) << "Could not find template " << u8(_parameters[2]);
+		CASPAR_LOG(warning) << "Could not find template " << _parameters[2];
 		SetReplyString(TEXT("404 CG ERROR\r\n"));
 	}
 	return true;
@@ -1080,7 +1067,7 @@ bool CGCommand::DoExecuteUpdate()
 		if(dataString.at(0) != TEXT('<'))
 		{
 			//The data is not an XML-string, it must be a filename
-			std::wstring filename = u16(env::data_folder());
+			std::wstring filename = env::data_folder();
 			filename.append(dataString);
 			filename.append(TEXT(".ftd"));
 
@@ -1099,7 +1086,7 @@ bool CGCommand::DoExecuteUpdate()
 		}		
 
 		int layer = _ttoi(_parameters.at(1).c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->update(layer, u8(dataString));
+		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->update(layer, dataString);
 	}
 	catch(...)
 	{
@@ -1124,8 +1111,8 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		auto result = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, u8(_parameters2[2]));
-		replyString << u16(result) << TEXT("\r\n"); 
+		auto result = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
+		replyString << result << TEXT("\r\n"); 
 	}
 	else 
 	{
@@ -1153,12 +1140,12 @@ bool CGCommand::DoExecuteInfo()
 		int layer = _ttoi(_parameters[1].c_str());
 		auto desc = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->description(layer);
 		
-		replyString << u16(desc) << TEXT("\r\n"); 
+		replyString << desc << TEXT("\r\n"); 
 	}
 	else 
 	{
 		auto info = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->template_host_info();
-		replyString << u16(info) << TEXT("\r\n"); 
+		replyString << info << TEXT("\r\n"); 
 	}	
 
 	SetReplyString(replyString.str());
@@ -1187,7 +1174,7 @@ bool DataCommand::DoExecuteStore()
 		return false;
 	}
 
-	std::wstring filename = u16(env::data_folder());
+	std::wstring filename = env::data_folder();
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
@@ -1214,7 +1201,7 @@ bool DataCommand::DoExecuteRetrieve()
 		return false;
 	}
 
-	std::wstring filename = u16(env::data_folder());
+	std::wstring filename = env::data_folder();
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
@@ -1249,11 +1236,11 @@ bool DataCommand::DoExecuteList()
 	std::wstringstream replyString;
 	replyString << TEXT("200 DATA LIST OK\r\n");
 
-	for (boost::filesystem::wrecursive_directory_iterator itr(u16(env::data_folder())), end; itr != end; ++itr)
+	for (boost::filesystem::wrecursive_directory_iterator itr(env::data_folder()), end; itr != end; ++itr)
 	{			
 		if(boost::filesystem::is_regular_file(itr->path()))
 		{
-			if(!iequals(itr->path().extension(), L".ftd"))
+			if(!boost::iequals(itr->path().extension(), L".ftd"))
 				continue;
 			
 			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::data_folder().size()-1, itr->path().file_string().size()));
@@ -1268,7 +1255,7 @@ bool DataCommand::DoExecuteList()
 	
 	replyString << TEXT("\r\n");
 
-	SetReplyString(to_upper_copy(replyString.str()));
+	SetReplyString(boost::to_upper_copy(replyString.str()));
 	return true;
 }
 
@@ -1279,11 +1266,11 @@ bool CinfCommand::DoExecute()
 	try
 	{
 		std::wstring info;
-		for (boost::filesystem::wrecursive_directory_iterator itr(u16(env::media_folder())), end; itr != end; ++itr)
+		for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
 		{
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
-			if(iequals(file, _parameters.at(0)))
+			if(boost::iequals(file, _parameters.at(0)))
 				info += MediaInfo(itr->path()) + L"\r\n";
 		}
 
@@ -1305,86 +1292,87 @@ bool CinfCommand::DoExecute()
 	return true;
 }
 
-void GenerateChannelInfo(int index, const safe_ptr<core::video_channel>& pChannel, std::stringstream& replyString)
+void GenerateChannelInfo(int index, const safe_ptr<core::video_channel>& pChannel, std::wstringstream& replyString)
 {
-	replyString << index+1 << " " << pChannel->get_video_format_desc().name << " PLAYING" << "\r\n";
+	replyString << index+1 << TEXT(" ") << pChannel->get_video_format_desc().name << TEXT(" PLAYING") << TEXT("\r\n");
 }
 
 bool InfoCommand::DoExecute()
 {
-	std::stringstream replyString;
+	std::wstringstream replyString;
 	
-	boost::property_tree::xml_writer_settings<char> w(' ', 3);
+	boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
 
 	try
 	{
 		if(_parameters.size() >= 1 && _parameters[0] == L"TEMPLATE")
 		{		
-			replyString << "201 INFO TEMPLATE OK\r\n";
+			replyString << L"201 INFO TEMPLATE OK\r\n";
 
 			// Needs to be extended for any file, not just flash.
 
-			auto filename = u16(flash::find_template(env::template_folder() + u8(_parameters.at(1))));
+			auto filename = flash::find_template(env::template_folder() + _parameters.at(1));
 						
-			std::stringstream str;
-			str << flash::read_template_meta_info(filename);
-			boost::property_tree::ptree info;
+			std::wstringstream str;
+			str << widen(flash::read_template_meta_info(filename));
+			boost::property_tree::wptree info;
 			boost::property_tree::xml_parser::read_xml(str, info, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
 			boost::property_tree::xml_parser::write_xml(replyString, info, w);
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"CONFIG")
 		{		
-			replyString << "201 INFO CONFIG OK\r\n";
+			replyString << L"201 INFO CONFIG OK\r\n";
+
 			boost::property_tree::write_xml(replyString, caspar::env::properties(), w);
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"PATHS")
 		{
-			replyString << "201 INFO PATHS OK\r\n";
+			replyString << L"201 INFO PATHS OK\r\n";
 
-			boost::property_tree::ptree info;
-			info.add_child("paths", caspar::env::properties().get_child("configuration.paths"));
-			info.add("paths.initial-path", boost::filesystem2::initial_path().directory_string() + "\\");
+			boost::property_tree::wptree info;
+			info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
+			info.add(L"paths.initial-path", boost::filesystem2::initial_path<boost::filesystem2::wpath>().directory_string() + L"\\");
 
 			boost::property_tree::write_xml(replyString, info, w);
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"SYSTEM")
 		{
-			replyString << "201 INFO SYSTEM OK\r\n";
+			replyString << L"201 INFO SYSTEM OK\r\n";
 			
-			boost::property_tree::ptree info;
+			boost::property_tree::wptree info;
 			
-			info.add("system.name",					caspar::get_system_product_name());
-			info.add("system.windows.name",			caspar::get_win_product_name());
-			info.add("system.windows.service-pack",	caspar::get_win_sp_version());
-			info.add("system.cpu",					caspar::get_cpu_info());
+			info.add(L"system.name",					caspar::get_system_product_name());
+			info.add(L"system.windows.name",			caspar::get_win_product_name());
+			info.add(L"system.windows.service-pack",	caspar::get_win_sp_version());
+			info.add(L"system.cpu",						caspar::get_cpu_info());
 	
 			BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
-				info.add("system.decklink.device", device);
+				info.add(L"system.decklink.device", device);
 
 			BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
-				info.add("system.bluefish.device", device);
+				info.add(L"system.bluefish.device", device);
 				
-			info.add("system.flash",					caspar::flash::get_version());
-			info.add("system.free-image",				caspar::image::get_version());
-			info.add("system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
-			info.add("system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
-			info.add("system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
-			info.add("system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
-			info.add("system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
+			info.add(L"system.flash",					caspar::flash::get_version());
+			info.add(L"system.free-image",				caspar::image::get_version());
+			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
+			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
+			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
+			info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
+			info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
 						
 			boost::property_tree::write_xml(replyString, info, w);
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"SERVER")
 		{
-			replyString << "201 INFO SYSTEM OK\r\n";
+			replyString << L"201 INFO SYSTEM OK\r\n";
 			
-			boost::property_tree::ptree info;
+			boost::property_tree::wptree info;
 
 			int index = 0;
 			BOOST_FOREACH(auto channel, channels_)
-				info.add_child("channels.channel", channel->info())
-					.add("index", ++index);
+				info.add_child(L"channels.channel", channel->info())
+					.add(L"index", ++index);
 			
 			boost::property_tree::write_xml(replyString, info, w);
 		}
@@ -1392,8 +1380,8 @@ bool InfoCommand::DoExecute()
 		{			
 			if(_parameters.size() >= 1)
 			{
-				replyString << "201 INFO OK\r\n";
-				boost::property_tree::ptree info;
+				replyString << TEXT("201 INFO OK\r\n");
+				boost::property_tree::wptree info;
 
 				std::vector<std::wstring> split;
 				boost::split(split, _parameters[0], boost::is_any_of("-"));
@@ -1406,22 +1394,22 @@ bool InfoCommand::DoExecute()
 				
 				if(layer == std::numeric_limits<int>::min())
 				{	
-					info.add_child("channel", channels_.at(channel)->info())
-							.add("index", channel);
+					info.add_child(L"channel", channels_.at(channel)->info())
+							.add(L"index", channel);
 				}
 				else
 				{
 					if(_parameters.size() >= 2)
 					{
 						if(_parameters[1] == L"B")
-							info.add_child("producer", channels_.at(channel)->stage()->background(layer).get()->info());
+							info.add_child(L"producer", channels_.at(channel)->stage()->background(layer).get()->info());
 						else
-							info.add_child("producer", channels_.at(channel)->stage()->foreground(layer).get()->info());
+							info.add_child(L"producer", channels_.at(channel)->stage()->foreground(layer).get()->info());
 					}
 					else
 					{
-						info.add_child("layer", channels_.at(channel)->stage()->info(layer).get())
-							.add("index", layer);
+						info.add_child(L"layer", channels_.at(channel)->stage()->info(layer).get())
+							.add(L"index", layer);
 					}
 				}
 				boost::property_tree::xml_parser::write_xml(replyString, info, w);
@@ -1429,9 +1417,10 @@ bool InfoCommand::DoExecute()
 			else
 			{
 				// This is needed for backwards compatibility with old clients
-				replyString << "200 INFO OK\r\n";
+				replyString << TEXT("200 INFO OK\r\n");
 				for(size_t n = 0; n < channels_.size(); ++n)
 					GenerateChannelInfo(n, channels_[n], replyString);
+				replyString << TEXT("\r\n");
 			}
 
 		}
@@ -1442,8 +1431,8 @@ bool InfoCommand::DoExecute()
 		return false;
 	}
 
-	replyString << "\r\n";
-	SetReplyString(u16(replyString.str()));
+	replyString << TEXT("\r\n");
+	SetReplyString(replyString.str());
 	return true;
 }
 
@@ -1461,7 +1450,7 @@ bool ClsCommand::DoExecute()
 	replyString << TEXT("200 CLS OK\r\n");
 	replyString << ListMedia();
 	replyString << TEXT("\r\n");
-	SetReplyString(to_upper_copy(replyString.str()));
+	SetReplyString(boost::to_upper_copy(replyString.str()));
 	return true;
 }
 
@@ -1479,14 +1468,14 @@ bool TlsCommand::DoExecute()
 
 bool VersionCommand::DoExecute()
 {
-	std::wstring replyString = TEXT("201 VERSION OK\r\n") + u16(env::version()) + TEXT("\r\n");
+	std::wstring replyString = TEXT("201 VERSION OK\r\n") + env::version() + TEXT("\r\n");
 
 	if(_parameters.size() > 0)
 	{
 		if(_parameters[0] == L"FLASH")
-			replyString = TEXT("201 VERSION OK\r\n") + u16(flash::get_version()) + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n") + flash::get_version() + TEXT("\r\n");
 		else if(_parameters[0] == L"TEMPLATEHOST")
-			replyString = TEXT("201 VERSION OK\r\n") + u16(flash::get_cg_version()) + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n") + flash::get_cg_version() + TEXT("\r\n");
 		else if(_parameters[0] != L"SERVER")
 			replyString = TEXT("403 VERSION ERROR\r\n");
 	}
@@ -1511,7 +1500,7 @@ bool SetCommand::DoExecute()
 
 	if(name == TEXT("MODE"))
 	{
-		auto format_desc = core::video_format_desc::get(u8(value));
+		auto format_desc = core::video_format_desc::get(value);
 		if(format_desc.format != core::video_format::invalid)
 		{
 			GetChannel()->set_video_format_desc(format_desc);

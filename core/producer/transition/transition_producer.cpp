@@ -32,6 +32,8 @@
 
 #include <boost/assign.hpp>
 
+using namespace boost::assign;
+
 namespace caspar { namespace core {	
 
 struct transition_producer : public frame_producer
@@ -101,17 +103,17 @@ struct transition_producer : public frame_producer
 		return get_following_producer()->nb_frames();
 	}
 
-	virtual std::string print() const override
+	virtual std::wstring print() const override
 	{
-		return "transition[" + source_producer_->print() + "|" + dest_producer_->print() + "]";
+		return L"transition[" + source_producer_->print() + L"|" + dest_producer_->print() + L"]";
 	}
 	
-	boost::property_tree::ptree info() const override
+	boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::ptree info;
-		info.add("type", "transition-producer");
-		info.add_child("source.producer",	   source_producer_->info());
-		info.add_child("destination.producer", dest_producer_->info());
+		boost::property_tree::wptree info;
+		info.add(L"type", L"transition-producer");
+		info.add_child(L"source.producer",	   source_producer_->info());
+		info.add_child(L"destination.producer", dest_producer_->info());
 		return info;
 	}
 

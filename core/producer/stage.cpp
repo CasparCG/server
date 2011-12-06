@@ -55,8 +55,8 @@ public:
 	tweened_transform()
 		: duration_(0)
 		, time_(0)
-		, tweener_(get_tweener("linear")){}
-	tweened_transform(const T& source, const T& dest, int duration, const std::string& tween = "linear")
+		, tweener_(get_tweener(L"linear")){}
+	tweened_transform(const T& source, const T& dest, int duration, const std::wstring& tween = L"linear")
 		: source_(source)
 		, dest_(dest)
 		, duration_(duration)
@@ -94,7 +94,7 @@ public:
 		: graph_(graph)
 		, format_desc_(format_desc)
 		, target_(target)
-		, executor_("stage")
+		, executor_(L"stage")
 	{
 		graph_->add_guide("tick-time", 0.5f);	
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
@@ -167,7 +167,7 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}		
 	}
-		void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::string& tween)
+		void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
 		executor_.begin_invoke([=]
 		{
@@ -177,7 +177,7 @@ public:
 		}, high_priority);
 	}
 				
-	void apply_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration, const std::string& tween)
+	void apply_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
 		executor_.begin_invoke([=]
 		{
@@ -251,11 +251,11 @@ public:
 		}, high_priority);
 	}	
 	
-	boost::unique_future<std::string> call(int index, bool foreground, const std::string& param)
+	boost::unique_future<std::wstring> call(int index, bool foreground, const std::wstring& param)
 	{
 		return std::move(*executor_.invoke([=]
 		{
-			return std::make_shared<boost::unique_future<std::string>>(std::move(layers_[index].call(foreground, param)));
+			return std::make_shared<boost::unique_future<std::wstring>>(std::move(layers_[index].call(foreground, param)));
 		}, high_priority));
 	}
 	
@@ -323,21 +323,21 @@ public:
 		}, high_priority);
 	}
 
-	boost::unique_future<boost::property_tree::ptree> info()
+	boost::unique_future<boost::property_tree::wptree> info()
 	{
-		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::ptree
+		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
 		{
-			boost::property_tree::ptree info;
+			boost::property_tree::wptree info;
 			BOOST_FOREACH(auto& layer, layers_)			
-				info.add_child("layers.layer", layer.second.info())
-					.add("index", layer.first);	
+				info.add_child(L"layers.layer", layer.second.info())
+					.add(L"index", layer.first);	
 			return info;
 		}, high_priority));
 	}
 
-	boost::unique_future<boost::property_tree::ptree> info(int index)
+	boost::unique_future<boost::property_tree::wptree> info(int index)
 	{
-		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::ptree
+		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
 		{
 			return layers_[index].info();
 		}, high_priority));
@@ -345,8 +345,8 @@ public:
 };
 
 stage::stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc) : impl_(new implementation(graph, target, format_desc)){}
-void stage::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::string& tween){impl_->set_transform(index, transform, mix_duration, tween);}
-void stage::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::string& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
+void stage::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
+void stage::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
 void stage::spawn_token(){impl_->spawn_token();}
@@ -361,8 +361,8 @@ void stage::swap_layer(int index, size_t other_index){impl_->swap_layer(index, o
 void stage::swap_layer(int index, size_t other_index, const safe_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
 boost::unique_future<safe_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
 boost::unique_future<safe_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
-boost::unique_future<std::string> stage::call(int index, bool foreground, const std::string& param){return impl_->call(index, foreground, param);}
+boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
 void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
-boost::unique_future<boost::property_tree::ptree> stage::info() const{return impl_->info();}
-boost::unique_future<boost::property_tree::ptree> stage::info(int index) const{return impl_->info(index);}
+boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
+boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
 }}

@@ -27,7 +27,7 @@ namespace caspar { namespace flash {
 
 void init();
 
-std::string get_cg_version();
-std::string get_version();
+std::wstring get_cg_version();
+std::wstring get_version();
 
 }}

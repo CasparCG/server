@@ -61,18 +61,18 @@ struct field_mode
 		progressive = 3 // NOTE: progressive == lower | upper;
 	};
 
-	static std::string print(field_mode::type value)
+	static std::wstring print(field_mode::type value)
 	{
 		switch(value)
 		{
 			case progressive:
-				return "progressive"; 
+				return L"progressive"; 
 			case lower:
-				return "lower";
+				return L"lower";
 			case upper:
-				return "upper";
+				return L"upper";
 			default:
-				return "invalid";
+				return L"invalid";
 		}
 	}
 };
@@ -91,14 +91,14 @@ struct video_format_desc
 	size_t					duration;
 	size_t					field_count;
 	size_t					size;		// output frame size in bytes 
-	std::string				name;		// name of output format
+	std::wstring			name;		// name of output format
 
 	size_t					audio_sample_rate;
 	size_t					audio_channels;
 	std::vector<size_t>		audio_cadence;
 
 	static const video_format_desc& get(video_format::type format);
-	static const video_format_desc& get(const std::string& name);
+	static const video_format_desc& get(const std::wstring& name);
 	
 	bool operator==(const video_format_desc& lhs)
 	{

@@ -56,13 +56,13 @@ void init()
 	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))		
 		return;
 		
-	core::register_consumer_factory([](const std::vector<std::string>& params){return create_consumer(params);});
+	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
 }
 
-std::string get_version() 
+std::wstring get_version() 
 {
-	std::string version = "Not found";
+	std::wstring version = L"Not found";
 	
 	struct co_init
 	{
@@ -81,9 +81,9 @@ std::string get_version()
 	return version;
 }
 
-std::vector<std::string> get_device_list()
+std::vector<std::wstring> get_device_list()
 {
-	std::vector<std::string> devices;
+	std::vector<std::wstring> devices;
 	
 	struct co_init
 	{
@@ -101,7 +101,7 @@ std::vector<std::string> get_device_list()
 			{
 				BSTR model_name = L"Unknown";
 				decklink->GetModelName(&model_name);
-				devices.push_back(u8(model_name) + " [" + boost::lexical_cast<std::string>(n) + "]");	
+				devices.push_back(std::wstring(model_name) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");	
 			}
 		}
 	}

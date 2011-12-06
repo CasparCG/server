@@ -84,7 +84,7 @@ public:
 	}
 				
 private:
-	context() : executor_("diagnostics")
+	context() : executor_(L"diagnostics")
 	{
 		executor_.set_priority_class(below_normal_priority_class);
 	}
@@ -394,6 +394,11 @@ void graph::set_text(const std::string& value)
 	});
 }
 
+void graph::set_text(const std::wstring& value)
+{
+	set_text(narrow(value));
+}
+
 void graph::update_value(const std::string& name, double value)
 {
 	auto p = impl_;
@@ -450,10 +455,10 @@ void show_graphs(bool value)
 //	
 //struct line::implementation
 //{
-//	std::string name_;
+//	std::wstring name_;
 //	boost::circular_buffer<data> ticks_;
 //
-//	implementation(const std::string& name) 
+//	implementation(const std::wstring& name) 
 //		: name_(name)
 //		, ticks_(1024){}
 //	
@@ -471,25 +476,25 @@ void show_graphs(bool value)
 //};
 //
 //line::line(){}
-//line::line(const std::string& name) : impl_(new implementation(name)){}
-//std::string line::print() const {return impl_->name_;}
+//line::line(const std::wstring& name) : impl_(new implementation(name)){}
+//std::wstring line::print() const {return impl_->name_;}
 //void line::update_value(float value){impl_->update_value(value);}
 //void line::set_value(float value){impl_->set_value(value);}
 //boost::circular_buffer<data>& line::ticks() { return impl_->ticks_;}
 //
 //struct graph::implementation
 //{
-//	std::map<std::string, line> lines_;
+//	std::map<std::wstring, line> lines_;
 //	color						 color_;
 //	printer						 printer_;
 //
-//	implementation(const std::string& name) 
+//	implementation(const std::wstring& name) 
 //		: printer_([=]{return name;}){}
 //
 //	implementation(const printer& parent_printer) 
 //		: printer_(parent_printer){}
 //	
-//	void update_value(const std::string& name, float value)
+//	void update_value(const std::wstring& name, float value)
 //	{
 //		auto it = lines_.find(name);
 //		if(it == lines_.end())
@@ -498,7 +503,7 @@ void show_graphs(bool value)
 //		it->second.update_value(value);
 //	}
 //
-//	void set_value(const std::string& name, float value)
+//	void set_value(const std::wstring& name, float value)
 //	{
 //		auto it = lines_.find(name);
 //		if(it == lines_.end())
@@ -507,12 +512,12 @@ void show_graphs(bool value)
 //		it->second.set_value(value);
 //	}
 //	
-//	void set_color(const std::string& name, color color)
+//	void set_color(const std::wstring& name, color color)
 //	{
 //		color_ = color;
 //	}
 //
-//	std::map<std::string, line>& get_lines()
+//	std::map<std::wstring, line>& get_lines()
 //	{
 //		return lines_;
 //	}
@@ -522,29 +527,29 @@ void show_graphs(bool value)
 //		return color_;
 //	}
 //
-//	std::string print() const
+//	std::wstring print() const
 //	{
-//		return printer_ ? printer_() : "graph";
+//		return printer_ ? printer_() : L"graph";
 //	}
 //};
 //	
-//graph::graph(const std::string& name) : impl_(new implementation(name)){}
+//graph::graph(const std::wstring& name) : impl_(new implementation(name)){}
 //graph::graph(const printer& parent_printer) : impl_(new implementation(parent_printer)){}
-//void graph::update_value(const std::string& name, float value){impl_->update_value(name, value);}
-//void graph::set_value(const std::string& name, float value){impl_->set_value(name, value);}
-//void graph::set_color(const std::string& name, color c){impl_->set_color(name, c);}
+//void graph::update_value(const std::wstring& name, float value){impl_->update_value(name, value);}
+//void graph::set_value(const std::wstring& name, float value){impl_->set_value(name, value);}
+//void graph::set_color(const std::wstring& name, color c){impl_->set_color(name, c);}
 //color graph::get_color() const {return impl_->get_color();}
-//std::string graph::print() const {return impl_->print();}
+//std::wstring graph::print() const {return impl_->print();}
 //
 //safe_ptr<graph> graph::clone() const 
 //{
-//	safe_ptr<graph> clone(new graph(std::string("")));
+//	safe_ptr<graph> clone(new graph(std::wstring(L"")));
 //	clone->impl_->printer_ = impl_->printer_;
 //	clone->impl_->lines_ = impl_->lines_;
 //	clone->impl_->color_ = impl_->color_;	
 //}
 //
-//std::map<std::string, line>& graph::get_lines() {impl_->get_lines();}
+//std::map<std::wstring, line>& graph::get_lines() {impl_->get_lines();}
 //
 //std::vector<safe_ptr<graph>> g_graphs;
 //

@@ -40,18 +40,18 @@ struct display_mode
 		invalid
 	};
 
-	static std::string print(display_mode::type value)
+	static std::wstring print(display_mode::type value)
 	{
 		switch(value)
 		{
-			case simple:						return "simple";
-			case duplicate:						return "duplicate";
-			case half:							return "half";
-			case interlace:						return "interlace";
-			case deinterlace_bob:				return "deinterlace_bob";
-			case deinterlace_bob_reinterlace:	return "deinterlace_bob_reinterlace";
-			case deinterlace:					return "deinterlace";
-			default:							return "invalid";
+			case simple:						return L"simple";
+			case duplicate:						return L"duplicate";
+			case half:							return L"half";
+			case interlace:						return L"interlace";
+			case deinterlace_bob:				return L"deinterlace_bob";
+			case deinterlace_bob_reinterlace:	return L"deinterlace_bob_reinterlace";
+			case deinterlace:					return L"deinterlace";
+			default:							return L"invalid";
 		}
 	}
 };

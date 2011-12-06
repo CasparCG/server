@@ -29,6 +29,6 @@
 
 namespace caspar { namespace core {
 	
-safe_ptr<frame_producer> create_playlist_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::string>& params);
+safe_ptr<frame_producer> create_playlist_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
 
 }}

@@ -44,11 +44,13 @@
 #include <algorithm>
 #include <array>
 
+using namespace boost::assign;
+
 namespace caspar { namespace image {
 		
 struct image_scroll_producer : public core::frame_producer
 {	
-	const std::string							filename_;
+	const std::wstring							filename_;
 	std::vector<safe_ptr<core::basic_frame>>	frames_;
 	core::video_format_desc						format_desc_;
 	size_t										width_;
@@ -61,7 +63,7 @@ struct image_scroll_producer : public core::frame_producer
 
 	safe_ptr<core::basic_frame>					last_frame_;
 	
-	explicit image_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::string& filename, int speed) 
+	explicit image_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
 		: filename_(filename)
 		, delta_(0)
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -155,7 +157,7 @@ struct image_scroll_producer : public core::frame_producer
 			}
 		}
 
-		CASPAR_LOG(info) << print() << " Initialized";
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 	
 	// frame_producer
@@ -198,16 +200,16 @@ struct image_scroll_producer : public core::frame_producer
 		return last_frame_;
 	}
 		
-	virtual std::string print() const override
+	virtual std::wstring print() const override
 	{
-		return "image_scroll_producer[" + filename_ + "]";
+		return L"image_scroll_producer[" + filename_ + L"]";
 	}
 
-	virtual boost::property_tree::ptree info() const override
+	virtual boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::ptree info;
-		info.add("type", "image-scroll-producer");
-		info.add("filename", filename_);
+		boost::property_tree::wptree info;
+		info.add(L"type", L"image-scroll-producer");
+		info.add(L"filename", filename_);
 		return info;
 	}
 
@@ -227,21 +229,21 @@ struct image_scroll_producer : public core::frame_producer
 	}
 };
 
-safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::string>& params)
+safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
-	static const std::vector<std::string> extensions = boost::assign::list_of("png")("tga")("bmp")("jpg")("jpeg")("gif")("tiff")("tif")("jp2")("jpx")("j2k")("j2c");
-	std::string filename = env::media_folder() + "\\" + params[0];
+	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
+	std::wstring filename = env::media_folder() + L"\\" + params[0];
 	
-	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::string& ex) -> bool
+	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 		{					
-			return boost::filesystem::is_regular_file(boost::filesystem::path(filename).replace_extension(ex));
+			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
 		});
 
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 	
 	size_t speed = 0;
-	auto speed_it = std::find(params.begin(), params.end(), "SPEED");
+	auto speed_it = std::find(params.begin(), params.end(), L"SPEED");
 	if(speed_it != params.end())
 	{
 		if(++speed_it != params.end())
@@ -251,7 +253,7 @@ safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame
 	if(speed == 0)
 		return core::frame_producer::empty();
 
-	return make_safe<image_scroll_producer>(frame_factory, filename + "." + *ext, speed);
+	return make_safe<image_scroll_producer>(frame_factory, filename + L"." + *ext, speed);
 }
 
 }}

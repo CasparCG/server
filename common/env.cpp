@@ -37,12 +37,14 @@
 #include <iostream>
 
 namespace caspar { namespace env {
-	
-std::string media;
-std::string log;
-std::string ftemplate;
-std::string data;
-boost::property_tree::ptree pt;
+
+using namespace boost::filesystem2;
+
+std::wstring media;
+std::wstring log;
+std::wstring ftemplate;
+std::wstring data;
+boost::property_tree::wptree pt;
 
 void check_is_configured()
 {
@@ -50,59 +52,59 @@ void check_is_configured()
 		BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Enviroment properties has not been configured"));
 }
 
-void configure(const std::string& filename)
+void configure(const std::wstring& filename)
 {
 	try
 	{
-		auto initialPath = boost::filesystem::initial_path().file_string();
+		auto initialPath = boost::filesystem::initial_path<boost::filesystem2::wpath>().file_string();
 	
-		std::ifstream file(initialPath + "\\" + filename);
+		std::wifstream file(initialPath + L"\\" + filename);
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
-		auto paths = pt.get_child("configuration.paths");
-		media = paths.get("media-path", initialPath + "\\media\\");
-		log = paths.get("log-path", initialPath + "\\log\\");
-		ftemplate = boost::filesystem2::complete(paths.get("template-path", initialPath + "\\template\\")).string();		
-		data = paths.get("data-path", initialPath + "\\data\\");
+		auto paths = pt.get_child(L"configuration.paths");
+		media = widen(paths.get(L"media-path", initialPath + L"\\media\\"));
+		log = widen(paths.get(L"log-path", initialPath + L"\\log\\"));
+		ftemplate = complete(wpath(widen(paths.get(L"template-path", initialPath + L"\\template\\")))).string();		
+		data = widen(paths.get(L"data-path", initialPath + L"\\data\\"));
 	}
 	catch(...)
 	{
-		std::wcout << " ### Invalid configuration file. ###";
+		std::wcout << L" ### Invalid configuration file. ###";
 		throw;
 	}
 }
 	
-const std::string& media_folder()
+const std::wstring& media_folder()
 {
 	check_is_configured();
 	return media;
 }
 
-const std::string& log_folder()
+const std::wstring& log_folder()
 {
 	check_is_configured();
 	return log;
 }
 
-const std::string& template_folder()
+const std::wstring& template_folder()
 {
 	check_is_configured();
 	return ftemplate;
 }
 
-const std::string& data_folder()
+const std::wstring& data_folder()
 {
 	check_is_configured();
 	return data;
 }
 
-const std::string& version()
+const std::wstring& version()
 {
-	static std::string ver = std::string("") + CASPAR_GEN + "." + CASPAR_MAYOR + "." + CASPAR_MINOR + "." + CASPAR_REV + " " + CASPAR_TAG;
+	static std::wstring ver = std::wstring(L"") + CASPAR_GEN + L"." + CASPAR_MAYOR + L"." + CASPAR_MINOR + L"." + CASPAR_REV + L" " + CASPAR_TAG;
 	return ver;
 }
 
-const boost::property_tree::ptree& properties()
+const boost::property_tree::wptree& properties()
 {
 	check_is_configured();
 	return pt;

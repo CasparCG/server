@@ -66,7 +66,7 @@ public:
 		: channel_index_(channel_index)
 		, graph_(graph)
 		, format_desc_(format_desc)
-		, executor_("output")
+		, executor_(L"output")
 	{
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f));
 	}	
@@ -81,7 +81,7 @@ public:
 		executor_.invoke([&]
 		{
 			consumers_.insert(std::make_pair(index, consumer));
-			CASPAR_LOG(info) << print() << " " << consumer->print() << " Added.";
+			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
 		}, high_priority);
 	}
 
@@ -109,7 +109,7 @@ public:
 		{
 			auto str = old_consumer->print();
 			old_consumer.reset();
-			CASPAR_LOG(info) << print() << " " << str << " Removed.";
+			CASPAR_LOG(info) << print() << L" " << str << L" Removed.";
 		}
 	}
 
@@ -133,7 +133,7 @@ public:
 				catch(...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
-					CASPAR_LOG(info) << print() << " " << it->second->print() << " Removed.";
+					CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
 					consumers_.erase(it++);
 				}
 			}
@@ -200,7 +200,7 @@ public:
 							++it;
 						else
 						{
-							CASPAR_LOG(info) << print() << " " << it->second->print() << " Removed.";
+							CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
 							consumers_.erase(it++);
 						}
 					}
@@ -218,7 +218,7 @@ public:
 						catch(...)
 						{
 							CASPAR_LOG_CURRENT_EXCEPTION();
-							CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << ". Removing it.";
+							CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << L". Removing it.";
 							consumers_.erase(it++);
 						}
 					}
@@ -233,20 +233,20 @@ public:
 		});
 	}
 
-	std::string print() const
+	std::wstring print() const
 	{
-		return "output[" + boost::lexical_cast<std::string>(channel_index_) + "]";
+		return L"output[" + boost::lexical_cast<std::wstring>(channel_index_) + L"]";
 	}
 
-	boost::unique_future<boost::property_tree::ptree> info()
+	boost::unique_future<boost::property_tree::wptree> info()
 	{
-		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::ptree
+		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
 		{			
-			boost::property_tree::ptree info;
+			boost::property_tree::wptree info;
 			BOOST_FOREACH(auto& consumer, consumers_)
 			{
-				info.add_child("consumers.consumer", consumer.second->info())
-					.add("index", consumer.first); 
+				info.add_child(L"consumers.consumer", consumer.second->info())
+					.add(L"index", consumer.first); 
 			}
 			return info;
 		}, high_priority));
@@ -260,5 +260,5 @@ void output::remove(int index){impl_->remove(index);}
 void output::remove(const safe_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 void output::send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) {impl_->send(frame); }
 void output::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
-boost::unique_future<boost::property_tree::ptree> output::info() const{return impl_->info();}
+boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
 }}

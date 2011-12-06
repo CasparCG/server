@@ -82,7 +82,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	CComPtr<IDeckLink>											decklink_;
 	CComQIPtr<IDeckLinkInput>									input_;
 	
-	const std::string											model_name_;
+	const std::wstring											model_name_;
 	const core::video_format_desc								format_desc_;
 	const size_t												device_index_;
 
@@ -101,7 +101,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	ffmpeg::frame_muxer											muxer_;
 
 public:
-	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::string& filter)
+	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
 		: decklink_(get_device(device_index))
 		, input_(decklink_)
 		, model_name_(get_model_name(decklink_))
@@ -128,25 +128,25 @@ public:
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
 		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(print() + " Could not enable video input.")
+									<< msg_info(narrow(print()) + " Could not enable video input.")
 									<< boost::errinfo_api_function("EnableVideoInput"));
 
 		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, format_desc_.audio_channels))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(print() + " Could not enable audio input.")
+									<< msg_info(narrow(print()) + " Could not enable audio input.")
 									<< boost::errinfo_api_function("EnableAudioInput"));
 			
 		if (FAILED(input_->SetCallback(this)) != S_OK)
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(print() + " Failed to set input callback.")
+									<< msg_info(narrow(print()) + " Failed to set input callback.")
 									<< boost::errinfo_api_function("SetCallback"));
 			
 		if(FAILED(input_->StartStreams()))
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(print() + " Failed to start input stream.")
+									<< msg_info(narrow(print()) + " Failed to start input stream.")
 									<< boost::errinfo_api_function("StartStreams"));
 		
-		CASPAR_LOG(info) << print() << " Successfully Initialized.";
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
 	~decklink_producer()
@@ -244,9 +244,9 @@ public:
 		return frame;
 	}
 	
-	std::string print() const
+	std::wstring print() const
 	{
-		return model_name_ + " [" + boost::lexical_cast<std::string>(device_index_) + "]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
 	}
 };
 	
@@ -257,8 +257,8 @@ class decklink_producer_proxy : public core::frame_producer
 	const uint32_t					length_;
 public:
 
-	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::string& filter_str, uint32_t length)
-		: context_("decklink_producer[" + boost::lexical_cast<std::string>(device_index) + "]")
+	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length)
+		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, last_frame_(core::basic_frame::empty())
 		, length_(length)
 	{
@@ -269,7 +269,7 @@ public:
 	{
 		auto str = print();
 		context_.reset();
-		CASPAR_LOG(info) << str << " Successfully Uninitialized.";	
+		CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
 	}
 
 	// frame_producer
@@ -292,31 +292,31 @@ public:
 		return length_;
 	}
 	
-	std::string print() const override
+	std::wstring print() const override
 	{
 		return context_->print();
 	}
 
-	virtual boost::property_tree::ptree info() const override
+	virtual boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::ptree info;
-		info.add("type", "decklink-producer");
+		boost::property_tree::wptree info;
+		info.add(L"type", L"decklink-producer");
 		return info;
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::string>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
-	if(params.empty() || !iequals(params[0], "decklink"))
+	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
 
-	auto device_index	= get_param("DEVICE", params, 1);
-	auto filter_str		= get_param("FILTER", params); 	
-	auto length			= get_param("LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
-	auto format_desc	= core::video_format_desc::get(get_param("FORMAT", params, "INVALID"));
+	auto device_index	= get_param(L"DEVICE", params, 1);
+	auto filter_str		= get_param(L"FILTER", params); 	
+	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
+	auto format_desc	= core::video_format_desc::get(get_param(L"FORMAT", params, L"INVALID"));
 	
-	boost::replace_all(filter_str, "DEINTERLACE", "YADIF=0:-1");
-	boost::replace_all(filter_str, "DEINTERLACE_BOB", "YADIF=1:-1");
+	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
+	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();

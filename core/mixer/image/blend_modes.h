@@ -61,6 +61,6 @@ struct blend_mode
 	};
 };
 
-blend_mode::type get_blend_mode(const std::string& str);
+blend_mode::type get_blend_mode(const std::wstring& str);
 
 }}

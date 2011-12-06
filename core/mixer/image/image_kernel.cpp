@@ -80,7 +80,7 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		if(!std::all_of(params.textures.begin(), params.textures.end(), std::mem_fn(&device_buffer::ready)))
 		{
-			CASPAR_LOG(trace) << "[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
+			CASPAR_LOG(trace) << L"[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
 			ogl_->yield(); // Try to give it some more time.
 		}		
 		
