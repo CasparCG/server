@@ -1,1 +1,0 @@
-./configure --disable-static --enable-shared --enable-gpl --disable-ffmpeg --disable-ffplay --disable-ffprobe --disable-ffserver --enable-postproc --enable-runtime-cpudetect --enable-hardcoded-tables --enable-memalign-hack --cross-prefix=i686-mingw32- --enable-cross-compile --target-os=mingw32 --cpu=686 --arch=x86
