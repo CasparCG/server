@@ -58,10 +58,10 @@ class context : public drawable
 public:					
 
 	template<typename Func>
-	static void begin_invoke(Func&& func) // noexcept
+	static void begin_invoke(Func&& func, task_priority priority) // noexcept
 	{	
-		if(get_instance().executor_.size() < 1024)
-			get_instance().executor_.begin_invoke(std::forward<Func>(func));	
+		if(get_instance().executor_.size() < 128)
+			get_instance().executor_.begin_invoke(std::forward<Func>(func), priority);	
 	}
 
 	static void register_drawable(const std::shared_ptr<drawable>& drawable)
@@ -72,7 +72,7 @@ public:
 		begin_invoke([=]
 		{
 			get_instance().do_register_drawable(drawable);
-		});
+		}, high_priority);
 	}
 
 	static void show(bool value)
@@ -80,7 +80,7 @@ public:
 		begin_invoke([=]
 		{	
 			get_instance().do_show(value);
-		});
+		}, high_priority);
 	}
 				
 private:
@@ -250,7 +250,7 @@ public:
 
 		if(!tick_data_.empty())
 		{
-			float sum = *std::max_element(tick_data_.begin(), tick_data_.end()) + std::numeric_limits<float>::min();
+			float sum = std::accumulate(tick_data_.begin(), tick_data_.end(), 0.0) + std::numeric_limits<float>::min();
 			line_data_.push_back(std::make_pair(static_cast<float>(sum)/static_cast<float>(tick_data_.size()), tick_tag_));
 			tick_data_.clear();
 		}
@@ -391,12 +391,16 @@ void graph::set_text(const std::string& value)
 	context::begin_invoke([=]
 	{	
 		p->set_text(value);
-	});
+	}, high_priority);
 }
 
 void graph::set_text(const std::wstring& value)
 {
-	set_text(narrow(value));
+	auto p = impl_;
+	context::begin_invoke([=]
+	{	
+		set_text(narrow(value));
+	}, high_priority);
 }
 
 void graph::update_value(const std::string& name, double value)
@@ -405,7 +409,7 @@ void graph::update_value(const std::string& name, double value)
 	context::begin_invoke([=]
 	{	
 		p->update(name, value);
-	});
+	}, high_priority);
 }
 void graph::set_value(const std::string& name, double value)
 {	
@@ -413,7 +417,7 @@ void graph::set_value(const std::string& name, double value)
 	context::begin_invoke([=]
 	{	
 		p->set(name, value);
-	});	
+	}, high_priority);	
 }
 void graph::set_color(const std::string& name, color c)
 {		
@@ -421,7 +425,7 @@ void graph::set_color(const std::string& name, color c)
 	context::begin_invoke([=]
 	{	
 		p->set_color(name, c);
-	});
+	}, high_priority);
 }
 void graph::add_tag(const std::string& name)
 {		
@@ -429,7 +433,7 @@ void graph::add_tag(const std::string& name)
 	context::begin_invoke([=]
 	{	
 		p->tag(name);
-	});
+	}, high_priority);
 }
 void graph::add_guide(const std::string& name, double value)
 {	
@@ -437,7 +441,7 @@ void graph::add_guide(const std::string& name, double value)
 	context::begin_invoke([=]
 	{	
 		p->guide(name, value);
-	});
+	}, high_priority);
 }
 
 void register_graph(const safe_ptr<graph>& graph)
