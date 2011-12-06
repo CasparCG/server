@@ -49,7 +49,7 @@ public:
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
-	boost::unique_future<std::wstring> call(bool foreground, const std::wstring& param);
+	boost::unique_future<std::string> call(bool foreground, const std::string& param);
 
 	bool is_paused() const;
 	int64_t frame_number() const;
@@ -61,7 +61,7 @@ public:
 
 	safe_ptr<basic_frame> receive(int hints); // nothrow
 
-	boost::property_tree::wptree info() const;
+	boost::property_tree::ptree info() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

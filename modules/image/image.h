@@ -27,6 +27,6 @@ namespace caspar { namespace image {
 
 void init();
 
-std::wstring get_version();
+std::string get_version();
 
 }}

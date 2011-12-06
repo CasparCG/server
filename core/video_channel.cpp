@@ -62,7 +62,7 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
-		for(int n = 0; n < std::max(1, env::properties().get(L"configuration.pipeline-tokens", 2)); ++n)
+		for(int n = 0; n < std::max(1, env::properties().get("configuration.pipeline-tokens", 2)); ++n)
 			stage_->spawn_token();
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
@@ -85,14 +85,14 @@ public:
 		format_desc_ = format_desc;
 	}
 		
-	std::wstring print() const
+	std::string print() const
 	{
-		return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" +  format_desc_.name + L"]";
+		return "video_channel[" + boost::lexical_cast<std::string>(index_) + "|" +  format_desc_.name + "]";
 	}
 
-	boost::property_tree::wptree info() const
+	boost::property_tree::ptree info() const
 	{
-		boost::property_tree::wptree info;
+		boost::property_tree::ptree info;
 
 		auto stage_info  = stage_->info();
 		auto mixer_info  = mixer_->info();
@@ -102,10 +102,10 @@ public:
 		mixer_info.timed_wait(boost::posix_time::seconds(2));
 		output_info.timed_wait(boost::posix_time::seconds(2));
 		
-		info.add(L"video-mode", format_desc_.name);
-		info.add_child(L"stage", stage_info.get());
-		info.add_child(L"mixer", mixer_info.get());
-		info.add_child(L"output", output_info.get());
+		info.add("video-mode", format_desc_.name);
+		info.add_child("stage", stage_info.get());
+		info.add_child("mixer", mixer_info.get());
+		info.add_child("output", output_info.get());
    
 		return info;			   
 	}
@@ -117,6 +117,6 @@ safe_ptr<mixer> video_channel::mixer() { return impl_->mixer_;}
 safe_ptr<output> video_channel::output() { return impl_->output_;} 
 video_format_desc video_channel::get_video_format_desc() const{return impl_->format_desc_;}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
-boost::property_tree::wptree video_channel::info() const{return impl_->info();}
+boost::property_tree::ptree video_channel::info() const{return impl_->info();}
 
 }}

@@ -68,7 +68,7 @@ public:
 	
 	void set_blend_mode(int index, blend_mode::type value);
 
-	boost::unique_future<boost::property_tree::wptree> info() const;
+	boost::unique_future<boost::property_tree::ptree> info() const;
 	
 private:
 	struct implementation;

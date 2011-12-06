@@ -106,7 +106,7 @@ namespace amcp {
 		{
 			_parameters2 = _parameters;
 			for(size_t n = 0; n < _parameters.size(); ++n)
-				_parameters[n] = boost::to_upper_copy(_parameters[n]);
+				_parameters[n] = to_upper_copy(_parameters[n]);
 			return (TNeedChannel && !GetChannel()) || _parameters.size() < TMinParameters ? false : DoExecute();
 		}
 

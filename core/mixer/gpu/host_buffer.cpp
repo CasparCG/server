@@ -65,7 +65,7 @@ public:
 		if(!pbo_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
 
-		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == write_only ? "write_only" : "read_only");
+		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == write_only ? g_w_total_count : g_r_total_count) << "] allocated size:" << size_ << " usage: " << (usage == write_only ? "write_only" : "read_only");
 	}	
 
 	~implementation()
@@ -73,7 +73,7 @@ public:
 		try
 		{
 			GL(glDeleteBuffers(1, &pbo_));
-			//CASPAR_LOG(trace) << "[host_buffer] [" << --(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] deallocated size:" << size_ << " usage: " << (usage_ == write_only ? "write_only" : "read_only");
+			//CASPAR_LOG(trace) << "[host_buffer] [" << --(usage_ == write_only ? g_w_total_count : g_r_total_count) << "] deallocated size:" << size_ << " usage: " << (usage_ == write_only ? "write_only" : "read_only");
 		}
 		catch(...)
 		{

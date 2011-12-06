@@ -39,7 +39,7 @@ void init()
 	try
 	{
 		blue_initialize();
-		core::register_consumer_factory([](const std::vector<std::wstring>& params)
+		core::register_consumer_factory([](const std::vector<std::string>& params)
 		{
 			return create_consumer(params);
 		});
@@ -47,7 +47,7 @@ void init()
 	catch(...){}
 }
 
-std::wstring get_version()
+std::string get_version()
 {
 	try
 	{
@@ -55,18 +55,18 @@ std::wstring get_version()
 	}
 	catch(...)
 	{
-		return L"Not found";
+		return "Not found";
 	}
 
 	if(!BlueVelvetVersion)
-		return L"Unknown";
+		return "Unknown";
 
-	return widen(std::string(BlueVelvetVersion()));
+	return std::string(BlueVelvetVersion());
 }
 
-std::vector<std::wstring> get_device_list()
+std::vector<std::string> get_device_list()
 {
-	std::vector<std::wstring> devices;
+	std::vector<std::string> devices;
 
 	try
 	{		
@@ -76,7 +76,7 @@ std::vector<std::wstring> get_device_list()
 
 		for(int n = 1; BLUE_PASS(blue->device_attach(n, FALSE)); ++n)
 		{				
-			devices.push_back(std::wstring(get_card_desc(*blue)) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");
+			devices.push_back(std::string(get_card_desc(*blue)) + " [" + boost::lexical_cast<std::string>(n) + "]");
 			blue->device_detach();		
 		}
 	}

@@ -29,7 +29,7 @@ namespace caspar { namespace ogl {
 
 void init()
 {
-	caspar::core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	caspar::core::register_consumer_factory([](const std::vector<std::string>& params){return create_consumer(params);});
 }
 
 }}

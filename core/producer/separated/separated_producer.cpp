@@ -86,17 +86,17 @@ struct separated_producer : public frame_producer
 		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
 	}
 
-	virtual std::wstring print() const override
+	virtual std::string print() const override
 	{
-		return L"separated[fill:" + fill_producer_->print() + L"|key:" + key_producer_->print() + L"]";
+		return "separated[fill:" + fill_producer_->print() + "|key:" + key_producer_->print() + "]";
 	}	
 
-	boost::property_tree::wptree info() const override
+	boost::property_tree::ptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"separated-producer");
-		info.add_child(L"fill.producer",	fill_producer_->info());
-		info.add_child(L"key.producer",	key_producer_->info());
+		boost::property_tree::ptree info;
+		info.add("type", "separated-producer");
+		info.add_child("fill.producer",	fill_producer_->info());
+		info.add_child("key.producer",	key_producer_->info());
 		return info;
 	}
 };

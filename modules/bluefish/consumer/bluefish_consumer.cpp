@@ -56,7 +56,7 @@ struct bluefish_consumer : boost::noncopyable
 	const core::video_format_desc		format_desc_;
 	const int							channel_index_;
 
-	const std::wstring					model_name_;
+	const std::string					model_name_;
 
 	safe_ptr<diagnostics::graph>		graph_;
 	boost::timer						frame_timer_;
@@ -96,24 +96,24 @@ public:
 			
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set videomode."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to set videomode."));
 
 		//Select Update Mode for output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_UPDATE_TYPE, UPD_FMT_FRAME))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set update type."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to set update type."));
 	
 		disable_video_output();
 
 		//Enable dual link output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT, 1)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to enable dual link."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to enable dual link."));
 
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_4224)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set dual link format type to 4:2:2:4."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to set dual link format type to 4:2:2:4."));
 			
 		//Select output memory format
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MEMORY_FORMAT, MEM_FMT_ARGB_PC))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to set memory format."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + " Failed to set memory format."));
 		
 		//Select image orientation
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
@@ -284,10 +284,10 @@ public:
 			encode_hanc_frame_ex(blue_->has_video_cardtype(), &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
 	}
 	
-	std::wstring print() const
+	std::string print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + 
-			boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
+		return model_name_ + " [" + boost::lexical_cast<std::string>(channel_index_) + "-" + 
+			boost::lexical_cast<std::string>(device_index_) + "|" +  format_desc_.name + "]";
 	}
 };
 
@@ -313,7 +313,7 @@ public:
 		{
 			auto str = print();
 			consumer_.reset();
-			CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
+			CASPAR_LOG(info) << str << " Successfully Uninitialized.";	
 		}
 	}
 
@@ -323,7 +323,7 @@ public:
 	{
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index));
 		audio_cadence_ = format_desc.audio_cadence;
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
+		CASPAR_LOG(info) << print() << " Successfully Initialized.";	
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -335,18 +335,18 @@ public:
 		return true;
 	}
 		
-	virtual std::wstring print() const override
+	virtual std::string print() const override
 	{
-		return consumer_ ? consumer_->print() : L"[bluefish_consumer]";
+		return consumer_ ? consumer_->print() : "[bluefish_consumer]";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	virtual boost::property_tree::ptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"bluefish-consumer");
-		info.add(L"key-only", key_only_);
-		info.add(L"device", device_index_);
-		info.add(L"embedded-audio", embedded_audio_);
+		boost::property_tree::ptree info;
+		info.add("type", "bluefish-consumer");
+		info.add("key-only", key_only_);
+		info.add("device", device_index_);
+		info.add("embedded-audio", embedded_audio_);
 		return info;
 	}
 
@@ -361,24 +361,24 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params)
 {
-	if(params.size() < 1 || params[0] != L"BLUEFISH")
+	if(params.size() < 1 || params[0] != "BLUEFISH")
 		return core::frame_consumer::empty();
 		
 	const auto device_index = params.size() > 1 ? lexical_cast_or_default<int>(params[1], 1) : 1;
 
-	const auto embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
-	const auto key_only		  = std::find(params.begin(), params.end(), L"KEY_ONLY")	   != params.end();
+	const auto embedded_audio = std::find(params.begin(), params.end(), "EMBEDDED_AUDIO") != params.end();
+	const auto key_only		  = std::find(params.begin(), params.end(), "KEY_ONLY")	   != params.end();
 
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
 {	
-	const auto device_index		= ptree.get(L"device",			1);
-	const auto embedded_audio	= ptree.get(L"embedded-audio",	false);
-	const auto key_only			= ptree.get(L"key-only",		false);
+	const auto device_index		= ptree.get("device",			1);
+	const auto embedded_audio	= ptree.get("embedded-audio",	false);
+	const auto key_only			= ptree.get("key-only",		false);
 
 	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }

@@ -76,13 +76,13 @@ struct fence::implementation
 		{
 			if(!warned.fetch_and_store(true))
 			{
-				CASPAR_LOG(warning) << L"[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms. Further warnings are sent to trace log level."
-									<< L" You can ignore this warning if you do not notice any problems with output video. This warning is caused by insufficent support or performance of your graphics card for OpenGL based memory transfers. "
-									<< L" Please try to update your graphics drivers or update your graphics card, see recommendations on (www.casparcg.com)."
-									<< L" Further help is available at (www.casparcg.com/forum).";
+				CASPAR_LOG(warning) << "[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << " ms. Further warnings are sent to trace log level."
+									<< " You can ignore this warning if you do not notice any problems with output video. This warning is caused by insufficent support or performance of your graphics card for OpenGL based memory transfers. "
+									<< " Please try to update your graphics drivers or update your graphics card, see recommendations on (www.casparcg.com)."
+									<< " Further help is available at (www.casparcg.com/forum).";
 			}
 			else
-				CASPAR_LOG(trace) << L"[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms.";
+				CASPAR_LOG(trace) << "[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << " ms.";
 		}
 	}
 };

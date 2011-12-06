@@ -41,8 +41,8 @@ struct frame_consumer : boost::noncopyable
 	
 	virtual bool send(const safe_ptr<read_frame>& frame) = 0;
 	virtual void initialize(const video_format_desc& format_desc, int channel_index) = 0;
-	virtual std::wstring print() const = 0;
-	virtual boost::property_tree::wptree info() const = 0;
+	virtual std::string print() const = 0;
+	virtual boost::property_tree::ptree info() const = 0;
 	virtual bool has_synchronization_clock() const {return true;}
 	virtual size_t buffer_depth() const = 0;
 	virtual int index() const = 0;
@@ -52,9 +52,9 @@ struct frame_consumer : boost::noncopyable
 
 safe_ptr<frame_consumer> create_consumer_cadence_guard(const safe_ptr<frame_consumer>& consumer);
 
-typedef std::function<safe_ptr<core::frame_consumer>(const std::vector<std::wstring>&)> consumer_factory_t;
+typedef std::function<safe_ptr<core::frame_consumer>(const std::vector<std::string>&)> consumer_factory_t;
 
 void register_consumer_factory(const consumer_factory_t& factory);
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params);
 
 }}
