@@ -237,17 +237,17 @@ public:
 					
 	std::string do_call(const std::string& param)
 	{
-		static const boost::regex loop_exp("LOOP\\s*(?<VALUE>\\d?)", boost::regex::icase);
-		static const boost::regex seek_exp("SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
+		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)", boost::regex::icase);
+		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
 		
-		boost::smatch what;
-		if(boost::regex_match(param, what, loop_exp))
+		boost::wsmatch what;
+		if(boost::regex_match(u16(param), what, loop_exp))
 		{
 			if(!what["VALUE"].str().empty())
 				input_.loop(boost::lexical_cast<bool>(what["VALUE"].str()));
 			return boost::lexical_cast<std::string>(input_.loop());
 		}
-		if(boost::regex_match(param, what, seek_exp))
+		if(boost::regex_match(u16(param), what, seek_exp))
 		{
 			input_.seek(boost::lexical_cast<uint32_t>(what["VALUE"].str()));
 			return "";
