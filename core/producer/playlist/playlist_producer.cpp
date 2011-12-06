@@ -98,25 +98,26 @@ struct playlist_producer : public frame_producer
 
 	// playlist_producer
 
-	std::string do_call(const std::string& param)
+	std::string do_call(const std::string& param2)
 	{		
-		static const boost::regex push_front_exp	("PUSH_FRONT (?<PARAM>.+)");		
-		static const boost::regex push_back_exp	("(PUSH_BACK|PUSH) (?<PARAM>.+)");
-		static const boost::regex pop_front_exp	("POP_FRONT");		
-		static const boost::regex pop_back_exp		("(POP_BACK|POP)");
-		static const boost::regex clear_exp		("CLEAR");
-		static const boost::regex next_exp			("NEXT");
-		static const boost::regex insert_exp		("INSERT (?<POS>\\d+) (?<PARAM>.+)");	
-		static const boost::regex remove_exp		("REMOVE (?<POS>\\d+) (?<PARAM>.+)");	
-		static const boost::regex list_exp			("LIST");			
-		static const boost::regex loop_exp			("LOOP\\s*(?<VALUE>\\d?)");
+		auto param = u16(param2);
+		static const boost::wregex push_front_exp	(L"PUSH_FRONT (?<PARAM>.+)");		
+		static const boost::wregex push_back_exp	(L"(PUSH_BACK|PUSH) (?<PARAM>.+)");
+		static const boost::wregex pop_front_exp	(L"POP_FRONT");		
+		static const boost::wregex pop_back_exp		(L"(POP_BACK|POP)");
+		static const boost::wregex clear_exp		(L"CLEAR");
+		static const boost::wregex next_exp			(L"NEXT");
+		static const boost::wregex insert_exp		(L"INSERT (?<POS>\\d+) (?<PARAM>.+)");	
+		static const boost::wregex remove_exp		(L"REMOVE (?<POS>\\d+) (?<PARAM>.+)");	
+		static const boost::wregex list_exp			(L"LIST");			
+		static const boost::wregex loop_exp			(L"LOOP\\s*(?<VALUE>\\d?)");
 		
-		boost::smatch what;
+		boost::wsmatch what;
 
 		if(boost::regex_match(param, what, push_front_exp))
-			return push_front(what["PARAM"].str()); 
+			return push_front(u8(what["PARAM"].str())); 
 		else if(boost::regex_match(param, what, push_back_exp))
-			return push_back(what["PARAM"].str()); 
+			return push_back(u8(what["PARAM"].str())); 
 		if(boost::regex_match(param, what, pop_front_exp))
 			return pop_front(); 
 		else if(boost::regex_match(param, what, pop_back_exp))
@@ -126,7 +127,7 @@ struct playlist_producer : public frame_producer
 		else if(boost::regex_match(param, what, next_exp))
 			return next(); 
 		else if(boost::regex_match(param, what, insert_exp))
-			return insert(boost::lexical_cast<size_t>(what["POS"].str()), what["PARAM"].str());
+			return insert(boost::lexical_cast<size_t>(what["POS"].str()), u8(what["PARAM"].str()));
 		else if(boost::regex_match(param, what, remove_exp))
 			return erase(boost::lexical_cast<size_t>(what["POS"].str()));
 		else if(boost::regex_match(param, what, list_exp))

@@ -112,21 +112,22 @@ public:
 		return flash_producer_->call(str);
 	}
 
-	boost::unique_future<std::string> call(const std::string& str)
+	boost::unique_future<std::string> call(const std::string& str2)
 	{		
-		static const boost::regex add_exp			("ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)( (?<DATA>.*))?");
-		static const boost::regex remove_exp		("REMOVE (?<LAYER>\\d+)");
-		static const boost::regex play_exp			("PLAY (?<LAYER>\\d+)");
-		static const boost::regex stop_exp			("STOP (?<LAYER>\\d+)");
-		static const boost::regex next_exp			("NEXT (?<LAYER>\\d+)");
-		static const boost::regex update_exp		("UPDATE (?<LAYER>\\d+) (?<DATA>.+)");
-		static const boost::regex invoke_exp		("INVOKE (?<LAYER>\\d+) (?<LABEL>.+)");
-		static const boost::regex description_exp	("INFO (?<LAYER>\\d+)");
-		static const boost::regex info_exp			("INFO");
+		auto str = u16(str2);
+		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)( (?<DATA>.*))?");
+		static const boost::wregex remove_exp		(L"REMOVE (?<LAYER>\\d+)");
+		static const boost::wregex play_exp			(L"PLAY (?<LAYER>\\d+)");
+		static const boost::wregex stop_exp			(L"STOP (?<LAYER>\\d+)");
+		static const boost::wregex next_exp			(L"NEXT (?<LAYER>\\d+)");
+		static const boost::wregex update_exp		(L"UPDATE (?<LAYER>\\d+) (?<DATA>.+)");
+		static const boost::wregex invoke_exp		(L"INVOKE (?<LAYER>\\d+) (?<LABEL>.+)");
+		static const boost::wregex description_exp	(L"INFO (?<LAYER>\\d+)");
+		static const boost::wregex info_exp			(L"INFO");
 		
-		boost::smatch what;
+		boost::wsmatch what;
 		if(boost::regex_match(str, what, add_exp))
-			return add(boost::lexical_cast<int>(what["LAYER"].str()), flash::find_template(env::template_folder() + what["FILENAME"].str()), boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()), "", what["DATA"].str()); 
+			return add(boost::lexical_cast<int>(what["LAYER"].str()), flash::find_template(env::template_folder() + u8(what["FILENAME"].str())), boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()), "", u8(what["DATA"].str())); 
 		else if(boost::regex_match(str, what, remove_exp))
 			return remove(boost::lexical_cast<int>(what["LAYER"].str())); 
 		else if(boost::regex_match(str, what, stop_exp))
@@ -134,15 +135,15 @@ public:
 		else if(boost::regex_match(str, what, next_exp))
 			return next(boost::lexical_cast<int>(what["LAYER"].str())); 
 		else if(boost::regex_match(str, what, update_exp))
-			return update(boost::lexical_cast<int>(what["LAYER"].str()), what["DATA"].str()); 
+			return update(boost::lexical_cast<int>(what["LAYER"].str()), u8(what["DATA"].str())); 
 		else if(boost::regex_match(str, what, next_exp))
-			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABE"].str()); 
+			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), u8(what["LABE"].str())); 
 		else if(boost::regex_match(str, what, description_exp))
 			return description(boost::lexical_cast<int>(what["LAYER"].str())); 
 		else if(boost::regex_match(str, what, invoke_exp))
 			return template_host_info(); 
 
-		return flash_producer_->call(str);
+		return flash_producer_->call(str2);
 	}
 
 	safe_ptr<core::basic_frame> receive(int hints)
