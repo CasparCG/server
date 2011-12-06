@@ -216,10 +216,13 @@ public:
 		else if(c->codec_id == CODEC_ID_H264)
 		{			   
 			c->pix_fmt = PIX_FMT_YUV420P;    
-			av_opt_set(c->priv_data, "preset", "ultrafast", 0);
-			av_opt_set(c->priv_data, "tune",   "film",   0);
-			av_opt_set(c->priv_data, "crf",    "5",     0);
-			
+			if(options.empty())
+			{
+				av_opt_set(c->priv_data, "preset", "ultrafast", 0);
+				av_opt_set(c->priv_data, "tune",   "fastdecode",   0);
+				av_opt_set(c->priv_data, "crf",    "5",     0);
+			}
+
 			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else
