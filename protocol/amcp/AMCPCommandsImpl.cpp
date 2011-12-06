@@ -1420,7 +1420,6 @@ bool InfoCommand::DoExecute()
 				replyString << TEXT("200 INFO OK\r\n");
 				for(size_t n = 0; n < channels_.size(); ++n)
 					GenerateChannelInfo(n, channels_[n], replyString);
-				replyString << TEXT("\r\n");
 			}
 
 		}
