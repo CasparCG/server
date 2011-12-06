@@ -35,7 +35,7 @@ namespace core {
 namespace ogl {
 
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params);
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree);
 
 }}

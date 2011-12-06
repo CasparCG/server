@@ -43,7 +43,7 @@ using namespace core;
 const std::wstring CIIProtocolStrategy::MessageDelimiter = TEXT("\r\n");
 const TCHAR CIIProtocolStrategy::TokenDelimiter = TEXT('\\');
 
-CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels) : pChannel_(channels.at(0)), executor_(L"CIIProtocolStrategy")
+CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels) : pChannel_(channels.at(0)), executor_("CIIProtocolStrategy")
 {
 }
 
@@ -168,27 +168,27 @@ CIICommandPtr CIIProtocolStrategy::Create(const std::wstring& name)
 
 void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, const std::wstring& titleName, const std::wstring& xmlData) 
 {
-	std::wstring fullTemplateFilename = env::template_folder();
+	std::wstring fullTemplateFilename = u16(env::template_folder());
 	if(currentProfile_.size() > 0)
 	{
 		fullTemplateFilename += currentProfile_;
 		fullTemplateFilename += TEXT("\\");
 	}
 	fullTemplateFilename += templateName;
-	fullTemplateFilename = flash::find_template(fullTemplateFilename);
+	fullTemplateFilename = u16(flash::find_template(u8(fullTemplateFilename)));
 	if(fullTemplateFilename.empty())
 	{
-		CASPAR_LOG(error) << "Failed to save instance of " << templateName << TEXT(" as ") << titleName << TEXT(", template ") << fullTemplateFilename << " not found";
+		CASPAR_LOG(error) << "Failed to save instance of " << u8(templateName) << " as " << u8(titleName) << ", template " << u8(fullTemplateFilename) << " not found";
 		return;
 	}
 	
-	auto producer = flash::create_producer(this->GetChannel()->mixer(), boost::assign::list_of(env::template_folder()+TEXT("CG.fth")));
+	auto producer = flash::create_producer(this->GetChannel()->mixer(), boost::assign::list_of(env::template_folder()+"CG.fth"));
 
 	std::wstringstream flashParam;
 	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");
-	producer->call(flashParam.str());
+	producer->call(u8(flashParam.str()));
 
-	CASPAR_LOG(info) << "Saved an instance of " << templateName << TEXT(" as ") << titleName ;
+	CASPAR_LOG(info) << "Saved an instance of " << u8(templateName) << " as " << u8(titleName);
 
 	PutPreparedTemplate(titleName, safe_ptr<core::frame_producer>(std::move(producer)));
 	
@@ -201,11 +201,11 @@ void CIIProtocolStrategy::DisplayTemplate(const std::wstring& titleName)
 		pChannel_->stage()->load(0, GetPreparedTemplate(titleName));
 		pChannel_->stage()->play(0);
 
-		CASPAR_LOG(info) << L"Displayed title " << titleName ;
+		CASPAR_LOG(info) << "Displayed title " << u8(titleName);
 	}
 	catch(caspar_exception&)
 	{
-		CASPAR_LOG(error) << L"Failed to display title " << titleName;
+		CASPAR_LOG(error) << "Failed to display title " << u8(titleName);
 	}
 }
 
@@ -215,7 +215,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition.type = transition::mix;
 	transition.duration = 12;
 
-	auto pFP = create_producer(GetChannel()->mixer(), filename);
+	auto pFP = create_producer(GetChannel()->mixer(), u8(filename));
 	auto pTransition = create_transition_producer(GetChannel()->get_video_format_desc().field_mode, pFP, transition);
 
 	try
@@ -225,13 +225,13 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(error) << L"Failed to display " << filename ;
+		CASPAR_LOG(error) << "Failed to display " << u8(filename);
 		return;
 	}
 
 	pChannel_->stage()->play(0);
 
-	CASPAR_LOG(info) << L"Displayed " << filename;
+	CASPAR_LOG(info) << "Displayed " << u8(filename);
 }
 
 safe_ptr<core::frame_producer> CIIProtocolStrategy::GetPreparedTemplate(const std::wstring& titleName)
@@ -240,18 +240,18 @@ safe_ptr<core::frame_producer> CIIProtocolStrategy::GetPreparedTemplate(const st
 
 	TitleList::iterator it = std::find(titles_.begin(), titles_.end(), titleName);
 	if(it != titles_.end()) {
-		CASPAR_LOG(debug) << L"Found title with name " << it->titleName;
+		CASPAR_LOG(debug) << "Found title with name " << u8(it->titleName);
 		result = (*it).pframe_producer;
 	}
 	else 
-		CASPAR_LOG(error) << L"Could not find title with name " << titleName;
+		CASPAR_LOG(error) << "Could not find title with name " << u8(titleName);
 
 	return result;
 }
 
 void CIIProtocolStrategy::PutPreparedTemplate(const std::wstring& titleName, safe_ptr<core::frame_producer>& pFP)
 {
-	CASPAR_LOG(debug) << L"Saved title with name " << titleName;
+	CASPAR_LOG(debug) << "Saved title with name " << u8(titleName);
 
 	TitleList::iterator it = std::find(titles_.begin(), titles_.end(), titleName);
 	if(it != titles_.end()) {

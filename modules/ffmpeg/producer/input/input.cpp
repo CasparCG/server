@@ -68,7 +68,7 @@ struct input::implementation : boost::noncopyable
 	const safe_ptr<AVFormatContext>								format_context_; // Destroy this last
 	const int													default_stream_index_;
 			
-	const std::wstring											filename_;
+	const std::string											filename_;
 	tbb::atomic<bool>											loop_;
 	const uint32_t												start_;		
 	const uint32_t												length_;
@@ -85,7 +85,7 @@ struct input::implementation : boost::noncopyable
 
 	tbb::recursive_mutex										mutex_;
 
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
+	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::string& filename, bool loop, uint32_t start, uint32_t length) 
 		: graph_(graph)
 		, format_context_(open_input(filename))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
@@ -108,7 +108,7 @@ struct input::implementation : boost::noncopyable
 		is_running_ = true;
 		thread_ = boost::thread([this]{run();});
 
-		CASPAR_LOG(info) << print() << L" Initialized.";
+		CASPAR_LOG(info) << print() << " Initialized.";
 	}
 
 	~implementation()
@@ -269,13 +269,13 @@ struct input::implementation : boost::noncopyable
 		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 	
-	std::wstring print() const
+	std::string print() const
 	{
-		return L"ffmpeg_input[" + filename_ + L")]";
+		return "ffmpeg_input[" + filename_ + ")]";
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::string& filename, bool loop, uint32_t start, uint32_t length) 
 	: impl_(new implementation(graph, filename, loop, start, length)){}
 bool input::eof() const {return impl_->is_eof_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}

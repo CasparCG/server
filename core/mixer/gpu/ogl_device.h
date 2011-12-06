@@ -119,7 +119,7 @@ public:
 	void yield();
 	boost::unique_future<void> gc();
 
-	std::wstring version();
+	std::string version();
 
 private:
 	safe_ptr<device_buffer> allocate_device_buffer(size_t width, size_t height, size_t stride);

@@ -61,7 +61,7 @@ namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer
 {
-	const std::wstring											filename_;
+	const std::string											filename_;
 	
 	const safe_ptr<diagnostics::graph>							graph_;
 	boost::timer												frame_timer_;
@@ -86,7 +86,7 @@ struct ffmpeg_producer : public core::frame_producer
 	uint32_t													file_frame_number_;
 	
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::string& filename, const std::string& filter, bool loop, uint32_t start, uint32_t length) 
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -196,61 +196,61 @@ public:
 		return file_nb_frames;
 	}
 	
-	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
+	virtual boost::unique_future<std::string> call(const std::string& param) override
 	{
-		boost::promise<std::wstring> promise;
+		boost::promise<std::string> promise;
 		promise.set_value(do_call(param));
 		return promise.get_future();
 	}
 				
-	virtual std::wstring print() const override
+	virtual std::string print() const override
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
-						  + print_mode() + L"|" 
-						  + boost::lexical_cast<std::wstring>(file_frame_number_) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
+		return "ffmpeg[" + boost::filesystem::path(filename_).filename() + "|" 
+						  + print_mode() + "|" 
+						  + boost::lexical_cast<std::string>(file_frame_number_) + "/" + boost::lexical_cast<std::string>(file_nb_frames()) + "]";
 	}
 
-	boost::property_tree::wptree info() const override
+	boost::property_tree::ptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type",				L"ffmpeg-producer");
-		info.add(L"filename",			filename_);
-		info.add(L"width",				video_decoder_ ? video_decoder_->width() : 0);
-		info.add(L"height",				video_decoder_ ? video_decoder_->height() : 0);
-		info.add(L"progressive",		video_decoder_ ? video_decoder_->is_progressive() : false);
-		info.add(L"fps",				fps_);
-		info.add(L"loop",				input_.loop());
-		info.add(L"frame-number",		frame_number_);
+		boost::property_tree::ptree info;
+		info.add("type",				"ffmpeg-producer");
+		info.add("filename",			filename_);
+		info.add("width",				video_decoder_ ? video_decoder_->width() : 0);
+		info.add("height",				video_decoder_ ? video_decoder_->height() : 0);
+		info.add("progressive",		video_decoder_ ? video_decoder_->is_progressive() : false);
+		info.add("fps",				fps_);
+		info.add("loop",				input_.loop());
+		info.add("frame-number",		frame_number_);
 		auto nb_frames2 = nb_frames();
-		info.add(L"nb-frames",			nb_frames2 == std::numeric_limits<int64_t>::max() ? -1 : nb_frames2);
-		info.add(L"file-frame-number",	file_frame_number_);
-		info.add(L"file-nb-frames",		file_nb_frames());
+		info.add("nb-frames",			nb_frames2 == std::numeric_limits<int64_t>::max() ? -1 : nb_frames2);
+		info.add("file-frame-number",	file_frame_number_);
+		info.add("file-nb-frames",		file_nb_frames());
 		return info;
 	}
 
 	// ffmpeg_producer
 
-	std::wstring print_mode() const
+	std::string print_mode() const
 	{
-		return video_decoder_ ? ffmpeg::print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive()) : L"";
+		return video_decoder_ ? ffmpeg::print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive()) : "";
 	}
 					
-	std::wstring do_call(const std::wstring& param)
+	std::string do_call(const std::string& param)
 	{
-		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)", boost::regex::icase);
-		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
+		static const boost::regex loop_exp("LOOP\\s*(?<VALUE>\\d?)", boost::regex::icase);
+		static const boost::regex seek_exp("SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
 		
-		boost::wsmatch what;
+		boost::smatch what;
 		if(boost::regex_match(param, what, loop_exp))
 		{
 			if(!what["VALUE"].str().empty())
 				input_.loop(boost::lexical_cast<bool>(what["VALUE"].str()));
-			return boost::lexical_cast<std::wstring>(input_.loop());
+			return boost::lexical_cast<std::string>(input_.loop());
 		}
 		if(boost::regex_match(param, what, seek_exp))
 		{
 			input_.seek(boost::lexical_cast<uint32_t>(what["VALUE"].str()));
-			return L"";
+			return "";
 		}
 
 		BOOST_THROW_EXCEPTION(invalid_argument());
@@ -311,20 +311,20 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::string>& params)
 {		
-	auto filename = probe_stem(env::media_folder() + L"\\" + params.at(0));
+	auto filename = probe_stem(env::media_folder() + "\\" + params.at(0));
 
 	if(filename.empty())
 		return core::frame_producer::empty();
 	
-	auto loop		= boost::range::find(params, L"LOOP") != params.end();
-	auto start		= get_param(L"SEEK", params, static_cast<uint32_t>(0));
-	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
-	auto filter_str = get_param(L"FILTER", params, L""); 	
+	auto loop		= boost::range::find(params, "LOOP") != params.end();
+	auto start		= get_param("SEEK", params, static_cast<uint32_t>(0));
+	auto length		= get_param("LENGTH", params, std::numeric_limits<uint32_t>::max());
+	auto filter_str = get_param("FILTER", params, ""); 	
 		
-	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
-	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
+	boost::replace_all(filter_str, "DEINTERLACE", "YADIF=0:-1");
+	boost::replace_all(filter_str, "DEINTERLACE_BOB", "YADIF=1:-1");
 	
 	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length));
 }

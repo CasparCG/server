@@ -38,16 +38,14 @@
 
 #include <algorithm>
 
-using namespace boost::assign;
-
 namespace caspar { namespace image {
 
 struct image_producer : public core::frame_producer
 {	
-	const std::wstring filename_;
+	const std::string filename_;
 	safe_ptr<core::basic_frame> frame_;
 	
-	explicit image_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
+	explicit image_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::string& filename) 
 		: filename_(filename)
 		, frame_(core::basic_frame::empty())	
 	{
@@ -63,7 +61,7 @@ struct image_producer : public core::frame_producer
 		frame->commit();
 		frame_ = std::move(frame);
 
-		CASPAR_LOG(info) << print() << L" Initialized";
+		CASPAR_LOG(info) << print() << " Initialized";
 	}
 	
 	// frame_producer
@@ -78,34 +76,34 @@ struct image_producer : public core::frame_producer
 		return frame_;
 	}
 
-	virtual std::wstring print() const override
+	virtual std::string print() const override
 	{
-		return L"image_producer[" + filename_ + L"]";
+		return "image_producer[" + filename_ + "]";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	virtual boost::property_tree::ptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"image-producer");
-		info.add(L"filename", filename_);
+		boost::property_tree::ptree info;
+		info.add("type", "image-producer");
+		info.add("filename", filename_);
 		return info;
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::string>& params)
 {
-	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
-	std::wstring filename = env::media_folder() + L"\\" + params[0];
+	static const std::vector<std::string> extensions = boost::assign::list_of("png")("tga")("bmp")("jpg")("jpeg")("gif")("tiff")("tif")("jp2")("jpx")("j2k")("j2c");
+	std::string filename = env::media_folder() + "\\" + params[0];
 	
-	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
+	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::string& ex) -> bool
 		{					
-			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+			return boost::filesystem::is_regular_file(boost::filesystem::path(filename).replace_extension(ex));
 		});
 
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return make_safe<image_producer>(frame_factory, filename + L"." + *ext);
+	return make_safe<image_producer>(frame_factory, filename + "." + *ext);
 }
 
 

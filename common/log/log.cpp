@@ -65,10 +65,8 @@
 #include <boost/lambda/lambda.hpp>
 
 namespace caspar { namespace log {
-
-using namespace boost;
-
-void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& rec)
+	
+void my_formatter(std::ostream& strm, boost::log::basic_record<char> const& rec)
 {
     namespace lambda = boost::lambda;
 	
@@ -79,15 +77,15 @@ void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& 
 	timeinfo = localtime ( &rawtime );
 	char buffer [80];
 	strftime (buffer,80, "%c", timeinfo);
-	strm << L"[" << buffer << L"] ";
+	strm << "[" << buffer << "] ";
 		
     boost::log::attributes::current_thread_id::held_type thread_id;
-    if(boost::log::extract<boost::log::attributes::current_thread_id::held_type>(L"ThreadID", rec.attribute_values(), lambda::var(thread_id) = lambda::_1))
-        strm << L"[" << thread_id << L"] ";
+    if(boost::log::extract<boost::log::attributes::current_thread_id::held_type>("ThreadID", rec.attribute_values(), lambda::var(thread_id) = lambda::_1))
+        strm << "[" << thread_id << "] ";
 
     severity_level severity;
-    if(boost::log::extract<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get(), rec.attribute_values(), lambda::var(severity) = lambda::_1))
-        strm << L"[" << severity << L"] ";
+    if(boost::log::extract<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get(), rec.attribute_values(), lambda::var(severity) = lambda::_1))
+        strm << "[" << severity << "] ";
 
     strm << rec.message();
 }
@@ -96,15 +94,15 @@ namespace internal{
 	
 void init()
 {	
-	boost::log::add_common_attributes<wchar_t>();
-	typedef boost::log::aux::add_common_attributes_constants<wchar_t> traits_t;
+	boost::log::add_common_attributes<char>();
+	typedef boost::log::aux::add_common_attributes_constants<char> traits_t;
 
-	typedef boost::log::sinks::synchronous_sink<boost::log::sinks::wtext_file_backend> file_sink_type;
+	typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend> file_sink_type;
 
-	typedef boost::log::sinks::asynchronous_sink<boost::log::sinks::wtext_ostream_backend> stream_sink_type;
+	typedef boost::log::sinks::asynchronous_sink<boost::log::sinks::text_ostream_backend> stream_sink_type;
 
-	auto stream_backend = boost::make_shared<boost::log::sinks::wtext_ostream_backend>();
-	stream_backend->add_stream(boost::shared_ptr<std::wostream>(&std::wcout, boost::log::empty_deleter()));
+	auto stream_backend = boost::make_shared<boost::log::sinks::text_ostream_backend>();
+	stream_backend->add_stream(boost::shared_ptr<std::ostream>(&std::cout, boost::log::empty_deleter()));
 	stream_backend->auto_flush(true);
 
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
@@ -117,17 +115,17 @@ void init()
 
 	stream_sink->locked_backend()->set_formatter(&my_formatter);
 
-	boost::log::wcore::get()->add_sink(stream_sink);
+	boost::log::core::get()->add_sink(stream_sink);
 }
 
 }
 
-void add_file_sink(const std::wstring& folder)
+void add_file_sink(const std::string& folder)
 {	
-	boost::log::add_common_attributes<wchar_t>();
-	typedef boost::log::aux::add_common_attributes_constants<wchar_t> traits_t;
+	boost::log::add_common_attributes<char>();
+	typedef boost::log::aux::add_common_attributes_constants<char> traits_t;
 
-	typedef boost::log::sinks::synchronous_sink<boost::log::sinks::wtext_file_backend> file_sink_type;
+	typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend> file_sink_type;
 
 	try
 	{
@@ -135,7 +133,7 @@ void add_file_sink(const std::wstring& folder)
 			BOOST_THROW_EXCEPTION(directory_not_found());
 
 		auto file_sink = boost::make_shared<file_sink_type>(
-			boost::log::keywords::file_name = (folder + L"caspar_%Y-%m-%d.log"),
+			boost::log::keywords::file_name = (folder + "caspar_%Y-%m-%d.log"),
 			boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
 			boost::log::keywords::auto_flush = true,
 			boost::log::keywords::open_mode = std::ios::app
@@ -148,28 +146,28 @@ void add_file_sink(const std::wstring& folder)
 //#else
 //		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
 //#endif
-		boost::log::wcore::get()->add_sink(file_sink);
+		boost::log::core::get()->add_sink(file_sink);
 	}
 	catch(...)
 	{
-		std::wcerr << L"Failed to Setup File Logging Sink" << std::endl << std::endl;
+		std::cerr << L"Failed to Setup File Logging Sink" << std::endl << std::endl;
 	}
 }
 
-void set_log_level(const std::wstring& lvl)
+void set_log_level(const std::string& lvl)
 {	
-	if(boost::iequals(lvl, L"trace"))
-		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= trace);
-	else if(boost::iequals(lvl, L"debug"))
-		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
-	else if(boost::iequals(lvl, L"info"))
-		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
-	else if(boost::iequals(lvl, L"warning"))
-		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= warning);
-	else if(boost::iequals(lvl, L"error"))
-		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= error);
-	else if(boost::iequals(lvl, L"fatal"))
-		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= fatal);
+	if(iequals(lvl, "trace"))
+		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= trace);
+	else if(iequals(lvl, "debug"))
+		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= debug);
+	else if(iequals(lvl, "info"))
+		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= info);
+	else if(iequals(lvl, "warning"))
+		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= warning);
+	else if(iequals(lvl, "error"))
+		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= error);
+	else if(iequals(lvl, "fatal"))
+		boost::log::core::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<char>::get()) >= fatal);
 }
 
 }}

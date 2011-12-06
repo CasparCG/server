@@ -30,8 +30,8 @@
 
 namespace caspar { namespace flash {
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::string>& params);
 
-std::wstring find_template(const std::wstring& templateName);
+std::string find_template(const std::string& templateName);
 
 }}

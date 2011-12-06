@@ -80,7 +80,7 @@ enum stretch
 
 struct configuration
 {
-	std::wstring	name;
+	std::string	name;
 	size_t			screen_index;
 	stretch			stretch;
 	bool			windowed;
@@ -88,7 +88,7 @@ struct configuration
 	bool			key_only;
 
 	configuration()
-		: name(L"ogl")
+		: name("ogl")
 		, screen_index(0)
 		, stretch(fill)
 		, windowed(true)
@@ -139,7 +139,7 @@ public:
 		, screen_height_(format_desc.height)
 		, square_width_(format_desc.square_width)
 		, square_height_(format_desc.square_height)
-		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
+		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
 		frame_buffer_.set_capacity(2);
 		
@@ -156,11 +156,11 @@ public:
 			displayDevices.push_back(d_device);
 
 		if(config_.screen_index >= displayDevices.size())
-			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_") << msg_info(narrow(print())));
+			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_") << msg_info((print())));
 		
 		DEVMODE devmode = {};
 		if(!EnumDisplaySettings(displayDevices[config_.screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
-			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info(narrow(print()) + " EnumDisplaySettings"));
+			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info(print() + " EnumDisplaySettings"));
 		
 		screen_x_		= devmode.dmPosition.x;
 		screen_y_		= devmode.dmPosition.y;
@@ -183,7 +183,7 @@ public:
 		if(!GLEW_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
-		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), (print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
 		window_.ShowMouseCursor(false);
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
@@ -364,9 +364,9 @@ public:
 		return is_running_;
 	}
 		
-	std::wstring print() const
+	std::string print() const
 	{	
-		return config_.name + L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+		return config_.name + "[" + boost::lexical_cast<std::string>(channel_index_) + "|" + format_desc_.name + "]";
 	}
 	
 	void calculate_aspect()
@@ -443,7 +443,7 @@ public:
 		{
 			auto str = print();
 			consumer_.reset();
-			CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
+			CASPAR_LOG(info) << str << " Successfully Uninitialized.";	
 		}
 	}
 
@@ -453,7 +453,7 @@ public:
 	{
 		consumer_.reset();
 		consumer_.reset(new ogl_consumer(config_, format_desc, channel_index));
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
+		CASPAR_LOG(info) << print() << " Successfully Initialized.";	
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -461,18 +461,18 @@ public:
 		return consumer_->send(frame);
 	}
 	
-	virtual std::wstring print() const override
+	virtual std::string print() const override
 	{
-		return consumer_ ? consumer_->print() : L"[ogl_consumer]";
+		return consumer_ ? consumer_->print() : "[ogl_consumer]";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	virtual boost::property_tree::ptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"ogl-consumer");
-		info.add(L"key-only", config_.key_only);
-		info.add(L"windowed", config_.windowed);
-		info.add(L"auto-deinterlace", config_.auto_deinterlace);
+		boost::property_tree::ptree info;
+		info.add("type", "ogl-consumer");
+		info.add("key-only", config_.key_only);
+		info.add("windowed", config_.windowed);
+		info.add("auto-deinterlace", config_.auto_deinterlace);
 		return info;
 	}
 
@@ -492,9 +492,9 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params)
 {
-	if(params.size() < 1 || params[0] != L"SCREEN")
+	if(params.size() < 1 || params[0] != "SCREEN")
 		return core::frame_consumer::empty();
 	
 	configuration config;
@@ -505,24 +505,24 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	if(params.size() > 2) 
 		config.windowed = lexical_cast_or_default<bool>(params[3], config.windowed);
 
-	config.key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
+	config.key_only = std::find(params.begin(), params.end(), "KEY_ONLY") != params.end();
 
 	return make_safe<ogl_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
+safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::ptree& ptree) 
 {
 	configuration config;
-	config.name				= ptree.get(L"name",	 config.name);
-	config.screen_index		= ptree.get(L"device",   config.screen_index+1)-1;
-	config.windowed			= ptree.get(L"windowed", config.windowed);
-	config.key_only			= ptree.get(L"key-only", config.key_only);
-	config.auto_deinterlace	= ptree.get(L"auto-deinterlace", config.auto_deinterlace);
+	config.name				= ptree.get("name",	 config.name);
+	config.screen_index		= ptree.get("device",   config.screen_index+1)-1;
+	config.windowed			= ptree.get("windowed", config.windowed);
+	config.key_only			= ptree.get("key-only", config.key_only);
+	config.auto_deinterlace	= ptree.get("auto-deinterlace", config.auto_deinterlace);
 	
-	auto stretch_str = ptree.get(L"stretch", L"default");
-	if(stretch_str == L"uniform")
+	auto stretch_str = ptree.get("stretch", "default");
+	if(stretch_str == "uniform")
 		config.stretch = stretch::uniform;
-	else if(stretch_str == L"uniform_to_fill")
+	else if(stretch_str == "uniform_to_fill")
 		config.stretch = stretch::uniform_to_fill;
 	
 	return make_safe<ogl_consumer_proxy>(config);

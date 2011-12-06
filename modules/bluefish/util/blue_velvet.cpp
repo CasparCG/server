@@ -43,11 +43,11 @@ void blue_velvet_initialize()
 	std::string module_str = "BlueVelvet3.dll";
 #endif
 
-	auto module = LoadLibrary(widen(module_str).c_str());
+	auto module = LoadLibrary(u16(module_str).c_str());
 	if(!module)
-		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
 	if(!module)
-		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
@@ -64,11 +64,11 @@ void blue_hanc_initialize()
 	std::string module_str = "BlueHancUtils.dll";
 #endif
 	
-	auto module = LoadLibrary(widen(module_str).c_str());
+	auto module = LoadLibrary(u16(module_str).c_str());
 	if(!module)
-		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
 	if(!module)
-		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
@@ -126,44 +126,44 @@ bool is_epoch_card(CBlueVelvet4& blue)
 	}
 }
 
-std::wstring get_card_desc(CBlueVelvet4& blue)
+std::string get_card_desc(CBlueVelvet4& blue)
 {
 	switch(blue.has_video_cardtype()) 
 	{
-	case CRD_BLUEDEEP_LT:				return L"Deepblue LT";// D64 Lite
-	case CRD_BLUEDEEP_SD:				return L"Iridium SD";// Iridium SD
-	case CRD_BLUEDEEP_AV:				return L"Iridium AV";// Iridium AV
-	case CRD_BLUEDEEP_IO:				return L"Deepblue IO";// D64 Full
-	case CRD_BLUEWILD_AV:				return L"Wildblue AV";// D64 AV
-	case CRD_IRIDIUM_HD:				return L"Iridium HD";// * Iridium HD
-	case CRD_BLUEWILD_RT:				return L"Wildblue RT";// D64 RT
-	case CRD_BLUEWILD_HD:				return L"Wildblue HD";// * BadAss G2
-	case CRD_REDDEVIL:					return L"Iridium Full";// Iridium Full
+	case CRD_BLUEDEEP_LT:				return "Deepblue LT";// D64 Lite
+	case CRD_BLUEDEEP_SD:				return "Iridium SD";// Iridium SD
+	case CRD_BLUEDEEP_AV:				return "Iridium AV";// Iridium AV
+	case CRD_BLUEDEEP_IO:				return "Deepblue IO";// D64 Full
+	case CRD_BLUEWILD_AV:				return "Wildblue AV";// D64 AV
+	case CRD_IRIDIUM_HD:				return "Iridium HD";// * Iridium HD
+	case CRD_BLUEWILD_RT:				return "Wildblue RT";// D64 RT
+	case CRD_BLUEWILD_HD:				return "Wildblue HD";// * BadAss G2
+	case CRD_REDDEVIL:					return "Iridium Full";// Iridium Full
 	case CRD_BLUEDEEP_HD:	
-	case CRD_BLUEDEEP_HDS:				return L"Reserved for \"BasAss G2";// * BadAss G2 variant, proposed, reserved
-	case CRD_BLUE_ENVY:					return L"Blue Envy"; // Mini Din 
-	case CRD_BLUE_PRIDE:				return L"Blue Pride";//Mini Din Output 
-	case CRD_BLUE_GREED:				return L"Blue Greed";
-	case CRD_BLUE_INGEST:				return L"Blue Ingest";
-	case CRD_BLUE_SD_DUALLINK:			return L"Blue SD Duallink";
-	case CRD_BLUE_CATALYST:				return L"Blue Catalyst";
-	case CRD_BLUE_SD_DUALLINK_PRO:		return L"Blue SD Duallink Pro";
-	case CRD_BLUE_SD_INGEST_PRO:		return L"Blue SD Ingest pro";
-	case CRD_BLUE_SD_DEEPBLUE_LITE_PRO:	return L"Blue SD Deepblue lite Pro";
-	case CRD_BLUE_SD_SINGLELINK_PRO:	return L"Blue SD Singlelink Pro";
-	case CRD_BLUE_SD_IRIDIUM_AV_PRO:	return L"Blue SD Iridium AV Pro";
-	case CRD_BLUE_SD_FIDELITY:			return L"Blue SD Fidelity";
-	case CRD_BLUE_SD_FOCUS:				return L"Blue SD Focus";
-	case CRD_BLUE_SD_PRIME:				return L"Blue SD Prime";
-	case CRD_BLUE_EPOCH_2K_CORE:		return L"Blue Epoch 2K Core";
-	case CRD_BLUE_EPOCH_2K_ULTRA:		return L"Blue Epoch 2K Ultra";
-	case CRD_BLUE_EPOCH_HORIZON:		return L"Blue Epoch Horizon";
-	case CRD_BLUE_EPOCH_CORE:			return L"Blue Epoch Core";
-	case CRD_BLUE_EPOCH_ULTRA:			return L"Blue Epoch Ultra";
-	case CRD_BLUE_CREATE_HD:			return L"Blue Create HD";
-	case CRD_BLUE_CREATE_2K:			return L"Blue Create 2K";
-	case CRD_BLUE_CREATE_2K_ULTRA:		return L"Blue Create 2K Ultra";
-	default:							return L"Unknown";
+	case CRD_BLUEDEEP_HDS:				return "Reserved for \"BasAss G2";// * BadAss G2 variant, proposed, reserved
+	case CRD_BLUE_ENVY:					return "Blue Envy"; // Mini Din 
+	case CRD_BLUE_PRIDE:				return "Blue Pride";//Mini Din Output 
+	case CRD_BLUE_GREED:				return "Blue Greed";
+	case CRD_BLUE_INGEST:				return "Blue Ingest";
+	case CRD_BLUE_SD_DUALLINK:			return "Blue SD Duallink";
+	case CRD_BLUE_CATALYST:				return "Blue Catalyst";
+	case CRD_BLUE_SD_DUALLINK_PRO:		return "Blue SD Duallink Pro";
+	case CRD_BLUE_SD_INGEST_PRO:		return "Blue SD Ingest pro";
+	case CRD_BLUE_SD_DEEPBLUE_LITE_PRO:	return "Blue SD Deepblue lite Pro";
+	case CRD_BLUE_SD_SINGLELINK_PRO:	return "Blue SD Singlelink Pro";
+	case CRD_BLUE_SD_IRIDIUM_AV_PRO:	return "Blue SD Iridium AV Pro";
+	case CRD_BLUE_SD_FIDELITY:			return "Blue SD Fidelity";
+	case CRD_BLUE_SD_FOCUS:				return "Blue SD Focus";
+	case CRD_BLUE_SD_PRIME:				return "Blue SD Prime";
+	case CRD_BLUE_EPOCH_2K_CORE:		return "Blue Epoch 2K Core";
+	case CRD_BLUE_EPOCH_2K_ULTRA:		return "Blue Epoch 2K Ultra";
+	case CRD_BLUE_EPOCH_HORIZON:		return "Blue Epoch Horizon";
+	case CRD_BLUE_EPOCH_CORE:			return "Blue Epoch Core";
+	case CRD_BLUE_EPOCH_ULTRA:			return "Blue Epoch Ultra";
+	case CRD_BLUE_CREATE_HD:			return "Blue Create HD";
+	case CRD_BLUE_CREATE_2K:			return "Blue Create 2K";
+	case CRD_BLUE_CREATE_2K_ULTRA:		return "Blue Create 2K Ultra";
+	default:							return "Unknown";
 	}
 }
 
@@ -179,7 +179,7 @@ EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& for
 			vid_fmt = videoMode;			
 	}
 	if(vid_fmt == VID_FMT_INVALID)
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("video-mode not supported.") << arg_value_info(narrow(format_desc.name)));
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("video-mode not supported.") << arg_value_info((format_desc.name)));
 
 	return vid_fmt;
 }

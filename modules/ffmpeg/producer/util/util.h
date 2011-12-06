@@ -62,16 +62,16 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 safe_ptr<AVPacket> create_packet();
 
 safe_ptr<AVCodecContext> open_codec(AVFormatContext& context,  enum AVMediaType type, int& index);
-safe_ptr<AVFormatContext> open_input(const std::wstring& filename);
+safe_ptr<AVFormatContext> open_input(const std::string& filename);
 
 bool is_sane_fps(AVRational time_base);
 AVRational fix_time_base(AVRational time_base);
 
 double read_fps(AVFormatContext& context, double fail_value);
 
-std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced);
+std::string print_mode(size_t width, size_t height, double fps, bool interlaced);
 
-std::wstring probe_stem(const std::wstring stem);
-bool is_valid_file(const std::wstring filename);
+std::string probe_stem(const std::string stem);
+bool is_valid_file(const std::string filename);
 
 }}

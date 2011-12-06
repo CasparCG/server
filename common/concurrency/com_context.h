@@ -43,7 +43,7 @@ class com_context : public executor
 {
 	std::unique_ptr<T> instance_;
 public:
-	com_context(const std::wstring& name) : executor(name)
+	com_context(const std::string& name) : executor(name)
 	{
 		executor::begin_invoke([]
 		{
@@ -59,7 +59,7 @@ public:
 			::CoUninitialize();
 		}).timed_wait(boost::posix_time::milliseconds(500)))
 		{
-			CASPAR_LOG(error) << L"[com_contex] Timer expired, deadlock detected and released, leaking resources.";
+			CASPAR_LOG(error) << "[com_contex] Timer expired, deadlock detected and released, leaking resources.";
 		}
 	}
 	

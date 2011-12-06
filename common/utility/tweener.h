@@ -26,6 +26,6 @@
 namespace caspar {
 
 typedef std::function<double(double, double, double, double)> tweener_t;
-tweener_t get_tweener(std::wstring name = L"linear");
+tweener_t get_tweener(std::string name = "linear");
 
 }

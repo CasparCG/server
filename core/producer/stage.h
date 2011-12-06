@@ -47,8 +47,8 @@ public:
 	
 	// stage
 	
-	void set_frame_transform(int index, const frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_frame_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void set_frame_transform(int index, const frame_transform& transform, unsigned int mix_duration = 0, const std::string& tween = "linear");
+	void apply_frame_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration = 0, const std::string& tween = "linear");
 	void clear_transforms(int index);
 	void clear_transforms();
 
@@ -64,12 +64,12 @@ public:
 	void swap_layer(int index, size_t other_index);
 	void swap_layer(int index, size_t other_index, const safe_ptr<stage>& other);
 	
-	boost::unique_future<std::wstring>				call(int index, bool foreground, const std::wstring& param);
+	boost::unique_future<std::string>				call(int index, bool foreground, const std::string& param);
 	boost::unique_future<safe_ptr<frame_producer>>	foreground(int index);
 	boost::unique_future<safe_ptr<frame_producer>>	background(int index);
 
-	boost::unique_future<boost::property_tree::wptree> info() const;
-	boost::unique_future<boost::property_tree::wptree> info(int layer) const;
+	boost::unique_future<boost::property_tree::ptree> info() const;
+	boost::unique_future<boost::property_tree::ptree> info(int layer) const;
 	
 	void set_video_format_desc(const video_format_desc& format_desc);
 

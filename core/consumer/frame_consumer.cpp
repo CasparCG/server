@@ -40,7 +40,7 @@ void register_consumer_factory(const consumer_factory_t& factory)
 	g_factories.push_back(factory);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::string>& params)
 {
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
@@ -92,7 +92,7 @@ public:
 		if(!boost::range::equal(sync_buffer_, audio_cadence_))
 		{
 			synced_ = false;
-			CASPAR_LOG(trace) << L"[cadence_guard] Audio cadence unsynced. Skipping frame.";
+			CASPAR_LOG(trace) << "[cadence_guard] Audio cadence unsynced. Skipping frame.";
 			return true;
 		}
 		else if(!synced_)
@@ -107,12 +107,12 @@ public:
 		return consumer_->send(frame);
 	}
 
-	virtual std::wstring print() const override
+	virtual std::string print() const override
 	{
 		return consumer_->print();
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	virtual boost::property_tree::ptree info() const override
 	{
 		return consumer_->info();
 	}
@@ -144,14 +144,14 @@ const safe_ptr<frame_consumer>& frame_consumer::empty()
 	{
 		virtual bool send(const safe_ptr<read_frame>&) override {return false;}
 		virtual void initialize(const video_format_desc&, int) override{}
-		virtual std::wstring print() const override {return L"empty";}
+		virtual std::string print() const override {return "empty";}
 		virtual bool has_synchronization_clock() const override {return false;}
 		virtual size_t buffer_depth() const override {return 0;};
 		virtual int index() const{return -1;}
-		virtual boost::property_tree::wptree info() const override
+		virtual boost::property_tree::ptree info() const override
 		{
-			boost::property_tree::wptree info;
-			info.add(L"type", L"empty-consumer");
+			boost::property_tree::ptree info;
+			info.add("type", "empty-consumer");
 			return info;
 		}
 	};
