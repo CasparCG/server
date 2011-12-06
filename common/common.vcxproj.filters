@@ -1,0 +1,143 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{bb2d04f1-2743-4d80-87a4-928970bb233a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\os">
+      <UniqueIdentifier>{49ed2765-f23e-4a1b-9d6a-f80d510b92e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\os\windows">
+      <UniqueIdentifier>{1f3002ae-ebb8-4195-8cf3-1a5b87822f38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\utility">
+      <UniqueIdentifier>{11860e2d-8adf-4573-956b-785e59aef2b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\memory">
+      <UniqueIdentifier>{9259676d-c225-4422-a50e-30d152d78dc2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\log">
+      <UniqueIdentifier>{3b529e9b-c729-4c8a-8166-0cb8d8030973}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\gl">
+      <UniqueIdentifier>{0d94bbc2-e196-4618-a90b-19392a3a0a8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\exception">
+      <UniqueIdentifier>{35ca385e-c4db-4fe7-858b-0a0bb678675f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\diagnostics">
+      <UniqueIdentifier>{29a29bcc-a9a0-4083-b713-c3773d18e177}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\concurrency">
+      <UniqueIdentifier>{644fe2e4-1199-4a0e-8d4c-63cf1ac82f1d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\compiler">
+      <UniqueIdentifier>{63471750-a430-4167-9b49-31b7a068a913}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\compiler\vs">
+      <UniqueIdentifier>{28c25c8a-1277-4d2c-9e85-5af33f9938ea}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="exception\win32_exception.cpp">
+      <Filter>source\exception</Filter>
+    </ClCompile>
+    <ClCompile Include="log\log.cpp">
+      <Filter>source\log</Filter>
+    </ClCompile>
+    <ClCompile Include="diagnostics\graph.cpp">
+      <Filter>source\diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="utility\string.cpp">
+      <Filter>source\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="gl\gl_check.cpp">
+      <Filter>source\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="env.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="utility\tweener.cpp">
+      <Filter>source\utility</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="exception\exceptions.h">
+      <Filter>source\exception</Filter>
+    </ClInclude>
+    <ClInclude Include="exception\win32_exception.h">
+      <Filter>source\exception</Filter>
+    </ClInclude>
+    <ClInclude Include="compiler\vs\disable_silly_warnings.h">
+      <Filter>source\compiler\vs</Filter>
+    </ClInclude>
+    <ClInclude Include="concurrency\executor.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="log\log.h">
+      <Filter>source\log</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\gl_check.h">
+      <Filter>source\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\page_locked_allocator.h">
+      <Filter>source\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\safe_ptr.h">
+      <Filter>source\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="diagnostics\graph.h">
+      <Filter>source\diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="utility\assert.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\string.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\timer.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\tweener.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\memcpy.h">
+      <Filter>source\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\memclr.h">
+      <Filter>source\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="os\windows\current_version.h">
+      <Filter>source\os\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="os\windows\system_info.h">
+      <Filter>source\os\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="concurrency\com_context.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\memshfl.h">
+      <Filter>source\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="env.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\move_on_copy.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="concurrency\target.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\param.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\utf8conv.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\utf8conv_inl.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

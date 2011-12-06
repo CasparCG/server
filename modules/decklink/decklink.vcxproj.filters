@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{e4ed0331-a111-453e-9249-9f3ee3277f4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\util">
+      <UniqueIdentifier>{963cca43-0294-4fdd-a786-b98499c22644}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\producer">
+      <UniqueIdentifier>{d1c2b767-8787-4ba5-b141-0c17d030bfe0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\interop">
+      <UniqueIdentifier>{8f268fa2-b236-4cb5-86dc-ca6612b251a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\consumer">
+      <UniqueIdentifier>{681577c3-a264-4849-bdef-27fc1988e50f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="consumer\decklink_consumer.cpp">
+      <Filter>source\consumer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\decklink_producer.cpp">
+      <Filter>source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="interop\DeckLinkAPI_i.c">
+      <Filter>source\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="decklink.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="consumer\decklink_consumer.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\decklink_producer.h">
+      <Filter>source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="util\util.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="interop\DeckLinkAPIVersion.h">
+      <Filter>source\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="interop\DeckLinkAPI_h.h">
+      <Filter>source\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="decklink.h">
+      <Filter>source</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="interop\DeckLinkAPI_v7_1.idl">
+      <Filter>source\interop</Filter>
+    </Midl>
+    <Midl Include="interop\DeckLinkAPI_v7_3.idl">
+      <Filter>source\interop</Filter>
+    </Midl>
+    <Midl Include="interop\DeckLinkAPI_v7_6.idl">
+      <Filter>source\interop</Filter>
+    </Midl>
+    <Midl Include="interop\DeckLinkAPI.idl">
+      <Filter>source\interop</Filter>
+    </Midl>
+  </ItemGroup>
+</Project>

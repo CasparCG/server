@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{8512c5f0-048f-48de-82ba-eb3ed1cf1177}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\util">
+      <UniqueIdentifier>{3de40b41-6c7c-4009-8159-b235e6d33ff6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\consumer">
+      <UniqueIdentifier>{0c50a039-638b-4d66-9b27-6ca0f75b5b63}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="consumer\bluefish_consumer.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="util\memory.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="util\blue_velvet.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="bluefish.h">
+      <Filter>source</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="consumer\bluefish_consumer.cpp">
+      <Filter>source\consumer</Filter>
+    </ClCompile>
+    <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="util\blue_velvet.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
+    <ClCompile Include="bluefish.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
