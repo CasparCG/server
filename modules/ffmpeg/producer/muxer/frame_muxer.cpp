@@ -348,6 +348,9 @@ struct frame_muxer::implementation : boost::noncopyable
 	uint32_t calc_nb_frames(uint32_t nb_frames) const
 	{
 		uint64_t nb_frames2 = nb_frames;
+		
+		if(filter_.is_double_rate()) // Take into account transformations in filter.
+			nb_frames2 *= 2;
 
 		switch(display_mode_) // Take into account transformation in run.
 		{
@@ -360,9 +363,6 @@ struct frame_muxer::implementation : boost::noncopyable
 			nb_frames2 *= 2;
 			break;
 		}
-
-		if(filter_.is_double_rate()) // Take into account transformations in filter.
-			nb_frames2 *= 2;
 
 		return static_cast<uint32_t>(nb_frames2);
 	}
