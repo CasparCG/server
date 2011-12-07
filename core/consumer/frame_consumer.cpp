@@ -86,16 +86,18 @@ public:
 
 	virtual bool send(const safe_ptr<read_frame>& frame) override
 	{		
+		bool result = true;
+
+		if(boost::range::equal(sync_buffer_, audio_cadence_))
+			result = consumer_->send(frame);
+		else
+			CASPAR_LOG(debug) << print() << L" Syncing audio.";
+
 		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size()));
-		if(!boost::range::equal(sync_buffer_, audio_cadence_))
-		{
-			CASPAR_LOG(trace) << L"[cadence_guard] Audio cadence unsynced. Skipping frame.";
-			return true;
-		}
 
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
-		return consumer_->send(frame);
+		return result;
 	}
 
 	virtual std::wstring print() const override
