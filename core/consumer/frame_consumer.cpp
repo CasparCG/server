@@ -95,7 +95,7 @@ public:
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 		}
 		else
-			CASPAR_LOG(debug) << print() << L" Syncing audio.";
+			CASPAR_LOG(trace) << print() << L" Syncing audio.";
 
 		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size()));
 		
