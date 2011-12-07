@@ -88,8 +88,9 @@ public:
 	{		
 		bool result = true;
 		
-		if(boost::range::equal(sync_buffer_, audio_cadence_))
-		{
+		if(boost::range::equal(sync_buffer_, audio_cadence_)) 
+		{	
+			// Audio sent so far is in sync, now we can send the next chunk.
 			result = consumer_->send(frame);
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 		}
