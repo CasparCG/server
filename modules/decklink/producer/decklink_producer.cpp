@@ -100,6 +100,8 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 		
 	ffmpeg::frame_muxer											muxer_;
 
+	boost::circular_buffer<size_t>								sync_buffer_;
+
 public:
 	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
 		: decklink_(get_device(device_index))
@@ -110,7 +112,8 @@ public:
 		, frame_factory_(frame_factory)
 		, audio_cadence_(frame_factory->get_video_format_desc().audio_cadence)
 		, muxer_(format_desc.fps, frame_factory, filter, ffmpeg::display_mode::deinterlace)
-	{
+		, sync_buffer_(format_desc.audio_cadence.size())
+	{		
 		hints_ = 0;
 		frame_buffer_.set_capacity(2);
 		
@@ -179,6 +182,8 @@ public:
 
 			frame_timer_.restart();
 
+			// PUSH
+
 			void* bytes = nullptr;
 			if(FAILED(video->GetBytes(&bytes)) || !bytes)
 				return S_OK;
@@ -193,22 +198,41 @@ public:
 			av_frame->height			= video->GetHeight();
 			av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 			av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
-					
-			muxer_.push(av_frame, hints_);		
-									
+				
+			std::shared_ptr<core::audio_buffer> audio_buffer;
+
 			// It is assumed that audio is always equal or ahead of video.
-			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
+			if(audio && SUCCEEDED(audio->GetBytes(&bytes)) && bytes)
 			{
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<int32_t*>(bytes);
-				muxer_.push(std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels));
+				audio_buffer = std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels);
 			}
-			else
+			else			
+				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front(), 0);
+			
+			sync_buffer_.push_back(audio_buffer->size());
+		
+			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
-				muxer_.push(std::make_shared<core::audio_buffer>(audio_cadence_.front(), 0));
-				std::rotate(std::begin(audio_cadence_), std::begin(audio_cadence_)+1, std::end(audio_cadence_));
+				CASPAR_LOG(trace) << print() << L" Syncing audio.";
+				return S_OK;
 			}
 
+			muxer_.push(audio_buffer);
+			muxer_.push(av_frame, hints_);	
+					
+			// Note: We don't fully sync with cadence, we send last and first (1602, 1602) to have as many samples as possible when inserting into mixer
+			if(!boost::range::equal(sync_buffer_, audio_cadence_)) 
+			{
+				CASPAR_LOG(trace) << L"[cadence_guard] Audio cadence unsynced. Skipping frame.";
+				return S_OK;
+			}
+						
+			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+			
+			// POLL
+			
 			for(auto frame = muxer_.poll(); frame; frame = muxer_.poll())
 			{
 				if(!frame_buffer_.try_push(make_safe_ptr(frame)))
