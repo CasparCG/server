@@ -105,7 +105,7 @@ struct transition_producer : public frame_producer
 
 	virtual std::wstring print() const override
 	{
-		return L"transition[" + source_producer_->print() + L"|" + dest_producer_->print() + L"]";
+		return L"transition[" + source_producer_->print() + L"=>" + dest_producer_->print() + L"]";
 	}
 	
 	boost::property_tree::wptree info() const override
