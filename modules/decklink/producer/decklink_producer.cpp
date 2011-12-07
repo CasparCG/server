@@ -211,6 +211,8 @@ public:
 			else			
 				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front(), 0);
 			
+			// Note: Uses the following cadence (1602, 1602, 1601, 1602, 1601) in order to fill mixer as much as possible.
+
 			sync_buffer_.push_back(audio_buffer->size());		
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
