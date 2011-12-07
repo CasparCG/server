@@ -98,7 +98,7 @@ public:
 		, frame_number_(0)
 	{
 		// TODO: Ask stakeholders about case where file already exists.
-		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
+		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + u16(filename))); // Delete the file if it exists
 
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -157,7 +157,7 @@ public:
 			
 	std::wstring print() const
 	{
-		return L"ffmpeg[" + widen(filename_) + L"]";
+		return L"ffmpeg[" + u16(filename_) + L"]";
 	}
 
 	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id, const std::string& options)
@@ -405,7 +405,7 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int)
 	{
 		consumer_.reset();
-		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, narrow(codec_), narrow(options_)));
+		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, u8(codec_), u8(options_)));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override

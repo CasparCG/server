@@ -62,10 +62,10 @@ void configure(const std::wstring& filename)
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
 		auto paths = pt.get_child(L"configuration.paths");
-		media = widen(paths.get(L"media-path", initialPath + L"\\media\\"));
-		log = widen(paths.get(L"log-path", initialPath + L"\\log\\"));
-		ftemplate = complete(wpath(widen(paths.get(L"template-path", initialPath + L"\\template\\")))).string();		
-		data = widen(paths.get(L"data-path", initialPath + L"\\data\\"));
+		media = u16(paths.get(L"media-path", initialPath + L"\\media\\"));
+		log = u16(paths.get(L"log-path", initialPath + L"\\log\\"));
+		ftemplate = complete(wpath(u16(paths.get(L"template-path", initialPath + L"\\template\\")))).string();		
+		data = u16(paths.get(L"data-path", initialPath + L"\\data\\"));
 	}
 	catch(...)
 	{

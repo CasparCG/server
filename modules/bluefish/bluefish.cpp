@@ -61,7 +61,7 @@ std::wstring get_version()
 	if(!BlueVelvetVersion)
 		return L"Unknown";
 
-	return widen(std::string(BlueVelvetVersion()));
+	return u16(std::string(BlueVelvetVersion()));
 }
 
 std::vector<std::wstring> get_device_list()
