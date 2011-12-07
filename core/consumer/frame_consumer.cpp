@@ -86,9 +86,12 @@ public:
 
 	virtual bool send(const safe_ptr<read_frame>& frame) override
 	{		
+		if(audio_cadence_.size() == 1)
+			return consumer_->send(frame);
+
 		bool result = true;
 		
-		if(boost::range::equal(sync_buffer_, audio_cadence_)) 
+		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size())) 
 		{	
 			// Audio sent so far is in sync, now we can send the next chunk.
 			result = consumer_->send(frame);
