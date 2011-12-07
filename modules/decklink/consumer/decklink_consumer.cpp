@@ -272,10 +272,10 @@ public:
 	void enable_audio()
 	{
 		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, 2, bmdAudioOutputStreamTimestamped)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable audio output."));
+				BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Could not enable audio output."));
 				
 		if(FAILED(output_->SetAudioCallback(this)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not set audio callback."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Could not set audio callback."));
 
 		CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
 	}
@@ -283,18 +283,18 @@ public:
 	void enable_video(BMDDisplayMode display_mode)
 	{
 		if(FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable video output."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Could not enable video output."));
 		
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(u8(print()) + " Failed to set playback completion callback.")
+									<< wmsg_info(print() + L" Failed to set playback completion callback.")
 									<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
 	}
 
 	void start_playback()
 	{
 		if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to schedule playback."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to schedule playback."));
 	}
 	
 	STDMETHOD (QueryInterface(REFIID, LPVOID*))	{return E_NOINTERFACE;}
@@ -419,7 +419,7 @@ public:
 		}
 
 		if(!is_running_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Is not running."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Is not running."));
 		
 		if(config_.embedded_audio)
 			audio_frame_buffer_.push(frame);	

@@ -63,7 +63,7 @@ namespace caspar { namespace ffmpeg {
 	
 struct ffmpeg_consumer : boost::noncopyable
 {		
-	const std::string						filename_;
+	const std::wstring						filename_;
 		
 	const std::shared_ptr<AVFormatContext>	oc_;
 	const core::video_format_desc			format_desc_;
@@ -88,7 +88,7 @@ struct ffmpeg_consumer : boost::noncopyable
 	int64_t									frame_number_;
 	
 public:
-	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, const std::string& codec, const std::string& options)
+	ffmpeg_consumer(const std::wstring& filename, const core::video_format_desc& format_desc, const std::wstring& codec, const std::wstring& options)
 		: filename_(filename)
 		, video_outbuf_(1920*1080*8)
 		, oc_(avformat_alloc_context(), av_free)
@@ -98,7 +98,7 @@ public:
 		, frame_number_(0)
 	{
 		// TODO: Ask stakeholders about case where file already exists.
-		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + u16(filename))); // Delete the file if it exists
+		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + filename)); // Delete the file if it exists
 
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -109,27 +109,27 @@ public:
 		executor_.set_capacity(8);
 		file_write_executor_.set_capacity(8);
 
-		oc_->oformat = av_guess_format(nullptr, filename_.c_str(), nullptr);
+		oc_->oformat = av_guess_format(nullptr, u8(filename_).c_str(), nullptr);
 		if (!oc_->oformat)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not find suitable output format."));
 		
 		THROW_ON_ERROR2(av_set_parameters(oc_.get(), nullptr), "[ffmpeg_consumer]");
 
-		strcpy_s(oc_->filename, filename_.c_str());
+		strcpy_s(oc_->filename, u8(filename_).c_str());
 		
-		auto video_codec = avcodec_find_encoder_by_name(codec.c_str());
+		auto video_codec = avcodec_find_encoder_by_name(u8(codec).c_str());
 		if(video_codec == nullptr)
-			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info(codec));
+			BOOST_THROW_EXCEPTION(invalid_argument() << warg_name_info(codec));
 
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs .
-		video_st_ = add_video_stream(video_codec->id, options);
+		video_st_ = add_video_stream(video_codec->id, u8(options));
 		audio_st_ = add_audio_stream();
 				
-		dump_format(oc_.get(), 0, filename_.c_str(), 1);
+		dump_format(oc_.get(), 0, u8(filename_).c_str(), 1);
 		 
 		// Open the output ffmpeg, if needed.
 		if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
-			THROW_ON_ERROR2(avio_open(&oc_->pb, filename_.c_str(), URL_WRONLY), "[ffmpeg_consumer]");
+			THROW_ON_ERROR2(avio_open(&oc_->pb, u8(filename_).c_str(), URL_WRONLY), "[ffmpeg_consumer]");
 				
 		THROW_ON_ERROR2(av_write_header(oc_.get()), "[ffmpeg_consumer]");
 
@@ -157,7 +157,7 @@ public:
 			
 	std::wstring print() const
 	{
-		return L"ffmpeg[" + u16(filename_) + L"]";
+		return L"ffmpeg[" + filename_ + L"]";
 	}
 
 	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id, const std::string& options)
@@ -405,7 +405,7 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int)
 	{
 		consumer_.reset();
-		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, u8(codec_), u8(options_)));
+		consumer_.reset(new ffmpeg_consumer(filename_, format_desc, codec_, options_));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override

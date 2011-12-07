@@ -26,13 +26,23 @@
 #include <boost/exception/error_info.hpp>
 #include <boost/throw_exception.hpp>
 
+#include "../utility/string.h"
+
 namespace caspar {
 
 typedef boost::error_info<struct tag_arg_name_info, std::string>		arg_name_info;
 typedef boost::error_info<struct tag_arg_value_info, std::string>		arg_value_info;
 typedef boost::error_info<struct tag_msg_info, std::string>				msg_info;
-typedef boost::error_info<struct tag_errorstr, std::string>				errorstr;
 typedef boost::error_info<struct tag_source_info, std::string>			source_info;
+typedef boost::error_info<struct tag_errorstr_info, std::string>		errstr_info;
+typedef boost::error_info<struct tag_errinfo_file_name, std::string>	err_file_name_info;
+
+inline arg_name_info		warg_name_info(const std::wstring& str)		{return arg_name_info(u8(str));}
+inline arg_value_info		warg_value_info(const std::wstring& str)	{return arg_value_info(u8(str));}
+inline msg_info				wmsg_info(const std::wstring& str)			{return msg_info(u8(str));}
+inline source_info			wsource_info(const std::wstring& str)		{return source_info(u8(str));}
+inline err_file_name_info	werr_file_name_info(const std::wstring& str){return err_file_name_info(u8(str));}
+
 typedef boost::error_info<struct tag_line_info, size_t>					line_info;
 typedef boost::error_info<struct errinfo_nested_exception_, std::exception_ptr> errinfo_nested_exception;
 
