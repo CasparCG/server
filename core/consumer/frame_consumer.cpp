@@ -87,16 +87,17 @@ public:
 	virtual bool send(const safe_ptr<read_frame>& frame) override
 	{		
 		bool result = true;
-
+		
 		if(boost::range::equal(sync_buffer_, audio_cadence_))
+		{
 			result = consumer_->send(frame);
+			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+		}
 		else
 			CASPAR_LOG(debug) << print() << L" Syncing audio.";
 
 		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size()));
-
-		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
-
+		
 		return result;
 	}
 
