@@ -88,7 +88,7 @@ struct separated_producer : public frame_producer
 
 	virtual std::wstring print() const override
 	{
-		return L"separated[fill:" + fill_producer_->print() + L"|key:" + key_producer_->print() + L"]";
+		return L"separated[fill:" + fill_producer_->print() + L"|key[" + key_producer_->print() + L"]]";
 	}	
 
 	boost::property_tree::wptree info() const override
