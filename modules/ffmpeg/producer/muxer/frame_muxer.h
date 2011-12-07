@@ -59,9 +59,6 @@ public:
 	std::shared_ptr<core::basic_frame> poll();
 
 	uint32_t calc_nb_frames(uint32_t nb_frames) const;
-
-	void force_deinterlacing(bool value);
-
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

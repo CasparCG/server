@@ -118,8 +118,16 @@ struct frame_muxer::implementation : boost::noncopyable
 		}
 		else
 		{
+			bool deinterlace_hint = (hints & core::frame_producer::DEINTERLACE_HINT) != 0;
+		
+			if(auto_deinterlace_ && force_deinterlacing_ != deinterlace_hint)
+			{
+				force_deinterlacing_ = deinterlace_hint;
+				display_mode_ = display_mode::invalid;
+			}
+
 			if(display_mode_ == display_mode::invalid)
-				update_display_mode(video_frame);
+				update_display_mode(video_frame, force_deinterlacing_);
 				
 			if(hints & core::frame_producer::ALPHA_HINT)
 				video_frame->format = make_alpha_format(video_frame->format);
@@ -282,7 +290,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		return samples;
 	}
 				
-	void update_display_mode(const std::shared_ptr<AVFrame>& frame)
+	void update_display_mode(const std::shared_ptr<AVFrame>& frame, bool force_deinterlace)
 	{
 		std::wstring filter_str = filter_str_;
 
@@ -307,7 +315,7 @@ struct frame_muxer::implementation : boost::noncopyable
 				display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
 			}
 
-			if(force_deinterlacing_ && mode != core::field_mode::progressive && display_mode_ != display_mode::deinterlace && display_mode_ != display_mode::deinterlace_bob)			
+			if(force_deinterlace && mode != core::field_mode::progressive && display_mode_ != display_mode::deinterlace && display_mode_ != display_mode::deinterlace_bob)			
 			{	
 				if(force_deinterlacing_mode_ == display_mode::deinterlace)
 					CASPAR_LOG(warning) << L"[frame_muxer] Forcing non bob deinterlacing.";
@@ -339,16 +347,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			CASPAR_LOG(info) << "[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
 		}
 	}
-
-	void force_deinterlacing(bool value)
-	{
-		if(!auto_deinterlace_ || value == force_deinterlacing_)
-			return;
-
-		force_deinterlacing_ = value;
-		display_mode_ = display_mode::invalid;
-	}
-
+	
 	uint32_t calc_nb_frames(uint32_t nb_frames) const
 	{
 		uint64_t nb_frames2 = nb_frames;
@@ -380,6 +379,5 @@ std::shared_ptr<basic_frame> frame_muxer::poll(){return impl_->poll();}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}
 bool frame_muxer::audio_ready() const{return impl_->audio_ready();}
-void frame_muxer::force_deinterlacing(bool value){impl_->force_deinterlacing(value);}
 
 }}

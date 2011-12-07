@@ -174,8 +174,6 @@ public:
 
 		try
 		{
-			muxer_.force_deinterlacing((hints_ & core::frame_producer::DEINTERLACE_HINT) != 0);
-
 			graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 
@@ -196,7 +194,7 @@ public:
 			av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 			av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
 					
-			muxer_.push(av_frame);		
+			muxer_.push(av_frame, hints_);		
 									
 			// It is assumed that audio is always equal or ahead of video.
 			if(audio && SUCCEEDED(audio->GetBytes(&bytes)))
