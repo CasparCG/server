@@ -71,11 +71,9 @@ class cadence_guard : public frame_consumer
 	safe_ptr<frame_consumer>		consumer_;
 	std::vector<size_t>				audio_cadence_;
 	boost::circular_buffer<size_t>	sync_buffer_;
-	bool							synced_;
 public:
 	cadence_guard(const safe_ptr<frame_consumer>& consumer)
 		: consumer_(consumer)
-		, synced_(false)
 	{
 	}
 	
@@ -88,24 +86,23 @@ public:
 
 	virtual bool send(const safe_ptr<read_frame>& frame) override
 	{		
+		if(audio_cadence_.size() == 1)
+			return consumer_->send(frame);
+
+		bool result = true;
+		
+		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size())) 
+		{	
+			// Audio sent so far is in sync, now we can send the next chunk.
+			result = consumer_->send(frame);
+			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+		}
+		else
+			CASPAR_LOG(trace) << print() << L" Syncing audio.";
+
 		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size()));
 		
-		if(!boost::range::equal(sync_buffer_, audio_cadence_))
-		{
-			synced_ = false;
-			CASPAR_LOG(trace) << L"[cadence_guard] Audio cadence unsynced. Skipping frame.";
-			return true;
-		}
-		else if(!synced_)
-		{
-			synced_ = true;
-			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
-			return true;
-		}
-
-		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
-
-		return consumer_->send(frame);
+		return result;
 	}
 
 	virtual std::wstring print() const override
