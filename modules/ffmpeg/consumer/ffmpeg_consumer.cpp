@@ -138,9 +138,11 @@ public:
 
 	~ffmpeg_consumer()
 	{    
+		executor_.wait();
 		executor_.stop();
 		executor_.join();
 
+		file_write_executor_.wait();
 		file_write_executor_.stop();
 		file_write_executor_.join();
 		
