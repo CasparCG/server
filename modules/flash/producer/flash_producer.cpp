@@ -179,25 +179,25 @@ public:
 		graph_->set_color("skip-sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to create FlashAxContainer"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to create FlashAxContainer"));
 		
 		ax_->set_print([this]{return L"flash_renderer";});
 
 		if(FAILED(ax_->CreateAxControl()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to Create FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to Create FlashAxControl"));
 		
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to Query FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to Query FlashAxControl"));
 												
 		if(FAILED(spFlash->put_Playing(true)) )
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to start playing Flash"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to start playing Flash"));
 
 		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to Load Template Host"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to Load Template Host"));
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to Set Scale Mode"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to Set Scale Mode"));
 						
 		ax_->SetSize(width_, height_);		
 	
@@ -219,7 +219,7 @@ public:
 		std::wstring result;
 
 		if(!ax_->FlashCall(param, result))
-			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(u8(param)));
+			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << wmsg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(u8(param)));
 		graph_->add_tag("param");
 
 		return result;
@@ -307,7 +307,7 @@ public:
 		, context_(L"flash_producer")
 	{	
 		if(!boost::filesystem::exists(filename))
-			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
+			BOOST_THROW_EXCEPTION(file_not_found() << werr_file_name_info(filename));	
 
 		fps_ = 0;
 
@@ -437,7 +437,7 @@ public:
 
 				graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));				
-				graph_->set_text(u8(print()));
+				graph_->set_text(print());
 
 				render(renderer);
 			}

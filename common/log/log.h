@@ -30,6 +30,8 @@
 #pragma warning (disable : 4996) // _CRT_SECURE_NO_WARNINGS
 #endif
 
+#include "../utility/string.h"
+
 #include <boost/log/detail/prologue.hpp>
 #include <boost/log/keywords/severity.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
@@ -90,7 +92,7 @@ BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 
 #define CASPAR_LOG_CURRENT_EXCEPTION() \
 	try\
-	{CASPAR_LOG(error) << boost::current_exception_diagnostic_information().c_str();}\
+	{CASPAR_LOG(error) << caspar::u16(boost::current_exception_diagnostic_information());}\
 	catch(...){}
 
 void set_log_level(const std::wstring& lvl);

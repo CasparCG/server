@@ -156,11 +156,11 @@ public:
 			displayDevices.push_back(d_device);
 
 		if(config_.screen_index >= displayDevices.size())
-			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_") << msg_info(u8(print())));
+			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_") << wmsg_info(print()));
 		
 		DEVMODE devmode = {};
 		if(!EnumDisplaySettings(displayDevices[config_.screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
-			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info(u8(print()) + " EnumDisplaySettings"));
+			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << wmsg_info(print() + L" EnumDisplaySettings"));
 		
 		screen_x_		= devmode.dmPosition.x;
 		screen_y_		= devmode.dmPosition.y;

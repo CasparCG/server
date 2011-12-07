@@ -43,7 +43,7 @@ void init()
 
 std::wstring get_version()
 {
-	return u16(std::string(FreeImage_GetVersion()));
+	return u16(FreeImage_GetVersion());
 }
 
 }}

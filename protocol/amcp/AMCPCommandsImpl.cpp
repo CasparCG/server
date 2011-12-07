@@ -702,7 +702,7 @@ bool LoadbgCommand::DoExecute()
 		_parameters[0] = _parameters[0];
 		auto pFP = create_producer(GetChannel()->mixer(), _parameters);
 		if(pFP == frame_producer::empty())
-			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? u8(_parameters[0]) : ""));
+			BOOST_THROW_EXCEPTION(file_not_found() << wmsg_info(_parameters.size() > 0 ? _parameters[0] : L""));
 
 		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
 
