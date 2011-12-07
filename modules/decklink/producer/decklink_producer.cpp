@@ -211,7 +211,7 @@ public:
 			else			
 				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front(), 0);
 			
-			// Note: Uses the following cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
+			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
 			sync_buffer_.push_back(audio_buffer->size());		
