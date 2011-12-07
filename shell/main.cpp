@@ -179,9 +179,7 @@ int main(int argc, wchar_t* argv[])
 
 	// Install structured exception handler.
 	caspar::win32_exception::install_handler();
-
-	caspar::log::set_log_level(L"debug");
-			
+				
 	// Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
 	struct inc_prec
 	{
@@ -207,6 +205,8 @@ int main(int argc, wchar_t* argv[])
 		// Configure environment properties from configuration.
 		caspar::env::configure(L"casparcg.config");
 				
+		caspar::log::set_log_level(caspar::env::properties().get(L"configuration.log-level", L"debug"));
+
 	#ifdef _DEBUG
 		if(caspar::env::properties().get(L"configuration.debugging.remote", false))
 			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
