@@ -211,8 +211,7 @@ public:
 			else			
 				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front(), 0);
 			
-			sync_buffer_.push_back(audio_buffer->size());
-		
+			sync_buffer_.push_back(audio_buffer->size());		
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
 				CASPAR_LOG(trace) << print() << L" Syncing audio.";
@@ -221,14 +220,7 @@ public:
 
 			muxer_.push(audio_buffer);
 			muxer_.push(av_frame, hints_);	
-					
-			// Note: We don't fully sync with cadence, we send last and first (1602, 1602) to have as many samples as possible when inserting into mixer
-			if(!boost::range::equal(sync_buffer_, audio_cadence_)) 
-			{
-				CASPAR_LOG(trace) << L"[cadence_guard] Audio cadence unsynced. Skipping frame.";
-				return S_OK;
-			}
-						
+											
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 			
 			// POLL

@@ -71,11 +71,9 @@ class cadence_guard : public frame_consumer
 	safe_ptr<frame_consumer>		consumer_;
 	std::vector<size_t>				audio_cadence_;
 	boost::circular_buffer<size_t>	sync_buffer_;
-	bool							synced_;
 public:
 	cadence_guard(const safe_ptr<frame_consumer>& consumer)
 		: consumer_(consumer)
-		, synced_(false)
 	{
 	}
 	
@@ -89,17 +87,9 @@ public:
 	virtual bool send(const safe_ptr<read_frame>& frame) override
 	{		
 		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size()));
-		
 		if(!boost::range::equal(sync_buffer_, audio_cadence_))
 		{
-			synced_ = false;
 			CASPAR_LOG(trace) << L"[cadence_guard] Audio cadence unsynced. Skipping frame.";
-			return true;
-		}
-		else if(!synced_)
-		{
-			synced_ = true;
-			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 			return true;
 		}
 
