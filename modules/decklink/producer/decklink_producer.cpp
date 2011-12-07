@@ -111,7 +111,7 @@ public:
 		, device_index_(device_index)
 		, frame_factory_(frame_factory)
 		, audio_cadence_(frame_factory->get_video_format_desc().audio_cadence)
-		, muxer_(format_desc.fps, frame_factory, filter, ffmpeg::display_mode::deinterlace)
+		, muxer_(format_desc.fps, frame_factory, filter)
 		, sync_buffer_(format_desc.audio_cadence.size())
 	{		
 		hints_ = 0;
