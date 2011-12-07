@@ -26,10 +26,10 @@
 	   
 namespace caspar {
 
-std::wstring widen(const std::string& str);
-std::wstring widen(const std::wstring& str);
-std::string narrow(const std::wstring& str);	   
-std::string narrow(const std::string& str);
+std::wstring u16(const std::string& str);
+std::wstring u16(const std::wstring& str);
+std::string u8(const std::wstring& str);	   
+std::string u8(const std::string& str);
 
 template <typename T>
 inline T lexical_cast_or_default(const std::wstring str, T fail_value = T())

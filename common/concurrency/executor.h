@@ -111,7 +111,7 @@ class executor : boost::noncopyable
 
 public:
 		
-	explicit executor(const std::wstring& name) : name_(narrow(name)) // noexcept
+	explicit executor(const std::wstring& name) : name_(u8(name)) // noexcept
 	{
 		is_running_ = true;
 		thread_ = boost::thread([this]{run();});

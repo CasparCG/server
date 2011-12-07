@@ -128,7 +128,7 @@ safe_ptr<core::write_frame> create_color_frame(void* tag, const safe_ptr<core::f
 {
 	auto color2 = get_hex_color(color);
 	if(color2.length() != 9 || color2[0] != '#')
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color2)) << msg_info("Invalid color."));
+		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(u8(color2)) << msg_info("Invalid color."));
 	
 	core::pixel_format_desc desc;
 	desc.pix_fmt = pixel_format::bgra;
@@ -140,7 +140,7 @@ safe_ptr<core::write_frame> create_color_frame(void* tag, const safe_ptr<core::f
 	auto& value = *reinterpret_cast<uint32_t*>(frame->image_data().begin());
 	std::wstringstream str(color2.substr(1));
 	if(!(str >> std::hex >> value) || !str.eof())
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(narrow(color2)) << msg_info("Invalid color."));
+		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(u8(color2)) << msg_info("Invalid color."));
 
 	frame->commit();
 		

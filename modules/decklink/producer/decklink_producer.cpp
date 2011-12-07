@@ -128,22 +128,22 @@ public:
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
 		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(narrow(print()) + " Could not enable video input.")
+									<< msg_info(u8(print()) + " Could not enable video input.")
 									<< boost::errinfo_api_function("EnableVideoInput"));
 
 		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, format_desc_.audio_channels))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(narrow(print()) + " Could not enable audio input.")
+									<< msg_info(u8(print()) + " Could not enable audio input.")
 									<< boost::errinfo_api_function("EnableAudioInput"));
 			
 		if (FAILED(input_->SetCallback(this)) != S_OK)
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(narrow(print()) + " Failed to set input callback.")
+									<< msg_info(u8(print()) + " Failed to set input callback.")
 									<< boost::errinfo_api_function("SetCallback"));
 			
 		if(FAILED(input_->StartStreams()))
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(narrow(print()) + " Failed to start input stream.")
+									<< msg_info(u8(print()) + " Failed to start input stream.")
 									<< boost::errinfo_api_function("StartStreams"));
 		
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";

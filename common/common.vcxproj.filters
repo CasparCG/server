@@ -133,11 +133,5 @@
     <ClInclude Include="utility\param.h">
       <Filter>source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="utility\utf8conv.h">
-      <Filter>source\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\utf8conv_inl.h">
-      <Filter>source\utility</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

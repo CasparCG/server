@@ -702,7 +702,7 @@ bool LoadbgCommand::DoExecute()
 		_parameters[0] = _parameters[0];
 		auto pFP = create_producer(GetChannel()->mixer(), _parameters);
 		if(pFP == frame_producer::empty())
-			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
+			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? u8(_parameters[0]) : ""));
 
 		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
 
@@ -1314,7 +1314,7 @@ bool InfoCommand::DoExecute()
 			auto filename = flash::find_template(env::template_folder() + _parameters.at(1));
 						
 			std::wstringstream str;
-			str << widen(flash::read_template_meta_info(filename));
+			str << u16(flash::read_template_meta_info(filename));
 			boost::property_tree::wptree info;
 			boost::property_tree::xml_parser::read_xml(str, info, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 

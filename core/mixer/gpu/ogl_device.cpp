@@ -271,7 +271,7 @@ std::wstring ogl_device::version()
 	static std::wstring ver = L"Not found";
 	try
 	{
-		ver = widen(invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
+		ver = u16(invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
 		+ " "	+ invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));			
 	}
 	catch(...){}

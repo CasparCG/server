@@ -182,7 +182,7 @@ struct filter::implementation
 					inputs->pad_idx			= 0;
 					inputs->next			= nullptr;
 			
-					std::string filters = boost::to_lower_copy(narrow(filters_));
+					std::string filters = boost::to_lower_copy(u8(filters_));
 					THROW_ON_ERROR2(avfilter_graph_parse(graph_.get(), filters.c_str(), &inputs, &outputs, NULL), "[filter]");
 			
 					auto yadif_filter = boost::adaptors::filtered([&](AVFilterContext* p){return strstr(p->name, "yadif") != 0;});
