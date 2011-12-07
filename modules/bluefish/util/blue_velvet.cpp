@@ -43,11 +43,11 @@ void blue_velvet_initialize()
 	std::string module_str = "BlueVelvet3.dll";
 #endif
 
-	auto module = LoadLibrary(widen(module_str).c_str());
+	auto module = LoadLibrary(u16(module_str).c_str());
 	if(!module)
-		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
 	if(!module)
-		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
@@ -64,11 +64,11 @@ void blue_hanc_initialize()
 	std::string module_str = "BlueHancUtils.dll";
 #endif
 	
-	auto module = LoadLibrary(widen(module_str).c_str());
+	auto module = LoadLibrary(u16(module_str).c_str());
 	if(!module)
-		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files\\Bluefish444\\Driver\\" + module_str).c_str());
 	if(!module)
-		LoadLibrary(widen(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
+		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
@@ -179,7 +179,7 @@ EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& for
 			vid_fmt = videoMode;			
 	}
 	if(vid_fmt == VID_FMT_INVALID)
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("video-mode not supported.") << arg_value_info(narrow(format_desc.name)));
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("video-mode not supported.") << arg_value_info(u8(format_desc.name)));
 
 	return vid_fmt;
 }

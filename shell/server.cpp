@@ -112,7 +112,7 @@ struct server::implementation : boost::noncopyable
 		using boost::property_tree::wptree;
 		BOOST_FOREACH(auto& xml_channel, pt.get_child(L"configuration.channels"))
 		{		
-			auto format_desc = video_format_desc::get(widen(xml_channel.second.get(L"video-mode", L"PAL")));		
+			auto format_desc = video_format_desc::get(u16(xml_channel.second.get(L"video-mode", L"PAL")));		
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
@@ -134,7 +134,7 @@ struct server::implementation : boost::noncopyable
 					else if(name == L"system-audio")
 						channels_.back()->output()->add(oal::create_consumer());		
 					else if(name != L"<xmlcomment>")
-						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
+						CASPAR_LOG(warning) << "Invalid consumer: " << u16(name);	
 				}
 				catch(...)
 				{
@@ -162,7 +162,7 @@ struct server::implementation : boost::noncopyable
 					async_servers_.push_back(asyncbootstrapper);
 				}
 				else
-					CASPAR_LOG(warning) << "Invalid controller: " << widen(name);	
+					CASPAR_LOG(warning) << "Invalid controller: " << u16(name);	
 			}
 			catch(...)
 			{
@@ -180,7 +180,7 @@ struct server::implementation : boost::noncopyable
 		else if(boost::iequals(name, L"CLOCK"))
 			return make_safe<CLK::CLKProtocolStrategy>(channels_);
 		
-		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info("name") << arg_value_info(narrow(name)) << msg_info("Invalid protocol"));
+		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info("name") << arg_value_info(u8(name)) << msg_info("Invalid protocol"));
 	}
 };
 

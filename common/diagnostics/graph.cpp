@@ -399,7 +399,7 @@ void graph::set_text(const std::wstring& value)
 	auto p = impl_;
 	context::begin_invoke([=]
 	{	
-		set_text(narrow(value));
+		set_text(u8(value));
 	}, high_priority);
 }
 

@@ -445,7 +445,7 @@ safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType t
 safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
 {
 	AVFormatContext* weak_context = nullptr;
-	THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(filename).c_str(), nullptr, nullptr), filename);
+	THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(filename).c_str(), nullptr, nullptr), filename);
 	safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
 	THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), filename);
 	fix_meta_data(*context);
@@ -462,7 +462,7 @@ std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced
 
 bool is_valid_file(const std::wstring filename)
 {			
-	auto filename2 = narrow(filename);
+	auto filename2 = u8(filename);
 
 	std::ifstream file(filename);
 

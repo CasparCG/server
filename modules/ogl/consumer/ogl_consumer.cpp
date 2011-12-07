@@ -156,11 +156,11 @@ public:
 			displayDevices.push_back(d_device);
 
 		if(config_.screen_index >= displayDevices.size())
-			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_") << msg_info(narrow(print())));
+			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_") << msg_info(u8(print())));
 		
 		DEVMODE devmode = {};
 		if(!EnumDisplaySettings(displayDevices[config_.screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
-			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info(narrow(print()) + " EnumDisplaySettings"));
+			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << msg_info(u8(print()) + " EnumDisplaySettings"));
 		
 		screen_x_		= devmode.dmPosition.x;
 		screen_y_		= devmode.dmPosition.y;
@@ -183,7 +183,7 @@ public:
 		if(!GLEW_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
-		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), u8(print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
 		window_.ShowMouseCursor(false);
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
