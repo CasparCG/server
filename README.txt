@@ -13,18 +13,18 @@ http://casparcg.com/
 http://casparcg.com/forum/
 http://casparcg.com/wiki/
 
-CasparCG uses FFmpeg(http://ffmpeg.org/) under the GPLv2 Licence. 
+CasparCG uses FFmpeg (http://ffmpeg.org/) under the GPLv2 Licence. 
 FFmpeg is a trademark of Fabrice Bellard, originator of the FFmpeg project.
 
-CasparCG uses the Threading Building Blocks(http://www.threadingbuildingblocks.org/) library under the GPLv2 Licence.
+CasparCG uses the Threading Building Blocks (http://www.threadingbuildingblocks.org/) library under the GPLv2 Licence.
 
-CasparCG uses FreeImage(http://freeimage.sourceforge.net/) under the GPLv2.
+CasparCG uses FreeImage (http://freeimage.sourceforge.net/) under the GPLv2.
 
-CasparCG uses SFML(http://www.sfml-dev.org/) under the zlib/libpng License.
+CasparCG uses SFML (http://www.sfml-dev.org/) under the zlib/libpng License.
 
-CasparCG uses Glee(http://elf-stone.com/) under the modified BSD license.
+CasparCG uses GLEW (http://glew.sourceforge.net) under the modified BSD license.
 
-CasparCG uses boost(http://www.boost.org/) under the Boost Software License, Version 1.0.
+CasparCG uses boost (http://www.boost.org/) under the Boost Software License, Version 1.0.
 
 AUTHORS - People who have developed the CasparCG Server Software (sorted alphabetically by last name).
 ================================================

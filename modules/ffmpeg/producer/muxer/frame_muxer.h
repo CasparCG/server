@@ -48,7 +48,7 @@ namespace ffmpeg {
 class frame_muxer : boost::noncopyable
 {
 public:
-	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter = L"", display_mode::type force_deinterlace_mode = display_mode::deinterlace_bob_reinterlace);
+	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter = L"");
 	
 	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
 	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);
@@ -59,9 +59,6 @@ public:
 	std::shared_ptr<core::basic_frame> poll();
 
 	uint32_t calc_nb_frames(uint32_t nb_frames) const;
-
-	void force_deinterlacing(bool value);
-
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
