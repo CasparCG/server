@@ -313,7 +313,10 @@ struct frame_muxer::implementation : boost::noncopyable
 				display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
 			}
 
-			if(force_deinterlace && mode != core::field_mode::progressive && display_mode_ != display_mode::deinterlace && display_mode_ != display_mode::deinterlace_bob)			
+			if(force_deinterlace && mode != core::field_mode::progressive && 
+			   display_mode_ != display_mode::deinterlace && 
+			   display_mode_ != display_mode::deinterlace_bob && 
+			   display_mode_ != display_mode::deinterlace_bob_reinterlace)			
 			{	
 				CASPAR_LOG(info) << L"[frame_muxer] Automatically started non bob-deinterlacing. Consider starting producer with bob-deinterlacing for smoothest playback.";
 				display_mode_ = display_mode::deinterlace;
