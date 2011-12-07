@@ -25,7 +25,8 @@
 
 #include "../version.h"
 
-#include "exception\exceptions.h"
+#include "log/log.h"
+#include "exception/exceptions.h"
 #include "utility/string.h"
 
 #include <boost/property_tree/ptree.hpp>
@@ -37,9 +38,7 @@
 #include <iostream>
 
 namespace caspar { namespace env {
-
-using namespace boost::filesystem2;
-
+	
 std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
@@ -49,27 +48,27 @@ boost::property_tree::wptree pt;
 void check_is_configured()
 {
 	if(pt.empty())
-		BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Enviroment properties has not been configured"));
+		BOOST_THROW_EXCEPTION(invalid_operation() << wmsg_info(L"Enviroment properties has not been configured"));
 }
 
 void configure(const std::wstring& filename)
 {
 	try
 	{
-		auto initialPath = boost::filesystem::initial_path<boost::filesystem2::wpath>().file_string();
+		auto initialPath = boost::filesystem2::initial_path<boost::filesystem2::wpath>().file_string();
 	
 		std::wifstream file(initialPath + L"\\" + filename);
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
-		auto paths = pt.get_child(L"configuration.paths");
-		media = u16(paths.get(L"media-path", initialPath + L"\\media\\"));
-		log = u16(paths.get(L"log-path", initialPath + L"\\log\\"));
-		ftemplate = complete(wpath(u16(paths.get(L"template-path", initialPath + L"\\template\\")))).string();		
-		data = u16(paths.get(L"data-path", initialPath + L"\\data\\"));
+		auto paths	= pt.get_child(L"configuration.paths");
+		media		= paths.get(L"media-path", initialPath + L"\\media\\");
+		log			= paths.get(L"log-path", initialPath + L"\\log\\");
+		ftemplate	= boost::filesystem2::complete(paths.get(L"template-path", initialPath + L"\\template\\")).string();		
+		data		= paths.get(L"data-path", initialPath + L"\\data\\");
 	}
 	catch(...)
 	{
-		std::wcout << L" ### Invalid configuration file. ###";
+		CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
 		throw;
 	}
 }

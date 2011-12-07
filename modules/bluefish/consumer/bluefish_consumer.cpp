@@ -96,35 +96,35 @@ public:
 			
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to set videomode."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to set videomode."));
 
 		//Select Update Mode for output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_UPDATE_TYPE, UPD_FMT_FRAME))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to set update type."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to set update type."));
 	
 		disable_video_output();
 
 		//Enable dual link output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT, 1)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to enable dual link."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to enable dual link."));
 
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_4224)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to set dual link format type to 4:2:2:4."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to set dual link format type to 4:2:2:4."));
 			
 		//Select output memory format
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MEMORY_FORMAT, MEM_FMT_ARGB_PC))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to set memory format."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to set memory format."));
 		
 		//Select image orientation
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
-			CASPAR_LOG(warning) << print() << TEXT(" Failed to set image orientation to normal.");	
+			CASPAR_LOG(warning) << print() << L" Failed to set image orientation to normal.";	
 
 		// Select data range
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_RGB_DATA_RANGE, CGR_RANGE))) 
-			CASPAR_LOG(warning) << print() << TEXT(" Failed to set RGB data range to CGR.");	
+			CASPAR_LOG(warning) << print() << L" Failed to set RGB data range to CGR.";	
 		
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_PREDEFINED_COLOR_MATRIX, vid_fmt_ == VID_FMT_PAL ? MATRIX_601_CGR : MATRIX_709_CGR)))
-			CASPAR_LOG(warning) << print() << TEXT(" Failed to set colormatrix to ") << (vid_fmt_ == VID_FMT_PAL ? TEXT("601 CGR") : TEXT("709 CGR")) << TEXT(".");
+			CASPAR_LOG(warning) << print() << L" Failed to set colormatrix to " << (vid_fmt_ == VID_FMT_PAL ? L"601 CGR" : L"709 CGR") << L".";
 
 		if(!embedded_audio_)
 		{

@@ -462,8 +462,6 @@ std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced
 
 bool is_valid_file(const std::wstring filename)
 {			
-	auto filename2 = u8(filename);
-
 	std::ifstream file(filename);
 
 	std::vector<unsigned char> buf;
@@ -474,7 +472,7 @@ bool is_valid_file(const std::wstring filename)
 		return nullptr;
 
 	AVProbeData pb;
-	pb.filename = filename2.c_str();
+	pb.filename = u8(filename).c_str();
 	pb.buf		= buf.data();
 	pb.buf_size = buf.size();
 

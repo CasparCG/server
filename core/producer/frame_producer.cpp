@@ -237,7 +237,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		std::wstring str;
 		BOOST_FOREACH(auto& param, params)
 			str += param + L" ";
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(u8(str)));
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << warg_value_info(str));
 	}
 
 	return producer;
