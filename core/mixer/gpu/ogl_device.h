@@ -68,6 +68,7 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>, boost::nonco
 	GLint							 active_shader_;
 	std::array<GLint, 16>			 binded_textures_;
 	std::array<GLint, 4>			 blend_func_;
+	GLenum							 read_buffer_;
 
 	std::unique_ptr<sf::Context> context_;
 	
@@ -97,6 +98,8 @@ public:
 	void blend_func(int c1, int c2);
 	
 	void use(shader& shader);
+
+	void read_buffer(device_buffer& texture);
 
 	void flush();
 
