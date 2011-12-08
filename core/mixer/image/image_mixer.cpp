@@ -111,6 +111,7 @@ private:
 
 		auto host_buffer = ogl_->create_host_buffer(format_desc.size, host_buffer::read_only);
 		ogl_->attach(*draw_buffer);
+		ogl_->read_buffer(*draw_buffer);
 		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
 		
 		transferring_buffer_ = std::move(draw_buffer);
