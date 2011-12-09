@@ -33,9 +33,9 @@ class device_buffer : boost::noncopyable
 {
 public:
 	
-	size_t stride() const;	
-	size_t width() const;
-	size_t height() const;
+	int stride() const;	
+	int width() const;
+	int height() const;
 		
 	void bind(int index);
 	void unbind();
@@ -44,7 +44,7 @@ public:
 	bool ready() const;
 private:
 	friend class ogl_device;
-	device_buffer(size_t width, size_t height, size_t stride);
+	device_buffer(int width, int height, int stride);
 
 	int id() const;
 
@@ -52,6 +52,6 @@ private:
 	safe_ptr<implementation> impl_;
 };
 	
-unsigned int format(size_t stride);
+unsigned int format(int stride);
 
 }}

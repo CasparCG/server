@@ -73,7 +73,7 @@ struct bluefish_consumer : boost::noncopyable
 		
 	executor							executor_;
 public:
-	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only, int channel_index) 
+	bluefish_consumer(const core::video_format_desc& format_desc, int device_index, bool embedded_audio, bool key_only, int channel_index) 
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
 		, format_desc_(format_desc) 
@@ -232,15 +232,18 @@ public:
 		if(embedded_audio_)
 		{		
 			auto frame_audio = core::audio_32_to_24(frame->audio_data());			
-			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio.data(), frame->audio_data().size()/format_desc_.audio_channels, format_desc_.audio_channels);
+			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), 
+						frame_audio.data(), 
+						static_cast<int>(frame->audio_data().size()/format_desc_.audio_channels), 
+						format_desc_.audio_channels);
 								
 			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
-											reserved_frames_.front()->image_size(), 
+											static_cast<unsigned long>(reserved_frames_.front()->image_size()), 
 											nullptr, 
 											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
 
 			blue_->system_buffer_write_async(reserved_frames_.front()->hanc_data(),
-											reserved_frames_.front()->hanc_size(), 
+											static_cast<unsigned long>(reserved_frames_.front()->hanc_size()), 
 											nullptr,                 
 											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_HANC));
 
@@ -250,7 +253,7 @@ public:
 		else
 		{
 			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
-											reserved_frames_.front()->image_size(), 
+											static_cast<unsigned long>(reserved_frames_.front()->image_size()), 
 											nullptr,                 
 											BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE));
 			
@@ -263,7 +266,7 @@ public:
 		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 	}
 
-	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
+	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, int audio_samples, int audio_nchannels)
 	{	
 		const auto sample_type = AUDIO_CHANNEL_24BIT | AUDIO_CHANNEL_LITTLEENDIAN;
 		const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
@@ -294,13 +297,13 @@ public:
 struct bluefish_consumer_proxy : public core::frame_consumer
 {
 	std::unique_ptr<bluefish_consumer>	consumer_;
-	const size_t						device_index_;
+	const int							device_index_;
 	const bool							embedded_audio_;
 	const bool							key_only_;
-	std::vector<size_t>					audio_cadence_;
+	std::vector<int>					audio_cadence_;
 public:
 
-	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
+	bluefish_consumer_proxy(int device_index, bool embedded_audio, bool key_only)
 		: device_index_(device_index)
 		, embedded_audio_(embedded_audio)
 		, key_only_(key_only)
@@ -350,7 +353,7 @@ public:
 		return info;
 	}
 
-	size_t buffer_depth() const override
+	int buffer_depth() const override
 	{
 		return 1;
 	}

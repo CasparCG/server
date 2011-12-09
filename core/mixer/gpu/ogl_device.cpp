@@ -33,7 +33,7 @@
 
 #include <boost/foreach.hpp>
 
-#include <gl/glew.h>
+#include <GL/glew.h>
 
 namespace caspar { namespace core {
 
@@ -86,7 +86,7 @@ ogl_device::~ogl_device()
 	});
 }
 
-safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t height, size_t stride)
+safe_ptr<device_buffer> ogl_device::allocate_device_buffer(int width, int height, int stride)
 {
 	std::shared_ptr<device_buffer> buffer;
 	try
@@ -112,7 +112,7 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t 
 	return make_safe_ptr(buffer);
 }
 				
-safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride)
+safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, int stride)
 {
 	CASPAR_VERIFY(stride > 0 && stride < 5);
 	CASPAR_VERIFY(width > 0 && height > 0);
@@ -129,7 +129,7 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t he
 	});
 }
 
-safe_ptr<host_buffer> ogl_device::allocate_host_buffer(size_t size, host_buffer::usage_t usage)
+safe_ptr<host_buffer> ogl_device::allocate_host_buffer(int size, host_buffer::usage_t usage)
 {
 	std::shared_ptr<host_buffer> buffer;
 
@@ -165,7 +165,7 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(size_t size, host_buffer:
 	return make_safe_ptr(buffer);
 }
 	
-safe_ptr<host_buffer> ogl_device::create_host_buffer(size_t size, host_buffer::usage_t usage)
+safe_ptr<host_buffer> ogl_device::create_host_buffer(int size, host_buffer::usage_t usage)
 {
 	CASPAR_VERIFY(usage == host_buffer::write_only || usage == host_buffer::read_only);
 	CASPAR_VERIFY(size > 0);
@@ -300,7 +300,7 @@ void ogl_device::disable(GLenum cap)
 	}
 }
 
-void ogl_device::viewport(size_t x, size_t y, size_t width, size_t height)
+void ogl_device::viewport(int x, int y, int width, int height)
 {
 	if(x != viewport_[0] || y != viewport_[1] || width != viewport_[2] || height != viewport_[3])
 	{		
@@ -312,7 +312,7 @@ void ogl_device::viewport(size_t x, size_t y, size_t width, size_t height)
 	}
 }
 
-void ogl_device::scissor(size_t x, size_t y, size_t width, size_t height)
+void ogl_device::scissor(int x, int y, int width, int height)
 {
 	if(x != scissor_[0] || y != scissor_[1] || width != scissor_[2] || height != scissor_[3])
 	{		

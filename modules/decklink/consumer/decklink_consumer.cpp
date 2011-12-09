@@ -49,13 +49,13 @@ namespace caspar { namespace decklink {
 	
 struct configuration
 {
-	size_t	device_index;
+	int		device_index;
 	bool	embedded_audio;
 	bool	internal_key;
 	bool	low_latency;
 	bool	key_only;
-	size_t	base_buffer_depth;
-	size_t	buffer_depth;
+	int		base_buffer_depth;
+	int		buffer_depth;
 	
 	configuration()
 		: device_index(1)
@@ -388,7 +388,7 @@ public:
 	template<typename T>
 	void schedule_next_audio(const T& audio_data)
 	{
-		const int sample_frame_count = audio_data.size()/format_desc_.audio_channels;
+		const int sample_frame_count = static_cast<int>(audio_data.size())/format_desc_.audio_channels;
 
 		audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
 
@@ -437,7 +437,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 {
 	const configuration				config_;
 	com_context<decklink_consumer>	context_;
-	std::vector<size_t>				audio_cadence_;
+	std::vector<int>				audio_cadence_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
@@ -493,7 +493,7 @@ public:
 		return info;
 	}
 
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
 		return config_.buffer_depth;
 	}

@@ -109,7 +109,7 @@ private:
 			draw(std::move(layers), draw_buffer, format_desc);
 		}
 
-		auto host_buffer = ogl_->create_host_buffer(format_desc.size, host_buffer::read_only);
+		auto host_buffer = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::read_only);
 		ogl_->attach(*draw_buffer);
 		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
 		
@@ -228,7 +228,7 @@ private:
 		kernel_.draw(std::move(draw_params));
 	}
 			
-	safe_ptr<device_buffer> create_mixer_buffer(size_t stride, const video_format_desc& format_desc)
+	safe_ptr<device_buffer> create_mixer_buffer(int stride, const video_format_desc& format_desc)
 	{
 		auto buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, stride);
 		ogl_->clear(*buffer);

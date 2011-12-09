@@ -80,7 +80,7 @@ struct ffmpeg_producer : public core::frame_producer
 
 	safe_ptr<core::basic_frame>									last_frame_;
 	
-	std::queue<std::pair<safe_ptr<core::basic_frame>, size_t>>	frame_buffer_;
+	std::queue<std::pair<safe_ptr<core::basic_frame>, uint32_t>>	frame_buffer_;
 
 	int64_t														frame_number_;
 	uint32_t													file_frame_number_;
@@ -202,7 +202,7 @@ public:
 				
 	virtual std::wstring print() const override
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
+		return L"ffmpeg[" + boost::filesystem::path(filename_).filename().wstring() + L"|" 
 						  + print_mode() + L"|" 
 						  + boost::lexical_cast<std::wstring>(file_frame_number_) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 	}
@@ -299,7 +299,7 @@ public:
 				muxer_->push(empty_video(), 0);
 		}
 		
-		size_t file_frame_number = 0;
+		uint32_t file_frame_number = 0;
 		file_frame_number = std::max(file_frame_number, video_decoder_ ? video_decoder_->file_frame_number() : 0);
 		//file_frame_number = std::max(file_frame_number, audio_decoder_ ? audio_decoder_->file_frame_number() : 0);
 

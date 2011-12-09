@@ -143,7 +143,7 @@ public:
 		});
 	}
 
-	std::pair<size_t, size_t> minmax_buffer_depth() const
+	std::pair<int, int> minmax_buffer_depth() const
 	{		
 		if(consumers_.empty())
 			return std::make_pair(0, 0);

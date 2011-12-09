@@ -44,7 +44,7 @@ struct frame_consumer : boost::noncopyable
 	virtual std::wstring print() const = 0;
 	virtual boost::property_tree::wptree info() const = 0;
 	virtual bool has_synchronization_clock() const {return true;}
-	virtual size_t buffer_depth() const = 0;
+	virtual int buffer_depth() const = 0;
 	virtual int index() const = 0;
 
 	static const safe_ptr<frame_consumer>& empty();
