@@ -68,6 +68,9 @@
     <ProjectReference Include="..\modules\flash\flash.vcxproj">
       <Project>{816deaba-3757-4306-afe0-c27cf96c4dea}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\modules\image\image.vcxproj">
+      <Project>{3e11ff65-a9da-4f80-87f2-a7c6379ed5e2}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\protocol\protocol.vcxproj">
       <Project>{2040b361-1fb6-488e-84a5-38a580da90de}</Project>
     </ProjectReference>
@@ -184,7 +187,7 @@
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\dependencies\BluefishSDK_V5_10_0_42\Inc\;..\dependencies\boost\;..\dependencies\ffmpeg 0.8\include\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\include;..\dependencies\SFML-1.6\include\;..\dependencies\tbb\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">..\dependencies\BluefishSDK_V5_10_0_42\Inc\;..\dependencies\boost\;..\dependencies\ffmpeg 0.8\include\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\include;..\dependencies\SFML-1.6\include\;..\dependencies\tbb\include\;$(IncludePath)</IncludePath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\dependencies64\boost\lib\;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\freeimage\lib\;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg 0.8\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg 0.8\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg 0.8\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;$(LibraryPath)</LibraryPath>
@@ -307,7 +310,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>sfml-system-d.lib;sfml-window-d.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;OpenGL32.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system-d.lib;sfml-window-d.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;OpenGL32.lib;FreeImaged.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
