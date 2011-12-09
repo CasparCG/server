@@ -44,10 +44,10 @@
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 
-//#include <modules/bluefish/bluefish.h>
-//#include <modules/decklink/decklink.h>
-//#include <modules/flash/flash.h>
-//#include <modules/ffmpeg/ffmpeg.h>
+#include <modules/bluefish/bluefish.h>
+#include <modules/decklink/decklink.h>
+#include <modules/flash/flash.h>
+#include <modules/ffmpeg/ffmpeg.h>
 //#include <modules/image/image.h>
 
 #include <common/env.h>
@@ -125,21 +125,21 @@ void print_info()
 	CASPAR_LOG(info) << caspar::get_cpu_info();
 	CASPAR_LOG(info) << caspar::get_system_product_name();
 	
-	//CASPAR_LOG(info) << L"Decklink " << caspar::decklink::get_version();
-	//BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
-	//	CASPAR_LOG(info) << L" - " << device;	
-	//	
-	//CASPAR_LOG(info) << L"Bluefish " << caspar::bluefish::get_version();
-	//BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
-	//	CASPAR_LOG(info) << L" - " << device;	
-	//
-	//CASPAR_LOG(info) << L"Flash "			<< caspar::flash::get_version();
+	CASPAR_LOG(info) << L"Decklink " << caspar::decklink::get_version();
+	BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+		CASPAR_LOG(info) << L" - " << device;	
+		
+	CASPAR_LOG(info) << L"Bluefish " << caspar::bluefish::get_version();
+	BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
+		CASPAR_LOG(info) << L" - " << device;	
+	
+	CASPAR_LOG(info) << L"Flash "			<< caspar::flash::get_version();
 	//CASPAR_LOG(info) << L"FreeImage "		<< caspar::image::get_version();
-	//CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
-	//CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::ffmpeg::get_avformat_version();
-	//CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
-	//CASPAR_LOG(info) << L"FFMPEG-avutil "	<< caspar::ffmpeg::get_avutil_version();
-	//CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::ffmpeg::get_swscale_version();
+	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::ffmpeg::get_avformat_version();
+	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
+	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< caspar::ffmpeg::get_avutil_version();
+	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::ffmpeg::get_swscale_version();
 }
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
