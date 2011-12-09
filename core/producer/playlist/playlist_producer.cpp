@@ -52,16 +52,16 @@ struct playlist_producer : public frame_producer
 
 	// frame_producer
 	
-	virtual safe_ptr<basic_frame> receive(int hints) override
+	virtual safe_ptr<basic_frame> receive(int flags) override
 	{
 		if(current_ == frame_producer::empty() && !producers_.empty())
 			next();
 
-		auto frame = current_->receive(hints);
+		auto frame = current_->receive(flags);
 		if(frame == basic_frame::eof())
 		{
 			current_ = frame_producer::empty();
-			return receive(hints);
+			return receive(flags);
 		}
 
 		return last_frame_ = frame;

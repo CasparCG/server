@@ -100,7 +100,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		boost::range::reverse(audio_cadence_);
 	}
 
-	void push(const std::shared_ptr<AVFrame>& video_frame, int hints)
+	void push(const std::shared_ptr<AVFrame>& video_frame, int flags)
 	{		
 		if(!video_frame)
 			return;
@@ -116,18 +116,18 @@ struct frame_muxer::implementation : boost::noncopyable
 		}
 		else
 		{
-			bool deinterlace_hint = (hints & core::frame_producer::DEINTERLACE_HINT) != 0;
+			bool DEINTERLACE_FLAG = (flags & core::frame_producer::DEINTERLACE_FLAG) != 0;
 		
-			if(auto_deinterlace_ && force_deinterlacing_ != deinterlace_hint)
+			if(auto_deinterlace_ && force_deinterlacing_ != DEINTERLACE_FLAG)
 			{
-				force_deinterlacing_ = deinterlace_hint;
+				force_deinterlacing_ = DEINTERLACE_FLAG;
 				display_mode_ = display_mode::invalid;
 			}
 
 			if(display_mode_ == display_mode::invalid)
 				update_display_mode(video_frame, force_deinterlacing_);
 				
-			if(hints & core::frame_producer::ALPHA_HINT)
+			if(flags & core::frame_producer::ALPHA_ONLY_FLAG)
 				video_frame->format = make_alpha_format(video_frame->format);
 		
 			auto format = video_frame->format;
@@ -140,7 +140,7 @@ struct frame_muxer::implementation : boost::noncopyable
 				if(video_frame->format == PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
 					av_frame->format = format;
 
-				video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, hints));
+				video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, flags));
 			}
 		}
 
@@ -373,7 +373,7 @@ struct frame_muxer::implementation : boost::noncopyable
 
 frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
 	: impl_(new implementation(in_fps, frame_factory, filter)){}
-void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
+void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int flags){impl_->push(video_frame, flags);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
 std::shared_ptr<basic_frame> frame_muxer::poll(){return impl_->poll();}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}

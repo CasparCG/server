@@ -122,17 +122,17 @@ public:
 			{
 				auto transform = transforms_[layer.first].fetch_and_tick(1);
 
-				int hints = frame_producer::NO_HINT;
+				int flags = frame_producer::NO_FLAG;
 				if(format_desc_.field_mode != field_mode::progressive)
 				{
-					hints |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::DEINTERLACE_HINT : frame_producer::NO_HINT;
-					hints |= std::abs(transform.fill_translation[1]) > 0.0001 ? frame_producer::DEINTERLACE_HINT : frame_producer::NO_HINT;
+					flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::DEINTERLACE_FLAG : frame_producer::NO_FLAG;
+					flags |= std::abs(transform.fill_translation[1]) > 0.0001 ? frame_producer::DEINTERLACE_FLAG : frame_producer::NO_FLAG;
 				}
 
 				if(transform.is_key)
-					hints |= frame_producer::ALPHA_HINT;
+					flags |= frame_producer::ALPHA_ONLY_FLAG;
 
-				auto frame = layer.second.receive(hints);	
+				auto frame = layer.second.receive(flags);	
 				
 				auto frame1 = make_safe<core::basic_frame>(frame);
 				frame1->get_frame_transform() = transform;
@@ -167,7 +167,8 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}		
 	}
-		void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
+		
+	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
 		executor_.begin_invoke([=]
 		{

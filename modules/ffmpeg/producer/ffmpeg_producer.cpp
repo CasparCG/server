@@ -138,12 +138,12 @@ public:
 
 	// frame_producer
 	
-	virtual safe_ptr<core::basic_frame> receive(int hints) override
+	virtual safe_ptr<core::basic_frame> receive(int flags) override
 	{		
 		frame_timer_.restart();
 				
 		for(int n = 0; n < 16 && frame_buffer_.size() < 2; ++n)
-			try_decode_frame(hints);
+			try_decode_frame(flags);
 		
 		graph_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 				
@@ -253,7 +253,7 @@ public:
 		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
 
-	void try_decode_frame(int hints)
+	void try_decode_frame(int flags)
 	{
 		std::shared_ptr<AVPacket> pkt;
 
@@ -280,7 +280,7 @@ public:
 				audio = audio_decoder_->poll();		
 		});
 		
-		muxer_->push(video, hints);
+		muxer_->push(video, flags);
 		muxer_->push(audio);
 
 		if(!audio_decoder_)
