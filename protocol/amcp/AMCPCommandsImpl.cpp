@@ -1347,19 +1347,19 @@ bool InfoCommand::DoExecute()
 			info.add(L"system.windows.service-pack",	caspar::get_win_sp_version());
 			info.add(L"system.cpu",						caspar::get_cpu_info());
 	
-			//BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
-			//	info.add(L"system.decklink.device", device);
+			BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+				info.add(L"system.decklink.device", device);
 
-			//BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
-			//	info.add(L"system.bluefish.device", device);
-			//	
-			//info.add(L"system.flash",					caspar::flash::get_version());
+			BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
+				info.add(L"system.bluefish.device", device);
+				
+			info.add(L"system.flash",					caspar::flash::get_version());
 			//info.add(L"system.free-image",				caspar::image::get_version());
-			//info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
-			//info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
-			//info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
-			//info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
-			//info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
+			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
+			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
+			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
+			info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
+			info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
 						
 			boost::property_tree::write_xml(replyString, info, w);
 		}
