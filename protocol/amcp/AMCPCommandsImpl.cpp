@@ -93,25 +93,25 @@ namespace caspar { namespace protocol {
 
 using namespace core;
 
-std::wstring MediaInfo(const boost::filesystem::wpath& path)
+std::wstring MediaInfo(const boost::filesystem::path& path)
 {
 	if(boost::filesystem::is_regular_file(path))
 	{
 		std::wstring clipttype = TEXT(" N/A ");
-		std::wstring extension = boost::to_upper_copy(path.extension());
+		std::wstring extension = boost::to_upper_copy(path.extension().wstring());
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
 			extension == L"GIF" || extension == L"BMP")
 			clipttype = TEXT(" STILL ");
 		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
 			clipttype = TEXT(" STILL ");
-		else if(caspar::ffmpeg::is_valid_file(path.file_string()) || extension == L".CT")
+		else if(caspar::ffmpeg::is_valid_file(path.wstring()) || extension == L".CT")
 			clipttype = TEXT(" MOVIE ");
 
 		if(clipttype != TEXT(" N/A "))
 		{		
 			auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-			auto relativePath = boost::filesystem::wpath(path.file_string().substr(env::media_folder().size()-1, path.file_string().size()));
+			auto relativePath = boost::filesystem::path(path.wstring().substr(env::media_folder().size()-1, path.wstring().size()));
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
@@ -121,7 +121,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 			sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 				
-			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			auto str = relativePath.replace_extension(TEXT("")).native();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -138,7 +138,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 std::wstring ListMedia()
 {	
 	std::wstringstream replyString;
-	for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)	
+	for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)	
 		replyString << MediaInfo(itr->path());
 	
 	return boost::to_upper_copy(replyString.str());
@@ -148,11 +148,11 @@ std::wstring ListTemplates()
 {
 	std::wstringstream replyString;
 
-	for (boost::filesystem::wrecursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
 	{		
 		if(boost::filesystem::is_regular_file(itr->path()) && (itr->path().extension() == L".ft" || itr->path().extension() == L".ct"))
 		{
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::template_folder().size()-1, itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::wpath(itr->path().wstring().substr(env::template_folder().size()-1, itr->path().wstring().size()));
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), [](char c){ return std::isdigit(c) == 0;}), writeTimeStr.end());
@@ -163,11 +163,11 @@ std::wstring ListTemplates()
 
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 
-			std::wstring dir = relativePath.parent_path().external_directory_string();
-			std::wstring file = boost::to_upper_copy(relativePath.filename());
+			std::wstring dir = relativePath.parent_path().native();
+			std::wstring file = boost::to_upper_copy(relativePath.filename().wstring());
 			relativePath = boost::filesystem::wpath(dir + L"/" + file);
 						
-			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			auto str = relativePath.replace_extension(TEXT("")).native();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -941,7 +941,7 @@ bool CGCommand::DoExecuteAdd() {
 	std::wstring fullFilename = flash::find_template(env::template_folder() + _parameters[2]);
 	if(!fullFilename.empty())
 	{
-		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
+		std::wstring extension = boost::filesystem::path(fullFilename).extension().wstring();
 		std::wstring filename = _parameters[2];
 		filename.append(extension);
 
@@ -1236,16 +1236,16 @@ bool DataCommand::DoExecuteList()
 	std::wstringstream replyString;
 	replyString << TEXT("200 DATA LIST OK\r\n");
 
-	for (boost::filesystem::wrecursive_directory_iterator itr(env::data_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(env::data_folder()), end; itr != end; ++itr)
 	{			
 		if(boost::filesystem::is_regular_file(itr->path()))
 		{
-			if(!boost::iequals(itr->path().extension(), L".ftd"))
+			if(!boost::iequals(itr->path().extension().wstring(), L".ftd"))
 				continue;
 			
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::data_folder().size()-1, itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::wpath(itr->path().wstring().substr(env::data_folder().size()-1, itr->path().wstring().size()));
 			
-			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			auto str = relativePath.replace_extension(TEXT("")).native();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -1266,11 +1266,11 @@ bool CinfCommand::DoExecute()
 	try
 	{
 		std::wstring info;
-		for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
+		for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
 		{
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
-			if(boost::iequals(file, _parameters.at(0)))
+			if(boost::iequals(file.wstring(), _parameters.at(0)))
 				info += MediaInfo(itr->path()) + L"\r\n";
 		}
 
@@ -1332,7 +1332,7 @@ bool InfoCommand::DoExecute()
 
 			boost::property_tree::wptree info;
 			info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
-			info.add(L"paths.initial-path", boost::filesystem2::initial_path<boost::filesystem2::wpath>().directory_string() + L"\\");
+			info.add(L"paths.initial-path", boost::filesystem3::initial_path().wstring() + L"\\");
 
 			boost::property_tree::write_xml(replyString, info, w);
 		}
@@ -1347,19 +1347,19 @@ bool InfoCommand::DoExecute()
 			info.add(L"system.windows.service-pack",	caspar::get_win_sp_version());
 			info.add(L"system.cpu",						caspar::get_cpu_info());
 	
-			BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
-				info.add(L"system.decklink.device", device);
+			//BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+			//	info.add(L"system.decklink.device", device);
 
-			BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
-				info.add(L"system.bluefish.device", device);
-				
-			info.add(L"system.flash",					caspar::flash::get_version());
-			info.add(L"system.free-image",				caspar::image::get_version());
-			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
-			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
-			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
-			info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
-			info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
+			//BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
+			//	info.add(L"system.bluefish.device", device);
+			//	
+			//info.add(L"system.flash",					caspar::flash::get_version());
+			//info.add(L"system.free-image",				caspar::image::get_version());
+			//info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
+			//info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
+			//info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
+			//info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
+			//info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
 						
 			boost::property_tree::write_xml(replyString, info, w);
 		}

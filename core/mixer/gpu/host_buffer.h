@@ -40,7 +40,7 @@ public:
 	
 	const void* data() const;
 	void* data();
-	size_t size() const;	
+	int size() const;	
 	
 	void bind();
 	void unbind();
@@ -48,12 +48,12 @@ public:
 	void map();
 	void unmap();
 	
-	void begin_read(size_t width, size_t height, unsigned int format);
+	void begin_read(int width, int height, unsigned int format);
 	bool ready() const;
 	void wait(ogl_device& ogl);
 private:
 	friend class ogl_device;
-	host_buffer(size_t size, usage_t usage);
+	host_buffer(int size, usage_t usage);
 
 	struct implementation;
 	safe_ptr<implementation> impl_;

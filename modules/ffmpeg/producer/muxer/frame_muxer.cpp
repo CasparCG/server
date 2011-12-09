@@ -75,7 +75,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	bool											auto_transcode_;
 	bool											auto_deinterlace_;
 	
-	std::vector<size_t>								audio_cadence_;
+	std::vector<int>								audio_cadence_;
 			
 	safe_ptr<core::frame_factory>					frame_factory_;
 	
@@ -166,7 +166,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			boost::range::push_back(audio_streams_.back(), *audio);
 		}
 
-		if(audio_streams_.back().size() > 32*audio_cadence_.front())
+		if(audio_streams_.back().size() > static_cast<size_t>(32*audio_cadence_.front()))
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 	
@@ -198,9 +198,9 @@ struct frame_muxer::implementation : boost::noncopyable
 		switch(display_mode_)
 		{
 		case display_mode::duplicate:					
-			return audio_streams_.front().size()/2 >= audio_cadence_.front();
+			return audio_streams_.front().size()/2 >= static_cast<size_t>(audio_cadence_.front());
 		default:										
-			return audio_streams_.front().size() >= audio_cadence_.front();
+			return audio_streams_.front().size() >= static_cast<size_t>(audio_cadence_.front());
 		}
 	}
 		
@@ -275,7 +275,7 @@ struct frame_muxer::implementation : boost::noncopyable
 
 	core::audio_buffer pop_audio()
 	{
-		CASPAR_VERIFY(audio_streams_.front().size() >= audio_cadence_.front());
+		CASPAR_VERIFY(audio_streams_.front().size() >= static_cast<size_t>(audio_cadence_.front()));
 
 		auto begin = audio_streams_.front().begin();
 		auto end   = begin + audio_cadence_.front();

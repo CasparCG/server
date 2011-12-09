@@ -70,7 +70,7 @@ struct audio_mixer::implementation
 	std::stack<core::frame_transform>	transform_stack_;
 	std::map<const void*, audio_stream>	audio_streams_;
 	std::vector<audio_item>				items_;
-	std::vector<size_t>					audio_cadence_;
+	std::vector<int>					audio_cadence_;
 	video_format_desc					format_desc_;
 	
 public:

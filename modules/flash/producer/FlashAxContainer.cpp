@@ -592,7 +592,7 @@ void FlashAxContainer::EnterFullscreen()
 {
 	if(m_spInPlaceObjectWindowless != 0)
 	{
-		HRESULT result;
+		LRESULT result;
 		m_spInPlaceObjectWindowless->OnWindowMessage(WM_LBUTTONDOWN, 0, MAKELPARAM(1, 1), &result);
 		m_spInPlaceObjectWindowless->OnWindowMessage(WM_LBUTTONUP, 0, MAKELPARAM(1, 1), &result);
 	}
@@ -898,7 +898,7 @@ void FlashAxContainer::Tick()
 		if(time - timerCount_ >= 400)
 		{
 			timerCount_ = time;
-			HRESULT hr;
+			LRESULT hr;
 			m_spInPlaceObjectWindowless->OnWindowMessage(WM_TIMER, 3, 0, &hr);
 		}
 	}

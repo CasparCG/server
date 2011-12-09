@@ -42,14 +42,14 @@ static tbb::atomic<int> g_r_total_count;
 struct host_buffer::implementation : boost::noncopyable
 {	
 	GLuint			pbo_;
-	const size_t	size_;
+	const int	size_;
 	void*			data_;
 	GLenum			usage_;
 	GLenum			target_;
 	fence			fence_;
 
 public:
-	implementation(size_t size, usage_t usage) 
+	implementation(int size, usage_t usage) 
 		: size_(size)
 		, data_(nullptr)
 		, pbo_(0)
@@ -122,7 +122,7 @@ public:
 		GL(glBindBuffer(target_, 0));
 	}
 
-	void begin_read(size_t width, size_t height, GLuint format)
+	void begin_read(int width, int height, GLuint format)
 	{
 		unmap();
 		bind();
@@ -137,15 +137,15 @@ public:
 	}
 };
 
-host_buffer::host_buffer(size_t size, usage_t usage) : impl_(new implementation(size, usage)){}
+host_buffer::host_buffer(int size, usage_t usage) : impl_(new implementation(size, usage)){}
 const void* host_buffer::data() const {return impl_->data_;}
 void* host_buffer::data() {return impl_->data_;}
 void host_buffer::map(){impl_->map();}
 void host_buffer::unmap(){impl_->unmap();}
 void host_buffer::bind(){impl_->bind();}
 void host_buffer::unbind(){impl_->unbind();}
-void host_buffer::begin_read(size_t width, size_t height, GLuint format){impl_->begin_read(width, height, format);}
-size_t host_buffer::size() const { return impl_->size_; }
+void host_buffer::begin_read(int width, int height, GLuint format){impl_->begin_read(width, height, format);}
+int host_buffer::size() const { return impl_->size_; }
 bool host_buffer::ready() const{return impl_->ready();}
 void host_buffer::wait(ogl_device& ogl){impl_->wait(ogl);}
 

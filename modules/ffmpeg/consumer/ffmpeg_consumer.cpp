@@ -98,7 +98,7 @@ public:
 		, frame_number_(0)
 	{
 		// TODO: Ask stakeholders about case where file already exists.
-		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + filename)); // Delete the file if it exists
+		boost::filesystem::remove(boost::filesystem::path(env::media_folder() + filename)); // Delete the file if it exists
 
 		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -307,8 +307,8 @@ public:
 		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper;
 		av_frame->pts				= frame_number_++;
-
-		int out_size = THROW_ON_ERROR2(avcodec_encode_video(c, video_outbuf_.data(), video_outbuf_.size(), av_frame.get()), "[ffmpeg_consumer]");
+		
+		int out_size = THROW_ON_ERROR2(avcodec_encode_video(c, video_outbuf_.data(), static_cast<int>(video_outbuf_.size()), av_frame.get()), "[ffmpeg_consumer]");
 		if(out_size > 0)
 		{
 			safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
@@ -352,7 +352,7 @@ public:
 
 		pkt->flags		 |= AV_PKT_FLAG_KEY;
 		pkt->stream_index = audio_st_->index;
-		pkt->size		 = audio_data.size()*2;
+		pkt->size		 = static_cast<int>(audio_data.size()*2);
 		pkt->data		 = reinterpret_cast<uint8_t*>(audio_data.data());
 		
 		av_dup_packet(pkt.get());
@@ -437,7 +437,7 @@ public:
 		return false;
 	}
 
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
 		return 1;
 	}

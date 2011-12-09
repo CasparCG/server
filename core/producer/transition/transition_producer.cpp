@@ -124,8 +124,8 @@ struct transition_producer : public frame_producer
 		if(info_.type == transition::cut)		
 			return src_frame;
 										
-		const double delta1 = info_.tweener(current_frame_*2-1, 0.0, 1.0, info_.duration*2);
-		const double delta2 = info_.tweener(current_frame_*2, 0.0, 1.0, info_.duration*2);  
+		const double delta1 = info_.tweener(current_frame_*2-1, 0.0, 1.0, static_cast<double>(info_.duration*2));
+		const double delta2 = info_.tweener(current_frame_*2,   0.0, 1.0, static_cast<double>(info_.duration*2));  
 
 		const double dir = info_.direction == transition_direction::from_left ? 1.0 : -1.0;		
 		

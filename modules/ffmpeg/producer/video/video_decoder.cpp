@@ -59,11 +59,11 @@ struct video_decoder::implementation : boost::noncopyable
 	
 	const uint32_t							nb_frames_;
 
-	const size_t							width_;
-	const size_t							height_;
+	const int								width_;
+	const int								height_;
 	bool									is_progressive_;
 
-	tbb::atomic<size_t>						file_frame_number_;
+	tbb::atomic<uint32_t>					file_frame_number_;
 
 public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context) 
@@ -102,7 +102,7 @@ public:
 			}
 					
 			packets_.pop();
-			file_frame_number_ = static_cast<size_t>(packet->pos);
+			file_frame_number_ = static_cast<uint32_t>(packet->pos);
 			avcodec_flush_buffers(codec_context_.get());
 			return flush_video();	
 		}
@@ -150,8 +150,8 @@ video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context) : impl_(n
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}
-size_t video_decoder::width() const{return impl_->width_;}
-size_t video_decoder::height() const{return impl_->height_;}
+int video_decoder::width() const{return impl_->width_;}
+int video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}

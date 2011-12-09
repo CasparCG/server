@@ -37,7 +37,7 @@ namespace caspar { namespace core {
 static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
 static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};	
 
-unsigned int format(size_t stride)
+unsigned int format(int stride)
 {
 	return FORMAT[stride];
 }
@@ -48,14 +48,14 @@ struct device_buffer::implementation : boost::noncopyable
 {
 	GLuint id_;
 
-	const size_t width_;
-	const size_t height_;
-	const size_t stride_;
+	const int width_;
+	const int height_;
+	const int stride_;
 
 	fence		 fence_;
 
 public:
-	implementation(size_t width, size_t height, size_t stride) 
+	implementation(int width, int height, int stride) 
 		: width_(width)
 		, height_(height)
 		, stride_(stride)
@@ -114,10 +114,10 @@ public:
 	}
 };
 
-device_buffer::device_buffer(size_t width, size_t height, size_t stride) : impl_(new implementation(width, height, stride)){}
-size_t device_buffer::stride() const { return impl_->stride_; }
-size_t device_buffer::width() const { return impl_->width_; }
-size_t device_buffer::height() const { return impl_->height_; }
+device_buffer::device_buffer(int width, int height, int stride) : impl_(new implementation(width, height, stride)){}
+int device_buffer::stride() const { return impl_->stride_; }
+int device_buffer::width() const { return impl_->width_; }
+int device_buffer::height() const { return impl_->height_; }
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
 void device_buffer::begin_read(){impl_->begin_read();}

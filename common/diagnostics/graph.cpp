@@ -28,7 +28,7 @@
 #include "../concurrency/executor.h"
 #include "../env.h"
 
-#include <SFML/Graphics.hpp>
+//#include <SFML/Graphics.hpp>
 
 #include <boost/foreach.hpp>
 #include <boost/optional.hpp>
@@ -40,418 +40,418 @@
 #include <array>
 
 namespace caspar { namespace diagnostics {
-		
-struct drawable : public sf::Drawable
-{
-	virtual ~drawable(){}
-	virtual void render(sf::RenderTarget& target) = 0;
-	virtual void Render(sf::RenderTarget& target) const { const_cast<drawable*>(this)->render(target);}
-};
-
-class context : public drawable
-{	
-	std::unique_ptr<sf::RenderWindow> window_;
+//		
+//struct drawable : public sf::Drawable
+//{
+//	virtual ~drawable(){}
+//	virtual void render(sf::RenderTarget& target) = 0;
+//	virtual void Render(sf::RenderTarget& target) const { const_cast<drawable*>(this)->render(target);}
+//};
+//
+//class context : public drawable
+//{	
+//	std::unique_ptr<sf::RenderWindow> window_;
+//	
+//	std::list<std::shared_ptr<drawable>> drawables_;
+//		
+//	executor executor_;
+//public:					
+//
+//	template<typename Func>
+//	static void begin_invoke(Func&& func, task_priority priority) // noexcept
+//	{	
+//		if(get_instance().executor_.size() < 128)
+//			get_instance().executor_.begin_invoke(std::forward<Func>(func), priority);	
+//	}
+//
+//	static void register_drawable(const std::shared_ptr<drawable>& drawable)
+//	{
+//		if(!drawable)
+//			return;
+//
+//		begin_invoke([=]
+//		{
+//			get_instance().do_register_drawable(drawable);
+//		}, high_priority);
+//	}
+//
+//	static void show(bool value)
+//	{
+//		begin_invoke([=]
+//		{	
+//			get_instance().do_show(value);
+//		}, high_priority);
+//	}
+//				
+//private:
+//	context() : executor_(L"diagnostics")
+//	{
+//		executor_.set_priority_class(below_normal_priority_class);
+//	}
+//
+//	void do_show(bool value)
+//	{
+//		if(value)
+//		{
+//			if(!window_)
+//			{
+//				window_.reset(new sf::RenderWindow(sf::VideoMode(600, 1000), "CasparCG Diagnostics"));
+//				window_->SetPosition(0, 0);
+//				window_->SetActive();
+//				glEnable(GL_BLEND);
+//				glEnable(GL_LINE_SMOOTH);
+//				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+//				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//				tick();
+//			}
+//		}
+//		else
+//			window_.reset();
+//	}
+//
+//	void tick()
+//	{
+//		if(!window_)
+//			return;
+//
+//		sf::Event e;
+//		while(window_->GetEvent(e))
+//		{
+//			if(e.Type == sf::Event::Closed)
+//			{
+//				window_.reset();
+//				return;
+//			}
+//		}		
+//		glClear(GL_COLOR_BUFFER_BIT);
+//		window_->Draw(*this);
+//		window_->Display();
+//		boost::this_thread::sleep(boost::posix_time::milliseconds(20));
+//		executor_.begin_invoke([this]{tick();});
+//	}
+//
+//	void render(sf::RenderTarget& target)
+//	{
+//		auto count = std::max<size_t>(8, drawables_.size());
+//		float target_dy = 1.0f/static_cast<float>(count);
+//
+//		float last_y = 0.0f;
+//		int n = 0;
+//		for(auto it = drawables_.begin(); it != drawables_.end(); ++n)
+//		{
+//			auto& drawable = *it;
+//			if(!drawable.unique())
+//			{
+//				drawable->SetScale(static_cast<float>(window_->GetWidth()), static_cast<float>(target_dy*window_->GetHeight()));
+//				float target_y = std::max(last_y, static_cast<float>(n * window_->GetHeight())*target_dy);
+//				drawable->SetPosition(0.0f, target_y);			
+//				target.Draw(*drawable);				
+//				++it;		
+//			}
+//			else	
+//				it = drawables_.erase(it);			
+//		}		
+//	}	
+//	
+//	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
+//	{
+//		if(std::find(drawables_.begin(), drawables_.end(), drawable) == drawables_.end())
+//			drawables_.push_back(drawable);
+//	}
+//	
+//	static context& get_instance()
+//	{
+//		static context impl;
+//		return impl;
+//	}
+//};
+//
+//class guide : public drawable
+//{
+//	float value_;
+//	color c_;
+//public:
+//	guide(color c = color(1.0f, 1.0f, 1.0f, 0.6f)) 
+//		: value_(0.0f)
+//		, c_(c){}
+//
+//	guide(float value, color c = color(1.0f, 1.0f, 1.0f, 0.6f)) 
+//		: value_(value)
+//		, c_(c){}
+//			
+//	void set_color(color c) {c_ = c;}
+//
+//	void render(sf::RenderTarget&)
+//	{		
+//		glEnable(GL_LINE_STIPPLE);
+//		glLineStipple(3, 0xAAAA);
+//		glBegin(GL_LINE_STRIP);	
+//			glColor4f(c_.red, c_.green, c_.blue+0.2f, c_.alpha);		
+//			glVertex3f(0.0f, (1.0f-value_) * 0.8f + 0.1f, 0.0f);		
+//			glVertex3f(1.0f, (1.0f-value_) * 0.8f + 0.1f, 0.0f);	
+//		glEnd();
+//		glDisable(GL_LINE_STIPPLE);
+//	}
+//};
+//
+//class line : public drawable
+//{
+//	boost::optional<diagnostics::guide> guide_;
+//	boost::circular_buffer<std::pair<double, bool>> line_data_;
+//
+//	boost::circular_buffer<double>	tick_data_;
+//	bool							tick_tag_;
+//	color c_;
+//public:
+//	line(size_t res = 600)
+//		: line_data_(res)
+//		, tick_data_(50)
+//		, tick_tag_(false)
+//		, c_(1.0f, 1.0f, 1.0f)
+//	{
+//		line_data_.push_back(std::make_pair(-1.0f, false));
+//	}
+//	
+//	void update(double value)
+//	{
+//		tick_data_.push_back(value);
+//	}
+//
+//	void set(double value)
+//	{
+//		tick_data_.clear();
+//		tick_data_.push_back(value);
+//	}
+//	
+//	void tag()
+//	{
+//		tick_tag_ = true;
+//	}
+//
+//	void guide(const guide& guide)
+//	{
+//		guide_ = guide;
+//		guide_->set_color(c_);
+//	}
+//	
+//	void set_color(color c)
+//	{
+//		c_ = c;
+//		if(guide_)
+//			guide_->set_color(c_);
+//	}
+//
+//	color get_color() const { return c_; }
+//	
+//	void render(sf::RenderTarget& target)
+//	{
+//		float dx = 1.0f/static_cast<float>(line_data_.capacity());
+//		float x = static_cast<float>(line_data_.capacity()-line_data_.size())*dx;
+//
+//		if(!tick_data_.empty())
+//		{
+//			float sum = std::accumulate(tick_data_.begin(), tick_data_.end(), 0.0) + std::numeric_limits<float>::min();
+//			line_data_.push_back(std::make_pair(static_cast<float>(sum)/static_cast<float>(tick_data_.size()), tick_tag_));
+//			tick_data_.clear();
+//		}
+//		else if(!line_data_.empty())
+//		{
+//			line_data_.push_back(std::make_pair(line_data_.back().first, tick_tag_));
+//		}
+//		tick_tag_ = false;
+//
+//		if(guide_)
+//			target.Draw(*guide_);
+//		
+//		glBegin(GL_LINE_STRIP);
+//		glColor4f(c_.red, c_.green, c_.blue, 0.8f);		
+//		for(size_t n = 0; n < line_data_.size(); ++n)		
+//			if(line_data_[n].first > -0.5)
+//				glVertex3d(x+n*dx, std::max(0.05, std::min(0.95, (1.0f-line_data_[n].first)*0.8 + 0.1f)), 0.0);		
+//		glEnd();
+//				
+//		glEnable(GL_LINE_STIPPLE);
+//		glLineStipple(3, 0xAAAA);
+//		for(size_t n = 0; n < line_data_.size(); ++n)	
+//		{
+//			if(line_data_[n].second)
+//			{
+//				glBegin(GL_LINE_STRIP);
+//				glColor4f(c_.red, c_.green, c_.blue, c_.alpha);					
+//					glVertex3f(x+n*dx, 0.0f, 0.0f);				
+//					glVertex3f(x+n*dx, 1.0f, 0.0f);		
+//				glEnd();
+//			}
+//		}
+//		glDisable(GL_LINE_STIPPLE);
+//	}
+//};
+//
+//struct graph::implementation : public drawable
+//{
+//	std::map<std::string, diagnostics::line> lines_;
+//	std::string name_;
+//	std::string text_;
+//	
+//	implementation(const std::string& name) 
+//		: name_(name)
+//		, text_(name_){}
+//	
+//	void set_text(const std::string& value)
+//	{
+//		text_ = value;
+//	}
+//
+//	void update(const std::string& name, double value)
+//	{
+//		lines_[name].update(value);
+//	}
+//
+//	void set(const std::string& name, double value)
+//	{
+//		lines_[name].set(value);
+//	}
+//
+//	void tag(const std::string& name)
+//	{
+//		lines_[name].tag();
+//	}
+//
+//	void set_color(const std::string& name, color c)
+//	{
+//		lines_[name].set_color(c);
+//	}
+//	
+//	void guide(const std::string& name, double value)
+//	{
+//		lines_[name].guide(diagnostics::guide(value));	
+//	}
+//	
+//private:
+//	void render(sf::RenderTarget& target)
+//	{
+//		const size_t text_size = 15;
+//		const size_t text_margin = 2;
+//		const size_t text_offset = (text_size+text_margin*2)*2;
+//
+//		sf::String text(text_.c_str(), sf::Font::GetDefaultFont(), text_size);
+//		text.SetStyle(sf::String::Italic);
+//		text.Move(text_margin, text_margin);
+//		
+//		glPushMatrix();
+//			glScaled(1.0f/GetScale().x, 1.0f/GetScale().y, 1.0f);
+//			target.Draw(text);
+//			float x_offset = text_margin;
+//			for(auto it = lines_.begin(); it != lines_.end(); ++it)
+//			{						
+//				sf::String line_text(it->first, sf::Font::GetDefaultFont(), text_size);
+//				line_text.SetPosition(x_offset, text_margin+text_offset/2);
+//				auto c = it->second.get_color();
+//				line_text.SetColor(sf::Color(c.red*255.0f, c.green*255.0f, c.blue*255.0f, c.alpha*255.0f));
+//				target.Draw(line_text);
+//				x_offset = line_text.GetRect().Right + text_margin*2;
+//			}
+//
+//			glDisable(GL_TEXTURE_2D);
+//		glPopMatrix();
+//
+//		glBegin(GL_QUADS);
+//			glColor4f(1.0f, 1.0f, 1.0f, 0.2f);	
+//			glVertex2f(1.0f, 0.99f);
+//			glVertex2f(0.0f, 0.99f);
+//			glVertex2f(0.0f, 0.01f);	
+//			glVertex2f(1.0f, 0.01f);	
+//		glEnd();
+//
+//		glPushMatrix();
+//			glTranslated(0.0f, text_offset/GetScale().y, 1.0f);
+//			glScaled(1.0f, 1.0-text_offset/GetScale().y, 1.0f);
+//		
+//			target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
+//			target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
+//
+//			for(auto it = lines_.begin(); it != lines_.end(); ++it)		
+//				target.Draw(it->second);
+//		
+//		glPopMatrix();
+//	}
+//
+//	implementation(implementation&);
+//	implementation& operator=(implementation&);
+//};
 	
-	std::list<std::shared_ptr<drawable>> drawables_;
-		
-	executor executor_;
-public:					
-
-	template<typename Func>
-	static void begin_invoke(Func&& func, task_priority priority) // noexcept
-	{	
-		if(get_instance().executor_.size() < 128)
-			get_instance().executor_.begin_invoke(std::forward<Func>(func), priority);	
-	}
-
-	static void register_drawable(const std::shared_ptr<drawable>& drawable)
-	{
-		if(!drawable)
-			return;
-
-		begin_invoke([=]
-		{
-			get_instance().do_register_drawable(drawable);
-		}, high_priority);
-	}
-
-	static void show(bool value)
-	{
-		begin_invoke([=]
-		{	
-			get_instance().do_show(value);
-		}, high_priority);
-	}
-				
-private:
-	context() : executor_(L"diagnostics")
-	{
-		executor_.set_priority_class(below_normal_priority_class);
-	}
-
-	void do_show(bool value)
-	{
-		if(value)
-		{
-			if(!window_)
-			{
-				window_.reset(new sf::RenderWindow(sf::VideoMode(600, 1000), "CasparCG Diagnostics"));
-				window_->SetPosition(0, 0);
-				window_->SetActive();
-				glEnable(GL_BLEND);
-				glEnable(GL_LINE_SMOOTH);
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				tick();
-			}
-		}
-		else
-			window_.reset();
-	}
-
-	void tick()
-	{
-		if(!window_)
-			return;
-
-		sf::Event e;
-		while(window_->GetEvent(e))
-		{
-			if(e.Type == sf::Event::Closed)
-			{
-				window_.reset();
-				return;
-			}
-		}		
-		glClear(GL_COLOR_BUFFER_BIT);
-		window_->Draw(*this);
-		window_->Display();
-		boost::this_thread::sleep(boost::posix_time::milliseconds(20));
-		executor_.begin_invoke([this]{tick();});
-	}
-
-	void render(sf::RenderTarget& target)
-	{
-		auto count = std::max<size_t>(8, drawables_.size());
-		float target_dy = 1.0f/static_cast<float>(count);
-
-		float last_y = 0.0f;
-		int n = 0;
-		for(auto it = drawables_.begin(); it != drawables_.end(); ++n)
-		{
-			auto& drawable = *it;
-			if(!drawable.unique())
-			{
-				drawable->SetScale(static_cast<float>(window_->GetWidth()), static_cast<float>(target_dy*window_->GetHeight()));
-				float target_y = std::max(last_y, static_cast<float>(n * window_->GetHeight())*target_dy);
-				drawable->SetPosition(0.0f, target_y);			
-				target.Draw(*drawable);				
-				++it;		
-			}
-			else	
-				it = drawables_.erase(it);			
-		}		
-	}	
-	
-	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
-	{
-		if(std::find(drawables_.begin(), drawables_.end(), drawable) == drawables_.end())
-			drawables_.push_back(drawable);
-	}
-	
-	static context& get_instance()
-	{
-		static context impl;
-		return impl;
-	}
-};
-
-class guide : public drawable
-{
-	float value_;
-	color c_;
-public:
-	guide(color c = color(1.0f, 1.0f, 1.0f, 0.6f)) 
-		: value_(0.0f)
-		, c_(c){}
-
-	guide(float value, color c = color(1.0f, 1.0f, 1.0f, 0.6f)) 
-		: value_(value)
-		, c_(c){}
-			
-	void set_color(color c) {c_ = c;}
-
-	void render(sf::RenderTarget&)
-	{		
-		glEnable(GL_LINE_STIPPLE);
-		glLineStipple(3, 0xAAAA);
-		glBegin(GL_LINE_STRIP);	
-			glColor4f(c_.red, c_.green, c_.blue+0.2f, c_.alpha);		
-			glVertex3f(0.0f, (1.0f-value_) * 0.8f + 0.1f, 0.0f);		
-			glVertex3f(1.0f, (1.0f-value_) * 0.8f + 0.1f, 0.0f);	
-		glEnd();
-		glDisable(GL_LINE_STIPPLE);
-	}
-};
-
-class line : public drawable
-{
-	boost::optional<diagnostics::guide> guide_;
-	boost::circular_buffer<std::pair<double, bool>> line_data_;
-
-	boost::circular_buffer<double>	tick_data_;
-	bool							tick_tag_;
-	color c_;
-public:
-	line(size_t res = 600)
-		: line_data_(res)
-		, tick_data_(50)
-		, tick_tag_(false)
-		, c_(1.0f, 1.0f, 1.0f)
-	{
-		line_data_.push_back(std::make_pair(-1.0f, false));
-	}
-	
-	void update(double value)
-	{
-		tick_data_.push_back(value);
-	}
-
-	void set(double value)
-	{
-		tick_data_.clear();
-		tick_data_.push_back(value);
-	}
-	
-	void tag()
-	{
-		tick_tag_ = true;
-	}
-
-	void guide(const guide& guide)
-	{
-		guide_ = guide;
-		guide_->set_color(c_);
-	}
-	
-	void set_color(color c)
-	{
-		c_ = c;
-		if(guide_)
-			guide_->set_color(c_);
-	}
-
-	color get_color() const { return c_; }
-	
-	void render(sf::RenderTarget& target)
-	{
-		float dx = 1.0f/static_cast<float>(line_data_.capacity());
-		float x = static_cast<float>(line_data_.capacity()-line_data_.size())*dx;
-
-		if(!tick_data_.empty())
-		{
-			float sum = std::accumulate(tick_data_.begin(), tick_data_.end(), 0.0) + std::numeric_limits<float>::min();
-			line_data_.push_back(std::make_pair(static_cast<float>(sum)/static_cast<float>(tick_data_.size()), tick_tag_));
-			tick_data_.clear();
-		}
-		else if(!line_data_.empty())
-		{
-			line_data_.push_back(std::make_pair(line_data_.back().first, tick_tag_));
-		}
-		tick_tag_ = false;
-
-		if(guide_)
-			target.Draw(*guide_);
-		
-		glBegin(GL_LINE_STRIP);
-		glColor4f(c_.red, c_.green, c_.blue, 0.8f);		
-		for(size_t n = 0; n < line_data_.size(); ++n)		
-			if(line_data_[n].first > -0.5)
-				glVertex3d(x+n*dx, std::max(0.05, std::min(0.95, (1.0f-line_data_[n].first)*0.8 + 0.1f)), 0.0);		
-		glEnd();
-				
-		glEnable(GL_LINE_STIPPLE);
-		glLineStipple(3, 0xAAAA);
-		for(size_t n = 0; n < line_data_.size(); ++n)	
-		{
-			if(line_data_[n].second)
-			{
-				glBegin(GL_LINE_STRIP);
-				glColor4f(c_.red, c_.green, c_.blue, c_.alpha);					
-					glVertex3f(x+n*dx, 0.0f, 0.0f);				
-					glVertex3f(x+n*dx, 1.0f, 0.0f);		
-				glEnd();
-			}
-		}
-		glDisable(GL_LINE_STIPPLE);
-	}
-};
-
-struct graph::implementation : public drawable
-{
-	std::map<std::string, diagnostics::line> lines_;
-	std::string name_;
-	std::string text_;
-	
-	implementation(const std::string& name) 
-		: name_(name)
-		, text_(name_){}
-	
-	void set_text(const std::string& value)
-	{
-		text_ = value;
-	}
-
-	void update(const std::string& name, double value)
-	{
-		lines_[name].update(value);
-	}
-
-	void set(const std::string& name, double value)
-	{
-		lines_[name].set(value);
-	}
-
-	void tag(const std::string& name)
-	{
-		lines_[name].tag();
-	}
-
-	void set_color(const std::string& name, color c)
-	{
-		lines_[name].set_color(c);
-	}
-	
-	void guide(const std::string& name, double value)
-	{
-		lines_[name].guide(diagnostics::guide(value));	
-	}
-	
-private:
-	void render(sf::RenderTarget& target)
-	{
-		const size_t text_size = 15;
-		const size_t text_margin = 2;
-		const size_t text_offset = (text_size+text_margin*2)*2;
-
-		sf::String text(text_.c_str(), sf::Font::GetDefaultFont(), text_size);
-		text.SetStyle(sf::String::Italic);
-		text.Move(text_margin, text_margin);
-		
-		glPushMatrix();
-			glScaled(1.0f/GetScale().x, 1.0f/GetScale().y, 1.0f);
-			target.Draw(text);
-			float x_offset = text_margin;
-			for(auto it = lines_.begin(); it != lines_.end(); ++it)
-			{						
-				sf::String line_text(it->first, sf::Font::GetDefaultFont(), text_size);
-				line_text.SetPosition(x_offset, text_margin+text_offset/2);
-				auto c = it->second.get_color();
-				line_text.SetColor(sf::Color(c.red*255.0f, c.green*255.0f, c.blue*255.0f, c.alpha*255.0f));
-				target.Draw(line_text);
-				x_offset = line_text.GetRect().Right + text_margin*2;
-			}
-
-			glDisable(GL_TEXTURE_2D);
-		glPopMatrix();
-
-		glBegin(GL_QUADS);
-			glColor4f(1.0f, 1.0f, 1.0f, 0.2f);	
-			glVertex2f(1.0f, 0.99f);
-			glVertex2f(0.0f, 0.99f);
-			glVertex2f(0.0f, 0.01f);	
-			glVertex2f(1.0f, 0.01f);	
-		glEnd();
-
-		glPushMatrix();
-			glTranslated(0.0f, text_offset/GetScale().y, 1.0f);
-			glScaled(1.0f, 1.0-text_offset/GetScale().y, 1.0f);
-		
-			target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
-			target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
-
-			for(auto it = lines_.begin(); it != lines_.end(); ++it)		
-				target.Draw(it->second);
-		
-		glPopMatrix();
-	}
-
-	implementation(implementation&);
-	implementation& operator=(implementation&);
-};
-	
-graph::graph() : impl_(new implementation(""))
+graph::graph() //: impl_(new implementation(""))
 {
 
 }
 
 void graph::set_text(const std::string& value)
 {
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->set_text(value);
-	}, high_priority);
+	//auto p = impl_;
+	//context::begin_invoke([=]
+	//{	
+	//	p->set_text(value);
+	//}, high_priority);
 }
 
 void graph::set_text(const std::wstring& value)
 {
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		set_text(u8(value));
-	}, high_priority);
+	//auto p = impl_;
+	//context::begin_invoke([=]
+	//{	
+	//	set_text(u8(value));
+	//}, high_priority);
 }
 
 void graph::update_value(const std::string& name, double value)
 {
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->update(name, value);
-	}, high_priority);
+	//auto p = impl_;
+	//context::begin_invoke([=]
+	//{	
+	//	p->update(name, value);
+	//}, high_priority);
 }
 void graph::set_value(const std::string& name, double value)
 {	
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->set(name, value);
-	}, high_priority);	
+	//auto p = impl_;
+	//context::begin_invoke([=]
+	//{	
+	//	p->set(name, value);
+	//}, high_priority);	
 }
 void graph::set_color(const std::string& name, color c)
 {		
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->set_color(name, c);
-	}, high_priority);
+	//auto p = impl_;
+	//context::begin_invoke([=]
+	//{	
+	//	p->set_color(name, c);
+	//}, high_priority);
 }
 void graph::add_tag(const std::string& name)
 {		
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->tag(name);
-	}, high_priority);
+	//auto p = impl_;
+	//context::begin_invoke([=]
+	//{	
+	//	p->tag(name);
+	//}, high_priority);
 }
 void graph::add_guide(const std::string& name, double value)
 {	
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->guide(name, value);
-	}, high_priority);
+	//auto p = impl_;
+	//context::begin_invoke([=]
+	//{	
+	//	p->guide(name, value);
+	//}, high_priority);
 }
 
 void register_graph(const safe_ptr<graph>& graph)
 {
-	context::register_drawable(graph->impl_);
+	//context::register_drawable(graph->impl_);
 }
 
 void show_graphs(bool value)
 {
-	context::show(value);
+	//context::show(value);
 }
 
 //namespace v2
