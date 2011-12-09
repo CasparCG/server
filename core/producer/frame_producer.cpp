@@ -92,7 +92,7 @@ public:
 		}
 	}
 
-	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
+	virtual safe_ptr<basic_frame>								receive(int flags) override												{return (*producer_)->receive(flags);}
 	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (*producer_)->last_frame();}
 	virtual std::wstring										print() const override													{return (*producer_)->print();}
 	virtual boost::property_tree::wptree 						info() const override													{return (*producer_)->info();}
@@ -154,9 +154,9 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 	return producer;
 }	
 
-safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints)
+safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int flags)
 {	
-	auto frame = producer->receive(hints);
+	auto frame = producer->receive(flags);
 	if(frame == basic_frame::eof())
 	{
 		CASPAR_LOG(info) << producer->print() << " End Of File.";
@@ -169,7 +169,7 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int
 		else
 			producer = make_safe<last_frame_producer>(producer);
 
-		return receive_and_follow(producer, hints);
+		return receive_and_follow(producer, flags);
 	}
 	return frame;
 }
