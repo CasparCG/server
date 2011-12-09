@@ -171,7 +171,7 @@ int make_alpha_format(int format)
 	}
 }
 
-safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints)
+safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int flags)
 {			
 	static tbb::concurrent_unordered_map<size_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
@@ -182,7 +182,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	const auto height = decoded_frame->height;
 	auto desc		  = get_pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
 	
-	if(hints & core::frame_producer::ALPHA_HINT)
+	if(flags & core::frame_producer::ALPHA_ONLY_FLAG)
 		desc = get_pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
 
 	std::shared_ptr<core::write_frame> write;

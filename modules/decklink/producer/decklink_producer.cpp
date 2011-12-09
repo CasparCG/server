@@ -90,7 +90,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
 		
-	tbb::atomic<int>											hints_;
+	tbb::atomic<int>											flags_;
 	safe_ptr<core::frame_factory>								frame_factory_;
 	std::vector<size_t>											audio_cadence_;
 
@@ -114,7 +114,7 @@ public:
 		, muxer_(format_desc.fps, frame_factory, filter)
 		, sync_buffer_(format_desc.audio_cadence.size())
 	{		
-		hints_ = 0;
+		flags_ = 0;
 		frame_buffer_.set_capacity(2);
 		
 		graph_->add_guide("tick-time", 0.5);
@@ -222,7 +222,7 @@ public:
 			}
 
 			muxer_.push(audio_buffer);
-			muxer_.push(av_frame, hints_);	
+			muxer_.push(av_frame, flags_);	
 											
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 			
@@ -247,12 +247,12 @@ public:
 		return S_OK;
 	}
 	
-	safe_ptr<core::basic_frame> get_frame(int hints)
+	safe_ptr<core::basic_frame> get_frame(int flags)
 	{
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
 
-		hints_ = hints;
+		flags_ = flags;
 
 		safe_ptr<core::basic_frame> frame = core::basic_frame::late();
 		if(!frame_buffer_.try_pop(frame))
@@ -291,9 +291,9 @@ public:
 
 	// frame_producer
 				
-	virtual safe_ptr<core::basic_frame> receive(int hints) override
+	virtual safe_ptr<core::basic_frame> receive(int flags) override
 	{
-		auto frame = context_->get_frame(hints);
+		auto frame = context_->get_frame(flags);
 		if(frame != core::basic_frame::late())
 			last_frame_ = frame;
 		return frame;
