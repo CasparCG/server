@@ -113,7 +113,7 @@ core::pixel_format::type get_pixel_format(PixelFormat pix_fmt)
 	}
 }
 
-core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_t height)
+core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, int width, int height)
 {
 	// Get linesizes
 	AVPicture dummy_pict;	
@@ -142,8 +142,8 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width,
 	case core::pixel_format::ycbcra:
 		{		
 			// Find chroma height
-			size_t size2 = dummy_pict.data[2] - dummy_pict.data[1];
-			size_t h2 = size2/dummy_pict.linesize[1];			
+			int size2 = static_cast<int>(dummy_pict.data[2] - dummy_pict.data[1]);
+			int h2 = size2/dummy_pict.linesize[1];			
 
 			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
 			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1));
@@ -173,7 +173,7 @@ int make_alpha_format(int format)
 
 safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int flags)
 {			
-	static tbb::concurrent_unordered_map<size_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
+	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
 		return make_safe<core::write_frame>(tag);
@@ -214,7 +214,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 
 		//CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
 
-		size_t key = ((width << 22) & 0xFFC00000) | ((height << 6) & 0x003FC000) | ((pix_fmt << 7) & 0x00007F00) | ((target_pix_fmt << 0) & 0x0000007F);
+		int key = ((width << 22) & 0xFFC00000) | ((height << 6) & 0x003FC000) | ((pix_fmt << 7) & 0x00007F00) | ((target_pix_fmt << 0) & 0x0000007F);
 			
 		auto& pool = sws_contexts_[key];
 						
@@ -241,7 +241,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		{
 			av_frame->width	 = width;
 			av_frame->height = height;
-			for(size_t n = 0; n < target_desc.planes.size(); ++n)
+			for(int n = 0; n < target_desc.planes.size(); ++n)
 			{
 				av_frame->data[n]		= write->image_data(n).begin();
 				av_frame->linesize[n]	= target_desc.planes[n].linesize;
@@ -271,7 +271,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			if(decoded_linesize != static_cast<int>(plane.width))
 			{
 				// Copy line by line since ffmpeg sometimes pads each line.
-				tbb::parallel_for<size_t>(0, desc.planes[n].height, [&](size_t y)
+				tbb::parallel_for<int>(0, desc.planes[n].height, [&](int y)
 				{
 					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 				});
@@ -334,7 +334,7 @@ double read_fps(AVFormatContext& context, double fail_value)
 						
 		AVRational time_base = video_context->time_base;
 
-		if(boost::filesystem2::path(context.filename).extension() == ".flv")
+		if(boost::filesystem::path(context.filename).extension().string() == ".flv")
 		{
 			try
 			{
@@ -396,7 +396,7 @@ void fix_meta_data(AVFormatContext& context)
 		auto video_stream   = context.streams[video_index];
 		auto video_context  = context.streams[video_index]->codec;
 						
-		if(boost::filesystem2::path(context.filename).extension() == ".flv")
+		if(boost::filesystem::path(context.filename).extension().string() == ".flv")
 		{
 			try
 			{
@@ -452,7 +452,7 @@ safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
 	return context;
 }
 
-std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced)
+std::wstring print_mode(int width, int height, double fps, bool interlaced)
 {
 	std::wostringstream fps_ss;
 	fps_ss << std::fixed << std::setprecision(2) << (!interlaced ? fps : 2.0 * fps);
@@ -474,7 +474,7 @@ bool is_valid_file(const std::wstring filename)
 	AVProbeData pb;
 	pb.filename = u8(filename).c_str();
 	pb.buf		= buf.data();
-	pb.buf_size = buf.size();
+	pb.buf_size = static_cast<int>(buf.size());
 
 	int score = 0;
 	return av_probe_input_format2(&pb, true, &score) != nullptr;
@@ -482,12 +482,12 @@ bool is_valid_file(const std::wstring filename)
 
 std::wstring probe_stem(const std::wstring stem)
 {
-	auto stem2 = boost::filesystem2::wpath(stem);
+	auto stem2 = boost::filesystem::path(stem);
 	auto dir = stem2.parent_path();
-	for(auto it = boost::filesystem2::wdirectory_iterator(dir); it != boost::filesystem2::wdirectory_iterator(); ++it)
+	for(auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it)
 	{
-		if(boost::iequals(it->path().stem(), stem2.filename()) && is_valid_file(it->path().file_string()))
-			return it->path().file_string();
+		if(boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring()))
+			return it->path().wstring();
 	}
 	return L"";
 }

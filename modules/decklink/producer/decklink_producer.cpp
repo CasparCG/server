@@ -92,7 +92,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 		
 	tbb::atomic<int>											flags_;
 	safe_ptr<core::frame_factory>								frame_factory_;
-	std::vector<size_t>											audio_cadence_;
+	std::vector<int>											audio_cadence_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
 

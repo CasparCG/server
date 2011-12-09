@@ -275,7 +275,7 @@ public:
 		}, high_priority);
 	}
 
-	void swap_layer(int index, size_t other_index)
+	void swap_layer(int index, int other_index)
 	{
 		executor_.begin_invoke([=]
 		{
@@ -283,7 +283,7 @@ public:
 		}, high_priority);
 	}
 
-	void swap_layer(int index, size_t other_index, const safe_ptr<stage>& other)
+	void swap_layer(int index, int other_index, const safe_ptr<stage>& other)
 	{
 		if(other->impl_.get() == this)
 			swap_layer(index, other_index);
@@ -358,8 +358,8 @@ void stage::stop(int index){impl_->stop(index);}
 void stage::clear(int index){impl_->clear(index);}
 void stage::clear(){impl_->clear();}
 void stage::swap_layers(const safe_ptr<stage>& other){impl_->swap_layers(other);}
-void stage::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
-void stage::swap_layer(int index, size_t other_index, const safe_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
+void stage::swap_layer(int index, int other_index){impl_->swap_layer(index, other_index);}
+void stage::swap_layer(int index, int other_index, const safe_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
 boost::unique_future<safe_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
 boost::unique_future<safe_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
 boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
