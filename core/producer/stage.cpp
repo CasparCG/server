@@ -126,7 +126,7 @@ public:
 				if(format_desc_.field_mode != field_mode::progressive)
 				{
 					flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::DEINTERLACE_FLAG : frame_producer::NO_FLAG;
-					flags |= std::abs(transform.fill_translation[1]) > 0.0001 ? frame_producer::DEINTERLACE_FLAG : frame_producer::NO_FLAG;
+					flags |= std::abs(transform.fill_translation[1])  > 0.0001 ? frame_producer::DEINTERLACE_FLAG : frame_producer::NO_FLAG;
 				}
 
 				if(transform.is_key)
