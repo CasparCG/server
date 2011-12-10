@@ -28,7 +28,6 @@
 #include <common/gl/gl_check.h>
 #include <common/log/log.h>
 #include <common/memory/safe_ptr.h>
-#include <common/memory/memcpy.h>
 #include <common/memory/memshfl.h>
 #include <common/utility/timer.h>
 #include <common/utility/string.h>
@@ -338,9 +337,9 @@ public:
 		if(ptr)
 		{
 			if(config_.key_only)
-				fast_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				aligned_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
-				fast_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
+				memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
 
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 		}

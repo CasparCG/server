@@ -98,8 +98,8 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)tmp\$(Configuration)\</IntDir>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\;..\dependencies64\ffmpeg\include\;..\dependencies64\glew\include;..\dependencies64\sfml\include\;..\dependencies64\tbb\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dependencies64\boost\;..\dependencies64\ffmpeg\include\;..\dependencies64\glew\include;..\dependencies64\sfml\include\;..\dependencies64\tbb\include\;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\freeimage\lib\;..\dependencies64\sfml\extlibs\lib\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\freeimage\lib\;..\dependencies64\sfml\extlibs\lib\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\freeimage\lib\;..\dependencies64\sfml\extlibs\lib\;..\dependencies64\asmlib\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\freeimage\lib\;..\dependencies64\sfml\extlibs\lib\;..\dependencies64\asmlib\;$(LibraryPath)</LibraryPath>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)bin\$(Configuration)\</OutDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionName)</TargetName>
@@ -137,7 +137,7 @@
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>sfml-system-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;FreeImaged.lib;glew32.lib;freetype248_D.lib;openal32.lib</AdditionalDependencies>
+      <AdditionalDependencies>alibcof64o.lib;sfml-system-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;FreeImaged.lib;glew32.lib;freetype248_D.lib;openal32.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -191,7 +191,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </ClCompile>
     <Link>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>sfml-system.lib;sfml-window.lib;sfml-graphics.lib;sfml-audio.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;glew32.lib;freetype248.lib;openal32.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>alibcof64o.lib;sfml-system.lib;sfml-window.lib;sfml-graphics.lib;sfml-audio.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;glew32.lib;freetype248.lib;openal32.lib;freeimage.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>

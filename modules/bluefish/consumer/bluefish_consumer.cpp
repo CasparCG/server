@@ -30,10 +30,9 @@
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/memory/memclr.h>
-#include <common/memory/memcpy.h>
 #include <common/memory/memshfl.h>
 #include <common/utility/timer.h>
+#include <common/utility/assert.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
@@ -219,12 +218,12 @@ public:
 		if(!frame->image_data().empty())
 		{
 			if(key_only_)						
-				fast_memshfl(reserved_frames_.front()->image_data(), std::begin(frame->image_data()), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				aligned_memshfl(reserved_frames_.front()->image_data(), std::begin(frame->image_data()), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
-				fast_memcpy(reserved_frames_.front()->image_data(), std::begin(frame->image_data()), frame->image_data().size());
+				memcpy(reserved_frames_.front()->image_data(), std::begin(frame->image_data()), frame->image_data().size());
 		}
 		else
-			fast_memclr(reserved_frames_.front()->image_data(), reserved_frames_.front()->image_size());
+			memset(reserved_frames_.front()->image_data(), 0, reserved_frames_.front()->image_size());
 								
 
 		// Send and display
