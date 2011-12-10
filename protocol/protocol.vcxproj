@@ -262,7 +262,7 @@
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\;..\dependencies\tbb\include;..\dependencies64\boost\;$(IncludePath)</IncludePath>
+    <IncludePath>..\;..\dependencies64\tbb\include;..\dependencies64\boost\;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>

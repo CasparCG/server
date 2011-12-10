@@ -130,7 +130,7 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\;..\dependencies\boost\;..\dependencies\tbb\include\;..\dependencies\SFML-1.6\include;..\dependencies\glew-1.6.0\include;..\dependencies\FreeImage\Dist;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include;..\dependencies64\glew\include;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include\;..\dependencies64\glew\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\;..\dependencies\boost\;..\dependencies\tbb\include\;..\dependencies\SFML-1.6\include;..\dependencies\glew-1.6.0\include;..\dependencies\FreeImage\Dist;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\;..\dependencies\boost\;..\dependencies\tbb\include\;..\dependencies\SFML-1.6\include;..\dependencies\glew-1.6.0\include;..\dependencies\FreeImage\Dist;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\;..\dependencies\boost\;..\dependencies\tbb\include\;..\dependencies\SFML-1.6\include;..\dependencies\glew-1.6.0\include;..\dependencies\FreeImage\Dist;$(IncludePath)</IncludePath>
