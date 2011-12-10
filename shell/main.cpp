@@ -48,7 +48,7 @@
 #include <modules/decklink/decklink.h>
 #include <modules/flash/flash.h>
 #include <modules/ffmpeg/ffmpeg.h>
-//#include <modules/image/image.h>
+#include <modules/image/image.h>
 
 #include <common/env.h>
 #include <common/exception/win32_exception.h>
@@ -134,7 +134,7 @@ void print_info()
 		CASPAR_LOG(info) << L" - " << device;	
 	
 	CASPAR_LOG(info) << L"Flash "			<< caspar::flash::get_version();
-	//CASPAR_LOG(info) << L"FreeImage "		<< caspar::image::get_version();
+	CASPAR_LOG(info) << L"FreeImage "		<< caspar::image::get_version();
 	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
 	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::ffmpeg::get_avformat_version();
 	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
