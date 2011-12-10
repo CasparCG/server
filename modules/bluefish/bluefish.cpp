@@ -19,6 +19,8 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
+#include "StdAfx.h"
+
 #include "bluefish.h"
 
 #include "consumer/bluefish_consumer.h"
