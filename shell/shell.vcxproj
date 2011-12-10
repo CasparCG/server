@@ -337,7 +337,9 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       </IgnoreAllDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
+      <Command>copy "$(SolutionDir)dependencies64\ffmpeg\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies64\tbb\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies64\glew\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

@@ -38,7 +38,7 @@
 
 #include <gl/glew.h>
 
-#include "../../dependencies\SFML-1.6\include\SFML/Window/Context.hpp"
+#include <SFML/Window/Context.hpp>
 
 namespace caspar { namespace core {
 
