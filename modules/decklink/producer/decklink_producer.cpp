@@ -35,7 +35,6 @@
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
-#include <common/memory/memclr.h>
 #include <common/utility/param.h>
 
 #include <core/mixer/write_frame.h>

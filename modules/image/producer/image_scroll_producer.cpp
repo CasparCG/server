@@ -32,7 +32,6 @@
 
 #include <common/env.h>
 #include <common/log/log.h>
-#include <common/memory/memclr.h>
 #include <common/exception/exceptions.h>
 
 #include <boost/assign.hpp>
@@ -97,7 +96,7 @@ struct image_scroll_producer : public core::frame_producer
 				}
 				else
 				{
-					fast_memclr(frame->image_data().begin(), frame->image_data().size());	
+					memset(frame->image_data().begin(), 0, frame->image_data().size());	
 					std::copy_n(bytes, count, frame->image_data().begin() + format_desc_.size - count);
 					count = 0;
 				}
@@ -132,7 +131,7 @@ struct image_scroll_producer : public core::frame_producer
 				}
 				else
 				{
-					fast_memclr(frame->image_data().begin(), frame->image_data().size());	
+					memset(frame->image_data().begin(), 0, frame->image_data().size());	
 					int width2 = width_ % format_desc_.width;
 					for(int y = 0; y < height_; ++y)
 						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, frame->image_data().begin() + y * format_desc_.width*4);

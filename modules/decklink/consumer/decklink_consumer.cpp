@@ -32,9 +32,8 @@
 #include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
-#include <common/memory/memcpy.h>
-#include <common/memory/memclr.h>
 #include <common/memory/memshfl.h>
+#include <common/utility/assert.h>
 
 #include <core/consumer/frame_consumer.h>
 
@@ -124,7 +123,7 @@ public:
 			if(key_data_.empty())
 			{
 				key_data_.resize(frame_->image_data().size());
-				fast_memshfl(key_data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				aligned_memshfl(key_data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 				frame_.reset();
 			}
 			*buffer = key_data_.data();
