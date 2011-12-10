@@ -137,7 +137,7 @@
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>alibcof64o.lib;sfml-system-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;FreeImaged.lib;glew32.lib;freetype248_D.lib;openal32.lib</AdditionalDependencies>
+      <AdditionalDependencies>alibcof64.lib;sfml-system-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;FreeImaged.lib;glew32.lib;freetype248_D.lib;openal32.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -191,7 +191,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </ClCompile>
     <Link>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>alibcof64o.lib;sfml-system.lib;sfml-window.lib;sfml-graphics.lib;sfml-audio.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;glew32.lib;freetype248.lib;openal32.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>alibcof64.lib;sfml-system.lib;sfml-window.lib;sfml-graphics.lib;sfml-audio.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;glew32.lib;freetype248.lib;openal32.lib;freeimage.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
