@@ -36,14 +36,14 @@
 #include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
-//#include <modules/oal/oal.h>
-//#include <modules/ogl/ogl.h>
-//#include <modules/image/image.h>
-//
-//#include <modules/oal/consumer/oal_consumer.h>
+#include <modules/oal/oal.h>
+#include <modules/ogl/ogl.h>
+#include <modules/image/image.h>
+
+#include <modules/oal/consumer/oal_consumer.h>
 #include <modules/bluefish/consumer/bluefish_consumer.h>
 #include <modules/decklink/consumer/decklink_consumer.h>
-//#include <modules/ogl/consumer/ogl_consumer.h>
+#include <modules/ogl/consumer/ogl_consumer.h>
 #include <modules/ffmpeg/consumer/ffmpeg_consumer.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
@@ -80,14 +80,14 @@ struct server::implementation : boost::noncopyable
 		decklink::init();	  
 		CASPAR_LOG(info) << L"Initialized decklink module.";
 							  							  
-		//oal::init();		  
-		//CASPAR_LOG(info) << L"Initialized oal module.";
-		//					  
-		//ogl::init();		  
-		//CASPAR_LOG(info) << L"Initialized ogl module.";
+		oal::init();		  
+		CASPAR_LOG(info) << L"Initialized oal module.";
+							  
+		ogl::init();		  
+		CASPAR_LOG(info) << L"Initialized ogl module.";
 
-		//image::init();		  
-		//CASPAR_LOG(info) << L"Initialized image module.";
+		image::init();		  
+		CASPAR_LOG(info) << L"Initialized image module.";
 
 		flash::init();		  
 		CASPAR_LOG(info) << L"Initialized flash module.";
@@ -101,6 +101,7 @@ struct server::implementation : boost::noncopyable
 
 	~implementation()
 	{		
+		image::uninit();
 		ffmpeg::uninit();
 
 		async_servers_.clear();
@@ -123,16 +124,16 @@ struct server::implementation : boost::noncopyable
 				try
 				{
 					auto name = xml_consumer.first;
-			//		if(name == L"screen")
-			//			channels_.back()->output()->add(ogl::create_consumer(xml_consumer.second));					
+					if(name == L"screen")
+						channels_.back()->output()->add(ogl::create_consumer(xml_consumer.second));					
 					if(name == L"bluefish")					
 						channels_.back()->output()->add(bluefish::create_consumer(xml_consumer.second));					
 					else if(name == L"decklink")					
 						channels_.back()->output()->add(decklink::create_consumer(xml_consumer.second));				
 					else if(name == L"file")					
 						channels_.back()->output()->add(ffmpeg::create_consumer(xml_consumer.second));						
-			//		else if(name == L"system-audio")
-			//			channels_.back()->output()->add(oal::create_consumer());		
+					else if(name == L"system-audio")
+						channels_.back()->output()->add(oal::create_consumer());		
 					else if(name != L"<xmlcomment>")
 						CASPAR_LOG(warning) << "Invalid consumer: " << name;	
 				}
