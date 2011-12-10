@@ -18,8 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-
 #include "server.h"
 
 #include <common/env.h>
