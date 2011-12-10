@@ -94,18 +94,18 @@ struct image_producer : public core::frame_producer
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
-	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
+	static const std::vector<std::wstring> extensions = list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
-		{					
-			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+		{			
+			return boost::filesystem::is_regular_file(boost::filesystem::path(filename).replace_extension(ex));
 		});
 
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return make_safe<image_producer>(frame_factory, filename + L"." + *ext);
+	return make_safe<image_producer>(frame_factory, filename + *ext);
 }
 
 
