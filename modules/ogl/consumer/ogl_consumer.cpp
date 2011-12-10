@@ -81,7 +81,7 @@ enum stretch
 struct configuration
 {
 	std::wstring	name;
-	size_t			screen_index;
+	int			screen_index;
 	stretch			stretch;
 	bool			windowed;
 	bool			auto_deinterlace;
@@ -113,8 +113,8 @@ struct ogl_consumer : boost::noncopyable
 	unsigned int			screen_y_;
 	unsigned int			screen_width_;
 	unsigned int			screen_height_;
-	size_t					square_width_;
-	size_t					square_height_;				
+	int					square_width_;
+	int					square_height_;				
 	
 	sf::Window				window_;
 	
@@ -188,6 +188,10 @@ public:
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
 		window_.SetActive();
+
+		auto error = GetLastError();
+		error;
+
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glDisable(GL_DEPTH_TEST));		
 		GL(glClearColor(0.0, 0.0, 0.0, 0.0));
@@ -238,7 +242,6 @@ public:
 			{			
 				try
 				{
-
 					sf::Event e;		
 					while(window_.GetEvent(e))
 					{
@@ -292,7 +295,7 @@ public:
 
 	void render(const safe_ptr<core::read_frame>& frame)
 	{			
-		if(static_cast<size_t>(frame->image_data().size()) != format_desc_.size)
+		if(static_cast<int>(frame->image_data().size()) != format_desc_.size)
 			return;
 					
 		auto av_frame = get_av_frame();
@@ -481,7 +484,7 @@ public:
 		return false;
 	}
 	
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
 		return 1;
 	}

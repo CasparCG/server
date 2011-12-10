@@ -33,7 +33,7 @@
 
 #include <core/mixer/read_frame.h>
 
-#include <SFML/Audio.hpp>
+#include <SFML/Audio/SoundStream.hpp>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
