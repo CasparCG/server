@@ -49,6 +49,8 @@
 
 #include <boost/assign.hpp>
 
+#include <asmlib.h>
+
 #include <algorithm>
 #include <vector>
 
@@ -311,9 +313,9 @@ public:
 		if(av_frame->linesize[0] != static_cast<int>(format_desc_.width*4))
 		{
 			const uint8_t *src_data[4] = {0};
-			memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
+			A_memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
 			const int src_linesizes[4] = {0};
-			memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
+			A_memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
 
 			auto av_frame2 = get_av_frame();
 			av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
@@ -339,7 +341,7 @@ public:
 			if(config_.key_only)
 				aligned_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
-				memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
+				A_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
 
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 		}

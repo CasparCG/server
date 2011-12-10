@@ -46,9 +46,11 @@
 #include <boost/timer.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <functional>
-
 #include <tbb/spin_mutex.h>
+
+#include <asmlib.h>
+
+#include <functional>
 
 namespace caspar { namespace flash {
 		
@@ -243,7 +245,7 @@ public:
 		ax_->Tick();
 		if(ax_->InvalidRect())
 		{			
-			memset(bmp_.data(), 0, width_*height_*4);
+			A_memset(bmp_.data(), 0, width_*height_*4);
 			ax_->DrawControl(bmp_);
 		
 			core::pixel_format_desc desc;
@@ -251,7 +253,7 @@ public:
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
 			auto frame = frame_factory_->create_frame(this, desc);
 
-			memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
+			A_memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
 			frame->commit();
 			head_ = frame;
 		}		

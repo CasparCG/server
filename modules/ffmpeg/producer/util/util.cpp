@@ -44,6 +44,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <asmlib.h>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -270,7 +272,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			// Copy line by line since ffmpeg sometimes pads each line.
 			tbb::parallel_for<int>(0, desc.planes[n].height, [&](int y)
 			{
-				memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+				A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 			});
 
 			write->commit(n);
