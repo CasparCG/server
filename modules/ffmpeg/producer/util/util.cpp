@@ -38,7 +38,6 @@
 
 #include <common/exception/exceptions.h>
 #include <common/utility/assert.h>
-#include <common/memory/memcpy.h>
 
 #include <tbb/parallel_for.h>
 
@@ -268,18 +267,11 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			CASPAR_ASSERT(decoded);
 			CASPAR_ASSERT(write->image_data(n).begin());
 
-			if(decoded_linesize != static_cast<int>(plane.width))
+			// Copy line by line since ffmpeg sometimes pads each line.
+			tbb::parallel_for<int>(0, desc.planes[n].height, [&](int y)
 			{
-				// Copy line by line since ffmpeg sometimes pads each line.
-				tbb::parallel_for<int>(0, desc.planes[n].height, [&](int y)
-				{
-					fast_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-				});
-			}
-			else
-			{
-				fast_memcpy(result, decoded, plane.size);
-			}
+				memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+			});
 
 			write->commit(n);
 		}

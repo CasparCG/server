@@ -122,8 +122,6 @@
     <ClInclude Include="exception\win32_exception.h" />
     <ClInclude Include="gl\gl_check.h" />
     <ClInclude Include="log\log.h" />
-    <ClInclude Include="memory\memclr.h" />
-    <ClInclude Include="memory\memcpy.h" />
     <ClInclude Include="memory\memshfl.h" />
     <ClInclude Include="memory\page_locked_allocator.h" />
     <ClInclude Include="memory\safe_ptr.h" />
