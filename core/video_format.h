@@ -97,24 +97,26 @@ struct video_format_desc sealed
 	int					audio_channels;
 	std::vector<int>	audio_cadence;
 
-	static const video_format_desc& get(video_format::type format);
-	static const video_format_desc& get(const std::wstring& name);
-	
-	bool operator==(const video_format_desc& lhs)
-	{
-		return format == lhs.format;
-	}
+	video_format_desc(video_format::type format,
+					  int width,
+					  int height,
+					  int square_width,
+					  int square_height,
+					  field_mode::type field_mode,
+					  int time_scale,
+					  int duration,
+					  const std::wstring& name,
+					  const std::vector<int>& audio_cadence);
 
-	bool operator!=(const video_format_desc& lhs)
-	{
-		return !(*this == lhs);
-	}
+	video_format_desc& operator=(const video_format_desc& other);
+	
+	video_format_desc(video_format::type format = video_format::invalid);
+	video_format_desc(const std::wstring& name);
 };
 
-inline std::wostream& operator<<(std::wostream& out, const video_format_desc& format_desc)
-{
-	out << format_desc.name.c_str();
-	return out;
-}
+bool operator==(const video_format_desc& rhs, const video_format_desc& lhs);
+bool operator!=(const video_format_desc& rhs, const video_format_desc& lhs);
+
+std::wostream& operator<<(std::wostream& out, const video_format_desc& format_desc);
 
 }}

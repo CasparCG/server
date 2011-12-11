@@ -329,7 +329,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	auto device_index	= get_param(L"DEVICE", params, 1);
 	auto filter_str		= get_param(L"FILTER", params); 	
 	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
-	auto format_desc	= core::video_format_desc::get(get_param(L"FORMAT", params, L"INVALID"));
+	auto format_desc	= core::video_format_desc(get_param(L"FORMAT", params, L"INVALID"));
 	
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");

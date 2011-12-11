@@ -76,7 +76,6 @@ struct audio_mixer::implementation
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph)
 		: graph_(graph)
-		, format_desc_(video_format_desc::get(video_format::invalid))
 	{
 		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
 		transform_stack_.push(core::frame_transform());
