@@ -25,7 +25,6 @@
 #include <core/video_format.h>
 
 #include <boost/array.hpp>
-#include <type_traits>
 
 namespace caspar { namespace core {
 
