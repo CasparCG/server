@@ -1499,7 +1499,7 @@ bool SetCommand::DoExecute()
 
 	if(name == TEXT("MODE"))
 	{
-		auto format_desc = core::video_format_desc::get(value);
+		auto format_desc = core::video_format_desc(value);
 		if(format_desc.format != core::video_format::invalid)
 		{
 			GetChannel()->set_video_format_desc(format_desc);

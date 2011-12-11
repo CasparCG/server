@@ -111,7 +111,7 @@ struct server::implementation : boost::noncopyable
 		using boost::property_tree::wptree;
 		BOOST_FOREACH(auto& xml_channel, pt.get_child(L"configuration.channels"))
 		{		
-			auto format_desc = video_format_desc::get(xml_channel.second.get(L"video-mode", L"PAL"));		
+			auto format_desc = video_format_desc(xml_channel.second.get(L"video-mode", L"PAL"));		
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
