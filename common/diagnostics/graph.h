@@ -24,11 +24,6 @@
 #include "../memory/safe_ptr.h"
 
 #include <string>
-#include <vector>
-#include <map>
-
-#include <boost/range/iterator_range.hpp>
-#include <boost/circular_buffer.hpp>
 
 namespace caspar { namespace diagnostics {
 	
