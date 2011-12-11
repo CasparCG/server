@@ -36,6 +36,7 @@
 #include <common/env.h>
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
+#include <common/utility/assert.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)

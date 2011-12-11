@@ -26,11 +26,11 @@
 #include <boost/noncopyable.hpp>
 
 #include <algorithm>
+#include <stdint.h>
+#include <limits>
 #include <functional>
 #include <string>
 #include <vector>
-#include <stdint.h>
-#include <numeric>
 
 #include <boost/thread/future.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>

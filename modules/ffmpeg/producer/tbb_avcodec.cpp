@@ -27,7 +27,6 @@
 #include <common/env.h>
 #include <common/utility/assert.h>
 
-#include <tbb/task.h>
 #include <tbb/atomic.h>
 #include <tbb/parallel_for.h>
 #include <tbb/tbb_thread.h>
