@@ -189,7 +189,6 @@ public:
 		video_frame_buffer_.set_capacity(1);
 		audio_frame_buffer_.set_capacity(1);
 
-		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -316,7 +315,7 @@ public:
 		{
 			if(result == bmdOutputFrameDisplayedLate)
 			{
-				graph_->add_tag("late-frame");
+				graph_->set_tag("late-frame");
 				video_scheduled_ += format_desc_.duration;
 				audio_scheduled_ += reinterpret_cast<decklink_frame*>(completed_frame)->audio_data().size()/format_desc_.audio_channels;
 				//++video_scheduled_;
@@ -324,9 +323,9 @@ public:
 				//++audio_scheduled_;
 			}
 			else if(result == bmdOutputFrameDropped)
-				graph_->add_tag("dropped-frame");
+				graph_->set_tag("dropped-frame");
 			else if(result == bmdOutputFrameFlushed)
-				graph_->add_tag("flushed-frame");
+				graph_->set_tag("flushed-frame");
 
 			std::shared_ptr<core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);					
@@ -334,7 +333,7 @@ public:
 			
 			unsigned long buffered;
 			output_->GetBufferedVideoFrameCount(&buffered);
-			graph_->update_value("buffered-video", static_cast<double>(buffered)/format_desc_.fps);
+			graph_->set_value("buffered-video", static_cast<double>(buffered)/format_desc_.fps);
 		}
 		catch(...)
 		{
@@ -372,7 +371,7 @@ public:
 
 			unsigned long buffered;
 			output_->GetBufferedAudioSampleFrameCount(&buffered);
-			graph_->update_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0]*2));
+			graph_->set_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0]*2));
 		}
 		catch(...)
 		{
@@ -405,7 +404,7 @@ public:
 
 		video_scheduled_ += format_desc_.duration;
 
-		graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
+		graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 		tick_timer_.restart();
 	}
 

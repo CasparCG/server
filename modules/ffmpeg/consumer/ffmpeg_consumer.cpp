@@ -100,7 +100,6 @@ public:
 		// TODO: Ask stakeholders about case where file already exists.
 		boost::filesystem::remove(boost::filesystem::path(env::media_folder() + filename)); // Delete the file if it exists
 
-		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("write-time", diagnostics::color(0.5f, 0.5f, 0.1f));
 		graph_->set_text(print());
@@ -368,7 +367,7 @@ public:
 			auto video = encode_video_frame(frame);
 			auto audio = encode_audio_frame(frame);
 
-			graph_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
+			graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 			
 			file_write_executor_.begin_invoke([=]
 			{
@@ -379,7 +378,7 @@ public:
 				if(audio)
 					av_write_frame(oc_.get(), audio.get());
 
-				graph_->update_value("write-time", write_timer_.elapsed()*format_desc_.fps*0.5);
+				graph_->set_value("write-time", write_timer_.elapsed()*format_desc_.fps*0.5);
 			});
 		});
 	}

@@ -97,7 +97,6 @@ public:
 		, last_frame_(core::basic_frame::empty())
 		, frame_number_(0)
 	{
-		graph_->add_guide("frame-time", 0.5);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		diagnostics::register_graph(graph_);
@@ -145,14 +144,14 @@ public:
 		for(int n = 0; n < 16 && frame_buffer_.size() < 2; ++n)
 			try_decode_frame(flags);
 		
-		graph_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
+		graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 				
 		if(frame_buffer_.empty() && input_.eof())
 			return last_frame();
 
 		if(frame_buffer_.empty())
 		{
-			graph_->add_tag("underflow");	
+			graph_->set_tag("underflow");	
 			return core::basic_frame::late();			
 		}
 		
