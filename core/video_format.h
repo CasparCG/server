@@ -81,21 +81,21 @@ struct video_format_desc
 {
 	video_format::type		format;		// video output format
 
-	size_t					width;		// output frame width
-	size_t					height;		// output frame height
-	size_t					square_width;
-	size_t					square_height;
-	field_mode::type		field_mode;	// progressive, interlaced upper field first, interlaced lower field first
-	double					fps;		// actual framerate, e.g. i50 = 25 fps, p50 = 50 fps
-	size_t					time_scale;
-	size_t					duration;
-	size_t					field_count;
-	size_t					size;		// output frame size in bytes 
-	std::wstring			name;		// name of output format
+	int					width;		// output frame width
+	int					height;		// output frame height
+	int					square_width;
+	int					square_height;
+	field_mode::type	field_mode;	// progressive, interlaced upper field first, interlaced lower field first
+	double				fps;		// actual framerate, e.g. i50 = 25 fps, p50 = 50 fps
+	int					time_scale;
+	int					duration;
+	int					field_count;
+	int					size;		// output frame size in bytes 
+	std::wstring		name;		// name of output format
 
-	size_t					audio_sample_rate;
-	size_t					audio_channels;
-	std::vector<size_t>		audio_cadence;
+	int					audio_sample_rate;
+	int					audio_channels;
+	std::vector<int>	audio_cadence;
 
 	static const video_format_desc& get(video_format::type format);
 	static const video_format_desc& get(const std::wstring& name);

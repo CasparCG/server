@@ -55,6 +55,8 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+#pragma warning (disable : 4146)
+
 namespace caspar { namespace ffmpeg {
 
 static const size_t MAX_BUFFER_COUNT = 100;

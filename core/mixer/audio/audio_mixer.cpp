@@ -70,7 +70,7 @@ struct audio_mixer::implementation
 	std::stack<core::frame_transform>	transform_stack_;
 	std::map<const void*, audio_stream>	audio_streams_;
 	std::vector<audio_item>				items_;
-	std::vector<size_t>					audio_cadence_;
+	std::vector<int>					audio_cadence_;
 	video_format_desc					format_desc_;
 	
 public:
@@ -134,10 +134,7 @@ public:
 				prev_transform	= it->second.prev_transform;
 				next_audio		= std::move(it->second.audio_data);
 			}
-
-			if(prev_transform.volume < 0.001 && next_transform.volume < 0.001)
-				continue;
-			
+						
 			const float prev_volume = static_cast<float>(prev_transform.volume);
 			const float next_volume = static_cast<float>(next_transform.volume);
 									

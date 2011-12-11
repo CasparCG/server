@@ -28,7 +28,6 @@
 #include <common/gl/gl_check.h>
 #include <common/log/log.h>
 #include <common/memory/safe_ptr.h>
-#include <common/memory/memcpy.h>
 #include <common/memory/memshfl.h>
 #include <common/utility/timer.h>
 #include <common/utility/string.h>
@@ -49,6 +48,8 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/assign.hpp>
+
+#include <asmlib.h>
 
 #include <algorithm>
 #include <vector>
@@ -81,7 +82,7 @@ enum stretch
 struct configuration
 {
 	std::wstring	name;
-	size_t			screen_index;
+	int			screen_index;
 	stretch			stretch;
 	bool			windowed;
 	bool			auto_deinterlace;
@@ -113,8 +114,8 @@ struct ogl_consumer : boost::noncopyable
 	unsigned int			screen_y_;
 	unsigned int			screen_width_;
 	unsigned int			screen_height_;
-	size_t					square_width_;
-	size_t					square_height_;				
+	int					square_width_;
+	int					square_height_;				
 	
 	sf::Window				window_;
 	
@@ -188,6 +189,10 @@ public:
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
 		window_.SetActive();
+
+		auto error = GetLastError();
+		error;
+
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glDisable(GL_DEPTH_TEST));		
 		GL(glClearColor(0.0, 0.0, 0.0, 0.0));
@@ -238,7 +243,6 @@ public:
 			{			
 				try
 				{
-
 					sf::Event e;		
 					while(window_.GetEvent(e))
 					{
@@ -292,7 +296,7 @@ public:
 
 	void render(const safe_ptr<core::read_frame>& frame)
 	{			
-		if(static_cast<size_t>(frame->image_data().size()) != format_desc_.size)
+		if(static_cast<int>(frame->image_data().size()) != format_desc_.size)
 			return;
 					
 		auto av_frame = get_av_frame();
@@ -309,9 +313,9 @@ public:
 		if(av_frame->linesize[0] != static_cast<int>(format_desc_.width*4))
 		{
 			const uint8_t *src_data[4] = {0};
-			memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
+			A_memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
 			const int src_linesizes[4] = {0};
-			memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
+			A_memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
 
 			auto av_frame2 = get_av_frame();
 			av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
@@ -335,9 +339,9 @@ public:
 		if(ptr)
 		{
 			if(config_.key_only)
-				fast_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				aligned_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
-				fast_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
+				A_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
 
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 		}
@@ -481,7 +485,7 @@ public:
 		return false;
 	}
 	
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
 		return 1;
 	}

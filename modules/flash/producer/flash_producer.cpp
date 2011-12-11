@@ -38,8 +38,6 @@
 #include <common/env.h>
 #include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
-#include <common/memory/memcpy.h>
-#include <common/memory/memclr.h>
 #include <common/utility/timer.h>
 
 #include <boost/filesystem.hpp>
@@ -48,9 +46,11 @@
 #include <boost/timer.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <functional>
-
 #include <tbb/spin_mutex.h>
+
+#include <asmlib.h>
+
+#include <functional>
 
 namespace caspar { namespace flash {
 		
@@ -65,10 +65,10 @@ public:
 		memset(&info, 0, sizeof(BITMAPINFO));
 		info.bmiHeader.biBitCount = 32;
 		info.bmiHeader.biCompression = BI_RGB;
-		info.bmiHeader.biHeight = -height;
+		info.bmiHeader.biHeight = static_cast<LONG>(-height);
 		info.bmiHeader.biPlanes = 1;
 		info.bmiHeader.biSize = sizeof(BITMAPINFO);
-		info.bmiHeader.biWidth = width;
+		info.bmiHeader.biWidth = static_cast<LONG>(width);
 
 		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
 		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
@@ -92,8 +92,8 @@ struct template_host
 {
 	std::wstring  video_mode;
 	std::wstring  filename;
-	size_t		  width;
-	size_t		  height;
+	int			  width;
+	int			  height;
 };
 
 template_host get_template_host(const core::video_format_desc& desc)
@@ -127,11 +127,11 @@ template_host get_template_host(const core::video_format_desc& desc)
 	template_host template_host;
 	template_host.filename = L"cg.fth";
 
-	for(auto it = boost::filesystem2::wdirectory_iterator(env::template_folder()); it != boost::filesystem2::wdirectory_iterator(); ++it)
+	for(auto it = boost::filesystem::directory_iterator(env::template_folder()); it != boost::filesystem::directory_iterator(); ++it)
 	{
-		if(boost::iequals(it->path().extension(), L"." + desc.name))
+		if(boost::iequals(it->path().extension().wstring(), L"." + desc.name))
 		{
-			template_host.filename = it->filename();
+			template_host.filename = it->path().filename().wstring();
 			break;
 		}
 	}
@@ -157,8 +157,8 @@ class flash_renderer
 
 	high_prec_timer timer_;
 
-	const size_t width_;
-	const size_t height_;
+	const int width_;
+	const int height_;
 	
 public:
 	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
@@ -229,7 +229,7 @@ public:
 	{
 		float frame_time = 1.0f/ax_->GetFPS();
 
-		graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
+		graph_->update_value("tick-time", (tick_timer_.elapsed()/frame_time)*0.5f);
 		tick_timer_.restart();
 
 		if(ax_->IsEmpty())
@@ -245,7 +245,7 @@ public:
 		ax_->Tick();
 		if(ax_->InvalidRect())
 		{			
-			fast_memclr(bmp_.data(), width_*height_*4);
+			A_memset(bmp_.data(), 0, width_*height_*4);
 			ax_->DrawControl(bmp_);
 		
 			core::pixel_format_desc desc;
@@ -253,7 +253,7 @@ public:
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
 			auto frame = frame_factory_->create_frame(this, desc);
 
-			fast_memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
+			A_memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
 			frame->commit();
 			head_ = frame;
 		}		
@@ -274,7 +274,7 @@ public:
 	
 	std::wstring print()
 	{
-		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]";		
+		return L"flash[" + boost::filesystem::path(filename_).filename().wstring() + L"]";		
 	}
 };
 
@@ -298,7 +298,7 @@ struct flash_producer : public core::frame_producer
 	com_context<flash_renderer>									context_;	
 
 public:
-	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, size_t width, size_t height) 
+	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
 		, last_frame_(core::basic_frame::empty())
@@ -373,7 +373,7 @@ public:
 		
 	virtual std::wstring print() const override
 	{ 
-		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
+		return L"flash[" + boost::filesystem::wpath(filename_).filename().wstring() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
 
 	virtual boost::property_tree::wptree info() const override

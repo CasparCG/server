@@ -32,7 +32,6 @@
 
 #include <common/env.h>
 #include <common/log/log.h>
-#include <common/memory/memclr.h>
 #include <common/exception/exceptions.h>
 
 #include <boost/assign.hpp>
@@ -53,8 +52,8 @@ struct image_scroll_producer : public core::frame_producer
 	const std::wstring							filename_;
 	std::vector<safe_ptr<core::basic_frame>>	frames_;
 	core::video_format_desc						format_desc_;
-	size_t										width_;
-	size_t										height_;
+	int										width_;
+	int										height_;
 
 	int											delta_;
 	int											speed_;
@@ -93,11 +92,11 @@ struct image_scroll_producer : public core::frame_producer
 				if(count >= frame->image_data().size())
 				{	
 					std::copy_n(bytes + count - frame->image_data().size(), frame->image_data().size(), frame->image_data().begin());
-					count -= frame->image_data().size();
+					count -= static_cast<int>(frame->image_data().size());
 				}
 				else
 				{
-					fast_memclr(frame->image_data().begin(), frame->image_data().size());	
+					memset(frame->image_data().begin(), 0, frame->image_data().size());	
 					std::copy_n(bytes, count, frame->image_data().begin() + format_desc_.size - count);
 					count = 0;
 				}
@@ -124,17 +123,17 @@ struct image_scroll_producer : public core::frame_producer
 				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
 				if(count >= frame->image_data().size())
 				{	
-					for(size_t y = 0; y < height_; ++y)
+					for(int y = 0; y < height_; ++y)
 						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, frame->image_data().begin() + y * format_desc_.width*4);
 					
 					++i;
-					count -= frame->image_data().size();
+					count -= static_cast<int>(frame->image_data().size());
 				}
 				else
 				{
-					fast_memclr(frame->image_data().begin(), frame->image_data().size());	
+					memset(frame->image_data().begin(), 0, frame->image_data().size());	
 					int width2 = width_ % format_desc_.width;
-					for(size_t y = 0; y < height_; ++y)
+					for(int y = 0; y < height_; ++y)
 						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, frame->image_data().begin() + y * format_desc_.width*4);
 
 					count = 0;
@@ -171,10 +170,10 @@ struct image_scroll_producer : public core::frame_producer
 		
 		if(height_ > format_desc_.height)
 		{
-			if(static_cast<size_t>(std::abs(delta_)) >= height_ - format_desc_.height)
+			if(static_cast<int>(std::abs(delta_)) >= height_ - format_desc_.height)
 				return core::basic_frame::eof();
 
-			for(size_t n = 0; n < frames_.size(); ++n)
+			for(int n = 0; n < frames_.size(); ++n)
 			{
 				frames_[n]->get_frame_transform().fill_translation[0] = start_offset_[0];
 				frames_[n]->get_frame_transform().fill_translation[1] =	start_offset_[1] - (n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height);
@@ -182,10 +181,10 @@ struct image_scroll_producer : public core::frame_producer
 		}
 		else
 		{
-			if(static_cast<size_t>(std::abs(delta_)) >= width_ - format_desc_.width)
+			if(static_cast<int>(std::abs(delta_)) >= width_ - format_desc_.width)
 				return core::basic_frame::eof();
 
-			for(size_t n = 0; n < frames_.size(); ++n)
+			for(int n = 0; n < frames_.size(); ++n)
 			{
 				frames_[n]->get_frame_transform().fill_translation[0] = start_offset_[0] - (n+1) + delta_ * 0.5/static_cast<double>(format_desc_.width);				
 				frames_[n]->get_frame_transform().fill_translation[1] = start_offset_[1];
@@ -242,7 +241,7 @@ safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 	
-	size_t speed = 0;
+	int speed = 0;
 	auto speed_it = std::find(params.begin(), params.end(), L"SPEED");
 	if(speed_it != params.end())
 	{

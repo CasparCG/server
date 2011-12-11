@@ -47,8 +47,8 @@ public:
 	void push(const std::shared_ptr<AVPacket>& packet);
 	std::shared_ptr<AVFrame> poll();
 	
-	size_t	 width()		const;
-	size_t	 height()	const;
+	int	 width()		const;
+	int	 height()	const;
 
 	uint32_t nb_frames() const;
 	uint32_t file_frame_number() const;

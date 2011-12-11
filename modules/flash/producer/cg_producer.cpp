@@ -210,9 +210,9 @@ safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_fac
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
 		
-	boost::filesystem2::wpath path(filename);
-	path = boost::filesystem2::complete(path);
-	filename = path.file_string();
+	boost::filesystem::path path(filename);
+	path = boost::filesystem3::complete(path);
+	filename = path.wstring();
 
 	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
 	auto producer = make_safe<cg_producer>(flash_producer);

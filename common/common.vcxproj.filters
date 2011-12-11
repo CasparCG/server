@@ -103,12 +103,6 @@
     <ClInclude Include="utility\tweener.h">
       <Filter>source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="memory\memcpy.h">
-      <Filter>source\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="memory\memclr.h">
-      <Filter>source\memory</Filter>
-    </ClInclude>
     <ClInclude Include="os\windows\current_version.h">
       <Filter>source\os\windows</Filter>
     </ClInclude>

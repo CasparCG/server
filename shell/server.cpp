@@ -18,8 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-
 #include "server.h"
 
 #include <common/env.h>
@@ -28,6 +26,7 @@
 
 #include <core/mixer/gpu/ogl_device.h>
 #include <core/video_channel.h>
+#include <core/video_format.h>
 #include <core/producer/stage.h>
 #include <core/consumer/output.h>
 
@@ -37,7 +36,6 @@
 #include <modules/flash/flash.h>
 #include <modules/oal/oal.h>
 #include <modules/ogl/ogl.h>
-#include <modules/silverlight/silverlight.h>
 #include <modules/image/image.h>
 
 #include <modules/oal/consumer/oal_consumer.h>
@@ -101,6 +99,7 @@ struct server::implementation : boost::noncopyable
 
 	~implementation()
 	{		
+		image::uninit();
 		ffmpeg::uninit();
 
 		async_servers_.clear();
@@ -116,7 +115,7 @@ struct server::implementation : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(make_safe<video_channel>(channels_.size()+1, format_desc, ogl_));
+			channels_.push_back(make_safe<video_channel>(static_cast<int>(channels_.size()+1), format_desc, ogl_));
 			
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child(L"consumers"))
 			{
@@ -125,7 +124,7 @@ struct server::implementation : boost::noncopyable
 					auto name = xml_consumer.first;
 					if(name == L"screen")
 						channels_.back()->output()->add(ogl::create_consumer(xml_consumer.second));					
-					else if(name == L"bluefish")					
+					if(name == L"bluefish")					
 						channels_.back()->output()->add(bluefish::create_consumer(xml_consumer.second));					
 					else if(name == L"decklink")					
 						channels_.back()->output()->add(decklink::create_consumer(xml_consumer.second));				
