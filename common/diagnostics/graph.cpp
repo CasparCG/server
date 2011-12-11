@@ -37,6 +37,7 @@
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/atomic.h>
+#include <tbb/spin_mutex.h>
 
 #include <numeric>
 #include <array>
@@ -253,6 +254,8 @@ public:
 struct graph::implementation : public drawable
 {
 	tbb::concurrent_unordered_map<std::string, diagnostics::line> lines_;
+
+	tbb::spin_mutex mutex_;
 	std::wstring text_;
 		
 	implementation()
@@ -261,6 +264,7 @@ struct graph::implementation : public drawable
 
 	void set_text(const std::wstring& value)
 	{
+		tbb::spin_mutex::scoped_lock lock(mutex_);
 		text_ = value;
 	}
 
@@ -286,7 +290,13 @@ private:
 		const size_t text_margin = 2;
 		const size_t text_offset = (text_size+text_margin*2)*2;
 
-		sf::String text(text_.c_str(), sf::Font::GetDefaultFont(), text_size);
+		std::wstring text_str;
+		{
+			tbb::spin_mutex::scoped_lock lock(mutex_);
+			text_str = text_;
+		}
+
+		sf::String text(text_str.c_str(), sf::Font::GetDefaultFont(), text_size);
 		text.SetStyle(sf::String::Italic);
 		text.Move(text_margin, text_margin);
 		
