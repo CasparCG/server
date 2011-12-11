@@ -21,7 +21,7 @@
 
 #pragma once
 
-namespace caspar{ namespace core{
+namespace caspar { namespace core {
 
 class basic_frame;
 class write_frame;

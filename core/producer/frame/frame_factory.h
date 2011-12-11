@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include "pixel_format.h"
-
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>

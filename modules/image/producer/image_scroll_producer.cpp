@@ -28,6 +28,7 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/frame_transform.h>
+#include <core/producer/frame/pixel_format.h>
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
