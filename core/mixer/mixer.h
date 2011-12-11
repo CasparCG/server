@@ -47,7 +47,7 @@ class ogl_device;
 struct frame_transform;
 struct pixel_format;
 
-class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>>
+class mixer sealed : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>>
 			, public core::frame_factory
 {
 public:	

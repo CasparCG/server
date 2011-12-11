@@ -38,7 +38,7 @@ namespace caspar { namespace core {
 struct video_format_desc;
 struct frame_transform;
 
-class stage : boost::noncopyable
+class stage sealed : boost::noncopyable
 {
 public:
 	typedef target<std::pair<std::map<int, safe_ptr<basic_frame>>, std::shared_ptr<void>>> target_t;

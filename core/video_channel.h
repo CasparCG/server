@@ -35,7 +35,7 @@ class output;
 class ogl_device;
 struct video_format_desc;
 
-class video_channel : boost::noncopyable
+class video_channel sealed : boost::noncopyable
 {
 public:
 	explicit video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);

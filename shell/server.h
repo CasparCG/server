@@ -34,7 +34,7 @@ namespace core {
 	class video_channel;
 }
 
-class server : boost::noncopyable
+class server sealed : boost::noncopyable
 {
 public:
 	server();
