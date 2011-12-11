@@ -270,10 +270,12 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			CASPAR_ASSERT(write->image_data(n).begin());
 
 			// Copy line by line since ffmpeg sometimes pads each line.
-			tbb::parallel_for<int>(0, desc.planes[n].height, [&](int y)
+			tbb::affinity_partitioner ap;
+			tbb::parallel_for(tbb::blocked_range<int>(0, desc.planes[n].height), [&](const tbb::blocked_range<int>& r)
 			{
-				A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-			});
+				for(int y = r.begin(); y != r.end(); ++y)
+					A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+			}, ap);
 
 			write->commit(n);
 		}
