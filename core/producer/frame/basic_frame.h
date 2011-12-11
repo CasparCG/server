@@ -27,10 +27,6 @@
 
 #include <common/memory/safe_ptr.h>
 
-#include <boost/range/iterator_range.hpp>
-
-#include <vector>
-
 namespace caspar { namespace core {
 
 struct frame_transform;

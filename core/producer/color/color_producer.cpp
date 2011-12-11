@@ -25,6 +25,7 @@
 
 #include "../frame/basic_frame.h"
 #include "../frame/frame_factory.h"
+#include "../frame/pixel_format.h"
 #include "../../mixer/write_frame.h"
 
 #include <common/exception/exceptions.h>

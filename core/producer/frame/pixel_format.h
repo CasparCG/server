@@ -57,17 +57,24 @@ struct pixel_format_desc
 			, width(0)
 			, height(0)
 			, size(0)
-			, channels(0){}
+			, channels(0)
+		{
+		}
 
 		plane(int width, int height, int channels)
 			: linesize(width*channels)
 			, width(width)
 			, height(height)
 			, size(width*height*channels)
-			, channels(channels){}
+			, channels(channels)
+		{
+		}
 	};
 
-	pixel_format_desc() : pix_fmt(pixel_format::invalid){}
+	pixel_format_desc() 
+		: pix_fmt(pixel_format::invalid)
+	{
+	}
 	
 	pixel_format::type pix_fmt;
 	std::vector<plane> planes;
