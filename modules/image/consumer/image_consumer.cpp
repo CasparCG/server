@@ -35,6 +35,8 @@
 
 #include <tbb/concurrent_queue.h>
 
+#include <asmlib.h>
+
 #include <FreeImage.h>
 
 #include <vector>
@@ -63,7 +65,7 @@ public:
 				auto filename = u8(env::data_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
 
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(format_desc.width, format_desc.height, 32), FreeImage_Unload);
-				memcpy(FreeImage_GetBits(bitmap.get()), frame->image_data().begin(), frame->image_size());
+				A_memcpy(FreeImage_GetBits(bitmap.get()), frame->image_data().begin(), frame->image_size());
 				FreeImage_FlipVertical(bitmap.get());
 				FreeImage_Save(FIF_PNG, bitmap.get(), filename.c_str(), 0);
 			}
@@ -89,7 +91,7 @@ public:
 		return info;
 	}
 
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
 		return 0;
 	}

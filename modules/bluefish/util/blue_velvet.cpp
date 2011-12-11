@@ -38,9 +38,9 @@ BLUE_UINT32 (*encode_hanc_frame_ex)(BLUE_UINT32 card_type, struct hanc_stream_in
 void blue_velvet_initialize()
 {
 #ifdef _DEBUG
-	std::string module_str = "BlueVelvet3_d.dll";
+	std::string module_str = "BlueVelvet64_d.dll";
 #else
-	std::string module_str = "BlueVelvet3.dll";
+	std::string module_str = "BlueVelvet64.dll";
 #endif
 
 	auto module = LoadLibrary(u16(module_str).c_str());
@@ -59,9 +59,9 @@ void blue_velvet_initialize()
 void blue_hanc_initialize()
 {
 #ifdef _DEBUG
-	std::string module_str = "BlueHancUtils_d.dll";
+	std::string module_str = "BlueHancUtils64_d.dll";
 #else
-	std::string module_str = "BlueHancUtils.dll";
+	std::string module_str = "BlueHancUtils64.dll";
 #endif
 	
 	auto module = LoadLibrary(u16(module_str).c_str());
@@ -192,7 +192,7 @@ safe_ptr<CBlueVelvet4> create_blue()
 	return safe_ptr<CBlueVelvet4>(BlueVelvetFactory4(), BlueVelvetDestroy);
 }
 
-safe_ptr<CBlueVelvet4> create_blue(size_t device_index)
+safe_ptr<CBlueVelvet4> create_blue(int device_index)
 {
 	auto blue = create_blue();
 	

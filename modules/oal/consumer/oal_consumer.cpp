@@ -33,7 +33,7 @@
 
 #include <core/mixer/read_frame.h>
 
-#include <SFML/Audio.hpp>
+#include <SFML/Audio/SoundStream.hpp>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -116,7 +116,7 @@ public:
 		return info;
 	}
 	
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
 		return 2;
 	}

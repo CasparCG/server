@@ -62,7 +62,7 @@ struct audio_decoder::implementation : boost::noncopyable
 	std::queue<safe_ptr<AVPacket>>								packets_;
 
 	const int64_t												nb_frames_;
-	tbb::atomic<size_t>											file_frame_number_;
+	tbb::atomic<uint32_t>										file_frame_number_;
 public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
@@ -96,7 +96,7 @@ public:
 		if(packet->data == nullptr)
 		{
 			packets_.pop();
-			file_frame_number_ = static_cast<size_t>(packet->pos);
+			file_frame_number_ = static_cast<uint32_t>(packet->pos);
 			avcodec_flush_buffers(codec_context_.get());
 			return flush_audio();
 		}
@@ -112,7 +112,7 @@ public:
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
 	{		
 		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
-		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
+		int written_bytes = static_cast<int>(buffer1_.size()) - FF_INPUT_BUFFER_PADDING_SIZE;
 		
 		int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, &pkt), "[audio_decoder]");
 

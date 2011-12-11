@@ -102,7 +102,7 @@ void setup_console_window()
 
 	// Set console title.
 	std::wstringstream str;
-	str << "CasparCG Server " << caspar::env::version();
+	str << "CasparCG Server " << caspar::env::version() << L" x64 ";
 #ifdef COMPILE_RELEASE
 	str << " Release";
 #elif  COMPILE_PROFILE
@@ -159,9 +159,7 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 }
 
 int main(int argc, wchar_t* argv[])
-{	
-	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
-	
+{		
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
 
 	std::wcout << L"Type \"q\" to close application." << std::endl;
@@ -296,7 +294,7 @@ int main(int argc, wchar_t* argv[])
 				}
 
 				wcmd += L"\r\n";
-				amcp.Parse(wcmd.c_str(), wcmd.length(), console_client);
+				amcp.Parse(wcmd.c_str(), static_cast<int>(wcmd.length()), console_client);
 			}	
 		}
 		Sleep(500);

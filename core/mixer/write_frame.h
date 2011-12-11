@@ -60,10 +60,10 @@ public:
 
 	void swap(write_frame& other);
 			
-	boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
+	boost::iterator_range<uint8_t*> image_data(int plane_index = 0);	
 	audio_buffer& audio_data();
 	
-	void commit(uint32_t plane_index);
+	void commit(int plane_index);
 	void commit();
 	
 	void set_type(const field_mode::type& mode);

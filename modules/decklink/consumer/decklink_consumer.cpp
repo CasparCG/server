@@ -32,9 +32,8 @@
 #include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
-#include <common/memory/memcpy.h>
-#include <common/memory/memclr.h>
 #include <common/memory/memshfl.h>
+#include <common/utility/assert.h>
 
 #include <core/consumer/frame_consumer.h>
 
@@ -49,13 +48,13 @@ namespace caspar { namespace decklink {
 	
 struct configuration
 {
-	size_t	device_index;
+	int		device_index;
 	bool	embedded_audio;
 	bool	internal_key;
 	bool	low_latency;
 	bool	key_only;
-	size_t	base_buffer_depth;
-	size_t	buffer_depth;
+	int		base_buffer_depth;
+	int		buffer_depth;
 	
 	configuration()
 		: device_index(1)
@@ -124,7 +123,7 @@ public:
 			if(key_data_.empty())
 			{
 				key_data_.resize(frame_->image_data().size());
-				fast_memshfl(key_data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				aligned_memshfl(key_data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 				frame_.reset();
 			}
 			*buffer = key_data_.data();
@@ -388,7 +387,7 @@ public:
 	template<typename T>
 	void schedule_next_audio(const T& audio_data)
 	{
-		const int sample_frame_count = audio_data.size()/format_desc_.audio_channels;
+		const int sample_frame_count = static_cast<int>(audio_data.size())/format_desc_.audio_channels;
 
 		audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
 
@@ -437,7 +436,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 {
 	const configuration				config_;
 	com_context<decklink_consumer>	context_;
-	std::vector<size_t>				audio_cadence_;
+	std::vector<int>				audio_cadence_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
@@ -493,7 +492,7 @@ public:
 		return info;
 	}
 
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
 		return config_.buffer_depth;
 	}
