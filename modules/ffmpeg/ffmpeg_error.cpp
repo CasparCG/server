@@ -22,7 +22,6 @@
 */
 #include "ffmpeg_error.h"
 
-#include <common/exception/exceptions.h>
 #include <common/utility/string.h>
 
 #pragma warning(disable: 4146)

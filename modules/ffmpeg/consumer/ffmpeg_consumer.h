@@ -21,7 +21,9 @@
 
 #pragma once
 
-#include <boost/property_tree/ptree.hpp>
+#include <common/memory/safe_ptr.h>
+
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
 #include <vector>

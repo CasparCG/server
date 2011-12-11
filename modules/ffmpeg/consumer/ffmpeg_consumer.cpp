@@ -30,18 +30,17 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
 
+#include <common/env.h>
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/env.h>
+#include <common/memory/safe_ptr.h>
 #include <common/utility/string.h>
 #include <common/utility/param.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
-
-#include <tbb/cache_aligned_allocator.h>
-#include <tbb/parallel_invoke.h>
+#include <boost/filesystem.hpp>
 
 #if defined(_MSC_VER)
 #pragma warning (push)

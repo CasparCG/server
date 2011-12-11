@@ -24,6 +24,7 @@
 #include "audio_resampler.h"
 
 #include <common/exception/exceptions.h>
+#include <common/log/log.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)

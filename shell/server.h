@@ -19,7 +19,6 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-
 #pragma once
 
 #include <common/memory/safe_ptr.h>

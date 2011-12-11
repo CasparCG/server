@@ -49,6 +49,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/find.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
 #include <tbb/parallel_invoke.h>
