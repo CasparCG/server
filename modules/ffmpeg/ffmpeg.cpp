@@ -193,14 +193,14 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 
 void init()
 {
+	av_lockmgr_register(ffmpeg_lock_callback);
+	av_log_set_callback(log_callback);
     avfilter_register_all();
 	//fix_yadif_filter_format_query();
 	av_register_all();
     avformat_network_init();
 	avcodec_init();
     avcodec_register_all();
-	av_lockmgr_register(ffmpeg_lock_callback);
-	av_log_set_callback(log_callback);
 	
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
