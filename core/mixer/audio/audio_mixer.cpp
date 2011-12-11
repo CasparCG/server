@@ -187,7 +187,7 @@ public:
 
 		auto max = boost::range::max_element(result);
 
-		graph_->update_value("volume", static_cast<double>(std::abs(*max))/std::numeric_limits<int32_t>::max());
+		graph_->set_value("volume", static_cast<double>(std::abs(*max))/std::numeric_limits<int32_t>::max());
 
 		return result;
 	}

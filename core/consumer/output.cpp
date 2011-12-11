@@ -227,7 +227,7 @@ public:
 					}
 				}
 						
-				graph_->update_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
+				graph_->set_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
 			}
 			catch(...)
 			{

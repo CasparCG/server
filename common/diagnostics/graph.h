@@ -24,35 +24,22 @@
 #include "../memory/safe_ptr.h"
 
 #include <string>
+#include <tuple>
 
 namespace caspar { namespace diagnostics {
 	
-struct color
-{
-	float red;
-	float green;
-	float blue;
-	float alpha;
-	
-	color(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f)
-		: red(r)
-		, green(g)
-		, blue(b)
-		, alpha(a){}
-};
+int color(float r, float g, float b, float a = 1.0f);
+std::tuple<float, float, float, float> color(int code);
 
 class graph
 {
 	friend void register_graph(const safe_ptr<graph>& graph);
 public:
 	graph();
-	void set_text(const std::string& value);
 	void set_text(const std::wstring& value);
-	void update_value(const std::string& name, double value);
 	void set_value(const std::string& name, double value);
-	void set_color(const std::string& name, color c);
-	void add_tag(const std::string& name);
-	void add_guide(const std::string& name, double value);
+	void set_color(const std::string& name, int color);
+	void set_tag(const std::string& name);
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
