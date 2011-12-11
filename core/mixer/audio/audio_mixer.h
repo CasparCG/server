@@ -45,7 +45,7 @@ struct video_format_desc;
 	
 typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
 
-class audio_mixer : public core::frame_visitor, boost::noncopyable
+class audio_mixer sealed : public core::frame_visitor, boost::noncopyable
 {
 public:
 	audio_mixer(const safe_ptr<diagnostics::graph>& graph);

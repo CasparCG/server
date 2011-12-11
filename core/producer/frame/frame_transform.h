@@ -30,7 +30,7 @@ namespace caspar { namespace core {
 
 struct pixel_format_desc;
 		
-struct levels
+struct levels sealed
 {
 	levels() 
 		: min_input(0.0)
@@ -47,7 +47,7 @@ struct levels
 	double max_output;
 };
 
-struct frame_transform 
+struct frame_transform sealed
 {
 public:
 

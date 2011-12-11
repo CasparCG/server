@@ -77,9 +77,9 @@ struct field_mode
 	}
 };
 
-struct video_format_desc
+struct video_format_desc sealed
 {
-	video_format::type		format;		// video output format
+	video_format::type	format;		// video output format
 
 	int					width;		// output frame width
 	int					height;		// output frame height

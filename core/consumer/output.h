@@ -33,7 +33,7 @@
 
 namespace caspar { namespace core {
 	
-class output : public target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>>
+class output sealed : public target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>>
 			 , boost::noncopyable
 {
 public:

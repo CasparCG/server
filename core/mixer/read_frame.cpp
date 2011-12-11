@@ -34,15 +34,17 @@ namespace caspar { namespace core {
 struct read_frame::implementation : boost::noncopyable
 {
 	safe_ptr<ogl_device>		ogl_;
-	int						size_;
+	int							width_;
+	int							height_;
 	safe_ptr<host_buffer>		image_data_;
 	tbb::mutex					mutex_;
 	audio_buffer				audio_data_;
 
 public:
-	implementation(const safe_ptr<ogl_device>& ogl, int size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
+	implementation(const safe_ptr<ogl_device>& ogl, int width, int height, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
 		: ogl_(ogl)
-		, size_(size)
+		, width_(width)
+		, height_(height)
 		, image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data)){}	
 	
@@ -67,8 +69,8 @@ public:
 	}
 };
 
-read_frame::read_frame(const safe_ptr<ogl_device>& ogl, int size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
-	: impl_(new implementation(ogl, size, std::move(image_data), std::move(audio_data))){}
+read_frame::read_frame(const safe_ptr<ogl_device>& ogl, int width, int height, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
+	: impl_(new implementation(ogl, width, height, std::move(image_data), std::move(audio_data))){}
 read_frame::read_frame(){}
 const boost::iterator_range<const uint8_t*> read_frame::image_data()
 {
@@ -80,7 +82,8 @@ const boost::iterator_range<const int32_t*> read_frame::audio_data()
 	return impl_ ? impl_->audio_data() : boost::iterator_range<const int32_t*>();
 }
 
-int read_frame::image_size() const{return impl_ ? impl_->size_ : 0;}
+int read_frame::width() const{return impl_ ? impl_->width_ : 0;}
+int read_frame::height() const{return impl_ ? impl_->height_ : 0;}
 
 //#include <tbb/scalable_allocator.h>
 //#include <tbb/parallel_for.h>

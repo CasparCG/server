@@ -42,7 +42,7 @@ struct pixel_format
 	};
 };
 
-struct pixel_format_desc
+struct pixel_format_desc sealed
 {
 	struct plane
 	{

@@ -39,7 +39,7 @@ class ogl_device;
 struct video_format_desc;
 struct pixel_format_desc;
 
-class image_mixer : public core::frame_visitor, boost::noncopyable
+class image_mixer sealed : public core::frame_visitor, boost::noncopyable
 {
 public:
 	image_mixer(const safe_ptr<ogl_device>& ogl);

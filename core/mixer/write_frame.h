@@ -40,7 +40,7 @@ struct frame_visitor;
 struct pixel_format_desc;
 class ogl_device;	
 
-class write_frame : public core::basic_frame, boost::noncopyable
+class write_frame sealed : public core::basic_frame, boost::noncopyable
 {
 public:	
 	explicit write_frame(const void* tag);
