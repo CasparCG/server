@@ -62,7 +62,7 @@ struct draw_params
 	}
 };
 
-class image_kernel : boost::noncopyable
+class image_kernel sealed : boost::noncopyable
 {
 public:
 	image_kernel(const safe_ptr<ogl_device>& ogl);

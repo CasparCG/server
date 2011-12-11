@@ -34,7 +34,7 @@ namespace caspar { namespace core {
 struct frame_producer;
 class basic_frame;
 
-class layer : boost::noncopyable
+class layer sealed : boost::noncopyable
 {
 public:
 	layer(); // nothrow

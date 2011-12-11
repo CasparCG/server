@@ -174,7 +174,7 @@ public:
 				if(!has_synchronization_clock())
 					sync_timer_.tick(1.0/format_desc_.fps);
 
-				if(input_frame->image_size() != format_desc_.size)
+				if(input_frame->image_data().size() != format_desc_.size)
 				{
 					sync_timer_.tick(1.0/format_desc_.fps);
 					return;
