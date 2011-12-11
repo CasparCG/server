@@ -37,12 +37,12 @@ std::map<std::string, std::string> read_flv_meta_info(const std::string& filenam
 {
 	std::map<std::string, std::string>  values;
 
-	if(boost::filesystem2::path(filename).extension() != ".flv")
+	if(boost::filesystem::path(filename).extension().string() != ".flv")
 		return values;
 	
 	try
 	{
-		if(!boost::filesystem2::exists(filename))
+		if(!boost::filesystem::exists(filename))
 			BOOST_THROW_EXCEPTION(caspar_exception());
 	
 		std::fstream fileStream = std::fstream(filename, std::fstream::in);

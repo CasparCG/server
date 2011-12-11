@@ -23,11 +23,3 @@
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
-
-#include <windows.h>
-#include <GL/glew.h>
-
-#include "compiler\vs\disable_silly_warnings.h"
-
-#include <string>
-#include <cassert>

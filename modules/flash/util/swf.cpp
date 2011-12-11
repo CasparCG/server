@@ -23,7 +23,7 @@
 
 #include <common/exception/exceptions.h>
 
-#include <zlib.h>
+#include <zlib.h> // Compiled into FreeImage
 
 #include <fstream>
 #include <streambuf>
@@ -37,7 +37,7 @@ std::vector<char> decompress_one_file(const std::vector<char>& in_data, uLong bu
 
 	std::vector<char> out_data(buf_size, 0);
 
-	auto ret = uncompress((Bytef*)out_data.data(), &buf_size, (Bytef*)in_data.data(), in_data.size());
+	auto ret = uncompress(reinterpret_cast<Bytef*>(out_data.data()), &buf_size, reinterpret_cast<const Bytef*>(in_data.data()), static_cast<uLong>(in_data.size()));
 
 	if(ret == Z_BUF_ERROR)
 		return decompress_one_file(in_data, buf_size*2);

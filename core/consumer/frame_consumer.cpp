@@ -69,8 +69,8 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 class cadence_guard : public frame_consumer
 {
 	safe_ptr<frame_consumer>		consumer_;
-	std::vector<size_t>				audio_cadence_;
-	boost::circular_buffer<size_t>	sync_buffer_;
+	std::vector<int>				audio_cadence_;
+	boost::circular_buffer<int>	sync_buffer_;
 public:
 	cadence_guard(const safe_ptr<frame_consumer>& consumer)
 		: consumer_(consumer)
@@ -80,7 +80,7 @@ public:
 	virtual void initialize(const video_format_desc& format_desc, int channel_index) override
 	{
 		audio_cadence_	= format_desc.audio_cadence;
-		sync_buffer_	= boost::circular_buffer<size_t>(format_desc.audio_cadence.size());
+		sync_buffer_	= boost::circular_buffer<int>(format_desc.audio_cadence.size());
 		consumer_->initialize(format_desc, channel_index);
 	}
 
@@ -91,7 +91,7 @@ public:
 
 		bool result = true;
 		
-		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size())) 
+		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<int>(frame->audio_data().size())) 
 		{	
 			// Audio sent so far is in sync, now we can send the next chunk.
 			result = consumer_->send(frame);
@@ -100,7 +100,7 @@ public:
 		else
 			CASPAR_LOG(trace) << print() << L" Syncing audio.";
 
-		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size()));
+		sync_buffer_.push_back(static_cast<int>(frame->audio_data().size()));
 		
 		return result;
 	}
@@ -120,7 +120,7 @@ public:
 		return consumer_->has_synchronization_clock();
 	}
 
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
 		return consumer_->buffer_depth();
 	}
@@ -144,7 +144,7 @@ const safe_ptr<frame_consumer>& frame_consumer::empty()
 		virtual void initialize(const video_format_desc&, int) override{}
 		virtual std::wstring print() const override {return L"empty";}
 		virtual bool has_synchronization_clock() const override {return false;}
-		virtual size_t buffer_depth() const override {return 0;};
+		virtual int buffer_depth() const override {return 0;};
 		virtual int index() const{return -1;}
 		virtual boost::property_tree::wptree info() const override
 		{
