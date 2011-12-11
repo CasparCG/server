@@ -34,7 +34,7 @@
 namespace caspar { namespace core {
 	
 class output sealed : public target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>>
-			 , boost::noncopyable
+					, boost::noncopyable
 {
 public:
 	explicit output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index);

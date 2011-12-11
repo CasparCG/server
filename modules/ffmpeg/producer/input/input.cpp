@@ -26,11 +26,12 @@
 #include "../util/util.h"
 #include "../../ffmpeg_error.h"
 
-#include <core/video_format.h>
-
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/exception/win32_exception.h>
+#include <common/log/log.h>
+
+#include <core/video_format.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>

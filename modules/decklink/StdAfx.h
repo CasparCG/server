@@ -39,10 +39,9 @@
 #include <queue>
 #include <string>
 #include <vector>
-
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
-
+#include <tbb/cache_aligned_allocator.h>
 #include <boost/assign.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
@@ -50,11 +49,38 @@
 #include <boost/foreach.hpp>
 #include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string.hpp>
+
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C" 
+{
+	#define __STDC_CONSTANT_MACROS
+	#define __STDC_LIMIT_MACROS
+	#include <libavcodec/avcodec.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
+
+#pragma warning(push)
+#pragma warning(disable : 4996)
+
+	#include <atlbase.h>
+
+	#include <atlcom.h>
+	#include <atlhost.h>
+
+#pragma warning(push)
+
+#include <functional>
+
 
 #include "../common/memory/safe_ptr.h"
 #include "../common/utility/string.h"
-//#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
-
 #include "../common/exception/exceptions.h"
 #include "../common/exception/win32_exception.h"
 #include "../common/log/Log.h"
