@@ -131,8 +131,8 @@ struct input::implementation : boost::noncopyable
 			buffer_cond_.notify_all();
 		}
 
-		graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-		graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
+		graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+		graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
 
 		return result;
 	}
@@ -179,7 +179,7 @@ struct input::implementation : boost::noncopyable
 			if(loop_)
 			{
 				do_seek(start_);
-				graph_->add_tag("seek");		
+				graph_->set_tag("seek");		
 				CASPAR_LOG(trace) << print() << " Looping.";			
 			}					
 		}
@@ -205,8 +205,8 @@ struct input::implementation : boost::noncopyable
 			buffer_.try_push(packet);
 			buffer_size_ += packet->size;
 				
-			graph_->update_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-			graph_->update_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
+			graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+			graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
 		}			
 	}
 

@@ -62,7 +62,6 @@ public:
 		: container_(16)
 		, channel_index_(-1)
 	{
-		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		diagnostics::register_graph(graph_);
 
@@ -132,7 +131,7 @@ public:
 		data.Samples = container_.back().data();
 		data.NbSamples = container_.back().size();	
 		
-		graph_->update_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);		
+		graph_->set_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);		
 		perf_timer_.restart();
 
 		return is_running_;

@@ -172,9 +172,7 @@ public:
 		, width_(width)
 		, height_(height)
 	{		
-		graph_->add_guide("frame-time", 0.5f);
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
-		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("skip-sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
@@ -221,7 +219,7 @@ public:
 
 		if(!ax_->FlashCall(param, result))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << wmsg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(u8(param)));
-		graph_->add_tag("param");
+		graph_->set_tag("param");
 
 		return result;
 	}
@@ -230,7 +228,7 @@ public:
 	{
 		float frame_time = 1.0f/ax_->GetFPS();
 
-		graph_->update_value("tick-time", (tick_timer_.elapsed()/frame_time)*0.5f);
+		graph_->set_value("tick-time", (tick_timer_.elapsed()/frame_time)*0.5f);
 		tick_timer_.restart();
 
 		if(ax_->IsEmpty())
@@ -239,7 +237,7 @@ public:
 		if(!has_underflow)			
 			timer_.tick(frame_time); // This will block the thread.
 		else
-			graph_->add_tag("skip-sync");
+			graph_->set_tag("skip-sync");
 			
 		frame_timer_.restart();
 
@@ -259,7 +257,7 @@ public:
 			head_ = frame;
 		}		
 				
-		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);
+		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);
 		return head_;
 	}
 
@@ -335,7 +333,7 @@ public:
 
 		auto frame = core::basic_frame::late();
 		if(!frame_buffer_.try_pop(frame) && context_)
-			graph_->add_tag("underflow");
+			graph_->set_tag("underflow");
 
 		return frame;
 	}

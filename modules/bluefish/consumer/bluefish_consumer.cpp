@@ -87,9 +87,7 @@ public:
 	{
 		executor_.set_capacity(1);
 
-		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
-		graph_->add_guide("frame-time", 0.5f);	
 		graph_->set_color("sync-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("frame-time", diagnostics::color(0.5f, 1.0f, 0.2f));
 		graph_->set_text(print());
@@ -194,7 +192,7 @@ public:
 			try
 			{	
 				display_frame(frame);				
-				graph_->update_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
+				graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
 				tick_timer_.restart();
 			}
 			catch(...)
@@ -211,7 +209,7 @@ public:
 		sync_timer_.restart();
 		unsigned long n_field = 0;
 		blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
-		graph_->update_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
+		graph_->set_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
 		
 		frame_timer_.restart();		
 
@@ -264,7 +262,7 @@ public:
 
 		boost::range::rotate(reserved_frames_, std::begin(reserved_frames_)+1);
 		
-		graph_->update_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
+		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
 	}
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, int audio_samples, int audio_nchannels)

@@ -144,7 +144,6 @@ public:
 	{		
 		frame_buffer_.set_capacity(2);
 		
-		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -257,11 +256,11 @@ public:
 					
 					perf_timer_.restart();
 					render(frame);
-					graph_->update_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);	
+					graph_->set_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);	
 
 					window_.Display();
 					
-					graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);	
+					graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);	
 					tick_timer_.restart();
 				}
 				catch(...)
@@ -364,7 +363,7 @@ public:
 	bool send(const safe_ptr<core::read_frame>& frame)
 	{
 		if(!frame_buffer_.try_push(frame))
-			graph_->add_tag("dropped-frame");
+			graph_->set_tag("dropped-frame");
 		return is_running_;
 	}
 		
