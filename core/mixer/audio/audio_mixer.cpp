@@ -134,10 +134,7 @@ public:
 				prev_transform	= it->second.prev_transform;
 				next_audio		= std::move(it->second.audio_data);
 			}
-
-			if(prev_transform.volume < 0.001 && next_transform.volume < 0.001)
-				continue;
-			
+						
 			const float prev_volume = static_cast<float>(prev_transform.volume);
 			const float next_volume = static_cast<float>(next_transform.volume);
 									
