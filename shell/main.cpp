@@ -22,17 +22,18 @@
 // tbbmalloc_proxy: 
 // Replace the standard memory allocation routines in Microsoft* C/C++ RTL 
 // (malloc/free, global new/delete, etc.) with the TBB memory allocator. 
-#include <tbb/tbbmalloc_proxy.h>
-
-#include "resource.h"
-
-#include "server.h"
 
 #ifdef _DEBUG
 	#define _CRTDBG_MAP_ALLOC
 	#include <stdlib.h>
 	#include <crtdbg.h>
+#else
+	#include <tbb/tbbmalloc_proxy.h>
 #endif
+
+#include "resource.h"
+
+#include "server.h"
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -168,10 +169,17 @@ int main(int argc, wchar_t* argv[])
 	
 	// Set debug mode.
 	#ifdef _DEBUG
-		_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
-		_CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );
-		_CrtSetReportMode( _CRT_WARN, _CRTDBG_MODE_DEBUG );
-		_CrtSetReportMode( _CRT_ASSERT, _CRTDBG_MODE_DEBUG );
+		HANDLE hLogFile;
+		hLogFile = CreateFile(L"crt_log.txt", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		std::shared_ptr<void> crt_log(nullptr, [](HANDLE h){::CloseHandle(h);});
+
+		_CrtSetDbgFlag (_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+		_CrtSetReportMode(_CRT_WARN,	_CRTDBG_MODE_FILE);
+		_CrtSetReportFile(_CRT_WARN,	hLogFile);
+		_CrtSetReportMode(_CRT_ERROR,	_CRTDBG_MODE_FILE);
+		_CrtSetReportFile(_CRT_ERROR,	hLogFile);
+		_CrtSetReportMode(_CRT_ASSERT,	_CRTDBG_MODE_FILE);
+		_CrtSetReportFile(_CRT_ASSERT,	hLogFile);
 	#endif
 
 	// Increase process priotity.
