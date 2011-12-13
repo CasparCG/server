@@ -715,8 +715,11 @@ bool LoadbgCommand::DoExecute()
 		return true;
 	}
 	catch(file_not_found&)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
+	{		
+		std::wstring params2;
+		for(auto it = _parameters.begin(); it != _parameters.end(); ++it)
+			params2 += L" " + *it;
+		CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax:" << params2;
 		SetReplyString(TEXT("404 LOADBG ERROR\r\n"));
 		return false;
 	}
