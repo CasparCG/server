@@ -40,7 +40,7 @@ std::vector<const producer_factory_t> g_factories;
 	
 class destroy_producer_proxy : public frame_producer
 {	
-	std::shared_ptr<frame_producer>* producer_;
+	std::unique_ptr<std::shared_ptr<frame_producer>> producer_;
 public:
 	destroy_producer_proxy(safe_ptr<frame_producer>&& producer) 
 		: producer_(new std::shared_ptr<frame_producer>(std::move(producer)))
@@ -64,20 +64,24 @@ public:
 				CASPAR_LOG(trace) << "Created destroyer: " << destroyer_count;
 			}
 				
-			auto producer = producer_;
+			auto producer = producer_.release();
 			auto pool	  = destroyers;
 			destroyer->begin_invoke([=]
 			{
+				std::unique_ptr<std::shared_ptr<frame_producer>> producer2(producer);
+
+				auto str = (*producer2)->print();
 				try
 				{
 					if(!producer->unique())
-						CASPAR_LOG(trace) << (*producer)->print() << L" Not destroyed on safe asynchronous destruction thread: " << producer->use_count();
+						CASPAR_LOG(trace) << str << L" Not destroyed on safe asynchronous destruction thread: " << producer->use_count();
 					else
-						CASPAR_LOG(trace) << (*producer)->print() << L" Destroying on safe asynchronous destruction thread.";
+						CASPAR_LOG(trace) << str << L" Destroying on safe asynchronous destruction thread.";
 				}
 				catch(...){}
-
-				delete producer;
+								
+				producer2.reset();
+				CASPAR_LOG(debug) << str << L" Destroyed.";
 				pool->push(destroyer);
 			}); 
 		}
@@ -86,7 +90,9 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			try
 			{
-				delete producer_;
+				auto str = (*producer_)->print();
+				producer_.reset();
+				CASPAR_LOG(debug) << str << L" Destroyed.";
 			}
 			catch(...){}
 		}
