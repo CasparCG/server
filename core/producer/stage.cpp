@@ -38,8 +38,10 @@
 #include <tbb/parallel_for_each.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/range/algorithm_ext.hpp>
 
 #include <map>
+#include <vector>
 
 namespace caspar { namespace core {
 	
@@ -78,22 +80,22 @@ public:
 struct stage::implementation : public std::enable_shared_from_this<implementation>
 							 , boost::noncopyable
 {		
-	safe_ptr<diagnostics::graph>	graph_;
-	safe_ptr<stage::target_t>		target_;
-	video_format_desc				format_desc_;
+	safe_ptr<diagnostics::graph>							graph_;
 
-	boost::timer					produce_timer_;
-	boost::timer					tick_timer_;
+	std::vector<std::weak_ptr<stage::target_t>>				targets_;
+	video_format_desc										format_desc_;
 
-	std::map<int, layer>			layers_;	
+	boost::timer											produce_timer_;
+	boost::timer											tick_timer_;
+
+	std::map<int, layer>									layers_;	
 	std::map<int, tweened_transform<core::frame_transform>> transforms_;	
 
-	executor						executor_;
+	executor												executor_;
 public:
-	implementation(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<stage::target_t>& target, const video_format_desc& format_desc)  
+	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc)  
 		: graph_(graph)
 		, format_desc_(format_desc)
-		, target_(target)
 		, executor_(L"stage")
 	{
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
@@ -105,7 +107,12 @@ public:
 		std::weak_ptr<implementation> self = shared_from_this();
 		executor_.begin_invoke([=]{tick(self);});
 	}
-							
+
+	void link_target(const std::weak_ptr<stage::target_t>& target)
+	{
+		targets_.push_back(target);
+	}
+
 	void tick(const std::weak_ptr<implementation>& self)
 	{		
 		try
@@ -154,8 +161,14 @@ public:
 				if(self2)				
 					self2->executor_.begin_invoke([=]{tick(self);});				
 			});
+							
+			boost::range::remove_erase_if(targets_, [](const std::weak_ptr<target_t>& target)
+			{
+				return target.lock() == nullptr;
+			});
 
-			target_->send(std::make_pair(frames, ticket));
+			BOOST_FOREACH(auto target, targets_)
+				target.lock()->send(std::make_pair(frames, ticket));
 
 			graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
@@ -344,7 +357,8 @@ public:
 	}
 };
 
-stage::stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc) : impl_(new implementation(graph, target, format_desc)){}
+stage::stage(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) : impl_(new implementation(graph, format_desc)){}
+void stage::link_target(const std::weak_ptr<target_t>& target){impl_->link_target(target);}
 void stage::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
 void stage::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}

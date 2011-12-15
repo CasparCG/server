@@ -56,9 +56,12 @@ public:
 		, format_desc_(format_desc)
 		, ogl_(ogl)
 		, output_(new caspar::core::output(graph_, format_desc, index))
-		, mixer_(new caspar::core::mixer(graph_, output_, format_desc, ogl))
-		, stage_(new caspar::core::stage(graph_, mixer_, format_desc))	
+		, mixer_(new caspar::core::mixer(graph_, format_desc, ogl))
+		, stage_(new caspar::core::stage(graph_, format_desc))	
 	{
+		mixer_->link_target(output_);
+		stage_->link_target(mixer_);
+
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
