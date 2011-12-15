@@ -96,11 +96,12 @@ std::vector<std::wstring> get_device_list()
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(SUCCEEDED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
 		{		
-			CComPtr<IDeckLink> decklink;
+			IDeckLink* decklink;
 			for(int n = 1; pDecklinkIterator->Next(&decklink) == S_OK; ++n)	
 			{
 				BSTR model_name = L"Unknown";
 				decklink->GetModelName(&model_name);
+				decklink->Release();
 				devices.push_back(std::wstring(model_name) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");	
 			}
 		}
