@@ -21,13 +21,14 @@
 
 #pragma once
 
-#include "../frame_producer.h"
-
 #include <string>
 #include <memory>
 #include <vector>
 
 namespace caspar { namespace core {
+	
+struct frame_factory;
+struct frame_producer;
 	
 safe_ptr<frame_producer> create_playlist_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
 

@@ -53,13 +53,15 @@ class mixer sealed : public target<std::pair<std::map<int, safe_ptr<core::basic_
 public:	
 	typedef target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>> target_t;
 
-	explicit mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
+	explicit mixer(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
 		
 	// target
 
 	virtual void send(const std::pair<std::map<int, safe_ptr<basic_frame>>, std::shared_ptr<void>>& frames) override; 
 		
 	// mixer
+
+	void link_target(const std::weak_ptr<target_t>& target);
 
 	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);		
 	

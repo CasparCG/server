@@ -23,6 +23,7 @@
 
 #include "color_producer.h"
 
+#include "../frame_producer.h"
 #include "../frame/basic_frame.h"
 #include "../frame/frame_factory.h"
 #include "../frame/pixel_format.h"

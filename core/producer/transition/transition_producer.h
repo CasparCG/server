@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "../frame_producer.h"
 #include "../../video_format.h"
 
 #include <common/utility/tweener.h>
@@ -30,6 +29,8 @@
 #include <memory>
 
 namespace caspar { namespace core {
+
+struct frame_producer;
 
 struct transition
 {

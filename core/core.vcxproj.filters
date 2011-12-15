@@ -40,6 +40,9 @@
     <Filter Include="source\mixer\image\shader">
       <UniqueIdentifier>{e0a140f8-e217-465c-a934-163b7ea786be}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\producer\reroute">
+      <UniqueIdentifier>{e5def302-a2b5-4e1f-8565-d6ef3927b31f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
