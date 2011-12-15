@@ -156,11 +156,11 @@ public:
 			displayDevices.push_back(d_device);
 
 		if(config_.screen_index >= displayDevices.size())
-			BOOST_THROW_EXCEPTION(out_of_range() << arg_name_info("screen_index_") << wmsg_info(print()));
+			CASPAR_LOG(warning) << print() << L" Invalid screen-index: " << config_.screen_index;
 		
 		DEVMODE devmode = {};
 		if(!EnumDisplaySettings(displayDevices[config_.screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
-			BOOST_THROW_EXCEPTION(invalid_operation() << arg_name_info("screen_index") << wmsg_info(print() + L" EnumDisplaySettings"));
+			CASPAR_LOG(warning) << print() << L" Could not find display settings for screen-index: " << config_.screen_index;
 		
 		screen_x_		= devmode.dmPosition.x;
 		screen_y_		= devmode.dmPosition.y;
