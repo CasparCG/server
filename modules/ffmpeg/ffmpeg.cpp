@@ -195,6 +195,7 @@ void init()
 {
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_callback);
+
     avfilter_register_all();
 	//fix_yadif_filter_format_query();
 	av_register_all();
