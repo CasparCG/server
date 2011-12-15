@@ -49,19 +49,19 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 			try
 			{
 				if(pCurrentCommand->Execute()) 
-					CASPAR_LOG(info) << "Executed command: " << pCurrentCommand->print();
+					CASPAR_LOG(trace) << "Executed command: " << pCurrentCommand->print();
 				else 
-					CASPAR_LOG(info) << "Failed to execute command: " << pCurrentCommand->print();
+					CASPAR_LOG(warning) << "Failed to execute command: " << pCurrentCommand->print();
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(info) << "Failed to execute command:" << pCurrentCommand->print();
+				CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
 			}
 				
 			pCurrentCommand->SendReply();
 			
-			CASPAR_LOG(info) << "Ready for a new command";
+			CASPAR_LOG(trace) << "Ready for a new command";
 		}
 		catch(...)
 		{
