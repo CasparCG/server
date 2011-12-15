@@ -22,6 +22,7 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
+#include <common/exception/exceptions.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -61,9 +62,7 @@ public:
 
 	virtual boost::unique_future<std::wstring> call(const std::wstring&) 
 	{
-		boost::promise<std::wstring> promise;
-		promise.set_value(L"");
-		return promise.get_future();
+		BOOST_THROW_EXCEPTION(not_supported());
 	}
 
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow

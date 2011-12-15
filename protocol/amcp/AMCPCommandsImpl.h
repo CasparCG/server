@@ -38,7 +38,7 @@ class DiagnosticsCommand : public AMCPCommandBase<false, AddToQueue, 0>
 	bool DoExecute();
 };
 
-class CallCommand : public AMCPCommandBase<true, AddToQueue, 2>
+class CallCommand : public AMCPCommandBase<true, AddToQueue, 1>
 {
 	std::wstring print() const { return L"CallCommand";}
 	bool DoExecute();
