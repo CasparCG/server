@@ -227,19 +227,23 @@ bool CallCommand::DoExecute()
 	try
 	{
 		auto what = _parameters.at(0);
-
-		std::wstring param = _parameters2.at(1);
-		for(auto it = std::begin(_parameters2)+2; it != std::end(_parameters2); ++it)
-			param += L" " + *it;
-		
+				
 		boost::unique_future<std::wstring> result;
-		if(what == L"B")
-			result = GetChannel()->stage()->call(GetLayerIndex(), false, param);
-		else if(what == L"F")
-			result = GetChannel()->stage()->call(GetLayerIndex(), true, param);
+		if(what == L"B" || what == L"F")
+		{
+			std::wstring param;
+			for(auto it = std::begin(_parameters2)+1; it != std::end(_parameters2); ++it, param += L" ")
+				param += *it;
+			result = GetChannel()->stage()->call(GetLayerIndex(), what == L"F", boost::trim_copy(param));
+		}
 		else
-			result = GetChannel()->stage()->call(GetLayerIndex(), true, _parameters.at(0) + L" " + param);
-	
+		{
+			std::wstring param;
+			for(auto it = std::begin(_parameters2); it != std::end(_parameters2); ++it, param += L" ")
+				param += *it;
+			result = GetChannel()->stage()->call(GetLayerIndex(), true, boost::trim_copy(param));
+		}
+
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
 			BOOST_THROW_EXCEPTION(timed_out());
 

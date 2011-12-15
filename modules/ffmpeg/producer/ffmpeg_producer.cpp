@@ -234,7 +234,7 @@ public:
 					
 	std::wstring do_call(const std::wstring& param)
 	{
-		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)", boost::regex::icase);
+		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)?", boost::regex::icase);
 		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
 		
 		boost::wsmatch what;
