@@ -434,10 +434,10 @@ void AsyncEventServer::DoSend(SocketInfo& socketInfo) {
 			}
 			else {
 				if(sentBytes == bytesToSend) {
-					if(sentBytes < 200)
-						CASPAR_LOG(info) << "Sent " << socketInfo.sendQueue_.front().c_str() << TEXT(" to ") << socketInfo.host_.c_str();
+					if(sentBytes < 512)
+						CASPAR_LOG(info) << "Sent: " << socketInfo.sendQueue_.front().c_str() << TEXT(" to ") << socketInfo.host_.c_str();
 					else
-						CASPAR_LOG(info) << "Sent more than 200 bytes to " << socketInfo.host_.c_str();
+						CASPAR_LOG(info) << "Sent more than 512 bytes to " << socketInfo.host_.c_str();
 
 					socketInfo.currentlySending_.resize(0);
 					socketInfo.currentlySendingOffset_ = 0;
