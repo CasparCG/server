@@ -21,13 +21,13 @@
 
 #pragma once
 
-#include "../frame_producer.h"
-
 #include <string>
 #include <memory>
 
 namespace caspar { namespace core {
-	
+
+struct frame_producer;
+
 safe_ptr<frame_producer> create_separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key);
 
 }}

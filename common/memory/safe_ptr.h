@@ -136,15 +136,17 @@ public:
     { 
         p_.swap(other.p_); 
     } 
-
-    operator std::shared_ptr<T>() const 
+	
+	template<typename U>
+    operator std::shared_ptr<U>() const 
     { 
         return p_;
     }
 
-    operator std::weak_ptr<T>() const 
+	template<typename U>
+    operator std::weak_ptr<U>() const 
     { 
-        return std::weak_ptr<T>(p_);
+        return std::weak_ptr<U>(p_);
     }
     
     template<class U>

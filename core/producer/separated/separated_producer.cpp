@@ -23,7 +23,8 @@
 
 #include "separated_producer.h"
 
-#include <core/producer/frame/basic_frame.h>
+#include "../frame_producer.h"
+#include "../frame/basic_frame.h"
 
 #include <tbb/parallel_invoke.h>
 

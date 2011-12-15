@@ -23,10 +23,9 @@
 
 #include "transition_producer.h"
 
-#include <core/video_format.h>
-
-#include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_transform.h>
+#include "../frame_producer.h"
+#include "../frame/basic_frame.h"
+#include "../frame/frame_transform.h"
 
 #include <tbb/parallel_invoke.h>
 
