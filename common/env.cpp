@@ -71,6 +71,30 @@ void configure(const std::wstring& filename)
 		CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
 		throw;
 	}
+
+	try
+	{
+		auto media_path = boost::filesystem::wpath(media);
+		if(!boost::filesystem::exists(media_path))
+			boost::filesystem::create_directory(media_path);
+		
+		auto log_path = boost::filesystem::wpath(log);
+		if(!boost::filesystem::exists(log_path))
+			boost::filesystem::create_directory(log_path);
+		
+		auto template_path = boost::filesystem::wpath(ftemplate);
+		if(!boost::filesystem::exists(template_path))
+			boost::filesystem::create_directory(template_path);
+		
+		auto data_path = boost::filesystem::wpath(data);
+		if(!boost::filesystem::exists(data_path))
+			boost::filesystem::create_directory(data_path);
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		CASPAR_LOG(error) << L"Failed to create configured directories.";
+	}
 }
 	
 const std::wstring& media_folder()
