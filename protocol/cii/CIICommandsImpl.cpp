@@ -111,6 +111,9 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
 	{
 		layer_ = _ttoi(parameters[4].c_str());
 		filename_ = parameters[5];
+		if(filename_.find(L"PK/") == std::wstring::npos && filename_.find(L"PK\\") == std::wstring::npos)
+			filename_ = L"PK/" + filename_;
+
 		state_ = 1;
 		if(parameters.size() > 7) {
 			std::wstringstream dataStream;
@@ -132,7 +135,7 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
 		std::wstring value = parameters[3];
 		std::transform(value.begin(), value.end(), value.begin(), toupper);
 
-		//this->pCIIStrategy_->GetChannel()->SetVideoFormat(value); TODO
+		this->pCIIStrategy_->GetChannel()->set_video_format_desc(core::video_format_desc::get(value));
 	}
 }
 
