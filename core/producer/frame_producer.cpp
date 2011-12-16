@@ -113,31 +113,6 @@ safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::fram
 	return make_safe<destroy_producer_proxy>(std::move(producer));
 }
 
-class last_frame_producer : public frame_producer
-{
-	const std::wstring			print_;
-	const safe_ptr<basic_frame>	frame_;
-	const uint32_t				nb_frames_;
-public:
-	last_frame_producer(const safe_ptr<frame_producer>& producer) 
-		: print_(producer->print())
-		, frame_(producer->last_frame() != basic_frame::eof() ? producer->last_frame() : basic_frame::empty())
-		, nb_frames_(producer->nb_frames())
-	{
-	}
-	
-	virtual safe_ptr<basic_frame> receive(int){return frame_;}
-	virtual safe_ptr<core::basic_frame> last_frame() const{return frame_;}
-	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
-	virtual uint32_t nb_frames() const {return nb_frames_;}	
-	virtual boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"last-frame-producer");
-		return info;
-	}
-};
-
 struct empty_frame_producer : public frame_producer
 {
 	virtual safe_ptr<basic_frame> receive(int){return basic_frame::empty();}
@@ -163,21 +138,15 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int flags)
 {	
 	auto frame = producer->receive(flags);
-	if(frame == basic_frame::eof())
-	{
-		CASPAR_LOG(info) << producer->print() << " End Of File.";
-		auto following = producer->get_following_producer();
-		if(following != frame_producer::empty())
-		{
-			following->set_leading_producer(producer);
-			producer = std::move(following);
-		}
-		else
-			producer = make_safe<last_frame_producer>(producer);
+	if(frame != basic_frame::eof())
+		return frame;
+		
+	CASPAR_LOG(info) << producer->print() << " End Of File.";
+	auto following = producer->get_following_producer();
+	following->set_leading_producer(producer);
+	producer = std::move(following);
 
-		return receive_and_follow(producer, flags);
-	}
-	return frame;
+	return receive_and_follow(producer, flags);	
 }
 
 void register_producer_factory(const producer_factory_t& factory)

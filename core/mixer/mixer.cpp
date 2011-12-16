@@ -136,11 +136,6 @@ public:
 			targets_.push_back(target);
 		}, high_priority);
 	}
-					
-	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
-	{		
-		return make_safe<write_frame>(ogl_, tag, desc);
-	}
 				
 	void set_blend_mode(int index, blend_mode::type value)
 	{
@@ -178,7 +173,6 @@ mixer::mixer(const safe_ptr<diagnostics::graph>& graph, const video_format_desc&
 void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
 void mixer::link_target(const std::weak_ptr<target_t>& target){impl_->link_target(target);}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }
-safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}

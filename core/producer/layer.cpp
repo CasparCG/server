@@ -25,11 +25,19 @@
 
 #include "frame_producer.h"
 #include "frame/basic_frame.h"
+#include "frame/frame_transform.h"
 
 #include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
 	
+safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame)
+{
+	auto frame2 = make_safe<basic_frame>(frame);
+	frame2->get_frame_transform().volume = 0.0;
+	return frame2;
+}
+
 struct layer::implementation
 {				
 	safe_ptr<frame_producer>	foreground_;
@@ -108,7 +116,7 @@ public:
 		
 			auto frame = receive_and_follow(foreground_, flags);
 			if(frame == core::basic_frame::late())
-				return foreground_->last_frame();
+				return disable_audio(foreground_->last_frame());
 
 			auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(++frame_number_) - static_cast<int64_t>(auto_play_delta_);
 			if(auto_play_delta_ > -1 && frames_left < 1)
