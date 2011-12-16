@@ -79,7 +79,7 @@ struct separated_producer : public frame_producer
 
 	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
-		return disable_audio(last_frame_);
+		return last_frame_;
 	}
 
 	virtual uint32_t nb_frames() const override

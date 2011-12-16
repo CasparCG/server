@@ -28,6 +28,7 @@
 #include "consumer/output.h"
 #include "mixer/mixer.h"
 #include "mixer/gpu/ogl_device.h"
+#include "mixer/write_frame.h"
 #include "producer/stage.h"
 
 #include <common/diagnostics/graph.h>
@@ -39,7 +40,7 @@
 
 namespace caspar { namespace core {
 
-struct video_channel::implementation : boost::noncopyable
+struct video_channel::implementation sealed : public frame_factory
 {
 	const int						index_;
 	video_format_desc				format_desc_;
@@ -69,6 +70,16 @@ public:
 			stage_->spawn_token();
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
+	}
+						
+	virtual safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override
+	{		
+		return make_safe<write_frame>(ogl_, tag, desc);
+	}
+	
+	virtual core::video_format_desc get_video_format_desc() const override// nothrow
+	{
+		return mixer_->get_video_format_desc();
 	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
@@ -120,6 +131,7 @@ public:
 video_channel::video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) : impl_(new implementation(index, format_desc, ogl)){}
 safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
 safe_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
+safe_ptr<frame_factory> video_channel::frame_factory() { return impl_;} 
 safe_ptr<output> video_channel::output() { return impl_->output_;} 
 video_format_desc video_channel::get_video_format_desc() const{return impl_->format_desc_;}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}

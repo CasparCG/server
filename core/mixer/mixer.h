@@ -48,7 +48,6 @@ struct frame_transform;
 struct pixel_format;
 
 class mixer sealed : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>>
-			, public core::frame_factory
 {
 public:	
 	typedef target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>> target_t;
@@ -62,8 +61,6 @@ public:
 	// mixer
 
 	void link_target(const std::weak_ptr<target_t>& target);
-
-	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);		
 	
 	core::video_format_desc get_video_format_desc() const; // nothrow
 	void set_video_format_desc(const video_format_desc& format_desc);
