@@ -596,7 +596,7 @@ bool LoadCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(GetChannel()->mixer(), _parameters);		
+		auto pFP = create_producer(GetChannel()->frame_factory(), _parameters);		
 		GetChannel()->stage()->load(GetLayerIndex(), pFP, true);
 	
 		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
@@ -704,7 +704,7 @@ bool LoadbgCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(GetChannel()->mixer(), _parameters);
+		auto pFP = create_producer(GetChannel()->frame_factory(), _parameters);
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << wmsg_info(_parameters.size() > 0 ? _parameters[0] : L""));
 
