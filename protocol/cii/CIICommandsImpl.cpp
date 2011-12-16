@@ -132,7 +132,7 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
 		std::wstring value = parameters[3];
 		std::transform(value.begin(), value.end(), value.begin(), toupper);
 
-		//this->pCIIStrategy_->GetChannel()->SetVideoFormat(value); TODO
+		this->pCIIStrategy_->GetChannel()->set_video_format_desc(core::video_format_desc::get(value));
 	}
 }
 

@@ -45,11 +45,14 @@ public:
 		: flash_producer_(frame_producer)
 	{}
 	
-	boost::unique_future<std::wstring> add(int layer, std::wstring filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
+	boost::unique_future<std::wstring> add(int layer, std::wstring filename,  bool play_on_load, const std::wstring& label, std::wstring data)
 	{
 		if(filename.size() > 0 && filename[0] == L'/')
 			filename = filename.substr(1, filename.size()-1);
 
+		if(boost::filesystem::wpath(filename).extension() == L"")
+			filename += L".ft";
+		
 		auto str = (boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?TEXT("<true/>"):TEXT("<false/>")) % label % data).str();
 
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command: " << str;
@@ -194,11 +197,19 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 {	
 	auto flash_producer = video_channel->stage()->foreground(render_layer).get();
 
-	if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
+	try
 	{
-		flash_producer = make_safe<cg_producer>(flash::create_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>()));	
-		video_channel->stage()->load(render_layer, flash_producer); 
-		video_channel->stage()->play(render_layer);
+		if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
+		{
+			flash_producer = make_safe<cg_producer>(flash::create_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>()));	
+			video_channel->stage()->load(render_layer, flash_producer); 
+			video_channel->stage()->play(render_layer);
+		}
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		throw;
 	}
 
 	return static_pointer_cast<cg_producer>(flash_producer);
