@@ -73,6 +73,9 @@ public:
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
+		if(format_desc.format == core::video_format::invalid)
+			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Invalid video-format"));
+
 		try
 		{
 			output_->set_video_format_desc(format_desc);
