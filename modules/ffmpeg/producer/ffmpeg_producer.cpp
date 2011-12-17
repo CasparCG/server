@@ -148,7 +148,7 @@ public:
 		graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 				
 		if(frame_buffer_.empty() && input_.eof())
-			return last_frame();
+			return disable_audio(last_frame());
 
 		if(frame_buffer_.empty())
 		{

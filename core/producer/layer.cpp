@@ -30,13 +30,6 @@
 #include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
-	
-safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame)
-{
-	auto frame2 = make_safe<basic_frame>(frame);
-	frame2->get_frame_transform().volume = 0.0;
-	return frame2;
-}
 
 struct layer::implementation
 {				
