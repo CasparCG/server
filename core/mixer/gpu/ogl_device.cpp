@@ -66,9 +66,8 @@ ogl_device::ogl_device()
 	
 		CASPAR_LOG(info) << L"Successfully initialized GLEW.";
 
-		GL(glGenFramebuffers(1, &fbo_));		
-		GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
-        //GL(glDisable(GL_MULTISAMPLE_ARB));
+		glGenFramebuffers(1, &fbo_);		
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
 
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
 	});
