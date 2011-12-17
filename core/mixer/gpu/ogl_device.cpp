@@ -349,10 +349,10 @@ void ogl_device::clear(device_buffer& texture)
 
 void ogl_device::read_buffer(device_buffer&)
 {
-	if(read_buffer_ != GL_COLOR_ATTACHMENT0_EXT)
+	if(read_buffer_ != GL_COLOR_ATTACHMENT0)
 	{
-		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
-		read_buffer_ = GL_COLOR_ATTACHMENT0_EXT;
+		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
+		read_buffer_ = GL_COLOR_ATTACHMENT0;
 	}
 }
 

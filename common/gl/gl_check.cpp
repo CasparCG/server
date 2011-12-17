@@ -95,10 +95,10 @@ void SMFL_GLCheckError(const std::string& expr, const std::string& file, unsigne
 					<< line_info(line)
 					<< source_info(file));
 
-			case GL_INVALID_FRAMEBUFFER_OPERATION_EXT :
+			case GL_INVALID_FRAMEBUFFER_OPERATION :
 				BOOST_THROW_EXCEPTION(ogl_stack_underflow()
-					<< msg_info("the object bound to FRAMEBUFFER_BINDING_EXT is not \"framebuffer complete\"")
-					<< errorstr("GL_INVALID_FRAMEBUFFER_OPERATION_EXT")
+					<< msg_info("the object bound to FRAMEBUFFER_BINDING is not \"framebuffer complete\"")
+					<< errorstr("GL_INVALID_FRAMEBUFFER_OPERATION")
 					<< line_info(line)
 					<< source_info(file));
 		}
