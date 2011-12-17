@@ -33,7 +33,7 @@
 
 #include <boost/foreach.hpp>
 
-#include <GL/glew.h>
+#include <gl/glew.h>
 
 namespace caspar { namespace core {
 
@@ -42,6 +42,7 @@ ogl_device::ogl_device()
 	, pattern_(nullptr)
 	, attached_texture_(0)
 	, active_shader_(0)
+	, read_buffer_(0)
 {
 	CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
@@ -67,7 +68,6 @@ ogl_device::ogl_device()
 
 		GL(glGenFramebuffers(1, &fbo_));		
 		GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
-		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
         //GL(glDisable(GL_MULTISAMPLE_ARB));
 
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
@@ -346,6 +346,15 @@ void ogl_device::clear(device_buffer& texture)
 {	
 	attach(texture);
 	GL(glClear(GL_COLOR_BUFFER_BIT));
+}
+
+void ogl_device::read_buffer(device_buffer&)
+{
+	if(read_buffer_ != GL_COLOR_ATTACHMENT0_EXT)
+	{
+		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
+		read_buffer_ = GL_COLOR_ATTACHMENT0_EXT;
+	}
 }
 
 void ogl_device::use(shader& shader)
