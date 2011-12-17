@@ -77,15 +77,7 @@ private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
 };
-
-inline bool is_concrete_frame(const safe_ptr<basic_frame>& frame)
-{
-	return frame != basic_frame::empty() && frame != basic_frame::eof() && frame != basic_frame::late();
-}
-
-inline bool is_concrete_frame(const std::shared_ptr<basic_frame>& frame)
-{
-	return frame != nullptr && frame.get() != basic_frame::empty().get() && frame.get() != basic_frame::eof().get() && frame.get() != basic_frame::late().get();
-}
+	
+safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame);
 
 }}
