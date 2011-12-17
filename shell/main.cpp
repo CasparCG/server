@@ -193,7 +193,7 @@ int main(int argc, wchar_t* argv[])
 		~inc_prec(){timeEndPeriod(1);}
 	} inc_prec;	
 
-	// Install unstructured exception handlers into all tbb threads.
+	// Install SEH into all tbb threads.
 	struct tbb_thread_installer : public tbb::task_scheduler_observer
 	{
 		tbb_thread_installer(){observe(true);}
