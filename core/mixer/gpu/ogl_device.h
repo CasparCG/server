@@ -38,7 +38,7 @@
 
 #include <gl/glew.h>
 
-#include <SFML/Window/Context.hpp>
+#include "../../dependencies\SFML-1.6\include\SFML/Window/Context.hpp"
 
 namespace caspar { namespace core {
 
@@ -61,13 +61,14 @@ struct buffer_pool
 class ogl_device : public std::enable_shared_from_this<ogl_device>, boost::noncopyable
 {	
 	std::unordered_map<GLenum, bool> caps_;
-	std::array<int, 4>			 viewport_;
-	std::array<int, 4>			 scissor_;
+	std::array<int, 4>				 viewport_;
+	std::array<int, 4>				 scissor_;
 	const GLubyte*					 pattern_;
 	GLint							 attached_texture_;
 	GLint							 active_shader_;
 	std::array<GLint, 16>			 binded_textures_;
 	std::array<GLint, 4>			 blend_func_;
+	GLenum							 read_buffer_;
 
 	std::unique_ptr<sf::Context> context_;
 	
@@ -97,6 +98,8 @@ public:
 	void blend_func(int c1, int c2);
 	
 	void use(shader& shader);
+
+	void read_buffer(device_buffer& texture);
 
 	void flush();
 
