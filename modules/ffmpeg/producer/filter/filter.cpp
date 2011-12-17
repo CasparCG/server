@@ -162,13 +162,13 @@ struct filter::implementation
 					args << frame->width << ":" << frame->height << ":" << frame->format << ":" << 0 << ":" << 0 << ":" << 0 << ":" << 0; // don't care about pts and aspect_ratio
 					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersrc_ctx_, avfilter_get_by_name("buffer"), "src", args.str().c_str(), NULL, graph_.get()), "[filter]");
 					
-#if FF_API_OLD_VSINK_API
+				#if FF_API_OLD_VSINK_API
 					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts_.data(), graph_.get()), "[filter]");
-#else
+				#else
 					safe_ptr<AVBufferSinkParams> buffersink_params(av_buffersink_params_alloc(), av_free);
 					buffersink_params->pixel_fmts = pix_fmts_.data();
-					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params.get(), graph_.get()), "[filter]");
-#endif
+					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params.get(), graph_.get()), "[filter]");				
+				#endif
 					AVFilterInOut* inputs  = avfilter_inout_alloc();
 					AVFilterInOut* outputs = avfilter_inout_alloc();
 								
