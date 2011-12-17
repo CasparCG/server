@@ -145,4 +145,11 @@ safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fil
 	return make_safe<basic_frame>(std::move(frames));
 }
 	
+safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame)
+{
+	auto frame2 = make_safe<basic_frame>(frame);
+	frame2->get_frame_transform().volume = 0.0;
+	return frame2;
+}
+	
 }}
