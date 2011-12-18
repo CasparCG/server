@@ -48,8 +48,8 @@ private:
 
 	int id() const;
 
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 	
 unsigned int format(int stride);

@@ -45,7 +45,7 @@
 
 namespace caspar { namespace core {
 	
-struct output::implementation
+struct output::impl
 {		
 	const int										channel_index_;
 	const safe_ptr<diagnostics::graph>				graph_;
@@ -62,7 +62,7 @@ struct output::implementation
 	executor										executor_;
 		
 public:
-	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) 
+	impl(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) 
 		: channel_index_(channel_index)
 		, graph_(graph)
 		, format_desc_(format_desc)
@@ -256,7 +256,7 @@ public:
 	}
 };
 
-output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new implementation(graph, format_desc, channel_index)){}
+output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new impl(graph, format_desc, channel_index)){}
 void output::add(int index, const safe_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
 void output::add(const safe_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}

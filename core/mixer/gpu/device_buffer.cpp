@@ -44,7 +44,7 @@ unsigned int format(int stride)
 
 static tbb::atomic<int> g_total_count;
 
-struct device_buffer::implementation : boost::noncopyable
+struct device_buffer::impl : boost::noncopyable
 {
 	GLuint id_;
 
@@ -55,7 +55,7 @@ struct device_buffer::implementation : boost::noncopyable
 	fence		 fence_;
 
 public:
-	implementation(int width, int height, int stride) 
+	impl(int width, int height, int stride) 
 		: width_(width)
 		, height_(height)
 		, stride_(stride)
@@ -71,7 +71,7 @@ public:
 		CASPAR_LOG(trace) << "[device_buffer] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
 	}	
 
-	~implementation()
+	~impl()
 	{
 		try
 		{
@@ -114,7 +114,7 @@ public:
 	}
 };
 
-device_buffer::device_buffer(int width, int height, int stride) : impl_(new implementation(width, height, stride)){}
+device_buffer::device_buffer(int width, int height, int stride) : impl_(new impl(width, height, stride)){}
 int device_buffer::stride() const { return impl_->stride_; }
 int device_buffer::width() const { return impl_->width_; }
 int device_buffer::height() const { return impl_->height_; }

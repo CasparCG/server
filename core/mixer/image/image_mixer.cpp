@@ -236,14 +236,14 @@ private:
 	}
 };
 		
-struct image_mixer::implementation : boost::noncopyable
+struct image_mixer::impl : boost::noncopyable
 {	
 	safe_ptr<ogl_device>			ogl_;
 	image_renderer					renderer_;
 	std::vector<frame_transform>	transform_stack_;
 	std::vector<layer>				layers_; // layer/stream/items
 public:
-	implementation(const safe_ptr<ogl_device>& ogl) 
+	impl(const safe_ptr<ogl_device>& ogl) 
 		: ogl_(ogl)
 		, renderer_(ogl)
 		, transform_stack_(1)	
@@ -285,7 +285,7 @@ public:
 	}
 };
 
-image_mixer::image_mixer(const safe_ptr<ogl_device>& ogl) : impl_(new implementation(ogl)){}
+image_mixer::image_mixer(const safe_ptr<ogl_device>& ogl) : impl_(new impl(ogl)){}
 void image_mixer::begin(basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}

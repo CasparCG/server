@@ -30,24 +30,24 @@
 
 namespace caspar { namespace core {
 																																						
-struct basic_frame::implementation
+struct basic_frame::impl
 {		
 	std::vector<safe_ptr<basic_frame>> frames_;
 
 	frame_transform frame_transform_;	
 	
 public:
-	implementation(const std::vector<safe_ptr<basic_frame>>& frames) : frames_(frames) 
+	impl(const std::vector<safe_ptr<basic_frame>>& frames) : frames_(frames) 
 	{
 	}
-	implementation(std::vector<safe_ptr<basic_frame>>&& frames) : frames_(std::move(frames))
+	impl(std::vector<safe_ptr<basic_frame>>&& frames) : frames_(std::move(frames))
 	{
 	}
-	implementation(safe_ptr<basic_frame>&& frame) 
+	impl(safe_ptr<basic_frame>&& frame) 
 	{
 		frames_.push_back(std::move(frame));
 	}
-	implementation(const safe_ptr<basic_frame>& frame) 		
+	impl(const safe_ptr<basic_frame>& frame) 		
 	{ 
 		frames_.push_back(frame);
 	}
@@ -61,12 +61,12 @@ public:
 	}	
 };
 	
-basic_frame::basic_frame() : impl_(new implementation(std::vector<safe_ptr<basic_frame>>())){}
-basic_frame::basic_frame(const std::vector<safe_ptr<basic_frame>>& frames) : impl_(new implementation(frames)){}
-basic_frame::basic_frame(const basic_frame& other) : impl_(new implementation(*other.impl_)){}
-basic_frame::basic_frame(std::vector<safe_ptr<basic_frame>>&& frames) : impl_(new implementation(frames)){}
-basic_frame::basic_frame(const safe_ptr<basic_frame>& frame) : impl_(new implementation(frame)){}
-basic_frame::basic_frame(safe_ptr<basic_frame>&& frame)  : impl_(new implementation(std::move(frame))){}
+basic_frame::basic_frame() : impl_(new impl(std::vector<safe_ptr<basic_frame>>())){}
+basic_frame::basic_frame(const std::vector<safe_ptr<basic_frame>>& frames) : impl_(new impl(frames)){}
+basic_frame::basic_frame(const basic_frame& other) : impl_(new impl(*other.impl_)){}
+basic_frame::basic_frame(std::vector<safe_ptr<basic_frame>>&& frames) : impl_(new impl(frames)){}
+basic_frame::basic_frame(const safe_ptr<basic_frame>& frame) : impl_(new impl(frame)){}
+basic_frame::basic_frame(safe_ptr<basic_frame>&& frame)  : impl_(new impl(std::move(frame))){}
 basic_frame::basic_frame(basic_frame&& other) : impl_(std::move(other.impl_)){}
 basic_frame& basic_frame::operator=(const basic_frame& other)
 {

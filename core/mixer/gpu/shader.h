@@ -39,8 +39,8 @@ public:
 	void set(const std::string& name, double value);
 private:
 	friend class ogl_device;
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 
 	int id() const;
 };

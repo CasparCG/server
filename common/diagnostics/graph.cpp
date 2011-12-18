@@ -251,14 +251,14 @@ public:
 	}
 };
 
-struct graph::implementation : public drawable
+struct graph::impl : public drawable
 {
 	tbb::concurrent_unordered_map<std::string, diagnostics::line> lines_;
 
 	tbb::spin_mutex mutex_;
 	std::wstring text_;
 		
-	implementation()
+	impl()
 	{
 	}
 
@@ -355,11 +355,11 @@ private:
 		glPopMatrix();
 	}
 
-	implementation(implementation&);
-	implementation& operator=(implementation&);
+	impl(impl&);
+	impl& operator=(impl&);
 };
 	
-graph::graph() : impl_(new implementation())
+graph::graph() : impl_(new impl())
 {
 }
 
@@ -381,12 +381,12 @@ void show_graphs(bool value)
 //namespace v2
 //{	
 //	
-//struct line::implementation
+//struct line::impl
 //{
 //	std::wstring name_;
 //	boost::circular_buffer<data> ticks_;
 //
-//	implementation(const std::wstring& name) 
+//	impl(const std::wstring& name) 
 //		: name_(name)
 //		, ticks_(1024){}
 //	
@@ -404,22 +404,22 @@ void show_graphs(bool value)
 //};
 //
 //line::line(){}
-//line::line(const std::wstring& name) : impl_(new implementation(name)){}
+//line::line(const std::wstring& name) : impl_(new impl(name)){}
 //std::wstring line::print() const {return impl_->name_;}
 //void line::set_value(float value){impl_->set_value(value);}
 //void line::set_value(float value){impl_->set_value(value);}
 //boost::circular_buffer<data>& line::ticks() { return impl_->ticks_;}
 //
-//struct graph::implementation
+//struct graph::impl
 //{
 //	std::map<std::wstring, line> lines_;
 //	color						 color_;
 //	printer						 printer_;
 //
-//	implementation(const std::wstring& name) 
+//	impl(const std::wstring& name) 
 //		: printer_([=]{return name;}){}
 //
-//	implementation(const printer& parent_printer) 
+//	impl(const printer& parent_printer) 
 //		: printer_(parent_printer){}
 //	
 //	void set_value(const std::wstring& name, float value)
@@ -461,8 +461,8 @@ void show_graphs(bool value)
 //	}
 //};
 //	
-//graph::graph(const std::wstring& name) : impl_(new implementation(name)){}
-//graph::graph(const printer& parent_printer) : impl_(new implementation(parent_printer)){}
+//graph::graph(const std::wstring& name) : impl_(new impl(name)){}
+//graph::graph(const printer& parent_printer) : impl_(new impl(parent_printer)){}
 //void graph::set_value(const std::wstring& name, float value){impl_->set_value(name, value);}
 //void graph::set_value(const std::wstring& name, float value){impl_->set_value(name, value);}
 //void graph::set_color(const std::wstring& name, color c){impl_->set_color(name, c);}

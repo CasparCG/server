@@ -61,8 +61,8 @@ public:
 	std::wstring template_host_info();
 
 private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	struct impl;
+	std::shared_ptr<impl> impl_;
 };
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int layer_index = cg_producer::DEFAULT_LAYER);
 

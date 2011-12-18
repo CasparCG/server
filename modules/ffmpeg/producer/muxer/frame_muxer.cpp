@@ -65,7 +65,7 @@ using namespace caspar::core;
 
 namespace caspar { namespace ffmpeg {
 	
-struct frame_muxer::implementation : boost::noncopyable
+struct frame_muxer::impl : boost::noncopyable
 {	
 	std::queue<std::queue<safe_ptr<write_frame>>>	video_streams_;
 	std::queue<core::audio_buffer>					audio_streams_;
@@ -84,7 +84,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	const std::wstring								filter_str_;
 	bool											force_deinterlacing_;
 		
-	implementation(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
+	impl(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
 		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -373,7 +373,7 @@ struct frame_muxer::implementation : boost::noncopyable
 };
 
 frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
-	: impl_(new implementation(in_fps, frame_factory, filter)){}
+	: impl_(new impl(in_fps, frame_factory, filter)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int flags){impl_->push(video_frame, flags);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
 std::shared_ptr<basic_frame> frame_muxer::poll(){return impl_->poll();}

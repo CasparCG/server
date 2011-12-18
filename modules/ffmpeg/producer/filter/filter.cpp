@@ -102,7 +102,7 @@ static int query_formats_410(AVFilterContext *ctx)
     return 0;
 }
 
-struct filter::implementation
+struct filter::impl
 {
 	std::wstring					filters_;
 	std::shared_ptr<AVFilterGraph>	graph_;	
@@ -112,7 +112,7 @@ struct filter::implementation
 	std::vector<PixelFormat>		pix_fmts_;
 	std::queue<safe_ptr<AVFrame>>	bypass_;
 		
-	implementation(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) 
+	impl(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) 
 		: filters_(filters)
 		, parallel_yadif_ctx_(nullptr)
 		, pix_fmts_(pix_fmts)
@@ -314,7 +314,7 @@ struct filter::implementation
 	}
 };
 
-filter::filter(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) : impl_(new implementation(filters, pix_fmts)){}
+filter::filter(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) : impl_(new impl(filters, pix_fmts)){}
 filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
 filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
 void filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}

@@ -74,8 +74,8 @@ public:
 	
 	virtual void accept(frame_visitor& visitor);
 private:
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 	
 safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame);

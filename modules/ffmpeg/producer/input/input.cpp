@@ -64,7 +64,7 @@ static const size_t MAX_BUFFER_COUNT = 100;
 static const size_t MIN_BUFFER_COUNT = 4;
 static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
 	
-struct input::implementation : boost::noncopyable
+struct input::impl : boost::noncopyable
 {		
 	safe_ptr<diagnostics::graph>								graph_;
 
@@ -88,7 +88,7 @@ struct input::implementation : boost::noncopyable
 
 	tbb::recursive_mutex										mutex_;
 
-	explicit implementation(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
+	explicit impl(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
 		: graph_(graph)
 		, format_context_(open_input(filename))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
@@ -114,7 +114,7 @@ struct input::implementation : boost::noncopyable
 		CASPAR_LOG(info) << print() << L" Initialized.";
 	}
 
-	~implementation()
+	~impl()
 	{
 		is_running_ = false;
 		buffer_cond_.notify_all();
@@ -279,7 +279,7 @@ struct input::implementation : boost::noncopyable
 };
 
 input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
-	: impl_(new implementation(graph, filename, loop, start, length)){}
+	: impl_(new impl(graph, filename, loop, start, length)){}
 bool input::eof() const {return impl_->is_eof_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
