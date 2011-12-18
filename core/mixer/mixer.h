@@ -70,8 +70,8 @@ public:
 	boost::unique_future<boost::property_tree::wptree> info() const;
 	
 private:
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 
 }}

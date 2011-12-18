@@ -90,8 +90,8 @@ public:
 		return is_deinterlacing(filter_str());
 	}
 private:
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 
 }}

@@ -41,8 +41,8 @@ public:
 	void set_color(const std::string& name, int color);
 	void set_tag(const std::string& name);
 private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	struct impl;
+	std::shared_ptr<impl> impl_;
 };
 
 void register_graph(const safe_ptr<graph>& graph);

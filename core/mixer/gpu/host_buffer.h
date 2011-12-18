@@ -55,8 +55,8 @@ private:
 	friend class ogl_device;
 	host_buffer(int size, usage_t usage);
 
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 
 }}

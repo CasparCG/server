@@ -31,7 +31,7 @@
 
 namespace caspar { namespace core {
 																																							
-struct read_frame::implementation : boost::noncopyable
+struct read_frame::impl : boost::noncopyable
 {
 	safe_ptr<ogl_device>		ogl_;
 	int							width_;
@@ -41,7 +41,7 @@ struct read_frame::implementation : boost::noncopyable
 	audio_buffer				audio_data_;
 
 public:
-	implementation(const safe_ptr<ogl_device>& ogl, int width, int height, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
+	impl(const safe_ptr<ogl_device>& ogl, int width, int height, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
 		: ogl_(ogl)
 		, width_(width)
 		, height_(height)
@@ -70,7 +70,7 @@ public:
 };
 
 read_frame::read_frame(const safe_ptr<ogl_device>& ogl, int width, int height, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
-	: impl_(new implementation(ogl, width, height, std::move(image_data), std::move(audio_data))){}
+	: impl_(new impl(ogl, width, height, std::move(image_data), std::move(audio_data))){}
 read_frame::read_frame(){}
 const boost::iterator_range<const uint8_t*> read_frame::image_data()
 {

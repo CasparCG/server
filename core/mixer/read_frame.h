@@ -50,8 +50,8 @@ public:
 	int height() const;
 		
 private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	struct impl;
+	std::shared_ptr<impl> impl_;
 };
 
 }}

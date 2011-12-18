@@ -31,12 +31,12 @@
 
 namespace caspar { namespace core {
 
-struct fence::implementation
+struct fence::impl
 {
 	GLsync sync_;
 
-	implementation() : sync_(0){}
-	~implementation(){glDeleteSync(sync_);}
+	impl() : sync_(0){}
+	~impl(){glDeleteSync(sync_);}
 		
 	void set()
 	{
@@ -92,7 +92,7 @@ fence::fence()
 	static bool log_flag = false;
 
 	if(GLEW_ARB_sync)
-		impl_.reset(new implementation());
+		impl_.reset(new impl());
 	else if(!log_flag)
 	{
 		CASPAR_LOG(warning) << "[fence] GL_SYNC not supported, running without fences. This might cause performance degradation when running multiple channels and short buffer depth.";

@@ -39,8 +39,8 @@ public:
 	server();
 	const std::vector<safe_ptr<core::video_channel>> get_channels() const;
 private:
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 
 }

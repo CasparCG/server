@@ -31,7 +31,7 @@
 
 namespace caspar { namespace core {
 
-struct layer::implementation
+struct layer::impl
 {				
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
@@ -40,7 +40,7 @@ struct layer::implementation
 	bool						is_paused_;
 
 public:
-	implementation() 
+	impl() 
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, frame_number_(0)
@@ -155,14 +155,14 @@ public:
 	}
 };
 
-layer::layer() : impl_(new implementation()){}
+layer::layer() : impl_(new impl()){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
 layer& layer::operator=(layer&& other)
 {
 	impl_ = std::move(other.impl_);
 	return *this;
 }
-layer::layer(const layer& other) : impl_(new implementation(*other.impl_)){}
+layer::layer(const layer& other) : impl_(new impl(*other.impl_)){}
 layer& layer::operator=(const layer& other)
 {
 	layer temp(other);

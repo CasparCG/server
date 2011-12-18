@@ -37,11 +37,11 @@
 		
 namespace caspar { namespace flash {
 	
-struct cg_producer::implementation : boost::noncopyable
+struct cg_producer::impl : boost::noncopyable
 {
 	safe_ptr<core::frame_producer> flash_producer_;
 public:
-	implementation(const safe_ptr<core::frame_producer>& frame_producer) 
+	impl(const safe_ptr<core::frame_producer>& frame_producer) 
 		: flash_producer_(frame_producer)
 	{}
 	
@@ -240,7 +240,7 @@ safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_fac
 	return make_safe<cg_producer>(flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>()));	
 }
 
-cg_producer::cg_producer(const safe_ptr<core::frame_producer>& frame_producer) : impl_(new implementation(frame_producer)){}
+cg_producer::cg_producer(const safe_ptr<core::frame_producer>& frame_producer) : impl_(new impl(frame_producer)){}
 cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
 safe_ptr<core::basic_frame> cg_producer::receive(int flags){return impl_->receive(flags);}
 safe_ptr<core::basic_frame> cg_producer::last_frame() const{return impl_->last_frame();}

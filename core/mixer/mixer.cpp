@@ -57,7 +57,7 @@
 
 namespace caspar { namespace core {
 		
-struct mixer::implementation : boost::noncopyable
+struct mixer::impl : boost::noncopyable
 {		
 	safe_ptr<diagnostics::graph>				graph_;
 	boost::timer								mix_timer_;
@@ -76,7 +76,7 @@ struct mixer::implementation : boost::noncopyable
 	executor executor_;
 
 public:
-	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
+	impl(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
 		: graph_(graph)
 		, format_desc_(format_desc)
 		, ogl_(ogl)
@@ -169,7 +169,7 @@ public:
 };
 	
 mixer::mixer(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
-	: impl_(new implementation(graph, format_desc, ogl)){}
+	: impl_(new impl(graph, format_desc, ogl)){}
 void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
 void mixer::link_target(const std::weak_ptr<target_t>& target){impl_->link_target(target);}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }

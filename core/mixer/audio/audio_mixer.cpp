@@ -64,7 +64,7 @@ struct audio_stream
 	audio_buffer_ps		audio_data;
 };
 
-struct audio_mixer::implementation
+struct audio_mixer::impl
 {
 	safe_ptr<diagnostics::graph>		graph_;
 	std::stack<core::frame_transform>	transform_stack_;
@@ -74,7 +74,7 @@ struct audio_mixer::implementation
 	video_format_desc					format_desc_;
 	
 public:
-	implementation(const safe_ptr<diagnostics::graph>& graph)
+	impl(const safe_ptr<diagnostics::graph>& graph)
 		: graph_(graph)
 	{
 		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
@@ -193,7 +193,7 @@ public:
 	}
 };
 
-audio_mixer::audio_mixer(const safe_ptr<diagnostics::graph>& graph) : impl_(new implementation(graph)){}
+audio_mixer::audio_mixer(const safe_ptr<diagnostics::graph>& graph) : impl_(new impl(graph)){}
 void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}

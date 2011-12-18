@@ -51,7 +51,7 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 	
-struct audio_decoder::implementation : boost::noncopyable
+struct audio_decoder::impl : boost::noncopyable
 {	
 	int															index_;
 	const safe_ptr<AVCodecContext>								codec_context_;		
@@ -66,7 +66,7 @@ struct audio_decoder::implementation : boost::noncopyable
 	const int64_t												nb_frames_;
 	tbb::atomic<uint32_t>										file_frame_number_;
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
+	explicit impl(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
 		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
 		, resampler_(format_desc.audio_channels,	codec_context_->channels,
@@ -145,7 +145,7 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
+audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new impl(context, format_desc)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}

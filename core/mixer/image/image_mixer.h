@@ -54,8 +54,8 @@ public:
 	boost::unique_future<safe_ptr<host_buffer>> operator()(const video_format_desc& format_desc);
 		
 private:
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 
 }}

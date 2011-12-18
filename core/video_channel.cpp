@@ -40,7 +40,7 @@
 
 namespace caspar { namespace core {
 
-struct video_channel::implementation sealed : public frame_factory
+struct video_channel::impl sealed : public frame_factory
 {
 	const int						index_;
 	video_format_desc				format_desc_;
@@ -52,7 +52,7 @@ struct video_channel::implementation sealed : public frame_factory
 	safe_ptr<caspar::core::stage>	stage_;
 	
 public:
-	implementation(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl)  
+	impl(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl)  
 		: index_(index)
 		, format_desc_(format_desc)
 		, ogl_(ogl)
@@ -128,7 +128,7 @@ public:
 	}
 };
 
-video_channel::video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) : impl_(new implementation(index, format_desc, ogl)){}
+video_channel::video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) : impl_(new impl(index, format_desc, ogl)){}
 safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
 safe_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
 safe_ptr<frame_factory> video_channel::frame_factory() { return impl_;} 
