@@ -20,7 +20,7 @@
 */
 
  
-// AsyncEventServer.cpp: implementation of the AsyncEventServer class.
+// AsyncEventServer.cpp: impl of the AsyncEventServer class.
 //
 //////////////////////////////////////////////////////////////////////
 

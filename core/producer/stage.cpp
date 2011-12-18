@@ -77,7 +77,7 @@ public:
 	}
 };
 
-struct stage::implementation : public std::enable_shared_from_this<implementation>
+struct stage::impl : public std::enable_shared_from_this<impl>
 							 , boost::noncopyable
 {		
 	safe_ptr<diagnostics::graph>							graph_;
@@ -93,7 +93,7 @@ struct stage::implementation : public std::enable_shared_from_this<implementatio
 
 	executor												executor_;
 public:
-	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc)  
+	impl(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc)  
 		: graph_(graph)
 		, format_desc_(format_desc)
 		, executor_(L"stage")
@@ -104,7 +104,7 @@ public:
 
 	void spawn_token()
 	{
-		std::weak_ptr<implementation> self = shared_from_this();
+		std::weak_ptr<impl> self = shared_from_this();
 		executor_.begin_invoke([=]{tick(self);});
 	}
 
@@ -113,7 +113,7 @@ public:
 		targets_.push_back(target);
 	}
 
-	void tick(const std::weak_ptr<implementation>& self)
+	void tick(const std::weak_ptr<impl>& self)
 	{		
 		try
 		{
@@ -357,7 +357,7 @@ public:
 	}
 };
 
-stage::stage(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) : impl_(new implementation(graph, format_desc)){}
+stage::stage(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) : impl_(new impl(graph, format_desc)){}
 void stage::link_target(const std::weak_ptr<target_t>& target){impl_->link_target(target);}
 void stage::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
 void stage::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}

@@ -40,7 +40,7 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 
-struct audio_resampler::implementation
+struct audio_resampler::impl
 {	
 	std::shared_ptr<ReSampleContext> resampler_;
 	
@@ -53,7 +53,7 @@ struct audio_resampler::implementation
 	const int			input_channels_;
 	const AVSampleFormat	input_sample_format_;
 
-	implementation(int output_channels, int input_channels, int output_sample_rate, int input_sample_rate, AVSampleFormat output_sample_format, AVSampleFormat input_sample_format)
+	impl(int output_channels, int input_channels, int output_sample_rate, int input_sample_rate, AVSampleFormat output_sample_format, AVSampleFormat input_sample_format)
 		: output_channels_(output_channels)
 		, output_sample_format_(output_sample_format)
 		, input_channels_(input_channels)
@@ -101,7 +101,7 @@ struct audio_resampler::implementation
 
 
 audio_resampler::audio_resampler(int output_channels, int input_channels, int output_sample_rate, int input_sample_rate, AVSampleFormat output_sample_format, AVSampleFormat input_sample_format)
-				: impl_(new implementation(output_channels, input_channels, output_sample_rate, input_sample_rate, output_sample_format, input_sample_format)){}
+				: impl_(new impl(output_channels, input_channels, output_sample_rate, input_sample_rate, output_sample_format, input_sample_format)){}
 std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> audio_resampler::resample(std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>&& data){return impl_->resample(std::move(data));}
 
 }}

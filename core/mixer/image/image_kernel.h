@@ -68,8 +68,8 @@ public:
 	image_kernel(const safe_ptr<ogl_device>& ogl);
 	void draw(draw_params&& params);
 private:
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 
 }}

@@ -39,7 +39,7 @@ namespace caspar { namespace core {
 static tbb::atomic<int> g_w_total_count;
 static tbb::atomic<int> g_r_total_count;
 																																								
-struct host_buffer::implementation : boost::noncopyable
+struct host_buffer::impl : boost::noncopyable
 {	
 	GLuint			pbo_;
 	const int	size_;
@@ -49,7 +49,7 @@ struct host_buffer::implementation : boost::noncopyable
 	fence			fence_;
 
 public:
-	implementation(int size, usage_t usage) 
+	impl(int size, usage_t usage) 
 		: size_(size)
 		, data_(nullptr)
 		, pbo_(0)
@@ -68,7 +68,7 @@ public:
 		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == write_only ? "write_only" : "read_only");
 	}	
 
-	~implementation()
+	~impl()
 	{
 		try
 		{
@@ -137,7 +137,7 @@ public:
 	}
 };
 
-host_buffer::host_buffer(int size, usage_t usage) : impl_(new implementation(size, usage)){}
+host_buffer::host_buffer(int size, usage_t usage) : impl_(new impl(size, usage)){}
 const void* host_buffer::data() const {return impl_->data_;}
 void* host_buffer::data() {return impl_->data_;}
 void host_buffer::map(){impl_->map();}

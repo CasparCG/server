@@ -31,13 +31,13 @@
 
 namespace caspar { namespace core {
 
-struct shader::implementation : boost::noncopyable
+struct shader::impl : boost::noncopyable
 {
 	GLuint program_;
 	std::unordered_map<std::string, GLint> locations_;
 public:
 
-	implementation(const std::string& vertex_source_str, const std::string& fragment_source_str) : program_(0)
+	impl(const std::string& vertex_source_str, const std::string& fragment_source_str) : program_(0)
 	{
 		GLint success;
 	
@@ -100,7 +100,7 @@ public:
 		GL(glUseProgramObjectARB(program_));
 	}
 	
-	~implementation()
+	~impl()
 	{
 		glDeleteProgram(program_);
 	}
@@ -135,7 +135,7 @@ public:
 };
 
 
-shader::shader(const std::string& vertex_source_str, const std::string& fragment_source_str) : impl_(new implementation(vertex_source_str, fragment_source_str)){}
+shader::shader(const std::string& vertex_source_str, const std::string& fragment_source_str) : impl_(new impl(vertex_source_str, fragment_source_str)){}
 void shader::set(const std::string& name, bool value){impl_->set(name, value);}
 void shader::set(const std::string& name, int value){impl_->set(name, value);}
 void shader::set(const std::string& name, float value){impl_->set(name, value);}

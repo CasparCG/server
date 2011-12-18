@@ -60,13 +60,13 @@ namespace caspar {
 using namespace core;
 using namespace protocol;
 
-struct server::implementation : boost::noncopyable
+struct server::impl : boost::noncopyable
 {
 	safe_ptr<ogl_device>						ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
 	std::vector<safe_ptr<video_channel>>		channels_;
 
-	implementation()		
+	impl()		
 		: ogl_(ogl_device::create())
 	{			
 		ffmpeg::init();
@@ -97,7 +97,7 @@ struct server::implementation : boost::noncopyable
 		CASPAR_LOG(info) << L"Initialized controllers.";
 	}
 
-	~implementation()
+	~impl()
 	{		
 		image::uninit();
 		ffmpeg::uninit();
@@ -183,7 +183,7 @@ struct server::implementation : boost::noncopyable
 	}
 };
 
-server::server() : impl_(new implementation()){}
+server::server() : impl_(new impl()){}
 
 const std::vector<safe_ptr<video_channel>> server::get_channels() const
 {

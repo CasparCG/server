@@ -75,8 +75,8 @@ public:
 	void set_video_format_desc(const video_format_desc& format_desc);
 
 private:
-	struct implementation;
-	safe_ptr<implementation> impl_;
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 
 }}
