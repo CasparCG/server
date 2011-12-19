@@ -68,7 +68,7 @@ ogl_device::ogl_device()
 
 		glGenFramebuffers(1, &fbo_);	
 
-		CASPAR_LOG(debug) << "Created framebuffer";
+		CASPAR_LOG(debug) << "Created framebuffer.";
 
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
 
