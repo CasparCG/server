@@ -22,11 +22,14 @@
  
 #include "../StdAfx.h"
 
+#pragma warning (disable: 4244)
+
 #include "CIIProtocolStrategy.h"
 #include "CIICommandsImpl.h"
 #include <sstream>
 #include <algorithm>
 #include <modules/flash/producer/cg_producer.h>
+#include <boost/locale.hpp>
 
 namespace caspar { namespace protocol { namespace cii {
 
@@ -145,8 +148,12 @@ void MiscellaneousCommand::Execute()
 		pCIIStrategy_->DisplayMediaFile(filename_);	
 
 	//TODO: Need to be checked for validity
-	else if(state_ == 1)
-		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->add(layer_, filename_, false, TEXT(""), xmlData_);
+	else if(state_ == 1)		
+	{
+		// HACK fix. The data sent is UTF8, however the protocol is implemented for ISO-8859-1. Instead of doing risky changes we simply convert into proper encoding when leaving protocol code.
+		auto xmlData2 = boost::locale::conv::utf_to_utf<wchar_t, char>(std::string(xmlData_.begin(), xmlData_.end()));
+		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->add(layer_, filename_, false, TEXT(""), xmlData2);
+	}
 }
 
 
