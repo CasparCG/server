@@ -306,9 +306,6 @@ public:
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
 		, context_(L"flash_producer")
 	{	
-		if(!boost::filesystem::exists(filename))
-			BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
-
 		fps_ = 0;
 
 		graph_->set_color("output-buffer-count", diagnostics::color(1.0f, 1.0f, 0.0f));		 
@@ -455,7 +452,12 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 {
 	auto template_host = get_template_host(frame_factory->get_video_format_desc());
 	
-	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, env::template_folder() + L"\\" + template_host.filename, template_host.width, template_host.height));
+	auto filename = env::template_folder() + L"\\" + template_host.filename;
+	
+	if(!boost::filesystem::exists(filename))
+		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
+
+	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, filename, template_host.width, template_host.height));
 }
 
 std::wstring find_template(const std::wstring& template_name)
