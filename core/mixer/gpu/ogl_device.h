@@ -27,6 +27,10 @@
 #include <common/concurrency/executor.h>
 #include <common/memory/safe_ptr.h>
 
+#include <gl/glew.h>
+
+#include <SFML/Window/Context.hpp>
+
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
 
@@ -35,10 +39,6 @@
 
 #include <array>
 #include <unordered_map>
-
-#include <gl/glew.h>
-
-#include "../../dependencies\SFML-1.6\include\SFML/Window/Context.hpp"
 
 namespace caspar { namespace core {
 
