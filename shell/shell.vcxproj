@@ -198,7 +198,13 @@
       <MapExports>false</MapExports>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
+      <Command>copy "$(SolutionDir)dependencies\ffmpeg 0.8\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\zlib\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\SFML-1.6\lib\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\SFML-1.6\extlibs\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -254,7 +260,13 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
+      <Command>copy "$(SolutionDir)dependencies\ffmpeg 0.8\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\zlib\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\SFML-1.6\lib\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\SFML-1.6\extlibs\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -309,7 +321,13 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
+      <Command>copy "$(SolutionDir)dependencies\ffmpeg 0.8\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\zlib\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\SFML-1.6\lib\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\SFML-1.6\extlibs\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -364,7 +382,13 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)dlls\*.dll" "$(OutDir)"
+      <Command>copy "$(SolutionDir)dependencies\ffmpeg 0.8\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\zlib\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\SFML-1.6\lib\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\SFML-1.6\extlibs\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
