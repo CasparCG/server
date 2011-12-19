@@ -84,7 +84,7 @@ ogl_device::~ogl_device()
 			pool.clear();
 		BOOST_FOREACH(auto& pool, host_pools_)
 			pool.clear();
-		glDeleteFramebuffersEXT(1, &fbo_);
+		glDeleteFramebuffers(1, &fbo_);
 	});
 }
 
