@@ -40,6 +40,9 @@
     <Filter Include="source\mixer\image\shader">
       <UniqueIdentifier>{e0a140f8-e217-465c-a934-163b7ea786be}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\producer\channel">
+      <UniqueIdentifier>{f2380c6b-6ec8-4a47-8394-357a05eb831a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
@@ -136,6 +139,9 @@
     <ClInclude Include="mixer\image\shader\blending_glsl.h">
       <Filter>source\mixer\image\shader</Filter>
     </ClInclude>
+    <ClInclude Include="producer\channel\channel_producer.h">
+      <Filter>source\producer\channel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -216,6 +222,9 @@
     </ClCompile>
     <ClCompile Include="mixer\image\blend_modes.cpp">
       <Filter>source\mixer\image</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\channel\channel_producer.cpp">
+      <Filter>source\producer\channel</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
