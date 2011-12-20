@@ -38,6 +38,7 @@
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
 #include <core/producer/transition/transition_producer.h>
+#include <core/producer/channel/channel_producer.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
@@ -219,6 +220,46 @@ bool DiagnosticsCommand::DoExecute()
 		SetReplyString(TEXT("502 DIAG FAILED\r\n"));
 		return false;
 	}
+}
+
+bool ChannelGridCommand::DoExecute()
+{
+	int index = 1;
+	BOOST_FOREACH(auto channel, GetChannels())
+	{
+		if(channel != GetChannel())
+		{
+			auto producer = create_channel_producer(GetChannel()->mixer(), channel);		
+			GetChannel()->stage()->load(index, producer, false);
+			GetChannel()->stage()->play(index);
+			index++;
+		}
+	}
+
+	int n = GetChannels().size()-1;
+	double delta = 1.0/static_cast<double>(n);
+	for(int x = 0; x < n; ++x)
+	{
+		for(int y = 0; y < n; ++y)
+		{
+			int index = x+y*n+1;
+			auto transform = [=](frame_transform transform) -> frame_transform
+			{		
+				transform.fill_translation[0]	= x*delta;
+				transform.fill_translation[1]	= y*delta;
+				transform.fill_scale[0]			= delta;
+				transform.fill_scale[1]			= delta;
+				transform.clip_translation[0]	= x*delta;
+				transform.clip_translation[1]	= y*delta;
+				transform.clip_scale[0]			= delta;
+				transform.clip_scale[1]			= delta;			
+				return transform;
+			};
+			GetChannel()->stage()->apply_frame_transform(index, transform);
+		}
+	}
+
+	return true;
 }
 
 bool CallCommand::DoExecute()
