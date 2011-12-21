@@ -41,14 +41,14 @@ namespace caspar { namespace core {
 
 struct video_channel::implementation : boost::noncopyable
 {
-	const int						index_;
-	video_format_desc				format_desc_;
-	const safe_ptr<ogl_device>		ogl_;
-	safe_ptr<diagnostics::graph>	graph_;
+	const int								index_;
+	video_format_desc						format_desc_;
+	const safe_ptr<ogl_device>				ogl_;
+	const safe_ptr<diagnostics::graph>		graph_;
 
-	safe_ptr<caspar::core::output>	output_;
-	safe_ptr<caspar::core::mixer>	mixer_;
-	safe_ptr<caspar::core::stage>	stage_;
+	const safe_ptr<caspar::core::output>	output_;
+	const safe_ptr<caspar::core::mixer>		mixer_;
+	const safe_ptr<caspar::core::stage>		stage_;
 	
 public:
 	implementation(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl)  
@@ -121,5 +121,6 @@ safe_ptr<output> video_channel::output() { return impl_->output_;}
 video_format_desc video_channel::get_video_format_desc() const{return impl_->format_desc_;}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}
+int video_channel::index() const {return impl_->index_;}
 
 }}

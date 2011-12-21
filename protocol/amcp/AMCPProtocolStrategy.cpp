@@ -185,6 +185,7 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 			}
 			else
 			{
+				pCommand->SetChannels(channels_);
 				//Set scheduling
 				if(commandSwitch.size() > 0) {
 					transform(commandSwitch.begin(), commandSwitch.end(), commandSwitch.begin(), toupper);
@@ -249,7 +250,6 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 				}
 
 				pCommand->SetChannel(pChannel);
-				pCommand->SetChannels(channels_);
 				pCommand->SetChannelIndex(channelIndex);
 				pCommand->SetLayerIntex(layerIndex);
 

@@ -53,6 +53,8 @@ public:
 	void set_video_format_desc(const video_format_desc& format_desc);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
+
+	bool empty() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
