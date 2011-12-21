@@ -32,7 +32,7 @@ std::wstring ListTemplates();
 
 namespace amcp {
 	
-class ChannelGridCommand : public AMCPCommandBase<true, AddToQueue, 0>
+class ChannelGridCommand : public AMCPCommandBase<false, AddToQueue, 0>
 {
 	std::wstring print() const { return L"ChannelGridCommand";}
 	bool DoExecute();

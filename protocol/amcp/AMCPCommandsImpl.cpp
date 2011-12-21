@@ -54,6 +54,7 @@
 #include <modules/flash/producer/cg_producer.h>
 #include <modules/ffmpeg/producer/util/util.h>
 #include <modules/image/image.h>
+#include <modules/ogl/ogl.h>
 
 #include <algorithm>
 #include <locale>
@@ -225,13 +226,23 @@ bool DiagnosticsCommand::DoExecute()
 bool ChannelGridCommand::DoExecute()
 {
 	int index = 1;
+	auto self = GetChannels().back();
+	
+	std::vector<std::wstring> params;
+	params.push_back(L"SCREEN");
+	params.push_back(L"NAME");
+	params.push_back(L"Channel Grid Window");
+	auto screen = create_consumer(params);
+
+	self->output()->add(screen);
+
 	BOOST_FOREACH(auto channel, GetChannels())
 	{
-		if(channel != GetChannel())
+		if(channel != self)
 		{
-			auto producer = create_channel_producer(GetChannel()->mixer(), channel);		
-			GetChannel()->stage()->load(index, producer, false);
-			GetChannel()->stage()->play(index);
+			auto producer = create_channel_producer(self->mixer(), channel);		
+			self->stage()->load(index, producer, false);
+			self->stage()->play(index);
 			index++;
 		}
 	}
@@ -255,7 +266,7 @@ bool ChannelGridCommand::DoExecute()
 				transform.clip_scale[1]			= delta;			
 				return transform;
 			};
-			GetChannel()->stage()->apply_frame_transform(index, transform);
+			self->stage()->apply_frame_transform(index, transform);
 		}
 	}
 

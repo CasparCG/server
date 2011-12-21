@@ -21,39 +21,16 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include "../frame_producer.h"
 
-#include <boost/noncopyable.hpp>
-
-#include <boost/property_tree/ptree_fwd.hpp>
+#include <string>
+#include <vector>
 
 namespace caspar { namespace core {
-	
-class stage;
-class mixer;
-class output;
-class ogl_device;
-struct video_format_desc;
 
-class video_channel : boost::noncopyable
-{
-public:
-	explicit video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
+class video_channel;
+struct frame_factory;
 
-	safe_ptr<stage> stage();
-	safe_ptr<mixer>	mixer();
-	safe_ptr<output> output();
-	
-	video_format_desc get_video_format_desc() const;
-	void set_video_format_desc(const video_format_desc& format_desc);
-	
-	boost::property_tree::wptree info() const;
-
-	int index() const;
-
-private:
-	struct implementation;
-	safe_ptr<implementation> impl_;
-};
+safe_ptr<frame_producer> create_channel_producer(const safe_ptr<core::frame_factory>& frame_factory, const safe_ptr<video_channel>& channel);
 
 }}
