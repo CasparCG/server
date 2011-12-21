@@ -49,7 +49,7 @@ public:
 	channel_consumer() 
 	{
 		is_running_ = true;
-		frame_buffer_.set_capacity(2);
+		frame_buffer_.set_capacity(3);
 	}
 
 	~channel_consumer()
@@ -129,12 +129,14 @@ class channel_producer : public frame_producer
 
 	std::queue<safe_ptr<basic_frame>>	frame_buffer_;
 	safe_ptr<basic_frame>				last_frame_;
+	uint64_t							frame_number_;
 
 public:
 	explicit channel_producer(const safe_ptr<frame_factory>& frame_factory, const safe_ptr<video_channel>& channel) 
 		: frame_factory_(frame_factory)
 		, consumer_(make_safe<channel_consumer>())
 		, last_frame_(basic_frame::empty())
+		, frame_number_(0)
 	{
 		channel->output()->add(consumer_);
 		CASPAR_LOG(info) << print() << L" Initialized";
@@ -152,16 +154,7 @@ public:
 	{
 		auto format_desc = consumer_->get_video_format_desc();
 
-		bool half_speed = std::abs(format_desc.fps / 2.0 - frame_factory_->get_video_format_desc().fps) < 0.01;
-		
-		if(half_speed && frame_buffer_.size() >= 2)
-		{				
-			frame_buffer_.pop();
-			auto frame = frame_buffer_.front();
-			frame_buffer_.pop();
-			return last_frame_ = frame;
-		}
-		else if(!frame_buffer_.empty())
+		if(frame_buffer_.size() > 1)
 		{
 			auto frame = frame_buffer_.front();
 			frame_buffer_.pop();
@@ -171,8 +164,16 @@ public:
 		auto read_frame = consumer_->receive();
 		if(!read_frame || read_frame->image_data().empty())
 			return basic_frame::late();		
+
+		frame_number_++;
 		
 		core::pixel_format_desc desc;
+		bool double_speed = std::abs(frame_factory_->get_video_format_desc().fps / 2.0 - format_desc.fps) < 0.01;		
+		bool half_speed = std::abs(format_desc.fps / 2.0 - frame_factory_->get_video_format_desc().fps) < 0.01;
+
+		if(half_speed && frame_number_ % 2 == 0)
+			return receive(0);
+
 		desc.pix_fmt = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
 		auto frame = frame_factory_->create_frame(this, desc);
@@ -182,8 +183,6 @@ public:
 
 		frame_buffer_.push(frame);	
 		
-		bool double_speed = std::abs(frame_factory_->get_video_format_desc().fps / 2.0 - format_desc.fps) < 0.01;
-
 		if(double_speed)	
 			frame_buffer_.push(frame);
 
