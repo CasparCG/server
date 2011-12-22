@@ -68,7 +68,7 @@ public:
 		, format_desc_(format_desc)
 		, executor_(L"output")
 	{
-		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f));
+		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8));
 	}	
 	
 	void add(int index, safe_ptr<frame_consumer> consumer)
@@ -227,7 +227,7 @@ public:
 					}
 				}
 						
-				graph_->update_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
+				graph_->set_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
 			}
 			catch(...)
 			{

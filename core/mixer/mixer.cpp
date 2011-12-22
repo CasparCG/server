@@ -82,7 +82,7 @@ public:
 		, audio_mixer_(graph_)
 		, executor_(L"mixer")
 	{			
-		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f));
+		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
 	}
 	
 	void send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& packet)
@@ -110,7 +110,7 @@ public:
 				auto audio = audio_mixer_(format_desc_);
 				image.wait();
 
-				graph_->update_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
+				graph_->set_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
 
 				target_->send(std::make_pair(make_safe<read_frame>(ogl_, format_desc_.size, std::move(image.get()), std::move(audio)), packet.second));					
 			}

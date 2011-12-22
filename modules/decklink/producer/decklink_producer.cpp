@@ -117,7 +117,6 @@ public:
 		hints_ = 0;
 		frame_buffer_.set_capacity(2);
 		
-		graph_->add_guide("tick-time", 0.5);
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -177,7 +176,7 @@ public:
 
 		try
 		{
-			graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
+			graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 
 			frame_timer_.restart();
@@ -231,10 +230,10 @@ public:
 			for(auto frame = muxer_.poll(); frame; frame = muxer_.poll())
 			{
 				if(!frame_buffer_.try_push(make_safe_ptr(frame)))
-					graph_->add_tag("dropped-frame");
+					graph_->set_tag("dropped-frame");
 			}
 
-			graph_->update_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
+			graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 
 			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 		}
@@ -256,7 +255,7 @@ public:
 
 		safe_ptr<core::basic_frame> frame = core::basic_frame::late();
 		if(!frame_buffer_.try_pop(frame))
-			graph_->add_tag("late-frame");
+			graph_->set_tag("late-frame");
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 		return frame;
 	}
