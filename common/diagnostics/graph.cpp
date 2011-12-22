@@ -26,6 +26,7 @@
 #pragma warning (disable : 4244)
 
 #include "../concurrency/executor.h"
+#include "../concurrency/lock.h"
 #include "../env.h"
 
 #include <SFML/Graphics.hpp>
@@ -35,12 +36,35 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
-#include <numeric>
-#include <map>
+#include <tbb/concurrent_unordered_map.h>
+#include <tbb/atomic.h>
+#include <tbb/spin_mutex.h>
+
 #include <array>
+#include <numeric>
+#include <tuple>
 
 namespace caspar { namespace diagnostics {
 		
+int color(float r, float g, float b, float a)
+{
+	int code = 0;
+	code |= static_cast<int>(r*255.0f+0.5f) << 24;
+	code |= static_cast<int>(g*255.0f+0.5f) << 16;
+	code |= static_cast<int>(b*255.0f+0.5f) <<  8;
+	code |= static_cast<int>(a*255.0f+0.5f) <<  0;
+	return code;
+}
+
+std::tuple<float, float, float, float> color(int code)
+{
+	float r = static_cast<float>((code >> 24) & 255)/255.0f;
+	float g = static_cast<float>((code >> 16) & 255)/255.0f;
+	float b = static_cast<float>((code >>  8) & 255)/255.0f;
+	float a = static_cast<float>((code >>  0) & 255)/255.0f;
+	return std::make_tuple(r, g, b, a);
+}
+
 struct drawable : public sf::Drawable
 {
 	virtual ~drawable(){}
@@ -52,24 +76,17 @@ class context : public drawable
 {	
 	std::unique_ptr<sf::RenderWindow> window_;
 	
-	std::list<std::shared_ptr<drawable>> drawables_;
+	std::list<std::weak_ptr<drawable>> drawables_;
 		
 	executor executor_;
 public:					
-
-	template<typename Func>
-	static void begin_invoke(Func&& func, task_priority priority) // noexcept
-	{	
-		if(get_instance().executor_.size() < 128)
-			get_instance().executor_.begin_invoke(std::forward<Func>(func), priority);	
-	}
 
 	static void register_drawable(const std::shared_ptr<drawable>& drawable)
 	{
 		if(!drawable)
 			return;
 
-		begin_invoke([=]
+		get_instance().executor_.begin_invoke([=]
 		{
 			get_instance().do_register_drawable(drawable);
 		}, high_priority);
@@ -77,7 +94,7 @@ public:
 
 	static void show(bool value)
 	{
-		begin_invoke([=]
+		get_instance().executor_.begin_invoke([=]
 		{	
 			get_instance().do_show(value);
 		}, high_priority);
@@ -95,7 +112,7 @@ private:
 		{
 			if(!window_)
 			{
-				window_.reset(new sf::RenderWindow(sf::VideoMode(600, 1000), "CasparCG Diagnostics"));
+				window_.reset(new sf::RenderWindow(sf::VideoMode(750, 750), "CasparCG Diagnostics"));
 				window_->SetPosition(0, 0);
 				window_->SetActive();
 				glEnable(GL_BLEND);
@@ -126,7 +143,7 @@ private:
 		glClear(GL_COLOR_BUFFER_BIT);
 		window_->Draw(*this);
 		window_->Display();
-		boost::this_thread::sleep(boost::posix_time::milliseconds(20));
+		boost::this_thread::sleep(boost::posix_time::milliseconds(15));
 		executor_.begin_invoke([this]{tick();});
 	}
 
@@ -139,8 +156,8 @@ private:
 		int n = 0;
 		for(auto it = drawables_.begin(); it != drawables_.end(); ++n)
 		{
-			auto& drawable = *it;
-			if(!drawable.unique())
+			auto drawable = it->lock();
+			if(drawable)
 			{
 				drawable->SetScale(static_cast<float>(window_->GetWidth()), static_cast<float>(target_dy*window_->GetHeight()));
 				float target_y = std::max(last_y, static_cast<float>(n * window_->GetHeight())*target_dy);
@@ -155,8 +172,15 @@ private:
 	
 	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
 	{
-		if(std::find(drawables_.begin(), drawables_.end(), drawable) == drawables_.end())
-			drawables_.push_back(drawable);
+		drawables_.push_back(drawable);
+		auto it = drawables_.begin();
+		while(it != drawables_.end())
+		{
+			if(it->lock())
+				++it;
+			else	
+				it = drawables_.erase(it);			
+		}
 	}
 	
 	static context& get_instance()
@@ -166,105 +190,55 @@ private:
 	}
 };
 
-class guide : public drawable
-{
-	float value_;
-	color c_;
-public:
-	guide(color c = color(1.0f, 1.0f, 1.0f, 0.6f)) 
-		: value_(0.0f)
-		, c_(c){}
-
-	guide(float value, color c = color(1.0f, 1.0f, 1.0f, 0.6f)) 
-		: value_(value)
-		, c_(c){}
-			
-	void set_color(color c) {c_ = c;}
-
-	void render(sf::RenderTarget&)
-	{		
-		glEnable(GL_LINE_STIPPLE);
-		glLineStipple(3, 0xAAAA);
-		glBegin(GL_LINE_STRIP);	
-			glColor4f(c_.red, c_.green, c_.blue+0.2f, c_.alpha);		
-			glVertex3f(0.0f, (1.0f-value_) * 0.8f + 0.1f, 0.0f);		
-			glVertex3f(1.0f, (1.0f-value_) * 0.8f + 0.1f, 0.0f);	
-		glEnd();
-		glDisable(GL_LINE_STIPPLE);
-	}
-};
-
 class line : public drawable
 {
-	boost::optional<diagnostics::guide> guide_;
-	boost::circular_buffer<std::pair<double, bool>> line_data_;
+	boost::circular_buffer<std::pair<float, bool>> line_data_;
 
-	boost::circular_buffer<double>	tick_data_;
-	bool							tick_tag_;
-	color c_;
+	tbb::atomic<float>	tick_data_;
+	tbb::atomic<bool>	tick_tag_;
+	tbb::atomic<int>	color_;
 public:
 	line(size_t res = 600)
 		: line_data_(res)
-		, tick_data_(50)
-		, tick_tag_(false)
-		, c_(1.0f, 1.0f, 1.0f)
 	{
+		tick_data_	= -1.0f;
+		color_		= 0xFFFFFFFF;
+		tick_tag_	= false;
+
 		line_data_.push_back(std::make_pair(-1.0f, false));
 	}
 	
-	void update(double value)
+	void set_value(float value)
 	{
-		tick_data_.push_back(value);
-	}
-
-	void set(double value)
-	{
-		tick_data_.clear();
-		tick_data_.push_back(value);
+		tick_data_ = value;
 	}
 	
-	void tag()
+	void set_tag()
 	{
 		tick_tag_ = true;
 	}
-
-	void guide(const guide& guide)
+		
+	void set_color(int color)
 	{
-		guide_ = guide;
-		guide_->set_color(c_);
-	}
-	
-	void set_color(color c)
-	{
-		c_ = c;
-		if(guide_)
-			guide_->set_color(c_);
+		color_ = color;
 	}
 
-	color get_color() const { return c_; }
-	
+	int get_color()
+	{
+		return color_;
+	}
+		
 	void render(sf::RenderTarget& target)
 	{
 		float dx = 1.0f/static_cast<float>(line_data_.capacity());
 		float x = static_cast<float>(line_data_.capacity()-line_data_.size())*dx;
 
-		if(!tick_data_.empty())
-		{
-			float sum = std::accumulate(tick_data_.begin(), tick_data_.end(), 0.0) + std::numeric_limits<float>::min();
-			line_data_.push_back(std::make_pair(static_cast<float>(sum)/static_cast<float>(tick_data_.size()), tick_tag_));
-			tick_data_.clear();
-		}
-		else if(!line_data_.empty())
-		{
-			line_data_.push_back(std::make_pair(line_data_.back().first, tick_tag_));
-		}
-		tick_tag_ = false;
-
-		if(guide_)
-			target.Draw(*guide_);
-		
+		line_data_.push_back(std::make_pair(tick_data_, tick_tag_));		
+		tick_tag_   = false;
+				
 		glBegin(GL_LINE_STRIP);
-		glColor4f(c_.red, c_.green, c_.blue, 0.8f);		
+		auto c = color(color_);
+		glColor4f(std::get<0>(c), std::get<1>(c), std::get<2>(c), 0.8f);		
 		for(size_t n = 0; n < line_data_.size(); ++n)		
 			if(line_data_[n].first > -0.5)
 				glVertex3d(x+n*dx, std::max(0.05, std::min(0.95, (1.0f-line_data_[n].first)*0.8 + 0.1f)), 0.0);		
@@ -276,8 +250,7 @@ public:
 		{
 			if(line_data_[n].second)
 			{
-				glBegin(GL_LINE_STRIP);
-				glColor4f(c_.red, c_.green, c_.blue, c_.alpha);					
+				glBegin(GL_LINE_STRIP);			
 					glVertex3f(x+n*dx, 0.0f, 0.0f);				
 					glVertex3f(x+n*dx, 1.0f, 0.0f);		
 				glEnd();
@@ -287,46 +260,41 @@ public:
 	}
 };
 
-struct graph::implementation : public drawable
+struct graph::impl : public drawable
 {
-	std::map<std::string, diagnostics::line> lines_;
-	std::string name_;
-	std::string text_;
-	
-	implementation(const std::string& name) 
-		: name_(name)
-		, text_(name_){}
-	
-	void set_text(const std::string& value)
+	tbb::concurrent_unordered_map<std::string, diagnostics::line> lines_;
+
+	tbb::spin_mutex mutex_;
+	std::wstring text_;
+
+	impl()
 	{
-		text_ = value;
+	}
+		
+	void set_text(const std::wstring& value)
+	{
+		auto temp = value;
+		lock(mutex_, [&]
+		{
+			text_ = std::move(temp);
+		});
 	}
 
-	void update(const std::string& name, double value)
+	void set_value(const std::string& name, double value)
 	{
-		lines_[name].update(value);
+		lines_[name].set_value(value);
 	}
 
-	void set(const std::string& name, double value)
+	void set_tag(const std::string& name)
 	{
-		lines_[name].set(value);
+		lines_[name].set_tag();
 	}
 
-	void tag(const std::string& name)
+	void set_color(const std::string& name, int color)
 	{
-		lines_[name].tag();
+		lines_[name].set_color(color);
 	}
-
-	void set_color(const std::string& name, color c)
-	{
-		lines_[name].set_color(c);
-	}
-	
-	void guide(const std::string& name, double value)
-	{
-		lines_[name].guide(diagnostics::guide(value));	
-	}
-	
+		
 private:
 	void render(sf::RenderTarget& target)
 	{
@@ -334,7 +302,13 @@ private:
 		const size_t text_margin = 2;
 		const size_t text_offset = (text_size+text_margin*2)*2;
 
-		sf::String text(text_.c_str(), sf::Font::GetDefaultFont(), text_size);
+		std::wstring text_str;
+		{
+			tbb::spin_mutex::scoped_lock lock(mutex_);
+			text_str = text_;
+		}
+
+		sf::String text(text_str.c_str(), sf::Font::GetDefaultFont(), text_size);
 		text.SetStyle(sf::String::Italic);
 		text.Move(text_margin, text_margin);
 		
@@ -347,7 +321,7 @@ private:
 				sf::String line_text(it->first, sf::Font::GetDefaultFont(), text_size);
 				line_text.SetPosition(x_offset, text_margin+text_offset/2);
 				auto c = it->second.get_color();
-				line_text.SetColor(sf::Color(c.red*255.0f, c.green*255.0f, c.blue*255.0f, c.alpha*255.0f));
+				line_text.SetColor(sf::Color((c >> 24) & 255, (c >> 16) & 255, (c >> 8) & 255, (c >> 0) & 255));
 				target.Draw(line_text);
 				x_offset = line_text.GetRect().Right + text_margin*2;
 			}
@@ -367,8 +341,25 @@ private:
 			glTranslated(0.0f, text_offset/GetScale().y, 1.0f);
 			glScaled(1.0f, 1.0-text_offset/GetScale().y, 1.0f);
 		
-			target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
-			target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
+			glEnable(GL_LINE_STIPPLE);
+			glLineStipple(3, 0xAAAA);
+			glColor4f(1.0f, 1.0f, 1.9f, 0.5f);	
+			glBegin(GL_LINE_STRIP);		
+				glVertex3f(0.0f, (1.0f-0.5f) * 0.8f + 0.1f, 0.0f);		
+				glVertex3f(1.0f, (1.0f-0.5f) * 0.8f + 0.1f, 0.0f);	
+			glEnd();
+			glBegin(GL_LINE_STRIP);		
+				glVertex3f(0.0f, (1.0f-0.0f) * 0.8f + 0.1f, 0.0f);		
+				glVertex3f(1.0f, (1.0f-0.0f) * 0.8f + 0.1f, 0.0f);	
+			glEnd();
+			glBegin(GL_LINE_STRIP);		
+				glVertex3f(0.0f, (1.0f-1.0f) * 0.8f + 0.1f, 0.0f);		
+				glVertex3f(1.0f, (1.0f-1.0f) * 0.8f + 0.1f, 0.0f);	
+			glEnd();
+			glDisable(GL_LINE_STIPPLE);
+
+			//target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
+			//target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
 
 			for(auto it = lines_.begin(); it != lines_.end(); ++it)		
 				target.Draw(it->second);
@@ -376,73 +367,18 @@ private:
 		glPopMatrix();
 	}
 
-	implementation(implementation&);
-	implementation& operator=(implementation&);
+	impl(impl&);
+	impl& operator=(impl&);
 };
 	
-graph::graph() : impl_(new implementation(""))
+graph::graph() : impl_(new impl())
 {
-
-}
-
-void graph::set_text(const std::string& value)
-{
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->set_text(value);
-	}, high_priority);
 }
 
-void graph::set_text(const std::wstring& value)
-{
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		set_text(narrow(value));
-	}, high_priority);
-}
-
-void graph::update_value(const std::string& name, double value)
-{
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->update(name, value);
-	}, high_priority);
-}
-void graph::set_value(const std::string& name, double value)
-{	
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->set(name, value);
-	}, high_priority);	
-}
-void graph::set_color(const std::string& name, color c)
-{		
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->set_color(name, c);
-	}, high_priority);
-}
-void graph::add_tag(const std::string& name)
-{		
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->tag(name);
-	}, high_priority);
-}
-void graph::add_guide(const std::string& name, double value)
-{	
-	auto p = impl_;
-	context::begin_invoke([=]
-	{	
-		p->guide(name, value);
-	}, high_priority);
-}
+void graph::set_text(const std::wstring& value){impl_->set_text(value);}
+void graph::set_value(const std::string& name, double value){impl_->set_value(name, value);}
+void graph::set_color(const std::string& name, int color){impl_->set_color(name, color);}
+void graph::set_tag(const std::string& name){impl_->set_tag(name);}
 
 void register_graph(const safe_ptr<graph>& graph)
 {
@@ -457,16 +393,16 @@ void show_graphs(bool value)
 //namespace v2
 //{	
 //	
-//struct line::implementation
+//struct line::impl
 //{
 //	std::wstring name_;
 //	boost::circular_buffer<data> ticks_;
 //
-//	implementation(const std::wstring& name) 
+//	impl(const std::wstring& name) 
 //		: name_(name)
 //		, ticks_(1024){}
 //	
-//	void update_value(float value)
+//	void set_value(float value)
 //	{
 //		ticks_.push_back();
 //		ticks_.back().value = value;
@@ -475,36 +411,36 @@ void show_graphs(bool value)
 //	void set_value(float value)
 //	{
 //		ticks_.clear();
-//		update_value(value);
+//		set_value(value);
 //	}
 //};
 //
 //line::line(){}
-//line::line(const std::wstring& name) : impl_(new implementation(name)){}
+//line::line(const std::wstring& name) : impl_(new impl(name)){}
 //std::wstring line::print() const {return impl_->name_;}
-//void line::update_value(float value){impl_->update_value(value);}
+//void line::set_value(float value){impl_->set_value(value);}
 //void line::set_value(float value){impl_->set_value(value);}
 //boost::circular_buffer<data>& line::ticks() { return impl_->ticks_;}
 //
-//struct graph::implementation
+//struct graph::impl
 //{
 //	std::map<std::wstring, line> lines_;
 //	color						 color_;
 //	printer						 printer_;
 //
-//	implementation(const std::wstring& name) 
+//	impl(const std::wstring& name) 
 //		: printer_([=]{return name;}){}
 //
-//	implementation(const printer& parent_printer) 
+//	impl(const printer& parent_printer) 
 //		: printer_(parent_printer){}
 //	
-//	void update_value(const std::wstring& name, float value)
+//	void set_value(const std::wstring& name, float value)
 //	{
 //		auto it = lines_.find(name);
 //		if(it == lines_.end())
 //			it = lines_.insert(std::make_pair(name, line(name))).first;
 //
-//		it->second.update_value(value);
+//		it->second.set_value(value);
 //	}
 //
 //	void set_value(const std::wstring& name, float value)
@@ -537,9 +473,9 @@ void show_graphs(bool value)
 //	}
 //};
 //	
-//graph::graph(const std::wstring& name) : impl_(new implementation(name)){}
-//graph::graph(const printer& parent_printer) : impl_(new implementation(parent_printer)){}
-//void graph::update_value(const std::wstring& name, float value){impl_->update_value(name, value);}
+//graph::graph(const std::wstring& name) : impl_(new impl(name)){}
+//graph::graph(const printer& parent_printer) : impl_(new impl(parent_printer)){}
+//void graph::set_value(const std::wstring& name, float value){impl_->set_value(name, value);}
 //void graph::set_value(const std::wstring& name, float value){impl_->set_value(name, value);}
 //void graph::set_color(const std::wstring& name, color c){impl_->set_color(name, c);}
 //color graph::get_color() const {return impl_->get_color();}

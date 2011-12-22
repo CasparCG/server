@@ -96,8 +96,7 @@ public:
 		, target_(target)
 		, executor_(L"stage")
 	{
-		graph_->add_guide("tick-time", 0.5f);	
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f, 0.8));	
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 	}
 
@@ -147,7 +146,7 @@ public:
 				frames[layer.first] = frame1;
 			});
 			
-			graph_->update_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
+			graph_->set_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
 			
 			std::shared_ptr<void> ticket(nullptr, [self](void*)
 			{
@@ -158,7 +157,7 @@ public:
 
 			target_->send(std::make_pair(frames, ticket));
 
-			graph_->update_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
+			graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 		}
 		catch(...)

@@ -211,6 +211,7 @@
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
     <ClInclude Include="concurrency\com_context.h" />
     <ClInclude Include="concurrency\executor.h" />
+    <ClInclude Include="concurrency\lock.h" />
     <ClInclude Include="concurrency\target.h" />
     <ClInclude Include="diagnostics\graph.h" />
     <ClInclude Include="exception\exceptions.h" />
