@@ -33,6 +33,7 @@
 #include "../../mixer/read_frame.h"
 
 #include <common/exception/exceptions.h>
+#include <common/memory/memcpy.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -40,10 +41,10 @@ namespace caspar { namespace core {
 
 class channel_consumer : public frame_consumer
 {	
-	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>> frame_buffer_;
-	core::video_format_desc format_desc_;
-	int						channel_index_;
-	tbb::atomic<bool>		is_running_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>>	frame_buffer_;
+	core::video_format_desc										format_desc_;
+	int															channel_index_;
+	tbb::atomic<bool>											is_running_;
 
 public:
 	channel_consumer() 
@@ -68,7 +69,7 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		format_desc_    = format_desc;
-		channel_index_ = channel_index;
+		channel_index_  = channel_index;
 	}
 
 	virtual std::wstring print() const override
@@ -168,17 +169,17 @@ public:
 		frame_number_++;
 		
 		core::pixel_format_desc desc;
-		bool double_speed = std::abs(frame_factory_->get_video_format_desc().fps / 2.0 - format_desc.fps) < 0.01;		
-		bool half_speed = std::abs(format_desc.fps / 2.0 - frame_factory_->get_video_format_desc().fps) < 0.01;
+		bool double_speed	= std::abs(frame_factory_->get_video_format_desc().fps / 2.0 - format_desc.fps) < 0.01;		
+		bool half_speed		= std::abs(format_desc.fps / 2.0 - frame_factory_->get_video_format_desc().fps) < 0.01;
 
-		if(half_speed && frame_number_ % 2 == 0)
+		if(half_speed && frame_number_ % 2 == 0) // Skip frame
 			return receive(0);
 
 		desc.pix_fmt = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
 		auto frame = frame_factory_->create_frame(this, desc);
 
-		memcpy(frame->image_data().begin(), read_frame->image_data().begin(), read_frame->image_data().size());
+		fast_memcpy(frame->image_data().begin(), read_frame->image_data().begin(), read_frame->image_data().size());
 		frame->commit();
 
 		frame_buffer_.push(frame);	
@@ -199,7 +200,7 @@ public:
 		return L"channel[]";
 	}
 
-	boost::property_tree::wptree info() const override
+	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"channel-producer");
