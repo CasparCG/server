@@ -52,6 +52,8 @@ public:
 	uint32_t nb_frames() const;
 	
 	uint32_t file_frame_number() const;
+
+	std::wstring print() const;
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

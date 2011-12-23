@@ -85,9 +85,16 @@ void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& 
     if(boost::log::extract<boost::log::attributes::current_thread_id::held_type>(L"ThreadID", rec.attribute_values(), lambda::var(thread_id) = lambda::_1))
         strm << L"[" << thread_id << L"] ";
 
+
     severity_level severity;
     if(boost::log::extract<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get(), rec.attribute_values(), lambda::var(severity) = lambda::_1))
+	{
+		std::stringstream ss;
+		ss << severity;
         strm << L"[" << severity << L"] ";
+		for(int n = 0; n < 7-static_cast<int>(ss.str().size()); ++n)
+			strm << L" ";
+	}
 
     strm << rec.message();
 }
@@ -158,17 +165,17 @@ void add_file_sink(const std::wstring& folder)
 
 void set_log_level(const std::wstring& lvl)
 {	
-	if(boost::iequals(lvl, L"trace  "))
+	if(boost::iequals(lvl, L"trace"))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= trace);
-	else if(boost::iequals(lvl, L"debug  "))
+	else if(boost::iequals(lvl, L"debug"))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
-	else if(boost::iequals(lvl, L"info   "))
+	else if(boost::iequals(lvl, L"info"))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
 	else if(boost::iequals(lvl, L"warning"))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= warning);
-	else if(boost::iequals(lvl, L"error  "))
+	else if(boost::iequals(lvl, L"error"))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= error);
-	else if(boost::iequals(lvl, L"fatal  "))
+	else if(boost::iequals(lvl, L"fatal"))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= fatal);
 }
 

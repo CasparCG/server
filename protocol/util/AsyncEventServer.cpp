@@ -31,6 +31,8 @@
 
 #include <common/log/log.h>
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include <string>
 #include <algorithm>
 
@@ -355,12 +357,17 @@ bool AsyncEventServer::OnRead(SocketInfoPtr& pSI) {
 
 		//Convert to widechar
 		if(ConvertMultiByteToWideChar(pProtocolStrategy_->GetCodepage(), pSI->recvBuffer_, recvResult + pSI->recvLeftoverOffset_, pSI->wideRecvBuffer_, pSI->recvLeftoverOffset_))
+		{
+			auto msg = 	std::wstring(pSI->wideRecvBuffer_.begin(), pSI->wideRecvBuffer_.end());
+			boost::replace_all(msg, L"\n", L"\\n");
+			boost::replace_all(msg, L"\r", L"\\r");
+
+			CASPAR_LOG(info) << L"Received message from " << pSI->host_.c_str() << ": "<< msg;
 			pProtocolStrategy_->Parse(&pSI->wideRecvBuffer_[0], pSI->wideRecvBuffer_.size(), pSI);
+		}
 		else			
 			CASPAR_LOG(error) << "Read from " << pSI->host_.c_str() << TEXT(" failed, could not convert command to UNICODE");
 			
-		
-
 		maxRecvLength = sizeof(pSI->recvBuffer_)-pSI->recvLeftoverOffset_;
 		recvResult = recv(pSI->socket_, pSI->recvBuffer_+pSI->recvLeftoverOffset_, maxRecvLength, 0);
 	}
@@ -434,8 +441,13 @@ void AsyncEventServer::DoSend(SocketInfo& socketInfo) {
 			}
 			else {
 				if(sentBytes == bytesToSend) {
+					
 					if(sentBytes < 512)
+					{
+						boost::replace_all(socketInfo.sendQueue_.front(), L"\n", L"\\n");
+						boost::replace_all(socketInfo.sendQueue_.front(), L"\r", L"\\r");
 						CASPAR_LOG(info) << L"Sent message to " << socketInfo.host_.c_str() << L": " << socketInfo.sendQueue_.front().c_str();
+					}
 					else
 						CASPAR_LOG(info) << "Sent more than 512 bytes to " << socketInfo.host_.c_str();
 

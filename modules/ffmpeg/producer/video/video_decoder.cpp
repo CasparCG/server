@@ -73,7 +73,6 @@ public:
 		, height_(codec_context_->height)
 	{
 		file_frame_number_ = 0;
-		CASPAR_LOG(debug) << "[video_decoder] " << context->streams[index_]->codec->codec->long_name;
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -144,6 +143,11 @@ public:
 	{
 		return std::max<uint32_t>(nb_frames_, file_frame_number_);
 	}
+
+	std::wstring print() const
+	{		
+		return L"[video_decoder] " + widen(codec_context_->codec->long_name);
+	}
 };
 
 video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context) : impl_(new implementation(context)){}
@@ -155,5 +159,6 @@ size_t video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}
+std::wstring video_decoder::print() const{return impl_->print();}
 
 }}
