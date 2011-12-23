@@ -135,6 +135,10 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     //}
     strcpy(prev, line);
     sanitize((uint8_t*)line);
+
+	auto len = strlen(line);
+	if(len > 0)
+		line[len-1] = 0;
 	
 	if(level == AV_LOG_DEBUG)
 		CASPAR_LOG(debug) << L"[ffmpeg] " << line;

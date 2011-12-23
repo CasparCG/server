@@ -81,7 +81,6 @@ public:
 				catch(...){}
 								
 				producer2.reset();
-				CASPAR_LOG(debug) << str << L" Destroyed.";
 				pool->push(destroyer);
 			}); 
 		}
@@ -98,7 +97,7 @@ public:
 		}
 	}
 
-	virtual safe_ptr<basic_frame>								receive(int flags) override												{return (*producer_)->receive(flags);}
+	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
 	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (*producer_)->last_frame();}
 	virtual std::wstring										print() const override													{return (*producer_)->print();}
 	virtual boost::property_tree::wptree 						info() const override													{return (*producer_)->info();}
@@ -108,10 +107,67 @@ public:
 	virtual uint32_t											nb_frames() const override												{return (*producer_)->nb_frames();}
 };
 
-safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer>&& producer)
+safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer> producer)
 {
 	return make_safe<destroy_producer_proxy>(std::move(producer));
 }
+
+class print_producer_proxy : public frame_producer
+{	
+	std::shared_ptr<frame_producer> producer_;
+public:
+	print_producer_proxy(safe_ptr<frame_producer>&& producer) 
+		: producer_(std::move(producer))
+	{
+		CASPAR_LOG(info) << producer_->print() << L" Initialized";
+	}
+
+	~print_producer_proxy()
+	{		
+		auto str = producer_->print();
+		producer_.reset();
+		CASPAR_LOG(info) << str << L" Uninitialized";
+	}
+
+	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (producer_)->receive(hints);}
+	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (producer_)->last_frame();}
+	virtual std::wstring										print() const override													{return (producer_)->print();}
+	virtual boost::property_tree::wptree 						info() const override													{return (producer_)->info();}
+	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (producer_)->call(str);}
+	virtual safe_ptr<frame_producer>							get_following_producer() const override									{return (producer_)->get_following_producer();}
+	virtual void												set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(producer_)->set_leading_producer(producer);}
+	virtual uint32_t											nb_frames() const override												{return (producer_)->nb_frames();}
+};
+
+safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer)
+{
+	return make_safe<print_producer_proxy>(std::move(producer));
+}
+
+class last_frame_producer : public frame_producer
+{
+	const std::wstring			print_;
+	const safe_ptr<basic_frame>	frame_;
+	const uint32_t				nb_frames_;
+public:
+	last_frame_producer(const safe_ptr<frame_producer>& producer) 
+		: print_(producer->print())
+		, frame_(producer->last_frame() != basic_frame::eof() ? producer->last_frame() : basic_frame::empty())
+		, nb_frames_(producer->nb_frames())
+	{
+	}
+	
+	virtual safe_ptr<basic_frame> receive(int){return frame_;}
+	virtual safe_ptr<core::basic_frame> last_frame() const{return frame_;}
+	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
+	virtual uint32_t nb_frames() const {return nb_frames_;}	
+	virtual boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"last-frame-producer");
+		return info;
+	}
+};
 
 struct empty_frame_producer : public frame_producer
 {
@@ -135,18 +191,24 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 	return producer;
 }	
 
-safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int flags)
+safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints)
 {	
-	auto frame = producer->receive(flags);
-	if(frame != basic_frame::eof())
-		return frame;
-		
-	CASPAR_LOG(info) << producer->print() << " End Of File.";
-	auto following = producer->get_following_producer();
-	following->set_leading_producer(producer);
-	producer = std::move(following);
+	auto frame = producer->receive(hints);
+	if(frame == basic_frame::eof())
+	{
+		CASPAR_LOG(info) << producer->print() << " End Of File.";
+		auto following = producer->get_following_producer();
+		if(following != frame_producer::empty())
+		{
+			following->set_leading_producer(producer);
+			producer = std::move(following);
+		}
+		else
+			producer = make_safe<last_frame_producer>(producer);
 
-	return receive_and_follow(producer, flags);	
+		return receive_and_follow(producer, hints);
+	}
+	return frame;
 }
 
 void register_producer_factory(const producer_factory_t& factory)
@@ -178,6 +240,9 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 	
 	if(producer == frame_producer::empty())
 		producer = create_playlist_producer(my_frame_factory, params);
+	
+	if(producer != frame_producer::empty())
+		producer = create_producer_print_proxy(producer);
 
 	return producer;
 }
@@ -212,7 +277,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		std::wstring str;
 		BOOST_FOREACH(auto& param, params)
 			str += param + L" ";
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << warg_value_info(str));
+		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(u8(str)));
 	}
 
 	return producer;

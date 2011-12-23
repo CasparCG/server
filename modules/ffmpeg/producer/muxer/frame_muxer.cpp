@@ -97,8 +97,10 @@ struct frame_muxer::impl : boost::noncopyable
 	{
 		video_streams_.push(std::queue<safe_ptr<write_frame>>());
 		audio_streams_.push(core::audio_buffer());
-		boost::range::sort(audio_cadence_);
-		boost::range::reverse(audio_cadence_);
+		
+		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
+		// This cadence fills the audio mixer most optimally.
+		boost::range::rotate(audio_cadence_, std::end(audio_cadence_)-1);
 	}
 
 	void push(const std::shared_ptr<AVFrame>& video_frame, int flags)

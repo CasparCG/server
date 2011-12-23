@@ -21,42 +21,16 @@
 
 #pragma once
 
-#include <core/mixer/audio/audio_mixer.h>
+#include "../frame_producer.h"
 
-#include <common/memory/safe_ptr.h>
+#include <string>
+#include <vector>
 
-#include <boost/noncopyable.hpp>
+namespace caspar { namespace core {
 
-struct AVPacket;
-struct AVFormatContext;
+class video_channel;
+struct frame_factory;
 
-namespace caspar { 
-			
-namespace core {
-
-struct video_format_desc;
-
-}
-
-namespace ffmpeg {
-	
-class audio_decoder : boost::noncopyable
-{
-public:
-	explicit audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
-	
-	bool ready() const;
-	void push(const std::shared_ptr<AVPacket>& packet);
-	std::shared_ptr<core::audio_buffer> poll();
-
-	uint32_t nb_frames() const;
-	
-	uint32_t file_frame_number() const;
-
-	std::wstring print() const;
-private:
-	struct impl;
-	safe_ptr<impl> impl_;
-};
+safe_ptr<frame_producer> create_channel_producer(const safe_ptr<core::frame_factory>& frame_factory, const safe_ptr<video_channel>& channel);
 
 }}

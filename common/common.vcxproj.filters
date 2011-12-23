@@ -127,5 +127,8 @@
     <ClInclude Include="utility\param.h">
       <Filter>source\utility</Filter>
     </ClInclude>
+    <ClInclude Include="concurrency\lock.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

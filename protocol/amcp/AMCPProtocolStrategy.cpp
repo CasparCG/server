@@ -156,8 +156,6 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 	AMCPCommandPtr pCommand;
 	MessageParserState state = New;
 
-	CASPAR_LOG(info) << L"Received: " << message;
-
 	std::size_t tokensInMessage = TokenizeMessage(message, &tokens);
 
 	//parse the message one token at the time
@@ -185,6 +183,7 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 			}
 			else
 			{
+				pCommand->SetChannels(channels_);
 				//Set scheduling
 				if(commandSwitch.size() > 0) {
 					transform(commandSwitch.begin(), commandSwitch.end(), commandSwitch.begin(), toupper);
@@ -249,7 +248,6 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 				}
 
 				pCommand->SetChannel(pChannel);
-				pCommand->SetChannels(channels_);
 				pCommand->SetChannelIndex(channelIndex);
 				pCommand->SetLayerIntex(layerIndex);
 
@@ -298,29 +296,30 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	std::wstring s = str;
 	transform(s.begin(), s.end(), s.begin(), toupper);
 	
-	if	   (s == TEXT("MIXER"))		return std::make_shared<MixerCommand>();
-	else if(s == TEXT("DIAG"))		return std::make_shared<DiagnosticsCommand>();
-	else if(s == TEXT("CALL"))		return std::make_shared<CallCommand>();
-	else if(s == TEXT("SWAP"))		return std::make_shared<SwapCommand>();
-	else if(s == TEXT("LOAD"))		return std::make_shared<LoadCommand>();
-	else if(s == TEXT("LOADBG"))	return std::make_shared<LoadbgCommand>();
-	else if(s == TEXT("ADD"))		return std::make_shared<AddCommand>();
-	else if(s == TEXT("REMOVE"))	return std::make_shared<RemoveCommand>();
-	else if(s == TEXT("PAUSE"))		return std::make_shared<PauseCommand>();
-	else if(s == TEXT("PLAY"))		return std::make_shared<PlayCommand>();
-	else if(s == TEXT("STOP"))		return std::make_shared<StopCommand>();
-	else if(s == TEXT("CLEAR"))		return std::make_shared<ClearCommand>();
-	else if(s == TEXT("PRINT"))		return std::make_shared<PrintCommand>();
-	else if(s == TEXT("LOG"))		return std::make_shared<LogCommand>();
-	else if(s == TEXT("CG"))		return std::make_shared<CGCommand>();
-	else if(s == TEXT("DATA"))		return std::make_shared<DataCommand>();
-	else if(s == TEXT("CINF"))		return std::make_shared<CinfCommand>();
-	else if(s == TEXT("INFO"))		return std::make_shared<InfoCommand>(channels_);
-	else if(s == TEXT("CLS"))		return std::make_shared<ClsCommand>();
-	else if(s == TEXT("TLS"))		return std::make_shared<TlsCommand>();
-	else if(s == TEXT("VERSION"))	return std::make_shared<VersionCommand>();
-	else if(s == TEXT("BYE"))		return std::make_shared<ByeCommand>();
-	else if(s == TEXT("SET"))		return std::make_shared<SetCommand>();
+	if	   (s == TEXT("MIXER"))			return std::make_shared<MixerCommand>();
+	else if(s == TEXT("DIAG"))			return std::make_shared<DiagnosticsCommand>();
+	else if(s == TEXT("CHANNEL_GRID"))	return std::make_shared<ChannelGridCommand>();
+	else if(s == TEXT("CALL"))			return std::make_shared<CallCommand>();
+	else if(s == TEXT("SWAP"))			return std::make_shared<SwapCommand>();
+	else if(s == TEXT("LOAD"))			return std::make_shared<LoadCommand>();
+	else if(s == TEXT("LOADBG"))		return std::make_shared<LoadbgCommand>();
+	else if(s == TEXT("ADD"))			return std::make_shared<AddCommand>();
+	else if(s == TEXT("REMOVE"))		return std::make_shared<RemoveCommand>();
+	else if(s == TEXT("PAUSE"))			return std::make_shared<PauseCommand>();
+	else if(s == TEXT("PLAY"))			return std::make_shared<PlayCommand>();
+	else if(s == TEXT("STOP"))			return std::make_shared<StopCommand>();
+	else if(s == TEXT("CLEAR"))			return std::make_shared<ClearCommand>();
+	else if(s == TEXT("PRINT"))			return std::make_shared<PrintCommand>();
+	else if(s == TEXT("LOG"))			return std::make_shared<LogCommand>();
+	else if(s == TEXT("CG"))			return std::make_shared<CGCommand>();
+	else if(s == TEXT("DATA"))			return std::make_shared<DataCommand>();
+	else if(s == TEXT("CINF"))			return std::make_shared<CinfCommand>();
+	else if(s == TEXT("INFO"))			return std::make_shared<InfoCommand>(channels_);
+	else if(s == TEXT("CLS"))			return std::make_shared<ClsCommand>();
+	else if(s == TEXT("TLS"))			return std::make_shared<TlsCommand>();
+	else if(s == TEXT("VERSION"))		return std::make_shared<VersionCommand>();
+	else if(s == TEXT("BYE"))			return std::make_shared<ByeCommand>();
+	else if(s == TEXT("SET"))			return std::make_shared<SetCommand>();
 	//else if(s == TEXT("MONITOR"))
 	//{
 	//	result = AMCPCommandPtr(new MonitorCommand());

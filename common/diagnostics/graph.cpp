@@ -26,6 +26,7 @@
 #pragma warning (disable : 4244)
 
 #include "../concurrency/executor.h"
+#include "../concurrency/lock.h"
 #include "../env.h"
 
 #include <SFML/Graphics.hpp>
@@ -39,8 +40,9 @@
 #include <tbb/atomic.h>
 #include <tbb/spin_mutex.h>
 
-#include <numeric>
 #include <array>
+#include <numeric>
+#include <tuple>
 
 namespace caspar { namespace diagnostics {
 		
@@ -74,7 +76,7 @@ class context : public drawable
 {	
 	std::unique_ptr<sf::RenderWindow> window_;
 	
-	std::list<std::shared_ptr<drawable>> drawables_;
+	std::list<std::weak_ptr<drawable>> drawables_;
 		
 	executor executor_;
 public:					
@@ -110,7 +112,7 @@ private:
 		{
 			if(!window_)
 			{
-				window_.reset(new sf::RenderWindow(sf::VideoMode(600, 1000), "CasparCG Diagnostics"));
+				window_.reset(new sf::RenderWindow(sf::VideoMode(750, 750), "CasparCG Diagnostics"));
 				window_->SetPosition(0, 0);
 				window_->SetActive();
 				glEnable(GL_BLEND);
@@ -141,7 +143,7 @@ private:
 		glClear(GL_COLOR_BUFFER_BIT);
 		window_->Draw(*this);
 		window_->Display();
-		boost::this_thread::sleep(boost::posix_time::milliseconds(20));
+		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
 		executor_.begin_invoke([this]{tick();});
 	}
 
@@ -154,8 +156,8 @@ private:
 		int n = 0;
 		for(auto it = drawables_.begin(); it != drawables_.end(); ++n)
 		{
-			auto& drawable = *it;
-			if(!drawable.unique())
+			auto drawable = it->lock();
+			if(drawable)
 			{
 				drawable->SetScale(static_cast<float>(window_->GetWidth()), static_cast<float>(target_dy*window_->GetHeight()));
 				float target_y = std::max(last_y, static_cast<float>(n * window_->GetHeight())*target_dy);
@@ -170,8 +172,15 @@ private:
 	
 	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
 	{
-		if(std::find(drawables_.begin(), drawables_.end(), drawable) == drawables_.end())
-			drawables_.push_back(drawable);
+		drawables_.push_back(drawable);
+		auto it = drawables_.begin();
+		while(it != drawables_.end())
+		{
+			if(it->lock())
+				++it;
+			else	
+				it = drawables_.erase(it);			
+		}
 	}
 	
 	static context& get_instance()
@@ -183,23 +192,23 @@ private:
 
 class line : public drawable
 {
-	boost::circular_buffer<std::pair<double, bool>> line_data_;
+	boost::circular_buffer<std::pair<float, bool>> line_data_;
 
-	tbb::atomic<double>	tick_data_;
+	tbb::atomic<float>	tick_data_;
 	tbb::atomic<bool>	tick_tag_;
 	tbb::atomic<int>	color_;
 public:
-	line(size_t res = 600)
+	line(size_t res = 1200)
 		: line_data_(res)
 	{
-		tick_data_	= 0;
+		tick_data_	= -1.0f;
 		color_		= 0xFFFFFFFF;
 		tick_tag_	= false;
 
 		line_data_.push_back(std::make_pair(-1.0f, false));
 	}
 	
-	void set_value(double value)
+	void set_value(float value)
 	{
 		tick_data_ = value;
 	}
@@ -257,15 +266,18 @@ struct graph::impl : public drawable
 
 	tbb::spin_mutex mutex_;
 	std::wstring text_;
-		
+
 	impl()
 	{
 	}
-
+		
 	void set_text(const std::wstring& value)
 	{
-		tbb::spin_mutex::scoped_lock lock(mutex_);
-		text_ = value;
+		auto temp = value;
+		lock(mutex_, [&]
+		{
+			text_ = std::move(temp);
+		});
 	}
 
 	void set_value(const std::string& name, double value)
@@ -331,7 +343,7 @@ private:
 		
 			glEnable(GL_LINE_STIPPLE);
 			glLineStipple(3, 0xAAAA);
-			glColor4f(0.8f, 0.8f, 0.8f, 1.0f);	
+			glColor4f(1.0f, 1.0f, 1.9f, 0.5f);	
 			glBegin(GL_LINE_STRIP);		
 				glVertex3f(0.0f, (1.0f-0.5f) * 0.8f + 0.1f, 0.0f);		
 				glVertex3f(1.0f, (1.0f-0.5f) * 0.8f + 0.1f, 0.0f);	

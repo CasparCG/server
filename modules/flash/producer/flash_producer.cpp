@@ -180,7 +180,7 @@ public:
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to create FlashAxContainer"));
 		
-		ax_->set_print([this]{return L"flash_renderer";});
+		ax_->set_print([this]{return print();});
 
 		if(FAILED(ax_->CreateAxControl()))
 			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to Create FlashAxControl"));
@@ -200,7 +200,7 @@ public:
 						
 		ax_->SetSize(width_, height_);		
 	
-		CASPAR_LOG(info) << print() << L" Successfully initialized with template-host: " << filename << L" width: " << width_ << L" height: " << height_ << L".";
+		CASPAR_LOG(info) << print() << L" Initialized.";
 	}
 
 	~flash_renderer()
@@ -218,7 +218,7 @@ public:
 		std::wstring result;
 
 		if(!ax_->FlashCall(param, result))
-			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << wmsg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(u8(param)));
+			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
 		graph_->set_tag("param");
 
 		return result;
@@ -228,7 +228,7 @@ public:
 	{
 		float frame_time = 1.0f/ax_->GetFPS();
 
-		graph_->set_value("tick-time", (tick_timer_.elapsed()/frame_time)*0.5f);
+		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
 		tick_timer_.restart();
 
 		if(ax_->IsEmpty())
@@ -273,7 +273,10 @@ public:
 	
 	std::wstring print()
 	{
-		return L"flash[" + boost::filesystem::path(filename_).filename().wstring() + L"]";		
+		return L"flash-player[" + boost::filesystem::wpath(filename_).filename().wstring() 
+				  + L"|" + boost::lexical_cast<std::wstring>(width_)
+				  + L"x" + boost::lexical_cast<std::wstring>(height_)
+				  + L"]";		
 	}
 };
 
@@ -305,9 +308,6 @@ public:
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
 		, context_(L"flash_producer")
 	{	
-		if(!boost::filesystem::exists(filename))
-			BOOST_THROW_EXCEPTION(file_not_found() << werr_file_name_info(filename));	
-
 		fps_ = 0;
 
 		graph_->set_color("output-buffer-count", diagnostics::color(1.0f, 1.0f, 0.0f));		 
@@ -454,7 +454,12 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 {
 	auto template_host = get_template_host(frame_factory->get_video_format_desc());
 	
-	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, env::template_folder() + L"\\" + template_host.filename, template_host.width, template_host.height));
+	auto filename = env::template_folder() + L"\\" + template_host.filename;
+	
+	if(!boost::filesystem::exists(filename))
+		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
+
+	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, filename, template_host.width, template_host.height));
 }
 
 std::wstring find_template(const std::wstring& template_name)

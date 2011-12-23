@@ -66,9 +66,11 @@ ogl_device::ogl_device()
 	
 		CASPAR_LOG(info) << L"Successfully initialized GLEW.";
 
-		GL(glGenFramebuffers(1, &fbo_));		
-		GL(glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo_));
-        //GL(glDisable(GL_MULTISAMPLE_ARB));
+		glGenFramebuffers(1, &fbo_);	
+
+		CASPAR_LOG(debug) << "Created framebuffer.";
+
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
 
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
 	});
@@ -82,7 +84,7 @@ ogl_device::~ogl_device()
 			pool.clear();
 		BOOST_FOREACH(auto& pool, host_pools_)
 			pool.clear();
-		glDeleteFramebuffersEXT(1, &fbo_);
+		glDeleteFramebuffers(1, &fbo_);
 	});
 }
 
@@ -350,10 +352,10 @@ void ogl_device::clear(device_buffer& texture)
 
 void ogl_device::read_buffer(device_buffer&)
 {
-	if(read_buffer_ != GL_COLOR_ATTACHMENT0_EXT)
+	if(read_buffer_ != GL_COLOR_ATTACHMENT0)
 	{
-		GL(glReadBuffer(GL_COLOR_ATTACHMENT0_EXT));
-		read_buffer_ = GL_COLOR_ATTACHMENT0_EXT;
+		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
+		read_buffer_ = GL_COLOR_ATTACHMENT0;
 	}
 }
 
