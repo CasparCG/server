@@ -199,7 +199,7 @@ public:
 						
 		ax_->SetSize(width_, height_);		
 	
-		CASPAR_LOG(info) << print() << L" Successfully initialized with template-host: " << filename << L" width: " << width_ << L" height: " << height_ << L".";
+		CASPAR_LOG(info) << print() << L" Initialized.";
 	}
 
 	~flash_renderer()
@@ -272,7 +272,10 @@ public:
 	
 	std::wstring print()
 	{
-		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"]";		
+		return L"flash-player[" + boost::filesystem::wpath(filename_).filename() 
+				  + L"|" + boost::lexical_cast<std::wstring>(width_)
+				  + L"x" + boost::lexical_cast<std::wstring>(height_)
+				  + L"]";		
 	}
 };
 

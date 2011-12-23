@@ -143,7 +143,7 @@ private:
 		glClear(GL_COLOR_BUFFER_BIT);
 		window_->Draw(*this);
 		window_->Display();
-		boost::this_thread::sleep(boost::posix_time::milliseconds(15));
+		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
 		executor_.begin_invoke([this]{tick();});
 	}
 
@@ -198,7 +198,7 @@ class line : public drawable
 	tbb::atomic<bool>	tick_tag_;
 	tbb::atomic<int>	color_;
 public:
-	line(size_t res = 600)
+	line(size_t res = 1200)
 		: line_data_(res)
 	{
 		tick_data_	= -1.0f;

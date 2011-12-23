@@ -134,7 +134,7 @@ public:
 
 	bool ready() const
 	{
-		return packets_.size() > 10;
+		return packets_.size() >= 8;
 	}
 
 	uint32_t nb_frames() const

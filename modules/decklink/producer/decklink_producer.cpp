@@ -147,8 +147,6 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() 
 									<< msg_info(narrow(print()) + " Failed to start input stream.")
 									<< boost::errinfo_api_function("StartStreams"));
-		
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
 	~decklink_producer()
@@ -280,14 +278,7 @@ public:
 	{
 		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str);}); 
 	}
-
-	~decklink_producer_proxy()
-	{
-		auto str = print();
-		context_.reset();
-		CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
-	}
-
+	
 	// frame_producer
 				
 	virtual safe_ptr<core::basic_frame> receive(int hints) override
