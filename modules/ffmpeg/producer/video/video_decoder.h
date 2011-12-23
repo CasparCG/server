@@ -55,6 +55,8 @@ public:
 
 	bool	 is_progressive() const;
 
+	std::wstring print() const;
+
 private:
 	struct impl;
 	safe_ptr<impl> impl_;

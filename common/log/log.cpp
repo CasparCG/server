@@ -85,9 +85,16 @@ void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& 
     if(boost::log::extract<boost::log::attributes::current_thread_id::held_type>(L"ThreadID", rec.attribute_values(), lambda::var(thread_id) = lambda::_1))
         strm << L"[" << thread_id << L"] ";
 
+
     severity_level severity;
     if(boost::log::extract<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get(), rec.attribute_values(), lambda::var(severity) = lambda::_1))
+	{
+		std::stringstream ss;
+		ss << severity;
         strm << L"[" << severity << L"] ";
+		for(int n = 0; n < 7-static_cast<int>(ss.str().size()); ++n)
+			strm << L" ";
+	}
 
     strm << rec.message();
 }

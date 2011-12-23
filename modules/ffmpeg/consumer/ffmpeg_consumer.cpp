@@ -225,6 +225,10 @@ public:
 
 			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
+		else if(c->codec_id == CODEC_ID_QTRLE)
+		{
+			c->pix_fmt = PIX_FMT_ARGB;
+		}
 		else
 		{
 			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");

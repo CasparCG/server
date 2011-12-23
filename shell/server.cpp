@@ -141,6 +141,10 @@ struct server::impl : boost::noncopyable
 				}
 			}							
 		}
+
+		// Dummy diagnostics channel
+		if(env::properties().get(L"configuration.channel-grid", false))
+			channels_.push_back(make_safe<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), ogl_));
 	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)

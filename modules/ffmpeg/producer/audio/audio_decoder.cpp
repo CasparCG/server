@@ -75,8 +75,7 @@ public:
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
 		, nb_frames_(0)//context->streams[index_]->nb_frames)
 	{		
-		file_frame_number_ = 0;
-		CASPAR_LOG(debug) << "[audio_decoder] " << context->streams[index_]->codec->codec->long_name;	   
+		file_frame_number_ = 0;   
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -143,6 +142,11 @@ public:
 	{
 		return 0;//std::max<int64_t>(nb_frames_, file_frame_number_);
 	}
+
+	std::wstring print() const
+	{		
+		return L"[audio-decoder] " + u16(codec_context_->codec->long_name);
+	}
 };
 
 audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new impl(context, format_desc)){}
@@ -151,5 +155,6 @@ bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
+std::wstring audio_decoder::print() const{return impl_->print();}
 
 }}

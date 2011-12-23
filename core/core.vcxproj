@@ -44,8 +44,8 @@
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include\;..\dependencies64\glew\include\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include\;..\dependencies64\glew\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include\;..\dependencies64\glew\include\;..\dependencies64\asmlib\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include\;..\dependencies64\glew\include\;..\dependencies64\asmlib\;$(IncludePath)</IncludePath>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectName)</TargetName>
@@ -123,6 +123,7 @@
     <ClInclude Include="mixer\image\blend_modes.h" />
     <ClInclude Include="mixer\image\shader\blending_glsl.h" />
     <ClInclude Include="mixer\image\shader\image_shader.h" />
+    <ClInclude Include="producer\channel\channel_producer.h" />
     <ClInclude Include="producer\playlist\playlist_producer.h" />
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="consumer\output.h" />
@@ -171,6 +172,14 @@
     <ClCompile Include="mixer\image\shader\image_shader.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="producer\channel\channel_producer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\playlist\playlist_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../stdafx.h</PrecompiledHeaderFile>
