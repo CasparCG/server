@@ -73,8 +73,7 @@ public:
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
 		, nb_frames_(0)//context->streams[index_]->nb_frames)
 	{		
-		file_frame_number_ = 0;
-		CASPAR_LOG(debug) << "[audio_decoder] " << context->streams[index_]->codec->codec->long_name;	   
+		file_frame_number_ = 0;   
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -144,7 +143,7 @@ public:
 
 	std::wstring print() const
 	{		
-		return L"[audio_decoder] " + widen(codec_context_->codec->long_name);
+		return L"[audio-decoder] " + widen(codec_context_->codec->long_name);
 	}
 };
 

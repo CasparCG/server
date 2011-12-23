@@ -146,7 +146,7 @@ public:
 
 	std::wstring print() const
 	{		
-		return L"[video_decoder] " + widen(codec_context_->codec->long_name);
+		return L"[video-decoder] " + widen(codec_context_->codec->long_name);
 	}
 };
 
