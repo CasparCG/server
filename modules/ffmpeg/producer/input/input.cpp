@@ -148,7 +148,7 @@ struct input::implementation : boost::noncopyable
 	{	
 		if(!executor_.is_running())
 			return;
-
+		
 		executor_.begin_invoke([this]
 		{			
 			if(full())
