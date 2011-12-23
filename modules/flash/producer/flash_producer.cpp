@@ -179,7 +179,7 @@ public:
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
 		
-		ax_->set_print([this]{return L"flash_renderer";});
+		ax_->set_print([this]{return print();});
 
 		if(FAILED(ax_->CreateAxControl()))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Create FlashAxControl"));

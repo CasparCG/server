@@ -158,17 +158,17 @@ void add_file_sink(const std::wstring& folder)
 
 void set_log_level(const std::wstring& lvl)
 {	
-	if(boost::iequals(lvl, L"trace"))
+	if(boost::iequals(lvl, L"trace  "))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= trace);
-	else if(boost::iequals(lvl, L"debug"))
+	else if(boost::iequals(lvl, L"debug  "))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
-	else if(boost::iequals(lvl, L"info"))
+	else if(boost::iequals(lvl, L"info   "))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= info);
 	else if(boost::iequals(lvl, L"warning"))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= warning);
-	else if(boost::iequals(lvl, L"error"))
+	else if(boost::iequals(lvl, L"error  "))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= error);
-	else if(boost::iequals(lvl, L"fatal"))
+	else if(boost::iequals(lvl, L"fatal  "))
 		boost::log::wcore::get()->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= fatal);
 }
 
