@@ -3,10 +3,10 @@
 namespace caspar {
 
 template<typename T, typename F>
-void lock(T& mutex, F&& func)
+auto lock(T& mutex, F&& func) -> decltype(func())
 {
 	T::scoped_lock lock(mutex);
-	func();
+	return func();
 }
 
 }
