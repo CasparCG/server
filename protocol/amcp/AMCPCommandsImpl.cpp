@@ -885,25 +885,32 @@ bool LogCommand::DoExecute()
 
 bool CGCommand::DoExecute()
 {
-	std::wstring command = _parameters[0];
-	if(command == TEXT("ADD"))
-		return DoExecuteAdd();
-	else if(command == TEXT("PLAY"))
-		return DoExecutePlay();
-	else if(command == TEXT("STOP"))
-		return DoExecuteStop();
-	else if(command == TEXT("NEXT"))
-		return DoExecuteNext();
-	else if(command == TEXT("REMOVE"))
-		return DoExecuteRemove();
-	else if(command == TEXT("CLEAR"))
-		return DoExecuteClear();
-	else if(command == TEXT("UPDATE"))
-		return DoExecuteUpdate();
-	else if(command == TEXT("INVOKE"))
-		return DoExecuteInvoke();
-	else if(command == TEXT("INFO"))
-		return DoExecuteInfo();
+	try
+	{
+		std::wstring command = _parameters[0];
+		if(command == TEXT("ADD"))
+			return DoExecuteAdd();
+		else if(command == TEXT("PLAY"))
+			return DoExecutePlay();
+		else if(command == TEXT("STOP"))
+			return DoExecuteStop();
+		else if(command == TEXT("NEXT"))
+			return DoExecuteNext();
+		else if(command == TEXT("REMOVE"))
+			return DoExecuteRemove();
+		else if(command == TEXT("CLEAR"))
+			return DoExecuteClear();
+		else if(command == TEXT("UPDATE"))
+			return DoExecuteUpdate();
+		else if(command == TEXT("INVOKE"))
+			return DoExecuteInvoke();
+		else if(command == TEXT("INFO"))
+			return DoExecuteInfo();
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+	}
 
 	SetReplyString(TEXT("403 CG ERROR\r\n"));
 	return false;
