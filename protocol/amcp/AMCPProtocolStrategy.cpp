@@ -156,8 +156,6 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 	AMCPCommandPtr pCommand;
 	MessageParserState state = New;
 
-	CASPAR_LOG(info) << L"Received: " << message;
-
 	std::size_t tokensInMessage = TokenizeMessage(message, &tokens);
 
 	//parse the message one token at the time

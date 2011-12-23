@@ -608,12 +608,12 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("OnCommand")) != std::wstring::npos) {
 		//this is how templatehost 1.8 reports that a command has been received
-		CASPAR_LOG(debug)  << print_()  << L" Command: " << str;
+		CASPAR_LOG(debug)  << print_()  << L" [command]      " << str;
 		bCallSuccessful_ = true;
 	}
 	else if(str.find(TEXT("Activity")) != std::wstring::npos)
 	{
-		CASPAR_LOG(debug) << print_() << L" Activity: " << str;
+		CASPAR_LOG(debug) << print_() << L" [activity]     " << str;
 
 		//this is how templatehost 1.7 reports that a command has been received
 		if(str.find(TEXT("Command recieved")) != std::wstring::npos)
@@ -627,7 +627,7 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("OnNotify")) != std::wstring::npos)
 	{
-		CASPAR_LOG(info) << print_() << L" Notification: " << str;
+		CASPAR_LOG(info) << print_() << L" [notification] " << str;
 
 		//if(pFlashProducer_ != 0 && pFlashProducer_->pMonitor_) {
 		//	std::wstring::size_type pos = str.find(TEXT('@'));
@@ -637,17 +637,17 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("IsEmpty")) != std::wstring::npos)
 	{
-		CASPAR_LOG(info) << print_() << L" Empty.";
+		CASPAR_LOG(trace) << print_() << L" Empty.";
 		ATLTRACE(_T("ShockwaveFlash::IsEmpty\n"));
 		bIsEmpty_ = true;
 	}
 	else if(str.find(TEXT("OnError")) != std::wstring::npos)
 	{
-		CASPAR_LOG(error) << print_() << L" Error: " << str;
+		CASPAR_LOG(error) << print_() << L" [error]        " << str;
 	}
 	else if(str.find(TEXT("OnDebug")) != std::wstring::npos)
 	{
-		CASPAR_LOG(error) << print_() << L" Debug: " << str;
+		CASPAR_LOG(debug) << print_() << L" [debug]        " << str;
 	}
 	//else if(str.find(TEXT("OnTemplateDescription")) != std::wstring::npos)
 	//{

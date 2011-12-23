@@ -134,12 +134,17 @@ public:
 
 	bool ready() const
 	{
-		return packets_.size() >= 8;
+		return packets_.size() > 10;
 	}
 
 	uint32_t nb_frames() const
 	{
 		return 0;//std::max<int64_t>(nb_frames_, file_frame_number_);
+	}
+
+	std::wstring print() const
+	{		
+		return L"[audio_decoder] " + widen(codec_context_->codec->long_name);
 	}
 };
 
@@ -149,5 +154,6 @@ bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
+std::wstring audio_decoder::print() const{return impl_->print();}
 
 }}

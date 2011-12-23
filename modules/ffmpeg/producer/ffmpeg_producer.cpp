@@ -104,10 +104,11 @@ public:
 		try
 		{
 			video_decoder_.reset(new video_decoder(input_.context()));
+			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 		}
 		catch(averror_stream_not_found&)
 		{
-			CASPAR_LOG(warning) << print() << " No video-stream found. Running without video.";	
+			//CASPAR_LOG(warning) << print() << " No video-stream found. Running without video.";	
 		}
 		catch(...)
 		{
@@ -118,10 +119,11 @@ public:
 		try
 		{
 			audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc()));
+			CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 		}
 		catch(averror_stream_not_found&)
 		{
-			CASPAR_LOG(warning) << print() << " No audio-stream found. Running without audio.";	
+			//CASPAR_LOG(warning) << print() << " No audio-stream found. Running without audio.";	
 		}
 		catch(...)
 		{

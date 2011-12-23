@@ -244,8 +244,8 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <GenerateMapFile>false</GenerateMapFile>
-      <MapExports>false</MapExports>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapExports>true</MapExports>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>
       </OptimizeReferences>
