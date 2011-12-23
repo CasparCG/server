@@ -139,55 +139,70 @@ struct input::implementation : boost::noncopyable
 		return L"ffmpeg_input[" + filename_ + L")]";
 	}
 	
+	bool full() const
+	{
+		return !executor_.is_running() || (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT;
+	}
+
 	void tick()
 	{		
 		executor_.begin_invoke([this]
-		{
-			auto packet = create_packet();
-		
-			auto ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
-		
-			if(is_eof(ret))														     
+		{			
+			if(full())
+				return;
+
+			try
 			{
-				frame_number_	= 0;
-
-				if(loop_)
+				auto packet = create_packet();
+		
+				auto ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
+		
+				if(is_eof(ret))														     
 				{
-					queued_seek(start_);
-					graph_->set_tag("seek");		
-					CASPAR_LOG(trace) << print() << " Looping.";			
-				}		
+					frame_number_	= 0;
+
+					if(loop_)
+					{
+						queued_seek(start_);
+						graph_->set_tag("seek");		
+						CASPAR_LOG(trace) << print() << " Looping.";			
+					}		
+					else
+						executor_.stop();
+				}
 				else
-					executor_.stop();
-			}
-			else
-			{		
-				THROW_ON_ERROR(ret, "av_read_frame", print());
+				{		
+					THROW_ON_ERROR(ret, "av_read_frame", print());
 
-				if(packet->stream_index == default_stream_index_)
-					++frame_number_;
+					if(packet->stream_index == default_stream_index_)
+						++frame_number_;
 
-				THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
+					THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
 				
-				// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
-				auto size = packet->size;
-				auto data = packet->data;
+					// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
+					auto size = packet->size;
+					auto data = packet->data;
 			
-				packet = safe_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
-				{
-					packet->size = size;
-					packet->data = data;				
-				});
+					packet = safe_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
+					{
+						packet->size = size;
+						packet->data = data;				
+					});
 
-				buffer_.try_push(packet);
-				buffer_size_ += packet->size;
+					buffer_.try_push(packet);
+					buffer_size_ += packet->size;
 				
-				graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-				graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
-			}	
-
-			if((buffer_size_ < MAX_BUFFER_SIZE || buffer_.size() > MIN_BUFFER_COUNT) && buffer_.size() < MAX_BUFFER_COUNT && executor_.is_running())			
-				tick();			
+					graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+					graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
+				}	
+		
+				tick();		
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				executor_.stop();
+			}
 		});
 	}	
 			
