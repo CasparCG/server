@@ -84,7 +84,7 @@ public:
 		, audio_mixer_(graph_)
 		, executor_(L"mixer")
 	{			
-		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f));
+		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
 	}
 	
 	void send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& packet)

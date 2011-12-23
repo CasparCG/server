@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../exception/win32_exception.h"
+#include "../exception/exceptions.h"
 #include "../utility/string.h"
 #include "../utility/move_on_copy.h"
 #include "../log/log.h"
@@ -164,6 +165,9 @@ public:
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
+		if(!is_running_)
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running."));
+
 		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
 		auto task_adaptor = make_move_on_copy(create_task(func));
 

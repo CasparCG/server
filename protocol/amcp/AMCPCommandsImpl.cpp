@@ -38,6 +38,7 @@
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
 #include <core/producer/transition/transition_producer.h>
+#include <core/producer/channel/channel_producer.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
@@ -53,6 +54,7 @@
 #include <modules/flash/producer/cg_producer.h>
 #include <modules/ffmpeg/producer/util/util.h>
 #include <modules/image/image.h>
+#include <modules/ogl/ogl.h>
 
 #include <algorithm>
 #include <locale>
@@ -219,6 +221,56 @@ bool DiagnosticsCommand::DoExecute()
 		SetReplyString(TEXT("502 DIAG FAILED\r\n"));
 		return false;
 	}
+}
+
+bool ChannelGridCommand::DoExecute()
+{
+	int index = 1;
+	auto self = GetChannels().back();
+	
+	std::vector<std::wstring> params;
+	params.push_back(L"SCREEN");
+	params.push_back(L"NAME");
+	params.push_back(L"Channel Grid Window");
+	auto screen = create_consumer(params);
+
+	self->output()->add(screen);
+
+	BOOST_FOREACH(auto channel, GetChannels())
+	{
+		if(channel != self)
+		{
+			auto producer = create_channel_producer(self->frame_factory(), channel);		
+			self->stage()->load(index, producer, false);
+			self->stage()->play(index);
+			index++;
+		}
+	}
+
+	int n = GetChannels().size()-1;
+	double delta = 1.0/static_cast<double>(n);
+	for(int x = 0; x < n; ++x)
+	{
+		for(int y = 0; y < n; ++y)
+		{
+			int index = x+y*n+1;
+			auto transform = [=](frame_transform transform) -> frame_transform
+			{		
+				transform.fill_translation[0]	= x*delta;
+				transform.fill_translation[1]	= y*delta;
+				transform.fill_scale[0]			= delta;
+				transform.fill_scale[1]			= delta;
+				transform.clip_translation[0]	= x*delta;
+				transform.clip_translation[1]	= y*delta;
+				transform.clip_scale[0]			= delta;
+				transform.clip_scale[1]			= delta;			
+				return transform;
+			};
+			self->stage()->apply_frame_transform(index, transform);
+		}
+	}
+
+	return true;
 }
 
 bool CallCommand::DoExecute()
@@ -833,25 +885,32 @@ bool LogCommand::DoExecute()
 
 bool CGCommand::DoExecute()
 {
-	std::wstring command = _parameters[0];
-	if(command == TEXT("ADD"))
-		return DoExecuteAdd();
-	else if(command == TEXT("PLAY"))
-		return DoExecutePlay();
-	else if(command == TEXT("STOP"))
-		return DoExecuteStop();
-	else if(command == TEXT("NEXT"))
-		return DoExecuteNext();
-	else if(command == TEXT("REMOVE"))
-		return DoExecuteRemove();
-	else if(command == TEXT("CLEAR"))
-		return DoExecuteClear();
-	else if(command == TEXT("UPDATE"))
-		return DoExecuteUpdate();
-	else if(command == TEXT("INVOKE"))
-		return DoExecuteInvoke();
-	else if(command == TEXT("INFO"))
-		return DoExecuteInfo();
+	try
+	{
+		std::wstring command = _parameters[0];
+		if(command == TEXT("ADD"))
+			return DoExecuteAdd();
+		else if(command == TEXT("PLAY"))
+			return DoExecutePlay();
+		else if(command == TEXT("STOP"))
+			return DoExecuteStop();
+		else if(command == TEXT("NEXT"))
+			return DoExecuteNext();
+		else if(command == TEXT("REMOVE"))
+			return DoExecuteRemove();
+		else if(command == TEXT("CLEAR"))
+			return DoExecuteClear();
+		else if(command == TEXT("UPDATE"))
+			return DoExecuteUpdate();
+		else if(command == TEXT("INVOKE"))
+			return DoExecuteInvoke();
+		else if(command == TEXT("INFO"))
+			return DoExecuteInfo();
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+	}
 
 	SetReplyString(TEXT("403 CG ERROR\r\n"));
 	return false;

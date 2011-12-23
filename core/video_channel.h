@@ -51,6 +51,8 @@ public:
 	
 	boost::property_tree::wptree info() const;
 
+	int index() const;
+
 private:
 	struct impl;
 	safe_ptr<impl> impl_;
