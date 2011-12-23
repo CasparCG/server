@@ -107,12 +107,12 @@ public:
 		}
 		catch(averror_stream_not_found&)
 		{
-			CASPAR_LOG(warning) << "No video-stream found. Running without video.";	
+			CASPAR_LOG(warning) << print() << " No video-stream found. Running without video.";	
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << "Failed to open video-stream. Running without video.";	
+			CASPAR_LOG(warning) << print() << "Failed to open video-stream. Running without video.";	
 		}
 
 		try
@@ -121,12 +121,12 @@ public:
 		}
 		catch(averror_stream_not_found&)
 		{
-			CASPAR_LOG(warning) << "No audio-stream found. Running without audio.";	
+			CASPAR_LOG(warning) << print() << " No audio-stream found. Running without audio.";	
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << "Failed to open audio-stream. Running without audio.";		
+			CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";		
 		}	
 
 		if(!video_decoder_ && !audio_decoder_)
