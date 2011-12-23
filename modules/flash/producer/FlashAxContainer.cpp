@@ -608,12 +608,12 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("OnCommand")) != std::wstring::npos) {
 		//this is how templatehost 1.8 reports that a command has been received
-		CASPAR_LOG(debug)  << print_()  << L" Command: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+		CASPAR_LOG(debug)  << print_()  << L" Command: " << str;
 		bCallSuccessful_ = true;
 	}
 	else if(str.find(TEXT("Activity")) != std::wstring::npos)
 	{
-		CASPAR_LOG(debug) << print_() << L" Activity: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+		CASPAR_LOG(debug) << print_() << L" Activity: " << str;
 
 		//this is how templatehost 1.7 reports that a command has been received
 		if(str.find(TEXT("Command recieved")) != std::wstring::npos)
@@ -627,7 +627,7 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("OnNotify")) != std::wstring::npos)
 	{
-		CASPAR_LOG(info) << print_() << L" Notification: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+		CASPAR_LOG(info) << print_() << L" Notification: " << str;
 
 		//if(pFlashProducer_ != 0 && pFlashProducer_->pMonitor_) {
 		//	std::wstring::size_type pos = str.find(TEXT('@'));
@@ -643,11 +643,11 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(TEXT("OnError")) != std::wstring::npos)
 	{
-		CASPAR_LOG(error) << print_() << L" Error: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+		CASPAR_LOG(error) << print_() << L" Error: " << str;
 	}
 	else if(str.find(TEXT("OnDebug")) != std::wstring::npos)
 	{
-		CASPAR_LOG(error) << print_() << L" Debug: \n-------------------------------------------\n" << str << L"\n-------------------------------------------";
+		CASPAR_LOG(error) << print_() << L" Debug: " << str;
 	}
 	//else if(str.find(TEXT("OnTemplateDescription")) != std::wstring::npos)
 	//{
