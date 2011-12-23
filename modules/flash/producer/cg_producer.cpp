@@ -201,7 +201,7 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 	{
 		if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
 		{
-			flash_producer = make_safe<cg_producer>(flash::create_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>()));	
+			flash_producer = flash::create_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>());	
 			video_channel->stage()->load(render_layer, flash_producer); 
 			video_channel->stage()->play(render_layer);
 		}
@@ -212,7 +212,7 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 		throw;
 	}
 
-	return static_pointer_cast<cg_producer>(flash_producer);
+	return make_safe<cg_producer>(flash_producer);
 }
 
 safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 

@@ -81,7 +81,6 @@ public:
 				catch(...){}
 								
 				producer2.reset();
-				CASPAR_LOG(debug) << str << L" Destroyed.";
 				pool->push(destroyer);
 			}); 
 		}
@@ -108,9 +107,41 @@ public:
 	virtual uint32_t											nb_frames() const override												{return (*producer_)->nb_frames();}
 };
 
-safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer>&& producer)
+safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer> producer)
 {
 	return make_safe<destroy_producer_proxy>(std::move(producer));
+}
+
+class print_producer_proxy : public frame_producer
+{	
+	std::shared_ptr<frame_producer> producer_;
+public:
+	print_producer_proxy(safe_ptr<frame_producer>&& producer) 
+		: producer_(std::move(producer))
+	{
+		CASPAR_LOG(info) << producer_->print() << L" Initialized";
+	}
+
+	~print_producer_proxy()
+	{		
+		auto str = producer_->print();
+		producer_.reset();
+		CASPAR_LOG(info) << str << L" Uninitialized";
+	}
+
+	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (producer_)->receive(hints);}
+	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (producer_)->last_frame();}
+	virtual std::wstring										print() const override													{return (producer_)->print();}
+	virtual boost::property_tree::wptree 						info() const override													{return (producer_)->info();}
+	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (producer_)->call(str);}
+	virtual safe_ptr<frame_producer>							get_following_producer() const override									{return (producer_)->get_following_producer();}
+	virtual void												set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(producer_)->set_leading_producer(producer);}
+	virtual uint32_t											nb_frames() const override												{return (producer_)->nb_frames();}
+};
+
+safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer)
+{
+	return make_safe<print_producer_proxy>(std::move(producer));
 }
 
 class last_frame_producer : public frame_producer
@@ -209,6 +240,9 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 	
 	if(producer == frame_producer::empty())
 		producer = create_playlist_producer(my_frame_factory, params);
+	
+	if(producer != frame_producer::empty())
+		producer = create_producer_print_proxy(producer);
 
 	return producer;
 }
