@@ -141,11 +141,14 @@ struct input::implementation : boost::noncopyable
 	
 	bool full() const
 	{
-		return !executor_.is_running() || (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT;
+		return (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT;
 	}
 
 	void tick()
-	{		
+	{	
+		if(!executor_.is_running())
+			return;
+
 		executor_.begin_invoke([this]
 		{			
 			if(full())
