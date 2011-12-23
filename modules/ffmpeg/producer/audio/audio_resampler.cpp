@@ -69,10 +69,13 @@ struct audio_resampler::implementation
 
 			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
 
-			CASPAR_LOG(warning) << L"Resampling." <<
-									L" sample_rate:" << input_sample_rate  <<
-									L" audio_channels:" << input_channels  <<
-									L" sample_fmt:" << input_sample_format;
+			char sample_fmt_string[200];
+			av_get_sample_fmt_string(sample_fmt_string, 200, input_sample_format);
+
+			CASPAR_LOG(warning) << L"[audio-resampler]"		
+								<< L" sample-rate: "	<< input_sample_rate 
+								<< L" channels: "		<< input_channels 
+								<< L" sample-fmt: "		<< widen(sample_fmt_string);
 
 			if(resampler)
 				resampler_.reset(resampler, audio_resample_close);
