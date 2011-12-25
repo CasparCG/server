@@ -44,6 +44,7 @@ public:
 
 	void Send(const std::wstring& data);
 	void Disconnect();
+	virtual std::wstring print() const override {return host_;}
 
 	SOCKET			socket_;
 	HANDLE			event_;

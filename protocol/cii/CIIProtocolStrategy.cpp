@@ -32,6 +32,8 @@
 #include <core/mixer/mixer.h>
 #include <common/env.h>
 
+#include <boost/algorithm/string/replace.hpp>
+
 #if defined(_MSC_VER)
 #pragma warning (push, 1) // TODO: Legacy code, just disable warnings
 #endif
@@ -61,7 +63,7 @@ void CIIProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInf
 			std::wstring message = availibleData.substr(0,pos);
 
 			if(message.length() > 0) {
-				ProcessMessage(message);
+				ProcessMessage(message, pClientInfo);
 				if(pClientInfo != 0)
 					pClientInfo->Send(TEXT("*\r\n"));
 			}
@@ -81,8 +83,10 @@ void CIIProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInf
 	currentMessage_ = availibleData;
 }
 
-void CIIProtocolStrategy::ProcessMessage(const std::wstring& message)
-{
+void CIIProtocolStrategy::ProcessMessage(const std::wstring& message, IO::ClientInfoPtr pClientInfo)
+{	
+	CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << ": " << message + L"\\r\\n";
+
 	std::vector<std::wstring> tokens;
 	int tokenCount = TokenizeMessage(message, &tokens);
 

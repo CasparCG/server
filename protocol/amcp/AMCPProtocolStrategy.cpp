@@ -35,6 +35,7 @@
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/lexical_cast.hpp>
 
 #if defined(_MSC_VER)
@@ -110,7 +111,9 @@ void AMCPProtocolStrategy::Parse(const TCHAR* pData, int charCount, ClientInfoPt
 }
 
 void AMCPProtocolStrategy::ProcessMessage(const std::wstring& message, ClientInfoPtr& pClientInfo)
-{
+{	
+	CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << ": " << message + L"\\r\\n";
+	
 	bool bError = true;
 	MessageParserState state = New;
 

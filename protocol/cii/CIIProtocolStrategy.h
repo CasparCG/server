@@ -79,7 +79,7 @@ private:
 	static const TCHAR TokenDelimiter;
 	static const std::wstring MessageDelimiter;
 
-	void ProcessMessage(const std::wstring& message);
+	void ProcessMessage(const std::wstring& message, IO::ClientInfoPtr pClientInfo);
 	int TokenizeMessage(const std::wstring& message, std::vector<std::wstring>* pTokenVector);
 	CIICommandPtr Create(const std::wstring& name);
 
