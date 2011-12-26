@@ -74,7 +74,7 @@ class decklink_frame : public IDeckLinkVideoFrame
 	const core::video_format_desc								format_desc_;
 
 	const bool													key_only_;
-	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> key_data_;
+	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> data_;
 public:
 	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
 		: frame_(frame)
@@ -83,24 +83,27 @@ public:
 	{
 		ref_count_ = 0;
 	}
+	
+	// IUnknown
 
-	const boost::iterator_range<const int32_t*> audio_data()
+	STDMETHOD (QueryInterface(REFIID, LPVOID*))		
 	{
-		return frame_->audio_data();
+		return E_NOINTERFACE;
 	}
 	
-	STDMETHOD (QueryInterface(REFIID, LPVOID*))		{return E_NOINTERFACE;}
 	STDMETHOD_(ULONG,			AddRef())			
 	{
 		return ++ref_count_;
 	}
+
 	STDMETHOD_(ULONG,			Release())			
 	{
-		--ref_count_;
-		if(ref_count_ == 0)
+		if(--ref_count_ == 0)
 			delete this;
 		return ref_count_;
 	}
+
+	// IDecklinkVideoFrame
 
 	STDMETHOD_(long,			GetWidth())			{return format_desc_.width;}        
     STDMETHOD_(long,			GetHeight())		{return format_desc_.height;}        
@@ -110,24 +113,30 @@ public:
         
     STDMETHOD(GetBytes(void** buffer))
 	{
-		static std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> zeros(1920*1080*4, 0);
-		if(static_cast<size_t>(frame_->image_data().size()) != format_desc_.size)
+		try
 		{
-			*buffer = zeros.data();
-			return S_OK;
-		}
-
-		if(!key_only_)
-			*buffer = const_cast<uint8_t*>(frame_->image_data().begin());
-		else
-		{
-			if(key_data_.empty())
+			if(static_cast<size_t>(frame_->image_data().size()) != format_desc_.size)
 			{
-				key_data_.resize(frame_->image_data().size());
-				fast_memshfl(key_data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-				frame_.reset();
+				data_.resize(format_desc_.size, 0);
+				*buffer = data_.data();
 			}
-			*buffer = key_data_.data();
+			else if(key_only_)
+			{
+				if(data_.empty())
+				{
+					data_.resize(frame_->image_data().size());
+					fast_memshfl(data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+					frame_.reset();
+				}
+				*buffer = data_.data();
+			}
+			else
+				*buffer = const_cast<uint8_t*>(frame_->image_data().begin());
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			return E_FAIL;
 		}
 
 		return S_OK;
@@ -135,6 +144,13 @@ public:
         
     STDMETHOD(GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode)){return S_FALSE;}        
     STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
+
+	// decklink_frame	
+
+	const boost::iterator_range<const int32_t*> audio_data()
+	{
+		return frame_->audio_data();
+	}
 };
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
