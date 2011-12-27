@@ -103,7 +103,8 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return make_safe<image_producer>(frame_factory, filename + L"." + *ext);
+	return create_producer_print_proxy(
+			make_safe<image_producer>(frame_factory, filename + L"." + *ext));
 }
 
 
