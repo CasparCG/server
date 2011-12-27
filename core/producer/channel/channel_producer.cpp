@@ -212,7 +212,8 @@ public:
 
 safe_ptr<frame_producer> create_channel_producer(const safe_ptr<core::frame_factory>& frame_factory, const safe_ptr<video_channel>& channel)
 {
-	return make_safe<channel_producer>(frame_factory, channel);
+	return create_producer_print_proxy(
+			make_safe<channel_producer>(frame_factory, channel));
 }
 
 }}

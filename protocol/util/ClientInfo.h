@@ -37,6 +37,7 @@ public:
 
 	virtual void Send(const std::wstring& data) = 0;
 	virtual void Disconnect() = 0;
+	virtual std::wstring print() const = 0;
 
 	std::wstring		currentMessage_;
 };
@@ -49,6 +50,7 @@ struct ConsoleClientInfo : public caspar::IO::ClientInfo
 		std::wcout << (L"#" + data);
 	}
 	void Disconnect(){}
+	virtual std::wstring print() const {return L"Console";}
 };
 
 }}

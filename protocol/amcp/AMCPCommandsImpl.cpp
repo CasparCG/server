@@ -298,9 +298,7 @@ bool CallCommand::DoExecute()
 
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
 			BOOST_THROW_EXCEPTION(timed_out());
-
-		CASPAR_LOG(info) << "Executed call: " <<  _parameters[0] << TEXT(" successfully");
-		
+				
 		std::wstringstream replyString;
 		if(result.get().empty())
 			replyString << TEXT("202 CALL OK\r\n");
@@ -564,9 +562,7 @@ bool SwapCommand::DoExecute()
 			auto ch2 = GetChannels().at(boost::lexical_cast<int>(_parameters[0])-1);
 			ch1->stage()->swap_layers(ch2->stage());
 		}
-
-		CASPAR_LOG(info) << "Swapped successfully";
-
+		
 		SetReplyString(TEXT("202 SWAP OK\r\n"));
 
 		return true;
@@ -593,8 +589,6 @@ bool AddCommand::DoExecute()
 		auto consumer = create_consumer(_parameters);
 		GetChannel()->output()->add(GetLayerIndex(consumer->index()), consumer);
 	
-		CASPAR_LOG(info) << "Added " <<  _parameters[0] << TEXT(" successfully");
-
 		SetReplyString(TEXT("202 ADD OK\r\n"));
 
 		return true;
@@ -651,8 +645,6 @@ bool LoadCommand::DoExecute()
 		auto pFP = create_producer(GetChannel()->frame_factory(), _parameters);		
 		GetChannel()->stage()->load(GetLayerIndex(), pFP, true);
 	
-		CASPAR_LOG(info) << "Loaded " <<  _parameters[0] << TEXT(" successfully");
-
 		SetReplyString(TEXT("202 LOAD OK\r\n"));
 
 		return true;
@@ -765,7 +757,6 @@ bool LoadbgCommand::DoExecute()
 		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc().field_mode, pFP, transitionInfo);
 		GetChannel()->stage()->load(GetLayerIndex(), pFP2, false, auto_play ? transitionInfo.duration : -1); // TODO: LOOP
 	
-		CASPAR_LOG(info) << "Loaded " << _parameters[0] << TEXT(" successfully to background");
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
 
 		return true;
@@ -817,9 +808,7 @@ bool PlayCommand::DoExecute()
 			for(auto it = _parameters.begin(); it != _parameters.end(); ++it)
 				lbg.AddParameter(*it);
 			if(!lbg.Execute())
-				CASPAR_LOG(warning) << " Failed to play.";
-
-			CASPAR_LOG(info) << "Playing " << _parameters[0];
+				throw std::exception();
 		}
 
 		GetChannel()->stage()->play(GetLayerIndex());

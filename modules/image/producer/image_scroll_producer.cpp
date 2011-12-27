@@ -253,7 +253,8 @@ safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame
 	if(speed == 0)
 		return core::frame_producer::empty();
 
-	return make_safe<image_scroll_producer>(frame_factory, filename + L"." + *ext, speed);
+	return create_producer_print_proxy(
+			make_safe<image_scroll_producer>(frame_factory, filename + L"." + *ext, speed));
 }
 
 }}

@@ -30,11 +30,9 @@
 #include "SocketInfo.h"
 
 #include <common/log/log.h>
-
-#include <boost/algorithm/string/replace.hpp>
-
 #include <string>
 #include <algorithm>
+#include <boost/algorithm/string/replace.hpp>
 
 #if defined(_MSC_VER)
 #pragma warning (push, 1) // TODO: Legacy code, just disable warnings, will replace with boost::asio in future
@@ -356,15 +354,8 @@ bool AsyncEventServer::OnRead(SocketInfoPtr& pSI) {
 		}
 
 		//Convert to widechar
-		if(ConvertMultiByteToWideChar(pProtocolStrategy_->GetCodepage(), pSI->recvBuffer_, recvResult + pSI->recvLeftoverOffset_, pSI->wideRecvBuffer_, pSI->recvLeftoverOffset_))
-		{
-			auto msg = 	std::wstring(pSI->wideRecvBuffer_.begin(), pSI->wideRecvBuffer_.end());
-			boost::replace_all(msg, L"\n", L"\\n");
-			boost::replace_all(msg, L"\r", L"\\r");
-
-			CASPAR_LOG(info) << L"Received message from " << pSI->host_.c_str() << ": "<< msg;
-			pProtocolStrategy_->Parse(&pSI->wideRecvBuffer_[0], pSI->wideRecvBuffer_.size(), pSI);
-		}
+		if(ConvertMultiByteToWideChar(pProtocolStrategy_->GetCodepage(), pSI->recvBuffer_, recvResult + pSI->recvLeftoverOffset_, pSI->wideRecvBuffer_, pSI->recvLeftoverOffset_))		
+			pProtocolStrategy_->Parse(&pSI->wideRecvBuffer_[0], pSI->wideRecvBuffer_.size(), pSI);		
 		else			
 			CASPAR_LOG(error) << "Read from " << pSI->host_.c_str() << TEXT(" failed, could not convert command to UNICODE");
 			

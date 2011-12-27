@@ -144,6 +144,13 @@ public:
 				SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
 		});
 	}
+	
+	void clear()
+	{		
+		std::function<void()> func;
+		while(execution_queue_[normal_priority].try_pop(func));
+		while(execution_queue_[high_priority].try_pop(func));
+	}
 				
 	void stop() // noexcept
 	{

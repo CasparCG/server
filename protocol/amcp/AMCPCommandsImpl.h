@@ -104,7 +104,7 @@ class StopCommand : public AMCPCommandBase<true, AddToQueue, 0>
 	bool DoExecute();
 };
 
-class ClearCommand : public AMCPCommandBase<true, AddToQueue, 0>
+class ClearCommand : public AMCPCommandBase<true, ImmediatelyAndClear, 0>
 {
 	std::wstring print() const { return L"ClearCommand";}
 	bool DoExecute();

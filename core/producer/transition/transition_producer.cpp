@@ -184,7 +184,8 @@ struct transition_producer : public frame_producer
 
 safe_ptr<frame_producer> create_transition_producer(const field_mode::type& mode, const safe_ptr<frame_producer>& destination, const transition_info& info)
 {
-	return make_safe<transition_producer>(mode, destination, info);
+	return create_producer_print_proxy(
+			make_safe<transition_producer>(mode, destination, info));
 }
 
 }}
