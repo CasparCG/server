@@ -297,6 +297,7 @@ struct flash_producer : public core::frame_producer
 	int															width_;
 	int															height_;
 
+	tbb::atomic<bool>											is_running_;
 	std::unique_ptr<flash_renderer>								renderer_;
 
 	executor													executor_;	
@@ -310,6 +311,7 @@ public:
 		, executor_(L"flash_producer")
 	{	
 		fps_ = 0;
+		is_running_ = true;
 
 		graph_->set_color("output-buffer-count", diagnostics::color(1.0f, 1.0f, 0.0f));		 
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
@@ -326,12 +328,15 @@ public:
 
 	~flash_producer()
 	{
+		is_running_ = false;
+
 		safe_ptr<core::basic_frame> frame;
 		for(int n = 0; n < 3; ++n)
 			frame_buffer_.try_pop(frame);
 
-		executor_.invoke([]
+		executor_.invoke([this]
 		{
+			renderer_.reset();
 			::CoUninitialize();
 		});
 	}
@@ -361,6 +366,9 @@ public:
 	{	
 		return executor_.begin_invoke([=]() -> std::wstring
 		{
+			if(!is_running_)
+				return;
+
 			if(!renderer_)
 			{
 				renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_));
@@ -415,7 +423,7 @@ public:
 	{		
 		executor_.begin_invoke([=]
 		{
-			if(renderer_.get() != renderer) // Since initialize will start a new recursive call make sure the recursive calls are only for a specific instance.
+			if(!is_running_ || renderer_.get() != renderer) // Since initialize will start a new recursive call make sure the recursive calls are only for a specific instance.
 				return;
 
 			try
