@@ -36,7 +36,8 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
-#include <common/concurrency/com_context.h>
+#include <common/concurrency/executor.h>
+#include <common/concurrency/lock.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
@@ -296,8 +297,9 @@ struct flash_producer : public core::frame_producer
 	int															width_;
 	int															height_;
 
-	com_context<flash_renderer>									context_;	
+	std::unique_ptr<flash_renderer>								renderer_;
 
+	executor													executor_;	
 public:
 	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, size_t width, size_t height) 
 		: filename_(filename)		
@@ -305,7 +307,7 @@ public:
 		, last_frame_(core::basic_frame::empty())
 		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
-		, context_(L"flash_producer")
+		, executor_(L"flash_producer")
 	{	
 		fps_ = 0;
 
@@ -316,12 +318,22 @@ public:
 		
 		frame_buffer_.set_capacity(frame_factory_->get_video_format_desc().fps > 30.0 ? 2 : 1);
 
-		initialize();				
+		executor_.begin_invoke([]
+		{
+			::CoInitialize(nullptr);
+		});			
 	}
 
 	~flash_producer()
 	{
-		frame_buffer_.clear();
+		safe_ptr<core::basic_frame> frame;
+		for(int n = 0; n < 3; ++n)
+			frame_buffer_.try_pop(frame);
+
+		executor_.invoke([]
+		{
+			::CoUninitialize();
+		});
 	}
 
 	// frame_producer
@@ -331,7 +343,7 @@ public:
 		graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 
 		auto frame = core::basic_frame::late();
-		if(!frame_buffer_.try_pop(frame) && context_)
+		if(!frame_buffer_.try_pop(frame) && renderer_)
 			graph_->set_tag("underflow");
 
 		return frame;
@@ -339,20 +351,25 @@ public:
 
 	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
-		tbb::spin_mutex::scoped_lock lock(last_frame_mutex_);
-		return last_frame_;
+		return lock(last_frame_mutex_, [this]
+		{
+			return last_frame_;
+		});
 	}		
 	
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{	
-		return context_.begin_invoke([=]() -> std::wstring
+		return executor_.begin_invoke([=]() -> std::wstring
 		{
-			if(!context_)
-				initialize();
+			if(!renderer_)
+			{
+				renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_));
+				render(renderer_.get());
+			}
 
 			try
 			{
-				return context_->call(param);	
+				return renderer_->call(param);	
 
 				//const auto& format_desc = frame_factory_->get_video_format_desc();
 				//if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
@@ -361,12 +378,12 @@ public:
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				context_.reset(nullptr);
+				renderer_.reset(nullptr);
 				frame_buffer_.push(core::basic_frame::empty());
 			}
 
 			return L"";
-		});
+		}, high_priority);
 	}
 		
 	virtual std::wstring print() const override
@@ -382,40 +399,35 @@ public:
 	}
 
 	// flash_producer
-
-	void initialize()
-	{
-		context_.reset([&]{return new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_);});
-		while(frame_buffer_.try_push(core::basic_frame::empty())){}		
-		render(context_.get());
-	}
-
+	
 	safe_ptr<core::basic_frame> render_frame()
 	{
-		auto frame = context_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());		
-		tbb::spin_mutex::scoped_lock lock(last_frame_mutex_);
-		last_frame_ = make_safe<core::basic_frame>(frame);
+		auto frame = renderer_->render_frame(frame_buffer_.size() < frame_buffer_.capacity());		
+		lock(last_frame_mutex_, [&]
+		{
+			last_frame_ = make_safe<core::basic_frame>(frame);
+		});
 		return frame;
 	}
 
 	void render(const flash_renderer* renderer)
 	{		
-		context_.begin_invoke([=]
+		executor_.begin_invoke([=]
 		{
-			if(context_.get() != renderer) // Since initialize will start a new recursive call make sure the recursive calls are only for a specific instance.
+			if(renderer_.get() != renderer) // Since initialize will start a new recursive call make sure the recursive calls are only for a specific instance.
 				return;
 
 			try
 			{		
 				const auto& format_desc = frame_factory_->get_video_format_desc();
 
-				if(abs(context_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
+				if(abs(renderer_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
 				{
 					auto frame1 = render_frame();
 					auto frame2 = render_frame();
 					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
 				}
-				else if(abs(context_->fps()- format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
+				else if(abs(renderer_->fps()- format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
 				{
 					auto frame = render_frame();
 					frame_buffer_.push(frame);
@@ -427,14 +439,14 @@ public:
 					frame_buffer_.push(frame);
 				}
 
-				if(context_->is_empty())
+				if(renderer_->is_empty())
 				{
-					context_.reset(nullptr);
+					renderer_.reset(nullptr);
 					return;
 				}
 
 				graph_->set_value("output-buffer-count", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
-				fps_.fetch_and_store(static_cast<int>(context_->fps()*100.0));				
+				fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));				
 				graph_->set_text(print());
 
 				render(renderer);
@@ -442,7 +454,7 @@ public:
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				context_.reset(nullptr);
+				renderer_.reset(nullptr);
 				frame_buffer_.push(core::basic_frame::empty());
 			}
 		});
