@@ -46,6 +46,8 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 	{
 		CASPAR_LOG(error) << "AMCP Command Queue Overflow.";
 		CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
+		pCurrentCommand->SetReplyString(L"500 FAILED");
+		pCurrentCommand->SendReply();
 	}
 	
 	executor_.begin_invoke([=]
