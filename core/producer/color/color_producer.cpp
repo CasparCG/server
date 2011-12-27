@@ -124,7 +124,8 @@ safe_ptr<frame_producer> create_color_producer(const safe_ptr<core::frame_factor
 	if(color2.length() != 9 || color2[0] != '#')
 		return core::frame_producer::empty();
 
-	return make_safe<color_producer>(frame_factory, color2);
+	return create_producer_print_proxy(
+			make_safe<color_producer>(frame_factory, color2));
 }
 safe_ptr<core::write_frame> create_color_frame(void* tag, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& color)
 {

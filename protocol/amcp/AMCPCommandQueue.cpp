@@ -39,8 +39,23 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 	if(!pCurrentCommand)
 		return;
 
-	//if(pNewCommand->GetScheduling() == ImmediatelyAndClear)
-	//	executor_.clear();
+	if(pCurrentCommand->GetScheduling() == ImmediatelyAndClear)
+		executor_.clear();
+
+	if(executor_.size() > 64)
+	{
+		try
+		{
+			CASPAR_LOG(error) << "AMCP Command Queue Overflow.";
+			CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
+			pCurrentCommand->SetReplyString(L"500 FAILED");
+			pCurrentCommand->SendReply();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+	}
 	
 	executor_.begin_invoke([=]
 	{
@@ -49,7 +64,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 			try
 			{
 				if(pCurrentCommand->Execute()) 
-					CASPAR_LOG(trace) << "Executed command: " << pCurrentCommand->print();
+					CASPAR_LOG(debug) << "Executed command: " << pCurrentCommand->print();
 				else 
 					CASPAR_LOG(warning) << "Failed to execute command: " << pCurrentCommand->print();
 			}

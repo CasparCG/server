@@ -48,13 +48,13 @@ namespace caspar { namespace decklink {
 	
 struct configuration
 {
-	int		device_index;
+	int	device_index;
 	bool	embedded_audio;
 	bool	internal_key;
 	bool	low_latency;
 	bool	key_only;
-	int		base_buffer_depth;
-	int		buffer_depth;
+	int	base_buffer_depth;
+	int	buffer_depth;
 	
 	configuration()
 		: device_index(1)
@@ -73,7 +73,7 @@ class decklink_frame : public IDeckLinkVideoFrame
 	const core::video_format_desc								format_desc_;
 
 	const bool													key_only_;
-	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> key_data_;
+	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> data_;
 public:
 	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
 		: frame_(frame)
@@ -82,24 +82,27 @@ public:
 	{
 		ref_count_ = 0;
 	}
+	
+	// IUnknown
 
-	const boost::iterator_range<const int32_t*> audio_data()
+	STDMETHOD (QueryInterface(REFIID, LPVOID*))		
 	{
-		return frame_->audio_data();
+		return E_NOINTERFACE;
 	}
 	
-	STDMETHOD (QueryInterface(REFIID, LPVOID*))		{return E_NOINTERFACE;}
 	STDMETHOD_(ULONG,			AddRef())			
 	{
 		return ++ref_count_;
 	}
+
 	STDMETHOD_(ULONG,			Release())			
 	{
-		--ref_count_;
-		if(ref_count_ == 0)
+		if(--ref_count_ == 0)
 			delete this;
 		return ref_count_;
 	}
+
+	// IDecklinkVideoFrame
 
 	STDMETHOD_(long,			GetWidth())			{return format_desc_.width;}        
     STDMETHOD_(long,			GetHeight())		{return format_desc_.height;}        
@@ -109,24 +112,30 @@ public:
         
     STDMETHOD(GetBytes(void** buffer))
 	{
-		static std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> zeros(1920*1080*4, 0);
-		if(static_cast<size_t>(frame_->image_data().size()) != format_desc_.size)
+		try
 		{
-			*buffer = zeros.data();
-			return S_OK;
-		}
-
-		if(!key_only_)
-			*buffer = const_cast<uint8_t*>(frame_->image_data().begin());
-		else
-		{
-			if(key_data_.empty())
+			if(static_cast<int>(frame_->image_data().size()) != format_desc_.size)
 			{
-				key_data_.resize(frame_->image_data().size());
-				aligned_memshfl(key_data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-				frame_.reset();
+				data_.resize(format_desc_.size, 0);
+				*buffer = data_.data();
 			}
-			*buffer = key_data_.data();
+			else if(key_only_)
+			{
+				if(data_.empty())
+				{
+					data_.resize(frame_->image_data().size());
+					aligned_memshfl(data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+					frame_.reset();
+				}
+				*buffer = data_.data();
+			}
+			else
+				*buffer = const_cast<uint8_t*>(frame_->image_data().begin());
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			return E_FAIL;
 		}
 
 		return S_OK;
@@ -134,6 +143,13 @@ public:
         
     STDMETHOD(GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode)){return S_FALSE;}        
     STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
+
+	// decklink_frame	
+
+	const boost::iterator_range<const int32_t*> audio_data()
+	{
+		return frame_->audio_data();
+	}
 };
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
@@ -153,12 +169,12 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 		
 	const std::wstring					model_name_;
 	const core::video_format_desc		format_desc_;
-	const size_t						buffer_size_;
+	const int						buffer_size_;
 
 	long long							video_scheduled_;
 	long long							audio_scheduled_;
 
-	size_t								preroll_count_;
+	int								preroll_count_;
 		
 	boost::circular_buffer<std::vector<int32_t>>	audio_container_;
 
@@ -209,7 +225,7 @@ public:
 		if(config.embedded_audio)		
 			output_->BeginAudioPreroll();		
 		
-		for(size_t n = 0; n < buffer_size_; ++n)
+		for(int n = 0; n < buffer_size_; ++n)
 			schedule_next_video(make_safe<core::read_frame>());
 
 		if(!config.embedded_audio)
@@ -270,10 +286,10 @@ public:
 	void enable_audio()
 	{
 		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, 2, bmdAudioOutputStreamTimestamped)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Could not enable audio output."));
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable audio output."));
 				
 		if(FAILED(output_->SetAudioCallback(this)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Could not set audio callback."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not set audio callback."));
 
 		CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
 	}
@@ -281,18 +297,18 @@ public:
 	void enable_video(BMDDisplayMode display_mode)
 	{
 		if(FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Could not enable video output."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable video output."));
 		
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			BOOST_THROW_EXCEPTION(caspar_exception() 
-									<< wmsg_info(print() + L" Failed to set playback completion callback.")
+									<< msg_info(u8(print()) + " Failed to set playback completion callback.")
 									<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
 	}
 
 	void start_playback()
 	{
 		if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to schedule playback."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to schedule playback."));
 	}
 	
 	STDMETHOD (QueryInterface(REFIID, LPVOID*))	{return E_NOINTERFACE;}
@@ -386,7 +402,7 @@ public:
 	template<typename T>
 	void schedule_next_audio(const T& audio_data)
 	{
-		const int sample_frame_count = static_cast<int>(audio_data.size())/format_desc_.audio_channels;
+		auto sample_frame_count = static_cast<int>(audio_data.size()/format_desc_.audio_channels);
 
 		audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
 
@@ -417,7 +433,7 @@ public:
 		}
 
 		if(!is_running_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Is not running."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Is not running."));
 		
 		if(config_.embedded_audio)
 			audio_frame_buffer_.push(frame);	
@@ -466,7 +482,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
-		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
+		CASPAR_VERIFY(audio_cadence_.front() == static_cast<int>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
 		context_->send(frame);
