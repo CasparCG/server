@@ -367,7 +367,7 @@ public:
 		return executor_.begin_invoke([=]() -> std::wstring
 		{
 			if(!is_running_)
-				return;
+				return L"";
 
 			if(!renderer_)
 			{
