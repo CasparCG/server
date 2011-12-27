@@ -479,7 +479,9 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(!boost::filesystem::exists(filename))
 		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(narrow(filename)));	
 
-	return create_producer_destroy_proxy(make_safe<flash_producer>(frame_factory, filename, template_host.width, template_host.height));
+	return create_producer_print_proxy(
+		   create_producer_destroy_proxy(
+			make_safe<flash_producer>(frame_factory, filename, template_host.width, template_host.height)));
 }
 
 std::wstring find_template(const std::wstring& template_name)
