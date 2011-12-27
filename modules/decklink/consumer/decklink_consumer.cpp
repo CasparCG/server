@@ -29,8 +29,7 @@
 
 #include <core/mixer/read_frame.h>
 
-#include <common/concurrency/executor.h>
-#include <common/concurrency/lock.h>
+#include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/memory/memcpy.h>
@@ -355,10 +354,8 @@ public:
 		}
 		catch(...)
 		{
-			lock(exception_mutex_, [this]
-			{
-				exception_ = std::current_exception();
-			});
+			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
+			exception_ = std::current_exception();
 			return E_FAIL;
 		}
 
@@ -395,10 +392,8 @@ public:
 		}
 		catch(...)
 		{
-			lock(exception_mutex_, [this]
-			{
-				exception_ = std::current_exception();
-			});
+			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
+			exception_ = std::current_exception();
 			return E_FAIL;
 		}
 
@@ -432,14 +427,12 @@ public:
 
 	void send(const safe_ptr<core::read_frame>& frame)
 	{
-		auto exception = lock(exception_mutex_, [this]
 		{
-			return exception_;
-		});
+			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
+			if(exception_ != nullptr)
+				std::rethrow_exception(exception_);
+		}
 
-		if(exception != nullptr)
-			std::rethrow_exception(exception);
-		
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Is not running."));
 		
@@ -457,51 +450,35 @@ public:
 
 struct decklink_consumer_proxy : public core::frame_consumer
 {
-	const configuration					config_;
-	std::unique_ptr<decklink_consumer>	consumer_;
-	std::vector<size_t>					audio_cadence_;
-	executor							executor_;
+	const configuration				config_;
+	com_context<decklink_consumer>	context_;
+	std::vector<size_t>				audio_cadence_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
 		: config_(config)
-		, executor_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
+		, context_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
 	{
-		executor_.begin_invoke([=]
-		{
-			::CoInitialize(nullptr);
-		});
 	}
 
 	~decklink_consumer_proxy()
 	{
-		executor_.invoke([=]
+		if(context_)
 		{
-			if(consumer_)
-			{
-				auto str = print();
-				consumer_.reset();
-				CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
-			}
-		});
-		
-		executor_.invoke([=]
-		{
-			::CoUninitialize();
-		});
+			auto str = print();
+			context_.reset();
+			CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
+		}
 	}
 
 	// frame_consumer
 	
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
-		executor_.invoke([=]
-		{
-			consumer_.reset(new decklink_consumer(config_, format_desc, channel_index));		
-			audio_cadence_ = format_desc.audio_cadence;		
+		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index);});		
+		audio_cadence_ = format_desc.audio_cadence;		
 
-			CASPAR_LOG(info) << print() << L" Successfully Initialized.";
-		});
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -509,13 +486,13 @@ public:
 		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
-		consumer_->send(frame);
+		context_->send(frame);
 		return true;
 	}
 	
 	virtual std::wstring print() const override
 	{
-		return consumer_ ? consumer_->print() : L"[decklink_consumer]";
+		return context_ ? context_->print() : L"[decklink_consumer]";
 	}		
 
 	virtual boost::property_tree::wptree info() const override

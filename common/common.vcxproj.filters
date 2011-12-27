@@ -115,6 +115,9 @@
     <ClInclude Include="os\windows\system_info.h">
       <Filter>source\os\windows</Filter>
     </ClInclude>
+    <ClInclude Include="concurrency\com_context.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
     <ClInclude Include="memory\memshfl.h">
       <Filter>source\memory</Filter>
     </ClInclude>
