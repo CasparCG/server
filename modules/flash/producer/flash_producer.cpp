@@ -364,6 +364,7 @@ public:
 			if(!renderer_)
 			{
 				renderer_.reset(new flash_renderer(safe_ptr<diagnostics::graph>(graph_), frame_factory_, filename_, width_, height_));
+				while(frame_buffer_.try_push(core::basic_frame::empty()));
 				render(renderer_.get());
 			}
 
