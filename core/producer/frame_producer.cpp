@@ -74,9 +74,9 @@ public:
 				try
 				{
 					if(!producer->unique())
-						CASPAR_LOG(trace) << str << L" Not destroyed on safe asynchronous destruction thread: " << producer->use_count();
+						CASPAR_LOG(trace) << str << L" Not destroyed on asynchronous destruction thread: " << producer->use_count();
 					else
-						CASPAR_LOG(trace) << str << L" Destroying on safe asynchronous destruction thread.";
+						CASPAR_LOG(trace) << str << L" Destroying on asynchronous destruction thread.";
 				}
 				catch(...){}
 								
@@ -89,9 +89,7 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			try
 			{
-				auto str = (*producer_)->print();
 				producer_.reset();
-				CASPAR_LOG(debug) << str << L" Destroyed.";
 			}
 			catch(...){}
 		}
@@ -119,14 +117,15 @@ public:
 	print_producer_proxy(safe_ptr<frame_producer>&& producer) 
 		: producer_(std::move(producer))
 	{
-		CASPAR_LOG(info) << producer_->print() << L" Initialized";
+		CASPAR_LOG(info) << producer_->print() << L" Initialized.";
 	}
 
 	~print_producer_proxy()
 	{		
 		auto str = producer_->print();
+		CASPAR_LOG(trace) << str << L" Uninitializing.";
 		producer_.reset();
-		CASPAR_LOG(info) << str << L" Uninitialized";
+		CASPAR_LOG(info) << str << L" Uninitialized.";
 	}
 
 	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (producer_)->receive(hints);}
@@ -241,9 +240,6 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 	if(producer == frame_producer::empty())
 		producer = create_playlist_producer(my_frame_factory, params);
 	
-	if(producer != frame_producer::empty())
-		producer = create_producer_print_proxy(producer);
-
 	return producer;
 }
 

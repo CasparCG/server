@@ -80,9 +80,9 @@ namespace amcp {
 		virtual std::wstring print() const = 0;
 
 		void SetScheduling(AMCPCommandScheduling s){scheduling_ = s;}
+		void SetReplyString(const std::wstring& str){replyString_ = str;}
 
 	protected:
-		void SetReplyString(const std::wstring& str){replyString_ = str;}
 		std::vector<std::wstring> _parameters;
 		std::vector<std::wstring> _parameters2;
 
