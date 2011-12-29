@@ -161,6 +161,7 @@
 copy "$(SolutionDir)dependencies64\tbb\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\glew\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\freeimage\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies64\sfml\extlibs\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -206,6 +207,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
 copy "$(SolutionDir)dependencies64\tbb\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\glew\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\freeimage\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies64\sfml\extlibs\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
