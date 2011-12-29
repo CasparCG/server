@@ -59,10 +59,10 @@ namespace caspar { namespace core {
 		
 struct mixer::impl : boost::noncopyable
 {		
+	safe_ptr<mixer::target_t>					target_;
+
 	safe_ptr<diagnostics::graph>				graph_;
-	boost::timer								mix_timer_;
-	
-	std::list<std::weak_ptr<mixer::target_t>>	targets_;
+	boost::timer								mix_timer_;	
 
 	mutable tbb::spin_mutex						format_desc_mutex_;
 	video_format_desc							format_desc_;
@@ -76,8 +76,9 @@ struct mixer::impl : boost::noncopyable
 	executor executor_;
 
 public:
-	impl(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
-		: graph_(graph)
+	impl(const safe_ptr<mixer::target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
+		: target_(target)
+		, graph_(graph)
 		, format_desc_(format_desc)
 		, ogl_(ogl)
 		, image_mixer_(ogl)
@@ -114,13 +115,7 @@ public:
 
 				graph_->set_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
 				
-				boost::range::remove_erase_if(targets_, [](const std::weak_ptr<target_t>& target)
-				{
-					return target.lock() == nullptr;
-				});
-
-				BOOST_FOREACH(auto target, targets_)
-					target.lock()->send(std::make_pair(make_safe<read_frame>(ogl_, format_desc_.width, format_desc_.height, std::move(image.get()), std::move(audio)), packet.second));	
+				target_->send(std::make_pair(make_safe<read_frame>(ogl_, format_desc_.width, format_desc_.height, std::move(image.get()), std::move(audio)), packet.second));	
 			}
 			catch(...)
 			{
@@ -128,15 +123,7 @@ public:
 			}	
 		});		
 	}
-	
-	void link_target(const std::weak_ptr<mixer::target_t>& target)
-	{
-		executor_.begin_invoke([=]
-		{
-			targets_.push_back(target);
-		}, high_priority);
-	}
-				
+					
 	void set_blend_mode(int index, blend_mode::type value)
 	{
 		executor_.begin_invoke([=]
@@ -168,10 +155,9 @@ public:
 	}
 };
 	
-mixer::mixer(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
-	: impl_(new impl(graph, format_desc, ogl)){}
+mixer::mixer(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
+	: impl_(new impl(target, graph, format_desc, ogl)){}
 void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
-void mixer::link_target(const std::weak_ptr<target_t>& target){impl_->link_target(target);}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}

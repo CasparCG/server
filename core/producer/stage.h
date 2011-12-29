@@ -43,10 +43,9 @@ class stage sealed : boost::noncopyable
 public:
 	typedef target<std::pair<std::map<int, safe_ptr<basic_frame>>, std::shared_ptr<void>>> target_t;
 
-	explicit stage(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc);
+	explicit stage(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc);
 	
 	// stage
-	void link_target(const std::weak_ptr<target_t>& target);
 	
 	void set_frame_transform(int index, const frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void apply_frame_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
