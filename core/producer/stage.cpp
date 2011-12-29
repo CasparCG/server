@@ -78,12 +78,12 @@ public:
 };
 
 struct stage::impl : public std::enable_shared_from_this<impl>
-							 , boost::noncopyable
+				   , boost::noncopyable
 {		
-	safe_ptr<diagnostics::graph>							graph_;
-
-	std::vector<std::weak_ptr<stage::target_t>>				targets_;
+	safe_ptr<stage::target_t>								target_;
 	video_format_desc										format_desc_;
+	
+	safe_ptr<diagnostics::graph>							graph_;
 
 	boost::timer											produce_timer_;
 	boost::timer											tick_timer_;
@@ -93,8 +93,9 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 
 	executor												executor_;
 public:
-	impl(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc)  
-		: graph_(graph)
+	impl(const safe_ptr<stage::target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc)  
+		: target_(target)
+		, graph_(graph)
 		, format_desc_(format_desc)
 		, executor_(L"stage")
 	{
@@ -107,12 +108,7 @@ public:
 		std::weak_ptr<impl> self = shared_from_this();
 		executor_.begin_invoke([=]{tick(self);});
 	}
-
-	void link_target(const std::weak_ptr<stage::target_t>& target)
-	{
-		targets_.push_back(target);
-	}
-
+	
 	void tick(const std::weak_ptr<impl>& self)
 	{		
 		try
@@ -161,14 +157,8 @@ public:
 				if(self2)				
 					self2->executor_.begin_invoke([=]{tick(self);});				
 			});
-							
-			boost::range::remove_erase_if(targets_, [](const std::weak_ptr<target_t>& target)
-			{
-				return target.lock() == nullptr;
-			});
-
-			BOOST_FOREACH(auto target, targets_)
-				target.lock()->send(std::make_pair(frames, ticket));
+						
+			target_->send(std::make_pair(frames, ticket));
 
 			graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
@@ -357,8 +347,7 @@ public:
 	}
 };
 
-stage::stage(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) : impl_(new impl(graph, format_desc)){}
-void stage::link_target(const std::weak_ptr<target_t>& target){impl_->link_target(target);}
+stage::stage(const safe_ptr<stage::target_t>& target,const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) : impl_(new impl(target, graph, format_desc)){}
 void stage::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
 void stage::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
