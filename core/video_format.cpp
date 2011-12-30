@@ -51,7 +51,7 @@ namespace caspar { namespace core {
 const video_format_desc format_descs[video_format::count] =  
 {									   
 	DEFINE_VIDEOFORMATDESC(video_format::pal		,720,  576,  1024, 576,  field_mode::upper,			25,		1,		 boost::assign::list_of(3840),							L"PAL"), 
-	DEFINE_VIDEOFORMATDESC(video_format::ntsc		,720,  486,  720,  534,  field_mode::lower,			30000,	1001,	 boost::assign::list_of(3204)(3202)(3204)(3202)(3204),	L"NTSC"), 
+	DEFINE_VIDEOFORMATDESC(video_format::ntsc		,720,  486,  720,  540,  field_mode::lower,			30000,	1001,	 boost::assign::list_of(3204)(3202)(3204)(3202)(3204),	L"NTSC"), 
 	DEFINE_VIDEOFORMATDESC(video_format::x576p2500	,1024, 576,  1024, 576,  field_mode::progressive,	25,		1,		 boost::assign::list_of(3840),							L"576p2500"),
 	DEFINE_VIDEOFORMATDESC(video_format::x720p2500	,1280, 720,  1280, 720,  field_mode::progressive,	25,		1,		 boost::assign::list_of(3840),							L"720p2500"), 
 	DEFINE_VIDEOFORMATDESC(video_format::x720p5000	,1280, 720,  1280, 720,  field_mode::progressive,	50,		1,		 boost::assign::list_of(1920),							L"720p5000"), 

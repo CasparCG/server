@@ -80,12 +80,20 @@ enum stretch
 
 struct configuration
 {
+	enum aspect_ratio
+	{
+		aspect_4_3 = 0,
+		aspect_16_9,
+		aspect_invalid,
+	};
+		
 	std::wstring	name;
 	size_t			screen_index;
 	stretch			stretch;
 	bool			windowed;
 	bool			auto_deinterlace;
 	bool			key_only;
+	aspect_ratio	aspect;	
 
 	configuration()
 		: name(L"ogl")
@@ -94,6 +102,7 @@ struct configuration
 		, windowed(true)
 		, auto_deinterlace(true)
 		, key_only(false)
+		, aspect(aspect_invalid)
 	{
 	}
 };
@@ -106,7 +115,7 @@ struct ogl_consumer : boost::noncopyable
 
 	GLuint					texture_;
 	std::vector<GLuint>		pbos_;
-	
+			
 	float					width_;
 	float					height_;	
 	unsigned int			screen_x_;
@@ -141,6 +150,18 @@ public:
 		, square_height_(format_desc.square_height)
 		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
+		if(format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_4_3)
+		{
+			// Use default values which are 4:3.
+		}
+		else
+		{
+			if(config_.aspect == configuration::aspect_16_9)
+				square_width_ = (format_desc.height*16)/9;
+			else if(config_.aspect == configuration::aspect_4_3)
+				square_width_ = (format_desc.height*4)/3;
+		}
+
 		frame_buffer_.set_capacity(2);
 		
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
@@ -526,6 +547,12 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 		config.stretch = stretch::uniform;
 	else if(stretch_str == L"uniform_to_fill")
 		config.stretch = stretch::uniform_to_fill;
+
+	auto aspect_str = ptree.get(L"aspect-ratio", L"default");
+	if(aspect_str == L"16:9")
+		config.aspect = configuration::aspect_16_9;
+	else if(aspect_str == L"4:3")
+		config.aspect = configuration::aspect_4_3;
 	
 	return make_safe<ogl_consumer_proxy>(config);
 }
