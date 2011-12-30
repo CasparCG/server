@@ -127,7 +127,7 @@ public:
 			{						
 				try
 				{
-					it->second->initialize(format_desc_, channel_index_);
+					it->second->initialize(format_desc, channel_index_);
 					++it;
 				}
 				catch(...)
