@@ -64,7 +64,6 @@ struct mixer::impl : boost::noncopyable
 	safe_ptr<diagnostics::graph>				graph_;
 	boost::timer								mix_timer_;	
 
-	mutable tbb::spin_mutex						format_desc_mutex_;
 	video_format_desc							format_desc_;
 	safe_ptr<ogl_device>						ogl_;
 	
@@ -136,15 +135,8 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			tbb::spin_mutex::scoped_lock lock(format_desc_mutex_);
 			format_desc_ = format_desc;
 		});
-	}
-
-	core::video_format_desc get_video_format_desc() const // nothrow
-	{
-		tbb::spin_mutex::scoped_lock lock(format_desc_mutex_);
-		return format_desc_;
 	}
 
 	boost::unique_future<boost::property_tree::wptree> info() const
@@ -158,7 +150,6 @@ public:
 mixer::mixer(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
 	: impl_(new impl(target, graph, format_desc, ogl)){}
 void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
-core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}

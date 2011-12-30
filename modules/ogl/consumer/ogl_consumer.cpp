@@ -89,7 +89,7 @@ struct configuration
 	};
 		
 	std::wstring	name;
-	int			screen_index;
+	int				screen_index;
 	stretch			stretch;
 	bool			windowed;
 	bool			auto_deinterlace;
