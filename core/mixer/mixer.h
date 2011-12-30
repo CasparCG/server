@@ -60,7 +60,6 @@ public:
 		
 	// mixer
 		
-	core::video_format_desc get_video_format_desc() const; // nothrow
 	void set_video_format_desc(const video_format_desc& format_desc);
 	
 	void set_blend_mode(int index, blend_mode::type value);

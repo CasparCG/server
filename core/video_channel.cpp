@@ -76,7 +76,7 @@ public:
 	
 	virtual core::video_format_desc get_video_format_desc() const override// nothrow
 	{
-		return mixer_->get_video_format_desc();
+		return format_desc_;
 	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
