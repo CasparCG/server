@@ -45,7 +45,7 @@ public:
 
 	void swap(layer& other); // nothrow 
 		
-	void load(const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta); // nothrow
+	void load(const safe_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow

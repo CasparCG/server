@@ -27,6 +27,7 @@
 #include "frame/basic_frame.h"
 #include "frame/frame_transform.h"
 
+#include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
@@ -36,7 +37,7 @@ struct layer::impl
 	safe_ptr<frame_producer>	foreground_;
 	safe_ptr<frame_producer>	background_;
 	int64_t						frame_number_;
-	int32_t						auto_play_delta_;
+	boost::optional<int32_t>	auto_play_delta_;
 	bool						is_paused_;
 
 public:
@@ -44,7 +45,6 @@ public:
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, frame_number_(0)
-		, auto_play_delta_(-1)
 		, is_paused_(false)
 	{
 	}
@@ -59,12 +59,12 @@ public:
 		is_paused_ = false;
 	}
 
-	void load(const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
+	void load(const safe_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
 	{		
 		background_		 = producer;
 		auto_play_delta_ = auto_play_delta;
 
-		if(auto_play_delta_ > -1 && foreground_ == frame_producer::empty())
+		if(auto_play_delta_ && foreground_ == frame_producer::empty())
 			play();
 
 		if(preview) // Play the first frame and pause.
@@ -84,7 +84,7 @@ public:
 			foreground_			= background_;
 			background_			= frame_producer::empty();
 			frame_number_		= 0;
-			auto_play_delta_	= -1;	
+			auto_play_delta_	= nullptr;	
 		}
 
 		is_paused_			= false;
@@ -95,7 +95,7 @@ public:
 		foreground_			= frame_producer::empty();
 		background_			= background_;
 		frame_number_		= 0;
-		auto_play_delta_	= -1;
+		auto_play_delta_	= nullptr;	
 
 		is_paused_			= true;
 	}
@@ -111,11 +111,14 @@ public:
 			if(frame == core::basic_frame::late())
 				return disable_audio(foreground_->last_frame());
 
-			auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(++frame_number_) - static_cast<int64_t>(auto_play_delta_);
-			if(auto_play_delta_ > -1 && frames_left < 1)
+			if(auto_play_delta_)
 			{
-				play();
-				return receive(flags);
+				auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(++frame_number_) - static_cast<int64_t>(*auto_play_delta_);
+				if(frames_left < 1)
+				{
+					play();
+					return receive(flags);
+				}
 			}
 				
 			return frame;
@@ -173,7 +176,7 @@ void layer::swap(layer& other)
 {	
 	impl_.swap(other.impl_);
 }
-void layer::load(const safe_ptr<frame_producer>& frame_producer, bool preview, int auto_play_delta){return impl_->load(frame_producer, preview, auto_play_delta);}	
+void layer::load(const safe_ptr<frame_producer>& frame_producer, bool preview, const boost::optional<int32_t>& auto_play_delta){return impl_->load(frame_producer, preview, auto_play_delta);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
