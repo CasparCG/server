@@ -210,9 +210,6 @@ public:
 		window_.SetSize(screen_width_, screen_height_);
 		window_.SetActive();
 
-		auto error = GetLastError();
-		error;
-
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glDisable(GL_DEPTH_TEST));		
 		GL(glClearColor(0.0, 0.0, 0.0, 0.0));
