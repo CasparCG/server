@@ -84,7 +84,7 @@ public:
 			foreground_			= background_;
 			background_			= frame_producer::empty();
 			frame_number_		= 0;
-			auto_play_delta_	= nullptr;	
+			auto_play_delta_.reset();
 		}
 
 		is_paused_			= false;
@@ -95,7 +95,7 @@ public:
 		foreground_			= frame_producer::empty();
 		background_			= background_;
 		frame_number_		= 0;
-		auto_play_delta_	= nullptr;	
+		auto_play_delta_.reset();
 
 		is_paused_			= true;
 	}
@@ -145,7 +145,7 @@ public:
 	{
 		boost::property_tree::wptree info;
 		info.add(L"status",		is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"));
-		info.add(L"auto_delta",	auto_play_delta_);
+		info.add(L"auto_delta",	(auto_play_delta_ ? boost::lexical_cast<std::wstring>(*auto_play_delta_) : L"null"));
 		info.add(L"frame-number", frame_number_);
 
 		auto nb_frames = foreground_->nb_frames();
