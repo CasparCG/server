@@ -324,7 +324,7 @@ public:
 
 	boost::unique_future<boost::property_tree::wptree> info()
 	{
-		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
+		return std::move(executor_.begin_invoke([this]() -> boost::property_tree::wptree
 		{
 			boost::property_tree::wptree info;
 			BOOST_FOREACH(auto& layer, layers_)			
@@ -336,7 +336,7 @@ public:
 
 	boost::unique_future<boost::property_tree::wptree> info(int index)
 	{
-		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
+		return std::move(executor_.begin_invoke([=]() -> boost::property_tree::wptree
 		{
 			return layers_[index].info();
 		}, high_priority));
