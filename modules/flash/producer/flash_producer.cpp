@@ -318,7 +318,8 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 		
-		frame_buffer_.set_capacity(frame_factory_->get_video_format_desc().fps > 30.0 ? 2 : 1);
+		auto flash_buffer = env::properties().get(L"configuration.flash.buffer-depth", frame_factory_->get_video_format_desc().fps > 30.0 ? 2 : 1);
+		frame_buffer_.set_capacity(flash_buffer);
 
 		executor_.begin_invoke([]
 		{
