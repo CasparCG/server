@@ -166,7 +166,8 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}		
 	}
-		void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
+		
+	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
 		executor_.begin_invoke([=]
 		{
