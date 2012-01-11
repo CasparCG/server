@@ -23,9 +23,8 @@
 
 #include <common/exception/exceptions.h>
 #include <common/diagnostics/graph.h>
-#include <common/log/log.h>
-#include <common/utility/timer.h>
-#include <common/utility/string.h>
+#include <common/log.h>
+#include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>

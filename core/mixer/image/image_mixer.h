@@ -23,35 +23,30 @@
 
 #include "blend_modes.h"
 
+#include <common/forward.h>
+#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/frame_visitor.h>
 
-#include <boost/noncopyable.hpp>
-
-#include <boost/thread/future.hpp>
+FORWARD1(boost, template<typename> class unique_future);
 
 namespace caspar { namespace core {
-
-class write_frame;
-class host_buffer;
-class ogl_device;
-struct video_format_desc;
-struct pixel_format_desc;
-
-class image_mixer sealed : public core::frame_visitor, boost::noncopyable
-{
-public:
-	image_mixer(const safe_ptr<ogl_device>& ogl);
 	
-	virtual void begin(core::basic_frame& frame);
-	virtual void visit(core::write_frame& frame);
+class image_mixer sealed : public frame_visitor
+{
+	CASPAR_NO_COPY(image_mixer);
+public:
+	image_mixer(const safe_ptr<class ogl_device>& ogl);
+	
+	virtual void begin(class basic_frame& frame);
+	virtual void visit(class write_frame& frame);
 	virtual void end();
 
-	void begin_layer(blend_mode::type blend_mode);
+	void begin_layer(blend_mode blend_mode);
 	void end_layer();
 		
-	boost::unique_future<safe_ptr<host_buffer>> operator()(const video_format_desc& format_desc);
+	boost::unique_future<safe_ptr<class host_buffer>> operator()(const struct video_format_desc& format_desc);
 		
 private:
 	struct impl;

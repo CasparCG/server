@@ -21,21 +21,19 @@
 
 #pragma once
 
+#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 
-#include <boost/noncopyable.hpp>
-
 namespace caspar { namespace core {
-	
-class write_frame;
-struct pixel_format_desc;
-struct video_format_desc;
-		
-struct frame_factory : boost::noncopyable
+			
+struct frame_factory
 {
-	virtual safe_ptr<write_frame> create_frame(const void* video_stream_tag, const pixel_format_desc& desc) = 0;	
-	
-	virtual video_format_desc get_video_format_desc() const = 0; // nothrow
+	CASPAR_NO_COPY(frame_factory);
+
+	frame_factory(){}
+
+	virtual safe_ptr<class write_frame> create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;		
+	virtual struct video_format_desc get_video_format_desc() const = 0; // nothrow
 };
 
 }}

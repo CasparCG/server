@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../stdafx.h"
+#include "stdafx.h"
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4100) // 'identifier' : unreferenced formal parameter
@@ -28,8 +28,10 @@
 
 #include "log.h"
 
-#include "../exception/exceptions.h"
-#include "../utility/string.h"
+#include "utf.h"
+
+#include "exception/exceptions.h"
+
 #include <ios>
 #include <string>
 #include <ostream>

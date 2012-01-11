@@ -22,10 +22,10 @@
 #pragma once
 
 #include "../exception/win32_exception.h"
-#include "../exception/exceptions.h"
-#include "../utility/string.h"
 #include "../utility/move_on_copy.h"
-#include "../log/log.h"
+#include "../log.h"
+
+#include <Windows.h>
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>

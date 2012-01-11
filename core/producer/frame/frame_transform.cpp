@@ -23,7 +23,7 @@
 
 #include "frame_transform.h"
 
-#include <common/utility/assert.h>
+#include <algorithm>
 
 namespace caspar { namespace core {
 		
@@ -63,7 +63,7 @@ frame_transform& frame_transform::operator*=(const frame_transform &other)
 	levels.min_output		 = std::max(levels.min_output, other.levels.min_output);
 	levels.max_output		 = std::min(levels.max_output, other.levels.max_output);
 	levels.gamma			*= other.levels.gamma;
-	field_mode				 = static_cast<field_mode::type>(field_mode & other.field_mode);
+	field_mode				 = static_cast<core::field_mode>(field_mode & other.field_mode);
 	is_key					|= other.is_key;
 	is_mix					|= other.is_mix;
 	return *this;
@@ -100,7 +100,7 @@ frame_transform tween(double time, const frame_transform& source, const frame_tr
 	result.levels.max_output	= do_tween(time, source.levels.max_output,		dest.levels.max_output,		duration, tweener);
 	result.levels.min_output	= do_tween(time, source.levels.min_output,		dest.levels.min_output,		duration, tweener);
 	result.levels.gamma			= do_tween(time, source.levels.gamma,			dest.levels.gamma,			duration, tweener);
-	result.field_mode			= static_cast<field_mode::type>(source.field_mode & dest.field_mode);
+	result.field_mode			= static_cast<field_mode>(source.field_mode & dest.field_mode);
 	result.is_key				= source.is_key | dest.is_key;
 	result.is_mix				= source.is_mix | dest.is_mix;
 	

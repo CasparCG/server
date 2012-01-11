@@ -23,7 +23,7 @@
 
 #include "win32_exception.h"
 
-#include "../log/log.h"
+#include <windows.h>
 
 namespace caspar {
 

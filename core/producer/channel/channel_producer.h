@@ -21,16 +21,15 @@
 
 #pragma once
 
-#include "../frame_producer.h"
+#include "../../video_channel.h"
+
+#include <common/memory/safe_ptr.h>
 
 #include <string>
 #include <vector>
 
 namespace caspar { namespace core {
-
-class video_channel;
-struct frame_factory;
-
-safe_ptr<frame_producer> create_channel_producer(const safe_ptr<core::frame_factory>& frame_factory, const safe_ptr<video_channel>& channel);
+	
+safe_ptr<struct frame_producer> create_channel_producer(const safe_ptr<struct frame_factory>& frame_factory, const safe_ptr<video_channel>& channel);
 
 }}

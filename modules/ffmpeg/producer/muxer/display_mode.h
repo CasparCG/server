@@ -23,40 +23,42 @@
 
 #include <core/video_format.h>
 
+#include <ostream>
+
 namespace caspar { namespace ffmpeg {
 	
-struct display_mode
+enum display_mode
 {
-	enum type
-	{
-		simple,
-		duplicate,
-		half,
-		interlace,
-		deinterlace_bob,
-		deinterlace_bob_reinterlace,
-		deinterlace,
-		count,
-		invalid
-	};
-
-	static std::wstring print(display_mode::type value)
-	{
-		switch(value)
-		{
-			case simple:						return L"simple";
-			case duplicate:						return L"duplicate";
-			case half:							return L"half";
-			case interlace:						return L"interlace";
-			case deinterlace_bob:				return L"deinterlace_bob";
-			case deinterlace_bob_reinterlace:	return L"deinterlace_bob_reinterlace";
-			case deinterlace:					return L"deinterlace";
-			default:							return L"invalid";
-		}
-	}
+	simple,
+	duplicate,
+	half,
+	interlace,
+	deinterlace_bob,
+	deinterlace_bob_reinterlace,
+	deinterlace,
+	count,
+	invalid
 };
 
-static display_mode::type get_display_mode(const core::field_mode::type in_mode, double in_fps, const core::field_mode::type out_mode, double out_fps)
+template< typename CharT, typename TraitsT >
+std::basic_ostream< CharT, TraitsT >& operator<< (std::basic_ostream<CharT, TraitsT>& o, display_mode value)
+{	
+	switch(value)
+	{
+		case simple:						o << L"simple";
+		case duplicate:						o << L"duplicate";
+		case half:							o << L"half";
+		case interlace:						o << L"interlace";
+		case deinterlace_bob:				o << L"deinterlace_bob";
+		case deinterlace_bob_reinterlace:	o << L"deinterlace_bob_reinterlace";
+		case deinterlace:					o << L"deinterlace";
+		default:							o << L"invalid";
+	}
+	return o;
+}
+
+
+static display_mode get_display_mode(const core::field_mode in_mode, double in_fps, const core::field_mode out_mode, double out_fps)
 {		
 	static const auto epsilon = 2.0;
 

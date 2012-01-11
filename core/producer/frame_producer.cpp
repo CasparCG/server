@@ -35,6 +35,11 @@
 #include <common/utility/move_on_copy.h>
 
 namespace caspar { namespace core {
+
+boost::unique_future<std::wstring> frame_producer::call(const std::wstring&) 
+{
+	BOOST_THROW_EXCEPTION(not_supported());
+}
 	
 std::vector<const producer_factory_t> g_factories;
 	

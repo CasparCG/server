@@ -27,6 +27,8 @@
 #include "../frame/basic_frame.h"
 #include "../frame/frame_transform.h"
 
+#include <common/no_copy.h>
+
 #include <tbb/parallel_invoke.h>
 
 #include <boost/assign.hpp>
@@ -37,7 +39,9 @@ namespace caspar { namespace core {
 
 struct transition_producer : public frame_producer
 {	
-	const field_mode::type		mode_;
+	CASPAR_NO_COPY(transition_producer);
+
+	const field_mode		mode_;
 	unsigned int				current_frame_;
 	
 	const transition_info		info_;
@@ -47,7 +51,7 @@ struct transition_producer : public frame_producer
 
 	safe_ptr<basic_frame>		last_frame_;
 		
-	explicit transition_producer(const field_mode::type& mode, const safe_ptr<frame_producer>& dest, const transition_info& info) 
+	explicit transition_producer(const field_mode& mode, const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
 		, current_frame_(0)
 		, info_(info)
@@ -182,7 +186,7 @@ struct transition_producer : public frame_producer
 	}
 };
 
-safe_ptr<frame_producer> create_transition_producer(const field_mode::type& mode, const safe_ptr<frame_producer>& destination, const transition_info& info)
+safe_ptr<frame_producer> create_transition_producer(const field_mode& mode, const safe_ptr<frame_producer>& destination, const transition_info& info)
 {
 	return create_producer_print_proxy(
 			make_safe<transition_producer>(mode, destination, info));

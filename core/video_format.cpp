@@ -47,12 +47,12 @@ const std::vector<video_format_desc> format_descs = boost::assign::list_of
 	(video_format_desc(video_format::x1080p5000,	1920, 1080, 1920, 1080, field_mode::progressive,	   50,	   1, L"1080p5000",	boost::assign::list_of<int>(1920)						))
 	(video_format_desc(video_format::invalid,		   0,	 0,    0,	 0, field_mode::progressive,	    1,	   1, L"invalid",	boost::assign::list_of<int>(1)							));
 
-video_format_desc::video_format_desc(video_format::type format,
+video_format_desc::video_format_desc(video_format format,
 					int width,
 					int height,
 					int square_width,
 					int square_height,
-					field_mode::type field_mode,
+					core::field_mode field_mode,
 					int time_scale,
 					int duration,
 					const std::wstring& name,
@@ -75,12 +75,16 @@ video_format_desc::video_format_desc(video_format::type format,
 {
 }
 
-video_format_desc::video_format_desc(video_format::type format)
+video_format_desc::video_format_desc(video_format format)
+	: format(video_format::invalid)
+	, field_mode(field_mode::empty)
 {
-	*this = format_descs[format];
+	*this = format_descs.at(format.value());
 }
 
 video_format_desc::video_format_desc(const std::wstring& name)
+	: format(video_format::invalid)
+	, field_mode(field_mode::empty)
 {	
 	*this = video_format_desc(video_format::invalid);
 	for(auto it = std::begin(format_descs); it != std::end(format_descs)-1; ++it)

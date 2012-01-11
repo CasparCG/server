@@ -21,20 +21,19 @@
 
 #pragma once
 
+#include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 
-#include <boost/noncopyable.hpp>
-#include <boost/thread/future.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
 
+FORWARD1(boost, template<typename T> class unique_future);
+FORWARD1(boost, template<typename T> class optional);
+
 namespace caspar { namespace core {
-
-struct frame_producer;
-class basic_frame;
-
-class layer sealed : boost::noncopyable
+	
+class layer sealed
 {
 public:
 	layer(); // nothrow
@@ -45,7 +44,7 @@ public:
 
 	void swap(layer& other); // nothrow 
 		
-	void load(const safe_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
+	void load(const safe_ptr<struct frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
@@ -56,10 +55,10 @@ public:
 	
 	bool empty() const;
 
-	safe_ptr<frame_producer> foreground() const; // nothrow
-	safe_ptr<frame_producer> background() const; // nothrow
+	safe_ptr<struct frame_producer> foreground() const; // nothrow
+	safe_ptr<struct frame_producer> background() const; // nothrow
 
-	safe_ptr<basic_frame> receive(int flags); // nothrow
+	safe_ptr<class basic_frame> receive(int flags); // nothrow
 
 	boost::property_tree::wptree info() const;
 private:

@@ -31,14 +31,14 @@
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/memshfl.h>
-#include <common/utility/timer.h>
-#include <common/utility/assert.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
 
 #include <tbb/concurrent_queue.h>
 
+#include <boost/assert.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -330,7 +330,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
-		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
+		BOOST_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
 		consumer_->send(frame);
@@ -368,7 +368,7 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	if(params.size() < 1 || params[0] != L"BLUEFISH")
 		return core::frame_consumer::empty();
 		
-	const auto device_index = params.size() > 1 ? lexical_cast_or_default<int>(params[1], 1) : 1;
+	const auto device_index = params.size() > 1 ? boost::lexical_cast<int>(params[1]) : 1;
 
 	const auto embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	const auto key_only		  = std::find(params.begin(), params.end(), L"KEY_ONLY")	   != params.end();

@@ -29,7 +29,7 @@
 #include "AsyncEventServer.h"
 #include "SocketInfo.h"
 
-#include <common/log/log.h>
+#include <common/log.h>
 #include <string>
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>

@@ -119,22 +119,24 @@
     <ClInclude Include="concurrency\lock.h" />
     <ClInclude Include="concurrency\target.h" />
     <ClInclude Include="diagnostics\graph.h" />
+    <ClInclude Include="no_copy.h" />
     <ClInclude Include="exception\exceptions.h" />
     <ClInclude Include="exception\win32_exception.h" />
+    <ClInclude Include="forward.h" />
     <ClInclude Include="gl\gl_check.h" />
-    <ClInclude Include="log\log.h" />
+    <ClInclude Include="log.h" />
     <ClInclude Include="memory\memshfl.h" />
     <ClInclude Include="memory\page_locked_allocator.h" />
     <ClInclude Include="memory\safe_ptr.h" />
     <ClInclude Include="env.h" />
     <ClInclude Include="os\windows\current_version.h" />
     <ClInclude Include="os\windows\system_info.h" />
+    <ClInclude Include="enum_class.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="utility\assert.h" />
+    <ClInclude Include="utf.h" />
+    <ClInclude Include="prec_timer.h" />
     <ClInclude Include="utility\move_on_copy.h" />
     <ClInclude Include="utility\param.h" />
-    <ClInclude Include="utility\string.h" />
-    <ClInclude Include="utility\timer.h" />
     <ClInclude Include="utility\tweener.h" />
   </ItemGroup>
   <ItemGroup>
@@ -150,10 +152,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="log\log.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
+    <ClCompile Include="log.cpp" />
     <ClCompile Include="env.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -161,13 +160,17 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="utility\string.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
+    <ClCompile Include="utf.cpp" />
+    <ClCompile Include="prec_timer.cpp" />
     <ClCompile Include="utility\tweener.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">Use</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">Use</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

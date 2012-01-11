@@ -23,38 +23,38 @@
 
 #include "frame_producer.h"
 
+#include <common/no_copy.h>
+#include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
-#include <common/diagnostics/graph.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 #include <boost/thread/future.hpp>
 
 #include <functional>
 
+FORWARD2(caspar, diagnostics, class graph);
+
 namespace caspar { namespace core {
-
-struct video_format_desc;
-struct frame_transform;
-
-class stage sealed : boost::noncopyable
+	
+class stage sealed
 {
+	CASPAR_NO_COPY(stage);
 public:
-	typedef target<std::pair<std::map<int, safe_ptr<basic_frame>>, std::shared_ptr<void>>> target_t;
+	typedef target<std::pair<std::map<int, safe_ptr<class basic_frame>>, std::shared_ptr<void>>> target_t;
 
-	explicit stage(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc);
+	stage(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc);
 	
 	// stage
 	
-	void set_frame_transform(int index, const frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_frame_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void set_frame_transform(int index, const struct frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_frame_transform(int index, const std::function<struct frame_transform(struct frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void clear_transforms(int index);
 	void clear_transforms();
 
 	void spawn_token();
 			
-	void load(int index, const safe_ptr<frame_producer>& producer, bool preview = false, int auto_play_delta = -1);
+	void load(int index, const safe_ptr<struct frame_producer>& producer, bool preview = false, int auto_play_delta = -1);
 	void pause(int index);
 	void play(int index);
 	void stop(int index);
@@ -64,14 +64,14 @@ public:
 	void swap_layer(int index, int other_index);
 	void swap_layer(int index, int other_index, const safe_ptr<stage>& other);
 	
-	boost::unique_future<std::wstring>				call(int index, bool foreground, const std::wstring& param);
-	boost::unique_future<safe_ptr<frame_producer>>	foreground(int index);
-	boost::unique_future<safe_ptr<frame_producer>>	background(int index);
+	boost::unique_future<std::wstring>						call(int index, bool foreground, const std::wstring& param);
+	boost::unique_future<safe_ptr<struct frame_producer>>	foreground(int index);
+	boost::unique_future<safe_ptr<struct frame_producer>>	background(int index);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 	boost::unique_future<boost::property_tree::wptree> info(int layer) const;
 	
-	void set_video_format_desc(const video_format_desc& format_desc);
+	void set_video_format_desc(const struct video_format_desc& format_desc);
 
 private:
 	struct impl;

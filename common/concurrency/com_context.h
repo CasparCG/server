@@ -23,7 +23,7 @@
 
 #include "executor.h"
 
-#include "../log/log.h"
+#include "../log.h"
 #include "../exception/exceptions.h"
 
 #define NOMINMAX

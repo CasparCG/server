@@ -21,18 +21,15 @@
 
 #pragma once
 
+#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
-
-#include <boost/noncopyable.hpp>
-
-#include <memory>
 
 namespace caspar { namespace core {
 		
-class device_buffer : boost::noncopyable
+class device_buffer
 {
-public:
-	
+	CASPAR_NO_COPY(device_buffer);
+public:	
 	int stride() const;	
 	int width() const;
 	int height() const;

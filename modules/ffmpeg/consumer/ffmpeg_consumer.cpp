@@ -34,7 +34,7 @@
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/safe_ptr.h>
-#include <common/utility/string.h>
+#include <common/utf.h>
 #include <common/utility/param.h>
 
 #include <boost/algorithm/string.hpp>

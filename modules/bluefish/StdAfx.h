@@ -39,11 +39,11 @@
 #include <string>
 #include <math.h>
 
-#include <common/utility/string.h>
+#include <common/utf.h>
 #include <common/memory/safe_ptr.h>
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
-#include <common/log/Log.h>
+#include <common/log.h>
 #include <common/exception/exceptions.h>
 
 #include <assert.h>

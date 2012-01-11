@@ -26,11 +26,10 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/gl/gl_check.h>
-#include <common/log/log.h>
+#include <common/log.h>
 #include <common/memory/safe_ptr.h>
 #include <common/memory/memshfl.h>
-#include <common/utility/timer.h>
-#include <common/utility/string.h>
+#include <common/utf.h>
 
 #include <ffmpeg/producer/filter/filter.h>
 

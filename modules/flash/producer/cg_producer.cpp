@@ -53,7 +53,7 @@ public:
 		if(boost::filesystem::wpath(filename).extension() == L"")
 			filename += L".ft";
 		
-		auto str = (boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?TEXT("<true/>"):TEXT("<false/>")) % label % data).str();
+		auto str = (boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?L"<true/>":L"<false/>") % label % data).str();
 
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command: " << str;
 		return flash_producer_->call(str);

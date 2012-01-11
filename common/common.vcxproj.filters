@@ -16,9 +16,6 @@
     <Filter Include="source\memory">
       <UniqueIdentifier>{9259676d-c225-4422-a50e-30d152d78dc2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\log">
-      <UniqueIdentifier>{3b529e9b-c729-4c8a-8166-0cb8d8030973}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\gl">
       <UniqueIdentifier>{0d94bbc2-e196-4618-a90b-19392a3a0a8e}</UniqueIdentifier>
     </Filter>
@@ -42,16 +39,10 @@
     <ClCompile Include="exception\win32_exception.cpp">
       <Filter>source\exception</Filter>
     </ClCompile>
-    <ClCompile Include="log\log.cpp">
-      <Filter>source\log</Filter>
-    </ClCompile>
     <ClCompile Include="diagnostics\graph.cpp">
       <Filter>source\diagnostics</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="utility\string.cpp">
-      <Filter>source\utility</Filter>
-    </ClCompile>
     <ClCompile Include="gl\gl_check.cpp">
       <Filter>source\gl</Filter>
     </ClCompile>
@@ -60,6 +51,15 @@
     </ClCompile>
     <ClCompile Include="utility\tweener.cpp">
       <Filter>source\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="utf.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="prec_timer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="log.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -75,9 +75,6 @@
     <ClInclude Include="concurrency\executor.h">
       <Filter>source\concurrency</Filter>
     </ClInclude>
-    <ClInclude Include="log\log.h">
-      <Filter>source\log</Filter>
-    </ClInclude>
     <ClInclude Include="gl\gl_check.h">
       <Filter>source\gl</Filter>
     </ClInclude>
@@ -91,15 +88,6 @@
       <Filter>source\diagnostics</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="utility\assert.h">
-      <Filter>source\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\string.h">
-      <Filter>source\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\timer.h">
-      <Filter>source\utility</Filter>
-    </ClInclude>
     <ClInclude Include="utility\tweener.h">
       <Filter>source\utility</Filter>
     </ClInclude>
@@ -129,6 +117,24 @@
     </ClInclude>
     <ClInclude Include="concurrency\lock.h">
       <Filter>source\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="utf.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="prec_timer.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="log.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="forward.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="no_copy.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="enum_class.h">
+      <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

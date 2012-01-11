@@ -34,13 +34,14 @@
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/memory/memshfl.h>
-#include <common/utility/assert.h>
 
 #include <core/consumer/frame_consumer.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/cache_aligned_allocator.h>
 
+#include <boost/assert.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -499,7 +500,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
-		CASPAR_VERIFY(audio_cadence_.front() == static_cast<int>(frame->audio_data().size()));
+		BOOST_VERIFY(audio_cadence_.front() == static_cast<int>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
 		consumer_->send(frame);
@@ -543,7 +544,7 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	configuration config;
 		
 	if(params.size() > 1)
-		config.device_index = lexical_cast_or_default<int>(params[1], config.device_index);
+		config.device_index = boost::lexical_cast<int>(params[1]);
 	
 	config.internal_key		= std::find(params.begin(), params.end(), L"INTERNAL_KEY")	 != params.end();
 	config.low_latency		= std::find(params.begin(), params.end(), L"LOW_LATENCY")	 != params.end();

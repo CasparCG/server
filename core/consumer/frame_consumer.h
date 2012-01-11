@@ -21,9 +21,9 @@
 
 #pragma once
 
+#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <functional>
@@ -32,15 +32,15 @@
 
 namespace caspar { namespace core {
 	
-class read_frame;
-struct video_format_desc;
-
-struct frame_consumer : boost::noncopyable
+struct frame_consumer
 {
+	CASPAR_NO_COPY(frame_consumer);
+
+	frame_consumer(){}
 	virtual ~frame_consumer() {}
 	
-	virtual bool send(const safe_ptr<read_frame>& frame) = 0;
-	virtual void initialize(const video_format_desc& format_desc, int channel_index) = 0;
+	virtual bool send(const safe_ptr<class read_frame>& frame) = 0;
+	virtual void initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
 	virtual std::wstring print() const = 0;
 	virtual boost::property_tree::wptree info() const = 0;
 	virtual bool has_synchronization_clock() const {return true;}
@@ -52,9 +52,9 @@ struct frame_consumer : boost::noncopyable
 
 safe_ptr<frame_consumer> create_consumer_cadence_guard(const safe_ptr<frame_consumer>& consumer);
 
-typedef std::function<safe_ptr<core::frame_consumer>(const std::vector<std::wstring>&)> consumer_factory_t;
+typedef std::function<safe_ptr<frame_consumer>(const std::vector<std::wstring>&)> consumer_factory_t;
 
 void register_consumer_factory(const consumer_factory_t& factory);
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+safe_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>& params);
 
 }}

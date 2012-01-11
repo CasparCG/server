@@ -30,6 +30,7 @@
 #include "mixer/gpu/ogl_device.h"
 #include "mixer/write_frame.h"
 #include "producer/stage.h"
+#include "producer/frame/frame_factory.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>

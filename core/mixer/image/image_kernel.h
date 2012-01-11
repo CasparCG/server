@@ -23,37 +23,32 @@
 
 #include "blend_modes.h"
 
+#include <common/no_copy.h>
+#include <common/enum_class.h>
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_transform.h>
 
-#include <boost/noncopyable.hpp>
-
 namespace caspar { namespace core {
 	
-class device_buffer;
-class ogl_device;
-
-struct keyer
+CASPAR_BEGIN_ENUM_CLASS
 {
-	enum type
-	{
-		linear = 0,
-		additive
-	};
-};
+	linear = 0,
+	additive
+}
+CASPAR_END_ENUM_CLASS(keyer)
 
-struct draw_params
+struct draw_params sealed
 {
-	pixel_format_desc						pix_desc;
-	std::vector<safe_ptr<device_buffer>>	textures;
-	frame_transform							transform;
-	blend_mode::type						blend_mode;
-	keyer::type								keyer;
-	std::shared_ptr<device_buffer>			background;
-	std::shared_ptr<device_buffer>			local_key;
-	std::shared_ptr<device_buffer>			layer_key;
+	pixel_format_desc							pix_desc;
+	std::vector<safe_ptr<class device_buffer>>	textures;
+	frame_transform								transform;
+	blend_mode									blend_mode;
+	keyer										keyer;
+	std::shared_ptr<class device_buffer>		background;
+	std::shared_ptr<class device_buffer>		local_key;
+	std::shared_ptr<class device_buffer>		layer_key;
 
 	draw_params() 
 		: blend_mode(blend_mode::normal)
@@ -62,10 +57,11 @@ struct draw_params
 	}
 };
 
-class image_kernel sealed : boost::noncopyable
+class image_kernel sealed
 {
+	CASPAR_NO_COPY(image_kernel);
 public:
-	image_kernel(const safe_ptr<ogl_device>& ogl);
+	image_kernel(const safe_ptr<class ogl_device>& ogl);
 	void draw(draw_params&& params);
 private:
 	struct impl;

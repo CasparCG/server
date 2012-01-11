@@ -22,7 +22,7 @@
 */
 #include "ffmpeg_error.h"
 
-#include <common/utility/string.h>
+#include <common/utf.h>
 
 #pragma warning(disable: 4146)
 

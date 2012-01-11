@@ -21,32 +21,25 @@
 
 #pragma once
 
+#include <common/forward.h>
+#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/frame_visitor.h>
-
-#include <boost/noncopyable.hpp>
 
 #include <tbb/cache_aligned_allocator.h>
 
 #include <vector>
 
-namespace caspar {
-	
-namespace diagnostics {
-	
-class graph;
+FORWARD2(caspar, diagnostics, class graph);
 
-}
-
-namespace core {
-
-struct video_format_desc;
-	
+namespace caspar { namespace core {
+		
 typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
 
-class audio_mixer sealed : public core::frame_visitor, boost::noncopyable
+class audio_mixer sealed : public frame_visitor
 {
+	CASPAR_NO_COPY(audio_mixer);
 public:
 	audio_mixer(const safe_ptr<diagnostics::graph>& graph);
 
@@ -54,7 +47,7 @@ public:
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
-	audio_buffer operator()(const video_format_desc& format_desc);
+	audio_buffer operator()(const struct video_format_desc& format_desc);
 	
 private:
 	struct impl;

@@ -33,6 +33,8 @@ namespace caspar { namespace core {
 
 struct shader::impl : boost::noncopyable
 {
+	CASPAR_NO_COPY(impl);
+
 	GLuint program_;
 	std::unordered_map<std::string, GLint> locations_;
 public:

@@ -40,7 +40,7 @@
 #include <common/concurrency/executor.h>
 #include <common/concurrency/lock.h>
 #include <common/diagnostics/graph.h>
-#include <common/utility/timer.h>
+#include <common/prec_timer.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -157,7 +157,7 @@ class flash_renderer
 	boost::timer frame_timer_;
 	boost::timer tick_timer_;
 
-	high_prec_timer timer_;
+	prec_timer timer_;
 
 	const int width_;
 	const int height_;

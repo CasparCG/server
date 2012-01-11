@@ -18,11 +18,13 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
+#include "stdafx.h"
+
 #include "server.h"
 
 #include <common/env.h>
 #include <common/exception/exceptions.h>
-#include <common/utility/string.h>
+#include <common/utf.h>
 
 #include <core/mixer/gpu/ogl_device.h>
 #include <core/video_channel.h>

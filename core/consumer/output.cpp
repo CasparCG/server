@@ -27,16 +27,19 @@
 
 #include "output.h"
 
+#include "frame_consumer.h"
+
 #include "../video_format.h"
 #include "../mixer/gpu/ogl_device.h"
 #include "../mixer/read_frame.h"
 
 #include <common/concurrency/executor.h>
-#include <common/utility/assert.h>
-#include <common/utility/timer.h>
+#include <common/diagnostics/graph.h>
+#include <common/prec_timer.h>
 #include <common/memory/memshfl.h>
 #include <common/env.h>
 
+#include <boost/assert.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
@@ -55,7 +58,7 @@ struct output::impl
 
 	std::map<int, safe_ptr<frame_consumer>>			consumers_;
 	
-	high_prec_timer									sync_timer_;
+	prec_timer										sync_timer_;
 
 	boost::circular_buffer<safe_ptr<read_frame>>	frames_;
 
@@ -254,14 +257,6 @@ public:
 			return info;
 		}, high_priority));
 	}
-
-	bool empty()
-	{
-		return executor_.invoke([this]
-		{
-			return consumers_.empty();
-		});
-	}
 };
 
 output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new impl(graph, format_desc, channel_index)){}
@@ -272,5 +267,4 @@ void output::remove(const safe_ptr<frame_consumer>& consumer){impl_->remove(cons
 void output::send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) {impl_->send(frame); }
 void output::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
-bool output::empty() const{return impl_->empty();}
 }}
