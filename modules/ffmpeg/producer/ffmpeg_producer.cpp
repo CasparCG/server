@@ -32,7 +32,7 @@
 #include "video/video_decoder.h"
 
 #include <common/env.h>
-#include <common/utility/assert.h>
+#include <common/log.h>
 #include <common/utility/param.h>
 #include <common/diagnostics/graph.h>
 
@@ -43,6 +43,7 @@
 #include <core/producer/frame/frame_transform.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/assert.hpp>
 #include <boost/assign.hpp>
 #include <boost/timer.hpp>
 #include <boost/foreach.hpp>
@@ -51,6 +52,7 @@
 #include <boost/range/algorithm/find.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
+#include <boost/thread/future.hpp>
 
 #include <tbb/parallel_invoke.h>
 

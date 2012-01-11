@@ -26,6 +26,7 @@
 #endif
 
 #define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 
 #include <GL/glew.h>
 
@@ -43,6 +44,7 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
 
+#include <boost/assert.hpp>
 #include <boost/assign.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
@@ -55,11 +57,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-#include <common/utility/string.h>
+#include <common/utf.h>
 #include <common/memory/safe_ptr.h>
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
-#include <common/log/log.h>
+#include <common/log.h>
 #include <common/exception/exceptions.h>
 #include <common/exception/win32_exception.h>
-#include <common/utility/assert.h>

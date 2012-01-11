@@ -23,46 +23,37 @@
 
 #include "image/blend_modes.h"
 
-#include "../producer/frame/frame_factory.h"
-
+#include <common/no_copy.h>
+#include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
-#include <common/diagnostics/graph.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
-#include <boost/thread/future.hpp>
 
 #include <map>
 
-namespace caspar { 
+FORWARD2(caspar, diagnostics, class graph);
+FORWARD1(boost, template<typename> class unique_future);
 
-class executor;
+namespace caspar { namespace core {
 	
-namespace core {
-
-class read_frame;
-class write_frame;
-class basic_frame;
-class ogl_device;
-struct frame_transform;
-struct pixel_format;
-
-class mixer sealed : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>>
+class mixer sealed : public target<std::pair<std::map<int, safe_ptr<class basic_frame>>, std::shared_ptr<void>>>
 {
+	CASPAR_NO_COPY(mixer);
 public:	
-	typedef target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>> target_t;
+	typedef target<std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>> target_t;
 
-	explicit mixer(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
+	explicit mixer(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc, const safe_ptr<class ogl_device>& ogl);
 		
 	// target
 
-	virtual void send(const std::pair<std::map<int, safe_ptr<basic_frame>>, std::shared_ptr<void>>& frames) override; 
+	virtual void send(const std::pair<std::map<int, safe_ptr<class basic_frame>>, std::shared_ptr<void>>& frames) override; 
 		
 	// mixer
 		
-	void set_video_format_desc(const video_format_desc& format_desc);
+	void set_video_format_desc(const struct video_format_desc& format_desc);
 	
-	void set_blend_mode(int index, blend_mode::type value);
+	void set_blend_mode(int index, blend_mode value);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 	

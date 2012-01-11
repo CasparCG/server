@@ -27,24 +27,18 @@
 #include <core/video_format.h>
 #include <core/mixer/audio/audio_mixer.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 
-#include <cstdint>
+#include <stdint.h>
 #include <vector>
 
 namespace caspar { namespace core {
-
-class device_buffer;
-struct frame_visitor;
-struct pixel_format_desc;
-class ogl_device;	
-
-class write_frame sealed : public core::basic_frame, boost::noncopyable
+	
+class write_frame sealed : public core::basic_frame
 {
 public:	
 	explicit write_frame(const void* tag);
-	explicit write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc);
+	explicit write_frame(const safe_ptr<class ogl_device>& ogl, const void* tag, const struct pixel_format_desc& desc);
 
 	write_frame(const write_frame& other);
 	write_frame(write_frame&& other);
@@ -54,7 +48,7 @@ public:
 			
 	// basic_frame
 
-	virtual void accept(frame_visitor& visitor) override;
+	virtual void accept(struct frame_visitor& visitor) override;
 
 	// write _frame
 
@@ -66,17 +60,17 @@ public:
 	void commit(int plane_index);
 	void commit();
 	
-	void set_type(const field_mode::type& mode);
-	field_mode::type get_type() const;
+	void set_type(const field_mode& mode);
+	field_mode get_type() const;
 	
 	const void* tag() const;
 
-	const core::pixel_format_desc& get_pixel_format_desc() const;
+	const struct pixel_format_desc& get_pixel_format_desc() const;
 	
 private:
 	friend class image_mixer;
 	
-	const std::vector<safe_ptr<device_buffer>>& get_textures() const;
+	const std::vector<safe_ptr<class device_buffer>>& get_textures() const;
 
 	struct impl;
 	safe_ptr<impl> impl_;

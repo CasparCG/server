@@ -23,7 +23,7 @@
 
 #include "blue_velvet.h"
 
-#include <common/utility/string.h>
+#include <common/utf.h>
 
 #include <core/video_format.h>
 
@@ -82,9 +82,9 @@ void blue_initialize()
 	blue_velvet_initialize();
 }
 
-EVideoMode vid_fmt_from_video_format(const core::video_format::type& fmt) 
+EVideoMode vid_fmt_from_video_format(const core::video_format& fmt) 
 {
-	switch(fmt)
+	switch(fmt.value())
 	{
 	case core::video_format::pal:			return VID_FMT_PAL;
 	case core::video_format::ntsc:			return VID_FMT_NTSC;

@@ -27,6 +27,8 @@
 #include "gpu/host_buffer.h"
 #include "gpu/device_buffer.h"
 
+#include <common/no_copy.h>
+
 #include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
 
@@ -35,17 +37,18 @@
 namespace caspar { namespace core {
 																																							
 struct write_frame::impl
-{				
+{			
 	std::shared_ptr<ogl_device>					ogl_;
 	std::vector<std::shared_ptr<host_buffer>>	buffers_;
 	std::vector<safe_ptr<device_buffer>>		textures_;
 	audio_buffer								audio_data_;
 	const core::pixel_format_desc				desc_;
 	const void*									tag_;
-	core::field_mode::type						mode_;
+	core::field_mode							mode_;
 
 	impl(const void* tag)
 		: tag_(tag)
+		, mode_(core::field_mode::empty)
 	{
 	}
 
@@ -134,8 +137,8 @@ const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return
 const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
 void write_frame::commit(int plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
-void write_frame::set_type(const field_mode::type& mode){impl_->mode_ = mode;}
-core::field_mode::type write_frame::get_type() const{return impl_->mode_;}
+void write_frame::set_type(const field_mode& mode){impl_->mode_ = mode;}
+core::field_mode write_frame::get_type() const{return impl_->mode_;}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 }}

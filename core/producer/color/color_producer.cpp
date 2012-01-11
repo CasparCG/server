@@ -29,6 +29,7 @@
 #include "../frame/pixel_format.h"
 #include "../../mixer/write_frame.h"
 
+#include <common/no_copy.h>
 #include <common/exception/exceptions.h>
 
 #include <boost/algorithm/string.hpp>
@@ -39,6 +40,8 @@ namespace caspar { namespace core {
 	
 class color_producer : public frame_producer
 {
+	CASPAR_NO_COPY(color_producer);
+
 	safe_ptr<basic_frame> frame_;
 	const std::wstring color_str_;
 
@@ -115,7 +118,7 @@ std::wstring get_hex_color(const std::wstring& str)
 	return str;
 }
 
-safe_ptr<frame_producer> create_color_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<frame_producer> create_color_producer(const safe_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.size() < 0)
 		return core::frame_producer::empty();
@@ -127,7 +130,7 @@ safe_ptr<frame_producer> create_color_producer(const safe_ptr<core::frame_factor
 	return create_producer_print_proxy(
 			make_safe<color_producer>(frame_factory, color2));
 }
-safe_ptr<core::write_frame> create_color_frame(void* tag, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& color)
+safe_ptr<write_frame> create_color_frame(void* tag, const safe_ptr<frame_factory>& frame_factory, const std::wstring& color)
 {
 	auto color2 = get_hex_color(color);
 	if(color2.length() != 9 || color2[0] != '#')

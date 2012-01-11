@@ -27,10 +27,10 @@
 
 #include <common/memory/safe_ptr.h>
 
+#include <vector>
+
 namespace caspar { namespace core {
-
-struct frame_transform;
-
+	
 class basic_frame
 {
 public:
@@ -47,10 +47,10 @@ public:
 	
 	void swap(basic_frame& other);
 
-	const frame_transform& get_frame_transform() const;
-	frame_transform& get_frame_transform();
+	const struct frame_transform& get_frame_transform() const;
+	struct frame_transform& get_frame_transform();
 				
-	static safe_ptr<basic_frame> interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, field_mode::type mode);
+	static safe_ptr<basic_frame> interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, field_mode mode);
 	static safe_ptr<basic_frame> combine(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2);
 	static safe_ptr<basic_frame> fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key);
 		

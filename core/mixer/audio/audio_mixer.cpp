@@ -27,8 +27,6 @@
 #include <core/producer/frame/frame_transform.h>
 #include <common/diagnostics/graph.h>
 
-#include <tbb/cache_aligned_allocator.h>
-
 #include <boost/range/adaptors.hpp>
 #include <boost/range/distance.hpp>
 

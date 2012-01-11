@@ -21,26 +21,26 @@
 
 #pragma once
 
+#include <common/enum_class.h>
+
 #include <vector>
 
 namespace caspar { namespace core {
 		
-struct pixel_format
+CASPAR_BEGIN_ENUM_CLASS
 {
-	enum type
-	{
-		gray = 0,
-		bgra,
-		rgba,
-		argb,
-		abgr,
-		ycbcr,
-		ycbcra,
-		luma,
-		count,
-		invalid
-	};
-};
+	gray = 0,
+	bgra,
+	rgba,
+	argb,
+	abgr,
+	ycbcr,
+	ycbcra,
+	luma,
+	count,
+	invalid
+}
+CASPAR_END_ENUM_CLASS(pixel_format)
 
 struct pixel_format_desc sealed
 {
@@ -76,8 +76,8 @@ struct pixel_format_desc sealed
 	{
 	}
 	
-	pixel_format::type pix_fmt;
-	std::vector<plane> planes;
+	pixel_format		pix_fmt;
+	std::vector<plane>	planes;
 };
 
 }}

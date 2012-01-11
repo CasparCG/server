@@ -35,8 +35,7 @@
 
 #include <common/env.h>
 #include <common/exception/exceptions.h>
-#include <common/log/log.h>
-#include <common/utility/assert.h>
+#include <common/log.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -53,6 +52,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+#include <boost/assert.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -70,7 +70,7 @@ struct frame_muxer::impl : boost::noncopyable
 	std::queue<std::queue<safe_ptr<write_frame>>>	video_streams_;
 	std::queue<core::audio_buffer>					audio_streams_;
 	std::queue<safe_ptr<basic_frame>>				frame_buffer_;
-	display_mode::type								display_mode_;
+	display_mode								display_mode_;
 	const double									in_fps_;
 	const video_format_desc							format_desc_;
 	bool											auto_transcode_;
@@ -119,7 +119,7 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 		else
 		{
-			bool DEINTERLACE_FLAG = (flags & core::frame_producer::DEINTERLACE_FLAG) != 0;
+			bool DEINTERLACE_FLAG = (flags & core::frame_producer::flags::deinterlace) != 0;
 		
 			if(auto_deinterlace_ && force_deinterlacing_ != DEINTERLACE_FLAG)
 			{
@@ -130,7 +130,7 @@ struct frame_muxer::impl : boost::noncopyable
 			if(display_mode_ == display_mode::invalid)
 				update_display_mode(video_frame, force_deinterlacing_);
 				
-			if(flags & core::frame_producer::ALPHA_ONLY_FLAG)
+			if(flags & core::frame_producer::flags::alpha_only)
 				video_frame->format = make_alpha_format(video_frame->format);
 		
 			auto format = video_frame->format;
@@ -278,7 +278,7 @@ struct frame_muxer::impl : boost::noncopyable
 
 	core::audio_buffer pop_audio()
 	{
-		CASPAR_VERIFY(audio_streams_.front().size() >= static_cast<size_t>(audio_cadence_.front()));
+		BOOST_VERIFY(audio_streams_.front().size() >= static_cast<size_t>(audio_cadence_.front()));
 
 		auto begin = audio_streams_.front().begin();
 		auto end   = begin + audio_cadence_.front();
@@ -347,7 +347,7 @@ struct frame_muxer::impl : boost::noncopyable
 					video_streams_.back().push(make_write_frame(this, make_safe_ptr(av_frame), frame_factory_, 0));
 			}
 			filter_ = filter(filter_str);
-			CASPAR_LOG(info) << L"[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
+			CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
 		}
 	}
 	

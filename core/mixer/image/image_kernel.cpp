@@ -38,7 +38,7 @@
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_transform.h>
 
-#include <boost/noncopyable.hpp>
+#include <boost/assert.hpp>
 
 namespace caspar { namespace core {
 	
@@ -56,6 +56,8 @@ GLubyte lower_pattern[] = {
 
 struct image_kernel::impl : boost::noncopyable
 {	
+	CASPAR_NO_COPY(impl);
+
 	safe_ptr<ogl_device>	ogl_;
 	safe_ptr<shader>		shader_;
 	bool					blend_modes_;
@@ -70,7 +72,7 @@ struct image_kernel::impl : boost::noncopyable
 	{
 		static const double epsilon = 0.001;
 
-		CASPAR_ASSERT(params.pix_desc.planes.size() == params.textures.size());
+		BOOST_ASSERT(params.pix_desc.planes.size() == params.textures.size());
 
 		if(params.textures.empty() || !params.background)
 			return;
@@ -108,7 +110,7 @@ struct image_kernel::impl : boost::noncopyable
 		shader_->set("is_hd",		 	params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	params.local_key);
 		shader_->set("has_layer_key",	params.layer_key);
-		shader_->set("pixel_format",	params.pix_desc.pix_fmt);	
+		shader_->set("pixel_format",	params.pix_desc.pix_fmt.value());	
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
 		
 		// Setup blend_func
@@ -121,12 +123,12 @@ struct image_kernel::impl : boost::noncopyable
 			params.background->bind(6);
 
 			shader_->set("background",	texture_id::background);
-			shader_->set("blend_mode",	params.blend_mode);
-			shader_->set("keyer",		params.keyer);
+			shader_->set("blend_mode",	params.blend_mode.value());
+			shader_->set("keyer",		params.keyer.value());
 		}
 		else
 		{
-			switch(params.keyer)
+			switch(params.keyer.value())
 			{
 			case keyer::additive:
 				ogl_->blend_func(GL_ONE, GL_ONE);	

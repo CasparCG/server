@@ -27,7 +27,7 @@
 
 namespace caspar { namespace core {
 		
-blend_mode::type get_blend_mode(const std::wstring& str)
+blend_mode get_blend_mode(const std::wstring& str)
 {
 	if(boost::iequals(str, L"normal"))
 		return blend_mode::normal;

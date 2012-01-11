@@ -24,6 +24,8 @@
 #include "host_buffer.h"
 #include "device_buffer.h"
 
+#include <common/forward.h>
+#include <common/no_copy.h>
 #include <common/concurrency/executor.h>
 #include <common/memory/safe_ptr.h>
 
@@ -34,11 +36,10 @@
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
 
-#include <boost/noncopyable.hpp>
-#include <boost/thread/future.hpp>
-
 #include <array>
 #include <unordered_map>
+
+FORWARD1(boost, template<typename> class unique_future);
 
 namespace caspar { namespace core {
 
@@ -47,6 +48,8 @@ class shader;
 template<typename T>
 struct buffer_pool
 {
+	CASPAR_NO_COPY(buffer_pool);
+
 	tbb::atomic<int> usage_count;
 	tbb::atomic<int> flush_count;
 	tbb::concurrent_bounded_queue<std::shared_ptr<T>> items;
@@ -58,8 +61,10 @@ struct buffer_pool
 	}
 };
 
-class ogl_device : public std::enable_shared_from_this<ogl_device>, boost::noncopyable
+class ogl_device : public std::enable_shared_from_this<ogl_device>
 {	
+	CASPAR_NO_COPY(ogl_device);
+
 	std::unordered_map<GLenum, bool> caps_;
 	std::array<int, 4>				 viewport_;
 	std::array<int, 4>				 scissor_;

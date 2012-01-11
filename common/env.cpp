@@ -25,9 +25,9 @@
 
 #include "../version.h"
 
-#include "log/log.h"
+#include "log.h"
 #include "exception/exceptions.h"
-#include "utility/string.h"
+#include "string.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>

@@ -7,6 +7,9 @@
     <ClCompile Include="server.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>stdafx</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="casparcg.config" />
@@ -19,10 +22,16 @@
     <ClInclude Include="resource.h">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>stdafx</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="source">
       <UniqueIdentifier>{39e46848-dfec-441d-b0c0-f131380cdc6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="stdafx">
+      <UniqueIdentifier>{d8384077-3b1f-45df-93e3-26aa9d97bdb3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

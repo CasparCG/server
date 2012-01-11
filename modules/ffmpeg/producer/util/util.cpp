@@ -37,10 +37,10 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/exception/exceptions.h>
-#include <common/utility/assert.h>
 
 #include <tbb/parallel_for.h>
 
+#include <boost/assert.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -86,7 +86,7 @@ std::shared_ptr<AVFrame>			empty_video()
 	return video;
 }
 
-core::field_mode::type get_mode(const AVFrame& frame)
+core::field_mode get_mode(const AVFrame& frame)
 {
 	if(!frame.interlaced_frame)
 		return core::field_mode::progressive;
@@ -94,7 +94,7 @@ core::field_mode::type get_mode(const AVFrame& frame)
 	return frame.top_field_first ? core::field_mode::upper : core::field_mode::lower;
 }
 
-core::pixel_format::type get_pixel_format(PixelFormat pix_fmt)
+core::pixel_format get_pixel_format(PixelFormat pix_fmt)
 {
 	switch(pix_fmt)
 	{
@@ -123,7 +123,7 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, int width, in
 	core::pixel_format_desc desc;
 	desc.pix_fmt = get_pixel_format(pix_fmt);
 		
-	switch(desc.pix_fmt)
+	switch(desc.pix_fmt.value())
 	{
 	case core::pixel_format::gray:
 	case core::pixel_format::luma:
@@ -162,7 +162,7 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, int width, in
 
 int make_alpha_format(int format)
 {
-	switch(get_pixel_format(static_cast<PixelFormat>(format)))
+	switch(get_pixel_format(static_cast<PixelFormat>(format)).value())
 	{
 	case core::pixel_format::ycbcr:
 	case core::pixel_format::ycbcra:
@@ -183,7 +183,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	const auto height = decoded_frame->height;
 	auto desc		  = get_pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
 	
-	if(flags & core::frame_producer::ALPHA_ONLY_FLAG)
+	if(flags & core::frame_producer::flags::alpha_only)
 		desc = get_pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
 
 	std::shared_ptr<core::write_frame> write;
@@ -236,7 +236,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		if(target_pix_fmt == PIX_FMT_BGRA)
 		{
 			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
-			CASPAR_VERIFY(size == write->image_data().size()); 
+			BOOST_VERIFY(size == write->image_data().size()); 
 		}
 		else
 		{
@@ -266,8 +266,8 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			auto decoded          = decoded_frame->data[n];
 			auto decoded_linesize = decoded_frame->linesize[n];
 			
-			CASPAR_ASSERT(decoded);
-			CASPAR_ASSERT(write->image_data(n).begin());
+			BOOST_ASSERT(decoded);
+			BOOST_ASSERT(write->image_data(n).begin());
 
 			// Copy line by line since ffmpeg sometimes pads each line.
 			tbb::affinity_partitioner ap;
@@ -368,7 +368,7 @@ double read_fps(AVFormatContext& context, double fail_value)
 		double closest_fps = 0.0;
 		for(int n = 0; n < core::video_format::count; ++n)
 		{
-			auto format = core::video_format_desc(static_cast<core::video_format::type>(n));
+			auto format = core::video_format_desc(core::video_format(n));
 
 			double diff1 = std::abs(format.fps - fps);
 			double diff2 = std::abs(closest_fps - fps);

@@ -24,7 +24,7 @@
 #include "flv.h"
 
 #include <common/exception/exceptions.h>
-#include <common/log/log.h>
+#include <common/log.h>
 
 #include <boost/filesystem.hpp>
 

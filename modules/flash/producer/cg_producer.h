@@ -50,7 +50,7 @@ public:
 
 	//cg_producer
 
-	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = TEXT(""), const std::wstring& data = TEXT(""));
+	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = L"", const std::wstring& data = L"");
 	void remove(int layer);
 	void play(int layer);
 	void stop(int layer, unsigned int mix_out_duration);

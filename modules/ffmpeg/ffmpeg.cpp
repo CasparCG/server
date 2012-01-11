@@ -24,7 +24,7 @@
 #include "consumer/ffmpeg_consumer.h"
 #include "producer/ffmpeg_producer.h"
 
-#include <common/log/log.h>
+#include <common/log.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>

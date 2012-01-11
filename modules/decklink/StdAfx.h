@@ -26,6 +26,7 @@
 #endif
 
 #define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 
 #include <Windows.h>
 
@@ -80,7 +81,7 @@ extern "C"
 
 
 #include "../common/memory/safe_ptr.h"
-#include "../common/utility/string.h"
+#include "../common/utf.h"
 #include "../common/exception/exceptions.h"
 #include "../common/exception/win32_exception.h"
-#include "../common/log/Log.h"
+#include "../common/log.h"

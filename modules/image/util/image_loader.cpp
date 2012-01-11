@@ -22,7 +22,7 @@
 #include "image_loader.h"
 
 #include <common/exception/Exceptions.h>
-#include <common/utility/string.h>
+#include <common/utf.h>
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4714) // marked as __forceinline not inlined

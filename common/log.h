@@ -30,8 +30,6 @@
 #pragma warning (disable : 4996) // _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "../utility/string.h"
-
 #include <boost/log/detail/prologue.hpp>
 #include <boost/log/keywords/severity.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>

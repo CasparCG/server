@@ -21,25 +21,20 @@
 
 #pragma once
 
-#include "../log/log.h"
+namespace caspar {
+	
+class prec_timer
+{
+public:
+	prec_timer();
 
-#ifdef _MSC_VER
-#define _CASPAR_DBG_BREAK _CrtDbgBreak()
-#else
-#define _CASPAR_DBG_BREAK
-#endif
+	// Author: Ryan M. Geiss
+	// http://www.geisswerks.com/ryan/FAQS/timing.html
+	void tick(double interval);
 
-#define CASPAR_VERIFY_EXPR_STR(str) #str
+private:	
+	DWORD time_;
+};
 
-#define CASPAR_VERIFY(expr) do{if(!(expr)){ CASPAR_LOG(warning) << "Assertion Failed: " << \
-	CASPAR_VERIFY_EXPR_STR(expr) << " " \
-	<< "file:" << __FILE__ << " " \
-	<< "line:" << __LINE__ << " "; \
-	_CASPAR_DBG_BREAK;\
-	}}while(0);
 
-#ifdef _DEBUG
-#define CASPAR_ASSERT(expr) CASPAR_VERIFY(expr)
-#else
-#define CASPAR_ASSERT(expr)
-#endif
+}

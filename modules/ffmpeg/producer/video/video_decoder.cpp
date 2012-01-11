@@ -27,7 +27,7 @@
 
 #include "../../ffmpeg_error.h"
 
-#include <common/log/log.h>
+#include <common/log.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
 

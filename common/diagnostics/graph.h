@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../memory/safe_ptr.h"
+#include "../no_copy.h"
 
 #include <string>
 #include <tuple>
@@ -33,6 +34,8 @@ std::tuple<float, float, float, float> color(int code);
 
 class graph
 {
+	CASPAR_NO_COPY(graph);
+
 	friend void register_graph(const safe_ptr<graph>& graph);
 public:
 	graph();

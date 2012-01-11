@@ -34,7 +34,7 @@
 #include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
-#include <common/log/log.h>
+#include <common/log.h>
 #include <common/utility/param.h>
 
 #include <core/mixer/write_frame.h>

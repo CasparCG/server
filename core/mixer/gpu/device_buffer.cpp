@@ -53,7 +53,6 @@ struct device_buffer::impl : boost::noncopyable
 	const int stride_;
 
 	fence		 fence_;
-
 public:
 	impl(int width, int height, int stride) 
 		: width_(width)
