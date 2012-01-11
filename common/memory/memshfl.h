@@ -23,10 +23,6 @@
 
 #include <intrin.h>
 
-#include <assert.h>
-
-#include <tbb/parallel_for.h>
-
 namespace caspar {
 	
 static void* aligned_memshfl(void* dest, const void* source, size_t count, int m1, int m2, int m3, int m4)

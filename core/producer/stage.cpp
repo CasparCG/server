@@ -29,6 +29,7 @@
 #include "frame/frame_factory.h"
 
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
 
 #include <core/producer/frame/frame_transform.h>
 
@@ -124,15 +125,15 @@ public:
 			{
 				auto transform = transforms_[layer.first].fetch_and_tick(1);
 
-				int flags = frame_producer::NO_FLAG;
+				int flags = frame_producer::flags::none;
 				if(format_desc_.field_mode != field_mode::progressive)
 				{
-					flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::DEINTERLACE_FLAG : frame_producer::NO_FLAG;
-					flags |= std::abs(transform.fill_translation[1])  > 0.0001 ? frame_producer::DEINTERLACE_FLAG : frame_producer::NO_FLAG;
+					flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
+					flags |= std::abs(transform.fill_translation[1])  > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
 				}
 
 				if(transform.is_key)
-					flags |= frame_producer::ALPHA_ONLY_FLAG;
+					flags |= frame_producer::flags::alpha_only;
 
 				auto frame = layer.second.receive(flags);	
 				
@@ -347,7 +348,7 @@ public:
 	}
 };
 
-stage::stage(const safe_ptr<stage::target_t>& target,const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc) : impl_(new impl(target, graph, format_desc)){}
+stage::stage(const safe_ptr<stage::target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc) : impl_(new impl(target, graph, format_desc)){}
 void stage::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
 void stage::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}

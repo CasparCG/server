@@ -24,7 +24,7 @@
 #include "FlashAxContainer.h"
 #include "../interop/TimerHelper.h"
 
-#include <common/log/log.h>
+#include <common/log.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push, 2) // TODO

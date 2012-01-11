@@ -23,37 +23,33 @@
 
 #include "../../video_format.h"
 
+#include <common/memory/safe_ptr.h>
+#include <common/enum_class.h>
 #include <common/utility/tweener.h>
 
 #include <string>
-#include <memory>
 
 namespace caspar { namespace core {
-
-struct frame_producer;
-
-struct transition
+	
+CASPAR_BEGIN_ENUM_CLASS
 {
-	enum type
-	{
-
-		cut = 1,
-		mix,
-		push,
-		slide,
-		wipe
-	};
-};
-
-struct transition_direction
+	cut,	
+	mix,	
+	push,	 
+	slide,	
+	wipe,
+	count
+}
+CASPAR_END_ENUM_CLASS(transition)
+	
+CASPAR_BEGIN_ENUM_CLASS
 {
-	enum type
-	{
-		from_left = 1,
-		from_right
-	};
-};
-
+	from_left,
+	from_right,
+	count
+}
+CASPAR_END_ENUM_CLASS(transition_direction)
+	
 struct transition_info
 {
 	transition_info() 
@@ -62,12 +58,12 @@ struct transition_info
 		, direction(transition_direction::from_left)
 		, tweener(get_tweener(L"linear")){}
 		
-	size_t						duration;
-	transition_direction::type	direction;
-	transition::type			type;
-	tweener_t					tweener;
+	size_t					duration;
+	transition_direction	direction;
+	transition				type;
+	tweener_t				tweener;
 };
 
-safe_ptr<frame_producer> create_transition_producer(const field_mode::type& mode, const safe_ptr<frame_producer>& destination, const transition_info& info);
+safe_ptr<struct frame_producer> create_transition_producer(const field_mode& mode, const safe_ptr<struct frame_producer>& destination, const transition_info& info);
 
 }}

@@ -30,7 +30,7 @@
 
 #include <common/env.h>
 
-#include <common/log/log.h>
+#include <common/log.h>
 #include <common/diagnostics/graph.h>
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
@@ -324,7 +324,7 @@ bool MixerCommand::DoExecute()
 	{	
 		if(_parameters[0] == L"KEYER" || _parameters[0] == L"IS_KEY")
 		{
-			bool value = lexical_cast_or_default(_parameters.at(1), false);
+			bool value = boost::lexical_cast<int>(_parameters.at(1));
 			auto transform = [=](frame_transform transform) -> frame_transform
 			{
 				transform.is_key = value;
@@ -336,7 +336,7 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"OPACITY")
 		{
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 
 			double value = boost::lexical_cast<double>(_parameters.at(1));
@@ -352,7 +352,7 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"FILL" || _parameters[0] == L"FILL_RECT")
 		{
-			int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[5], 0) : 0;
+			int duration = _parameters.size() > 5 ? boost::lexical_cast<int>(_parameters[5]) : 0;
 			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
 			double x	= boost::lexical_cast<double>(_parameters.at(1));
 			double y	= boost::lexical_cast<double>(_parameters.at(2));
@@ -377,7 +377,7 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"CLIP" || _parameters[0] == L"CLIP_RECT")
 		{
-			int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[5], 0) : 0;
+			int duration = _parameters.size() > 5 ? boost::lexical_cast<int>(_parameters[5]) : 0;
 			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
 			double x	= boost::lexical_cast<double>(_parameters.at(1));
 			double y	= boost::lexical_cast<double>(_parameters.at(2));
@@ -398,7 +398,7 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"GRID")
 		{
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			int n = boost::lexical_cast<int>(_parameters.at(1));
 			double delta = 1.0/static_cast<double>(n);
@@ -432,7 +432,7 @@ bool MixerCommand::DoExecute()
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			auto transform = [=](frame_transform transform) -> frame_transform
 			{
@@ -446,7 +446,7 @@ bool MixerCommand::DoExecute()
 		else if(_parameters[0] == L"SATURATION")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			auto transform = [=](frame_transform transform) -> frame_transform
 			{
@@ -460,7 +460,7 @@ bool MixerCommand::DoExecute()
 		else if(_parameters[0] == L"CONTRAST")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			auto transform = [=](frame_transform transform) -> frame_transform
 			{
@@ -479,7 +479,7 @@ bool MixerCommand::DoExecute()
 			value.gamma		 = boost::lexical_cast<double>(_parameters.at(3));
 			value.min_output = boost::lexical_cast<double>(_parameters.at(4));
 			value.max_output = boost::lexical_cast<double>(_parameters.at(5));
-			int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
+			int duration = _parameters.size() > 6 ? boost::lexical_cast<int>(_parameters[6]) : 0;
 			std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
 
 			auto transform = [=](frame_transform transform) -> frame_transform
@@ -493,7 +493,7 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"VOLUME")
 		{
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			double value = boost::lexical_cast<double>(_parameters[1]);
 
@@ -718,7 +718,7 @@ bool LoadbgCommand::DoExecute()
 	if(boost::regex_match(message, what, expr))
 	{
 		auto transition = what["TRANSITION"].str();
-		transitionInfo.duration = lexical_cast_or_default<size_t>(what["DURATION"].str());
+		transitionInfo.duration = boost::lexical_cast<size_t>(what["DURATION"].str());
 		auto direction = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
 		auto tween = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
 		transitionInfo.tweener = get_tweener(tween);		

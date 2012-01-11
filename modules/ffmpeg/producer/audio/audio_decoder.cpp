@@ -30,7 +30,7 @@
 
 #include <core/video_format.h>
 
-#include <common/log/log.h>
+#include <common/log.h>
 
 #include <tbb/cache_aligned_allocator.h>
 

@@ -28,7 +28,7 @@
 #include "frame/frame_transform.h"
 
 #include <boost/optional.hpp>
-#include <boost/property_tree/ptree.hpp>
+#include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
 
@@ -70,7 +70,7 @@ public:
 		if(preview) // Play the first frame and pause.
 		{			
 			play();
-			receive(frame_producer::NO_FLAG);
+			receive(frame_producer::flags::none);
 			pause();
 		}
 	}

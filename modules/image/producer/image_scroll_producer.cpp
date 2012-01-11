@@ -32,7 +32,7 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
-#include <common/log/log.h>
+#include <common/log.h>
 #include <common/exception/exceptions.h>
 
 #include <boost/assign.hpp>

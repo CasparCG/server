@@ -28,12 +28,9 @@
 
 #include "gl_check.h"
 
+#include "../log.h"
+
 #include <GL/glew.h>
-
-#include "../exception/exceptions.h"
-#include "../log/log.h"
-
-#include <boost/lexical_cast.hpp>
 
 namespace caspar { namespace gl {	
 

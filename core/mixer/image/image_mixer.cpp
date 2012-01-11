@@ -29,9 +29,7 @@
 #include "../gpu/host_buffer.h"
 #include "../gpu/device_buffer.h"
 
-#include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
-#include <common/utility/move_on_copy.h>
 
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/pixel_format.h>
@@ -41,9 +39,10 @@
 
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
+#include <boost/thread/future.hpp>
 
 #include <algorithm>
-#include <deque>
+#include <vector>
 
 using namespace boost::assign;
 
@@ -56,7 +55,7 @@ struct item
 	frame_transform							transform;
 };
 
-typedef std::pair<blend_mode::type, std::vector<item>> layer;
+typedef std::pair<blend_mode, std::vector<item>> layer;
 
 class image_renderer
 {
@@ -92,13 +91,13 @@ private:
 			BOOST_FOREACH(auto& layer, upper)
 			{
 				BOOST_FOREACH(auto& item, layer.second)
-					item.transform.field_mode = static_cast<field_mode::type>(item.transform.field_mode & field_mode::upper);
+					item.transform.field_mode = static_cast<field_mode>(item.transform.field_mode & field_mode::upper);
 			}
 
 			BOOST_FOREACH(auto& layer, lower)
 			{
 				BOOST_FOREACH(auto& item, layer.second)
-					item.transform.field_mode = static_cast<field_mode::type>(item.transform.field_mode & field_mode::lower);
+					item.transform.field_mode = static_cast<field_mode>(item.transform.field_mode & field_mode::lower);
 			}
 
 			draw(std::move(upper), draw_buffer, format_desc);
@@ -213,7 +212,7 @@ private:
 
 	void draw_mixer_buffer(safe_ptr<device_buffer>&			draw_buffer, 
 						   std::shared_ptr<device_buffer>&& source_buffer, 
-						   blend_mode::type					blend_mode = blend_mode::normal)
+						   blend_mode						blend_mode = blend_mode::normal)
 	{
 		if(!source_buffer)
 			return;
@@ -251,7 +250,7 @@ public:
 	{
 	}
 
-	void begin_layer(blend_mode::type blend_mode)
+	void begin_layer(blend_mode blend_mode)
 	{
 		layers_.push_back(std::make_pair(blend_mode, std::vector<item>()));
 	}
@@ -291,7 +290,7 @@ void image_mixer::begin(basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<host_buffer>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
-void image_mixer::begin_layer(blend_mode::type blend_mode){impl_->begin_layer(blend_mode);}
+void image_mixer::begin_layer(blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 
 }}

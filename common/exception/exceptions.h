@@ -21,12 +21,12 @@
 
 #pragma once
 
+#include "../utf.h"
+
 #include <exception>
 #include <boost/exception/all.hpp>
 #include <boost/exception/error_info.hpp>
 #include <boost/throw_exception.hpp>
-
-#include "../utility/string.h"
 
 namespace caspar {
 

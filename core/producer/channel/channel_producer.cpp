@@ -27,6 +27,7 @@
 #include "../../consumer/output.h"
 #include "../../video_channel.h"
 
+#include "../frame_producer.h"
 #include "../frame/basic_frame.h"
 #include "../frame/frame_factory.h"
 #include "../frame/pixel_format.h"
@@ -34,6 +35,7 @@
 #include "../../mixer/read_frame.h"
 
 #include <common/exception/exceptions.h>
+#include <common/no_copy.h>
 
 #include <asmlib.h>
 
@@ -43,6 +45,8 @@ namespace caspar { namespace core {
 
 class channel_consumer : public frame_consumer
 {	
+	CASPAR_NO_COPY(channel_consumer);
+
 	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>>	frame_buffer_;
 	core::video_format_desc										format_desc_;
 	int															channel_index_;
@@ -127,6 +131,8 @@ public:
 	
 class channel_producer : public frame_producer
 {
+	CASPAR_NO_COPY(channel_producer);
+
 	const safe_ptr<frame_factory>		frame_factory_;
 	const safe_ptr<channel_consumer>	consumer_;
 
@@ -210,7 +216,7 @@ public:
 	}
 };
 
-safe_ptr<frame_producer> create_channel_producer(const safe_ptr<core::frame_factory>& frame_factory, const safe_ptr<video_channel>& channel)
+safe_ptr<core::frame_producer> create_channel_producer(const safe_ptr<core::frame_factory>& frame_factory, const safe_ptr<core::video_channel>& channel)
 {
 	return create_producer_print_proxy(
 			make_safe<channel_producer>(frame_factory, channel));

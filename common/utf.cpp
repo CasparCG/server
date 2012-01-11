@@ -19,29 +19,34 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#pragma once
+#include "stdafx.h"
 
-#include <string>
-#include <boost/lexical_cast.hpp>
-	   
+#include "utf.h"
+
+#pragma warning(push, 1)
+
+#include <boost/locale.hpp>
+
 namespace caspar {
-
-std::wstring u16(const std::string& str);
-std::wstring u16(const std::wstring& str);
-std::string u8(const std::wstring& str);	   
-std::string u8(const std::string& str);
-
-template <typename T>
-inline T lexical_cast_or_default(const std::wstring str, T fail_value = T())
+	
+std::wstring u16(const std::string& str)
 {
-	try
-	{
-		return boost::lexical_cast<T>(str);
-	}
-	catch(boost::bad_lexical_cast&)
-	{
-		return fail_value;
-	}
+	return boost::locale::conv::utf_to_utf<wchar_t>(str);//std::wstring(str.begin(), str.end());
+}
+
+std::wstring u16(const std::wstring& str)
+{
+	return str;
+}
+	   
+std::string u8(const std::wstring& str)
+{
+	return boost::locale::conv::utf_to_utf<char>(str);//std::string(str.begin(), str.end());
+}
+	   
+std::string u8(const std::string& str)
+{
+	return str ;
 }
 
 }

@@ -24,7 +24,6 @@
 #include "basic_frame.h"
 
 #include "frame_transform.h"
-#include "../../video_format.h"
 
 #include <boost/foreach.hpp>
 
@@ -34,19 +33,21 @@ struct basic_frame::impl
 {		
 	std::vector<safe_ptr<basic_frame>> frames_;
 
-	frame_transform frame_transform_;	
-	
+	frame_transform frame_transform_;		
 public:
 	impl(const std::vector<safe_ptr<basic_frame>>& frames) : frames_(frames) 
 	{
 	}
+
 	impl(std::vector<safe_ptr<basic_frame>>&& frames) : frames_(std::move(frames))
 	{
 	}
+
 	impl(safe_ptr<basic_frame>&& frame) 
 	{
 		frames_.push_back(std::move(frame));
 	}
+
 	impl(const safe_ptr<basic_frame>& frame) 		
 	{ 
 		frames_.push_back(frame);
@@ -86,7 +87,7 @@ const frame_transform& basic_frame::get_frame_transform() const { return impl_->
 frame_transform& basic_frame::get_frame_transform() { return impl_->frame_transform_;}
 void basic_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
 
-safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, field_mode::type mode)
+safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, field_mode mode)
 {				
 	if(frame1 == basic_frame::eof() || frame2 == basic_frame::eof())
 		return basic_frame::eof();

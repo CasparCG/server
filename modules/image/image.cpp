@@ -28,7 +28,7 @@
 #include <core/producer/frame_producer.h>
 #include <core/consumer/frame_consumer.h>
 
-#include <common/utility/string.h>
+#include <common/utf.h>
 
 #include <FreeImage.h>
 

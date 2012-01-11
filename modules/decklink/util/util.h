@@ -22,7 +22,7 @@
 #pragma once
 
 #include <common/exception/exceptions.h>
-#include <common/log/log.h>
+#include <common/log.h>
 #include <core/video_format.h>
 
 #include "../interop/DeckLinkAPI_h.h"
@@ -35,9 +35,9 @@
 
 namespace caspar { namespace decklink {
 	
-static BMDDisplayMode get_decklink_video_format(core::video_format::type fmt) 
+static BMDDisplayMode get_decklink_video_format(core::video_format fmt) 
 {
-	switch(fmt)
+	switch(fmt.value())
 	{
 	case core::video_format::pal:			return bmdModePAL;
 	case core::video_format::ntsc:			return bmdModeNTSC;
@@ -59,7 +59,7 @@ static BMDDisplayMode get_decklink_video_format(core::video_format::type fmt)
 	}
 }
 
-static core::video_format::type get_caspar_video_format(BMDDisplayMode fmt) 
+static core::video_format get_caspar_video_format(BMDDisplayMode fmt) 
 {
 	switch(fmt)
 	{
@@ -112,7 +112,7 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 }
 
 template<typename T, typename F>
-static BMDDisplayMode get_display_mode(const T& device, core::video_format::type fmt, BMDPixelFormat pix_fmt, F flag)
+static BMDDisplayMode get_display_mode(const T& device, core::video_format fmt, BMDPixelFormat pix_fmt, F flag)
 {	
 	return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag);
 }

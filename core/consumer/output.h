@@ -21,40 +21,38 @@
 
 #pragma once
 
-#include "../consumer/frame_consumer.h"
-
+#include <common/forward.h>
+#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
-#include <common/diagnostics/graph.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
-#include <boost/thread/future.hpp>
+
+FORWARD1(boost, template<typename> class unique_future)
+FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 	
-class output sealed : public target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>>
-					, boost::noncopyable
+class output sealed : public target<std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>>
 {
+	CASPAR_NO_COPY(output);
 public:
-	explicit output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index);
+	explicit output(const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc, int channel_index);
 
 	// target
 	
-	virtual void send( const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) override;
+	virtual void send(const std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>& frame) override;
 
 	// output
 	
-	void add(const safe_ptr<frame_consumer>& consumer);
-	void add(int index, const safe_ptr<frame_consumer>& consumer);
-	void remove(const safe_ptr<frame_consumer>& consumer);
+	void add(const safe_ptr<struct frame_consumer>& consumer);
+	void add(int index, const safe_ptr<struct frame_consumer>& consumer);
+	void remove(const safe_ptr<struct frame_consumer>& consumer);
 	void remove(int index);
 	
-	void set_video_format_desc(const video_format_desc& format_desc);
+	void set_video_format_desc(const struct video_format_desc& format_desc);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
-
-	bool empty() const;
 private:
 	struct impl;
 	safe_ptr<impl> impl_;

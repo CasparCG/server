@@ -26,12 +26,16 @@
 #include "../frame_producer.h"
 #include "../frame/basic_frame.h"
 
+#include <common/no_copy.h>
+
 #include <tbb/parallel_invoke.h>
 
 namespace caspar { namespace core {	
 
 struct separated_producer : public frame_producer
 {		
+	CASPAR_NO_COPY(separated_producer);
+
 	safe_ptr<frame_producer>	fill_producer_;
 	safe_ptr<frame_producer>	key_producer_;
 	safe_ptr<basic_frame>		fill_;
@@ -60,7 +64,7 @@ struct separated_producer : public frame_producer
 		[&]
 		{
 			if(key_ == core::basic_frame::late())
-				key_ = receive_and_follow(key_producer_, flags | ALPHA_ONLY_FLAG);
+				key_ = receive_and_follow(key_producer_, flags | frame_producer::flags::alpha_only);
 		});
 
 		if(fill_ == basic_frame::eof() || key_ == basic_frame::eof())

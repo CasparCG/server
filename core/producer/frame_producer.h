@@ -21,64 +21,58 @@
 
 #pragma once
 
+#include <common/no_copy.h>
+#include <common/forward.h>
 #include <common/memory/safe_ptr.h>
-#include <common/exception/exceptions.h>
+#include <common/enum_class.h>
 
-#include <boost/noncopyable.hpp>
-
-#include <algorithm>
 #include <stdint.h>
 #include <limits>
 #include <functional>
 #include <string>
 #include <vector>
 
-#include <boost/thread/future.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
-namespace caspar { 
-	
-class executor;
-	
-namespace core {
+FORWARD1(caspar, class executor);
+FORWARD1(boost, template<typename T> class unique_future);
 
-class basic_frame;
-struct frame_factory;
-
-struct frame_producer : boost::noncopyable
+namespace caspar { namespace core {
+	
+struct frame_producer
 {
+	CASPAR_NO_COPY(frame_producer);
 public:
-	enum flags
+	CASPAR_BEGIN_ENUM_CLASS
 	{
-		NO_FLAG = 0,
-		ALPHA_ONLY_FLAG = 1,
-		DEINTERLACE_FLAG
-	};
+		none		= 0,
+		alpha_only	= 2,
+		deinterlace	= 4, 
+	}
+	CASPAR_END_ENUM_CLASS(flags)
 
+	frame_producer(){}
 	virtual ~frame_producer(){}	
 
 	virtual std::wstring print() const = 0; // nothrow
 	virtual boost::property_tree::wptree info() const = 0;
 
-	virtual boost::unique_future<std::wstring> call(const std::wstring&) 
-	{
-		BOOST_THROW_EXCEPTION(not_supported());
-	}
+	virtual boost::unique_future<std::wstring> call(const std::wstring&);
 
 	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
 	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
 		
 	virtual uint32_t nb_frames() const {return std::numeric_limits<uint32_t>::max();}
 	
-	virtual safe_ptr<basic_frame> receive(int flags) = 0;
-	virtual safe_ptr<core::basic_frame> last_frame() const = 0;
+	virtual safe_ptr<class basic_frame> receive(int flags) = 0;
+	virtual safe_ptr<class basic_frame> last_frame() const = 0;
 
 	static const safe_ptr<frame_producer>& empty(); // nothrow
 };
 
-safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int flags);
+safe_ptr<class basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int flags);
 
-typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
+typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<struct frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& params);
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::wstring& params);

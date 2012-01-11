@@ -27,8 +27,8 @@
 
 #include "util/blue_velvet.h"
 
-#include <common/log/log.h>
-#include <common/utility/string.h>
+#include <common/log.h>
+#include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
 

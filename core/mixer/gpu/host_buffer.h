@@ -21,16 +21,14 @@
 
 #pragma once
 
-#include <boost/noncopyable.hpp>
-
+#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 
 namespace caspar { namespace core {
-
-class ogl_device;
-		
-class host_buffer : boost::noncopyable
+			
+class host_buffer
 {
+	CASPAR_NO_COPY(host_buffer);
 public:
 	enum usage_t
 	{
@@ -50,7 +48,7 @@ public:
 	
 	void begin_read(int width, int height, unsigned int format);
 	bool ready() const;
-	void wait(ogl_device& ogl);
+	void wait(class ogl_device& ogl);
 private:
 	friend class ogl_device;
 	host_buffer(int size, usage_t usage);

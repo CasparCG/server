@@ -27,9 +27,7 @@
 #include <boost/array.hpp>
 
 namespace caspar { namespace core {
-
-struct pixel_format_desc;
-		
+			
 struct levels sealed
 {
 	levels() 
@@ -64,7 +62,7 @@ public:
 	boost::array<double, 2>	clip_scale;  
 	levels					levels;
 
-	field_mode::type		field_mode;
+	field_mode				field_mode;
 	bool					is_key;
 	bool					is_mix;
 	

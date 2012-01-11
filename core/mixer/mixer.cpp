@@ -30,7 +30,9 @@
 #include "image/image_mixer.h"
 
 #include <common/env.h>
+#include <common/no_copy.h>
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
 #include <common/utility/tweener.h>
@@ -41,7 +43,6 @@
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/pixel_format.h>
-
 #include <core/video_format.h>
 
 #include <boost/foreach.hpp>
@@ -59,18 +60,20 @@ namespace caspar { namespace core {
 		
 struct mixer::impl : boost::noncopyable
 {		
-	safe_ptr<mixer::target_t>					target_;
+	CASPAR_NO_COPY(impl);
 
-	safe_ptr<diagnostics::graph>				graph_;
-	boost::timer								mix_timer_;	
+	safe_ptr<mixer::target_t>			target_;
 
-	video_format_desc							format_desc_;
-	safe_ptr<ogl_device>						ogl_;
+	safe_ptr<diagnostics::graph>		graph_;
+	boost::timer						mix_timer_;	
+
+	video_format_desc					format_desc_;
+	safe_ptr<ogl_device>				ogl_;
 	
-	audio_mixer									audio_mixer_;
-	image_mixer									image_mixer_;
+	audio_mixer							audio_mixer_;
+	image_mixer							image_mixer_;
 	
-	std::unordered_map<int, blend_mode::type>	blend_modes_;
+	std::unordered_map<int, blend_mode>	blend_modes_;
 			
 	executor executor_;
 
@@ -123,11 +126,15 @@ public:
 		});		
 	}
 					
-	void set_blend_mode(int index, blend_mode::type value)
+	void set_blend_mode(int index, blend_mode value)
 	{
 		executor_.begin_invoke([=]
 		{
-			blend_modes_[index] = value;
+			auto it = blend_modes_.find(index);
+			if(it == blend_modes_.end())
+				blend_modes_.insert(std::make_pair(index, value));
+			else
+				it->second = value;
 		}, high_priority);
 	}
 	
@@ -150,7 +157,7 @@ public:
 mixer::mixer(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
 	: impl_(new impl(target, graph, format_desc, ogl)){}
 void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
-void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
+void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 }}

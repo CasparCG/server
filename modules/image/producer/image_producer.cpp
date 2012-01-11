@@ -31,7 +31,7 @@
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
-#include <common/log/log.h>
+#include <common/log.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>

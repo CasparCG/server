@@ -21,71 +21,54 @@
 
 #pragma once
 
+#include <common/enum_class.h>
+
 #include <vector>
 #include <string>
 
 namespace caspar { namespace core {
 	
-struct video_format 
-{ 
-	enum type
-	{
-		pal = 0,
-		ntsc,
-		x576p2500,
-		x720p2500,
-		x720p5000,
-		x720p5994,
-		x720p6000,
-		x1080p2397,
-		x1080p2400,
-		x1080i5000,
-		x1080i5994,
-		x1080i6000,
-		x1080p2500,
-		x1080p2997,
-		x1080p3000,
-		x1080p5000,
-		invalid,
-		count
-	};
-};
+CASPAR_BEGIN_ENUM_CLASS
+{
+	pal,		
+	ntsc,		
+	x576p2500,	
+	x720p2500,	
+	x720p5000,	
+	x720p5994,	
+	x720p6000,	
+	x1080p2397,	
+	x1080p2400,	
+	x1080i5000,	
+	x1080i5994,	
+	x1080i6000,	
+	x1080p2500,	
+	x1080p2997,	
+	x1080p3000,	
+	x1080p5000,	
+	invalid,
+	count
+}
+CASPAR_END_ENUM_CLASS(video_format);
 
-struct field_mode 
-{ 
-	enum type
-	{
-		empty		= 0,
-		lower		= 1,
-		upper		= 2,
-		progressive = 3 // NOTE: progressive == lower | upper;
-	};
-
-	static std::wstring print(field_mode::type value)
-	{
-		switch(value)
-		{
-			case progressive:
-				return L"progressive"; 
-			case lower:
-				return L"lower";
-			case upper:
-				return L"upper";
-			default:
-				return L"invalid";
-		}
-	}
-};
+CASPAR_BEGIN_ENUM_CLASS
+{
+	empty		= 0,
+	lower		= 1,
+	upper		= 2,
+	progressive = 3, // NOTE: progressive == lower | upper;
+}
+CASPAR_END_ENUM_CLASS(field_mode);
 
 struct video_format_desc sealed
 {
-	video_format::type	format;		// video output format
+	video_format		format;		// video output format
 
 	int					width;		// output frame width
 	int					height;		// output frame height
 	int					square_width;
 	int					square_height;
-	field_mode::type	field_mode;	// progressive, interlaced upper field first, interlaced lower field first
+	field_mode			field_mode;	// progressive, interlaced upper field first, interlaced lower field first
 	double				fps;		// actual framerate, e.g. i50 = 25 fps, p50 = 50 fps
 	int					time_scale;
 	int					duration;
@@ -97,12 +80,12 @@ struct video_format_desc sealed
 	int					audio_channels;
 	std::vector<int>	audio_cadence;
 
-	video_format_desc(video_format::type format,
+	video_format_desc(video_format format,
 					  int width,
 					  int height,
 					  int square_width,
 					  int square_height,
-					  field_mode::type field_mode,
+					  core::field_mode field_mode,
 					  int time_scale,
 					  int duration,
 					  const std::wstring& name,
@@ -110,7 +93,7 @@ struct video_format_desc sealed
 
 	video_format_desc& operator=(const video_format_desc& other);
 	
-	video_format_desc(video_format::type format = video_format::invalid);
+	video_format_desc(video_format format = video_format::invalid);
 	video_format_desc(const std::wstring& name);
 };
 

@@ -23,7 +23,7 @@
 
 #include "parallel_yadif.h"
 
-#include <common/log/log.h>
+#include <common/log.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
