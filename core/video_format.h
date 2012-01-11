@@ -90,9 +90,7 @@ struct video_format_desc sealed
 					  int duration,
 					  const std::wstring& name,
 					  const std::vector<int>& audio_cadence);
-
-	video_format_desc& operator=(const video_format_desc& other);
-	
+		
 	video_format_desc(video_format format = video_format::invalid);
 	video_format_desc(const std::wstring& name);
 };

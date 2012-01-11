@@ -97,27 +97,6 @@ video_format_desc::video_format_desc(const std::wstring& name)
 	}
 }
 
-video_format_desc& video_format_desc::operator=(const video_format_desc& other)
-{
-	format				= other.format;			
-	width				= other.width;
-	height				= other.height;
-	square_width		= other.square_width;
-	square_height		= other.square_height;
-	field_mode			= other.field_mode;
-	fps					= other.fps;
-	time_scale			= other.time_scale;
-	duration			= other.duration;
-	field_count			= other.field_count;
-	size				= other.size;
-	name				= other.name;
-	audio_sample_rate 	= other.audio_sample_rate;
-	audio_channels		= other.audio_channels;
-	audio_cadence		= other.audio_cadence;
-
-	return *this;
-}
-
 bool operator==(const video_format_desc& lhs, const video_format_desc& rhs)
 {											
 	return lhs.format == rhs.format;
