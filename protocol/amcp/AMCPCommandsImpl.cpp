@@ -124,7 +124,7 @@ std::wstring MediaInfo(const boost::filesystem::path& path)
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 				
 			auto str = relativePath.replace_extension(TEXT("")).native();
-			if(str[0] == '\\' || str[0] == '/')
+			while(str.size() > 0 && (str[0] == '\\' || str[0] == '/'))
 				str = std::wstring(str.begin() + 1, str.end());
 
 			return std::wstring() + TEXT("\"") + str +
@@ -170,7 +170,7 @@ std::wstring ListTemplates()
 			relativePath = boost::filesystem::wpath(dir + L"/" + file);
 						
 			auto str = relativePath.replace_extension(TEXT("")).native();
-			if(str[0] == '\\' || str[0] == '/')
+			while(str.size() > 0 && (str[0] == '\\' || str[0] == '/'))
 				str = std::wstring(str.begin() + 1, str.end());
 
 			replyString << TEXT("\"") << str
