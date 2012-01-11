@@ -88,12 +88,14 @@ public:
 		{
 			output_->set_video_format_desc(format_desc);
 			mixer_->set_video_format_desc(format_desc);
+			stage_->set_video_format_desc(format_desc);
 			ogl_->gc();
 		}
 		catch(...)
 		{
 			output_->set_video_format_desc(format_desc_);
 			mixer_->set_video_format_desc(format_desc_);
+			stage_->set_video_format_desc(format_desc_);
 			throw;
 		}
 		format_desc_ = format_desc;
