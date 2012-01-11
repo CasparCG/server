@@ -69,17 +69,21 @@ public:
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
+
+	// frame_factory
 						
 	virtual safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override
 	{		
 		return make_safe<write_frame>(ogl_, tag, desc);
 	}
 	
-	virtual core::video_format_desc get_video_format_desc() const override// nothrow
+	virtual core::video_format_desc get_video_format_desc() const override
 	{
 		return format_desc_;
 	}
 	
+	// video_channel
+
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
 		if(format_desc.format == core::video_format::invalid)
