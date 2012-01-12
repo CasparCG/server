@@ -30,7 +30,7 @@
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
 
-#include <boost/assert.hpp>
+#include <common/assert.h>
 #include <boost/foreach.hpp>
 
 #include <gl/glew.h>
@@ -116,8 +116,8 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(int width, int height
 				
 safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, int stride)
 {
-	BOOST_VERIFY(stride > 0 && stride < 5);
-	BOOST_VERIFY(width > 0 && height > 0);
+	CASPAR_VERIFY(stride > 0 && stride < 5);
+	CASPAR_VERIFY(width > 0 && height > 0);
 	auto& pool = device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->items.try_pop(buffer))		
@@ -169,8 +169,8 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(int size, host_buffer::us
 	
 safe_ptr<host_buffer> ogl_device::create_host_buffer(int size, host_buffer::usage_t usage)
 {
-	BOOST_VERIFY(usage == host_buffer::write_only || usage == host_buffer::read_only);
-	BOOST_VERIFY(size > 0);
+	CASPAR_VERIFY(usage == host_buffer::write_only || usage == host_buffer::read_only);
+	CASPAR_VERIFY(size > 0);
 	auto& pool = host_pools_[usage][size];
 	std::shared_ptr<host_buffer> buffer;
 	if(!pool->items.try_pop(buffer))	

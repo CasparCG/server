@@ -42,8 +42,7 @@ public:
 	basic_frame(const basic_frame& other);
 	basic_frame(basic_frame&& other);
 
-	basic_frame& operator=(const basic_frame& other);
-	basic_frame& operator=(basic_frame&& other);
+	basic_frame& operator=(basic_frame other);
 	
 	void swap(basic_frame& other);
 

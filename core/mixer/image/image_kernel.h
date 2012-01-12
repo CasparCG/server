@@ -23,21 +23,25 @@
 
 #include "blend_modes.h"
 
-#include <common/no_copy.h>
 #include <common/enum_class.h>
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_transform.h>
 
+#include <boost/noncopyable.hpp>
+
 namespace caspar { namespace core {
 	
-CASPAR_BEGIN_ENUM_CLASS
+struct keyer_def
 {
-	linear = 0,
-	additive
-}
-CASPAR_END_ENUM_CLASS(keyer)
+	enum type
+	{
+		linear = 0,
+		additive,
+	};
+};
+typedef enum_class<keyer_def> keyer;
 
 struct draw_params sealed
 {
@@ -57,9 +61,8 @@ struct draw_params sealed
 	}
 };
 
-class image_kernel sealed
+class image_kernel sealed : boost::noncopyable
 {
-	CASPAR_NO_COPY(image_kernel);
 public:
 	image_kernel(const safe_ptr<class ogl_device>& ogl);
 	void draw(draw_params&& params);

@@ -35,11 +35,10 @@
 
 #include <boost/foreach.hpp>
 #include <boost/timer.hpp>
-
-#include <tbb/parallel_for_each.h>
-
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm_ext.hpp>
+
+#include <tbb/parallel_for_each.h>
 
 #include <map>
 #include <vector>
@@ -104,10 +103,11 @@ public:
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 	}
 
-	void spawn_token()
+	void start(int tokens)
 	{
 		std::weak_ptr<impl> self = shared_from_this();
-		executor_.begin_invoke([=]{tick(self);});
+		for(int n = 0; n < tokens; ++n)
+			executor_.begin_invoke([=]{tick(self);});
 	}
 	
 	void tick(const std::weak_ptr<impl>& self)
@@ -352,11 +352,11 @@ public:
 };
 
 stage::stage(const safe_ptr<stage::target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc) : impl_(new impl(target, graph, format_desc)){}
+void stage::start(int tokens){impl_->start(tokens);}
 void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){impl_->apply_transforms(transforms);}
 void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
-void stage::spawn_token(){impl_->spawn_token();}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
 void stage::play(int index){impl_->play(index);}

@@ -33,8 +33,6 @@ namespace caspar { namespace core {
 																																							
 struct read_frame::impl : boost::noncopyable
 {
-	CASPAR_NO_COPY(impl);
-
 	safe_ptr<ogl_device>		ogl_;
 	int							width_;
 	int							height_;
@@ -108,7 +106,7 @@ int read_frame::height() const{return impl_ ? impl_->height_ : 0;}
 //	auto height		= 720;
 //	auto width4		= frame->image_data().size()/height;
 //
-//	BOOST_ASSERT(frame->image_data().size() % height == 0);
+//	CASPAR_ASSERT(frame->image_data().size() % height == 0);
 //			
 //	tbb::affinity_partitioner ap;
 //	tbb::parallel_for(tbb::blocked_range<int>(0, height), [&](tbb::blocked_range<int>& r)

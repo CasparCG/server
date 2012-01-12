@@ -21,16 +21,16 @@
 
 #pragma once
 
-#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
+
+#include <boost/noncopyable.hpp>
 
 #include <string>
 
 namespace caspar { namespace core {
 		
-class shader
+class shader : boost::noncopyable
 {
-	CASPAR_NO_COPY(shader);
 public:
 	shader(const std::string& vertex_source_str, const std::string& fragment_source_str);
 	void set(const std::string& name, bool value);

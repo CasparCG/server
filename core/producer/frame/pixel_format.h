@@ -27,20 +27,23 @@
 
 namespace caspar { namespace core {
 		
-CASPAR_BEGIN_ENUM_CLASS
+struct pixel_format_def
 {
-	gray = 0,
-	bgra,
-	rgba,
-	argb,
-	abgr,
-	ycbcr,
-	ycbcra,
-	luma,
-	count,
-	invalid
-}
-CASPAR_END_ENUM_CLASS(pixel_format)
+	enum type
+	{
+		gray = 0,
+		bgra,
+		rgba,
+		argb,
+		abgr,
+		ycbcr,
+		ycbcra,
+		luma,
+		count,
+		invalid,
+	};
+};
+typedef enum_class<pixel_format_def> pixel_format;
 
 struct pixel_format_desc sealed
 {

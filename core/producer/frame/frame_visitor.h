@@ -21,9 +21,11 @@
 
 #pragma once
 
+#include <boost/noncopyable.hpp>
+
 namespace caspar { namespace core {
 	
-struct frame_visitor
+struct frame_visitor : boost::noncopyable
 {
 	virtual void begin(class basic_frame& frame) = 0;
 	virtual void end() = 0;

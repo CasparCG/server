@@ -25,41 +25,44 @@
 
 namespace caspar { namespace core {
 		
-CASPAR_BEGIN_ENUM_CLASS
+struct blend_mode_def
 {
-	normal = 0,
-	lighten,
-	darken,
-	multiply,
-	average,
-	add,
-	subtract,
-	difference,
-	negation,
-	exclusion,
-	screen,
-	overlay,
-	soft_light,
-	hard_light,
-	color_dodge,
-	color_burn,
-	linear_dodge,
-	linear_burn,
-	linear_light,
-	vivid_light,
-	pin_light,
-	hard_mix,
-	reflect,
-	glow,
-	phoenix,
-	contrast,
-	saturation,
-	color,
-	luminosity,
-	mix,
-	blend_mode_count 
-}
-CASPAR_END_ENUM_CLASS(blend_mode)
+	enum type
+	{
+		normal = 0,
+		lighten,
+		darken,
+		multiply,
+		average,
+		add,
+		subtract,
+		difference,
+		negation,
+		exclusion,
+		screen,
+		overlay,
+		soft_light,
+		hard_light,
+		color_dodge,
+		color_burn,
+		linear_dodge,
+		linear_burn,
+		linear_light,
+		vivid_light,
+		pin_light,
+		hard_mix,
+		reflect,
+		glow,
+		phoenix,
+		contrast,
+		saturation,
+		color,
+		luminosity,
+		mix,
+		blend_mode_count 
+	};
+};
+typedef enum_class<blend_mode_def> blend_mode;
 
 blend_mode get_blend_mode(const std::wstring& str);
 

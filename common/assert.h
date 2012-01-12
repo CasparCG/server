@@ -21,18 +21,25 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include "log.h"
 
-#include <boost/noncopyable.hpp>
+#ifdef _MSC_VER
+#define _CASPAR_DBG_BREAK _CrtDbgBreak()
+#else
+#define _CASPAR_DBG_BREAK
+#endif
 
-namespace caspar { namespace core {
-			
-struct frame_factory : boost::noncopyable
-{
-	frame_factory(){}
+#define CASPAR_VERIFY_EXPR_STR(str) #str
 
-	virtual safe_ptr<class write_frame> create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;		
-	virtual struct video_format_desc get_video_format_desc() const = 0; // nothrow
-};
+#define CASPAR_VERIFY(expr) do{if(!(expr)){ CASPAR_LOG(warning) << "Assertion Failed: " << \
+	CASPAR_VERIFY_EXPR_STR(expr) << " " \
+	<< "file:" << __FILE__ << " " \
+	<< "line:" << __LINE__ << " "; \
+	_CASPAR_DBG_BREAK;\
+	}}while(0);
 
-}}
+#ifdef _DEBUG
+#define CASPAR_ASSERT(expr) CASPAR_VERIFY(expr)
+#else
+#define CASPAR_ASSERT(expr)
+#endif

@@ -30,7 +30,6 @@
 #include "image/image_mixer.h"
 
 #include <common/env.h>
-#include <common/no_copy.h>
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
@@ -60,18 +59,16 @@ namespace caspar { namespace core {
 		
 struct mixer::impl : boost::noncopyable
 {		
-	CASPAR_NO_COPY(impl);
+	safe_ptr<mixer::target_t>		target_;
 
-	safe_ptr<mixer::target_t>			target_;
+	safe_ptr<diagnostics::graph>	graph_;
+	boost::timer					mix_timer_;	
 
-	safe_ptr<diagnostics::graph>		graph_;
-	boost::timer						mix_timer_;	
-
-	video_format_desc					format_desc_;
-	safe_ptr<ogl_device>				ogl_;
+	video_format_desc				format_desc_;
+	safe_ptr<ogl_device>			ogl_;
 	
-	audio_mixer							audio_mixer_;
-	image_mixer							image_mixer_;
+	audio_mixer						audio_mixer_;
+	image_mixer						image_mixer_;
 	
 	std::unordered_map<int, blend_mode>	blend_modes_;
 			

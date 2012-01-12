@@ -24,7 +24,6 @@
 #include "blend_modes.h"
 
 #include <common/forward.h>
-#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/frame_visitor.h>
@@ -35,7 +34,6 @@ namespace caspar { namespace core {
 	
 class image_mixer sealed : public frame_visitor
 {
-	CASPAR_NO_COPY(image_mixer);
 public:
 	image_mixer(const safe_ptr<class ogl_device>& ogl);
 	

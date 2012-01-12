@@ -29,7 +29,6 @@
 #include "../frame/pixel_format.h"
 #include "../../mixer/write_frame.h"
 
-#include <common/no_copy.h>
 #include <common/exception/exceptions.h>
 
 #include <boost/algorithm/string.hpp>
@@ -40,8 +39,6 @@ namespace caspar { namespace core {
 	
 class color_producer : public frame_producer
 {
-	CASPAR_NO_COPY(color_producer);
-
 	safe_ptr<basic_frame> frame_;
 	const std::wstring color_str_;
 
@@ -134,7 +131,7 @@ safe_ptr<write_frame> create_color_frame(void* tag, const safe_ptr<frame_factory
 {
 	auto color2 = get_hex_color(color);
 	if(color2.length() != 9 || color2[0] != '#')
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << warg_value_info(color2) << msg_info("Invalid color."));
+		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
 	
 	core::pixel_format_desc desc;
 	desc.pix_fmt = pixel_format::bgra;
@@ -146,7 +143,7 @@ safe_ptr<write_frame> create_color_frame(void* tag, const safe_ptr<frame_factory
 	auto& value = *reinterpret_cast<uint32_t*>(frame->image_data().begin());
 	std::wstringstream str(color2.substr(1));
 	if(!(str >> std::hex >> value) || !str.eof())
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << warg_value_info(color2) << msg_info("Invalid color."));
+		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
 
 	frame->commit();
 		

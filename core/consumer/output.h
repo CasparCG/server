@@ -22,10 +22,10 @@
 #pragma once
 
 #include <common/forward.h>
-#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
 
+#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 FORWARD1(boost, template<typename> class unique_future)
@@ -34,8 +34,8 @@ FORWARD2(caspar, diagnostics, class graph);
 namespace caspar { namespace core {
 	
 class output sealed : public target<std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>>
+					, boost::noncopyable
 {
-	CASPAR_NO_COPY(output);
 public:
 	explicit output(const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc, int channel_index);
 

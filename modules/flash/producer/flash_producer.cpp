@@ -179,25 +179,25 @@ public:
 		graph_->set_color("skip-sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to create FlashAxContainer"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to create FlashAxContainer"));
 		
 		ax_->set_print([this]{return print();});
 
 		if(FAILED(ax_->CreateAxControl()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to Create FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Create FlashAxControl"));
 		
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to Query FlashAxControl"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Query FlashAxControl"));
 												
 		if(FAILED(spFlash->put_Playing(true)) )
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to start playing Flash"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start playing Flash"));
 
 		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to Load Template Host"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Load Template Host"));
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to Set Scale Mode"));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Set Scale Mode"));
 						
 		ax_->SetSize(width_, height_);		
 	

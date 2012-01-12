@@ -43,8 +43,8 @@
   <PropertyGroup>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\;..\..\common;..\..\dependencies64\bluefish\include\;..\..\dependencies64\boost\;..\..\dependencies64\tbb\include\;..\..\dependencies64\glew\include\;..\..\dependencies64\sfml\include\;..\..\dependencies64\ffmpeg\include\;..\..\dependencies64\asmlib\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\;..\..\common;..\..\dependencies64\bluefish\include\;..\..\dependencies64\boost\;..\..\dependencies64\tbb\include\;..\..\dependencies64\glew\include\;..\..\dependencies64\sfml\include\;..\..\dependencies64\ffmpeg\include\;..\..\dependencies64\asmlib\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\;..\..\dependencies64\bluefish\include\;..\..\dependencies64\boost\;..\..\dependencies64\tbb\include\;..\..\dependencies64\glew\include\;..\..\dependencies64\sfml\include\;..\..\dependencies64\ffmpeg\include\;..\..\dependencies64\asmlib\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\;..\..\dependencies64\bluefish\include\;..\..\dependencies64\boost\;..\..\dependencies64\tbb\include\;..\..\dependencies64\glew\include\;..\..\dependencies64\sfml\include\;..\..\dependencies64\ffmpeg\include\;..\..\dependencies64\asmlib\;$(IncludePath)</IncludePath>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectName)</TargetName>
