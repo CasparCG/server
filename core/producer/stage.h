@@ -41,14 +41,16 @@ struct frame_transform;
 class stage : boost::noncopyable
 {
 public:
+	typedef std::function<struct frame_transform(struct frame_transform)>							transform_func_t;
+	typedef std::tuple<int, transform_func_t, unsigned int, std::wstring>							transform_tuple_t;
 	typedef target<std::pair<std::map<int, safe_ptr<basic_frame>>, std::shared_ptr<void>>> target_t;
 
 	explicit stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc);
 	
 	// stage
 	
-	void set_frame_transform(int index, const frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_frame_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_transforms(const std::vector<transform_tuple_t>& transforms);
+	void apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void clear_transforms(int index);
 	void clear_transforms();
 
