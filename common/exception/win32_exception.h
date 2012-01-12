@@ -23,8 +23,6 @@
 
 #include "exceptions.h"
 
-#include "../no_copy.h"
-
 struct _EXCEPTION_RECORD;
 struct _EXCEPTION_POINTERS;
 
@@ -35,7 +33,6 @@ namespace caspar {
 
 class win32_exception : public std::exception
 {
-	//CASPAR_NO_COPY(win32_exception);
 public:
 	typedef const void* address;
 	static void install_handler();
@@ -57,8 +54,6 @@ private:
 
 class win32_access_violation : public win32_exception
 {
-	//CASPAR_NO_COPY(win32_access_violation);
-
 	mutable char messageBuffer_[256];
 
 public:

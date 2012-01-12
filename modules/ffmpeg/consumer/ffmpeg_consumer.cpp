@@ -117,7 +117,7 @@ public:
 		
 		auto video_codec = avcodec_find_encoder_by_name(u8(codec).c_str());
 		if(video_codec == nullptr)
-			BOOST_THROW_EXCEPTION(invalid_argument() << warg_name_info(codec));
+			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info(codec));
 
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs .
 		video_st_ = add_video_stream(video_codec->id, u8(options));

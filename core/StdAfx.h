@@ -44,7 +44,6 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
 
-#include <boost/assert.hpp>
 #include <boost/assign.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
@@ -57,6 +56,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
+#include <common/assert.h>
 #include <common/utf.h>
 #include <common/memory/safe_ptr.h>
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug

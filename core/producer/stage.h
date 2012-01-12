@@ -23,11 +23,11 @@
 
 #include "frame_producer.h"
 
-#include <common/no_copy.h>
+#include <common/concurrency/target.h>
 #include <common/forward.h>
 #include <common/memory/safe_ptr.h>
-#include <common/concurrency/target.h>
 
+#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <functional>
@@ -39,25 +39,22 @@ FORWARD1(boost, template<typename> class unique_future);
 
 namespace caspar { namespace core {
 	
-class stage sealed
+class stage sealed : boost::noncopyable
 {
-	CASPAR_NO_COPY(stage);
 public:	
 	typedef std::function<struct frame_transform(struct frame_transform)>							transform_func_t;
 	typedef std::tuple<int, transform_func_t, unsigned int, std::wstring>							transform_tuple_t;
 	typedef target<std::pair<std::map<int, safe_ptr<class basic_frame>>, std::shared_ptr<void>>>	target_t;
 
-	stage(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc);
-	
-	// stage
-	
+	explicit stage(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc);
+		
+	void start(int tokens);
+
 	void apply_transforms(const std::vector<transform_tuple_t>& transforms);
 	void apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void clear_transforms(int index);
 	void clear_transforms();
-
-	void spawn_token();
-			
+				
 	void load(int index, const safe_ptr<struct frame_producer>& producer, bool preview = false, int auto_play_delta = -1);
 	void pause(int index);
 	void play(int index);
@@ -76,7 +73,6 @@ public:
 	boost::unique_future<boost::property_tree::wptree> info(int layer) const;
 	
 	void set_video_format_desc(const struct video_format_desc& format_desc);
-
 private:
 	struct impl;
 	safe_ptr<impl> impl_;

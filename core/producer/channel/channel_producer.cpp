@@ -35,7 +35,6 @@
 #include "../../mixer/read_frame.h"
 
 #include <common/exception/exceptions.h>
-#include <common/no_copy.h>
 
 #include <asmlib.h>
 
@@ -45,8 +44,6 @@ namespace caspar { namespace core {
 
 class channel_consumer : public frame_consumer
 {	
-	CASPAR_NO_COPY(channel_consumer);
-
 	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>>	frame_buffer_;
 	core::video_format_desc										format_desc_;
 	int															channel_index_;
@@ -131,8 +128,6 @@ public:
 	
 class channel_producer : public frame_producer
 {
-	CASPAR_NO_COPY(channel_producer);
-
 	const safe_ptr<frame_factory>		frame_factory_;
 	const safe_ptr<channel_consumer>	consumer_;
 

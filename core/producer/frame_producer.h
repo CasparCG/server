@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <common/no_copy.h>
 #include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 #include <common/enum_class.h>
@@ -32,6 +31,7 @@
 #include <string>
 #include <vector>
 
+#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 FORWARD1(caspar, class executor);
@@ -39,17 +39,19 @@ FORWARD1(boost, template<typename T> class unique_future);
 
 namespace caspar { namespace core {
 	
-struct frame_producer
+struct frame_producer : boost::noncopyable
 {
-	CASPAR_NO_COPY(frame_producer);
 public:
-	CASPAR_BEGIN_ENUM_CLASS
+	struct flags_def
 	{
-		none		= 0,
-		alpha_only	= 2,
-		deinterlace	= 4, 
-	}
-	CASPAR_END_ENUM_CLASS(flags)
+		enum type
+		{
+			none		= 0,
+			alpha_only	= 2,
+			deinterlace	= 4,
+		};
+	};
+	typedef enum_class<flags_def> flags;
 
 	frame_producer(){}
 	virtual ~frame_producer(){}	

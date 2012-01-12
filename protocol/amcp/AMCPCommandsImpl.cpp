@@ -718,15 +718,15 @@ bool LoadbgCommand::DoExecute()
 		transitionInfo.tweener = get_tweener(tween);		
 
 		if(transition == TEXT("CUT"))
-			transitionInfo.type = transition::cut;
+			transitionInfo.type = transition_type::cut;
 		else if(transition == TEXT("MIX"))
-			transitionInfo.type = transition::mix;
+			transitionInfo.type = transition_type::mix;
 		else if(transition == TEXT("PUSH"))
-			transitionInfo.type = transition::push;
+			transitionInfo.type = transition_type::push;
 		else if(transition == TEXT("SLIDE"))
-			transitionInfo.type = transition::slide;
+			transitionInfo.type = transition_type::slide;
 		else if(transition == TEXT("WIPE"))
-			transitionInfo.type = transition::wipe;
+			transitionInfo.type = transition_type::wipe;
 		
 		if(direction == TEXT("FROMLEFT"))
 			transitionInfo.direction = transition_direction::from_left;
@@ -744,7 +744,7 @@ bool LoadbgCommand::DoExecute()
 		_parameters[0] = _parameters[0];
 		auto pFP = create_producer(GetChannel()->frame_factory(), _parameters);
 		if(pFP == frame_producer::empty())
-			BOOST_THROW_EXCEPTION(file_not_found() << wmsg_info(_parameters.size() > 0 ? _parameters[0] : L""));
+			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? _parameters[0] : L""));
 
 		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
 

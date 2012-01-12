@@ -185,7 +185,7 @@ struct server::impl : boost::noncopyable
 		else if(boost::iequals(name, L"CLOCK"))
 			return make_safe<CLK::CLKProtocolStrategy>(channels_);
 		
-		BOOST_THROW_EXCEPTION(caspar_exception() << warg_name_info(L"name") << warg_value_info(name) << wmsg_info(L"Invalid protocol"));
+		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
 	}
 };
 

@@ -179,7 +179,7 @@ EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& for
 			vid_fmt = videoMode;			
 	}
 	if(vid_fmt == VID_FMT_INVALID)
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("video-mode not supported.") << warg_value_info(format_desc.name));
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("video-mode not supported.") << arg_value_info(format_desc.name));
 
 	return vid_fmt;
 }

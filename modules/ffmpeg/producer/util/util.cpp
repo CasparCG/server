@@ -40,7 +40,7 @@
 
 #include <tbb/parallel_for.h>
 
-#include <boost/assert.hpp>
+#include <common/assert.h>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -236,7 +236,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		if(target_pix_fmt == PIX_FMT_BGRA)
 		{
 			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
-			BOOST_VERIFY(size == write->image_data().size()); 
+			CASPAR_VERIFY(size == write->image_data().size()); 
 		}
 		else
 		{
@@ -266,8 +266,8 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			auto decoded          = decoded_frame->data[n];
 			auto decoded_linesize = decoded_frame->linesize[n];
 			
-			BOOST_ASSERT(decoded);
-			BOOST_ASSERT(write->image_data(n).begin());
+			CASPAR_ASSERT(decoded);
+			CASPAR_ASSERT(write->image_data(n).begin());
 
 			// Copy line by line since ffmpeg sometimes pads each line.
 			tbb::affinity_partitioner ap;

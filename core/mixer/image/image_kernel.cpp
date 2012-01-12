@@ -38,7 +38,8 @@
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_transform.h>
 
-#include <boost/assert.hpp>
+#include <boost/noncopyable.hpp>
+#include <common/assert.h>
 
 namespace caspar { namespace core {
 	
@@ -56,8 +57,6 @@ GLubyte lower_pattern[] = {
 
 struct image_kernel::impl : boost::noncopyable
 {	
-	CASPAR_NO_COPY(impl);
-
 	safe_ptr<ogl_device>	ogl_;
 	safe_ptr<shader>		shader_;
 	bool					blend_modes_;
@@ -72,7 +71,7 @@ struct image_kernel::impl : boost::noncopyable
 	{
 		static const double epsilon = 0.001;
 
-		BOOST_ASSERT(params.pix_desc.planes.size() == params.textures.size());
+		CASPAR_ASSERT(params.pix_desc.planes.size() == params.textures.size());
 
 		if(params.textures.empty() || !params.background)
 			return;

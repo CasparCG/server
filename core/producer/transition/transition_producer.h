@@ -31,36 +31,42 @@
 
 namespace caspar { namespace core {
 	
-CASPAR_BEGIN_ENUM_CLASS
+struct transition_type_def
 {
-	cut,	
-	mix,	
-	push,	 
-	slide,	
-	wipe,
-	count
-}
-CASPAR_END_ENUM_CLASS(transition)
+	enum type
+	{
+		cut,	
+		mix,	
+		push,	 
+		slide,	
+		wipe,
+		count
+	};
+};
+typedef enum_class<transition_type_def> transition_type;
 	
-CASPAR_BEGIN_ENUM_CLASS
+struct transition_direction_def
 {
-	from_left,
-	from_right,
-	count
-}
-CASPAR_END_ENUM_CLASS(transition_direction)
-	
+	enum type
+	{
+		from_left,
+		from_right,
+		count
+	};
+};
+typedef enum_class<transition_direction_def> transition_direction;
+
 struct transition_info
 {
 	transition_info() 
-		: type(transition::cut)
+		: type(transition_type::cut)
 		, duration(0)
 		, direction(transition_direction::from_left)
 		, tweener(get_tweener(L"linear")){}
 		
 	size_t					duration;
 	transition_direction	direction;
-	transition				type;
+	transition_type			type;
 	tweener_t				tweener;
 };
 

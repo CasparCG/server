@@ -53,49 +53,49 @@ void SMFL_GLCheckError(const std::string& expr, const std::string& file, unsigne
 			case GL_INVALID_ENUM :
 				BOOST_THROW_EXCEPTION(ogl_invalid_enum()
 					<< msg_info("an unacceptable value has been specified for an enumerated argument")
-					<< errstr_info("GL_INVALID_ENUM")
+					<< error_info("GL_INVALID_ENUM")
 					<< line_info(line)
 					<< source_info(file));
 
 			case GL_INVALID_VALUE :
 				BOOST_THROW_EXCEPTION(ogl_invalid_value()
 					<< msg_info("a numeric argument is out of range")
-					<< errstr_info("GL_INVALID_VALUE")
+					<< error_info("GL_INVALID_VALUE")
 					<< line_info(line)
 					<< source_info(file));
 
 			case GL_INVALID_OPERATION :
 				BOOST_THROW_EXCEPTION(ogl_invalid_operation()
 					<< msg_info("the specified operation is not allowed in the current state")
-					<< errstr_info("GL_INVALID_OPERATION")
+					<< error_info("GL_INVALID_OPERATION")
 					<< line_info(line)
 					<< source_info(file));
 
 			case GL_STACK_OVERFLOW :
 				BOOST_THROW_EXCEPTION(ogl_stack_overflow()
 					<< msg_info("this command would cause a stack overflow")
-					<< errstr_info("GL_STACK_OVERFLOW")
+					<< error_info("GL_STACK_OVERFLOW")
 					<< line_info(line)
 					<< source_info(file));
 
 			case GL_STACK_UNDERFLOW :
 				BOOST_THROW_EXCEPTION(ogl_stack_underflow()
 					<< msg_info("this command would cause a stack underflow")
-					<< errstr_info("GL_STACK_UNDERFLOW")
+					<< error_info("GL_STACK_UNDERFLOW")
 					<< line_info(line)
 					<< source_info(file));
 
 			case GL_OUT_OF_MEMORY :
 				BOOST_THROW_EXCEPTION(ogl_out_of_memory()
 					<< msg_info("there is not enough memory left to execute the command")
-					<< errstr_info("GL_OUT_OF_MEMORY")
+					<< error_info("GL_OUT_OF_MEMORY")
 					<< line_info(line)
 					<< source_info(file));
 
 			case GL_INVALID_FRAMEBUFFER_OPERATION_EXT :
 				BOOST_THROW_EXCEPTION(ogl_stack_underflow()
 					<< msg_info("the object bound to FRAMEBUFFER_BINDING_EXT is not \"framebuffer complete\"")
-					<< errstr_info("GL_INVALID_FRAMEBUFFER_OPERATION_EXT")
+					<< error_info("GL_INVALID_FRAMEBUFFER_OPERATION_EXT")
 					<< line_info(line)
 					<< source_info(file));
 		}

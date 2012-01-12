@@ -37,7 +37,7 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include <boost/assert.hpp>
+#include <common/assert.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
@@ -95,24 +95,24 @@ public:
 			
 		//Setting output Video mode
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to set videomode."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set videomode."));
 
 		//Select Update Mode for output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_UPDATE_TYPE, UPD_FMT_FRAME))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to set update type."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set update type."));
 	
 		disable_video_output();
 
 		//Enable dual link output
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT, 1)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to enable dual link."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to enable dual link."));
 
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_4224)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to set dual link format type to 4:2:2:4."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set dual link format type to 4:2:2:4."));
 			
 		//Select output memory format
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MEMORY_FORMAT, MEM_FMT_ARGB_PC))) 
-			BOOST_THROW_EXCEPTION(caspar_exception() << wmsg_info(print() + L" Failed to set memory format."));
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set memory format."));
 		
 		//Select image orientation
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
@@ -330,7 +330,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
-		BOOST_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
+		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
 		consumer_->send(frame);

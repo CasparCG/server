@@ -27,20 +27,12 @@
 #include "../frame/basic_frame.h"
 #include "../frame/frame_transform.h"
 
-#include <common/no_copy.h>
-
 #include <tbb/parallel_invoke.h>
-
-#include <boost/assign.hpp>
-
-using namespace boost::assign;
 
 namespace caspar { namespace core {	
 
 struct transition_producer : public frame_producer
 {	
-	CASPAR_NO_COPY(transition_producer);
-
 	const field_mode		mode_;
 	unsigned int				current_frame_;
 	
@@ -124,7 +116,7 @@ struct transition_producer : public frame_producer
 						
 	safe_ptr<basic_frame> compose(const safe_ptr<basic_frame>& dest_frame, const safe_ptr<basic_frame>& src_frame) 
 	{	
-		if(info_.type == transition::cut)		
+		if(info_.type == transition_type::cut)		
 			return src_frame;
 										
 		const double delta1 = info_.tweener(current_frame_*2-1, 0.0, 1.0, static_cast<double>(info_.duration*2));
@@ -146,7 +138,7 @@ struct transition_producer : public frame_producer
 		d_frame1->get_frame_transform().volume = 0.0;
 		d_frame2->get_frame_transform().volume = delta2;
 
-		if(info_.type == transition::mix)
+		if(info_.type == transition_type::mix)
 		{
 			d_frame1->get_frame_transform().opacity = delta1;	
 			d_frame1->get_frame_transform().is_mix = true;
@@ -158,12 +150,12 @@ struct transition_producer : public frame_producer
 			s_frame2->get_frame_transform().opacity = 1.0-delta2;	
 			s_frame2->get_frame_transform().is_mix = true;
 		}
-		if(info_.type == transition::slide)
+		if(info_.type == transition_type::slide)
 		{
 			d_frame1->get_frame_transform().fill_translation[0] = (-1.0+delta1)*dir;	
 			d_frame2->get_frame_transform().fill_translation[0] = (-1.0+delta2)*dir;		
 		}
-		else if(info_.type == transition::push)
+		else if(info_.type == transition_type::push)
 		{
 			d_frame1->get_frame_transform().fill_translation[0] = (-1.0+delta1)*dir;
 			d_frame2->get_frame_transform().fill_translation[0] = (-1.0+delta2)*dir;
@@ -171,7 +163,7 @@ struct transition_producer : public frame_producer
 			s_frame1->get_frame_transform().fill_translation[0] = (0.0+delta1)*dir;	
 			s_frame2->get_frame_transform().fill_translation[0] = (0.0+delta2)*dir;		
 		}
-		else if(info_.type == transition::wipe)		
+		else if(info_.type == transition_type::wipe)		
 		{
 			d_frame1->get_frame_transform().clip_scale[0] = delta1;	
 			d_frame2->get_frame_transform().clip_scale[0] = delta2;			

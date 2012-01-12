@@ -52,7 +52,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <boost/assert.hpp>
+#include <common/assert.h>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -278,7 +278,7 @@ struct frame_muxer::impl : boost::noncopyable
 
 	core::audio_buffer pop_audio()
 	{
-		BOOST_VERIFY(audio_streams_.front().size() >= static_cast<size_t>(audio_cadence_.front()));
+		CASPAR_VERIFY(audio_streams_.front().size() >= static_cast<size_t>(audio_cadence_.front()));
 
 		auto begin = audio_streams_.front().begin();
 		auto end   = begin + audio_cadence_.front();

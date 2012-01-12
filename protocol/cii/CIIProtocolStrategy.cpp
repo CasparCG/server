@@ -214,7 +214,7 @@ void CIIProtocolStrategy::DisplayTemplate(const std::wstring& titleName)
 void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename) 
 {
 	transition_info transition;
-	transition.type = transition::mix;
+	transition.type = transition_type::mix;
 	transition.duration = 12;
 
 	auto pFP = create_producer(GetChannel()->frame_factory(), filename);

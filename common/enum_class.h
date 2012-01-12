@@ -35,8 +35,4 @@ public:
 	//}
 };
 
-#define CASPAR_ENUM_CLASS_DEF(name) name ## _def
-#define CASPAR_BEGIN_ENUM_CLASS typedef struct { enum type				
-#define CASPAR_END_ENUM_CLASS(name) ;} CASPAR_ENUM_CLASS_DEF(name); typedef enum_class<CASPAR_ENUM_CLASS_DEF(name)> name;
-
 }

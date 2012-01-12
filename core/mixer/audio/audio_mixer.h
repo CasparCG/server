@@ -22,7 +22,6 @@
 #pragma once
 
 #include <common/forward.h>
-#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 
 #include <core/producer/frame/frame_visitor.h>
@@ -39,7 +38,6 @@ typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer
 
 class audio_mixer sealed : public frame_visitor
 {
-	CASPAR_NO_COPY(audio_mixer);
 public:
 	audio_mixer(const safe_ptr<diagnostics::graph>& graph);
 
