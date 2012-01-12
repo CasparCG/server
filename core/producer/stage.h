@@ -29,26 +29,26 @@
 #include <common/concurrency/target.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
-#include <boost/thread/future.hpp>
 
 #include <functional>
 
 FORWARD2(caspar, diagnostics, class graph);
+FORWARD1(boost, template<typename> class unique_future);
 
 namespace caspar { namespace core {
 	
 class stage sealed
 {
 	CASPAR_NO_COPY(stage);
-public:
+public:	
 	typedef target<std::pair<std::map<int, safe_ptr<class basic_frame>>, std::shared_ptr<void>>> target_t;
 
 	stage(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc);
 	
 	// stage
 	
-	void set_frame_transform(int index, const struct frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
-	void apply_frame_transform(int index, const std::function<struct frame_transform(struct frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_transform(int index, const struct frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
+	void apply_transform(int index, const std::function<struct frame_transform(struct frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void clear_transforms(int index);
 	void clear_transforms();
 

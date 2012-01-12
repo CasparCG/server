@@ -171,7 +171,7 @@ public:
 		}		
 	}
 		
-	void set_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
+	void apply_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
 		executor_.begin_invoke([=]
 		{
@@ -349,8 +349,8 @@ public:
 };
 
 stage::stage(const safe_ptr<stage::target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc) : impl_(new impl(target, graph, format_desc)){}
-void stage::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
-void stage::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
+void stage::apply_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
+void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
 void stage::spawn_token(){impl_->spawn_token();}
