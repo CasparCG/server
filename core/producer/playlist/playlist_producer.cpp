@@ -29,6 +29,7 @@
 
 #include <boost/regex.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/thread/future.hpp>
 
 #include <deque>
 
