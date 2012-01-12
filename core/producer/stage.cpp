@@ -176,8 +176,21 @@ public:
 			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
 		}, high_priority);
 	}
-				
-	void apply_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween)
+					
+	void apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, std::wstring>>& transforms)
+	{
+		executor_.begin_invoke([=]
+		{
+			BOOST_FOREACH(auto& transform, transforms)
+			{
+				auto src = transforms_[std::get<0>(transform)].fetch();
+				auto dst = std::get<1>(transform)(src);
+				transforms_[std::get<0>(transform)] = tweened_transform<frame_transform>(src, dst, std::get<2>(transform), std::get<3>(transform));
+			}
+		}, high_priority);
+	}
+						
+	void apply_transform(int index, const stage::transform_func_t& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
 		executor_.begin_invoke([=]
 		{
@@ -345,8 +358,8 @@ public:
 };
 
 stage::stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc) : impl_(new implementation(graph, target, format_desc)){}
-void stage::set_frame_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->set_transform(index, transform, mix_duration, tween);}
-void stage::apply_frame_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
+void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){impl_->apply_transforms(transforms);}
+void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
 void stage::spawn_token(){impl_->spawn_token();}

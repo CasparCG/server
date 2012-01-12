@@ -69,6 +69,8 @@
 #include <boost/regex.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
+#include <tbb/concurrent_unordered_map.h>
+
 /* Return codes
 
 100 [action]			Information om att något har hänt  
@@ -266,7 +268,7 @@ bool ChannelGridCommand::DoExecute()
 				transform.clip_scale[1]			= delta;			
 				return transform;
 			};
-			self->stage()->apply_frame_transform(index, transform);
+			self->stage()->apply_transform(index, transform);
 		}
 	}
 
@@ -317,49 +319,52 @@ bool CallCommand::DoExecute()
 	}
 }
 
+// UGLY HACK
+tbb::concurrent_unordered_map<int, std::vector<stage::transform_tuple_t>> deferred_transforms;
+
 bool MixerCommand::DoExecute()
 {	
 	//Perform loading of the clip
 	try
 	{	
+		bool defer = _parameters.back() == L"DEFER";
+		if(defer)
+			_parameters.pop_back();
+
+		std::vector<stage::transform_tuple_t> transforms;
+
 		if(_parameters[0] == L"KEYER" || _parameters[0] == L"IS_KEY")
 		{
-			bool value = lexical_cast_or_default(_parameters.at(1), false);
-			auto transform = [=](frame_transform transform) -> frame_transform
+			bool value = boost::lexical_cast<int>(_parameters.at(1));
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.is_key = value;
 				return transform;					
-			};
-
-			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform);
+			}, 0, L"linear"));
 		}
 		else if(_parameters[0] == L"OPACITY")
 		{
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 
 			double value = boost::lexical_cast<double>(_parameters.at(1));
 			
-			auto transform = [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.opacity = value;
 				return transform;					
-			};
-
-			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			}, duration, tween));
 		}
 		else if(_parameters[0] == L"FILL" || _parameters[0] == L"FILL_RECT")
 		{
-			int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[5], 0) : 0;
+			int duration = _parameters.size() > 5 ? boost::lexical_cast<int>(_parameters[5]) : 0;
 			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
 			double x	= boost::lexical_cast<double>(_parameters.at(1));
 			double y	= boost::lexical_cast<double>(_parameters.at(2));
 			double x_s	= boost::lexical_cast<double>(_parameters.at(3));
 			double y_s	= boost::lexical_cast<double>(_parameters.at(4));
 
-			auto transform = [=](frame_transform transform) mutable -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) mutable -> frame_transform
 			{
 				transform.fill_translation[0]	= x;
 				transform.fill_translation[1]	= y;
@@ -370,35 +375,29 @@ bool MixerCommand::DoExecute()
 				transform.clip_scale[0]			= x_s;
 				transform.clip_scale[1]			= y_s;
 				return transform;
-			};
-				
-			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			}, duration, tween));
 		}
 		else if(_parameters[0] == L"CLIP" || _parameters[0] == L"CLIP_RECT")
 		{
-			int duration = _parameters.size() > 5 ? lexical_cast_or_default(_parameters[5], 0) : 0;
+			int duration = _parameters.size() > 5 ? boost::lexical_cast<int>(_parameters[5]) : 0;
 			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
 			double x	= boost::lexical_cast<double>(_parameters.at(1));
 			double y	= boost::lexical_cast<double>(_parameters.at(2));
 			double x_s	= boost::lexical_cast<double>(_parameters.at(3));
 			double y_s	= boost::lexical_cast<double>(_parameters.at(4));
 
-			auto transform = [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.clip_translation[0]	= x;
 				transform.clip_translation[1]	= y;
 				transform.clip_scale[0]			= x_s;
 				transform.clip_scale[1]			= y_s;
 				return transform;
-			};
-				
-			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			}, duration, tween));
 		}
 		else if(_parameters[0] == L"GRID")
 		{
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			int n = boost::lexical_cast<int>(_parameters.at(1));
 			double delta = 1.0/static_cast<double>(n);
@@ -407,7 +406,7 @@ bool MixerCommand::DoExecute()
 				for(int y = 0; y < n; ++y)
 				{
 					int index = x+y*n+1;
-					auto transform = [=](frame_transform transform) -> frame_transform
+					transforms.push_back(stage::transform_tuple_t(index, [=](frame_transform transform) -> frame_transform
 					{		
 						transform.fill_translation[0]	= x*delta;
 						transform.fill_translation[1]	= y*delta;
@@ -418,8 +417,7 @@ bool MixerCommand::DoExecute()
 						transform.clip_scale[0]			= delta;
 						transform.clip_scale[1]			= delta;			
 						return transform;
-					};
-					GetChannel()->stage()->apply_frame_transform(index, transform, duration, tween);
+					}, duration, tween));
 				}
 			}
 		}
@@ -432,44 +430,35 @@ bool MixerCommand::DoExecute()
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			auto transform = [=](frame_transform transform) -> frame_transform
+			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.brightness = value;
 				return transform;
-			};
-				
-			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			}, duration, tween);
 		}
 		else if(_parameters[0] == L"SATURATION")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			auto transform = [=](frame_transform transform) -> frame_transform
+			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.saturation = value;
 				return transform;
-			};
-				
-			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			}, duration, tween);	
 		}
 		else if(_parameters[0] == L"CONTRAST")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			auto transform = [=](frame_transform transform) -> frame_transform
+			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.contrast = value;
 				return transform;
-			};
-				
-			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			}, duration, tween);	
 		}
 		else if(_parameters[0] == L"LEVELS")
 		{
@@ -479,32 +468,26 @@ bool MixerCommand::DoExecute()
 			value.gamma		 = boost::lexical_cast<double>(_parameters.at(3));
 			value.min_output = boost::lexical_cast<double>(_parameters.at(4));
 			value.max_output = boost::lexical_cast<double>(_parameters.at(5));
-			int duration = _parameters.size() > 6 ? lexical_cast_or_default(_parameters[6], 0) : 0;
+			int duration = _parameters.size() > 6 ? boost::lexical_cast<int>(_parameters[6]) : 0;
 			std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
 
-			auto transform = [=](frame_transform transform) -> frame_transform
+			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.levels = value;
 				return transform;
-			};
-				
-			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);	
+			}, duration, tween);
 		}
 		else if(_parameters[0] == L"VOLUME")
 		{
-			int duration = _parameters.size() > 2 ? lexical_cast_or_default(_parameters[2], 0) : 0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			double value = boost::lexical_cast<double>(_parameters[1]);
 
-			auto transform = [=](frame_transform transform) -> frame_transform
+			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.volume = value;
 				return transform;
-			};
-				
-			int layer = GetLayerIndex();
-			GetChannel()->stage()->apply_frame_transform(GetLayerIndex(), transform, duration, tween);
+			}, duration, tween);
 		}
 		else if(_parameters[0] == L"CLEAR")
 		{
@@ -514,11 +497,23 @@ bool MixerCommand::DoExecute()
 			else
 				GetChannel()->stage()->clear_transforms(layer);
 		}
+		else if(_parameters[0] == L"COMMIT")
+		{
+			transforms = std::move(deferred_transforms[GetChannelIndex()]);
+		}
 		else
 		{
 			SetReplyString(TEXT("404 MIXER ERROR\r\n"));
 			return false;
 		}
+
+		if(defer)
+		{
+			auto& defer_tranforms = deferred_transforms[GetChannelIndex()];
+			defer_tranforms.insert(defer_tranforms.end(), transforms.begin(), transforms.end());
+		}
+		else
+			GetChannel()->stage()->apply_transforms(transforms);
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));
 
