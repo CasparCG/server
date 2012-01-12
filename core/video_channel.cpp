@@ -50,8 +50,7 @@ struct video_channel::impl sealed : public frame_factory
 
 	const safe_ptr<caspar::core::output>	output_;
 	const safe_ptr<caspar::core::mixer>		mixer_;
-	const safe_ptr<caspar::core::stage>		stage_;
-	
+	const safe_ptr<caspar::core::stage>		stage_;	
 public:
 	impl(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl)  
 		: index_(index)
@@ -64,8 +63,7 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
-		for(int n = 0; n < std::max(1, env::properties().get(L"configuration.pipeline-tokens", 2)); ++n)
-			stage_->spawn_token();
+		stage_->start(std::max(1, env::properties().get(L"configuration.pipeline-tokens", 2)));
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
@@ -140,6 +138,5 @@ safe_ptr<output> video_channel::output() { return impl_->output_;}
 video_format_desc video_channel::get_video_format_desc() const{return impl_->format_desc_;}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}
-int video_channel::index() const {return impl_->index_;}
 
 }}

@@ -39,7 +39,7 @@
 #include <common/memory/memshfl.h>
 #include <common/env.h>
 
-#include <boost/assert.hpp>
+#include <common/assert.h>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>

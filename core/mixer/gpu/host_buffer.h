@@ -21,14 +21,14 @@
 
 #pragma once
 
-#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
+
+#include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
 			
-class host_buffer
+class host_buffer : boost::noncopyable
 {
-	CASPAR_NO_COPY(host_buffer);
 public:
 	enum usage_t
 	{

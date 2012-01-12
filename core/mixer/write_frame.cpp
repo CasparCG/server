@@ -27,8 +27,6 @@
 #include "gpu/host_buffer.h"
 #include "gpu/device_buffer.h"
 
-#include <common/no_copy.h>
-
 #include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
 
@@ -36,7 +34,7 @@
 
 namespace caspar { namespace core {
 																																							
-struct write_frame::impl
+struct write_frame::impl : boost::noncopyable
 {			
 	std::shared_ptr<ogl_device>					ogl_;
 	std::vector<std::shared_ptr<host_buffer>>	buffers_;
@@ -114,14 +112,7 @@ struct write_frame::impl
 write_frame::write_frame(const void* tag) : impl_(new impl(tag)){}
 write_frame::write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc) 
 	: impl_(new impl(ogl, tag, desc)){}
-write_frame::write_frame(const write_frame& other) : impl_(new impl(*other.impl_)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
-write_frame& write_frame::operator=(const write_frame& other)
-{
-	basic_frame temp(other);
-	temp.swap(*this);
-	return *this;
-}
 write_frame& write_frame::operator=(write_frame&& other)
 {
 	write_frame temp(std::move(other));
@@ -129,7 +120,6 @@ write_frame& write_frame::operator=(write_frame&& other)
 	return *this;
 }
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
-
 boost::iterator_range<uint8_t*> write_frame::image_data(int index){return impl_->image_data(index);}
 audio_buffer& write_frame::audio_data() { return impl_->audio_data_; }
 const void* write_frame::tag() const {return impl_->tag_;}

@@ -21,11 +21,11 @@
 
 #pragma once
 
-#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 
 #include <core/mixer/audio/audio_mixer.h>
 
+#include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 
 #include <stdint.h>
@@ -34,9 +34,8 @@
 
 namespace caspar { namespace core {
 	
-class read_frame sealed
+class read_frame sealed : boost::noncopyable
 {
-	CASPAR_NO_COPY(read_frame);
 public:
 	read_frame();
 	read_frame(const safe_ptr<class ogl_device>& ogl, int width, int height, safe_ptr<class host_buffer>&& image_data, audio_buffer&& audio_data);

@@ -23,11 +23,11 @@
 
 #include "image/blend_modes.h"
 
-#include <common/no_copy.h>
 #include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
 
+#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <map>
@@ -38,8 +38,8 @@ FORWARD1(boost, template<typename> class unique_future);
 namespace caspar { namespace core {
 	
 class mixer sealed : public target<std::pair<std::map<int, safe_ptr<class basic_frame>>, std::shared_ptr<void>>>
+				   , boost::noncopyable
 {
-	CASPAR_NO_COPY(mixer);
 public:	
 	typedef target<std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>> target_t;
 

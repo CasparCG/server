@@ -43,7 +43,7 @@
 #include <core/producer/frame/frame_transform.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/assert.hpp>
+#include <common/assert.h>
 #include <boost/assign.hpp>
 #include <boost/timer.hpp>
 #include <boost/foreach.hpp>

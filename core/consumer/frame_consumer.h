@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include <common/no_copy.h>
 #include <common/memory/safe_ptr.h>
 
+#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <functional>
@@ -32,10 +32,8 @@
 
 namespace caspar { namespace core {
 	
-struct frame_consumer
+struct frame_consumer : boost::noncopyable
 {
-	CASPAR_NO_COPY(frame_consumer);
-
 	frame_consumer(){}
 	virtual ~frame_consumer() {}
 	

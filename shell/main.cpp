@@ -271,6 +271,23 @@ int main(int argc, wchar_t* argv[])
 							L"PLAY 2-2 " + file + L" LOOP\r\n" 
 							L"PLAY 2-3 " + file + L" LOOP\r\n";
 				}
+				else if(wcmd.substr(0, 1) == L"7")
+				{
+					wcmd = L"";
+					wcmd += L"CLEAR 1\r\n";
+					wcmd += L"MIXER 1 CLEAR\r\n";
+					wcmd += L"PLAY 1-0 GREEN\r\n";
+					wcmd += L"PLAY 1-1 BLUE\r\n";
+					wcmd += L"CG 1-2 ADD 1 ECS_TEST 1\r\n";
+					wcmd += L"MIXER 1-2 FILL 0 -1 1 2\r\n";
+				}
+				else if(wcmd.substr(0, 1) == L"8")
+				{
+					wcmd = L"";
+					wcmd += L"MIXER 1-1 FILL 0.0 0.5 1.0 1.0 500 linear DEFER\r\n";
+					wcmd += L"MIXER 1-2 FILL 0.0 0.0 1.0 1.0 500 linear DEFER\r\n";
+					wcmd += L"MIXER 1 COMMIT\r\n";
+				}
 				else if(wcmd.substr(0, 1) == L"X")
 				{
 					int num = 0;

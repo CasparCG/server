@@ -40,10 +40,7 @@ public:
 	explicit write_frame(const void* tag);
 	explicit write_frame(const safe_ptr<class ogl_device>& ogl, const void* tag, const struct pixel_format_desc& desc);
 
-	write_frame(const write_frame& other);
 	write_frame(write_frame&& other);
-
-	write_frame& operator=(const write_frame& other);
 	write_frame& operator=(write_frame&& other);
 			
 	// basic_frame

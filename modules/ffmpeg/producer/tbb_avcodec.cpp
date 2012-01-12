@@ -23,6 +23,7 @@
 
 #include "tbb_avcodec.h"
 
+#include <common/assert.h>
 #include <common/log.h>
 #include <common/env.h>
 
@@ -63,7 +64,7 @@ int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg
 	tbb::atomic<int> counter;   
     counter = 0;   
 
-	BOOST_VERIFY(tbb::tbb_thread::hardware_concurrency() < 16);
+	CASPAR_VERIFY(tbb::tbb_thread::hardware_concurrency() < 16);
 	// Note: this will probably only work when tbb::task_scheduler_init::num_threads() < 16.
     tbb::parallel_for(tbb::blocked_range<int>(0, count, 2), [&](const tbb::blocked_range<int> &r)    
     {   

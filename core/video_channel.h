@@ -22,15 +22,14 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
-#include <common/no_copy.h>
 
+#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 namespace caspar { namespace core {
 	
-class video_channel sealed
+class video_channel sealed : boost::noncopyable
 {
-	CASPAR_NO_COPY(video_channel);
 public:
 	explicit video_channel(int index, const struct video_format_desc& format_desc, const safe_ptr<class ogl_device>& ogl);
 
@@ -44,8 +43,7 @@ public:
 	
 	boost::property_tree::wptree info() const;
 
-	int index() const;
-
+	//int index() const;
 private:
 	struct impl;
 	safe_ptr<impl> impl_;

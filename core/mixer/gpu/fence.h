@@ -23,12 +23,14 @@
 
 #include <memory>
 
+#include <boost/noncopyable.hpp>
+
 namespace caspar { namespace core {
 	
 // Used to avoid blocking ogl thread for async operations. 
 // This is imported when several objects use the same ogl context.
 // Based on http://www.opengl.org/registry/specs/ARB/sync.txt.
-class fence
+class fence : boost::noncopyable
 {
 public:
 	fence();

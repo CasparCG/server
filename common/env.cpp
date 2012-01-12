@@ -48,7 +48,7 @@ boost::property_tree::wptree pt;
 void check_is_configured()
 {
 	if(pt.empty())
-		BOOST_THROW_EXCEPTION(invalid_operation() << wmsg_info(L"Enviroment properties has not been configured"));
+		BOOST_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
 }
 
 void configure(const std::wstring& filename)

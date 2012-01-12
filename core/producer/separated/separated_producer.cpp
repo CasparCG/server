@@ -26,16 +26,12 @@
 #include "../frame_producer.h"
 #include "../frame/basic_frame.h"
 
-#include <common/no_copy.h>
-
 #include <tbb/parallel_invoke.h>
 
 namespace caspar { namespace core {	
 
 struct separated_producer : public frame_producer
 {		
-	CASPAR_NO_COPY(separated_producer);
-
 	safe_ptr<frame_producer>	fill_producer_;
 	safe_ptr<frame_producer>	key_producer_;
 	safe_ptr<basic_frame>		fill_;

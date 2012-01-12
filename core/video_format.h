@@ -28,37 +28,43 @@
 
 namespace caspar { namespace core {
 	
-CASPAR_BEGIN_ENUM_CLASS
-{
-	pal,		
-	ntsc,		
-	x576p2500,	
-	x720p2500,	
-	x720p5000,	
-	x720p5994,	
-	x720p6000,	
-	x1080p2397,	
-	x1080p2400,	
-	x1080i5000,	
-	x1080i5994,	
-	x1080i6000,	
-	x1080p2500,	
-	x1080p2997,	
-	x1080p3000,	
-	x1080p5000,	
-	invalid,
-	count
-}
-CASPAR_END_ENUM_CLASS(video_format);
+struct video_format_def 
+{ 
+	enum type 
+	{
+		pal,		
+		ntsc,		
+		x576p2500,	
+		x720p2500,	
+		x720p5000,	
+		x720p5994,	
+		x720p6000,	
+		x1080p2397,	
+		x1080p2400,	
+		x1080i5000,	
+		x1080i5994,	
+		x1080i6000,	
+		x1080p2500,	
+		x1080p2997,	
+		x1080p3000,	
+		x1080p5000,	
+		invalid,
+		count
+	};
+};
+typedef enum_class<video_format_def> video_format;
 
-CASPAR_BEGIN_ENUM_CLASS
+struct field_mode_def
 {
-	empty		= 0,
-	lower		= 1,
-	upper		= 2,
-	progressive = 3, // NOTE: progressive == lower | upper;
-}
-CASPAR_END_ENUM_CLASS(field_mode);
+	enum type 
+	{
+		empty		= 0,
+		lower		= 1,
+		upper		= 2,
+		progressive = 3, // NOTE: progressive == lower | upper;
+	};
+};
+typedef enum_class<field_mode_def> field_mode;
 
 struct video_format_desc sealed
 {

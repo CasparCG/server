@@ -130,10 +130,10 @@
     <ClInclude Include="forward.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="no_copy.h">
+    <ClInclude Include="enum_class.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="enum_class.h">
+    <ClInclude Include="assert.h">
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>

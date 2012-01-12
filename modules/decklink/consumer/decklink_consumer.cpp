@@ -40,7 +40,7 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/cache_aligned_allocator.h>
 
-#include <boost/assert.hpp>
+#include <common/assert.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
@@ -500,7 +500,7 @@ public:
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
-		BOOST_VERIFY(audio_cadence_.front() == static_cast<int>(frame->audio_data().size()));
+		CASPAR_VERIFY(audio_cadence_.front() == static_cast<int>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
 		consumer_->send(frame);

@@ -69,16 +69,9 @@ basic_frame::basic_frame(std::vector<safe_ptr<basic_frame>>&& frames) : impl_(ne
 basic_frame::basic_frame(const safe_ptr<basic_frame>& frame) : impl_(new impl(frame)){}
 basic_frame::basic_frame(safe_ptr<basic_frame>&& frame)  : impl_(new impl(std::move(frame))){}
 basic_frame::basic_frame(basic_frame&& other) : impl_(std::move(other.impl_)){}
-basic_frame& basic_frame::operator=(const basic_frame& other)
+basic_frame& basic_frame::operator=(basic_frame other)
 {
-	basic_frame temp(other);
-	temp.swap(*this);
-	return *this;
-}
-basic_frame& basic_frame::operator=(basic_frame&& other)
-{
-	basic_frame temp(std::move(other));
-	temp.swap(*this);
+	other.swap(*this);
 	return *this;
 }
 void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
