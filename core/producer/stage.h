@@ -47,7 +47,6 @@ public:
 	
 	// stage
 	
-	void apply_transform(int index, const struct frame_transform& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void apply_transform(int index, const std::function<struct frame_transform(struct frame_transform)>& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void clear_transforms(int index);
 	void clear_transforms();

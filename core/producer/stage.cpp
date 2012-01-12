@@ -170,17 +170,7 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}		
 	}
-		
-	void apply_transform(int index, const frame_transform& transform, unsigned int mix_duration, const std::wstring& tween)
-	{
-		executor_.begin_invoke([=]
-		{
-			auto src = transforms_[index].fetch();
-			auto dst = transform;
-			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
-		}, high_priority);
-	}
-				
+						
 	void apply_transform(int index, const std::function<frame_transform(frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween)
 	{
 		executor_.begin_invoke([=]
@@ -349,7 +339,6 @@ public:
 };
 
 stage::stage(const safe_ptr<stage::target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc) : impl_(new impl(target, graph, format_desc)){}
-void stage::apply_transform(int index, const core::frame_transform& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
