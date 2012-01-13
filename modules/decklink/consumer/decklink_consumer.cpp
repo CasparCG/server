@@ -127,7 +127,6 @@ public:
 				{
 					data_.resize(frame_->image_data().size());
 					aligned_memshfl(data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-					frame_.reset();
 				}
 				*buffer = data_.data();
 			}
