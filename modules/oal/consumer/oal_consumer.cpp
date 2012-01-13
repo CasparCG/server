@@ -117,7 +117,7 @@ public:
 	
 	virtual size_t buffer_depth() const override
 	{
-		return 6;
+		return 2;
 	}
 
 	// oal_consumer
