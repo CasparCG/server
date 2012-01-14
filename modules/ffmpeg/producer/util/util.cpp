@@ -458,6 +458,9 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced)
 
 bool is_valid_file(const std::wstring filename)
 {			
+	if(boost::filesystem::path(filename2).extension() == ".m2t")
+		return true;
+
 	std::ifstream file(filename);
 
 	std::vector<unsigned char> buf;
