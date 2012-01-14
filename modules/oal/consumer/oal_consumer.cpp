@@ -116,7 +116,7 @@ public:
 	
 	virtual int buffer_depth() const override
 	{
-		return 2;
+		return 6;
 	}
 
 	// oal_consumer
