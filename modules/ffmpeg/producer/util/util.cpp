@@ -464,6 +464,9 @@ bool is_valid_file(const std::wstring filename)
 {			
 	auto filename2 = narrow(filename);
 
+	if(boost::filesystem::path(filename2).extension() == ".m2t")
+		return true;
+
 	std::ifstream file(filename);
 
 	std::vector<unsigned char> buf;
