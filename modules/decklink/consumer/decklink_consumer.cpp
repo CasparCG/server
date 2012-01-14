@@ -50,13 +50,12 @@ namespace caspar { namespace decklink {
 	
 struct configuration
 {
-	int	device_index;
+	int		device_index;
 	bool	embedded_audio;
 	bool	internal_key;
 	bool	low_latency;
 	bool	key_only;
-	int	base_buffer_depth;
-	int	buffer_depth;
+	int		base_buffer_depth;
 	
 	configuration()
 		: device_index(1)
@@ -65,7 +64,13 @@ struct configuration
 		, low_latency(true)
 		, key_only(false)
 		, base_buffer_depth(3)
-		, buffer_depth(base_buffer_depth + (low_latency ? 0 : 1) + (embedded_audio ? 1 : 0)){}
+	{
+	}
+
+	int buffer_depth() const
+	{
+		return base_buffer_depth + (low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
+	}
 };
 
 class decklink_frame : public IDeckLinkVideoFrame
@@ -195,7 +200,7 @@ public:
 		, keyer_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
-		, buffer_size_(config.buffer_depth) // Minimum buffer-size 3.
+		, buffer_size_(config.buffer_depth()) // Minimum buffer-size 3.
 		, video_scheduled_(0)
 		, audio_scheduled_(0)
 		, preroll_count_(0)
@@ -526,7 +531,7 @@ public:
 
 	virtual int buffer_depth() const override
 	{
-		return config_.buffer_depth;
+		return config_.buffer_depth();
 	}
 
 	virtual int index() const override
