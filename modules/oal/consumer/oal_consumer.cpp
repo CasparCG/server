@@ -25,6 +25,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/log.h>
 #include <common/utf.h>
+#include <common/env.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
@@ -116,7 +117,7 @@ public:
 	
 	virtual int buffer_depth() const override
 	{
-		return 6;
+		return 3;
 	}
 
 	// oal_consumer
