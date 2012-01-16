@@ -217,6 +217,8 @@ public:
 	{		
 		std::wstring result;
 
+		CASPAR_LOG(trace) << print() << " Call: " << param;
+
 		if(!ax_->FlashCall(param, result))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
 		graph_->set_tag("param");
@@ -365,10 +367,10 @@ public:
 	
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{	
-		return executor_.begin_invoke([=]() -> std::wstring
+		executor_.begin_invoke([=]()
 		{
 			if(!is_running_)
-				return L"";
+				return;
 
 			if(!renderer_)
 			{
@@ -376,6 +378,15 @@ public:
 				while(frame_buffer_.try_push(core::basic_frame::empty()));
 				render(renderer_.get());
 			}
+		});
+
+		return executor_.begin_invoke([=]() -> std::wstring
+		{
+			if(!is_running_)
+				return L"";
+			
+			if(!renderer_)
+				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("No renderer"));
 
 			try
 			{
@@ -393,7 +404,7 @@ public:
 			}
 
 			return L"";
-		}, high_priority);
+		});
 	}
 		
 	virtual std::wstring print() const override
