@@ -67,6 +67,28 @@ void configure(const std::wstring& filename)
 		log = widen(paths.get(L"log-path", initialPath + L"\\log\\"));
 		ftemplate = complete(wpath(widen(paths.get(L"template-path", initialPath + L"\\template\\")))).string();		
 		data = widen(paths.get(L"data-path", initialPath + L"\\data\\"));
+
+		try
+		{
+			for(auto it = boost::filesystem2::wdirectory_iterator(initialPath); it != boost::filesystem2::wdirectory_iterator(); ++it)
+			{
+				if(it->filename().find(L".fth") != std::wstring::npos)			
+				{
+					auto from_path = *it;
+					auto to_path = boost::filesystem2::wpath(ftemplate + L"/" + it->filename());
+				
+					if(boost::filesystem2::exists(to_path))
+						boost::filesystem2::remove(to_path);
+
+					boost::filesystem2::copy_file(from_path, to_path);
+				}	
+			}
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(error) << L"Failed to copy template-hosts from initial-path to template-path.";
+		}
 	}
 	catch(...)
 	{
