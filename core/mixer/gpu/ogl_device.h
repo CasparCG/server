@@ -65,6 +65,7 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>, boost::nonco
 	std::array<size_t, 4>			 scissor_;
 	const GLubyte*					 pattern_;
 	GLint							 attached_texture_;
+	GLuint							 attached_fbo_;
 	GLint							 active_shader_;
 	std::array<GLint, 16>			 binded_textures_;
 	std::array<GLint, 4>			 blend_func_;
@@ -75,7 +76,7 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>, boost::nonco
 	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
 	std::array<tbb::concurrent_unordered_map<size_t, safe_ptr<buffer_pool<host_buffer>>>, 2> host_pools_;
 	
-	unsigned int fbo_;
+	GLuint fbo_;
 
 	executor executor_;
 				
