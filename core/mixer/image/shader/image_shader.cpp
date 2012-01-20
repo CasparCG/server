@@ -297,12 +297,9 @@ safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes)
 		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
 	}
 						
-	ogl.enable(GL_TEXTURE_2D);
-
 	if(!g_blend_modes)
 	{
-		ogl.enable(GL_BLEND);
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
+		ogl.blend_func(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 		CASPAR_LOG(info) << L"[shader] Blend-modes are disabled.";
 	}
 

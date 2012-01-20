@@ -38,6 +38,7 @@
 #include <boost/noncopyable.hpp>
 
 #include <array>
+#include <stack>
 #include <unordered_map>
 
 FORWARD1(boost, template<typename> class unique_future);
@@ -63,38 +64,61 @@ struct buffer_pool : boost::noncopyable
 class ogl_device : public std::enable_shared_from_this<ogl_device>
 				 , boost::noncopyable
 {	
-	std::unordered_map<GLenum, bool> caps_;
-	std::array<int, 4>				 viewport_;
-	std::array<int, 4>				 scissor_;
-	const GLubyte*					 pattern_;
-	GLint							 attached_texture_;
-	GLint							 active_shader_;
-	std::array<GLint, 16>			 binded_textures_;
-	std::array<GLint, 4>			 blend_func_;
-	GLenum							 read_buffer_;
+	struct state
+	{
+		std::array<int, 4>						viewport;
+		std::array<int, 4>						scissor;
+		std::array<GLubyte, 32*32> 				pattern;
+		GLint									attached_texture;
+		GLint									active_shader;
+		std::array<GLint, 4>					blend_func;
+		std::array<GLint, 16>					binded_textures;
+
+		state()
+			: attached_texture(0)
+			, active_shader(0)
+		{
+			binded_textures.assign(0);
+			viewport.assign(std::numeric_limits<int>::max());
+			scissor.assign(std::numeric_limits<int>::max());
+			blend_func.assign(std::numeric_limits<int>::max());
+			pattern.assign(0xFF);
+		}	 
+	};
+
+	state state_;
+	std::stack<state> state_stack_;
+
+	std::map<GLenum, bool> caps_;
+	void enable(GLenum cap);
+	void disable(GLenum cap);
 
 	std::unique_ptr<sf::Context> context_;
+	GLuint fbo_;
 	
 	std::array<tbb::concurrent_unordered_map<int, safe_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
 	std::array<tbb::concurrent_unordered_map<int, safe_ptr<buffer_pool<host_buffer>>>, 2> host_pools_;
 	
-	unsigned int fbo_;
-
 	executor executor_;
 				
 	ogl_device();
+
+	void use(GLint id);
+	void attach(GLint id);
+	void bind(GLint id, int index);
+
 public:		
 	static safe_ptr<ogl_device> create();
 	~ogl_device();
 
+	void push_state();
+	void pop_state();
+
 	// Not thread-safe, must be called inside of context
-	void enable(GLenum cap);
-	void disable(GLenum cap);
 	void viewport(int x, int y, int width, int height);
 	void scissor(int x, int y, int width, int height);
 	void stipple_pattern(const GLubyte* pattern);
-
-	void attach(device_buffer& texture);
+	
 	void clear(device_buffer& texture);
 	
 	void blend_func(int c1, int c2, int a1, int a2);
@@ -102,7 +126,9 @@ public:
 	
 	void use(shader& shader);
 
-	void read_buffer(device_buffer& texture);
+	void attach(device_buffer& texture);
+
+	void bind(device_buffer& texture, int index);
 
 	void flush();
 
@@ -121,6 +147,7 @@ public:
 		
 	safe_ptr<device_buffer> create_device_buffer(int width, int height, int stride);
 	safe_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage_t usage);
+	boost::unique_future<safe_ptr<host_buffer>> transfer(const safe_ptr<device_buffer>& source);
 	
 	void yield();
 	boost::unique_future<void> gc();

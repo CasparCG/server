@@ -45,10 +45,6 @@ public:
 
 	void map();
 	void unmap();
-	
-	void begin_read(int width, int height, unsigned int format);
-	bool ready() const;
-	void wait(class ogl_device& ogl);
 private:
 	friend class ogl_device;
 	host_buffer(int size, usage_t usage);

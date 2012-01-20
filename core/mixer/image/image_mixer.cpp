@@ -61,7 +61,6 @@ class image_renderer
 {
 	safe_ptr<ogl_device>			ogl_;
 	image_kernel					kernel_;	
-	std::shared_ptr<device_buffer>	transferring_buffer_;
 public:
 	image_renderer(const safe_ptr<ogl_device>& ogl)
 		: ogl_(ogl)
@@ -71,16 +70,6 @@ public:
 	
 	boost::unique_future<safe_ptr<host_buffer>> operator()(std::vector<layer>&& layers, const video_format_desc& format_desc)
 	{		
-		auto layers2 = make_move_on_copy(std::move(layers));
-		return ogl_->begin_invoke([=]
-		{
-			return do_render(std::move(layers2.value), format_desc);
-		});
-	}
-
-private:
-	safe_ptr<host_buffer> do_render(std::vector<layer>&& layers, const video_format_desc& format_desc)
-	{
 		auto draw_buffer = create_mixer_buffer(4, format_desc);
 
 		if(format_desc.field_mode != field_mode::progressive)
@@ -107,18 +96,11 @@ private:
 		{
 			draw(std::move(layers), draw_buffer, format_desc);
 		}
-
-		auto host_buffer = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::read_only);
-		ogl_->attach(*draw_buffer);
-		ogl_->read_buffer(*draw_buffer);
-		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
-		
-		transferring_buffer_ = std::move(draw_buffer);
-
-		ogl_->flush(); // NOTE: This is important, otherwise fences will deadlock.
-			
-		return host_buffer;
+								
+		return ogl_->transfer(draw_buffer);		
 	}
+
+private:
 
 	void draw(std::vector<layer>&&		layers, 
 			  safe_ptr<device_buffer>&	draw_buffer, 
@@ -281,7 +263,9 @@ public:
 	
 	boost::unique_future<safe_ptr<host_buffer>> render(const video_format_desc& format_desc)
 	{
-		return renderer_(std::move(layers_), format_desc);
+		auto result = renderer_(std::move(layers_), format_desc);
+		layers_.clear();
+		return std::move(result);
 	}
 };
 
