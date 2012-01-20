@@ -221,6 +221,15 @@ public:
 			if(func)
 				func();
 		}	
+
+		if(!func)
+		{
+			execution_queue_[normal_priority].try_pop(func);
+			if(func)
+				func();
+			else
+				boost::thread::yield();
+		}
 	}
 	
 	function_queue::size_type capacity() const /*noexcept*/ { return execution_queue_[normal_priority].capacity();	}
