@@ -29,6 +29,8 @@
 
 #include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
+#include <common/scope_guard.h>
+#include <common/gl/gl_check.h>
 
 #include <boost/lexical_cast.hpp>
 
@@ -103,7 +105,16 @@ struct write_frame::impl : boost::noncopyable
 		{			
 			buffer->unmap();
 			buffer->bind();
-			texture->begin_read();
+			
+			ogl_->push_state();
+			auto restore_state = make_scope_guard([&]
+			{
+				ogl_->pop_state();
+			});
+
+			ogl_->bind(*texture, 0);
+			GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture->width(), texture->height(), format(texture->stride()), GL_UNSIGNED_BYTE, NULL));
+			
 			buffer->unbind();
 		}, high_priority);
 	}

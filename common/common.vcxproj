@@ -132,6 +132,7 @@
     <ClInclude Include="os\windows\current_version.h" />
     <ClInclude Include="os\windows\system_info.h" />
     <ClInclude Include="enum_class.h" />
+    <ClInclude Include="scope_guard.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="utf.h" />
     <ClInclude Include="prec_timer.h" />
