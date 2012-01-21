@@ -68,7 +68,7 @@ public:
 	
 	boost::unique_future<safe_ptr<host_buffer>> operator()(std::vector<layer>&& layers, const video_format_desc& format_desc)
 	{		
-		auto draw_buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, 4, true);
+		auto draw_buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, 4);
 			
 		if(format_desc.field_mode != field_mode::progressive)
 		{
@@ -125,7 +125,7 @@ private:
 				
 		if(layer.first != blend_mode::normal)
 		{
-			auto layer_draw_buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, 4, true);
+			auto layer_draw_buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, 4);
 
 			BOOST_FOREACH(auto& item, layer.second)
 				draw_item(std::move(item), layer_draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer, format_desc);	
@@ -161,7 +161,7 @@ private:
 
 		if(item.transform.is_key)
 		{
-			local_key_buffer = local_key_buffer ? local_key_buffer : ogl_->create_device_buffer(format_desc.width, format_desc.height, 4, true);
+			local_key_buffer = local_key_buffer ? local_key_buffer : ogl_->create_device_buffer(format_desc.width, format_desc.height, 4);
 
 			draw_params.background			= local_key_buffer;
 			draw_params.local_key			= nullptr;
@@ -171,7 +171,7 @@ private:
 		}
 		else if(item.transform.is_mix)
 		{
-			local_mix_buffer = local_mix_buffer ? local_mix_buffer : ogl_->create_device_buffer(format_desc.width, format_desc.height, 4, true);
+			local_mix_buffer = local_mix_buffer ? local_mix_buffer : ogl_->create_device_buffer(format_desc.width, format_desc.height, 4);
 
 			draw_params.background			= local_mix_buffer;
 			draw_params.local_key			= std::move(local_key_buffer);
