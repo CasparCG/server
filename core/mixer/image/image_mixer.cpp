@@ -61,7 +61,6 @@ class image_renderer
 {
 	safe_ptr<ogl_device>			ogl_;
 	image_kernel					kernel_;	
-	std::shared_ptr<device_buffer>	transferring_buffer_;
 public:
 	image_renderer(const safe_ptr<ogl_device>& ogl)
 		: ogl_(ogl)
@@ -112,11 +111,7 @@ private:
 		ogl_->attach(*draw_buffer);
 		ogl_->read_buffer(*draw_buffer);
 		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
-		
-		transferring_buffer_ = std::move(draw_buffer);
-
-		ogl_->flush(); // NOTE: This is important, otherwise fences will deadlock.
-			
+									
 		return host_buffer;
 	}
 
