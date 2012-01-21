@@ -103,9 +103,7 @@ public:
 	void use(shader& shader);
 
 	void read_buffer(device_buffer& texture);
-
-	void flush();
-
+	
 	// thread-afe
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
@@ -122,7 +120,6 @@ public:
 	safe_ptr<device_buffer> create_device_buffer(int width, int height, int stride);
 	safe_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage_t usage);
 	
-	void yield();
 	boost::unique_future<void> gc();
 
 	std::wstring version();

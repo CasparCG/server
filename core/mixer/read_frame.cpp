@@ -23,7 +23,6 @@
 
 #include "read_frame.h"
 
-#include "gpu/fence.h"
 #include "gpu/host_buffer.h"	
 #include "gpu/ogl_device.h"
 
@@ -53,11 +52,8 @@ public:
 		{
 			tbb::mutex::scoped_lock lock(mutex_);
 
-			if(!image_data_->data())
-			{
-				image_data_.get()->wait(*ogl_);
-				ogl_->invoke([=]{image_data_.get()->map();}, high_priority);
-			}
+			if(!image_data_->data())			
+				ogl_->invoke([=]{image_data_.get()->map();}, high_priority);			
 		}
 
 		auto ptr = static_cast<const uint8_t*>(image_data_->data());

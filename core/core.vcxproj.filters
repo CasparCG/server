@@ -115,9 +115,6 @@
     <ClInclude Include="mixer\gpu\shader.h">
       <Filter>source\mixer\gpu</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\gpu\fence.h">
-      <Filter>source\mixer\gpu</Filter>
-    </ClInclude>
     <ClInclude Include="producer\frame\frame_transform.h">
       <Filter>source\producer\frame</Filter>
     </ClInclude>
@@ -203,9 +200,6 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="mixer\gpu\shader.cpp">
-      <Filter>source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\fence.cpp">
       <Filter>source\mixer\gpu</Filter>
     </ClCompile>
     <ClCompile Include="producer\frame\frame_transform.cpp">
