@@ -51,6 +51,8 @@ struct device_buffer::impl : boost::noncopyable
 	const int width_;
 	const int height_;
 	const int stride_;
+
+	fence		 fence_;
 public:
 	impl(int width, int height, int stride) 
 		: width_(width)
@@ -80,12 +82,45 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}
+	
+	void bind()
+	{
+		GL(glBindTexture(GL_TEXTURE_2D, id_));
+	}
+
+	void bind(int index)
+	{
+		GL(glActiveTexture(GL_TEXTURE0+index));
+		bind();
+	}
+
+	void unbind()
+	{
+		GL(glBindTexture(GL_TEXTURE_2D, 0));
+	}
+
+	void begin_read()
+	{
+		bind();
+		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
+		unbind();
+		fence_.set();
+	}
+	
+	bool ready() const
+	{
+		return fence_.ready();
+	}
 };
 
 device_buffer::device_buffer(int width, int height, int stride) : impl_(new impl(width, height, stride)){}
 int device_buffer::stride() const { return impl_->stride_; }
 int device_buffer::width() const { return impl_->width_; }
 int device_buffer::height() const { return impl_->height_; }
+void device_buffer::bind(int index){impl_->bind(index);}
+void device_buffer::unbind(){impl_->unbind();}
+void device_buffer::begin_read(){impl_->begin_read();}
+bool device_buffer::ready() const{return impl_->ready();}
 int device_buffer::id() const{ return impl_->id_;}
 
 

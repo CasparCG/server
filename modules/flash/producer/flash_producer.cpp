@@ -34,7 +34,7 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/pixel_format.h>
-#include <core/mixer/device_frame.h>
+#include <core/mixer/write_frame.h>
 
 #include <common/env.h>
 #include <common/concurrency/executor.h>
@@ -251,10 +251,11 @@ public:
 			core::pixel_format_desc desc;
 			desc.pix_fmt = core::pixel_format::bgra;
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
-			head_ = frame_factory_->create_frame(this, desc, [&](const core::frame_factory::range_vector_type& ranges)
-			{
-				A_memcpy(ranges.at(0).begin(), bmp_.data(), width_*height_*4);
-			});
+			auto frame = frame_factory_->create_frame(this, desc);
+
+			A_memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
+			frame->commit();
+			head_ = frame;
 		}		
 				
 		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);

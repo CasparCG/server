@@ -38,7 +38,7 @@ public:
 	image_mixer(const safe_ptr<class ogl_device>& ogl);
 	
 	virtual void begin(class basic_frame& frame);
-	virtual void visit(class device_frame& frame);
+	virtual void visit(class write_frame& frame);
 	virtual void end();
 
 	void begin_layer(blend_mode blend_mode);

@@ -27,7 +27,7 @@
 #include <common/memory/safe_ptr.h>
 #include <common/exception/exceptions.h>
 #include <core/video_format.h>
-#include <core/mixer/data_frame.h>
+#include <core/mixer/read_frame.h>
 
 #include <boost/circular_buffer.hpp>
 
@@ -84,7 +84,7 @@ public:
 		consumer_->initialize(format_desc, channel_index);
 	}
 
-	virtual bool send(const safe_ptr<data_frame>& frame) override
+	virtual bool send(const safe_ptr<read_frame>& frame) override
 	{		
 		if(audio_cadence_.size() == 1)
 			return consumer_->send(frame);
@@ -140,7 +140,7 @@ const safe_ptr<frame_consumer>& frame_consumer::empty()
 {
 	struct empty_frame_consumer : public frame_consumer
 	{
-		virtual bool send(const safe_ptr<data_frame>&) override {return false;}
+		virtual bool send(const safe_ptr<read_frame>&) override {return false;}
 		virtual void initialize(const video_format_desc&, int) override{}
 		virtual std::wstring print() const override {return L"empty";}
 		virtual bool has_synchronization_clock() const override {return false;}

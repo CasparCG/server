@@ -42,7 +42,7 @@ public:
 	audio_mixer(const safe_ptr<diagnostics::graph>& graph);
 
 	virtual void begin(core::basic_frame& frame);
-	virtual void visit(core::device_frame& frame);
+	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
 	audio_buffer operator()(const struct video_format_desc& format_desc);

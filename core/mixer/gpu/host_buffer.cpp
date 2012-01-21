@@ -41,11 +41,12 @@ static tbb::atomic<int> g_r_total_count;
 																																								
 struct host_buffer::impl : boost::noncopyable
 {	
-	GLuint		pbo_;
+	GLuint			pbo_;
 	const int	size_;
-	void*		data_;
-	GLenum		usage_;
-	GLenum		target_;
+	void*			data_;
+	GLenum			usage_;
+	GLenum			target_;
+	fence			fence_;
 
 public:
 	impl(int size, usage_t usage) 
@@ -94,7 +95,12 @@ public:
 		if(!data_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
 	}
-	
+
+	void wait(ogl_device& ogl)
+	{
+		fence_.wait(ogl);
+	}
+
 	void unmap()
 	{
 		if(!data_)
@@ -115,6 +121,20 @@ public:
 	{
 		GL(glBindBuffer(target_, 0));
 	}
+
+	void begin_read(int width, int height, GLuint format)
+	{
+		unmap();
+		bind();
+		GL(glReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, NULL));
+		unbind();
+		fence_.set();
+	}
+
+	bool ready() const
+	{
+		return fence_.ready();
+	}
 };
 
 host_buffer::host_buffer(int size, usage_t usage) : impl_(new impl(size, usage)){}
@@ -124,6 +144,9 @@ void host_buffer::map(){impl_->map();}
 void host_buffer::unmap(){impl_->unmap();}
 void host_buffer::bind(){impl_->bind();}
 void host_buffer::unbind(){impl_->unbind();}
+void host_buffer::begin_read(int width, int height, GLuint format){impl_->begin_read(width, height, format);}
 int host_buffer::size() const { return impl_->size_; }
+bool host_buffer::ready() const{return impl_->ready();}
+void host_buffer::wait(ogl_device& ogl){impl_->wait(ogl);}
 
 }}

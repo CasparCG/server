@@ -210,10 +210,10 @@ public:
 		return begin_invoke(std::forward<Func>(func), prioriy).get();
 	}
 	
-	bool yield() // noexcept
+	void yield() // noexcept
 	{
 		if(boost::this_thread::get_id() != thread_.get_id())  // Only yield when calling from execution thread.
-			return false;
+			return;
 
 		std::function<void()> func;
 		while(execution_queue_[high_priority].try_pop(func))
@@ -221,15 +221,6 @@ public:
 			if(func)
 				func();
 		}	
-
-		if(!func)
-		{
-			execution_queue_[normal_priority].try_pop(func);
-			if(func)
-				func();
-		}
-
-		return func != nullptr;
 	}
 	
 	function_queue::size_type capacity() const /*noexcept*/ { return execution_queue_[normal_priority].capacity();	}

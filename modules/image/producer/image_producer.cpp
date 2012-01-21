@@ -28,7 +28,7 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/pixel_format.h>
-#include <core/mixer/device_frame.h>
+#include <core/mixer/write_frame.h>
 
 #include <common/env.h>
 #include <common/log.h>
@@ -58,11 +58,11 @@ struct image_producer : public core::frame_producer
 		core::pixel_format_desc desc;
 		desc.pix_fmt = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
+		auto frame = frame_factory->create_frame(this, desc);
 
-		frame_ = frame_factory->create_frame(this, desc, [&](const core::frame_factory::range_vector_type& ranges)
-		{
-			std::copy_n(FreeImage_GetBits(bitmap.get()), ranges[0].size(), ranges[0].begin());
-		});
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data().size(), frame->image_data().begin());
+		frame->commit();
+		frame_ = std::move(frame);
 	}
 	
 	// frame_producer

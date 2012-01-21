@@ -33,7 +33,12 @@ public:
 	int stride() const;	
 	int width() const;
 	int height() const;
-				
+		
+	void bind(int index);
+	void unbind();
+		
+	void begin_read();
+	bool ready() const;
 private:
 	friend class ogl_device;
 	device_buffer(int width, int height, int stride);
