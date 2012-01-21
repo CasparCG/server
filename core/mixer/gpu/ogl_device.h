@@ -99,11 +99,12 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>
 	ogl_device();
 
 	void use(GLint id);
-	void attach(GLint id);
+	GLint attach(GLint id);
 	void bind(GLint id, int index);	
 	void flush();
 	
 	friend class scoped_state;
+	
 public:		
 	void push_state();
 	state pop_state();
@@ -128,7 +129,6 @@ public:
 
 	void bind(const device_buffer& texture, int index);
 
-
 	// thread-afe
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
@@ -142,7 +142,7 @@ public:
 		return executor_.invoke(std::forward<Func>(func), priority);
 	}
 		
-	safe_ptr<device_buffer> create_device_buffer(int width, int height, int stride, bool zero = false);
+	safe_ptr<device_buffer> create_device_buffer(int width, int height, int stride);
 	safe_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage_t usage);
 
 	boost::unique_future<safe_ptr<host_buffer>> transfer(const safe_ptr<device_buffer>& source);
