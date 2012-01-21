@@ -113,7 +113,7 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(int width, int height
 	return make_safe_ptr(buffer);
 }
 				
-safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, int stride, bool zero)
+safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, int stride)
 {
 	CASPAR_VERIFY(stride > 0 && stride < 5);
 	CASPAR_VERIFY(width > 0 && height > 0);
@@ -121,23 +121,17 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, 
 	std::shared_ptr<device_buffer> buffer;
 		
 	if(!pool->items.try_pop(buffer))			
-		buffer =  executor_.invoke([&]{return allocate_device_buffer(width, height, stride);});
-
-	if(zero)
-	{		
-		executor_.invoke([&]
-		{
-			scoped_state scope(*this);
-			attach(*buffer);
-			glClear(GL_COLOR_BUFFER_BIT);
-		}, high_priority);	
-	}		
-	
-	//++pool->usage_count;
-
+		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);});
+		
 	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*) mutable
 	{		
-		pool->items.push(buffer);	
+		executor_.begin_invoke([=]
+		{
+			auto prev = attach(buffer->id());
+			glClear(GL_COLOR_BUFFER_BIT);
+			attach(prev);
+			pool->items.push(buffer);
+		}, high_priority);		
 	});
 }
 
@@ -391,8 +385,9 @@ void ogl_device::stipple_pattern(const std::array<GLubyte, 32*32>& pattern)
 	}
 }
 
-void ogl_device::attach(GLint id)
+GLint ogl_device::attach(GLint id)
 {	
+	auto prev = state_.attached_texture;
 	if(id != state_.attached_texture)
 	{
 		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, id, 0));
@@ -400,6 +395,7 @@ void ogl_device::attach(GLint id)
 
 		state_.attached_texture = id;
 	}
+	return prev;
 }
 
 void ogl_device::attach(const device_buffer& texture)
