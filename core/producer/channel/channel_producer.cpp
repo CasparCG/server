@@ -31,8 +31,8 @@
 #include "../frame/basic_frame.h"
 #include "../frame/frame_factory.h"
 #include "../frame/pixel_format.h"
-#include "../../mixer/device_frame.h"
-#include "../../mixer/data_frame.h"
+#include "../../mixer/write_frame.h"
+#include "../../mixer/read_frame.h"
 
 #include <common/exception/exceptions.h>
 
@@ -44,7 +44,7 @@ namespace caspar { namespace core {
 
 class channel_consumer : public frame_consumer
 {	
-	tbb::concurrent_bounded_queue<std::shared_ptr<data_frame>>	frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>>	frame_buffer_;
 	core::video_format_desc										format_desc_;
 	int															channel_index_;
 	tbb::atomic<bool>											is_running_;
@@ -63,7 +63,7 @@ public:
 
 	// frame_consumer
 
-	virtual bool send(const safe_ptr<data_frame>& frame) override
+	virtual bool send(const safe_ptr<read_frame>& frame) override
 	{
 		frame_buffer_.try_push(frame);
 		return is_running_;
@@ -108,7 +108,7 @@ public:
 	void stop()
 	{
 		is_running_ = false;
-		frame_buffer_.try_push(make_safe<data_frame>());
+		frame_buffer_.try_push(make_safe<read_frame>());
 	}
 	
 	const core::video_format_desc& get_video_format_desc()
@@ -116,11 +116,11 @@ public:
 		return format_desc_;
 	}
 
-	std::shared_ptr<data_frame> receive()
+	std::shared_ptr<read_frame> receive()
 	{
 		if(!is_running_)
-			return make_safe<data_frame>();
-		std::shared_ptr<data_frame> frame;
+			return make_safe<read_frame>();
+		std::shared_ptr<read_frame> frame;
 		frame_buffer_.try_pop(frame);
 		return frame;
 	}
@@ -165,8 +165,8 @@ public:
 			return last_frame_ = frame;
 		}
 		
-		auto data_frame = consumer_->receive();
-		if(!data_frame || data_frame->image_data().empty())
+		auto read_frame = consumer_->receive();
+		if(!read_frame || read_frame->image_data().empty())
 			return basic_frame::late();		
 
 		frame_number_++;
@@ -180,11 +180,11 @@ public:
 
 		desc.pix_fmt = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-		auto frame = frame_factory_->create_frame(this, desc, [&](const frame_factory::range_vector_type& ranges)
-		{
-			A_memcpy(ranges.at(0).begin(), data_frame->image_data().begin(), data_frame->image_data().size());
-		});
-		
+		auto frame = frame_factory_->create_frame(this, desc);
+
+		A_memcpy(frame->image_data().begin(), read_frame->image_data().begin(), read_frame->image_data().size());
+		frame->commit();
+
 		frame_buffer_.push(frame);	
 		
 		if(double_speed)	

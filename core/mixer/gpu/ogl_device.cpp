@@ -26,16 +26,12 @@
 #include "ogl_device.h"
 
 #include "shader.h"
-#include "fence.h"
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
-#include <common/scope_guard.h>
 
 #include <common/assert.h>
 #include <boost/foreach.hpp>
-
-#include <asmlib.h>
 
 #include <gl/glew.h>
 
@@ -43,11 +39,18 @@ namespace caspar { namespace core {
 
 ogl_device::ogl_device() 
 	: executor_(L"ogl_device")
+	, pattern_(nullptr)
+	, attached_texture_(0)
+	, active_shader_(0)
+	, read_buffer_(0)
 {
-	state_stack_.push(state());
-
 	CASPAR_LOG(info) << L"Initializing OpenGL Device.";
-		
+
+	std::fill(binded_textures_.begin(), binded_textures_.end(), 0);
+	std::fill(viewport_.begin(), viewport_.end(), 0);
+	std::fill(scissor_.begin(), scissor_.end(), 0);
+	std::fill(blend_func_.begin(), blend_func_.end(), 0);
+	
 	invoke([=]
 	{
 		context_.reset(new sf::Context());
@@ -70,8 +73,6 @@ ogl_device::ogl_device()
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
 
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
-
-		enable(GL_TEXTURE_2D);
 	});
 }
 
@@ -119,19 +120,14 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, 
 	CASPAR_VERIFY(width > 0 && height > 0);
 	auto& pool = device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
-		
-	if(!pool->items.try_pop(buffer))			
-		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);});
-		
+	if(!pool->items.try_pop(buffer))		
+		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);}, high_priority);			
+	
+	//++pool->usage_count;
+
 	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*) mutable
 	{		
-		executor_.begin_invoke([=]
-		{
-			auto prev = attach(buffer->id());
-			glClear(GL_COLOR_BUFFER_BIT);
-			attach(prev);
-			pool->items.push(buffer);
-		}, high_priority);		
+		pool->items.push(buffer);	
 	});
 }
 
@@ -241,10 +237,9 @@ void ogl_device::flush()
 	//}
 }
 
-bool ogl_device::yield()
+void ogl_device::yield()
 {
-	scoped_state scope(*this);
-	return executor_.yield();
+	executor_.yield();
 }
 
 boost::unique_future<void> ogl_device::gc()
@@ -286,31 +281,6 @@ std::wstring ogl_device::version()
 	return ver;
 }
 
-void ogl_device::push_state()
-{
-	state_stack_.push(state_);
-}
-
-ogl_device::state ogl_device::pop_state()
-{
-	if(state_stack_.size() <= 1)
-		BOOST_THROW_EXCEPTION(invalid_operation());
-
-	auto prev_state = state_stack_.top();
-	state_stack_.pop();
-	auto new_state = state_stack_.top();
-	
-	viewport(new_state.viewport);
-	scissor(new_state.scissor);
-	stipple_pattern(new_state.pattern);
-	blend_func(new_state.blend_func);
-	attach(new_state.attached_texture);
-	use(new_state.active_shader);
-	for(int n = 0; n < 16; ++n)
-		bind(new_state.binded_textures[n], n);
-
-	return prev_state;
-}
 
 void ogl_device::enable(GLenum cap)
 {
@@ -332,224 +302,86 @@ void ogl_device::disable(GLenum cap)
 	}
 }
 
-void ogl_device::viewport(const std::array<GLint, 4>& viewport)
-{
-	if(viewport != state_.viewport)
-	{		
-		glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-		state_.viewport = viewport;
-	}
-}
-
 void ogl_device::viewport(int x, int y, int width, int height)
 {
-	std::array<int, 4> ar = {{x, y, width, height}};
-	viewport(ar);
-}
-
-void ogl_device::scissor(const std::array<GLint, 4>& scissor)
-{
-	if(scissor != state_.scissor)
+	if(x != viewport_[0] || y != viewport_[1] || width != viewport_[2] || height != viewport_[3])
 	{		
-		if(scissor == state().scissor)
-		{
-			disable(GL_SCISSOR_TEST);
-		}
-		else
-		{
-			enable(GL_SCISSOR_TEST);
-			glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
-			state_.scissor = scissor;
-		}
+		glViewport(x, y, width, height);
+		viewport_[0] = x;
+		viewport_[1] = y;
+		viewport_[2] = width;
+		viewport_[3] = height;
 	}
 }
 
 void ogl_device::scissor(int x, int y, int width, int height)
 {
-	std::array<int, 4> ar = {{x, y, width, height}};
-	scissor(ar);
-}
-
-void ogl_device::stipple_pattern(const std::array<GLubyte, 32*32>& pattern)
-{
-	if(pattern != state_.pattern)
-	{
-		if(pattern == state().pattern)
-			disable(GL_POLYGON_STIPPLE);
-		else
-		{
-			enable(GL_POLYGON_STIPPLE);
-			glPolygonStipple(pattern.data());
-			state_.pattern = pattern;
-		}
-	}
-}
-
-GLint ogl_device::attach(GLint id)
-{	
-	auto prev = state_.attached_texture;
-	if(id != state_.attached_texture)
-	{
-		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, id, 0));
-		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
-
-		state_.attached_texture = id;
-	}
-	return prev;
-}
-
-void ogl_device::attach(const device_buffer& texture)
-{	
-	attach(texture.id());
-}
-
-void ogl_device::bind(GLint id, int index)
-{
-	if(id != state_.binded_textures[index])
+	if(x != scissor_[0] || y != scissor_[1] || width != scissor_[2] || height != scissor_[3])
 	{		
-		GL(glActiveTexture(GL_TEXTURE0+index));
-		glBindTexture(GL_TEXTURE_2D, id);
+		glScissor(x, y, width, height);
+		scissor_[0] = x;
+		scissor_[1] = y;
+		scissor_[2] = width;
+		scissor_[3] = height;
 	}
 }
 
-void ogl_device::blend_func(const std::array<GLint, 4>& func)
+void ogl_device::stipple_pattern(const GLubyte* pattern)
 {
-	if(state_.blend_func != func)
+	if(pattern_ != pattern)
+	{		
+		glPolygonStipple(pattern);
+		pattern_ = pattern;
+	}
+}
+
+void ogl_device::attach(device_buffer& texture)
+{	
+	if(attached_texture_ != texture.id())
 	{
-		state def_state_;
-		if(func == def_state_.blend_func)
-			disable(GL_BLEND);
-		else
-		{
-			enable(GL_BLEND);
-			GL(glBlendFuncSeparate(func[0], func[1], func[2], func[3]));
-			state_.blend_func = func;
-		}
+		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, texture.id(), 0));
+		attached_texture_ = texture.id();
+	}
+}
+
+void ogl_device::clear(device_buffer& texture)
+{	
+	attach(texture);
+	GL(glClear(GL_COLOR_BUFFER_BIT));
+}
+
+void ogl_device::read_buffer(device_buffer&)
+{
+	if(read_buffer_ != GL_COLOR_ATTACHMENT0)
+	{
+		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
+		read_buffer_ = GL_COLOR_ATTACHMENT0;
+	}
+}
+
+void ogl_device::use(shader& shader)
+{
+	if(active_shader_ != shader.id())
+	{		
+		GL(glUseProgramObjectARB(shader.id()));	
+		active_shader_ = shader.id();
 	}
 }
 
 void ogl_device::blend_func(int c1, int c2, int a1, int a2)
 {
-	std::array<int, 4> ar = {c1, c2, a1, a2};
-	blend_func(ar);
+	std::array<int, 4> func = {c1, c2, a1, a2};
+
+	if(blend_func_ != func)
+	{
+		blend_func_ = func;
+		GL(glBlendFuncSeparate(c1, c2, a1, a2));
+	}
 }
 
 void ogl_device::blend_func(int c1, int c2)
 {
 	blend_func(c1, c2, c1, c2);
-}
-
-void ogl_device::bind(const device_buffer& texture, int index)
-{
-	//while(true)
-	//{
-	//	if(!texture.ready())		
-	//		yield();
-	//	else
-	//		break;
-	//}
-
-	bind(texture.id(), index);
-}
-
-
-void ogl_device::use(GLint id)
-{
-	if(id != state_.active_shader)
-	{		
-		GL(glUseProgramObjectARB(id));	
-		state_.active_shader = id;
-	}
-}
-
-void ogl_device::use(const shader& shader)
-{
-	use(shader.id());
-}
-
-
-boost::unique_future<safe_ptr<host_buffer>> ogl_device::transfer(const safe_ptr<device_buffer>& source)
-{		
-	return begin_invoke([=]() -> safe_ptr<host_buffer>
-	{
-		auto dest = create_host_buffer(source->width()*source->height()*source->stride(), host_buffer::read_only);
-
-		{
-			scoped_state scope(*this);
-
-			attach(*source);
-	
-			dest->bind();
-			GL(glReadPixels(0, 0, source->width(), source->height(), format(source->stride()), GL_UNSIGNED_BYTE, NULL));
-
-			dest->unbind();
-		}
-	
-		auto sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-
-		flush();
-	
-		GLsizei length = 0;
-		int values[] = {0};
-	
-		while(true)
-		{
-			GL(glGetSynciv(sync, GL_SYNC_STATUS, 1, &length, values));
-
-			if(values[0] != GL_SIGNALED)		
-			{
-				if(!yield())
-					Sleep(2);
-			}
-			else
-				break;
-		}
-
-		dest->map();
-
-		return dest;
-	});
-}
-
-boost::unique_future<safe_ptr<device_buffer>> ogl_device::transfer(const safe_ptr<host_buffer>& source, int width, int height, int stride)
-{		
-	return begin_invoke([=]() -> safe_ptr<device_buffer>
-	{		
-		auto dest = create_device_buffer(width, height, stride);
-		
-		scoped_state scope(*this);
-
-		source->unmap();
-		source->bind();
-			
-		const_cast<ogl_device*>(this)->bind(*dest, 0); // WORKAROUND: const-cast needed due to compiler bug?
-		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, dest->width(), dest->height(), format(dest->stride()), GL_UNSIGNED_BYTE, NULL));
-			
-		source->unbind();
-		
-		return dest;
-	});
-}
-
-ogl_device::state::state()
-	: attached_texture(0)
-	, active_shader(0)
-{
-	binded_textures.assign(0);
-	viewport.assign(std::numeric_limits<int>::max());
-	scissor.assign(std::numeric_limits<int>::max());
-	blend_func.assign(std::numeric_limits<int>::max());
-	pattern.assign(0xFF);
-}	 
-
-ogl_device::state::state(const state& other)
-{
-	A_memcpy(this, &other, sizeof(state));
-}
-
-ogl_device::state& ogl_device::state::operator=(const state& other)
-{
-	A_memcpy(this, &other, sizeof(state));
 }
 
 }}

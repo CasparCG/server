@@ -28,7 +28,7 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
-#include <core/mixer/data_frame.h>
+#include <core/mixer/read_frame.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread.hpp>
@@ -53,7 +53,7 @@ public:
 	{
 	}
 	
-	virtual bool send(const safe_ptr<core::data_frame>& frame) override
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{				
 		boost::thread async([frame]
 		{

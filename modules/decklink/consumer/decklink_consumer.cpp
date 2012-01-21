@@ -27,7 +27,7 @@
 
 #include "../interop/DeckLinkAPI_h.h"
 
-#include <core/mixer/data_frame.h>
+#include <core/mixer/read_frame.h>
 
 #include <common/concurrency/executor.h>
 #include <common/concurrency/lock.h>
@@ -76,13 +76,13 @@ struct configuration
 class decklink_frame : public IDeckLinkVideoFrame
 {
 	tbb::atomic<int>											ref_count_;
-	std::shared_ptr<core::data_frame>							frame_;
+	std::shared_ptr<core::read_frame>							frame_;
 	const core::video_format_desc								format_desc_;
 
 	const bool													key_only_;
 	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> data_;
 public:
-	decklink_frame(const safe_ptr<core::data_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
+	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
 		: frame_(frame)
 		, format_desc_(format_desc)
 		, key_only_(key_only)
@@ -184,8 +184,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 		
 	boost::circular_buffer<std::vector<int32_t>>	audio_container_;
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<core::data_frame>> video_frame_buffer_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<core::data_frame>> audio_frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> video_frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> audio_frame_buffer_;
 	
 	safe_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
@@ -232,7 +232,7 @@ public:
 			output_->BeginAudioPreroll();		
 		
 		for(int n = 0; n < buffer_size_; ++n)
-			schedule_next_video(make_safe<core::data_frame>());
+			schedule_next_video(make_safe<core::read_frame>());
 
 		if(!config.embedded_audio)
 			start_playback();
@@ -241,8 +241,8 @@ public:
 	~decklink_consumer()
 	{		
 		is_running_ = false;
-		video_frame_buffer_.try_push(std::make_shared<core::data_frame>());
-		audio_frame_buffer_.try_push(std::make_shared<core::data_frame>());
+		video_frame_buffer_.try_push(std::make_shared<core::read_frame>());
+		audio_frame_buffer_.try_push(std::make_shared<core::read_frame>());
 
 		if(output_ != nullptr) 
 		{
@@ -349,7 +349,7 @@ public:
 			else if(result == bmdOutputFrameFlushed)
 				graph_->set_tag("flushed-frame");
 
-			std::shared_ptr<core::data_frame> frame;	
+			std::shared_ptr<core::read_frame> frame;	
 			video_frame_buffer_.pop(frame);					
 			schedule_next_video(make_safe_ptr(frame));	
 			
@@ -388,7 +388,7 @@ public:
 			}
 			else
 			{
-				std::shared_ptr<core::data_frame> frame;
+				std::shared_ptr<core::read_frame> frame;
 				audio_frame_buffer_.pop(frame);
 				schedule_next_audio(frame->audio_data());
 			}
@@ -420,7 +420,7 @@ public:
 		audio_scheduled_ += sample_frame_count;
 	}
 			
-	void schedule_next_video(const safe_ptr<core::data_frame>& frame)
+	void schedule_next_video(const safe_ptr<core::read_frame>& frame)
 	{
 		CComPtr<IDeckLinkVideoFrame> frame2(new decklink_frame(frame, format_desc_, config_.key_only));
 		if(FAILED(output_->ScheduleVideoFrame(frame2, video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
@@ -432,7 +432,7 @@ public:
 		tick_timer_.restart();
 	}
 
-	void send(const safe_ptr<core::data_frame>& frame)
+	void send(const safe_ptr<core::read_frame>& frame)
 	{
 		auto exception = lock(exception_mutex_, [&]
 		{
@@ -502,7 +502,7 @@ public:
 		});
 	}
 	
-	virtual bool send(const safe_ptr<core::data_frame>& frame) override
+	virtual bool send(const safe_ptr<core::read_frame>& frame) override
 	{
 		CASPAR_VERIFY(audio_cadence_.front() == static_cast<int>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);

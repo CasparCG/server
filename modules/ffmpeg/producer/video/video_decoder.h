@@ -33,7 +33,7 @@ namespace caspar {
 
 namespace core {
 	struct frame_factory;
-	class device_frame;
+	class write_frame;
 }
 
 namespace ffmpeg {

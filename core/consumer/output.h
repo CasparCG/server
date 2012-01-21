@@ -33,7 +33,7 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 	
-class output sealed : public target<std::pair<safe_ptr<class data_frame>, std::shared_ptr<void>>>
+class output sealed : public target<std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>>
 					, boost::noncopyable
 {
 public:
@@ -41,7 +41,7 @@ public:
 
 	// target
 	
-	virtual void send(const std::pair<safe_ptr<class data_frame>, std::shared_ptr<void>>& frame) override;
+	virtual void send(const std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>& frame) override;
 
 	// output
 	
