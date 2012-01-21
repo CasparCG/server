@@ -21,7 +21,7 @@
 
 #include "../stdafx.h"
 
-#include "read_frame.h"
+#include "data_frame.h"
 
 #include "gpu/fence.h"
 #include "gpu/host_buffer.h"	
@@ -31,7 +31,7 @@
 
 namespace caspar { namespace core {
 																																							
-struct read_frame::impl : boost::noncopyable
+struct data_frame::impl : boost::noncopyable
 {
 	int											width_;
 	int											height_;
@@ -56,21 +56,21 @@ public:
 	}
 };
 
-read_frame::read_frame(int width, int height, boost::unique_future<safe_ptr<host_buffer>>&& image_data, audio_buffer&& audio_data) 
+data_frame::data_frame(int width, int height, boost::unique_future<safe_ptr<host_buffer>>&& image_data, audio_buffer&& audio_data) 
 	: impl_(new impl(width, height, std::move(image_data), std::move(audio_data))){}
-read_frame::read_frame(){}
-const boost::iterator_range<const uint8_t*> read_frame::image_data()
+data_frame::data_frame(){}
+const boost::iterator_range<const uint8_t*> data_frame::image_data()
 {
 	return impl_ ? impl_->image_data() : boost::iterator_range<const uint8_t*>();
 }
 
-const boost::iterator_range<const int32_t*> read_frame::audio_data()
+const boost::iterator_range<const int32_t*> data_frame::audio_data()
 {
 	return impl_ ? impl_->audio_data() : boost::iterator_range<const int32_t*>();
 }
 
-int read_frame::width() const{return impl_ ? impl_->width_ : 0;}
-int read_frame::height() const{return impl_ ? impl_->height_ : 0;}
+int data_frame::width() const{return impl_ ? impl_->width_ : 0;}
+int data_frame::height() const{return impl_ ? impl_->height_ : 0;}
 
 //#include <tbb/scalable_allocator.h>
 //#include <tbb/parallel_for.h>
@@ -87,7 +87,7 @@ int read_frame::height() const{return impl_ ? impl_->height_ : 0;}
 //
 //void	CopyFrame( void * pSrc, void * pDest, UINT width, UINT height, UINT pitch );
 //
-//void* copy_frame(void* dest, const safe_ptr<read_frame>& frame)
+//void* copy_frame(void* dest, const safe_ptr<data_frame>& frame)
 //{
 //	auto src		= frame->image_data().begin();
 //	auto height		= 720;

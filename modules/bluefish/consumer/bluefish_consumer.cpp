@@ -26,7 +26,7 @@
 #include "../util/memory.h"
 
 #include <core/video_format.h>
-#include <core/mixer/read_frame.h>
+#include <core/mixer/data_frame.h>
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
@@ -67,7 +67,7 @@ struct bluefish_consumer : boost::noncopyable
 	unsigned int						vid_fmt_;
 
 	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
-	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<core::data_frame>> frame_buffer_;
 	
 	const bool							embedded_audio_;
 	const bool							key_only_;
@@ -185,7 +185,7 @@ public:
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");		
 	}
 	
-	void send(const safe_ptr<core::read_frame>& frame)
+	void send(const safe_ptr<core::data_frame>& frame)
 	{					
 		executor_.begin_invoke([=]
 		{
@@ -202,7 +202,7 @@ public:
 		});
 	}
 
-	void display_frame(const safe_ptr<core::read_frame>& frame)
+	void display_frame(const safe_ptr<core::data_frame>& frame)
 	{
 		// Sync
 
@@ -328,7 +328,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	virtual bool send(const safe_ptr<core::data_frame>& frame) override
 	{
 		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);

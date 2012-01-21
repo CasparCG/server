@@ -29,7 +29,7 @@ struct frame_visitor : boost::noncopyable
 {
 	virtual void begin(class basic_frame& frame) = 0;
 	virtual void end() = 0;
-	virtual void visit(class write_frame& frame) = 0;
+	virtual void visit(class device_frame& frame) = 0;
 };
 
 }}

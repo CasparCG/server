@@ -27,7 +27,7 @@
 #include "../frame/basic_frame.h"
 #include "../frame/frame_factory.h"
 #include "../frame/pixel_format.h"
-#include "../../mixer/write_frame.h"
+#include "../../mixer/device_frame.h"
 
 #include <common/exception/exceptions.h>
 
@@ -127,7 +127,7 @@ safe_ptr<frame_producer> create_color_producer(const safe_ptr<frame_factory>& fr
 	return create_producer_print_proxy(
 			make_safe<color_producer>(frame_factory, color2));
 }
-safe_ptr<write_frame> create_color_frame(void* tag, const safe_ptr<frame_factory>& frame_factory, const std::wstring& color)
+safe_ptr<device_frame> create_color_frame(void* tag, const safe_ptr<frame_factory>& frame_factory, const std::wstring& color)
 {
 	auto color2 = get_hex_color(color);
 	if(color2.length() != 9 || color2[0] != '#')
@@ -136,18 +136,13 @@ safe_ptr<write_frame> create_color_frame(void* tag, const safe_ptr<frame_factory
 	core::pixel_format_desc desc;
 	desc.pix_fmt = pixel_format::bgra;
 	desc.planes.push_back(core::pixel_format_desc::plane(1, 1, 4));
-	auto frame = frame_factory->create_frame(tag, desc);
-		
-	// Read color from hex-string and write to frame pixel.
-
-	auto& value = *reinterpret_cast<uint32_t*>(frame->image_data().begin());
-	std::wstringstream str(color2.substr(1));
-	if(!(str >> std::hex >> value) || !str.eof())
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
-
-	frame->commit();
-		
-	return frame;
+	return frame_factory->create_frame(tag, desc, [&](const frame_factory::range_vector_type& ranges)
+	{		
+		auto& value = *reinterpret_cast<uint32_t*>(ranges.at(0).begin());
+		std::wstringstream str(color2.substr(1));
+		if(!(str >> std::hex >> value) || !str.eof())
+			BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
+	});
 }
 
 }}

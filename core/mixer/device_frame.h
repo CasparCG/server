@@ -28,20 +28,24 @@
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <boost/range/iterator_range.hpp>
+#include <boost/thread/future.hpp>
 
 #include <stdint.h>
 #include <vector>
 
 namespace caspar { namespace core {
 	
-class write_frame sealed : public core::basic_frame
+class device_frame sealed : public core::basic_frame
 {
 public:	
-	explicit write_frame(const void* tag);
-	explicit write_frame(const safe_ptr<class ogl_device>& ogl, const void* tag, const struct pixel_format_desc& desc);
+	typedef boost::unique_future<safe_ptr<class device_buffer>> future_texture;
 
-	write_frame(write_frame&& other);
-	write_frame& operator=(write_frame&& other);
+	explicit device_frame(const void* tag);
+	explicit device_frame(std::vector<future_texture>&& textures, const void* tag, const struct pixel_format_desc& desc, field_mode type);
+	explicit device_frame(future_texture&& texture, const void* tag, const struct pixel_format_desc& desc, field_mode type);
+
+	device_frame(device_frame&& other);
+	device_frame& operator=(device_frame&& other);
 			
 	// basic_frame
 
@@ -49,15 +53,10 @@ public:
 
 	// write _frame
 
-	void swap(write_frame& other);
+	void swap(device_frame& other);
 			
-	boost::iterator_range<uint8_t*> image_data(int plane_index = 0);	
 	audio_buffer& audio_data();
-	
-	void commit(int plane_index);
-	void commit();
-	
-	void set_type(const field_mode& mode);
+		
 	field_mode get_type() const;
 	
 	const void* tag() const;
@@ -67,7 +66,7 @@ public:
 private:
 	friend class image_mixer;
 	
-	const std::vector<safe_ptr<class device_buffer>>& get_textures() const;
+	const std::vector<boost::shared_future<safe_ptr<class device_buffer>>>& get_textures() const;
 
 	struct impl;
 	safe_ptr<impl> impl_;

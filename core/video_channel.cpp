@@ -28,9 +28,10 @@
 #include "consumer/output.h"
 #include "mixer/mixer.h"
 #include "mixer/gpu/ogl_device.h"
-#include "mixer/write_frame.h"
+#include "mixer/device_frame.h"
 #include "producer/stage.h"
 #include "producer/frame/frame_factory.h"
+#include "producer/frame/pixel_format.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
@@ -70,9 +71,29 @@ public:
 
 	// frame_factory
 						
-	virtual safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override
+	virtual safe_ptr<device_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, const std::function<void(const frame_factory::range_vector_type&)>& func, core::field_mode type) override
 	{		
-		return make_safe<write_frame>(ogl_, tag, desc);
+		std::vector<safe_ptr<host_buffer>> buffers;
+		BOOST_FOREACH(auto& plane, desc.planes)
+			buffers.push_back(ogl_->create_host_buffer(plane.size, host_buffer::write_only));
+
+		std::vector<boost::iterator_range<uint8_t*>> dest;
+		boost::range::transform(buffers, std::back_inserter(dest), [](const safe_ptr<host_buffer>& buffer) -> boost::iterator_range<uint8_t*>
+		{
+			auto ptr = reinterpret_cast<uint8_t*>(buffer->data());
+			return boost::iterator_range<uint8_t*>(ptr, ptr + buffer->size());
+		});
+
+		func(dest);
+
+		std::vector<boost::unique_future<safe_ptr<device_buffer>>> textures;
+		for(std::size_t n = 0; n < desc.planes.size(); ++n)
+		{
+			auto texture = ogl_->transfer(buffers.at(n), desc.planes[n].width, desc.planes[n].height, desc.planes[n].channels);
+			textures.push_back(std::move(texture));
+		}
+		
+		return make_safe<device_frame>(std::move(textures), tag, desc, type);
 	}
 	
 	virtual core::video_format_desc get_video_format_desc() const override

@@ -38,16 +38,16 @@ public:
 	
 	const void* data() const;
 	void* data();
-	int size() const;	
+	int size() const;
 	
-	void bind();
-	void unbind();
-
-	void map();
-	void unmap();
 private:
 	friend class ogl_device;
 	host_buffer(int size, usage_t usage);
+		
+	void map();
+	void bind();
+	void unbind();
+	void unmap();
 
 	struct impl;
 	safe_ptr<impl> impl_;

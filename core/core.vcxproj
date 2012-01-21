@@ -135,8 +135,8 @@
     <ClInclude Include="mixer\gpu\ogl_device.h" />
     <ClInclude Include="mixer\image\image_kernel.h" />
     <ClInclude Include="mixer\image\image_mixer.h" />
-    <ClInclude Include="mixer\read_frame.h" />
-    <ClInclude Include="mixer\write_frame.h" />
+    <ClInclude Include="mixer\data_frame.h" />
+    <ClInclude Include="mixer\device_frame.h" />
     <ClInclude Include="producer\color\color_producer.h" />
     <ClInclude Include="producer\frame\basic_frame.h" />
     <ClInclude Include="producer\frame\frame_factory.h" />
@@ -222,11 +222,11 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="mixer\read_frame.cpp">
+    <ClCompile Include="mixer\data_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="mixer\write_frame.cpp">
+    <ClCompile Include="mixer\device_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
