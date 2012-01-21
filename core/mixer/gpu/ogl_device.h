@@ -68,10 +68,10 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>
 	__declspec(align(16)) struct state
 	{
 		std::array<GLubyte, 32*32> 				pattern;
+		std::array<GLint, 16>					binded_textures;
 		std::array<GLint, 4>					viewport;
 		std::array<GLint, 4>					scissor;
 		std::array<GLint, 4>					blend_func;
-		std::array<GLint, 16>					binded_textures;
 		GLint									attached_texture;
 		GLint									active_shader;
 		GLint padding[2];
