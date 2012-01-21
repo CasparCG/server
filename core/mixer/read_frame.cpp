@@ -21,34 +21,47 @@
 
 #include "../stdafx.h"
 
-#include "data_frame.h"
+#include "read_frame.h"
 
 #include "gpu/fence.h"
 #include "gpu/host_buffer.h"	
 #include "gpu/ogl_device.h"
 
-#include <boost/thread/future.hpp>
+#include <tbb/mutex.h>
 
 namespace caspar { namespace core {
 																																							
-struct data_frame::impl : boost::noncopyable
+struct read_frame::impl : boost::noncopyable
 {
-	int											width_;
-	int											height_;
-	boost::unique_future<safe_ptr<host_buffer>>	image_data_;
-	audio_buffer								audio_data_;
+	safe_ptr<ogl_device>		ogl_;
+	int							width_;
+	int							height_;
+	safe_ptr<host_buffer>		image_data_;
+	tbb::mutex					mutex_;
+	audio_buffer				audio_data_;
 
 public:
-	impl(int width, int height, boost::unique_future<safe_ptr<host_buffer>>&& image_data, audio_buffer&& audio_data) 
-		: width_(width)
+	impl(const safe_ptr<ogl_device>& ogl, int width, int height, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
+		: ogl_(ogl)
+		, width_(width)
 		, height_(height)
 		, image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data)){}	
 	
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
-		auto ptr = static_cast<const uint8_t*>(image_data_.get()->data());
-		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_.get()->size());
+		{
+			tbb::mutex::scoped_lock lock(mutex_);
+
+			if(!image_data_->data())
+			{
+				image_data_.get()->wait(*ogl_);
+				ogl_->invoke([=]{image_data_.get()->map();}, high_priority);
+			}
+		}
+
+		auto ptr = static_cast<const uint8_t*>(image_data_->data());
+		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_->size());
 	}
 	const boost::iterator_range<const int32_t*> audio_data()
 	{
@@ -56,21 +69,21 @@ public:
 	}
 };
 
-data_frame::data_frame(int width, int height, boost::unique_future<safe_ptr<host_buffer>>&& image_data, audio_buffer&& audio_data) 
-	: impl_(new impl(width, height, std::move(image_data), std::move(audio_data))){}
-data_frame::data_frame(){}
-const boost::iterator_range<const uint8_t*> data_frame::image_data()
+read_frame::read_frame(const safe_ptr<ogl_device>& ogl, int width, int height, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
+	: impl_(new impl(ogl, width, height, std::move(image_data), std::move(audio_data))){}
+read_frame::read_frame(){}
+const boost::iterator_range<const uint8_t*> read_frame::image_data()
 {
 	return impl_ ? impl_->image_data() : boost::iterator_range<const uint8_t*>();
 }
 
-const boost::iterator_range<const int32_t*> data_frame::audio_data()
+const boost::iterator_range<const int32_t*> read_frame::audio_data()
 {
 	return impl_ ? impl_->audio_data() : boost::iterator_range<const int32_t*>();
 }
 
-int data_frame::width() const{return impl_ ? impl_->width_ : 0;}
-int data_frame::height() const{return impl_ ? impl_->height_ : 0;}
+int read_frame::width() const{return impl_ ? impl_->width_ : 0;}
+int read_frame::height() const{return impl_ ? impl_->height_ : 0;}
 
 //#include <tbb/scalable_allocator.h>
 //#include <tbb/parallel_for.h>
@@ -87,7 +100,7 @@ int data_frame::height() const{return impl_ ? impl_->height_ : 0;}
 //
 //void	CopyFrame( void * pSrc, void * pDest, UINT width, UINT height, UINT pitch );
 //
-//void* copy_frame(void* dest, const safe_ptr<data_frame>& frame)
+//void* copy_frame(void* dest, const safe_ptr<read_frame>& frame)
 //{
 //	auto src		= frame->image_data().begin();
 //	auto height		= 720;

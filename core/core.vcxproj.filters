@@ -90,6 +90,12 @@
     <ClInclude Include="mixer\audio\audio_mixer.h">
       <Filter>source\mixer\audio</Filter>
     </ClInclude>
+    <ClInclude Include="mixer\read_frame.h">
+      <Filter>source\mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\write_frame.h">
+      <Filter>source\mixer</Filter>
+    </ClInclude>
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="mixer\mixer.h">
       <Filter>source\mixer</Filter>
@@ -121,6 +127,9 @@
     <ClInclude Include="producer\playlist\playlist_producer.h">
       <Filter>source\producer\playlist</Filter>
     </ClInclude>
+    <ClInclude Include="mixer\image\shader\image_shader.h">
+      <Filter>source\mixer\image\shader</Filter>
+    </ClInclude>
     <ClInclude Include="mixer\image\blend_modes.h">
       <Filter>source\mixer\image</Filter>
     </ClInclude>
@@ -132,15 +141,6 @@
     </ClInclude>
     <ClInclude Include="producer\separated\separated_producer.h">
       <Filter>source\producer\separated</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\device_frame.h">
-      <Filter>source\mixer</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\data_frame.h">
-      <Filter>source\mixer</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\image\shader\image_shader.h">
-      <Filter>source\mixer\image\shader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -179,6 +179,12 @@
     </ClCompile>
     <ClCompile Include="producer\separated\separated_producer.cpp">
       <Filter>source\producer\separated</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\read_frame.cpp">
+      <Filter>source\mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\write_frame.cpp">
+      <Filter>source\mixer</Filter>
     </ClCompile>
     <ClCompile Include="StdAfx.cpp" />
     <ClCompile Include="mixer\mixer.cpp">
@@ -219,12 +225,6 @@
     </ClCompile>
     <ClCompile Include="producer\channel\channel_producer.cpp">
       <Filter>source\producer\channel</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\device_frame.cpp">
-      <Filter>source\mixer</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\data_frame.cpp">
-      <Filter>source\mixer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

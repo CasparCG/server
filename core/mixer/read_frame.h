@@ -22,7 +22,6 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
-#include <common/forward.h>
 
 #include <core/mixer/audio/audio_mixer.h>
 
@@ -33,15 +32,13 @@
 #include <memory>
 #include <vector>
 
-FORWARD1(boost, template<typename> class unique_future);
-
 namespace caspar { namespace core {
 	
-class data_frame sealed : boost::noncopyable
+class read_frame sealed : boost::noncopyable
 {
 public:
-	data_frame();
-	data_frame(int width, int height, boost::unique_future<safe_ptr<class host_buffer>>&& image_data, audio_buffer&& audio_data);
+	read_frame();
+	read_frame(const safe_ptr<class ogl_device>& ogl, int width, int height, safe_ptr<class host_buffer>&& image_data, audio_buffer&& audio_data);
 
 	const boost::iterator_range<const uint8_t*> image_data();
 	const boost::iterator_range<const int32_t*> audio_data();

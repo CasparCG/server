@@ -136,8 +136,5 @@
     <ClInclude Include="assert.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="scope_guard.h">
-      <Filter>source</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

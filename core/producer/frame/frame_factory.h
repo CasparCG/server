@@ -24,23 +24,14 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
-#include <boost/range.hpp>
 
 namespace caspar { namespace core {
 			
 struct frame_factory : boost::noncopyable
 {
-	typedef boost::iterator_range<uint8_t*> range_type;
-	typedef std::vector<range_type> range_vector_type;
-
 	frame_factory(){}
-	
 
-	virtual safe_ptr<class device_frame> create_frame(const void* video_stream_tag, 
-													 const struct pixel_format_desc& desc, 
-													 const std::function<void(const range_vector_type&)>& func, 
-													 core::field_mode type = core::field_mode::progressive) = 0;	
-
+	virtual safe_ptr<class write_frame> create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;		
 	virtual struct video_format_desc get_video_format_desc() const = 0; // nothrow
 };
 

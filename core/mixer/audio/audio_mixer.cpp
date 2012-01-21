@@ -23,7 +23,7 @@
 
 #include "audio_mixer.h"
 
-#include <core/mixer/device_frame.h>
+#include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
 #include <common/diagnostics/graph.h>
 
@@ -84,7 +84,7 @@ public:
 		transform_stack_.push(transform_stack_.top()*frame.get_frame_transform());
 	}
 
-	void visit(core::device_frame& frame)
+	void visit(core::write_frame& frame)
 	{
 		if(transform_stack_.top().volume < 0.002 || frame.audio_data().empty())
 			return;
@@ -193,7 +193,7 @@ public:
 
 audio_mixer::audio_mixer(const safe_ptr<diagnostics::graph>& graph) : impl_(new impl(graph)){}
 void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
-void audio_mixer::visit(core::device_frame& frame){impl_->visit(frame);}
+void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
 audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){return impl_->mix(format_desc);}
 
