@@ -23,9 +23,8 @@
 
 #include "prec_timer.h"
 
-#define NOMINMAX
+#include "os/windows/windows.h"
 
-#include <windows.h>
 #include <Mmsystem.h>
 
 namespace caspar {

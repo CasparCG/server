@@ -23,7 +23,7 @@
 
 #include "win32_exception.h"
 
-#include <windows.h>
+#include "../os/windows/windows.h"
 
 namespace caspar {
 
