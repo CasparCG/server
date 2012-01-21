@@ -41,7 +41,7 @@ class mixer sealed : public target<std::pair<std::map<int, safe_ptr<class basic_
 				   , boost::noncopyable
 {
 public:	
-	typedef target<std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>> target_t;
+	typedef target<std::pair<safe_ptr<class data_frame>, std::shared_ptr<void>>> target_t;
 
 	explicit mixer(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc, const safe_ptr<class ogl_device>& ogl);
 		

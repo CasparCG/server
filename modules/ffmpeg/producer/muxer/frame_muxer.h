@@ -37,7 +37,7 @@ namespace caspar {
 	
 namespace core {
 
-class write_frame;
+class device_frame;
 class basic_frame;
 struct frame_factory;
 
