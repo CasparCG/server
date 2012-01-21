@@ -37,7 +37,7 @@
 
 #include "server.h"
 
-#include <windows.h>
+#include <common/os/windows/windows.h>
 #include <winnt.h>
 #include <mmsystem.h>
 #include <atlbase.h>

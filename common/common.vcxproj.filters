@@ -136,5 +136,8 @@
     <ClInclude Include="assert.h">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="os\windows\windows.h">
+      <Filter>source\os\windows</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
