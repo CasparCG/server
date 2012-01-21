@@ -68,8 +68,8 @@ public:
 	
 	boost::unique_future<safe_ptr<host_buffer>> operator()(std::vector<layer>&& layers, const video_format_desc& format_desc)
 	{		
-		auto draw_buffer = create_mixer_buffer(4, format_desc);
-
+		auto draw_buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, 4, true);
+			
 		if(format_desc.field_mode != field_mode::progressive)
 		{
 			auto upper = layers;
@@ -94,8 +94,8 @@ public:
 		{
 			draw(std::move(layers), draw_buffer, format_desc);
 		}
-								
-		return ogl_->transfer(draw_buffer);		
+						
+		return ogl_->transfer(draw_buffer);	
 	}
 
 private:
@@ -125,7 +125,7 @@ private:
 				
 		if(layer.first != blend_mode::normal)
 		{
-			auto layer_draw_buffer = create_mixer_buffer(4, format_desc);
+			auto layer_draw_buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, 4, true);
 
 			BOOST_FOREACH(auto& item, layer.second)
 				draw_item(std::move(item), layer_draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer, format_desc);	
@@ -161,7 +161,7 @@ private:
 
 		if(item.transform.is_key)
 		{
-			local_key_buffer = local_key_buffer ? local_key_buffer : create_mixer_buffer(1, format_desc);
+			local_key_buffer = local_key_buffer ? local_key_buffer : ogl_->create_device_buffer(format_desc.width, format_desc.height, 4, true);
 
 			draw_params.background			= local_key_buffer;
 			draw_params.local_key			= nullptr;
@@ -171,7 +171,7 @@ private:
 		}
 		else if(item.transform.is_mix)
 		{
-			local_mix_buffer = local_mix_buffer ? local_mix_buffer : create_mixer_buffer(4, format_desc);
+			local_mix_buffer = local_mix_buffer ? local_mix_buffer : ogl_->create_device_buffer(format_desc.width, format_desc.height, 4, true);
 
 			draw_params.background			= local_mix_buffer;
 			draw_params.local_key			= std::move(local_key_buffer);
@@ -209,13 +209,6 @@ private:
 		draw_params.background			= draw_buffer;
 
 		kernel_.draw(std::move(draw_params));
-	}
-			
-	safe_ptr<device_buffer> create_mixer_buffer(int stride, const video_format_desc& format_desc)
-	{
-		auto buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, stride);
-		ogl_->clear(*buffer);
-		return buffer;
 	}
 };
 		
