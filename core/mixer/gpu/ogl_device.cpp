@@ -35,6 +35,8 @@
 #include <common/assert.h>
 #include <boost/foreach.hpp>
 
+#include <asmlib.h>
+
 #include <gl/glew.h>
 
 namespace caspar { namespace core {
@@ -111,14 +113,25 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(int width, int height
 	return make_safe_ptr(buffer);
 }
 				
-safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, int stride)
+safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, int stride, bool zero)
 {
 	CASPAR_VERIFY(stride > 0 && stride < 5);
 	CASPAR_VERIFY(width > 0 && height > 0);
 	auto& pool = device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
-	if(!pool->items.try_pop(buffer))		
-		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);}, high_priority);			
+		
+	if(!pool->items.try_pop(buffer))			
+		buffer =  executor_.invoke([&]{return allocate_device_buffer(width, height, stride);});
+
+	if(zero)
+	{		
+		executor_.invoke([&]
+		{
+			scoped_state scope(*this);
+			attach(*buffer);
+			glClear(GL_COLOR_BUFFER_BIT);
+		}, high_priority);	
+	}		
 	
 	//++pool->usage_count;
 
@@ -234,15 +247,10 @@ void ogl_device::flush()
 	//}
 }
 
-void ogl_device::yield()
+bool ogl_device::yield()
 {
-	push_state();
-	auto restore_state = make_scope_guard([&]
-	{
-		pop_state();
-	});
-	
-	executor_.yield();
+	scoped_state scope(*this);
+	return executor_.yield();
 }
 
 boost::unique_future<void> ogl_device::gc()
@@ -289,21 +297,25 @@ void ogl_device::push_state()
 	state_stack_.push(state_);
 }
 
-void ogl_device::pop_state()
+ogl_device::state ogl_device::pop_state()
 {
-	if(state_stack_.size() == 1)
+	if(state_stack_.size() <= 1)
 		BOOST_THROW_EXCEPTION(invalid_operation());
 
+	auto prev_state = state_stack_.top();
 	state_stack_.pop();
 	auto new_state = state_stack_.top();
-	viewport(new_state.viewport[0], new_state.viewport[1], new_state.viewport[2], new_state.viewport[3]);
-	scissor(new_state.scissor[0], new_state.scissor[1], new_state.scissor[2], new_state.scissor[3]);
-	stipple_pattern(new_state.pattern.data());
-	blend_func(new_state.blend_func[0], new_state.blend_func[1], new_state.blend_func[2], new_state.blend_func[3]);
+	
+	viewport(new_state.viewport);
+	scissor(new_state.scissor);
+	stipple_pattern(new_state.pattern);
+	blend_func(new_state.blend_func);
 	attach(new_state.attached_texture);
 	use(new_state.active_shader);
 	for(int n = 0; n < 16; ++n)
 		bind(new_state.binded_textures[n], n);
+
+	return prev_state;
 }
 
 void ogl_device::enable(GLenum cap)
@@ -326,9 +338,8 @@ void ogl_device::disable(GLenum cap)
 	}
 }
 
-void ogl_device::viewport(int x, int y, int width, int height)
+void ogl_device::viewport(const std::array<GLint, 4>& viewport)
 {
-	std::array<int, 4> viewport = {{x, y, width, height}};
 	if(viewport != state_.viewport)
 	{		
 		glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
@@ -336,13 +347,17 @@ void ogl_device::viewport(int x, int y, int width, int height)
 	}
 }
 
-void ogl_device::scissor(int x, int y, int width, int height)
+void ogl_device::viewport(int x, int y, int width, int height)
 {
-	std::array<int, 4> scissor = {{x, y, width, height}};
+	std::array<int, 4> ar = {{x, y, width, height}};
+	viewport(ar);
+}
+
+void ogl_device::scissor(const std::array<GLint, 4>& scissor)
+{
 	if(scissor != state_.scissor)
 	{		
-		state def_state_;
-		if(scissor == def_state_.scissor)
+		if(scissor == state().scissor)
 		{
 			disable(GL_SCISSOR_TEST);
 		}
@@ -355,21 +370,23 @@ void ogl_device::scissor(int x, int y, int width, int height)
 	}
 }
 
-void ogl_device::stipple_pattern(const GLubyte* pattern)
+void ogl_device::scissor(int x, int y, int width, int height)
 {
-	std::array<GLubyte, 32*32> pattern2;
-	memcpy(pattern2.data(), pattern, 32*32);
+	std::array<int, 4> ar = {{x, y, width, height}};
+	scissor(ar);
+}
 
-	if(pattern2 != state_.pattern)
+void ogl_device::stipple_pattern(const std::array<GLubyte, 32*32>& pattern)
+{
+	if(pattern != state_.pattern)
 	{
-		state def_state_;
-		if(pattern2 == def_state_.pattern)
+		if(pattern == state().pattern)
 			disable(GL_POLYGON_STIPPLE);
 		else
 		{
 			enable(GL_POLYGON_STIPPLE);
-			glPolygonStipple(pattern2.data());
-			state_.pattern = pattern2;
+			glPolygonStipple(pattern.data());
+			state_.pattern = pattern;
 		}
 	}
 }
@@ -399,6 +416,33 @@ void ogl_device::bind(GLint id, int index)
 	}
 }
 
+void ogl_device::blend_func(const std::array<GLint, 4>& func)
+{
+	if(state_.blend_func != func)
+	{
+		state def_state_;
+		if(func == def_state_.blend_func)
+			disable(GL_BLEND);
+		else
+		{
+			enable(GL_BLEND);
+			GL(glBlendFuncSeparate(func[0], func[1], func[2], func[3]));
+			state_.blend_func = func;
+		}
+	}
+}
+
+void ogl_device::blend_func(int c1, int c2, int a1, int a2)
+{
+	std::array<int, 4> ar = {c1, c2, a1, a2};
+	blend_func(ar);
+}
+
+void ogl_device::blend_func(int c1, int c2)
+{
+	blend_func(c1, c2, c1, c2);
+}
+
 void ogl_device::bind(const device_buffer& texture, int index)
 {
 	//while(true)
@@ -412,17 +456,6 @@ void ogl_device::bind(const device_buffer& texture, int index)
 	bind(texture.id(), index);
 }
 
-void ogl_device::clear(device_buffer& texture)
-{	
-	auto prev = state_.attached_texture;
-	attach(texture);
-	auto restore_attachement = make_scope_guard([&]
-	{
-		attach(prev);
-	});
-
-	GL(glClear(GL_COLOR_BUFFER_BIT));
-}
 
 void ogl_device::use(GLint id)
 {
@@ -438,46 +471,23 @@ void ogl_device::use(const shader& shader)
 	use(shader.id());
 }
 
-void ogl_device::blend_func(int c1, int c2, int a1, int a2)
-{
-	std::array<int, 4> func = {c1, c2, a1, a2};
-
-	if(state_.blend_func != func)
-	{
-		state def_state_;
-		if(func == def_state_.blend_func)
-			disable(GL_BLEND);
-		else
-		{
-			enable(GL_BLEND);
-			GL(glBlendFuncSeparate(c1, c2, a1, a2));
-			state_.blend_func = func;
-		}
-	}
-}
-
-void ogl_device::blend_func(int c1, int c2)
-{
-	blend_func(c1, c2, c1, c2);
-}
 
 boost::unique_future<safe_ptr<host_buffer>> ogl_device::transfer(const safe_ptr<device_buffer>& source)
 {		
 	return begin_invoke([=]() -> safe_ptr<host_buffer>
 	{
-		push_state();
-		auto restore_state = make_scope_guard([&]
-		{
-			pop_state();
-		});
-
 		auto dest = create_host_buffer(source->width()*source->height()*source->stride(), host_buffer::read_only);
 
-		attach(*source);
+		{
+			scoped_state scope(*this);
+
+			attach(*source);
 	
-		dest->bind();
-		GL(glReadPixels(0, 0, source->width(), source->height(), format(source->stride()), GL_UNSIGNED_BYTE, NULL));
-		dest->unbind();
+			dest->bind();
+			GL(glReadPixels(0, 0, source->width(), source->height(), format(source->stride()), GL_UNSIGNED_BYTE, NULL));
+
+			dest->unbind();
+		}
 	
 		auto sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
@@ -491,7 +501,10 @@ boost::unique_future<safe_ptr<host_buffer>> ogl_device::transfer(const safe_ptr<
 			GL(glGetSynciv(sync, GL_SYNC_STATUS, 1, &length, values));
 
 			if(values[0] != GL_SIGNALED)		
-				yield();
+			{
+				if(!yield())
+					Sleep(2);
+			}
 			else
 				break;
 		}
@@ -505,14 +518,10 @@ boost::unique_future<safe_ptr<host_buffer>> ogl_device::transfer(const safe_ptr<
 boost::unique_future<safe_ptr<device_buffer>> ogl_device::transfer(const safe_ptr<host_buffer>& source, int width, int height, int stride)
 {		
 	return begin_invoke([=]() -> safe_ptr<device_buffer>
-	{
-		push_state();
-		auto restore_state = make_scope_guard([&]
-		{
-			pop_state();
-		});
-		
+	{		
 		auto dest = create_device_buffer(width, height, stride);
+		
+		scoped_state scope(*this);
 
 		source->unmap();
 		source->bind();
@@ -521,9 +530,30 @@ boost::unique_future<safe_ptr<device_buffer>> ogl_device::transfer(const safe_pt
 		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, dest->width(), dest->height(), format(dest->stride()), GL_UNSIGNED_BYTE, NULL));
 			
 		source->unbind();
-
+		
 		return dest;
 	});
+}
+
+ogl_device::state::state()
+	: attached_texture(0)
+	, active_shader(0)
+{
+	binded_textures.assign(0);
+	viewport.assign(std::numeric_limits<int>::max());
+	scissor.assign(std::numeric_limits<int>::max());
+	blend_func.assign(std::numeric_limits<int>::max());
+	pattern.assign(0xFF);
+}	 
+
+ogl_device::state::state(const state& other)
+{
+	A_memcpy(this, &other, sizeof(state));
+}
+
+ogl_device::state& ogl_device::state::operator=(const state& other)
+{
+	A_memcpy(this, &other, sizeof(state));
 }
 
 }}

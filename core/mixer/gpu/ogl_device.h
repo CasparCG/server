@@ -40,6 +40,7 @@
 #include <array>
 #include <stack>
 #include <unordered_map>
+#include <type_traits>
 
 FORWARD1(boost, template<typename> class unique_future);
 
@@ -64,28 +65,22 @@ struct buffer_pool : boost::noncopyable
 class ogl_device : public std::enable_shared_from_this<ogl_device>
 				 , boost::noncopyable
 {	
-	struct state
+	__declspec(align(16)) struct state
 	{
-		std::array<int, 4>						viewport;
-		std::array<int, 4>						scissor;
 		std::array<GLubyte, 32*32> 				pattern;
-		GLint									attached_texture;
-		GLint									active_shader;
+		std::array<GLint, 4>					viewport;
+		std::array<GLint, 4>					scissor;
 		std::array<GLint, 4>					blend_func;
 		std::array<GLint, 16>					binded_textures;
+		GLint									attached_texture;
+		GLint									active_shader;
+		GLint padding[2];
 
-		state()
-			: attached_texture(0)
-			, active_shader(0)
-		{
-			binded_textures.assign(0);
-			viewport.assign(std::numeric_limits<int>::max());
-			scissor.assign(std::numeric_limits<int>::max());
-			blend_func.assign(std::numeric_limits<int>::max());
-			pattern.assign(0xFF);
-		}	 
+		state(); 
+		state(const state& other);
+		state& operator=(const state& other);
 	};
-
+	
 	state state_;
 	std::stack<state> state_stack_;
 
@@ -106,22 +101,24 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>
 	void use(GLint id);
 	void attach(GLint id);
 	void bind(GLint id, int index);	
-	void push_state();
-	void pop_state();
 	void flush();
-
+	
+	friend class scoped_state;
 public:		
+	void push_state();
+	state pop_state();
+	
 	static safe_ptr<ogl_device> create();
 	~ogl_device();
 
-
 	// Not thread-safe, must be called inside of context
 	void viewport(int x, int y, int width, int height);
+	void viewport(const std::array<GLint, 4>& ar);
 	void scissor(int x, int y, int width, int height);
-	void stipple_pattern(const GLubyte* pattern);
-	
-	void clear(device_buffer& texture);
-	
+	void scissor(const std::array<GLint, 4>& ar);
+	void stipple_pattern(const std::array<GLubyte, 32*32>& pattern);
+		
+	void blend_func(const std::array<GLint, 4>& ar);
 	void blend_func(int c1, int c2, int a1, int a2);
 	void blend_func(int c1, int c2);
 	
@@ -145,13 +142,13 @@ public:
 		return executor_.invoke(std::forward<Func>(func), priority);
 	}
 		
-	safe_ptr<device_buffer> create_device_buffer(int width, int height, int stride);
+	safe_ptr<device_buffer> create_device_buffer(int width, int height, int stride, bool zero = false);
 	safe_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage_t usage);
 
 	boost::unique_future<safe_ptr<host_buffer>> transfer(const safe_ptr<device_buffer>& source);
 	boost::unique_future<safe_ptr<device_buffer>> transfer(const safe_ptr<host_buffer>& source, int width, int height, int stride);
 	
-	void yield();
+	bool yield();
 	boost::unique_future<void> gc();
 
 	std::wstring version();
@@ -159,6 +156,22 @@ public:
 private:
 	safe_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride);
 	safe_ptr<host_buffer> allocate_host_buffer(int size, host_buffer::usage_t usage);
+};
+
+class scoped_state
+{
+	ogl_device& context_;
+public:
+	scoped_state(ogl_device& context)
+		: context_(context)
+	{
+		context_.push_state();
+	}
+
+	~scoped_state()
+	{
+		context_.pop_state();
+	}
 };
 
 }}
