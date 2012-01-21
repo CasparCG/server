@@ -37,11 +37,11 @@ FORWARD1(boost, template<typename> class unique_future);
 
 namespace caspar { namespace core {
 	
-class read_frame sealed : boost::noncopyable
+class data_frame sealed : boost::noncopyable
 {
 public:
-	read_frame();
-	read_frame(int width, int height, boost::unique_future<safe_ptr<class host_buffer>>&& image_data, audio_buffer&& audio_data);
+	data_frame();
+	data_frame(int width, int height, boost::unique_future<safe_ptr<class host_buffer>>&& image_data, audio_buffer&& audio_data);
 
 	const boost::iterator_range<const uint8_t*> image_data();
 	const boost::iterator_range<const int32_t*> audio_data();

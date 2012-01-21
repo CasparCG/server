@@ -385,7 +385,7 @@ void ogl_device::attach(GLint id)
 	}
 }
 
-void ogl_device::attach(device_buffer& texture)
+void ogl_device::attach(const device_buffer& texture)
 {	
 	attach(texture.id());
 }
@@ -399,7 +399,7 @@ void ogl_device::bind(GLint id, int index)
 	}
 }
 
-void ogl_device::bind(device_buffer& texture, int index)
+void ogl_device::bind(const device_buffer& texture, int index)
 {
 	//while(true)
 	//{
@@ -433,7 +433,7 @@ void ogl_device::use(GLint id)
 	}
 }
 
-void ogl_device::use(shader& shader)
+void ogl_device::use(const shader& shader)
 {
 	use(shader.id());
 }
@@ -475,7 +475,6 @@ boost::unique_future<safe_ptr<host_buffer>> ogl_device::transfer(const safe_ptr<
 
 		attach(*source);
 	
-		dest->unmap();
 		dest->bind();
 		GL(glReadPixels(0, 0, source->width(), source->height(), format(source->stride()), GL_UNSIGNED_BYTE, NULL));
 		dest->unbind();
@@ -503,6 +502,29 @@ boost::unique_future<safe_ptr<host_buffer>> ogl_device::transfer(const safe_ptr<
 	});
 }
 
+boost::unique_future<safe_ptr<device_buffer>> ogl_device::transfer(const safe_ptr<host_buffer>& source, int width, int height, int stride)
+{		
+	return begin_invoke([=]() -> safe_ptr<device_buffer>
+	{
+		push_state();
+		auto restore_state = make_scope_guard([&]
+		{
+			pop_state();
+		});
+		
+		auto dest = create_device_buffer(width, height, stride);
+
+		source->unmap();
+		source->bind();
+			
+		const_cast<ogl_device*>(this)->bind(*dest, 0); // WORKAROUND: const-cast needed due to compiler bug?
+		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, dest->width(), dest->height(), format(dest->stride()), GL_UNSIGNED_BYTE, NULL));
+			
+		source->unbind();
+
+		return dest;
+	});
+}
 
 }}
 

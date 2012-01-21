@@ -29,7 +29,7 @@
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/pixel_format.h>
-#include <core/mixer/write_frame.h>
+#include <core/mixer/device_frame.h>
 
 #include <common/env.h>
 #include <common/log.h>
@@ -88,21 +88,21 @@ struct image_scroll_producer : public core::frame_producer
 				core::pixel_format_desc desc;
 				desc.pix_fmt = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(width_, format_desc_.height, 4));
-				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
+				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc, [&](const core::frame_factory::range_vector_type& ranges)
+				{					
+					if(count >= ranges.at(0).size())
+					{	
+						std::copy_n(bytes + count - ranges.at(0).size(), ranges.at(0).size(), ranges.at(0).begin());
+						count -= static_cast<int>(ranges.at(0).size());
+					}
+					else
+					{
+						memset(ranges.at(0).begin(), 0, ranges.at(0).size());	
+						std::copy_n(bytes, count, ranges.at(0).begin() + format_desc_.size - count);
+						count = 0;
+					}			
+				});
 
-				if(count >= frame->image_data().size())
-				{	
-					std::copy_n(bytes + count - frame->image_data().size(), frame->image_data().size(), frame->image_data().begin());
-					count -= static_cast<int>(frame->image_data().size());
-				}
-				else
-				{
-					memset(frame->image_data().begin(), 0, frame->image_data().size());	
-					std::copy_n(bytes, count, frame->image_data().begin() + format_desc_.size - count);
-					count = 0;
-				}
-			
-				frame->commit();
 				frames_.push_back(frame);
 			}
 			
@@ -121,26 +121,27 @@ struct image_scroll_producer : public core::frame_producer
 				core::pixel_format_desc desc;
 				desc.pix_fmt = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width, height_, 4));
-				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
-				if(count >= frame->image_data().size())
+				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc, [&](const core::frame_factory::range_vector_type& ranges)
 				{	
-					for(int y = 0; y < height_; ++y)
-						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, frame->image_data().begin() + y * format_desc_.width*4);
+					if(count >= ranges.at(0).size())
+					{	
+						for(int y = 0; y < height_; ++y)
+							std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, ranges.at(0).begin() + y * format_desc_.width*4);
 					
-					++i;
-					count -= static_cast<int>(frame->image_data().size());
-				}
-				else
-				{
-					memset(frame->image_data().begin(), 0, frame->image_data().size());	
-					int width2 = width_ % format_desc_.width;
-					for(int y = 0; y < height_; ++y)
-						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, frame->image_data().begin() + y * format_desc_.width*4);
+						++i;
+						count -= static_cast<int>(ranges.at(0).size());
+					}
+					else
+					{
+						memset(ranges.at(0).begin(), 0, ranges.at(0).size());	
+						int width2 = width_ % format_desc_.width;
+						for(int y = 0; y < height_; ++y)
+							std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, ranges.at(0).begin() + y * format_desc_.width*4);
 
-					count = 0;
-				}
+						count = 0;
+					}
+				});
 			
-				frame->commit();
 				frames_.push_back(frame);
 			}
 

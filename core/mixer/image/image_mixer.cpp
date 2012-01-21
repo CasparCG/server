@@ -24,7 +24,7 @@
 #include "image_mixer.h"
 
 #include "image_kernel.h"
-#include "../write_frame.h"
+#include "../device_frame.h"
 #include "../gpu/ogl_device.h"
 #include "../gpu/host_buffer.h"
 #include "../gpu/device_buffer.h"
@@ -34,8 +34,6 @@
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/pixel_format.h>
 #include <core/video_format.h>
-
-#include <gl/glew.h>
 
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
@@ -50,9 +48,9 @@ namespace caspar { namespace core {
 	
 struct item
 {
-	pixel_format_desc						pix_desc;
-	std::vector<safe_ptr<device_buffer>>	textures;
-	frame_transform							transform;
+	pixel_format_desc											pix_desc;
+	std::vector<boost::shared_future<safe_ptr<device_buffer>>>	textures;
+	frame_transform												transform;
 };
 
 typedef std::pair<blend_mode, std::vector<item>> layer;
@@ -155,7 +153,10 @@ private:
 	{			
 		draw_params draw_params;
 		draw_params.pix_desc				= std::move(item.pix_desc);
-		draw_params.textures				= std::move(item.textures);
+
+		BOOST_FOREACH(auto& tex, item.textures)
+			draw_params.textures.push_back(tex.get());
+
 		draw_params.transform				= std::move(item.transform);
 
 		if(item.transform.is_key)
@@ -242,7 +243,7 @@ public:
 		transform_stack_.push_back(transform_stack_.back()*frame.get_frame_transform());
 	}
 		
-	void visit(write_frame& frame)
+	void visit(device_frame& frame)
 	{			
 		item item;
 		item.pix_desc	= frame.get_pixel_format_desc();
@@ -271,7 +272,7 @@ public:
 
 image_mixer::image_mixer(const safe_ptr<ogl_device>& ogl) : impl_(new impl(ogl)){}
 void image_mixer::begin(basic_frame& frame){impl_->begin(frame);}
-void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
+void image_mixer::visit(device_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<host_buffer>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(blend_mode blend_mode){impl_->begin_layer(blend_mode);}

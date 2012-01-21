@@ -31,7 +31,7 @@
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/pixel_format.h>
 #include <core/producer/frame/frame_factory.h>
-#include <core/mixer/write_frame.h>
+#include <core/mixer/device_frame.h>
 
 #include <common/env.h>
 #include <common/exception/exceptions.h>
@@ -67,7 +67,7 @@ namespace caspar { namespace ffmpeg {
 	
 struct frame_muxer::impl : boost::noncopyable
 {	
-	std::queue<std::queue<safe_ptr<write_frame>>>	video_streams_;
+	std::queue<std::queue<safe_ptr<device_frame>>>	video_streams_;
 	std::queue<core::audio_buffer>					audio_streams_;
 	std::queue<safe_ptr<basic_frame>>				frame_buffer_;
 	display_mode								display_mode_;
@@ -95,7 +95,7 @@ struct frame_muxer::impl : boost::noncopyable
 		, filter_str_(filter_str)
 		, force_deinterlacing_(false)
 	{
-		video_streams_.push(std::queue<safe_ptr<write_frame>>());
+		video_streams_.push(std::queue<safe_ptr<device_frame>>());
 		audio_streams_.push(core::audio_buffer());
 		
 		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
@@ -110,11 +110,11 @@ struct frame_muxer::impl : boost::noncopyable
 		
 		if(video_frame == flush_video())
 		{	
-			video_streams_.push(std::queue<safe_ptr<write_frame>>());
+			video_streams_.push(std::queue<safe_ptr<device_frame>>());
 		}
 		else if(video_frame == empty_video())
 		{
-			video_streams_.back().push(make_safe<core::write_frame>(this));
+			video_streams_.back().push(make_safe<core::device_frame>(this));
 			display_mode_ = display_mode::simple;
 		}
 		else
@@ -143,7 +143,7 @@ struct frame_muxer::impl : boost::noncopyable
 				if(video_frame->format == PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
 					av_frame->format = format;
 
-				video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, flags));
+				video_streams_.back().push(make_device_frame(this, av_frame, frame_factory_, flags));
 			}
 		}
 
@@ -250,7 +250,7 @@ struct frame_muxer::impl : boost::noncopyable
 			}
 		case display_mode::duplicate:	
 			{
-				auto frame2				= make_safe<core::write_frame>(*frame1);
+				auto frame2				= make_safe<core::device_frame>(*frame1);
 				frame2->audio_data()	= pop_audio();
 
 				frame_buffer_.push(frame1);
@@ -269,7 +269,7 @@ struct frame_muxer::impl : boost::noncopyable
 		return frame_buffer_.empty() ? nullptr : poll();
 	}
 	
-	safe_ptr<core::write_frame> pop_video()
+	safe_ptr<core::device_frame> pop_video()
 	{
 		auto frame = video_streams_.front().front();
 		video_streams_.front().pop();		
@@ -344,7 +344,7 @@ struct frame_muxer::impl : boost::noncopyable
 				filter_.push(frame);
 				auto av_frame = filter_.poll();
 				if(av_frame)							
-					video_streams_.back().push(make_write_frame(this, make_safe_ptr(av_frame), frame_factory_, 0));
+					video_streams_.back().push(make_device_frame(this, make_safe_ptr(av_frame), frame_factory_, 0));
 			}
 			filter_ = filter(filter_str);
 			CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);

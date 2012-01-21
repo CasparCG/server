@@ -34,7 +34,7 @@
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
-#include <core/mixer/write_frame.h>
+#include <core/mixer/device_frame.h>
 
 #include <common/exception/exceptions.h>
 
@@ -172,12 +172,12 @@ int make_alpha_format(int format)
 	}
 }
 
-safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int flags)
+safe_ptr<core::device_frame> make_device_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int flags)
 {			
 	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
-		return make_safe<core::write_frame>(tag);
+		return make_safe<core::device_frame>(tag);
 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
@@ -186,7 +186,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	if(flags & core::frame_producer::flags::alpha_only)
 		desc = get_pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
 
-	std::shared_ptr<core::write_frame> write;
+	std::shared_ptr<core::device_frame> write;
 
 	if(desc.pix_fmt == core::pixel_format::invalid)
 	{
@@ -208,77 +208,72 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		
 		auto target_desc = get_pixel_format_desc(target_pix_fmt, width, height);
 
-		write = frame_factory->create_frame(tag, target_desc);
-		write->set_type(get_mode(*decoded_frame));
+		write = frame_factory->create_frame(tag, target_desc, [&](const std::vector<boost::iterator_range<uint8_t*>>& dest)
+		{
+			std::shared_ptr<SwsContext> sws_context;
 
-		std::shared_ptr<SwsContext> sws_context;
+			//CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
 
-		//CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
-
-		int key = ((width << 22) & 0xFFC00000) | ((height << 6) & 0x003FC000) | ((pix_fmt << 7) & 0x00007F00) | ((target_pix_fmt << 0) & 0x0000007F);
+			int key = ((width << 22) & 0xFFC00000) | ((height << 6) & 0x003FC000) | ((pix_fmt << 7) & 0x00007F00) | ((target_pix_fmt << 0) & 0x0000007F);
 			
-		auto& pool = sws_contexts_[key];
+			auto& pool = sws_contexts_[key];
 						
-		if(!pool.try_pop(sws_context))
-		{
-			double param;
-			sws_context.reset(sws_getContext(width, height, pix_fmt, width, height, target_pix_fmt, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
-		}
-			
-		if(!sws_context)
-		{
-			BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << 
-									boost::errinfo_api_function("sws_getContext"));
-		}	
-		
-		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-		avcodec_get_frame_defaults(av_frame.get());			
-		if(target_pix_fmt == PIX_FMT_BGRA)
-		{
-			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
-			CASPAR_VERIFY(size == write->image_data().size()); 
-		}
-		else
-		{
-			av_frame->width	 = width;
-			av_frame->height = height;
-			for(int n = 0; n < target_desc.planes.size(); ++n)
+			if(!pool.try_pop(sws_context))
 			{
-				av_frame->data[n]		= write->image_data(n).begin();
-				av_frame->linesize[n]	= target_desc.planes[n].linesize;
+				double param;
+				sws_context.reset(sws_getContext(width, height, pix_fmt, width, height, target_pix_fmt, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 			}
-		}
+			
+			if(!sws_context)
+			{
+				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << 
+										boost::errinfo_api_function("sws_getContext"));
+			}	
+		
+			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+			avcodec_get_frame_defaults(av_frame.get());			
+			if(target_pix_fmt == PIX_FMT_BGRA)
+			{
+				avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest.at(0).begin(), PIX_FMT_BGRA, width, height);
+			}
+			else
+			{
+				av_frame->width	 = width;
+				av_frame->height = height;
+				for(int n = 0; n < target_desc.planes.size(); ++n)
+				{
+					av_frame->data[n]		= dest.at(n).begin();
+					av_frame->linesize[n]	= target_desc.planes[n].linesize;
+				}
+			}
 
-		sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
-		pool.push(sws_context);
-
-		write->commit();		
+			sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
+			pool.push(sws_context);	
+		}, get_mode(*decoded_frame));
 	}
 	else
 	{
-		write = frame_factory->create_frame(tag, desc);
-		write->set_type(get_mode(*decoded_frame));
-
-		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
+		write = frame_factory->create_frame(tag, desc, [&](const std::vector<boost::iterator_range<uint8_t*>>& dest)
 		{
-			auto plane            = desc.planes[n];
-			auto result           = write->image_data(n).begin();
-			auto decoded          = decoded_frame->data[n];
-			auto decoded_linesize = decoded_frame->linesize[n];
-			
-			CASPAR_ASSERT(decoded);
-			CASPAR_ASSERT(write->image_data(n).begin());
-
-			// Copy line by line since ffmpeg sometimes pads each line.
-			tbb::affinity_partitioner ap;
-			tbb::parallel_for(tbb::blocked_range<int>(0, desc.planes[n].height), [&](const tbb::blocked_range<int>& r)
+			for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 			{
-				for(int y = r.begin(); y != r.end(); ++y)
-					A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-			}, ap);
+				auto plane            = desc.planes[n];
+				auto result           = dest.at(n).begin();
+				auto decoded          = decoded_frame->data[n];
+				auto decoded_linesize = decoded_frame->linesize[n];
+			
+				CASPAR_ASSERT(decoded);
+				CASPAR_ASSERT(dest.at(n).begin());
 
-			write->commit(n);
-		}
+				// Copy line by line since ffmpeg sometimes pads each line.
+				tbb::affinity_partitioner ap;
+				tbb::parallel_for(tbb::blocked_range<int>(0, desc.planes[n].height), [&](const tbb::blocked_range<int>& r)
+				{
+					for(int y = r.begin(); y != r.end(); ++y)
+						A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+				}, ap);
+			}
+		}, get_mode(*decoded_frame));
 	}
 
 	if(decoded_frame->height == 480) // NTSC DV

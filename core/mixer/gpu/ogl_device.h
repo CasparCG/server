@@ -105,14 +105,15 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>
 
 	void use(GLint id);
 	void attach(GLint id);
-	void bind(GLint id, int index);
+	void bind(GLint id, int index);	
+	void push_state();
+	void pop_state();
+	void flush();
 
 public:		
 	static safe_ptr<ogl_device> create();
 	~ogl_device();
 
-	void push_state();
-	void pop_state();
 
 	// Not thread-safe, must be called inside of context
 	void viewport(int x, int y, int width, int height);
@@ -124,13 +125,12 @@ public:
 	void blend_func(int c1, int c2, int a1, int a2);
 	void blend_func(int c1, int c2);
 	
-	void use(shader& shader);
+	void use(const shader& shader);
 
-	void attach(device_buffer& texture);
+	void attach(const device_buffer& texture);
 
-	void bind(device_buffer& texture, int index);
+	void bind(const device_buffer& texture, int index);
 
-	void flush();
 
 	// thread-afe
 	template<typename Func>
@@ -147,7 +147,9 @@ public:
 		
 	safe_ptr<device_buffer> create_device_buffer(int width, int height, int stride);
 	safe_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage_t usage);
+
 	boost::unique_future<safe_ptr<host_buffer>> transfer(const safe_ptr<device_buffer>& source);
+	boost::unique_future<safe_ptr<device_buffer>> transfer(const safe_ptr<host_buffer>& source, int width, int height, int stride);
 	
 	void yield();
 	boost::unique_future<void> gc();
