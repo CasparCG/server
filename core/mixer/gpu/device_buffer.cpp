@@ -80,11 +80,6 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}
-	
-	void bind()
-	{
-		GL(glBindTexture(GL_TEXTURE_2D, id_));
-	}
 };
 
 device_buffer::device_buffer(int width, int height, int stride) : impl_(new impl(width, height, stride)){}

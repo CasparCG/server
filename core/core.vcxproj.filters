@@ -121,9 +121,6 @@
     <ClInclude Include="producer\playlist\playlist_producer.h">
       <Filter>source\producer\playlist</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\image\shader\image_shader.h">
-      <Filter>source\mixer\image\shader</Filter>
-    </ClInclude>
     <ClInclude Include="mixer\image\blend_modes.h">
       <Filter>source\mixer\image</Filter>
     </ClInclude>
@@ -141,6 +138,9 @@
     </ClInclude>
     <ClInclude Include="mixer\data_frame.h">
       <Filter>source\mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\image\shader\image_shader.h">
+      <Filter>source\mixer\image\shader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
