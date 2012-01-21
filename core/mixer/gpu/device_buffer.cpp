@@ -23,8 +23,6 @@
 
 #include "device_buffer.h"
 
-#include "fence.h"
-
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
 
@@ -51,8 +49,6 @@ struct device_buffer::impl : boost::noncopyable
 	const int width_;
 	const int height_;
 	const int stride_;
-
-	fence		 fence_;
 public:
 	impl(int width, int height, int stride) 
 		: width_(width)
@@ -104,12 +100,6 @@ public:
 		bind();
 		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 		unbind();
-		fence_.set();
-	}
-	
-	bool ready() const
-	{
-		return fence_.ready();
 	}
 };
 
@@ -120,7 +110,6 @@ int device_buffer::height() const { return impl_->height_; }
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
 void device_buffer::begin_read(){impl_->begin_read();}
-bool device_buffer::ready() const{return impl_->ready();}
 int device_buffer::id() const{ return impl_->id_;}
 
 

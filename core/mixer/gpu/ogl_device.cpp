@@ -99,7 +99,6 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(int width, int height
 	{
 		try
 		{
-			yield();
 			gc().wait();
 					
 			// Try again
@@ -147,7 +146,6 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(int size, host_buffer::us
 	{
 		try
 		{
-			yield();
 			gc().wait();
 
 			// Try again
@@ -196,50 +194,6 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(int size, host_buffer::usag
 safe_ptr<ogl_device> ogl_device::create()
 {
 	return safe_ptr<ogl_device>(new ogl_device());
-}
-
-//template<typename T>
-//void flush_pool(buffer_pool<T>& pool)
-//{	
-//	if(pool.flush_count.fetch_and_increment() < 16)
-//		return;
-//
-//	if(pool.usage_count.fetch_and_store(0) < pool.items.size())
-//	{
-//		std::shared_ptr<T> buffer;
-//		pool.items.try_pop(buffer);
-//	}
-//
-//	pool.flush_count = 0;
-//	pool.usage_count = 0;
-//}
-
-void ogl_device::flush()
-{
-	GL(glFlush());	
-		
-	//try
-	//{
-	//	BOOST_FOREACH(auto& pools, device_pools_)
-	//	{
-	//		BOOST_FOREACH(auto& pool, pools)
-	//			flush_pool(*pool.second);
-	//	}
-	//	BOOST_FOREACH(auto& pools, host_pools_)
-	//	{
-	//		BOOST_FOREACH(auto& pool, pools)
-	//			flush_pool(*pool.second);
-	//	}
-	//}
-	//catch(...)
-	//{
-	//	CASPAR_LOG_CURRENT_EXCEPTION();
-	//}
-}
-
-void ogl_device::yield()
-{
-	executor_.yield();
 }
 
 boost::unique_future<void> ogl_device::gc()

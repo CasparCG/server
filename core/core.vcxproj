@@ -118,7 +118,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="mixer\audio\audio_util.h" />
-    <ClInclude Include="mixer\gpu\fence.h" />
     <ClInclude Include="mixer\gpu\shader.h" />
     <ClInclude Include="mixer\image\blend_modes.h" />
     <ClInclude Include="mixer\image\shader\blending_glsl.h" />
@@ -157,10 +156,6 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="mixer\gpu\fence.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="mixer\gpu\shader.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../StdAfx.h</PrecompiledHeaderFile>

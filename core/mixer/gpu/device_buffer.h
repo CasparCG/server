@@ -38,7 +38,6 @@ public:
 	void unbind();
 		
 	void begin_read();
-	bool ready() const;
 private:
 	friend class ogl_device;
 	device_buffer(int width, int height, int stride);

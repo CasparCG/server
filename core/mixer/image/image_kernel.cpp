@@ -78,13 +78,7 @@ struct image_kernel::impl : boost::noncopyable
 
 		if(params.transform.opacity < epsilon)
 			return;
-		
-		if(!std::all_of(params.textures.begin(), params.textures.end(), std::mem_fn(&device_buffer::ready)))
-		{
-			CASPAR_LOG(trace) << L"[image_mixer] Performance warning. Host to device transfer not complete, GPU will be stalled";
-			ogl_->yield(); // Try to give it some more time.
-		}		
-		
+				
 		// Bind textures
 
 		for(int n = 0; n < params.textures.size(); ++n)
@@ -223,7 +217,6 @@ struct image_kernel::impl : boost::noncopyable
 		ogl_->disable(GL_SCISSOR_TEST);	
 						
 		params.textures.clear();
-		ogl_->yield(); // Return resources to pool as early as possible.
 
 		if(blend_modes_)
 		{
