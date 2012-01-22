@@ -101,13 +101,13 @@ public:
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 	}
 		
-	boost::unique_future<void> copy_async_from(const safe_ptr<host_buffer>& source)
+	void copy_from(const safe_ptr<host_buffer>& source)
 	{
 		auto ogl = parent_.lock();
 		if(!ogl)
 			BOOST_THROW_EXCEPTION(invalid_operation());
 
-		return ogl->begin_invoke([=]
+		ogl->begin_invoke([=]
 		{
 			source->unmap();
 			source->bind();
@@ -118,13 +118,13 @@ public:
 		}, high_priority);
 	}
 
-	boost::unique_future<void> copy_async_to(const safe_ptr<host_buffer>& dest)
+	void copy_to(const safe_ptr<host_buffer>& dest)
 	{
 		auto ogl = parent_.lock();
 		if(!ogl)
 			BOOST_THROW_EXCEPTION(invalid_operation());
 
-		return ogl->begin_invoke([=]
+		ogl->begin_invoke([=]
 		{
 			dest->unmap();
 			dest->bind();
@@ -142,8 +142,8 @@ int device_buffer::width() const { return impl_->width_; }
 int device_buffer::height() const { return impl_->height_; }
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
-boost::unique_future<void> device_buffer::copy_async_from(const safe_ptr<host_buffer>& source){return impl_->copy_async_from(source);}
-boost::unique_future<void> device_buffer::copy_async_to(const safe_ptr<host_buffer>& dest){return impl_->copy_async_to(dest);}
+void device_buffer::copy_from(const safe_ptr<host_buffer>& source){impl_->copy_from(source);}
+void device_buffer::copy_to(const safe_ptr<host_buffer>& dest){impl_->copy_to(dest);}
 int device_buffer::id() const{ return impl_->id_;}
 
 

@@ -97,7 +97,7 @@ struct write_frame::impl : boost::noncopyable
 		if(!buffer)
 			return;
 				
-		textures_.at(plane_index)->copy_async_from(make_safe_ptr(buffer));
+		textures_.at(plane_index)->copy_from(make_safe_ptr(buffer));
 	}
 };
 	
