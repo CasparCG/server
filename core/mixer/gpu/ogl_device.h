@@ -63,15 +63,14 @@ struct buffer_pool : boost::noncopyable
 class ogl_device : public std::enable_shared_from_this<ogl_device>
 				 , boost::noncopyable
 {	
-	std::unordered_map<GLenum, bool> caps_;
 	std::array<GLubyte, 32*32>		 pattern_;
 	std::array<int, 4>				 viewport_;
 	std::array<int, 4>				 scissor_;
 	std::array<GLint, 4>			 blend_func_;
 	GLint							 attached_texture_;
 	GLint							 active_shader_;
-	GLenum							 read_buffer_;
-
+	
+	std::unordered_map<GLenum, bool> caps_;
 	std::unique_ptr<sf::Context> context_;
 	
 	std::array<tbb::concurrent_unordered_map<int, safe_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
@@ -100,9 +99,7 @@ public:
 	void blend_func(int c1, int c2);
 	
 	void use(shader& shader);
-
-	void read_buffer(device_buffer& texture);
-	
+		
 	// thread-afe
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
