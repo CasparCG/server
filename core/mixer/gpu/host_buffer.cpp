@@ -86,51 +86,29 @@ public:
 		if(data_ != nullptr)
 			return data_;
 
-		auto ogl = parent_.lock();
-
-		if(!ogl)
-			BOOST_THROW_EXCEPTION(invalid_operation());
-
-		return ogl->invoke([&]() -> void*
-		{		
-			if(data_ != nullptr)
-				return data_;
-
-			GL(glBindBuffer(target_, pbo_));
-			if(usage_ == GL_STREAM_DRAW)			
-				GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
+		GL(glBindBuffer(target_, pbo_));
+		if(usage_ == GL_STREAM_DRAW)			
+			GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
 		
-			data_ = GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
-			GL(glBindBuffer(target_, 0));
-			if(!data_)
-				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
+		data_ = GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
+		GL(glBindBuffer(target_, 0));
+		if(!data_)
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
 
-			return data_;
-		}, high_priority);
+		return data_;
 	}
 	
 	void unmap()
 	{
 		if(data_ == nullptr)
 			return;
-
-		auto ogl = parent_.lock();
-
-		if(!ogl)
-			BOOST_THROW_EXCEPTION(invalid_operation());
-
-		ogl->invoke([&]
-		{
-			if(data_ == nullptr)
-				return;
 		
-			GL(glBindBuffer(target_, pbo_));
-			GL(glUnmapBuffer(target_));	
-			if(usage_ == GL_STREAM_READ)			
-				GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
-			data_ = nullptr;	
-			GL(glBindBuffer(target_, 0));
-		}, high_priority);
+		GL(glBindBuffer(target_, pbo_));
+		GL(glUnmapBuffer(target_));	
+		if(usage_ == GL_STREAM_READ)			
+			GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
+		data_ = nullptr;	
+		GL(glBindBuffer(target_, 0));
 	}
 
 	void bind()
@@ -145,7 +123,18 @@ public:
 	
 	void* data()
 	{
-		return map();
+		if(data_ != nullptr)
+			return data_;
+
+		auto ogl = parent_.lock();
+
+		if(!ogl)
+			BOOST_THROW_EXCEPTION(invalid_operation());
+		
+		return ogl->invoke([&]
+		{
+			return map();
+		}, high_priority);
 	}
 };
 
