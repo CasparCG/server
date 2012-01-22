@@ -40,8 +40,8 @@ public:
 	int width() const;
 	int height() const;
 		
-	boost::unique_future<void> copy_async_from(const safe_ptr<host_buffer>& source);
-	boost::unique_future<void> copy_async_to(const safe_ptr<host_buffer>& dest);
+	void copy_from(const safe_ptr<host_buffer>& source);
+	void copy_to(const safe_ptr<host_buffer>& dest);
 private:
 	friend class ogl_device;
 	friend class image_kernel;

@@ -100,7 +100,7 @@ public:
 			}
 			
 			auto result = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::usage::read_only);
-			draw_buffer->copy_async_to(result);									
+			draw_buffer->copy_to(result);							
 			return result;
 		});
 	}
