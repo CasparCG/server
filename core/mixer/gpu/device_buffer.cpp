@@ -22,6 +22,7 @@
 #include "../../stdafx.h"
 
 #include "device_buffer.h"
+#include "ogl_device.h"
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
@@ -30,10 +31,13 @@
 
 #include <tbb/atomic.h>
 
+#include <boost/thread/future.hpp>
+
 namespace caspar { namespace core {
 	
 static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
 static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};	
+static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV};	
 
 unsigned int format(int stride)
 {
@@ -44,14 +48,16 @@ static tbb::atomic<int> g_total_count;
 
 struct device_buffer::impl : boost::noncopyable
 {
-	GLuint id_;
+	std::weak_ptr<ogl_device>	parent_;
+	GLuint						id_;
 
 	const int width_;
 	const int height_;
 	const int stride_;
 public:
-	impl(int width, int height, int stride) 
-		: width_(width)
+	impl(std::weak_ptr<ogl_device> parent, int width, int height, int stride) 
+		: parent_(parent)
+		, width_(width)
 		, height_(height)
 		, stride_(stride)
 	{	
@@ -61,7 +67,7 @@ public:
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
+		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], TYPE[stride_], NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 		CASPAR_LOG(trace) << "[device_buffer] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
 	}	
@@ -94,22 +100,50 @@ public:
 	{
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 	}
-
-	void begin_read()
+		
+	boost::unique_future<void> copy_async_from(const safe_ptr<host_buffer>& source)
 	{
-		bind();
-		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
-		unbind();
+		auto ogl = parent_.lock();
+		if(!ogl)
+			BOOST_THROW_EXCEPTION(invalid_operation());
+
+		return ogl->begin_invoke([=]
+		{
+			source->unmap();
+			source->bind();
+			GL(glBindTexture(GL_TEXTURE_2D, id_));
+			GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
+			GL(glBindTexture(GL_TEXTURE_2D, 0));
+			source->unbind();
+		}, high_priority);
+	}
+
+	boost::unique_future<void> copy_async_to(const safe_ptr<host_buffer>& dest)
+	{
+		auto ogl = parent_.lock();
+		if(!ogl)
+			BOOST_THROW_EXCEPTION(invalid_operation());
+
+		return ogl->begin_invoke([=]
+		{
+			dest->unmap();
+			dest->bind();
+			GL(glBindTexture(GL_TEXTURE_2D, id_));
+			GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
+			GL(glBindTexture(GL_TEXTURE_2D, 0));
+			dest->unbind();
+		}, high_priority);
 	}
 };
 
-device_buffer::device_buffer(int width, int height, int stride) : impl_(new impl(width, height, stride)){}
+device_buffer::device_buffer(std::weak_ptr<ogl_device> parent, int width, int height, int stride) : impl_(new impl(parent, width, height, stride)){}
 int device_buffer::stride() const { return impl_->stride_; }
 int device_buffer::width() const { return impl_->width_; }
 int device_buffer::height() const { return impl_->height_; }
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
-void device_buffer::begin_read(){impl_->begin_read();}
+boost::unique_future<void> device_buffer::copy_async_from(const safe_ptr<host_buffer>& source){return impl_->copy_async_from(source);}
+boost::unique_future<void> device_buffer::copy_async_to(const safe_ptr<host_buffer>& dest){return impl_->copy_async_to(dest);}
 int device_buffer::id() const{ return impl_->id_;}
 
 

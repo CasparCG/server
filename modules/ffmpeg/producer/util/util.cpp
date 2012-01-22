@@ -208,8 +208,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		
 		auto target_desc = get_pixel_format_desc(target_pix_fmt, width, height);
 
-		write = frame_factory->create_frame(tag, target_desc);
-		write->set_type(get_mode(*decoded_frame));
+		write = frame_factory->create_frame(tag, target_desc, get_mode(*decoded_frame));
 
 		std::shared_ptr<SwsContext> sws_context;
 
@@ -256,8 +255,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	}
 	else
 	{
-		write = frame_factory->create_frame(tag, desc);
-		write->set_type(get_mode(*decoded_frame));
+		write = frame_factory->create_frame(tag, desc, get_mode(*decoded_frame));
 
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 		{
