@@ -38,7 +38,7 @@ class write_frame sealed : public core::basic_frame
 {
 public:	
 	explicit write_frame(const void* tag);
-	explicit write_frame(const safe_ptr<class ogl_device>& ogl, const void* tag, const struct pixel_format_desc& desc);
+	explicit write_frame(const safe_ptr<class ogl_device>& ogl, const void* tag, const struct pixel_format_desc& desc, const field_mode& mode = field_mode::progressive);
 
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
@@ -57,7 +57,6 @@ public:
 	void commit(int plane_index);
 	void commit();
 	
-	void set_type(const field_mode& mode);
 	field_mode get_type() const;
 	
 	const void* tag() const;

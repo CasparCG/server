@@ -22,11 +22,17 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
+#include <common/forward.h>
 
 #include <boost/noncopyable.hpp>
 
+FORWARD1(boost, template<typename> class unique_future);
+
 namespace caspar { namespace core {
 		
+class host_buffer;
+class ogl_device;
+
 class device_buffer : boost::noncopyable
 {
 public:	
@@ -34,14 +40,15 @@ public:
 	int width() const;
 	int height() const;
 		
-	void bind(int index);
-	void unbind();
-		
-	void begin_read();
+	boost::unique_future<void> copy_async_from(const safe_ptr<host_buffer>& source);
+	boost::unique_future<void> copy_async_to(const safe_ptr<host_buffer>& dest);
 private:
 	friend class ogl_device;
-	device_buffer(int width, int height, int stride);
-
+	friend class image_kernel;
+	device_buffer(std::weak_ptr<ogl_device> parent, int width, int height, int stride);
+			
+	void bind(int index);
+	void unbind();
 	int id() const;
 
 	struct impl;

@@ -40,30 +40,32 @@ static tbb::atomic<int> g_r_total_count;
 																																								
 struct host_buffer::impl : boost::noncopyable
 {	
-	GLuint		pbo_;
-	const int	size_;
-	void*		data_;
-	GLenum		usage_;
-	GLenum		target_;
+	GLuint						pbo_;
+	const int					size_;
+	tbb::atomic<void*>			data_;
+	GLenum						usage_;
+	GLenum						target_;
+	std::weak_ptr<ogl_device>	parent_;
 
 public:
-	impl(int size, usage_t usage) 
-		: size_(size)
-		, data_(nullptr)
+	impl(std::weak_ptr<ogl_device> parent, int size, host_buffer::usage usage) 
+		: parent_(parent)
+		, size_(size)
 		, pbo_(0)
-		, target_(usage == write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
-		, usage_(usage == write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
+		, target_(usage == host_buffer::usage::write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
+		, usage_(usage == host_buffer::usage::write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
 	{
+		data_ = nullptr;
 		GL(glGenBuffers(1, &pbo_));
-		GL(glBindBuffer(target_, pbo_));
-		if(usage_ != write_only)	
+		bind();
+		if(usage_ != GL_STREAM_DRAW)	
 			GL(glBufferData(target_, size_, NULL, usage_));	
-		GL(glBindBuffer(target_, 0));
+		unbind();
 
 		if(!pbo_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
 
-		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == write_only ? "write_only" : "read_only");
+		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == host_buffer::usage::write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == host_buffer::usage::write_only ? "write_only" : "read_only");
 	}	
 
 	~impl()
@@ -79,33 +81,56 @@ public:
 		}
 	}
 
-	void map()
+	void* map()
 	{
-		if(data_)
-			return;
+		if(data_ != nullptr)
+			return data_;
 
-		if(usage_ == write_only)			
-			GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
+		auto ogl = parent_.lock();
+
+		if(!ogl)
+			BOOST_THROW_EXCEPTION(invalid_operation());
+
+		return ogl->invoke([&]() -> void*
+		{		
+			if(data_ != nullptr)
+				return data_;
+
+			GL(glBindBuffer(target_, pbo_));
+			if(usage_ == GL_STREAM_DRAW)			
+				GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
 		
-		GL(glBindBuffer(target_, pbo_));
-		data_ = GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
-		GL(glBindBuffer(target_, 0)); 
-		if(!data_)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
+			data_ = GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
+			GL(glBindBuffer(target_, 0));
+			if(!data_)
+				BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
+
+			return data_;
+		}, high_priority);
 	}
 	
 	void unmap()
 	{
-		if(!data_)
+		if(data_ == nullptr)
 			return;
-		
-		if(usage_ == read_only)			
-			GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
 
-		GL(glBindBuffer(target_, pbo_));
-		GL(glUnmapBuffer(target_));	
-		data_ = nullptr;		
-		GL(glBindBuffer(target_, 0));
+		auto ogl = parent_.lock();
+
+		if(!ogl)
+			BOOST_THROW_EXCEPTION(invalid_operation());
+
+		ogl->invoke([&]
+		{
+			if(data_ == nullptr)
+				return;
+		
+			GL(glBindBuffer(target_, pbo_));
+			GL(glUnmapBuffer(target_));	
+			if(usage_ == GL_STREAM_READ)			
+				GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
+			data_ = nullptr;	
+			GL(glBindBuffer(target_, 0));
+		}, high_priority);
 	}
 
 	void bind()
@@ -117,24 +142,20 @@ public:
 	{
 		GL(glBindBuffer(target_, 0));
 	}
-
-	void begin_read(int width, int height, GLuint format)
+	
+	void* data()
 	{
-		unmap();
-		bind();
-		GL(glReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, NULL));
-		unbind();
+		return map();
 	}
 };
 
-host_buffer::host_buffer(int size, usage_t usage) : impl_(new impl(size, usage)){}
+host_buffer::host_buffer(std::weak_ptr<ogl_device> parent, int size, usage usage) : impl_(new impl(parent, size, usage)){}
 const void* host_buffer::data() const {return impl_->data_;}
-void* host_buffer::data() {return impl_->data_;}
+void* host_buffer::data() {return impl_->data();}
 void host_buffer::map(){impl_->map();}
 void host_buffer::unmap(){impl_->unmap();}
 void host_buffer::bind(){impl_->bind();}
 void host_buffer::unbind(){impl_->unbind();}
-void host_buffer::begin_read(int width, int height, GLuint format){impl_->begin_read(width, height, format);}
 int host_buffer::size() const { return impl_->size_; }
 
 }}
