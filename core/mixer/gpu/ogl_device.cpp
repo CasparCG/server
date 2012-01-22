@@ -41,7 +41,6 @@ ogl_device::ogl_device()
 	: executor_(L"ogl_device")
 	, attached_texture_(0)
 	, active_shader_(0)
-	, read_buffer_(0)
 {
 	CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
@@ -303,6 +302,7 @@ void ogl_device::attach(device_buffer& texture)
 	if(attached_texture_ != texture.id())
 	{
 		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, texture.id(), 0));
+		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
 		attached_texture_ = texture.id();
 	}
 }
@@ -311,15 +311,6 @@ void ogl_device::clear(device_buffer& texture)
 {	
 	attach(texture);
 	GL(glClear(GL_COLOR_BUFFER_BIT));
-}
-
-void ogl_device::read_buffer(device_buffer&)
-{
-	if(read_buffer_ != GL_COLOR_ATTACHMENT0)
-	{
-		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
-		read_buffer_ = GL_COLOR_ATTACHMENT0;
-	}
 }
 
 void ogl_device::use(shader& shader)
