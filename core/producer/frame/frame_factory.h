@@ -31,7 +31,7 @@ struct frame_factory : boost::noncopyable
 {
 	frame_factory(){}
 
-	virtual safe_ptr<class write_frame> create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;		
+	virtual safe_ptr<class write_frame> create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc, field_mode mode = field_mode::progressive) = 0;		
 	virtual struct video_format_desc get_video_format_desc() const = 0; // nothrow
 };
 

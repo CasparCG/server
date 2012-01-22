@@ -39,18 +39,17 @@ namespace caspar { namespace core {
 
 ogl_device::ogl_device() 
 	: executor_(L"ogl_device")
-	, pattern_(nullptr)
 	, attached_texture_(0)
 	, active_shader_(0)
 	, read_buffer_(0)
 {
 	CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 
-	std::fill(binded_textures_.begin(), binded_textures_.end(), 0);
-	std::fill(viewport_.begin(), viewport_.end(), 0);
-	std::fill(scissor_.begin(), scissor_.end(), 0);
-	std::fill(blend_func_.begin(), blend_func_.end(), 0);
-	
+	viewport_.assign(std::numeric_limits<GLint>::max());
+	scissor_.assign(std::numeric_limits<GLint>::max());
+	blend_func_.assign(std::numeric_limits<GLint>::max());
+	pattern_.assign(0xFF);
+		
 	invoke([=]
 	{
 		context_.reset(new sf::Context());
@@ -93,7 +92,7 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(int width, int height
 	std::shared_ptr<device_buffer> buffer;
 	try
 	{
-		buffer.reset(new device_buffer(width, height, stride));
+		buffer.reset(new device_buffer(shared_from_this(), width, height, stride));
 	}
 	catch(...)
 	{
@@ -102,7 +101,7 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(int width, int height
 			gc().wait();
 					
 			// Try again
-			buffer.reset(new device_buffer(width, height, stride));
+			buffer.reset(new device_buffer(shared_from_this(), width, height, stride));
 		}
 		catch(...)
 		{
@@ -130,14 +129,14 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, 
 	});
 }
 
-safe_ptr<host_buffer> ogl_device::allocate_host_buffer(int size, host_buffer::usage_t usage)
+safe_ptr<host_buffer> ogl_device::allocate_host_buffer(int size, host_buffer::usage usage)
 {
 	std::shared_ptr<host_buffer> buffer;
 
 	try
 	{
-		buffer.reset(new host_buffer(size, usage));
-		if(usage == host_buffer::write_only)
+		buffer.reset(new host_buffer(shared_from_this(), size, usage));
+		if(usage == host_buffer::usage::write_only)
 			buffer->map();
 		else
 			buffer->unmap();			
@@ -149,8 +148,8 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(int size, host_buffer::us
 			gc().wait();
 
 			// Try again
-			buffer.reset(new host_buffer(size, usage));
-			if(usage == host_buffer::write_only)
+			buffer.reset(new host_buffer(shared_from_this(), size, usage));
+			if(usage == host_buffer::usage::write_only)
 				buffer->map();
 			else
 				buffer->unmap();	
@@ -165,23 +164,25 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(int size, host_buffer::us
 	return make_safe_ptr(buffer);
 }
 	
-safe_ptr<host_buffer> ogl_device::create_host_buffer(int size, host_buffer::usage_t usage)
+safe_ptr<host_buffer> ogl_device::create_host_buffer(int size, host_buffer::usage usage)
 {
-	CASPAR_VERIFY(usage == host_buffer::write_only || usage == host_buffer::read_only);
+	CASPAR_VERIFY(usage == host_buffer::usage::write_only || usage == host_buffer::usage::read_only);
 	CASPAR_VERIFY(size > 0);
-	auto& pool = host_pools_[usage][size];
+	auto& pool = host_pools_[usage.value()][size];
 	std::shared_ptr<host_buffer> buffer;
 	if(!pool->items.try_pop(buffer))	
 		buffer = executor_.invoke([=]{return allocate_host_buffer(size, usage);}, high_priority);	
 	
 	//++pool->usage_count;
 
-	auto self = shared_from_this();
+	auto self			= shared_from_this();
+	bool is_write_only	= (usage == host_buffer::usage::write_only);
+
 	return safe_ptr<host_buffer>(buffer.get(), [=](host_buffer*) mutable
 	{
 		self->executor_.begin_invoke([=]() mutable
 		{		
-			if(usage == host_buffer::write_only)
+			if(is_write_only)
 				buffer->map();
 			else
 				buffer->unmap();
@@ -258,33 +259,39 @@ void ogl_device::disable(GLenum cap)
 
 void ogl_device::viewport(int x, int y, int width, int height)
 {
-	if(x != viewport_[0] || y != viewport_[1] || width != viewport_[2] || height != viewport_[3])
+	std::array<GLint, 4> viewport = {{x, y, width, height}};
+	if(viewport != viewport_)
 	{		
 		glViewport(x, y, width, height);
-		viewport_[0] = x;
-		viewport_[1] = y;
-		viewport_[2] = width;
-		viewport_[3] = height;
+		viewport_ = viewport;
 	}
 }
 
 void ogl_device::scissor(int x, int y, int width, int height)
 {
-	if(x != scissor_[0] || y != scissor_[1] || width != scissor_[2] || height != scissor_[3])
+	std::array<GLint, 4> scissor = {{x, y, width, height}};
+	if(scissor != scissor_)
 	{		
+		enable(GL_SCISSOR_TEST);
 		glScissor(x, y, width, height);
-		scissor_[0] = x;
-		scissor_[1] = y;
-		scissor_[2] = width;
-		scissor_[3] = height;
+		scissor_ = scissor;
 	}
 }
 
-void ogl_device::stipple_pattern(const GLubyte* pattern)
+void ogl_device::stipple_pattern(const std::array<GLubyte, 32*32>& pattern)
 {
 	if(pattern_ != pattern)
 	{		
-		glPolygonStipple(pattern);
+		enable(GL_POLYGON_STIPPLE);
+
+		std::array<GLubyte, 32*32> nopattern;
+		nopattern.assign(0xFF);
+
+		if(pattern == nopattern)
+			disable(GL_POLYGON_STIPPLE);
+		else
+			glPolygonStipple(pattern.data());
+
 		pattern_ = pattern;
 	}
 }

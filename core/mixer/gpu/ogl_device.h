@@ -64,13 +64,12 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>
 				 , boost::noncopyable
 {	
 	std::unordered_map<GLenum, bool> caps_;
+	std::array<GLubyte, 32*32>		 pattern_;
 	std::array<int, 4>				 viewport_;
 	std::array<int, 4>				 scissor_;
-	const GLubyte*					 pattern_;
+	std::array<GLint, 4>			 blend_func_;
 	GLint							 attached_texture_;
 	GLint							 active_shader_;
-	std::array<GLint, 16>			 binded_textures_;
-	std::array<GLint, 4>			 blend_func_;
 	GLenum							 read_buffer_;
 
 	std::unique_ptr<sf::Context> context_;
@@ -92,7 +91,7 @@ public:
 	void disable(GLenum cap);
 	void viewport(int x, int y, int width, int height);
 	void scissor(int x, int y, int width, int height);
-	void stipple_pattern(const GLubyte* pattern);
+	void stipple_pattern(const std::array<GLubyte, 32*32>& pattern);
 
 	void attach(device_buffer& texture);
 	void clear(device_buffer& texture);
@@ -118,7 +117,7 @@ public:
 	}
 		
 	safe_ptr<device_buffer> create_device_buffer(int width, int height, int stride);
-	safe_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage_t usage);
+	safe_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage usage);
 	
 	boost::unique_future<void> gc();
 
@@ -126,7 +125,7 @@ public:
 
 private:
 	safe_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride);
-	safe_ptr<host_buffer> allocate_host_buffer(int size, host_buffer::usage_t usage);
+	safe_ptr<host_buffer> allocate_host_buffer(int size, host_buffer::usage usage);
 };
 
 }}

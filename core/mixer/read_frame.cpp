@@ -24,7 +24,6 @@
 #include "read_frame.h"
 
 #include "gpu/host_buffer.h"	
-#include "gpu/ogl_device.h"
 
 #include <tbb/mutex.h>
 
@@ -32,32 +31,22 @@ namespace caspar { namespace core {
 																																							
 struct read_frame::impl : boost::noncopyable
 {
-	safe_ptr<ogl_device>		ogl_;
-	int							width_;
-	int							height_;
-	safe_ptr<host_buffer>		image_data_;
-	tbb::mutex					mutex_;
-	audio_buffer				audio_data_;
+	int											width_;
+	int											height_;
+	boost::unique_future<safe_ptr<host_buffer>>	image_data_;
+	audio_buffer								audio_data_;
 
 public:
-	impl(const safe_ptr<ogl_device>& ogl, int width, int height, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
-		: ogl_(ogl)
-		, width_(width)
+	impl( int width, int height, boost::unique_future<safe_ptr<host_buffer>>&& image_data, audio_buffer&& audio_data) 
+		: width_(width)
 		, height_(height)
 		, image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data)){}	
 	
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
-		{
-			tbb::mutex::scoped_lock lock(mutex_);
-
-			if(!image_data_->data())			
-				ogl_->invoke([=]{image_data_.get()->map();}, high_priority);			
-		}
-
-		auto ptr = static_cast<const uint8_t*>(image_data_->data());
-		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_->size());
+		auto ptr = static_cast<const uint8_t*>(image_data_.get()->data());
+		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_.get()->size());
 	}
 	const boost::iterator_range<const int32_t*> audio_data()
 	{
@@ -65,8 +54,8 @@ public:
 	}
 };
 
-read_frame::read_frame(const safe_ptr<ogl_device>& ogl, int width, int height, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
-	: impl_(new impl(ogl, width, height, std::move(image_data), std::move(audio_data))){}
+read_frame::read_frame(int width, int height, boost::unique_future<safe_ptr<host_buffer>>&& image_data, audio_buffer&& audio_data) 
+	: impl_(new impl(width, height, std::move(image_data), std::move(audio_data))){}
 read_frame::read_frame(){}
 const boost::iterator_range<const uint8_t*> read_frame::image_data()
 {

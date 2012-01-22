@@ -110,11 +110,10 @@ public:
 
 				auto image = image_mixer_(format_desc_);
 				auto audio = audio_mixer_(format_desc_);
-				image.wait();
 
 				graph_->set_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
 				
-				target_->send(std::make_pair(make_safe<read_frame>(ogl_, format_desc_.width, format_desc_.height, std::move(image.get()), std::move(audio)), packet.second));	
+				target_->send(std::make_pair(make_safe<read_frame>(format_desc_.width, format_desc_.height, std::move(image), std::move(audio)), packet.second));	
 			}
 			catch(...)
 			{

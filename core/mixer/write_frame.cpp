@@ -50,15 +50,15 @@ struct write_frame::impl : boost::noncopyable
 	{
 	}
 
-	impl(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc) 
+	impl(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const field_mode& mode) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
-		, mode_(core::field_mode::progressive)
+		, mode_(mode)
 	{
 		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
 		{
-			return ogl_->create_host_buffer(plane.size, host_buffer::write_only);
+			return ogl_->create_host_buffer(plane.size, host_buffer::usage::write_only);
 		});
 		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures_), [&](const core::pixel_format_desc::plane& plane)
 		{
@@ -96,22 +96,14 @@ struct write_frame::impl : boost::noncopyable
 
 		if(!buffer)
 			return;
-
-		auto texture = textures_.at(plane_index);
-		
-		ogl_->begin_invoke([=]
-		{			
-			buffer->unmap();
-			buffer->bind();
-			texture->begin_read();
-			buffer->unbind();
-		}, high_priority);
+				
+		textures_.at(plane_index)->copy_async_from(make_safe_ptr(buffer));
 	}
 };
 	
 write_frame::write_frame(const void* tag) : impl_(new impl(tag)){}
-write_frame::write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc) 
-	: impl_(new impl(ogl, tag, desc)){}
+write_frame::write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const field_mode& mode) 
+	: impl_(new impl(ogl, tag, desc, mode)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(write_frame&& other)
 {
@@ -127,7 +119,6 @@ const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return
 const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
 void write_frame::commit(int plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
-void write_frame::set_type(const field_mode& mode){impl_->mode_ = mode;}
 core::field_mode write_frame::get_type() const{return impl_->mode_;}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
 

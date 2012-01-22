@@ -68,52 +68,44 @@ public:
 	{
 	}
 	
-	boost::unique_future<safe_ptr<host_buffer>> operator()(std::vector<layer>&& layers, const video_format_desc& format_desc)
-	{		
-		auto layers2 = make_move_on_copy(std::move(layers));
-		return ogl_->begin_invoke([=]
+	boost::unique_future<safe_ptr<host_buffer>> operator()(std::vector<layer> layers, const video_format_desc& format_desc)
+	{	
+		return ogl_->begin_invoke([=]() mutable -> safe_ptr<host_buffer>
 		{
-			return do_render(std::move(layers2.value), format_desc);
+			auto draw_buffer = create_mixer_buffer(4, format_desc);
+
+			if(format_desc.field_mode != field_mode::progressive)
+			{
+				auto upper = layers;
+				auto lower = std::move(layers);
+
+				BOOST_FOREACH(auto& layer, upper)
+				{
+					BOOST_FOREACH(auto& item, layer.second)
+						item.transform.field_mode = static_cast<field_mode>(item.transform.field_mode & field_mode::upper);
+				}
+
+				BOOST_FOREACH(auto& layer, lower)
+				{
+					BOOST_FOREACH(auto& item, layer.second)
+						item.transform.field_mode = static_cast<field_mode>(item.transform.field_mode & field_mode::lower);
+				}
+
+				draw(std::move(upper), draw_buffer, format_desc);
+				draw(std::move(lower), draw_buffer, format_desc);
+			}
+			else
+			{
+				draw(std::move(layers), draw_buffer, format_desc);
+			}
+			
+			auto result = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::usage::read_only);
+			draw_buffer->copy_async_to(result);									
+			return result;
 		});
 	}
 
 private:
-	safe_ptr<host_buffer> do_render(std::vector<layer>&& layers, const video_format_desc& format_desc)
-	{
-		auto draw_buffer = create_mixer_buffer(4, format_desc);
-
-		if(format_desc.field_mode != field_mode::progressive)
-		{
-			auto upper = layers;
-			auto lower = std::move(layers);
-
-			BOOST_FOREACH(auto& layer, upper)
-			{
-				BOOST_FOREACH(auto& item, layer.second)
-					item.transform.field_mode = static_cast<field_mode>(item.transform.field_mode & field_mode::upper);
-			}
-
-			BOOST_FOREACH(auto& layer, lower)
-			{
-				BOOST_FOREACH(auto& item, layer.second)
-					item.transform.field_mode = static_cast<field_mode>(item.transform.field_mode & field_mode::lower);
-			}
-
-			draw(std::move(upper), draw_buffer, format_desc);
-			draw(std::move(lower), draw_buffer, format_desc);
-		}
-		else
-		{
-			draw(std::move(layers), draw_buffer, format_desc);
-		}
-
-		auto host_buffer = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::read_only);
-		ogl_->attach(*draw_buffer);
-		ogl_->read_buffer(*draw_buffer);
-		host_buffer->begin_read(draw_buffer->width(), draw_buffer->height(), format(draw_buffer->stride()));
-									
-		return host_buffer;
-	}
 
 	void draw(std::vector<layer>&&		layers, 
 			  safe_ptr<device_buffer>&	draw_buffer, 

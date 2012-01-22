@@ -22,6 +22,7 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
+#include <common/enum_class.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -30,26 +31,31 @@ namespace caspar { namespace core {
 class host_buffer : boost::noncopyable
 {
 public:
-	enum usage_t
+	struct usage_def
 	{
-		write_only,
-		read_only
+		enum type
+		{
+			write_only,
+			read_only
+		};
 	};
+	typedef enum_class<usage_def> usage;
 	
 	const void* data() const;
 	void* data();
 	int size() const;	
 	
+private:
+	friend class ogl_device;
+	friend class device_buffer;
+
 	void bind();
 	void unbind();
 
 	void map();
 	void unmap();
-	
-	void begin_read(int width, int height, unsigned int format);
-private:
-	friend class ogl_device;
-	host_buffer(int size, usage_t usage);
+
+	host_buffer(std::weak_ptr<ogl_device> parent, int size, usage usage);
 
 	struct impl;
 	safe_ptr<impl> impl_;
