@@ -72,6 +72,8 @@ ogl_device::ogl_device()
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
 
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
+				
+		enable(GL_TEXTURE_2D);
 	});
 }
 
@@ -335,6 +337,7 @@ void ogl_device::blend_func(int c1, int c2, int a1, int a2)
 
 	if(blend_func_ != func)
 	{
+		enable(GL_BLEND);
 		blend_func_ = func;
 		GL(glBlendFuncSeparate(c1, c2, a1, a2));
 	}
