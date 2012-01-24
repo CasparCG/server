@@ -68,6 +68,7 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>
 	std::array<int, 4>				 scissor_;
 	std::array<GLint, 4>			 blend_func_;
 	GLint							 attached_texture_;
+	GLuint							 attached_fbo_;
 	GLint							 active_shader_;
 	
 	std::unordered_map<GLenum, bool> caps_;
@@ -76,7 +77,7 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>
 	std::array<tbb::concurrent_unordered_map<int, safe_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
 	std::array<tbb::concurrent_unordered_map<int, safe_ptr<buffer_pool<host_buffer>>>, 2> host_pools_;
 	
-	unsigned int fbo_;
+	GLuint fbo_;
 
 	executor executor_;
 				
