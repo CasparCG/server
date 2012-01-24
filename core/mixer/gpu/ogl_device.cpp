@@ -40,6 +40,7 @@ namespace caspar { namespace core {
 ogl_device::ogl_device() 
 	: executor_(L"ogl_device")
 	, attached_texture_(0)
+	, attached_fbo_(0)
 	, active_shader_(0)
 {
 	CASPAR_LOG(info) << L"Initializing OpenGL Device.";
@@ -62,14 +63,8 @@ ogl_device::ogl_device()
 		if(!GLEW_VERSION_3_0)
 			CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";
 	
-		CASPAR_LOG(info) << L"Successfully initialized GLEW.";
-
 		glGenFramebuffers(1, &fbo_);	
-
-		CASPAR_LOG(debug) << "Created framebuffer.";
-
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
-
+		
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
 				
 		enable(GL_TEXTURE_2D);
@@ -301,6 +296,12 @@ void ogl_device::attach(device_buffer& texture)
 {	
 	if(attached_texture_ != texture.id())
 	{
+		if(attached_fbo_ != fbo_)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+			attached_fbo_ = fbo_;
+		}
+
 		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, texture.id(), 0));
 		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
 		attached_texture_ = texture.id();
