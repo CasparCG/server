@@ -76,7 +76,7 @@ public:
 		, stage_(new caspar::core::stage())	
 		, executor_(L"video_channel")
 	{
-		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
+		//graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8));
@@ -119,11 +119,11 @@ public:
 
 		// Mix
 
-		mix_timer_.restart();
+		//mix_timer_.restart();
 
 		auto mixed_frame  = (*mixer_)(std::move(stage_frames), format_desc_);
 		
-		graph_->set_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
+		//graph_->set_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
 
 		// Consume
 
