@@ -277,6 +277,16 @@ public:
 			frame->commit();
 			head_ = frame;
 		}		
+
+		MSG msg;
+		while(PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) 
+		{
+			if(msg.message != WM_TIMER)
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}
 										
 		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);
 		return head_;
