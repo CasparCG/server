@@ -277,17 +277,15 @@ public:
 			frame->commit();
 			head_ = frame;
 		}		
-
-		// DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!
-	
+					
 		MSG msg;
-		while(PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) 
+		while(PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) // DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!  
 		{
-			if(msg.message != WM_TIMER)
-			{
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
+			if(msg.message == WM_TIMER && msg.wParam == 3 && msg.lParam == 0) // We tick this inside FlashAxContainer
+				continue;
+			
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);			
 		}
 										
 		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);
