@@ -28,6 +28,8 @@
 
 #include "audio/audio_mixer.h"
 #include "image/image_mixer.h"
+#include "gpu/image/image_mixer.h"
+#include "gpu/accelerator.h"
 
 #include <common/env.h>
 #include <common/concurrency/executor.h>
@@ -36,8 +38,6 @@
 #include <common/gl/gl_check.h>
 #include <common/utility/tweener.h>
 
-#include <core/mixer/read_frame.h>
-#include <core/mixer/write_frame.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/frame_transform.h>
@@ -58,66 +58,51 @@
 namespace caspar { namespace core {
 		
 struct mixer::impl : boost::noncopyable
-{		
-	safe_ptr<mixer::target_t>		target_;
-
-	safe_ptr<diagnostics::graph>	graph_;
-	boost::timer					mix_timer_;	
-
-	video_format_desc				format_desc_;
-	safe_ptr<ogl_device>			ogl_;
+{			
+	safe_ptr<gpu::accelerator>			ogl_;
 	
-	audio_mixer						audio_mixer_;
-	image_mixer						image_mixer_;
+	audio_mixer							audio_mixer_;
+	safe_ptr<image_mixer>				image_mixer_;
 	
 	std::unordered_map<int, blend_mode>	blend_modes_;
 			
 	executor executor_;
 
 public:
-	impl(const safe_ptr<mixer::target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
-		: target_(target)
-		, graph_(graph)
-		, format_desc_(format_desc)
-		, ogl_(ogl)
-		, image_mixer_(ogl)
-		, audio_mixer_(graph_)
+	impl(const safe_ptr<gpu::accelerator>& ogl) 
+		: ogl_(ogl)
+		, audio_mixer_()
+		, image_mixer_(make_safe<gpu::image_mixer>(ogl_))
 		, executor_(L"mixer")
 	{			
-		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
-	}
+	}	
 	
-	void send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& packet)
-	{			
-		executor_.begin_invoke([=]
+	safe_ptr<const frame> operator()(std::map<int, safe_ptr<basic_frame>> frames, const video_format_desc& format_desc)
+	{		
+		return executor_.invoke([=]() mutable -> safe_ptr<const struct frame>
 		{		
 			try
-			{
-				mix_timer_.restart();
-
-				auto frames = packet.first;
-				
+			{				
 				BOOST_FOREACH(auto& frame, frames)
 				{
 					auto blend_it = blend_modes_.find(frame.first);
-					image_mixer_.begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
+					image_mixer_->begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
 													
 					frame.second->accept(audio_mixer_);					
-					frame.second->accept(image_mixer_);
+					frame.second->accept(*image_mixer_);
 
-					image_mixer_.end_layer();
+					image_mixer_->end_layer();
 				}
 
-				auto image = image_mixer_(format_desc_);
-				auto audio = audio_mixer_(format_desc_);
+				auto image = (*image_mixer_)(format_desc);
+				auto audio = audio_mixer_(format_desc);
 
-				graph_->set_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
-				
-				target_->send(std::make_pair(make_safe<read_frame>(format_desc_.width, format_desc_.height, std::move(image), std::move(audio)), packet.second));	
+				return read_frame::create(std::move(image), std::move(audio), format_desc);	
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
+				return frame::empty();
 			}	
 		});		
 	}
@@ -134,14 +119,6 @@ public:
 		}, high_priority);
 	}
 	
-	void set_video_format_desc(const video_format_desc& format_desc)
-	{
-		executor_.begin_invoke([=]
-		{
-			format_desc_ = format_desc;
-		});
-	}
-
 	boost::unique_future<boost::property_tree::wptree> info() const
 	{
 		boost::promise<boost::property_tree::wptree> info;
@@ -150,10 +127,9 @@ public:
 	}
 };
 	
-mixer::mixer(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
-	: impl_(new impl(target, graph, format_desc, ogl)){}
-void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
+mixer::mixer(const safe_ptr<gpu::accelerator>& ogl) 
+	: impl_(new impl(ogl)){}
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
-void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
+safe_ptr<const frame> mixer::operator()(std::map<int, safe_ptr<basic_frame>> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
 }}

@@ -21,28 +21,54 @@
 
 #pragma once
 
+#include "../../image/blend_modes.h"
+
+#include <common/enum_class.h>
 #include <common/memory/safe_ptr.h>
+
+#include <core/producer/frame/pixel_format.h>
+#include <core/producer/frame/frame_transform.h>
 
 #include <boost/noncopyable.hpp>
 
-#include <string>
-
-namespace caspar { namespace core {
-		
-class shader : boost::noncopyable
+namespace caspar { namespace core { namespace gpu {
+	
+struct keyer_def
 {
-public:
-	shader(const std::string& vertex_source_str, const std::string& fragment_source_str);
-	void set(const std::string& name, bool value);
-	void set(const std::string& name, int value);
-	void set(const std::string& name, float value);
-	void set(const std::string& name, double value);
-private:
-	friend class ogl_device;
-	struct impl;
-	safe_ptr<impl> impl_;
+	enum type
+	{
+		linear = 0,
+		additive,
+	};
+};
+typedef enum_class<keyer_def> keyer;
 
-	int id() const;
+struct draw_params sealed
+{
+	pixel_format_desc							pix_desc;
+	std::vector<safe_ptr<class device_buffer>>	textures;
+	frame_transform								transform;
+	blend_mode									blend_mode;
+	keyer										keyer;
+	std::shared_ptr<class device_buffer>		background;
+	std::shared_ptr<class device_buffer>		local_key;
+	std::shared_ptr<class device_buffer>		layer_key;
+
+	draw_params() 
+		: blend_mode(blend_mode::normal)
+		, keyer(keyer::linear)
+	{
+	}
 };
 
-}}
+class image_kernel sealed : boost::noncopyable
+{
+public:
+	image_kernel(const safe_ptr<class accelerator>& ogl);
+	void draw(draw_params&& params);
+private:
+	struct impl;
+	safe_ptr<impl> impl_;
+};
+
+}}}

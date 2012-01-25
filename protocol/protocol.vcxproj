@@ -23,6 +23,9 @@
     <ProjectReference Include="..\modules\flash\flash.vcxproj">
       <Project>{816deaba-3757-4306-afe0-c27cf96c4dea}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\modules\reroute\reroute.vcxproj">
+      <Project>{7d58bd57-fdd5-46e6-a23b-ed14b5314a0e}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="amcp\AMCPCommand.h" />

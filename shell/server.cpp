@@ -26,7 +26,7 @@
 #include <common/exception/exceptions.h>
 #include <common/utf.h>
 
-#include <core/mixer/gpu/ogl_device.h>
+#include <core/mixer/gpu/accelerator.h>
 #include <core/video_channel.h>
 #include <core/video_format.h>
 #include <core/producer/stage.h>
@@ -64,12 +64,12 @@ using namespace protocol;
 
 struct server::impl : boost::noncopyable
 {
-	safe_ptr<ogl_device>						ogl_;
+	safe_ptr<gpu::accelerator>					ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
 	std::vector<safe_ptr<video_channel>>		channels_;
 
 	impl()		
-		: ogl_(ogl_device::create())
+		: ogl_(gpu::accelerator::create())
 	{			
 		ffmpeg::init();
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";

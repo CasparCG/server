@@ -29,9 +29,10 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
+#include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
 
-#include <core/mixer/read_frame.h>
+#include <core/frame.h>
 
 #include <SFML/Audio/SoundStream.hpp>
 
@@ -97,7 +98,7 @@ public:
 		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	virtual bool send(const safe_ptr<const core::frame>& frame) override
 	{			
 		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame->audio_data())));
 		return true;

@@ -23,6 +23,8 @@
 
 #include <common/memory/safe_ptr.h>
 
+#include <core/video_format.h>
+
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {

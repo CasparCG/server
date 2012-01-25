@@ -21,15 +21,28 @@
 
 #pragma once
 
-#include "../../video_channel.h"
-
 #include <common/memory/safe_ptr.h>
 
-#include <string>
-#include <vector>
+namespace caspar { namespace core { namespace gpu {
 
-namespace caspar { namespace core {
-	
-safe_ptr<struct frame_producer> create_channel_producer(const safe_ptr<struct frame_factory>& frame_factory, const safe_ptr<video_channel>& channel);
+class shader;
+class accelerator;
 
-}}
+struct texture_id
+{
+	enum type
+	{
+		plane0 = 0,
+		plane1,
+		plane2,
+		plane3,
+		local_key,
+		layer_key,
+		background,
+	};
+};
+
+safe_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes);
+
+
+}}}

@@ -24,7 +24,7 @@
 #include "image_shader.h"
 
 #include "../../gpu/shader.h"
-#include "../../gpu/ogl_device.h"
+#include "../../gpu/accelerator.h"
 
 #include "blending_glsl.h"
 
@@ -33,7 +33,7 @@
 
 #include <tbb/mutex.h>
 
-namespace caspar { namespace core {
+namespace caspar { namespace core { namespace gpu {
 
 std::shared_ptr<shader> g_shader;
 tbb::mutex				g_shader_mutex;
@@ -273,7 +273,7 @@ std::string get_fragment(bool blend_modes)
 	"}																					\n";
 }
 
-safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes)
+safe_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes)
 {
 	tbb::mutex::scoped_lock lock(g_shader_mutex);
 
@@ -307,4 +307,4 @@ safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes)
 	return make_safe_ptr(g_shader);
 }
 
-}}
+}}}

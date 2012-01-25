@@ -37,7 +37,7 @@ struct frame_consumer : boost::noncopyable
 	frame_consumer(){}
 	virtual ~frame_consumer() {}
 	
-	virtual bool send(const safe_ptr<class read_frame>& frame) = 0;
+	virtual bool send(const safe_ptr<const struct frame>& frame) = 0;
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
 	virtual std::wstring print() const = 0;
 	virtual boost::property_tree::wptree info() const = 0;

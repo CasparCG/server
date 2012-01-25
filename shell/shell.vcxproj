@@ -52,6 +52,9 @@
     <ProjectReference Include="..\modules\ogl\ogl.vcxproj">
       <Project>{88f974f0-d09f-4788-8cf8-f563209e60c1}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\modules\reroute\reroute.vcxproj">
+      <Project>{7d58bd57-fdd5-46e6-a23b-ed14b5314a0e}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\protocol\protocol.vcxproj">
       <Project>{2040b361-1fb6-488e-84a5-38a580da90de}</Project>
     </ProjectReference>

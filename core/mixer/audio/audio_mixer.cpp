@@ -62,9 +62,8 @@ struct audio_stream
 	audio_buffer_ps		audio_data;
 };
 
-struct audio_mixer::impl
+struct audio_mixer::impl : boost::noncopyable
 {
-	safe_ptr<diagnostics::graph>		graph_;
 	std::stack<core::frame_transform>	transform_stack_;
 	std::map<const void*, audio_stream>	audio_streams_;
 	std::vector<audio_item>				items_;
@@ -72,10 +71,8 @@ struct audio_mixer::impl
 	video_format_desc					format_desc_;
 	
 public:
-	impl(const safe_ptr<diagnostics::graph>& graph)
-		: graph_(graph)
+	impl()
 	{
-		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
 		transform_stack_.push(core::frame_transform());
 	}
 	
@@ -182,16 +179,12 @@ public:
 		audio_buffer result;
 		result.reserve(result_ps.size());
 		boost::range::transform(result_ps, std::back_inserter(result), [](float sample){return static_cast<int32_t>(sample);});		
-
-		auto max = boost::range::max_element(result);
-
-		graph_->set_value("volume", static_cast<double>(std::abs(*max))/std::numeric_limits<int32_t>::max());
-
+		
 		return result;
 	}
 };
 
-audio_mixer::audio_mixer(const safe_ptr<diagnostics::graph>& graph) : impl_(new impl(graph)){}
+audio_mixer::audio_mixer() : impl_(new impl()){}
 void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
