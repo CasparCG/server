@@ -68,7 +68,6 @@ public:
 		, format_desc_(format_desc)
 		, executor_(L"output")
 	{
-		executor_.set_capacity(1);
 	}	
 	
 	void add(int index, safe_ptr<frame_consumer> consumer)
@@ -163,7 +162,7 @@ public:
 		
 	void operator()(safe_ptr<const frame> input_frame, const video_format_desc& format_desc)
 	{
-		executor_.begin_invoke([=]
+		executor_.invoke([=]
 		{
 			try
 			{				
