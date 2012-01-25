@@ -26,7 +26,6 @@
 #include "frame/frame_transform.h"
 
 #include "color/color_producer.h"
-#include "playlist/playlist_producer.h"
 #include "separated/separated_producer.h"
 
 #include <common/memory/safe_ptr.h>
@@ -241,10 +240,7 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(my_frame_factory, params);
-	
-	if(producer == frame_producer::empty())
-		producer = create_playlist_producer(my_frame_factory, params);
-	
+		
 	return producer;
 }
 

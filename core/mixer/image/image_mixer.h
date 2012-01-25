@@ -29,26 +29,22 @@
 #include <core/producer/frame/frame_visitor.h>
 
 FORWARD1(boost, template<typename> class unique_future);
+FORWARD3(caspar, core, gpu, class host_buffer);
 
 namespace caspar { namespace core {
 	
-class image_mixer sealed : public frame_visitor
+struct image_mixer : public frame_visitor
 {
-public:
-	image_mixer(const safe_ptr<class ogl_device>& ogl);
+	virtual ~image_mixer(){}
 	
-	virtual void begin(class basic_frame& frame);
-	virtual void visit(class write_frame& frame);
-	virtual void end();
+	virtual void begin(class basic_frame& frame) = 0;
+	virtual void visit(class write_frame& frame) = 0;
+	virtual void end() = 0;
 
-	void begin_layer(blend_mode blend_mode);
-	void end_layer();
+	virtual void begin_layer(blend_mode blend_mode) = 0;
+	virtual void end_layer() = 0;
 		
-	boost::unique_future<safe_ptr<class host_buffer>> operator()(const struct video_format_desc& format_desc);
-		
-private:
-	struct impl;
-	safe_ptr<impl> impl_;
+	virtual boost::unique_future<safe_ptr<gpu::host_buffer>> operator()(const struct video_format_desc& format_desc) = 0;
 };
 
 }}

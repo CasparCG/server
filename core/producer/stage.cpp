@@ -79,96 +79,67 @@ public:
 
 struct stage::impl : public std::enable_shared_from_this<impl>
 				   , boost::noncopyable
-{		
-	safe_ptr<stage::target_t>								target_;
-	video_format_desc										format_desc_;
-	
-	safe_ptr<diagnostics::graph>							graph_;
-
-	boost::timer											produce_timer_;
-	boost::timer											tick_timer_;
-
+{			
 	std::map<int, layer>									layers_;	
 	std::map<int, tweened_transform<core::frame_transform>> transforms_;	
 
 	executor												executor_;
 public:
-	impl(const safe_ptr<stage::target_t>& target, const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc)  
-		: target_(target)
-		, graph_(graph)
-		, format_desc_(format_desc)
-		, executor_(L"stage")
+	impl()  
+		: executor_(L"stage")
 	{
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
-		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 	}
-
-	void start(int tokens)
-	{
-		std::weak_ptr<impl> self = shared_from_this();
-		for(int n = 0; n < tokens; ++n)
-			executor_.begin_invoke([=]{tick(self);});
-	}
-	
-	void tick(const std::weak_ptr<impl>& self)
-	{		
-		try
-		{
-			produce_timer_.restart();
-
-			std::map<int, safe_ptr<basic_frame>> frames;
 		
-			BOOST_FOREACH(auto& layer, layers_)			
-				frames[layer.first] = basic_frame::empty();	
-
-			tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer) 
-			{
-				auto transform = transforms_[layer.first].fetch_and_tick(1);
-
-				int flags = frame_producer::flags::none;
-				if(format_desc_.field_mode != field_mode::progressive)
-				{
-					flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
-					flags |= std::abs(transform.fill_translation[1])  > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
-				}
-
-				if(transform.is_key)
-					flags |= frame_producer::flags::alpha_only;
-
-				auto frame = layer.second.receive(flags);	
-				
-				auto frame1 = make_safe<core::basic_frame>(frame);
-				frame1->get_frame_transform() = transform;
-
-				if(format_desc_.field_mode != core::field_mode::progressive)
-				{				
-					auto frame2 = make_safe<core::basic_frame>(frame);
-					frame2->get_frame_transform() = transforms_[layer.first].fetch_and_tick(1);
-					frame1 = core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode);
-				}
-
-				frames[layer.first] = frame1;
-			});
-			
-			graph_->set_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
-			
-			std::shared_ptr<void> ticket(nullptr, [self](void*)
-			{
-				auto self2 = self.lock();
-				if(self2)				
-					self2->executor_.begin_invoke([=]{tick(self);});				
-			});
-						
-			target_->send(std::make_pair(frames, ticket));
-
-			graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
-			tick_timer_.restart();
-		}
-		catch(...)
+	std::map<int, safe_ptr<basic_frame>> operator()(const struct video_format_desc& format_desc)
+	{		
+		return executor_.invoke([=]() -> std::map<int, safe_ptr<basic_frame>>
 		{
-			layers_.clear();
-			CASPAR_LOG_CURRENT_EXCEPTION();
-		}		
+			std::map<int, safe_ptr<class basic_frame>> result;
+
+			try
+			{					
+				BOOST_FOREACH(auto& layer, layers_)			
+					result[layer.first] = basic_frame::empty();	
+
+				auto format_desc2 = format_desc;
+
+				tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer)
+				{
+					auto transform = transforms_[layer.first].fetch_and_tick(1);
+
+					int flags = frame_producer::flags::none;
+					if(format_desc2.field_mode != field_mode::progressive)
+					{
+						flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
+						flags |= std::abs(transform.fill_translation[1])  > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
+					}
+
+					if(transform.is_key)
+						flags |= frame_producer::flags::alpha_only;
+
+					auto frame = layer.second.receive(flags);	
+				
+					auto frame1 = make_safe<core::basic_frame>(frame);
+					frame1->get_frame_transform() = transform;
+
+					if(format_desc2.field_mode != core::field_mode::progressive)
+					{				
+						auto frame2 = make_safe<core::basic_frame>(frame);
+						frame2->get_frame_transform() = transforms_[layer.first].fetch_and_tick(1);
+						frame1 = core::basic_frame::interlace(frame1, frame2, format_desc2.field_mode);
+					}
+
+					result[layer.first] = frame1;
+				});		
+			}
+			catch(...)
+			{
+				layers_.clear();
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}	
+
+			return result;
+		});
 	}
 		
 	void apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, std::wstring>>& transforms)
@@ -321,14 +292,6 @@ public:
 			return layers_[index].background();
 		}, high_priority);
 	}
-	
-	void set_video_format_desc(const video_format_desc& format_desc)
-	{
-		executor_.begin_invoke([=]
-		{
-			format_desc_ = format_desc;
-		}, high_priority);
-	}
 
 	boost::unique_future<boost::property_tree::wptree> info()
 	{
@@ -348,11 +311,10 @@ public:
 		{
 			return layers_[index].info();
 		}, high_priority));
-	}
+	}		
 };
 
-stage::stage(const safe_ptr<stage::target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc) : impl_(new impl(target, graph, format_desc)){}
-void stage::start(int tokens){impl_->start(tokens);}
+stage::stage() : impl_(new impl()){}
 void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){impl_->apply_transforms(transforms);}
 void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
@@ -369,7 +331,7 @@ void stage::swap_layer(int index, int other_index, const safe_ptr<stage>& other)
 boost::unique_future<safe_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
 boost::unique_future<safe_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
 boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
-void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
+std::map<int, safe_ptr<class basic_frame>> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
 }}

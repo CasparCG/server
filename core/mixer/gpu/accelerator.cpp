@@ -23,7 +23,7 @@
 
 #include "../../stdafx.h"
 
-#include "ogl_device.h"
+#include "accelerator.h"
 
 #include "shader.h"
 
@@ -35,10 +35,10 @@
 
 #include <gl/glew.h>
 
-namespace caspar { namespace core {
+namespace caspar { namespace core { namespace gpu {
 
-ogl_device::ogl_device() 
-	: executor_(L"ogl_device")
+accelerator::accelerator() 
+	: executor_(L"accelerator")
 	, attached_texture_(0)
 	, attached_fbo_(0)
 	, active_shader_(0)
@@ -71,7 +71,7 @@ ogl_device::ogl_device()
 	});
 }
 
-ogl_device::~ogl_device()
+accelerator::~accelerator()
 {
 	invoke([=]
 	{
@@ -83,7 +83,7 @@ ogl_device::~ogl_device()
 	});
 }
 
-safe_ptr<device_buffer> ogl_device::allocate_device_buffer(int width, int height, int stride)
+safe_ptr<device_buffer> accelerator::allocate_device_buffer(int width, int height, int stride)
 {
 	std::shared_ptr<device_buffer> buffer;
 	try
@@ -108,7 +108,7 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(int width, int height
 	return make_safe_ptr(buffer);
 }
 				
-safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, int stride)
+safe_ptr<device_buffer> accelerator::create_device_buffer(int width, int height, int stride)
 {
 	CASPAR_VERIFY(stride > 0 && stride < 5);
 	CASPAR_VERIFY(width > 0 && height > 0);
@@ -125,7 +125,7 @@ safe_ptr<device_buffer> ogl_device::create_device_buffer(int width, int height, 
 	});
 }
 
-safe_ptr<host_buffer> ogl_device::allocate_host_buffer(int size, host_buffer::usage usage)
+safe_ptr<host_buffer> accelerator::allocate_host_buffer(int size, host_buffer::usage usage)
 {
 	std::shared_ptr<host_buffer> buffer;
 
@@ -160,7 +160,7 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(int size, host_buffer::us
 	return make_safe_ptr(buffer);
 }
 	
-safe_ptr<host_buffer> ogl_device::create_host_buffer(int size, host_buffer::usage usage)
+safe_ptr<host_buffer> accelerator::create_host_buffer(int size, host_buffer::usage usage)
 {
 	CASPAR_VERIFY(usage == host_buffer::usage::write_only || usage == host_buffer::usage::read_only);
 	CASPAR_VERIFY(size > 0);
@@ -188,12 +188,12 @@ safe_ptr<host_buffer> ogl_device::create_host_buffer(int size, host_buffer::usag
 	});
 }
 
-safe_ptr<ogl_device> ogl_device::create()
+safe_ptr<accelerator> accelerator::create()
 {
-	return safe_ptr<ogl_device>(new ogl_device());
+	return safe_ptr<accelerator>(new accelerator());
 }
 
-boost::unique_future<void> ogl_device::gc()
+boost::unique_future<void> accelerator::gc()
 {	
 	return begin_invoke([=]
 	{
@@ -219,7 +219,7 @@ boost::unique_future<void> ogl_device::gc()
 	}, high_priority);
 }
 
-std::wstring ogl_device::version()
+std::wstring accelerator::version()
 {	
 	static std::wstring ver = L"Not found";
 	try
@@ -233,7 +233,7 @@ std::wstring ogl_device::version()
 }
 
 
-void ogl_device::enable(GLenum cap)
+void accelerator::enable(GLenum cap)
 {
 	auto& val = caps_[cap];
 	if(!val)
@@ -243,7 +243,7 @@ void ogl_device::enable(GLenum cap)
 	}
 }
 
-void ogl_device::disable(GLenum cap)
+void accelerator::disable(GLenum cap)
 {
 	auto& val = caps_[cap];
 	if(val)
@@ -253,7 +253,7 @@ void ogl_device::disable(GLenum cap)
 	}
 }
 
-void ogl_device::viewport(int x, int y, int width, int height)
+void accelerator::viewport(int x, int y, int width, int height)
 {
 	std::array<GLint, 4> viewport = {{x, y, width, height}};
 	if(viewport != viewport_)
@@ -263,7 +263,7 @@ void ogl_device::viewport(int x, int y, int width, int height)
 	}
 }
 
-void ogl_device::scissor(int x, int y, int width, int height)
+void accelerator::scissor(int x, int y, int width, int height)
 {
 	std::array<GLint, 4> scissor = {{x, y, width, height}};
 	if(scissor != scissor_)
@@ -274,7 +274,7 @@ void ogl_device::scissor(int x, int y, int width, int height)
 	}
 }
 
-void ogl_device::stipple_pattern(const std::array<GLubyte, 32*32>& pattern)
+void accelerator::stipple_pattern(const std::array<GLubyte, 32*32>& pattern)
 {
 	if(pattern_ != pattern)
 	{		
@@ -292,7 +292,7 @@ void ogl_device::stipple_pattern(const std::array<GLubyte, 32*32>& pattern)
 	}
 }
 
-void ogl_device::attach(device_buffer& texture)
+void accelerator::attach(device_buffer& texture)
 {	
 	if(attached_texture_ != texture.id())
 	{
@@ -308,13 +308,13 @@ void ogl_device::attach(device_buffer& texture)
 	}
 }
 
-void ogl_device::clear(device_buffer& texture)
+void accelerator::clear(device_buffer& texture)
 {	
 	attach(texture);
 	GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
-void ogl_device::use(shader& shader)
+void accelerator::use(shader& shader)
 {
 	if(active_shader_ != shader.id())
 	{		
@@ -323,7 +323,7 @@ void ogl_device::use(shader& shader)
 	}
 }
 
-void ogl_device::blend_func(int c1, int c2, int a1, int a2)
+void accelerator::blend_func(int c1, int c2, int a1, int a2)
 {
 	std::array<int, 4> func = {c1, c2, a1, a2};
 
@@ -335,10 +335,20 @@ void ogl_device::blend_func(int c1, int c2, int a1, int a2)
 	}
 }
 
-void ogl_device::blend_func(int c1, int c2)
+void accelerator::blend_func(int c1, int c2)
 {
 	blend_func(c1, c2, c1, c2);
 }
+	
+boost::unique_future<safe_ptr<device_buffer>> accelerator::copy_async(safe_ptr<host_buffer>&& source, int width, int height, int stride)
+{
+	return executor_.begin_invoke([=]() -> safe_ptr<device_buffer>
+	{
+		auto result = create_device_buffer(width, height, stride);
+		result->copy_from(source);
+		return result;
+	}, high_priority);
+}
 
-}}
+}}}
 

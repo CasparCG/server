@@ -25,38 +25,35 @@
 
 #include <common/forward.h>
 #include <common/memory/safe_ptr.h>
-#include <common/concurrency/target.h>
+#include <common/reactive.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/thread/future.hpp>
 
 #include <map>
 
-FORWARD2(caspar, diagnostics, class graph);
 FORWARD1(boost, template<typename> class unique_future);
+FORWARD2(caspar, diagnostics, class graph);
+FORWARD3(caspar, core, gpu, class accelerator);
 
 namespace caspar { namespace core {
 	
-class mixer sealed : public target<std::pair<std::map<int, safe_ptr<class basic_frame>>, std::shared_ptr<void>>>
-				   , boost::noncopyable
+class mixer sealed : boost::noncopyable
 {
 public:	
-	typedef target<std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>> target_t;
-
-	explicit mixer(const safe_ptr<target_t>& target, const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc, const safe_ptr<class ogl_device>& ogl);
-		
-	// target
-
-	virtual void send(const std::pair<std::map<int, safe_ptr<class basic_frame>>, std::shared_ptr<void>>& frames) override; 
-		
+	explicit mixer(const safe_ptr<gpu::accelerator>& ogl);
+				
 	// mixer
-		
-	void set_video_format_desc(const struct video_format_desc& format_desc);
-	
+			
 	void set_blend_mode(int index, blend_mode value);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 	
+	// subject
+
+	safe_ptr<const struct frame> operator()(std::map<int, safe_ptr<class basic_frame>> frames, const struct video_format_desc& format_desc);
+
 private:
 	struct impl;
 	safe_ptr<impl> impl_;

@@ -23,10 +23,11 @@
 
 #include "write_frame.h"
 
-#include "gpu/ogl_device.h"
+#include "gpu/accelerator.h"
 #include "gpu/host_buffer.h"
 #include "gpu/device_buffer.h"
 
+#include <common/exception/exceptions.h>
 #include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
 
@@ -36,13 +37,13 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::impl : boost::noncopyable
 {			
-	std::shared_ptr<ogl_device>					ogl_;
-	std::vector<std::shared_ptr<host_buffer>>	buffers_;
-	std::vector<safe_ptr<device_buffer>>		textures_;
-	audio_buffer								audio_data_;
-	const core::pixel_format_desc				desc_;
-	const void*									tag_;
-	core::field_mode							mode_;
+	std::shared_ptr<gpu::accelerator>				ogl_;
+	std::vector<std::shared_ptr<gpu::host_buffer>>	buffers_;
+	std::vector<boost::shared_future<safe_ptr<gpu::device_buffer>>>		textures_;
+	audio_buffer									audio_data_;
+	const core::pixel_format_desc					desc_;
+	const void*										tag_;
+	core::field_mode								mode_;
 
 	impl(const void* tag)
 		: tag_(tag)
@@ -50,7 +51,7 @@ struct write_frame::impl : boost::noncopyable
 	{
 	}
 
-	impl(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const field_mode& mode) 
+	impl(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc, const field_mode& mode) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
@@ -58,12 +59,9 @@ struct write_frame::impl : boost::noncopyable
 	{
 		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
 		{
-			return ogl_->create_host_buffer(plane.size, host_buffer::usage::write_only);
+			return ogl_->create_host_buffer(plane.size, gpu::host_buffer::usage::write_only);
 		});
-		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures_), [&](const core::pixel_format_desc::plane& plane)
-		{
-			return ogl_->create_device_buffer(plane.width, plane.height, plane.channels);	
-		});
+		textures_.resize(desc.planes.size());
 	}
 			
 	void accept(write_frame& self, core::frame_visitor& visitor)
@@ -76,7 +74,7 @@ struct write_frame::impl : boost::noncopyable
 	boost::iterator_range<uint8_t*> image_data(int index)
 	{
 		if(index >= buffers_.size() || !buffers_[index]->data())
-			return boost::iterator_range<uint8_t*>();
+			BOOST_THROW_EXCEPTION(out_of_range());
 		auto ptr = static_cast<uint8_t*>(buffers_[index]->data());
 		return boost::iterator_range<uint8_t*>(ptr, ptr+buffers_[index]->size());
 	}
@@ -97,12 +95,13 @@ struct write_frame::impl : boost::noncopyable
 		if(!buffer)
 			return;
 				
-		textures_.at(plane_index)->copy_from(make_safe_ptr(buffer));
+		auto plane = desc_.planes.at(plane_index);
+		textures_.at(plane_index) = ogl_->copy_async(make_safe_ptr(std::move(buffer)), plane.width, plane.height, plane.channels);
 	}
 };
 	
 write_frame::write_frame(const void* tag) : impl_(new impl(tag)){}
-write_frame::write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const field_mode& mode) 
+write_frame::write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc, const field_mode& mode) 
 	: impl_(new impl(ogl, tag, desc, mode)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(write_frame&& other)
@@ -116,10 +115,10 @@ boost::iterator_range<uint8_t*> write_frame::image_data(int index){return impl_-
 audio_buffer& write_frame::audio_data() { return impl_->audio_data_; }
 const void* write_frame::tag() const {return impl_->tag_;}
 const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
-const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
+const std::vector<boost::shared_future<safe_ptr<gpu::device_buffer>>>& write_frame::get_textures() const{return impl_->textures_;}
 void write_frame::commit(int plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
-core::field_mode write_frame::get_type() const{return impl_->mode_;}
+core::field_mode write_frame::get_field_mode() const{return impl_->mode_;}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 }}

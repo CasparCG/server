@@ -21,8 +21,11 @@
 
 #pragma once
 
+#include "../frame.h"
+
 #include <common/memory/safe_ptr.h>
 #include <common/forward.h>
+#include <common/exception/exceptions.h>
 
 #include <core/mixer/audio/audio_mixer.h>
 
@@ -34,21 +37,36 @@
 #include <vector>
 
 FORWARD1(boost, template<typename> class unique_future);
+FORWARD3(caspar, core, gpu, class host_buffer);
 
 namespace caspar { namespace core {
 	
-class read_frame sealed : boost::noncopyable
+class read_frame sealed : public frame
 {
+	read_frame(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const struct video_format_desc& format_desc);
 public:
-	read_frame();
-	read_frame(int width, int height, boost::unique_future<safe_ptr<class host_buffer>>&& image_data, audio_buffer&& audio_data);
-
-	const boost::iterator_range<const uint8_t*> image_data();
-	const boost::iterator_range<const int32_t*> audio_data();
-
-	int width() const;
-	int height() const;
+	static safe_ptr<const read_frame> create(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const struct video_format_desc& format_desc);
 		
+	virtual const struct  pixel_format_desc& get_pixel_format_desc() const override;
+
+	virtual const boost::iterator_range<const uint8_t*> image_data() const override;
+	virtual const boost::iterator_range<const int32_t*> audio_data() const override;
+	
+	virtual double	   get_frame_rate() const override;
+	virtual field_mode get_field_mode() const override;
+
+	virtual int width() const override;
+	virtual int height() const override;
+
+	virtual const boost::iterator_range<uint8_t*> image_data() override
+	{
+		BOOST_THROW_EXCEPTION(invalid_operation());
+	}
+	virtual const boost::iterator_range<int32_t*> audio_data() override
+	{
+		BOOST_THROW_EXCEPTION(invalid_operation());
+	}
+			
 private:
 	struct impl;
 	std::shared_ptr<impl> impl_;

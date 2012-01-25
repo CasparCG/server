@@ -19,15 +19,15 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../../../stdafx.h"
 
 #include "image_mixer.h"
 
 #include "image_kernel.h"
-#include "../write_frame.h"
-#include "../gpu/ogl_device.h"
-#include "../gpu/host_buffer.h"
-#include "../gpu/device_buffer.h"
+#include "../accelerator.h"
+#include "../host_buffer.h"
+#include "../device_buffer.h"
+#include "../../write_frame.h"
 
 #include <common/gl/gl_check.h>
 
@@ -46,23 +46,23 @@
 
 using namespace boost::assign;
 
-namespace caspar { namespace core {
+namespace caspar { namespace core { namespace gpu {
 	
 struct item
 {
-	pixel_format_desc						pix_desc;
-	std::vector<safe_ptr<device_buffer>>	textures;
-	frame_transform							transform;
+	pixel_format_desc											pix_desc;
+	std::vector<boost::shared_future<safe_ptr<device_buffer>>>	textures;
+	frame_transform												transform;
 };
 
 typedef std::pair<blend_mode, std::vector<item>> layer;
 
 class image_renderer
 {
-	safe_ptr<ogl_device>			ogl_;
+	safe_ptr<accelerator>			ogl_;
 	image_kernel					kernel_;	
 public:
-	image_renderer(const safe_ptr<ogl_device>& ogl)
+	image_renderer(const safe_ptr<accelerator>& ogl)
 		: ogl_(ogl)
 		, kernel_(ogl_)
 	{
@@ -160,7 +160,8 @@ private:
 	{			
 		draw_params draw_params;
 		draw_params.pix_desc				= std::move(item.pix_desc);
-		draw_params.textures				= std::move(item.textures);
+		BOOST_FOREACH(auto& future_texture, item.textures)
+			draw_params.textures.push_back(future_texture.get());
 		draw_params.transform				= std::move(item.transform);
 
 		if(item.transform.is_key)
@@ -225,12 +226,12 @@ private:
 		
 struct image_mixer::impl : boost::noncopyable
 {	
-	safe_ptr<ogl_device>			ogl_;
+	safe_ptr<accelerator>			ogl_;
 	image_renderer					renderer_;
 	std::vector<frame_transform>	transform_stack_;
 	std::vector<layer>				layers_; // layer/stream/items
 public:
-	impl(const safe_ptr<ogl_device>& ogl) 
+	impl(const safe_ptr<accelerator>& ogl) 
 		: ogl_(ogl)
 		, renderer_(ogl)
 		, transform_stack_(1)	
@@ -272,7 +273,7 @@ public:
 	}
 };
 
-image_mixer::image_mixer(const safe_ptr<ogl_device>& ogl) : impl_(new impl(ogl)){}
+image_mixer::image_mixer(const safe_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
 void image_mixer::begin(basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
@@ -280,4 +281,4 @@ boost::unique_future<safe_ptr<host_buffer>> image_mixer::operator()(const video_
 void image_mixer::begin_layer(blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 
-}}
+}}}

@@ -34,7 +34,7 @@
 #include <ffmpeg/producer/filter/filter.h>
 
 #include <core/video_format.h>
-#include <core/mixer/read_frame.h>
+#include <core/frame.h>
 #include <core/consumer/frame_consumer.h>
 
 #include <boost/timer.hpp>
@@ -122,8 +122,8 @@ struct ogl_consumer : boost::noncopyable
 	unsigned int			screen_y_;
 	unsigned int			screen_width_;
 	unsigned int			screen_height_;
-	int					square_width_;
-	int					square_height_;				
+	int						square_width_;
+	int						square_height_;				
 	
 	sf::Window				window_;
 	
@@ -131,7 +131,7 @@ struct ogl_consumer : boost::noncopyable
 	boost::timer					perf_timer_;
 	boost::timer					tick_timer_;
 
-	tbb::concurrent_bounded_queue<safe_ptr<core::read_frame>>	frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<const core::frame>>	frame_buffer_;
 
 	boost::thread			thread_;
 	tbb::atomic<bool>		is_running_;
@@ -194,7 +194,7 @@ public:
 	~ogl_consumer()
 	{
 		is_running_ = false;
-		frame_buffer_.try_push(make_safe<core::read_frame>());
+		frame_buffer_.try_push(core::frame::empty());
 		thread_.join();
 	}
 
@@ -268,11 +268,11 @@ public:
 							is_running_ = false;
 					}
 			
-					safe_ptr<core::read_frame> frame;
+					std::shared_ptr<const core::frame> frame;
 					frame_buffer_.pop(frame);
 					
 					perf_timer_.restart();
-					render(frame);
+					render(make_safe_ptr(frame));
 					graph_->set_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);	
 
 					window_.Display();
@@ -310,7 +310,7 @@ public:
 		return av_frame;
 	}
 
-	void render(const safe_ptr<core::read_frame>& frame)
+	void render(const safe_ptr<const core::frame>& frame)
 	{			
 		if(static_cast<int>(frame->image_data().size()) != format_desc_.size)
 			return;
@@ -377,7 +377,7 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
-	bool send(const safe_ptr<core::read_frame>& frame)
+	bool send(const safe_ptr<const core::frame>& frame)
 	{
 		if(!frame_buffer_.try_push(frame))
 			graph_->set_tag("dropped-frame");
@@ -476,7 +476,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	virtual bool send(const safe_ptr<const core::frame>& frame) override
 	{
 		return consumer_->send(frame);
 	}

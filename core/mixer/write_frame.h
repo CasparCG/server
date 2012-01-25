@@ -22,6 +22,7 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
+#include <common/forward.h>
 
 #include <core/producer/frame/basic_frame.h>
 #include <core/video_format.h>
@@ -32,13 +33,17 @@
 #include <stdint.h>
 #include <vector>
 
+FORWARD1(boost, template<typename> class shared_future);
+FORWARD3(caspar, core, gpu, class accelerator);
+FORWARD3(caspar, core, gpu, class device_buffer);
+
 namespace caspar { namespace core {
 	
 class write_frame sealed : public core::basic_frame
 {
 public:	
 	explicit write_frame(const void* tag);
-	explicit write_frame(const safe_ptr<class ogl_device>& ogl, const void* tag, const struct pixel_format_desc& desc, const field_mode& mode = field_mode::progressive);
+	explicit write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const struct pixel_format_desc& desc, const field_mode& mode = field_mode::progressive);
 
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
@@ -57,17 +62,14 @@ public:
 	void commit(int plane_index);
 	void commit();
 	
-	field_mode get_type() const;
+	field_mode get_field_mode() const;
 	
 	const void* tag() const;
 
 	const struct pixel_format_desc& get_pixel_format_desc() const;
 	
+	const std::vector<boost::shared_future<safe_ptr<gpu::device_buffer>>>& get_textures() const;
 private:
-	friend class image_mixer;
-	
-	const std::vector<safe_ptr<class device_buffer>>& get_textures() const;
-
 	struct impl;
 	safe_ptr<impl> impl_;
 };

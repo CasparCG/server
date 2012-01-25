@@ -109,9 +109,6 @@
     <ClInclude Include="utility\move_on_copy.h">
       <Filter>source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="concurrency\target.h">
-      <Filter>source\concurrency</Filter>
-    </ClInclude>
     <ClInclude Include="utility\param.h">
       <Filter>source\utility</Filter>
     </ClInclude>
@@ -138,6 +135,9 @@
     </ClInclude>
     <ClInclude Include="os\windows\windows.h">
       <Filter>source\os\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="reactive.h">
+      <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
