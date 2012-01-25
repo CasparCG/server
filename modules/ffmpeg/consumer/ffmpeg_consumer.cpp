@@ -88,7 +88,7 @@ struct ffmpeg_consumer : boost::noncopyable
 	int64_t									frame_number_;
 	
 public:
-	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, const std::string& codec, const std::string& options)
+	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, const std::string& codec, const std::vector<std::string>& options)
 		: filename_(filename)
 		, video_outbuf_(1920*1080*8)
 		, oc_(avformat_alloc_context(), av_free)
@@ -159,7 +159,7 @@ public:
 		return L"ffmpeg[" + widen(filename_) + L"]";
 	}
 
-	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id, const std::string& options)
+	std::shared_ptr<AVStream> add_video_stream(enum CodecID codec_id, const std::vector<std::string>& options)
 	{ 
 		auto st = av_new_stream(oc_.get(), 0);
 		if (!st) 		
@@ -186,7 +186,6 @@ public:
 		{			
 			c->bit_rate	= format_desc_.width < 1280 ? 63*1000000 : 220*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P10;
-			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else if(c->codec_id == CODEC_ID_DNXHD)
 		{
@@ -195,8 +194,6 @@ public:
 
 			c->bit_rate	= 220*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P;
-
-			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else if(c->codec_id == CODEC_ID_DVVIDEO)
 		{
@@ -208,9 +205,7 @@ public:
 			if(format_desc_.duration == 1001)			
 				c->width = format_desc_.height == 1080 ? 1280 : c->width;			
 			else
-				c->width = format_desc_.height == 1080 ? 1440 : c->width;
-			
-			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
+				c->width = format_desc_.height == 1080 ? 1440 : c->width;			
 		}
 		else if(c->codec_id == CODEC_ID_H264)
 		{			   
@@ -221,8 +216,6 @@ public:
 				av_opt_set(c->priv_data, "tune",   "fastdecode",   0);
 				av_opt_set(c->priv_data, "crf",    "5",     0);
 			}
-
-			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else if(c->codec_id == CODEC_ID_QTRLE)
 		{
@@ -230,12 +223,14 @@ public:
 		}
 		else
 		{
-			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
-			CASPAR_LOG(warning) << " Potentially unsupported output parameters.";
+			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported output parameters."));
 		}
 		
-		c->max_b_frames = 0; // b-franes not supported.
+		c->max_b_frames = 0; // b-frames not supported.
 
+		for(size_t n = 0; n < options.size()/2; ++n)
+			THROW_ON_ERROR2(av_opt_set(c, options[n*2+0].c_str(), options[n*2+1].c_str(), AV_OPT_SEARCH_CHILDREN), "[ffmpeg_consumer]");
+		
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 		
@@ -388,16 +383,16 @@ public:
 
 struct ffmpeg_consumer_proxy : public core::frame_consumer
 {
-	const std::wstring	filename_;
-	const bool			key_only_;
-	const std::wstring	codec_;
-	const std::wstring	options_;
+	const std::wstring				filename_;
+	const bool						key_only_;
+	const std::wstring				codec_;
+	const std::vector<std::string>	options_;
 
 	std::unique_ptr<ffmpeg_consumer> consumer_;
 
 public:
 
-	ffmpeg_consumer_proxy(const std::wstring& filename, bool key_only, const std::wstring codec, const std::wstring& options)
+	ffmpeg_consumer_proxy(const std::wstring& filename, bool key_only, const std::wstring codec, const std::vector<std::string>& options)
 		: filename_(filename)
 		, key_only_(key_only)
 		, codec_(boost::to_lower_copy(codec))
@@ -408,7 +403,7 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int)
 	{
 		consumer_.reset();
-		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, narrow(codec_), narrow(options_)));
+		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, narrow(codec_), options_));
 	}
 	
 	virtual bool send(const safe_ptr<core::read_frame>& frame) override
@@ -428,8 +423,7 @@ public:
 		info.add(L"type", L"ffmpeg-consumer");
 		info.add(L"key-only", key_only_);
 		info.add(L"filename", filename_);
-		info.add(L"codec", codec_);
-		info.add(L"options", options_);
+		info.add(L"vcodec", codec_);
 		return info;
 	}
 		
@@ -456,17 +450,26 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	
 	auto filename	= (params.size() > 1 ? params[1] : L"");
 	bool key_only	= get_param(L"KEY_ONLY", params, false);
-	auto codec		= get_param(L"CODEC", params, L"libx264");
-	auto options	= get_param(L"OPTIONS", params);
-	
+	auto codec		= get_param(L"-VCODEC", params,  get_param(L"CODEC", params, L"libx264"));
+
+	std::vector<std::string> options;
+	auto opt_it = std::find(params.begin(), params.end(), L"-VCODEC");
+
+	if(std::distance(opt_it, params.end()) > 2)
+	{
+		std::advance(opt_it, 2);
+		while(opt_it != params.end())
+			options.push_back(narrow(boost::replace_all_copy(boost::trim_copy(boost::to_lower_copy(*opt_it++)), L"-", L"")));		
+
+	}
+
+		
 	if(codec == L"H264")
 		codec = L"libx264";
 
 	if(codec == L"DVCPRO")
 		codec = L"dvvideo";
-
-	boost::to_lower(options);
-
+	
 	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
 }
 
@@ -474,10 +477,9 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 {
 	auto filename	= ptree.get<std::wstring>(L"path");
 	auto key_only	= ptree.get(L"key-only", false);
-	auto codec		= ptree.get(L"codec", L"libx264");
-	auto options	= ptree.get(L"options", L"");
+	auto codec		= ptree.get(L"vcodec", L"libx264");
 	
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
+	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, std::vector<std::string>());
 }
 
 }}
