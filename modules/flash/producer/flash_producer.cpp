@@ -278,6 +278,8 @@ public:
 			head_ = frame;
 		}		
 
+		// DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!
+	
 		MSG msg;
 		while(PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) 
 		{
