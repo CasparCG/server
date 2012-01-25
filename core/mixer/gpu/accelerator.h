@@ -42,7 +42,7 @@
 
 FORWARD1(boost, template<typename> class unique_future);
 
-namespace caspar { namespace core {
+namespace caspar { namespace core { namespace gpu {
 
 class shader;
 
@@ -60,7 +60,7 @@ struct buffer_pool : boost::noncopyable
 	}
 };
 
-class ogl_device : public std::enable_shared_from_this<ogl_device>
+class accelerator : public std::enable_shared_from_this<accelerator>
 				 , boost::noncopyable
 {	
 	std::array<GLubyte, 32*32>		 pattern_;
@@ -81,10 +81,10 @@ class ogl_device : public std::enable_shared_from_this<ogl_device>
 
 	executor executor_;
 				
-	ogl_device();
+	accelerator();
 public:		
-	static safe_ptr<ogl_device> create();
-	~ogl_device();
+	static safe_ptr<accelerator> create();
+	~accelerator();
 
 	// Not thread-safe, must be called inside of context
 	void enable(GLenum cap);
@@ -121,9 +121,11 @@ public:
 
 	std::wstring version();
 
+	boost::unique_future<safe_ptr<device_buffer>> copy_async(safe_ptr<host_buffer>&& source, int width, int height, int stride);
+
 private:
 	safe_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride);
 	safe_ptr<host_buffer> allocate_host_buffer(int size, host_buffer::usage usage);
 };
 
-}}
+}}}

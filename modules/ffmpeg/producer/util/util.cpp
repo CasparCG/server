@@ -286,9 +286,9 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	}
 	
 	// Fix field-order if needed
-	if(write->get_type() == core::field_mode::lower && frame_factory->get_video_format_desc().field_mode == core::field_mode::upper)
+	if(write->get_field_mode() == core::field_mode::lower && frame_factory->get_video_format_desc().field_mode == core::field_mode::upper)
 		write->get_frame_transform().fill_translation[1] += 1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
-	else if(write->get_type() == core::field_mode::upper && frame_factory->get_video_format_desc().field_mode == core::field_mode::lower)
+	else if(write->get_field_mode() == core::field_mode::upper && frame_factory->get_video_format_desc().field_mode == core::field_mode::lower)
 		write->get_frame_transform().fill_translation[1] -= 1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
 
 	return make_safe_ptr(write);

@@ -39,7 +39,7 @@ typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer
 class audio_mixer sealed : public frame_visitor
 {
 public:
-	audio_mixer(const safe_ptr<diagnostics::graph>& graph);
+	audio_mixer();
 
 	virtual void begin(core::basic_frame& frame);
 	virtual void visit(core::write_frame& frame);

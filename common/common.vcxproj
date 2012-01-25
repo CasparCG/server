@@ -118,7 +118,6 @@
     <ClInclude Include="concurrency\com_context.h" />
     <ClInclude Include="concurrency\executor.h" />
     <ClInclude Include="concurrency\lock.h" />
-    <ClInclude Include="concurrency\target.h" />
     <ClInclude Include="diagnostics\graph.h" />
     <ClInclude Include="exception\exceptions.h" />
     <ClInclude Include="exception\win32_exception.h" />
@@ -133,6 +132,7 @@
     <ClInclude Include="os\windows\system_info.h" />
     <ClInclude Include="enum_class.h" />
     <ClInclude Include="os\windows\windows.h" />
+    <ClInclude Include="reactive.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="utf.h" />
     <ClInclude Include="prec_timer.h" />

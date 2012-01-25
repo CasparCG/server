@@ -21,28 +21,35 @@
 
 #pragma once
 
+#include "../../image/blend_modes.h"
+#include "../../image/image_mixer.h"
+
+#include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 
-namespace caspar { namespace core {
+#include <core/producer/frame/frame_visitor.h>
 
-class shader;
-class ogl_device;
+FORWARD1(boost, template<typename> class unique_future);
 
-struct texture_id
+namespace caspar { namespace core { namespace gpu {
+	
+class image_mixer sealed : public core::image_mixer
 {
-	enum type
-	{
-		plane0 = 0,
-		plane1,
-		plane2,
-		plane3,
-		local_key,
-		layer_key,
-		background,
-	};
+public:
+	image_mixer(const safe_ptr<class accelerator>& ogl);
+	
+	virtual void begin(class basic_frame& frame);
+	virtual void visit(class write_frame& frame);
+	virtual void end();
+
+	void begin_layer(blend_mode blend_mode);
+	void end_layer();
+		
+	virtual boost::unique_future<safe_ptr<class host_buffer>> operator()(const struct video_format_desc& format_desc) override;
+		
+private:
+	struct impl;
+	safe_ptr<impl> impl_;
 };
 
-safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes);
-
-
-}}
+}}}

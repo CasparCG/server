@@ -19,16 +19,16 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../../../stdafx.h"
 
 #include "image_kernel.h"
 
-#include "shader/image_shader.h"
-#include "shader/blending_glsl.h"
+#include "blending_glsl.h"
+#include "image_shader.h"
 
-#include "../gpu/shader.h"
-#include "../gpu/device_buffer.h"
-#include "../gpu/ogl_device.h"
+#include "../shader.h"
+#include "../device_buffer.h"
+#include "../accelerator.h"
 
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
@@ -41,7 +41,7 @@
 #include <boost/noncopyable.hpp>
 #include <common/assert.h>
 
-namespace caspar { namespace core {
+namespace caspar { namespace core { namespace gpu {
 	
 __declspec(align(16)) std::array<GLubyte, 32*32> upper_pattern = {{
 	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
@@ -63,11 +63,11 @@ __declspec(align(16)) std::array<GLubyte, 32*32> progressive_pattern = {{
 
 struct image_kernel::impl : boost::noncopyable
 {	
-	safe_ptr<ogl_device>	ogl_;
+	safe_ptr<accelerator>	ogl_;
 	safe_ptr<shader>		shader_;
 	bool					blend_modes_;
 							
-	impl(const safe_ptr<ogl_device>& ogl)
+	impl(const safe_ptr<accelerator>& ogl)
 		: ogl_(ogl)
 		, shader_(ogl_->invoke([&]{return get_image_shader(*ogl, blend_modes_);}))
 	{
@@ -215,10 +215,10 @@ struct image_kernel::impl : boost::noncopyable
 	}
 };
 
-image_kernel::image_kernel(const safe_ptr<ogl_device>& ogl) : impl_(new impl(ogl)){}
+image_kernel::image_kernel(const safe_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
 void image_kernel::draw(draw_params&& params)
 {
 	impl_->draw(std::move(params));
 }
 
-}}
+}}}

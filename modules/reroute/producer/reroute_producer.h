@@ -22,43 +22,15 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
-#include <common/enum_class.h>
+#include <common/reactive.h>
+#include <common/forward.h>
 
-#include <boost/noncopyable.hpp>
+#include <core/producer/frame/frame_factory.h>
+#include <core/producer/frame_producer.h>
+#include <core/frame.h>
 
-namespace caspar { namespace core {
-			
-class host_buffer : boost::noncopyable
-{
-public:
-	struct usage_def
-	{
-		enum type
-		{
-			write_only,
-			read_only
-		};
-	};
-	typedef enum_class<usage_def> usage;
+namespace caspar { namespace reroute {
 	
-	const void* data() const;
-	void* data();
-	int size() const;	
-	
-private:
-	friend class ogl_device;
-	friend class device_buffer;
-
-	void bind();
-	void unbind();
-
-	void map();
-	void unmap();
-
-	host_buffer(std::weak_ptr<ogl_device> parent, int size, usage usage);
-
-	struct impl;
-	safe_ptr<impl> impl_;
-};
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, reactive::observable<safe_ptr<const core::frame>>& o);
 
 }}

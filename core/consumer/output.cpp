@@ -30,7 +30,7 @@
 #include "frame_consumer.h"
 
 #include "../video_format.h"
-#include "../mixer/gpu/ogl_device.h"
+#include "../mixer/gpu/accelerator.h"
 #include "../mixer/read_frame.h"
 
 #include <common/concurrency/executor.h>
@@ -51,8 +51,6 @@ namespace caspar { namespace core {
 struct output::impl
 {		
 	const int										channel_index_;
-	const safe_ptr<diagnostics::graph>				graph_;
-	boost::timer									consume_timer_;
 
 	video_format_desc								format_desc_;
 
@@ -60,18 +58,17 @@ struct output::impl
 	
 	prec_timer										sync_timer_;
 
-	boost::circular_buffer<safe_ptr<read_frame>>	frames_;
+	boost::circular_buffer<safe_ptr<const frame>>	frames_;
 
 	executor										executor_;
 		
 public:
-	impl(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) 
+	impl(const video_format_desc& format_desc, int channel_index) 
 		: channel_index_(channel_index)
-		, graph_(graph)
 		, format_desc_(format_desc)
 		, executor_(L"output")
 	{
-		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8));
+		executor_.set_capacity(1);
 	}	
 	
 	void add(int index, safe_ptr<frame_consumer> consumer)
@@ -163,19 +160,18 @@ public:
 	{
 		return boost::range::count_if(consumers_ | boost::adaptors::map_values, [](const safe_ptr<frame_consumer>& x){return x->has_synchronization_clock();}) > 0;
 	}
-
-	void send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& packet)
+		
+	void operator()(safe_ptr<const frame> input_frame, const video_format_desc& format_desc)
 	{
 		executor_.begin_invoke([=]
 		{
 			try
-			{
-				consume_timer_.restart();
-
-				auto input_frame = packet.first;
-
+			{				
 				if(!has_synchronization_clock())
 					sync_timer_.tick(1.0/format_desc_.fps);
+				
+				if(format_desc_ != format_desc)
+					set_video_format_desc(format_desc);
 
 				if(input_frame->image_data().size() != format_desc_.size)
 				{
@@ -229,8 +225,6 @@ public:
 						}
 					}
 				}
-						
-				graph_->set_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
 			}
 			catch(...)
 			{
@@ -259,12 +253,11 @@ public:
 	}
 };
 
-output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new impl(graph, format_desc, channel_index)){}
+output::output(const video_format_desc& format_desc, int channel_index) : impl_(new impl(format_desc, channel_index)){}
 void output::add(int index, const safe_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
 void output::add(const safe_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}
 void output::remove(const safe_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
-void output::send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) {impl_->send(frame); }
-void output::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
+void output::operator()(safe_ptr<const frame> frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
 }}

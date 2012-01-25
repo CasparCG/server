@@ -38,7 +38,6 @@
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
 #include <core/producer/transition/transition_producer.h>
-#include <core/producer/channel/channel_producer.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
@@ -55,6 +54,7 @@
 #include <modules/ffmpeg/producer/util/util.h>
 #include <modules/image/image.h>
 #include <modules/ogl/ogl.h>
+#include <modules/reroute/producer/reroute_producer.h>
 
 #include <algorithm>
 #include <locale>
@@ -242,7 +242,7 @@ bool ChannelGridCommand::DoExecute()
 	{
 		if(channel != self)
 		{
-			auto producer = create_channel_producer(self->frame_factory(), channel);		
+			auto producer = reroute::create_producer(self->frame_factory(), *channel);		
 			self->stage()->load(index, producer, false);
 			self->stage()->play(index);
 			index++;

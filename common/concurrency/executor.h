@@ -209,16 +209,12 @@ public:
 		
 		return begin_invoke(std::forward<Func>(func), prioriy).get();
 	}
-		
-	function_queue::size_type capacity() const /*noexcept*/ { return execution_queue_[normal_priority].capacity();	}
-	function_queue::size_type size() const /*noexcept*/ { return execution_queue_[normal_priority].size();	}
-	bool empty() const /*noexcept*/	{ return execution_queue_[normal_priority].empty();	}
-	bool is_running() const /*noexcept*/ { return is_running_; }	
-		
-private:
-	
-	void execute() // noexcept
+
+	void yield() // noexcept
 	{
+		if(boost::this_thread::get_id() != thread_.get_id())
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context."));
+
 		std::function<void()> func;
 		execution_queue_[normal_priority].pop(func);	
 		
@@ -232,6 +228,14 @@ private:
 		if(func)
 			func();
 	}
+		
+	function_queue::size_type capacity() const /*noexcept*/ { return execution_queue_[normal_priority].capacity();	}
+	function_queue::size_type size() const /*noexcept*/ { return execution_queue_[normal_priority].size();	}
+	bool empty() const /*noexcept*/	{ return execution_queue_[normal_priority].empty();	}
+	bool is_running() const /*noexcept*/ { return is_running_; }	
+		
+private:
+	
 
 	void run() // noexcept
 	{
@@ -241,7 +245,7 @@ private:
 		{
 			try
 			{
-				execute();
+				yield();
 			}
 			catch(...)
 			{

@@ -22,6 +22,8 @@
 #include "../stdafx.h"
 
 #include "read_frame.h"
+#include "../video_format.h"
+#include "../producer/frame/pixel_format.h"
 
 #include "gpu/host_buffer.h"	
 
@@ -31,17 +33,20 @@ namespace caspar { namespace core {
 																																							
 struct read_frame::impl : boost::noncopyable
 {
-	int											width_;
-	int											height_;
-	boost::unique_future<safe_ptr<host_buffer>>	image_data_;
-	audio_buffer								audio_data_;
+	boost::unique_future<safe_ptr<gpu::host_buffer>>	image_data_;
+	const audio_buffer									audio_data_;
+	const video_format_desc								video_desc_;
+	pixel_format_desc									pixel_desc_;
 
 public:
-	impl( int width, int height, boost::unique_future<safe_ptr<host_buffer>>&& image_data, audio_buffer&& audio_data) 
-		: width_(width)
-		, height_(height)
-		, image_data_(std::move(image_data))
-		, audio_data_(std::move(audio_data)){}	
+	impl(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
+		: image_data_(std::move(image_data))
+		, audio_data_(std::move(audio_data))
+		, video_desc_(format_desc)
+	{
+		pixel_desc_.pix_fmt = core::pixel_format::bgra;
+		pixel_desc_.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
+	}	
 	
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
@@ -54,21 +59,20 @@ public:
 	}
 };
 
-read_frame::read_frame(int width, int height, boost::unique_future<safe_ptr<host_buffer>>&& image_data, audio_buffer&& audio_data) 
-	: impl_(new impl(width, height, std::move(image_data), std::move(audio_data))){}
-read_frame::read_frame(){}
-const boost::iterator_range<const uint8_t*> read_frame::image_data()
-{
-	return impl_ ? impl_->image_data() : boost::iterator_range<const uint8_t*>();
-}
+read_frame::read_frame(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
+	: impl_(new impl(std::move(image_data), std::move(audio_data), format_desc)){}
+const boost::iterator_range<const uint8_t*> read_frame::image_data() const{	return impl_->image_data();}
+const boost::iterator_range<const int32_t*> read_frame::audio_data() const{	return impl_->audio_data();}
+const pixel_format_desc& read_frame::get_pixel_format_desc() const{	return impl_->pixel_desc_;}
+double read_frame::get_frame_rate() const {return impl_->video_desc_.fps;}
+field_mode read_frame::get_field_mode() const {return impl_->video_desc_.field_mode;}
+int read_frame::width() const {return impl_->video_desc_.width;}
+int read_frame::height() const {return impl_->video_desc_.height;}
 
-const boost::iterator_range<const int32_t*> read_frame::audio_data()
+safe_ptr<const read_frame> read_frame::create(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const struct video_format_desc& format_desc)
 {
-	return impl_ ? impl_->audio_data() : boost::iterator_range<const int32_t*>();
+	return safe_ptr<const read_frame>(new read_frame(std::move(image_data), std::move(audio_data), format_desc));
 }
-
-int read_frame::width() const{return impl_ ? impl_->width_ : 0;}
-int read_frame::height() const{return impl_ ? impl_->height_ : 0;}
 
 //#include <tbb/scalable_allocator.h>
 //#include <tbb/parallel_for.h>
@@ -85,7 +89,7 @@ int read_frame::height() const{return impl_ ? impl_->height_ : 0;}
 //
 //void	CopyFrame( void * pSrc, void * pDest, UINT width, UINT height, UINT pitch );
 //
-//void* copy_frame(void* dest, const safe_ptr<read_frame>& frame)
+//void* copy_frame(void* dest, const safe_ptr<const frame>& frame)
 //{
 //	auto src		= frame->image_data().begin();
 //	auto height		= 720;

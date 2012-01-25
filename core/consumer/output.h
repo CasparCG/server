@@ -23,7 +23,7 @@
 
 #include <common/forward.h>
 #include <common/memory/safe_ptr.h>
-#include <common/concurrency/target.h>
+#include <common/reactive.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -33,26 +33,22 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 	
-class output sealed : public target<std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>>
-					, boost::noncopyable
+class output sealed : boost::noncopyable
 {
 public:
-	explicit output(const safe_ptr<diagnostics::graph>& graph, const struct video_format_desc& format_desc, int channel_index);
-
-	// target
+	explicit output(const struct video_format_desc& format_desc, int channel_index);
 	
-	virtual void send(const std::pair<safe_ptr<class read_frame>, std::shared_ptr<void>>& frame) override;
-
 	// output
+
+	void operator()(safe_ptr<const struct frame> frame, const struct video_format_desc& format_desc);
 	
 	void add(const safe_ptr<struct frame_consumer>& consumer);
 	void add(int index, const safe_ptr<struct frame_consumer>& consumer);
 	void remove(const safe_ptr<struct frame_consumer>& consumer);
 	void remove(int index);
 	
-	void set_video_format_desc(const struct video_format_desc& format_desc);
-
 	boost::unique_future<boost::property_tree::wptree> info() const;
+
 private:
 	struct impl;
 	safe_ptr<impl> impl_;
