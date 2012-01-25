@@ -195,7 +195,10 @@ public:
 
 			c->bit_rate	= 220*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P;
+
+			av_opt_set(c->priv_data, "b",    "120000000",     0);
 			
+			av_opt_set(c, "b",    "120000000",     0);
 			THROW_ON_ERROR2(av_set_options_string(c->priv_data, options.c_str(), "=", ":"), "[ffmpeg_consumer]");
 		}
 		else if(c->codec_id == CODEC_ID_DVVIDEO)
