@@ -459,7 +459,12 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	{
 		std::advance(opt_it, 2);
 		while(opt_it != params.end())
-			options.push_back(narrow(boost::replace_all_copy(boost::trim_copy(boost::to_lower_copy(*opt_it++)), L"-", L"")));		
+		{
+			auto str = boost::trim_copy(boost::to_lower_copy(*opt_it++));
+			if(str.size() > 0 && str.at(0) == L'-')
+				str = str.substr(1);
+			options.push_back(narrow(str));		
+		}
 	}
 		
 	if(codec == L"H264")
