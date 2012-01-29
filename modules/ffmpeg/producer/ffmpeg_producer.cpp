@@ -38,9 +38,9 @@
 
 #include <core/video_format.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_transform.h>
+#include <core/frame/frame_factory.h>
+#include <core/frame/draw_frame.h>
+#include <core/frame/frame_transform.h>
 
 #include <boost/algorithm/string.hpp>
 #include <common/assert.h>
@@ -81,9 +81,9 @@ struct ffmpeg_producer : public core::frame_producer
 	const uint32_t												start_;
 	const uint32_t												length_;
 
-	safe_ptr<core::basic_frame>									last_frame_;
+	safe_ptr<core::draw_frame>									last_frame_;
 	
-	std::queue<std::pair<safe_ptr<core::basic_frame>, uint32_t>>	frame_buffer_;
+	std::queue<std::pair<safe_ptr<core::draw_frame>, uint32_t>>	frame_buffer_;
 
 	int64_t														frame_number_;
 	uint32_t													file_frame_number_;
@@ -97,7 +97,7 @@ public:
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
 		, length_(length)
-		, last_frame_(core::basic_frame::empty())
+		, last_frame_(core::draw_frame::empty())
 		, frame_number_(0)
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -142,7 +142,7 @@ public:
 
 	// frame_producer
 	
-	virtual safe_ptr<core::basic_frame> receive(int flags) override
+	virtual safe_ptr<core::draw_frame> receive(int flags) override
 	{		
 		frame_timer_.restart();
 				
@@ -157,7 +157,7 @@ public:
 		if(frame_buffer_.empty())
 		{
 			graph_->set_tag("underflow");	
-			return core::basic_frame::late();			
+			return core::draw_frame::late();			
 		}
 		
 		auto frame = frame_buffer_.front(); 
@@ -171,7 +171,7 @@ public:
 		return last_frame_ = frame.first;
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const override
+	virtual safe_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_;
 	}

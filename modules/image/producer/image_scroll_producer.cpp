@@ -25,10 +25,10 @@
 
 #include <core/video_format.h>
 
-#include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame/frame_transform.h>
-#include <core/producer/frame/pixel_format.h>
+#include <core/frame/draw_frame.h>
+#include <core/frame/frame_factory.h>
+#include <core/frame/frame_transform.h>
+#include <core/frame/pixel_format.h>
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
@@ -51,7 +51,7 @@ namespace caspar { namespace image {
 struct image_scroll_producer : public core::frame_producer
 {	
 	const std::wstring							filename_;
-	std::vector<safe_ptr<core::basic_frame>>	frames_;
+	std::vector<safe_ptr<core::draw_frame>>	frames_;
 	core::video_format_desc						format_desc_;
 	int										width_;
 	int										height_;
@@ -61,14 +61,14 @@ struct image_scroll_producer : public core::frame_producer
 
 	std::array<double, 2>						start_offset_;
 
-	safe_ptr<core::basic_frame>					last_frame_;
+	safe_ptr<core::draw_frame>					last_frame_;
 	
 	explicit image_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
 		: filename_(filename)
 		, delta_(0)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, speed_(speed)
-		, last_frame_(core::basic_frame::empty())
+		, last_frame_(core::draw_frame::empty())
 	{
 		start_offset_.assign(0.0);
 
@@ -162,17 +162,17 @@ struct image_scroll_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<core::basic_frame> receive(int) override
+	virtual safe_ptr<core::draw_frame> receive(int) override
 	{		
 		delta_ += speed_;
 
 		if(frames_.empty())
-			return core::basic_frame::eof();
+			return core::draw_frame::eof();
 		
 		if(height_ > format_desc_.height)
 		{
 			if(static_cast<int>(std::abs(delta_)) >= height_ - format_desc_.height)
-				return core::basic_frame::eof();
+				return core::draw_frame::eof();
 
 			for(int n = 0; n < frames_.size(); ++n)
 			{
@@ -183,7 +183,7 @@ struct image_scroll_producer : public core::frame_producer
 		else
 		{
 			if(static_cast<int>(std::abs(delta_)) >= width_ - format_desc_.width)
-				return core::basic_frame::eof();
+				return core::draw_frame::eof();
 
 			for(int n = 0; n < frames_.size(); ++n)
 			{
@@ -192,10 +192,10 @@ struct image_scroll_producer : public core::frame_producer
 			}
 		}
 
-		return last_frame_ = make_safe<core::basic_frame>(frames_);
+		return last_frame_ = make_safe<core::draw_frame>(frames_);
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const override
+	virtual safe_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_;
 	}

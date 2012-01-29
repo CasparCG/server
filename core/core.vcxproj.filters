@@ -25,9 +25,6 @@
     <Filter Include="source\producer\color">
       <UniqueIdentifier>{78b16c14-bf29-4511-9122-684ff513dbf5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\producer\frame">
-      <UniqueIdentifier>{b19721c1-8dd1-45fb-b9e3-212b548ebbb6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\producer\separated">
       <UniqueIdentifier>{cf834e89-32d6-47bc-8d5a-10e032f88e15}</UniqueIdentifier>
     </Filter>
@@ -36,6 +33,9 @@
     </Filter>
     <Filter Include="source\mixer\gpu\image">
       <UniqueIdentifier>{d8d99a8a-42f9-48a3-b8a5-c07228226eab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\frame">
+      <UniqueIdentifier>{b19721c1-8dd1-45fb-b9e3-212b548ebbb6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -53,18 +53,6 @@
     </ClInclude>
     <ClInclude Include="producer\layer.h">
       <Filter>source\producer</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame\basic_frame.h">
-      <Filter>source\producer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame\pixel_format.h">
-      <Filter>source\producer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame\frame_visitor.h">
-      <Filter>source\producer\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame\frame_factory.h">
-      <Filter>source\producer\frame</Filter>
     </ClInclude>
     <ClInclude Include="mixer\image\image_mixer.h">
       <Filter>source\mixer\image</Filter>
@@ -93,9 +81,6 @@
     </ClInclude>
     <ClInclude Include="video_channel.h">
       <Filter>source</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\frame\frame_transform.h">
-      <Filter>source\producer\frame</Filter>
     </ClInclude>
     <ClInclude Include="mixer\audio\audio_util.h">
       <Filter>source\mixer\audio</Filter>
@@ -130,8 +115,23 @@
     <ClInclude Include="mixer\gpu\accelerator.h">
       <Filter>source\mixer\gpu</Filter>
     </ClInclude>
-    <ClInclude Include="frame.h">
-      <Filter>source</Filter>
+    <ClInclude Include="frame\frame_factory.h">
+      <Filter>source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\frame_transform.h">
+      <Filter>source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\frame_visitor.h">
+      <Filter>source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\pixel_format.h">
+      <Filter>source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\data_frame.h">
+      <Filter>source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\draw_frame.h">
+      <Filter>source\frame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -146,9 +146,6 @@
     </ClCompile>
     <ClCompile Include="producer\layer.cpp">
       <Filter>source\producer</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\frame\basic_frame.cpp">
-      <Filter>source\producer\frame</Filter>
     </ClCompile>
     <ClCompile Include="mixer\audio\audio_mixer.cpp">
       <Filter>source\mixer\audio</Filter>
@@ -178,9 +175,6 @@
     <ClCompile Include="video_format.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="producer\frame\frame_transform.cpp">
-      <Filter>source\producer\frame</Filter>
-    </ClCompile>
     <ClCompile Include="producer\frame_producer.cpp">
       <Filter>source\producer</Filter>
     </ClCompile>
@@ -207,6 +201,12 @@
     </ClCompile>
     <ClCompile Include="mixer\gpu\accelerator.cpp">
       <Filter>source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\frame_transform.cpp">
+      <Filter>source\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\draw_frame.cpp">
+      <Filter>source\frame</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

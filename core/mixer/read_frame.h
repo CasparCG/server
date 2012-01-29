@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../frame.h"
+#include "../frame/data_frame.h"
 
 #include <common/memory/safe_ptr.h>
 #include <common/forward.h>
@@ -41,7 +41,7 @@ FORWARD3(caspar, core, gpu, class host_buffer);
 
 namespace caspar { namespace core {
 	
-class read_frame sealed : public frame
+class read_frame sealed : public data_frame
 {
 	read_frame(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const struct video_format_desc& format_desc);
 public:

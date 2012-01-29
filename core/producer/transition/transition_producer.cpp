@@ -24,8 +24,8 @@
 #include "transition_producer.h"
 
 #include "../frame_producer.h"
-#include "../frame/basic_frame.h"
-#include "../frame/frame_transform.h"
+#include "../../frame/draw_frame.h"
+#include "../../frame/frame_transform.h"
 
 #include <tbb/parallel_invoke.h>
 
@@ -41,7 +41,7 @@ struct transition_producer : public frame_producer
 	safe_ptr<frame_producer>	dest_producer_;
 	safe_ptr<frame_producer>	source_producer_;
 
-	safe_ptr<basic_frame>		last_frame_;
+	safe_ptr<draw_frame>		last_frame_;
 		
 	explicit transition_producer(const field_mode& mode, const safe_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
@@ -49,7 +49,7 @@ struct transition_producer : public frame_producer
 		, info_(info)
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
-		, last_frame_(basic_frame::empty()){}
+		, last_frame_(draw_frame::empty()){}
 	
 	// frame_producer
 
@@ -63,32 +63,32 @@ struct transition_producer : public frame_producer
 		source_producer_ = producer;
 	}
 
-	virtual safe_ptr<basic_frame> receive(int flags) override
+	virtual safe_ptr<draw_frame> receive(int flags) override
 	{
 		if(++current_frame_ >= info_.duration)
-			return basic_frame::eof();
+			return draw_frame::eof();
 		
-		auto dest = basic_frame::empty();
-		auto source = basic_frame::empty();
+		auto dest = draw_frame::empty();
+		auto source = draw_frame::empty();
 
 		tbb::parallel_invoke(
 		[&]
 		{
 			dest = receive_and_follow(dest_producer_, flags);
-			if(dest == core::basic_frame::late())
+			if(dest == core::draw_frame::late())
 				dest = dest_producer_->last_frame();
 		},
 		[&]
 		{
 			source = receive_and_follow(source_producer_, flags);
-			if(source == core::basic_frame::late())
+			if(source == core::draw_frame::late())
 				source = source_producer_->last_frame();
 		});
 
 		return compose(dest, source);
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const override
+	virtual safe_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_;
 	}
@@ -114,7 +114,7 @@ struct transition_producer : public frame_producer
 
 	// transition_producer
 						
-	safe_ptr<basic_frame> compose(const safe_ptr<basic_frame>& dest_frame, const safe_ptr<basic_frame>& src_frame) 
+	safe_ptr<draw_frame> compose(const safe_ptr<draw_frame>& dest_frame, const safe_ptr<draw_frame>& src_frame) 
 	{	
 		if(info_.type == transition_type::cut)		
 			return src_frame;
@@ -126,14 +126,14 @@ struct transition_producer : public frame_producer
 		
 		// For interlaced transitions. Seperate fields into seperate frames which are transitioned accordingly.
 		
-		auto s_frame1 = make_safe<basic_frame>(src_frame);
-		auto s_frame2 = make_safe<basic_frame>(src_frame);
+		auto s_frame1 = make_safe<draw_frame>(src_frame);
+		auto s_frame2 = make_safe<draw_frame>(src_frame);
 
 		s_frame1->get_frame_transform().volume = 0.0;
 		s_frame2->get_frame_transform().volume = 1.0-delta2;
 
-		auto d_frame1 = make_safe<basic_frame>(dest_frame);
-		auto d_frame2 = make_safe<basic_frame>(dest_frame);
+		auto d_frame1 = make_safe<draw_frame>(dest_frame);
+		auto d_frame2 = make_safe<draw_frame>(dest_frame);
 		
 		d_frame1->get_frame_transform().volume = 0.0;
 		d_frame2->get_frame_transform().volume = delta2;
@@ -169,12 +169,12 @@ struct transition_producer : public frame_producer
 			d_frame2->get_frame_transform().clip_scale[0] = delta2;			
 		}
 				
-		const auto s_frame = s_frame1->get_frame_transform() == s_frame2->get_frame_transform() ? s_frame2 : basic_frame::interlace(s_frame1, s_frame2, mode_);
-		const auto d_frame = d_frame1->get_frame_transform() == d_frame2->get_frame_transform() ? d_frame2 : basic_frame::interlace(d_frame1, d_frame2, mode_);
+		const auto s_frame = s_frame1->get_frame_transform() == s_frame2->get_frame_transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, mode_);
+		const auto d_frame = d_frame1->get_frame_transform() == d_frame2->get_frame_transform() ? d_frame2 : draw_frame::interlace(d_frame1, d_frame2, mode_);
 		
-		last_frame_ = basic_frame::combine(s_frame2, d_frame2);
+		last_frame_ = draw_frame::combine(s_frame2, d_frame2);
 
-		return basic_frame::combine(s_frame, d_frame);
+		return draw_frame::combine(s_frame, d_frame);
 	}
 };
 

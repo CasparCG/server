@@ -24,7 +24,7 @@
 #include <common/memory/safe_ptr.h>
 #include <common/forward.h>
 
-#include <core/producer/frame/basic_frame.h>
+#include <core/frame/draw_frame.h>
 #include <core/video_format.h>
 #include <core/mixer/audio/audio_mixer.h>
 
@@ -39,7 +39,7 @@ FORWARD3(caspar, core, gpu, class device_buffer);
 
 namespace caspar { namespace core {
 	
-class write_frame sealed : public core::basic_frame
+class write_frame sealed : public core::draw_frame
 {
 public:	
 	explicit write_frame(const void* tag);
@@ -48,7 +48,7 @@ public:
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
 			
-	// basic_frame
+	// draw_frame
 
 	virtual void accept(struct frame_visitor& visitor) override;
 

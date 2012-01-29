@@ -35,8 +35,8 @@
 #include <common/env.h>
 
 #include <core/video_format.h>
-#include <core/producer/frame/pixel_format.h>
-#include <core/producer/frame/frame_transform.h>
+#include <core/frame/pixel_format.h>
+#include <core/frame/frame_transform.h>
 
 #include <boost/noncopyable.hpp>
 #include <common/assert.h>

@@ -24,9 +24,9 @@
 #include "color_producer.h"
 
 #include "../frame_producer.h"
-#include "../frame/basic_frame.h"
-#include "../frame/frame_factory.h"
-#include "../frame/pixel_format.h"
+#include "../../frame/draw_frame.h"
+#include "../../frame/frame_factory.h"
+#include "../../frame/pixel_format.h"
 #include "../../mixer/write_frame.h"
 
 #include <common/exception/exceptions.h>
@@ -39,7 +39,7 @@ namespace caspar { namespace core {
 	
 class color_producer : public frame_producer
 {
-	safe_ptr<basic_frame> frame_;
+	safe_ptr<draw_frame> frame_;
 	const std::wstring color_str_;
 
 public:
@@ -50,12 +50,12 @@ public:
 
 	// frame_producer
 			
-	virtual safe_ptr<basic_frame> receive(int) override
+	virtual safe_ptr<draw_frame> receive(int) override
 	{
 		return frame_;
 	}	
 
-	virtual safe_ptr<basic_frame> last_frame() const override
+	virtual safe_ptr<draw_frame> last_frame() const override
 	{
 		return frame_; 
 	}	

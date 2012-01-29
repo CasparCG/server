@@ -26,7 +26,7 @@
 #include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 
-#include <core/producer/frame/frame_visitor.h>
+#include <core/frame/frame_visitor.h>
 
 FORWARD1(boost, template<typename> class unique_future);
 FORWARD3(caspar, core, gpu, class host_buffer);
@@ -37,7 +37,7 @@ struct image_mixer : public frame_visitor
 {
 	virtual ~image_mixer(){}
 	
-	virtual void begin(class basic_frame& frame) = 0;
+	virtual void begin(class draw_frame& frame) = 0;
 	virtual void visit(class write_frame& frame) = 0;
 	virtual void end() = 0;
 

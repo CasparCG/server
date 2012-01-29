@@ -24,7 +24,7 @@
 #include <common/memory/safe_ptr.h>
 
 #include <core/video_format.h>
-#include <core/producer/frame/pixel_format.h>
+#include <core/frame/pixel_format.h>
 #include <core/mixer/audio/audio_mixer.h>
 
 enum PixelFormat;

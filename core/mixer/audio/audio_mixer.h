@@ -24,7 +24,7 @@
 #include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 
-#include <core/producer/frame/frame_visitor.h>
+#include <core/frame/frame_visitor.h>
 
 #include <tbb/cache_aligned_allocator.h>
 
@@ -41,7 +41,7 @@ class audio_mixer sealed : public frame_visitor
 public:
 	audio_mixer();
 
-	virtual void begin(core::basic_frame& frame);
+	virtual void begin(core::draw_frame& frame);
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 

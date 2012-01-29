@@ -25,12 +25,12 @@
 #include <common/reactive.h>
 #include <common/forward.h>
 
-#include <core/producer/frame/frame_factory.h>
+#include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
-#include <core/frame.h>
+#include <core/frame/data_frame.h>
 
 namespace caspar { namespace reroute {
 	
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, reactive::observable<safe_ptr<const core::frame>>& o);
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, reactive::observable<safe_ptr<const core::data_frame>>& o);
 
 }}

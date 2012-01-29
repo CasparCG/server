@@ -25,7 +25,7 @@
 
 #include "ffmpeg_consumer.h"
 
-#include <core/frame.h>
+#include <core/frame/data_frame.h>
 #include <core/mixer/audio/audio_util.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
@@ -275,7 +275,7 @@ public:
 		});
 	}
 
-	std::shared_ptr<AVFrame> convert_video_frame(const safe_ptr<const core::frame>& frame, AVCodecContext* c)
+	std::shared_ptr<AVFrame> convert_video_frame(const safe_ptr<const core::data_frame>& frame, AVCodecContext* c)
 	{
 		if(!sws_) 
 		{
@@ -296,7 +296,7 @@ public:
 		return local_av_frame;
 	}
   
-	std::shared_ptr<AVPacket> encode_video_frame(const safe_ptr<const core::frame>& frame)
+	std::shared_ptr<AVPacket> encode_video_frame(const safe_ptr<const core::data_frame>& frame)
 	{ 
 		auto c = video_st_->codec;
  
@@ -331,7 +331,7 @@ public:
 		return nullptr;
 	}
 		
-	std::shared_ptr<AVPacket> encode_audio_frame(const safe_ptr<const core::frame>& frame)
+	std::shared_ptr<AVPacket> encode_audio_frame(const safe_ptr<const core::data_frame>& frame)
 	{			
 		auto c = audio_st_->codec;
 
@@ -356,7 +356,7 @@ public:
 		return pkt;
 	}
 		 
-	void send(const safe_ptr<const core::frame>& frame)
+	void send(const safe_ptr<const core::data_frame>& frame)
 	{
 		executor_.begin_invoke([=]
 		{		
@@ -407,7 +407,7 @@ public:
 		consumer_.reset(new ffmpeg_consumer(filename_, format_desc, codec_, options_));
 	}
 	
-	virtual bool send(const safe_ptr<const core::frame>& frame) override
+	virtual bool send(const safe_ptr<const core::data_frame>& frame) override
 	{
 		consumer_->send(frame);
 		return true;

@@ -26,8 +26,8 @@
 #include <common/enum_class.h>
 #include <common/memory/safe_ptr.h>
 
-#include <core/producer/frame/pixel_format.h>
-#include <core/producer/frame/frame_transform.h>
+#include <core/frame/pixel_format.h>
+#include <core/frame/frame_transform.h>
 
 #include <boost/noncopyable.hpp>
 

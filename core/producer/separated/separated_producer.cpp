@@ -24,7 +24,7 @@
 #include "separated_producer.h"
 
 #include "../frame_producer.h"
-#include "../frame/basic_frame.h"
+#include "../../frame/draw_frame.h"
 
 #include <tbb/parallel_invoke.h>
 
@@ -34,50 +34,50 @@ struct separated_producer : public frame_producer
 {		
 	safe_ptr<frame_producer>	fill_producer_;
 	safe_ptr<frame_producer>	key_producer_;
-	safe_ptr<basic_frame>		fill_;
-	safe_ptr<basic_frame>		key_;
-	safe_ptr<basic_frame>		last_frame_;
+	safe_ptr<draw_frame>		fill_;
+	safe_ptr<draw_frame>		key_;
+	safe_ptr<draw_frame>		last_frame_;
 		
 	explicit separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key) 
 		: fill_producer_(fill)
 		, key_producer_(key)
-		, fill_(core::basic_frame::late())
-		, key_(core::basic_frame::late())
-		, last_frame_(core::basic_frame::empty())
+		, fill_(core::draw_frame::late())
+		, key_(core::draw_frame::late())
+		, last_frame_(core::draw_frame::empty())
 	{
 	}
 
 	// frame_producer
 	
-	virtual safe_ptr<basic_frame> receive(int flags) override
+	virtual safe_ptr<draw_frame> receive(int flags) override
 	{
 		tbb::parallel_invoke(
 		[&]
 		{
-			if(fill_ == core::basic_frame::late())
+			if(fill_ == core::draw_frame::late())
 				fill_ = receive_and_follow(fill_producer_, flags);
 		},
 		[&]
 		{
-			if(key_ == core::basic_frame::late())
+			if(key_ == core::draw_frame::late())
 				key_ = receive_and_follow(key_producer_, flags | frame_producer::flags::alpha_only);
 		});
 
-		if(fill_ == basic_frame::eof() || key_ == basic_frame::eof())
-			return basic_frame::eof();
+		if(fill_ == draw_frame::eof() || key_ == draw_frame::eof())
+			return draw_frame::eof();
 
-		if(fill_ == core::basic_frame::late() || key_ == core::basic_frame::late()) // One of the producers is lagging, keep them in sync.
-			return core::basic_frame::late();
+		if(fill_ == core::draw_frame::late() || key_ == core::draw_frame::late()) // One of the producers is lagging, keep them in sync.
+			return core::draw_frame::late();
 		
-		auto frame = basic_frame::fill_and_key(fill_, key_);
+		auto frame = draw_frame::fill_and_key(fill_, key_);
 
-		fill_ = basic_frame::late();
-		key_  = basic_frame::late();
+		fill_ = draw_frame::late();
+		key_  = draw_frame::late();
 
 		return last_frame_ = frame;
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const override
+	virtual safe_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_;
 	}

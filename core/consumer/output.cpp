@@ -58,7 +58,7 @@ struct output::impl
 	
 	prec_timer										sync_timer_;
 
-	boost::circular_buffer<safe_ptr<const frame>>	frames_;
+	boost::circular_buffer<safe_ptr<const data_frame>>	frames_;
 
 	executor										executor_;
 		
@@ -160,7 +160,7 @@ public:
 		return boost::range::count_if(consumers_ | boost::adaptors::map_values, [](const safe_ptr<frame_consumer>& x){return x->has_synchronization_clock();}) > 0;
 	}
 		
-	void operator()(safe_ptr<const frame> input_frame, const video_format_desc& format_desc)
+	void operator()(safe_ptr<const data_frame> input_frame, const video_format_desc& format_desc)
 	{
 		executor_.invoke([=]
 		{
@@ -258,5 +258,5 @@ void output::add(const safe_ptr<frame_consumer>& consumer){impl_->add(consumer);
 void output::remove(int index){impl_->remove(index);}
 void output::remove(const safe_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
-void output::operator()(safe_ptr<const frame> frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
+void output::operator()(safe_ptr<const data_frame> frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
 }}
