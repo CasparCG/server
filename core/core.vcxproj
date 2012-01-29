@@ -117,7 +117,12 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="frame.h" />
+    <ClInclude Include="frame\draw_frame.h" />
+    <ClInclude Include="frame\data_frame.h" />
+    <ClInclude Include="frame\frame_factory.h" />
+    <ClInclude Include="frame\frame_transform.h" />
+    <ClInclude Include="frame\frame_visitor.h" />
+    <ClInclude Include="frame\pixel_format.h" />
     <ClInclude Include="mixer\audio\audio_util.h" />
     <ClInclude Include="mixer\gpu\device_buffer.h" />
     <ClInclude Include="mixer\gpu\host_buffer.h" />
@@ -137,11 +142,6 @@
     <ClInclude Include="mixer\read_frame.h" />
     <ClInclude Include="mixer\write_frame.h" />
     <ClInclude Include="producer\color\color_producer.h" />
-    <ClInclude Include="producer\frame\basic_frame.h" />
-    <ClInclude Include="producer\frame\frame_factory.h" />
-    <ClInclude Include="producer\frame\frame_visitor.h" />
-    <ClInclude Include="producer\frame\frame_transform.h" />
-    <ClInclude Include="producer\frame\pixel_format.h" />
     <ClInclude Include="producer\frame_producer.h" />
     <ClInclude Include="producer\stage.h" />
     <ClInclude Include="producer\layer.h" />
@@ -156,6 +156,14 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="frame\draw_frame.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="frame\frame_transform.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="mixer\gpu\device_buffer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -214,14 +222,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\color\color_producer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producer\frame\basic_frame.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producer\frame\frame_transform.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

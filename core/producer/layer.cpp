@@ -24,8 +24,9 @@
 #include "layer.h"
 
 #include "frame_producer.h"
-#include "frame/basic_frame.h"
-#include "frame/frame_transform.h"
+
+#include "../frame/draw_frame.h"
+#include "../frame/frame_transform.h"
 
 #include <boost/optional.hpp>
 #include <boost/thread/future.hpp>
@@ -100,7 +101,7 @@ public:
 		is_paused_			= true;
 	}
 		
-	safe_ptr<basic_frame> receive(int flags)
+	safe_ptr<draw_frame> receive(int flags)
 	{		
 		try
 		{
@@ -108,7 +109,7 @@ public:
 				return disable_audio(foreground_->last_frame());
 		
 			auto frame = receive_and_follow(foreground_, flags);
-			if(frame == core::basic_frame::late())
+			if(frame == core::draw_frame::late())
 				return disable_audio(foreground_->last_frame());
 
 			if(auto_play_delta_)
@@ -127,7 +128,7 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			stop();
-			return core::basic_frame::empty();
+			return core::draw_frame::empty();
 		}
 	}
 
@@ -182,7 +183,7 @@ void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 bool layer::is_paused() const{return impl_->is_paused_;}
 int64_t layer::frame_number() const{return impl_->frame_number_;}
-safe_ptr<basic_frame> layer::receive(int flags) {return impl_->receive(flags);}
+safe_ptr<draw_frame> layer::receive(int flags) {return impl_->receive(flags);}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}

@@ -38,7 +38,7 @@
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
 #include <core/producer/transition/transition_producer.h>
-#include <core/producer/frame/frame_transform.h>
+#include <core/frame/frame_transform.h>
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
 #include <core/mixer/mixer.h>

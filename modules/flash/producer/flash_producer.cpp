@@ -31,9 +31,9 @@
 
 #include <core/video_format.h>
 
-#include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame/pixel_format.h>
+#include <core/frame/draw_frame.h>
+#include <core/frame/frame_factory.h>
+#include <core/frame/pixel_format.h>
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
@@ -168,7 +168,7 @@ class flash_renderer
 	const std::shared_ptr<core::frame_factory> frame_factory_;
 	
 	CComObject<caspar::flash::FlashAxContainer>* ax_;
-	safe_ptr<core::basic_frame> head_;
+	safe_ptr<core::draw_frame> head_;
 	bitmap bmp_;
 	
 	safe_ptr<diagnostics::graph> graph_;
@@ -186,7 +186,7 @@ public:
 		, filename_(filename)
 		, frame_factory_(frame_factory)
 		, ax_(nullptr)
-		, head_(core::basic_frame::empty())
+		, head_(core::draw_frame::empty())
 		, bmp_(width, height)
 		, width_(width)
 		, height_(height)
@@ -248,7 +248,7 @@ public:
 		return result;
 	}
 	
-	safe_ptr<core::basic_frame> render_frame(bool sync)
+	safe_ptr<core::draw_frame> render_frame(bool sync)
 	{
 		float frame_time = 1.0f/ax_->GetFPS();
 
@@ -256,7 +256,7 @@ public:
 		tick_timer_.restart();
 
 		if(ax_->IsEmpty())
-			return core::basic_frame::empty();		
+			return core::draw_frame::empty();		
 		
 		if(sync)			
 			timer_.tick(frame_time); // This will block the thread.
@@ -327,11 +327,11 @@ struct flash_producer : public core::frame_producer
 
 	safe_ptr<diagnostics::graph>								graph_;
 
-	std::queue<safe_ptr<core::basic_frame>>						frame_buffer_;
-	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	output_buffer_;
+	std::queue<safe_ptr<core::draw_frame>>						frame_buffer_;
+	tbb::concurrent_bounded_queue<safe_ptr<core::draw_frame>>	output_buffer_;
 	
 	mutable tbb::spin_mutex										last_frame_mutex_;
-	safe_ptr<core::basic_frame>									last_frame_;
+	safe_ptr<core::draw_frame>									last_frame_;
 		
 	std::unique_ptr<flash_renderer>								renderer_;
 
@@ -340,7 +340,7 @@ public:
 	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
-		, last_frame_(core::basic_frame::empty())
+		, last_frame_(core::draw_frame::empty())
 		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
 		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", frame_factory_->get_video_format_desc().fps > 30.0 ? 3 : 2))
@@ -365,9 +365,9 @@ public:
 
 	// frame_producer
 		
-	virtual safe_ptr<core::basic_frame> receive(int) override
+	virtual safe_ptr<core::draw_frame> receive(int) override
 	{					
-		auto frame = core::basic_frame::late();
+		auto frame = core::draw_frame::late();
 		
 		graph_->set_value("buffer-size", static_cast<float>(output_buffer_.size())/static_cast<float>(buffer_size_));
 		sync_ = output_buffer_.size() == buffer_size_;
@@ -380,7 +380,7 @@ public:
 		return frame;
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const override
+	virtual safe_ptr<core::draw_frame> last_frame() const override
 	{
 		return lock(last_frame_mutex_, [this]
 		{
@@ -399,7 +399,7 @@ public:
 					renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_, width_, height_));
 
 					while(output_buffer_.size() < buffer_size_)
-						output_buffer_.push(core::basic_frame::empty());
+						output_buffer_.push(core::draw_frame::empty());
 				}
 
 				return renderer_->call(param);	
@@ -437,7 +437,7 @@ public:
 		executor_.begin_invoke([this]
 		{
 			if(!renderer_)
-				frame_buffer_.push(core::basic_frame::empty());
+				frame_buffer_.push(core::draw_frame::empty());
 
 			if(frame_buffer_.empty())
 			{
@@ -447,7 +447,7 @@ public:
 				{
 					auto frame1 = render_frame();
 					auto frame2 = render_frame();
-					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
+					frame_buffer_.push(core::draw_frame::interlace(frame1, frame2, format_desc.field_mode));
 				}
 				else if(abs(renderer_->fps() - format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
 				{
@@ -473,7 +473,7 @@ public:
 		});
 	}
 
-	safe_ptr<core::basic_frame> render_frame()
+	safe_ptr<core::draw_frame> render_frame()
 	{	
 		auto frame = renderer_->render_frame(sync_);
 		lock(last_frame_mutex_, [&]

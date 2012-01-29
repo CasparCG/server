@@ -31,8 +31,8 @@
 
 #include <common/gl/gl_check.h>
 
-#include <core/producer/frame/frame_transform.h>
-#include <core/producer/frame/pixel_format.h>
+#include <core/frame/frame_transform.h>
+#include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
 #include <gl/glew.h>
@@ -243,7 +243,7 @@ public:
 		layers_.push_back(std::make_pair(blend_mode, std::vector<item>()));
 	}
 		
-	void begin(basic_frame& frame)
+	void begin(draw_frame& frame)
 	{
 		transform_stack_.push_back(transform_stack_.back()*frame.get_frame_transform());
 	}
@@ -274,7 +274,7 @@ public:
 };
 
 image_mixer::image_mixer(const safe_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
-void image_mixer::begin(basic_frame& frame){impl_->begin(frame);}
+void image_mixer::begin(draw_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<host_buffer>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}

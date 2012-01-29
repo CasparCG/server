@@ -38,8 +38,8 @@
 #include <common/utility/param.h>
 
 #include <core/mixer/write_frame.h>
-#include <core/producer/frame/frame_transform.h>
-#include <core/producer/frame/frame_factory.h>
+#include <core/frame/frame_transform.h>
+#include <core/frame/frame_factory.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -93,7 +93,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	safe_ptr<core::frame_factory>								frame_factory_;
 	std::vector<int>											audio_cadence_;
 
-	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
+	tbb::concurrent_bounded_queue<safe_ptr<core::draw_frame>>	frame_buffer_;
 
 	std::exception_ptr											exception_;
 		
@@ -243,14 +243,14 @@ public:
 		return S_OK;
 	}
 	
-	safe_ptr<core::basic_frame> get_frame(int flags)
+	safe_ptr<core::draw_frame> get_frame(int flags)
 	{
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
 
 		flags_ = flags;
 
-		safe_ptr<core::basic_frame> frame = core::basic_frame::late();
+		safe_ptr<core::draw_frame> frame = core::draw_frame::late();
 		if(!frame_buffer_.try_pop(frame))
 			graph_->set_tag("late-frame");
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
@@ -265,14 +265,14 @@ public:
 	
 class decklink_producer_proxy : public core::frame_producer
 {		
-	safe_ptr<core::basic_frame>		last_frame_;
+	safe_ptr<core::draw_frame>		last_frame_;
 	com_context<decklink_producer>	context_;
 	const uint32_t					length_;
 public:
 
 	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length)
 		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
-		, last_frame_(core::basic_frame::empty())
+		, last_frame_(core::draw_frame::empty())
 		, length_(length)
 	{
 		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str);}); 
@@ -280,15 +280,15 @@ public:
 	
 	// frame_producer
 				
-	virtual safe_ptr<core::basic_frame> receive(int flags) override
+	virtual safe_ptr<core::draw_frame> receive(int flags) override
 	{
 		auto frame = context_->get_frame(flags);
-		if(frame != core::basic_frame::late())
+		if(frame != core::draw_frame::late())
 			last_frame_ = frame;
 		return frame;
 	}
 
-	virtual safe_ptr<core::basic_frame> last_frame() const override
+	virtual safe_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_;
 	}

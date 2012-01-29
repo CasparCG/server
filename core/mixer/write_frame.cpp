@@ -28,8 +28,8 @@
 #include "gpu/device_buffer.h"
 
 #include <common/exception/exceptions.h>
-#include <core/producer/frame/frame_visitor.h>
-#include <core/producer/frame/pixel_format.h>
+#include <core/frame/frame_visitor.h>
+#include <core/frame/pixel_format.h>
 
 #include <boost/lexical_cast.hpp>
 

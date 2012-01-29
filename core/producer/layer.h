@@ -58,7 +58,7 @@ public:
 	safe_ptr<struct frame_producer> foreground() const; // nothrow
 	safe_ptr<struct frame_producer> background() const; // nothrow
 
-	safe_ptr<class basic_frame> receive(int flags); // nothrow
+	safe_ptr<class draw_frame> receive(int flags); // nothrow
 
 	boost::property_tree::wptree info() const;
 private:

@@ -22,8 +22,9 @@
 #include "../StdAfx.h"
 
 #include "frame_producer.h"
-#include "frame/basic_frame.h"
-#include "frame/frame_transform.h"
+
+#include "../frame/draw_frame.h"
+#include "../frame/frame_transform.h"
 
 #include "color/color_producer.h"
 #include "separated/separated_producer.h"
@@ -99,8 +100,8 @@ public:
 		}
 	}
 
-	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
-	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (*producer_)->last_frame();}
+	virtual safe_ptr<draw_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
+	virtual safe_ptr<draw_frame>								last_frame() const override		 										{return (*producer_)->last_frame();}
 	virtual std::wstring										print() const override													{return (*producer_)->print();}
 	virtual boost::property_tree::wptree 						info() const override													{return (*producer_)->info();}
 	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (*producer_)->call(str);}
@@ -132,8 +133,8 @@ public:
 		CASPAR_LOG(info) << str << L" Uninitialized.";
 	}
 
-	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (producer_)->receive(hints);}
-	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (producer_)->last_frame();}
+	virtual safe_ptr<draw_frame>								receive(int hints) override												{return (producer_)->receive(hints);}
+	virtual safe_ptr<draw_frame>								last_frame() const override		 										{return (producer_)->last_frame();}
 	virtual std::wstring										print() const override													{return (producer_)->print();}
 	virtual boost::property_tree::wptree 						info() const override													{return (producer_)->info();}
 	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (producer_)->call(str);}
@@ -150,18 +151,18 @@ safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_
 class last_frame_producer : public frame_producer
 {
 	const std::wstring			print_;
-	const safe_ptr<basic_frame>	frame_;
+	const safe_ptr<draw_frame>	frame_;
 	const uint32_t				nb_frames_;
 public:
 	last_frame_producer(const safe_ptr<frame_producer>& producer) 
 		: print_(producer->print())
-		, frame_(producer->last_frame() != basic_frame::eof() ? producer->last_frame() : basic_frame::empty())
+		, frame_(producer->last_frame() != draw_frame::eof() ? producer->last_frame() : draw_frame::empty())
 		, nb_frames_(producer->nb_frames())
 	{
 	}
 	
-	virtual safe_ptr<basic_frame> receive(int){return frame_;}
-	virtual safe_ptr<core::basic_frame> last_frame() const{return frame_;}
+	virtual safe_ptr<draw_frame> receive(int){return frame_;}
+	virtual safe_ptr<core::draw_frame> last_frame() const{return frame_;}
 	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
 	virtual uint32_t nb_frames() const {return nb_frames_;}	
 	virtual boost::property_tree::wptree info() const override
@@ -174,8 +175,8 @@ public:
 
 struct empty_frame_producer : public frame_producer
 {
-	virtual safe_ptr<basic_frame> receive(int){return basic_frame::empty();}
-	virtual safe_ptr<basic_frame> last_frame() const{return basic_frame::empty();}
+	virtual safe_ptr<draw_frame> receive(int){return draw_frame::empty();}
+	virtual safe_ptr<draw_frame> last_frame() const{return draw_frame::empty();}
 	virtual void set_frame_factory(const safe_ptr<frame_factory>&){}
 	virtual uint32_t nb_frames() const {return 0;}
 	virtual std::wstring print() const { return L"empty";}
@@ -194,10 +195,10 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 	return producer;
 }	
 
-safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints)
+safe_ptr<draw_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints)
 {	
 	auto frame = producer->receive(hints);
-	if(frame == basic_frame::eof())
+	if(frame == draw_frame::eof())
 	{
 		CASPAR_LOG(info) << producer->print() << " End Of File.";
 		auto following = producer->get_following_producer();

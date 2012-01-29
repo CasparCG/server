@@ -27,10 +27,10 @@
 #include "../util/util.h"
 
 #include <core/producer/frame_producer.h>
-#include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_transform.h>
-#include <core/producer/frame/pixel_format.h>
-#include <core/producer/frame/frame_factory.h>
+#include <core/frame/draw_frame.h>
+#include <core/frame/frame_transform.h>
+#include <core/frame/pixel_format.h>
+#include <core/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
@@ -69,7 +69,7 @@ struct frame_muxer::impl : boost::noncopyable
 {	
 	std::queue<std::queue<safe_ptr<write_frame>>>	video_streams_;
 	std::queue<core::audio_buffer>					audio_streams_;
-	std::queue<safe_ptr<basic_frame>>				frame_buffer_;
+	std::queue<safe_ptr<draw_frame>>				frame_buffer_;
 	display_mode								display_mode_;
 	const double									in_fps_;
 	const video_format_desc							format_desc_;
@@ -207,7 +207,7 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 	}
 		
-	std::shared_ptr<basic_frame> poll()
+	std::shared_ptr<draw_frame> poll()
 	{
 		if(!frame_buffer_.empty())
 		{
@@ -245,7 +245,7 @@ struct frame_muxer::impl : boost::noncopyable
 			{				
 				auto frame2 = pop_video();
 
-				frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc_.field_mode));	
+				frame_buffer_.push(core::draw_frame::interlace(frame1, frame2, format_desc_.field_mode));	
 				break;
 			}
 		case display_mode::duplicate:	
@@ -378,7 +378,7 @@ frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& fra
 	: impl_(new impl(in_fps, frame_factory, filter)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int flags){impl_->push(video_frame, flags);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
-std::shared_ptr<basic_frame> frame_muxer::poll(){return impl_->poll();}
+std::shared_ptr<draw_frame> frame_muxer::poll(){return impl_->poll();}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}
 bool frame_muxer::audio_ready() const{return impl_->audio_ready();}

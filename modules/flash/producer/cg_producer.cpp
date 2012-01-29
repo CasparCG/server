@@ -148,12 +148,12 @@ public:
 		return flash_producer_->call(str);
 	}
 
-	safe_ptr<core::basic_frame> receive(int flags)
+	safe_ptr<core::draw_frame> receive(int flags)
 	{
 		return flash_producer_->receive(flags);
 	}
 
-	safe_ptr<core::basic_frame> last_frame() const
+	safe_ptr<core::draw_frame> last_frame() const
 	{
 		return flash_producer_->last_frame();
 	}		
@@ -242,8 +242,8 @@ safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_fac
 
 cg_producer::cg_producer(const safe_ptr<core::frame_producer>& frame_producer) : impl_(new impl(frame_producer)){}
 cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
-safe_ptr<core::basic_frame> cg_producer::receive(int flags){return impl_->receive(flags);}
-safe_ptr<core::basic_frame> cg_producer::last_frame() const{return impl_->last_frame();}
+safe_ptr<core::draw_frame> cg_producer::receive(int flags){return impl_->receive(flags);}
+safe_ptr<core::draw_frame> cg_producer::last_frame() const{return impl_->last_frame();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}
 void cg_producer::play(int layer){impl_->play(layer);}

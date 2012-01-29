@@ -42,8 +42,8 @@ public:
 	
 	// frame_producer
 
-	virtual safe_ptr<core::basic_frame> receive(int) override;
-	virtual safe_ptr<core::basic_frame> last_frame() const override;
+	virtual safe_ptr<core::draw_frame> receive(int) override;
+	virtual safe_ptr<core::draw_frame> last_frame() const override;
 	virtual std::wstring print() const override;
 	virtual boost::unique_future<std::wstring> call(const std::wstring&) override;
 	virtual boost::property_tree::wptree info() const override;

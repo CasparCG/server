@@ -40,7 +40,7 @@ public:
 	
 	// output
 
-	void operator()(safe_ptr<const struct frame> frame, const struct video_format_desc& format_desc);
+	void operator()(safe_ptr<const struct data_frame> frame, const struct video_format_desc& format_desc);
 	
 	void add(const safe_ptr<struct frame_consumer>& consumer);
 	void add(int index, const safe_ptr<struct frame_consumer>& consumer);
