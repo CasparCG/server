@@ -106,11 +106,11 @@ public:
 		try
 		{
 			if(is_paused_)
-				return disable_audio(foreground_->last_frame());
+				return draw_frame::silence(foreground_->last_frame());
 		
 			auto frame = receive_and_follow(foreground_, flags);
 			if(frame == core::draw_frame::late())
-				return disable_audio(foreground_->last_frame());
+				return draw_frame::silence(foreground_->last_frame());
 
 			if(auto_play_delta_)
 			{

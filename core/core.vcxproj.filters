@@ -208,5 +208,8 @@
     <ClCompile Include="frame\draw_frame.cpp">
       <Filter>source\frame</Filter>
     </ClCompile>
+    <ClCompile Include="frame\data_frame.cpp">
+      <Filter>source\frame</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../stdafx.h"
 
 #include "draw_frame.h"
 
@@ -110,7 +110,7 @@ safe_ptr<draw_frame> draw_frame::interlace(const safe_ptr<draw_frame>& frame1, c
 	return make_safe<draw_frame>(std::move(frames));
 }
 
-safe_ptr<draw_frame> draw_frame::combine(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2)
+safe_ptr<draw_frame> draw_frame::over(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2)
 {	
 	if(frame1 == draw_frame::eof() || frame2 == draw_frame::eof())
 		return draw_frame::eof();
@@ -124,7 +124,7 @@ safe_ptr<draw_frame> draw_frame::combine(const safe_ptr<draw_frame>& frame1, con
 	return make_safe<draw_frame>(std::move(frames));
 }
 
-safe_ptr<draw_frame> draw_frame::fill_and_key(const safe_ptr<draw_frame>& fill, const safe_ptr<draw_frame>& key)
+safe_ptr<draw_frame> draw_frame::mask(const safe_ptr<draw_frame>& fill, const safe_ptr<draw_frame>& key)
 {	
 	if(fill == draw_frame::eof() || key == draw_frame::eof())
 		return draw_frame::eof();
@@ -139,11 +139,30 @@ safe_ptr<draw_frame> draw_frame::fill_and_key(const safe_ptr<draw_frame>& fill, 
 	return make_safe<draw_frame>(std::move(frames));
 }
 	
-safe_ptr<draw_frame> disable_audio(const safe_ptr<draw_frame>& frame)
+safe_ptr<draw_frame> draw_frame::silence(const safe_ptr<draw_frame>& frame)
 {
 	auto frame2 = make_safe<draw_frame>(frame);
 	frame2->get_frame_transform().volume = 0.0;
 	return frame2;
 }
+
+const safe_ptr<draw_frame>& draw_frame::eof()
+{
+	static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
+	return frame;
+}
+
+const safe_ptr<draw_frame>& draw_frame::empty()
+{
+	static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
+	return frame;
+}
+
+const safe_ptr<draw_frame>& draw_frame::late()
+{
+	static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
+	return frame;
+}
 	
+
 }}
