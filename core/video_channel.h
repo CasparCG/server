@@ -32,7 +32,7 @@ FORWARD3(caspar, core, gpu, class accelerator);
 
 namespace caspar { namespace core {
 	
-class video_channel sealed : public reactive::observable<safe_ptr<const struct frame>>
+class video_channel sealed : public reactive::observable<safe_ptr<const struct data_frame>>
 						   , boost::noncopyable
 {
 public:

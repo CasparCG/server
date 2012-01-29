@@ -38,7 +38,7 @@ namespace caspar {
 namespace core {
 
 class write_frame;
-class basic_frame;
+class draw_frame;
 struct frame_factory;
 
 }
@@ -56,7 +56,7 @@ public:
 	bool video_ready() const;
 	bool audio_ready() const;
 
-	std::shared_ptr<core::basic_frame> poll();
+	std::shared_ptr<core::draw_frame> poll();
 
 	uint32_t calc_nb_frames(uint32_t nb_frames) const;
 private:

@@ -34,7 +34,7 @@
 #include <ffmpeg/producer/filter/filter.h>
 
 #include <core/video_format.h>
-#include <core/frame.h>
+#include <core/frame/data_frame.h>
 #include <core/consumer/frame_consumer.h>
 
 #include <boost/timer.hpp>
@@ -131,7 +131,7 @@ struct ogl_consumer : boost::noncopyable
 	boost::timer					perf_timer_;
 	boost::timer					tick_timer_;
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<const core::frame>>	frame_buffer_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>>	frame_buffer_;
 
 	boost::thread			thread_;
 	tbb::atomic<bool>		is_running_;
@@ -194,7 +194,7 @@ public:
 	~ogl_consumer()
 	{
 		is_running_ = false;
-		frame_buffer_.try_push(core::frame::empty());
+		frame_buffer_.try_push(core::data_frame::empty());
 		thread_.join();
 	}
 
@@ -268,7 +268,7 @@ public:
 							is_running_ = false;
 					}
 			
-					std::shared_ptr<const core::frame> frame;
+					std::shared_ptr<const core::data_frame> frame;
 					frame_buffer_.pop(frame);
 					
 					perf_timer_.restart();
@@ -310,7 +310,7 @@ public:
 		return av_frame;
 	}
 
-	void render(const safe_ptr<const core::frame>& frame)
+	void render(const safe_ptr<const core::data_frame>& frame)
 	{			
 		if(static_cast<int>(frame->image_data().size()) != format_desc_.size)
 			return;
@@ -377,7 +377,7 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
-	bool send(const safe_ptr<const core::frame>& frame)
+	bool send(const safe_ptr<const core::data_frame>& frame)
 	{
 		if(!frame_buffer_.try_push(frame))
 			graph_->set_tag("dropped-frame");
@@ -476,7 +476,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
-	virtual bool send(const safe_ptr<const core::frame>& frame) override
+	virtual bool send(const safe_ptr<const core::data_frame>& frame) override
 	{
 		return consumer_->send(frame);
 	}

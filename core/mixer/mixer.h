@@ -52,7 +52,7 @@ public:
 	
 	// subject
 
-	safe_ptr<const struct frame> operator()(std::map<int, safe_ptr<class basic_frame>> frames, const struct video_format_desc& format_desc);
+	safe_ptr<const struct data_frame> operator()(std::map<int, safe_ptr<class draw_frame>> frames, const struct video_format_desc& format_desc);
 
 private:
 	struct impl;

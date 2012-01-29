@@ -46,7 +46,7 @@ public:
 
 	stage();
 		
-	std::map<int, safe_ptr<class basic_frame>> operator()(const struct video_format_desc& format_desc);
+	std::map<int, safe_ptr<class draw_frame>> operator()(const struct video_format_desc& format_desc);
 
 	void apply_transforms(const std::vector<transform_tuple_t>& transforms);
 	void apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");

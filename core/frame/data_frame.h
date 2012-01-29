@@ -5,14 +5,14 @@
 
 #include <stdint.h>
 
-#include "frame/pixel_format.h"
-#include "video_format.h"
+#include "pixel_format.h"
+#include "../video_format.h"
 
 namespace caspar { namespace core {
 
 struct data_frame : boost::noncopyable
 {
-	virtual ~frame()
+	virtual ~data_frame()
 	{
 	}
 
@@ -30,9 +30,9 @@ struct data_frame : boost::noncopyable
 	virtual int width() const = 0;
 	virtual int height() const = 0;
 
-	static safe_ptr<frame> empty()
+	static safe_ptr<data_frame> empty()
 	{
-		struct empty_frame : public frame
+		struct empty_frame : public data_frame
 		{
 			virtual const struct  video_format_desc& get_video_format_desc() const
 			{

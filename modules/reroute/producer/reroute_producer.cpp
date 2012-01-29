@@ -24,11 +24,11 @@
 #include "reroute_producer.h"
 
 #include <core/producer/frame_producer.h>
-#include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame/pixel_format.h>
+#include <core/frame/draw_frame.h>
+#include <core/frame/frame_factory.h>
+#include <core/frame/pixel_format.h>
 #include <core/mixer/write_frame.h>
-#include <core/frame.h>
+#include <core/frame/data_frame.h>
 
 #include <common/exception/exceptions.h>
 #include <common/diagnostics/graph.h>
@@ -46,22 +46,22 @@
 
 namespace caspar { namespace reroute {
 		
-class reroute_producer : public reactive::observer<safe_ptr<const core::frame>>
+class reroute_producer : public reactive::observer<safe_ptr<const core::data_frame>>
 					   , public core::frame_producer
 					   , public enable_safe_from_this<reroute_producer>
 {
 	const safe_ptr<diagnostics::graph>									graph_;
 	const safe_ptr<core::frame_factory>									frame_factory_;
 	
-	tbb::concurrent_bounded_queue<std::shared_ptr<const core::frame>>	input_buffer_;
-	std::queue<safe_ptr<core::basic_frame>>								frame_buffer_;
-	safe_ptr<core::basic_frame>											last_frame_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>>	input_buffer_;
+	std::queue<safe_ptr<core::draw_frame>>								frame_buffer_;
+	safe_ptr<core::draw_frame>											last_frame_;
 	uint64_t															frame_number_;
 
 public:
 	explicit reroute_producer(const safe_ptr<core::frame_factory>& frame_factory) 
 		: frame_factory_(frame_factory)
-		, last_frame_(core::basic_frame::empty())
+		, last_frame_(core::draw_frame::empty())
 		, frame_number_(0)
 	{
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -74,7 +74,7 @@ public:
 	
 	// observable
 
-	void on_next(const safe_ptr<const core::frame>& frame)
+	void on_next(const safe_ptr<const core::data_frame>& frame)
 	{
 		if(!input_buffer_.try_push(frame))
 			graph_->set_tag("dropped-frame");
@@ -82,7 +82,7 @@ public:
 
 	// frame_producer
 			
-	virtual safe_ptr<core::basic_frame> receive(int) override
+	virtual safe_ptr<core::draw_frame> receive(int) override
 	{
 		if(!frame_buffer_.empty())
 		{
@@ -91,11 +91,11 @@ public:
 			return last_frame_ = frame;
 		}
 		
-		std::shared_ptr<const core::frame> read_frame;
+		std::shared_ptr<const core::data_frame> read_frame;
 		if(input_buffer_.try_pop(read_frame) || read_frame->image_data().empty())
 		{
 			graph_->set_tag("late-frame");
-			return core::basic_frame::late();		
+			return core::draw_frame::late();		
 		}
 		
 		frame_number_++;
@@ -123,7 +123,7 @@ public:
 		return receive(0);
 	}	
 
-	virtual safe_ptr<core::basic_frame> last_frame() const override
+	virtual safe_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_; 
 	}	
@@ -141,7 +141,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, reactive::observable<safe_ptr<const core::frame>>& o)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, reactive::observable<safe_ptr<const core::data_frame>>& o)
 {
 	auto producer = make_safe<reroute_producer>(frame_factory);
 	o.subscribe(producer);

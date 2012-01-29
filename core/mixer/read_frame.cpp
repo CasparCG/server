@@ -23,7 +23,7 @@
 
 #include "read_frame.h"
 #include "../video_format.h"
-#include "../producer/frame/pixel_format.h"
+#include "../frame/pixel_format.h"
 
 #include "gpu/host_buffer.h"	
 
@@ -89,7 +89,7 @@ safe_ptr<const read_frame> read_frame::create(boost::unique_future<safe_ptr<gpu:
 //
 //void	CopyFrame( void * pSrc, void * pDest, UINT width, UINT height, UINT pitch );
 //
-//void* copy_frame(void* dest, const safe_ptr<const frame>& frame)
+//void* copy_frame(void* dest, const safe_ptr<const data_frame>& frame)
 //{
 //	auto src		= frame->image_data().begin();
 //	auto height		= 720;

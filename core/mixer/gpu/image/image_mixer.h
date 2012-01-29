@@ -27,7 +27,7 @@
 #include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 
-#include <core/producer/frame/frame_visitor.h>
+#include <core/frame/frame_visitor.h>
 
 FORWARD1(boost, template<typename> class unique_future);
 
@@ -38,7 +38,7 @@ class image_mixer sealed : public core::image_mixer
 public:
 	image_mixer(const safe_ptr<class accelerator>& ogl);
 	
-	virtual void begin(class basic_frame& frame);
+	virtual void begin(class draw_frame& frame);
 	virtual void visit(class write_frame& frame);
 	virtual void end();
 

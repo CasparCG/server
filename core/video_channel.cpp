@@ -29,9 +29,9 @@
 #include "mixer/mixer.h"
 #include "mixer/write_frame.h"
 #include "mixer/gpu/accelerator.h"
-#include "frame.h"
+#include "frame/data_frame.h"
 #include "producer/stage.h"
-#include "producer/frame/frame_factory.h"
+#include "frame/frame_factory.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
@@ -47,7 +47,7 @@ namespace caspar { namespace core {
 
 struct video_channel::impl sealed : public frame_factory
 {
-	reactive::basic_subject<safe_ptr<const frame>> frame_subject_;
+	reactive::basic_subject<safe_ptr<const data_frame>> frame_subject_;
 	const int								index_;
 
 	mutable tbb::spin_mutex					format_desc_mutex_;

@@ -25,13 +25,13 @@
 
 #include "layer.h"
 
-#include "frame/basic_frame.h"
-#include "frame/frame_factory.h"
+#include "../frame/draw_frame.h"
+#include "../frame/frame_factory.h"
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 
-#include <core/producer/frame/frame_transform.h>
+#include <core/frame/frame_transform.h>
 
 #include <boost/foreach.hpp>
 #include <boost/timer.hpp>
@@ -90,16 +90,16 @@ public:
 	{
 	}
 		
-	std::map<int, safe_ptr<basic_frame>> operator()(const struct video_format_desc& format_desc)
+	std::map<int, safe_ptr<draw_frame>> operator()(const struct video_format_desc& format_desc)
 	{		
-		return executor_.invoke([=]() -> std::map<int, safe_ptr<basic_frame>>
+		return executor_.invoke([=]() -> std::map<int, safe_ptr<draw_frame>>
 		{
-			std::map<int, safe_ptr<class basic_frame>> result;
+			std::map<int, safe_ptr<class draw_frame>> result;
 
 			try
 			{					
 				BOOST_FOREACH(auto& layer, layers_)			
-					result[layer.first] = basic_frame::empty();	
+					result[layer.first] = draw_frame::empty();	
 
 				auto format_desc2 = format_desc;
 
@@ -119,14 +119,14 @@ public:
 
 					auto frame = layer.second.receive(flags);	
 				
-					auto frame1 = make_safe<core::basic_frame>(frame);
+					auto frame1 = make_safe<core::draw_frame>(frame);
 					frame1->get_frame_transform() = transform;
 
 					if(format_desc2.field_mode != core::field_mode::progressive)
 					{				
-						auto frame2 = make_safe<core::basic_frame>(frame);
+						auto frame2 = make_safe<core::draw_frame>(frame);
 						frame2->get_frame_transform() = transforms_[layer.first].fetch_and_tick(1);
-						frame1 = core::basic_frame::interlace(frame1, frame2, format_desc2.field_mode);
+						frame1 = core::draw_frame::interlace(frame1, frame2, format_desc2.field_mode);
 					}
 
 					result[layer.first] = frame1;
@@ -333,5 +333,5 @@ boost::unique_future<safe_ptr<frame_producer>> stage::background(int index) {ret
 boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
-std::map<int, safe_ptr<class basic_frame>> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
+std::map<int, safe_ptr<class draw_frame>> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
 }}

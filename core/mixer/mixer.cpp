@@ -38,10 +38,10 @@
 #include <common/gl/gl_check.h>
 #include <common/utility/tweener.h>
 
-#include <core/producer/frame/basic_frame.h>
-#include <core/producer/frame/frame_factory.h>
-#include <core/producer/frame/frame_transform.h>
-#include <core/producer/frame/pixel_format.h>
+#include <core/frame/draw_frame.h>
+#include <core/frame/frame_factory.h>
+#include <core/frame/frame_transform.h>
+#include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
 #include <boost/foreach.hpp>
@@ -77,9 +77,9 @@ public:
 	{			
 	}	
 	
-	safe_ptr<const frame> operator()(std::map<int, safe_ptr<basic_frame>> frames, const video_format_desc& format_desc)
+	safe_ptr<const data_frame> operator()(std::map<int, safe_ptr<draw_frame>> frames, const video_format_desc& format_desc)
 	{		
-		return executor_.invoke([=]() mutable -> safe_ptr<const struct frame>
+		return executor_.invoke([=]() mutable -> safe_ptr<const struct data_frame>
 		{		
 			try
 			{				
@@ -102,7 +102,7 @@ public:
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				return frame::empty();
+				return data_frame::empty();
 			}	
 		});		
 	}
@@ -131,5 +131,5 @@ mixer::mixer(const safe_ptr<gpu::accelerator>& ogl)
 	: impl_(new impl(ogl)){}
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
-safe_ptr<const frame> mixer::operator()(std::map<int, safe_ptr<basic_frame>> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
+safe_ptr<const data_frame> mixer::operator()(std::map<int, safe_ptr<draw_frame>> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
 }}

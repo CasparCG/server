@@ -31,43 +31,43 @@
 
 namespace caspar { namespace core {
 	
-class basic_frame
+class draw_frame
 {
 public:
-	basic_frame();	
-	basic_frame(const safe_ptr<basic_frame>& frame);
-	basic_frame(safe_ptr<basic_frame>&& frame);
-	basic_frame(const std::vector<safe_ptr<basic_frame>>& frames);
-	basic_frame(std::vector<safe_ptr<basic_frame>>&& frames);
-	basic_frame(const basic_frame& other);
-	basic_frame(basic_frame&& other);
+	draw_frame();	
+	draw_frame(const safe_ptr<draw_frame>& frame);
+	draw_frame(safe_ptr<draw_frame>&& frame);
+	draw_frame(const std::vector<safe_ptr<draw_frame>>& frames);
+	draw_frame(std::vector<safe_ptr<draw_frame>>&& frames);
+	draw_frame(const draw_frame& other);
+	draw_frame(draw_frame&& other);
 
-	basic_frame& operator=(basic_frame other);
+	draw_frame& operator=(draw_frame other);
 	
-	void swap(basic_frame& other);
+	void swap(draw_frame& other);
 
 	const struct frame_transform& get_frame_transform() const;
 	struct frame_transform& get_frame_transform();
 				
-	static safe_ptr<basic_frame> interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, field_mode mode);
-	static safe_ptr<basic_frame> combine(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2);
-	static safe_ptr<basic_frame> fill_and_key(const safe_ptr<basic_frame>& fill, const safe_ptr<basic_frame>& key);
+	static safe_ptr<draw_frame> interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, field_mode mode);
+	static safe_ptr<draw_frame> combine(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2);
+	static safe_ptr<draw_frame> fill_and_key(const safe_ptr<draw_frame>& fill, const safe_ptr<draw_frame>& key);
 		
-	static const safe_ptr<basic_frame>& eof()
+	static const safe_ptr<draw_frame>& eof()
 	{
-		static safe_ptr<basic_frame> frame = make_safe<basic_frame>();
+		static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
 		return frame;
 	}
 
-	static const safe_ptr<basic_frame>& empty()
+	static const safe_ptr<draw_frame>& empty()
 	{
-		static safe_ptr<basic_frame> frame = make_safe<basic_frame>();
+		static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
 		return frame;
 	}
 
-	static const safe_ptr<basic_frame>& late()
+	static const safe_ptr<draw_frame>& late()
 	{
-		static safe_ptr<basic_frame> frame = make_safe<basic_frame>();
+		static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
 		return frame;
 	}
 	
@@ -77,6 +77,6 @@ private:
 	safe_ptr<impl> impl_;
 };
 	
-safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame);
+safe_ptr<draw_frame> disable_audio(const safe_ptr<draw_frame>& frame);
 
 }}
