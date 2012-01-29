@@ -35,48 +35,35 @@ class draw_frame
 {
 public:
 	draw_frame();	
+	draw_frame(const draw_frame& other);
+	draw_frame(draw_frame&& other);
+	draw_frame& operator=(draw_frame other);
+
 	draw_frame(const safe_ptr<draw_frame>& frame);
 	draw_frame(safe_ptr<draw_frame>&& frame);
 	draw_frame(const std::vector<safe_ptr<draw_frame>>& frames);
 	draw_frame(std::vector<safe_ptr<draw_frame>>&& frames);
-	draw_frame(const draw_frame& other);
-	draw_frame(draw_frame&& other);
-
-	draw_frame& operator=(draw_frame other);
-	
+		
 	void swap(draw_frame& other);
 
 	const struct frame_transform& get_frame_transform() const;
 	struct frame_transform& get_frame_transform();
 				
 	static safe_ptr<draw_frame> interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, field_mode mode);
-	static safe_ptr<draw_frame> combine(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2);
-	static safe_ptr<draw_frame> fill_and_key(const safe_ptr<draw_frame>& fill, const safe_ptr<draw_frame>& key);
+	static safe_ptr<draw_frame> over(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2);
+	static safe_ptr<draw_frame> mask(const safe_ptr<draw_frame>& fill, const safe_ptr<draw_frame>& key);
+	static safe_ptr<draw_frame> silence(const safe_ptr<draw_frame>& frame);
 		
-	static const safe_ptr<draw_frame>& eof()
-	{
-		static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
-		return frame;
-	}
-
-	static const safe_ptr<draw_frame>& empty()
-	{
-		static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
-		return frame;
-	}
-
-	static const safe_ptr<draw_frame>& late()
-	{
-		static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
-		return frame;
-	}
+	static const safe_ptr<draw_frame>& eof();
+	static const safe_ptr<draw_frame>& empty();
+	static const safe_ptr<draw_frame>& late();
 	
+
 	virtual void accept(frame_visitor& visitor);
 private:
 	struct impl;
 	safe_ptr<impl> impl_;
 };
 	
-safe_ptr<draw_frame> disable_audio(const safe_ptr<draw_frame>& frame);
 
 }}

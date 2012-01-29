@@ -69,7 +69,7 @@ struct separated_producer : public frame_producer
 		if(fill_ == core::draw_frame::late() || key_ == core::draw_frame::late()) // One of the producers is lagging, keep them in sync.
 			return core::draw_frame::late();
 		
-		auto frame = draw_frame::fill_and_key(fill_, key_);
+		auto frame = draw_frame::mask(fill_, key_);
 
 		fill_ = draw_frame::late();
 		key_  = draw_frame::late();

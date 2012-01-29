@@ -152,7 +152,7 @@ public:
 		graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 				
 		if(frame_buffer_.empty() && input_.eof())
-			return disable_audio(last_frame());
+			return last_frame();
 
 		if(frame_buffer_.empty())
 		{
@@ -173,7 +173,7 @@ public:
 
 	virtual safe_ptr<core::draw_frame> last_frame() const override
 	{
-		return last_frame_;
+		return core::draw_frame::silence(last_frame_);
 	}
 
 	virtual uint32_t nb_frames() const override
