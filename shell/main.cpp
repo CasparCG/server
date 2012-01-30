@@ -317,15 +317,13 @@ int main(int argc, wchar_t* argv[])
 		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (casparcg.config) for errors.";
 		system("pause");	
 	}
-	catch(caspar::gl::ogl_exception&)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled OpenGL Error in main thread. Please try to update graphics drivers for OpenGL 3.0+ Support.";
-	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
 		CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the CasparCG forums (www.casparcg.com/forum).";
+		Sleep(1000);
+		std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file folder for more information.\n\n";
+		Sleep(4000);
 	}	
 	
 	return 0;
