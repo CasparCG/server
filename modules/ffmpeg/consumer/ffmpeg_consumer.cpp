@@ -472,6 +472,8 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 
 	if(codec == L"DVCPRO")
 		codec = L"dvvideo";
+
+	codec = boost::to_lower_copy(codec);
 	
 	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
 }
