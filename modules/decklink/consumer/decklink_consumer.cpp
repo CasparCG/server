@@ -49,18 +49,32 @@ namespace caspar { namespace decklink {
 	
 struct configuration
 {
-	size_t	device_index;
-	bool	embedded_audio;
-	bool	internal_key;
-	bool	low_latency;
-	bool	key_only;
-	size_t	base_buffer_depth;
+	enum keyer_t
+	{
+		internal_keyer,
+		external_keyer,
+		default_keyer
+	};
+
+	enum latency_t
+	{
+		low_latency,
+		normal_latency,
+		default_latency
+	};
+
+	size_t		device_index;
+	bool		embedded_audio;
+	keyer_t		keyer;
+	latency_t	latency;
+	bool		key_only;
+	size_t		base_buffer_depth;
 	
 	configuration()
 		: device_index(1)
 		, embedded_audio(false)
-		, internal_key(false)
-		, low_latency(true)
+		, keyer(default_keyer)
+		, latency(default_latency)
 		, key_only(false)
 		, base_buffer_depth(3)
 	{
@@ -68,7 +82,7 @@ struct configuration
 	
 	size_t buffer_depth() const
 	{
-		return base_buffer_depth + (low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
+		return base_buffer_depth + (latency == low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
 	}
 };
 
@@ -166,6 +180,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	CComQIPtr<IDeckLinkOutput>			output_;
 	CComQIPtr<IDeckLinkConfiguration>	configuration_;
 	CComQIPtr<IDeckLinkKeyer>			keyer_;
+	CComQIPtr<IDeckLinkAttributes>		attributes_;
 
 	tbb::spin_mutex						exception_mutex_;
 	std::exception_ptr					exception_;
@@ -197,6 +212,7 @@ public:
 		, output_(decklink_)
 		, configuration_(decklink_)
 		, keyer_(decklink_)
+		, attributes_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
 		, buffer_size_(config.buffer_depth()) // Minimum buffer-size 3.
@@ -224,8 +240,8 @@ public:
 		if(config.embedded_audio)
 			enable_audio();
 
-		set_latency(config.low_latency);				
-		set_keyer(config.internal_key);
+		set_latency(config.latency);				
+		set_keyer(config.keyer);
 				
 		if(config.embedded_audio)		
 			output_->BeginAudioPreroll();		
@@ -252,34 +268,40 @@ public:
 		}
 	}
 			
-	void set_latency(bool low_latency)
+	void set_latency(configuration::latency_t latency)
 	{		
-		if(!low_latency)
+		if(latency == configuration::low_latency)
 		{
-			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
-			CASPAR_LOG(info) << print() << L" Enabled normal-latency mode";
-		}
-		else
-		{			
 			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
-			CASPAR_LOG(info) << print() << L" Enabled low-latency mode";
+			CASPAR_LOG(info) << print() << L" Enabled low-latency mode.";
+		}
+		else if(latency == configuration::normal_latency)
+		{			
+			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
+			CASPAR_LOG(info) << print() << L" Disabled low-latency mode.";
 		}
 	}
 
-	void set_keyer(bool internal_key)
+	void set_keyer(configuration::keyer_t keyer)
 	{
-		if(internal_key) 
+		if(keyer == configuration::internal_keyer) 
 		{
-			if(FAILED(keyer_->Enable(FALSE)))			
+			BOOL value = true;
+			if(SUCCEEDED(attributes_->GetFlag(BMDDeckLinkSupportsInternalKeying, &value)) && !value)
+				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";	
+			else if(FAILED(keyer_->Enable(FALSE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
 			else if(FAILED(keyer_->SetLevel(255)))			
 				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
 			else
 				CASPAR_LOG(info) << print() << L" Enabled internal keyer.";		
 		}
-		else
+		else if(keyer == configuration::external_keyer)
 		{
-			if(FAILED(keyer_->Enable(TRUE)))			
+			BOOL value = true;
+			if(SUCCEEDED(attributes_->GetFlag(BMDDeckLinkSupportsExternalKeying, &value)) && !value)
+				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
+			else if(FAILED(keyer_->Enable(TRUE)))			
 				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
 			else if(FAILED(keyer_->SetLevel(255)))			
 				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
@@ -508,7 +530,7 @@ public:
 		info.add(L"low-latency", config_.low_latency);
 		info.add(L"embedded-audio", config_.embedded_audio);
 		info.add(L"low-latency", config_.low_latency);
-		info.add(L"internal-key", config_.internal_key);
+		//info.add(L"internal-key", config_.internal_key);
 		return info;
 	}
 
@@ -533,8 +555,16 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	if(params.size() > 1)
 		config.device_index = lexical_cast_or_default<int>(params[1], config.device_index);
 	
-	config.internal_key		= std::find(params.begin(), params.end(), L"INTERNAL_KEY")	 != params.end();
-	config.low_latency		= std::find(params.begin(), params.end(), L"LOW_LATENCY")	 != params.end();
+	if(std::find(params.begin(), params.end(), L"INTERNAL_KEY")			!= params.end())
+		config.keyer = configuration::internal_keyer;
+	else if(std::find(params.begin(), params.end(), L"EXTERNAL_KEY")	!= params.end())
+		config.keyer = configuration::external_keyer;
+	else
+		config.keyer = configuration::default_keyer;
+
+	if(std::find(params.begin(), params.end(), L"LOW_LATENCY")	 != params.end())
+		config.latency = configuration::low_latency;
+
 	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
 
@@ -545,8 +575,18 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 {
 	configuration config;
 
-	config.internal_key			= ptree.get(L"internal-key",	config.internal_key);
-	config.low_latency			= ptree.get(L"low-latency",		config.low_latency);
+	auto keyer = ptree.get(L"keyer", L"external");
+	if(keyer == L"external")
+		config.keyer = configuration::external_keyer;
+	else if(keyer == L"internal")
+		config.keyer = configuration::internal_keyer;
+
+	auto latency = ptree.get(L"latency", L"normal");
+	if(latency == L"low")
+		config.latency = configuration::low_latency;
+	else if(latency == L"normal")
+		config.latency = configuration::normal_latency;
+
 	config.key_only				= ptree.get(L"key-only",		config.key_only);
 	config.device_index			= ptree.get(L"device",			config.device_index);
 	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
