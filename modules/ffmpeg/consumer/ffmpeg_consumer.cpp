@@ -464,7 +464,7 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 			auto str = *opt_it++;
 			if(str.size() > 0 && str.at(0) == L'-')
 				str = str.substr(1);
-			options.push_back(str);		
+			options.push_back(boost::to_lower_copy(str));		
 		}
 	}
 		
@@ -473,6 +473,8 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 
 	if(codec == L"DVCPRO")
 		codec = L"dvvideo";
+
+	codec = boost::to_lower_copy(codec);
 	
 	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
 }
