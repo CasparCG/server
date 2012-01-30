@@ -60,9 +60,9 @@ accelerator::accelerator()
 						
 		CASPAR_LOG(info) << L"OpenGL " << version();
 
-		if(!GLEW_VERSION_3_0)
-			CASPAR_LOG(warning) << "Missing OpenGL 3.0 support.";
-	
+		if(!GLEW_VERSION_3_0)		
+			BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 3.0 or higher. CasparCG Server will not be able to continue."));
+		
 		glGenFramebuffers(1, &fbo_);	
 		
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
