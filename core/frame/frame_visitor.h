@@ -27,6 +27,7 @@ namespace caspar { namespace core {
 	
 struct frame_visitor : boost::noncopyable
 {
+	virtual ~frame_visitor(){}
 	virtual void begin(class draw_frame& frame) = 0;
 	virtual void end() = 0;
 	virtual void visit(class write_frame& frame) = 0;
