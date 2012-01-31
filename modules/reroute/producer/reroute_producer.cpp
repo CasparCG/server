@@ -100,16 +100,13 @@ public:
 		
 		frame_number_++;
 		
-		core::pixel_format_desc desc;
 		bool double_speed	= std::abs(frame_factory_->get_video_format_desc().fps / 2.0 - read_frame->get_frame_rate()) < 0.01;		
 		bool half_speed		= std::abs(read_frame->get_frame_rate() / 2.0 - frame_factory_->get_video_format_desc().fps) < 0.01;
 
 		if(half_speed && frame_number_ % 2 == 0) // Skip frame
 			return receive(0);
 
-		desc.pix_fmt = core::pixel_format::bgra;
-		desc.planes.push_back(core::pixel_format_desc::plane(read_frame->width(), read_frame->height(), 4));
-		auto frame = frame_factory_->create_frame(this, desc);
+		auto frame = frame_factory_->create_frame(this, read_frame->get_pixel_format_desc());
 
 		A_memcpy(frame->image_data().begin(), read_frame->image_data().begin(), read_frame->image_data().size());
 		frame->commit();

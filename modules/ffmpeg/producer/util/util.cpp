@@ -120,10 +120,9 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, int width, in
 	AVPicture dummy_pict;	
 	avpicture_fill(&dummy_pict, nullptr, pix_fmt == CASPAR_PIX_FMT_LUMA ? PIX_FMT_GRAY8 : pix_fmt, width, height);
 
-	core::pixel_format_desc desc;
-	desc.pix_fmt = get_pixel_format(pix_fmt);
+	core::pixel_format_desc desc = get_pixel_format(pix_fmt);
 		
-	switch(desc.pix_fmt.value())
+	switch(desc.format.value())
 	{
 	case core::pixel_format::gray:
 	case core::pixel_format::luma:
@@ -150,12 +149,12 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, int width, in
 			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1));
 			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1));
 
-			if(desc.pix_fmt == core::pixel_format::ycbcra)						
+			if(desc.format == core::pixel_format::ycbcra)						
 				desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[3], height, 1));	
 			return desc;
 		}		
 	default:		
-		desc.pix_fmt = core::pixel_format::invalid;
+		desc.format = core::pixel_format::invalid;
 		return desc;
 	}
 }
@@ -188,7 +187,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 
 	std::shared_ptr<core::write_frame> write;
 
-	if(desc.pix_fmt == core::pixel_format::invalid)
+	if(desc.format == core::pixel_format::invalid)
 	{
 		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
 		auto target_pix_fmt = PIX_FMT_BGRA;
@@ -208,7 +207,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		
 		auto target_desc = get_pixel_format_desc(target_pix_fmt, width, height);
 
-		write = frame_factory->create_frame(tag, target_desc, get_mode(*decoded_frame));
+		write = frame_factory->create_frame(tag, target_desc);
 
 		std::shared_ptr<SwsContext> sws_context;
 
@@ -255,7 +254,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	}
 	else
 	{
-		write = frame_factory->create_frame(tag, desc, get_mode(*decoded_frame));
+		write = frame_factory->create_frame(tag, desc);
 
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 		{
@@ -286,9 +285,9 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	}
 	
 	// Fix field-order if needed
-	if(write->get_field_mode() == core::field_mode::lower && frame_factory->get_video_format_desc().field_mode == core::field_mode::upper)
+	if(get_mode(*decoded_frame) == core::field_mode::lower && frame_factory->get_video_format_desc().field_mode == core::field_mode::upper)
 		write->get_frame_transform().fill_translation[1] += 1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
-	else if(write->get_field_mode() == core::field_mode::upper && frame_factory->get_video_format_desc().field_mode == core::field_mode::lower)
+	else if(get_mode(*decoded_frame) == core::field_mode::upper && frame_factory->get_video_format_desc().field_mode == core::field_mode::lower)
 		write->get_frame_transform().fill_translation[1] -= 1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
 
 	return make_safe_ptr(write);

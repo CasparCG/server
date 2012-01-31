@@ -17,7 +17,7 @@ struct data_frame : boost::noncopyable
 {
 	virtual ~data_frame();
 
-	virtual const struct  pixel_format_desc& get_pixel_format_desc() const = 0;
+	virtual const struct pixel_format_desc& get_pixel_format_desc() const = 0;
 
 	virtual const boost::iterator_range<const uint8_t*> image_data() const = 0;
 	virtual const boost::iterator_range<const int32_t*> audio_data() const = 0;
@@ -26,7 +26,6 @@ struct data_frame : boost::noncopyable
 	virtual const boost::iterator_range<int32_t*> audio_data() = 0;
 
 	virtual double get_frame_rate() const = 0;
-	virtual field_mode get_field_mode() const = 0;
 
 	virtual int width() const = 0;
 	virtual int height() const = 0;

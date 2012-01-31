@@ -43,19 +43,17 @@ struct write_frame::impl : boost::noncopyable
 	audio_buffer									audio_data_;
 	const core::pixel_format_desc					desc_;
 	const void*										tag_;
-	core::field_mode								mode_;
 
 	impl(const void* tag)
-		: tag_(tag)
-		, mode_(core::field_mode::empty)
+		: desc_(core::pixel_format::invalid)
+		, tag_(tag)		
 	{
 	}
 
-	impl(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc, const field_mode& mode) 
+	impl(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
-		, mode_(mode)
 	{
 		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
 		{
@@ -101,8 +99,8 @@ struct write_frame::impl : boost::noncopyable
 };
 	
 write_frame::write_frame(const void* tag) : impl_(new impl(tag)){}
-write_frame::write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc, const field_mode& mode) 
-	: impl_(new impl(ogl, tag, desc, mode)){}
+write_frame::write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc) 
+	: impl_(new impl(ogl, tag, desc)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(write_frame&& other)
 {
@@ -118,7 +116,6 @@ const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return
 const std::vector<boost::shared_future<safe_ptr<gpu::device_buffer>>>& write_frame::get_textures() const{return impl_->textures_;}
 void write_frame::commit(int plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}
-core::field_mode write_frame::get_field_mode() const{return impl_->mode_;}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 }}
