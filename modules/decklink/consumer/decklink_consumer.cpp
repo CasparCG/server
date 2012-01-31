@@ -167,7 +167,7 @@ public:
 
 	// decklink_frame	
 
-	const boost::iterator_range<const int32_t*> audio_data()
+	const core::audio_buffer& audio_data()
 	{
 		return frame_->audio_data();
 	}

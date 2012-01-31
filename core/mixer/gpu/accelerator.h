@@ -121,7 +121,7 @@ public:
 
 	std::wstring version();
 
-	boost::unique_future<safe_ptr<device_buffer>> copy_async(safe_ptr<host_buffer>&& source, int width, int height, int stride);
+	boost::unique_future<safe_ptr<device_buffer>> copy_async(safe_ptr<host_buffer>& source, int width, int height, int stride);
 
 private:
 	safe_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride);

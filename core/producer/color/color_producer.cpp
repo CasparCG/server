@@ -139,13 +139,11 @@ safe_ptr<write_frame> create_color_frame(void* tag, const safe_ptr<frame_factory
 		
 	// Read color from hex-string and write to frame pixel.
 
-	auto& value = *reinterpret_cast<uint32_t*>(frame->image_data().begin());
+	auto& value = *reinterpret_cast<uint32_t*>(frame->image_data(0).begin());
 	std::wstringstream str(color2.substr(1));
 	if(!(str >> std::hex >> value) || !str.eof())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
-
-	frame->commit();
-		
+			
 	return frame;
 }
 

@@ -43,29 +43,31 @@ namespace caspar { namespace core {
 	
 class read_frame sealed : public data_frame
 {
-	read_frame(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const struct video_format_desc& format_desc);
 public:
-	static safe_ptr<const read_frame> create(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const struct video_format_desc& format_desc);
-		
+	read_frame(const void* tag, boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const struct video_format_desc& format_desc);
+	
+	// data_frame
+
 	virtual const struct  pixel_format_desc& get_pixel_format_desc() const override;
 
-	virtual const boost::iterator_range<const uint8_t*> image_data() const override;
-	virtual const boost::iterator_range<const int32_t*> audio_data() const override;
+	virtual const boost::iterator_range<const uint8_t*> image_data(int index) const override;
+	virtual const audio_buffer& audio_data() const override;
 	
 	virtual double	   get_frame_rate() const override;
 
 	virtual int width() const override;
 	virtual int height() const override;
 
-	virtual const boost::iterator_range<uint8_t*> image_data() override
+	virtual const boost::iterator_range<uint8_t*> image_data(int index) override
 	{
 		BOOST_THROW_EXCEPTION(invalid_operation());
 	}
-	virtual const boost::iterator_range<int32_t*> audio_data() override
+	virtual audio_buffer& audio_data() override
 	{
 		BOOST_THROW_EXCEPTION(invalid_operation());
 	}
-			
+		
+	virtual const void* tag() const override;	
 private:
 	struct impl;
 	std::shared_ptr<impl> impl_;
