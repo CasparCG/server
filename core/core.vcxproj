@@ -131,7 +131,6 @@
     <ClInclude Include="mixer\gpu\image\image_mixer.h" />
     <ClInclude Include="mixer\gpu\image\image_shader.h" />
     <ClInclude Include="mixer\gpu\accelerator.h" />
-    <ClInclude Include="mixer\gpu\read_frame.h" />
     <ClInclude Include="mixer\gpu\shader.h" />
     <ClInclude Include="mixer\gpu\write_frame.h" />
     <ClInclude Include="mixer\image\blend_modes.h" />
@@ -189,10 +188,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="mixer\gpu\accelerator.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\read_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

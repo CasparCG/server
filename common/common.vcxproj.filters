@@ -97,9 +97,6 @@
     <ClInclude Include="os\windows\system_info.h">
       <Filter>source\os\windows</Filter>
     </ClInclude>
-    <ClInclude Include="concurrency\com_context.h">
-      <Filter>source\concurrency</Filter>
-    </ClInclude>
     <ClInclude Include="memory\memshfl.h">
       <Filter>source\memory</Filter>
     </ClInclude>
@@ -138,6 +135,9 @@
     </ClInclude>
     <ClInclude Include="reactive.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="concurrency\defer.h">
+      <Filter>source\concurrency</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -127,9 +127,6 @@
     <ClInclude Include="frame\draw_frame.h">
       <Filter>source\frame</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\gpu\read_frame.h">
-      <Filter>source\mixer\gpu</Filter>
-    </ClInclude>
     <ClInclude Include="mixer\gpu\write_frame.h">
       <Filter>source\mixer\gpu</Filter>
     </ClInclude>
@@ -204,9 +201,6 @@
     </ClCompile>
     <ClCompile Include="frame\data_frame.cpp">
       <Filter>source\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\read_frame.cpp">
-      <Filter>source\mixer\gpu</Filter>
     </ClCompile>
     <ClCompile Include="mixer\gpu\write_frame.cpp">
       <Filter>source\mixer\gpu</Filter>

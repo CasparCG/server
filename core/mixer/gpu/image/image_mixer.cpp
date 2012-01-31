@@ -31,6 +31,7 @@
 #include "../device_buffer.h"
 
 #include <common/gl/gl_check.h>
+#include <common/concurrency/defer.h>
 
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
@@ -74,9 +75,9 @@ public:
 	{
 	}
 	
-	boost::unique_future<safe_ptr<host_buffer>> operator()(std::vector<layer> layers, const video_format_desc& format_desc)
+	boost::unique_future<safe_ptr<boost::iterator_range<const uint8_t*>>> operator()(std::vector<layer> layers, const video_format_desc& format_desc)
 	{	
-		return ogl_->begin_invoke([=]() mutable -> safe_ptr<host_buffer>
+		boost::shared_future<safe_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> safe_ptr<host_buffer>
 		{
 			auto draw_buffer = create_mixer_buffer(4, format_desc);
 
@@ -108,6 +109,12 @@ public:
 			auto result = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::usage::read_only); 
 			draw_buffer->copy_to(result);							
 			return result;
+		});
+
+		return defer([=]() mutable -> safe_ptr<boost::iterator_range<const uint8_t*>>
+		{
+			auto ptr = reinterpret_cast<const uint8_t*>(buffer.get()->data()); // ->data() can block OpenGL thread, defer it as long as possible.
+			return make_safe<boost::iterator_range<const uint8_t*>>(ptr, ptr + buffer.get()->size());
 		});
 	}
 
@@ -278,7 +285,7 @@ public:
 	{		
 	}
 	
-	boost::unique_future<safe_ptr<host_buffer>> render(const video_format_desc& format_desc)
+	boost::unique_future<safe_ptr<boost::iterator_range<const uint8_t*>>> render(const video_format_desc& format_desc)
 	{
 		return renderer_(std::move(layers_), format_desc);
 	}
@@ -288,7 +295,7 @@ image_mixer::image_mixer(const safe_ptr<accelerator>& ogl) : impl_(new impl(ogl)
 void image_mixer::begin(draw_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
-boost::unique_future<safe_ptr<host_buffer>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
+boost::unique_future<safe_ptr<boost::iterator_range<const uint8_t*>>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 
