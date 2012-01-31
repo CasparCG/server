@@ -30,8 +30,7 @@
 #include "frame_consumer.h"
 
 #include "../video_format.h"
-#include "../mixer/gpu/accelerator.h"
-#include "../mixer/read_frame.h"
+#include "../frame/data_frame.h"
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
@@ -50,18 +49,13 @@ namespace caspar { namespace core {
 	
 struct output::impl
 {		
-	const int										channel_index_;
-
-	video_format_desc								format_desc_;
-
-	std::map<int, safe_ptr<frame_consumer>>			consumers_;
-	
-	prec_timer										sync_timer_;
-
+	const int											channel_index_;
+	video_format_desc									format_desc_;
+	std::map<int, safe_ptr<frame_consumer>>				consumers_;	
+	prec_timer											sync_timer_;
 	boost::circular_buffer<safe_ptr<const data_frame>>	frames_;
 
-	executor										executor_;
-		
+	executor											executor_;		
 public:
 	impl(const video_format_desc& format_desc, int channel_index) 
 		: channel_index_(channel_index)

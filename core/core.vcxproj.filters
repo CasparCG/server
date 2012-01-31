@@ -60,12 +60,6 @@
     <ClInclude Include="mixer\audio\audio_mixer.h">
       <Filter>source\mixer\audio</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\read_frame.h">
-      <Filter>source\mixer</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\write_frame.h">
-      <Filter>source\mixer</Filter>
-    </ClInclude>
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="mixer\mixer.h">
       <Filter>source\mixer</Filter>
@@ -133,6 +127,12 @@
     <ClInclude Include="frame\draw_frame.h">
       <Filter>source\frame</Filter>
     </ClInclude>
+    <ClInclude Include="mixer\gpu\read_frame.h">
+      <Filter>source\mixer\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="mixer\gpu\write_frame.h">
+      <Filter>source\mixer\gpu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -152,12 +152,6 @@
     </ClCompile>
     <ClCompile Include="producer\separated\separated_producer.cpp">
       <Filter>source\producer\separated</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\read_frame.cpp">
-      <Filter>source\mixer</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\write_frame.cpp">
-      <Filter>source\mixer</Filter>
     </ClCompile>
     <ClCompile Include="StdAfx.cpp" />
     <ClCompile Include="mixer\mixer.cpp">
@@ -210,6 +204,12 @@
     </ClCompile>
     <ClCompile Include="frame\data_frame.cpp">
       <Filter>source\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\read_frame.cpp">
+      <Filter>source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="mixer\gpu\write_frame.cpp">
+      <Filter>source\mixer\gpu</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

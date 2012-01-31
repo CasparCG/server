@@ -34,7 +34,7 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
-#include <core/mixer/write_frame.h>
+#include <core/mixer/gpu/write_frame.h>
 
 #include <common/exception/exceptions.h>
 
