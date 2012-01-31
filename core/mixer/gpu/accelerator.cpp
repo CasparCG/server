@@ -39,19 +39,9 @@ namespace caspar { namespace core { namespace gpu {
 
 accelerator::accelerator() 
 	: executor_(L"accelerator")
-	, pattern_(nullptr)
-	, attached_texture_(0)
-	, attached_fbo_(0)
-	, active_shader_(0)
-	, read_buffer_(0)
 {
 	CASPAR_LOG(info) << L"Initializing OpenGL Device.";
-
-	std::fill(binded_textures_.begin(), binded_textures_.end(), 0);
-	std::fill(viewport_.begin(), viewport_.end(), 0);
-	std::fill(scissor_.begin(), scissor_.end(), 0);
-	std::fill(blend_func_.begin(), blend_func_.end(), 0);
-	
+		
 	invoke([=]
 	{
 		context_.reset(new sf::Context());
@@ -94,7 +84,7 @@ safe_ptr<device_buffer> accelerator::allocate_device_buffer(int width, int heigh
 	{
 		try
 		{
-			yield();
+			executor_.yield();
 			gc().wait();
 					
 			// Try again
@@ -142,7 +132,7 @@ safe_ptr<host_buffer> accelerator::allocate_host_buffer(int size, host_buffer::u
 	{
 		try
 		{
-			yield();
+			executor_.yield();
 			gc().wait();
 
 			// Try again
@@ -210,34 +200,6 @@ safe_ptr<accelerator> accelerator::create()
 //	pool.usage_count = 0;
 //}
 
-void accelerator::flush()
-{
-	GL(glFlush());	
-		
-	//try
-	//{
-	//	BOOST_FOREACH(auto& pools, device_pools_)
-	//	{
-	//		BOOST_FOREACH(auto& pool, pools)
-	//			flush_pool(*pool.second);
-	//	}
-	//	BOOST_FOREACH(auto& pools, host_pools_)
-	//	{
-	//		BOOST_FOREACH(auto& pool, pools)
-	//			flush_pool(*pool.second);
-	//	}
-	//}
-	//catch(...)
-	//{
-	//	CASPAR_LOG_CURRENT_EXCEPTION();
-	//}
-}
-
-void accelerator::yield()
-{
-	executor_.yield();
-}
-
 boost::unique_future<void> accelerator::gc()
 {	
 	return begin_invoke([=]
@@ -277,73 +239,10 @@ std::wstring accelerator::version()
 	return ver;
 }
 
-
-void accelerator::enable(GLenum cap)
-{
-	auto& val = caps_[cap];
-	if(!val)
-	{
-		glEnable(cap);
-		val = true;
-	}
-}
-
-void accelerator::disable(GLenum cap)
-{
-	auto& val = caps_[cap];
-	if(val)
-	{
-		glDisable(cap);
-		val = false;
-	}
-}
-
-void accelerator::viewport(int x, int y, int width, int height)
-{
-	if(x != viewport_[0] || y != viewport_[1] || width != viewport_[2] || height != viewport_[3])
-	{		
-		glViewport(x, y, width, height);
-		viewport_[0] = x;
-		viewport_[1] = y;
-		viewport_[2] = width;
-		viewport_[3] = height;
-	}
-}
-
-void accelerator::scissor(int x, int y, int width, int height)
-{
-	if(x != scissor_[0] || y != scissor_[1] || width != scissor_[2] || height != scissor_[3])
-	{		
-		glScissor(x, y, width, height);
-		scissor_[0] = x;
-		scissor_[1] = y;
-		scissor_[2] = width;
-		scissor_[3] = height;
-	}
-}
-
-void accelerator::stipple_pattern(const GLubyte* pattern)
-{
-	if(pattern_ != pattern)
-	{		
-		glPolygonStipple(pattern);
-		pattern_ = pattern;
-	}
-}
-
 void accelerator::attach(device_buffer& texture)
 {	
-	if(attached_texture_ != texture.id())
-	{
-		if(attached_fbo_ != fbo_)
-		{
-			glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
-			attached_fbo_ = fbo_;
-		}
-
-		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, texture.id(), 0));
-		attached_texture_ = texture.id();
-	}
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+	GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, texture.id(), 0));
 }
 
 void accelerator::clear(device_buffer& texture)
@@ -352,38 +251,9 @@ void accelerator::clear(device_buffer& texture)
 	GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
-void accelerator::read_buffer(device_buffer&)
-{
-	if(read_buffer_ != GL_COLOR_ATTACHMENT0)
-	{
-		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
-		read_buffer_ = GL_COLOR_ATTACHMENT0;
-	}
-}
-
 void accelerator::use(shader& shader)
-{
-	if(active_shader_ != shader.id())
-	{		
-		GL(glUseProgramObjectARB(shader.id()));	
-		active_shader_ = shader.id();
-	}
-}
-
-void accelerator::blend_func(int c1, int c2, int a1, int a2)
-{
-	std::array<int, 4> func = {c1, c2, a1, a2};
-
-	if(blend_func_ != func)
-	{
-		blend_func_ = func;
-		GL(glBlendFuncSeparate(c1, c2, a1, a2));
-	}
-}
-
-void accelerator::blend_func(int c1, int c2)
-{
-	blend_func(c1, c2, c1, c2);
+{	
+	GL(glUseProgramObjectARB(shader.id()));	
 }
 
 boost::unique_future<safe_ptr<device_buffer>> accelerator::copy_async(safe_ptr<host_buffer>& source, int width, int height, int stride)
