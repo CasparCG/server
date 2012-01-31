@@ -120,14 +120,16 @@ struct image_kernel::impl : boost::noncopyable
 		}
 		else
 		{
+			GL(glEnable(GL_BLEND));
+
 			switch(params.keyer.value())
 			{
 			case keyer::additive:
-				ogl_->blend_func(GL_ONE, GL_ONE);	
+				GL(glBlendFunc(GL_ONE, GL_ONE));	
 				break;
 			case keyer::linear:
-			default:				
-				ogl_->blend_func(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);	
+			default:			
+				GL(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
 			}		
 		}
 
@@ -163,23 +165,21 @@ struct image_kernel::impl : boost::noncopyable
 			shader_->set("csb",	false);	
 		
 		// Setup interlacing
-
-		if(params.transform.field_mode == core::field_mode::progressive)			
-			ogl_->disable(GL_POLYGON_STIPPLE);			
-		else			
+		
+		if(params.transform.field_mode != core::field_mode::progressive)	
 		{
-			ogl_->enable(GL_POLYGON_STIPPLE);
+			GL(glEnable(GL_POLYGON_STIPPLE));
 
 			if(params.transform.field_mode == core::field_mode::upper)
-				ogl_->stipple_pattern(upper_pattern);
+				glPolygonStipple(upper_pattern);
 			else if(params.transform.field_mode == core::field_mode::lower)
-				ogl_->stipple_pattern(lower_pattern);
+				glPolygonStipple(lower_pattern);
 		}
 
 		// Setup drawing area
 		
-		ogl_->viewport(0, 0, params.background->width(), params.background->height());
-								
+		GL(glViewport(0, 0, params.background->width(), params.background->height()));
+										
 		auto m_p = params.transform.clip_translation;
 		auto m_s = params.transform.clip_scale;
 
@@ -191,8 +191,8 @@ struct image_kernel::impl : boost::noncopyable
 			double w = static_cast<double>(params.background->width());
 			double h = static_cast<double>(params.background->height());
 		
-			ogl_->enable(GL_SCISSOR_TEST);
-			ogl_->scissor(static_cast<int>(m_p[0]*w), static_cast<int>(m_p[1]*h), static_cast<int>(m_s[0]*w), static_cast<int>(m_s[1]*h));
+			GL(glEnable(GL_SCISSOR_TEST));
+			glScissor(static_cast<int>(m_p[0]*w), static_cast<int>(m_p[1]*h), static_cast<int>(m_s[0]*w), static_cast<int>(m_s[1]*h));
 		}
 
 		auto f_p = params.transform.fill_translation;
@@ -212,11 +212,11 @@ struct image_kernel::impl : boost::noncopyable
 		glEnd();
 		
 		// Cleanup
-
-		ogl_->disable(GL_SCISSOR_TEST);	
+		
+		GL(glDisable(GL_SCISSOR_TEST));
+		GL(glDisable(GL_POLYGON_STIPPLE));
+		GL(glDisable(GL_BLEND));
 						
-		params.textures.clear();
-
 		if(blend_modes_)
 		{
 			// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
