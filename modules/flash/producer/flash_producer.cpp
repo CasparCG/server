@@ -271,8 +271,7 @@ public:
 			A_memset(bmp_.data(), 0, width_*height_*4);
 			ax_->DrawControl(bmp_);
 		
-			core::pixel_format_desc desc;
-			desc.pix_fmt = core::pixel_format::bgra;
+			core::pixel_format_desc desc = core::pixel_format::bgra;
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
 			auto frame = frame_factory_->create_frame(this, desc);
 

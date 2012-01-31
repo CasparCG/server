@@ -133,8 +133,7 @@ safe_ptr<write_frame> create_color_frame(void* tag, const safe_ptr<frame_factory
 	if(color2.length() != 9 || color2[0] != '#')
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
 	
-	core::pixel_format_desc desc;
-	desc.pix_fmt = pixel_format::bgra;
+	core::pixel_format_desc desc(pixel_format::bgra);
 	desc.planes.push_back(core::pixel_format_desc::plane(1, 1, 4));
 	auto frame = frame_factory->create_frame(tag, desc);
 		

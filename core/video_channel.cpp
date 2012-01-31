@@ -90,9 +90,9 @@ public:
 	
 	// frame_factory
 						
-	virtual safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, field_mode mode) override
+	virtual safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override
 	{		
-		return make_safe<write_frame>(ogl_, tag, desc, mode);
+		return make_safe<write_frame>(ogl_, tag, desc);
 	}
 	
 	virtual core::video_format_desc get_video_format_desc() const override

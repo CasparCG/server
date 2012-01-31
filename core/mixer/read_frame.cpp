@@ -43,8 +43,8 @@ public:
 		: image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data))
 		, video_desc_(format_desc)
+		, pixel_desc_(core::pixel_format::bgra)
 	{
-		pixel_desc_.pix_fmt = core::pixel_format::bgra;
 		pixel_desc_.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
 	}	
 	
@@ -65,7 +65,6 @@ const boost::iterator_range<const uint8_t*> read_frame::image_data() const{	retu
 const boost::iterator_range<const int32_t*> read_frame::audio_data() const{	return impl_->audio_data();}
 const pixel_format_desc& read_frame::get_pixel_format_desc() const{	return impl_->pixel_desc_;}
 double read_frame::get_frame_rate() const {return impl_->video_desc_.fps;}
-field_mode read_frame::get_field_mode() const {return impl_->video_desc_.field_mode;}
 int read_frame::width() const {return impl_->video_desc_.width;}
 int read_frame::height() const {return impl_->video_desc_.height;}
 

@@ -14,45 +14,36 @@ safe_ptr<data_frame> data_frame::empty()
 {
 	struct empty_frame : public data_frame
 	{
-		virtual const struct  video_format_desc& get_video_format_desc() const
+		virtual const struct pixel_format_desc& get_pixel_format_desc() const override
 		{
-			static video_format_desc invalid;
+			static pixel_format_desc invalid(pixel_format::invalid);
 			return invalid;
 		}
-		virtual const struct  pixel_format_desc& get_pixel_format_desc() const 
-		{
-			static pixel_format_desc invalid;
-			return invalid;
-		}
-		virtual const boost::iterator_range<const uint8_t*> image_data() const 
+		virtual const boost::iterator_range<const uint8_t*> image_data() const override
 		{
 			return boost::iterator_range<const uint8_t*>();
 		}
-		virtual const boost::iterator_range<const int32_t*> audio_data() const 
+		virtual const boost::iterator_range<const int32_t*> audio_data() const override
 		{
 			return boost::iterator_range<const int32_t*>();
 		}
-		const boost::iterator_range<uint8_t*> image_data()
+		const boost::iterator_range<uint8_t*> image_data() override
 		{
 			return boost::iterator_range<uint8_t*>();
 		}
-		const boost::iterator_range<int32_t*> audio_data()
+		const boost::iterator_range<int32_t*> audio_data() override
 		{
 			return boost::iterator_range<int32_t*>();
 		}
-		virtual double get_frame_rate() const
+		virtual double get_frame_rate() const override
 		{
 			return 0.0;
 		}
-		virtual field_mode get_field_mode() const
-		{
-			return field_mode::empty;
-		}
-		virtual int width() const
+		virtual int width() const override
 		{
 			return 0;
 		}
-		virtual int height() const
+		virtual int height() const override
 		{
 			return 0;
 		}

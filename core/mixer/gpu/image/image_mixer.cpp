@@ -53,6 +53,11 @@ struct item
 	pixel_format_desc											pix_desc;
 	std::vector<boost::shared_future<safe_ptr<device_buffer>>>	textures;
 	frame_transform												transform;
+
+	item()
+		: pix_desc(pixel_format::invalid)
+	{
+	}
 };
 
 typedef std::pair<blend_mode, std::vector<item>> layer;
@@ -206,7 +211,7 @@ private:
 			return;
 
 		draw_params draw_params;
-		draw_params.pix_desc.pix_fmt	= pixel_format::bgra;
+		draw_params.pix_desc.format		= pixel_format::bgra;
 		draw_params.pix_desc.planes		= list_of(pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4));
 		draw_params.textures			= list_of(source_buffer);
 		draw_params.transform			= frame_transform();

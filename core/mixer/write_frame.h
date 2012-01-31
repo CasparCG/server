@@ -43,7 +43,7 @@ class write_frame sealed : public core::draw_frame
 {
 public:	
 	explicit write_frame(const void* tag);
-	explicit write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const struct pixel_format_desc& desc, const field_mode& mode = field_mode::progressive);
+	explicit write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const struct pixel_format_desc& desc);
 
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
@@ -61,9 +61,7 @@ public:
 	
 	void commit(int plane_index);
 	void commit();
-	
-	field_mode get_field_mode() const;
-	
+		
 	const void* tag() const;
 
 	const struct pixel_format_desc& get_pixel_format_desc() const;
