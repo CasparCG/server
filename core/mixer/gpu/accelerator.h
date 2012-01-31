@@ -24,7 +24,6 @@
 #include "host_buffer.h"
 #include "device_buffer.h"
 
-#include <common/forward.h>
 #include <common/concurrency/executor.h>
 #include <common/memory/safe_ptr.h>
 
@@ -36,18 +35,17 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/thread/future.hpp>
 
 #include <array>
 #include <unordered_map>
-
-FORWARD1(boost, template<typename> class unique_future);
 
 namespace caspar { namespace core { namespace gpu {
 
 class shader;
 
 template<typename T>
-struct buffer_pool : boost::noncopyable
+struct buffer_pool
 {
 	tbb::atomic<int> usage_count;
 	tbb::atomic<int> flush_count;
@@ -60,18 +58,19 @@ struct buffer_pool : boost::noncopyable
 	}
 };
 
-class accelerator : public std::enable_shared_from_this<accelerator>
-				 , boost::noncopyable
+class accelerator : public std::enable_shared_from_this<accelerator>, boost::noncopyable
 {	
-	std::array<GLubyte, 32*32>		 pattern_;
-	std::array<int, 4>				 viewport_;
-	std::array<int, 4>				 scissor_;
-	std::array<GLint, 4>			 blend_func_;
+	std::unordered_map<GLenum, bool> caps_;
+	std::array<int, 4>			 viewport_;
+	std::array<int, 4>			 scissor_;
+	const GLubyte*					 pattern_;
 	GLint							 attached_texture_;
 	GLuint							 attached_fbo_;
 	GLint							 active_shader_;
-	
-	std::unordered_map<GLenum, bool> caps_;
+	std::array<GLint, 16>			 binded_textures_;
+	std::array<GLint, 4>			 blend_func_;
+	GLenum							 read_buffer_;
+
 	std::unique_ptr<sf::Context> context_;
 	
 	std::array<tbb::concurrent_unordered_map<int, safe_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
@@ -91,7 +90,7 @@ public:
 	void disable(GLenum cap);
 	void viewport(int x, int y, int width, int height);
 	void scissor(int x, int y, int width, int height);
-	void stipple_pattern(const std::array<GLubyte, 32*32>& pattern);
+	void stipple_pattern(const GLubyte* pattern);
 
 	void attach(device_buffer& texture);
 	void clear(device_buffer& texture);
@@ -100,7 +99,11 @@ public:
 	void blend_func(int c1, int c2);
 	
 	void use(shader& shader);
-		
+
+	void read_buffer(device_buffer& texture);
+
+	void flush();
+
 	// thread-afe
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
@@ -117,11 +120,12 @@ public:
 	safe_ptr<device_buffer> create_device_buffer(int width, int height, int stride);
 	safe_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage usage);
 	
+	void yield();
 	boost::unique_future<void> gc();
 
 	std::wstring version();
 
-	boost::unique_future<safe_ptr<device_buffer>> copy_async(safe_ptr<host_buffer>& source, int width, int height, int stride);
+	boost::unique_future<safe_ptr<device_buffer>> accelerator::copy_async(safe_ptr<host_buffer>& source, int width, int height, int stride);
 
 private:
 	safe_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride);
