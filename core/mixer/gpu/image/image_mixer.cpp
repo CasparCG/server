@@ -113,7 +113,7 @@ public:
 
 		return defer([=]() mutable -> boost::iterator_range<const uint8_t*>
 		{
-			auto ptr = reinterpret_cast<const uint8_t*>(buffer.get()->data()); // ->data() can block OpenGL thread, defer it as long as possible.
+			auto ptr = reinterpret_cast<const uint8_t*>(buffer.get()->data()); // .get() and ->data() can block calling thread, ->data() can also block OpenGL thread, defer it as long as possible.
 			return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());
 		});
 	}
