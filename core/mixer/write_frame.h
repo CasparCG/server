@@ -40,26 +40,25 @@ struct frame_visitor;
 struct pixel_format_desc;
 class ogl_device;	
 
-class write_frame : public core::basic_frame, boost::noncopyable
+class write_frame : public core::basic_frame
 {
+	write_frame(const write_frame&);
+	write_frame& operator=(const write_frame&);
 public:	
 	explicit write_frame(const void* tag);
 	explicit write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc);
 
-	write_frame(const write_frame& other);
 	write_frame(write_frame&& other);
-
-	write_frame& operator=(const write_frame& other);
 	write_frame& operator=(write_frame&& other);
+
+	void swap(write_frame& other);
 			
 	// basic_frame
 
 	virtual void accept(frame_visitor& visitor) override;
 
 	// write _frame
-
-	void swap(write_frame& other);
-			
+				
 	boost::iterator_range<uint8_t*> image_data(size_t plane_index = 0);	
 	audio_buffer& audio_data();
 	
