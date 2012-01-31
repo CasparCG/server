@@ -198,8 +198,15 @@ struct image_kernel::impl : boost::noncopyable
 		auto f_p = params.transform.fill_translation;
 		auto f_s = params.transform.fill_scale;
 		
-		// Set render target
-		
+		// Synchronize and set render target
+								
+		if(blend_modes_)
+		{
+			// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
+			// This allows us to use framebuffer (background) both as source and target while blending.
+			glTextureBarrierNV(); 
+		}
+
 		ogl_->attach(*params.background);
 		
 		// Draw
@@ -216,13 +223,6 @@ struct image_kernel::impl : boost::noncopyable
 		GL(glDisable(GL_SCISSOR_TEST));
 		GL(glDisable(GL_POLYGON_STIPPLE));
 		GL(glDisable(GL_BLEND));
-						
-		if(blend_modes_)
-		{
-			// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
-			// This allows us to use framebuffer (background) both as source and target while blending.
-			glTextureBarrierNV(); 
-		}
 	}
 };
 
