@@ -19,13 +19,13 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../stdafx.h"
+#include "../../stdafx.h"
 
 #include "write_frame.h"
 
-#include "gpu/accelerator.h"
-#include "gpu/host_buffer.h"
-#include "gpu/device_buffer.h"
+#include "accelerator.h"
+#include "host_buffer.h"
+#include "device_buffer.h"
 
 #include <common/exception/exceptions.h>
 #include <core/frame/frame_visitor.h>

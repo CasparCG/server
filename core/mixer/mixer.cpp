@@ -23,13 +23,15 @@
 
 #include "mixer.h"
 
-#include "read_frame.h"
-#include "write_frame.h"
+#include "../frame/data_frame.h"
 
 #include "audio/audio_mixer.h"
 #include "image/image_mixer.h"
+
 #include "gpu/image/image_mixer.h"
 #include "gpu/accelerator.h"
+#include "gpu/read_frame.h"
+#include "gpu/write_frame.h"
 
 #include <common/env.h>
 #include <common/concurrency/executor.h>

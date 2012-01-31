@@ -19,16 +19,15 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../stdafx.h"
+#include "../../stdafx.h"
 
 #include "read_frame.h"
-#include "../video_format.h"
-#include "../frame/pixel_format.h"
 
-#include "gpu/host_buffer.h"	
+#include "host_buffer.h"
 
-#include <tbb/mutex.h>
-
+#include "../../video_format.h"
+#include "../../frame/pixel_format.h"
+	
 namespace caspar { namespace core {
 																																							
 struct read_frame::impl : boost::noncopyable
