@@ -133,6 +133,7 @@ public:
 			GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
 			GL(glBindTexture(GL_TEXTURE_2D, 0));
 			dest->unbind();
+			GL(glFlush());
 		}, high_priority);
 	}
 };

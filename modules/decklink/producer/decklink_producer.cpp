@@ -31,7 +31,7 @@
 #include "../../ffmpeg/producer/muxer/frame_muxer.h"
 #include "../../ffmpeg/producer/muxer/display_mode.h"
 
-#include <common/concurrency/com_context.h>
+#include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/log.h>
@@ -265,24 +265,37 @@ public:
 	
 class decklink_producer_proxy : public core::frame_producer
 {		
-	safe_ptr<core::draw_frame>		last_frame_;
-	com_context<decklink_producer>	context_;
-	const uint32_t					length_;
+	safe_ptr<core::draw_frame>			last_frame_;
+	std::unique_ptr<decklink_producer>	producer_;
+	const uint32_t						length_;
+	executor							executor_;
 public:
-
 	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length)
-		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
+		: executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, last_frame_(core::draw_frame::empty())
 		, length_(length)
 	{
-		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str);}); 
+		executor_.invoke([=]
+		{
+			CoInitialize(nullptr);
+			producer_.reset(new decklink_producer(format_desc, device_index, frame_factory, filter_str));
+		});
+	}
+
+	~decklink_producer_proxy()
+	{		
+		executor_.invoke([=]
+		{
+			producer_.reset();
+			CoUninitialize();
+		});
 	}
 	
 	// frame_producer
 				
 	virtual safe_ptr<core::draw_frame> receive(int flags) override
 	{
-		auto frame = context_->get_frame(flags);
+		auto frame = producer_->get_frame(flags);
 		if(frame != core::draw_frame::late())
 			last_frame_ = frame;
 		return frame;
@@ -300,7 +313,7 @@ public:
 	
 	std::wstring print() const override
 	{
-		return context_->print();
+		return producer_->print();
 	}
 
 	virtual boost::property_tree::wptree info() const override

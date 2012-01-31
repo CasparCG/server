@@ -82,14 +82,11 @@ write_frame::write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag,
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(write_frame&& other)
 {
-	write_frame temp(std::move(other));
-	temp.swap(*this);
+	impl_ = std::move(other.impl_);
 	return *this;
 }
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
-
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
-
 const  pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
 const boost::iterator_range<const uint8_t*> write_frame::image_data(int index) const{return impl_->image_data(index);}
 const audio_buffer& write_frame::audio_data() const{return impl_->audio_data_;}
