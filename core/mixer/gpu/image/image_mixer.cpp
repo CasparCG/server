@@ -24,10 +24,11 @@
 #include "image_mixer.h"
 
 #include "image_kernel.h"
+
+#include "../write_frame.h"
 #include "../accelerator.h"
 #include "../host_buffer.h"
 #include "../device_buffer.h"
-#include "../../write_frame.h"
 
 #include <common/gl/gl_check.h>
 

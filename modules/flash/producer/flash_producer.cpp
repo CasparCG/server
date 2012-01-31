@@ -34,7 +34,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
-#include <core/mixer/write_frame.h>
+#include <core/mixer/gpu/write_frame.h>
 
 #include <common/env.h>
 #include <common/concurrency/executor.h>

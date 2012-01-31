@@ -27,7 +27,7 @@
 
 #include "consumer/output.h"
 #include "mixer/mixer.h"
-#include "mixer/write_frame.h"
+#include "mixer/gpu/write_frame.h"
 #include "mixer/gpu/accelerator.h"
 #include "frame/data_frame.h"
 #include "producer/stage.h"

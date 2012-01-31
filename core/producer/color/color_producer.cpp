@@ -23,11 +23,11 @@
 
 #include "color_producer.h"
 
-#include "../frame_producer.h"
-#include "../../frame/draw_frame.h"
-#include "../../frame/frame_factory.h"
-#include "../../frame/pixel_format.h"
-#include "../../mixer/write_frame.h"
+#include <core/producer/frame_producer.h>
+#include <core/frame/draw_frame.h>
+#include <core/frame/frame_factory.h>
+#include <core/frame/pixel_format.h>
+#include <core/mixer/gpu/write_frame.h>
 
 #include <common/exception/exceptions.h>
 
