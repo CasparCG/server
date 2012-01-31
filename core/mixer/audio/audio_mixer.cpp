@@ -131,7 +131,8 @@ public:
 						
 			const float prev_volume = static_cast<float>(prev_transform.volume);
 			const float next_volume = static_cast<float>(next_transform.volume);
-									
+						
+			// TODO: Move volume mixing into code below, in order to support audio sample counts not corresponding to frame audio samples.
 			auto alpha = (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/format_desc.audio_channels);
 			
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
