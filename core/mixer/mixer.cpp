@@ -30,7 +30,6 @@
 
 #include "gpu/image/image_mixer.h"
 #include "gpu/accelerator.h"
-#include "gpu/read_frame.h"
 #include "gpu/write_frame.h"
 
 #include <common/env.h>
@@ -58,6 +57,71 @@
 #include <vector>
 
 namespace caspar { namespace core {
+
+struct mixed_frame : public data_frame
+{
+	mutable boost::unique_future<safe_ptr<boost::iterator_range<const uint8_t*>>>	image_data_;
+	const audio_buffer																audio_data_;
+	const video_format_desc															video_desc_;
+	pixel_format_desc																pixel_desc_;
+	const void*																		tag_;
+
+public:
+	mixed_frame(const void* tag, boost::unique_future<safe_ptr<boost::iterator_range<const uint8_t*>>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
+		: tag_(tag)
+		, image_data_(std::move(image_data))
+		, audio_data_(std::move(audio_data))
+		, video_desc_(format_desc)
+		, pixel_desc_(core::pixel_format::bgra)
+	{
+		pixel_desc_.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
+	}	
+	
+	const boost::iterator_range<const uint8_t*> image_data(int index = 0) const override
+	{
+		return *image_data_.get();
+	}
+		
+	const boost::iterator_range<uint8_t*> image_data(int) override
+	{
+		BOOST_THROW_EXCEPTION(invalid_operation());
+	}
+	
+	virtual const struct pixel_format_desc& get_pixel_format_desc() const override
+	{
+		return pixel_desc_;
+	}
+
+	virtual const audio_buffer& audio_data() const override
+	{
+		return audio_data_;
+	}
+
+	virtual audio_buffer& audio_data() override
+	{
+		BOOST_THROW_EXCEPTION(invalid_operation());
+	}
+
+	virtual double get_frame_rate() const override
+	{
+		return video_desc_.fps;
+	}
+
+	virtual int width() const override
+	{
+		return video_desc_.width;
+	}
+
+	virtual int height() const override
+	{
+		return video_desc_.height;
+	}
+
+	virtual const void* tag() const override
+	{
+		return tag_;
+	}
+};
 		
 struct mixer::impl : boost::noncopyable
 {			
@@ -99,7 +163,7 @@ public:
 				auto image = (*image_mixer_)(format_desc);
 				auto audio = audio_mixer_(format_desc);
 
-				return make_safe<read_frame>(this, std::move(image), std::move(audio), format_desc);	
+				return make_safe<mixed_frame>(this, std::move(image), std::move(audio), format_desc);	
 			}
 			catch(...)
 			{

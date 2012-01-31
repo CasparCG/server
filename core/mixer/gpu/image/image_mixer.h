@@ -45,7 +45,7 @@ public:
 	void begin_layer(blend_mode blend_mode);
 	void end_layer();
 		
-	virtual boost::unique_future<safe_ptr<class host_buffer>> operator()(const struct video_format_desc& format_desc) override;
+	virtual boost::unique_future<safe_ptr<boost::iterator_range<const uint8_t*>>> operator()(const struct video_format_desc& format_desc) override;
 		
 private:
 	struct impl;

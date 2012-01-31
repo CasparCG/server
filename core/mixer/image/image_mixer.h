@@ -29,7 +29,6 @@
 #include <core/frame/frame_visitor.h>
 
 FORWARD1(boost, template<typename> class unique_future);
-FORWARD3(caspar, core, gpu, class host_buffer);
 
 namespace caspar { namespace core {
 	
@@ -44,7 +43,7 @@ struct image_mixer : public frame_visitor
 	virtual void begin_layer(blend_mode blend_mode) = 0;
 	virtual void end_layer() = 0;
 		
-	virtual boost::unique_future<safe_ptr<gpu::host_buffer>> operator()(const struct video_format_desc& format_desc) = 0;
+	virtual boost::unique_future<safe_ptr<boost::iterator_range<const uint8_t*>>> operator()(const struct video_format_desc& format_desc) = 0;
 };
 
 }}
