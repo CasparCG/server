@@ -250,12 +250,10 @@ struct frame_muxer::impl : boost::noncopyable
 			}
 		case display_mode::duplicate:	
 			{
-				// TODO: Test this!
-				auto frame2				= frame1;
-				boost::range::push_back(frame2->audio_data(), pop_audio());
+				boost::range::push_back(frame1->audio_data(), pop_audio());
 
 				frame_buffer_.push(frame1);
-				frame_buffer_.push(frame2);
+				frame_buffer_.push(frame1);
 				break;
 			}
 		case display_mode::half:	
