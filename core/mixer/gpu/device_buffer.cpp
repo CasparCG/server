@@ -129,6 +129,7 @@ public:
 			dest->unmap();
 			dest->bind();
 			GL(glBindTexture(GL_TEXTURE_2D, id_));
+			GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
 			GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
 			GL(glBindTexture(GL_TEXTURE_2D, 0));
 			dest->unbind();

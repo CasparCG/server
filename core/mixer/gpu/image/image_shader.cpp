@@ -297,11 +297,11 @@ safe_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes)
 		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
 	}
 						
-	if(!g_blend_modes)
-	{
-		ogl.blend_func(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
-		CASPAR_LOG(info) << L"[shader] Blend-modes are disabled.";
-	}
+	//if(!g_blend_modes)
+	//{
+	//	ogl.blend_func(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
+	//	CASPAR_LOG(info) << L"[shader] Blend-modes are disabled.";
+	//}
 
 	blend_modes = g_blend_modes;
 	return make_safe_ptr(g_shader);
