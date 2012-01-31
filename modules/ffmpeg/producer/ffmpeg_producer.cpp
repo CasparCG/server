@@ -83,10 +83,7 @@ struct ffmpeg_producer : public core::frame_producer
 
 	safe_ptr<core::draw_frame>									last_frame_;
 	
-	std::queue<std::pair<safe_ptr<core::draw_frame>, uint32_t>>	frame_buffer_;
-
 	int64_t														frame_number_;
-	uint32_t													file_frame_number_;
 	
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
@@ -146,29 +143,22 @@ public:
 	{		
 		frame_timer_.restart();
 				
-		for(int n = 0; n < 16 && frame_buffer_.size() < 2; ++n)
-			try_decode_frame(flags);
-		
+		std::shared_ptr<core::draw_frame> frame = try_decode_frame(flags);
+							
 		graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 				
-		if(frame_buffer_.empty() && input_.eof())
-			return last_frame();
-
-		if(frame_buffer_.empty())
+		if(!frame)
 		{
-			graph_->set_tag("underflow");	
-			return core::draw_frame::late();			
+			if(!input_.eof())				
+				graph_->set_tag("underflow");	
+			return last_frame();
 		}
-		
-		auto frame = frame_buffer_.front(); 
-		frame_buffer_.pop();
-		
+				
 		++frame_number_;
-		file_frame_number_ = frame.second;
 
 		graph_->set_text(print());
 
-		return last_frame_ = frame.first;
+		return last_frame_ = make_safe_ptr(frame);
 	}
 
 	virtual safe_ptr<core::draw_frame> last_frame() const override
@@ -196,6 +186,11 @@ public:
 		file_nb_frames = std::max(file_nb_frames, audio_decoder_ ? audio_decoder_->nb_frames() : 0);
 		return file_nb_frames;
 	}
+
+	uint32_t file_frame_number() const
+	{
+		return video_decoder_ ? video_decoder_->file_frame_number() : 0;
+	}
 	
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{
@@ -208,7 +203,7 @@ public:
 	{
 		return L"ffmpeg[" + boost::filesystem::path(filename_).filename().wstring() + L"|" 
 						  + print_mode() + L"|" 
-						  + boost::lexical_cast<std::wstring>(file_frame_number_) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
+						  + boost::lexical_cast<std::wstring>(file_frame_number()) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 	}
 
 	boost::property_tree::wptree info() const override
@@ -224,7 +219,7 @@ public:
 		info.add(L"frame-number",		frame_number_);
 		auto nb_frames2 = nb_frames();
 		info.add(L"nb-frames",			nb_frames2 == std::numeric_limits<int64_t>::max() ? -1 : nb_frames2);
-		info.add(L"file-frame-number",	file_frame_number_);
+		info.add(L"file-frame-number",	file_frame_number());
 		info.add(L"file-nb-frames",		file_nb_frames());
 		return info;
 	}
@@ -257,58 +252,58 @@ public:
 		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
 
-	void try_decode_frame(int flags)
+	std::shared_ptr<core::draw_frame> try_decode_frame(int flags)
 	{
-		std::shared_ptr<AVPacket> pkt;
+		std::shared_ptr<core::draw_frame> result = muxer_->poll();
 
-		for(int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || (audio_decoder_ && !audio_decoder_->ready())) && input_.try_pop(pkt); ++n)
+		for(int n = 0; n < 32 && !result; ++n, result = muxer_->poll())
 		{
-			if(video_decoder_)
-				video_decoder_->push(pkt);
-			if(audio_decoder_)
-				audio_decoder_->push(pkt);
-		}
+			std::shared_ptr<AVPacket> pkt;
+
+			for(int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || (audio_decoder_ && !audio_decoder_->ready())) && input_.try_pop(pkt); ++n)
+			{
+				if(video_decoder_)
+					video_decoder_->push(pkt);
+				if(audio_decoder_)
+					audio_decoder_->push(pkt);
+			}
 		
-		std::shared_ptr<AVFrame>			video;
-		std::shared_ptr<core::audio_buffer> audio;
+			std::shared_ptr<AVFrame>			video;
+			std::shared_ptr<core::audio_buffer> audio;
 
-		tbb::parallel_invoke(
-		[&]
-		{
-			if(!muxer_->video_ready() && video_decoder_)	
-				video = video_decoder_->poll();	
-		},
-		[&]
-		{		
-			if(!muxer_->audio_ready() && audio_decoder_)		
-				audio = audio_decoder_->poll();		
-		});
+			tbb::parallel_invoke(
+			[&]
+			{
+				if(!muxer_->video_ready() && video_decoder_)	
+					video = video_decoder_->poll();	
+			},
+			[&]
+			{		
+				if(!muxer_->audio_ready() && audio_decoder_)		
+					audio = audio_decoder_->poll();		
+			});
 		
-		muxer_->push(video, flags);
-		muxer_->push(audio);
+			muxer_->push(video, flags);
+			muxer_->push(audio);
 
-		if(!audio_decoder_)
-		{
-			if(video == flush_video())
-				muxer_->push(flush_audio());
-			else if(!muxer_->audio_ready())
-				muxer_->push(empty_audio());
+			if(!audio_decoder_)
+			{
+				if(video == flush_video())
+					muxer_->push(flush_audio());
+				else if(!muxer_->audio_ready())
+					muxer_->push(empty_audio());
+			}
+
+			if(!video_decoder_)
+			{
+				if(audio == flush_audio())
+					muxer_->push(flush_video(), 0);
+				else if(!muxer_->video_ready())
+					muxer_->push(empty_video(), 0);
+			}
 		}
 
-		if(!video_decoder_)
-		{
-			if(audio == flush_audio())
-				muxer_->push(flush_video(), 0);
-			else if(!muxer_->video_ready())
-				muxer_->push(empty_video(), 0);
-		}
-		
-		uint32_t file_frame_number = 0;
-		file_frame_number = std::max(file_frame_number, video_decoder_ ? video_decoder_->file_frame_number() : 0);
-		//file_frame_number = std::max(file_frame_number, audio_decoder_ ? audio_decoder_->file_frame_number() : 0);
-
-		for(auto frame = muxer_->poll(); frame; frame = muxer_->poll())
-			frame_buffer_.push(std::make_pair(make_safe_ptr(frame), file_frame_number));
+		return result;
 	}
 };
 
