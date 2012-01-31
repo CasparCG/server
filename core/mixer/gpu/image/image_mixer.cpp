@@ -258,7 +258,12 @@ public:
 	{			
 		item item;
 		item.pix_desc	= frame.get_pixel_format_desc();
-		item.textures	= frame.get_textures();
+
+		auto buffers = frame.get_buffers();
+		auto planes  = frame.get_pixel_format_desc().planes;
+		for(size_t n = 0; n < planes.size(); ++n)		
+			item.textures.push_back(ogl_->copy_async(buffers.at(n), planes[n].width, planes[n].height, planes[n].channels));
+				
 		item.transform	= transform_stack_.back();
 
 		layers_.back().second.push_back(item);

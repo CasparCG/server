@@ -340,7 +340,7 @@ void accelerator::blend_func(int c1, int c2)
 	blend_func(c1, c2, c1, c2);
 }
 	
-boost::unique_future<safe_ptr<device_buffer>> accelerator::copy_async(safe_ptr<host_buffer>&& source, int width, int height, int stride)
+boost::unique_future<safe_ptr<device_buffer>> accelerator::copy_async(safe_ptr<host_buffer>& source, int width, int height, int stride)
 {
 	return executor_.begin_invoke([=]() -> safe_ptr<device_buffer>
 	{

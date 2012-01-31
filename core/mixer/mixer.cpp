@@ -99,7 +99,7 @@ public:
 				auto image = (*image_mixer_)(format_desc);
 				auto audio = audio_mixer_(format_desc);
 
-				return read_frame::create(std::move(image), std::move(audio), format_desc);	
+				return make_safe<read_frame>(this, std::move(image), std::move(audio), format_desc);	
 			}
 			catch(...)
 			{
