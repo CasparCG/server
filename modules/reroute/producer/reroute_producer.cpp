@@ -108,8 +108,7 @@ public:
 
 		auto frame = frame_factory_->create_frame(this, read_frame->get_pixel_format_desc());
 
-		A_memcpy(frame->image_data().begin(), read_frame->image_data().begin(), read_frame->image_data().size());
-		frame->commit();
+		A_memcpy(frame->image_data(0).begin(), read_frame->image_data().begin(), read_frame->image_data().size());
 		boost::push_back(frame->audio_data(), read_frame->audio_data());
 
 		frame_buffer_.push(frame);	

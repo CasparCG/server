@@ -36,10 +36,12 @@ struct read_frame::impl : boost::noncopyable
 	const audio_buffer									audio_data_;
 	const video_format_desc								video_desc_;
 	pixel_format_desc									pixel_desc_;
+	const void*											tag_;
 
 public:
-	impl(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
-		: image_data_(std::move(image_data))
+	impl(const void* tag, boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
+		: tag_(tag)
+		, image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data))
 		, video_desc_(format_desc)
 		, pixel_desc_(core::pixel_format::bgra)
@@ -47,30 +49,22 @@ public:
 		pixel_desc_.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
 	}	
 	
-	const boost::iterator_range<const uint8_t*> image_data()
+	const boost::iterator_range<const uint8_t*> image_data(int)
 	{
 		auto ptr = static_cast<const uint8_t*>(image_data_.get()->data());
 		return boost::iterator_range<const uint8_t*>(ptr, ptr + image_data_.get()->size());
 	}
-	const boost::iterator_range<const int32_t*> audio_data()
-	{
-		return boost::iterator_range<const int32_t*>(audio_data_.data(), audio_data_.data() + audio_data_.size());
-	}
 };
 
-read_frame::read_frame(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
-	: impl_(new impl(std::move(image_data), std::move(audio_data), format_desc)){}
-const boost::iterator_range<const uint8_t*> read_frame::image_data() const{	return impl_->image_data();}
-const boost::iterator_range<const int32_t*> read_frame::audio_data() const{	return impl_->audio_data();}
+read_frame::read_frame(const void* tag, boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
+	: impl_(new impl(tag, std::move(image_data), std::move(audio_data), format_desc)){}
+const boost::iterator_range<const uint8_t*> read_frame::image_data(int index) const{	return impl_->image_data(index);}
+const audio_buffer& read_frame::audio_data() const{	return impl_->audio_data_;}
 const pixel_format_desc& read_frame::get_pixel_format_desc() const{	return impl_->pixel_desc_;}
 double read_frame::get_frame_rate() const {return impl_->video_desc_.fps;}
 int read_frame::width() const {return impl_->video_desc_.width;}
 int read_frame::height() const {return impl_->video_desc_.height;}
-
-safe_ptr<const read_frame> read_frame::create(boost::unique_future<safe_ptr<gpu::host_buffer>>&& image_data, audio_buffer&& audio_data, const struct video_format_desc& format_desc)
-{
-	return safe_ptr<const read_frame>(new read_frame(std::move(image_data), std::move(audio_data), format_desc));
-}
+const void* read_frame::tag() const{return impl_->tag_;}
 
 //#include <tbb/scalable_allocator.h>
 //#include <tbb/parallel_for.h>

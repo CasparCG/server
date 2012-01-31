@@ -233,8 +233,8 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		avcodec_get_frame_defaults(av_frame.get());			
 		if(target_pix_fmt == PIX_FMT_BGRA)
 		{
-			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
-			CASPAR_VERIFY(size == write->image_data().size()); 
+			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data(0).begin(), PIX_FMT_BGRA, width, height);
+			CASPAR_VERIFY(size == write->image_data(0).size()); 
 		}
 		else
 		{
@@ -248,9 +248,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		}
 
 		sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
-		pool.push(sws_context);
-
-		write->commit();		
+		pool.push(sws_context);	
 	}
 	else
 	{
@@ -273,8 +271,6 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 				for(int y = r.begin(); y != r.end(); ++y)
 					A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 			}, ap);
-
-			write->commit(n);
 		}
 	}
 

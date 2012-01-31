@@ -89,19 +89,18 @@ struct image_scroll_producer : public core::frame_producer
 				desc.planes.push_back(core::pixel_format_desc::plane(width_, format_desc_.height, 4));
 				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
 
-				if(count >= frame->image_data().size())
+				if(count >= frame->image_data(0).size())
 				{	
-					std::copy_n(bytes + count - frame->image_data().size(), frame->image_data().size(), frame->image_data().begin());
-					count -= static_cast<int>(frame->image_data().size());
+					std::copy_n(bytes + count - frame->image_data(0).size(), frame->image_data(0).size(), frame->image_data(0).begin());
+					count -= static_cast<int>(frame->image_data(0).size());
 				}
 				else
 				{
-					memset(frame->image_data().begin(), 0, frame->image_data().size());	
-					std::copy_n(bytes, count, frame->image_data().begin() + format_desc_.size - count);
+					memset(frame->image_data(0).begin(), 0, frame->image_data(0).size());	
+					std::copy_n(bytes, count, frame->image_data(0).begin() + format_desc_.size - count);
 					count = 0;
 				}
 			
-				frame->commit();
 				frames_.push_back(frame);
 			}
 			
@@ -120,25 +119,24 @@ struct image_scroll_producer : public core::frame_producer
 				core::pixel_format_desc desc = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width, height_, 4));
 				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
-				if(count >= frame->image_data().size())
+				if(count >= frame->image_data(0).size())
 				{	
 					for(int y = 0; y < height_; ++y)
-						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, frame->image_data().begin() + y * format_desc_.width*4);
+						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, frame->image_data(0).begin() + y * format_desc_.width*4);
 					
 					++i;
-					count -= static_cast<int>(frame->image_data().size());
+					count -= static_cast<int>(frame->image_data(0).size());
 				}
 				else
 				{
-					memset(frame->image_data().begin(), 0, frame->image_data().size());	
+					memset(frame->image_data(0).begin(), 0, frame->image_data(0).size());	
 					int width2 = width_ % format_desc_.width;
 					for(int y = 0; y < height_; ++y)
-						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, frame->image_data().begin() + y * format_desc_.width*4);
+						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, frame->image_data(0).begin() + y * format_desc_.width*4);
 
 					count = 0;
 				}
 			
-				frame->commit();
 				frames_.push_back(frame);
 			}
 

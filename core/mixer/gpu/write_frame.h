@@ -25,6 +25,7 @@
 #include <common/forward.h>
 
 #include <core/frame/draw_frame.h>
+#include <core/frame/data_frame.h>
 #include <core/video_format.h>
 #include <core/mixer/audio/audio_mixer.h>
 
@@ -33,40 +34,48 @@
 #include <stdint.h>
 #include <vector>
 
-FORWARD1(boost, template<typename> class shared_future);
 FORWARD3(caspar, core, gpu, class accelerator);
-FORWARD3(caspar, core, gpu, class device_buffer);
+FORWARD3(caspar, core, gpu, class host_buffer);
 
 namespace caspar { namespace core {
 	
-class write_frame sealed : public core::draw_frame
+class write_frame sealed : public core::draw_frame, public core::data_frame
 {
+	write_frame(const write_frame&);
+	write_frame& operator=(const write_frame);
 public:	
 	explicit write_frame(const void* tag);
 	explicit write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const struct pixel_format_desc& desc);
 
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
+
+	void swap(write_frame& other);
 			
 	// draw_frame
 
 	virtual void accept(struct frame_visitor& visitor) override;
 
-	// write _frame
-
-	void swap(write_frame& other);
-			
-	boost::iterator_range<uint8_t*> image_data(int plane_index = 0);	
-	audio_buffer& audio_data();
-	
-	void commit(int plane_index);
-	void commit();
+	// data_frame
 		
-	const void* tag() const;
+	virtual const struct pixel_format_desc& get_pixel_format_desc() const override;
 
-	const struct pixel_format_desc& get_pixel_format_desc() const;
+	virtual const boost::iterator_range<const uint8_t*> image_data(int index) const override;
+	virtual const audio_buffer& audio_data() const override;
+
+	virtual const boost::iterator_range<uint8_t*> image_data(int index) override;
+	virtual audio_buffer& audio_data() override;
 	
-	const std::vector<boost::shared_future<safe_ptr<gpu::device_buffer>>>& get_textures() const;
+	virtual double get_frame_rate() const override;
+
+	virtual int width() const override;
+	virtual int height() const override;
+								
+	virtual const void* tag() const override;
+			
+	// write_frames
+
+	std::vector<safe_ptr<gpu::host_buffer>> get_buffers();
 private:
 	struct impl;
 	safe_ptr<impl> impl_;

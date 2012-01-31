@@ -37,12 +37,11 @@ namespace caspar { namespace core {
 																																							
 struct write_frame::impl : boost::noncopyable
 {			
-	std::shared_ptr<gpu::accelerator>				ogl_;
-	std::vector<std::shared_ptr<gpu::host_buffer>>	buffers_;
-	std::vector<boost::shared_future<safe_ptr<gpu::device_buffer>>>		textures_;
-	audio_buffer									audio_data_;
-	const core::pixel_format_desc					desc_;
-	const void*										tag_;
+	std::shared_ptr<gpu::accelerator>		ogl_;
+	std::vector<safe_ptr<gpu::host_buffer>>	buffers_;
+	audio_buffer							audio_data_;
+	const core::pixel_format_desc			desc_;
+	const void*								tag_;
 
 	impl(const void* tag)
 		: desc_(core::pixel_format::invalid)
@@ -59,7 +58,6 @@ struct write_frame::impl : boost::noncopyable
 		{
 			return ogl_->create_host_buffer(plane.size, gpu::host_buffer::usage::write_only);
 		});
-		textures_.resize(desc.planes.size());
 	}
 			
 	void accept(write_frame& self, core::frame_visitor& visitor)
@@ -76,26 +74,6 @@ struct write_frame::impl : boost::noncopyable
 		auto ptr = static_cast<uint8_t*>(buffers_[index]->data());
 		return boost::iterator_range<uint8_t*>(ptr, ptr+buffers_[index]->size());
 	}
-	
-	void commit()
-	{
-		for(int n = 0; n < buffers_.size(); ++n)
-			commit(n);
-	}
-
-	void commit(int plane_index)
-	{
-		if(plane_index >= buffers_.size())
-			return;
-				
-		auto buffer = std::move(buffers_[plane_index]); // Release buffer once done.
-
-		if(!buffer)
-			return;
-				
-		auto plane = desc_.planes.at(plane_index);
-		textures_.at(plane_index) = ogl_->copy_async(make_safe_ptr(std::move(buffer)), plane.width, plane.height, plane.channels);
-	}
 };
 	
 write_frame::write_frame(const void* tag) : impl_(new impl(tag)){}
@@ -109,13 +87,19 @@ write_frame& write_frame::operator=(write_frame&& other)
 	return *this;
 }
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
-boost::iterator_range<uint8_t*> write_frame::image_data(int index){return impl_->image_data(index);}
-audio_buffer& write_frame::audio_data() { return impl_->audio_data_; }
-const void* write_frame::tag() const {return impl_->tag_;}
-const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
-const std::vector<boost::shared_future<safe_ptr<gpu::device_buffer>>>& write_frame::get_textures() const{return impl_->textures_;}
-void write_frame::commit(int plane_index){impl_->commit(plane_index);}
-void write_frame::commit(){impl_->commit();}
+
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
+
+const  pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
+const boost::iterator_range<const uint8_t*> write_frame::image_data(int index) const{return impl_->image_data(index);}
+const audio_buffer& write_frame::audio_data() const{return impl_->audio_data_;}
+const boost::iterator_range<uint8_t*> write_frame::image_data(int index){return impl_->image_data(index);}
+audio_buffer& write_frame::audio_data(){return impl_->audio_data_;}
+double write_frame::get_frame_rate() const{return 0.0;} // TODO: what's this?
+int write_frame::width() const{return impl_->desc_.planes.at(0).width;}
+int write_frame::height() const{return impl_->desc_.planes.at(0).height;}						
+const void* write_frame::tag() const{return impl_->tag_;}	
+std::vector<safe_ptr<gpu::host_buffer>> write_frame::get_buffers(){return impl_->buffers_;}
+
 
 }}
