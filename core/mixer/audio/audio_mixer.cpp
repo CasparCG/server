@@ -83,9 +83,6 @@ public:
 
 	void visit(core::write_frame& frame)
 	{
-		if(transform_stack_.top().volume < 0.002 || frame.audio_data().empty())
-			return;
-
 		audio_item item;
 		item.tag		= frame.tag();
 		item.transform	= transform_stack_.top();
@@ -128,6 +125,10 @@ public:
 				prev_transform	= it->second.prev_transform;
 				next_audio		= std::move(it->second.audio_data);
 			}
+			
+			// Skip it if there is no existing audio stream and item has no audio-data.
+			if(it == audio_streams_.end() && item.audio_data.empty()) 
+				continue;
 						
 			const float prev_volume = static_cast<float>(prev_transform.volume);
 			const float next_volume = static_cast<float>(next_transform.volume);
