@@ -38,6 +38,7 @@ public:
 	draw_frame(const draw_frame& other);
 	draw_frame(draw_frame&& other);
 	draw_frame& operator=(draw_frame other);
+	virtual ~draw_frame(){}
 
 	draw_frame(const safe_ptr<draw_frame>& frame);
 	draw_frame(safe_ptr<draw_frame>&& frame);
@@ -58,7 +59,6 @@ public:
 	static const safe_ptr<draw_frame>& empty();
 	static const safe_ptr<draw_frame>& late();
 	
-
 	virtual void accept(frame_visitor& visitor);
 private:
 	struct impl;
