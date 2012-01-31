@@ -53,7 +53,6 @@ public:
 	virtual const boost::iterator_range<const int32_t*> audio_data() const override;
 	
 	virtual double	   get_frame_rate() const override;
-	virtual field_mode get_field_mode() const override;
 
 	virtual int width() const override;
 	virtual int height() const override;

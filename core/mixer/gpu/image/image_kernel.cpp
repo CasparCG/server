@@ -109,7 +109,7 @@ struct image_kernel::impl : boost::noncopyable
 		shader_->set("is_hd",		 	params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	params.local_key);
 		shader_->set("has_layer_key",	params.layer_key);
-		shader_->set("pixel_format",	params.pix_desc.pix_fmt.value());	
+		shader_->set("pixel_format",	params.pix_desc.format.value());	
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
 		
 		// Setup blend_func

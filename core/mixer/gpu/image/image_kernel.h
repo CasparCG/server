@@ -55,7 +55,8 @@ struct draw_params sealed
 	std::shared_ptr<class device_buffer>		layer_key;
 
 	draw_params() 
-		: blend_mode(blend_mode::normal)
+		: pix_desc(pixel_format::invalid)
+		, blend_mode(blend_mode::normal)
 		, keyer(keyer::linear)
 	{
 	}

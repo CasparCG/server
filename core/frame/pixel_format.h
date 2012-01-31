@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "../video_format.h"
+
 #include <common/enum_class.h>
 
 #include <vector>
@@ -74,12 +76,12 @@ struct pixel_format_desc sealed
 		}
 	};
 
-	pixel_format_desc() 
-		: pix_fmt(pixel_format::invalid)
+	pixel_format_desc(pixel_format format) 
+		: format(format)
 	{
 	}
 	
-	pixel_format		pix_fmt;
+	pixel_format		format;
 	std::vector<plane>	planes;
 };
 
