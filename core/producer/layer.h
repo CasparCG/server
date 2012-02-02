@@ -49,11 +49,7 @@ public:
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
-	boost::unique_future<std::wstring> call(bool foreground, const std::wstring& param);
-
-	bool is_paused() const;
-	int64_t frame_number() const;
-	
+		
 	bool empty() const;
 
 	safe_ptr<struct frame_producer> foreground() const; // nothrow
