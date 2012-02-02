@@ -33,7 +33,7 @@
 #include <common/concurrency/executor.h>
 #include <common/concurrency/lock.h>
 #include <common/diagnostics/graph.h>
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/memory/memshfl.h>
 
 #include <core/consumer/frame_consumer.h>

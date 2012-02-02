@@ -27,7 +27,7 @@
 
 #include "../../ffmpeg_error.h"
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 
 #include <boost/assign.hpp>
 #include <boost/range/iterator_range.hpp>

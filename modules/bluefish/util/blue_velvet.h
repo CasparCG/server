@@ -27,7 +27,7 @@
 #include <BlueHancUtils.h>
 
 #include <common/memory/safe_ptr.h>
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 
 namespace caspar { 
 

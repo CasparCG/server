@@ -21,7 +21,7 @@
 
 #include "../StdAfx.h"
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 
 #include <zlib.h> // Compiled into FreeImage
 

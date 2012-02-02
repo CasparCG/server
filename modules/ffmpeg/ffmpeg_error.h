@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 
 #include <string>
 

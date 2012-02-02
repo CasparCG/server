@@ -23,7 +23,7 @@
 
 #include "audio_resampler.h"
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/log.h>
 
 #if defined(_MSC_VER)

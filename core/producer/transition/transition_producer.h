@@ -23,9 +23,9 @@
 
 #include "../../video_format.h"
 
-#include <common/memory/safe_ptr.h>
 #include <common/enum_class.h>
-#include <common/utility/tweener.h>
+#include <common/memory/safe_ptr.h>
+#include <common/tweener.h>
 
 #include <string>
 
@@ -62,12 +62,12 @@ struct transition_info
 		: type(transition_type::cut)
 		, duration(0)
 		, direction(transition_direction::from_left)
-		, tweener(get_tweener(L"linear")){}
+		, tweener(L"linear"){}
 		
 	size_t					duration;
 	transition_direction	direction;
 	transition_type			type;
-	tweener_t				tweener;
+	tweener					tweener;
 };
 
 safe_ptr<struct frame_producer> create_transition_producer(const field_mode& mode, const safe_ptr<struct frame_producer>& destination, const transition_info& info);

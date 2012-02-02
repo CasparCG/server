@@ -31,7 +31,7 @@
 
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/executor.h>
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/utility/move_on_copy.h>
 
 namespace caspar { namespace core {

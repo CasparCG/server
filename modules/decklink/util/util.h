@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/log.h>
 #include <core/video_format.h>
 
