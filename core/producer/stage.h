@@ -55,7 +55,7 @@ public:
 	void clear_transforms(int index);
 	void clear_transforms();
 				
-	void load(int index, const safe_ptr<struct frame_producer>& producer, bool preview = false, int auto_play_delta = -1);
+	void load(int index, const safe_ptr<struct frame_producer>& producer, int auto_play_delta = -1);
 	void pause(int index);
 	void play(int index);
 	void stop(int index);

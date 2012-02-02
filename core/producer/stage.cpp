@@ -72,7 +72,7 @@ public:
 				{
 					auto transform = transforms_[layer.first].fetch_and_tick(1);
 
-					int flags = frame_producer::flags::none;
+					frame_producer::flags flags = frame_producer::flags::none;
 					if(format_desc2.field_mode != field_mode::progressive)
 					{
 						flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
@@ -146,11 +146,11 @@ public:
 		}, high_priority);
 	}
 		
-	void load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta)
+	void load(int index, const safe_ptr<frame_producer>& producer, int auto_play_delta)
 	{
 		executor_.begin_invoke([=]
 		{
-			layers_[index].load(producer, preview, auto_play_delta);
+			layers_[index].load(producer, auto_play_delta);
 		}, high_priority);
 	}
 
@@ -252,22 +252,22 @@ public:
 
 	boost::unique_future<boost::property_tree::wptree> info()
 	{
-		return std::move(executor_.begin_invoke([this]() -> boost::property_tree::wptree
+		return executor_.begin_invoke([this]() -> boost::property_tree::wptree
 		{
 			boost::property_tree::wptree info;
 			BOOST_FOREACH(auto& layer, layers_)			
 				info.add_child(L"layers.layer", layer.second.info())
 					.add(L"index", layer.first);	
 			return info;
-		}, high_priority));
+		}, high_priority);
 	}
 
 	boost::unique_future<boost::property_tree::wptree> info(int index)
 	{
-		return std::move(executor_.begin_invoke([=]() -> boost::property_tree::wptree
+		return executor_.begin_invoke([=]() -> boost::property_tree::wptree
 		{
 			return layers_[index].info();
-		}, high_priority));
+		}, high_priority);
 	}		
 };
 
@@ -276,7 +276,7 @@ void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transf
 void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
-void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
+void stage::load(int index, const safe_ptr<frame_producer>& producer, int auto_play_delta){impl_->load(index, producer, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
 void stage::play(int index){impl_->play(index);}
 void stage::stop(int index){impl_->stop(index);}

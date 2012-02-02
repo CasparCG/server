@@ -24,9 +24,21 @@ public:
 		return enum_class(static_cast<type>(val_ & s.val_));
 	}
 
+	enum_class& operator&=(const enum_class& s)
+	{
+		val_ = static_cast<type>(val_ & s.val_);
+		return *this;
+	}
+
 	enum_class operator|(const enum_class& s) const
 	{
 		return enum_class(static_cast<type>(val_ | s.val_));
+	}
+	
+	enum_class& operator|=(const enum_class& s)
+	{
+		val_ = static_cast<type>(val_ | s.val_);
+		return *this;
 	}
 
 	//operator inner()
