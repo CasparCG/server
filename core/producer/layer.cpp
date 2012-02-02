@@ -60,20 +60,13 @@ public:
 		is_paused_ = false;
 	}
 
-	void load(const safe_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
+	void load(const safe_ptr<frame_producer>& producer, const boost::optional<int32_t>& auto_play_delta)
 	{		
 		background_		 = producer;
 		auto_play_delta_ = auto_play_delta;
 
 		if(auto_play_delta_ && foreground_ == frame_producer::empty())
 			play();
-
-		if(preview) // Play the first frame and pause.
-		{			
-			play();
-			receive(frame_producer::flags::none);
-			pause();
-		}
 	}
 	
 	void play()
@@ -101,14 +94,14 @@ public:
 		is_paused_			= true;
 	}
 		
-	safe_ptr<draw_frame> receive(int flags)
+	safe_ptr<draw_frame> receive(frame_producer::flags flags)
 	{		
 		try
 		{
 			if(is_paused_)
 				return draw_frame::silence(foreground_->last_frame());
 		
-			auto frame = receive_and_follow(foreground_, flags);
+			auto frame = receive_and_follow(foreground_, flags.value());
 			if(frame == core::draw_frame::late())
 				return draw_frame::silence(foreground_->last_frame());
 
@@ -155,30 +148,24 @@ public:
 };
 
 layer::layer() : impl_(new impl()){}
-layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
-layer& layer::operator=(layer&& other)
-{
-	impl_ = std::move(other.impl_);
-	return *this;
-}
 layer::layer(const layer& other) : impl_(new impl(*other.impl_)){}
-layer& layer::operator=(const layer& other)
+layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
+layer& layer::operator=(layer other)
 {
-	layer temp(other);
-	temp.swap(*this);
+	other.swap(*this);
 	return *this;
 }
 void layer::swap(layer& other)
 {	
 	impl_.swap(other.impl_);
 }
-void layer::load(const safe_ptr<frame_producer>& frame_producer, bool preview, const boost::optional<int32_t>& auto_play_delta){return impl_->load(frame_producer, preview, auto_play_delta);}	
+void layer::load(const safe_ptr<frame_producer>& frame_producer, const boost::optional<int32_t>& auto_play_delta){return impl_->load(frame_producer, auto_play_delta);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 bool layer::is_paused() const{return impl_->is_paused_;}
 int64_t layer::frame_number() const{return impl_->frame_number_;}
-safe_ptr<draw_frame> layer::receive(int flags) {return impl_->receive(flags);}
+safe_ptr<draw_frame> layer::receive(frame_producer::flags flags) {return impl_->receive(flags);}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}

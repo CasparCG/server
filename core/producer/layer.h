@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "frame_producer.h"
+
 #include <common/forward.h>
 #include <common/memory/safe_ptr.h>
 
@@ -37,14 +39,13 @@ class layer sealed
 {
 public:
 	layer(); // nothrow
-	layer(layer&& other); // nothrow
-	layer& operator=(layer&& other); // nothrow
 	layer(const layer&);
-	layer& operator=(const layer&);
+	layer(layer&& other); // nothrow
+	layer& operator=(layer other); // nothrow
 
 	void swap(layer& other); // nothrow 
 		
-	void load(const safe_ptr<struct frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
+	void load(const safe_ptr<struct frame_producer>& producer, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
@@ -58,7 +59,7 @@ public:
 	safe_ptr<struct frame_producer> foreground() const; // nothrow
 	safe_ptr<struct frame_producer> background() const; // nothrow
 
-	safe_ptr<class draw_frame> receive(int flags); // nothrow
+	safe_ptr<class draw_frame> receive(frame_producer::flags flags); // nothrow
 
 	boost::property_tree::wptree info() const;
 private:
