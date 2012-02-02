@@ -25,8 +25,8 @@
 
 #include "../version.h"
 
+#include "except.h"
 #include "log.h"
-#include "exception/exceptions.h"
 #include "string.h"
 
 #include <boost/property_tree/ptree.hpp>

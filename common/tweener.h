@@ -23,9 +23,16 @@
 
 #include <functional>
 
-namespace caspar {
+namespace caspar { namespace core {
 
-typedef std::function<double(double, double, double, double)> tweener_t;
-tweener_t get_tweener(std::wstring name = L"linear");
+class tweener
+{
+public:
+	tweener(const std::wstring& name = L"linear");
+	tweener(const wchar_t* name);
+	double operator()(double t, double b , double c, double d) const;
+private:
+	std::function<double(double, double, double, double)> func_;
+};
 
-}
+}}

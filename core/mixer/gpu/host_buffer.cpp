@@ -26,7 +26,7 @@
 #include "device_buffer.h"
 #include "accelerator.h"
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/gl/gl_check.h>
 
 #include <gl/glew.h>

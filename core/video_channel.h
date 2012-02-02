@@ -25,7 +25,6 @@
 #include <common/reactive.h>
 #include <common/forward.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 FORWARD3(caspar, core, gpu, class accelerator);
@@ -33,8 +32,9 @@ FORWARD3(caspar, core, gpu, class accelerator);
 namespace caspar { namespace core {
 	
 class video_channel sealed : public reactive::observable<safe_ptr<const struct data_frame>>
-						   , boost::noncopyable
 {
+	video_channel(const video_channel&);
+	video_channel& operator=(const video_channel&);
 public:
 	explicit video_channel(int index, const struct video_format_desc& format_desc, const safe_ptr<gpu::accelerator>& ogl);
 

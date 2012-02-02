@@ -38,9 +38,11 @@
 //    * Neither the name of the author nor the names of contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 //
 //THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#include "../stdafx.h"
+#include "stdafx.h"
 
 #include "tweener.h"
+
+#include "except.h"
 
 #include <boost/assign/list_of.hpp>
 #include <boost/regex.hpp>
@@ -52,7 +54,7 @@
 #include <functional>
 #include <vector>
 
-namespace caspar {
+namespace caspar { namespace core {
 
 typedef std::function<double(double, double, double, double)> tweener_t;
 			
@@ -445,7 +447,7 @@ tweener_t get_tweener(std::wstring name)
 
 	auto it = tweens.find(name);
 	if(it == tweens.end())
-		it = tweens.find(L"linear");
+		BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Could not find tween.") << arg_value_info(name));
 	
 	return [=](double t, double b, double c, double d)
 	{
@@ -453,4 +455,19 @@ tweener_t get_tweener(std::wstring name)
 	};
 };
 
+tweener::tweener(const std::wstring& name)
+	: func_(get_tweener(name))
+{
 }
+
+tweener::tweener(const wchar_t* name)
+	: func_(get_tweener(name))
+{
+}
+
+double tweener::operator()(double t, double b , double c, double d) const
+{
+	return func_(t, b, c, d);
+}
+
+}}

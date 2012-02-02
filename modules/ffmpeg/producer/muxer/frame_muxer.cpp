@@ -34,7 +34,7 @@
 #include <core/mixer/gpu/write_frame.h>
 
 #include <common/env.h>
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/log.h>
 
 #if defined(_MSC_VER)

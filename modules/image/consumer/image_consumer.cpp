@@ -21,7 +21,7 @@
 
 #include "image_consumer.h"
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/env.h>
 #include <common/log.h>
 #include <common/utf.h>

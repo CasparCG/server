@@ -22,7 +22,7 @@
 #include "../StdAfx.h"
 
 #include "thread.h"
-#include <common/exception/win32_exception.h>
+#include <common/except.h>
 
 namespace caspar {
 	

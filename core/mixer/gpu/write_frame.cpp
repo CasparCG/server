@@ -27,7 +27,7 @@
 #include "host_buffer.h"
 #include "device_buffer.h"
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <core/frame/frame_visitor.h>
 #include <core/frame/pixel_format.h>
 

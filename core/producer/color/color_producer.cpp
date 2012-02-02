@@ -29,7 +29,7 @@
 #include <core/frame/pixel_format.h>
 #include <core/mixer/gpu/write_frame.h>
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 
 #include <boost/algorithm/string.hpp>
 
