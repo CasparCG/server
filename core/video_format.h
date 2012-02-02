@@ -68,18 +68,18 @@ typedef enum_class<field_mode_def> field_mode;
 
 struct video_format_desc sealed
 {
-	video_format		format;		// video output format
+	video_format		format;		
 
-	int					width;		// output frame width
-	int					height;		// output frame height
+	int					width;		
+	int					height;		
 	int					square_width;
 	int					square_height;
 	field_mode			field_mode;	// progressive, interlaced upper field first, interlaced lower field first
-	double				fps;		// actual framerate, e.g. i50 = 25 fps, p50 = 50 fps
+	double				fps;		// actual framerate = duration/time_scale, e.g. i50 = 25 fps, p50 = 50 fps
 	int					time_scale;
 	int					duration;
 	int					field_count;
-	int					size;		// output frame size in bytes 
+	int					size;		// frame size in bytes 
 	std::wstring		name;		// name of output format
 
 	int					audio_sample_rate;
