@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include "../exception/win32_exception.h"
-#include "../utility/move_on_copy.h"
+#include "../except.h"
 #include "../log.h"
+#include "../utility/move_on_copy.h"
 
 #include <Windows.h>
 

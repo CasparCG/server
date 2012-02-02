@@ -21,12 +21,18 @@
 
 #pragma once
 
-#include "../utf.h"
+#include "utf.h"
 
 #include <exception>
 #include <boost/exception/all.hpp>
 #include <boost/exception/error_info.hpp>
 #include <boost/throw_exception.hpp>
+
+struct _EXCEPTION_RECORD;
+struct _EXCEPTION_POINTERS;
+
+typedef _EXCEPTION_RECORD EXCEPTION_RECORD;
+typedef _EXCEPTION_POINTERS EXCEPTION_POINTERS;
 
 namespace caspar {
 
@@ -75,6 +81,45 @@ struct timed_out				: virtual caspar_exception {};
 
 struct not_supported			: virtual caspar_exception {};
 struct not_implemented			: virtual caspar_exception {};
+
+class win32_exception : public std::exception
+{
+public:
+	typedef const void* address;
+	static void install_handler();
+
+	address location() const { return location_; }
+	unsigned int error_code() const { return errorCode_; }
+	virtual const char* what() const { return message_;	}
+
+protected:
+	win32_exception(const EXCEPTION_RECORD& info);
+	static void Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo);
+
+private:
+	const char* message_;
+
+	address location_;
+	unsigned int errorCode_;
+};
+
+class win32_access_violation : public win32_exception
+{
+	mutable char messageBuffer_[256];
+
+public:
+	bool is_write() const { return isWrite_; }
+	address bad_address() const { return badAddress_;}
+	virtual const char* what() const;
+
+protected:
+	win32_access_violation(const EXCEPTION_RECORD& info);
+	friend void win32_exception::Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo);
+
+private:
+	bool isWrite_;
+	address badAddress_;
+};
 
 }
 

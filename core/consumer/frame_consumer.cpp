@@ -25,7 +25,7 @@
 
 #include <common/env.h>
 #include <common/memory/safe_ptr.h>
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <core/video_format.h>
 #include <core/frame/data_frame.h>
 

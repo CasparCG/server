@@ -30,7 +30,7 @@
 #include <core/mixer/gpu/write_frame.h>
 #include <core/frame/data_frame.h>
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/diagnostics/graph.h>
 #include <common/log.h>
 #include <common/reactive.h>

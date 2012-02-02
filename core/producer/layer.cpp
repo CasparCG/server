@@ -131,12 +131,7 @@ public:
 			return core::draw_frame::empty();
 		}
 	}
-
-	boost::unique_future<std::wstring> call(bool foreground, const std::wstring& param)
-	{
-		return (foreground ? foreground_ : background_)->call(param);
-	}
-
+	
 	bool empty() const
 	{
 		return background_ == core::frame_producer::empty() && foreground_ == core::frame_producer::empty();
@@ -187,6 +182,5 @@ safe_ptr<draw_frame> layer::receive(int flags) {return impl_->receive(flags);}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}
-boost::unique_future<std::wstring> layer::call(bool foreground, const std::wstring& param){return impl_->call(foreground, param);}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
 }}

@@ -74,33 +74,33 @@ frame_transform frame_transform::operator*(const frame_transform &other) const
 	return frame_transform(*this) *= other;
 }
 
-frame_transform tween(double time, const frame_transform& source, const frame_transform& dest, double duration, const tweener_t& tweener)
+frame_transform frame_transform::tween(double time, const frame_transform& source, const frame_transform& dest, double duration, const tweener& tween)
 {	
-	auto do_tween = [](double time, double source, double dest, double duration, const tweener_t& tweener)
+	auto do_tween = [](double time, double source, double dest, double duration, const tweener& tween)
 	{
-		return tweener(time, source, dest-source, duration);
+		return tween(time, source, dest-source, duration);
 	};
 	
 	frame_transform result;	
-	result.volume				= do_tween(time, source.volume,					dest.volume,				duration, tweener);
-	result.brightness			= do_tween(time, source.brightness,				dest.brightness,			duration, tweener);
-	result.contrast				= do_tween(time, source.contrast,				dest.contrast,				duration, tweener);
-	result.saturation			= do_tween(time, source.saturation,				dest.saturation,			duration, tweener);
-	result.opacity				= do_tween(time, source.opacity,				dest.opacity,				duration, tweener);	
-	result.fill_translation[0]	= do_tween(time, source.fill_translation[0],	dest.fill_translation[0],	duration, tweener), 
-	result.fill_translation[1]	= do_tween(time, source.fill_translation[1],	dest.fill_translation[1],	duration, tweener);		
-	result.fill_scale[0]		= do_tween(time, source.fill_scale[0],			dest.fill_scale[0],			duration, tweener), 
-	result.fill_scale[1]		= do_tween(time, source.fill_scale[1],			dest.fill_scale[1],			duration, tweener);	
-	result.clip_translation[0]	= do_tween(time, source.clip_translation[0],	dest.clip_translation[0],	duration, tweener), 
-	result.clip_translation[1]	= do_tween(time, source.clip_translation[1],	dest.clip_translation[1],	duration, tweener);		
-	result.clip_scale[0]		= do_tween(time, source.clip_scale[0],			dest.clip_scale[0],			duration, tweener), 
-	result.clip_scale[1]		= do_tween(time, source.clip_scale[1],			dest.clip_scale[1],			duration, tweener);
-	result.levels.max_input		= do_tween(time, source.levels.max_input,		dest.levels.max_input,		duration, tweener);
-	result.levels.min_input		= do_tween(time, source.levels.min_input,		dest.levels.min_input,		duration, tweener);	
-	result.levels.max_output	= do_tween(time, source.levels.max_output,		dest.levels.max_output,		duration, tweener);
-	result.levels.min_output	= do_tween(time, source.levels.min_output,		dest.levels.min_output,		duration, tweener);
-	result.levels.gamma			= do_tween(time, source.levels.gamma,			dest.levels.gamma,			duration, tweener);
-	result.field_mode			= static_cast<field_mode>(source.field_mode & dest.field_mode);
+	result.volume				= do_tween(time, source.volume,					dest.volume,				duration, tween);
+	result.brightness			= do_tween(time, source.brightness,				dest.brightness,			duration, tween);
+	result.contrast				= do_tween(time, source.contrast,				dest.contrast,				duration, tween);
+	result.saturation			= do_tween(time, source.saturation,				dest.saturation,			duration, tween);
+	result.opacity				= do_tween(time, source.opacity,				dest.opacity,				duration, tween);	
+	result.fill_translation[0]	= do_tween(time, source.fill_translation[0],	dest.fill_translation[0],	duration, tween), 
+	result.fill_translation[1]	= do_tween(time, source.fill_translation[1],	dest.fill_translation[1],	duration, tween);		
+	result.fill_scale[0]		= do_tween(time, source.fill_scale[0],			dest.fill_scale[0],			duration, tween), 
+	result.fill_scale[1]		= do_tween(time, source.fill_scale[1],			dest.fill_scale[1],			duration, tween);	
+	result.clip_translation[0]	= do_tween(time, source.clip_translation[0],	dest.clip_translation[0],	duration, tween), 
+	result.clip_translation[1]	= do_tween(time, source.clip_translation[1],	dest.clip_translation[1],	duration, tween);		
+	result.clip_scale[0]		= do_tween(time, source.clip_scale[0],			dest.clip_scale[0],			duration, tween), 
+	result.clip_scale[1]		= do_tween(time, source.clip_scale[1],			dest.clip_scale[1],			duration, tween);
+	result.levels.max_input		= do_tween(time, source.levels.max_input,		dest.levels.max_input,		duration, tween);
+	result.levels.min_input		= do_tween(time, source.levels.min_input,		dest.levels.min_input,		duration, tween);	
+	result.levels.max_output	= do_tween(time, source.levels.max_output,		dest.levels.max_output,		duration, tween);
+	result.levels.min_output	= do_tween(time, source.levels.min_output,		dest.levels.min_output,		duration, tween);
+	result.levels.gamma			= do_tween(time, source.levels.gamma,			dest.levels.gamma,			duration, tween);
+	result.field_mode			= source.field_mode & dest.field_mode;
 	result.is_key				= source.is_key | dest.is_key;
 	result.is_mix				= source.is_mix | dest.is_mix;
 	

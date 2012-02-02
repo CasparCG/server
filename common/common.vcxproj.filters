@@ -19,9 +19,6 @@
     <Filter Include="source\gl">
       <UniqueIdentifier>{0d94bbc2-e196-4618-a90b-19392a3a0a8e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\exception">
-      <UniqueIdentifier>{35ca385e-c4db-4fe7-858b-0a0bb678675f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\diagnostics">
       <UniqueIdentifier>{29a29bcc-a9a0-4083-b713-c3773d18e177}</UniqueIdentifier>
     </Filter>
@@ -36,9 +33,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="exception\win32_exception.cpp">
-      <Filter>source\exception</Filter>
-    </ClCompile>
     <ClCompile Include="diagnostics\graph.cpp">
       <Filter>source\diagnostics</Filter>
     </ClCompile>
@@ -49,9 +43,6 @@
     <ClCompile Include="env.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="utility\tweener.cpp">
-      <Filter>source\utility</Filter>
-    </ClCompile>
     <ClCompile Include="utf.cpp">
       <Filter>source</Filter>
     </ClCompile>
@@ -61,14 +52,14 @@
     <ClCompile Include="log.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="except.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="tweener.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="exception\exceptions.h">
-      <Filter>source\exception</Filter>
-    </ClInclude>
-    <ClInclude Include="exception\win32_exception.h">
-      <Filter>source\exception</Filter>
-    </ClInclude>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h">
       <Filter>source\compiler\vs</Filter>
     </ClInclude>
@@ -88,9 +79,6 @@
       <Filter>source\diagnostics</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="utility\tweener.h">
-      <Filter>source\utility</Filter>
-    </ClInclude>
     <ClInclude Include="os\windows\current_version.h">
       <Filter>source\os\windows</Filter>
     </ClInclude>
@@ -138,6 +126,12 @@
     </ClInclude>
     <ClInclude Include="concurrency\defer.h">
       <Filter>source\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="except.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="tweener.h">
+      <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

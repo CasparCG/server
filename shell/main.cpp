@@ -51,8 +51,8 @@
 #include <modules/image/image.h>
 
 #include <common/env.h>
-#include <common/exception/win32_exception.h>
-#include <common/exception/exceptions.h>
+#include <common/except.h>
+#include <common/except.h>
 #include <common/log.h>
 #include <common/gl/gl_check.h>
 #include <common/os/windows/current_version.h>

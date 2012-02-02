@@ -21,7 +21,7 @@
 
 #include "image_loader.h"
 
-#include <common/exception/Exceptions.h>
+#include <common/except.h>
 #include <common/utf.h>
 
 #if defined(_MSC_VER)

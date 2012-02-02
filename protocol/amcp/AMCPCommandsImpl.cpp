@@ -288,14 +288,14 @@ bool CallCommand::DoExecute()
 			std::wstring param;
 			for(auto it = std::begin(_parameters2)+1; it != std::end(_parameters2); ++it, param += L" ")
 				param += *it;
-			result = GetChannel()->stage()->call(GetLayerIndex(), what == L"F", boost::trim_copy(param));
+			result = (what == L"F" ? GetChannel()->stage()->foreground(GetLayerIndex()) : GetChannel()->stage()->background(GetLayerIndex())).get()->call(boost::trim_copy(param));
 		}
 		else
 		{
 			std::wstring param;
 			for(auto it = std::begin(_parameters2); it != std::end(_parameters2); ++it, param += L" ")
 				param += *it;
-			result = GetChannel()->stage()->call(GetLayerIndex(), true, boost::trim_copy(param));
+			result = GetChannel()->stage()->foreground(GetLayerIndex()).get()->call(boost::trim_copy(param));
 		}
 
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
@@ -715,7 +715,7 @@ bool LoadbgCommand::DoExecute()
 		transitionInfo.duration = boost::lexical_cast<size_t>(what["DURATION"].str());
 		auto direction = what["DIRECTION"].matched ? what["DIRECTION"].str() : L"";
 		auto tween = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
-		transitionInfo.tweener = get_tweener(tween);		
+		transitionInfo.tweener = tween;		
 
 		if(transition == TEXT("CUT"))
 			transitionInfo.type = transition_type::cut;

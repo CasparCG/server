@@ -23,7 +23,7 @@
 #include "server.h"
 
 #include <common/env.h>
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/utf.h>
 
 #include <core/mixer/gpu/accelerator.h>

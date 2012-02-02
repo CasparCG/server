@@ -27,7 +27,7 @@
 
 #include "shader.h"
 
-#include <common/exception/exceptions.h>
+#include <common/except.h>
 #include <common/assert.h>
 #include <common/gl/gl_check.h>
 

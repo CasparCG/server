@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/utility/tweener.h>
+#include <common/tweener.h>
 #include <core/video_format.h>
 
 #include <boost/array.hpp>
@@ -68,12 +68,47 @@ public:
 	
 	frame_transform& frame_transform::operator*=(const frame_transform &other);
 	frame_transform frame_transform::operator*(const frame_transform &other) const;
-};
 
-frame_transform tween(double time, const frame_transform& source, const frame_transform& dest, double duration, const tweener_t& tweener);
+	static frame_transform tween(double time, const frame_transform& source, const frame_transform& dest, double duration, const tweener& tween);
+};
 
 bool operator<(const frame_transform& lhs, const frame_transform& rhs);
 bool operator==(const frame_transform& lhs, const frame_transform& rhs);
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs);
+
+class tweened_transform
+{
+	frame_transform source_;
+	frame_transform dest_;
+	int duration_;
+	int time_;
+	tweener tweener_;
+public:	
+	tweened_transform()
+		: duration_(0)
+		, time_(0)
+	{
+	}
+
+	tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, const tweener& tween)
+		: source_(source)
+		, dest_(dest)
+		, duration_(duration)
+		, time_(0)
+		, tweener_(tween)
+	{
+	}
+	
+	frame_transform fetch()
+	{
+		return time_ == duration_ ? dest_ : frame_transform::tween(static_cast<double>(time_), source_, dest_, static_cast<double>(duration_), tweener_);
+	}
+
+	frame_transform fetch_and_tick(int num)
+	{						
+		time_ = std::min(time_+num, duration_);
+		return fetch();
+	}
+};
 
 }}

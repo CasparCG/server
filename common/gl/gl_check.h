@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "../exception/exceptions.h"
+#include "../except.h"
 
 namespace caspar { namespace gl {
 

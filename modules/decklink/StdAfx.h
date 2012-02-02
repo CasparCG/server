@@ -82,6 +82,5 @@ extern "C"
 
 #include "../common/memory/safe_ptr.h"
 #include "../common/utf.h"
-#include "../common/exception/exceptions.h"
-#include "../common/exception/win32_exception.h"
+#include "../common/except.h"
 #include "../common/log.h"

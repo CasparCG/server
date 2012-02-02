@@ -45,48 +45,13 @@
 
 namespace caspar { namespace core {
 	
-template<typename T>
-class tweened_transform
-{
-	T source_;
-	T dest_;
-	int duration_;
-	int time_;
-	tweener_t tweener_;
-public:	
-	tweened_transform()
-		: duration_(0)
-		, time_(0)
-		, tweener_(get_tweener(L"linear")){}
-	tweened_transform(const T& source, const T& dest, int duration, const std::wstring& tween = L"linear")
-		: source_(source)
-		, dest_(dest)
-		, duration_(duration)
-		, time_(0)
-		, tweener_(get_tweener(tween)){}
-	
-	T fetch()
-	{
-		return time_ == duration_ ? dest_ : tween(static_cast<double>(time_), source_, dest_, static_cast<double>(duration_), tweener_);
-	}
-
-	T fetch_and_tick(int num)
-	{						
-		time_ = std::min(time_+num, duration_);
-		return fetch();
-	}
-};
-
 struct stage::impl : public std::enable_shared_from_this<impl>
-				   , boost::noncopyable
 {			
-	std::map<int, layer>									layers_;	
-	std::map<int, tweened_transform<core::frame_transform>> transforms_;	
-
-	executor												executor_;
+	std::map<int, layer>				layers_;	
+	std::map<int, tweened_transform>	transforms_;	
+	executor							executor_;
 public:
-	impl()  
-		: executor_(L"stage")
+	impl() : executor_(L"stage")
 	{
 	}
 		
@@ -94,12 +59,12 @@ public:
 	{		
 		return executor_.invoke([=]() -> std::map<int, safe_ptr<draw_frame>>
 		{
-			std::map<int, safe_ptr<class draw_frame>> result;
+			std::map<int, safe_ptr<class draw_frame>> frames;
 
 			try
 			{					
 				BOOST_FOREACH(auto& layer, layers_)			
-					result[layer.first] = draw_frame::empty();	
+					frames[layer.first] = draw_frame::empty();	
 
 				auto format_desc2 = format_desc;
 
@@ -129,7 +94,7 @@ public:
 						frame1 = core::draw_frame::interlace(frame1, frame2, format_desc2.field_mode);
 					}
 
-					result[layer.first] = frame1;
+					frames[layer.first] = frame1;
 				});		
 			}
 			catch(...)
@@ -138,11 +103,11 @@ public:
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}	
 
-			return result;
+			return frames;
 		});
 	}
 		
-	void apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, std::wstring>>& transforms)
+	void apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, tweener>>& transforms)
 	{
 		executor_.begin_invoke([=]
 		{
@@ -150,18 +115,18 @@ public:
 			{
 				auto src = transforms_[std::get<0>(transform)].fetch();
 				auto dst = std::get<1>(transform)(src);
-				transforms_[std::get<0>(transform)] = tweened_transform<frame_transform>(src, dst, std::get<2>(transform), std::get<3>(transform));
+				transforms_[std::get<0>(transform)] = tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
 			}
 		}, high_priority);
 	}
 						
-	void apply_transform(int index, const stage::transform_func_t& transform, unsigned int mix_duration, const std::wstring& tween)
+	void apply_transform(int index, const stage::transform_func_t& transform, unsigned int mix_duration, const tweener& tween)
 	{
 		executor_.begin_invoke([=]
 		{
 			auto src = transforms_[index].fetch();
 			auto dst = transform(src);
-			transforms_[index] = tweened_transform<frame_transform>(src, dst, mix_duration, tween);
+			transforms_[index] = tweened_transform(src, dst, mix_duration, tween);
 		}, high_priority);
 	}
 
@@ -228,15 +193,7 @@ public:
 			layers_.clear();
 		}, high_priority);
 	}	
-	
-	boost::unique_future<std::wstring> call(int index, bool foreground, const std::wstring& param)
-	{
-		return std::move(*executor_.invoke([=]
-		{
-			return std::make_shared<boost::unique_future<std::wstring>>(std::move(layers_[index].call(foreground, param)));
-		}, high_priority));
-	}
-	
+		
 	void swap_layers(const safe_ptr<stage>& other)
 	{
 		if(other->impl_.get() == this)
@@ -316,7 +273,7 @@ public:
 
 stage::stage() : impl_(new impl()){}
 void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){impl_->apply_transforms(transforms);}
-void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
+void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
@@ -330,7 +287,6 @@ void stage::swap_layer(int index, int other_index){impl_->swap_layer(index, othe
 void stage::swap_layer(int index, int other_index, const safe_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
 boost::unique_future<safe_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
 boost::unique_future<safe_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
-boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
 std::map<int, safe_ptr<class draw_frame>> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
