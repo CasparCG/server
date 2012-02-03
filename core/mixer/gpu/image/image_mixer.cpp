@@ -31,7 +31,7 @@
 #include "../device_buffer.h"
 
 #include <common/gl/gl_check.h>
-#include <common/concurrency/defer.h>
+#include <common/concurrency/async.h>
 
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
@@ -111,7 +111,7 @@ public:
 			return result;
 		});
 
-		return defer([=]() mutable -> boost::iterator_range<const uint8_t*>
+		return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
 		{
 			auto ptr = reinterpret_cast<const uint8_t*>(buffer.get()->data()); // .get() and ->data() can block calling thread, ->data() can also block OpenGL thread, defer it as long as possible.
 			return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());

@@ -264,7 +264,7 @@ public:
 
 	boost::unique_future<boost::property_tree::wptree> info(int index)
 	{
-		return executor_.begin_invoke([=]() -> boost::property_tree::wptree
+		return executor_.begin_invoke([=]
 		{
 			return layers_[index].info();
 		}, high_priority);

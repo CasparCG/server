@@ -29,10 +29,11 @@
 #include "color/color_producer.h"
 #include "separated/separated_producer.h"
 
-#include <common/memory/safe_ptr.h>
-#include <common/concurrency/executor.h>
+#include <common/assert.h>
 #include <common/except.h>
-#include <common/utility/move_on_copy.h>
+#include <common/concurrency/executor.h>
+#include <common/concurrency/async.h>
+#include <common/memory/safe_ptr.h>
 
 namespace caspar { namespace core {
 
@@ -54,24 +55,15 @@ public:
 
 	~destroy_producer_proxy()
 	{		
-		static auto destroyers = std::make_shared<tbb::concurrent_bounded_queue<std::shared_ptr<executor>>>();
-		static tbb::atomic<int> destroyer_count;
+		static tbb::atomic<int> counter = tbb::atomic<int>();
 
 		try
-		{
-			std::shared_ptr<executor> destroyer;
-			if(!destroyers->try_pop(destroyer))
-			{
-				destroyer.reset(new executor(L"destroyer"));
-				destroyer->set_priority_class(below_normal_priority_class);
-				if(++destroyer_count > 16)
-					CASPAR_LOG(warning) << L"Potential destroyer dead-lock detected.";
-				CASPAR_LOG(trace) << "Created destroyer: " << destroyer_count;
-			}
-				
+		{				
 			auto producer = producer_.release();
-			auto pool	  = destroyers;
-			destroyer->begin_invoke([=]
+			++counter;
+			CASPAR_VERIFY(counter < 32);
+
+			async([=]
 			{
 				std::unique_ptr<std::shared_ptr<frame_producer>> producer2(producer);
 
@@ -86,7 +78,8 @@ public:
 				catch(...){}
 								
 				producer2.reset();
-				pool->push(destroyer);
+
+				--counter;
 			}); 
 		}
 		catch(...)
@@ -148,31 +141,6 @@ safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_
 	return make_safe<print_producer_proxy>(std::move(producer));
 }
 
-class last_frame_producer : public frame_producer
-{
-	const std::wstring			print_;
-	const safe_ptr<draw_frame>	frame_;
-	const uint32_t				nb_frames_;
-public:
-	last_frame_producer(const safe_ptr<frame_producer>& producer) 
-		: print_(producer->print())
-		, frame_(producer->last_frame() != draw_frame::eof() ? producer->last_frame() : draw_frame::empty())
-		, nb_frames_(producer->nb_frames())
-	{
-	}
-	
-	virtual safe_ptr<draw_frame> receive(int){return frame_;}
-	virtual safe_ptr<core::draw_frame> last_frame() const{return frame_;}
-	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
-	virtual uint32_t nb_frames() const {return nb_frames_;}	
-	virtual boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"last-frame-producer");
-		return info;
-	}
-};
-
 struct empty_frame_producer : public frame_producer
 {
 	virtual safe_ptr<draw_frame> receive(int){return draw_frame::empty();}
@@ -207,8 +175,6 @@ safe_ptr<draw_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int 
 			following->set_leading_producer(producer);
 			producer = std::move(following);
 		}
-		else
-			producer = make_safe<last_frame_producer>(producer);
 
 		return receive_and_follow(producer, hints);
 	}
