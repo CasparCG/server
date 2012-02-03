@@ -48,8 +48,6 @@ struct frame_consumer : boost::noncopyable
 	static const safe_ptr<frame_consumer>& empty();
 };
 
-safe_ptr<frame_consumer> create_consumer_cadence_guard(const safe_ptr<frame_consumer>& consumer);
-
 typedef std::function<safe_ptr<frame_consumer>(const std::vector<std::wstring>&)> consumer_factory_t;
 
 void register_consumer_factory(const consumer_factory_t& factory);
