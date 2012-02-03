@@ -37,6 +37,9 @@
     <Filter Include="source\frame">
       <UniqueIdentifier>{b19721c1-8dd1-45fb-b9e3-212b548ebbb6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\consumer\cadence">
+      <UniqueIdentifier>{32043b44-b1bc-4098-8401-4b1467a96a01}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
@@ -130,6 +133,9 @@
     <ClInclude Include="mixer\gpu\write_frame.h">
       <Filter>source\mixer\gpu</Filter>
     </ClInclude>
+    <ClInclude Include="consumer\cadence\cadence_guard_consumer.h">
+      <Filter>source\consumer\cadence</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -204,6 +210,9 @@
     </ClCompile>
     <ClCompile Include="mixer\gpu\write_frame.cpp">
       <Filter>source\mixer\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\cadence\cadence_guard_consumer.cpp">
+      <Filter>source\consumer\cadence</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
