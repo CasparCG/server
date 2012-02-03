@@ -141,9 +141,8 @@ public:
 };
 
 layer::layer() : impl_(new impl()){}
-layer::layer(const layer& other) : impl_(new impl(*other.impl_)){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
-layer& layer::operator=(layer other)
+layer& layer::operator=(layer&& other)
 {
 	other.swap(*this);
 	return *this;

@@ -39,9 +39,8 @@ class layer sealed
 {
 public:
 	layer(); // nothrow
-	layer(const layer&);
 	layer(layer&& other); // nothrow
-	layer& operator=(layer other); // nothrow
+	layer& operator=(layer&& other); // nothrow
 
 	void swap(layer& other); // nothrow 
 		
