@@ -68,6 +68,8 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+typedef int (*PFNWGLEXTGETSWAPINTERVALPROC) (void);
+ 
 namespace caspar { namespace ogl {
 		
 enum stretch
@@ -94,6 +96,7 @@ struct configuration
 	bool			auto_deinterlace;
 	bool			key_only;
 	aspect_ratio	aspect;	
+	bool			vsync;
 
 	configuration()
 		: name(L"ogl")
@@ -103,6 +106,7 @@ struct configuration
 		, auto_deinterlace(true)
 		, key_only(false)
 		, aspect(aspect_invalid)
+		, vsync(false)
 	{
 	}
 };
@@ -186,7 +190,7 @@ public:
 		screen_y_		= devmode.dmPosition.y;
 		screen_width_	= config_.windowed ? square_width_ : devmode.dmPelsWidth;
 		screen_height_	= config_.windowed ? square_height_ : devmode.dmPelsHeight;
-		
+
 		is_running_ = true;
 		thread_ = boost::thread([this]{run();});
 	}
@@ -232,6 +236,18 @@ public:
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]);
 		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+				
+		if(config_.vsync)
+		{
+			auto wglSwapIntervalEXT = reinterpret_cast<void(APIENTRY*)(int)>(wglGetProcAddress("wglSwapIntervalEXT"));
+			if(wglSwapIntervalEXT)
+			{
+				wglSwapIntervalEXT(1);
+				CASPAR_LOG(info) << print() << " Successfully enabled vsync.";
+			}
+			else
+				CASPAR_LOG(info) << print() << " Failed to enable vsync.";
+		}
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
@@ -541,7 +557,8 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 	config.windowed			= ptree.get(L"windowed", config.windowed);
 	config.key_only			= ptree.get(L"key-only", config.key_only);
 	config.auto_deinterlace	= ptree.get(L"auto-deinterlace", config.auto_deinterlace);
-	
+	config.vsync			= ptree.get(L"vsync", config.vsync);
+
 	auto stretch_str = ptree.get(L"stretch", L"default");
 	if(stretch_str == L"uniform")
 		config.stretch = stretch::uniform;
