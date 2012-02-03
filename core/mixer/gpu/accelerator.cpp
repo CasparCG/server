@@ -106,7 +106,7 @@ safe_ptr<device_buffer> accelerator::create_device_buffer(int width, int height,
 	auto& pool = device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->items.try_pop(buffer))		
-		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);}, high_priority);			
+		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);}, task_priority::high_priority);			
 	
 	//++pool->usage_count;
 
@@ -159,7 +159,7 @@ safe_ptr<host_buffer> accelerator::create_host_buffer(int size, host_buffer::usa
 	auto& pool = host_pools_[usage.value()][size];
 	std::shared_ptr<host_buffer> buffer;
 	if(!pool->items.try_pop(buffer))	
-		buffer = executor_.invoke([=]{return allocate_host_buffer(size, usage);}, high_priority);	
+		buffer = executor_.invoke([=]{return allocate_host_buffer(size, usage);}, task_priority::high_priority);	
 	
 	//++pool->usage_count;
 
@@ -175,7 +175,7 @@ safe_ptr<host_buffer> accelerator::create_host_buffer(int size, host_buffer::usa
 				buffer->unmap();
 
 			pool->items.push(buffer);
-		}, high_priority);	
+		}, task_priority::high_priority);	
 	});
 }
 
@@ -223,7 +223,7 @@ boost::unique_future<void> accelerator::gc()
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-	}, high_priority);
+	}, task_priority::high_priority);
 }
 
 std::wstring accelerator::version()
@@ -263,7 +263,7 @@ boost::unique_future<safe_ptr<device_buffer>> accelerator::copy_async(safe_ptr<h
 		auto result = create_device_buffer(width, height, stride);
 		result->copy_from(source);
 		return result;
-	}, high_priority);
+	}, task_priority::high_priority);
 }
 
 }}}

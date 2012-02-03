@@ -131,7 +131,7 @@ struct input::impl : boost::noncopyable
 			queued_seek(target);
 
 			tick();
-		}, high_priority);
+		}, task_priority::high_priority);
 	}
 	
 	std::wstring print() const

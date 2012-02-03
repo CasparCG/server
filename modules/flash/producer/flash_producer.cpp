@@ -358,7 +358,7 @@ public:
 		executor_.invoke([this]
 		{
 			renderer_.reset();
-		}, high_priority);
+		}, task_priority::high_priority);
 	}
 
 	// frame_producer
