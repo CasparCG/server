@@ -43,17 +43,12 @@ class mixer sealed : boost::noncopyable
 {
 public:	
 	explicit mixer(const safe_ptr<gpu::accelerator>& ogl);
-				
-	// mixer
-			
+					
+	safe_ptr<const struct data_frame> operator()(std::map<int, safe_ptr<class draw_frame>> frames, const struct video_format_desc& format_desc);
+	
 	void set_blend_mode(int index, blend_mode value);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
-	
-	// subject
-
-	safe_ptr<const struct data_frame> operator()(std::map<int, safe_ptr<class draw_frame>> frames, const struct video_format_desc& format_desc);
-
 private:
 	struct impl;
 	safe_ptr<impl> impl_;
