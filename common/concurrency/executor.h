@@ -23,73 +23,53 @@
 
 #include "../except.h"
 #include "../log.h"
+#include "../enum_class.h"
 #include "../utility/move_on_copy.h"
-
-#include <Windows.h>
+#include "../os/windows/windows.h"
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 
 #include <boost/thread.hpp>
-#include <boost/optional.hpp>
-#include <boost/noncopyable.hpp>
 
 #include <functional>
 
 namespace caspar {
-
-namespace detail {
-
-//typedef struct tagTHREADNAME_INFO
-//{
-//	DWORD dwType; // must be 0x1000
-//	LPCSTR szName; // pointer to name (in user addr space)
-//	DWORD dwThreadID; // thread ID (-1=caller thread)
-//	DWORD dwFlags; // reserved for future use, must be zero
-//} THREADNAME_INFO;
-//
-//inline void SetThreadName(DWORD dwThreadID, LPCSTR szThreadName)
-//{
-//	THREADNAME_INFO info;
-//	{
-//		info.dwType = 0x1000;
-//		info.szName = szThreadName;
-//		info.dwThreadID = dwThreadID;
-//		info.dwFlags = 0;
-//	}
-//	__try
-//	{
-//		RaiseException( 0x406D1388, 0, sizeof(info)/sizeof(DWORD), (DWORD*)&info );
-//	}
-//	__except (EXCEPTION_CONTINUE_EXECUTION){}	
-//}
-//
-//}
-}
-
-enum task_priority
+	
+struct task_priority_def
 {
-	high_priority,
-	normal_priority,
-	priority_count
+	enum type
+	{
+		high_priority,
+		normal_priority,
+		priority_count
+	};
 };
+typedef enum_class<task_priority_def> task_priority;
 
-enum thread_priority
+struct thread_priority_def
 {
-	high_priority_class,
-	above_normal_priority_class,
-	normal_priority_class,
-	below_normal_priority_class
+	enum type
+	{
+		high_priority_class,
+		above_normal_priority_class,
+		normal_priority_class,
+		below_normal_priority_class
+	};
 };
+typedef enum_class<thread_priority_def> thread_priority;
 
-class executor : boost::noncopyable
+class executor
 {
+	executor(const executor&);
+	executor& operator=(const executor&);
+
 	const std::string name_;
 	boost::thread thread_;
 	tbb::atomic<bool> is_running_;
 	
 	typedef tbb::concurrent_bounded_queue<std::function<void()>> function_queue;
-	function_queue execution_queue_[priority_count];
+	function_queue execution_queue_[task_priority::priority_count];
 		
 	template<typename Func>
 	auto create_task(Func&& func) -> boost::packaged_task<decltype(func())> // noexcept
@@ -127,20 +107,20 @@ public:
 
 	void set_capacity(size_t capacity) // noexcept
 	{
-		execution_queue_[normal_priority].set_capacity(capacity);
+		execution_queue_[task_priority::normal_priority].set_capacity(capacity);
 	}
 
 	void set_priority_class(thread_priority p)
 	{
 		begin_invoke([=]
 		{
-			if(p == high_priority_class)
+			if(p == thread_priority::high_priority_class)
 				SetThreadPriority(GetCurrentThread(), HIGH_PRIORITY_CLASS);
-			else if(p == above_normal_priority_class)
+			else if(p == thread_priority::above_normal_priority_class)
 				SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
-			else if(p == normal_priority_class)
+			else if(p == thread_priority::normal_priority_class)
 				SetThreadPriority(GetCurrentThread(), NORMAL_PRIORITY_CLASS);
-			else if(p == below_normal_priority_class)
+			else if(p == thread_priority::below_normal_priority_class)
 				SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
 		});
 	}
@@ -148,14 +128,14 @@ public:
 	void clear()
 	{		
 		std::function<void()> func;
-		while(execution_queue_[normal_priority].try_pop(func));
-		while(execution_queue_[high_priority].try_pop(func));
+		while(execution_queue_[task_priority::normal_priority].try_pop(func));
+		while(execution_queue_[task_priority::high_priority].try_pop(func));
 	}
 				
 	void stop() // noexcept
 	{
 		is_running_ = false;	
-		execution_queue_[normal_priority].try_push([]{}); // Wake the execution thread.
+		execution_queue_[task_priority::normal_priority].try_push([]{}); // Wake the execution thread.
 	}
 
 	void wait() // noexcept
@@ -170,7 +150,7 @@ public:
 	}
 				
 	template<typename Func>
-	auto begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())> // noexcept
+	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running."));
@@ -180,7 +160,7 @@ public:
 
 		auto future = task_adaptor.value.get_future();
 
-		execution_queue_[priority].push([=]
+		execution_queue_[priority.value()].push([=]
 		{
 			try
 			{
@@ -195,14 +175,14 @@ public:
 			}
 		});
 
-		if(priority != normal_priority)
-			execution_queue_[normal_priority].push(nullptr);
+		if(priority != task_priority::normal_priority)
+			execution_queue_[task_priority::normal_priority].push(nullptr);
 					
 		return std::move(future);		
 	}
 	
 	template<typename Func>
-	auto invoke(Func&& func, task_priority prioriy = normal_priority) -> decltype(func()) // noexcept
+	auto invoke(Func&& func, task_priority prioriy = task_priority::normal_priority) -> decltype(func()) // noexcept
 	{
 		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
 			return func();
@@ -216,10 +196,10 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context."));
 
 		std::function<void()> func;
-		execution_queue_[normal_priority].pop(func);	
+		execution_queue_[task_priority::normal_priority].pop(func);	
 		
 		std::function<void()> func2;
-		while(execution_queue_[high_priority].try_pop(func2))
+		while(execution_queue_[task_priority::high_priority].try_pop(func2))
 		{
 			if(func2)
 				func2();
@@ -229,13 +209,14 @@ public:
 			func();
 	}
 		
-	function_queue::size_type capacity() const /*noexcept*/ { return execution_queue_[normal_priority].capacity();	}
-	function_queue::size_type size() const /*noexcept*/ { return execution_queue_[normal_priority].size();	}
-	bool empty() const /*noexcept*/	{ return execution_queue_[normal_priority].empty();	}
+	function_queue::size_type size() const /*noexcept*/
+	{
+		return execution_queue_[task_priority::normal_priority].size() + execution_queue_[task_priority::high_priority].size();	
+	}
+		
 	bool is_running() const /*noexcept*/ { return is_running_; }	
 		
-private:
-	
+private:	
 
 	void run() // noexcept
 	{

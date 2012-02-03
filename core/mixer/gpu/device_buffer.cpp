@@ -115,7 +115,7 @@ public:
 			GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
 			GL(glBindTexture(GL_TEXTURE_2D, 0));
 			source->unbind();
-		}, high_priority);
+		}, task_priority::high_priority);
 	}
 
 	void copy_to(const safe_ptr<host_buffer>& dest)
@@ -134,7 +134,7 @@ public:
 			GL(glBindTexture(GL_TEXTURE_2D, 0));
 			dest->unbind();
 			GL(glFlush());
-		}, high_priority);
+		}, task_priority::high_priority);
 	}
 };
 

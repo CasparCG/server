@@ -89,7 +89,7 @@ public:
 		get_instance().executor_.begin_invoke([=]
 		{
 			get_instance().do_register_drawable(drawable);
-		}, high_priority);
+		}, task_priority::high_priority);
 	}
 
 	static void show(bool value)
@@ -97,13 +97,13 @@ public:
 		get_instance().executor_.begin_invoke([=]
 		{	
 			get_instance().do_show(value);
-		}, high_priority);
+		}, task_priority::high_priority);
 	}
 				
 private:
 	context() : executor_(L"diagnostics")
 	{
-		executor_.set_priority_class(below_normal_priority_class);
+		executor_.set_priority_class(thread_priority::below_normal_priority_class);
 	}
 
 	void do_show(bool value)

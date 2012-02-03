@@ -181,7 +181,7 @@ public:
 				blend_modes_.insert(std::make_pair(index, value));
 			else
 				it->second = value;
-		}, high_priority);
+		}, task_priority::high_priority);
 	}
 	
 	boost::unique_future<boost::property_tree::wptree> info() const
