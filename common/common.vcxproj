@@ -115,7 +115,7 @@
   <ItemGroup>
     <ClInclude Include="assert.h" />
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
-    <ClInclude Include="concurrency\defer.h" />
+    <ClInclude Include="concurrency\async.h" />
     <ClInclude Include="concurrency\executor.h" />
     <ClInclude Include="concurrency\lock.h" />
     <ClInclude Include="diagnostics\graph.h" />

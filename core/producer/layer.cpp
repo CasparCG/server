@@ -60,9 +60,9 @@ public:
 		is_paused_ = false;
 	}
 
-	void load(const safe_ptr<frame_producer>& producer, const boost::optional<int32_t>& auto_play_delta)
+	void load(safe_ptr<frame_producer> producer, const boost::optional<int32_t>& auto_play_delta)
 	{		
-		background_		 = producer;
+		background_		 = std::move(producer);
 		auto_play_delta_ = auto_play_delta;
 
 		if(auto_play_delta_ && foreground_ == frame_producer::empty())
@@ -74,24 +74,22 @@ public:
 		if(background_ != frame_producer::empty())
 		{
 			background_->set_leading_producer(foreground_);
-			
-			foreground_			= background_;
-			background_			= frame_producer::empty();
-			frame_number_		= 0;
+			foreground_		= background_;
+			background_		= frame_producer::empty();
+			frame_number_	= 0;
 			auto_play_delta_.reset();
 		}
 
-		is_paused_			= false;
+		resume();
 	}
 	
 	void stop()
 	{
-		foreground_			= frame_producer::empty();
-		background_			= background_;
-		frame_number_		= 0;
+		foreground_		= frame_producer::empty();
+		frame_number_	= 0;
 		auto_play_delta_.reset();
 
-		is_paused_			= true;
+		pause();
 	}
 		
 	safe_ptr<draw_frame> receive(frame_producer::flags flags)
@@ -125,11 +123,6 @@ public:
 		}
 	}
 	
-	bool empty() const
-	{
-		return background_ == core::frame_producer::empty() && foreground_ == core::frame_producer::empty();
-	}
-
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
@@ -159,13 +152,12 @@ void layer::swap(layer& other)
 {	
 	impl_.swap(other.impl_);
 }
-void layer::load(const safe_ptr<frame_producer>& frame_producer, const boost::optional<int32_t>& auto_play_delta){return impl_->load(frame_producer, auto_play_delta);}	
+void layer::load(safe_ptr<frame_producer> frame_producer, const boost::optional<int32_t>& auto_play_delta){return impl_->load(std::move(frame_producer), auto_play_delta);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
 safe_ptr<draw_frame> layer::receive(frame_producer::flags flags) {return impl_->receive(flags);}
 safe_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
-bool layer::empty() const {return impl_->empty();}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
 }}

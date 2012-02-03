@@ -53,7 +53,6 @@ public:
 	};
 	typedef enum_class<flags_def> flags;
 
-	frame_producer(){}
 	virtual ~frame_producer(){}	
 
 	virtual std::wstring print() const = 0; // nothrow

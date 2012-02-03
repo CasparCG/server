@@ -45,13 +45,11 @@ public:
 
 	void swap(layer& other); // nothrow 
 		
-	void load(const safe_ptr<struct frame_producer>& producer, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
+	void load(safe_ptr<struct frame_producer> producer, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
 		
-	bool empty() const;
-
 	safe_ptr<struct frame_producer> foreground() const; // nothrow
 	safe_ptr<struct frame_producer> background() const; // nothrow
 

@@ -124,14 +124,14 @@
     <ClInclude Include="reactive.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="concurrency\defer.h">
-      <Filter>source\concurrency</Filter>
-    </ClInclude>
     <ClInclude Include="except.h">
       <Filter>source</Filter>
     </ClInclude>
     <ClInclude Include="tweener.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="concurrency\async.h">
+      <Filter>source\concurrency</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
