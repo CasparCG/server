@@ -23,8 +23,6 @@
 
 #include "frame_consumer.h"
 
-#include "cadence/cadence_guard_consumer.h"
-
 namespace caspar { namespace core {
 		
 std::vector<const consumer_factory_t> g_factories;

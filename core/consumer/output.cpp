@@ -29,7 +29,7 @@
 
 #include "frame_consumer.h"
 
-#include "cadence/cadence_guard_consumer.h"
+#include "cadence_guard.h"
 
 #include "../video_format.h"
 #include "../frame/data_frame.h"
