@@ -35,7 +35,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/memory/safe_ptr.h>
 #include <common/utf.h>
-#include <common/utility/param.h>
+#include <common/param.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
