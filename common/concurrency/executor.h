@@ -24,7 +24,6 @@
 #include "../except.h"
 #include "../log.h"
 #include "../enum_class.h"
-#include "../utility/move_on_copy.h"
 #include "../os/windows/windows.h"
 
 #include <tbb/atomic.h>
@@ -35,6 +34,24 @@
 #include <functional>
 
 namespace caspar {
+
+namespace detail {
+	
+template<typename T>
+struct move_on_copy
+{
+	move_on_copy(const move_on_copy<T>& other) : value(std::move(other.value)){}
+	move_on_copy(T&& value) : value(std::move(value)){}
+	mutable T value;
+};
+
+template<typename T>
+move_on_copy<T> make_move_on_copy(T&& value)
+{
+	return move_on_copy<T>(std::move(value));
+}
+
+}
 	
 struct task_priority_def
 {
@@ -158,7 +175,7 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running."));
 
 		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
-		auto task_adaptor = make_move_on_copy(create_task(func));
+		auto task_adaptor = detail::make_move_on_copy(create_task(func));
 
 		auto future = task_adaptor.value.get_future();
 

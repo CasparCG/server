@@ -35,7 +35,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/log.h>
-#include <common/utility/param.h>
+#include <common/param.h>
 
 #include <core/mixer/gpu/write_frame.h>
 #include <core/frame/frame_transform.h>

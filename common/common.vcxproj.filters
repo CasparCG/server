@@ -10,9 +10,6 @@
     <Filter Include="source\os\windows">
       <UniqueIdentifier>{1f3002ae-ebb8-4195-8cf3-1a5b87822f38}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\utility">
-      <UniqueIdentifier>{11860e2d-8adf-4573-956b-785e59aef2b0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\memory">
       <UniqueIdentifier>{9259676d-c225-4422-a50e-30d152d78dc2}</UniqueIdentifier>
     </Filter>
@@ -91,12 +88,6 @@
     <ClInclude Include="env.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="utility\move_on_copy.h">
-      <Filter>source\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\param.h">
-      <Filter>source\utility</Filter>
-    </ClInclude>
     <ClInclude Include="concurrency\lock.h">
       <Filter>source\concurrency</Filter>
     </ClInclude>
@@ -133,5 +124,6 @@
     <ClInclude Include="concurrency\async.h">
       <Filter>source\concurrency</Filter>
     </ClInclude>
+    <ClInclude Include="param.h" />
   </ItemGroup>
 </Project>
