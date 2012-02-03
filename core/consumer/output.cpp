@@ -176,7 +176,7 @@ public:
 					
 				auto minmax = minmax_buffer_depth();
 
-				frames_.set_capacity(minmax.second - minmax.first + 1);
+				frames_.set_capacity(std::max(1, minmax.second - minmax.first) + 1); // std::max(1, x) since we want to guarantee some pipeline depth for asycnhronous mixer read-back.
 				frames_.push_back(input_frame);
 
 				if(!frames_.full())
