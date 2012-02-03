@@ -145,8 +145,10 @@ public:
 
 	void join()
 	{
-		if(boost::this_thread::get_id() != thread_.get_id())
-			thread_.join();
+		if(boost::this_thread::get_id() == thread_.get_id())
+			BOOST_THROW_EXCEPTION(invalid_operation());
+
+		thread_.join();
 	}
 				
 	template<typename Func>
