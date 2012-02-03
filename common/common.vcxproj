@@ -131,13 +131,12 @@
     <ClInclude Include="os\windows\system_info.h" />
     <ClInclude Include="enum_class.h" />
     <ClInclude Include="os\windows\windows.h" />
+    <ClInclude Include="param.h" />
     <ClInclude Include="reactive.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="tweener.h" />
     <ClInclude Include="utf.h" />
     <ClInclude Include="prec_timer.h" />
-    <ClInclude Include="utility\move_on_copy.h" />
-    <ClInclude Include="utility\param.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="diagnostics\graph.cpp">

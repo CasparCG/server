@@ -33,7 +33,7 @@
 
 #include <common/env.h>
 #include <common/log.h>
-#include <common/utility/param.h>
+#include <common/param.h>
 #include <common/diagnostics/graph.h>
 
 #include <core/video_format.h>

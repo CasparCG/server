@@ -29,6 +29,7 @@
 #include <limits>
 #include <functional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <boost/noncopyable.hpp>
@@ -41,7 +42,6 @@ namespace caspar { namespace core {
 	
 struct frame_producer : boost::noncopyable
 {
-public:
 	struct flags_def
 	{
 		enum type
@@ -79,5 +79,5 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, c
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::wstring& params);
 safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer> producer);
 safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer);
-
+		
 }}
