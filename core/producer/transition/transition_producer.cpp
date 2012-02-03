@@ -180,8 +180,7 @@ struct transition_producer : public frame_producer
 
 safe_ptr<frame_producer> create_transition_producer(const field_mode& mode, const safe_ptr<frame_producer>& destination, const transition_info& info)
 {
-	return create_producer_print_proxy(
-			make_safe<transition_producer>(mode, destination, info));
+	return make_safe<transition_producer>(mode, destination, info);
 }
 
 }}
