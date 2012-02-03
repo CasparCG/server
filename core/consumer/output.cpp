@@ -75,7 +75,7 @@ public:
 		{
 			consumers_.insert(std::make_pair(index, consumer));
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
-		}, high_priority);
+		}, task_priority::high_priority);
 	}
 
 	void add(const safe_ptr<frame_consumer>& consumer)
@@ -96,7 +96,7 @@ public:
 				old_consumer = it->second;
 				consumers_.erase(it);
 			}
-		}, high_priority);
+		}, task_priority::high_priority);
 
 		if(old_consumer)
 		{
@@ -242,7 +242,7 @@ public:
 					.add(L"index", consumer.first); 
 			}
 			return info;
-		}, high_priority));
+		}, task_priority::high_priority));
 	}
 };
 

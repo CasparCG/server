@@ -134,7 +134,7 @@ public:
 		return ogl->invoke([&]
 		{
 			return map();
-		}, high_priority);
+		}, task_priority::high_priority);
 	}
 };
 
