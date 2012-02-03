@@ -87,23 +87,23 @@ public:
 
 	void remove(int index)
 	{		
-		// Destroy  consumer on calling thread:
-		std::shared_ptr<frame_consumer> old_consumer;
-
-		executor_.invoke([&]
+		auto consumer = executor_.invoke([&]() -> std::shared_ptr<frame_consumer>
 		{
+			auto consumer = frame_consumer::empty();
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
 			{
-				old_consumer = it->second;
+				consumer = it->second;
 				consumers_.erase(it);
 			}
+			return consumer;
 		}, task_priority::high_priority);
 
-		if(old_consumer)
+		// Destroy consumer on calling thread:
+		if(consumer)
 		{
-			auto str = old_consumer->print();
-			old_consumer.reset();
+			auto str = consumer->print();
+			consumer.reset();
 			CASPAR_LOG(info) << print() << L" " << str << L" Removed.";
 		}
 	}
