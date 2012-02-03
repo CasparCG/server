@@ -28,9 +28,8 @@
 
 #include "log.h"
 
+#include "except.h"
 #include "utf.h"
-
-#include "exception/exceptions.h"
 
 #include <ios>
 #include <string>
