@@ -1,6 +1,8 @@
-#include "../../stdafx.h"
+#include "../stdafx.h"
 
-#include "../frame_consumer.h"
+#include "cadence_guard.h"
+
+#include "frame_consumer.h"
 
 #include <common/env.h>
 #include <common/memory/safe_ptr.h>
