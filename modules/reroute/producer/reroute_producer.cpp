@@ -141,7 +141,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 {
 	auto producer = make_safe<reroute_producer>(frame_factory);
 	o.subscribe(producer);
-	return create_producer_print_proxy(producer);
+	return producer;
 }
 
 }}

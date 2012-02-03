@@ -340,9 +340,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();
 			
-	return create_producer_destroy_proxy(
-		   create_producer_print_proxy(
-			make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length)));
+	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length);
 }
 
 }}

@@ -104,8 +104,7 @@ struct separated_producer : public frame_producer
 
 safe_ptr<frame_producer> create_separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key)
 {
-	return create_producer_print_proxy(
-			make_safe<separated_producer>(fill, key));
+	return make_safe<separated_producer>(fill, key);
 }
 
 }}
