@@ -72,12 +72,10 @@ class image_renderer
 {
 	spl::shared_ptr<context>	ogl_;
 	image_kernel				kernel_;
-	bool						warm_;
 public:
 	image_renderer(const spl::shared_ptr<context>& ogl)
 		: ogl_(ogl)
 		, kernel_(ogl_)
-		, warm_(false)
 	{
 	}
 	
