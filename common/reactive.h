@@ -1,5 +1,7 @@
 #pragma once
 
+#include "spl/memory.h"
+
 #include <tbb/spin_rw_mutex.h>
 #include <tbb/cache_aligned_allocator.h>
 
@@ -310,7 +312,7 @@ public:
 		if(!filter_(e))
 			return;
 
-		std::vector<std::shared_ptr<observer>> observers;
+		std::vector<spl::shared_ptr<observer>> observers;
 
 		{
 			tbb::spin_rw_mutex::scoped_lock lock(mutex_, false);
@@ -321,7 +323,7 @@ public:
 			{
 				auto o = it->lock();
 				if(o)
-					observers.push_back(std::move(o));
+					observers.push_back(spl::make_shared_ptr(std::move(o)));
 				else
 					expired = it;
 			}
@@ -348,21 +350,21 @@ private:
 };
 
 template<typename F>
-std::shared_ptr<basic_subject<typename std::decay<typename detail::function_traits<F>::arg1_type>::type, typename std::decay<typename detail::function_traits<F>::arg1_type>::type, F>> 
+spl::shared_ptr<basic_subject<typename std::decay<typename detail::function_traits<F>::arg1_type>::type, typename std::decay<typename detail::function_traits<F>::arg1_type>::type, F>> 
 make_filter(F filter)
 {
 	return std::make_shared<basic_subject<std::decay<typename detail::function_traits<F>::arg1_type>::type, typename std::decay<typename detail::function_traits<F>::arg1_type>::type, F>>(std::move(filter));
 }
 
 template<typename F>
-std::shared_ptr<observer_function<typename std::decay<typename detail::function_traits<F>::arg1_type>::type, F>> 
+spl::shared_ptr<observer_function<typename std::decay<typename detail::function_traits<F>::arg1_type>::type, F>> 
 make_observer(F func)
 {
 	return std::make_shared<observer_function<std::decay<typename detail::function_traits<F>::arg1_type>::type, F>>(std::move(func));
 }
 
 template<typename F1, typename F2>
-std::shared_ptr<observer_function<typename std::decay<typename detail::function_traits<F1>::arg1_type>::type, F1, F2>> 
+spl::shared_ptr<observer_function<typename std::decay<typename detail::function_traits<F1>::arg1_type>::type, F1, F2>> 
 make_observer(F1 func, F2 filter)
 {
 	return std::make_shared<observer_function<std::decay<typename detail::function_traits<F1>::arg1_type>::type, F1, F2>>(std::move(func), std::move(filter));
