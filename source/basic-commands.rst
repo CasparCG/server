@@ -125,7 +125,7 @@ Syntax::
 Example::
 
 	<<< ADD 1 FILE output.mov CODEC DNXHD
-	<<< ADD 1 DECKLINK DEVICE 1
+	<<< ADD 1 DECKLINK 1
 		
 ======
 REMOVE
@@ -139,4 +139,4 @@ Syntax::
 Example::
 
 	<<< REMOVE 1 FILE 
-	<<< REMOVE 1 DECKLINK DEVICE 1
+	<<< REMOVE 1 DECKLINK 1
