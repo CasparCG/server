@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -37,7 +37,7 @@ struct frame_consumer : boost::noncopyable
 	frame_consumer(){}
 	virtual ~frame_consumer() {}
 	
-	virtual bool send(const safe_ptr<const struct data_frame>& frame) = 0;
+	virtual bool send(const spl::shared_ptr<const struct data_frame>& frame) = 0;
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
 	virtual std::wstring print() const = 0;
 	virtual boost::property_tree::wptree info() const = 0;
@@ -45,12 +45,12 @@ struct frame_consumer : boost::noncopyable
 	virtual int buffer_depth() const = 0;
 	virtual int index() const = 0;
 
-	static const safe_ptr<frame_consumer>& empty();
+	static const spl::shared_ptr<frame_consumer>& empty();
 };
 
-typedef std::function<safe_ptr<frame_consumer>(const std::vector<std::wstring>&)> consumer_factory_t;
+typedef std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&)> consumer_factory_t;
 
 void register_consumer_factory(const consumer_factory_t& factory);
-safe_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+spl::shared_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>& params);
 
 }}

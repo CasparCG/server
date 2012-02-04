@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../memory/safe_ptr.h"
+#include "../spl/memory.h"
 
 #include <string>
 #include <tuple>
@@ -35,7 +35,7 @@ std::tuple<float, float, float, float> color(int code);
 
 class graph : boost::noncopyable
 {
-	friend void register_graph(const safe_ptr<graph>& graph);
+	friend void register_graph(const spl::shared_ptr<graph>& graph);
 public:
 	graph();
 	void set_text(const std::wstring& value);
@@ -47,7 +47,7 @@ private:
 	std::shared_ptr<impl> impl_;
 };
 
-void register_graph(const safe_ptr<graph>& graph);
+void register_graph(const spl::shared_ptr<graph>& graph);
 void show_graphs(bool value);
 
 }}

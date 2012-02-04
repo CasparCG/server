@@ -66,10 +66,10 @@ struct ffmpeg_producer : public core::frame_producer
 {
 	const std::wstring											filename_;
 	
-	const safe_ptr<diagnostics::graph>							graph_;
+	const spl::shared_ptr<diagnostics::graph>							graph_;
 	boost::timer												frame_timer_;
 					
-	const safe_ptr<core::frame_factory>							frame_factory_;
+	const spl::shared_ptr<core::frame_factory>							frame_factory_;
 	const core::video_format_desc								format_desc_;
 
 	input														input_;	
@@ -81,12 +81,12 @@ struct ffmpeg_producer : public core::frame_producer
 	const uint32_t												start_;
 	const uint32_t												length_;
 
-	safe_ptr<core::draw_frame>									last_frame_;
+	spl::shared_ptr<core::draw_frame>									last_frame_;
 	
 	int64_t														frame_number_;
 	
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
+	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -139,7 +139,7 @@ public:
 
 	// frame_producer
 	
-	virtual safe_ptr<core::draw_frame> receive(int flags) override
+	virtual spl::shared_ptr<core::draw_frame> receive(int flags) override
 	{		
 		frame_timer_.restart();
 				
@@ -158,10 +158,10 @@ public:
 
 		graph_->set_text(print());
 
-		return last_frame_ = make_safe_ptr(frame);
+		return last_frame_ = spl::make_shared_ptr(frame);
 	}
 
-	virtual safe_ptr<core::draw_frame> last_frame() const override
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
 	{
 		return core::draw_frame::silence(last_frame_);
 	}
@@ -307,7 +307,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {		
 	auto filename = probe_stem(env::media_folder() + L"\\" + params.at(0));
 
@@ -322,7 +322,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
-	return make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length);
+	return spl::make_shared<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length);
 }
 
 }}

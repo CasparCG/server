@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -41,7 +41,7 @@ namespace ffmpeg {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(const safe_ptr<AVFormatContext>& context);
+	explicit video_decoder(const spl::shared_ptr<AVFormatContext>& context);
 	
 	bool ready() const;
 	void push(const std::shared_ptr<AVPacket>& packet);
@@ -59,7 +59,7 @@ public:
 
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}

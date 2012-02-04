@@ -24,7 +24,7 @@
 #include "image/blend_modes.h"
 
 #include <common/forward.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/reactive.h>
 
 #include <boost/noncopyable.hpp>
@@ -41,16 +41,16 @@ namespace caspar { namespace core {
 class mixer sealed : boost::noncopyable
 {
 public:	
-	explicit mixer(const safe_ptr<gpu::accelerator>& ogl);
+	explicit mixer(const spl::shared_ptr<gpu::accelerator>& ogl);
 					
-	safe_ptr<const struct data_frame> operator()(std::map<int, safe_ptr<class draw_frame>> frames, const struct video_format_desc& format_desc);
+	spl::shared_ptr<const struct data_frame> operator()(std::map<int, spl::shared_ptr<class draw_frame>> frames, const struct video_format_desc& format_desc);
 	
 	void set_blend_mode(int index, blend_mode value);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}

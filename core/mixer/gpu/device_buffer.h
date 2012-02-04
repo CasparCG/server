@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/forward.h>
 
 #include <boost/noncopyable.hpp>
@@ -40,8 +40,8 @@ public:
 	int width() const;
 	int height() const;
 		
-	void copy_from(const safe_ptr<host_buffer>& source);
-	void copy_to(const safe_ptr<host_buffer>& dest);
+	void copy_from(const spl::shared_ptr<host_buffer>& source);
+	void copy_to(const spl::shared_ptr<host_buffer>& dest);
 private:
 	friend class accelerator;
 	friend class image_kernel;
@@ -52,7 +52,7 @@ private:
 	int id() const;
 
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 	
 unsigned int format(int stride);

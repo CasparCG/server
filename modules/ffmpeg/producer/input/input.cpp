@@ -64,9 +64,9 @@ namespace caspar { namespace ffmpeg {
 		
 struct input::impl : boost::noncopyable
 {		
-	const safe_ptr<diagnostics::graph>							graph_;
+	const spl::shared_ptr<diagnostics::graph>							graph_;
 
-	const safe_ptr<AVFormatContext>								format_context_; // Destroy this last
+	const spl::shared_ptr<AVFormatContext>								format_context_; // Destroy this last
 	const int													default_stream_index_;
 			
 	const std::wstring											filename_;
@@ -80,7 +80,7 @@ struct input::impl : boost::noncopyable
 		
 	executor													executor_;
 	
-	impl(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
+	impl(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
 		: graph_(graph)
 		, format_context_(open_input(filename))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
@@ -186,7 +186,7 @@ struct input::impl : boost::noncopyable
 					auto size = packet->size;
 					auto data = packet->data;
 			
-					packet = safe_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
+					packet = spl::shared_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
 					{
 						packet->size = size;
 						packet->data = data;				
@@ -253,11 +253,11 @@ struct input::impl : boost::noncopyable
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
+input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
 	: impl_(new impl(graph, filename, loop, start, length)){}
 bool input::eof() const {return !impl_->executor_.is_running();}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
-safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
+spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}
 void input::seek(uint32_t target){impl_->seek(target);}

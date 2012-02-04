@@ -32,13 +32,13 @@ namespace caspar { namespace core {
 
 struct separated_producer : public frame_producer
 {		
-	safe_ptr<frame_producer>	fill_producer_;
-	safe_ptr<frame_producer>	key_producer_;
-	safe_ptr<draw_frame>		fill_;
-	safe_ptr<draw_frame>		key_;
-	safe_ptr<draw_frame>		last_frame_;
+	spl::shared_ptr<frame_producer>	fill_producer_;
+	spl::shared_ptr<frame_producer>	key_producer_;
+	spl::shared_ptr<draw_frame>		fill_;
+	spl::shared_ptr<draw_frame>		key_;
+	spl::shared_ptr<draw_frame>		last_frame_;
 		
-	explicit separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key) 
+	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key) 
 		: fill_producer_(fill)
 		, key_producer_(key)
 		, fill_(core::draw_frame::late())
@@ -49,7 +49,7 @@ struct separated_producer : public frame_producer
 
 	// frame_producer
 	
-	virtual safe_ptr<draw_frame> receive(int flags) override
+	virtual spl::shared_ptr<draw_frame> receive(int flags) override
 	{
 		tbb::parallel_invoke(
 		[&]
@@ -77,7 +77,7 @@ struct separated_producer : public frame_producer
 		return last_frame_ = frame;
 	}
 
-	virtual safe_ptr<core::draw_frame> last_frame() const override
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_;
 	}
@@ -102,9 +102,9 @@ struct separated_producer : public frame_producer
 	}
 };
 
-safe_ptr<frame_producer> create_separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key)
+spl::shared_ptr<frame_producer> create_separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key)
 {
-	return make_safe<separated_producer>(fill, key);
+	return spl::make_shared<separated_producer>(fill, key);
 }
 
 }}

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 namespace caspar { namespace core {
 	
-safe_ptr<struct frame_consumer> create_consumer_cadence_guard(const safe_ptr<struct frame_consumer>& consumer);
+spl::shared_ptr<struct frame_consumer> create_consumer_cadence_guard(const spl::shared_ptr<struct frame_consumer>& consumer);
 
 }}

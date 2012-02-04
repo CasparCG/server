@@ -23,14 +23,14 @@
 
 #include <core/producer/frame_producer.h>
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <vector>
 #include <string>
 
 namespace caspar { namespace flash {
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
 
 std::wstring find_template(const std::wstring& templateName);
 

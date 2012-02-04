@@ -168,10 +168,10 @@ class flash_renderer
 	const std::shared_ptr<core::frame_factory> frame_factory_;
 	
 	CComObject<caspar::flash::FlashAxContainer>* ax_;
-	safe_ptr<core::draw_frame> head_;
+	spl::shared_ptr<core::draw_frame> head_;
 	bitmap bmp_;
 	
-	safe_ptr<diagnostics::graph> graph_;
+	spl::shared_ptr<diagnostics::graph> graph_;
 	boost::timer frame_timer_;
 	boost::timer tick_timer_;
 
@@ -181,7 +181,7 @@ class flash_renderer
 	const int height_;
 	
 public:
-	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
+	flash_renderer(const spl::shared_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: graph_(graph)
 		, filename_(filename)
 		, frame_factory_(frame_factory)
@@ -248,7 +248,7 @@ public:
 		return result;
 	}
 	
-	safe_ptr<core::draw_frame> render_frame(bool sync)
+	spl::shared_ptr<core::draw_frame> render_frame(bool sync)
 	{
 		float frame_time = 1.0f/ax_->GetFPS();
 
@@ -315,7 +315,7 @@ public:
 struct flash_producer : public core::frame_producer
 {	
 	const std::wstring											filename_;	
-	const safe_ptr<core::frame_factory>							frame_factory_;
+	const spl::shared_ptr<core::frame_factory>							frame_factory_;
 	const int													width_;
 	const int													height_;
 	const int													buffer_size_;
@@ -323,19 +323,19 @@ struct flash_producer : public core::frame_producer
 	tbb::atomic<int>											fps_;
 	tbb::atomic<bool>											sync_;
 
-	safe_ptr<diagnostics::graph>								graph_;
+	spl::shared_ptr<diagnostics::graph>								graph_;
 
-	std::queue<safe_ptr<core::draw_frame>>						frame_buffer_;
-	tbb::concurrent_bounded_queue<safe_ptr<core::draw_frame>>	output_buffer_;
+	std::queue<spl::shared_ptr<core::draw_frame>>						frame_buffer_;
+	tbb::concurrent_bounded_queue<spl::shared_ptr<core::draw_frame>>	output_buffer_;
 	
 	mutable tbb::spin_mutex										last_frame_mutex_;
-	safe_ptr<core::draw_frame>									last_frame_;
+	spl::shared_ptr<core::draw_frame>									last_frame_;
 		
 	std::unique_ptr<flash_renderer>								renderer_;
 
 	executor													executor_;	
 public:
-	flash_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
+	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
 		, last_frame_(core::draw_frame::empty())
@@ -363,7 +363,7 @@ public:
 
 	// frame_producer
 		
-	virtual safe_ptr<core::draw_frame> receive(int) override
+	virtual spl::shared_ptr<core::draw_frame> receive(int) override
 	{					
 		auto frame = core::draw_frame::late();
 		
@@ -378,7 +378,7 @@ public:
 		return frame;
 	}
 
-	virtual safe_ptr<core::draw_frame> last_frame() const override
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
 	{
 		return lock(last_frame_mutex_, [this]
 		{
@@ -471,7 +471,7 @@ public:
 		});
 	}
 
-	safe_ptr<core::draw_frame> render_frame()
+	spl::shared_ptr<core::draw_frame> render_frame()
 	{	
 		auto frame = renderer_->render_frame(sync_);
 		lock(last_frame_mutex_, [&]
@@ -482,7 +482,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	auto template_host = get_template_host(frame_factory->get_video_format_desc());
 	
@@ -491,7 +491,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(!boost::filesystem::exists(filename))
 		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
 
-	return make_safe<flash_producer>(frame_factory, filename, template_host.width, template_host.height);
+	return spl::make_shared<flash_producer>(frame_factory, filename, template_host.width, template_host.height);
 }
 
 std::wstring find_template(const std::wstring& template_name)

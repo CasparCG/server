@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <vector>
 #include <boost/property_tree/ptree.hpp>
@@ -35,7 +35,7 @@ namespace core {
 namespace ogl {
 
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
 
 }}

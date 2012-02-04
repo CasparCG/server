@@ -110,7 +110,7 @@ struct filter::impl
 	AVFilterContext*				buffersrc_ctx_;
 	std::shared_ptr<void>			parallel_yadif_ctx_;
 	std::vector<PixelFormat>		pix_fmts_;
-	std::queue<safe_ptr<AVFrame>>	bypass_;
+	std::queue<spl::shared_ptr<AVFrame>>	bypass_;
 		
 	impl(const std::wstring& filters, const std::vector<PixelFormat>& pix_fmts) 
 		: filters_(filters)
@@ -145,7 +145,7 @@ struct filter::impl
 
 		if(filters_.empty())
 		{
-			bypass_.push(make_safe_ptr(frame));
+			bypass_.push(spl::make_shared_ptr(frame));
 			return;
 		}
 		
@@ -165,7 +165,7 @@ struct filter::impl
 				#if FF_API_OLD_VSINK_API
 					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, pix_fmts_.data(), graph_.get()), "[filter]");
 				#else
-					safe_ptr<AVBufferSinkParams> buffersink_params(av_buffersink_params_alloc(), av_free);
+					spl::shared_ptr<AVBufferSinkParams> buffersink_params(av_buffersink_params_alloc(), av_free);
 					buffersink_params->pixel_fmts = pix_fmts_.data();
 					THROW_ON_ERROR2(avfilter_graph_create_filter(&buffersink_ctx_, avfilter_get_by_name("buffersink"), "out", NULL, buffersink_params.get(), graph_.get()), "[filter]");				
 				#endif
@@ -278,7 +278,7 @@ struct filter::impl
 				if (!picref) 
 					return nullptr;
 				
-				safe_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
+				spl::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), [=](AVFrame* p)
 				{
 					av_free(p);
 					avfilter_unref_buffer(picref);
@@ -320,11 +320,11 @@ filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return
 void filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
 std::shared_ptr<AVFrame> filter::poll(){return impl_->poll();}
 std::wstring filter::filter_str() const{return impl_->filters_;}
-std::vector<safe_ptr<AVFrame>> filter::poll_all()
+std::vector<spl::shared_ptr<AVFrame>> filter::poll_all()
 {	
-	std::vector<safe_ptr<AVFrame>> frames;
+	std::vector<spl::shared_ptr<AVFrame>> frames;
 	for(auto frame = poll(); frame; frame = poll())
-		frames.push_back(make_safe_ptr(frame));
+		frames.push_back(spl::make_shared_ptr(frame));
 	return frames;
 }
 

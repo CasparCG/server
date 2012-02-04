@@ -5,7 +5,7 @@
 #include "frame_consumer.h"
 
 #include <common/env.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/except.h>
 
 #include <core/video_format.h>
@@ -16,11 +16,11 @@ namespace caspar { namespace core {
 // This class is used to guarantee that audio cadence is correct. This is important for NTSC audio.
 class cadence_guard : public frame_consumer
 {
-	safe_ptr<frame_consumer>		consumer_;
+	spl::shared_ptr<frame_consumer>		consumer_;
 	std::vector<int>				audio_cadence_;
 	boost::circular_buffer<int>	sync_buffer_;
 public:
-	cadence_guard(const safe_ptr<frame_consumer>& consumer)
+	cadence_guard(const spl::shared_ptr<frame_consumer>& consumer)
 		: consumer_(consumer)
 	{
 	}
@@ -32,7 +32,7 @@ public:
 		consumer_->initialize(format_desc, channel_index);
 	}
 
-	virtual bool send(const safe_ptr<const data_frame>& frame) override
+	virtual bool send(const spl::shared_ptr<const data_frame>& frame) override
 	{		
 		if(audio_cadence_.size() == 1)
 			return consumer_->send(frame);
@@ -79,9 +79,9 @@ public:
 	}
 };
 
-safe_ptr<frame_consumer> create_consumer_cadence_guard(const safe_ptr<frame_consumer>& consumer)
+spl::shared_ptr<frame_consumer> create_consumer_cadence_guard(const spl::shared_ptr<frame_consumer>& consumer)
 {
-	return make_safe<cadence_guard>(std::move(consumer));
+	return spl::make_shared<cadence_guard>(std::move(consumer));
 }
 
 }}

@@ -124,27 +124,27 @@ public:
 		
 struct mixer::impl : boost::noncopyable
 {			
-	safe_ptr<gpu::accelerator>			ogl_;
+	spl::shared_ptr<gpu::accelerator>			ogl_;
 	
 	audio_mixer							audio_mixer_;
-	safe_ptr<image_mixer>				image_mixer_;
+	spl::shared_ptr<image_mixer>				image_mixer_;
 	
 	std::unordered_map<int, blend_mode>	blend_modes_;
 			
 	executor executor_;
 
 public:
-	impl(const safe_ptr<gpu::accelerator>& ogl) 
+	impl(const spl::shared_ptr<gpu::accelerator>& ogl) 
 		: ogl_(ogl)
 		, audio_mixer_()
-		, image_mixer_(make_safe<gpu::image_mixer>(ogl_))
+		, image_mixer_(spl::make_shared<gpu::image_mixer>(ogl_))
 		, executor_(L"mixer")
 	{			
 	}	
 	
-	safe_ptr<const data_frame> operator()(std::map<int, safe_ptr<draw_frame>> frames, const video_format_desc& format_desc)
+	spl::shared_ptr<const data_frame> operator()(std::map<int, spl::shared_ptr<draw_frame>> frames, const video_format_desc& format_desc)
 	{		
-		return executor_.invoke([=]() mutable -> safe_ptr<const struct data_frame>
+		return executor_.invoke([=]() mutable -> spl::shared_ptr<const struct data_frame>
 		{		
 			try
 			{				
@@ -162,7 +162,7 @@ public:
 				auto image = (*image_mixer_)(format_desc);
 				auto audio = audio_mixer_(format_desc);
 
-				return make_safe<mixed_frame>(this, std::move(image), std::move(audio), format_desc);	
+				return spl::make_shared<mixed_frame>(this, std::move(image), std::move(audio), format_desc);	
 			}
 			catch(...)
 			{
@@ -192,9 +192,9 @@ public:
 	}
 };
 	
-mixer::mixer(const safe_ptr<gpu::accelerator>& ogl) 
+mixer::mixer(const spl::shared_ptr<gpu::accelerator>& ogl) 
 	: impl_(new impl(ogl)){}
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
-safe_ptr<const data_frame> mixer::operator()(std::map<int, safe_ptr<draw_frame>> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
+spl::shared_ptr<const data_frame> mixer::operator()(std::map<int, spl::shared_ptr<draw_frame>> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
 }}

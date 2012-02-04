@@ -24,7 +24,7 @@
 #include "../../image/blend_modes.h"
 
 #include <common/enum_class.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_transform.h>
@@ -46,7 +46,7 @@ typedef enum_class<keyer_def> keyer;
 struct draw_params sealed
 {
 	pixel_format_desc							pix_desc;
-	std::vector<safe_ptr<class device_buffer>>	textures;
+	std::vector<spl::shared_ptr<class device_buffer>>	textures;
 	frame_transform								transform;
 	blend_mode									blend_mode;
 	keyer										keyer;
@@ -65,11 +65,11 @@ struct draw_params sealed
 class image_kernel sealed : boost::noncopyable
 {
 public:
-	image_kernel(const safe_ptr<class accelerator>& ogl);
+	image_kernel(const spl::shared_ptr<class accelerator>& ogl);
 	void draw(draw_params&& params);
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}}

@@ -32,7 +32,7 @@ void register_consumer_factory(const consumer_factory_t& factory)
 	g_factories.push_back(factory);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
@@ -57,11 +57,11 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	return consumer;
 }
 
-const safe_ptr<frame_consumer>& frame_consumer::empty()
+const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 {
 	struct empty_frame_consumer : public frame_consumer
 	{
-		virtual bool send(const safe_ptr<const data_frame>&) override {return false;}
+		virtual bool send(const spl::shared_ptr<const data_frame>&) override {return false;}
 		virtual void initialize(const video_format_desc&, int) override{}
 		virtual std::wstring print() const override {return L"empty";}
 		virtual bool has_synchronization_clock() const override {return false;}
@@ -74,7 +74,7 @@ const safe_ptr<frame_consumer>& frame_consumer::empty()
 			return info;
 		}
 	};
-	static safe_ptr<frame_consumer> consumer = make_safe<empty_frame_consumer>();
+	static spl::shared_ptr<frame_consumer> consumer = spl::make_shared<empty_frame_consumer>();
 	return consumer;
 }
 

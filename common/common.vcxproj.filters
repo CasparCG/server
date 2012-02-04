@@ -28,6 +28,9 @@
     <Filter Include="source\compiler\vs">
       <UniqueIdentifier>{28c25c8a-1277-4d2c-9e85-5af33f9938ea}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\spl">
+      <UniqueIdentifier>{8b45f3e8-2ab4-4bee-8130-144a7bc795e8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="diagnostics\graph.cpp">
@@ -67,9 +70,6 @@
       <Filter>source\gl</Filter>
     </ClInclude>
     <ClInclude Include="memory\page_locked_allocator.h">
-      <Filter>source\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="memory\safe_ptr.h">
       <Filter>source\memory</Filter>
     </ClInclude>
     <ClInclude Include="diagnostics\graph.h">
@@ -125,5 +125,8 @@
       <Filter>source\concurrency</Filter>
     </ClInclude>
     <ClInclude Include="param.h" />
+    <ClInclude Include="spl\memory.h">
+      <Filter>source\spl</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

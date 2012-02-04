@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/reactive.h>
 #include <common/forward.h>
 
@@ -31,17 +31,17 @@ FORWARD3(caspar, core, gpu, class accelerator);
 
 namespace caspar { namespace core {
 	
-class video_channel sealed : public reactive::observable<safe_ptr<const struct data_frame>>
+class video_channel sealed : public reactive::observable<spl::shared_ptr<const struct data_frame>>
 {
 	video_channel(const video_channel&);
 	video_channel& operator=(const video_channel&);
 public:
-	explicit video_channel(int index, const struct video_format_desc& format_desc, const safe_ptr<gpu::accelerator>& ogl);
+	explicit video_channel(int index, const struct video_format_desc& format_desc, const spl::shared_ptr<gpu::accelerator>& ogl);
 
-	safe_ptr<class stage>			stage();
-	safe_ptr<class mixer>			mixer();
-	safe_ptr<class output>			output();
-	safe_ptr<struct frame_factory>	frame_factory();
+	spl::shared_ptr<class stage>			stage();
+	spl::shared_ptr<class mixer>			mixer();
+	spl::shared_ptr<class output>			output();
+	spl::shared_ptr<struct frame_factory>	frame_factory();
 	
 	struct video_format_desc get_video_format_desc() const;
 	void set_video_format_desc(const struct video_format_desc& format_desc);
@@ -54,7 +54,7 @@ public:
 	virtual void unsubscribe(const observer_ptr& o) override;
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}

@@ -125,7 +125,6 @@
     <ClInclude Include="log.h" />
     <ClInclude Include="memory\memshfl.h" />
     <ClInclude Include="memory\page_locked_allocator.h" />
-    <ClInclude Include="memory\safe_ptr.h" />
     <ClInclude Include="env.h" />
     <ClInclude Include="os\windows\current_version.h" />
     <ClInclude Include="os\windows\system_info.h" />
@@ -133,6 +132,7 @@
     <ClInclude Include="os\windows\windows.h" />
     <ClInclude Include="param.h" />
     <ClInclude Include="reactive.h" />
+    <ClInclude Include="spl\memory.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="tweener.h" />
     <ClInclude Include="utf.h" />

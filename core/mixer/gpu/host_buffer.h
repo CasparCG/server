@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/enum_class.h>
 
 #include <boost/noncopyable.hpp>
@@ -58,7 +58,7 @@ private:
 	host_buffer(std::weak_ptr<accelerator> parent, int size, usage usage);
 
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}}

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <core/video_format.h>
 
@@ -38,7 +38,7 @@ namespace core {
 
 namespace decklink {
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
 
 }}
