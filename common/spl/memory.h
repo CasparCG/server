@@ -481,12 +481,6 @@ private:
     std::unique_ptr<T, D> p_;
 };
 
-template<typename T>
-unique_ptr<T> make_shared_ptr(std::unique_ptr<T>&& ptr)
-{
-	return unique_ptr<T>(std::move(ptr));
-}
-
 template<class T, class T2>
 bool operator==(const unique_ptr<T>& a, const unique_ptr<T2>& b)
 {
@@ -632,6 +626,12 @@ unique_ptr<T> dynamic_pointer_cast(const unique_ptr<T2>& p)
     if(!temp)
         throw std::bad_cast();
     return unique_ptr<T>(std::move(temp));
+}
+
+template<typename T>
+unique_ptr<T> make_unique_ptr(std::unique_ptr<T>&& ptr)
+{
+	return unique_ptr<T>(std::move(ptr));
 }
 
 template<typename T>
