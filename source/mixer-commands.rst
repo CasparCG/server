@@ -10,10 +10,7 @@ If *keyer* equals 1 then the specified layer will not be rendered, instead it wi
 
 Syntax::
 
-	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		KEYER
-		(?<keyer>(0|1))
+	MIXER [channel:int]-[layer:int] KEYER [keyer:0|1]
 		
 Example::
 
@@ -26,13 +23,15 @@ MIXER BLEND
 Syntax::
 
 	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		BLEND
-		(?<blend-mode>(0|1))
+		[channel:int]-[layer:int] BLEND [blend-mode:string]
 		
 Example::
 
 	<<< MIXER 1-1 BLEND overlay
+	
+See:: 
+
+Blend-modes.
 	
 =============
 MIXER OPACITY
@@ -41,13 +40,7 @@ MIXER OPACITY
 Syntax::
 
 	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		OPACITY
-		(?<opacity>(\d*\.?\d+))
-		(
-			(?<tween>\w+)
-			(?<duration>\d+)
-		)?
+		[channel:int]-[layer:int] OPACITY [opacity:double] {[tween:string] [duration:int]}
 		
 Example::
 
@@ -59,14 +52,7 @@ MIXER BRIGTHNESS
 
 Syntax::
 
-	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		BRIGTHNESS
-		(?<brightness>(\d*\.?\d+))
-		(
-			(?<tween>\w+)
-			(?<duration>\d+)
-		)?
+	MIXER [channel:int]-[layer:int] BRIGTHNESS [brightness:double] {[tween:string] [duration:int]}
 		
 Example::
 
@@ -79,13 +65,7 @@ MIXER SATURATION
 Syntax::
 
 	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		SATURATION
-		(?<saturation>(\d*\.?\d+))
-		(
-			(?<tween>\w+)
-			(?<duration>\d+)
-		)?
+		[channel:int]-[layer:int] SATURATION [saturation:double] {[tween:string] [duration:int]}
 		
 Example::
 
@@ -98,13 +78,7 @@ MIXER CONTRAST
 Syntax::
 
 	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		SATURATION
-		(?<contrast>(\d*\.?\d+))
-		(
-			(?<tween>\w+)
-			(?<duration>\d+)
-		)?
+		[channel:int]-[layer:int] CONTRAST [contrast:double] {[tween:string] [duration:int]}
 		
 Example::
 
@@ -116,18 +90,7 @@ MIXER LEVELS
 
 Syntax::
 
-	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		SATURATION
-		(?<min-input>(\d*\.?\d+))
-		(?<max-input>(\d*\.?\d+))
-		(?<gamma>(\d*\.?\d+))
-		(?<min-output>(\d*\.?\d+))
-		(?<max-output>(\d*\.?\d+))
-		(
-			(?<tween>\w+)
-			(?<duration>\d+)
-		)?
+	MIXER [channel:int]-[layer:int] SATURATION [min-input:double] [max-input:double] [gamma:double] [min-output:double] [max-output:double] {[tween:string] [duration:int]}
 		
 Example::
 
@@ -140,17 +103,7 @@ Transforms the video stream on the specified layer.
 
 Syntax::
 
-	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		FILL
-		(?<x>(\d*\.?\d+))
-		(?<y>(\d*\.?\d+))
-		(?<x-scale>(\d*\.?\d+))
-		(?<y-scale>(\d*\.?\d+))
-		(
-			(?<tween>\w+)
-			(?<duration>\d+)
-		)?
+	MIXER [channel:int]-[layer:int]	FILL [x:double] [y:double] [x-scale:double] [y-scale:double] {[tween:string] [duration:int]}
 		
 Example::
 
@@ -163,17 +116,7 @@ Masks the video stream on the specified layer.
 
 Syntax::
 
-	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		CLIP
-		(?<x>(\d*\.?\d+))
-		(?<y>(\d*\.?\d+))
-		(?<x-scale>(\d*\.?\d+))
-		(?<y-scale>(\d*\.?\d+))
-		(
-			(?<tween>\w+)
-			(?<duration>\d+)
-		)?
+	MIXER [channel:int]-[layer:int] [x:double] [y:double] [x-scale:double] [y-scale:double] {[tween:string] [duration:int]}
 		
 Example::
 
@@ -184,10 +127,7 @@ MIXER GRID
 ==========
 Creates a grid of video streams in ascending order of the layer index, i.e. if resolution equals 2 then a 2x2 grid of layers will be created.
 
-	MIXER
-		(?<video-channel>[1-9]+)
-		GRID
-		(?<resolution>(\d+))
+	MIXER [channel:int] RID	[resolution:int]
 		
 Example::
 
@@ -200,14 +140,7 @@ Changes the volume of the specified layer.
 
 Syntax::
 
-	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		VOLUME
-		(?<volume>(\d+))
-		(
-			(?<tween>\w+)
-			(?<duration>\d+)
-		)?
+	MIXER [channel:int]-[layer:int] VOLUME [volume:double] {[tween:string] [duration:int]}
 		
 Example::
 
@@ -219,9 +152,7 @@ MIXER CLEAR
 
 Syntax::
 
-	MIXER
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))? 
-		CLEAR
+	MIXER [channel:int]-[layer:int]	CLEAR
 		
 Example::
 

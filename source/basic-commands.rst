@@ -10,17 +10,7 @@ If no layer is specified the default layer index will be used.
 
 Syntax:: 
 
-	LOADBG 
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		(?<producer>[\d\w]+) 
-		(
-			(?<transitions>CUT|MIX|PUSH|WIPE|SLIDE) 
-			(?<duration>\d+)
-			(?<tween>(linear|easein|and-more))?{LINEAR}
-			(?<direction>LEFT|RIGHT)?{RIGHT}
-		)?
-		(?<auto>AUTO)?
-		(?<parameters>.*)?
+	LOADBG [channel:int]-[layer:int] [clip:string] {[transition:CUT|MIX|PUSH|WIPE|SLIDE] [duration:int] {tween:string} {direction:LEFT|RIGHT} {auto:AUTO} {parameters:string}}
 			
 Example::
 
@@ -34,17 +24,7 @@ If no layer is specified the default layer index will be used.
 
 Syntax:: 
 
-	LOAD
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		(?<producer>[\d\w]+) 
-		(
-			(?<transitions>CUT|MIX|PUSH|WIPE|SLIDE) 
-			(?<duration>\d+)
-			(?<tween>(linear|easein|and-more))?{LINEAR}
-			(?<direction>LEFT|RIGHT)?{RIGHT}
-		)?
-		(?<auto>AUTO)?
-		(?<parameters>.*)?
+	LOAD [channel:int]-[layer:int] [clip:string] {[transition:CUT|MIX|PUSH|WIPE|SLIDE] [duration:int] {tween:string} {direction:LEFT|RIGHT} {auto:AUTO} {parameters:string}}
 	
 Example::	
 
@@ -58,18 +38,8 @@ If additional parameters (see LOADBG) are provided then the provided producer wi
 If no layer is specified the default layer index will be used.
 
 Syntax::
-
-	PLAY
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		(?<producer>[\d\w]+) 
-		(
-			(?<transitions>CUT|MIX|PUSH|WIPE|SLIDE) 
-			(?<duration>\d+)
-			(?<tween>(linear|easein|and-more))?{LINEAR}
-			(?<direction>LEFT|RIGHT)?{RIGHT}
-		)?
-		(?<auto>AUTO)?
-		(?<parameters>.*)?
+	
+	PLAY [channel:int]-[layer:int] [clip:string] {[transition:CUT|MIX|PUSH|WIPE|SLIDE] [duration:int] {tween:string} {direction:LEFT|RIGHT} {auto:AUTO} {parameters:string}}
 	
 Example::
 
@@ -83,8 +53,7 @@ Pauses foreground clip.
 
 Syntax::	
 
-	PAUSE 
-		(?<video-channel>\d+)(-(?<layer>\d+))?	
+	PAUSE [channel:int]-[layer:int]
 
 Example::
 
@@ -97,8 +66,7 @@ Removes foreground clip. If no layer is specified the default layer index will b
 
 Syntax::	
 
-	STOP 
-		(?<video-channel>\d+)(-(?<layer>\d+))?	
+	STOP [channel:int]-[layer:int]
 
 Example::
 
@@ -111,12 +79,12 @@ Removes both foreground and background clips. If no layer is specified then all 
 
 Syntax::	
 
-	CLEAR 
-		(?<video-channel>\d+)(-(?<layer>\d+))?	
+	CLEAR [channel:int]{-[layer:int]}
 
 Example::
 
 	<<< CLEAR 1-1
+	<<< CLEAR 1
 		
 ======
 CALL
@@ -125,10 +93,7 @@ Calls a producers specific function.
 
 Syntax::
 
-	CALL 
-		(?<video-channel>\d+(-(?<layer>\d+))?
-		(?<function>[\d\w]+)
-		(?<parameters>.*)?
+	CALL [channel:int]-[layer:int] [function:string] {parameters:string}
 
 Example::
 
@@ -141,9 +106,7 @@ Swaps layers between channels (both foreground and background will be swapped). 
 
 Syntax::
 
-	SWAP 
-		(?<video-channel1>\d+)(-(?<layer1>\d+))?		
-		(?<video-channel2>\d+)(-(?<layer2>\d+))? 
+	SWAP [channel:int]{-[layer:int]} [channel:int]{-[layer:int]}
 
 Example::
 
@@ -157,10 +120,7 @@ Adds consumer to output.
 
 Syntax::
 
-	ADD 
-		(?<video-channel1>\d+) 
-		(?<consumer>[\d\w]+) 
-		(?<parameters>.*)
+	ADD [channel:int] [consumer:string] {parameters:string}
 	
 Example::
 
@@ -174,10 +134,7 @@ Removes consumer from output.
 
 Syntax::
 
-	REMOVE 
-		(?<video-channel1>\d+) 
-		(?<consumer>[\d\w]+) 
-		(?<parameters>.*)
+	REMOVE [channel:int] [consumer:string] {parameters:string}
 
 Example::
 

@@ -1,11 +1,10 @@
 *************
 Misc Commands
 *************
-Opens the diagnostics window.
-
 ====
 DIAG
 ====
+Opens the diagnostics window.
 
 Syntax::
 
@@ -13,7 +12,7 @@ Syntax::
 	
 Example::
 
-	DIAG
+	<<< DIAG
 	
 ===
 BYE
@@ -26,4 +25,17 @@ Syntax::
 	
 Example
 
-	BYE
+	<<< BYE
+	
+====
+CHANNEL_GRID
+====
+Opens a window displaying all the channels currently running on the server.
+
+Syntax::
+
+	<<< CHANNEL_GRID
+	
+Example::
+
+	<<< CHANNEL_GRID

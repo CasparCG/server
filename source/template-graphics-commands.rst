@@ -33,13 +33,7 @@ Data is either inline xml or a reference to a saved dataset.
 
 Syntax::
 
-	CG
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		ADD
-		(?<template-layer>\d+)
-		(?<template>[\d\w]+)
-		(?<play-on-load>(0|1))?
-		(?<data>".*")
+	CG [channel:int]-[layer:int] ADD [template-host-layer:int] [template:string] {[play-on-load:0|1]} {[data:string]}
 		
 Example::
 
@@ -52,10 +46,7 @@ Removes the visible template from a specific layer.
 
 Syntax::
 
-	CG
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		REMOVE
-		(?<template-layer>\d+)
+	CG [channel:int]-[layer:int] REMOVE [template-host-layer:int] 
 		
 Example::
 
@@ -68,9 +59,7 @@ Clears all layers and any state that might be stored. What this actually does be
 
 Syntax::
 
-	CG
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		CLEAR
+	CG channel:int]-[layer:int]	CLEAR
 		
 Example::
 
@@ -83,10 +72,7 @@ Plays and displays the template in the specified layer.
 
 Syntax::
 
-	CG
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		PLAY
-		(?<template-layer>\d+)
+	CG [channel:int]-[layer:int] PLAY [template-host-layer:int] 
 		
 Example::
 
@@ -99,10 +85,7 @@ Stops and removes the template from the specified layer. This is different than 
 
 Syntax::
 
-	CG
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		STOP
-		(?<template-layer>\d+)
+	CG [channel:int]-[layer:int] STOP [template-host-layer:int] 
 		
 Example::
 
@@ -115,10 +98,7 @@ Triggers a "continue" in the template on the specified layer. This is used to co
 
 Syntax::
 
-	CG
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		NEXT
-		(?<template-layer>\d+)
+	CG [channel:int]-[layer:int] NEXT [template-host-layer:int] 
 		
 Example::
 
@@ -131,11 +111,7 @@ Jumps to the specified label in the template on the specified layer.
 
 Syntax::
 
-	CG
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		GOTO
-		(?<template-layer>\d+)
-		(?<label>[\d\w]+)
+	CG [channel:int]-[layer:int] GOTO [template-host-layer:int] {[label:string]}
 		
 Example::
 
@@ -148,11 +124,7 @@ Sends new data to the template on specified layer. Data is either inline xml or 
 
 Syntax::
 
-	CG
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		UPDATE
-		(?<template-layer>\d+)
-		(?<data>".*")
+	CG [channel:int]-[layer:int] UPDATE [template-host-layer:int] [data:string]
 		
 Example::
 
@@ -165,12 +137,8 @@ Calls a custom method in the document class of the template on the specified lay
 
 Syntax::
 
-	CG
-		(?<video-channel>[1-9]+)(-(?<layer>\d+))?
-		PLAY
-		(?<template-layer>\d+)
-		(?<method>[\d\w]+)
+	CG [channel:int]-[layer:int] INVOKE [template-host-layer:int] [method:string]
 		
 Example::
 
-	<<< CG 1-1 GOTO 1 start_intro
+	<<< CG 1-1 INVOKE 1 start_intro

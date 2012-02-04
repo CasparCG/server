@@ -53,7 +53,7 @@ Sets whether file will loop.
 
 Syntax::
 
-	LOOP (?<frame>0|1)
+	LOOP [loop:0|1]
 	
 ^^^^
 SEEK
@@ -62,7 +62,7 @@ Sets the start of the file. This point will be used while looping.
 
 Syntax::
 
-	SEEK (?<frames>\d+)
+	SEEK [frames:int]
 	
 Example::
 	
@@ -75,7 +75,7 @@ Sets the end of the file.
 
 Syntax::
 
-	LENGTH (?<frames>\d+)
+	LENGTH [frames:int]
 	
 Example::
 	
@@ -88,7 +88,7 @@ Configures as libavfilter which will be used for the file.
 
 Syntax::
 
-	FILTER (?<libavfilter-parameters>[\d\w]+)
+	FILTER [libavfilter-parameters:string]
 		
 Example::
 		
@@ -105,7 +105,7 @@ Sets whether file will loop.
 
 Syntax::
 
-	LOOP (?<frame>0|1)?
+	LOOP [loop:0|1]
 	
 Returns
 
@@ -123,7 +123,7 @@ Seeks in the file.
 
 Syntax::
 
-	SEEK (?<frames>\d+)
+	SEEK [frames:int]
 	
 Returns
 

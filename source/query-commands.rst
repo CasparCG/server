@@ -9,8 +9,7 @@ Returns information about a mediafile.
 
 Syntax::
 
-	CINF
-		(?<filename>[\d\w]+)
+	CINF [filename:string]
 		
 Example::
 
@@ -52,8 +51,7 @@ Returns the version of specified component.
 
 Syntax::
 
-	VERSION
-		(FLASH)?
+	VERSION	{SERVER|FLASH}
 		
 Example::
 
@@ -69,8 +67,7 @@ Returns information about the server. The TEMPLATE version will read and return 
 
 Syntax::
 
-	VERSION
-		((?<video-channel>\d+)(-(?<layer>\d+)))|(TEMPLATE (?<template>[\d\w]+)))?
+	INFO ([channel:int]{-[layer:int]}|TEMPLATE [filename:string])
 		
 Example::
 

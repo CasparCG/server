@@ -11,9 +11,7 @@ Stores the dataset data under the name name.
 
 Syntax::
 
-	DATA STORE
-		(?<name>[\d\w]+)
-		(?<data>.+)
+	DATA STORE [name:string] [data:string]
 		
 Example::
 
@@ -26,9 +24,7 @@ Returns the data saved under the name *name*.
 
 Syntax::
 
-	DATA STORE
-		(?<name>[\d\w]+)
-		(?<data>".*")
+	DATA RETRIEVE [name:string]
 		
 Example::
 

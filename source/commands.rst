@@ -38,12 +38,6 @@ Valid sequences:
 
 These sequences apply to all parameters, it doesn\'t matter if it\'s a file name or a long string of xml-data.
 
-*********************
-Command Specification
-*********************
-
-Commands are documented as regular expressions. Line-breaks represent whitespace (\s).
-
 ************
 Return codes
 ************
