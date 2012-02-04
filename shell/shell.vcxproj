@@ -25,6 +25,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\accelerator\accelerator.vcxproj">
+      <Project>{8493d01a-f642-454c-8c44-88b38e2a3ef8}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\common\common.vcxproj">
       <Project>{02308602-7fe0-4253-b96e-22134919f56a}</Project>
     </ProjectReference>
@@ -49,11 +52,11 @@
     <ProjectReference Include="..\modules\oal\oal.vcxproj">
       <Project>{82ed7ed6-8a15-40ec-a8af-f5e712e0da68}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\modules\ogl\ogl.vcxproj">
-      <Project>{88f974f0-d09f-4788-8cf8-f563209e60c1}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\modules\reroute\reroute.vcxproj">
       <Project>{7d58bd57-fdd5-46e6-a23b-ed14b5314a0e}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\modules\screen\screen.vcxproj">
+      <Project>{88f974f0-d09f-4788-8cf8-f563209e60c1}</Project>
     </ProjectReference>
     <ProjectReference Include="..\protocol\protocol.vcxproj">
       <Project>{2040b361-1fb6-488e-84a5-38a580da90de}</Project>

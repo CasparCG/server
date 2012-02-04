@@ -28,12 +28,6 @@
     <Filter Include="source\producer\separated">
       <UniqueIdentifier>{cf834e89-32d6-47bc-8d5a-10e032f88e15}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\mixer\gpu">
-      <UniqueIdentifier>{b2af87a2-9528-4f82-b3f1-b7409ca15acd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="source\mixer\gpu\image">
-      <UniqueIdentifier>{d8d99a8a-42f9-48a3-b8a5-c07228226eab}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\frame">
       <UniqueIdentifier>{b19721c1-8dd1-45fb-b9e3-212b548ebbb6}</UniqueIdentifier>
     </Filter>
@@ -82,32 +76,8 @@
     <ClInclude Include="producer\separated\separated_producer.h">
       <Filter>source\producer\separated</Filter>
     </ClInclude>
-    <ClInclude Include="mixer\gpu\device_buffer.h">
-      <Filter>source\mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\host_buffer.h">
-      <Filter>source\mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\shader.h">
-      <Filter>source\mixer\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\image\image_mixer.h">
-      <Filter>source\mixer\gpu\image</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\image\image_kernel.h">
-      <Filter>source\mixer\gpu\image</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\image\blending_glsl.h">
-      <Filter>source\mixer\gpu\image</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\image\image_shader.h">
-      <Filter>source\mixer\gpu\image</Filter>
-    </ClInclude>
     <ClInclude Include="mixer\image\blend_modes.h">
       <Filter>source\mixer\image</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\accelerator.h">
-      <Filter>source\mixer\gpu</Filter>
     </ClInclude>
     <ClInclude Include="frame\frame_factory.h">
       <Filter>source\frame</Filter>
@@ -126,9 +96,6 @@
     </ClInclude>
     <ClInclude Include="frame\draw_frame.h">
       <Filter>source\frame</Filter>
-    </ClInclude>
-    <ClInclude Include="mixer\gpu\write_frame.h">
-      <Filter>source\mixer\gpu</Filter>
     </ClInclude>
     <ClInclude Include="consumer\cadence_guard.h">
       <Filter>source\consumer</Filter>
@@ -175,29 +142,8 @@
     <ClCompile Include="producer\frame_producer.cpp">
       <Filter>source\producer</Filter>
     </ClCompile>
-    <ClCompile Include="mixer\gpu\device_buffer.cpp">
-      <Filter>source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\host_buffer.cpp">
-      <Filter>source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\shader.cpp">
-      <Filter>source\mixer\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\image\image_shader.cpp">
-      <Filter>source\mixer\gpu\image</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\image\image_mixer.cpp">
-      <Filter>source\mixer\gpu\image</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\image\image_kernel.cpp">
-      <Filter>source\mixer\gpu\image</Filter>
-    </ClCompile>
     <ClCompile Include="mixer\image\blend_modes.cpp">
       <Filter>source\mixer\image</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\accelerator.cpp">
-      <Filter>source\mixer\gpu</Filter>
     </ClCompile>
     <ClCompile Include="frame\frame_transform.cpp">
       <Filter>source\frame</Filter>
@@ -207,9 +153,6 @@
     </ClCompile>
     <ClCompile Include="frame\data_frame.cpp">
       <Filter>source\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="mixer\gpu\write_frame.cpp">
-      <Filter>source\mixer\gpu</Filter>
     </ClCompile>
     <ClCompile Include="consumer\cadence_guard.cpp">
       <Filter>source\consumer</Filter>

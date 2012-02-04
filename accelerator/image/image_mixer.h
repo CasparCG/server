@@ -21,36 +21,42 @@
 
 #pragma once
 
-#include "blend_modes.h"
-
 #include <common/forward.h>
 #include <common/spl/memory.h>
 
+#include <core/mixer/image/blend_modes.h>
+#include <core/mixer/image/image_mixer.h>
+
 #include <core/frame/frame_visitor.h>
-
-#include <boost/range.hpp>
-
-#include <stdint.h>
 
 FORWARD1(boost, template<typename> class unique_future);
 FORWARD2(caspar, core, struct write_frame);
 FORWARD2(caspar, core, struct pixel_format_desc);
+FORWARD2(caspar, core, struct video_format_desc);
+FORWARD2(caspar, core, struct data_Frame);
+FORWARD2(caspar, core, struct frame_transform);
 
-namespace caspar { namespace core {
+namespace caspar { namespace accelerator { namespace ogl {
 	
-struct image_mixer : public frame_visitor
+class image_mixer sealed : public core::image_mixer
 {
-	virtual ~image_mixer(){}
+public:
+	image_mixer(const spl::shared_ptr<class context>& ogl);
 	
-	virtual void push(struct frame_transform& frame) = 0;
-	virtual void visit(struct data_frame& frame) = 0;
-	virtual void pop() = 0;
+	virtual void push(core::frame_transform& frame);
+	virtual void visit(core::data_frame& frame);
+	virtual void pop();
 
-	virtual void begin_layer(blend_mode blend_mode) = 0;
-	virtual void end_layer() = 0;
+	void begin_layer(core::blend_mode blend_mode);
+	void end_layer();
 		
-	virtual boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(const struct video_format_desc& format_desc) = 0;
-	virtual spl::shared_ptr<core::write_frame> create_frame(const void* tag, const struct pixel_format_desc& desc) = 0;
+	// NOTE: Content of return future is only valid while future is valid.
+	virtual boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(const core::video_format_desc& format_desc) override;
+		
+	virtual spl::shared_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override;
+private:
+	struct impl;
+	spl::shared_ptr<impl> impl_;
 };
 
-}}
+}}}

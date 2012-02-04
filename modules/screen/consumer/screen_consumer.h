@@ -22,39 +22,20 @@
 #pragma once
 
 #include <common/spl/memory.h>
-#include <common/forward.h>
 
-#include <boost/noncopyable.hpp>
+#include <vector>
+#include <boost/property_tree/ptree.hpp>
 
-FORWARD1(boost, template<typename> class unique_future);
-
-namespace caspar { namespace core { namespace gpu {
-		
-class host_buffer;
-class accelerator;
-
-class device_buffer : boost::noncopyable
-{
-public:	
-	int stride() const;	
-	int width() const;
-	int height() const;
-		
-	void copy_from(const spl::shared_ptr<host_buffer>& source);
-	void copy_to(const spl::shared_ptr<host_buffer>& dest);
-private:
-	friend class accelerator;
-	friend class image_kernel;
-	device_buffer(std::weak_ptr<accelerator> parent, int width, int height, int stride);
-			
-	void bind(int index);
-	void unbind();
-	int id() const;
-
-	struct impl;
-	spl::shared_ptr<impl> impl_;
-};
+namespace caspar { 
 	
-unsigned int format(int stride);
+namespace core {
+	struct frame_consumer;
+}
 
-}}}
+namespace screen {
+
+
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
+
+}}

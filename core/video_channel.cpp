@@ -25,17 +25,16 @@
 
 #include "video_format.h"
 
-#include "consumer/output.h"
-#include "mixer/mixer.h"
-#include "mixer/gpu/write_frame.h"
-#include "mixer/gpu/accelerator.h"
-#include "frame/data_frame.h"
 #include "producer/stage.h"
+#include "mixer/mixer.h"
+#include "consumer/output.h"
+#include "frame/data_frame.h"
 #include "frame/frame_factory.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/concurrency/lock.h>
+#include <common/concurrency/executor.h>
 
 #include <tbb/spin_mutex.h>
 
@@ -48,31 +47,30 @@ namespace caspar { namespace core {
 struct video_channel::impl sealed : public frame_factory
 {
 	reactive::basic_subject<spl::shared_ptr<const data_frame>> frame_subject_;
-	const int								index_;
 
-	mutable tbb::spin_mutex					format_desc_mutex_;
-	video_format_desc						format_desc_;
+	const int										index_;
+
+	mutable tbb::spin_mutex							format_desc_mutex_;
+	video_format_desc								format_desc_;
 	
-	const spl::shared_ptr<gpu::accelerator>		ogl_;
 	const spl::shared_ptr<diagnostics::graph>		graph_;
 
-	const spl::shared_ptr<caspar::core::output>	output_;
+	const spl::shared_ptr<caspar::core::output>		output_;
 	const spl::shared_ptr<caspar::core::mixer>		mixer_;
 	const spl::shared_ptr<caspar::core::stage>		stage_;	
 
-	boost::timer							tick_timer_;
-	boost::timer							produce_timer_;
-	boost::timer							mix_timer_;
-	boost::timer							consume_timer_;
+	boost::timer									tick_timer_;
+	boost::timer									produce_timer_;
+	boost::timer									mix_timer_;
+	boost::timer									consume_timer_;
 
-	executor								executor_;
+	executor										executor_;
 public:
-	impl(int index, const video_format_desc& format_desc, const spl::shared_ptr<gpu::accelerator>& ogl)  
+	impl(int index, const video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer)  
 		:  index_(index)
 		, format_desc_(format_desc)
-		, ogl_(ogl)
 		, output_(new caspar::core::output(format_desc, index))
-		, mixer_(new caspar::core::mixer(ogl))
+		, mixer_(new caspar::core::mixer(std::move(image_mixer)))
 		, stage_(new caspar::core::stage())	
 		, executor_(L"video_channel")
 	{
@@ -142,7 +140,6 @@ public:
 
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
-		ogl_->gc();
 		lock(format_desc_mutex_, [&]
 		{
 			format_desc_ = format_desc;
@@ -171,7 +168,7 @@ public:
 	}
 };
 
-video_channel::video_channel(int index, const video_format_desc& format_desc, const spl::shared_ptr<gpu::accelerator>& ogl) : impl_(new impl(index, format_desc, ogl)){}
+video_channel::video_channel(int index, const video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, image_mixer)){}
 spl::shared_ptr<stage> video_channel::stage() { return impl_->stage_;} 
 spl::shared_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
 spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_;} 

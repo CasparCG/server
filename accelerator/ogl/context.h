@@ -40,7 +40,7 @@
 #include <array>
 #include <unordered_map>
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 
 class shader;
 
@@ -58,7 +58,7 @@ struct buffer_pool
 	}
 };
 
-class accelerator : public std::enable_shared_from_this<accelerator>, boost::noncopyable
+class context : public std::enable_shared_from_this<context>, boost::noncopyable
 {	
 	std::unique_ptr<sf::Context> context_;
 	
@@ -69,10 +69,10 @@ class accelerator : public std::enable_shared_from_this<accelerator>, boost::non
 
 	executor executor_;
 				
-	accelerator();
+	context();
 public:		
-	static spl::shared_ptr<accelerator> create();
-	~accelerator();
+	static spl::shared_ptr<context> create();
+	~context();
 	
 	void attach(device_buffer& texture);
 	void clear(device_buffer& texture);		

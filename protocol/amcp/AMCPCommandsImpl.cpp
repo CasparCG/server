@@ -53,7 +53,7 @@
 #include <modules/flash/producer/cg_producer.h>
 #include <modules/ffmpeg/producer/util/util.h>
 #include <modules/image/image.h>
-#include <modules/ogl/ogl.h>
+#include <modules/screen/screen.h>
 #include <modules/reroute/producer/reroute_producer.h>
 
 #include <algorithm>

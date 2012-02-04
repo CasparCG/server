@@ -19,16 +19,16 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../../stdafx.h"
+#include "../stdafx.h"
 
 #include "image_kernel.h"
 
 #include "image_shader.h"
 #include "blending_glsl.h"
 
-#include "../shader.h"
-#include "../device_buffer.h"
-#include "../accelerator.h"
+#include "../ogl/shader.h"
+#include "../ogl/device_buffer.h"
+#include "../ogl/context.h"
 
 #include <common/except.h>
 #include <common/gl/gl_check.h>
@@ -40,7 +40,7 @@
 
 #include <boost/noncopyable.hpp>
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 	
 GLubyte upper_pattern[] = {
 	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
@@ -56,11 +56,11 @@ GLubyte lower_pattern[] = {
 
 struct image_kernel::impl : boost::noncopyable
 {	
-	spl::shared_ptr<accelerator>	ogl_;
+	spl::shared_ptr<context>	ogl_;
 	spl::shared_ptr<shader>		shader_;
 	bool					blend_modes_;
 							
-	impl(const spl::shared_ptr<accelerator>& ogl)
+	impl(const spl::shared_ptr<context>& ogl)
 		: ogl_(ogl)
 		, shader_(ogl_->invoke([&]{return get_image_shader(*ogl, blend_modes_);}))
 	{
@@ -108,7 +108,7 @@ struct image_kernel::impl : boost::noncopyable
 		// Setup blend_func
 		
 		if(params.transform.is_key)
-			params.blend_mode = blend_mode::normal;
+			params.blend_mode = core::blend_mode::normal;
 
 		if(blend_modes_)
 		{
@@ -226,7 +226,7 @@ struct image_kernel::impl : boost::noncopyable
 	}
 };
 
-image_kernel::image_kernel(const spl::shared_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
+image_kernel::image_kernel(const spl::shared_ptr<context>& ogl) : impl_(new impl(ogl)){}
 void image_kernel::draw(draw_params&& params)
 {
 	impl_->draw(std::move(params));
