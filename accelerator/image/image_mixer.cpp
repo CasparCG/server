@@ -143,9 +143,7 @@ public:
 			draw_buffer->copy_to(result);							
 			return result;
 		});
-
-		warm_ = true;
-
+		
 		// Defer memory mapping.
 		return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
 		{
