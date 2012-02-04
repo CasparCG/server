@@ -197,4 +197,5 @@ mixer::mixer(const spl::shared_ptr<gpu::accelerator>& ogl)
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 spl::shared_ptr<const data_frame> mixer::operator()(std::map<int, spl::shared_ptr<draw_frame>> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
+spl::shared_ptr<write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
 }}

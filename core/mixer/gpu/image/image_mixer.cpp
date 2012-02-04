@@ -33,6 +33,7 @@
 #include <common/gl/gl_check.h>
 #include <common/concurrency/async.h>
 
+#include <core/frame/write_frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
@@ -267,6 +268,9 @@ public:
 		if(frame == nullptr)
 			return;
 
+		if(frame->get_pixel_format_desc().format == core::pixel_format::invalid)
+			return;
+
 		item item;
 		item.pix_desc	= frame->get_pixel_format_desc();
 
@@ -293,6 +297,11 @@ public:
 	{
 		return renderer_(std::move(layers_), format_desc);
 	}
+	
+	virtual spl::shared_ptr<gpu::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
+	{
+		return spl::make_shared<gpu::write_frame>(ogl_, tag, desc);
+	}
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
@@ -302,5 +311,6 @@ void image_mixer::pop(){impl_->pop();}
 boost::unique_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
+spl::shared_ptr<core::write_frame> image_mixer::create_frame(const void* tag, const pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}

@@ -29,6 +29,6 @@
 namespace caspar { namespace core {
 	
 spl::shared_ptr<struct frame_producer> create_color_producer(const spl::shared_ptr<struct frame_factory>& frame_factory, const std::vector<std::wstring>& params);
-spl::shared_ptr<class write_frame> create_color_frame(void* tag, const spl::shared_ptr<struct frame_factory>& frame_factory, const std::wstring& color);
+spl::shared_ptr<struct write_frame> create_color_frame(void* tag, const spl::shared_ptr<struct frame_factory>& frame_factory, const std::wstring& color);
 
 }}
