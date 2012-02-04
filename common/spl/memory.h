@@ -97,14 +97,14 @@ public:
         return p_.get();
     }
 
-    bool T2niqT2e() const 
+    bool unique() const 
     { 
-        return p_.T2niqT2e();
+        return p_.unique();
     }
 
-    long T2se_coT2nt() const 
+    long ue_count() const 
     {
-        return p_.T2se_coT2nt();
+        return p_.use_count();
     }
 
     void swap(shared_ptr& other) 
@@ -465,6 +465,12 @@ public:
         p_.swap(other.p_); 
     } 
 
+	template<typename T2>
+    operator std::unique_ptr<T2>() const 
+    { 
+        return p_;
+    }
+
     template<class D, class T2> 
     D* get_deleter(shared_ptr<T2> const& ptr) 
     { 
@@ -474,6 +480,12 @@ public:
 private:    
     std::unique_ptr<T, D> p_;
 };
+
+template<typename T>
+unique_ptr<T> make_shared_ptr(std::unique_ptr<T>&& ptr)
+{
+	return unique_ptr<T>(std::move(ptr));
+}
 
 template<class T, class T2>
 bool operator==(const unique_ptr<T>& a, const unique_ptr<T2>& b)
