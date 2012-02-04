@@ -256,18 +256,22 @@ public:
 		layers_.push_back(std::make_pair(blend_mode, std::vector<item>()));
 	}
 		
-	void begin(draw_frame& frame)
+	void push(frame_transform& transform)
 	{
-		transform_stack_.push_back(transform_stack_.back()*frame.get_frame_transform());
+		transform_stack_.push_back(transform_stack_.back()*transform);
 	}
 		
-	void visit(write_frame& frame)
+	void visit(data_frame& frame2)
 	{			
-		item item;
-		item.pix_desc	= frame.get_pixel_format_desc();
+		write_frame* frame = dynamic_cast<write_frame*>(&frame2);
+		if(frame == nullptr)
+			return;
 
-		auto buffers = frame.get_buffers();
-		auto planes  = frame.get_pixel_format_desc().planes;
+		item item;
+		item.pix_desc	= frame->get_pixel_format_desc();
+
+		auto buffers = frame->get_buffers();
+		auto planes  = frame->get_pixel_format_desc().planes;
 		for(size_t n = 0; n < planes.size(); ++n)		
 			item.textures.push_back(ogl_->copy_async(buffers.at(n), planes[n].width, planes[n].height, planes[n].channels));
 				
@@ -276,7 +280,7 @@ public:
 		layers_.back().second.push_back(item);
 	}
 
-	void end()
+	void pop()
 	{
 		transform_stack_.pop_back();
 	}
@@ -292,9 +296,9 @@ public:
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
-void image_mixer::begin(draw_frame& frame){impl_->begin(frame);}
-void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
-void image_mixer::end(){impl_->end();}
+void image_mixer::push(frame_transform& transform){impl_->push(transform);}
+void image_mixer::visit(data_frame& frame){impl_->visit(frame);}
+void image_mixer::pop(){impl_->pop();}
 boost::unique_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
