@@ -22,9 +22,8 @@
 #pragma once
 
 #include "../except.h"
-#include "../log.h"
 #include "../enum_class.h"
-#include "../os/windows/windows.h"
+#include "../log.h"
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
@@ -64,26 +63,13 @@ struct task_priority_def
 };
 typedef enum_class<task_priority_def> task_priority;
 
-struct thread_priority_def
-{
-	enum type
-	{
-		high_priority_class,
-		above_normal_priority_class,
-		normal_priority_class,
-		below_normal_priority_class
-	};
-};
-typedef enum_class<thread_priority_def> thread_priority;
-
 class executor
 {
 	executor(const executor&);
 	executor& operator=(const executor&);
-
-	const std::string name_;
-	boost::thread thread_;
-	tbb::atomic<bool> is_running_;
+	
+	tbb::atomic<bool>	is_running_;
+	boost::thread		thread_;
 	
 	typedef tbb::concurrent_bounded_queue<std::function<void()>> function_queue;
 	function_queue execution_queue_[task_priority::priority_count];
@@ -108,10 +94,10 @@ class executor
 		return std::move(task);
 	}
 
-public:
-		
-	explicit executor(const std::wstring& name) : name_(u8(name)) // noexcept
+public:		
+	executor(const std::wstring& name) // noexcept
 	{
+		name; // TODO: Use to set thread name.
 		is_running_ = true;
 		thread_ = boost::thread([this]{run();});
 	}
@@ -125,21 +111,6 @@ public:
 	void set_capacity(size_t capacity) // noexcept
 	{
 		execution_queue_[task_priority::normal_priority].set_capacity(capacity);
-	}
-
-	void set_priority_class(thread_priority p)
-	{
-		begin_invoke([=]
-		{
-			if(p == thread_priority::high_priority_class)
-				SetThreadPriority(GetCurrentThread(), HIGH_PRIORITY_CLASS);
-			else if(p == thread_priority::above_normal_priority_class)
-				SetThreadPriority(GetCurrentThread(), ABOVE_NORMAL_PRIORITY_CLASS);
-			else if(p == thread_priority::normal_priority_class)
-				SetThreadPriority(GetCurrentThread(), NORMAL_PRIORITY_CLASS);
-			else if(p == thread_priority::below_normal_priority_class)
-				SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
-		});
 	}
 	
 	void clear()
@@ -240,7 +211,6 @@ private:
 	void run() // noexcept
 	{
 		win32_exception::install_handler();		
-		//detail::SetThreadName(GetCurrentThreadId(), name_.c_str());
 		while(is_running_)
 		{
 			try
