@@ -53,12 +53,12 @@ public:
 		frames_.push_back(frame);
 	}
 	
-	void accept(draw_frame& self, frame_visitor& visitor)
+	void accept(frame_visitor& visitor)
 	{
-		visitor.begin(self);
+		visitor.push(frame_transform_);
 		BOOST_FOREACH(auto frame, frames_)
 			frame->accept(visitor);
-		visitor.end();
+		visitor.pop();
 	}	
 };
 	
@@ -76,7 +76,7 @@ void draw_frame::swap(draw_frame& other){impl_.swap(other.impl_);}
 
 const frame_transform& draw_frame::get_frame_transform() const { return impl_->frame_transform_;}
 frame_transform& draw_frame::get_frame_transform() { return impl_->frame_transform_;}
-void draw_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
+void draw_frame::accept(frame_visitor& visitor){impl_->accept(visitor);}
 
 spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2, field_mode mode)
 {				
