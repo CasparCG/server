@@ -6,7 +6,7 @@
 
 namespace caspar { namespace core {
 	
-safe_ptr<data_frame> data_frame::empty()
+spl::shared_ptr<data_frame> data_frame::empty()
 {
 	struct empty_frame : public data_frame
 	{
@@ -52,7 +52,7 @@ safe_ptr<data_frame> data_frame::empty()
 		}
 	};
 
-	static safe_ptr<empty_frame> empty;
+	static spl::shared_ptr<empty_frame> empty;
 	return empty;
 }
 

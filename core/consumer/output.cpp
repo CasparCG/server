@@ -53,9 +53,9 @@ struct output::impl
 {		
 	const int											channel_index_;
 	video_format_desc									format_desc_;
-	std::map<int, safe_ptr<frame_consumer>>				consumers_;	
+	std::map<int, spl::shared_ptr<frame_consumer>>				consumers_;	
 	prec_timer											sync_timer_;
-	boost::circular_buffer<safe_ptr<const data_frame>>	frames_;
+	boost::circular_buffer<spl::shared_ptr<const data_frame>>	frames_;
 
 	executor											executor_;		
 public:
@@ -66,7 +66,7 @@ public:
 	{
 	}	
 	
-	void add(int index, safe_ptr<frame_consumer> consumer)
+	void add(int index, spl::shared_ptr<frame_consumer> consumer)
 	{		
 		remove(index);
 
@@ -80,7 +80,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	void add(const safe_ptr<frame_consumer>& consumer)
+	void add(const spl::shared_ptr<frame_consumer>& consumer)
 	{
 		add(consumer->index(), consumer);
 	}
@@ -108,7 +108,7 @@ public:
 		}
 	}
 
-	void remove(const safe_ptr<frame_consumer>& consumer)
+	void remove(const spl::shared_ptr<frame_consumer>& consumer)
 	{
 		remove(consumer->index());
 	}
@@ -145,7 +145,7 @@ public:
 		
 		auto buffer_depths = consumers_ | 
 							 boost::adaptors::map_values | // std::function is MSVC workaround
-							 boost::adaptors::transformed(std::function<int(const safe_ptr<frame_consumer>&)>([](const safe_ptr<frame_consumer>& x){return x->buffer_depth();})); 
+							 boost::adaptors::transformed(std::function<int(const spl::shared_ptr<frame_consumer>&)>([](const spl::shared_ptr<frame_consumer>& x){return x->buffer_depth();})); 
 		
 
 		return std::make_pair(*boost::range::min_element(buffer_depths), *boost::range::max_element(buffer_depths));
@@ -153,10 +153,10 @@ public:
 
 	bool has_synchronization_clock() const
 	{
-		return boost::range::count_if(consumers_ | boost::adaptors::map_values, [](const safe_ptr<frame_consumer>& x){return x->has_synchronization_clock();}) > 0;
+		return boost::range::count_if(consumers_ | boost::adaptors::map_values, [](const spl::shared_ptr<frame_consumer>& x){return x->has_synchronization_clock();}) > 0;
 	}
 		
-	void operator()(safe_ptr<const data_frame> input_frame, const video_format_desc& format_desc)
+	void operator()(spl::shared_ptr<const data_frame> input_frame, const video_format_desc& format_desc)
 	{
 		executor_.invoke([=]
 		{
@@ -249,10 +249,10 @@ public:
 };
 
 output::output(const video_format_desc& format_desc, int channel_index) : impl_(new impl(format_desc, channel_index)){}
-void output::add(int index, const safe_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
-void output::add(const safe_ptr<frame_consumer>& consumer){impl_->add(consumer);}
+void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
+void output::add(const spl::shared_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}
-void output::remove(const safe_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
+void output::remove(const spl::shared_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
-void output::operator()(safe_ptr<const data_frame> frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
+void output::operator()(spl::shared_ptr<const data_frame> frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
 }}

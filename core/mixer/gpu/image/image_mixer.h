@@ -25,7 +25,7 @@
 #include "../../image/image_mixer.h"
 
 #include <common/forward.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <core/frame/frame_visitor.h>
 
@@ -36,7 +36,7 @@ namespace caspar { namespace core { namespace gpu {
 class image_mixer sealed : public core::image_mixer
 {
 public:
-	image_mixer(const safe_ptr<class accelerator>& ogl);
+	image_mixer(const spl::shared_ptr<class accelerator>& ogl);
 	
 	virtual void begin(class draw_frame& frame);
 	virtual void visit(class write_frame& frame);
@@ -50,7 +50,7 @@ public:
 		
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}}

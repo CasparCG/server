@@ -25,7 +25,7 @@
 #include "device_buffer.h"
 
 #include <common/concurrency/executor.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <gl/glew.h>
 
@@ -62,8 +62,8 @@ class accelerator : public std::enable_shared_from_this<accelerator>, boost::non
 {	
 	std::unique_ptr<sf::Context> context_;
 	
-	std::array<tbb::concurrent_unordered_map<int, safe_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
-	std::array<tbb::concurrent_unordered_map<int, safe_ptr<buffer_pool<host_buffer>>>, 2> host_pools_;
+	std::array<tbb::concurrent_unordered_map<int, spl::shared_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
+	std::array<tbb::concurrent_unordered_map<int, spl::shared_ptr<buffer_pool<host_buffer>>>, 2> host_pools_;
 	
 	GLuint fbo_;
 
@@ -71,16 +71,16 @@ class accelerator : public std::enable_shared_from_this<accelerator>, boost::non
 				
 	accelerator();
 public:		
-	static safe_ptr<accelerator> create();
+	static spl::shared_ptr<accelerator> create();
 	~accelerator();
 	
 	void attach(device_buffer& texture);
 	void clear(device_buffer& texture);		
 	void use(shader& shader);
 	
-	safe_ptr<device_buffer>							create_device_buffer(int width, int height, int stride);
-	safe_ptr<host_buffer>							create_host_buffer(int size, host_buffer::usage usage);
-	boost::unique_future<safe_ptr<device_buffer>>	copy_async(safe_ptr<host_buffer>& source, int width, int height, int stride);
+	spl::shared_ptr<device_buffer>							create_device_buffer(int width, int height, int stride);
+	spl::shared_ptr<host_buffer>							create_host_buffer(int size, host_buffer::usage usage);
+	boost::unique_future<spl::shared_ptr<device_buffer>>	copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride);
 	
 	boost::unique_future<void> gc();
 	std::wstring version();
@@ -97,8 +97,8 @@ public:
 		return executor_.invoke(std::forward<Func>(func), priority);
 	}
 private:
-	safe_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride);
-	safe_ptr<host_buffer>	allocate_host_buffer(int size, host_buffer::usage usage);
+	spl::shared_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride);
+	spl::shared_ptr<host_buffer>	allocate_host_buffer(int size, host_buffer::usage usage);
 };
 
 }}}

@@ -85,15 +85,15 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	const core::video_format_desc								format_desc_;
 	const size_t												device_index_;
 
-	safe_ptr<diagnostics::graph>								graph_;
+	spl::shared_ptr<diagnostics::graph>								graph_;
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
 		
 	tbb::atomic<int>											flags_;
-	safe_ptr<core::frame_factory>								frame_factory_;
+	spl::shared_ptr<core::frame_factory>								frame_factory_;
 	std::vector<int>											audio_cadence_;
 
-	tbb::concurrent_bounded_queue<safe_ptr<core::draw_frame>>	frame_buffer_;
+	tbb::concurrent_bounded_queue<spl::shared_ptr<core::draw_frame>>	frame_buffer_;
 
 	std::exception_ptr											exception_;
 		
@@ -102,7 +102,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	boost::circular_buffer<size_t>								sync_buffer_;
 
 public:
-	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
+	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
 		: decklink_(get_device(device_index))
 		, input_(decklink_)
 		, model_name_(get_model_name(decklink_))
@@ -184,7 +184,7 @@ public:
 			if(FAILED(video->GetBytes(&bytes)) || !bytes)
 				return S_OK;
 			
-			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+			spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 			avcodec_get_frame_defaults(av_frame.get());
 						
 			av_frame->data[0]			= reinterpret_cast<uint8_t*>(bytes);
@@ -226,7 +226,7 @@ public:
 			
 			for(auto frame = muxer_.poll(); frame; frame = muxer_.poll())
 			{
-				if(!frame_buffer_.try_push(make_safe_ptr(frame)))
+				if(!frame_buffer_.try_push(spl::make_shared_ptr(frame)))
 					graph_->set_tag("dropped-frame");
 			}
 
@@ -243,14 +243,14 @@ public:
 		return S_OK;
 	}
 	
-	safe_ptr<core::draw_frame> get_frame(int flags)
+	spl::shared_ptr<core::draw_frame> get_frame(int flags)
 	{
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
 
 		flags_ = flags;
 
-		safe_ptr<core::draw_frame> frame = core::draw_frame::late();
+		spl::shared_ptr<core::draw_frame> frame = core::draw_frame::late();
 		if(!frame_buffer_.try_pop(frame))
 			graph_->set_tag("late-frame");
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
@@ -265,12 +265,12 @@ public:
 	
 class decklink_producer_proxy : public core::frame_producer
 {		
-	safe_ptr<core::draw_frame>			last_frame_;
+	spl::shared_ptr<core::draw_frame>			last_frame_;
 	std::unique_ptr<decklink_producer>	producer_;
 	const uint32_t						length_;
 	executor							executor_;
 public:
-	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length)
+	explicit decklink_producer_proxy(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length)
 		: executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, last_frame_(core::draw_frame::empty())
 		, length_(length)
@@ -293,7 +293,7 @@ public:
 	
 	// frame_producer
 				
-	virtual safe_ptr<core::draw_frame> receive(int flags) override
+	virtual spl::shared_ptr<core::draw_frame> receive(int flags) override
 	{
 		auto frame = producer_->get_frame(flags);
 		if(frame != core::draw_frame::late())
@@ -301,7 +301,7 @@ public:
 		return frame;
 	}
 
-	virtual safe_ptr<core::draw_frame> last_frame() const override
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_;
 	}
@@ -324,7 +324,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
@@ -340,7 +340,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();
 			
-	return make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length);
+	return spl::make_shared<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length);
 }
 
 }}

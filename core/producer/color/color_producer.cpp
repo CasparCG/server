@@ -39,23 +39,23 @@ namespace caspar { namespace core {
 	
 class color_producer : public frame_producer
 {
-	safe_ptr<draw_frame> frame_;
+	spl::shared_ptr<draw_frame> frame_;
 	const std::wstring color_str_;
 
 public:
-	explicit color_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
+	explicit color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
 		: color_str_(color)
 		, frame_(create_color_frame(this, frame_factory, color))
 	{}
 
 	// frame_producer
 			
-	virtual safe_ptr<draw_frame> receive(int) override
+	virtual spl::shared_ptr<draw_frame> receive(int) override
 	{
 		return frame_;
 	}	
 
-	virtual safe_ptr<draw_frame> last_frame() const override
+	virtual spl::shared_ptr<draw_frame> last_frame() const override
 	{
 		return frame_; 
 	}	
@@ -115,7 +115,7 @@ std::wstring get_hex_color(const std::wstring& str)
 	return str;
 }
 
-safe_ptr<frame_producer> create_color_producer(const safe_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.size() < 0)
 		return core::frame_producer::empty();
@@ -124,9 +124,9 @@ safe_ptr<frame_producer> create_color_producer(const safe_ptr<frame_factory>& fr
 	if(color2.length() != 9 || color2[0] != '#')
 		return core::frame_producer::empty();
 
-	return make_safe<color_producer>(frame_factory, color2);
+	return spl::make_shared<color_producer>(frame_factory, color2);
 }
-safe_ptr<write_frame> create_color_frame(void* tag, const safe_ptr<frame_factory>& frame_factory, const std::wstring& color)
+spl::shared_ptr<write_frame> create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& color)
 {
 	auto color2 = get_hex_color(color);
 	if(color2.length() != 9 || color2[0] != '#')

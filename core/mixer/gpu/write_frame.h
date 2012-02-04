@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/forward.h>
 
 #include <core/frame/draw_frame.h>
@@ -45,7 +45,7 @@ class write_frame sealed : public core::draw_frame, public core::data_frame
 	write_frame& operator=(const write_frame);
 public:	
 	explicit write_frame(const void* tag);
-	explicit write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const struct pixel_format_desc& desc);
+	explicit write_frame(const spl::shared_ptr<gpu::accelerator>& ogl, const void* tag, const struct pixel_format_desc& desc);
 
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
@@ -75,10 +75,10 @@ public:
 			
 	// write_frames
 
-	std::vector<safe_ptr<gpu::host_buffer>> get_buffers();
+	std::vector<spl::shared_ptr<gpu::host_buffer>> get_buffers();
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 

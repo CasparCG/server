@@ -22,7 +22,7 @@
 #pragma once
 
 #include <common/forward.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/enum_class.h>
 
 #include <stdint.h>
@@ -60,23 +60,23 @@ struct frame_producer : boost::noncopyable
 
 	virtual boost::unique_future<std::wstring> call(const std::wstring&);
 
-	virtual safe_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
-	virtual void set_leading_producer(const safe_ptr<frame_producer>&) {}  // nothrow
+	virtual spl::shared_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
+	virtual void set_leading_producer(const spl::shared_ptr<frame_producer>&) {}  // nothrow
 		
 	virtual uint32_t nb_frames() const {return std::numeric_limits<uint32_t>::max();}
 	
-	virtual safe_ptr<class draw_frame> receive(int flags) = 0;
-	virtual safe_ptr<class draw_frame> last_frame() const = 0;
+	virtual spl::shared_ptr<class draw_frame> receive(int flags) = 0;
+	virtual spl::shared_ptr<class draw_frame> last_frame() const = 0;
 
-	static const safe_ptr<frame_producer>& empty(); // nothrow
+	static const spl::shared_ptr<frame_producer>& empty(); // nothrow
 };
 
-safe_ptr<class draw_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int flags);
+spl::shared_ptr<class draw_frame> receive_and_follow(spl::shared_ptr<frame_producer>& producer, int flags);
 
-typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<struct frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
+typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<struct frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& params);
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::wstring& params);
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const std::wstring& params);
 		
 }}

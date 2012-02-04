@@ -184,15 +184,15 @@ EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& for
 	return vid_fmt;
 }
 
-safe_ptr<CBlueVelvet4> create_blue()
+spl::shared_ptr<CBlueVelvet4> create_blue()
 {
 	if(!BlueVelvetFactory4 || !encode_hanc_frame || !encode_hanc_frame)
 		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
 
-	return safe_ptr<CBlueVelvet4>(BlueVelvetFactory4(), BlueVelvetDestroy);
+	return spl::shared_ptr<CBlueVelvet4>(BlueVelvetFactory4(), BlueVelvetDestroy);
 }
 
-safe_ptr<CBlueVelvet4> create_blue(int device_index)
+spl::shared_ptr<CBlueVelvet4> create_blue(int device_index)
 {
 	auto blue = create_blue();
 	

@@ -48,7 +48,7 @@ typedef std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_buffer
 
 struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 {
-	safe_ptr<diagnostics::graph>						graph_;
+	spl::shared_ptr<diagnostics::graph>						graph_;
 	boost::timer										perf_timer_;
 	int													channel_index_;
 
@@ -98,7 +98,7 @@ public:
 		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
 	
-	virtual bool send(const safe_ptr<const core::data_frame>& frame) override
+	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
 	{			
 		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame->audio_data())));
 		return true;
@@ -144,17 +144,17 @@ public:
 	}
 };
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"AUDIO")
 		return core::frame_consumer::empty();
 
-	return make_safe<oal_consumer>();
+	return spl::make_shared<oal_consumer>();
 }
 
-safe_ptr<core::frame_consumer> create_consumer()
+spl::shared_ptr<core::frame_consumer> create_consumer()
 {
-	return make_safe<oal_consumer>();
+	return spl::make_shared<oal_consumer>();
 }
 
 }}

@@ -97,7 +97,7 @@ class decklink_frame : public IDeckLinkVideoFrame
 	const bool													key_only_;
 	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> data_;
 public:
-	decklink_frame(const safe_ptr<const core::data_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
+	decklink_frame(const spl::shared_ptr<const core::data_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
 		: frame_(frame)
 		, format_desc_(format_desc)
 		, key_only_(key_only)
@@ -203,7 +203,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>> video_frame_buffer_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>> audio_frame_buffer_;
 	
-	safe_ptr<diagnostics::graph> graph_;
+	spl::shared_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
 
 public:
@@ -374,7 +374,7 @@ public:
 
 			std::shared_ptr<const core::data_frame> frame;	
 			video_frame_buffer_.pop(frame);					
-			schedule_next_video(make_safe_ptr(frame));	
+			schedule_next_video(spl::make_shared_ptr(frame));	
 			
 			unsigned long buffered;
 			output_->GetBufferedVideoFrameCount(&buffered);
@@ -443,7 +443,7 @@ public:
 		audio_scheduled_ += sample_frame_count;
 	}
 			
-	void schedule_next_video(const safe_ptr<const core::data_frame>& frame)
+	void schedule_next_video(const spl::shared_ptr<const core::data_frame>& frame)
 	{
 		CComPtr<IDeckLinkVideoFrame> frame2(new decklink_frame(frame, format_desc_, config_.key_only));
 		if(FAILED(output_->ScheduleVideoFrame(frame2, video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
@@ -455,7 +455,7 @@ public:
 		tick_timer_.restart();
 	}
 
-	void send(const safe_ptr<const core::data_frame>& frame)
+	void send(const spl::shared_ptr<const core::data_frame>& frame)
 	{
 		auto exception = lock(exception_mutex_, [&]
 		{
@@ -525,7 +525,7 @@ public:
 		});
 	}
 	
-	virtual bool send(const safe_ptr<const core::data_frame>& frame) override
+	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
 	{
 		CASPAR_VERIFY(audio_cadence_.front() == static_cast<int>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
@@ -563,7 +563,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params) 
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params) 
 {
 	if(params.size() < 1 || params[0] != L"DECKLINK")
 		return core::frame_consumer::empty();
@@ -586,10 +586,10 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
 
-	return make_safe<decklink_consumer_proxy>(config);
+	return spl::make_shared<decklink_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
+spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
 {
 	configuration config;
 
@@ -610,7 +610,7 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
 	config.base_buffer_depth	= ptree.get(L"buffer-depth",	config.base_buffer_depth);
 
-	return make_safe<decklink_consumer_proxy>(config);
+	return spl::make_shared<decklink_consumer_proxy>(config);
 }
 
 }}

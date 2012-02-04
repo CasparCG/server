@@ -46,20 +46,19 @@
 
 namespace caspar { namespace reroute {
 		
-class reroute_producer : public reactive::observer<safe_ptr<const core::data_frame>>
+class reroute_producer : public reactive::observer<spl::shared_ptr<const core::data_frame>>
 					   , public core::frame_producer
-					   , public enable_safe_from_this<reroute_producer>
 {
-	const safe_ptr<diagnostics::graph>									graph_;
-	const safe_ptr<core::frame_factory>									frame_factory_;
+	const spl::shared_ptr<diagnostics::graph>									graph_;
+	const spl::shared_ptr<core::frame_factory>									frame_factory_;
 	
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>>	input_buffer_;
-	std::queue<safe_ptr<core::draw_frame>>								frame_buffer_;
-	safe_ptr<core::draw_frame>											last_frame_;
+	std::queue<spl::shared_ptr<core::draw_frame>>								frame_buffer_;
+	spl::shared_ptr<core::draw_frame>											last_frame_;
 	uint64_t															frame_number_;
 
 public:
-	explicit reroute_producer(const safe_ptr<core::frame_factory>& frame_factory) 
+	explicit reroute_producer(const spl::shared_ptr<core::frame_factory>& frame_factory) 
 		: frame_factory_(frame_factory)
 		, last_frame_(core::draw_frame::empty())
 		, frame_number_(0)
@@ -74,7 +73,7 @@ public:
 	
 	// observable
 
-	void on_next(const safe_ptr<const core::data_frame>& frame)
+	void on_next(const spl::shared_ptr<const core::data_frame>& frame)
 	{
 		if(!input_buffer_.try_push(frame))
 			graph_->set_tag("dropped-frame");
@@ -82,7 +81,7 @@ public:
 
 	// frame_producer
 			
-	virtual safe_ptr<core::draw_frame> receive(int) override
+	virtual spl::shared_ptr<core::draw_frame> receive(int) override
 	{
 		if(!frame_buffer_.empty())
 		{
@@ -119,7 +118,7 @@ public:
 		return receive(0);
 	}	
 
-	virtual safe_ptr<core::draw_frame> last_frame() const override
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_; 
 	}	
@@ -137,9 +136,9 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, reactive::observable<safe_ptr<const core::data_frame>>& o)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, reactive::observable<spl::shared_ptr<const core::data_frame>>& o)
 {
-	auto producer = make_safe<reroute_producer>(frame_factory);
+	auto producer = spl::make_shared<reroute_producer>(frame_factory);
 	o.subscribe(producer);
 	return producer;
 }

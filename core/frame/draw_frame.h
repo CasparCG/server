@@ -25,7 +25,7 @@
 
 #include <core/video_format.h>
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <vector>
 
@@ -40,29 +40,27 @@ public:
 	draw_frame& operator=(draw_frame other);
 	virtual ~draw_frame(){}
 
-	draw_frame(const safe_ptr<draw_frame>& frame);
-	draw_frame(safe_ptr<draw_frame>&& frame);
-	draw_frame(const std::vector<safe_ptr<draw_frame>>& frames);
-	draw_frame(std::vector<safe_ptr<draw_frame>>&& frames);
+	draw_frame(spl::shared_ptr<draw_frame> frame);
+	draw_frame(std::vector<spl::shared_ptr<draw_frame>> frames);
 		
 	void swap(draw_frame& other);
 
 	const struct frame_transform& get_frame_transform() const;
 	struct frame_transform& get_frame_transform();
 				
-	static safe_ptr<draw_frame> interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, field_mode mode);
-	static safe_ptr<draw_frame> over(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2);
-	static safe_ptr<draw_frame> mask(const safe_ptr<draw_frame>& fill, const safe_ptr<draw_frame>& key);
-	static safe_ptr<draw_frame> silence(const safe_ptr<draw_frame>& frame);
+	static spl::shared_ptr<draw_frame> interlace(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2, field_mode mode);
+	static spl::shared_ptr<draw_frame> over(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2);
+	static spl::shared_ptr<draw_frame> mask(const spl::shared_ptr<draw_frame>& fill, const spl::shared_ptr<draw_frame>& key);
+	static spl::shared_ptr<draw_frame> silence(const spl::shared_ptr<draw_frame>& frame);
 		
-	static const safe_ptr<draw_frame>& eof();
-	static const safe_ptr<draw_frame>& empty();
-	static const safe_ptr<draw_frame>& late();
+	static const spl::shared_ptr<draw_frame>& eof();
+	static const spl::shared_ptr<draw_frame>& empty();
+	static const spl::shared_ptr<draw_frame>& late();
 	
 	virtual void accept(frame_visitor& visitor);
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 	
 

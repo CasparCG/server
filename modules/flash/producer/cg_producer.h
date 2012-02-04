@@ -37,13 +37,13 @@ class cg_producer : public core::frame_producer
 public:
 	static const unsigned int DEFAULT_LAYER = 9999;
 
-	explicit cg_producer(const safe_ptr<core::frame_producer>& producer);
+	explicit cg_producer(const spl::shared_ptr<core::frame_producer>& producer);
 	cg_producer(cg_producer&& other);
 	
 	// frame_producer
 
-	virtual safe_ptr<core::draw_frame> receive(int) override;
-	virtual safe_ptr<core::draw_frame> last_frame() const override;
+	virtual spl::shared_ptr<core::draw_frame> receive(int) override;
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override;
 	virtual std::wstring print() const override;
 	virtual boost::unique_future<std::wstring> call(const std::wstring&) override;
 	virtual boost::property_tree::wptree info() const override;
@@ -64,9 +64,9 @@ private:
 	struct impl;
 	std::shared_ptr<impl> impl_;
 };
-safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int layer_index = cg_producer::DEFAULT_LAYER);
+spl::shared_ptr<cg_producer> get_default_cg_producer(const spl::shared_ptr<core::video_channel>& video_channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
-safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
-safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_cg_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
 
 }}

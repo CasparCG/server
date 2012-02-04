@@ -38,12 +38,12 @@ struct transition_producer : public frame_producer
 	
 	const transition_info		info_;
 	
-	safe_ptr<frame_producer>	dest_producer_;
-	safe_ptr<frame_producer>	source_producer_;
+	spl::shared_ptr<frame_producer>	dest_producer_;
+	spl::shared_ptr<frame_producer>	source_producer_;
 
-	safe_ptr<draw_frame>		last_frame_;
+	spl::shared_ptr<draw_frame>		last_frame_;
 		
-	explicit transition_producer(const field_mode& mode, const safe_ptr<frame_producer>& dest, const transition_info& info) 
+	explicit transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
 		, current_frame_(0)
 		, info_(info)
@@ -53,17 +53,17 @@ struct transition_producer : public frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<frame_producer> get_following_producer() const override
+	virtual spl::shared_ptr<frame_producer> get_following_producer() const override
 	{
 		return dest_producer_;
 	}
 	
-	virtual void set_leading_producer(const safe_ptr<frame_producer>& producer) override
+	virtual void set_leading_producer(const spl::shared_ptr<frame_producer>& producer) override
 	{
 		source_producer_ = producer;
 	}
 
-	virtual safe_ptr<draw_frame> receive(int flags) override
+	virtual spl::shared_ptr<draw_frame> receive(int flags) override
 	{
 		if(++current_frame_ >= info_.duration)
 			return draw_frame::eof();
@@ -88,7 +88,7 @@ struct transition_producer : public frame_producer
 		return compose(dest, source);
 	}
 
-	virtual safe_ptr<core::draw_frame> last_frame() const override
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_;
 	}
@@ -114,7 +114,7 @@ struct transition_producer : public frame_producer
 
 	// transition_producer
 						
-	safe_ptr<draw_frame> compose(const safe_ptr<draw_frame>& dest_frame, const safe_ptr<draw_frame>& src_frame) 
+	spl::shared_ptr<draw_frame> compose(const spl::shared_ptr<draw_frame>& dest_frame, const spl::shared_ptr<draw_frame>& src_frame) 
 	{	
 		if(info_.type == transition_type::cut)		
 			return src_frame;
@@ -126,14 +126,14 @@ struct transition_producer : public frame_producer
 		
 		// For interlaced transitions. Seperate fields into seperate frames which are transitioned accordingly.
 		
-		auto s_frame1 = make_safe<draw_frame>(src_frame);
-		auto s_frame2 = make_safe<draw_frame>(src_frame);
+		auto s_frame1 = spl::make_shared<draw_frame>(src_frame);
+		auto s_frame2 = spl::make_shared<draw_frame>(src_frame);
 
 		s_frame1->get_frame_transform().volume = 0.0;
 		s_frame2->get_frame_transform().volume = 1.0-delta2;
 
-		auto d_frame1 = make_safe<draw_frame>(dest_frame);
-		auto d_frame2 = make_safe<draw_frame>(dest_frame);
+		auto d_frame1 = spl::make_shared<draw_frame>(dest_frame);
+		auto d_frame2 = spl::make_shared<draw_frame>(dest_frame);
 		
 		d_frame1->get_frame_transform().volume = 0.0;
 		d_frame2->get_frame_transform().volume = delta2;
@@ -178,9 +178,9 @@ struct transition_producer : public frame_producer
 	}
 };
 
-safe_ptr<frame_producer> create_transition_producer(const field_mode& mode, const safe_ptr<frame_producer>& destination, const transition_info& info)
+spl::shared_ptr<frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& destination, const transition_info& info)
 {
-	return make_safe<transition_producer>(mode, destination, info);
+	return spl::make_shared<transition_producer>(mode, destination, info);
 }
 
 }}

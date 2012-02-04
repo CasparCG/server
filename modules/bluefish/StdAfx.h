@@ -40,7 +40,7 @@
 #include <math.h>
 
 #include <common/utf.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 //#include "../common/concurrency/executor.h" // Can't include this due to MSVC lambda bug
 
 #include <common/log.h>

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/reactive.h>
 #include <common/forward.h>
 
@@ -31,6 +31,6 @@
 
 namespace caspar { namespace reroute {
 	
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, reactive::observable<safe_ptr<const core::data_frame>>& o);
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, reactive::observable<spl::shared_ptr<const core::data_frame>>& o);
 
 }}

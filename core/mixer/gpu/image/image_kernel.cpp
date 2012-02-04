@@ -56,11 +56,11 @@ GLubyte lower_pattern[] = {
 
 struct image_kernel::impl : boost::noncopyable
 {	
-	safe_ptr<accelerator>	ogl_;
-	safe_ptr<shader>		shader_;
+	spl::shared_ptr<accelerator>	ogl_;
+	spl::shared_ptr<shader>		shader_;
 	bool					blend_modes_;
 							
-	impl(const safe_ptr<accelerator>& ogl)
+	impl(const spl::shared_ptr<accelerator>& ogl)
 		: ogl_(ogl)
 		, shader_(ogl_->invoke([&]{return get_image_shader(*ogl, blend_modes_);}))
 	{
@@ -226,7 +226,7 @@ struct image_kernel::impl : boost::noncopyable
 	}
 };
 
-image_kernel::image_kernel(const safe_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
+image_kernel::image_kernel(const spl::shared_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
 void image_kernel::draw(draw_params&& params)
 {
 	impl_->draw(std::move(params));

@@ -33,7 +33,7 @@
 #include <common/env.h>
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/utf.h>
 #include <common/param.h>
 
@@ -67,7 +67,7 @@ struct ffmpeg_consumer : boost::noncopyable
 	const std::shared_ptr<AVFormatContext>	oc_;
 	const core::video_format_desc			format_desc_;
 	
-	const safe_ptr<diagnostics::graph>		graph_;
+	const spl::shared_ptr<diagnostics::graph>		graph_;
 	boost::timer							frame_timer_;
 	boost::timer							write_timer_;
 
@@ -275,7 +275,7 @@ public:
 		});
 	}
 
-	std::shared_ptr<AVFrame> convert_video_frame(const safe_ptr<const core::data_frame>& frame, AVCodecContext* c)
+	std::shared_ptr<AVFrame> convert_video_frame(const spl::shared_ptr<const core::data_frame>& frame, AVCodecContext* c)
 	{
 		if(!sws_) 
 		{
@@ -296,7 +296,7 @@ public:
 		return local_av_frame;
 	}
   
-	std::shared_ptr<AVPacket> encode_video_frame(const safe_ptr<const core::data_frame>& frame)
+	std::shared_ptr<AVPacket> encode_video_frame(const spl::shared_ptr<const core::data_frame>& frame)
 	{ 
 		auto c = video_st_->codec;
  
@@ -308,7 +308,7 @@ public:
 		int out_size = THROW_ON_ERROR2(avcodec_encode_video(c, video_outbuf_.data(), static_cast<int>(video_outbuf_.size()), av_frame.get()), "[ffmpeg_consumer]");
 		if(out_size > 0)
 		{
-			safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
+			spl::shared_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
 			{
 				av_free_packet(p);
 				delete p;
@@ -331,13 +331,13 @@ public:
 		return nullptr;
 	}
 		
-	std::shared_ptr<AVPacket> encode_audio_frame(const safe_ptr<const core::data_frame>& frame)
+	std::shared_ptr<AVPacket> encode_audio_frame(const spl::shared_ptr<const core::data_frame>& frame)
 	{			
 		auto c = audio_st_->codec;
 
 		auto audio_data = core::audio_32_to_16(frame->audio_data());
 		
-		safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
+		spl::shared_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
 		{
 			av_free_packet(p);
 			delete p;
@@ -356,7 +356,7 @@ public:
 		return pkt;
 	}
 		 
-	void send(const safe_ptr<const core::data_frame>& frame)
+	void send(const spl::shared_ptr<const core::data_frame>& frame)
 	{
 		executor_.begin_invoke([=]
 		{		
@@ -407,7 +407,7 @@ public:
 		consumer_.reset(new ffmpeg_consumer(filename_, format_desc, codec_, options_));
 	}
 	
-	virtual bool send(const safe_ptr<const core::data_frame>& frame) override
+	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
 	{
 		consumer_->send(frame);
 		return true;
@@ -444,7 +444,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"FILE")
 		return core::frame_consumer::empty();
@@ -476,16 +476,16 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 
 	codec = boost::to_lower_copy(codec);
 	
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
+	return spl::make_shared<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, options);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
+spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
 {
 	auto filename	= ptree.get<std::wstring>(L"path");
 	auto key_only	= ptree.get(L"key-only", false);
 	auto codec		= ptree.get(L"vcodec", L"libx264");
 	
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, std::vector<std::wstring>());
+	return spl::make_shared<ffmpeg_consumer_proxy>(env::media_folder() + filename, key_only, codec, std::vector<std::wstring>());
 }
 
 }}

@@ -24,7 +24,7 @@
 #include "frame_producer.h"
 
 #include <common/forward.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
@@ -39,25 +39,26 @@ class layer sealed
 {
 public:
 	layer(); // nothrow
+	layer(const layer&);
 	layer(layer&& other); // nothrow
-	layer& operator=(layer&& other); // nothrow
+	layer& operator=(layer other); // nothrow
 
 	void swap(layer& other); // nothrow 
 		
-	void load(safe_ptr<struct frame_producer> producer, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
+	void load(spl::shared_ptr<struct frame_producer> producer, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
 		
-	safe_ptr<struct frame_producer> foreground() const; // nothrow
-	safe_ptr<struct frame_producer> background() const; // nothrow
+	spl::shared_ptr<struct frame_producer> foreground() const; // nothrow
+	spl::shared_ptr<struct frame_producer> background() const; // nothrow
 
-	safe_ptr<class draw_frame> receive(frame_producer::flags flags); // nothrow
+	spl::shared_ptr<class draw_frame> receive(frame_producer::flags flags); // nothrow
 
 	boost::property_tree::wptree info() const;
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}

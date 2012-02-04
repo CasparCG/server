@@ -53,7 +53,7 @@ public:
 	{
 	}
 	
-	virtual bool send(const safe_ptr<const core::data_frame>& frame) override
+	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
 	{				
 		boost::thread async([frame]
 		{
@@ -99,12 +99,12 @@ public:
 	}
 };
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"IMAGE")
 		return core::frame_consumer::empty();
 
-	return make_safe<image_consumer>();
+	return spl::make_shared<image_consumer>();
 }
 
 }}

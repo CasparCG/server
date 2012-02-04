@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -40,7 +40,7 @@ public:
 private:
 	friend class accelerator;
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 
 	int id() const;
 };

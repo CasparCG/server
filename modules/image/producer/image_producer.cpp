@@ -46,9 +46,9 @@ namespace caspar { namespace image {
 struct image_producer : public core::frame_producer
 {	
 	const std::wstring filename_;
-	safe_ptr<core::draw_frame> frame_;
+	spl::shared_ptr<core::draw_frame> frame_;
 	
-	explicit image_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
+	explicit image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
 		: filename_(filename)
 		, frame_(core::draw_frame::empty())	
 	{
@@ -65,12 +65,12 @@ struct image_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<core::draw_frame> receive(int) override
+	virtual spl::shared_ptr<core::draw_frame> receive(int) override
 	{
 		return frame_;
 	}
 		
-	virtual safe_ptr<core::draw_frame> last_frame() const override
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
 	{
 		return frame_;
 	}
@@ -89,7 +89,7 @@ struct image_producer : public core::frame_producer
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
@@ -102,7 +102,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return make_safe<image_producer>(frame_factory, filename + *ext);
+	return spl::make_shared<image_producer>(frame_factory, filename + *ext);
 }
 
 

@@ -36,14 +36,14 @@ namespace caspar { namespace protocol { namespace cii {
 class CIIProtocolStrategy : public IO::IProtocolStrategy
 {
 public:
-	CIIProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels);
+	CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels);
 
 	void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
 	UINT GetCodepage() {return 28591;}	//ISO 8859-1
 
 	void SetProfile(const std::wstring& profile) {currentProfile_ = profile;}
 
-	safe_ptr<core::video_channel> GetChannel() const{return this->pChannel_;}
+	spl::shared_ptr<core::video_channel> GetChannel() const{return this->pChannel_;}
 
 	void DisplayMediaFile(const std::wstring& filename);
 	void DisplayTemplate(const std::wstring& titleName);
@@ -53,7 +53,7 @@ public:
 	struct TitleHolder
 	{
 		TitleHolder() : titleName(TEXT("")), pframe_producer(core::frame_producer::empty())	{}
-		TitleHolder(const std::wstring& name, safe_ptr<core::frame_producer> pFP) : titleName(name), pframe_producer(pFP) {}
+		TitleHolder(const std::wstring& name, spl::shared_ptr<core::frame_producer> pFP) : titleName(name), pframe_producer(pFP) {}
 		TitleHolder(const TitleHolder& th) : titleName(th.titleName), pframe_producer(th.pframe_producer) {}
 		const TitleHolder& operator=(const TitleHolder& th) 
 		{
@@ -66,15 +66,15 @@ public:
 		}
 
 		std::wstring titleName;
-		safe_ptr<core::frame_producer> pframe_producer;
+		spl::shared_ptr<core::frame_producer> pframe_producer;
 		friend CIIProtocolStrategy;
 	};
 private:
 
 	typedef std::list<TitleHolder> TitleList;
 	TitleList titles_;
-	safe_ptr<core::frame_producer> GetPreparedTemplate(const std::wstring& name);
-	void PutPreparedTemplate(const std::wstring& name, safe_ptr<core::frame_producer>& pframe_producer);
+	spl::shared_ptr<core::frame_producer> GetPreparedTemplate(const std::wstring& name);
+	void PutPreparedTemplate(const std::wstring& name, spl::shared_ptr<core::frame_producer>& pframe_producer);
 
 	static const TCHAR TokenDelimiter;
 	static const std::wstring MessageDelimiter;
@@ -87,7 +87,7 @@ private:
 	std::wstring currentMessage_;
 
 	std::wstring currentProfile_;
-	safe_ptr<core::video_channel> pChannel_;
+	spl::shared_ptr<core::video_channel> pChannel_;
 };
 
 }}}

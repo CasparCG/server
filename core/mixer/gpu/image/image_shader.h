@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 namespace caspar { namespace core { namespace gpu {
 
@@ -42,7 +42,7 @@ struct texture_id
 	};
 };
 
-safe_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes);
+spl::shared_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes);
 
 
 }}}

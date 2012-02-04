@@ -30,7 +30,7 @@
 #pragma once
 #endif
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <string>
 #include <map>
@@ -60,11 +60,11 @@ class AsyncEventServer : public IRunnable
 	AsyncEventServer& operator=(const AsyncEventServer&);
 
 public:
-	explicit AsyncEventServer(const safe_ptr<IProtocolStrategy>& pProtocol, int port);
+	explicit AsyncEventServer(const spl::shared_ptr<IProtocolStrategy>& pProtocol, int port);
 	~AsyncEventServer();
 
 	bool Start();
-	void SetProtocolStrategy(safe_ptr<IProtocolStrategy> pPS) {
+	void SetProtocolStrategy(spl::shared_ptr<IProtocolStrategy> pPS) {
 		pProtocolStrategy_ = pPS;
 	}
 
@@ -84,7 +84,7 @@ private:
 	void OnError(HANDLE waitEvent, int errorCode);
 
 	SocketInfoPtr		pListenSocketInfo_;
-	safe_ptr<IProtocolStrategy>	pProtocolStrategy_;
+	spl::shared_ptr<IProtocolStrategy>	pProtocolStrategy_;
 	int					port_;
 
 	friend class SocketInfo;

@@ -24,7 +24,7 @@
 #include "blend_modes.h"
 
 #include <common/forward.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <core/frame/frame_visitor.h>
 

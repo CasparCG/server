@@ -28,6 +28,6 @@
 
 namespace caspar { namespace image {
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
 
 }}

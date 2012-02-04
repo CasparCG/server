@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <memory>
 #include <string>
@@ -45,7 +45,7 @@ namespace ffmpeg {
 class input : boost::noncopyable
 {
 public:
-	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length);
+	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length);
 
 	bool try_pop(std::shared_ptr<AVPacket>& packet);
 	bool eof() const;
@@ -55,7 +55,7 @@ public:
 
 	void seek(uint32_t target);
 
-	safe_ptr<AVFormatContext> context();
+	spl::shared_ptr<AVFormatContext> context();
 private:
 	struct impl;
 	std::shared_ptr<impl> impl_;
