@@ -460,7 +460,7 @@ public:
         return p_.get();
     }
 	
-    void swap(shared_ptr& other) 
+    void swap(unique_ptr& other) 
     { 
         p_.swap(other.p_); 
     } 

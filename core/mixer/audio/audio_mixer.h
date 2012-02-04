@@ -41,9 +41,9 @@ class audio_mixer sealed : public frame_visitor
 public:
 	audio_mixer();
 
-	virtual void begin(core::draw_frame& frame);
-	virtual void visit(core::write_frame& frame);
-	virtual void end();
+	virtual void push(struct frame_transform& transform);
+	virtual void visit(struct data_frame& frame);
+	virtual void pop();
 
 	audio_buffer operator()(const struct video_format_desc& format_desc);
 	

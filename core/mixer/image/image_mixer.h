@@ -36,9 +36,9 @@ struct image_mixer : public frame_visitor
 {
 	virtual ~image_mixer(){}
 	
-	virtual void begin(class draw_frame& frame) = 0;
-	virtual void visit(class write_frame& frame) = 0;
-	virtual void end() = 0;
+	virtual void push(struct frame_transform& frame) = 0;
+	virtual void visit(struct data_frame& frame) = 0;
+	virtual void pop() = 0;
 
 	virtual void begin_layer(blend_mode blend_mode) = 0;
 	virtual void end_layer() = 0;

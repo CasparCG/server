@@ -76,12 +76,12 @@ public:
 		transform_stack_.push(core::frame_transform());
 	}
 	
-	void begin(core::draw_frame& frame)
+	void push(frame_transform& transform)
 	{
-		transform_stack_.push(transform_stack_.top()*frame.get_frame_transform());
+		transform_stack_.push(transform_stack_.top()*transform);
 	}
 
-	void visit(core::write_frame& frame)
+	void visit(data_frame& frame)
 	{
 		audio_item item;
 		item.tag		= frame.tag();
@@ -96,7 +96,7 @@ public:
 		transform_stack_.push(transform_stack_.top()*transform);
 	}
 		
-	void end()
+	void pop()
 	{
 		transform_stack_.pop();
 	}
@@ -187,9 +187,9 @@ public:
 };
 
 audio_mixer::audio_mixer() : impl_(new impl()){}
-void audio_mixer::begin(core::draw_frame& frame){impl_->begin(frame);}
-void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
-void audio_mixer::end(){impl_->end();}
+void audio_mixer::push(frame_transform& transform){impl_->push(transform);}
+void audio_mixer::visit(data_frame& frame){impl_->visit(frame);}
+void audio_mixer::pop(){impl_->pop();}
 audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){return impl_->mix(format_desc);}
 
 }}

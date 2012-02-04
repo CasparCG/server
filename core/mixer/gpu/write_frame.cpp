@@ -62,9 +62,9 @@ struct write_frame::impl : boost::noncopyable
 			
 	void accept(write_frame& self, core::frame_visitor& visitor)
 	{
-		visitor.begin(self);
+		visitor.push(self.get_frame_transform());
 		visitor.visit(self);
-		visitor.end();
+		visitor.pop();
 	}
 
 	boost::iterator_range<uint8_t*> image_data(int index)

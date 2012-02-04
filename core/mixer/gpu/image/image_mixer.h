@@ -38,9 +38,9 @@ class image_mixer sealed : public core::image_mixer
 public:
 	image_mixer(const spl::shared_ptr<class accelerator>& ogl);
 	
-	virtual void begin(class draw_frame& frame);
-	virtual void visit(class write_frame& frame);
-	virtual void end();
+	virtual void push(struct frame_transform& frame);
+	virtual void visit(struct data_frame& frame);
+	virtual void pop();
 
 	void begin_layer(blend_mode blend_mode);
 	void end_layer();
