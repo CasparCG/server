@@ -33,7 +33,7 @@ public:
 	void tick(double interval);
 
 private:	
-	DWORD time_;
+	unsigned long time_;
 };
 
 
