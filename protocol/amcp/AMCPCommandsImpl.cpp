@@ -994,7 +994,7 @@ bool CGCommand::DoExecuteAdd() {
 		std::wstring filename = _parameters[2];
 		filename.append(extension);
 
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
+		flash::get_default_cg_producer(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
 		SetReplyString(TEXT("202 CG OK\r\n"));
 	}
 	else
@@ -1015,7 +1015,7 @@ bool CGCommand::DoExecutePlay()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->play(layer);
+		flash::get_default_cg_producer(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->play(layer);
 	}
 	else
 	{
@@ -1037,7 +1037,7 @@ bool CGCommand::DoExecuteStop()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->stop(layer, 0);
+		flash::get_default_cg_producer(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->stop(layer, 0);
 	}
 	else 
 	{
@@ -1060,7 +1060,7 @@ bool CGCommand::DoExecuteNext()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->next(layer);
+		flash::get_default_cg_producer(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->next(layer);
 	}
 	else 
 	{
@@ -1083,7 +1083,7 @@ bool CGCommand::DoExecuteRemove()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->remove(layer);
+		flash::get_default_cg_producer(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->remove(layer);
 	}
 	else 
 	{
@@ -1135,7 +1135,7 @@ bool CGCommand::DoExecuteUpdate()
 		}		
 
 		int layer = _ttoi(_parameters.at(1).c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->update(layer, dataString);
+		flash::get_default_cg_producer(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->update(layer, dataString);
 	}
 	catch(...)
 	{
@@ -1160,7 +1160,7 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		auto result = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
+		auto result = flash::get_default_cg_producer(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
 		replyString << result << TEXT("\r\n"); 
 	}
 	else 
@@ -1187,13 +1187,13 @@ bool CGCommand::DoExecuteInfo()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		auto desc = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->description(layer);
+		auto desc = flash::get_default_cg_producer(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->description(layer);
 		
 		replyString << desc << TEXT("\r\n"); 
 	}
 	else 
 	{
-		auto info = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->template_host_info();
+		auto info = flash::get_default_cg_producer(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->template_host_info();
 		replyString << info << TEXT("\r\n"); 
 	}	
 
@@ -1341,7 +1341,7 @@ bool CinfCommand::DoExecute()
 	return true;
 }
 
-void GenerateChannelInfo(int index, const safe_ptr<core::video_channel>& pChannel, std::wstringstream& replyString)
+void GenerateChannelInfo(int index, const spl::shared_ptr<core::video_channel>& pChannel, std::wstringstream& replyString)
 {
 	replyString << index+1 << TEXT(" ") << pChannel->get_video_format_desc().name << TEXT(" PLAYING") << TEXT("\r\n");
 }

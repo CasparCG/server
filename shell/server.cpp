@@ -64,9 +64,9 @@ using namespace protocol;
 
 struct server::impl : boost::noncopyable
 {
-	safe_ptr<gpu::accelerator>					ogl_;
-	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
-	std::vector<safe_ptr<video_channel>>		channels_;
+	spl::shared_ptr<gpu::accelerator>					ogl_;
+	std::vector<spl::shared_ptr<IO::AsyncEventServer>> async_servers_;	
+	std::vector<spl::shared_ptr<video_channel>>		channels_;
 
 	impl()		
 		: ogl_(gpu::accelerator::create())
@@ -117,7 +117,7 @@ struct server::impl : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(make_safe<video_channel>(static_cast<int>(channels_.size()+1), format_desc, ogl_));
+			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, ogl_));
 			
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child(L"consumers"))
 			{
@@ -146,7 +146,7 @@ struct server::impl : boost::noncopyable
 
 		// Dummy diagnostics channel
 		if(env::properties().get(L"configuration.channel-grid", false))
-			channels_.push_back(make_safe<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), ogl_));
+			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), ogl_));
 	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)
@@ -162,7 +162,7 @@ struct server::impl : boost::noncopyable
 				if(name == L"tcp")
 				{					
 					unsigned int port = xml_controller.second.get(L"port", 5250);
-					auto asyncbootstrapper = make_safe<IO::AsyncEventServer>(create_protocol(protocol), port);
+					auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(create_protocol(protocol), port);
 					asyncbootstrapper->Start();
 					async_servers_.push_back(asyncbootstrapper);
 				}
@@ -176,14 +176,14 @@ struct server::impl : boost::noncopyable
 		}
 	}
 
-	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
+	spl::shared_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
 	{
 		if(boost::iequals(name, L"AMCP"))
-			return make_safe<amcp::AMCPProtocolStrategy>(channels_);
+			return spl::make_shared<amcp::AMCPProtocolStrategy>(channels_);
 		else if(boost::iequals(name, L"CII"))
-			return make_safe<cii::CIIProtocolStrategy>(channels_);
+			return spl::make_shared<cii::CIIProtocolStrategy>(channels_);
 		else if(boost::iequals(name, L"CLOCK"))
-			return make_safe<CLK::CLKProtocolStrategy>(channels_);
+			return spl::make_shared<CLK::CLKProtocolStrategy>(channels_);
 		
 		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
 	}
@@ -191,7 +191,7 @@ struct server::impl : boost::noncopyable
 
 server::server() : impl_(new impl()){}
 
-const std::vector<safe_ptr<video_channel>> server::get_channels() const
+const std::vector<spl::shared_ptr<video_channel>> server::get_channels() const
 {
 	return impl_->channels_;
 }

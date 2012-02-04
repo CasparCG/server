@@ -22,7 +22,7 @@
 #pragma once
 
 #include <common/forward.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/reactive.h>
 
 #include <boost/noncopyable.hpp>
@@ -40,18 +40,18 @@ public:
 	
 	// output
 
-	void operator()(safe_ptr<const struct data_frame> frame, const struct video_format_desc& format_desc);
+	void operator()(spl::shared_ptr<const struct data_frame> frame, const struct video_format_desc& format_desc);
 	
-	void add(const safe_ptr<struct frame_consumer>& consumer);
-	void add(int index, const safe_ptr<struct frame_consumer>& consumer);
-	void remove(const safe_ptr<struct frame_consumer>& consumer);
+	void add(const spl::shared_ptr<struct frame_consumer>& consumer);
+	void add(int index, const spl::shared_ptr<struct frame_consumer>& consumer);
+	void remove(const spl::shared_ptr<struct frame_consumer>& consumer);
 	void remove(int index);
 	
 	boost::unique_future<boost::property_tree::wptree> info() const;
 
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}

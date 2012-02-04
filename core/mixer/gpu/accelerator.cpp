@@ -73,7 +73,7 @@ accelerator::~accelerator()
 	});
 }
 
-safe_ptr<device_buffer> accelerator::allocate_device_buffer(int width, int height, int stride)
+spl::shared_ptr<device_buffer> accelerator::allocate_device_buffer(int width, int height, int stride)
 {
 	std::shared_ptr<device_buffer> buffer;
 	try
@@ -96,10 +96,10 @@ safe_ptr<device_buffer> accelerator::allocate_device_buffer(int width, int heigh
 			throw;
 		}
 	}
-	return make_safe_ptr(buffer);
+	return spl::make_shared_ptr(buffer);
 }
 				
-safe_ptr<device_buffer> accelerator::create_device_buffer(int width, int height, int stride)
+spl::shared_ptr<device_buffer> accelerator::create_device_buffer(int width, int height, int stride)
 {
 	CASPAR_VERIFY(stride > 0 && stride < 5);
 	CASPAR_VERIFY(width > 0 && height > 0);
@@ -110,13 +110,13 @@ safe_ptr<device_buffer> accelerator::create_device_buffer(int width, int height,
 	
 	//++pool->usage_count;
 
-	return safe_ptr<device_buffer>(buffer.get(), [=](device_buffer*) mutable
+	return spl::shared_ptr<device_buffer>(buffer.get(), [=](device_buffer*) mutable
 	{		
 		pool->items.push(buffer);	
 	});
 }
 
-safe_ptr<host_buffer> accelerator::allocate_host_buffer(int size, host_buffer::usage usage)
+spl::shared_ptr<host_buffer> accelerator::allocate_host_buffer(int size, host_buffer::usage usage)
 {
 	std::shared_ptr<host_buffer> buffer;
 
@@ -149,10 +149,10 @@ safe_ptr<host_buffer> accelerator::allocate_host_buffer(int size, host_buffer::u
 		}
 	}
 
-	return make_safe_ptr(buffer);
+	return spl::make_shared_ptr(buffer);
 }
 	
-safe_ptr<host_buffer> accelerator::create_host_buffer(int size, host_buffer::usage usage)
+spl::shared_ptr<host_buffer> accelerator::create_host_buffer(int size, host_buffer::usage usage)
 {
 	CASPAR_VERIFY(usage == host_buffer::usage::write_only || usage == host_buffer::usage::read_only);
 	CASPAR_VERIFY(size > 0);
@@ -165,7 +165,7 @@ safe_ptr<host_buffer> accelerator::create_host_buffer(int size, host_buffer::usa
 
 	auto self = shared_from_this();
 	bool is_write_only	= (usage == host_buffer::usage::write_only);
-	return safe_ptr<host_buffer>(buffer.get(), [=](host_buffer*) mutable
+	return spl::shared_ptr<host_buffer>(buffer.get(), [=](host_buffer*) mutable
 	{
 		self->executor_.begin_invoke([=]() mutable
 		{		
@@ -179,9 +179,9 @@ safe_ptr<host_buffer> accelerator::create_host_buffer(int size, host_buffer::usa
 	});
 }
 
-safe_ptr<accelerator> accelerator::create()
+spl::shared_ptr<accelerator> accelerator::create()
 {
-	return safe_ptr<accelerator>(new accelerator());
+	return spl::shared_ptr<accelerator>(new accelerator());
 }
 
 //template<typename T>
@@ -256,9 +256,9 @@ void accelerator::use(shader& shader)
 	GL(glUseProgramObjectARB(shader.id()));	
 }
 
-boost::unique_future<safe_ptr<device_buffer>> accelerator::copy_async(safe_ptr<host_buffer>& source, int width, int height, int stride)
+boost::unique_future<spl::shared_ptr<device_buffer>> accelerator::copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride)
 {
-	return executor_.begin_invoke([=]() -> safe_ptr<device_buffer>
+	return executor_.begin_invoke([=]() -> spl::shared_ptr<device_buffer>
 	{
 		auto result = create_device_buffer(width, height, stride);
 		result->copy_from(source);

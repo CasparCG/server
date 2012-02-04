@@ -39,9 +39,9 @@ namespace caspar { namespace flash {
 	
 struct cg_producer::impl : boost::noncopyable
 {
-	safe_ptr<core::frame_producer> flash_producer_;
+	spl::shared_ptr<core::frame_producer> flash_producer_;
 public:
-	impl(const safe_ptr<core::frame_producer>& frame_producer) 
+	impl(const spl::shared_ptr<core::frame_producer>& frame_producer) 
 		: flash_producer_(frame_producer)
 	{}
 	
@@ -148,12 +148,12 @@ public:
 		return flash_producer_->call(str);
 	}
 
-	safe_ptr<core::draw_frame> receive(int flags)
+	spl::shared_ptr<core::draw_frame> receive(int flags)
 	{
 		return flash_producer_->receive(flags);
 	}
 
-	safe_ptr<core::draw_frame> last_frame() const
+	spl::shared_ptr<core::draw_frame> last_frame() const
 	{
 		return flash_producer_->last_frame();
 	}		
@@ -193,7 +193,7 @@ public:
 	}
 };
 	
-safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int render_layer)
+spl::shared_ptr<cg_producer> get_default_cg_producer(const spl::shared_ptr<core::video_channel>& video_channel, int render_layer)
 {	
 	auto flash_producer = video_channel->stage()->foreground(render_layer).get();
 
@@ -212,10 +212,10 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 		throw;
 	}
 
-	return make_safe<cg_producer>(flash_producer);
+	return spl::make_shared<cg_producer>(flash_producer);
 }
 
-safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
+spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
 {
 	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".ct";
 	if(!boost::filesystem::exists(filename))
@@ -226,24 +226,24 @@ safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_fac
 	filename = path.wstring();
 
 	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
-	auto producer = make_safe<cg_producer>(flash_producer);
+	auto producer = spl::make_shared<cg_producer>(flash_producer);
 	producer->add(0, filename, 1);
 
 	return producer;
 }
 
-safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
+spl::shared_ptr<core::frame_producer> create_cg_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
 {
 	if(params.empty() || params.at(0) != L"[CG]")
 		return core::frame_producer::empty();
 
-	return make_safe<cg_producer>(flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>()));	
+	return spl::make_shared<cg_producer>(flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>()));	
 }
 
-cg_producer::cg_producer(const safe_ptr<core::frame_producer>& frame_producer) : impl_(new impl(frame_producer)){}
+cg_producer::cg_producer(const spl::shared_ptr<core::frame_producer>& frame_producer) : impl_(new impl(frame_producer)){}
 cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
-safe_ptr<core::draw_frame> cg_producer::receive(int flags){return impl_->receive(flags);}
-safe_ptr<core::draw_frame> cg_producer::last_frame() const{return impl_->last_frame();}
+spl::shared_ptr<core::draw_frame> cg_producer::receive(int flags){return impl_->receive(flags);}
+spl::shared_ptr<core::draw_frame> cg_producer::last_frame() const{return impl_->last_frame();}
 void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
 void cg_producer::remove(int layer){impl_->remove(layer);}
 void cg_producer::play(int layer){impl_->play(layer);}

@@ -52,14 +52,14 @@ namespace caspar { namespace bluefish {
 			
 struct bluefish_consumer : boost::noncopyable
 {
-	safe_ptr<CBlueVelvet4>				blue_;
+	spl::shared_ptr<CBlueVelvet4>				blue_;
 	const unsigned int					device_index_;
 	const core::video_format_desc		format_desc_;
 	const int							channel_index_;
 
 	const std::wstring					model_name_;
 
-	safe_ptr<diagnostics::graph>		graph_;
+	spl::shared_ptr<diagnostics::graph>		graph_;
 	boost::timer						frame_timer_;
 	boost::timer						tick_timer_;
 	boost::timer						sync_timer_;	
@@ -185,7 +185,7 @@ public:
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");		
 	}
 	
-	void send(const safe_ptr<const core::data_frame>& frame)
+	void send(const spl::shared_ptr<const core::data_frame>& frame)
 	{					
 		executor_.begin_invoke([=]
 		{
@@ -202,7 +202,7 @@ public:
 		});
 	}
 
-	void display_frame(const safe_ptr<const core::data_frame>& frame)
+	void display_frame(const spl::shared_ptr<const core::data_frame>& frame)
 	{
 		// Sync
 
@@ -328,7 +328,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
-	virtual bool send(const safe_ptr<const core::data_frame>& frame) override
+	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
 	{
 		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
@@ -363,7 +363,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"BLUEFISH")
 		return core::frame_consumer::empty();
@@ -373,16 +373,16 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	const auto embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	const auto key_only		  = std::find(params.begin(), params.end(), L"KEY_ONLY")	   != params.end();
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
+	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
+spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
 {	
 	const auto device_index		= ptree.get(L"device",			1);
 	const auto embedded_audio	= ptree.get(L"embedded-audio",	false);
 	const auto key_only			= ptree.get(L"key-only",		false);
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
+	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
 }}

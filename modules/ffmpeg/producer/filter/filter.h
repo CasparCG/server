@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
@@ -48,7 +48,7 @@ public:
 
 	void push(const std::shared_ptr<AVFrame>& frame);
 	std::shared_ptr<AVFrame> poll();
-	std::vector<safe_ptr<AVFrame>> poll_all();
+	std::vector<spl::shared_ptr<AVFrame>> poll_all();
 
 	std::wstring filter_str() const;
 			
@@ -91,7 +91,7 @@ public:
 	}
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}

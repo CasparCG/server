@@ -380,7 +380,7 @@ void graph::set_value(const std::string& name, double value){impl_->set_value(na
 void graph::set_color(const std::string& name, int color){impl_->set_color(name, color);}
 void graph::set_tag(const std::string& name){impl_->set_tag(name);}
 
-void register_graph(const safe_ptr<graph>& graph)
+void register_graph(const spl::shared_ptr<graph>& graph)
 {
 	context::register_drawable(graph->impl_);
 }
@@ -481,9 +481,9 @@ void show_graphs(bool value)
 //color graph::get_color() const {return impl_->get_color();}
 //std::wstring graph::print() const {return impl_->print();}
 //
-//safe_ptr<graph> graph::clone() const 
+//spl::shared_ptr<graph> graph::clone() const 
 //{
-//	safe_ptr<graph> clone(new graph(std::wstring(L"")));
+//	spl::shared_ptr<graph> clone(new graph(std::wstring(L"")));
 //	clone->impl_->printer_ = impl_->printer_;
 //	clone->impl_->lines_ = impl_->lines_;
 //	clone->impl_->color_ = impl_->color_;	
@@ -491,23 +491,23 @@ void show_graphs(bool value)
 //
 //std::map<std::wstring, line>& graph::get_lines() {impl_->get_lines();}
 //
-//std::vector<safe_ptr<graph>> g_graphs;
+//std::vector<spl::shared_ptr<graph>> g_graphs;
 //
-//safe_ptr<graph> create_graph(const std::string& name)
+//spl::shared_ptr<graph> create_graph(const std::string& name)
 //{
-//	g_graphs.push_back(make_safe<graph>(name));
+//	g_graphs.push_back(spl::make_shared<graph>(name));
 //	return g_graphs.back();
 //}
 //
-//safe_ptr<graph> create_graph(const printer& parent_printer)
+//spl::shared_ptr<graph> create_graph(const printer& parent_printer)
 //{
-//	g_graphs.push_back(make_safe<graph>(parent_printer));
+//	g_graphs.push_back(spl::make_shared<graph>(parent_printer));
 //	return g_graphs.back();
 //}
 //
-//static std::vector<safe_ptr<graph>> get_all_graphs()
+//static std::vector<spl::shared_ptr<graph>> get_all_graphs()
 //{
-//	std::vector<safe_ptr<graph>> graphs;
+//	std::vector<spl::shared_ptr<graph>> graphs;
 //	BOOST_FOREACH(auto& graph, g_graphs)
 //		graphs.push_back(graph->clone());
 //

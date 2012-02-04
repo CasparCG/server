@@ -80,7 +80,7 @@ extern "C"
 #include <functional>
 
 
-#include "../common/memory/safe_ptr.h"
+#include "../common/spl/memory.h"
 #include "../common/utf.h"
 #include "../common/except.h"
 #include "../common/log.h"

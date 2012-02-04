@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -37,10 +37,10 @@ class server sealed : boost::noncopyable
 {
 public:
 	server();
-	const std::vector<safe_ptr<core::video_channel>> get_channels() const;
+	const std::vector<spl::shared_ptr<core::video_channel>> get_channels() const;
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }

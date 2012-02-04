@@ -273,14 +273,14 @@ std::string get_fragment(bool blend_modes)
 	"}																					\n";
 }
 
-safe_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes)
+spl::shared_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes)
 {
 	tbb::mutex::scoped_lock lock(g_shader_mutex);
 
 	if(g_shader)
 	{
 		blend_modes = g_blend_modes;
-		return make_safe_ptr(g_shader);
+		return spl::make_shared_ptr(g_shader);
 	}
 		
 	try
@@ -304,7 +304,7 @@ safe_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes)
 	//}
 
 	blend_modes = g_blend_modes;
-	return make_safe_ptr(g_shader);
+	return spl::make_shared_ptr(g_shader);
 }
 
 }}}

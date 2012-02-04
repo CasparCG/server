@@ -24,7 +24,7 @@
 #include "frame_producer.h"
 
 #include <common/forward.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/tweener.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -48,32 +48,32 @@ public:
 
 	stage();
 		
-	std::map<int, safe_ptr<class draw_frame>> operator()(const struct video_format_desc& format_desc);
+	std::map<int, spl::shared_ptr<class draw_frame>> operator()(const struct video_format_desc& format_desc);
 
 	void apply_transforms(const std::vector<transform_tuple_t>& transforms);
 	void apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const tweener& tween = L"linear");
 	void clear_transforms(int index);
 	void clear_transforms();
 				
-	void load(int index, const safe_ptr<struct frame_producer>& producer, int auto_play_delta = -1);
+	void load(int index, const spl::shared_ptr<struct frame_producer>& producer, int auto_play_delta = -1);
 	void pause(int index);
 	void play(int index);
 	void stop(int index);
 	void clear(int index);
 	void clear();	
-	void swap_layers(const safe_ptr<stage>& other);
+	void swap_layers(const spl::shared_ptr<stage>& other);
 	void swap_layer(int index, int other_index);
-	void swap_layer(int index, int other_index, const safe_ptr<stage>& other);
+	void swap_layer(int index, int other_index, const spl::shared_ptr<stage>& other);
 	
-	boost::unique_future<safe_ptr<struct frame_producer>>	foreground(int index);
-	boost::unique_future<safe_ptr<struct frame_producer>>	background(int index);
+	boost::unique_future<spl::shared_ptr<struct frame_producer>>	foreground(int index);
+	boost::unique_future<spl::shared_ptr<struct frame_producer>>	background(int index);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 	boost::unique_future<boost::property_tree::wptree> info(int index) const;
 	
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}

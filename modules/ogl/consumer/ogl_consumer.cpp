@@ -27,7 +27,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/gl/gl_check.h>
 #include <common/log.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/memory/memshfl.h>
 #include <common/utf.h>
 
@@ -127,7 +127,7 @@ struct ogl_consumer : boost::noncopyable
 	
 	sf::Window				window_;
 	
-	safe_ptr<diagnostics::graph>	graph_;
+	spl::shared_ptr<diagnostics::graph>	graph_;
 	boost::timer					perf_timer_;
 	boost::timer					tick_timer_;
 
@@ -272,7 +272,7 @@ public:
 					frame_buffer_.pop(frame);
 					
 					perf_timer_.restart();
-					render(make_safe_ptr(frame));
+					render(spl::make_shared_ptr(frame));
 					graph_->set_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);	
 
 					window_.Display();
@@ -295,9 +295,9 @@ public:
 		}
 	}
 	
-	safe_ptr<AVFrame> get_av_frame()
+	spl::shared_ptr<AVFrame> get_av_frame()
 	{		
-		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+		spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 		avcodec_get_frame_defaults(av_frame.get());
 						
 		av_frame->linesize[0]		= format_desc_.width*4;			
@@ -310,7 +310,7 @@ public:
 		return av_frame;
 	}
 
-	void render(const safe_ptr<const core::data_frame>& frame)
+	void render(const spl::shared_ptr<const core::data_frame>& frame)
 	{			
 		if(static_cast<int>(frame->image_data().size()) != format_desc_.size)
 			return;
@@ -335,7 +335,7 @@ public:
 
 			auto av_frame2 = get_av_frame();
 			av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
-			av_frame = safe_ptr<AVFrame>(av_frame2.get(), [=](AVFrame*)
+			av_frame = spl::shared_ptr<AVFrame>(av_frame2.get(), [=](AVFrame*)
 			{
 				av_freep(&av_frame2->data[0]);
 			});
@@ -377,7 +377,7 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
-	bool send(const safe_ptr<const core::data_frame>& frame)
+	bool send(const spl::shared_ptr<const core::data_frame>& frame)
 	{
 		if(!frame_buffer_.try_push(frame))
 			graph_->set_tag("dropped-frame");
@@ -476,7 +476,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
-	virtual bool send(const safe_ptr<const core::data_frame>& frame) override
+	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
 	{
 		return consumer_->send(frame);
 	}
@@ -512,7 +512,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.size() < 1 || params[0] != L"SCREEN")
 		return core::frame_consumer::empty();
@@ -530,10 +530,10 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	if(name_it != params.end() && ++name_it != params.end())
 		config.name = *name_it;
 
-	return make_safe<ogl_consumer_proxy>(config);
+	return spl::make_shared<ogl_consumer_proxy>(config);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
+spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
 {
 	configuration config;
 	config.name				= ptree.get(L"name",	 config.name);
@@ -554,7 +554,7 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 	else if(aspect_str == L"4:3")
 		config.aspect = configuration::aspect_4_3;
 	
-	return make_safe<ogl_consumer_proxy>(config);
+	return spl::make_shared<ogl_consumer_proxy>(config);
 }
 
 }}

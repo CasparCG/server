@@ -24,7 +24,7 @@
 #include "../../video_format.h"
 
 #include <common/enum_class.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 #include <common/tweener.h>
 
 #include <string>
@@ -70,6 +70,6 @@ struct transition_info
 	tweener					tweener;
 };
 
-safe_ptr<struct frame_producer> create_transition_producer(const field_mode& mode, const safe_ptr<struct frame_producer>& destination, const transition_info& info);
+spl::shared_ptr<struct frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<struct frame_producer>& destination, const transition_info& info);
 
 }}

@@ -55,11 +55,11 @@ public:
 	{
 	}
 		
-	std::map<int, safe_ptr<draw_frame>> operator()(const struct video_format_desc& format_desc)
+	std::map<int, spl::shared_ptr<draw_frame>> operator()(const struct video_format_desc& format_desc)
 	{		
-		return executor_.invoke([=]() -> std::map<int, safe_ptr<draw_frame>>
+		return executor_.invoke([=]() -> std::map<int, spl::shared_ptr<draw_frame>>
 		{
-			std::map<int, safe_ptr<class draw_frame>> frames;
+			std::map<int, spl::shared_ptr<class draw_frame>> frames;
 
 			try
 			{					
@@ -84,12 +84,12 @@ public:
 
 					auto frame = layer.second.receive(flags);	
 				
-					auto frame1 = make_safe<core::draw_frame>(frame);
+					auto frame1 = spl::make_shared<core::draw_frame>(frame);
 					frame1->get_frame_transform() = transform;
 
 					if(format_desc2.field_mode != core::field_mode::progressive)
 					{				
-						auto frame2 = make_safe<core::draw_frame>(frame);
+						auto frame2 = spl::make_shared<core::draw_frame>(frame);
 						frame2->get_frame_transform() = transforms_[layer.first].fetch_and_tick(1);
 						frame1 = core::draw_frame::interlace(frame1, frame2, format_desc2.field_mode);
 					}
@@ -146,7 +146,7 @@ public:
 		}, task_priority::high_priority);
 	}
 		
-	void load(int index, const safe_ptr<frame_producer>& producer, int auto_play_delta)
+	void load(int index, const spl::shared_ptr<frame_producer>& producer, int auto_play_delta)
 	{
 		executor_.begin_invoke([=]
 		{
@@ -194,7 +194,7 @@ public:
 		}, task_priority::high_priority);
 	}	
 		
-	void swap_layers(const safe_ptr<stage>& other)
+	void swap_layers(const spl::shared_ptr<stage>& other)
 	{
 		if(other->impl_.get() == this)
 			return;
@@ -217,7 +217,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	void swap_layer(int index, int other_index, const safe_ptr<stage>& other)
+	void swap_layer(int index, int other_index, const spl::shared_ptr<stage>& other)
 	{
 		if(other->impl_.get() == this)
 			swap_layer(index, other_index);
@@ -234,7 +234,7 @@ public:
 		}
 	}
 		
-	boost::unique_future<safe_ptr<frame_producer>> foreground(int index)
+	boost::unique_future<spl::shared_ptr<frame_producer>> foreground(int index)
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -242,7 +242,7 @@ public:
 		}, task_priority::high_priority);
 	}
 	
-	boost::unique_future<safe_ptr<frame_producer>> background(int index)
+	boost::unique_future<spl::shared_ptr<frame_producer>> background(int index)
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -276,18 +276,18 @@ void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transf
 void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
-void stage::load(int index, const safe_ptr<frame_producer>& producer, int auto_play_delta){impl_->load(index, producer, auto_play_delta);}
+void stage::load(int index, const spl::shared_ptr<frame_producer>& producer, int auto_play_delta){impl_->load(index, producer, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
 void stage::play(int index){impl_->play(index);}
 void stage::stop(int index){impl_->stop(index);}
 void stage::clear(int index){impl_->clear(index);}
 void stage::clear(){impl_->clear();}
-void stage::swap_layers(const safe_ptr<stage>& other){impl_->swap_layers(other);}
+void stage::swap_layers(const spl::shared_ptr<stage>& other){impl_->swap_layers(other);}
 void stage::swap_layer(int index, int other_index){impl_->swap_layer(index, other_index);}
-void stage::swap_layer(int index, int other_index, const safe_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
-boost::unique_future<safe_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
-boost::unique_future<safe_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
+void stage::swap_layer(int index, int other_index, const spl::shared_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
+boost::unique_future<spl::shared_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
+boost::unique_future<spl::shared_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
-std::map<int, safe_ptr<class draw_frame>> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
+std::map<int, spl::shared_ptr<class draw_frame>> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
 }}

@@ -171,12 +171,12 @@ int make_alpha_format(int format)
 	}
 }
 
-safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int flags)
+spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags)
 {			
 	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
-		return make_safe<core::write_frame>(tag);
+		return spl::make_shared<core::write_frame>(tag);
 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
@@ -229,7 +229,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 									boost::errinfo_api_function("sws_getContext"));
 		}	
 		
-		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+		spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 		avcodec_get_frame_defaults(av_frame.get());			
 		if(target_pix_fmt == PIX_FMT_BGRA)
 		{
@@ -286,7 +286,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	else if(get_mode(*decoded_frame) == core::field_mode::upper && frame_factory->get_video_format_desc().field_mode == core::field_mode::lower)
 		write->get_frame_transform().fill_translation[1] -= 1.0/static_cast<double>(frame_factory->get_video_format_desc().height);
 
-	return make_safe_ptr(write);
+	return spl::make_shared_ptr(write);
 }
 
 bool is_sane_fps(AVRational time_base)
@@ -408,9 +408,9 @@ void fix_meta_data(AVFormatContext& context)
 	}
 }
 
-safe_ptr<AVPacket> create_packet()
+spl::shared_ptr<AVPacket> create_packet()
 {
-	safe_ptr<AVPacket> packet(new AVPacket, [](AVPacket* p)
+	spl::shared_ptr<AVPacket> packet(new AVPacket, [](AVPacket* p)
 	{
 		av_free_packet(p);
 		delete p;
@@ -420,7 +420,7 @@ safe_ptr<AVPacket> create_packet()
 	return packet;
 }
 
-safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index)
+spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index)
 {	
 	AVCodec* decoder;
 	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "");
@@ -428,14 +428,14 @@ safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType t
 	//	decoder = decoder->next;
 
 	THROW_ON_ERROR2(tbb_avcodec_open(context.streams[index]->codec, decoder), "");
-	return safe_ptr<AVCodecContext>(context.streams[index]->codec, tbb_avcodec_close);
+	return spl::shared_ptr<AVCodecContext>(context.streams[index]->codec, tbb_avcodec_close);
 }
 
-safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
+spl::shared_ptr<AVFormatContext> open_input(const std::wstring& filename)
 {
 	AVFormatContext* weak_context = nullptr;
 	THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(filename).c_str(), nullptr, nullptr), filename);
-	safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
+	spl::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
 	THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), filename);
 	fix_meta_data(*context);
 	return context;

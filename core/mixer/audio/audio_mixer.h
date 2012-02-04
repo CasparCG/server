@@ -22,7 +22,7 @@
 #pragma once
 
 #include <common/forward.h>
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <core/frame/frame_visitor.h>
 
@@ -49,7 +49,7 @@ public:
 	
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}

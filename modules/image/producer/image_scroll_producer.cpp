@@ -51,7 +51,7 @@ namespace caspar { namespace image {
 struct image_scroll_producer : public core::frame_producer
 {	
 	const std::wstring							filename_;
-	std::vector<safe_ptr<core::draw_frame>>	frames_;
+	std::vector<spl::shared_ptr<core::draw_frame>>	frames_;
 	core::video_format_desc						format_desc_;
 	int										width_;
 	int										height_;
@@ -61,9 +61,9 @@ struct image_scroll_producer : public core::frame_producer
 
 	std::array<double, 2>						start_offset_;
 
-	safe_ptr<core::draw_frame>					last_frame_;
+	spl::shared_ptr<core::draw_frame>					last_frame_;
 	
-	explicit image_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
+	explicit image_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
 		: filename_(filename)
 		, delta_(0)
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -158,7 +158,7 @@ struct image_scroll_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual safe_ptr<core::draw_frame> receive(int) override
+	virtual spl::shared_ptr<core::draw_frame> receive(int) override
 	{		
 		delta_ += speed_;
 
@@ -188,10 +188,10 @@ struct image_scroll_producer : public core::frame_producer
 			}
 		}
 
-		return last_frame_ = make_safe<core::draw_frame>(frames_);
+		return last_frame_ = spl::make_shared<core::draw_frame>(frames_);
 	}
 
-	virtual safe_ptr<core::draw_frame> last_frame() const override
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
 	{
 		return last_frame_;
 	}
@@ -225,7 +225,7 @@ struct image_scroll_producer : public core::frame_producer
 	}
 };
 
-safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
@@ -249,7 +249,7 @@ safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame
 	if(speed == 0)
 		return core::frame_producer::empty();
 
-	return make_safe<image_scroll_producer>(frame_factory, filename + L"." + *ext, speed);
+	return spl::make_shared<image_scroll_producer>(frame_factory, filename + L"." + *ext, speed);
 }
 
 }}

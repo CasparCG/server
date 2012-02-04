@@ -23,7 +23,7 @@
 
 #include <core/mixer/audio/audio_mixer.h>
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -43,7 +43,7 @@ namespace ffmpeg {
 class audio_decoder : boost::noncopyable
 {
 public:
-	explicit audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
+	explicit audio_decoder(const spl::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
 	
 	bool ready() const;
 	void push(const std::shared_ptr<AVPacket>& packet);
@@ -56,7 +56,7 @@ public:
 	std::wstring print() const;
 private:
 	struct impl;
-	safe_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}

@@ -31,24 +31,24 @@ namespace caspar { namespace core {
 																																						
 struct draw_frame::impl
 {		
-	std::vector<safe_ptr<draw_frame>> frames_;
+	std::vector<spl::shared_ptr<draw_frame>> frames_;
 
 	frame_transform frame_transform_;		
 public:
-	impl(const std::vector<safe_ptr<draw_frame>>& frames) : frames_(frames) 
+	impl()
 	{
 	}
 
-	impl(std::vector<safe_ptr<draw_frame>>&& frames) : frames_(std::move(frames))
+	impl(std::vector<spl::shared_ptr<draw_frame>> frames) : frames_(std::move(frames))
 	{
 	}
 
-	impl(safe_ptr<draw_frame>&& frame) 
+	impl(spl::shared_ptr<draw_frame>&& frame) 
 	{
 		frames_.push_back(std::move(frame));
 	}
 
-	impl(const safe_ptr<draw_frame>& frame) 		
+	impl(const spl::shared_ptr<draw_frame>& frame) 		
 	{ 
 		frames_.push_back(frame);
 	}
@@ -62,13 +62,11 @@ public:
 	}	
 };
 	
-draw_frame::draw_frame() : impl_(new impl(std::vector<safe_ptr<draw_frame>>())){}
-draw_frame::draw_frame(const std::vector<safe_ptr<draw_frame>>& frames) : impl_(new impl(frames)){}
+draw_frame::draw_frame() : impl_(new impl()){}
 draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
-draw_frame::draw_frame(std::vector<safe_ptr<draw_frame>>&& frames) : impl_(new impl(frames)){}
-draw_frame::draw_frame(const safe_ptr<draw_frame>& frame) : impl_(new impl(frame)){}
-draw_frame::draw_frame(safe_ptr<draw_frame>&& frame)  : impl_(new impl(std::move(frame))){}
 draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
+draw_frame::draw_frame(std::vector<spl::shared_ptr<draw_frame>> frames) : impl_(new impl(frames)){}
+draw_frame::draw_frame(spl::shared_ptr<draw_frame> frame)  : impl_(new impl(std::move(frame))){}
 draw_frame& draw_frame::operator=(draw_frame other)
 {
 	other.swap(*this);
@@ -80,7 +78,7 @@ const frame_transform& draw_frame::get_frame_transform() const { return impl_->f
 frame_transform& draw_frame::get_frame_transform() { return impl_->frame_transform_;}
 void draw_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
 
-safe_ptr<draw_frame> draw_frame::interlace(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2, field_mode mode)
+spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2, field_mode mode)
 {				
 	if(frame1 == draw_frame::eof() || frame2 == draw_frame::eof())
 		return draw_frame::eof();
@@ -91,8 +89,8 @@ safe_ptr<draw_frame> draw_frame::interlace(const safe_ptr<draw_frame>& frame1, c
 	if(frame1 == frame2 || mode == field_mode::progressive)
 		return frame2;
 
-	auto my_frame1 = make_safe<draw_frame>(frame1);
-	auto my_frame2 = make_safe<draw_frame>(frame2);
+	auto my_frame1 = spl::make_shared<draw_frame>(frame1);
+	auto my_frame2 = spl::make_shared<draw_frame>(frame2);
 	if(mode == field_mode::upper)
 	{
 		my_frame1->get_frame_transform().field_mode = field_mode::upper;	
@@ -104,13 +102,13 @@ safe_ptr<draw_frame> draw_frame::interlace(const safe_ptr<draw_frame>& frame1, c
 		my_frame2->get_frame_transform().field_mode = field_mode::upper;	
 	}
 
-	std::vector<safe_ptr<draw_frame>> frames;
+	std::vector<spl::shared_ptr<draw_frame>> frames;
 	frames.push_back(my_frame1);
 	frames.push_back(my_frame2);
-	return make_safe<draw_frame>(std::move(frames));
+	return spl::make_shared<draw_frame>(std::move(frames));
 }
 
-safe_ptr<draw_frame> draw_frame::over(const safe_ptr<draw_frame>& frame1, const safe_ptr<draw_frame>& frame2)
+spl::shared_ptr<draw_frame> draw_frame::over(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2)
 {	
 	if(frame1 == draw_frame::eof() || frame2 == draw_frame::eof())
 		return draw_frame::eof();
@@ -118,13 +116,13 @@ safe_ptr<draw_frame> draw_frame::over(const safe_ptr<draw_frame>& frame1, const 
 	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
 		return draw_frame::empty();
 
-	std::vector<safe_ptr<draw_frame>> frames;
+	std::vector<spl::shared_ptr<draw_frame>> frames;
 	frames.push_back(frame1);
 	frames.push_back(frame2);
-	return make_safe<draw_frame>(std::move(frames));
+	return spl::make_shared<draw_frame>(std::move(frames));
 }
 
-safe_ptr<draw_frame> draw_frame::mask(const safe_ptr<draw_frame>& fill, const safe_ptr<draw_frame>& key)
+spl::shared_ptr<draw_frame> draw_frame::mask(const spl::shared_ptr<draw_frame>& fill, const spl::shared_ptr<draw_frame>& key)
 {	
 	if(fill == draw_frame::eof() || key == draw_frame::eof())
 		return draw_frame::eof();
@@ -132,35 +130,35 @@ safe_ptr<draw_frame> draw_frame::mask(const safe_ptr<draw_frame>& fill, const sa
 	if(fill == draw_frame::empty() || key == draw_frame::empty())
 		return draw_frame::empty();
 
-	std::vector<safe_ptr<draw_frame>> frames;
+	std::vector<spl::shared_ptr<draw_frame>> frames;
 	key->get_frame_transform().is_key = true;
 	frames.push_back(key);
 	frames.push_back(fill);
-	return make_safe<draw_frame>(std::move(frames));
+	return spl::make_shared<draw_frame>(std::move(frames));
 }
 	
-safe_ptr<draw_frame> draw_frame::silence(const safe_ptr<draw_frame>& frame)
+spl::shared_ptr<draw_frame> draw_frame::silence(const spl::shared_ptr<draw_frame>& frame)
 {
-	auto frame2 = make_safe<draw_frame>(frame);
+	auto frame2 = spl::make_shared<draw_frame>(frame);
 	frame2->get_frame_transform().volume = 0.0;
 	return frame2;
 }
 
-const safe_ptr<draw_frame>& draw_frame::eof()
+const spl::shared_ptr<draw_frame>& draw_frame::eof()
 {
-	static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
+	static spl::shared_ptr<draw_frame> frame = spl::make_shared<draw_frame>();
 	return frame;
 }
 
-const safe_ptr<draw_frame>& draw_frame::empty()
+const spl::shared_ptr<draw_frame>& draw_frame::empty()
 {
-	static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
+	static spl::shared_ptr<draw_frame> frame = spl::make_shared<draw_frame>();
 	return frame;
 }
 
-const safe_ptr<draw_frame>& draw_frame::late()
+const spl::shared_ptr<draw_frame>& draw_frame::late()
 {
-	static safe_ptr<draw_frame> frame = make_safe<draw_frame>();
+	static spl::shared_ptr<draw_frame> frame = spl::make_shared<draw_frame>();
 	return frame;
 }
 	

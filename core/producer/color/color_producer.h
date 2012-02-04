@@ -21,14 +21,14 @@
 
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <string>
 #include <vector>
 
 namespace caspar { namespace core {
 	
-safe_ptr<struct frame_producer> create_color_producer(const safe_ptr<struct frame_factory>& frame_factory, const std::vector<std::wstring>& params);
-safe_ptr<class write_frame> create_color_frame(void* tag, const safe_ptr<struct frame_factory>& frame_factory, const std::wstring& color);
+spl::shared_ptr<struct frame_producer> create_color_producer(const spl::shared_ptr<struct frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+spl::shared_ptr<class write_frame> create_color_frame(void* tag, const spl::shared_ptr<struct frame_factory>& frame_factory, const std::wstring& color);
 
 }}

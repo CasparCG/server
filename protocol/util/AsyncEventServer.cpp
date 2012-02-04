@@ -47,7 +47,7 @@ long AsyncEventServer::instanceCount_ = 0;
 // AsyncEventServer constructor
 // PARAMS: port(TCP-port the server should listen to)
 // COMMENT: Initializes the WinSock2 library
-AsyncEventServer::AsyncEventServer(const safe_ptr<IProtocolStrategy>& pProtocol, int port) : port_(port), pProtocolStrategy_(pProtocol)
+AsyncEventServer::AsyncEventServer(const spl::shared_ptr<IProtocolStrategy>& pProtocol, int port) : port_(port), pProtocolStrategy_(pProtocol)
 {
 	if(instanceCount_ == 0) {
 		WSADATA wsaData;

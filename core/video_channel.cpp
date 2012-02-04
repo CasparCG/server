@@ -47,18 +47,18 @@ namespace caspar { namespace core {
 
 struct video_channel::impl sealed : public frame_factory
 {
-	reactive::basic_subject<safe_ptr<const data_frame>> frame_subject_;
+	reactive::basic_subject<spl::shared_ptr<const data_frame>> frame_subject_;
 	const int								index_;
 
 	mutable tbb::spin_mutex					format_desc_mutex_;
 	video_format_desc						format_desc_;
 	
-	const safe_ptr<gpu::accelerator>		ogl_;
-	const safe_ptr<diagnostics::graph>		graph_;
+	const spl::shared_ptr<gpu::accelerator>		ogl_;
+	const spl::shared_ptr<diagnostics::graph>		graph_;
 
-	const safe_ptr<caspar::core::output>	output_;
-	const safe_ptr<caspar::core::mixer>		mixer_;
-	const safe_ptr<caspar::core::stage>		stage_;	
+	const spl::shared_ptr<caspar::core::output>	output_;
+	const spl::shared_ptr<caspar::core::mixer>		mixer_;
+	const spl::shared_ptr<caspar::core::stage>		stage_;	
 
 	boost::timer							tick_timer_;
 	boost::timer							produce_timer_;
@@ -67,7 +67,7 @@ struct video_channel::impl sealed : public frame_factory
 
 	executor								executor_;
 public:
-	impl(int index, const video_format_desc& format_desc, const safe_ptr<gpu::accelerator>& ogl)  
+	impl(int index, const video_format_desc& format_desc, const spl::shared_ptr<gpu::accelerator>& ogl)  
 		:  index_(index)
 		, format_desc_(format_desc)
 		, ogl_(ogl)
@@ -90,9 +90,9 @@ public:
 	
 	// frame_factory
 						
-	virtual safe_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override
+	virtual spl::shared_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override
 	{		
-		return make_safe<write_frame>(ogl_, tag, desc);
+		return spl::make_shared<write_frame>(ogl_, tag, desc);
 	}
 	
 	virtual core::video_format_desc get_video_format_desc() const override
@@ -171,11 +171,11 @@ public:
 	}
 };
 
-video_channel::video_channel(int index, const video_format_desc& format_desc, const safe_ptr<gpu::accelerator>& ogl) : impl_(new impl(index, format_desc, ogl)){}
-safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
-safe_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
-safe_ptr<frame_factory> video_channel::frame_factory() { return impl_;} 
-safe_ptr<output> video_channel::output() { return impl_->output_;} 
+video_channel::video_channel(int index, const video_format_desc& format_desc, const spl::shared_ptr<gpu::accelerator>& ogl) : impl_(new impl(index, format_desc, ogl)){}
+spl::shared_ptr<stage> video_channel::stage() { return impl_->stage_;} 
+spl::shared_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
+spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_;} 
+spl::shared_ptr<output> video_channel::output() { return impl_->output_;} 
 video_format_desc video_channel::get_video_format_desc() const{return impl_->format_desc_;}
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}

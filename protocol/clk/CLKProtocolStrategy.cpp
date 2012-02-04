@@ -32,7 +32,7 @@
 
 namespace caspar { namespace protocol { namespace CLK {
 	
-CLKProtocolStrategy::CLKProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels) 
+CLKProtocolStrategy::CLKProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels) 
 	: currentState_(ExpectingNewCommand), bClockLoaded_(false), pChannel_(channels.at(0))
 {}
 

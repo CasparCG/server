@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/memory/safe_ptr.h>
+#include <common/spl/memory.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/range.hpp>
@@ -35,7 +35,7 @@ struct data_frame
 
 	virtual const void* tag() const = 0;
 
-	static safe_ptr<data_frame> empty();
+	static spl::shared_ptr<data_frame> empty();
 private:
 	data_frame(const data_frame&);
 	data_frame& operator=(const data_frame&);

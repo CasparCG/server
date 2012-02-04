@@ -53,7 +53,7 @@ namespace caspar { namespace core { namespace gpu {
 struct item
 {
 	pixel_format_desc											pix_desc;
-	std::vector<boost::shared_future<safe_ptr<device_buffer>>>	textures;
+	std::vector<boost::shared_future<spl::shared_ptr<device_buffer>>>	textures;
 	frame_transform												transform;
 
 	item()
@@ -66,10 +66,10 @@ typedef std::pair<blend_mode, std::vector<item>> layer;
 
 class image_renderer
 {
-	safe_ptr<accelerator>			ogl_;
+	spl::shared_ptr<accelerator>			ogl_;
 	image_kernel					kernel_;	
 public:
-	image_renderer(const safe_ptr<accelerator>& ogl)
+	image_renderer(const spl::shared_ptr<accelerator>& ogl)
 		: ogl_(ogl)
 		, kernel_(ogl_)
 	{
@@ -77,7 +77,7 @@ public:
 	
 	boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<layer> layers, const video_format_desc& format_desc)
 	{	
-		boost::shared_future<safe_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> safe_ptr<host_buffer>
+		boost::shared_future<spl::shared_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> spl::shared_ptr<host_buffer>
 		{
 			auto draw_buffer = create_mixer_buffer(4, format_desc);
 
@@ -121,7 +121,7 @@ public:
 private:
 
 	void draw(std::vector<layer>&&		layers, 
-			  safe_ptr<device_buffer>&	draw_buffer, 
+			  spl::shared_ptr<device_buffer>&	draw_buffer, 
 			  const video_format_desc& format_desc)
 	{
 		std::shared_ptr<device_buffer> layer_key_buffer;
@@ -131,7 +131,7 @@ private:
 	}
 
 	void draw_layer(layer&&							layer, 
-					safe_ptr<device_buffer>&		draw_buffer,
+					spl::shared_ptr<device_buffer>&		draw_buffer,
 					std::shared_ptr<device_buffer>& layer_key_buffer,
 					const video_format_desc&		format_desc)
 	{				
@@ -165,7 +165,7 @@ private:
 	}
 
 	void draw_item(item&&							item, 
-				   safe_ptr<device_buffer>&			draw_buffer, 
+				   spl::shared_ptr<device_buffer>&			draw_buffer, 
 				   std::shared_ptr<device_buffer>&	layer_key_buffer, 
 				   std::shared_ptr<device_buffer>&	local_key_buffer, 
 				   std::shared_ptr<device_buffer>&	local_mix_buffer,
@@ -211,7 +211,7 @@ private:
 		}	
 	}
 
-	void draw_mixer_buffer(safe_ptr<device_buffer>&			draw_buffer, 
+	void draw_mixer_buffer(spl::shared_ptr<device_buffer>&			draw_buffer, 
 						   std::shared_ptr<device_buffer>&& source_buffer, 
 						   blend_mode						blend_mode = blend_mode::normal)
 	{
@@ -229,7 +229,7 @@ private:
 		kernel_.draw(std::move(draw_params));
 	}
 			
-	safe_ptr<device_buffer> create_mixer_buffer(int stride, const video_format_desc& format_desc)
+	spl::shared_ptr<device_buffer> create_mixer_buffer(int stride, const video_format_desc& format_desc)
 	{
 		auto buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, stride);
 		ogl_->clear(*buffer);
@@ -239,12 +239,12 @@ private:
 		
 struct image_mixer::impl : boost::noncopyable
 {	
-	safe_ptr<accelerator>			ogl_;
+	spl::shared_ptr<accelerator>			ogl_;
 	image_renderer					renderer_;
 	std::vector<frame_transform>	transform_stack_;
 	std::vector<layer>				layers_; // layer/stream/items
 public:
-	impl(const safe_ptr<accelerator>& ogl) 
+	impl(const spl::shared_ptr<accelerator>& ogl) 
 		: ogl_(ogl)
 		, renderer_(ogl)
 		, transform_stack_(1)	
@@ -291,7 +291,7 @@ public:
 	}
 };
 
-image_mixer::image_mixer(const safe_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
+image_mixer::image_mixer(const spl::shared_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
 void image_mixer::begin(draw_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}

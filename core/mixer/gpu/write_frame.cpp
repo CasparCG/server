@@ -38,7 +38,7 @@ namespace caspar { namespace core {
 struct write_frame::impl : boost::noncopyable
 {			
 	std::shared_ptr<gpu::accelerator>		ogl_;
-	std::vector<safe_ptr<gpu::host_buffer>>	buffers_;
+	std::vector<spl::shared_ptr<gpu::host_buffer>>	buffers_;
 	audio_buffer							audio_data_;
 	const core::pixel_format_desc			desc_;
 	const void*								tag_;
@@ -49,7 +49,7 @@ struct write_frame::impl : boost::noncopyable
 	{
 	}
 
-	impl(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc) 
+	impl(const spl::shared_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
@@ -77,7 +77,7 @@ struct write_frame::impl : boost::noncopyable
 };
 	
 write_frame::write_frame(const void* tag) : impl_(new impl(tag)){}
-write_frame::write_frame(const safe_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc) 
+write_frame::write_frame(const spl::shared_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc) 
 	: impl_(new impl(ogl, tag, desc)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(write_frame&& other)
@@ -96,7 +96,7 @@ double write_frame::get_frame_rate() const{return 0.0;} // TODO: what's this?
 int write_frame::width() const{return impl_->desc_.planes.at(0).width;}
 int write_frame::height() const{return impl_->desc_.planes.at(0).height;}						
 const void* write_frame::tag() const{return impl_->tag_;}	
-std::vector<safe_ptr<gpu::host_buffer>> write_frame::get_buffers(){return impl_->buffers_;}
+std::vector<spl::shared_ptr<gpu::host_buffer>> write_frame::get_buffers(){return impl_->buffers_;}
 
 
 }}
