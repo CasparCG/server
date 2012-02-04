@@ -7,3 +7,4 @@ o Factor out gpu specific stuff
 o Replace AMCP with new OSC based implemention (throw out protocol project)
 	* All code in the protocol project is non-refactored legacy code.
 	 
+o Merge in monitor/OSC client project.
