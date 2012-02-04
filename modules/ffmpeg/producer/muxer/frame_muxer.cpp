@@ -114,7 +114,8 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 		else if(video_frame == empty_video())
 		{
-			video_streams_.back().push(spl::make_shared<core::write_frame>(this));
+			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid));
+			video_streams_.back().push(empty_frame);
 			display_mode_ = display_mode::simple;
 		}
 		else

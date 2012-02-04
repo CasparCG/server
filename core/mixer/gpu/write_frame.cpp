@@ -33,7 +33,7 @@
 
 #include <boost/lexical_cast.hpp>
 
-namespace caspar { namespace core {
+namespace caspar { namespace core { namespace gpu {
 																																							
 struct write_frame::impl : boost::noncopyable
 {			
@@ -54,10 +54,13 @@ struct write_frame::impl : boost::noncopyable
 		, desc_(desc)
 		, tag_(tag)
 	{
-		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
+		if(desc.format != core::pixel_format::invalid)
 		{
-			return ogl_->create_host_buffer(plane.size, gpu::host_buffer::usage::write_only);
-		});
+			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
+			{
+				return ogl_->create_host_buffer(plane.size, gpu::host_buffer::usage::write_only);
+			});
+		}
 	}
 			
 	void accept(write_frame& self, core::frame_visitor& visitor)
@@ -98,5 +101,4 @@ int write_frame::height() const{return impl_->desc_.planes.at(0).height;}
 const void* write_frame::tag() const{return impl_->tag_;}	
 std::vector<spl::shared_ptr<gpu::host_buffer>> write_frame::get_buffers(){return impl_->buffers_;}
 
-
-}}
+}}}

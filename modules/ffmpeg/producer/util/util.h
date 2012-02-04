@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <common/forward.h>
 #include <common/spl/memory.h>
 
 #include <core/video_format.h>
@@ -34,17 +35,11 @@ struct AVPacket;
 struct AVRational;
 struct AVCodecContext;
 
-namespace caspar {
+FORWARD2(caspar, core, struct pixel_format_desc);
+FORWARD2(caspar, core, struct write_frame);
+FORWARD2(caspar, core, struct frame_factory);
 
-namespace core {
-
-struct pixel_format_desc;
-class write_frame;
-struct frame_factory;
-
-}
-
-namespace ffmpeg {
+namespace caspar { namespace ffmpeg {
 		
 std::shared_ptr<core::audio_buffer> flush_audio();
 std::shared_ptr<core::audio_buffer> empty_audio();

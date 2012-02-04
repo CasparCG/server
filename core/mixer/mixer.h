@@ -35,6 +35,8 @@
 FORWARD1(boost, template<typename> class unique_future);
 FORWARD2(caspar, diagnostics, class graph);
 FORWARD3(caspar, core, gpu, class accelerator);
+FORWARD2(caspar, core, struct write_frame);
+FORWARD2(caspar, core, struct pixel_format_desc);
 
 namespace caspar { namespace core {
 	
@@ -48,6 +50,8 @@ public:
 	void set_blend_mode(int index, blend_mode value);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
+
+	spl::shared_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
