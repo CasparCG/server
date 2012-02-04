@@ -197,6 +197,9 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<f
 
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(my_frame_factory, params);
+
+	if(producer == frame_producer::empty())
+		return producer;
 		
 	return spl::make_shared<destroy_producer_proxy>(spl::make_shared<print_producer_proxy>(std::move(producer)));
 }
