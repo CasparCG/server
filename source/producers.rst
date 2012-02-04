@@ -47,7 +47,7 @@ Syntax::
 	
 Example::
 	
-	PLAY 1-1 MOVIE LOOP
+	>>> PLAY 1-1 MOVIE LOOP
 	
 ^^^^
 SEEK
@@ -60,7 +60,7 @@ Syntax::
 	
 Example::
 	
-	PLAY 1-1 MOVIE SEEK 100 LOOP
+	>>> PLAY 1-1 MOVIE SEEK 100 LOOP
 	
 ^^^^^^
 LENGTH
@@ -73,7 +73,7 @@ Syntax::
 	
 Example::
 	
-	PLAY 1-1 MOVIE LENGTH 100
+	>>> PLAY 1-1 MOVIE LENGTH 100
 	
 ^^^^^^
 FILTER
@@ -86,7 +86,7 @@ Syntax::
 		
 Example::
 		
-	PLAY 1-1 MOVIE FILTER hflip:yadif=0:0
+	>>> PLAY 1-1 MOVIE FILTER hflip:yadif=0:0
 	
 ---------
 Functions
@@ -107,8 +107,9 @@ Returns
 	
 Example::
 	
-	CALL 1-1 LOOP 1
-	CALL 1-1 LOOP   // Queries without changing.
+	>>> CALL 1-1 LOOP 1
+	>>> CALL 1-1 LOOP   // Queries without changing.
+	<<< 1
 	
 ^^^^
 SEEK
@@ -125,4 +126,4 @@ Returns
 	
 Example::
 	
-	CALL 1-1 SEEK 200
+	>>> CALL 1-1 SEEK 200
