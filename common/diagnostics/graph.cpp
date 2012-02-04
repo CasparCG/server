@@ -103,7 +103,10 @@ public:
 private:
 	context() : executor_(L"diagnostics")
 	{
-		executor_.set_priority_class(thread_priority::below_normal_priority_class);
+		executor_.begin_invoke([=]
+		{			
+			SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
+		});
 	}
 
 	void do_show(bool value)
