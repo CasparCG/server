@@ -21,28 +21,8 @@
 
 #pragma once
 
-#include <common/spl/memory.h>
+namespace caspar { namespace screen {
 
-namespace caspar { namespace core { namespace gpu {
+void init();
 
-class shader;
-class accelerator;
-
-struct texture_id
-{
-	enum type
-	{
-		plane0 = 0,
-		plane1,
-		plane2,
-		plane3,
-		local_key,
-		layer_key,
-		background,
-	};
-};
-
-spl::shared_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes);
-
-
-}}}
+}}

@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "context.h"
+
 #include <common/spl/memory.h>
 #include <common/forward.h>
 
@@ -33,10 +35,10 @@
 #include <stdint.h>
 #include <vector>
 
-FORWARD3(caspar, core, gpu, class accelerator);
-FORWARD3(caspar, core, gpu, class host_buffer);
+FORWARD2(caspar, core, struct frame_visitor);
+FORWARD2(caspar, core, struct pixel_format_desc);
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 	
 class write_frame sealed : public core::write_frame
 {
@@ -44,7 +46,7 @@ class write_frame sealed : public core::write_frame
 	write_frame& operator=(const write_frame);
 public:	
 	explicit write_frame(const void* tag);
-	explicit write_frame(const spl::shared_ptr<gpu::accelerator>& ogl, const void* tag, const struct pixel_format_desc& desc);
+	explicit write_frame(const spl::shared_ptr<class context>& ogl, const void* tag, const core::pixel_format_desc& desc);
 
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
@@ -53,17 +55,17 @@ public:
 			
 	// draw_frame
 
-	virtual void accept(struct frame_visitor& visitor) override;
+	virtual void accept(core::frame_visitor& visitor) override;
 
 	// data_frame
 		
-	virtual const struct pixel_format_desc& get_pixel_format_desc() const override;
+	virtual const core::pixel_format_desc& get_pixel_format_desc() const override;
 
 	virtual const boost::iterator_range<const uint8_t*> image_data(int index) const override;
-	virtual const audio_buffer& audio_data() const override;
+	virtual const core::audio_buffer& audio_data() const override;
 
 	virtual const boost::iterator_range<uint8_t*> image_data(int index) override;
-	virtual audio_buffer& audio_data() override;
+	virtual core::audio_buffer& audio_data() override;
 	
 	virtual double get_frame_rate() const override;
 
@@ -74,7 +76,7 @@ public:
 			
 	// write_frames
 
-	std::vector<spl::shared_ptr<gpu::host_buffer>> get_buffers();
+	std::vector<spl::shared_ptr<class host_buffer>> get_buffers();
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

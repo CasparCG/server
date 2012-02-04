@@ -19,12 +19,12 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../stdafx.h"
 
 #include "host_buffer.h"
 
 #include "device_buffer.h"
-#include "accelerator.h"
+#include "context.h"
 
 #include <common/except.h>
 #include <common/gl/gl_check.h>
@@ -33,7 +33,7 @@
 
 #include <tbb/atomic.h>
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 
 static tbb::atomic<int> g_w_total_count;
 static tbb::atomic<int> g_r_total_count;
@@ -45,10 +45,10 @@ struct host_buffer::impl : boost::noncopyable
 	tbb::atomic<void*>			data_;
 	GLenum						usage_;
 	GLenum						target_;
-	std::weak_ptr<accelerator>	parent_;
+	std::weak_ptr<context>	parent_;
 
 public:
-	impl(std::weak_ptr<accelerator> parent, int size, host_buffer::usage usage) 
+	impl(std::weak_ptr<context> parent, int size, host_buffer::usage usage) 
 		: parent_(parent)
 		, size_(size)
 		, pbo_(0)
@@ -138,7 +138,7 @@ public:
 	}
 };
 
-host_buffer::host_buffer(std::weak_ptr<accelerator> parent, int size, usage usage) : impl_(new impl(parent, size, usage)){}
+host_buffer::host_buffer(std::weak_ptr<context> parent, int size, usage usage) : impl_(new impl(parent, size, usage)){}
 const void* host_buffer::data() const {return impl_->data_;}
 void* host_buffer::data() {return impl_->data();}
 void host_buffer::map(){impl_->map();}

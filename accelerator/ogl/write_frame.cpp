@@ -19,11 +19,11 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../stdafx.h"
 
 #include "write_frame.h"
 
-#include "accelerator.h"
+#include "context.h"
 #include "host_buffer.h"
 #include "device_buffer.h"
 
@@ -33,15 +33,15 @@
 
 #include <boost/lexical_cast.hpp>
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 																																							
 struct write_frame::impl : boost::noncopyable
 {			
-	std::shared_ptr<gpu::accelerator>		ogl_;
-	std::vector<spl::shared_ptr<gpu::host_buffer>>	buffers_;
-	audio_buffer							audio_data_;
-	const core::pixel_format_desc			desc_;
-	const void*								tag_;
+	std::shared_ptr<context>					ogl_;
+	std::vector<spl::shared_ptr<ogl::host_buffer>>	buffers_;
+	core::audio_buffer								audio_data_;
+	const core::pixel_format_desc					desc_;
+	const void*										tag_;
 
 	impl(const void* tag)
 		: desc_(core::pixel_format::invalid)
@@ -49,7 +49,7 @@ struct write_frame::impl : boost::noncopyable
 	{
 	}
 
-	impl(const spl::shared_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc) 
+	impl(const spl::shared_ptr<ogl::context>& ogl, const void* tag, const core::pixel_format_desc& desc) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
@@ -58,7 +58,7 @@ struct write_frame::impl : boost::noncopyable
 		{
 			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
 			{
-				return ogl_->create_host_buffer(plane.size, gpu::host_buffer::usage::write_only);
+				return ogl_->create_host_buffer(plane.size, ogl::host_buffer::usage::write_only);
 			});
 		}
 	}
@@ -80,7 +80,7 @@ struct write_frame::impl : boost::noncopyable
 };
 	
 write_frame::write_frame(const void* tag) : impl_(new impl(tag)){}
-write_frame::write_frame(const spl::shared_ptr<gpu::accelerator>& ogl, const void* tag, const core::pixel_format_desc& desc) 
+write_frame::write_frame(const spl::shared_ptr<ogl::context>& ogl, const void* tag, const core::pixel_format_desc& desc) 
 	: impl_(new impl(ogl, tag, desc)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(write_frame&& other)
@@ -90,15 +90,15 @@ write_frame& write_frame::operator=(write_frame&& other)
 }
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
-const  pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
+const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
 const boost::iterator_range<const uint8_t*> write_frame::image_data(int index) const{return impl_->image_data(index);}
-const audio_buffer& write_frame::audio_data() const{return impl_->audio_data_;}
+const core::audio_buffer& write_frame::audio_data() const{return impl_->audio_data_;}
 const boost::iterator_range<uint8_t*> write_frame::image_data(int index){return impl_->image_data(index);}
-audio_buffer& write_frame::audio_data(){return impl_->audio_data_;}
+core::audio_buffer& write_frame::audio_data(){return impl_->audio_data_;}
 double write_frame::get_frame_rate() const{return 0.0;} // TODO: what's this?
 int write_frame::width() const{return impl_->desc_.planes.at(0).width;}
 int write_frame::height() const{return impl_->desc_.planes.at(0).height;}						
 const void* write_frame::tag() const{return impl_->tag_;}	
-std::vector<spl::shared_ptr<gpu::host_buffer>> write_frame::get_buffers(){return impl_->buffers_;}
+std::vector<spl::shared_ptr<ogl::host_buffer>> write_frame::get_buffers(){return impl_->buffers_;}
 
 }}}

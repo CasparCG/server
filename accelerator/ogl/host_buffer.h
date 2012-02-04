@@ -22,27 +22,43 @@
 #pragma once
 
 #include <common/spl/memory.h>
+#include <common/enum_class.h>
 
 #include <boost/noncopyable.hpp>
 
-#include <string>
-
-namespace caspar { namespace core { namespace gpu {
-		
-class shader : boost::noncopyable
+namespace caspar { namespace accelerator { namespace ogl {
+			
+class host_buffer : boost::noncopyable
 {
 public:
-	shader(const std::string& vertex_source_str, const std::string& fragment_source_str);
-	void set(const std::string& name, bool value);
-	void set(const std::string& name, int value);
-	void set(const std::string& name, float value);
-	void set(const std::string& name, double value);
+	struct usage_def
+	{
+		enum type
+		{
+			write_only,
+			read_only
+		};
+	};
+	typedef enum_class<usage_def> usage;
+	
+	const void* data() const;
+	void* data();
+	int size() const;	
+	
 private:
-	friend class accelerator;
+	friend class context;
+	friend class device_buffer;
+
+	void bind();
+	void unbind();
+
+	void map();
+	void unmap();
+
+	host_buffer(std::weak_ptr<context> parent, int size, usage usage);
+
 	struct impl;
 	spl::shared_ptr<impl> impl_;
-
-	int id() const;
 };
 
 }}}

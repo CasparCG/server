@@ -19,46 +19,17 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#pragma once
+#include "screen.h"
 
-#include <common/spl/memory.h>
-#include <common/enum_class.h>
+#include "consumer/screen_consumer.h"
 
-#include <boost/noncopyable.hpp>
+#include <core/consumer/frame_consumer.h>
 
-namespace caspar { namespace core { namespace gpu {
-			
-class host_buffer : boost::noncopyable
+namespace caspar { namespace screen {
+
+void init()
 {
-public:
-	struct usage_def
-	{
-		enum type
-		{
-			write_only,
-			read_only
-		};
-	};
-	typedef enum_class<usage_def> usage;
-	
-	const void* data() const;
-	void* data();
-	int size() const;	
-	
-private:
-	friend class accelerator;
-	friend class device_buffer;
+	caspar::core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+}
 
-	void bind();
-	void unbind();
-
-	void map();
-	void unmap();
-
-	host_buffer(std::weak_ptr<accelerator> parent, int size, usage usage);
-
-	struct impl;
-	spl::shared_ptr<impl> impl_;
-};
-
-}}}
+}}

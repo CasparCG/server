@@ -22,11 +22,13 @@
 
 #include "server.h"
 
+#include <accelerator/ogl/context.h>
+#include <accelerator/image/image_mixer.h>
+
 #include <common/env.h>
 #include <common/except.h>
 #include <common/utf.h>
 
-#include <core/mixer/gpu/accelerator.h>
 #include <core/video_channel.h>
 #include <core/video_format.h>
 #include <core/producer/stage.h>
@@ -37,13 +39,13 @@
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
 #include <modules/oal/oal.h>
-#include <modules/ogl/ogl.h>
+#include <modules/screen/screen.h>
 #include <modules/image/image.h>
 
 #include <modules/oal/consumer/oal_consumer.h>
 #include <modules/bluefish/consumer/bluefish_consumer.h>
 #include <modules/decklink/consumer/decklink_consumer.h>
-#include <modules/ogl/consumer/ogl_consumer.h>
+#include <modules/screen/consumer/screen_consumer.h>
 #include <modules/ffmpeg/consumer/ffmpeg_consumer.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
@@ -64,12 +66,12 @@ using namespace protocol;
 
 struct server::impl : boost::noncopyable
 {
-	spl::shared_ptr<gpu::accelerator>					ogl_;
-	std::vector<spl::shared_ptr<IO::AsyncEventServer>> async_servers_;	
-	std::vector<spl::shared_ptr<video_channel>>		channels_;
+	spl::shared_ptr<accelerator::ogl::context>			ogl_;
+	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;	
+	std::vector<spl::shared_ptr<video_channel>>			channels_;
 
 	impl()		
-		: ogl_(gpu::accelerator::create())
+		: ogl_(accelerator::ogl::context::create())
 	{			
 		ffmpeg::init();
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
@@ -83,7 +85,7 @@ struct server::impl : boost::noncopyable
 		oal::init();		  
 		CASPAR_LOG(info) << L"Initialized oal module.";
 							  
-		ogl::init();		  
+		screen::init();		  
 		CASPAR_LOG(info) << L"Initialized ogl module.";
 
 		image::init();		  
@@ -117,7 +119,7 @@ struct server::impl : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, ogl_));
+			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, spl::make_shared<accelerator::ogl::image_mixer>(ogl_)));
 			
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child(L"consumers"))
 			{
@@ -125,7 +127,7 @@ struct server::impl : boost::noncopyable
 				{
 					auto name = xml_consumer.first;
 					if(name == L"screen")
-						channels_.back()->output()->add(ogl::create_consumer(xml_consumer.second));					
+						channels_.back()->output()->add(caspar::screen::create_consumer(xml_consumer.second));					
 					if(name == L"bluefish")					
 						channels_.back()->output()->add(bluefish::create_consumer(xml_consumer.second));					
 					else if(name == L"decklink")					
@@ -146,7 +148,7 @@ struct server::impl : boost::noncopyable
 
 		// Dummy diagnostics channel
 		if(env::properties().get(L"configuration.channel-grid", false))
-			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), ogl_));
+			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), spl::make_shared<accelerator::ogl::image_mixer>(ogl_)));
 	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)

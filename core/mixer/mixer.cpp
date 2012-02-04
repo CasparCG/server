@@ -28,10 +28,6 @@
 #include "audio/audio_mixer.h"
 #include "image/image_mixer.h"
 
-#include "gpu/image/image_mixer.h"
-#include "gpu/accelerator.h"
-#include "gpu/write_frame.h"
-
 #include <common/env.h>
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
@@ -123,21 +119,18 @@ public:
 };
 		
 struct mixer::impl : boost::noncopyable
-{			
-	spl::shared_ptr<gpu::accelerator>			ogl_;
-	
+{				
 	audio_mixer							audio_mixer_;
-	spl::shared_ptr<image_mixer>				image_mixer_;
+	spl::shared_ptr<image_mixer>		image_mixer_;
 	
 	std::unordered_map<int, blend_mode>	blend_modes_;
 			
 	executor executor_;
 
 public:
-	impl(const spl::shared_ptr<gpu::accelerator>& ogl) 
-		: ogl_(ogl)
-		, audio_mixer_()
-		, image_mixer_(spl::make_shared<gpu::image_mixer>(ogl_))
+	impl(spl::shared_ptr<image_mixer> image_mixer) 
+		: audio_mixer_()
+		, image_mixer_(std::move(image_mixer))
 		, executor_(L"mixer")
 	{			
 	}	
@@ -192,8 +185,8 @@ public:
 	}
 };
 	
-mixer::mixer(const spl::shared_ptr<gpu::accelerator>& ogl) 
-	: impl_(new impl(ogl)){}
+mixer::mixer(spl::shared_ptr<image_mixer> image_mixer) 
+	: impl_(new impl(std::move(image_mixer))){}
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 spl::shared_ptr<const data_frame> mixer::operator()(std::map<int, spl::shared_ptr<draw_frame>> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}

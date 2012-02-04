@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{34e95782-44c6-42ea-9eb3-ef56fa1f8068}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\ogl">
+      <UniqueIdentifier>{dbb5f22a-c188-4ab8-af04-3ec2b12d2e27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\image">
+      <UniqueIdentifier>{1e686392-8f55-4919-8eee-026f3e8d2e9a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ogl\device_buffer.h">
+      <Filter>source\ogl</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\host_buffer.h">
+      <Filter>source\ogl</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\shader.h">
+      <Filter>source\ogl</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\write_frame.h">
+      <Filter>source\ogl</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="image\blending_glsl.h">
+      <Filter>source\image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image_kernel.h">
+      <Filter>source\image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image_mixer.h">
+      <Filter>source\image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image_shader.h">
+      <Filter>source\image</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\context.h">
+      <Filter>source\ogl</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ogl\device_buffer.cpp">
+      <Filter>source\ogl</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\host_buffer.cpp">
+      <Filter>source\ogl</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\shader.cpp">
+      <Filter>source\ogl</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\write_frame.cpp">
+      <Filter>source\ogl</Filter>
+    </ClCompile>
+    <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="image\image_kernel.cpp">
+      <Filter>source\image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image_mixer.cpp">
+      <Filter>source\image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image_shader.cpp">
+      <Filter>source\image</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\context.cpp">
+      <Filter>source\ogl</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

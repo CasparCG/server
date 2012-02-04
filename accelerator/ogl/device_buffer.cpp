@@ -19,10 +19,10 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../stdafx.h"
 
 #include "device_buffer.h"
-#include "accelerator.h"
+#include "context.h"
 
 #include <common/except.h>
 #include <common/gl/gl_check.h>
@@ -33,7 +33,7 @@
 
 #include <boost/thread/future.hpp>
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 	
 static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
 static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};	
@@ -48,14 +48,14 @@ static tbb::atomic<int> g_total_count;
 
 struct device_buffer::impl : boost::noncopyable
 {
-	std::weak_ptr<accelerator>	parent_;
+	std::weak_ptr<context>	parent_;
 	GLuint						id_;
 
 	const int width_;
 	const int height_;
 	const int stride_;
 public:
-	impl(std::weak_ptr<accelerator> parent, int width, int height, int stride) 
+	impl(std::weak_ptr<context> parent, int width, int height, int stride) 
 		: parent_(parent)
 		, width_(width)
 		, height_(height)
@@ -138,7 +138,7 @@ public:
 	}
 };
 
-device_buffer::device_buffer(std::weak_ptr<accelerator> parent, int width, int height, int stride) : impl_(new impl(parent, width, height, stride)){}
+device_buffer::device_buffer(std::weak_ptr<context> parent, int width, int height, int stride) : impl_(new impl(parent, width, height, stride)){}
 int device_buffer::stride() const { return impl_->stride_; }
 int device_buffer::width() const { return impl_->width_; }
 int device_buffer::height() const { return impl_->height_; }

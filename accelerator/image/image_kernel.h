@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../../image/blend_modes.h"
+#include <core/mixer/image/blend_modes.h>
 
 #include <common/enum_class.h>
 #include <common/spl/memory.h>
@@ -31,7 +31,7 @@
 
 #include <boost/noncopyable.hpp>
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 	
 struct keyer_def
 {
@@ -45,18 +45,18 @@ typedef enum_class<keyer_def> keyer;
 
 struct draw_params sealed
 {
-	pixel_format_desc							pix_desc;
+	core::pixel_format_desc								pix_desc;
 	std::vector<spl::shared_ptr<class device_buffer>>	textures;
-	frame_transform								transform;
-	blend_mode									blend_mode;
-	keyer										keyer;
-	std::shared_ptr<class device_buffer>		background;
-	std::shared_ptr<class device_buffer>		local_key;
-	std::shared_ptr<class device_buffer>		layer_key;
+	core::frame_transform								transform;
+	core::blend_mode									blend_mode;
+	keyer												keyer;
+	std::shared_ptr<class device_buffer>				background;
+	std::shared_ptr<class device_buffer>				local_key;
+	std::shared_ptr<class device_buffer>				layer_key;
 
 	draw_params() 
-		: pix_desc(pixel_format::invalid)
-		, blend_mode(blend_mode::normal)
+		: pix_desc(core::pixel_format::invalid)
+		, blend_mode(core::blend_mode::normal)
 		, keyer(keyer::linear)
 	{
 	}
@@ -65,7 +65,7 @@ struct draw_params sealed
 class image_kernel sealed : boost::noncopyable
 {
 public:
-	image_kernel(const spl::shared_ptr<class accelerator>& ogl);
+	image_kernel(const spl::shared_ptr<class context>& ogl);
 	void draw(draw_params&& params);
 private:
 	struct impl;
