@@ -236,16 +236,16 @@ public:
 		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		
-		if(config_.vsync)
+		auto wglSwapIntervalEXT = reinterpret_cast<void(APIENTRY*)(int)>(wglGetProcAddress("wglSwapIntervalEXT"));
+		if(wglSwapIntervalEXT)
 		{
-			auto wglSwapIntervalEXT = reinterpret_cast<void(APIENTRY*)(int)>(wglGetProcAddress("wglSwapIntervalEXT"));
-			if(wglSwapIntervalEXT)
+			if(config_.vsync)
 			{
 				wglSwapIntervalEXT(1);
-				CASPAR_LOG(info) << print() << " Successfully enabled vsync.";
+				CASPAR_LOG(info) << print() << " Enabled vsync.";
 			}
 			else
-				CASPAR_LOG(info) << print() << " Failed to enable vsync.";
+				wglSwapIntervalEXT(0);
 		}
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
@@ -372,7 +372,7 @@ public:
 				aligned_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
 				A_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
-
+			
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 		}
 
@@ -517,7 +517,7 @@ public:
 	
 	virtual int buffer_depth() const override
 	{
-		return 1;
+		return 2;
 	}
 
 	virtual int index() const override

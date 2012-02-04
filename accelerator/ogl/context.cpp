@@ -161,8 +161,6 @@ spl::shared_ptr<host_buffer> context::create_host_buffer(int size, host_buffer::
 	if(!pool->items.try_pop(buffer))	
 		buffer = executor_.invoke([=]{return allocate_host_buffer(size, usage);}, task_priority::high_priority);	
 	
-	//++pool->usage_count;
-
 	auto self = shared_from_this();
 	bool is_write_only	= (usage == host_buffer::usage::write_only);
 	return spl::shared_ptr<host_buffer>(buffer.get(), [=](host_buffer*) mutable
@@ -264,6 +262,11 @@ boost::unique_future<spl::shared_ptr<device_buffer>> context::copy_async(spl::sh
 		result->copy_from(source);
 		return result;
 	}, task_priority::high_priority);
+}
+
+void context::yield()
+{
+	executor_.yield(task_priority::high_priority);
 }
 
 }}}

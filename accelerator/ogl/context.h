@@ -77,6 +77,8 @@ public:
 	void attach(device_buffer& texture);
 	void clear(device_buffer& texture);		
 	void use(shader& shader);
+
+	void yield();
 	
 	spl::shared_ptr<device_buffer>							create_device_buffer(int width, int height, int stride);
 	spl::shared_ptr<host_buffer>							create_host_buffer(int size, host_buffer::usage usage);

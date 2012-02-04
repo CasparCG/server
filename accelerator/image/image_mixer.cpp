@@ -71,94 +71,89 @@ typedef std::pair<core::blend_mode, std::vector<item>> layer;
 class image_renderer
 {
 	spl::shared_ptr<context>	ogl_;
-	image_kernel				kernel_;	
+	image_kernel				kernel_;
+	bool						warm_;
 public:
 	image_renderer(const spl::shared_ptr<context>& ogl)
 		: ogl_(ogl)
 		, kernel_(ogl_)
+		, warm_(false)
 	{
 	}
 	
 	boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
 	{	
-		if(layers.empty())
+		// Remove empty layers.
+		boost::range::remove_erase_if(layers, [](const layer& layer)
 		{
-			// Bypass GPU since no work needs to be done.
-			auto buffer = ogl_->create_host_buffer(format_desc.size, host_buffer::usage::write_only);
-			A_memset(buffer->data(), 0, buffer->size());
+			return layer.second.empty();
+		});
 
-			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
-			{
-				auto ptr = reinterpret_cast<const uint8_t*>(buffer->data());
-				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());
-			});
-		}
-		else if(layers.size() == 1 && 
-				layers.at(0).first == core::blend_mode::normal &&
-				layers.at(0).second.at(0).pix_desc.format == core::pixel_format::bgra)
-		{ 
-			// Bypass GPU since no work needs to be done.
-			auto buffer = layers.at(0).second.at(0).buffers.at(0);
-			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
-			{
-				auto ptr = reinterpret_cast<const uint8_t*>(buffer->data());
-				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());
-			});
-		}
-		else
+		// Start host->device transfers.
+		std::map<host_buffer*, boost::shared_future<spl::shared_ptr<device_buffer>>> buffer_map;
+		BOOST_FOREACH(auto& layer, layers)
 		{
-			// Start host->device transfers.
-			BOOST_FOREACH(auto& layer, layers)
+			BOOST_FOREACH(auto& item, layer.second)
 			{
-				BOOST_FOREACH(auto& item, layer.second)
+				for(size_t n = 0; n < item.pix_desc.planes.size(); ++n)	
 				{
-					for(size_t n = 0; n < item.pix_desc.planes.size(); ++n)		
-						item.textures.push_back(ogl_->copy_async(item.buffers.at(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].channels));
-				}
-			}		
+					auto host_buffer = item.buffers.at(n);
+					auto it			 = buffer_map.find(host_buffer.get());
+					if(it == buffer_map.end())
+					{
+						auto plane					= item.pix_desc.planes[n];
+						auto future_device_buffer	= ogl_->copy_async(host_buffer, plane.width, plane.height, plane.channels);
+						it = buffer_map.insert(std::make_pair(host_buffer.get(), std::move(future_device_buffer))).first;
+					}
+					item.textures.push_back(it->second);
+				}	
+				item.buffers.clear();
+			}
+		}		
 
-			// Draw
-			boost::shared_future<spl::shared_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> spl::shared_ptr<host_buffer>
+		// Draw
+		boost::shared_future<spl::shared_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> spl::shared_ptr<host_buffer>
+		{
+			auto draw_buffer = create_mixer_buffer(4, format_desc);
+
+			if(format_desc.field_mode != core::field_mode::progressive)
 			{
-				auto draw_buffer = create_mixer_buffer(4, format_desc);
+				auto upper = layers;
+				auto lower = std::move(layers);
 
-				if(format_desc.field_mode != core::field_mode::progressive)
+				BOOST_FOREACH(auto& layer, upper)
 				{
-					auto upper = layers;
-					auto lower = std::move(layers);
-
-					BOOST_FOREACH(auto& layer, upper)
-					{
-						BOOST_FOREACH(auto& item, layer.second)
-							item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::upper);
-					}
-
-					BOOST_FOREACH(auto& layer, lower)
-					{
-						BOOST_FOREACH(auto& item, layer.second)
-							item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::lower);
-					}
-
-					draw(std::move(upper), draw_buffer, format_desc);
-					draw(std::move(lower), draw_buffer, format_desc);
+					BOOST_FOREACH(auto& item, layer.second)
+						item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::upper);
 				}
-				else
+
+				BOOST_FOREACH(auto& layer, lower)
 				{
-					draw(std::move(layers), draw_buffer, format_desc);
+					BOOST_FOREACH(auto& item, layer.second)
+						item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::lower);
 				}
+
+				draw(std::move(upper), draw_buffer, format_desc);
+				draw(std::move(lower), draw_buffer, format_desc);
+			}
+			else
+			{
+				draw(std::move(layers), draw_buffer, format_desc);
+			}
 			
-				auto result = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::usage::read_only); 
-				draw_buffer->copy_to(result);							
-				return result;
-			});
+			auto result = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::usage::read_only); 
+			draw_buffer->copy_to(result);							
+			return result;
+		});
 
-			// Defer memory mapping.
-			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
-			{
-				auto ptr = reinterpret_cast<const uint8_t*>(buffer.get()->data()); // .get() and ->data() can block calling thread, ->data() can also block OpenGL thread, defer it as long as possible.
-				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());
-			});
-		}
+		warm_ = true;
+
+		// Defer memory mapping.
+		return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
+		{
+			auto ptr = reinterpret_cast<const uint8_t*>(buffer.get()->data()); // .get() and ->data() can block calling thread, ->data() can also block OpenGL thread, defer it as long as possible.
+			return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());
+		});
 	}
 
 private:
@@ -282,7 +277,7 @@ private:
 		
 struct image_mixer::impl : boost::noncopyable
 {	
-	spl::shared_ptr<context>		ogl_;
+	spl::shared_ptr<context>			ogl_;
 	image_renderer						renderer_;
 	std::vector<core::frame_transform>	transform_stack_;
 	std::vector<layer>					layers_; // layer/stream/items
@@ -314,6 +309,9 @@ public:
 			return;
 
 		if(frame->get_buffers().empty())
+			return;
+
+		if(transform_stack_.back().field_mode == core::field_mode::empty)
 			return;
 
 		item item;

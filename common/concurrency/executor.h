@@ -198,6 +198,24 @@ public:
 		if(func)
 			func();
 	}
+
+	void yield(task_priority priority) // noexcept
+	{
+		if(boost::this_thread::get_id() != thread_.get_id())
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context."));
+
+		if(priority == task_priority::high_priority)
+		{
+			std::function<void()> func2;
+			while(execution_queue_[task_priority::high_priority].try_pop(func2))
+			{
+				if(func2)
+					func2();
+			}	
+		}
+		else
+			yield();
+	}
 		
 	function_queue::size_type size() const /*noexcept*/
 	{
