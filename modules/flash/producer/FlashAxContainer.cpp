@@ -774,7 +774,7 @@ HRESULT FlashAxContainer::CreateAxControl()
 			{
 				if(FAILED(spFlash->put_WMode(TEXT("Transparent"))))
 					CASPAR_LOG(warning) << print_() << L" Failed to set flash container to transparent mode.";
-				//spFlash->put_WMode(TEXT("GPU"));
+				//spFlash->put_WMode(TEXT("ogl"));
 				hResultQuality = spFlash->put_Quality2(TEXT("Best"));
 			}
 			if(SUCCEEDED(DispEventAdvise(spFlash, &DIID__IShockwaveFlashEvents)))

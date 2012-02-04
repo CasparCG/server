@@ -27,7 +27,7 @@
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
-FORWARD3(caspar, core, gpu, class accelerator);
+FORWARD3(caspar, core, ogl, class accelerator);
 
 namespace caspar { namespace core {
 	
@@ -36,7 +36,7 @@ class video_channel sealed : public reactive::observable<spl::shared_ptr<const s
 	video_channel(const video_channel&);
 	video_channel& operator=(const video_channel&);
 public:
-	explicit video_channel(int index, const struct video_format_desc& format_desc, const spl::shared_ptr<gpu::accelerator>& ogl);
+	explicit video_channel(int index, const struct video_format_desc& format_desc, spl::shared_ptr<struct image_mixer> image_mixer);
 
 	spl::shared_ptr<class stage>			stage();
 	spl::shared_ptr<class mixer>			mixer();

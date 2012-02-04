@@ -1,7 +1,7 @@
 o Rewrite transform API
 	* Current transforms api is both ugly and unspecified, e.g. what should happen if you have simultanous tweens o nthe same layer?
 	
-o Factor out gpu specific stuff
+o Factor out ogl specific stuff
 	* We want to have a cpu fallback.
 	
 o Replace AMCP with new OSC based implemention (throw out protocol project)

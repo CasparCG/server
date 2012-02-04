@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../stdafx.h"
 
 #include "shader.h"
 
@@ -29,7 +29,7 @@
 
 #include <unordered_map>
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 
 struct shader::impl : boost::noncopyable
 {

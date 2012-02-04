@@ -19,12 +19,12 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../../StdAfx.h"
+#include "../stdafx.h"
 
 #include "image_shader.h"
 
-#include "../../gpu/shader.h"
-#include "../../gpu/accelerator.h"
+#include "../ogl/shader.h"
+#include "../ogl/context.h"
 
 #include "blending_glsl.h"
 
@@ -33,7 +33,7 @@
 
 #include <tbb/mutex.h>
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 
 std::shared_ptr<shader> g_shader;
 tbb::mutex				g_shader_mutex;
@@ -273,7 +273,7 @@ std::string get_fragment(bool blend_modes)
 	"}																					\n";
 }
 
-spl::shared_ptr<shader> get_image_shader(accelerator& ogl, bool& blend_modes)
+spl::shared_ptr<shader> get_image_shader(context& ogl, bool& blend_modes)
 {
 	tbb::mutex::scoped_lock lock(g_shader_mutex);
 

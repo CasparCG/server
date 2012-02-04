@@ -29,7 +29,7 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
-#include <core/mixer/gpu/write_frame.h>
+#include <core/frame/write_frame.h>
 
 #include <common/env.h>
 #include <common/log.h>

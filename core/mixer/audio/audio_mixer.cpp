@@ -23,7 +23,7 @@
 
 #include "audio_mixer.h"
 
-#include <core/mixer/gpu/write_frame.h>
+#include <core/frame/write_frame.h>
 #include <core/frame/frame_transform.h>
 #include <common/diagnostics/graph.h>
 

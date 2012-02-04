@@ -19,16 +19,16 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../../stdafx.h"
+#include "../stdafx.h"
 
 #include "image_mixer.h"
 
 #include "image_kernel.h"
 
-#include "../write_frame.h"
-#include "../accelerator.h"
-#include "../host_buffer.h"
-#include "../device_buffer.h"
+#include "../ogl/write_frame.h"
+#include "../ogl/context.h"
+#include "../ogl/host_buffer.h"
+#include "../ogl/device_buffer.h"
 
 #include <common/gl/gl_check.h>
 #include <common/concurrency/async.h>
@@ -49,40 +49,40 @@
 
 using namespace boost::assign;
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 	
 struct item
 {
-	pixel_format_desc											pix_desc;
+	core::pixel_format_desc												pix_desc;
 	std::vector<boost::shared_future<spl::shared_ptr<device_buffer>>>	textures;
-	frame_transform												transform;
+	core::frame_transform												transform;
 
 	item()
-		: pix_desc(pixel_format::invalid)
+		: pix_desc(core::pixel_format::invalid)
 	{
 	}
 };
 
-typedef std::pair<blend_mode, std::vector<item>> layer;
+typedef std::pair<core::blend_mode, std::vector<item>> layer;
 
 class image_renderer
 {
-	spl::shared_ptr<accelerator>			ogl_;
+	spl::shared_ptr<context>	ogl_;
 	image_kernel					kernel_;	
 public:
-	image_renderer(const spl::shared_ptr<accelerator>& ogl)
+	image_renderer(const spl::shared_ptr<context>& ogl)
 		: ogl_(ogl)
 		, kernel_(ogl_)
 	{
 	}
 	
-	boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<layer> layers, const video_format_desc& format_desc)
+	boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
 	{	
 		boost::shared_future<spl::shared_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> spl::shared_ptr<host_buffer>
 		{
 			auto draw_buffer = create_mixer_buffer(4, format_desc);
 
-			if(format_desc.field_mode != field_mode::progressive)
+			if(format_desc.field_mode != core::field_mode::progressive)
 			{
 				auto upper = layers;
 				auto lower = std::move(layers);
@@ -90,13 +90,13 @@ public:
 				BOOST_FOREACH(auto& layer, upper)
 				{
 					BOOST_FOREACH(auto& item, layer.second)
-						item.transform.field_mode = static_cast<field_mode>(item.transform.field_mode & field_mode::upper);
+						item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::upper);
 				}
 
 				BOOST_FOREACH(auto& layer, lower)
 				{
 					BOOST_FOREACH(auto& item, layer.second)
-						item.transform.field_mode = static_cast<field_mode>(item.transform.field_mode & field_mode::lower);
+						item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::lower);
 				}
 
 				draw(std::move(upper), draw_buffer, format_desc);
@@ -121,9 +121,9 @@ public:
 
 private:
 
-	void draw(std::vector<layer>&&		layers, 
+	void draw(std::vector<layer>&&				layers, 
 			  spl::shared_ptr<device_buffer>&	draw_buffer, 
-			  const video_format_desc& format_desc)
+			  const core::video_format_desc&	format_desc)
 	{
 		std::shared_ptr<device_buffer> layer_key_buffer;
 
@@ -131,12 +131,12 @@ private:
 			draw_layer(std::move(layer), draw_buffer, layer_key_buffer, format_desc);
 	}
 
-	void draw_layer(layer&&							layer, 
+	void draw_layer(layer&&								layer, 
 					spl::shared_ptr<device_buffer>&		draw_buffer,
-					std::shared_ptr<device_buffer>& layer_key_buffer,
-					const video_format_desc&		format_desc)
+					std::shared_ptr<device_buffer>&		layer_key_buffer,
+					const core::video_format_desc&		format_desc)
 	{				
-		boost::remove_erase_if(layer.second, [](const item& item){return item.transform.field_mode == field_mode::empty;});
+		boost::remove_erase_if(layer.second, [](const item& item){return item.transform.field_mode == core::field_mode::empty;});
 
 		if(layer.second.empty())
 			return;
@@ -144,14 +144,14 @@ private:
 		std::shared_ptr<device_buffer> local_key_buffer;
 		std::shared_ptr<device_buffer> local_mix_buffer;
 				
-		if(layer.first != blend_mode::normal)
+		if(layer.first != core::blend_mode::normal)
 		{
 			auto layer_draw_buffer = create_mixer_buffer(4, format_desc);
 
 			BOOST_FOREACH(auto& item, layer.second)
 				draw_item(std::move(item), layer_draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer, format_desc);	
 		
-			draw_mixer_buffer(layer_draw_buffer, std::move(local_mix_buffer), blend_mode::normal);							
+			draw_mixer_buffer(layer_draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);							
 			draw_mixer_buffer(draw_buffer, std::move(layer_draw_buffer), layer.first);
 		}
 		else // fast path
@@ -159,18 +159,18 @@ private:
 			BOOST_FOREACH(auto& item, layer.second)		
 				draw_item(std::move(item), draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer, format_desc);		
 					
-			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), blend_mode::normal);
+			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);
 		}					
 
 		layer_key_buffer = std::move(local_key_buffer);
 	}
 
 	void draw_item(item&&							item, 
-				   spl::shared_ptr<device_buffer>&			draw_buffer, 
+				   spl::shared_ptr<device_buffer>&	draw_buffer, 
 				   std::shared_ptr<device_buffer>&	layer_key_buffer, 
 				   std::shared_ptr<device_buffer>&	local_key_buffer, 
 				   std::shared_ptr<device_buffer>&	local_mix_buffer,
-				   const video_format_desc&			format_desc)
+				   const core::video_format_desc&	format_desc)
 	{			
 		draw_params draw_params;
 		draw_params.pix_desc				= std::move(item.pix_desc);
@@ -202,7 +202,7 @@ private:
 		}
 		else
 		{
-			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), blend_mode::normal);
+			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);
 			
 			draw_params.background			= draw_buffer;
 			draw_params.local_key			= std::move(local_key_buffer);
@@ -212,25 +212,25 @@ private:
 		}	
 	}
 
-	void draw_mixer_buffer(spl::shared_ptr<device_buffer>&			draw_buffer, 
+	void draw_mixer_buffer(spl::shared_ptr<device_buffer>&	draw_buffer, 
 						   std::shared_ptr<device_buffer>&& source_buffer, 
-						   blend_mode						blend_mode = blend_mode::normal)
+						   core::blend_mode					blend_mode = core::blend_mode::normal)
 	{
 		if(!source_buffer)
 			return;
 
 		draw_params draw_params;
-		draw_params.pix_desc.format		= pixel_format::bgra;
-		draw_params.pix_desc.planes		= list_of(pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4));
+		draw_params.pix_desc.format		= core::pixel_format::bgra;
+		draw_params.pix_desc.planes		= list_of(core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4));
 		draw_params.textures			= list_of(source_buffer);
-		draw_params.transform			= frame_transform();
+		draw_params.transform			= core::frame_transform();
 		draw_params.blend_mode			= blend_mode;
 		draw_params.background			= draw_buffer;
 
 		kernel_.draw(std::move(draw_params));
 	}
 			
-	spl::shared_ptr<device_buffer> create_mixer_buffer(int stride, const video_format_desc& format_desc)
+	spl::shared_ptr<device_buffer> create_mixer_buffer(int stride, const core::video_format_desc& format_desc)
 	{
 		auto buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, stride);
 		ogl_->clear(*buffer);
@@ -240,29 +240,29 @@ private:
 		
 struct image_mixer::impl : boost::noncopyable
 {	
-	spl::shared_ptr<accelerator>			ogl_;
-	image_renderer					renderer_;
-	std::vector<frame_transform>	transform_stack_;
-	std::vector<layer>				layers_; // layer/stream/items
+	spl::shared_ptr<context>		ogl_;
+	image_renderer						renderer_;
+	std::vector<core::frame_transform>	transform_stack_;
+	std::vector<layer>					layers_; // layer/stream/items
 public:
-	impl(const spl::shared_ptr<accelerator>& ogl) 
+	impl(const spl::shared_ptr<context>& ogl) 
 		: ogl_(ogl)
 		, renderer_(ogl)
 		, transform_stack_(1)	
 	{
 	}
 
-	void begin_layer(blend_mode blend_mode)
+	void begin_layer(core::blend_mode blend_mode)
 	{
 		layers_.push_back(std::make_pair(blend_mode, std::vector<item>()));
 	}
 		
-	void push(frame_transform& transform)
+	void push(core::frame_transform& transform)
 	{
 		transform_stack_.push_back(transform_stack_.back()*transform);
 	}
 		
-	void visit(data_frame& frame2)
+	void visit(core::data_frame& frame2)
 	{			
 		write_frame* frame = dynamic_cast<write_frame*>(&frame2);
 		if(frame == nullptr)
@@ -293,24 +293,24 @@ public:
 	{		
 	}
 	
-	boost::unique_future<boost::iterator_range<const uint8_t*>> render(const video_format_desc& format_desc)
+	boost::unique_future<boost::iterator_range<const uint8_t*>> render(const core::video_format_desc& format_desc)
 	{
 		return renderer_(std::move(layers_), format_desc);
 	}
 	
-	virtual spl::shared_ptr<gpu::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
+	virtual spl::shared_ptr<ogl::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
-		return spl::make_shared<gpu::write_frame>(ogl_, tag, desc);
+		return spl::make_shared<ogl::write_frame>(ogl_, tag, desc);
 	}
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<accelerator>& ogl) : impl_(new impl(ogl)){}
-void image_mixer::push(frame_transform& transform){impl_->push(transform);}
-void image_mixer::visit(data_frame& frame){impl_->visit(frame);}
+image_mixer::image_mixer(const spl::shared_ptr<context>& ogl) : impl_(new impl(ogl)){}
+void image_mixer::push(core::frame_transform& transform){impl_->push(transform);}
+void image_mixer::visit(core::data_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-boost::unique_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
-void image_mixer::begin_layer(blend_mode blend_mode){impl_->begin_layer(blend_mode);}
+boost::unique_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
+void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
-spl::shared_ptr<core::write_frame> image_mixer::create_frame(const void* tag, const pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
+spl::shared_ptr<core::write_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}

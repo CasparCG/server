@@ -21,9 +21,9 @@
 
 // TODO: Smart GC
 
-#include "../../stdafx.h"
+#include "../stdafx.h"
 
-#include "accelerator.h"
+#include "context.h"
 
 #include "shader.h"
 
@@ -35,10 +35,10 @@
 
 #include <gl/glew.h>
 
-namespace caspar { namespace core { namespace gpu {
+namespace caspar { namespace accelerator { namespace ogl {
 
-accelerator::accelerator() 
-	: executor_(L"accelerator")
+context::context() 
+	: executor_(L"context")
 {
 	CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 		
@@ -61,7 +61,7 @@ accelerator::accelerator()
 	});
 }
 
-accelerator::~accelerator()
+context::~context()
 {
 	invoke([=]
 	{
@@ -73,7 +73,7 @@ accelerator::~accelerator()
 	});
 }
 
-spl::shared_ptr<device_buffer> accelerator::allocate_device_buffer(int width, int height, int stride)
+spl::shared_ptr<device_buffer> context::allocate_device_buffer(int width, int height, int stride)
 {
 	std::shared_ptr<device_buffer> buffer;
 	try
@@ -99,7 +99,7 @@ spl::shared_ptr<device_buffer> accelerator::allocate_device_buffer(int width, in
 	return spl::make_shared_ptr(buffer);
 }
 				
-spl::shared_ptr<device_buffer> accelerator::create_device_buffer(int width, int height, int stride)
+spl::shared_ptr<device_buffer> context::create_device_buffer(int width, int height, int stride)
 {
 	CASPAR_VERIFY(stride > 0 && stride < 5);
 	CASPAR_VERIFY(width > 0 && height > 0);
@@ -116,7 +116,7 @@ spl::shared_ptr<device_buffer> accelerator::create_device_buffer(int width, int 
 	});
 }
 
-spl::shared_ptr<host_buffer> accelerator::allocate_host_buffer(int size, host_buffer::usage usage)
+spl::shared_ptr<host_buffer> context::allocate_host_buffer(int size, host_buffer::usage usage)
 {
 	std::shared_ptr<host_buffer> buffer;
 
@@ -152,7 +152,7 @@ spl::shared_ptr<host_buffer> accelerator::allocate_host_buffer(int size, host_bu
 	return spl::make_shared_ptr(buffer);
 }
 	
-spl::shared_ptr<host_buffer> accelerator::create_host_buffer(int size, host_buffer::usage usage)
+spl::shared_ptr<host_buffer> context::create_host_buffer(int size, host_buffer::usage usage)
 {
 	CASPAR_VERIFY(usage == host_buffer::usage::write_only || usage == host_buffer::usage::read_only);
 	CASPAR_VERIFY(size > 0);
@@ -179,9 +179,9 @@ spl::shared_ptr<host_buffer> accelerator::create_host_buffer(int size, host_buff
 	});
 }
 
-spl::shared_ptr<accelerator> accelerator::create()
+spl::shared_ptr<context> context::create()
 {
-	return spl::shared_ptr<accelerator>(new accelerator());
+	return spl::shared_ptr<context>(new context());
 }
 
 //template<typename T>
@@ -200,7 +200,7 @@ spl::shared_ptr<accelerator> accelerator::create()
 //	pool.usage_count = 0;
 //}
 
-boost::unique_future<void> accelerator::gc()
+boost::unique_future<void> context::gc()
 {	
 	return begin_invoke([=]
 	{
@@ -226,7 +226,7 @@ boost::unique_future<void> accelerator::gc()
 	}, task_priority::high_priority);
 }
 
-std::wstring accelerator::version()
+std::wstring context::version()
 {	
 	static std::wstring ver = L"Not found";
 	try
@@ -239,24 +239,24 @@ std::wstring accelerator::version()
 	return ver;
 }
 
-void accelerator::attach(device_buffer& texture)
+void context::attach(device_buffer& texture)
 {	
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
 	GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, texture.id(), 0));
 }
 
-void accelerator::clear(device_buffer& texture)
+void context::clear(device_buffer& texture)
 {	
 	attach(texture);
 	GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
-void accelerator::use(shader& shader)
+void context::use(shader& shader)
 {	
 	GL(glUseProgramObjectARB(shader.id()));	
 }
 
-boost::unique_future<spl::shared_ptr<device_buffer>> accelerator::copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride)
+boost::unique_future<spl::shared_ptr<device_buffer>> context::copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride)
 {
 	return executor_.begin_invoke([=]() -> spl::shared_ptr<device_buffer>
 	{
