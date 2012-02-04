@@ -6,7 +6,7 @@ The Advanced Media Control Protocol (AMCP) is the main communication protocol us
 
 * All communication is presumed to be encoded in UTF-8.
 * Each command has to be terminated with both a carriage return and a linefeed character. For example:
-	* \r\n
+	* \\r\\n
 	* <CR><LF>
 	* <0x0D><0x0A>
 	* <13><10>
