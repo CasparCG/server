@@ -67,7 +67,7 @@ Returns information about the server. The TEMPLATE version will read and return 
 
 Syntax::
 
-	INFO ([channel:int]{-[layer:int]}|TEMPLATE [filename:string])
+	INFO {[channel:int]{-[layer:int]}|TEMPLATE [filename:string]}
 		
 Example::
 
