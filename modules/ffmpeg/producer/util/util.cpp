@@ -176,7 +176,7 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
-		return spl::make_shared<core::write_frame>(tag);
+		return frame_factory->create_frame(tag, core::pixel_format_desc(core::pixel_format::invalid));
 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;

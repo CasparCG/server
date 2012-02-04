@@ -92,7 +92,7 @@ public:
 						
 	virtual spl::shared_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override
 	{		
-		return spl::make_shared<write_frame>(ogl_, tag, desc);
+		return mixer_->create_frame(tag, desc);
 	}
 	
 	virtual core::video_format_desc get_video_format_desc() const override

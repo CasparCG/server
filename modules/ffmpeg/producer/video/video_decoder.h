@@ -22,6 +22,7 @@
 #pragma once
 
 #include <common/spl/memory.h>
+#include <common/forward.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -29,14 +30,10 @@ struct AVFormatContext;
 struct AVFrame;
 struct AVPacket;
 
-namespace caspar {
+FORWARD2(caspar, core, struct write_frame);
+FORWARD2(caspar, core, struct frame_factory);
 
-namespace core {
-	struct frame_factory;
-	class write_frame;
-}
-
-namespace ffmpeg {
+namespace caspar { namespace ffmpeg {
 
 class video_decoder : boost::noncopyable
 {

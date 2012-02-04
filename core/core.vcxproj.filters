@@ -133,6 +133,9 @@
     <ClInclude Include="consumer\cadence_guard.h">
       <Filter>source\consumer</Filter>
     </ClInclude>
+    <ClInclude Include="frame\write_frame.h">
+      <Filter>source\frame</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">

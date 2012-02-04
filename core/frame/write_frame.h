@@ -21,32 +21,14 @@
 
 #pragma once
 
-#include "blend_modes.h"
-
-#include <common/forward.h>
-#include <common/spl/memory.h>
-
-#include <core/frame/frame_visitor.h>
-
-FORWARD1(boost, template<typename> class unique_future);
-FORWARD2(caspar, core, struct write_frame);
-FORWARD2(caspar, core, struct pixel_format_desc);
+#include "data_frame.h"
+#include "draw_frame.h"
 
 namespace caspar { namespace core {
 	
-struct image_mixer : public frame_visitor
+struct write_frame : public draw_frame, public data_frame
 {
-	virtual ~image_mixer(){}
-	
-	virtual void push(struct frame_transform& frame) = 0;
-	virtual void visit(struct data_frame& frame) = 0;
-	virtual void pop() = 0;
-
-	virtual void begin_layer(blend_mode blend_mode) = 0;
-	virtual void end_layer() = 0;
-		
-	virtual boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(const struct video_format_desc& format_desc) = 0;
-	virtual spl::shared_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) = 0;
 };
+
 
 }}
