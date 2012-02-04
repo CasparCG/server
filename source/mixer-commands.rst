@@ -1,5 +1,5 @@
 **************
-MIXER Commands
+Mixer Commands
 **************
 
 ===========

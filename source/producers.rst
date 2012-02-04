@@ -6,21 +6,11 @@ Producers
 ffmpeg
 ======
 
---------------------
-Supported containers
---------------------
-
-| mpg, mpeg, m2v, m4v, mp3, mp4, mpga, avi, mov, 
-| webmv, f4x, flv, mkv, mka, mxf, dv, wmv,, wma, 
-| wave, rm,, ram, ogg, ogv, oga, ogx, divx, xvid
-
---------------
-Deinterlaceing
---------------
-
 -------
 Filters
 -------
+
+The ffmpeg producer supports "libavfilter" filters through the "FILTER" parameter.
 
 -----------
 Diagnostics
@@ -53,7 +43,11 @@ Sets whether file will loop.
 
 Syntax::
 
-	LOOP [loop:0|1]
+	{LOOP}
+	
+Example::
+	
+	PLAY 1-1 MOVIE LOOP
 	
 ^^^^
 SEEK
@@ -66,7 +60,7 @@ Syntax::
 	
 Example::
 	
-	PLAY 1-1 MOVIE SEEK 100
+	PLAY 1-1 MOVIE SEEK 100 LOOP
 	
 ^^^^^^
 LENGTH
@@ -84,7 +78,7 @@ Example::
 ^^^^^^
 FILTER
 ^^^^^^
-Configures as libavfilter which will be used for the file.
+Configures libavfilter which will be used.
 
 Syntax::
 
