@@ -67,6 +67,7 @@ class image_kernel sealed : boost::noncopyable
 public:
 	image_kernel(const spl::shared_ptr<class context>& ogl);
 	void draw(draw_params&& params);
+	bool has_blend_modes() const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

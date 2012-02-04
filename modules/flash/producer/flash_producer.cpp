@@ -314,26 +314,26 @@ public:
 
 struct flash_producer : public core::frame_producer
 {	
-	const std::wstring											filename_;	
+	const std::wstring													filename_;	
 	const spl::shared_ptr<core::frame_factory>							frame_factory_;
-	const int													width_;
-	const int													height_;
-	const int													buffer_size_;
+	const int															width_;
+	const int															height_;
+	const int															buffer_size_;
 
-	tbb::atomic<int>											fps_;
-	tbb::atomic<bool>											sync_;
+	tbb::atomic<int>													fps_;
+	tbb::atomic<bool>													sync_;
 
-	spl::shared_ptr<diagnostics::graph>								graph_;
+	spl::shared_ptr<diagnostics::graph>									graph_;
 
 	std::queue<spl::shared_ptr<core::draw_frame>>						frame_buffer_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<core::draw_frame>>	output_buffer_;
 	
-	mutable tbb::spin_mutex										last_frame_mutex_;
+	mutable tbb::spin_mutex												last_frame_mutex_;
 	spl::shared_ptr<core::draw_frame>									last_frame_;
 		
-	std::unique_ptr<flash_renderer>								renderer_;
+	std::unique_ptr<flash_renderer>										renderer_;
 
-	executor													executor_;	
+	executor																executor_;	
 public:
 	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: filename_(filename)		
@@ -341,7 +341,7 @@ public:
 		, last_frame_(core::draw_frame::empty())
 		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
-		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", frame_factory_->get_video_format_desc().fps > 30.0 ? 3 : 2))
+		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", frame_factory_->get_video_format_desc().fps > 30.0 ? 4 : 2))
 		, executor_(L"flash_producer")
 	{	
 		sync_ = true;
