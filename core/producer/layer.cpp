@@ -102,10 +102,12 @@ public:
 			auto frame = receive_and_follow(foreground_, flags.value());
 			if(frame == core::draw_frame::late())
 				return draw_frame::silence(foreground_->last_frame());
+			
+			++frame_number_;
 
 			if(auto_play_delta_)
 			{
-				auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(++frame_number_) - static_cast<int64_t>(*auto_play_delta_);
+				auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - frame_number_ - static_cast<int64_t>(*auto_play_delta_);
 				if(frames_left < 1)
 				{
 					play();
