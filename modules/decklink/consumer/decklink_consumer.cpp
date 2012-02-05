@@ -502,12 +502,6 @@ public:
 	{
 		executor_.invoke([=]
 		{
-			if(consumer_)
-			{
-				auto str = print();
-				consumer_.reset();
-				CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
-			}
 			::CoUninitialize();
 		});
 	}
@@ -519,9 +513,7 @@ public:
 		executor_.invoke([=]
 		{
 			consumer_.reset(new decklink_consumer(config_, format_desc, channel_index));		
-			audio_cadence_ = format_desc.audio_cadence;		
-
-			CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
+			audio_cadence_ = format_desc.audio_cadence;			
 		});
 	}
 	

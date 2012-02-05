@@ -130,8 +130,6 @@ public:
 			THROW_ON_ERROR2(avio_open(&oc_->pb, u8(filename_).c_str(), URL_WRONLY), "[ffmpeg_consumer]");
 				
 		THROW_ON_ERROR2(av_write_header(oc_.get()), "[ffmpeg_consumer]");
-
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 
 	~ffmpeg_consumer()
@@ -151,8 +149,6 @@ public:
 			  
 		if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
 			LOG_ON_ERROR2(avio_close(oc_->pb), "[ffmpeg_consumer]"); // Close the output ffmpeg.
-
-		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
 			
 	std::wstring print() const

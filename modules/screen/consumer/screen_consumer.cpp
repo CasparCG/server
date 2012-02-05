@@ -467,23 +467,12 @@ public:
 	screen_consumer_proxy(const configuration& config)
 		: config_(config){}
 	
-	~screen_consumer_proxy()
-	{
-		if(consumer_)
-		{
-			auto str = print();
-			consumer_.reset();
-			CASPAR_LOG(info) << str << L" Successfully Uninitialized.";	
-		}
-	}
-
 	// frame_consumer
 
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		consumer_.reset();
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index));
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
 	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
