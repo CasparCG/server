@@ -83,6 +83,9 @@ public:
 	
 	boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
 	{	
+		static const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> empty(2048*2048*4, 0);
+		CASPAR_VERIFY(empty.size() >= format_desc.size);
+
 		// Remove empty layers.
 		boost::range::remove_erase_if(layers, [](const layer& layer)
 		{
@@ -91,16 +94,14 @@ public:
 
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
-			auto buffer = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
-			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
+			return async(launch_policy::deferred, [=]
 			{
-				auto ptr = reinterpret_cast<const uint8_t*>(buffer->data());
-				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer->size());
+				return boost::iterator_range<const uint8_t*>(empty.data(), empty.data() + format_desc.size);
 			});
 		}
-		else if(layers.size()				== 1 &&
+		else if(has_uswc_memcpy() &&				
+				layers.size()				== 1 &&
 			    layers.at(0).second.size()	== 1 &&
-				has_uswc_memcpy() &&				
 			   (kernel_.has_blend_modes() && layers.at(0).first != core::blend_mode::normal) == false &&
 			    layers.at(0).second.at(0).pix_desc.format		== core::pixel_format::bgra &&
 			    layers.at(0).second.at(0).buffers.at(0)->size() == format_desc.size &&
@@ -112,8 +113,7 @@ public:
 			uswc_memcpy(buffer->data(), source_buffer->data(), source_buffer->size());
 			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
 			{
-				auto ptr = reinterpret_cast<const uint8_t*>(buffer->data());
-				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer->size());
+				return boost::iterator_range<const uint8_t*>(buffer->data(), buffer->data() + buffer->size());
 			});
 		}
 		else
