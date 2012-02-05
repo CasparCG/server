@@ -90,7 +90,7 @@ spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<draw_fra
 		return frame2;
 
 	auto my_frame1 = spl::make_shared<draw_frame>(frame1);
-	auto my_frame2 = spl::make_shared<draw_frame>(frame2);
+	auto my_frame2 = draw_frame::silence(spl::make_shared<draw_frame>(frame2));
 	if(mode == field_mode::upper)
 	{
 		my_frame1->get_frame_transform().field_mode = field_mode::upper;	
