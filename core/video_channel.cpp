@@ -105,35 +105,42 @@ public:
 
 	void tick()
 	{
-		tick_timer_.restart();
+		try
+		{
+			tick_timer_.restart();
 
-		// Produce
+			// Produce
 
-		produce_timer_.restart();
+			produce_timer_.restart();
 
-		auto stage_frames = (*stage_)(format_desc_);
+			auto stage_frames = (*stage_)(format_desc_);
 		
-		graph_->set_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
+			graph_->set_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
 
-		// Mix
+			// Mix
 
-		//mix_timer_.restart();
+			//mix_timer_.restart();
 
-		auto mixed_frame  = (*mixer_)(std::move(stage_frames), format_desc_);
+			auto mixed_frame  = (*mixer_)(std::move(stage_frames), format_desc_);
 		
-		//graph_->set_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
+			//graph_->set_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
 
-		// Consume
+			// Consume
 
-		consume_timer_.restart();
+			consume_timer_.restart();
 
-		frame_subject_.on_next(mixed_frame);
+			frame_subject_.on_next(mixed_frame);
 
-		graph_->set_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
+			graph_->set_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
 
-		(*output_)(std::move(mixed_frame), format_desc_);
+			(*output_)(std::move(mixed_frame), format_desc_);
 		
-		graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
+			graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 
 		executor_.begin_invoke([=]{tick();});
 	}
