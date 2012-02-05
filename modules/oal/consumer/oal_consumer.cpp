@@ -78,8 +78,6 @@ public:
 		Stop();
 		input_.try_push(std::make_shared<audio_buffer_16>());
 		input_.try_push(std::make_shared<audio_buffer_16>());
-
-		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
 
 	// frame consumer
@@ -95,7 +93,6 @@ public:
 			sf::SoundStream::Initialize(2, 48000);
 			Play();		
 		}
-		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
 	
 	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override

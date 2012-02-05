@@ -101,41 +101,29 @@ public:
 	~destroy_producer_proxy()
 	{		
 		static tbb::atomic<int> counter = tbb::atomic<int>();
-
-		try
-		{				
-			auto producer = producer_.release();
-			++counter;
-			CASPAR_VERIFY(counter < 32);
-
-			async([=]
-			{
-				std::unique_ptr<std::shared_ptr<frame_producer>> producer2(producer);
-
-				auto str = (*producer2)->print();
-				try
-				{
-					if(!producer->unique())
-						CASPAR_LOG(trace) << str << L" Not destroyed on asynchronous destruction thread: " << producer->use_count();
-					else
-						CASPAR_LOG(trace) << str << L" Destroying on asynchronous destruction thread.";
-				}
-				catch(...){}
-								
-				producer2.reset();
-
-				--counter;
-			}); 
-		}
-		catch(...)
+		
+		++counter;
+		CASPAR_VERIFY(counter < 32);
+		
+		auto producer = producer_.release();
+		async([=]
 		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
+			std::unique_ptr<std::shared_ptr<frame_producer>> pointer_guard(producer);
+
+			auto str = (*producer)->print();
 			try
 			{
-				producer_.reset();
+				if(!producer->unique())
+					CASPAR_LOG(trace) << str << L" Not destroyed on asynchronous destruction thread: " << producer->use_count();
+				else
+					CASPAR_LOG(trace) << str << L" Destroying on asynchronous destruction thread.";
 			}
 			catch(...){}
-		}
+
+			pointer_guard.reset();
+
+			--counter;
+		}); 
 	}
 
 	virtual spl::shared_ptr<draw_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
@@ -201,7 +189,9 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<f
 	if(producer == frame_producer::empty())
 		return producer;
 		
-	return spl::make_shared<destroy_producer_proxy>(spl::make_shared<print_producer_proxy>(std::move(producer)));
+	return spl::make_shared<destroy_producer_proxy>(
+			spl::make_shared<print_producer_proxy>(
+			 std::move(producer)));
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)

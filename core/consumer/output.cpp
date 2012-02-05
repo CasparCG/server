@@ -29,11 +29,10 @@
 
 #include "frame_consumer.h"
 
-#include "cadence_guard.h"
-
 #include "../video_format.h"
 #include "../frame/data_frame.h"
 
+#include <common/concurrency/async.h>
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
@@ -51,13 +50,12 @@ namespace caspar { namespace core {
 	
 struct output::impl
 {		
-	const int											channel_index_;
-	video_format_desc									format_desc_;
+	const int													channel_index_;
+	video_format_desc											format_desc_;
 	std::map<int, spl::shared_ptr<frame_consumer>>				consumers_;	
-	prec_timer											sync_timer_;
+	prec_timer													sync_timer_;
 	boost::circular_buffer<spl::shared_ptr<const data_frame>>	frames_;
-
-	executor											executor_;		
+	executor													executor_;		
 public:
 	impl(const video_format_desc& format_desc, int channel_index) 
 		: channel_index_(channel_index)
@@ -70,10 +68,9 @@ public:
 	{		
 		remove(index);
 
-		consumer = create_consumer_cadence_guard(consumer);
 		consumer->initialize(format_desc_, channel_index_);
 
-		executor_.invoke([&]
+		executor_.begin_invoke([=]
 		{
 			consumers_.insert(std::make_pair(index, consumer));
 			CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Added.";
@@ -87,25 +84,12 @@ public:
 
 	void remove(int index)
 	{		
-		auto consumer = executor_.invoke([&]() -> std::shared_ptr<frame_consumer>
+		executor_.begin_invoke([=]
 		{
-			auto consumer = frame_consumer::empty();
 			auto it = consumers_.find(index);
 			if(it != consumers_.end())
-			{
-				consumer = it->second;
-				consumers_.erase(it);
-			}
-			return consumer;
+				consumers_.erase(it);					
 		}, task_priority::high_priority);
-
-		// Destroy consumer on calling thread:
-		if(consumer)
-		{
-			auto str = consumer->print();
-			consumer.reset();
-			CASPAR_LOG(info) << print() << L" " << str << L" Removed.";
-		}
 	}
 
 	void remove(const spl::shared_ptr<frame_consumer>& consumer)

@@ -23,6 +23,13 @@
 
 #include "frame_consumer.h"
 
+#include <common/except.h>
+
+#include <core/video_format.h>
+#include <core/frame/data_frame.h>
+
+#include <common/concurrency/async.h>
+
 namespace caspar { namespace core {
 		
 std::vector<const consumer_factory_t> g_factories;
@@ -31,6 +38,126 @@ void register_consumer_factory(const consumer_factory_t& factory)
 {
 	g_factories.push_back(factory);
 }
+
+class destroy_consumer_proxy : public frame_consumer
+{	
+	std::unique_ptr<std::shared_ptr<frame_consumer>> consumer_;
+public:
+	destroy_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) 
+		: consumer_(new std::shared_ptr<frame_consumer>(std::move(consumer)))
+	{
+	}
+
+	~destroy_consumer_proxy()
+	{		
+		static tbb::atomic<int> counter = tbb::atomic<int>();
+			
+		++counter;
+		CASPAR_VERIFY(counter < 32);
+		
+		auto consumer = consumer_.release();
+		async([=]
+		{
+			std::unique_ptr<std::shared_ptr<frame_consumer>> pointer_guard(consumer);
+
+			auto str = (*consumer)->print();
+			try
+			{
+				if(!consumer->unique())
+					CASPAR_LOG(trace) << str << L" Not destroyed on asynchronous destruction thread: " << consumer->use_count();
+				else
+					CASPAR_LOG(trace) << str << L" Destroying on asynchronous destruction thread.";
+			}
+			catch(...){}
+
+			pointer_guard.reset();
+
+			--counter;
+		}); 
+	}
+	
+	virtual bool send(const spl::shared_ptr<const struct data_frame>& frame)					{ return (*consumer_)->send(frame);}
+	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)		{ return (*consumer_)->initialize(format_desc, channel_index);}
+	virtual std::wstring print() const															{ return (*consumer_)->print();}
+	virtual boost::property_tree::wptree info() const 											{ return (*consumer_)->info();}
+	virtual bool has_synchronization_clock() const 												{ return (*consumer_)->has_synchronization_clock();}
+	virtual int buffer_depth() const 															{ return (*consumer_)->buffer_depth();}
+	virtual int index() const																	{ return (*consumer_)->index();}
+};
+
+class print_consumer_proxy : public frame_consumer
+{	
+	std::shared_ptr<frame_consumer> consumer_;
+public:
+	print_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) 
+		: consumer_(std::move(consumer))
+	{
+		CASPAR_LOG(info) << consumer_->print() << L" Initialized.";
+	}
+
+	~print_consumer_proxy()
+	{		
+		auto str = consumer_->print();
+		CASPAR_LOG(trace) << str << L" Uninitializing.";
+		consumer_.reset();
+		CASPAR_LOG(info) << str << L" Uninitialized.";
+	}
+	
+	virtual bool send(const spl::shared_ptr<const struct data_frame>& frame)					{ return consumer_->send(frame);}
+	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)		{ return consumer_->initialize(format_desc, channel_index);}
+	virtual std::wstring print() const															{ return consumer_->print();}
+	virtual boost::property_tree::wptree info() const 											{ return consumer_->info();}
+	virtual bool has_synchronization_clock() const 												{ return consumer_->has_synchronization_clock();}
+	virtual int buffer_depth() const 															{ return consumer_->buffer_depth();}
+	virtual int index() const																	{ return consumer_->index();}
+};
+
+// This class is used to guarantee that audio cadence is correct. This is important for NTSC audio.
+class cadence_guard : public frame_consumer
+{
+	spl::shared_ptr<frame_consumer>		consumer_;
+	std::vector<int>				audio_cadence_;
+	boost::circular_buffer<int>	sync_buffer_;
+public:
+	cadence_guard(const spl::shared_ptr<frame_consumer>& consumer)
+		: consumer_(consumer)
+	{
+	}
+	
+	virtual void initialize(const video_format_desc& format_desc, int channel_index) override
+	{
+		audio_cadence_	= format_desc.audio_cadence;
+		sync_buffer_	= boost::circular_buffer<int>(format_desc.audio_cadence.size());
+		consumer_->initialize(format_desc, channel_index);
+	}
+
+	virtual bool send(const spl::shared_ptr<const data_frame>& frame) override
+	{		
+		if(audio_cadence_.size() == 1)
+			return consumer_->send(frame);
+
+		bool result = true;
+		
+		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<int>(frame->audio_data().size())) 
+		{	
+			// Audio sent so far is in sync, now we can send the next chunk.
+			result = consumer_->send(frame);
+			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+		}
+		else
+			CASPAR_LOG(trace) << print() << L" Syncing audio.";
+
+		sync_buffer_.push_back(static_cast<int>(frame->audio_data().size()));
+		
+		return result;
+	}
+
+	virtual std::wstring print() const override					{return consumer_->print(); }
+	virtual boost::property_tree::wptree info() const override	{return consumer_->info();	}
+	virtual bool has_synchronization_clock() const override		{return consumer_->has_synchronization_clock();}
+	virtual int buffer_depth() const override					{return consumer_->buffer_depth();}
+	virtual int index() const override							{return consumer_->index();}
+};
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
@@ -54,7 +181,10 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	if(consumer == frame_consumer::empty())
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
 
-	return consumer;
+	return spl::make_shared<destroy_consumer_proxy>(
+			spl::make_shared<print_consumer_proxy>(
+			 spl::make_shared<cadence_guard>(
+			  std::move(consumer))));
 }
 
 const spl::shared_ptr<frame_consumer>& frame_consumer::empty()

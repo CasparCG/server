@@ -97,9 +97,6 @@
     <ClInclude Include="frame\draw_frame.h">
       <Filter>source\frame</Filter>
     </ClInclude>
-    <ClInclude Include="consumer\cadence_guard.h">
-      <Filter>source\consumer</Filter>
-    </ClInclude>
     <ClInclude Include="frame\write_frame.h">
       <Filter>source\frame</Filter>
     </ClInclude>
@@ -153,9 +150,6 @@
     </ClCompile>
     <ClCompile Include="frame\data_frame.cpp">
       <Filter>source\frame</Filter>
-    </ClCompile>
-    <ClCompile Include="consumer\cadence_guard.cpp">
-      <Filter>source\consumer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
