@@ -106,7 +106,7 @@ public:
 
 			uswc_memcpy(buffer->data(), uswc_buffer->data(), uswc_buffer->size());
 
-			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
+			return async(launch_policy::deferred, [=]
 			{
 				return boost::iterator_range<const uint8_t*>(buffer->data(), buffer->data() + buffer->size());
 			});
