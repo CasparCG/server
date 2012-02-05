@@ -313,6 +313,7 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
+		consumer_.reset();
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index));
 		audio_cadence_ = format_desc.audio_cadence;	
 	}
