@@ -37,7 +37,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 																																							
 struct write_frame::impl : boost::noncopyable
 {			
-	std::shared_ptr<context>					ogl_;
+	std::shared_ptr<context>						ogl_;
 	std::vector<spl::shared_ptr<ogl::host_buffer>>	buffers_;
 	core::audio_buffer								audio_data_;
 	const core::pixel_format_desc					desc_;
@@ -54,13 +54,10 @@ struct write_frame::impl : boost::noncopyable
 		, desc_(desc)
 		, tag_(tag)
 	{
-		if(desc.format != core::pixel_format::invalid)
+		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
 		{
-			std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
-			{
-				return ogl_->create_host_buffer(plane.size, ogl::host_buffer::usage::write_only);
-			});
-		}
+			return ogl_->create_host_buffer(plane.size, ogl::host_buffer::usage::write_only);
+		});
 	}
 			
 	void accept(write_frame& self, core::frame_visitor& visitor)
