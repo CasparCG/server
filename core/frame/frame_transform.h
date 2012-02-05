@@ -72,7 +72,6 @@ public:
 	static frame_transform tween(double time, const frame_transform& source, const frame_transform& dest, double duration, const tweener& tween);
 };
 
-bool operator<(const frame_transform& lhs, const frame_transform& rhs);
 bool operator==(const frame_transform& lhs, const frame_transform& rhs);
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs);
 

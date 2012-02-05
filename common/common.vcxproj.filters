@@ -128,5 +128,8 @@
     <ClInclude Include="spl\memory.h">
       <Filter>source\spl</Filter>
     </ClInclude>
+    <ClInclude Include="memory\memcpy.h">
+      <Filter>source\memory</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
