@@ -66,10 +66,10 @@ struct ffmpeg_producer : public core::frame_producer
 {
 	const std::wstring											filename_;
 	
-	const spl::shared_ptr<diagnostics::graph>							graph_;
+	const spl::shared_ptr<diagnostics::graph>					graph_;
 	boost::timer												frame_timer_;
 					
-	const spl::shared_ptr<core::frame_factory>							frame_factory_;
+	const spl::shared_ptr<core::frame_factory>					frame_factory_;
 	const core::video_format_desc								format_desc_;
 
 	input														input_;	
@@ -81,7 +81,7 @@ struct ffmpeg_producer : public core::frame_producer
 	const uint32_t												start_;
 	const uint32_t												length_;
 
-	spl::shared_ptr<core::draw_frame>									last_frame_;
+	spl::shared_ptr<core::draw_frame>							last_frame_;
 	
 	int64_t														frame_number_;
 	
@@ -103,7 +103,7 @@ public:
 		
 		try
 		{
-			video_decoder_.reset(new video_decoder(input_.context()));
+			video_decoder_.reset(new video_decoder(input_.context(), frame_factory_));
 			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 		}
 		catch(averror_stream_not_found&)

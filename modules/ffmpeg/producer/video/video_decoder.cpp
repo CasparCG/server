@@ -54,9 +54,9 @@ namespace caspar { namespace ffmpeg {
 struct video_decoder::impl : boost::noncopyable
 {
 	int										index_;
-	const spl::shared_ptr<AVCodecContext>			codec_context_;
+	const spl::shared_ptr<AVCodecContext>	codec_context_;
 
-	std::queue<spl::shared_ptr<AVPacket>>			packets_;
+	std::queue<spl::shared_ptr<AVPacket>>	packets_;
 	
 	const uint32_t							nb_frames_;
 
@@ -67,13 +67,18 @@ struct video_decoder::impl : boost::noncopyable
 	tbb::atomic<uint32_t>					file_frame_number_;
 
 public:
-	explicit impl(const spl::shared_ptr<AVFormatContext>& context) 
+	explicit impl(const spl::shared_ptr<AVFormatContext>& context, const spl::shared_ptr<core::frame_factory>& frame_factory) 
 		: codec_context_(open_codec(*context, AVMEDIA_TYPE_VIDEO, index_))
 		, nb_frames_(static_cast<uint32_t>(context->streams[index_]->nb_frames))
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 	{
 		file_frame_number_ = 0;
+
+		// Reserve some frames
+		std::vector<spl::shared_ptr<core::write_frame>> frames;
+		for(int n = 0; n < 3; ++n)
+			frames.push_back(frame_factory->create_frame(this, get_pixel_format_desc(codec_context_->pix_fmt, codec_context_->width, codec_context_->height)));
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -151,7 +156,7 @@ public:
 	}
 };
 
-video_decoder::video_decoder(const spl::shared_ptr<AVFormatContext>& context) : impl_(new impl(context)){}
+video_decoder::video_decoder(const spl::shared_ptr<AVFormatContext>& context, const spl::shared_ptr<core::frame_factory>& frame_factory) : impl_(new impl(context, frame_factory)){}
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}

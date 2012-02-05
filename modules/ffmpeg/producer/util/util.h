@@ -50,9 +50,10 @@ std::shared_ptr<AVFrame>			empty_video();
 
 static const int CASPAR_PIX_FMT_LUMA = 10; // Just hijack some unual pixel format.
 
-core::field_mode		get_mode(const AVFrame& frame);
-int							make_alpha_format(int format); // NOTE: Be careful about CASPAR_PIX_FMT_LUMA, change it to PIX_FMT_GRAY8 if you want to use the frame inside some ffmpeg function.
-spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags);
+core::field_mode					get_mode(const AVFrame& frame);
+int									make_alpha_format(int format); // NOTE: Be careful about CASPAR_PIX_FMT_LUMA, change it to PIX_FMT_GRAY8 if you want to use the frame inside some ffmpeg function.
+spl::shared_ptr<core::write_frame>	make_write_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags);
+core::pixel_format_desc				get_pixel_format_desc(PixelFormat pix_fmt, int width, int height);
 
 spl::shared_ptr<AVPacket> create_packet();
 
