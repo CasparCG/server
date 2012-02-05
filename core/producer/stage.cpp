@@ -146,7 +146,7 @@ public:
 		}, task_priority::high_priority);
 	}
 		
-	void load(int index, const spl::shared_ptr<frame_producer>& producer, int auto_play_delta)
+	void load(int index, const spl::shared_ptr<frame_producer>& producer, const boost::optional<int32_t>& auto_play_delta)
 	{
 		executor_.begin_invoke([=]
 		{
@@ -276,7 +276,7 @@ void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transf
 void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
-void stage::load(int index, const spl::shared_ptr<frame_producer>& producer, int auto_play_delta){impl_->load(index, producer, auto_play_delta);}
+void stage::load(int index, const spl::shared_ptr<frame_producer>& producer, const boost::optional<int32_t>& auto_play_delta){impl_->load(index, producer, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
 void stage::play(int index){impl_->play(index);}
 void stage::stop(int index){impl_->stop(index);}

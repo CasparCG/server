@@ -749,7 +749,10 @@ bool LoadbgCommand::DoExecute()
 		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
 
 		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc().field_mode, pFP, transitionInfo);
-		GetChannel()->stage()->load(GetLayerIndex(), pFP2, auto_play ? transitionInfo.duration : -1); // TODO: LOOP
+		if(auto_play)
+			GetChannel()->stage()->load(GetLayerIndex(), pFP2, transitionInfo.duration); // TODO: LOOP
+		else
+			GetChannel()->stage()->load(GetLayerIndex(), pFP2); // TODO: LOOP
 	
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
 
