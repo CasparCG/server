@@ -98,13 +98,13 @@ public:
 				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer->size());
 			});
 		}
-		else if(support_uswc_memcpy() &&
-				layers.size() == 1 &&
+		else if(layers.size()				== 1 &&
+			    layers.at(0).second.size()	== 1 &&
+				support_uswc_memcpy() &&				
 			   (kernel_.has_blend_modes() && layers.at(0).first != core::blend_mode::normal) == false &&
-			    layers.at(0).second.size() == 1 &&
-			    layers.at(0).second.at(0).pix_desc.format == core::pixel_format::bgra &&
+			    layers.at(0).second.at(0).pix_desc.format		== core::pixel_format::bgra &&
 			    layers.at(0).second.at(0).buffers.at(0)->size() == format_desc.size &&
-			    layers.at(0).second.at(0).transform == core::frame_transform())
+			    layers.at(0).second.at(0).transform				== core::frame_transform())
 		{
 			auto source_buffer = layers.at(0).second.at(0).buffers.at(0);
 			auto buffer = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(source_buffer->size());
