@@ -107,10 +107,11 @@ public:
 			    layers.at(0).second.at(0).buffers.at(0)->size() == format_desc.size &&
 			    layers.at(0).second.at(0).transform				== core::frame_transform())
 		{ // Bypass GPU using streaming loads to cachable memory.
-			auto source_buffer = layers.at(0).second.at(0).buffers.at(0);
-			auto buffer = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(source_buffer->size());
+			auto uswc_buffer = layers.at(0).second.at(0).buffers.at(0);
+			auto buffer		 = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(uswc_buffer->size());
 
-			uswc_memcpy(buffer->data(), source_buffer->data(), source_buffer->size());
+			uswc_memcpy(buffer->data(), uswc_buffer->data(), uswc_buffer->size());
+
 			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
 			{
 				return boost::iterator_range<const uint8_t*>(buffer->data(), buffer->data() + buffer->size());
