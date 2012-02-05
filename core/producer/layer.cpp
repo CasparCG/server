@@ -37,9 +37,9 @@ struct layer::impl
 {				
 	spl::shared_ptr<frame_producer>	foreground_;
 	spl::shared_ptr<frame_producer>	background_;
-	int64_t						frame_number_;
-	boost::optional<int32_t>	auto_play_delta_;
-	bool						is_paused_;
+	int64_t							frame_number_;
+	boost::optional<int32_t>		auto_play_delta_;
+	bool							is_paused_;
 
 public:
 	impl() 
