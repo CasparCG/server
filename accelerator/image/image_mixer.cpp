@@ -32,6 +32,7 @@
 
 #include <common/gl/gl_check.h>
 #include <common/concurrency/async.h>
+#include <common/memory/memcpy.h>
 
 #include <core/frame/write_frame.h>
 #include <core/frame/frame_transform.h>
@@ -72,6 +73,7 @@ class image_renderer
 {
 	spl::shared_ptr<context>	ogl_;
 	image_kernel				kernel_;
+	bool						has_uswc_copy_;
 public:
 	image_renderer(const spl::shared_ptr<context>& ogl)
 		: ogl_(ogl)
@@ -87,69 +89,99 @@ public:
 			return layer.second.empty();
 		});
 
-		// Start host->device transfers.
-		std::map<host_buffer*, boost::shared_future<spl::shared_ptr<device_buffer>>> buffer_map;
-		BOOST_FOREACH(auto& layer, layers)
+		if(layers.empty())
 		{
-			BOOST_FOREACH(auto& item, layer.second)
+			auto buffer = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
+			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
 			{
-				for(size_t n = 0; n < item.pix_desc.planes.size(); ++n)	
+				auto ptr = reinterpret_cast<const uint8_t*>(buffer->data());
+				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer->size());
+			});
+		}
+		else if(support_uswc_memcpy() &&
+				layers.size() == 1 &&
+			   (kernel_.has_blend_modes() && layers.at(0).first != core::blend_mode::normal) == false &&
+			    layers.at(0).second.size() == 1 &&
+			    layers.at(0).second.at(0).pix_desc.format == core::pixel_format::bgra &&
+			    layers.at(0).second.at(0).buffers.at(0)->size() == format_desc.size &&
+			    layers.at(0).second.at(0).transform == core::frame_transform())
+		{
+			auto source_buffer = layers.at(0).second.at(0).buffers.at(0);
+			auto buffer = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(source_buffer->size());
+
+			uswc_memcpy(buffer->data(), source_buffer->data(), source_buffer->size());
+			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
+			{
+				auto ptr = reinterpret_cast<const uint8_t*>(buffer->data());
+				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer->size());
+			});
+		}
+		else
+		{
+			// Start host->device transfers.
+			std::map<host_buffer*, boost::shared_future<spl::shared_ptr<device_buffer>>> buffer_map;
+			BOOST_FOREACH(auto& layer, layers)
+			{
+				BOOST_FOREACH(auto& item, layer.second)
 				{
-					auto host_buffer = item.buffers.at(n);
-					auto it			 = buffer_map.find(host_buffer.get());
-					if(it == buffer_map.end())
+					for(size_t n = 0; n < item.pix_desc.planes.size(); ++n)	
 					{
-						auto plane					= item.pix_desc.planes[n];
-						auto future_device_buffer	= ogl_->copy_async(host_buffer, plane.width, plane.height, plane.channels);
-						it = buffer_map.insert(std::make_pair(host_buffer.get(), std::move(future_device_buffer))).first;
+						auto host_buffer = item.buffers.at(n);
+						auto it			 = buffer_map.find(host_buffer.get());
+						if(it == buffer_map.end())
+						{
+							auto plane					= item.pix_desc.planes[n];
+							auto future_device_buffer	= ogl_->copy_async(host_buffer, plane.width, plane.height, plane.channels);
+							it = buffer_map.insert(std::make_pair(host_buffer.get(), std::move(future_device_buffer))).first;
+						}
+						item.textures.push_back(it->second);
+					}	
+					item.buffers.clear();
+				}
+			}		
+
+			// Draw
+			boost::shared_future<spl::shared_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> spl::shared_ptr<host_buffer>
+			{
+				auto draw_buffer = create_mixer_buffer(4, format_desc);
+
+				if(format_desc.field_mode != core::field_mode::progressive)
+				{
+					auto upper = layers;
+					auto lower = std::move(layers);
+
+					BOOST_FOREACH(auto& layer, upper)
+					{
+						BOOST_FOREACH(auto& item, layer.second)
+							item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::upper);
 					}
-					item.textures.push_back(it->second);
-				}	
-				item.buffers.clear();
-			}
-		}		
 
-		// Draw
-		boost::shared_future<spl::shared_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> spl::shared_ptr<host_buffer>
-		{
-			auto draw_buffer = create_mixer_buffer(4, format_desc);
+					BOOST_FOREACH(auto& layer, lower)
+					{
+						BOOST_FOREACH(auto& item, layer.second)
+							item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::lower);
+					}
 
-			if(format_desc.field_mode != core::field_mode::progressive)
-			{
-				auto upper = layers;
-				auto lower = std::move(layers);
-
-				BOOST_FOREACH(auto& layer, upper)
-				{
-					BOOST_FOREACH(auto& item, layer.second)
-						item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::upper);
+					draw(std::move(upper), draw_buffer, format_desc);
+					draw(std::move(lower), draw_buffer, format_desc);
 				}
-
-				BOOST_FOREACH(auto& layer, lower)
+				else
 				{
-					BOOST_FOREACH(auto& item, layer.second)
-						item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::lower);
+					draw(std::move(layers), draw_buffer, format_desc);
 				}
-
-				draw(std::move(upper), draw_buffer, format_desc);
-				draw(std::move(lower), draw_buffer, format_desc);
-			}
-			else
-			{
-				draw(std::move(layers), draw_buffer, format_desc);
-			}
 			
-			auto result = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::usage::read_only); 
-			draw_buffer->copy_to(result);							
-			return result;
-		});
+				auto result = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::usage::read_only); 
+				draw_buffer->copy_to(result);							
+				return result;
+			});
 		
-		// Defer memory mapping.
-		return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
-		{
-			auto ptr = reinterpret_cast<const uint8_t*>(buffer.get()->data()); // .get() and ->data() can block calling thread, ->data() can also block OpenGL thread, defer it as long as possible.
-			return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());
-		});
+			// Defer memory mapping.
+			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
+			{
+				auto ptr = reinterpret_cast<const uint8_t*>(buffer.get()->data()); // .get() and ->data() can block calling thread, ->data() can also block OpenGL thread, defer it as long as possible.
+				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());
+			});
+		}
 	}
 
 private:
@@ -311,9 +343,10 @@ public:
 			return;
 
 		item item;
-		item.pix_desc	= frame->get_pixel_format_desc();
-		item.buffers	= frame->get_buffers();				
-		item.transform	= transform_stack_.back();
+		item.pix_desc			= frame->get_pixel_format_desc();
+		item.buffers			= frame->get_buffers();				
+		item.transform			= transform_stack_.back();
+		item.transform.volume	= core::frame_transform().volume; // Set volume to default since we don't care about it here.
 
 		layers_.back().second.push_back(item);
 	}

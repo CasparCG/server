@@ -23,7 +23,8 @@
 
 #include "frame_transform.h"
 
-#include <algorithm>
+#include <boost/range/algorithm/equal.hpp>
+#include <boost/range/algorithm/fill.hpp>
 
 namespace caspar { namespace core {
 		
@@ -37,10 +38,10 @@ frame_transform::frame_transform()
 	, is_key(false)
 	, is_mix(false)
 {
-	std::fill(fill_translation.begin(), fill_translation.end(), 0.0);
-	std::fill(fill_scale.begin(), fill_scale.end(), 1.0);
-	std::fill(clip_translation.begin(), clip_translation.end(), 0.0);
-	std::fill(clip_scale.begin(), clip_scale.end(), 1.0);
+	boost::range::fill(fill_translation, 0.0);
+	boost::range::fill(fill_scale, 1.0);
+	boost::range::fill(clip_translation, 0.0);
+	boost::range::fill(clip_scale, 1.0);
 }
 
 frame_transform& frame_transform::operator*=(const frame_transform &other)
@@ -107,14 +108,26 @@ frame_transform frame_transform::tween(double time, const frame_transform& sourc
 	return result;
 }
 
-bool operator<(const frame_transform& lhs, const frame_transform& rhs)
-{
-	return memcmp(&lhs, &rhs, sizeof(frame_transform)) < 0;
-}
-
 bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 {
-	return memcmp(&lhs, &rhs, sizeof(frame_transform)) == 0;
+	auto eq = [](double lhs, double rhs)
+	{
+		return std::abs(lhs - rhs) < 5e-8;
+	};
+
+	return 
+		eq(lhs.volume, rhs.volume) &&
+		eq(lhs.opacity, rhs.opacity) &&
+		eq(lhs.contrast, rhs.contrast) &&
+		eq(lhs.brightness, rhs.brightness) &&
+		eq(lhs.saturation, rhs.saturation) &&
+		boost::range::equal(lhs.fill_translation, rhs.fill_translation, eq) &&
+		boost::range::equal(lhs.fill_scale, rhs.fill_scale, eq) &&
+		boost::range::equal(lhs.clip_translation, rhs.clip_translation, eq) &&
+		boost::range::equal(lhs.clip_scale, rhs.clip_scale, eq) &&
+		lhs.field_mode == rhs.field_mode &&
+		lhs.is_key == rhs.is_key &&
+		lhs.is_mix == rhs.is_mix;
 }
 
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
