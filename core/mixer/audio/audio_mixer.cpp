@@ -158,7 +158,7 @@ public:
 			});
 
 			if(nb_invalid_streams > 0)		
-				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";			
+				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected. Appending empty samples.";			
 		}
 
 		std::vector<float> result_ps(audio_cadence_.front(), 0.0f);
@@ -167,10 +167,7 @@ public:
 			//CASPAR_LOG(debug) << stream.audio_data.size() << L" : " << result_ps.size();
 
 			if(stream.audio_data.size() < result_ps.size())
-			{
 				stream.audio_data.resize(result_ps.size(), 0.0f);
-				CASPAR_LOG(trace) << L"[audio_mixer] Appended zero samples";
-			}
 
 			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<float>());
 			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
