@@ -512,6 +512,7 @@ public:
 	{
 		executor_.invoke([=]
 		{
+			consumer_.reset();
 			consumer_.reset(new decklink_consumer(config_, format_desc, channel_index));		
 			audio_cadence_ = format_desc.audio_cadence;			
 		});
