@@ -85,13 +85,7 @@ public:
 	{	
 		static const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> empty(2048*2048*4, 0);
 		CASPAR_VERIFY(empty.size() >= format_desc.size);
-
-		// Remove empty layers.
-		boost::range::remove_erase_if(layers, [](const layer& layer)
-		{
-			return layer.second.empty();
-		});
-
+		
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
 			return async(launch_policy::deferred, [=]
@@ -363,6 +357,12 @@ public:
 	
 	boost::unique_future<boost::iterator_range<const uint8_t*>> render(const core::video_format_desc& format_desc)
 	{
+		// Remove empty layers.
+		boost::range::remove_erase_if(layers_, [](const layer& layer)
+		{
+			return layer.second.empty();
+		});
+
 		return renderer_(std::move(layers_), format_desc);
 	}
 	
