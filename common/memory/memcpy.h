@@ -101,8 +101,8 @@ static void uswc_memcpy(void* dest, void* source, int count)
 			auto x0 = _mm_stream_load_si128(load+0);  
 			_mm_store_si128(cache+0, x0);  
 		
-			cache += 4;  
-			load  += 4;  
+			cache += 1;  
+			load  += 1;  
 		}
 	}
 
@@ -116,8 +116,8 @@ static void uswc_memcpy(void* dest, void* source, int count)
 			auto x0 = _mm_load_si128(cache+0);  
 			_mm_stream_si128(store+0, x0);  
 		
-			cache += 4;  
-			store += 4;  
+			cache += 1;  
+			store += 1;  
 		}
 	}
 }  
