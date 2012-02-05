@@ -23,7 +23,7 @@ extern "C"
 
 namespace caspar {
 
-static bool support_uswc_memcpy()
+static bool has_uswc_memcpy()
 {
 	static bool value = (ff_get_cpu_flags_x86() & AV_CPU_FLAG_SSE4) != 0;
 	return value;

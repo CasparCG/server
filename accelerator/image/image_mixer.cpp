@@ -100,7 +100,7 @@ public:
 		}
 		else if(layers.size()				== 1 &&
 			    layers.at(0).second.size()	== 1 &&
-				support_uswc_memcpy() &&				
+				has_uswc_memcpy() &&				
 			   (kernel_.has_blend_modes() && layers.at(0).first != core::blend_mode::normal) == false &&
 			    layers.at(0).second.at(0).pix_desc.format		== core::pixel_format::bgra &&
 			    layers.at(0).second.at(0).buffers.at(0)->size() == format_desc.size &&
