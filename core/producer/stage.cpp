@@ -48,7 +48,7 @@ namespace caspar { namespace core {
 struct stage::impl : public std::enable_shared_from_this<impl>
 {			
 	std::map<int, layer>				layers_;	
-	std::map<int, tweened_transform>	transforms_;	
+	std::map<int, tweened_transform>	tweens_;	
 	executor							executor_;
 public:
 	impl() : executor_(L"stage")
@@ -70,7 +70,8 @@ public:
 
 				tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer)
 				{
-					auto transform = transforms_[layer.first].fetch_and_tick(1);
+					auto& tween		= tweens_[layer.first];
+					auto transform	= tween.fetch_and_tick(1);
 
 					frame_producer::flags flags = frame_producer::flags::none;
 					if(format_desc2.field_mode != field_mode::progressive)
@@ -90,7 +91,7 @@ public:
 					if(format_desc2.field_mode != core::field_mode::progressive)
 					{				
 						auto frame2 = spl::make_shared<core::draw_frame>(frame);
-						frame2->get_frame_transform() = transforms_[layer.first].fetch_and_tick(1);
+						frame2->get_frame_transform() = tween.fetch_and_tick(1);
 						frame1 = core::draw_frame::interlace(frame1, frame2, format_desc2.field_mode);
 					}
 
@@ -113,9 +114,9 @@ public:
 		{
 			BOOST_FOREACH(auto& transform, transforms)
 			{
-				auto src = transforms_[std::get<0>(transform)].fetch();
+				auto src = tweens_[std::get<0>(transform)].fetch();
 				auto dst = std::get<1>(transform)(src);
-				transforms_[std::get<0>(transform)] = tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
+				tweens_[std::get<0>(transform)] = tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
 			}
 		}, task_priority::high_priority);
 	}
@@ -124,9 +125,9 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			auto src = transforms_[index].fetch();
+			auto src = tweens_[index].fetch();
 			auto dst = transform(src);
-			transforms_[index] = tweened_transform(src, dst, mix_duration, tween);
+			tweens_[index] = tweened_transform(src, dst, mix_duration, tween);
 		}, task_priority::high_priority);
 	}
 
@@ -134,7 +135,7 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			transforms_.erase(index);
+			tweens_.erase(index);
 		}, task_priority::high_priority);
 	}
 
@@ -142,7 +143,7 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			transforms_.clear();
+			tweens_.clear();
 		}, task_priority::high_priority);
 	}
 		
