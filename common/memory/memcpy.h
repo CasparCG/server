@@ -41,8 +41,8 @@ static void uswc_memcpy(void* dest, void* source, int count)
 	{
 		__declspec(align(64)) std::array<uint8_t, CACHED_BUFFER_SIZE> cache_block;
 
-		auto load  = reinterpret_cast<__m128i*>(source)+r.begin()*CACHED_BUFFER_SIZE/sizeof(__m128i);
-		auto store = reinterpret_cast<__m128i*>(dest)+r.begin()*CACHED_BUFFER_SIZE/sizeof(__m128i);
+		auto load  = reinterpret_cast<__m128i*>(source)+r.begin()*CACHED_BUFFER_SIZE/16;
+		auto store = reinterpret_cast<__m128i*>(dest)+r.begin()*CACHED_BUFFER_SIZE/16;
 
 		for(int b = r.begin(); b != r.end(); ++b)
 		{
@@ -52,18 +52,15 @@ static void uswc_memcpy(void* dest, void* source, int count)
 
 				for(int n = 0; n < CACHED_BUFFER_SIZE; n += 64)
 				{
-					auto x0 = _mm_stream_load_si128(load+0);  
-					auto x1 = _mm_stream_load_si128(load+1);  
-					auto x2 = _mm_stream_load_si128(load+2);  
-					auto x3 = _mm_stream_load_si128(load+3);  
+					auto x0 = _mm_stream_load_si128(load++);  
+					auto x1 = _mm_stream_load_si128(load++);  
+					auto x2 = _mm_stream_load_si128(load++);  
+					auto x3 = _mm_stream_load_si128(load++);  
   
-					_mm_store_si128(cache+0, x0);  
-					_mm_store_si128(cache+1, x1);  
-					_mm_store_si128(cache+2, x2);  
-					_mm_store_si128(cache+3, x3);  
-  
-					cache += 4;  
-					load  += 4;  
+					_mm_store_si128(cache++, x0);  
+					_mm_store_si128(cache++, x1);  
+					_mm_store_si128(cache++, x2);  
+					_mm_store_si128(cache++, x3);  
 				}
 			}
 			{
@@ -72,18 +69,15 @@ static void uswc_memcpy(void* dest, void* source, int count)
 		          
 				for(int n = 0; n < CACHED_BUFFER_SIZE; n += 64)
 				{  
-					auto x0 = _mm_load_si128(cache+0);  
-					auto x1 = _mm_load_si128(cache+1);  
-					auto x2 = _mm_load_si128(cache+2);  
-					auto x3 = _mm_load_si128(cache+3);  
+					auto x0 = _mm_load_si128(cache++);  
+					auto x1 = _mm_load_si128(cache++);  
+					auto x2 = _mm_load_si128(cache++);  
+					auto x3 = _mm_load_si128(cache++);  
   
-					_mm_stream_si128(store+0, x0);  
-					_mm_stream_si128(store+1, x1);  
-					_mm_stream_si128(store+2, x2);  
-					_mm_stream_si128(store+3, x3);  
-  
-					cache += 4;  
-					store += 4;  
+					_mm_stream_si128(store++, x0);  
+					_mm_stream_si128(store++, x1);  
+					_mm_stream_si128(store++, x2);  
+					_mm_stream_si128(store++, x3);   
 				}  
 			}
 		}
@@ -94,31 +88,19 @@ static void uswc_memcpy(void* dest, void* source, int count)
 	{
 		_mm_mfence(); 
 		auto cache = reinterpret_cast<__m128i*>(cache_block.data());   
-		auto load  = reinterpret_cast<__m128i*>(source)+(count-reminder)/sizeof(__m128i);
+		auto load  = reinterpret_cast<__m128i*>(source)+(count-reminder)/16;
 
 		for(int n = 0; n < reminder; n += 16)
-		{
-			auto x0 = _mm_stream_load_si128(load+0);  
-			_mm_store_si128(cache+0, x0);  
-		
-			cache += 1;  
-			load  += 1;  
-		}
+			_mm_store_si128(cache++, _mm_stream_load_si128(load++));  		
 	}
 
 	{	
 		_mm_mfence(); 
 		auto cache = reinterpret_cast<__m128i*>(cache_block.data());   
-		auto store = reinterpret_cast<__m128i*>(dest)+(count-reminder)/sizeof(__m128i);
+		auto store = reinterpret_cast<__m128i*>(dest)+(count-reminder)/16;
 
 		for(int n = 0; n < reminder; n += 16)
-		{
-			auto x0 = _mm_load_si128(cache+0);  
-			_mm_stream_si128(store+0, x0);  
-		
-			cache += 1;  
-			store += 1;  
-		}
+			_mm_stream_si128(store++, _mm_load_si128(cache++));  		
 	}
 }  
 
