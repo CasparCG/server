@@ -45,6 +45,7 @@
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
+#include <tbb/parallel_for.h>
 
 #include <boost/assign.hpp>
 
@@ -339,44 +340,39 @@ public:
 			return;
 
 		av_frame = frames[0];
+		
+		GL(glBindTexture(GL_TEXTURE_2D, texture_));
 
-		if(av_frame->linesize[0] != static_cast<int>(format_desc_.width*4))
-		{
-			const uint8_t *src_data[4] = {0};
-			A_memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
-			const int src_linesizes[4] = {0};
-			A_memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
+		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]));
+		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0));
 
-			auto av_frame2 = get_av_frame();
-			av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
-			av_frame = spl::shared_ptr<AVFrame>(av_frame2.get(), [=](AVFrame*)
-			{
-				av_freep(&av_frame2->data[0]);
-			});
+		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]));
+		GL(glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW));
 
-			av_image_copy(av_frame2->data, av_frame2->linesize, src_data, src_linesizes, PIX_FMT_BGRA, av_frame2->width, av_frame2->height);
-		}
-
-		glBindTexture(GL_TEXTURE_2D, texture_);
-
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
-
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]);
-		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW);
-
-		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		auto ptr = reinterpret_cast<char*>(GL2(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY)));
 		if(ptr)
 		{
 			if(config_.key_only)
-				aligned_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			{
+				tbb::parallel_for(tbb::blocked_range<int>(0, format_desc_.height), [&](const tbb::blocked_range<int>& r)
+				{
+					for(int n = r.begin(); n != r.end(); ++n)
+						aligned_memshfl(ptr+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				});
+			}
 			else
-				A_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], frame->image_data().size());
+			{	
+				tbb::parallel_for(tbb::blocked_range<int>(0, format_desc_.height), [&](const tbb::blocked_range<int>& r)
+				{
+					for(int n = r.begin(); n != r.end(); ++n)
+						A_memcpy(ptr+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4);
+				});
+			}
 			
-			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
+			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER)); // release the mapped buffer
 		}
 
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
 				
 		GL(glClear(GL_COLOR_BUFFER_BIT));			
 		glBegin(GL_QUADS);
@@ -386,7 +382,7 @@ public:
 				glTexCoord2f(0.0f,	  0.0f);	glVertex2f(-width_,  height_);
 		glEnd();
 		
-		glBindTexture(GL_TEXTURE_2D, 0);
+		GL(glBindTexture(GL_TEXTURE_2D, 0));
 
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
