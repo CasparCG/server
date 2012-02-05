@@ -218,8 +218,10 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Set Scale Mode"));
 						
 		ax_->SetSize(width_, height_);		
-		render_frame(false);
-	
+
+		tick(false);
+		render();
+
 		CASPAR_LOG(info) << print() << L" Initialized.";
 	}
 
@@ -247,37 +249,20 @@ public:
 
 		return result;
 	}
-	
-	spl::shared_ptr<core::draw_frame> render_frame(bool sync)
-	{
-		float frame_time = 1.0f/ax_->GetFPS();
+
+	void tick(bool sync)
+	{		
+		const float frame_time = 1.0f/ax_->GetFPS();
 
 		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
 		tick_timer_.restart();
-
-		if(ax_->IsEmpty())
-			return core::draw_frame::empty();		
 		
 		if(sync)			
 			timer_.tick(frame_time); // This will block the thread.
 		else
 			graph_->set_tag("skip-sync");
-			
-		frame_timer_.restart();
-
-		ax_->Tick();
-		if(ax_->InvalidRect())
-		{			
-			A_memset(bmp_.data(), 0, width_*height_*4);
-			ax_->DrawControl(bmp_);
 		
-			core::pixel_format_desc desc = core::pixel_format::bgra;
-			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
-			auto frame = frame_factory_->create_frame(this, desc);
-
-			A_memcpy(frame->image_data(0).begin(), bmp_.data(), width_*height_*4);
-			head_ = frame;
-		}		
+		ax_->Tick();
 					
 		MSG msg;
 		while(PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) // DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!  
@@ -288,11 +273,31 @@ public:
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);			
 		}
+	}
+	
+	spl::shared_ptr<core::draw_frame> render()
+	{			
+		const float frame_time = 1.0f/ax_->GetFPS();
+
+		frame_timer_.restart();
+
+		if(ax_->InvalidRect())
+		{			
+			A_memset(bmp_.data(), 0, width_*height_*4);
+			ax_->DrawControl(bmp_);
+		
+			core::pixel_format_desc desc = core::pixel_format::bgra;
+			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
+			auto frame = frame_factory_->create_frame(this, desc);
+
+			A_memcpy(frame->image_data(0).begin(), bmp_.data(), width_*height_*4);
+			head_ = frame;	
+		}		
 										
 		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);
 		return head_;
 	}
-
+	
 	bool is_empty() const
 	{
 		return ax_->IsEmpty();
@@ -327,21 +332,21 @@ struct flash_producer : public core::frame_producer
 
 	std::queue<spl::shared_ptr<core::draw_frame>>						frame_buffer_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<core::draw_frame>>	output_buffer_;
-	
-	mutable tbb::spin_mutex												last_frame_mutex_;
+
 	spl::shared_ptr<core::draw_frame>									last_frame_;
-		
+	mutable tbb::spin_mutex												last_frame_mutex_;
+			
 	std::unique_ptr<flash_renderer>										renderer_;
 
-	executor																executor_;	
+	executor															executor_;	
 public:
 	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
-		, last_frame_(core::draw_frame::empty())
 		, width_(width > 0 ? width : frame_factory->get_video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->get_video_format_desc().height)
 		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", frame_factory_->get_video_format_desc().fps > 30.0 ? 4 : 2))
+		, last_frame_(core::draw_frame::empty())
 		, executor_(L"flash_producer")
 	{	
 		sync_ = true;
@@ -370,8 +375,8 @@ public:
 		graph_->set_value("buffer-size", static_cast<float>(output_buffer_.size())/static_cast<float>(buffer_size_));
 		sync_ = output_buffer_.size() == buffer_size_;
 
-		if(output_buffer_.try_pop(frame))	
-			next();
+		if(output_buffer_.try_pop(frame))			
+			executor_.begin_invoke(std::bind(&flash_producer::next, this));		
 		else
 			graph_->set_tag("late-frame");
 						
@@ -401,10 +406,6 @@ public:
 				}
 
 				return renderer_->call(param);	
-
-				//const auto& format_desc = frame_factory_->get_video_format_desc();
-				//if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
-				//	CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
 			}
 			catch(...)
 			{
@@ -429,56 +430,59 @@ public:
 	}
 
 	// flash_producer
-	
-	void next()
-	{	
-		executor_.begin_invoke([this]
+
+	spl::shared_ptr<core::draw_frame> render()
+	{
+		return lock(last_frame_mutex_, [this]
 		{
-			if(!renderer_)
-				frame_buffer_.push(core::draw_frame::empty());
-
-			if(frame_buffer_.empty())
-			{
-				auto format_desc = frame_factory_->get_video_format_desc();
-					
-				if(abs(renderer_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
-				{
-					auto frame1 = render_frame();
-					auto frame2 = render_frame();
-					frame_buffer_.push(core::draw_frame::interlace(frame1, frame2, format_desc.field_mode));
-				}
-				else if(abs(renderer_->fps() - format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
-				{
-					auto frame = render_frame();
-					frame_buffer_.push(frame);
-					frame_buffer_.push(frame);
-				}
-				else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
-				{
-					auto frame = render_frame();
-					frame_buffer_.push(frame);
-				}
-						
-				fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));				
-				graph_->set_text(print());
-			
-				if(renderer_->is_empty())			
-					renderer_.reset();
-			}
-
-			output_buffer_.push(std::move(frame_buffer_.front()));
-			frame_buffer_.pop();
+			return last_frame_ = renderer_->render();
 		});
 	}
 
-	spl::shared_ptr<core::draw_frame> render_frame()
+	void tick()
+	{
+		renderer_->tick(sync_);
+	}
+	
+	void next()
 	{	
-		auto frame = renderer_->render_frame(sync_);
-		lock(last_frame_mutex_, [&]
+		if(!renderer_)
+			frame_buffer_.push(core::draw_frame::empty());
+
+		if(frame_buffer_.empty())
 		{
-			last_frame_ = frame;
-		});
-		return frame;
+			auto format_desc = frame_factory_->get_video_format_desc();
+					
+			tick();
+			auto frame = render();
+
+			if(abs(renderer_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
+			{					
+				tick();
+				if(format_desc.field_mode != core::field_mode::progressive)
+					frame = core::draw_frame::interlace(frame, render(), format_desc.field_mode);
+				
+				frame_buffer_.push(frame);
+			}
+			else if(abs(renderer_->fps() - format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
+			{
+				frame_buffer_.push(frame);
+				frame_buffer_.push(frame);
+			}
+			else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
+			{
+				frame_buffer_.push(frame);
+			}
+						
+			fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));				
+			graph_->set_text(print());
+			
+			if(renderer_->is_empty())			
+				renderer_.reset();
+		}
+
+		output_buffer_.push(std::move(frame_buffer_.front()));
+		frame_buffer_.pop();
 	}
 };
 
