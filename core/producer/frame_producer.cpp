@@ -126,14 +126,14 @@ public:
 		}); 
 	}
 
-	virtual spl::shared_ptr<draw_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
-	virtual spl::shared_ptr<draw_frame>								last_frame() const override		 										{return (*producer_)->last_frame();}
-	virtual std::wstring										print() const override													{return (*producer_)->print();}
-	virtual boost::property_tree::wptree 						info() const override													{return (*producer_)->info();}
-	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (*producer_)->call(str);}
-	virtual spl::shared_ptr<frame_producer>							get_following_producer() const override									{return (*producer_)->get_following_producer();}
-	virtual void												set_leading_producer(const spl::shared_ptr<frame_producer>& producer) override	{(*producer_)->set_leading_producer(producer);}
-	virtual uint32_t											nb_frames() const override												{return (*producer_)->nb_frames();}
+	virtual spl::shared_ptr<draw_frame>							receive(int hints) override														{return (*producer_)->receive(hints);}
+	virtual spl::shared_ptr<draw_frame>							last_frame() const override		 												{return (*producer_)->last_frame();}
+	virtual std::wstring										print() const override															{return (*producer_)->print();}
+	virtual boost::property_tree::wptree 						info() const override															{return (*producer_)->info();}
+	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return (*producer_)->call(str);}
+	virtual spl::shared_ptr<frame_producer>						get_following_producer() const override											{return (*producer_)->get_following_producer();}
+	virtual void												set_leading_producer(const spl::shared_ptr<frame_producer>& producer) override	{return (*producer_)->set_leading_producer(producer);}
+	virtual uint32_t											nb_frames() const override														{return (*producer_)->nb_frames();}
 };
 
 class print_producer_proxy : public frame_producer
@@ -153,15 +153,16 @@ public:
 		producer_.reset();
 		CASPAR_LOG(info) << str << L" Uninitialized.";
 	}
+	
 
-	virtual spl::shared_ptr<draw_frame>				receive(int hints) override												{return (producer_)->receive(hints);}
-	virtual spl::shared_ptr<draw_frame>				last_frame() const override		 										{return (producer_)->last_frame();}
-	virtual std::wstring						print() const override													{return (producer_)->print();}
-	virtual boost::property_tree::wptree 		info() const override													{return (producer_)->info();}
-	virtual boost::unique_future<std::wstring>	call(const std::wstring& str) override									{return (producer_)->call(str);}
-	virtual spl::shared_ptr<frame_producer>			get_following_producer() const override									{return (producer_)->get_following_producer();}
-	virtual void								set_leading_producer(const spl::shared_ptr<frame_producer>& producer) override	{(producer_)->set_leading_producer(producer);}
-	virtual uint32_t							nb_frames() const override												{return (producer_)->nb_frames();}
+	virtual spl::shared_ptr<draw_frame>							receive(int hints) override														{return producer_->receive(hints);}
+	virtual spl::shared_ptr<draw_frame>							last_frame() const override		 												{return producer_->last_frame();}
+	virtual std::wstring										print() const override															{return producer_->print();}
+	virtual boost::property_tree::wptree 						info() const override															{return producer_->info();}
+	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
+	virtual spl::shared_ptr<frame_producer>						get_following_producer() const override											{return producer_->get_following_producer();}
+	virtual void												set_leading_producer(const spl::shared_ptr<frame_producer>& producer) override	{return producer_->set_leading_producer(producer);}
+	virtual uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 };
 
 spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)

@@ -143,71 +143,39 @@ public:
 	void operator()(spl::shared_ptr<const data_frame> input_frame, const video_format_desc& format_desc)
 	{
 		executor_.invoke([=]
-		{
-			try
-			{				
-				if(!has_synchronization_clock())
-					sync_timer_.tick(1.0/format_desc_.fps);
+		{			
+			if(!has_synchronization_clock())
+				sync_timer_.tick(1.0/format_desc_.fps);
 				
-				if(format_desc_ != format_desc)
-					set_video_format_desc(format_desc);
+			if(format_desc_ != format_desc)
+				set_video_format_desc(format_desc);
 
-				if(input_frame->image_data().size() != format_desc_.size)
-				{
-					sync_timer_.tick(1.0/format_desc_.fps);
-					return;
-				}
-					
-				auto minmax = minmax_buffer_depth();
-
-				frames_.set_capacity(std::max(1, minmax.second - minmax.first) + 1); // std::max(1, x) since we want to guarantee some pipeline depth for asycnhronous mixer read-back.
-				frames_.push_back(input_frame);
-
-				if(!frames_.full())
-					return;
-
-				auto it = consumers_.begin();
-				while(it != consumers_.end())
-				{
-					auto consumer	= it->second;
-					auto frame		= frames_.at(consumer->buffer_depth()-minmax.first);
-						
-					try
-					{
-						if(consumer->send(frame))
-							++it;
-						else
-						{
-							CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
-							consumers_.erase(it++);
-						}
-					}
-					catch(...)
-					{
-						CASPAR_LOG_CURRENT_EXCEPTION();
-						try
-						{
-							consumer->initialize(format_desc_, channel_index_);
-							if(consumer->send(frame))
-								++it;
-							else
-							{
-								CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
-								consumers_.erase(it++);
-							}
-						}
-						catch(...)
-						{
-							CASPAR_LOG_CURRENT_EXCEPTION();
-							CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << L". Removing it.";
-							consumers_.erase(it++);
-						}
-					}
-				}
-			}
-			catch(...)
+			if(input_frame->image_data().size() != format_desc_.size)
 			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
+				sync_timer_.tick(1.0/format_desc_.fps);
+				return;
+			}
+					
+			auto minmax = minmax_buffer_depth();
+
+			frames_.set_capacity(std::max(1, minmax.second - minmax.first) + 1); // std::max(1, x) since we want to guarantee some pipeline depth for asycnhronous mixer read-back.
+			frames_.push_back(input_frame);
+
+			if(!frames_.full())
+				return;
+
+			for(auto it = consumers_.begin(); it != consumers_.end();)
+			{
+				auto consumer	= it->second;
+				auto frame		= frames_.at(consumer->buffer_depth()-minmax.first);
+						
+				if(consumer->send(frame))
+					++it;
+				else
+				{
+					CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
+					consumers_.erase(it++);
+				}
 			}
 		});
 	}
