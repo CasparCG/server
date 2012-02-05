@@ -90,7 +90,7 @@ public:
 		});
 
 		if(layers.empty())
-		{
+		{ // Bypass GPU with empty frame.
 			auto buffer = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
 			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
 			{
@@ -105,7 +105,7 @@ public:
 			    layers.at(0).second.at(0).pix_desc.format		== core::pixel_format::bgra &&
 			    layers.at(0).second.at(0).buffers.at(0)->size() == format_desc.size &&
 			    layers.at(0).second.at(0).transform				== core::frame_transform())
-		{
+		{ // Bypass GPU using streaming loads to cachable memory.
 			auto source_buffer = layers.at(0).second.at(0).buffers.at(0);
 			auto buffer = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(source_buffer->size());
 
