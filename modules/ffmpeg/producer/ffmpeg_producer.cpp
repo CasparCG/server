@@ -163,7 +163,7 @@ public:
 
 	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
 	{
-		return core::draw_frame::silence(last_frame_);
+		return core::draw_frame::mute_audio(last_frame_);
 	}
 
 	virtual uint32_t nb_frames() const override

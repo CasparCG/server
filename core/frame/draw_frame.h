@@ -51,7 +51,7 @@ public:
 	static spl::shared_ptr<draw_frame> interlace(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2, field_mode mode);
 	static spl::shared_ptr<draw_frame> over(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2);
 	static spl::shared_ptr<draw_frame> mask(const spl::shared_ptr<draw_frame>& fill, const spl::shared_ptr<draw_frame>& key);
-	static spl::shared_ptr<draw_frame> silence(const spl::shared_ptr<draw_frame>& frame);
+	static spl::shared_ptr<draw_frame> mute_audio(const spl::shared_ptr<draw_frame>& frame);
 		
 	static const spl::shared_ptr<draw_frame>& eof();
 	static const spl::shared_ptr<draw_frame>& empty();
