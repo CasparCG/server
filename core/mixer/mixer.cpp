@@ -55,14 +55,14 @@ namespace caspar { namespace core {
 
 struct mixed_frame : public data_frame
 {
-	mutable boost::unique_future<boost::iterator_range<const uint8_t*>>	image_data_;
+	mutable boost::shared_future<boost::iterator_range<const uint8_t*>>	image_data_;
 	const audio_buffer													audio_data_;
 	const video_format_desc												video_desc_;
 	pixel_format_desc													pixel_desc_;
 	const void*															tag_;
 
 public:
-	mixed_frame(const void* tag, boost::unique_future<boost::iterator_range<const uint8_t*>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
+	mixed_frame(const void* tag, boost::shared_future<boost::iterator_range<const uint8_t*>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
 		: tag_(tag)
 		, image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data))
