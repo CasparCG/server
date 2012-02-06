@@ -74,13 +74,13 @@ struct transition_producer : public frame_producer
 		tbb::parallel_invoke(
 		[&]
 		{
-			dest = receive_and_follow(dest_producer_, flags);
+			dest = dest_producer_->receive(flags);
 			if(dest == core::draw_frame::late())
 				dest = dest_producer_->last_frame();
 		},
 		[&]
 		{
-			source = receive_and_follow(source_producer_, flags);
+			source = source_producer_->receive(flags);
 			if(source == core::draw_frame::late())
 				source = source_producer_->last_frame();
 		});
@@ -176,7 +176,7 @@ struct transition_producer : public frame_producer
 
 spl::shared_ptr<frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& destination, const transition_info& info)
 {
-	return spl::make_shared<transition_producer>(mode, destination, info);
+	return core::wrap_producer(spl::make_shared<transition_producer>(mode, destination, info));
 }
 
 }}

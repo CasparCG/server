@@ -99,7 +99,7 @@ public:
 			if(is_paused_)
 				return draw_frame::mute(foreground_->last_frame());
 		
-			auto frame = receive_and_follow(foreground_, flags.value());
+			auto frame = foreground_->receive(flags.value());
 			if(frame == core::draw_frame::late())
 				return draw_frame::mute(foreground_->last_frame());
 			

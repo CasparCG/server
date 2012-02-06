@@ -32,23 +32,15 @@
 
 namespace caspar { namespace flash {
 		
-class cg_producer : public core::frame_producer
+class cg_proxy
 {
 public:
 	static const unsigned int DEFAULT_LAYER = 9999;
 
-	explicit cg_producer(const spl::shared_ptr<core::frame_producer>& producer);
-	cg_producer(cg_producer&& other);
+	explicit cg_proxy(const spl::shared_ptr<core::frame_producer>& producer);
+	cg_proxy(cg_proxy&& other);
 	
-	// frame_producer
-
-	virtual spl::shared_ptr<core::draw_frame> receive(int) override;
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override;
-	virtual std::wstring print() const override;
-	virtual boost::unique_future<std::wstring> call(const std::wstring&) override;
-	virtual boost::property_tree::wptree info() const override;
-
-	//cg_producer
+	//cg_proxy
 
 	void add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& start_from_label = L"", const std::wstring& data = L"");
 	void remove(int layer);
@@ -64,9 +56,8 @@ private:
 	struct impl;
 	std::shared_ptr<impl> impl_;
 };
-spl::shared_ptr<cg_producer> get_default_cg_producer(const spl::shared_ptr<core::video_channel>& video_channel, int layer_index = cg_producer::DEFAULT_LAYER);
+cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_channel, int layer_index = cg_proxy::DEFAULT_LAYER);
 
 spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
-spl::shared_ptr<core::frame_producer> create_cg_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params);
 
 }}

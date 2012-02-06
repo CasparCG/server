@@ -24,7 +24,7 @@
 
 #include "CLKProtocolStrategy.h"
 
-#include <modules/flash/producer/cg_producer.h>
+#include <modules/flash/producer/cg_proxy.h>
 
 #include <string>
 #include <sstream>
@@ -117,7 +117,7 @@ void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInf
 
 			if(currentCommand_.command_ == CLKCommand::CLKReset) 
 			{
-				pChannel_->stage()->clear(flash::cg_producer::DEFAULT_LAYER);
+				pChannel_->stage()->clear(flash::cg_proxy::DEFAULT_LAYER);
 				bClockLoaded_ = false;
 				
 				CASPAR_LOG(info) << L"CLK: Recieved and executed reset-command";
@@ -126,11 +126,11 @@ void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInf
 			{
 				if(!bClockLoaded_) 
 				{
-					flash::get_default_cg_producer(pChannel_)->add(0, TEXT("hawrysklocka/clock.ft"), true, TEXT(""), currentCommand_.GetData());
+					flash::create_cg_proxy(pChannel_).add(0, TEXT("hawrysklocka/clock.ft"), true, TEXT(""), currentCommand_.GetData());
 					bClockLoaded_ = true;
 				}
 				else 
-					flash::get_default_cg_producer(pChannel_)->update(0, currentCommand_.GetData());
+					flash::create_cg_proxy(pChannel_).update(0, currentCommand_.GetData());
 				
 				CASPAR_LOG(debug) << L"CLK: Clockdata sent: " << currentCommand_.GetData();
 				CASPAR_LOG(debug) << L"CLK: Executed valid command: " << currentCommandString_.str();
