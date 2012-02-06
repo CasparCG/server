@@ -54,11 +54,15 @@ using namespace boost::assign;
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
+typedef boost::shared_future<spl::shared_ptr<device_buffer>> future_texture;
+
 struct item
 {
 	core::pixel_format_desc						pix_desc;
 	std::vector<spl::shared_ptr<host_buffer>>	buffers;
+	std::vector<future_texture>					textures;
 	core::frame_transform						transform;
+
 
 	item()
 		: pix_desc(core::pixel_format::invalid)
@@ -108,7 +112,6 @@ class image_renderer
 	spl::shared_ptr<context>																		ogl_;
 	image_kernel																					kernel_;
 	std::pair<std::vector<layer>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;
-	std::map<const host_buffer*, boost::shared_future<spl::shared_ptr<device_buffer>>>				buffer_map_;
 public:
 	image_renderer(const spl::shared_ptr<context>& ogl)
 		: ogl_(ogl)
@@ -159,23 +162,30 @@ private:
 		}
 		else
 		{	
-			buffer_map_.clear();
 			// Start host->device transfers.
+
+			std::map<const host_buffer*, future_texture> buffer_map;
+
 			BOOST_FOREACH(auto& layer, layers)
 			{
 				BOOST_FOREACH(auto& item, layer.items)
 				{
-					for(size_t n = 0; n < item.buffers.size(); ++n)	
+					auto host_buffers = boost::get<std::vector<spl::shared_ptr<host_buffer>>>(item.buffers);
+					auto textures	  = std::vector<future_texture>();
+
+					for(size_t n = 0; n < host_buffers.size(); ++n)	
 					{
-						auto buffer	= item.buffers.at(n);
-						auto it		= buffer_map_.find(buffer.get());
-						if(it == buffer_map_.end())
+						auto buffer	= host_buffers[n];
+						auto it		= buffer_map.find(buffer.get());
+						if(it == buffer_map.end())
 						{
 							auto plane			= item.pix_desc.planes[n];
 							auto future_texture	= ogl_->copy_async(buffer, plane.width, plane.height, plane.channels);
-							buffer_map_.insert(std::make_pair(buffer.get(), std::move(future_texture))).first;
+							it = buffer_map.insert(std::make_pair(buffer.get(), std::move(future_texture))).first;
 						}
+						item.textures.push_back(it->second);
 					}	
+					item.buffers.clear();
 				}
 			}	
 
@@ -222,16 +232,7 @@ private:
 			});
 		}
 	}
-
-	spl::shared_ptr<device_buffer> get_texture(const host_buffer& buffer)
-	{
-		auto it = buffer_map_.find(&buffer);
-		if(it == buffer_map_.end())
-			BOOST_THROW_EXCEPTION(invalid_operation());
-
-		return it->second.get();
-	}
-
+	
 	void draw(std::vector<layer>&&				layers, 
 			  spl::shared_ptr<device_buffer>&	draw_buffer, 
 			  const core::video_format_desc&	format_desc)
@@ -288,10 +289,10 @@ private:
 				   const core::video_format_desc&	format_desc)
 	{			
 		draw_params draw_params;
-		draw_params.pix_desc				= std::move(item.pix_desc);
-		draw_params.transform				= std::move(item.transform);
-		BOOST_FOREACH(auto& buffer, item.buffers)
-			draw_params.textures.push_back(get_texture(*buffer));
+		draw_params.pix_desc	= std::move(item.pix_desc);
+		draw_params.transform	= std::move(item.transform);
+		BOOST_FOREACH(auto& future_texture, item.textures)
+			draw_params.textures.push_back(future_texture.get());
 
 		if(item.transform.is_key)
 		{
