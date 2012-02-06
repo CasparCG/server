@@ -126,18 +126,14 @@ struct transition_producer : public frame_producer
 		
 		// For interlaced transitions. Seperate fields into seperate frames which are transitioned accordingly.
 		
+		src_frame->get_frame_transform().volume = 1.0-delta2;
 		auto s_frame1 = spl::make_shared<draw_frame>(src_frame);
 		auto s_frame2 = spl::make_shared<draw_frame>(src_frame);
-
-		s_frame1->get_frame_transform().volume = 0.0;
-		s_frame2->get_frame_transform().volume = 1.0-delta2;
-
+		
+		dest_frame->get_frame_transform().volume = delta2;
 		auto d_frame1 = spl::make_shared<draw_frame>(dest_frame);
 		auto d_frame2 = spl::make_shared<draw_frame>(dest_frame);
 		
-		d_frame1->get_frame_transform().volume = 0.0;
-		d_frame2->get_frame_transform().volume = delta2;
-
 		if(info_.type == transition_type::mix)
 		{
 			d_frame1->get_frame_transform().opacity = delta1;	

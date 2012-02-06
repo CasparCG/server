@@ -90,7 +90,7 @@ spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<draw_fra
 		return frame2;
 
 	auto my_frame1 = spl::make_shared<draw_frame>(frame1);
-	auto my_frame2 = draw_frame::mute_audio(spl::make_shared<draw_frame>(frame2));
+	auto my_frame2 = spl::make_shared<draw_frame>(frame2);
 	if(mode == field_mode::upper)
 	{
 		my_frame1->get_frame_transform().field_mode = field_mode::upper;	
@@ -137,7 +137,7 @@ spl::shared_ptr<draw_frame> draw_frame::mask(const spl::shared_ptr<draw_frame>& 
 	return spl::make_shared<draw_frame>(std::move(frames));
 }
 	
-spl::shared_ptr<draw_frame> draw_frame::mute_audio(const spl::shared_ptr<draw_frame>& frame)
+spl::shared_ptr<draw_frame> draw_frame::mute(const spl::shared_ptr<draw_frame>& frame)
 {
 	auto frame2 = spl::make_shared<draw_frame>(frame);
 	frame2->get_frame_transform().volume = 0.0;

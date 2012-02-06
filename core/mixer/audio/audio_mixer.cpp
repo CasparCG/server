@@ -111,6 +111,7 @@ public:
 		}		
 		
 		std::map<const void*, audio_stream>	next_audio_streams;
+		std::vector<const void*> used_tags;
 
 		BOOST_FOREACH(auto& item, items_)
 		{			
@@ -119,7 +120,14 @@ public:
 			auto next_transform = item.transform;
 			auto prev_transform = next_transform;
 
-			const auto it = audio_streams_.find(item.tag);
+			auto tag = item.tag;
+
+			if(boost::range::find(used_tags, tag) != used_tags.end())
+				continue;
+			
+			used_tags.push_back(tag);
+
+			const auto it = audio_streams_.find(tag);
 			if(it != audio_streams_.end())
 			{	
 				prev_transform	= it->second.prev_transform;
@@ -139,8 +147,8 @@ public:
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
 				next_audio.push_back(item.audio_data[n] * (prev_volume + (n/format_desc_.audio_channels) * alpha));
 										
-			next_audio_streams[item.tag].prev_transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
-			next_audio_streams[item.tag].audio_data		 = std::move(next_audio);			
+			next_audio_streams[tag].prev_transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
+			next_audio_streams[tag].audio_data		 = std::move(next_audio);			
 		}				
 
 		items_.clear();
