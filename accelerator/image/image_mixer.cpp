@@ -419,9 +419,7 @@ public:
 			return layer.items.empty();
 		});
 
-		auto layers = std::move(layers_);
-		layers_		= std::vector<layer>();
-		return renderer_(std::move(layers), format_desc);
+		return renderer_(std::move(layers_), format_desc);
 	}
 	
 	virtual spl::shared_ptr<ogl::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
