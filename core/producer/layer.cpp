@@ -97,11 +97,11 @@ public:
 		try
 		{
 			if(is_paused_)
-				return draw_frame::silence(foreground_->last_frame());
+				return draw_frame::mute_audio(foreground_->last_frame());
 		
 			auto frame = receive_and_follow(foreground_, flags.value());
 			if(frame == core::draw_frame::late())
-				return draw_frame::silence(foreground_->last_frame());
+				return draw_frame::mute_audio(foreground_->last_frame());
 			
 			++frame_number_;
 
