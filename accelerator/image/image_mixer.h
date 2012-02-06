@@ -51,7 +51,7 @@ public:
 	void end_layer();
 		
 	// NOTE: Content of return future is only valid while future is valid.
-	virtual boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(const core::video_format_desc& format_desc) override;
+	virtual boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(const core::video_format_desc& format_desc) override;
 		
 	virtual spl::shared_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override;
 private:
