@@ -58,6 +58,9 @@
     <ClCompile Include="tweener.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="memory\page_locked_allocator.cpp">
+      <Filter>source\memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h">

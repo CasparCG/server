@@ -21,11 +21,14 @@
 
 #pragma once
 
-#include <unordered_map>
-#include <tbb/mutex.h>
+namespace caspar {
 
-namespace caspar
-{
+namespace detail {
+
+void* alloc_page_locked(size_t size);
+void free_page_locked(void* p);
+
+}
 	
 template <class T>
 class page_locked_allocator
@@ -44,41 +47,12 @@ public:
   
 	pointer allocate(size_type n, const void * = 0) 
 	{
-		tbb::mutex::scoped_lock lock(get().mutex);
-
-		size_type size = n * sizeof(T);		
-		if(get().free < size)
-			allocate_store(size);
-
-		auto p = ::VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-		if(!p)
-			throw std::bad_alloc();
-
-		if(::VirtualLock(p, size) == 0)	
-		{
-			::VirtualFree(p, 0, MEM_RELEASE);
-			throw std::bad_alloc();
-		}
-		
-		get().free -= size;
-		get().map[p] = size;
-		return reinterpret_cast<T*>(p);
+		return reinterpret_cast<T*>(detail::alloc_page_locked(n));
 	}
   
 	void deallocate(void* p, size_type) 
 	{
-		tbb::mutex::scoped_lock lock(get().mutex);
-
-		if(!p || get().map.find(p) == get().map.end())
-			return;
-
-		try
-		{
-			::VirtualFree(p, 0, MEM_RELEASE);
-			get().free += get().map[p];
-			get().map.erase(p);
-		}
-		catch(...){}		
+		detail::free_page_locked(p);		
 	}
 
 	pointer           address(reference x) const { return &x; }
@@ -97,36 +71,5 @@ public:
 
 	template <class U>
 	page_locked_allocator& operator=(const page_locked_allocator<U>&) { return *this; }
-
-private:
-
-	void allocate_store(size_type size)
-	{		
-		SIZE_T workingSetMinSize = 0, workingSetMaxSize = 0;
-		if(::GetProcessWorkingSetSize(::GetCurrentProcess(), &workingSetMinSize, &workingSetMaxSize))
-		{			
-			workingSetMinSize += size;
-			workingSetMaxSize += size;
-
-			if(!::SetProcessWorkingSetSize(::GetCurrentProcess(), workingSetMinSize, workingSetMaxSize))		
-				throw std::bad_alloc();		
-
-			get().free += size;
-		}
-	}
-
-	struct impl
-	{
-		impl() : free(0){}
-		std::unordered_map<void*, size_type> map;
-		size_type free;
-		tbb::mutex mutex;
-	};
-
-	static impl& get()
-	{
-		static impl i;
-		return i;
-	}
 };
 }
