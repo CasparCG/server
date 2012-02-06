@@ -192,13 +192,13 @@ private:
 					BOOST_FOREACH(auto& layer, upper)
 					{
 						BOOST_FOREACH(auto& item, layer.items)
-							item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::upper);
+							item.transform.field_mode &= core::field_mode::upper;
 					}
 
 					BOOST_FOREACH(auto& layer, lower)
 					{
 						BOOST_FOREACH(auto& item, layer.items)
-							item.transform.field_mode = static_cast<core::field_mode>(item.transform.field_mode & core::field_mode::lower);
+							item.transform.field_mode &= core::field_mode::lower;
 					}
 
 					draw(std::move(upper), draw_buffer, format_desc);
@@ -246,7 +246,16 @@ private:
 					spl::shared_ptr<device_buffer>&		draw_buffer,
 					std::shared_ptr<device_buffer>&		layer_key_buffer,
 					const core::video_format_desc&		format_desc)
-	{				
+	{		
+		// Remove empty items.
+		boost::range::remove_erase_if(layer.items, [](const item& item)
+		{
+			return item.transform.field_mode == core::field_mode::empty;
+		});
+
+		if(layer.items.empty())
+			return;
+
 		std::shared_ptr<device_buffer> local_key_buffer;
 		std::shared_ptr<device_buffer> local_mix_buffer;
 				
