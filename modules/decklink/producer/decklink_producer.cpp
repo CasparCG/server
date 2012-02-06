@@ -331,7 +331,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 
 	auto device_index	= get_param(L"DEVICE", params, -1);
 	if(device_index == -1)
-		device_index = params.size() > 1 ? boost::lexical_cast<int>(params.at(1)) : 0;
+		device_index = params.size() > 1 ? boost::lexical_cast<int>(params.at(1)) : 1;
 
 	auto filter_str		= get_param(L"FILTER", params); 	
 	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
