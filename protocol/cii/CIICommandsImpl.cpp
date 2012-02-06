@@ -28,7 +28,7 @@
 #include "CIICommandsImpl.h"
 #include <sstream>
 #include <algorithm>
-#include <modules/flash/producer/cg_producer.h>
+#include <modules/flash/producer/cg_proxy.h>
 #include <boost/locale.hpp>
 
 namespace caspar { namespace protocol { namespace cii {
@@ -152,7 +152,7 @@ void MiscellaneousCommand::Execute()
 	{
 		// HACK fix. The data sent is UTF8, however the protocol is implemented for ISO-8859-1. Instead of doing risky changes we simply convert into proper encoding when leaving protocol code.
 		auto xmlData2 = boost::locale::conv::utf_to_utf<wchar_t, char>(std::string(xmlData_.begin(), xmlData_.end()));
-		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->add(layer_, filename_, false, TEXT(""), xmlData2);
+		flash::create_cg_proxy(pCIIStrategy_->GetChannel()).add(layer_, filename_, false, TEXT(""), xmlData2);
 	}
 }
 
@@ -167,11 +167,11 @@ void KeydataCommand::Execute()
 
 	//TODO: Need to be checked for validity
 	else if(state_ == 1)
-		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->stop(layer_, 0);
+		flash::create_cg_proxy(pCIIStrategy_->GetChannel()).stop(layer_, 0);
 	else if(state_ == 2)
-		pCIIStrategy_->GetChannel()->stage()->clear(flash::cg_producer::DEFAULT_LAYER);
+		pCIIStrategy_->GetChannel()->stage()->clear(flash::cg_proxy::DEFAULT_LAYER);
 	else if(state_ == 3)
-		flash::get_default_cg_producer(pCIIStrategy_->GetChannel())->play(layer_);
+		flash::create_cg_proxy(pCIIStrategy_->GetChannel()).play(layer_);
 }
 
 void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {

@@ -343,7 +343,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	if(format_desc.format == core::video_format::invalid)
 		format_desc = frame_factory->get_video_format_desc();
 			
-	return spl::make_shared<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length);
+	return core::wrap_producer(spl::make_shared<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length));
 }
 
 }}

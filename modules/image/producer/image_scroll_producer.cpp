@@ -249,7 +249,7 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_p
 	if(speed == 0)
 		return core::frame_producer::empty();
 
-	return spl::make_shared<image_scroll_producer>(frame_factory, filename + L"." + *ext, speed);
+	return core::wrap_producer(spl::make_shared<image_scroll_producer>(frame_factory, filename + L"." + *ext, speed));
 }
 
 }}

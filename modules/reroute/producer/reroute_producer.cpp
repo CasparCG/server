@@ -140,7 +140,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 {
 	auto producer = spl::make_shared<reroute_producer>(frame_factory);
 	o.subscribe(producer);
-	return producer;
+	return core::wrap_producer(producer);
 }
 
 }}
