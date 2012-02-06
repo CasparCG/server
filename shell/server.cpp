@@ -128,7 +128,7 @@ struct server::impl : boost::noncopyable
 					auto name = xml_consumer.first;
 					if(name == L"screen")
 						channels_.back()->output()->add(caspar::screen::create_consumer(xml_consumer.second));					
-					if(name == L"bluefish")					
+					else if(name == L"bluefish")					
 						channels_.back()->output()->add(bluefish::create_consumer(xml_consumer.second));					
 					else if(name == L"decklink")					
 						channels_.back()->output()->add(decklink::create_consumer(xml_consumer.second));				
