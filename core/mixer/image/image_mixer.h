@@ -49,7 +49,7 @@ struct image_mixer : public frame_visitor
 	virtual void begin_layer(blend_mode blend_mode) = 0;
 	virtual void end_layer() = 0;
 		
-	virtual boost::unique_future<boost::iterator_range<const uint8_t*>> operator()(const struct video_format_desc& format_desc) = 0;
+	virtual boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(const struct video_format_desc& format_desc) = 0;
 	virtual spl::shared_ptr<core::write_frame> create_frame(const void* tag, const struct pixel_format_desc& desc) = 0;
 };
 
