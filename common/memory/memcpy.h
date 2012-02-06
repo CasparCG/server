@@ -35,7 +35,7 @@ static void uswc_memcpy(void* dest, void* source, int count)
 	static const int CACHED_BUFFER_SIZE = 4096;
   
 	const int block_count	= count / CACHED_BUFFER_SIZE;
-	const int reminder		= count % CACHED_BUFFER_SIZE;
+	const int remainder		= count % CACHED_BUFFER_SIZE;
     
 	tbb::parallel_for(tbb::blocked_range<int>(0, block_count), [&](const tbb::blocked_range<int>& r)
 	{
@@ -88,18 +88,18 @@ static void uswc_memcpy(void* dest, void* source, int count)
 	{
 		_mm_mfence(); 
 		auto cache = reinterpret_cast<__m128i*>(cache_block.data());   
-		auto load  = reinterpret_cast<__m128i*>(source)+(count-reminder)/16;
+		auto load  = reinterpret_cast<__m128i*>(source)+(count-remainder)/16;
 
-		for(int n = 0; n < reminder; n += 16)
+		for(int n = 0; n < remainder; n += 16)
 			_mm_store_si128(cache++, _mm_stream_load_si128(load++));  		
 	}
 
 	{	
 		_mm_mfence(); 
 		auto cache = reinterpret_cast<__m128i*>(cache_block.data());   
-		auto store = reinterpret_cast<__m128i*>(dest)+(count-reminder)/16;
+		auto store = reinterpret_cast<__m128i*>(dest)+(count-remainder)/16;
 
-		for(int n = 0; n < reminder; n += 16)
+		for(int n = 0; n < remainder; n += 16)
 			_mm_stream_si128(store++, _mm_load_si128(cache++));  		
 	}
 }  
