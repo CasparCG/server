@@ -101,7 +101,7 @@ public:
 		
 			auto frame = foreground_->receive(flags.value());
 			if(frame == core::draw_frame::late())
-				return draw_frame::mute(foreground_->last_frame());
+				return foreground_->last_frame();
 			
 			++frame_number_;
 

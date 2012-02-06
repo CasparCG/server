@@ -102,7 +102,7 @@ public:
         return p_.unique();
     }
 
-    long ue_count() const 
+    long use_count() const 
     {
         return p_.use_count();
     }
