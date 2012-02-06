@@ -21,7 +21,7 @@
 
 #include "../StdAfx.h"
 
-#include "cg_producer.h"
+#include "cg_proxy.h"
 
 #include "flash_producer.h"
 
@@ -37,7 +37,7 @@
 		
 namespace caspar { namespace flash {
 	
-struct cg_producer::impl : boost::noncopyable
+struct cg_proxy::impl : boost::noncopyable
 {
 	spl::shared_ptr<core::frame_producer> flash_producer_;
 public:
@@ -114,62 +114,7 @@ public:
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking info-command: " << str;
 		return flash_producer_->call(str);
 	}
-
-	boost::unique_future<std::wstring> call(const std::wstring& str)
-	{		
-		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)( (?<DATA>.*))?");
-		static const boost::wregex remove_exp		(L"REMOVE (?<LAYER>\\d+)");
-		static const boost::wregex play_exp			(L"PLAY (?<LAYER>\\d+)");
-		static const boost::wregex stop_exp			(L"STOP (?<LAYER>\\d+)");
-		static const boost::wregex next_exp			(L"NEXT (?<LAYER>\\d+)");
-		static const boost::wregex update_exp		(L"UPDATE (?<LAYER>\\d+) (?<DATA>.+)");
-		static const boost::wregex invoke_exp		(L"INVOKE (?<LAYER>\\d+) (?<LABEL>.+)");
-		static const boost::wregex description_exp	(L"INFO (?<LAYER>\\d+)");
-		static const boost::wregex info_exp			(L"INFO");
 		
-		boost::wsmatch what;
-		if(boost::regex_match(str, what, add_exp))
-			return add(boost::lexical_cast<int>(what["LAYER"].str()), flash::find_template(env::template_folder() + what["FILENAME"].str()), boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()), L"", what["DATA"].str()); 
-		else if(boost::regex_match(str, what, remove_exp))
-			return remove(boost::lexical_cast<int>(what["LAYER"].str())); 
-		else if(boost::regex_match(str, what, stop_exp))
-			return stop(boost::lexical_cast<int>(what["LAYER"].str()), 0); 
-		else if(boost::regex_match(str, what, next_exp))
-			return next(boost::lexical_cast<int>(what["LAYER"].str())); 
-		else if(boost::regex_match(str, what, update_exp))
-			return update(boost::lexical_cast<int>(what["LAYER"].str()), what["DATA"].str()); 
-		else if(boost::regex_match(str, what, next_exp))
-			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABEL"].str()); 
-		else if(boost::regex_match(str, what, description_exp))
-			return description(boost::lexical_cast<int>(what["LAYER"].str())); 
-		else if(boost::regex_match(str, what, invoke_exp))
-			return template_host_info(); 
-
-		return flash_producer_->call(str);
-	}
-
-	spl::shared_ptr<core::draw_frame> receive(int flags)
-	{
-		return flash_producer_->receive(flags);
-	}
-
-	spl::shared_ptr<core::draw_frame> last_frame() const
-	{
-		return flash_producer_->last_frame();
-	}		
-			
-	std::wstring print() const
-	{
-		return flash_producer_->print();
-	}
-
-	boost::property_tree::wptree info() const
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"cg-producer");
-		return info;
-	}
-
 	std::wstring timed_invoke(int layer, const std::wstring& label)
 	{
 		auto result = invoke(layer, label);
@@ -193,7 +138,7 @@ public:
 	}
 };
 	
-spl::shared_ptr<cg_producer> get_default_cg_producer(const spl::shared_ptr<core::video_channel>& video_channel, int render_layer)
+cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_channel, int render_layer)
 {	
 	auto flash_producer = video_channel->stage()->foreground(render_layer).get();
 
@@ -212,7 +157,7 @@ spl::shared_ptr<cg_producer> get_default_cg_producer(const spl::shared_ptr<core:
 		throw;
 	}
 
-	return spl::make_shared<cg_producer>(flash_producer);
+	return cg_proxy(std::move(flash_producer));
 }
 
 spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
@@ -226,35 +171,22 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<c
 	filename = path.wstring();
 
 	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
-	auto producer = spl::make_shared<cg_producer>(flash_producer);
-	producer->add(0, filename, 1);
+	auto producer = flash_producer;
+	cg_proxy(producer).add(0, filename, 1);
 
-	return producer;
+	return core::wrap_producer(producer);
 }
 
-spl::shared_ptr<core::frame_producer> create_cg_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
-{
-	if(params.empty() || params.at(0) != L"[CG]")
-		return core::frame_producer::empty();
-
-	return spl::make_shared<cg_producer>(flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>()));	
-}
-
-cg_producer::cg_producer(const spl::shared_ptr<core::frame_producer>& frame_producer) : impl_(new impl(frame_producer)){}
-cg_producer::cg_producer(cg_producer&& other) : impl_(std::move(other.impl_)){}
-spl::shared_ptr<core::draw_frame> cg_producer::receive(int flags){return impl_->receive(flags);}
-spl::shared_ptr<core::draw_frame> cg_producer::last_frame() const{return impl_->last_frame();}
-void cg_producer::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
-void cg_producer::remove(int layer){impl_->remove(layer);}
-void cg_producer::play(int layer){impl_->play(layer);}
-void cg_producer::stop(int layer, unsigned int mix_out_duration){impl_->stop(layer, mix_out_duration);}
-void cg_producer::next(int layer){impl_->next(layer);}
-void cg_producer::update(int layer, const std::wstring& data){impl_->update(layer, data);}
-std::wstring cg_producer::print() const{return impl_->print();}
-boost::unique_future<std::wstring> cg_producer::call(const std::wstring& str){return impl_->call(str);}
-std::wstring cg_producer::invoke(int layer, const std::wstring& label){return impl_->timed_invoke(layer, label);}
-std::wstring cg_producer::description(int layer){return impl_->timed_description(layer);}
-std::wstring cg_producer::template_host_info(){return impl_->timed_template_host_info();}
-boost::property_tree::wptree cg_producer::info() const{return impl_->info();}
+cg_proxy::cg_proxy(const spl::shared_ptr<core::frame_producer>& frame_producer) : impl_(new impl(frame_producer)){}
+cg_proxy::cg_proxy(cg_proxy&& other) : impl_(std::move(other.impl_)){}
+void cg_proxy::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}
+void cg_proxy::remove(int layer){impl_->remove(layer);}
+void cg_proxy::play(int layer){impl_->play(layer);}
+void cg_proxy::stop(int layer, unsigned int mix_out_duration){impl_->stop(layer, mix_out_duration);}
+void cg_proxy::next(int layer){impl_->next(layer);}
+void cg_proxy::update(int layer, const std::wstring& data){impl_->update(layer, data);}
+std::wstring cg_proxy::invoke(int layer, const std::wstring& label){return impl_->timed_invoke(layer, label);}
+std::wstring cg_proxy::description(int layer){return impl_->timed_description(layer);}
+std::wstring cg_proxy::template_host_info(){return impl_->timed_template_host_info();}
 
 }}

@@ -102,7 +102,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return spl::make_shared<image_producer>(frame_factory, filename + *ext);
+	return core::wrap_producer(spl::make_shared<image_producer>(frame_factory, filename + *ext));
 }
 
 

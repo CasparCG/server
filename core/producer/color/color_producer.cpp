@@ -124,7 +124,7 @@ spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<fram
 	if(color2.length() != 9 || color2[0] != '#')
 		return core::frame_producer::empty();
 
-	return spl::make_shared<color_producer>(frame_factory, color2);
+	return core::wrap_producer(spl::make_shared<color_producer>(frame_factory, color2));
 }
 spl::shared_ptr<write_frame> create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& color)
 {

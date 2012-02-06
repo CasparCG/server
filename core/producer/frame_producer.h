@@ -71,12 +71,12 @@ struct frame_producer : boost::noncopyable
 	static const spl::shared_ptr<frame_producer>& empty(); // nothrow
 };
 
-spl::shared_ptr<class draw_frame> receive_and_follow(spl::shared_ptr<frame_producer>& producer, int flags);
-
 typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<struct frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const std::vector<std::wstring>& params);
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const std::wstring& params);
+
+spl::shared_ptr<core::frame_producer> wrap_producer(spl::shared_ptr<core::frame_producer> producer);
 		
 }}

@@ -55,12 +55,12 @@ struct separated_producer : public frame_producer
 		[&]
 		{
 			if(fill_ == core::draw_frame::late())
-				fill_ = receive_and_follow(fill_producer_, flags);
+				fill_ = fill_producer_->receive(flags);
 		},
 		[&]
 		{
 			if(key_ == core::draw_frame::late())
-				key_ = receive_and_follow(key_producer_, flags | frame_producer::flags::alpha_only);
+				key_ = key_producer_->receive(flags | frame_producer::flags::alpha_only);
 		});
 
 		if(fill_ == draw_frame::eof() || key_ == draw_frame::eof())
@@ -104,7 +104,7 @@ struct separated_producer : public frame_producer
 
 spl::shared_ptr<frame_producer> create_separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key)
 {
-	return spl::make_shared<separated_producer>(fill, key);
+	return core::wrap_producer(spl::make_shared<separated_producer>(fill, key));
 }
 
 }}

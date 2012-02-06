@@ -39,6 +39,11 @@ namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
 
+void register_producer_factory(const producer_factory_t& factory)
+{
+	g_factories.push_back(factory);
+}
+
 boost::unique_future<std::wstring> frame_producer::call(const std::wstring&) 
 {
 	BOOST_THROW_EXCEPTION(not_supported());
@@ -65,29 +70,6 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty() // nothrow
 	static spl::shared_ptr<frame_producer> producer = spl::make_shared<empty_frame_producer>();
 	return producer;
 }	
-
-spl::shared_ptr<draw_frame> receive_and_follow(spl::shared_ptr<frame_producer>& producer, int hints)
-{	
-	auto frame = producer->receive(hints);
-	if(frame == draw_frame::eof())
-	{
-		CASPAR_LOG(info) << producer->print() << " End Of File.";
-		auto following = producer->get_following_producer();
-		if(following != frame_producer::empty())
-		{
-			following->set_leading_producer(producer);
-			producer = std::move(following);
-		}
-
-		return receive_and_follow(producer, hints);
-	}
-	return frame;
-}
-
-void register_producer_factory(const producer_factory_t& factory)
-{
-	g_factories.push_back(factory);
-}
 
 class destroy_producer_proxy : public frame_producer
 {	
@@ -165,6 +147,50 @@ public:
 	virtual uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 };
 
+class follow_producer_proxy : public frame_producer
+{	
+	spl::shared_ptr<frame_producer> producer_;
+public:
+	follow_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
+		: producer_(std::move(producer))
+	{
+	}
+
+	virtual spl::shared_ptr<draw_frame>	receive(int hints) override														
+	{
+		auto frame = producer_->receive(hints);
+		if(frame == draw_frame::eof())
+		{
+			CASPAR_LOG(info) << producer_->print() << " End Of File.";
+			auto following = producer_->get_following_producer();
+			if(following != frame_producer::empty())
+			{
+				following->set_leading_producer(producer_);
+				producer_ = std::move(following);
+			}
+
+			return receive(hints);
+		}
+		return frame;
+	}
+
+	virtual spl::shared_ptr<draw_frame>							last_frame() const override		 												{return producer_->last_frame();}
+	virtual std::wstring										print() const override															{return producer_->print();}
+	virtual boost::property_tree::wptree 						info() const override															{return producer_->info();}
+	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
+	virtual spl::shared_ptr<frame_producer>						get_following_producer() const override											{return producer_->get_following_producer();}
+	virtual void												set_leading_producer(const spl::shared_ptr<frame_producer>& producer) override	{return producer_->set_leading_producer(producer);}
+	virtual uint32_t											nb_frames() const override														{return producer_->nb_frames();}
+};
+
+spl::shared_ptr<core::frame_producer> wrap_producer(spl::shared_ptr<core::frame_producer> producer)
+{
+	return spl::make_shared<follow_producer_proxy>(
+			spl::make_shared<destroy_producer_proxy>(
+			 spl::make_shared<print_producer_proxy>(
+			  std::move(producer))));
+}
+
 spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.empty())
@@ -190,9 +216,7 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<f
 	if(producer == frame_producer::empty())
 		return producer;
 		
-	return spl::make_shared<destroy_producer_proxy>(
-			spl::make_shared<print_producer_proxy>(
-			 std::move(producer)));
+	return producer;
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
