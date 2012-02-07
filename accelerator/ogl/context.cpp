@@ -35,6 +35,8 @@
 
 #include <gl/glew.h>
 
+#include <windows.h>
+
 #include <SFML/Window/Context.hpp>
 
 #include <array>
@@ -44,10 +46,11 @@
 #include <tbb/concurrent_queue.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
-	
+		
 struct context::impl : public std::enable_shared_from_this<impl>
 {
 	std::unique_ptr<sf::Context> context_;
+	std::unique_ptr<sf::Context> secondary_context_;
 	
 	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<device_buffer>>>, 4>	device_pools_;
 	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<host_buffer>>>, 2>		host_pools_;
@@ -55,34 +58,60 @@ struct context::impl : public std::enable_shared_from_this<impl>
 	GLuint fbo_;
 
 	executor& executor_;
+	executor  secondary_executor_;
 				
 	impl(executor& executor) 
 		: executor_(executor)
+		, secondary_executor_(L"OpenGL allocation context")
 	{
 		CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 		
-		executor_.invoke([=]
+		auto ctx1 = executor_.invoke([=]() -> HGLRC 
 		{
 			context_.reset(new sf::Context());
-			context_->SetActive(true);
-		
+			context_->SetActive(true);		
+						
 			if (glewInit() != GLEW_OK)
 				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
-						
-			CASPAR_LOG(info) << L"OpenGL " << version();
-
+		
 			if(!GLEW_VERSION_3_0)
 				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 3.0 or higher. CasparCG Server will not be able to continue."));
 	
 			glGenFramebuffers(1, &fbo_);				
 			glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+			
+			auto ctx1 = wglGetCurrentContext();
+			
+			context_->SetActive(false);
 
-			CASPAR_LOG(info) << L"Successfully initialized OpenGL Device.";
+			return ctx1;
 		});
+
+		secondary_executor_.invoke([=]
+		{
+			secondary_context_.reset(new sf::Context());
+			secondary_context_->SetActive(true);	
+			auto ctx2 = wglGetCurrentContext();
+
+			if(!wglShareLists(ctx1, ctx2))
+					BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to share OpenGL contexts."));
+		});
+
+		executor_.invoke([=]
+		{		
+			context_->SetActive(true);
+		});
+		
+		CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
 	}
 
 	~impl()
 	{
+		secondary_executor_.invoke([=]
+		{
+			secondary_context_.reset();
+		});
+
 		executor_.invoke([=]
 		{
 			BOOST_FOREACH(auto& pool, device_pools_)
@@ -90,22 +119,27 @@ struct context::impl : public std::enable_shared_from_this<impl>
 			BOOST_FOREACH(auto& pool, host_pools_)
 				pool.clear();
 			glDeleteFramebuffers(1, &fbo_);
+
+			context_.reset();
 		});
 	}
 
 	spl::shared_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride)
 	{
-		std::shared_ptr<device_buffer> buffer;
-		try
+		return executor_.invoke([&]() -> spl::shared_ptr<device_buffer>
 		{
-			buffer.reset(new device_buffer(width, height, stride));
-		}
-		catch(...)
-		{
-			CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
-			throw;
-		}
-		return spl::make_shared_ptr(buffer);
+			std::shared_ptr<device_buffer> buffer;
+			try
+			{
+				buffer.reset(new device_buffer(width, height, stride));
+			}
+			catch(...)
+			{
+				CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
+				throw;
+			}
+			return spl::make_shared_ptr(buffer);
+		});
 	}
 				
 	spl::shared_ptr<device_buffer> create_device_buffer(int width, int height, int stride)
@@ -117,7 +151,7 @@ struct context::impl : public std::enable_shared_from_this<impl>
 		
 		std::shared_ptr<device_buffer> buffer;
 		if(!pool->try_pop(buffer))		
-			buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);}, task_priority::high_priority);			
+			buffer = allocate_device_buffer(width, height, stride);		
 	
 		auto self = shared_from_this();
 		return spl::shared_ptr<device_buffer>(buffer.get(), [self, buffer, pool](device_buffer*) mutable
@@ -128,23 +162,26 @@ struct context::impl : public std::enable_shared_from_this<impl>
 
 	spl::shared_ptr<host_buffer> allocate_host_buffer(int size, host_buffer::usage usage)
 	{
-		std::shared_ptr<host_buffer> buffer;
-
-		try
+		return secondary_executor_.invoke([=]() -> spl::shared_ptr<host_buffer>
 		{
-			buffer.reset(new host_buffer(size, usage));
-			if(usage == host_buffer::usage::write_only)
-				buffer->map();
-			else
-				buffer->unmap();			
-		}
-		catch(...)
-		{
-			CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
-			throw;	
-		}
+			std::shared_ptr<host_buffer> buffer;
 
-		return spl::make_shared_ptr(buffer);
+			try
+			{
+				buffer.reset(new host_buffer(size, usage));
+				if(usage == host_buffer::usage::write_only)
+					buffer->map();
+				else
+					buffer->unmap();			
+			}
+			catch(...)
+			{
+				CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
+				throw;	
+			}
+
+			return spl::make_shared_ptr(buffer);
+		});
 	}
 	
 	spl::shared_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage usage)
@@ -156,13 +193,14 @@ struct context::impl : public std::enable_shared_from_this<impl>
 		
 		std::shared_ptr<host_buffer> buffer;
 		if(!pool->try_pop(buffer))	
-			buffer = executor_.invoke([=]{return allocate_host_buffer(size, usage);}, task_priority::high_priority);	
+			buffer = allocate_host_buffer(size, usage);	
 	
-		auto self		= shared_from_this();
-		bool is_write	= (usage == host_buffer::usage::write_only);
+		bool is_write = (usage == host_buffer::usage::write_only);
+
+		auto self = shared_from_this();
 		return spl::shared_ptr<host_buffer>(buffer.get(), [self, is_write, buffer, pool](host_buffer*) mutable
 		{
-			self->executor_.begin_invoke([=]() mutable
+			self->secondary_executor_.begin_invoke([=]() mutable
 			{		
 				if(is_write)
 					buffer->map();
