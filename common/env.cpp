@@ -143,9 +143,12 @@ const std::wstring& data_folder()
 	return data;
 }
 
+#define QUOTE(str) #str
+#define EXPAND_AND_QUOTE(str) QUOTE(str)
+
 const std::wstring& version()
 {
-	static std::wstring ver = widen(
+	static std::wstring ver = u16(
 			EXPAND_AND_QUOTE(CASPAR_GEN)	"." 
 			EXPAND_AND_QUOTE(CASPAR_MAYOR)  "." 
 			EXPAND_AND_QUOTE(CASPAR_MINOR)  "." 
