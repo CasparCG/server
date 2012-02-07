@@ -79,40 +79,43 @@ namespace caspar { namespace decklink {
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
-	CComPtr<IDeckLink>											decklink_;
-	CComQIPtr<IDeckLinkInput>									input_;
-	
-	const std::wstring											model_name_;
-	const core::video_format_desc								format_desc_;
-	const size_t												device_index_;
-
 	safe_ptr<diagnostics::graph>								graph_;
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
-		
+
+	CComPtr<IDeckLink>											decklink_;
+	CComQIPtr<IDeckLinkInput>									input_;
+	CComQIPtr<IDeckLinkAttributes >								attributes_;
+	
+	const std::wstring											model_name_;
+	const size_t												device_index_;
+	const std::wstring											filter_;
+	
+	core::video_format_desc										format_desc_;
+	std::vector<size_t>											audio_cadence_;
+	boost::circular_buffer<size_t>								sync_buffer_;
+	ffmpeg::frame_muxer											muxer_;
+			
 	tbb::atomic<int>											hints_;
 	safe_ptr<core::frame_factory>								frame_factory_;
-	std::vector<size_t>											audio_cadence_;
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
 
-	std::exception_ptr											exception_;
-		
-	ffmpeg::frame_muxer											muxer_;
-
-	boost::circular_buffer<size_t>								sync_buffer_;
+	std::exception_ptr											exception_;		
 
 public:
 	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
 		: decklink_(get_device(device_index))
 		, input_(decklink_)
+		, attributes_(decklink_)
 		, model_name_(get_model_name(decklink_))
-		, format_desc_(format_desc)
 		, device_index_(device_index)
-		, frame_factory_(frame_factory)
-		, audio_cadence_(frame_factory->get_video_format_desc().audio_cadence)
+		, filter_(filter)
+		, format_desc_(format_desc)
+		, audio_cadence_(format_desc.audio_cadence)
 		, muxer_(format_desc.fps, frame_factory, filter)
 		, sync_buffer_(format_desc.audio_cadence.size())
+		, frame_factory_(frame_factory)
 	{		
 		hints_ = 0;
 		frame_buffer_.set_capacity(2);
@@ -126,9 +129,9 @@ public:
 		diagnostics::register_graph(graph_);
 		
 		auto display_mode = get_display_mode(input_, format_desc_.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
-		
+				
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
-		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0))) 
+		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, bmdVideoInputFlagDefault))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
 									<< msg_info(narrow(print()) + " Could not enable video input.")
 									<< boost::errinfo_api_function("EnableVideoInput"));
@@ -162,7 +165,7 @@ public:
 	virtual ULONG STDMETHODCALLTYPE		AddRef ()							{return 1;}
 	virtual ULONG STDMETHODCALLTYPE		Release ()							{return 1;}
 		
-	virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents /*notificationEvents*/, IDeckLinkDisplayMode* newDisplayMode, BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/)
+	virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode* newDisplayMode, BMDDetectedVideoInputFormatFlags /*detectedSignalFlags*/)
 	{
 		return S_OK;
 	}
@@ -260,7 +263,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]";
 	}
 };
 	
@@ -317,7 +320,9 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
 
-	auto device_index	= get_param(L"DEVICE", params, 1);
+	auto device_index	= get_param(L"DEVICE", params, -1);
+	if(device_index == -1)
+		device_index = boost::lexical_cast<int>(params.at(1));
 	auto filter_str		= get_param(L"FILTER", params); 	
 	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
 	auto format_desc	= core::video_format_desc::get(get_param(L"FORMAT", params, L"INVALID"));
