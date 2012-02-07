@@ -273,7 +273,7 @@ std::string get_fragment(bool blend_modes)
 	"}																					\n";
 }
 
-spl::shared_ptr<shader> get_image_shader(context& ogl, bool& blend_modes)
+spl::shared_ptr<shader> get_image_shader(bool& blend_modes)
 {
 	tbb::mutex::scoped_lock lock(g_shader_mutex);
 
