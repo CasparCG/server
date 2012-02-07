@@ -145,7 +145,12 @@ const std::wstring& data_folder()
 
 const std::wstring& version()
 {
-	static std::wstring ver = std::wstring(L"") + CASPAR_GEN + L"." + CASPAR_MAYOR + L"." + CASPAR_MINOR + L"." + CASPAR_REV + L" " + CASPAR_TAG;
+	static std::wstring ver = widen(
+			EXPAND_AND_QUOTE(CASPAR_GEN)	"." 
+			EXPAND_AND_QUOTE(CASPAR_MAYOR)  "." 
+			EXPAND_AND_QUOTE(CASPAR_MINOR)  "." 
+			EXPAND_AND_QUOTE(CASPAR_REV)	" " 
+			CASPAR_TAG);
 	return ver;
 }
 
