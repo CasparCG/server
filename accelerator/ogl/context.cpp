@@ -50,7 +50,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 struct context::impl : public std::enable_shared_from_this<impl>
 {
 	std::unique_ptr<sf::Context> context_;
-	std::unique_ptr<sf::Context> secondary_context_;
+	std::unique_ptr<sf::Context> host_alloc_context_;
 	
 	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<device_buffer>>>, 4>	device_pools_;
 	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<host_buffer>>>, 2>		host_pools_;
@@ -58,11 +58,11 @@ struct context::impl : public std::enable_shared_from_this<impl>
 	GLuint fbo_;
 
 	executor& executor_;
-	executor  secondary_executor_;
+	executor  host_alloc_executor_;
 				
 	impl(executor& executor) 
 		: executor_(executor)
-		, secondary_executor_(L"OpenGL allocation context")
+		, host_alloc_executor_(L"OpenGL allocation context")
 	{
 		CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 		
@@ -75,7 +75,7 @@ struct context::impl : public std::enable_shared_from_this<impl>
 				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
 		
 			if(!GLEW_VERSION_3_0)
-				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 3.0 or higher. CasparCG Server will not be able to continue."));
+				CASPAR_LOG(warning) << "Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 3.0 or higher.";
 	
 			glGenFramebuffers(1, &fbo_);				
 			glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
@@ -87,14 +87,14 @@ struct context::impl : public std::enable_shared_from_this<impl>
 			return ctx1;
 		});
 
-		secondary_executor_.invoke([=]
+		host_alloc_executor_.invoke([=]
 		{
-			secondary_context_.reset(new sf::Context());
-			secondary_context_->SetActive(true);	
+			host_alloc_context_.reset(new sf::Context());
+			host_alloc_context_->SetActive(true);	
 			auto ctx2 = wglGetCurrentContext();
 
 			if(!wglShareLists(ctx1, ctx2))
-					BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to share OpenGL contexts."));
+				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to share OpenGL contexts."));
 		});
 
 		executor_.invoke([=]
@@ -107,9 +107,9 @@ struct context::impl : public std::enable_shared_from_this<impl>
 
 	~impl()
 	{
-		secondary_executor_.invoke([=]
+		host_alloc_executor_.invoke([=]
 		{
-			secondary_context_.reset();
+			host_alloc_context_.reset();
 			BOOST_FOREACH(auto& pool, host_pools_)
 				pool.clear();
 		});
@@ -162,7 +162,7 @@ struct context::impl : public std::enable_shared_from_this<impl>
 
 	spl::shared_ptr<host_buffer> allocate_host_buffer(int size, host_buffer::usage usage)
 	{
-		return secondary_executor_.invoke([=]() -> spl::shared_ptr<host_buffer>
+		return host_alloc_executor_.invoke([=]() -> spl::shared_ptr<host_buffer>
 		{
 			std::shared_ptr<host_buffer> buffer;
 
@@ -200,7 +200,7 @@ struct context::impl : public std::enable_shared_from_this<impl>
 		auto self = shared_from_this();
 		return spl::shared_ptr<host_buffer>(buffer.get(), [self, is_write, buffer, pool](host_buffer*) mutable
 		{
-			self->secondary_executor_.begin_invoke([=]() mutable
+			self->host_alloc_executor_.begin_invoke([=]() mutable
 			{		
 				if(is_write)
 					buffer->map();
