@@ -38,7 +38,7 @@ namespace caspar { namespace ffmpeg {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(const spl::shared_ptr<AVFormatContext>& context, const spl::shared_ptr<core::frame_factory>& frame_factory);
+	explicit video_decoder(const spl::shared_ptr<AVFormatContext>& context);
 	
 	bool ready() const;
 	void push(const std::shared_ptr<AVPacket>& packet);
