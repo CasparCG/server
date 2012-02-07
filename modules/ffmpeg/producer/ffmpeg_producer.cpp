@@ -103,7 +103,7 @@ public:
 		
 		try
 		{
-			video_decoder_.reset(new video_decoder(input_.context(), frame_factory_));
+			video_decoder_.reset(new video_decoder(input_.context()));
 			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 		}
 		catch(averror_stream_not_found&)
