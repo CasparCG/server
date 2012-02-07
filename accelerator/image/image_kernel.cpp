@@ -70,8 +70,8 @@ struct image_kernel::impl : boost::noncopyable
 	{
 		static const double epsilon = 0.001;
 		
-		ogl_->yield();
-
+		ogl_->yield();		
+		
 		CASPAR_ASSERT(params.pix_desc.planes.size() == params.textures.size());
 
 		if(params.textures.empty() || !params.background)
@@ -93,7 +93,7 @@ struct image_kernel::impl : boost::noncopyable
 			
 		// Setup shader
 								
-		ogl_->use(*shader_);
+		shader_->use();
 
 		shader_->set("plane[0]",		texture_id::plane0);
 		shader_->set("plane[1]",		texture_id::plane1);
@@ -209,7 +209,7 @@ struct image_kernel::impl : boost::noncopyable
 			glTextureBarrierNV(); 
 		}
 
-		ogl_->attach(*params.background);
+		params.background->attach();
 		
 		// Draw
 				

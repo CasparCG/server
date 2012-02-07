@@ -37,6 +37,7 @@ public:
 	void set(const std::string& name, int value);
 	void set(const std::string& name, float value);
 	void set(const std::string& name, double value);
+	void use() const;
 private:
 	friend class context;
 	struct impl;

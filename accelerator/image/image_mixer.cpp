@@ -188,7 +188,7 @@ private:
 					item.buffers.clear();
 				}
 			}	
-
+			
 			// Draw
 			boost::shared_future<spl::shared_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> spl::shared_ptr<host_buffer>
 			{
@@ -220,14 +220,18 @@ private:
 				}
 			
 				auto result = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::usage::read_only); 
-				draw_buffer->copy_to(result);							
+				draw_buffer->copy_to(*result);							
 				return result;
 			});
 		
 			// Defer memory mapping.
 			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
 			{
-				auto ptr = reinterpret_cast<const uint8_t*>(buffer.get()->data()); // .get() and ->data() can block calling thread, ->data() can also block OpenGL thread, defer it as long as possible.
+				const auto& buf = buffer.get();
+				if(!buf->data())
+					ogl_->invoke(std::bind(&host_buffer::map, std::ref(buf)), task_priority::high_priority);
+
+				auto ptr = reinterpret_cast<const uint8_t*>(buf->data()); // .get() and ->data() can block calling thread, ->data() can also block OpenGL thread, defer it as long as possible.
 				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());
 			});
 		}
@@ -349,7 +353,7 @@ private:
 	spl::shared_ptr<device_buffer> create_mixer_buffer(int stride, const core::video_format_desc& format_desc)
 	{
 		auto buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, stride);
-		ogl_->clear(*buffer);
+		buffer->clear();
 		return buffer;
 	}
 };

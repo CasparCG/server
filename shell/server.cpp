@@ -71,7 +71,6 @@ struct server::impl : boost::noncopyable
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
 
 	impl()		
-		: ogl_(accelerator::ogl::context::create())
 	{			
 		ffmpeg::init();
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";

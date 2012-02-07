@@ -36,21 +36,21 @@ class context;
 class device_buffer : boost::noncopyable
 {
 public:	
+	device_buffer(int width, int height, int stride);
+
 	int stride() const;	
 	int width() const;
 	int height() const;
 		
-	void copy_from(const spl::shared_ptr<host_buffer>& source);
-	void copy_to(const spl::shared_ptr<host_buffer>& dest);
-private:
-	friend class context;
-	friend class image_kernel;
-	device_buffer(std::weak_ptr<context> parent, int width, int height, int stride);
+	void copy_from(host_buffer& source);
+	void copy_to(host_buffer& dest);
 			
+	void attach();
+	void clear();
 	void bind(int index);
 	void unbind();
 	int id() const;
-
+private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
 };
