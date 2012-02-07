@@ -110,13 +110,13 @@ struct context::impl : public std::enable_shared_from_this<impl>
 		secondary_executor_.invoke([=]
 		{
 			secondary_context_.reset();
+			BOOST_FOREACH(auto& pool, host_pools_)
+				pool.clear();
 		});
 
 		executor_.invoke([=]
 		{
 			BOOST_FOREACH(auto& pool, device_pools_)
-				pool.clear();
-			BOOST_FOREACH(auto& pool, host_pools_)
 				pool.clear();
 			glDeleteFramebuffers(1, &fbo_);
 
