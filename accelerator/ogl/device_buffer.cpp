@@ -48,16 +48,14 @@ static tbb::atomic<int> g_total_count;
 
 struct device_buffer::impl : boost::noncopyable
 {
-	std::weak_ptr<context>	parent_;
 	GLuint						id_;
 
 	const int width_;
 	const int height_;
 	const int stride_;
 public:
-	impl(std::weak_ptr<context> parent, int width, int height, int stride) 
-		: parent_(parent)
-		, width_(width)
+	impl(int width, int height, int stride) 
+		: width_(width)
 		, height_(height)
 		, stride_(stride)
 	{	
@@ -100,52 +98,51 @@ public:
 	{
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 	}
-		
-	void copy_from(const spl::shared_ptr<host_buffer>& source)
-	{
-		auto ogl = parent_.lock();
-		if(!ogl)
-			BOOST_THROW_EXCEPTION(invalid_operation());
 
-		ogl->begin_invoke([=]
-		{
-			source->unmap();
-			source->bind();
-			GL(glBindTexture(GL_TEXTURE_2D, id_));
-			GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
-			GL(glBindTexture(GL_TEXTURE_2D, 0));
-			source->unbind();
-		}, task_priority::high_priority);
+	void attach()
+	{		
+		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, id_, 0));
 	}
 
-	void copy_to(const spl::shared_ptr<host_buffer>& dest)
+	void clear()
 	{
-		auto ogl = parent_.lock();
-		if(!ogl)
-			BOOST_THROW_EXCEPTION(invalid_operation());
+		attach();		
+		GL(glClear(GL_COLOR_BUFFER_BIT));
+	}
+		
+	void copy_from(host_buffer& source)
+	{
+		source.unmap();
+		source.bind();
+		GL(glBindTexture(GL_TEXTURE_2D, id_));
+		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
+		GL(glBindTexture(GL_TEXTURE_2D, 0));
+		source.unbind();
+	}
 
-		ogl->begin_invoke([=]
-		{
-			dest->unmap();
-			dest->bind();
-			GL(glBindTexture(GL_TEXTURE_2D, id_));
-			GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
-			GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
-			GL(glBindTexture(GL_TEXTURE_2D, 0));
-			dest->unbind();
-			GL(glFlush());
-		}, task_priority::high_priority);
+	void copy_to(host_buffer& dest)
+	{
+		dest.unmap();
+		dest.bind();
+		GL(glBindTexture(GL_TEXTURE_2D, id_));
+		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
+		GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
+		GL(glBindTexture(GL_TEXTURE_2D, 0));
+		dest.unbind();
+		GL(glFlush());
 	}
 };
 
-device_buffer::device_buffer(std::weak_ptr<context> parent, int width, int height, int stride) : impl_(new impl(parent, width, height, stride)){}
+device_buffer::device_buffer(int width, int height, int stride) : impl_(new impl(width, height, stride)){}
 int device_buffer::stride() const { return impl_->stride_; }
 int device_buffer::width() const { return impl_->width_; }
 int device_buffer::height() const { return impl_->height_; }
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
-void device_buffer::copy_from(const spl::shared_ptr<host_buffer>& source){impl_->copy_from(source);}
-void device_buffer::copy_to(const spl::shared_ptr<host_buffer>& dest){impl_->copy_to(dest);}
+void device_buffer::attach(){impl_->attach();}
+void device_buffer::clear(){impl_->clear();}
+void device_buffer::copy_from(host_buffer& source){impl_->copy_from(source);}
+void device_buffer::copy_to(host_buffer& dest){impl_->copy_to(dest);}
 int device_buffer::id() const{ return impl_->id_;}
 
 }}}

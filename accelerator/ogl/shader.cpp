@@ -132,6 +132,11 @@ public:
 	{
 		GL(glUniform1f(get_location(name.c_str()), static_cast<float>(value)));
 	}
+
+	void use()
+	{		
+		GL(glUseProgramObjectARB(program_));	
+	}
 };
 
 
@@ -141,5 +146,6 @@ void shader::set(const std::string& name, int value){impl_->set(name, value);}
 void shader::set(const std::string& name, float value){impl_->set(name, value);}
 void shader::set(const std::string& name, double value){impl_->set(name, value);}
 int shader::id() const{return impl_->program_;}
+void shader::use()const{impl_->use();}
 
 }}}

@@ -45,12 +45,10 @@ struct host_buffer::impl : boost::noncopyable
 	tbb::atomic<void*>			data_;
 	GLenum						usage_;
 	GLenum						target_;
-	std::weak_ptr<context>	parent_;
 
 public:
-	impl(std::weak_ptr<context> parent, int size, host_buffer::usage usage) 
-		: parent_(parent)
-		, size_(size)
+	impl(int size, host_buffer::usage usage) 
+		: size_(size)
 		, pbo_(0)
 		, target_(usage == host_buffer::usage::write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
 		, usage_(usage == host_buffer::usage::write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
@@ -120,27 +118,10 @@ public:
 	{
 		GL(glBindBuffer(target_, 0));
 	}
-	
-	void* data()
-	{
-		if(data_ != nullptr)
-			return data_;
-
-		auto ogl = parent_.lock();
-
-		if(!ogl)
-			BOOST_THROW_EXCEPTION(invalid_operation());
-		
-		return ogl->invoke([&]
-		{
-			return map();
-		}, task_priority::high_priority);
-	}
 };
 
-host_buffer::host_buffer(std::weak_ptr<context> parent, int size, usage usage) : impl_(new impl(parent, size, usage)){}
-const void* host_buffer::data() const {return impl_->data_;}
-void* host_buffer::data() {return impl_->data();}
+host_buffer::host_buffer(int size, usage usage) : impl_(new impl(size, usage)){}
+void* host_buffer::data(){return impl_->data_;}
 void host_buffer::map(){impl_->map();}
 void host_buffer::unmap(){impl_->unmap();}
 void host_buffer::bind(){impl_->bind();}

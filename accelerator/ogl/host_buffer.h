@@ -41,22 +41,18 @@ public:
 	};
 	typedef enum_class<usage_def> usage;
 	
+	host_buffer(int size, usage usage);
+
 	const void* data() const;
 	void* data();
 	int size() const;	
 	
-private:
-	friend class context;
-	friend class device_buffer;
-
-	void bind();
-	void unbind();
-
 	void map();
 	void unmap();
 
-	host_buffer(std::weak_ptr<context> parent, int size, usage usage);
-
+	void bind();
+	void unbind();
+private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
 };
