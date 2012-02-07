@@ -75,7 +75,7 @@ struct context::impl : public std::enable_shared_from_this<impl>
 				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
 		
 			if(!GLEW_VERSION_3_0)
-				CASPAR_LOG(warning) << "Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 3.0 or higher.";
+				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 3.0 or higher."));
 	
 			glGenFramebuffers(1, &fbo_);				
 			glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
