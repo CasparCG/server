@@ -38,9 +38,7 @@ class context : public std::enable_shared_from_this<context>, boost::noncopyable
 	executor executor_;
 public:		
 	context();
-	
-	void yield();
-	
+		
 	spl::shared_ptr<device_buffer>							create_device_buffer(int width, int height, int stride);
 	spl::shared_ptr<host_buffer>							create_host_buffer(int size, host_buffer::usage usage);
 

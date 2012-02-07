@@ -62,15 +62,13 @@ struct image_kernel::impl : boost::noncopyable
 							
 	impl(const spl::shared_ptr<context>& ogl)
 		: ogl_(ogl)
-		, shader_(ogl_->invoke([&]{return get_image_shader(*ogl, blend_modes_);}))
+		, shader_(ogl_->invoke([&]{return get_image_shader(blend_modes_);}))
 	{
 	}
 
 	void draw(draw_params&& params)
 	{
-		static const double epsilon = 0.001;
-		
-		ogl_->yield();		
+		static const double epsilon = 0.001;		
 		
 		CASPAR_ASSERT(params.pix_desc.planes.size() == params.textures.size());
 

@@ -234,11 +234,6 @@ struct context::impl : public std::enable_shared_from_this<impl>
 			return result;
 		}, task_priority::high_priority);
 	}
-
-	void yield()
-	{
-		executor_.yield(task_priority::high_priority);
-	}
 };
 
 context::context() 
@@ -247,7 +242,6 @@ context::context()
 {
 }
 	
-void													context::yield(){impl_->yield();}	
 spl::shared_ptr<device_buffer>							context::create_device_buffer(int width, int height, int stride){return impl_->create_device_buffer(width, height, stride);}
 spl::shared_ptr<host_buffer>							context::create_host_buffer(int size, host_buffer::usage usage){return impl_->create_host_buffer(size, usage);}
 boost::unique_future<spl::shared_ptr<device_buffer>>	context::copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
