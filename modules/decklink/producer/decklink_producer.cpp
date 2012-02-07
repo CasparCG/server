@@ -78,41 +78,45 @@ namespace caspar { namespace decklink {
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
-	CComPtr<IDeckLink>											decklink_;
-	CComQIPtr<IDeckLinkInput>									input_;
+	spl::shared_ptr<diagnostics::graph>		graph_;
+	boost::timer							tick_timer_;
+	boost::timer							frame_timer_;
+
+	CComPtr<IDeckLink>						decklink_;
+	CComQIPtr<IDeckLinkInput>				input_;
+	CComQIPtr<IDeckLinkAttributes >			attributes_;
 	
-	const std::wstring											model_name_;
-	const core::video_format_desc								format_desc_;
-	const size_t												device_index_;
+	const std::wstring						model_name_;
+	const size_t							device_index_;
+	const std::wstring						filter_;
+	
+	core::video_format_desc					format_desc_;
+	std::vector<int>						audio_cadence_;
+	boost::circular_buffer<size_t>			sync_buffer_;
+	ffmpeg::frame_muxer						muxer_;
+			
+	tbb::atomic<int>						flags_;
+	spl::shared_ptr<core::frame_factory>	frame_factory_;
 
-	spl::shared_ptr<diagnostics::graph>								graph_;
-	boost::timer												tick_timer_;
-	boost::timer												frame_timer_;
-		
-	tbb::atomic<int>											flags_;
-	spl::shared_ptr<core::frame_factory>								frame_factory_;
-	std::vector<int>											audio_cadence_;
+	tbb::concurrent_bounded_queue<
+		spl::shared_ptr<core::draw_frame>>	frame_buffer_;
 
-	tbb::concurrent_bounded_queue<spl::shared_ptr<core::draw_frame>>	frame_buffer_;
-
-	std::exception_ptr											exception_;
-		
-	ffmpeg::frame_muxer											muxer_;
-
-	boost::circular_buffer<size_t>								sync_buffer_;
+	std::exception_ptr						exception_;		
 
 public:
 	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
 		: decklink_(get_device(device_index))
 		, input_(decklink_)
+		, attributes_(decklink_)
 		, model_name_(get_model_name(decklink_))
-		, format_desc_(format_desc)
 		, device_index_(device_index)
-		, frame_factory_(frame_factory)
-		, audio_cadence_(frame_factory->get_video_format_desc().audio_cadence)
+		, filter_(filter)
+		, format_desc_(format_desc)
+		, audio_cadence_(format_desc.audio_cadence)
 		, muxer_(format_desc.fps, frame_factory, filter)
 		, sync_buffer_(format_desc.audio_cadence.size())
-	{		
+		, frame_factory_(frame_factory)
+	{	
 		flags_ = 0;
 		frame_buffer_.set_capacity(2);
 		
@@ -259,7 +263,7 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]";
 	}
 };
 	
@@ -331,7 +335,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 
 	auto device_index	= get_param(L"DEVICE", params, -1);
 	if(device_index == -1)
-		device_index = params.size() > 1 ? boost::lexical_cast<int>(params.at(1)) : 1;
+		device_index = boost::lexical_cast<int>(params.at(1));
 
 	auto filter_str		= get_param(L"FILTER", params); 	
 	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
