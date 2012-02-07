@@ -24,67 +24,28 @@
 #include "host_buffer.h"
 #include "device_buffer.h"
 
-#include <common/concurrency/executor.h>
 #include <common/spl/memory.h>
-
-#include <gl/glew.h>
-
-#include <SFML/Window/Context.hpp>
-
-#include <tbb/concurrent_unordered_map.h>
-#include <tbb/concurrent_queue.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
 
-#include <array>
-#include <unordered_map>
+#include <common/concurrency/executor.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
-
-class shader;
-
-template<typename T>
-struct buffer_pool
-{
-	tbb::atomic<int> usage_count;
-	tbb::atomic<int> flush_count;
-	tbb::concurrent_bounded_queue<std::shared_ptr<T>> items;
-
-	buffer_pool()
-	{
-		usage_count = 0;
-		flush_count = 0;
-	}
-};
-
+	
 class context : public std::enable_shared_from_this<context>, boost::noncopyable
 {	
-	std::unique_ptr<sf::Context> context_;
-	
-	std::array<tbb::concurrent_unordered_map<int, spl::shared_ptr<buffer_pool<device_buffer>>>, 4> device_pools_;
-	std::array<tbb::concurrent_unordered_map<int, spl::shared_ptr<buffer_pool<host_buffer>>>, 2> host_pools_;
-	
-	GLuint fbo_;
-
 	executor executor_;
-				
-	context();
 public:		
-	static spl::shared_ptr<context> create();
-	~context();
+	context();
 	
-	void attach(device_buffer& texture);
-	void clear(device_buffer& texture);		
-	void use(shader& shader);
-
 	void yield();
 	
 	spl::shared_ptr<device_buffer>							create_device_buffer(int width, int height, int stride);
 	spl::shared_ptr<host_buffer>							create_host_buffer(int size, host_buffer::usage usage);
+
 	boost::unique_future<spl::shared_ptr<device_buffer>>	copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride);
 	
-	boost::unique_future<void> gc();
 	std::wstring version();
 
 	template<typename Func>
@@ -99,8 +60,8 @@ public:
 		return executor_.invoke(std::forward<Func>(func), priority);
 	}
 private:
-	spl::shared_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride);
-	spl::shared_ptr<host_buffer>	allocate_host_buffer(int size, host_buffer::usage usage);
+	struct impl;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}}
