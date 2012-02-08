@@ -6,6 +6,8 @@
 #include <vector>
 #include <tbb/cache_aligned_allocator.h>
 
+namespace caspar { namespace accelerator { namespace cpu {
+
 typedef std::vector<float, tbb::cache_aligned_allocator<float>> vector_ps;
 
 class xmm_ps
@@ -565,4 +567,4 @@ T xmm_cast(const U& other)
 	return xmm_cast_impl<T>()(other);
 }
 
-
+}}}

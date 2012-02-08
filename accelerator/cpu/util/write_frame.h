@@ -36,10 +36,10 @@
 FORWARD2(caspar, core, struct frame_visitor);
 FORWARD2(caspar, core, struct pixel_format_desc);
 
-typedef std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> host_buffer;
-
 namespace caspar { namespace accelerator { namespace cpu {
 	
+typedef std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> host_buffer;
+
 class write_frame sealed : public core::write_frame
 {
 	write_frame(const write_frame&);

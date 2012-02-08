@@ -13,6 +13,8 @@
 #include <intrin.h>
 #include <stdint.h>
 
+namespace caspar { namespace accelerator { namespace cpu {
+
 /*
 	Function: blend
 
@@ -59,3 +61,5 @@ static void blend(uint8_t* dest, const uint8_t* source1, const uint8_t* source2,
 		}     
 	});
 }
+
+}}}
