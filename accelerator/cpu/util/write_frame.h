@@ -28,14 +28,17 @@
 #include <core/video_format.h>
 #include <core/mixer/audio/audio_mixer.h>
 
+#include <boost/range/iterator_range.hpp>
+
 #include <stdint.h>
 #include <vector>
 
-FORWARD1(boost, template <typename> class iterator_range);
 FORWARD2(caspar, core, struct frame_visitor);
 FORWARD2(caspar, core, struct pixel_format_desc);
 
-namespace caspar { namespace accelerator { namespace ogl {
+typedef std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> host_buffer;
+
+namespace caspar { namespace accelerator { namespace cpu {
 	
 class write_frame sealed : public core::write_frame
 {
@@ -43,7 +46,7 @@ class write_frame sealed : public core::write_frame
 	write_frame& operator=(const write_frame);
 public:	
 	explicit write_frame(const void* tag);
-	explicit write_frame(const spl::shared_ptr<class context>& ogl, const void* tag, const core::pixel_format_desc& desc);
+	explicit write_frame(const void* tag, const core::pixel_format_desc& desc);
 
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
@@ -69,11 +72,11 @@ public:
 	virtual int width() const override;
 	virtual int height() const override;
 								
-	virtual const void* tag() const override;
-			
+	virtual const void* tag() const override;	
+
 	// write_frames
 
-	std::vector<spl::shared_ptr<class host_buffer>> get_buffers();
+	std::vector<spl::shared_ptr<host_buffer>> get_buffers();		
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

@@ -22,8 +22,9 @@
 
 #include "server.h"
 
-#include <accelerator/ogl/util/context.h>
-#include <accelerator/ogl/image/image_mixer.h>
+#include <accelerator/factory.h>
+#include <accelerator/ogl/factory.h>
+#include <accelerator/cpu/factory.h>
 
 #include <common/env.h>
 #include <common/except.h>
@@ -66,12 +67,30 @@ using namespace protocol;
 
 struct server::impl : boost::noncopyable
 {
-	spl::shared_ptr<accelerator::ogl::context>			ogl_;
+	std::unique_ptr<accelerator::factory>				accel_factory_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;	
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
 
 	impl()		
-	{			
+	{	
+		auto accel_str = env::properties().get(L"configuration.accelerator", L"auto");
+
+		if(accel_str == L"cpu")
+			accel_factory_.reset(new accelerator::cpu::factory());
+		else
+		{
+			try
+			{
+				accel_factory_.reset(new accelerator::ogl::factory());
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				accel_factory_.reset(new accelerator::cpu::factory());
+				CASPAR_LOG(warning) << L"Using fallback CPU mixer.";
+			}
+		}
+
 		ffmpeg::init();
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
 							  
@@ -118,7 +137,7 @@ struct server::impl : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, spl::make_shared<accelerator::ogl::image_mixer>(ogl_)));
+			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, accel_factory_->create_image_mixer()));
 			
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child(L"consumers"))
 			{
@@ -147,7 +166,7 @@ struct server::impl : boost::noncopyable
 
 		// Dummy diagnostics channel
 		if(env::properties().get(L"configuration.channel-grid", false))
-			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), spl::make_shared<accelerator::ogl::image_mixer>(ogl_)));
+			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), accel_factory_->create_image_mixer()));
 	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)

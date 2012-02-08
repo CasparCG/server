@@ -75,6 +75,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <PostBuildEvent>
       <Command>
@@ -118,9 +119,13 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="cpu\factory.h" />
     <ClInclude Include="cpu\image\image_mixer.h" />
     <ClInclude Include="cpu\util\blend.h" />
     <ClInclude Include="cpu\util\simd.h" />
+    <ClInclude Include="cpu\util\write_frame.h" />
+    <ClInclude Include="factory.h" />
+    <ClInclude Include="ogl\factory.h" />
     <ClInclude Include="ogl\image\blending_glsl.h" />
     <ClInclude Include="ogl\image\image_kernel.h" />
     <ClInclude Include="ogl\image\image_mixer.h" />
@@ -141,9 +146,21 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="cpu\factory.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="cpu\image\image_mixer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="cpu\util\write_frame.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="ogl\factory.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="ogl\image\image_kernel.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
