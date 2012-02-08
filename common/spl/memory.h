@@ -411,9 +411,15 @@ public:
     typedef D deleter_type;
 
     unique_ptr()
-		: p_(new t())
+		: p_(new T())
 	{
 	}
+	
+    template<typename T2, typename D2>    
+    unique_ptr(unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
+        : p_(std::move(p))
+    {
+    }
 			
     template<typename T2, typename D2>    
     explicit unique_ptr(std::unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
@@ -439,12 +445,12 @@ public:
             throw std::invalid_argument("p");
     }
 
-    unique_ptr<T> operator=(unique_ptr&& other)
+    unique_ptr<T>& operator=(unique_ptr&& other)
     {
         other.swap(*this);
         return *this;
     }
-			
+				
     T& operator*() const 
     { 
         return *p_.get();
@@ -464,13 +470,7 @@ public:
     { 
         p_.swap(other.p_); 
     } 
-
-	template<typename T2>
-    operator std::unique_ptr<T2>() const 
-    { 
-        return p_;
-    }
-
+	
     template<class D, class T2> 
     D* get_deleter(shared_ptr<T2> const& ptr) 
     { 

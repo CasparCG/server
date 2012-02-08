@@ -7,9 +7,6 @@
     <Filter Include="source\ogl">
       <UniqueIdentifier>{dbb5f22a-c188-4ab8-af04-3ec2b12d2e27}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\image">
-      <UniqueIdentifier>{1e686392-8f55-4919-8eee-026f3e8d2e9a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\cpu">
       <UniqueIdentifier>{51a1672a-ca14-4c53-819d-ba8fbedc01da}</UniqueIdentifier>
     </Filter>
@@ -64,6 +61,18 @@
     <ClInclude Include="cpu\image\image_mixer.h">
       <Filter>source\cpu\image</Filter>
     </ClInclude>
+    <ClInclude Include="cpu\util\write_frame.h">
+      <Filter>source\cpu\util</Filter>
+    </ClInclude>
+    <ClInclude Include="factory.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="cpu\factory.h">
+      <Filter>source\cpu</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\factory.h">
+      <Filter>source\ogl</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp" />
@@ -93,6 +102,15 @@
     </ClCompile>
     <ClCompile Include="cpu\image\image_mixer.cpp">
       <Filter>source\cpu\image</Filter>
+    </ClCompile>
+    <ClCompile Include="cpu\util\write_frame.cpp">
+      <Filter>source\cpu\util</Filter>
+    </ClCompile>
+    <ClCompile Include="cpu\factory.cpp">
+      <Filter>source\cpu</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\factory.cpp">
+      <Filter>source\ogl</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
