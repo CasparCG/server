@@ -22,8 +22,8 @@
 
 #include "server.h"
 
-#include <accelerator/ogl/context.h>
-#include <accelerator/image/image_mixer.h>
+#include <accelerator/ogl/util/context.h>
+#include <accelerator/ogl/image/image_mixer.h>
 
 #include <common/env.h>
 #include <common/except.h>

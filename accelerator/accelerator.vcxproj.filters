@@ -10,62 +10,89 @@
     <Filter Include="source\image">
       <UniqueIdentifier>{1e686392-8f55-4919-8eee-026f3e8d2e9a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\cpu">
+      <UniqueIdentifier>{51a1672a-ca14-4c53-819d-ba8fbedc01da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\cpu\image">
+      <UniqueIdentifier>{aff9c695-a032-4348-b6df-beeba5140232}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\ogl\image">
+      <UniqueIdentifier>{2c25c424-afd1-4f90-847b-33c0d407be84}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\ogl\util">
+      <UniqueIdentifier>{7cda2be5-ffba-43b9-8aa9-3afcc106d569}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\cpu\util">
+      <UniqueIdentifier>{06a3568b-8213-4a87-8a22-19537441daad}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ogl\device_buffer.h">
-      <Filter>source\ogl</Filter>
-    </ClInclude>
-    <ClInclude Include="ogl\host_buffer.h">
-      <Filter>source\ogl</Filter>
-    </ClInclude>
-    <ClInclude Include="ogl\shader.h">
-      <Filter>source\ogl</Filter>
-    </ClInclude>
-    <ClInclude Include="ogl\write_frame.h">
-      <Filter>source\ogl</Filter>
-    </ClInclude>
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="image\blending_glsl.h">
-      <Filter>source\image</Filter>
+    <ClInclude Include="cpu\util\simd.h">
+      <Filter>source\cpu\util</Filter>
     </ClInclude>
-    <ClInclude Include="image\image_kernel.h">
-      <Filter>source\image</Filter>
+    <ClInclude Include="cpu\util\blend.h">
+      <Filter>source\cpu\util</Filter>
     </ClInclude>
-    <ClInclude Include="image\image_mixer.h">
-      <Filter>source\image</Filter>
+    <ClInclude Include="ogl\image\image_mixer.h">
+      <Filter>source\ogl\image</Filter>
     </ClInclude>
-    <ClInclude Include="image\image_shader.h">
-      <Filter>source\image</Filter>
+    <ClInclude Include="ogl\image\image_shader.h">
+      <Filter>source\ogl\image</Filter>
     </ClInclude>
-    <ClInclude Include="ogl\context.h">
-      <Filter>source\ogl</Filter>
+    <ClInclude Include="ogl\image\blending_glsl.h">
+      <Filter>source\ogl\image</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\image\image_kernel.h">
+      <Filter>source\ogl\image</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\util\context.h">
+      <Filter>source\ogl\util</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\util\device_buffer.h">
+      <Filter>source\ogl\util</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\util\host_buffer.h">
+      <Filter>source\ogl\util</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\util\shader.h">
+      <Filter>source\ogl\util</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\util\write_frame.h">
+      <Filter>source\ogl\util</Filter>
+    </ClInclude>
+    <ClInclude Include="cpu\image\image_mixer.h">
+      <Filter>source\cpu\image</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ogl\device_buffer.cpp">
-      <Filter>source\ogl</Filter>
-    </ClCompile>
-    <ClCompile Include="ogl\host_buffer.cpp">
-      <Filter>source\ogl</Filter>
-    </ClCompile>
-    <ClCompile Include="ogl\shader.cpp">
-      <Filter>source\ogl</Filter>
-    </ClCompile>
-    <ClCompile Include="ogl\write_frame.cpp">
-      <Filter>source\ogl</Filter>
-    </ClCompile>
     <ClCompile Include="StdAfx.cpp" />
-    <ClCompile Include="image\image_kernel.cpp">
-      <Filter>source\image</Filter>
+    <ClCompile Include="ogl\image\image_mixer.cpp">
+      <Filter>source\ogl\image</Filter>
     </ClCompile>
-    <ClCompile Include="image\image_mixer.cpp">
-      <Filter>source\image</Filter>
+    <ClCompile Include="ogl\image\image_shader.cpp">
+      <Filter>source\ogl\image</Filter>
     </ClCompile>
-    <ClCompile Include="image\image_shader.cpp">
-      <Filter>source\image</Filter>
+    <ClCompile Include="ogl\image\image_kernel.cpp">
+      <Filter>source\ogl\image</Filter>
     </ClCompile>
-    <ClCompile Include="ogl\context.cpp">
-      <Filter>source\ogl</Filter>
+    <ClCompile Include="ogl\util\context.cpp">
+      <Filter>source\ogl\util</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\util\device_buffer.cpp">
+      <Filter>source\ogl\util</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\util\host_buffer.cpp">
+      <Filter>source\ogl\util</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\util\shader.cpp">
+      <Filter>source\ogl\util</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\util\write_frame.cpp">
+      <Filter>source\ogl\util</Filter>
+    </ClCompile>
+    <ClCompile Include="cpu\image\image_mixer.cpp">
+      <Filter>source\cpu\image</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
