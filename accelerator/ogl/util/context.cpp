@@ -44,6 +44,9 @@
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
+#include <tbb/atomic.h>
+
+tbb::atomic<int> g_count = tbb::atomic<int>();
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
@@ -64,6 +67,9 @@ struct context::impl : public std::enable_shared_from_this<impl>
 		: executor_(executor)
 		, host_alloc_executor_(L"OpenGL allocation context")
 	{
+		if(g_count++ > 1)
+			CASPAR_LOG(warning) << L"Multiple OGL contexts.";
+
 		CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 		
 		auto ctx1 = executor_.invoke([=]() -> HGLRC 

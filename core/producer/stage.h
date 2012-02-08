@@ -27,6 +27,7 @@
 #include <common/spl/memory.h>
 #include <common/tweener.h>
 
+#include <boost/optional.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <functional>

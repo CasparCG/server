@@ -203,14 +203,17 @@ public:
 
 	void init()
 	{
-		if(!GLEW_VERSION_2_1)
-			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
-
 		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), u8(print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
 		window_.ShowMouseCursor(false);
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
 		window_.SetActive();
+		
+		if(!GLEW_VERSION_2_1 && glewInit() != GLEW_OK)
+			BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+
+		if(!GLEW_VERSION_2_1)
+			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glDisable(GL_DEPTH_TEST));		
