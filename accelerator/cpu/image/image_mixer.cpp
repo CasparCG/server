@@ -150,11 +150,11 @@ private:
 			auto start = field_mode == core::field_mode::lower ? 1 : 0;
 			auto step  = field_mode == core::field_mode::progressive ? 1 : 2;
 
-			auto source2 = item.buffers.at(0)->data();
+			auto source = item.buffers.at(0)->data();
 
 			tbb::parallel_for(start, height, step, [&](int y)
 			{
-				cpu::blend(dest + y*width*4, dest + y*width*4, source2 + y*width*4, width*4);
+				cpu::blend(dest + y*width*4, source + y*width*4, width*4);
 			});
 		}
 	}
@@ -191,6 +191,8 @@ private:
 			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest->data(), PIX_FMT_BGRA, width, height);
 				
 			sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, av_frame->data, av_frame->linesize);	
+			
+			clamp_alpha_overflow(av_frame->data[0], av_frame->data[0], width*height*4);
 
 			item.buffers.clear();
 			item.buffers.push_back(dest);
@@ -200,6 +202,36 @@ private:
 
 			pool.push(sws_context);
 		});
+	}
+
+	void clamp_alpha_overflow(uint8_t* dest, const uint8_t* source, size_t count)
+	{		
+		CASPAR_VERIFY(count % 64 == 0);
+
+		auto alpha_shuffle	= xmm_epi8(15, 15, 15, 15, 11, 11, 11, 11, 7, 7, 7, 7, 3, 3, 3, 3);
+
+		for(auto n = 0; n < count; n += 64)    
+		{
+			auto x0			= xmm_epi8::load(source+n+0);
+			auto x1			= xmm_epi8::load(source+n+16);
+			auto x2			= xmm_epi8::load(source+n+32);
+			auto x3			= xmm_epi8::load(source+n+48);
+
+			auto aaaa0		= xmm_epi8::shuffle(x0, alpha_shuffle);
+			auto aaaa1		= xmm_epi8::shuffle(x1, alpha_shuffle);
+			auto aaaa2		= xmm_epi8::shuffle(x2, alpha_shuffle);
+			auto aaaa3		= xmm_epi8::shuffle(x3, alpha_shuffle);
+
+			x0				= xmm_epi8::umin(x0, aaaa0);
+			x1				= xmm_epi8::umin(x1, aaaa1);
+			x2				= xmm_epi8::umin(x2, aaaa2);
+			x3				= xmm_epi8::umin(x3, aaaa3);
+			
+			xmm_epi8::stream(x0, dest+n+0);
+			xmm_epi8::stream(x1, dest+n+16);
+			xmm_epi8::stream(x2, dest+n+32);
+			xmm_epi8::stream(x3, dest+n+48);
+		} 
 	}
 };
 		
