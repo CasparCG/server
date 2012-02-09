@@ -206,6 +206,11 @@ public:
 	{
 		return value_.m128i_i32[index];
 	}
+
+	static xmm_epi32 zero()
+	{
+		return _mm_setzero_si128();
+	}
 };
 
 inline xmm_epi32 operator>>(const xmm_epi32& lhs, int count)
@@ -298,13 +303,13 @@ public:
 		return *this;
 	}
 
-	xmm_epi16 multiply_low_unsigned(const xmm_epi16& other)
+	xmm_epi16 umultiply_low(const xmm_epi16& other)
 	{		
 		value_ = _mm_mullo_epi16(value_, other.value_);
 		return *this;
 	}
 
-	xmm_epi16 multiply_high_unsigned(const xmm_epi16& other)
+	xmm_epi16 umultiply_high(const xmm_epi16& other)
 	{		
 		value_ = _mm_mulhi_epi16(value_, other.value_);
 		return *this;
@@ -334,6 +339,18 @@ public:
 		return *this;
 	}
 		
+	xmm_epi16 max(const xmm_epi16& other)
+	{		
+		value_ = _mm_max_epi16(value_, other.value_);
+		return *this;
+	}
+	
+	xmm_epi16 min(const xmm_epi16& other)
+	{		
+		value_ = _mm_min_epi16(value_, other.value_);
+		return *this;
+	}
+
 	int16_t operator[](int index) const
 	{
 		return value_.m128i_i16[index];
@@ -373,14 +390,14 @@ public:
 		return xmm_epi16(lhs).multiply_high(rhs);
 	}
 
-	static xmm_epi16 multiply_low_unsigned(const xmm_epi16& lhs, const xmm_epi16& rhs)
+	static xmm_epi16 umultiply_low(const xmm_epi16& lhs, const xmm_epi16& rhs)
 	{
-		return xmm_epi16(lhs).multiply_low_unsigned(rhs);
+		return xmm_epi16(lhs).umultiply_low(rhs);
 	}
 
-	static xmm_epi16 multiply_high_unsigned(const xmm_epi16& lhs, const xmm_epi16& rhs)
+	static xmm_epi16 umultiply_high(const xmm_epi16& lhs, const xmm_epi16& rhs)
 	{
-		return xmm_epi16(lhs).multiply_high_unsigned(rhs);
+		return xmm_epi16(lhs).umultiply_high(rhs);
 	}
 
 	static xmm_epi16 unpack_low(const xmm_epi16& lhs, const xmm_epi16& rhs)
@@ -401,6 +418,21 @@ public:
 	static xmm_epi16 and_not(const xmm_epi16& lhs, const xmm_epi16& rhs)
 	{
 		return xmm_epi16(lhs).and_not(rhs);
+	}
+	
+	static xmm_epi16 max(const xmm_epi16& lhs, const xmm_epi16& rhs)
+	{
+		return xmm_epi16(lhs).max(rhs);
+	}
+	
+	static xmm_epi16 min(const xmm_epi16& lhs, const xmm_epi16& rhs)
+	{
+		return xmm_epi16(lhs).min(rhs);
+	}
+
+	static xmm_epi16 zero()
+	{
+		return _mm_setzero_si128();
 	}
 };
 
@@ -486,6 +518,36 @@ public:
 		value_ = _mm_shuffle_epi8 (value_, other.value_);
 		return *this;
 	}
+		
+	xmm_epi8& max(const xmm_epi8& other)
+	{		
+		value_ = _mm_max_epi8 (value_, other.value_);
+		return *this;
+	}
+	
+	xmm_epi8& min(const xmm_epi8& other)
+	{		
+		value_ = _mm_min_epi8 (value_, other.value_);
+		return *this;
+	}
+	
+	xmm_epi8& umax(const xmm_epi8& other)
+	{		
+		value_ = _mm_max_epu8(value_, other.value_);
+		return *this;
+	}
+	
+	xmm_epi8& umin(const xmm_epi8& other)
+	{		
+		value_ = _mm_min_epu8(value_, other.value_);
+		return *this;
+	}
+	
+	xmm_epi8& blend(const xmm_epi8& other, const xmm_epi8& mask)
+	{		
+		value_ = _mm_blendv_epi8(value_, other.value_, mask.value_);
+		return *this;
+	}
 
 	const xmm_epi8& stream(void* dest) const
 	{
@@ -527,6 +589,36 @@ public:
 	static xmm_epi8& shuffle(const xmm_epi8& lhs, const xmm_epi8& rhs)
 	{		
 		return xmm_epi8(lhs).shuffle(rhs);
+	}
+	
+	static xmm_epi8& max(const xmm_epi8& lhs, const xmm_epi8& rhs)
+	{		
+		return xmm_epi8(lhs).max(rhs);
+	}
+	
+	static xmm_epi8& min(const xmm_epi8& lhs, const xmm_epi8& rhs)
+	{		
+		return xmm_epi8(lhs).min(rhs);
+	}
+	
+	static xmm_epi8& umax(const xmm_epi8& lhs, const xmm_epi8& rhs)
+	{		
+		return xmm_epi8(lhs).umax(rhs);
+	}
+	
+	static xmm_epi8& umin(const xmm_epi8& lhs, const xmm_epi8& rhs)
+	{		
+		return xmm_epi8(lhs).umin(rhs);
+	}
+
+	static xmm_epi8& blend(const xmm_epi8& lhs, const xmm_epi8& rhs, const xmm_epi8& mask)
+	{		
+		return xmm_epi8(lhs).blend(rhs, mask);
+	}
+
+	static xmm_epi8 zero()
+	{
+		return _mm_setzero_si128();
 	}
 };
 
