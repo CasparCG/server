@@ -24,6 +24,7 @@
 #include "image_mixer.h"
 
 #include "../util/write_frame.h"
+#include "../util/blend.h"
 
 #include <common/assert.h>
 #include <common/gl/gl_check.h>
@@ -35,12 +36,16 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
+#include <modules/ffmpeg/producer/util/util.h>
+
 #include <asmlib.h>
 
 #include <gl/glew.h>
 
 #include <tbb/cache_aligned_allocator.h>
+#include <tbb/parallel_for_each.h>
 
+#include <boost/assign.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
@@ -48,6 +53,20 @@
 
 #include <algorithm>
 #include <vector>
+
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C" 
+{
+	#include <libswscale/swscale.h>
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
 
 namespace caspar { namespace accelerator { namespace cpu {
 		
@@ -99,9 +118,9 @@ bool operator!=(const layer& lhs, const layer& rhs)
 
 class image_renderer
 {
-	std::pair<std::vector<layer>, boost::shared_future<boost::iterator_range<const uint8_t*>>> last_image_;
-public:
-	
+	std::pair<std::vector<layer>, boost::shared_future<boost::iterator_range<const uint8_t*>>>	last_image_;
+	std::map<int, std::shared_ptr<SwsContext>>													sws_contexts_;
+public:	
 	boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
 	{	
 		if(last_image_.first == layers && last_image_.second.has_value())
@@ -112,190 +131,83 @@ public:
 		return image;
 	}
 
-private:	
+private:
 	boost::shared_future<boost::iterator_range<const uint8_t*>> render(std::vector<layer> layers, const core::video_format_desc& format_desc)
-	{	
+	{
 		static const auto empty = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(2048*2048*4, 0);
 		CASPAR_VERIFY(empty->size() >= format_desc.size);
 		
-		if(layers.empty())
+		std::vector<item> items;
+		BOOST_FOREACH(auto& layer, layers)
+			items.insert(items.end(), layer.items.begin(), layer.items.end());
+
+		if(items.empty())
 		{
 			return async(launch_policy::deferred, [=]
 			{
 				return boost::iterator_range<const uint8_t*>(empty->data(), empty->data() + format_desc.size);
-			});
+			});		
 		}
-		else if(layers.size()				== 1 &&
-			    layers.at(0).items.size()	== 1 &&
-			    layers.at(0).items.at(0).pix_desc.format		== core::pixel_format::bgra &&
-			    layers.at(0).items.at(0).buffers.at(0)->size() == format_desc.size &&
-			    layers.at(0).items.at(0).transform				== core::frame_transform())
+
+		convert(items.begin(), items.end(), format_desc);			
+		blend(items.begin(), items.end());
+		
+		auto buffer = items.front().buffers.at(0);
+		return async(launch_policy::deferred, [=]
 		{
-			auto buffer = layers.at(0).items.at(0).buffers.at(0);
-			return async(launch_policy::deferred, [=]
-			{
-				return boost::iterator_range<const uint8_t*>(buffer->data(), buffer->data() + format_desc.size);
-			});
-		}
-		else
+			return boost::iterator_range<const uint8_t*>(buffer->data(), buffer->data() + format_desc.size);
+		});		
+	}
+
+	template<typename I>
+	void blend(I begin, I end)
+	{
+		for(auto it = begin + 1; it != end; ++it)
 		{
-			return async(launch_policy::deferred, [=]
-			{
-				return boost::iterator_range<const uint8_t*>(empty->data(), empty->data() + format_desc.size);
-			});
+			auto size    = begin->buffers.at(0)->size();
+			auto dest    = begin->buffers.at(0)->data();
+			auto source2 = it->buffers.at(0)->data();
+			cpu::blend(dest, dest, source2, size);
 		}
-		//else
-		//{				
-			//auto draw_buffer = create_mixer_buffer(4, format_desc);
-
-			//if(format_desc.field_mode != core::field_mode::progressive)
-			//{
-			//	auto upper = layers;
-			//	auto lower = std::move(layers);
-
-			//	BOOST_FOREACH(auto& layer, upper)
-			//	{
-			//		BOOST_FOREACH(auto& item, layer.items)
-			//			item.transform.field_mode &= core::field_mode::upper;
-			//	}
-
-			//	BOOST_FOREACH(auto& layer, lower)
-			//	{
-			//		BOOST_FOREACH(auto& item, layer.items)
-			//			item.transform.field_mode &= core::field_mode::lower;
-			//	}
-
-			//	draw(std::move(upper), draw_buffer, format_desc);
-			//	draw(std::move(lower), draw_buffer, format_desc);
-			//}
-			//else
-			//{
-			//	draw(std::move(layers), draw_buffer, format_desc);
-			//}
-			//						
-			//return draw_buffer;
-		//}
 	}
 	
-	//void draw(std::vector<layer>&&				layers, 
-	//		  spl::shared_ptr<device_buffer>&	draw_buffer, 
-	//		  const core::video_format_desc&	format_desc)
-	//{
-	//	std::shared_ptr<device_buffer> layer_key_buffer;
+	template<typename I>
+	void convert(I begin, I end, const core::video_format_desc& format_desc)
+	{
+		tbb::parallel_for_each(begin, end, [&](item& item)
+		{
+			if(item.pix_desc.format == core::pixel_format::bgra)
+				return;
 
-	//	BOOST_FOREACH(auto& layer, layers)
-	//		draw_layer(std::move(layer), draw_buffer, layer_key_buffer, format_desc);
-	//}
+			auto input_av_frame = ffmpeg::make_av_frame(item.buffers, item.pix_desc);
+								
+			int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
+									
+			auto& sws_context = sws_contexts_[key];
+			if(!sws_context)
+			{
+				double param;
+				sws_context.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), format_desc.width, format_desc.height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+			}
+			
+			if(!sws_context)				
+				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << boost::errinfo_api_function("sws_getContext"));				
+		
+			auto dest = spl::make_shared<host_buffer>(format_desc.size);
 
-	//void draw_layer(layer&&								layer, 
-	//				spl::shared_ptr<device_buffer>&		draw_buffer,
-	//				std::shared_ptr<device_buffer>&		layer_key_buffer,
-	//				const core::video_format_desc&		format_desc)
-	//{		
-	//	// Remove empty items.
-	//	boost::range::remove_erase_if(layer.items, [](const item& item)
-	//	{
-	//		return item.transform.field_mode == core::field_mode::empty;
-	//	});
+			spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+			avcodec_get_frame_defaults(av_frame.get());			
+			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest->data(), PIX_FMT_BGRA, format_desc.width, format_desc.height);
+				
+			sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, av_frame->data, av_frame->linesize);	
 
-	//	if(layer.items.empty())
-	//		return;
-
-	//	std::shared_ptr<device_buffer> local_key_buffer;
-	//	std::shared_ptr<device_buffer> local_mix_buffer;
-	//			
-	//	if(layer.blend_mode != core::blend_mode::normal)
-	//	{
-	//		auto layer_draw_buffer = create_mixer_buffer(4, format_desc);
-
-	//		BOOST_FOREACH(auto& item, layer.items)
-	//			draw_item(std::move(item), layer_draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer, format_desc);	
-	//	
-	//		draw_mixer_buffer(layer_draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);							
-	//		draw_mixer_buffer(draw_buffer, std::move(layer_draw_buffer), layer.blend_mode);
-	//	}
-	//	else // fast path
-	//	{
-	//		BOOST_FOREACH(auto& item, layer.items)		
-	//			draw_item(std::move(item), draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer, format_desc);		
-	//				
-	//		draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);
-	//	}					
-
-	//	layer_key_buffer = std::move(local_key_buffer);
-	//}
-
-	//void draw_item(item&&							item, 
-	//			   spl::shared_ptr<device_buffer>&	draw_buffer, 
-	//			   std::shared_ptr<device_buffer>&	layer_key_buffer, 
-	//			   std::shared_ptr<device_buffer>&	local_key_buffer, 
-	//			   std::shared_ptr<device_buffer>&	local_mix_buffer,
-	//			   const core::video_format_desc&	format_desc)
-	//{			
-	//	draw_params draw_params;
-	//	draw_params.pix_desc	= std::move(item.pix_desc);
-	//	draw_params.transform	= std::move(item.transform);
-	//	BOOST_FOREACH(auto& future_texture, item.textures)
-	//		draw_params.textures.push_back(future_texture.get());
-
-	//	if(item.transform.is_key)
-	//	{
-	//		local_key_buffer = local_key_buffer ? local_key_buffer : create_mixer_buffer(1, format_desc);
-
-	//		draw_params.background			= local_key_buffer;
-	//		draw_params.local_key			= nullptr;
-	//		draw_params.layer_key			= nullptr;
-
-	//		kernel_.draw(std::move(draw_params));
-	//	}
-	//	else if(item.transform.is_mix)
-	//	{
-	//		local_mix_buffer = local_mix_buffer ? local_mix_buffer : create_mixer_buffer(4, format_desc);
-
-	//		draw_params.background			= local_mix_buffer;
-	//		draw_params.local_key			= std::move(local_key_buffer);
-	//		draw_params.layer_key			= layer_key_buffer;
-
-	//		draw_params.keyer				= keyer::additive;
-
-	//		kernel_.draw(std::move(draw_params));
-	//	}
-	//	else
-	//	{
-	//		draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);
-	//		
-	//		draw_params.background			= draw_buffer;
-	//		draw_params.local_key			= std::move(local_key_buffer);
-	//		draw_params.layer_key			= layer_key_buffer;
-
-	//		kernel_.draw(std::move(draw_params));
-	//	}	
-	//}
-
-	//void draw_mixer_buffer(spl::shared_ptr<device_buffer>&	draw_buffer, 
-	//					   std::shared_ptr<device_buffer>&& source_buffer, 
-	//					   core::blend_mode					blend_mode = core::blend_mode::normal)
-	//{
-	//	if(!source_buffer)
-	//		return;
-
-	//	draw_params draw_params;
-	//	draw_params.pix_desc.format		= core::pixel_format::bgra;
-	//	draw_params.pix_desc.planes		= list_of(core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4));
-	//	draw_params.textures			= list_of(source_buffer);
-	//	draw_params.transform			= core::frame_transform();
-	//	draw_params.blend_mode			= blend_mode;
-	//	draw_params.background			= draw_buffer;
-
-	//	kernel_.draw(std::move(draw_params));
-	//}
-	//		
-	//spl::shared_ptr<device_buffer> create_mixer_buffer(int stride, const core::video_format_desc& format_desc)
-	//{
-	//	auto buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, stride);
-	//	buffer->clear();
-	//	return buffer;
-	//}
+			item.buffers.clear();
+			item.buffers.push_back(dest);
+			item.pix_desc = core::pixel_format_desc(core::pixel_format::bgra);
+			item.pix_desc.planes.clear();
+			item.pix_desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
+		});
+	}
 };
 		
 struct image_mixer::impl : boost::noncopyable

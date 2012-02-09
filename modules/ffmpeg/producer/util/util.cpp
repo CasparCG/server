@@ -289,6 +289,74 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 	return spl::make_shared_ptr(write);
 }
 
+spl::shared_ptr<AVFrame> make_av_frame(caspar::core::data_frame& frame)
+{
+	std::array<void*, 4> data = {};
+	for(int n = 0; n < frame.get_pixel_format_desc().planes.size(); ++n)
+		data[n] = frame.image_data(n).begin();
+
+	return make_av_frame(data, frame.get_pixel_format_desc());
+}
+
+spl::shared_ptr<AVFrame> make_av_frame(std::array<void*, 4> data, const core::pixel_format_desc& pix_desc)
+{
+	spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+	avcodec_get_frame_defaults(av_frame.get());
+	
+	auto planes		 = pix_desc.planes;
+	auto format		 = pix_desc.format.value();
+
+	av_frame->width  = planes[0].width;
+	av_frame->height = planes[0].height;
+	for(int n = 0; n < planes.size(); ++n)	
+	{
+		av_frame->data[n]	  = reinterpret_cast<uint8_t*>(data[n]);
+		av_frame->linesize[n] = planes[n].linesize;	
+	}
+	switch(format)
+	{
+	case core::pixel_format::rgba:
+		av_frame->format = PIX_FMT_RGBA; 
+		break;
+	case core::pixel_format::argb:
+		av_frame->format = PIX_FMT_ARGB; 
+		break;
+	case core::pixel_format::bgra:
+		av_frame->format = PIX_FMT_BGRA; 
+		break;
+	case core::pixel_format::abgr:
+		av_frame->format = PIX_FMT_ABGR; 
+		break;
+	case core::pixel_format::gray:
+		av_frame->format = PIX_FMT_GRAY8; 
+		break;
+	case core::pixel_format::ycbcr:
+	{
+		int y_w = planes[0].width;
+		int y_h = planes[0].height;
+		int c_w = planes[1].width;
+		int c_h = planes[1].height;
+
+		if(c_h == y_h && c_w == y_w)
+			av_frame->format = PIX_FMT_YUV444P;
+		else if(c_h == y_h && c_w*2 == y_w)
+			av_frame->format = PIX_FMT_YUV422P;
+		else if(c_h == y_h && c_w*4 == y_w)
+			av_frame->format = PIX_FMT_YUV411P;
+		else if(c_h*2 == y_h && c_w*2 == y_w)
+			av_frame->format = PIX_FMT_YUV420P;
+		else if(c_h*2 == y_h && c_w*4 == y_w)
+			av_frame->format = PIX_FMT_YUV410P;
+
+		break;
+	}
+	case core::pixel_format::ycbcra:
+		av_frame->format = PIX_FMT_YUVA420P;
+		break;
+	}
+	return av_frame;
+}
+
 bool is_sane_fps(AVRational time_base)
 {
 	double fps = static_cast<double>(time_base.den) / static_cast<double>(time_base.num);
