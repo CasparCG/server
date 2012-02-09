@@ -152,6 +152,14 @@ private:
 
 			auto source = item.buffers.at(0)->data();
 
+			// TODO: Blend using divide and conquer instead of accumulation.
+			// TODO: Add support for fill translations.
+			// TODO: Add support for mask translations.
+			// TODO: Add support for opacity.
+			// TODO: Add support for mix transition.
+			// TODO: Add support for push transition.
+			// TODO: Add support for wipe transition.
+			// TODO: Add support for slide transition.
 			tbb::parallel_for(start, height, step, [&](int y)
 			{
 				cpu::blend(dest + y*width*4, source + y*width*4, width*4);
@@ -161,6 +169,7 @@ private:
 	
 	void convert(std::vector<item>& items, int width, int height)
 	{
+		// TODO: Don't convert buffers multiple times just because they are in different items due to e.g. interlacing.
 		tbb::parallel_for_each(items.begin(), items.end(), [&](item& item)
 		{
 			if(item.pix_desc.format == core::pixel_format::bgra && 
