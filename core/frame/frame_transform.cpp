@@ -135,4 +135,14 @@ bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
 	return !(lhs == rhs);
 }
 
+bool operator<(const frame_transform& lhs, const frame_transform& rhs)
+{
+	return memcmp(&lhs, &rhs, sizeof(frame_transform)) < 0;
+}
+
+bool operator>(const frame_transform& lhs, const frame_transform& rhs)
+{
+	return memcmp(&lhs, &rhs, sizeof(frame_transform)) > 0;
+}
+
 }}
