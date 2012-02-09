@@ -74,6 +74,8 @@ public:
 
 bool operator==(const frame_transform& lhs, const frame_transform& rhs);
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs);
+bool operator<(const frame_transform& lhs, const frame_transform& rhs);
+bool operator>(const frame_transform& lhs, const frame_transform& rhs);
 
 class tweened_transform
 {
