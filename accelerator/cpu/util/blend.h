@@ -35,7 +35,7 @@ static void blend(uint8_t* dest, const uint8_t* source1, const uint8_t* source2,
     const xmm_epi16 round  = 128;
     const xmm_epi16 lomask = 0x00FF;
 		
-	tbb::parallel_for(tbb::blocked_range<int>(0, count/sizeof(xmm_epi8)), [&](const tbb::blocked_range<int>& r)
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, count/sizeof(xmm_epi8)), [&](const tbb::blocked_range<size_t>& r)
 	{
 		for(auto n = r.begin(); n != r.end(); ++n)    
 		{

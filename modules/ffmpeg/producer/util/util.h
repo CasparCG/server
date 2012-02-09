@@ -28,6 +28,8 @@
 #include <core/frame/pixel_format.h>
 #include <core/mixer/audio/audio_mixer.h>
 
+#include <array>
+
 enum PixelFormat;
 struct AVFrame;
 struct AVFormatContext;
@@ -37,6 +39,7 @@ struct AVCodecContext;
 
 FORWARD2(caspar, core, struct pixel_format_desc);
 FORWARD2(caspar, core, struct write_frame);
+FORWARD2(caspar, core, struct data_frame);
 FORWARD2(caspar, core, struct frame_factory);
 
 namespace caspar { namespace ffmpeg {
@@ -53,6 +56,19 @@ static const int CASPAR_PIX_FMT_LUMA = 10; // Just hijack some unual pixel forma
 core::field_mode					get_mode(const AVFrame& frame);
 int									make_alpha_format(int format); // NOTE: Be careful about CASPAR_PIX_FMT_LUMA, change it to PIX_FMT_GRAY8 if you want to use the frame inside some ffmpeg function.
 spl::shared_ptr<core::write_frame>	make_write_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags);
+spl::shared_ptr<AVFrame>			make_av_frame(caspar::core::data_frame& frame);
+spl::shared_ptr<AVFrame>			make_av_frame(std::array<void*, 4> data, const core::pixel_format_desc& pix_desc);
+
+template<typename C>
+std::shared_ptr<AVFrame> make_av_frame(const C& container, const core::pixel_format_desc& pix_desc)
+{	
+	std::array<void*, 4> data = {};
+	int n = 0;
+	for(auto it = std::begin(container); it != std::end(container); ++it)
+		data[n++] = (*it)->data();
+	return make_av_frame(data, pix_desc);
+}
+
 core::pixel_format_desc				get_pixel_format_desc(PixelFormat pix_fmt, int width, int height);
 
 spl::shared_ptr<AVPacket> create_packet();
