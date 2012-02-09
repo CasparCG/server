@@ -92,112 +92,103 @@ bool operator!=(const item& lhs, const item& rhs)
 	return !(lhs == rhs);
 }
 
-struct layer
-{
-	std::vector<item>	items;
-
-	layer()
-	{
-	}
-
-	layer(std::vector<item> items)
-		: items(std::move(items))
-	{
-	}
-};
-
-bool operator==(const layer& lhs, const layer& rhs)
-{
-	return lhs.items == rhs.items;
-}
-
-bool operator!=(const layer& lhs, const layer& rhs)
-{
-	return !(lhs == rhs);
-}
-
 class image_renderer
 {
-	std::pair<std::vector<layer>, boost::shared_future<boost::iterator_range<const uint8_t*>>>	last_image_;
-	std::map<int, std::shared_ptr<SwsContext>>													sws_contexts_;
+	std::pair<std::vector<item>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;
+	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_contexts_;
 public:	
-	boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
+	boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
 	{	
-		if(last_image_.first == layers && last_image_.second.has_value())
+		if(last_image_.first == items && last_image_.second.has_value())
 			return last_image_.second;
 
-		auto image	= render(layers, format_desc);
-		last_image_ = std::make_pair(std::move(layers), image);
+		auto image	= render(items, format_desc);
+		last_image_ = std::make_pair(std::move(items), image);
 		return image;
 	}
 
 private:
-	boost::shared_future<boost::iterator_range<const uint8_t*>> render(std::vector<layer> layers, const core::video_format_desc& format_desc)
+	boost::shared_future<boost::iterator_range<const uint8_t*>> render(std::vector<item> items, const core::video_format_desc& format_desc)
 	{
-		static const auto empty = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(2048*2048*4, 0);
-		CASPAR_VERIFY(empty->size() >= format_desc.size);
+		convert(items, format_desc.width, format_desc.height);		
 		
-		std::vector<item> items;
-		BOOST_FOREACH(auto& layer, layers)
-			items.insert(items.end(), layer.items.begin(), layer.items.end());
-
-		if(items.empty())
+		auto result = spl::make_shared<host_buffer>(format_desc.size, 0);
+		if(format_desc.field_mode != core::field_mode::progressive)
 		{
-			return async(launch_policy::deferred, [=]
-			{
-				return boost::iterator_range<const uint8_t*>(empty->data(), empty->data() + format_desc.size);
-			});		
-		}
+			auto upper = items;
+			auto lower = items;
 
-		convert(items.begin(), items.end(), format_desc);			
-		blend(items.begin(), items.end());
+			BOOST_FOREACH(auto& item, upper)
+				item.transform.field_mode &= core::field_mode::upper;
+					
+			BOOST_FOREACH(auto& item, lower)
+				item.transform.field_mode &= core::field_mode::lower;
+			
+			draw(upper, result->data(), format_desc.width, format_desc.height);
+			draw(lower, result->data(), format_desc.width, format_desc.height);
+		}
+		else
+		{
+			draw(items, result->data(), format_desc.width, format_desc.height);
+		}
 		
-		auto buffer = items.front().buffers.at(0);
 		return async(launch_policy::deferred, [=]
 		{
-			return boost::iterator_range<const uint8_t*>(buffer->data(), buffer->data() + format_desc.size);
+			return boost::iterator_range<const uint8_t*>(result->data(), result->data() + format_desc.size);
 		});		
 	}
 
-	template<typename I>
-	void blend(I begin, I end)
+	void draw(std::vector<item>& items, uint8_t* dest, int width, int height)
 	{
-		for(auto it = begin + 1; it != end; ++it)
+		BOOST_FOREACH(auto& item, items)
 		{
-			auto size    = begin->buffers.at(0)->size();
-			auto dest    = begin->buffers.at(0)->data();
-			auto source2 = it->buffers.at(0)->data();
-			cpu::blend(dest, dest, source2, size);
+			auto field_mode = item.transform.field_mode;		
+
+			if(field_mode == core::field_mode::empty)
+				continue;
+
+			auto start = field_mode == core::field_mode::lower ? 1 : 0;
+			auto step  = field_mode == core::field_mode::progressive ? 1 : 2;
+
+			auto source2 = item.buffers.at(0)->data();
+
+			tbb::parallel_for(start, height, step, [&](int y)
+			{
+				cpu::blend(dest + y*width*4, dest + y*width*4, source2 + y*width*4, width*4);
+			});
 		}
 	}
 	
-	template<typename I>
-	void convert(I begin, I end, const core::video_format_desc& format_desc)
+	void convert(std::vector<item>& items, int width, int height)
 	{
-		tbb::parallel_for_each(begin, end, [&](item& item)
+		tbb::parallel_for_each(items.begin(), items.end(), [&](item& item)
 		{
-			if(item.pix_desc.format == core::pixel_format::bgra)
+			if(item.pix_desc.format == core::pixel_format::bgra && 
+			   item.pix_desc.planes.at(0).width == width &&
+			   item.pix_desc.planes.at(0).height == height)
 				return;
 
 			auto input_av_frame = ffmpeg::make_av_frame(item.buffers, item.pix_desc);
 								
 			int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
-									
-			auto& sws_context = sws_contexts_[key];
-			if(!sws_context)
+						
+			auto& pool = sws_contexts_[key];
+
+			std::shared_ptr<SwsContext> sws_context;
+			if(!pool.try_pop(sws_context))
 			{
 				double param;
-				sws_context.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), format_desc.width, format_desc.height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+				sws_context.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 			}
 			
 			if(!sws_context)				
 				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << boost::errinfo_api_function("sws_getContext"));				
 		
-			auto dest = spl::make_shared<host_buffer>(format_desc.size);
+			auto dest = spl::make_shared<host_buffer>(width*height*4);
 
 			spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 			avcodec_get_frame_defaults(av_frame.get());			
-			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest->data(), PIX_FMT_BGRA, format_desc.width, format_desc.height);
+			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest->data(), PIX_FMT_BGRA, width, height);
 				
 			sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, av_frame->data, av_frame->linesize);	
 
@@ -205,7 +196,9 @@ private:
 			item.buffers.push_back(dest);
 			item.pix_desc = core::pixel_format_desc(core::pixel_format::bgra);
 			item.pix_desc.planes.clear();
-			item.pix_desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
+			item.pix_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
+
+			pool.push(sws_context);
 		});
 	}
 };
@@ -214,7 +207,7 @@ struct image_mixer::impl : boost::noncopyable
 {	
 	image_renderer						renderer_;
 	std::vector<core::frame_transform>	transform_stack_;
-	std::vector<layer>					layers_; // layer/stream/items
+	std::vector<item>					items_; // layer/stream/items
 public:
 	impl() 
 		: transform_stack_(1)	
@@ -224,7 +217,6 @@ public:
 
 	void begin_layer(core::blend_mode blend_mode)
 	{
-		layers_.push_back(layer(std::vector<item>()));
 	}
 		
 	void push(core::frame_transform& transform)
@@ -253,7 +245,7 @@ public:
 		item.transform			= transform_stack_.back();
 		item.transform.volume	= core::frame_transform().volume; // Set volume to default since we don't care about it here.
 
-		layers_.back().items.push_back(item);
+		items_.push_back(item);
 	}
 
 	void pop()
@@ -267,13 +259,7 @@ public:
 	
 	boost::shared_future<boost::iterator_range<const uint8_t*>> render(const core::video_format_desc& format_desc)
 	{
-		// Remove empty layers.
-		boost::range::remove_erase_if(layers_, [](const layer& layer)
-		{
-			return layer.items.empty();
-		});
-
-		return renderer_(std::move(layers_), format_desc);
+		return renderer_(std::move(items_), format_desc);
 	}
 	
 	virtual spl::shared_ptr<cpu::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
