@@ -37,6 +37,15 @@
     <ClInclude Include="cii\CIIProtocolStrategy.h" />
     <ClInclude Include="clk\CLKCommand.h" />
     <ClInclude Include="clk\CLKProtocolStrategy.h" />
+    <ClInclude Include="osc\oscpack\MessageMappingOscPacketListener.h" />
+    <ClInclude Include="osc\oscpack\OscException.h" />
+    <ClInclude Include="osc\oscpack\OscHostEndianness.h" />
+    <ClInclude Include="osc\oscpack\OscOutboundPacketStream.h" />
+    <ClInclude Include="osc\oscpack\OscPacketListener.h" />
+    <ClInclude Include="osc\oscpack\OscPrintReceivedElements.h" />
+    <ClInclude Include="osc\oscpack\OscReceivedElements.h" />
+    <ClInclude Include="osc\oscpack\OscTypes.h" />
+    <ClInclude Include="osc\server.h" />
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="util\AsyncEventServer.h" />
     <ClInclude Include="util\ClientInfo.h" />
@@ -70,6 +79,26 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="clk\CLKProtocolStrategy.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="osc\oscpack\OscOutboundPacketStream.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="osc\oscpack\OscPrintReceivedElements.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="osc\oscpack\OscReceivedElements.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="osc\oscpack\OscTypes.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="osc\server.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

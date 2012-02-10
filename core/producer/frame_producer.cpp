@@ -103,7 +103,6 @@ class follow_producer_proxy : public producer_proxy_base
 public:
 	follow_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
 		: producer_proxy_base(std::move(producer))
-		, event_subject_(new monitor::subject("asd"))
 	{
 		producer->subscribe(event_subject_);
 	}

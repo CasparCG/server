@@ -305,12 +305,12 @@ class enable_shared_from_this : public std::enable_shared_from_this<T>
 public:
     shared_ptr<T> shared_from_this() 
     {
-        return shared_ptr<T>(this->shared_from_this());
+        return shared_ptr<T>(std::enable_shared_from_this<T>::shared_from_this());
     }
 
     shared_ptr<T const> shared_from_this() const 
     {
-        return shared_ptr<T const>(this->shared_from_this());
+        return shared_ptr<T const>(std::enable_shared_from_this<T>::shared_from_this());
     }
 protected:
     enable_shared_from_this()
