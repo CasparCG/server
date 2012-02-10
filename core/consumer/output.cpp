@@ -50,6 +50,7 @@ namespace caspar { namespace core {
 	
 struct output::impl
 {		
+	spl::shared_ptr<diagnostics::graph>							graph_;
 	const int													channel_index_;
 	video_format_desc											format_desc_;
 	std::map<int, spl::shared_ptr<frame_consumer>>				consumers_;	
@@ -57,11 +58,13 @@ struct output::impl
 	boost::circular_buffer<spl::shared_ptr<const data_frame>>	frames_;
 	executor													executor_;		
 public:
-	impl(const video_format_desc& format_desc, int channel_index) 
-		: channel_index_(channel_index)
+	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) 
+		: graph_(std::move(graph))
+		, channel_index_(channel_index)
 		, format_desc_(format_desc)
 		, executor_(L"output")
 	{
+		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8));
 	}	
 	
 	void add(int index, spl::shared_ptr<frame_consumer> consumer)
@@ -101,6 +104,8 @@ public:
 	{
 		executor_.invoke([&]
 		{
+			boost::timer frame_timer;
+
 			auto it = consumers_.begin();
 			while(it != consumers_.end())
 			{						
@@ -119,6 +124,8 @@ public:
 			
 			format_desc_ = format_desc;
 			frames_.clear();
+
+			graph_->set_value("consume-time", frame_timer.elapsed()*format_desc.fps*0.5);
 		});
 	}
 
@@ -200,7 +207,7 @@ public:
 	}
 };
 
-output::output(const video_format_desc& format_desc, int channel_index) : impl_(new impl(format_desc, channel_index)){}
+output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) : impl_(new impl(std::move(graph), format_desc, channel_index)){}
 void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
 void output::add(const spl::shared_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}

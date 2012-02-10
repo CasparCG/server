@@ -36,7 +36,7 @@ namespace caspar { namespace core {
 class output sealed : boost::noncopyable
 {
 public:
-	explicit output(const struct video_format_desc& format_desc, int channel_index);
+	explicit output(spl::shared_ptr<diagnostics::graph> graph, const struct video_format_desc& format_desc, int channel_index);
 	
 	// output
 

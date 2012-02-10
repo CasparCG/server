@@ -47,7 +47,7 @@ public:
 	typedef std::function<struct frame_transform(struct frame_transform)> transform_func_t;
 	typedef std::tuple<int, transform_func_t, unsigned int, tweener> transform_tuple_t;
 
-	stage();
+	stage(spl::shared_ptr<diagnostics::graph> graph);
 		
 	std::map<int, spl::shared_ptr<class draw_frame>> operator()(const struct video_format_desc& format_desc);
 
