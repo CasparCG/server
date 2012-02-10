@@ -92,6 +92,11 @@ struct separated_producer : public frame_producer
 		return L"separated[fill:" + fill_producer_->print() + L"|key[" + key_producer_->print() + L"]]";
 	}	
 
+	virtual std::wstring name() const override
+	{
+		return L"separated";
+	}
+
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
@@ -99,6 +104,16 @@ struct separated_producer : public frame_producer
 		info.add_child(L"fill.producer",	fill_producer_->info());
 		info.add_child(L"key.producer",	key_producer_->info());
 		return info;
+	}
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
+	{
+		return fill_producer_->subscribe(o);
+	}
+
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
+	{
+		return fill_producer_->unsubscribe(o);
 	}
 };
 

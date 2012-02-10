@@ -67,6 +67,7 @@ using namespace protocol;
 
 struct server::impl : boost::noncopyable
 {
+	spl::shared_ptr<monitor::subject>					event_subject_;
 	std::unique_ptr<accelerator::factory>				accel_factory_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;	
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
@@ -137,7 +138,7 @@ struct server::impl : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
-			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, accel_factory_->create_image_mixer()));
+			auto channel = spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, accel_factory_->create_image_mixer());
 			
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child(L"consumers"))
 			{
@@ -145,15 +146,15 @@ struct server::impl : boost::noncopyable
 				{
 					auto name = xml_consumer.first;
 					if(name == L"screen")
-						channels_.back()->output()->add(caspar::screen::create_consumer(xml_consumer.second));					
+						channel->output()->add(caspar::screen::create_consumer(xml_consumer.second));					
 					else if(name == L"bluefish")					
-						channels_.back()->output()->add(bluefish::create_consumer(xml_consumer.second));					
+						channel->output()->add(bluefish::create_consumer(xml_consumer.second));					
 					else if(name == L"decklink")					
-						channels_.back()->output()->add(decklink::create_consumer(xml_consumer.second));				
+						channel->output()->add(decklink::create_consumer(xml_consumer.second));				
 					else if(name == L"file")					
-						channels_.back()->output()->add(ffmpeg::create_consumer(xml_consumer.second));						
+						channel->output()->add(ffmpeg::create_consumer(xml_consumer.second));						
 					else if(name == L"system-audio")
-						channels_.back()->output()->add(oal::create_consumer());		
+						channel->output()->add(oal::create_consumer());		
 					else if(name != L"<xmlcomment>")
 						CASPAR_LOG(warning) << "Invalid consumer: " << name;	
 				}
@@ -161,7 +162,10 @@ struct server::impl : boost::noncopyable
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
-			}							
+			}		
+
+		    channel->subscribe(monitor::observable::observer_ptr(event_subject_));
+			channels_.push_back(channel);
 		}
 
 		// Dummy diagnostics channel
@@ -215,5 +219,7 @@ const std::vector<spl::shared_ptr<video_channel>> server::get_channels() const
 {
 	return impl_->channels_;
 }
+void server::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_->subscribe(o);}
+void server::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_->unsubscribe(o);}
 
 }

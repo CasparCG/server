@@ -65,6 +65,11 @@ public:
 		return L"color[" + color_str_ + L"]";
 	}
 
+	virtual std::wstring name() const override
+	{
+		return L"color";
+	}
+
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;

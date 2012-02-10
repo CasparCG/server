@@ -128,6 +128,11 @@ public:
 		return L"reroute[]";
 	}
 
+	virtual std::wstring name() const override
+	{
+		return L"reroute";
+	}
+
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;

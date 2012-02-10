@@ -23,6 +23,8 @@
 
 #include <common/spl/memory.h>
 
+#include <core/monitor/monitor.h>
+
 #include <boost/noncopyable.hpp>
 
 #include <vector>
@@ -33,11 +35,17 @@ namespace core {
 	class video_channel;
 }
 
-class server sealed : boost::noncopyable
+class server sealed : public monitor::subject
+					, boost::noncopyable
 {
 public:
 	server();
 	const std::vector<spl::shared_ptr<core::video_channel>> get_channels() const;
+
+	// monitor::observable
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

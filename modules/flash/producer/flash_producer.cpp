@@ -422,6 +422,11 @@ public:
 		return L"flash[" + boost::filesystem::path(filename_).wstring() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
 
+	virtual std::wstring name() const override
+	{
+		return L"flash";
+	}
+
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
